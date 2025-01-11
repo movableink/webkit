@@ -1751,11 +1751,11 @@ void RenderThemeIOS::paintSliderTicks(const RenderObject& box, const PaintInfo& 
     auto deviceScaleFactor = box.document().deviceScaleFactor();
     auto styleColorOptions = box.styleColorOptions();
 
-    bool isReversedInlineDirection = (!isHorizontal && box.writingMode().isHorizontal()) || !box.style().isLeftToRightDirection();
+    bool isInlineFlipped = (!isHorizontal && box.writingMode().isHorizontal()) || box.writingMode().isInlineFlipped();
     for (auto& optionElement : dataList->suggestions()) {
         if (auto optionValue = input->listOptionValueAsDouble(optionElement)) {
             auto tickFraction = (*optionValue - min) / (max - min);
-            auto tickRatio = isReversedInlineDirection ? 1.0 - tickFraction : tickFraction;
+            auto tickRatio = isInlineFlipped ? 1.0 - tickFraction : tickFraction;
             if (isHorizontal)
                 tickRect.setX(rect.x() + tickRatio * (rect.width() - tickRect.width()));
             else

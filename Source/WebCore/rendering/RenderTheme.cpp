@@ -1477,11 +1477,11 @@ void RenderTheme::paintSliderTicks(const RenderObject& renderer, const PaintInfo
     }
     GraphicsContextStateSaver stateSaver(paintInfo.context());
     paintInfo.context().setFillColor(renderer.style().visitedDependentColorWithColorFilter(CSSPropertyColor));
-    bool isReversedInlineDirection = (!isHorizontal && renderer.writingMode().isHorizontal()) || !renderer.style().isLeftToRightDirection();
+    bool isInlineFlipped = (!isHorizontal && renderer.writingMode().isHorizontal()) || renderer.writingMode().isInlineFlipped();
     for (auto& optionElement : dataList->suggestions()) {
         if (auto optionValue = input->listOptionValueAsDouble(optionElement)) {
             double tickFraction = (*optionValue - min) / (max - min);
-            double tickRatio = isReversedInlineDirection ? 1.0 - tickFraction : tickFraction;
+            double tickRatio = isInlineFlipped ? 1.0 - tickFraction : tickFraction;
             double tickPosition = round(tickRegionSideMargin + tickRegionWidth * tickRatio);
             if (isHorizontal)
                 tickRect.setX(tickPosition);

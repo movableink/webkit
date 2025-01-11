@@ -90,10 +90,10 @@ void SliderTrackPart::drawTicks(GraphicsContext& context, const FloatRect& rect,
 
     bool isVerticalWritingMode = style.states.contains(ControlStyle::State::VerticalWritingMode);
     bool isRightToLeft = style.states.contains(ControlStyle::State::RightToLeft);
-    bool isReversedInlineDirection = (!isHorizontal && !isVerticalWritingMode) || isRightToLeft;
+    bool isInlineFlipped = (!isHorizontal && !isVerticalWritingMode) || isRightToLeft;
 
     for (auto tickRatio : m_tickRatios) {
-        double value = isReversedInlineDirection ? 1.0 - tickRatio : tickRatio;
+        double value = isInlineFlipped ? 1.0 - tickRatio : tickRatio;
         double tickPosition = round(tickRegionMargin + tickRegionWidth * value);
         if (isHorizontal)
             tickRect.setX(tickPosition);

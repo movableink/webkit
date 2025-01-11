@@ -252,7 +252,7 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
     // Do all the tracking math relative to the input's renderer's box.
 
     bool isVertical = hasVerticalAppearance(*input);
-    bool isReversedInlineDirection = thumbRenderer->writingMode().isBidiRTL() || (isVertical && thumbRenderer->writingMode().isHorizontal());
+    bool isInlineFlipped = thumbRenderer->writingMode().isInlineFlipped() || (isVertical && thumbRenderer->writingMode().isHorizontal());
 
     auto offset = inputRenderer->absoluteToLocal(absolutePoint, UseTransforms);
     auto trackBoundingBox = trackRenderer->localToContainerQuad(FloatRect { { }, trackRenderer->size() }, inputRenderer).enclosingBoundingBox();
@@ -262,16 +262,16 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
     if (isVertical) {
         trackLength = trackRenderer->contentBoxHeight() - thumbRenderer->height();
         position = offset.y() - thumbRenderer->height() / 2 - trackBoundingBox.y();
-        position -= !isReversedInlineDirection ? thumbRenderer->marginTop() : thumbRenderer->marginBottom();
+        position -= !isInlineFlipped ? thumbRenderer->marginTop() : thumbRenderer->marginBottom();
     } else {
         trackLength = trackRenderer->contentBoxWidth() - thumbRenderer->width();
         position = offset.x() - thumbRenderer->width() / 2 - trackBoundingBox.x();
-        position -= !isReversedInlineDirection ? thumbRenderer->marginLeft() : thumbRenderer->marginRight();
+        position -= !isInlineFlipped ? thumbRenderer->marginLeft() : thumbRenderer->marginRight();
     }
 
     position = std::max<LayoutUnit>(0, std::min(position, trackLength));
     auto ratio = Decimal::fromDouble(static_cast<double>(position) / trackLength);
-    auto fraction = isReversedInlineDirection ? Decimal(1) - ratio : ratio;
+    auto fraction = isInlineFlipped ? Decimal(1) - ratio : ratio;
     auto stepRange = input->createStepRange(AnyStepHandling::Reject);
     auto value = stepRange.clampValue(stepRange.valueFromProportion(fraction));
 
@@ -280,7 +280,7 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
     if (snappingThreshold > 0) {
         if (std::optional<Decimal> closest = input->findClosestTickMarkValue(value)) {
             double closestFraction = stepRange.proportionFromValue(*closest).toDouble();
-            double closestRatio = isReversedInlineDirection ? 1.0 - closestFraction : closestFraction;
+            double closestRatio = isInlineFlipped ? 1.0 - closestFraction : closestFraction;
             LayoutUnit closestPosition { trackLength * closestRatio };
             if ((closestPosition - position).abs() <= snappingThreshold)
                 value = *closest;
