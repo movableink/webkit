@@ -263,6 +263,7 @@ private:
     RefPtr<CoordinatedBackingStore> m_backingStore WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedAnimatedBackingStoreClient> m_animatedBackingStoreClient WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedImageBackingStore> m_imageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
+    RefPtr<CoordinatedImageBackingStore> m_committedImageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
     bool m_imageBackingStoreVisible WTF_GUARDED_BY_LOCK(m_lock) { false };
     Vector<IntRect, 1> m_dirtyRegion WTF_GUARDED_BY_LOCK(m_lock);
     FilterOperations m_filters WTF_GUARDED_BY_LOCK(m_lock);

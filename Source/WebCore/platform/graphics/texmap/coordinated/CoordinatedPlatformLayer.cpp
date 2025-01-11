@@ -115,6 +115,7 @@ void CoordinatedPlatformLayer::invalidateTarget()
         m_committedContentsBuffer = nullptr;
     }
     m_backingStore = nullptr;
+    m_committedImageBackingStore = nullptr;
     m_target = nullptr;
 }
 
@@ -859,6 +860,9 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
             m_committedContentsBuffer->activateOnCompositingThread(*this);
     }
 
+    if (m_pendingChanges.contains(Change::ContentsImage))
+        m_committedImageBackingStore = m_imageBackingStore;
+
     if (m_pendingChanges.contains(Change::ContentsColor))
         layer.setSolidColor(m_contentsColor);
 
@@ -927,8 +931,8 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
 
     if (m_committedContentsBuffer)
         m_committedContentsBuffer->swapBuffer();
-    else if (m_imageBackingStore && m_imageBackingStoreVisible)
-        layer.setContentsLayer(m_imageBackingStore->buffer());
+    else if (m_committedImageBackingStore && m_imageBackingStoreVisible)
+        layer.setContentsLayer(m_committedImageBackingStore->buffer());
     else
         layer.setContentsLayer(nullptr);
 
