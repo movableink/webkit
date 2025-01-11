@@ -106,7 +106,7 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
     };
 
     // If pendingDoc is not fully active, then reject promise with a TypeError exception and return promise.
-    if (promise && !document().isFullyActive()) {
+    if (promise && !protectedDocument()->isFullyActive()) {
         handleError("Cannot request fullscreen on a document that is not fully active."_s, EmitErrorEvent::No, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
         return;
     }

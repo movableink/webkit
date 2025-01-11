@@ -82,7 +82,7 @@ void CredentialsContainer::isCreate(CredentialCreationOptions&& options, Credent
 
 void CredentialsContainer::preventSilentAccess(DOMPromiseDeferred<void>&& promise) const
 {
-    if (document() && !document()->isFullyActive()) {
+    if (RefPtr document = this->document(); !document->isFullyActive()) {
         promise.reject(Exception { ExceptionCode::InvalidStateError, "The document is not fully active."_s });
         return;
     }
