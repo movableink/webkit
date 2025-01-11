@@ -1830,7 +1830,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 {
     ASSERT(WebThreadIsLockedOrDisabled());
     if (auto* view = _private->coreFrame->view())
-        view->setWasScrolledByUser(true);
+        view->setLastUserScrollType(WebCore::LocalFrameView::UserScrollType::Explicit);
 }
 
 - (NSString *)stringByEvaluatingJavaScriptFromString:(NSString *)string forceUserGesture:(BOOL)forceUserGesture

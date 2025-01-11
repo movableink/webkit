@@ -392,7 +392,9 @@ public:
     WEBCORE_EXPORT void updateControlTints();
 
     WEBCORE_EXPORT bool wasScrolledByUser() const;
-    WEBCORE_EXPORT void setWasScrolledByUser(bool);
+
+    enum class UserScrollType : uint8_t { Explicit, Implicit };
+    WEBCORE_EXPORT void setLastUserScrollType(std::optional<UserScrollType>);
 
     bool safeToPropagateScrollToParent() const;
 
@@ -1044,6 +1046,8 @@ private:
 
     std::unique_ptr<ScrollAnchoringController> m_scrollAnchoringController;
 
+    std::optional<UserScrollType> m_lastUserScrollType;
+
     bool m_shouldUpdateWhileOffscreen { true };
     bool m_canHaveScrollbars { true };
     bool m_cannotBlitToWindow { false };
@@ -1057,7 +1061,6 @@ private:
 #endif
 
     bool m_isTrackingRepaints { false }; // Used for testing.
-    bool m_wasScrolledByUser { false };
     bool m_shouldScrollToFocusedElement { false };
 
     bool m_isPainting { false };

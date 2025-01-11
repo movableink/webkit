@@ -2683,7 +2683,7 @@ void FrameSelection::revealSelection(SelectionRevealMode revealMode, const Scrol
     // FIXME: This code only handles scrolling the startContainer's layer, but
     // the selection rect could intersect more than just that.
     // See <rdar://problem/4799899>.
-    m_document->frame()->view()->setWasScrolledByUser(true);
+    m_document->frame()->view()->setLastUserScrollType(LocalFrameView::UserScrollType::Implicit);
     LocalFrameView::scrollRectToVisible(rect, *start.deprecatedNode()->renderer(), insideFixed, { revealMode, alignment, alignment, ShouldAllowCrossOriginScrolling::Yes, scrollBehavior });
     updateAppearance();
 

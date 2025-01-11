@@ -4976,7 +4976,7 @@ void EventHandler::scheduleScrollEvent()
 void EventHandler::setFrameWasScrolledByUser()
 {
     if (RefPtr view = m_frame->view())
-        view->setWasScrolledByUser(true);
+        view->setLastUserScrollType(LocalFrameView::UserScrollType::Explicit);
 }
 
 bool EventHandler::passMousePressEventToScrollbar(MouseEventWithHitTestResults& mouseEventAndResult, Scrollbar* scrollbar)

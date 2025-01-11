@@ -251,7 +251,7 @@ void LocalFrameView::reset()
     m_isOverlapped = false;
     m_contentIsOpaque = false;
     m_updateEmbeddedObjectsTimer.stop();
-    m_wasScrolledByUser = false;
+    m_lastUserScrollType = std::nullopt;
     m_delayedScrollEventTimer.stop();
     m_shouldScrollToFocusedElement = false;
     m_delayedScrollToFocusedElementTimer.stop();
@@ -2585,7 +2585,7 @@ void LocalFrameView::scrollRectToVisibleInChildView(const LayoutRect& absoluteRe
     // If scrollbars aren't explicitly forbidden, permit scrolling.
     if (m_frame->scrollingMode() == ScrollbarMode::AlwaysOff) {
         // If scrollbars are forbidden, user initiated scrolls should obviously be ignored.
-        if (wasScrolledByUser())
+        if (m_lastUserScrollType == UserScrollType::Explicit)
             return;
         // Forbid autoscrolls when scrollbars are off, but permits other programmatic scrolls, like navigation to an anchor.
         if (m_frame->eventHandler().autoscrollInProgress())
@@ -3204,7 +3204,7 @@ static bool shouldEnableSpeculativeTilingDuringLoading(const LocalFrameView& vie
 void LocalFrameView::enableSpeculativeTilingIfNeeded()
 {
     ASSERT(!m_speculativeTilingEnabled);
-    if (m_wasScrolledByUser) {
+    if (wasScrolledByUser()) {
         m_speculativeTilingEnabled = true;
         return;
     }
@@ -3239,7 +3239,7 @@ void LocalFrameView::show()
         // Turn off speculative tiling for a brief moment after a LocalFrameView appears on screen.
         // Note that adjustTiledBackingCoverage() kicks the (500ms) timer to re-enable it.
         m_speculativeTilingEnabled = false;
-        m_wasScrolledByUser = false;
+        m_lastUserScrollType = std::nullopt;
         adjustTiledBackingCoverage();
     }
 }
@@ -4574,25 +4574,25 @@ void LocalFrameView::traverseForPaintInvalidation(NullGraphicsContext::PaintInva
 
 bool LocalFrameView::wasScrolledByUser() const
 {
-    return m_wasScrolledByUser;
+    return m_lastUserScrollType.has_value();
 }
 
-void LocalFrameView::setWasScrolledByUser(bool wasScrolledByUser)
+void LocalFrameView::setLastUserScrollType(std::optional<UserScrollType> userScrollType)
 {
-    LOG(Scrolling, "LocalFrameView::setWasScrolledByUser at %d", wasScrolledByUser);
+    LOG(Scrolling, "LocalFrameView::setLastUserScrollType at %d", userScrollType ? enumToUnderlyingType(*userScrollType) : -1);
 
     cancelScheduledScrolls();
     if (currentScrollType() == ScrollType::Programmatic)
         return;
 
     RefPtr document = m_frame->document();
-    if (wasScrolledByUser && document)
+    if (userScrollType && document)
         document->setGotoAnchorNeededAfterStylesheetsLoad(false);
 
     m_maintainScrollPositionAnchor = nullptr;
-    if (m_wasScrolledByUser == wasScrolledByUser)
+    if (m_lastUserScrollType == userScrollType)
         return;
-    m_wasScrolledByUser = wasScrolledByUser;
+    m_lastUserScrollType = userScrollType;
     adjustTiledBackingCoverage();
 }
 

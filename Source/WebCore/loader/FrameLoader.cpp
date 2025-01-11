@@ -2654,7 +2654,7 @@ void FrameLoader::open(CachedFrameBase& cachedFrame)
     // When navigating to a CachedFrame its FrameView should never be null.  If it is we'll crash in creative ways downstream.
     ASSERT(view);
     if (RefPtr localView = dynamicDowncast<LocalFrameView>(view.get()))
-        localView->setWasScrolledByUser(false);
+        localView->setLastUserScrollType(std::nullopt);
 
     Ref frame = m_frame.get();
     std::optional<IntRect> previousViewFrameRect = frame->view() ?  frame->view()->frameRect() : std::optional<IntRect>(std::nullopt);
@@ -4297,7 +4297,7 @@ void FrameLoader::loadSameDocumentItem(HistoryItem& item)
     // FIXME: Does form state need to be saved here too?
     history->saveScrollPositionAndViewStateToItem(history->protectedCurrentItem().get());
     if (RefPtr view = frame->view())
-        view->setWasScrolledByUser(false);
+        view->setLastUserScrollType(std::nullopt);
 
     history->setCurrentItem(item);
         

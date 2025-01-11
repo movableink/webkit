@@ -621,7 +621,7 @@ void HistoryController::recursiveUpdateForCommit()
         saveScrollPositionAndViewStateToItem(protectedCurrentItem().get());
 
         if (RefPtr view = m_frame->view())
-            view->setWasScrolledByUser(false);
+            view->setLastUserScrollType(std::nullopt);
 
         // Now commit the provisional item
         if (RefPtr provisionalItem = m_provisionalItem) {
