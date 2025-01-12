@@ -130,6 +130,7 @@ public:
     TZoneHeapManager(TZoneHeapManager &other) = delete;
     void operator=(const TZoneHeapManager &) = delete;
 
+    BEXPORT static void requirePerBootSeed();
     BEXPORT static void setBucketParams(unsigned smallSizeCount, unsigned largeSizeCount = 0, unsigned smallSizeLimit = 0);
 
     BEXPORT static bool isReady();
@@ -177,7 +178,7 @@ private:
     inline unsigned tzoneBucketForKey(const TZoneSpecification&, unsigned bucketCountForSize, LockHolder&);
     TZoneTypeBuckets* populateBucketsForSizeClass(LockHolder&, SizeAndAlignment::Value);
 
-    static TZoneHeapManager::State m_state;
+    static TZoneHeapManager::State s_state;
     Mutex m_mutex;
     Mutex m_differentSizeMutex;
     uint64_t m_tzoneKeySeed;

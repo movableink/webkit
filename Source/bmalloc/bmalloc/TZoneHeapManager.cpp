@@ -50,15 +50,17 @@ static bool (*hasDisableTZoneEntitlement)();
 
 TZoneHeapManager* tzoneHeapManager;
 TZoneMallocFallback tzoneMallocFallback;
-TZoneHeapManager::State TZoneHeapManager::m_state;
+TZoneHeapManager::State TZoneHeapManager::s_state;
 
 static constexpr unsigned defaultBucketsForSmallSizes = 5;
 static constexpr unsigned defaultBucketsForLargeSizes = 3;
 static constexpr unsigned defaultMaxSmallSize = 128;
 
-unsigned bucketsForSmallSizes { defaultBucketsForSmallSizes };
-unsigned bucketsForLargeSizes { defaultBucketsForLargeSizes };
-unsigned maxSmallSize { defaultMaxSmallSize };
+static unsigned bucketsForSmallSizes { defaultBucketsForSmallSizes };
+static unsigned bucketsForLargeSizes { defaultBucketsForLargeSizes };
+static unsigned maxSmallSize { defaultMaxSmallSize };
+
+static bool requirePerBootPrimodialSeed;
 
 static constexpr bool verbose = false;
 
@@ -102,7 +104,7 @@ TZoneHeapManager::TZoneHeapManager()
 {
     determineTZoneMallocFallback();
 
-    // Ensures that the default value for m_state is State::Uninitialized.
+    // Ensures that the default value for s_state is State::Uninitialized.
     static_assert(!static_cast<unsigned>(TZoneHeapManager::State::Uninitialized));
 
 #if TZONE_VERBOSE_DEBUG
@@ -156,9 +158,15 @@ void determineTZoneMallocFallback()
     }
 }
 
+void TZoneHeapManager::requirePerBootSeed()
+{
+    RELEASE_BASSERT(s_state < State::Seeded);
+    requirePerBootPrimodialSeed = true;
+}
+
 void TZoneHeapManager::setBucketParams(unsigned smallSizeCount, unsigned largeSizeCount, unsigned smallSizeLimit)
 {
-    RELEASE_BASSERT(m_state < State::StartedRegisteringTypes);
+    RELEASE_BASSERT(s_state < State::StartedRegisteringTypes);
 
     bucketsForSmallSizes = smallSizeCount;
     if (largeSizeCount)
@@ -172,7 +180,7 @@ void TZoneHeapManager::setBucketParams(unsigned smallSizeCount, unsigned largeSi
 
 void TZoneHeapManager::init()
 {
-    RELEASE_BASSERT(m_state == State::Uninitialized);
+    RELEASE_BASSERT(s_state == State::Uninitialized);
 
     if constexpr (verbose)
         TZONE_LOG_DEBUG("TZoneHeapManager initialization ");
@@ -229,6 +237,7 @@ void TZoneHeapManager::init()
     auto sysctlResult = sysctl(mib, 2, &timeValue, &size, nullptr, 0);
     if (sysctlResult) {
         TZONE_LOG_DEBUG("kern.boottime is required for TZoneHeap initialization: %d errno %d\n", sysctlResult, errno);
+        RELEASE_BASSERT(!sysctlResult || !requirePerBootPrimodialSeed);
         // Some clients of JSC may not have access to kern.boottime. In those cases, use a fallback.
         gettimeofday(&timeValue, NULL);
     }
@@ -304,7 +313,7 @@ void TZoneHeapManager::init()
         TZONE_LOG_DEBUG(" }\n");
     }
 
-    m_state = State::Seeded;
+    s_state = State::Seeded;
 
     if (verbose)
         atexit(dumpRegisteredTypesAtExit);
@@ -312,7 +321,7 @@ void TZoneHeapManager::init()
 
 bool TZoneHeapManager::isReady()
 {
-    return m_state >= State::Seeded;
+    return s_state >= State::Seeded;
 }
 
 #if TZONE_VERBOSE_DEBUG
@@ -370,7 +379,7 @@ static void setNextTypeName(char* typeName, size_t length)
 void TZoneHeapManager::dumpRegisteredTypes()
 {
 #if TZONE_VERBOSE_DEBUG
-    if (verbose && m_state >= State::Seeded) {
+    if (verbose && s_state >= State::Seeded) {
         if (!m_typeSizes.size())
             return;
 
@@ -506,9 +515,9 @@ BALLOW_UNSAFE_BUFFER_USAGE_END
 
 TZoneHeapManager::TZoneTypeBuckets* TZoneHeapManager::populateBucketsForSizeClass(LockHolder& lock, SizeAndAlignment::Value sizeAndAlignment)
 {
-    RELEASE_BASSERT(m_state >= State::Seeded);
+    RELEASE_BASSERT(s_state >= State::Seeded);
     BASSERT(!m_heapRefsBySizeAndAlignment.contains(sizeAndAlignment));
-    m_state = State::StartedRegisteringTypes;
+    s_state = State::StartedRegisteringTypes;
 
     auto bucketCount = bucketCountForSizeClass(sizeAndAlignment);
     if (tzoneMallocFallback == TZoneMallocFallback::ForceSpecifiedFallBack) {
@@ -590,7 +599,7 @@ BINLINE pas_heap_ref* TZoneHeapManager::heapRefForTZoneType(const TZoneSpecifica
 
 pas_heap_ref* TZoneHeapManager::heapRefForTZoneType(const TZoneSpecification& spec)
 {
-    RELEASE_BASSERT(m_state >= State::Seeded);
+    RELEASE_BASSERT(s_state >= State::Seeded);
     RELEASE_BASSERT(tzoneMallocFallback != TZoneMallocFallback::Undecided);
 
     LockHolder lock(mutex());
