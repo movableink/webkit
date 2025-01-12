@@ -1182,6 +1182,8 @@ webkit.org/b/213699 http/wpt/mediarecorder/MediaRecorder-first-frame.html [ Fail
 # due to missing index. GLib baselines reflect this, the Pass expectation is kept here for future reference.
 webkit.org/b/282534 http/wpt/mediarecorder/MediaRecorder-audio-samplingrate-change.html [ Pass ]
 
+webkit.org/b/285813 http/wpt/mediarecorder/pause-recording.html [ Timeout ]
+
 webkit.org/b/218317 media/media-source/media-source-trackid-change.html [ Failure ]
 webkit.org/b/238201 media/media-source/media-mp4-hevc-bframes.html [ Failure ]
 webkit.org/b/270622 media/media-source/media-managedmse-noresumeafterpause.html [ Timeout ]
@@ -2106,7 +2108,8 @@ webkit.org/b/265865 imported/w3c/web-platform-tests/webrtc-stats/rtp-stats-creat
 # Requires video scaling adaptation.
 webrtc/captureCanvas-webrtc-with-video-scaling-adaptation.html [ Failure ]
 webrtc/video-maxBitrate.html [ Failure ]
-webrtc/video-maxBitrate-vp8.html [ Failure ]
+# Failure in release builds:
+webkit.org/b/285812 webrtc/video-maxBitrate-vp8.html [ Crash Failure ]
 
 # Times out waiting for DTLS transport setup. Some bug related with data-channel, pending investigation.
 webkit.org/b/265860 imported/w3c/web-platform-tests/webrtc-stats/supported-stats.https.html [ Skip ]
@@ -2865,6 +2868,8 @@ fast/mediastream/captureInGPUProcess.html [ Skip ]
 fast/mediastream/video-rotation-gpu-process-crash.html [ Skip ]
 http/wpt/mediarecorder/MediaRecorder-AV-audio-video-dataavailable-gpuprocess.html [ Skip ]
 webgl/webgl-fail-after-context-creation-no-crash.html [ Skip ]
+fast/mediastream/mediastreamtrack-clone-muted.html [ Skip ]
+fast/mediastream/video-background-with-canvas.html [ Skip ]
 
 # Payment Request
 imported/w3c/web-platform-tests/payment-request [ Skip ]
