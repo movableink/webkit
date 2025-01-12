@@ -34,28 +34,6 @@ class CSSValue;
 
 namespace CSS {
 
-// Helper for declaring types in the CSS namespace as Tuple-Like.
-#define CSS_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
-    namespace std { \
-        template<> class tuple_size<WebCore::CSS::t> : public std::integral_constant<size_t, numberOfArguments> { }; \
-        template<size_t I> class tuple_element<I, WebCore::CSS::t> { \
-        public: \
-            using type = decltype(WebCore::CSS::get<I>(std::declval<WebCore::CSS::t>())); \
-        }; \
-    } \
-    template<> inline constexpr bool WebCore::TreatAsTupleLike<WebCore::CSS::t> = true; \
-\
-
-#define CSS_SPACE_SEPARATED_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
-    CSS_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
-    template<> inline constexpr ASCIILiteral WebCore::SerializationSeparator<WebCore::CSS::t> = " "_s; \
-\
-
-#define CSS_COMMA_SEPARATED_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
-    CSS_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
-    template<> inline constexpr ASCIILiteral WebCore::SerializationSeparator<WebCore::CSS::t> = ", "_s; \
-\
-
 // MARK: - Serialization
 
 // All leaf types must implement the following conversions:

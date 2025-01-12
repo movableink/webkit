@@ -64,4 +64,4 @@ FloatRoundedRect::Radii evaluate(const BorderRadius&, FloatSize referenceBox);
 } // namespace Style
 } // namespace WebCore
 
-STYLE_TUPLE_LIKE_CONFORMANCE(BorderRadius, 4)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::BorderRadius, 4)

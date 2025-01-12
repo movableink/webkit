@@ -62,4 +62,4 @@ template<> struct Serialize<Ray> { void operator()(StringBuilder&, const Ray&); 
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(Ray, 4)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Ray, 4)

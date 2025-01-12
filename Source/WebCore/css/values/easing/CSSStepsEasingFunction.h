@@ -72,7 +72,7 @@ struct StepsEasingParameters {
 };
 using StepsEasingFunction = FunctionNotation<CSSValueSteps, StepsEasingParameters>;
 
-DEFINE_TYPE_WRAPPER(StepsEasingParameters, value);
+DEFINE_TYPE_WRAPPER_GET(StepsEasingParameters, value);
 
 template<size_t I, typename T, typename K, auto shouldSerializeKeyword> const auto& get(const StepsEasingParameters::Kind<T, K, shouldSerializeKeyword>& value)
 {
@@ -93,7 +93,7 @@ template<typename T, typename K, auto shouldSerializeKeyword> struct Serialize<S
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(StepsEasingParameters, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::StepsEasingParameters, 1)
 
 namespace std {
 

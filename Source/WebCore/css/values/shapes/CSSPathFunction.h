@@ -63,4 +63,4 @@ template<> struct CSSValueChildrenVisitor<Path::Data> { IterationStatus operator
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(Path, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Path, 2)

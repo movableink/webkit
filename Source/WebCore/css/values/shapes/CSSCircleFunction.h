@@ -59,4 +59,4 @@ template<> struct Serialize<Circle> { void operator()(StringBuilder&, const Circ
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(Circle, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Circle, 2)

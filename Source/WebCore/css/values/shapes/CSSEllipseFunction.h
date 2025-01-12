@@ -59,4 +59,4 @@ template<> struct Serialize<Ellipse> { void operator()(StringBuilder&, const Ell
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(Ellipse, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Ellipse, 2)

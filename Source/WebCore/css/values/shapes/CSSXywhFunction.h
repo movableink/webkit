@@ -59,4 +59,4 @@ template<> struct Serialize<Xywh> { void operator()(StringBuilder&, const Xywh&)
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(Xywh, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Xywh, 3)

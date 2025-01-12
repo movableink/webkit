@@ -393,19 +393,19 @@ using Gradient = std::variant<
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(LinearGradient, 3)
-CSS_TUPLE_LIKE_CONFORMANCE(PrefixedLinearGradient, 3)
-CSS_TUPLE_LIKE_CONFORMANCE(DeprecatedLinearGradient, 3)
-CSS_TUPLE_LIKE_CONFORMANCE(RadialGradient::Ellipse, 2)
-CSS_TUPLE_LIKE_CONFORMANCE(RadialGradient::Circle, 2)
-CSS_TUPLE_LIKE_CONFORMANCE(RadialGradient, 3)
-CSS_TUPLE_LIKE_CONFORMANCE(PrefixedRadialGradient::Ellipse, 2)
-CSS_TUPLE_LIKE_CONFORMANCE(PrefixedRadialGradient::Circle, 2)
-CSS_TUPLE_LIKE_CONFORMANCE(PrefixedRadialGradient, 3)
-CSS_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient::GradientBox, 4)
-CSS_TUPLE_LIKE_CONFORMANCE(DeprecatedRadialGradient, 3)
-CSS_TUPLE_LIKE_CONFORMANCE(ConicGradient::GradientBox, 2)
-CSS_TUPLE_LIKE_CONFORMANCE(ConicGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::LinearGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::PrefixedLinearGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::DeprecatedLinearGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::RadialGradient::Ellipse, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::RadialGradient::Circle, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::RadialGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::PrefixedRadialGradient::Ellipse, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::PrefixedRadialGradient::Circle, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::PrefixedRadialGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::DeprecatedRadialGradient::GradientBox, 4)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::DeprecatedRadialGradient, 3)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::ConicGradient::GradientBox, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::ConicGradient, 3)
 
 template<typename C, typename P> inline constexpr bool WebCore::TreatAsTupleLike<WebCore::CSS::GradientColorStop<C, P>> = true;
 

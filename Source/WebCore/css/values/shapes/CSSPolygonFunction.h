@@ -57,4 +57,4 @@ template<> struct Serialize<Polygon> { void operator()(StringBuilder&, const Pol
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(Polygon, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Polygon, 2)

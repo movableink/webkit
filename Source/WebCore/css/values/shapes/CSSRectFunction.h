@@ -56,4 +56,4 @@ template<> struct Serialize<Rect> { void operator()(StringBuilder&, const Rect&)
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(Rect, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Rect, 2)

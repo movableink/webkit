@@ -61,6 +61,6 @@ template<size_t I> const auto& get(const ColorScheme& colorScheme)
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(ColorScheme, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::ColorScheme, 2)
 
 #endif

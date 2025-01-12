@@ -73,4 +73,4 @@ template<> struct Serialize<BorderRadius> { void operator()(StringBuilder&, cons
 } // namespace CSS
 } // namespace WebCore
 
-CSS_TUPLE_LIKE_CONFORMANCE(BorderRadius, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::BorderRadius, 2)
