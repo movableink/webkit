@@ -330,21 +330,29 @@ void GraphicsContextSkia::drawNativeImageInternal(NativeImage& nativeImage, cons
 
 void GraphicsContextSkia::drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter& filter, FilterResults& results)
 {
-    auto* sourceImageGrContext = sourceImage ? sourceImage->skiaGrContext() : nullptr;
-    if (sourceImageGrContext && sourceImageGrContext != PlatformDisplay::sharedDisplay().skiaGrContext()) {
-        // If we encounter an accelerated ImageBuffer (skiaGrContext() != nullptr), we are in the threaded GPU rendering painting mode, verify that.
-        ASSERT(m_renderingMode == RenderingMode::Accelerated);
-        ASSERT(ProcessCapabilities::canUseAcceleratedBuffers());
-#if USE(COORDINATED_GRAPHICS)
-        ASSERT(SkiaPaintingEngine::numberOfGPUPaintingThreads() > 0);
-#endif
-        // The 'image' was produced on another thread -- to use it here, we need to create a new ImageBuffer, that wraps the existing GPU resource.
-        auto newSourceImage = sourceImage->copyAcceleratedImageBufferBorrowingBackendRenderTarget();
-        GraphicsContext::drawFilteredImageBuffer(newSourceImage.get(), sourceImageRect, filter, results);
+    auto needsAcceleratedImageBufferCopy = [&]() -> bool {
+        if (m_renderingMode == RenderingMode::Unaccelerated)
+            return false;
+        if (!sourceImage || !sourceImage->skiaGrContext())
+            return false;
+        if (sourceImage->skiaGrContext() == PlatformDisplay::sharedDisplay().skiaGrContext())
+            return false;
+        return true;
+    };
+
+    if (!needsAcceleratedImageBufferCopy()) {
+        GraphicsContext::drawFilteredImageBuffer(sourceImage, sourceImageRect, filter, results);
         return;
     }
 
-    GraphicsContext::drawFilteredImageBuffer(sourceImage, sourceImageRect, filter, results);
+    // If we encounter an accelerated ImageBuffer (skiaGrContext() != nullptr), we are in the threaded GPU rendering painting mode, verify that.
+    ASSERT(ProcessCapabilities::canUseAcceleratedBuffers());
+#if USE(COORDINATED_GRAPHICS)
+    ASSERT(SkiaPaintingEngine::numberOfGPUPaintingThreads() > 0);
+#endif
+    // The 'image' was produced on another thread -- to use it here, we need to create a new ImageBuffer, that wraps the existing GPU resource.
+    auto newSourceImage = sourceImage->copyAcceleratedImageBufferBorrowingBackendRenderTarget();
+    GraphicsContext::drawFilteredImageBuffer(newSourceImage.get(), sourceImageRect, filter, results);
 }
 
 // This is only used to draw borders, so we should not draw shadows.
