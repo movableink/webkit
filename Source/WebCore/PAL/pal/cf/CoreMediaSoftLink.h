@@ -30,7 +30,9 @@
 
 #include <CoreAudio/CoreAudioTypes.h>
 #include <pal/spi/cf/CoreMediaSPI.h>
+#include <span>
 #include <wtf/SoftLinking.h>
+#include <wtf/StdLibExtras.h>
 
 #if PLATFORM(WATCHOS)
 #define SOFTLINK_AVKIT_FRAMEWORK() SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(AVKit)
@@ -408,6 +410,19 @@ SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, CoreMedia, kCMFormatDescriptionExten
 #define kCMFormatDescriptionExtension_ProjectionKind get_CoreMedia_kCMFormatDescriptionExtension_ProjectionKind()
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, CoreMedia, kCMFormatDescriptionProjectionKind_Rectilinear, CFStringRef)
 #define kCMFormatDescriptionProjectionKind_Rectilinear get_CoreMedia_kCMFormatDescriptionProjectionKind_Rectilinear()
+
+namespace PAL {
+
+inline std::span<uint8_t> CMBlockBufferGetDataSpan(CMBlockBufferRef theBuffer, size_t offset = 0)
+{
+    char* data = nullptr;
+    size_t lengthAtOffset = 0;
+    if (auto error = PAL::CMBlockBufferGetDataPointer(theBuffer, offset, &lengthAtOffset, nullptr, &data))
+        return { };
+    return unsafeMakeSpan(byteCast<uint8_t>(data), lengthAtOffset);
+}
+
+} // namespace PAL
 
 #if PLATFORM(MAC)
 

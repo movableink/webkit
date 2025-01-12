@@ -540,11 +540,7 @@ Ref<SharedBuffer> sharedBufferFromCMBlockBuffer(CMBlockBufferRef blockBuffer)
         [blockBuffer = ensureContiguousBlockBuffer(blockBuffer)]() -> std::span<const uint8_t> {
             if (!blockBuffer)
                 return { };
-            size_t lengthAtOffset = 0;
-            char* data = nullptr;
-            if (auto status = PAL::CMBlockBufferGetDataPointer(blockBuffer.get(), 0, &lengthAtOffset, nullptr, &data))
-                return { };
-            return unsafeMakeSpan(reinterpret_cast<uint8_t*>(data), lengthAtOffset);
+            return PAL::CMBlockBufferGetDataSpan(blockBuffer.get());
         }
     });
 }

@@ -418,11 +418,10 @@ Ref<WebCoreDecompressionSession::DecodingPromise> WebCoreDecompressionSession::d
                         return DecodingPromise::createAndReject(status);
                     buffer = adoptCF(contiguousBuffer);
                 }
-                auto size = PAL::CMBlockBufferGetDataLength(buffer.get());
-                char* data = nullptr;
-                if (auto status = PAL::CMBlockBufferGetDataPointer(buffer.get(), 0, nullptr, nullptr, &data); status != noErr)
-                    return DecodingPromise::createAndReject(status);
-                promises.append(videoDecoder->decode({ { byteCast<uint8_t>(data), size }, true, presentationTimestamp.toMicroseconds(), 0 }));
+                auto data = PAL::CMBlockBufferGetDataSpan(buffer.get());
+                if (!data.data())
+                    return DecodingPromise::createAndReject(-1);
+                promises.append(videoDecoder->decode({ data, true, presentationTimestamp.toMicroseconds(), 0 }));
             }
             DecodingPromise::Producer producer;
             auto promise = producer.promise();

@@ -174,6 +174,14 @@ void add(std::span<const double> inputVector1, std::span<const double> inputVect
     vDSP_vaddD(inputVector1.data(), 1, inputVector2.data(), 1, outputVector.data(), 1, inputVector1.size());
 }
 
+float dotProduct(std::span<const float> inputVector1, std::span<const float> inputVector2)
+{
+    RELEASE_ASSERT(inputVector1.size() == inputVector2.size());
+    float result = 0;
+    vDSP_dotpr(inputVector1.data(), 1, inputVector2.data(), 1, &result, inputVector1.size());
+    return result;
+}
+
 #else
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
@@ -927,6 +935,15 @@ void add(std::span<const double> inputVector1, std::span<const double> inputVect
     RELEASE_ASSERT(outputVector.size() >= inputVector1.size());
     for (size_t i = 0; i < inputVector1.size(); ++i)
         outputVector[i] = inputVector1[i] + inputVector2[i];
+}
+
+float dotProduct(std::span<const float> inputVector1, std::span<const float> inputVector2)
+{
+    RELEASE_ASSERT(inputVector1.size() == inputVector2.size());
+    float result = 0;
+    for (size_t i = 0; i < inputVector1.size(); ++i)
+        result += inputVector1[i] * inputVector2[i];
+    return result;
 }
 
 #endif // USE(ACCELERATE)

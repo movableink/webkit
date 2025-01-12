@@ -138,14 +138,14 @@ RetainPtr<CMBlockBufferRef> WebAudioBufferList::setSampleCountWithBlockBuffer(si
     }
     RetainPtr block = adoptCF(blockBuffer);
 
-    char* data = { };
-    if (auto error = PAL::CMBlockBufferGetDataPointer(blockBuffer, 0, nullptr, nullptr, &data)) {
-        RELEASE_LOG_ERROR(Media, "WebAudioBufferList::setSampleCountWithBlockBuffer CMBlockBufferGetDataPointer failed with: %d", static_cast<int>(error));
+    auto data = PAL::CMBlockBufferGetDataSpan(blockBuffer);
+    if (!data.data()) {
+        RELEASE_LOG_ERROR(Media, "WebAudioBufferList::setSampleCountWithBlockBuffer CMBlockBufferGetDataSpan failed.");
         return { };
     }
     m_blockBuffer = WTFMove(block);
 
-    initializeList(unsafeMakeSpan(reinterpret_cast<uint8_t*>(data), bufferSizes->second), bufferSizes->first);
+    initializeList(data.first(bufferSizes->second), bufferSizes->first);
 
     return m_blockBuffer;
 }
