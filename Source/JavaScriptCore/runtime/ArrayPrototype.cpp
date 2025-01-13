@@ -1267,14 +1267,25 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSplice, (JSGlobalObject* globalObject, Ca
 
     uint64_t actualDeleteCount = length - actualStart;
     if (callFrame->argumentCount() > 1) {
-        double deleteCount = callFrame->uncheckedArgument(1).toIntegerOrInfinity(globalObject);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
-        if (deleteCount < 0)
-            actualDeleteCount = 0;
-        else if (deleteCount > length - actualStart)
-            actualDeleteCount = length - actualStart;
-        else
-            actualDeleteCount = static_cast<uint64_t>(deleteCount);
+        JSValue deleteCountValue = callFrame->uncheckedArgument(1);
+        if (LIKELY(deleteCountValue.isInt32())) {
+            int32_t deleteCount = deleteCountValue.asInt32();
+            if (deleteCount < 0)
+                actualDeleteCount = 0;
+            else if (static_cast<uint64_t>(deleteCount) > length - actualStart)
+                actualDeleteCount = length - actualStart;
+            else
+                actualDeleteCount = static_cast<uint64_t>(deleteCount);
+        } else {
+            double deleteCount = deleteCountValue.toIntegerOrInfinity(globalObject);
+            RETURN_IF_EXCEPTION(scope, encodedJSValue());
+            if (deleteCount < 0)
+                actualDeleteCount = 0;
+            else if (deleteCount > length - actualStart)
+                actualDeleteCount = length - actualStart;
+            else
+                actualDeleteCount = static_cast<uint64_t>(deleteCount);
+        }
     }
     unsigned itemCount = std::max<int>(callFrame->argumentCount() - 2, 0);
     if (UNLIKELY(length - actualDeleteCount + itemCount > static_cast<uint64_t>(maxSafeInteger())))
