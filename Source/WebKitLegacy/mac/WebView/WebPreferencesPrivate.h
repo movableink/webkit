@@ -245,10 +245,6 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 
 @property (nonatomic) BOOL storageTrackerEnabled;
 @property (nonatomic) unsigned audioSessionCategoryOverride;
-// WARNING: this affect network performance. This must not be enabled for production use.
-// Enabling this makes WebCore reports the network data usage.
-// This is a global setting.
-@property (nonatomic) BOOL networkDataUsageTrackingEnabled;
 @property (nonatomic) NSString *networkInterfaceName;
 @property (nonatomic, setter=_setMinimumZoomFontSize:) float _minimumZoomFontSize;
 @property (nonatomic) BOOL mediaPlaybackAllowsAirPlay;
@@ -357,6 +353,10 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL offlineWebApplicationCacheEnabled;
 @property (nonatomic) int64_t applicationCacheTotalQuota;
 @property (nonatomic) int64_t applicationCacheDefaultOriginQuota;
+
+#if TARGET_OS_IPHONE
+@property (nonatomic) BOOL networkDataUsageTrackingEnabled;
+#endif
 
 - (void)setDiskImageCacheEnabled:(BOOL)enabled;
 

@@ -206,7 +206,6 @@
 #define WebKitInterpolationQualityPreferenceKey @"WebKitInterpolationQualityPreferenceKey"
 #define WebKitPasswordEchoEnabledPreferenceKey @"WebKitEnablePasswordEchoPreferenceKey"
 #define WebKitPasswordEchoDurationPreferenceKey @"WebKitPasswordEchoDurationPreferenceKey"
-#define WebKitNetworkDataUsageTrackingEnabledPreferenceKey @"WebKitNetworkDataUsageTrackingEnabledPreferenceKey"
 #define WebKitNetworkInterfaceNamePreferenceKey @"WebKitNetworkInterfaceNamePreferenceKey"
 #define WebKitQuickLookDocumentSavingPreferenceKey @"WebKitQuickLookDocumentSavingPreferenceKey"
 #endif
@@ -275,3 +274,7 @@
 #define WebKitIntersectionObserverEnabledPreferenceKey @"WebKitIntersectionObserverEnabled"
 #define WebKitSyntheticEditingCommandsEnabledPreferenceKey @"WebKitSyntheticEditingCommandsEnabled"
 #define WebKitServerTimingEnabledPreferenceKey @"WebKitServerTimingEnabled"
+
+#if TARGET_OS_IPHONE
+#define WebKitNetworkDataUsageTrackingEnabledPreferenceKey @"WebKitNetworkDataUsageTrackingEnabledPreferenceKey"
+#endif

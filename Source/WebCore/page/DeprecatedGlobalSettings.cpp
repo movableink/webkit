@@ -103,11 +103,6 @@ unsigned DeprecatedGlobalSettings::audioSessionCategoryOverride()
     return static_cast<unsigned>(AudioSession::sharedSession().categoryOverride());
 }
 
-void DeprecatedGlobalSettings::setNetworkDataUsageTrackingEnabled(bool trackingEnabled)
-{
-    shared().m_networkDataUsageTrackingEnabled = trackingEnabled;
-}
-
 void DeprecatedGlobalSettings::setNetworkInterfaceName(const String& networkInterfaceName)
 {
     shared().m_networkInterfaceName = networkInterfaceName;

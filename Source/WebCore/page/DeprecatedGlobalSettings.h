@@ -59,9 +59,6 @@ public:
     WEBCORE_EXPORT static void setAudioSessionCategoryOverride(unsigned);
     static unsigned audioSessionCategoryOverride();
 
-    WEBCORE_EXPORT static void setNetworkDataUsageTrackingEnabled(bool);
-    static bool networkDataUsageTrackingEnabled() { return shared().m_networkDataUsageTrackingEnabled; }
-
     WEBCORE_EXPORT static void setNetworkInterfaceName(const String&);
     static const String& networkInterfaceName() { return shared().m_networkInterfaceName; }
 
@@ -141,7 +138,6 @@ private:
     bool m_usesOverlayScrollbars { false };
 
 #if PLATFORM(IOS_FAMILY)
-    bool m_networkDataUsageTrackingEnabled { false };
     String m_networkInterfaceName;
     bool m_shouldOptOutOfNetworkStateObservation { false };
     bool m_disableScreenSizeOverride { false };

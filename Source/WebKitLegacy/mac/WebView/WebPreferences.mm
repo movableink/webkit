@@ -423,7 +423,6 @@ public:
         @(static_cast<unsigned>(AudioSession::CategoryType::None)), WebKitAudioSessionCategoryOverride,
         @NO, WebKitAlwaysRequestGeolocationPermissionPreferenceKey,
         @(static_cast<int>(InterpolationQuality::Low)), WebKitInterpolationQualityPreferenceKey,
-        @NO, WebKitNetworkDataUsageTrackingEnabledPreferenceKey,
         @"", WebKitNetworkInterfaceNamePreferenceKey,
 #endif
         nil];
@@ -1961,16 +1960,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setUnsignedIntValue:override forKey:WebKitAudioSessionCategoryOverride];
 }
 
-- (BOOL)networkDataUsageTrackingEnabled
-{
-    return [self _boolValueForKey:WebKitNetworkDataUsageTrackingEnabledPreferenceKey];
-}
-
-- (void)setNetworkDataUsageTrackingEnabled:(BOOL)trackingEnabled
-{
-    [self _setBoolValue:trackingEnabled forKey:WebKitNetworkDataUsageTrackingEnabledPreferenceKey];
-}
-
 - (NSString *)networkInterfaceName
 {
     return [self _stringValueForKey:WebKitNetworkInterfaceNamePreferenceKey];
@@ -3341,5 +3330,15 @@ static RetainPtr<NSString>& classIBCreatorID()
 {
 }
 
+#if PLATFORM(IOS_FAMILY)
+- (BOOL)networkDataUsageTrackingEnabled
+{
+    return NO;
+}
+
+- (void)setNetworkDataUsageTrackingEnabled:(BOOL)trackingEnabled
+{
+}
+#endif // PLATFORM(IOS_FAMILY)
 
 @end
