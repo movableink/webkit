@@ -1939,7 +1939,7 @@ webkit.org/b/285033 [ Ventura+ ] http/tests/download/sandboxed-iframe-download-n
 
 webkit.org/b/285627 [ Ventura+ ] http/tests/navigation/forward-and-cancel.html [ Pass Crash ]
 
-# webkit.org/b/288449 [ MacOS iOS ] 3x imported/w3c/web-platform-tests/navigation-api/navigation are consistent failures 
+# webkit.org/b/288409 [ MacOS iOS ] 3x imported/w3c/web-platform-tests/navigation-api/navigation are consistent failures 
 imported/w3c/web-platform-tests/navigation-api/navigation-activation/activation-traverse-not-in-entries.html [ Failure ]
 imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-forward.html [ Failure ]
 imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-traverseTo-forward-multiple.html [ Failure ]
