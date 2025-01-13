@@ -131,7 +131,7 @@ private:
     virtual String typeAttributeValue() const = 0;
     virtual String languageAttributeValue() const = 0;
     virtual ReferrerPolicy referrerPolicy() const = 0;
-    virtual RequestPriority fetchPriorityHint() const { return RequestPriority::Auto; }
+    virtual RequestPriority fetchPriority() const { return RequestPriority::Auto; }
 
     virtual bool isScriptPreventedByAttributes() const { return false; }
 

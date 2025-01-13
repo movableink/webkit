@@ -292,7 +292,7 @@ void LinkHeader::setValue(LinkParameterName name, String&& value)
         m_referrerPolicy = WTFMove(value);
         break;
     case LinkParameterFetchPriority:
-        m_fetchPriorityHint = WTFMove(value);
+        m_fetchPriority = WTFMove(value);
         break;
     case LinkParameterTitle:
     case LinkParameterRev:

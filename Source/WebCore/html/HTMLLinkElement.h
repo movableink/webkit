@@ -96,7 +96,7 @@ public:
 
     void setFetchPriorityForBindings(const AtomString&);
     String fetchPriorityForBindings() const;
-    RequestPriority fetchPriorityHint() const;
+    RequestPriority fetchPriority() const;
 
     void processInternalResourceLink(HTMLAnchorElement* = nullptr);
 

@@ -70,7 +70,7 @@ public:
 
     void setFetchPriorityForBindings(const AtomString&);
     String fetchPriorityForBindings() const;
-    RequestPriority fetchPriorityHint() const override;
+    RequestPriority fetchPriority() const override;
 
     WEBCORE_EXPORT DOMTokenList& blocking();
 

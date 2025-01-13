@@ -315,7 +315,7 @@ void HTMLLinkElement::process()
         attributeWithoutSynchronization(imagesizesAttr),
         nonce(),
         referrerPolicy(),
-        fetchPriorityHint(),
+        fetchPriority(),
     };
 
     m_linkLoader.loadLink(params, document);
@@ -376,7 +376,7 @@ void HTMLLinkElement::process()
             options.contentSecurityPolicyImposition = ContentSecurityPolicyImposition::SkipPolicyCheck;
         options.integrity = m_integrityMetadataForPendingSheetRequest;
         options.referrerPolicy = params.referrerPolicy;
-        options.fetchPriorityHint = fetchPriorityHint();
+        options.fetchPriority = fetchPriority();
 
         auto request = createPotentialAccessControlRequest(m_url, WTFMove(options), document, crossOrigin());
         request.setPriority(WTFMove(priority));
@@ -825,10 +825,10 @@ void HTMLLinkElement::setFetchPriorityForBindings(const AtomString& value)
 
 String HTMLLinkElement::fetchPriorityForBindings() const
 {
-    return convertEnumerationToString(fetchPriorityHint());
+    return convertEnumerationToString(fetchPriority());
 }
 
-RequestPriority HTMLLinkElement::fetchPriorityHint() const
+RequestPriority HTMLLinkElement::fetchPriority() const
 {
     return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
 }

@@ -1327,7 +1327,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
             }
 
             if (forPreload == ForPreload::No)
-                resource->setLoadPriority(request.priority(), request.fetchPriorityHint());
+                resource->setLoadPriority(request.priority(), request.fetchPriority());
         }
         break;
     }
