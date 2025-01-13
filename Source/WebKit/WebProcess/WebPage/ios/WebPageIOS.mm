@@ -992,8 +992,12 @@ void WebPage::completeSyntheticClick(Node& nodeRespondingToClick, const WebCore:
         auto& document = nodeRespondingToClick.document();
         // Dispatch mouseOut to dismiss tooltip content when tapping on the control bar buttons (cc, settings).
         if (document.quirks().needsYouTubeMouseOutQuirk()) {
-            if (auto* frame = document.frame())
-                frame->eventHandler().dispatchSyntheticMouseOut(PlatformMouseEvent(roundedAdjustedPoint, roundedAdjustedPoint, MouseButton::Left, PlatformEvent::Type::NoType, 0, platformModifiers, WallTime::now(), 0, WebCore::SyntheticClickType::NoTap, pointerId));
+            if (RefPtr frame = document.frame()) {
+                PlatformMouseEvent event { roundedAdjustedPoint, roundedAdjustedPoint, MouseButton::Left, PlatformEvent::Type::NoType, 0, platformModifiers, WallTime::now(), 0, WebCore::SyntheticClickType::NoTap, pointerId };
+                if (!nodeRespondingToClick.isConnected())
+                    frame->eventHandler().dispatchSyntheticMouseMove(event);
+                frame->eventHandler().dispatchSyntheticMouseOut(event);
+            }
         }
     }
 
