@@ -26,7 +26,7 @@
 #pragma once
 
 #include "CSSNumericValue.h"
-#include "Length.h"
+#include "CSSPrimitiveValue.h"
 #include "ScrollTimeline.h"
 #include "ViewTimelineOptions.h"
 #include <wtf/Ref.h>
@@ -50,7 +50,7 @@ struct ViewTimelineInsets {
 
 class ViewTimeline final : public ScrollTimeline {
 public:
-    static Ref<ViewTimeline> create(ViewTimelineOptions&& = { });
+    static ExceptionOr<Ref<ViewTimeline>> create(Document&, ViewTimelineOptions&& = { });
     static Ref<ViewTimeline> create(const AtomString&, ScrollAxis, ViewTimelineInsets&&);
 
     const Element* subject() const { return m_subject.get(); }
@@ -73,7 +73,7 @@ private:
     ScrollTimeline::Data computeTimelineData() const final;
     std::pair<WebAnimationTime, WebAnimationTime> intervalForAttachmentRange(const TimelineRange&) const final;
 
-    explicit ViewTimeline(ViewTimelineOptions&& = { });
+    explicit ViewTimeline(ScrollAxis);
     explicit ViewTimeline(const AtomString&, ScrollAxis, ViewTimelineInsets&&);
 
     bool isViewTimeline() const final { return true; }
@@ -89,7 +89,15 @@ private:
 
     void cacheCurrentTime();
 
+    struct SpecifiedViewTimelineInsets {
+        RefPtr<CSSPrimitiveValue> start;
+        RefPtr<CSSPrimitiveValue> end;
+    };
+
+    ExceptionOr<SpecifiedViewTimelineInsets> validateSpecifiedInsets(const ViewTimelineInsetValue, const Document&);
+
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_subject;
+    std::optional<SpecifiedViewTimelineInsets> m_specifiedInsets;
     ViewTimelineInsets m_insets;
     CurrentTimeData m_cachedCurrentTimeData { };
 };

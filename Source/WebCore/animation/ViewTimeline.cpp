@@ -43,9 +43,28 @@
 
 namespace WebCore {
 
-Ref<ViewTimeline> ViewTimeline::create(ViewTimelineOptions&& options)
+static bool isValidInset(RefPtr<CSSPrimitiveValue>& inset)
 {
-    return adoptRef(*new ViewTimeline(WTFMove(options)));
+    return !inset || inset->valueID() == CSSValueAuto || inset->isLength() || inset->isPercentage();
+}
+
+ExceptionOr<Ref<ViewTimeline>> ViewTimeline::create(Document& document, ViewTimelineOptions&& options)
+{
+    auto viewTimeline = adoptRef(*new ViewTimeline(options.axis));
+
+    auto specifiedInsetsOrException = viewTimeline->validateSpecifiedInsets(options.inset, document);
+    if (specifiedInsetsOrException.hasException())
+        return specifiedInsetsOrException.releaseException();
+
+    auto specifiedInsets = specifiedInsetsOrException.releaseReturnValue();
+    if (!isValidInset(specifiedInsets.start) || !isValidInset(specifiedInsets.end))
+        return Exception { ExceptionCode::TypeError };
+
+    viewTimeline->m_specifiedInsets = WTFMove(specifiedInsets);
+    viewTimeline->setSubject(options.subject.get());
+    viewTimeline->cacheCurrentTime();
+
+    return viewTimeline;
 }
 
 Ref<ViewTimeline> ViewTimeline::create(const AtomString& name, ScrollAxis axis, ViewTimelineInsets&& insets)
@@ -53,65 +72,87 @@ Ref<ViewTimeline> ViewTimeline::create(const AtomString& name, ScrollAxis axis, 
     return adoptRef(*new ViewTimeline(name, axis, WTFMove(insets)));
 }
 
-static std::optional<Length> lengthForInset(std::variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>> inset)
+ViewTimeline::ViewTimeline(ScrollAxis axis)
+    : ScrollTimeline(nullAtom(), axis)
 {
-    // TODO: Need to test this
-    if (auto* numericInset = std::get_if<RefPtr<CSSNumericValue>>(&inset)) {
-        if (RefPtr insetValue = dynamicDowncast<CSSUnitValue>(*numericInset)) {
-            if (auto length = insetValue->convertTo(CSSUnitType::CSS_PX))
-                return Length(length->value(), LengthType::Fixed);
-            return { };
-        }
-    }
-    ASSERT(std::holds_alternative<RefPtr<CSSKeywordValue>>(inset));
-    return { };
-}
-
-static ViewTimelineInsets insetsFromOptions(const std::variant<String, Vector<std::variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>>> inset, RefPtr<Element> element)
-{
-    if (auto* insetString = std::get_if<String>(&inset)) {
-        if (insetString->isEmpty())
-            return { };
-        CSSTokenizer tokenizer(*insetString);
-        auto tokenRange = tokenizer.tokenRange();
-        tokenRange.consumeWhitespace();
-        auto consumedInset = CSSPropertyParserHelpers::consumeViewTimelineInsetListItem(tokenRange, element->protectedDocument()->cssParserContext());
-        if (auto insetPair = dynamicDowncast<CSSValuePair>(consumedInset)) {
-            return {
-                SingleTimelineRange::lengthForCSSValue(dynamicDowncast<CSSPrimitiveValue>(insetPair->protectedFirst()), element),
-                SingleTimelineRange::lengthForCSSValue(dynamicDowncast<CSSPrimitiveValue>(insetPair->protectedSecond()), element)
-            };
-        }
-        return {
-            SingleTimelineRange::lengthForCSSValue(dynamicDowncast<CSSPrimitiveValue>(consumedInset), element),
-            std::nullopt
-        };
-    }
-    auto insetList = std::get<Vector<std::variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>>>(inset);
-
-    if (!insetList.size())
-        return { };
-    if (insetList.size() == 2)
-        return { lengthForInset(insetList.at(0)), lengthForInset(insetList.at(1)) };
-    return { lengthForInset(insetList.at(0)), std::nullopt };
-}
-
-ViewTimeline::ViewTimeline(ViewTimelineOptions&& options)
-    : ScrollTimeline(nullAtom(), options.axis)
-    , m_subject(WTFMove(options.subject))
-{
-    if (m_subject) {
-        auto document = m_subject->protectedDocument();
-        document->ensureTimelinesController().addTimeline(*this);
-        m_insets = insetsFromOptions(options.inset, RefPtr { m_subject.get() });
-        cacheCurrentTime();
-    }
 }
 
 ViewTimeline::ViewTimeline(const AtomString& name, ScrollAxis axis, ViewTimelineInsets&& insets)
     : ScrollTimeline(name, axis)
     , m_insets(WTFMove(insets))
 {
+}
+
+ExceptionOr<ViewTimeline::SpecifiedViewTimelineInsets> ViewTimeline::validateSpecifiedInsets(const ViewTimelineInsetValue inset, const Document& document)
+{
+    // https://drafts.csswg.org/scroll-animations-1/#dom-viewtimeline-viewtimeline
+
+    // FIXME: note that we use CSSKeywordish instead of CSSKeywordValue to match Chrome,
+    // issue being tracked at https://github.com/w3c/csswg-drafts/issues/11477.
+
+    // If a DOMString value is provided as an inset, parse it as a <'view-timeline-inset'> value;
+    if (auto* insetString = std::get_if<String>(&inset)) {
+        if (insetString->isEmpty())
+            return Exception { ExceptionCode::TypeError };
+        CSSTokenizer tokenizer(*insetString);
+        auto tokenRange = tokenizer.tokenRange();
+        tokenRange.consumeWhitespace();
+        auto consumedInset = CSSPropertyParserHelpers::consumeViewTimelineInsetListItem(tokenRange, Ref { document }->cssParserContext());
+        if (!consumedInset)
+            return Exception { ExceptionCode::TypeError };
+
+        if (auto insetPair = dynamicDowncast<CSSValuePair>(consumedInset)) {
+            return { {
+                dynamicDowncast<CSSPrimitiveValue>(insetPair->protectedFirst()),
+                dynamicDowncast<CSSPrimitiveValue>(insetPair->protectedSecond())
+            } };
+        } else
+            return { { dynamicDowncast<CSSPrimitiveValue>(consumedInset), nullptr } };
+    }
+
+    auto cssPrimitiveValueForCSSNumericValue = [&](RefPtr<CSSNumericValue> numericValue) -> ExceptionOr<RefPtr<CSSPrimitiveValue>> {
+        if (RefPtr insetValue = dynamicDowncast<CSSUnitValue>(*numericValue))
+            return dynamicDowncast<CSSPrimitiveValue>(insetValue->toCSSValue());
+        return nullptr;
+    };
+
+    auto cssPrimitiveValueForCSSKeywordValue = [&](RefPtr<CSSKeywordValue> keywordValue) -> ExceptionOr<RefPtr<CSSPrimitiveValue>> {
+        if (keywordValue->value() != "auto"_s)
+            return Exception { ExceptionCode::TypeError };
+        return nullptr;
+    };
+
+    auto cssPrimitiveValueForIndividualInset = [&](ViewTimelineIndividualInset individualInset) -> ExceptionOr<RefPtr<CSSPrimitiveValue>> {
+        if (auto* numericInset = std::get_if<RefPtr<CSSNumericValue>>(&individualInset))
+            return cssPrimitiveValueForCSSNumericValue(*numericInset);
+        if (auto* stringInset = std::get_if<String>(&individualInset))
+            return cssPrimitiveValueForCSSKeywordValue(CSSKeywordValue::rectifyKeywordish(*stringInset));
+        ASSERT(std::holds_alternative<RefPtr<CSSKeywordValue>>(individualInset));
+        return cssPrimitiveValueForCSSKeywordValue(CSSKeywordValue::rectifyKeywordish(std::get<RefPtr<CSSKeywordValue>>(individualInset)));
+    };
+
+    // if a sequence is provided, the first value represents the start inset and the second value represents the end inset.
+    // If the sequence has only one value, it is duplicated. If it has zero values or more than two values, or if it contains
+    // a CSSKeywordValue whose value is not "auto", throw a TypeError.
+    auto insetList = std::get<Vector<ViewTimelineIndividualInset>>(inset);
+    auto numberOfInsets = insetList.size();
+
+    if (!numberOfInsets || numberOfInsets > 2)
+        return Exception { ExceptionCode::TypeError };
+
+    auto startInsetOrException = cssPrimitiveValueForIndividualInset(insetList.at(0));
+    if (startInsetOrException.hasException())
+        return startInsetOrException.releaseException();
+    auto startInset = startInsetOrException.releaseReturnValue();
+
+    if (numberOfInsets == 1)
+        return { { startInset, startInset } };
+
+    auto endInsetOrException = cssPrimitiveValueForIndividualInset(insetList.at(1));
+    if (endInsetOrException.hasException())
+        return endInsetOrException.releaseException();
+    auto endInset = endInsetOrException.releaseReturnValue();
+    return { { startInset, endInset } };
 }
 
 void ViewTimeline::setSubject(const Element* subject)
@@ -194,8 +235,27 @@ void ViewTimeline::cacheCurrentTime()
 
         auto subjectSize = scrollDirection->isVertical ? subjectBounds.height() : subjectBounds.width();
 
-        auto insetStartLength = m_insets.start.value_or(Length());
-        auto insetEndLength = m_insets.end.value_or(insetStartLength);
+        if (m_specifiedInsets) {
+            RefPtr subject { m_subject.get() };
+            auto computedInset = [&](const RefPtr<CSSPrimitiveValue>& specifiedInset) -> std::optional<Length> {
+                if (specifiedInset)
+                    return SingleTimelineRange::lengthForCSSValue(specifiedInset, subject);
+                return { };
+            };
+            m_insets = { computedInset(m_specifiedInsets->start), computedInset(m_specifiedInsets->end) };
+        }
+
+        enum class PaddingEdge : bool { Start, End };
+        auto scrollPadding = [&](PaddingEdge edge) {
+            auto& style = sourceRenderer->style();
+            if (edge == PaddingEdge::Start)
+                return scrollDirection->isVertical ? style.scrollPaddingTop() : style.scrollPaddingLeft();
+            return scrollDirection->isVertical ? style.scrollPaddingBottom() : style.scrollPaddingRight();
+        };
+
+        auto hasAutoStartInset = !m_insets.start;
+        auto insetStartLength = hasAutoStartInset ? scrollPadding(PaddingEdge::Start) : *m_insets.start;
+        auto insetEndLength = m_insets.end.value_or(hasAutoStartInset ? scrollPadding(PaddingEdge::End) : insetStartLength);
         auto insetStart = floatValueForOffset(insetStartLength, scrollContainerSize);
         auto insetEnd = floatValueForOffset(insetEndLength, scrollContainerSize);
 
