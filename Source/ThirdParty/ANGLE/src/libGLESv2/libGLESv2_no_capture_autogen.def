@@ -1188,6 +1188,8 @@ EXPORTS
     ; GL_OES_query_matrix
     glQueryMatrixxOES
 
+    ; GL_OES_required_internalformat
+
     ; GL_OES_rgb8_rgba8
 
     ; GL_OES_sample_shading
@@ -1440,6 +1442,9 @@ EXPORTS
     EGL_CreatePlatformPixmapSurfaceEXT
     EGL_CreatePlatformWindowSurfaceEXT
     EGL_GetPlatformDisplayEXT
+
+    ; EGL_EXT_surface_compression
+    EGL_QuerySupportedCompressionRatesEXT
 
     ; EGL_KHR_debug
     EGL_DebugMessageControlKHR

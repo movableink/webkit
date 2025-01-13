@@ -7,15 +7,139 @@
 #include "compiler/translator/wgsl/OutputUniformBlocks.h"
 
 #include "angle_gl.h"
+#include "common/mathutil.h"
 #include "common/utilities.h"
+#include "compiler/translator/BaseTypes.h"
 #include "compiler/translator/Compiler.h"
+#include "compiler/translator/ImmutableStringBuilder.h"
 #include "compiler/translator/InfoSink.h"
 #include "compiler/translator/IntermNode.h"
+#include "compiler/translator/SymbolUniqueId.h"
+#include "compiler/translator/tree_util/IntermTraverse.h"
 #include "compiler/translator/util.h"
 #include "compiler/translator/wgsl/Utils.h"
 
 namespace sh
 {
+
+namespace
+{
+
+// Traverses the AST and finds all structs that are used in the uniform address space (see the
+// UniformBlockMetadata struct).
+class FindUniformAddressSpaceStructs : public TIntermTraverser
+{
+  public:
+    FindUniformAddressSpaceStructs(UniformBlockMetadata *uniformBlockMetadata)
+        : TIntermTraverser(true, false, false), mUniformBlockMetadata(uniformBlockMetadata)
+    {}
+
+    ~FindUniformAddressSpaceStructs() override = default;
+
+    bool visitDeclaration(Visit visit, TIntermDeclaration *node) override
+    {
+        const TIntermSequence &sequence = *(node->getSequence());
+
+        TIntermTyped *variable = sequence.front()->getAsTyped();
+        const TType &type      = variable->getType();
+
+        // TODO(anglebug.com/376553328): should eventually ASSERT that there are no default uniforms
+        // here.
+        if (type.getQualifier() == EvqUniform)
+        {
+            recordTypesUsedInUniformAddressSpace(&type);
+        }
+
+        return true;
+    }
+
+  private:
+    // Recurses through the tree of types referred to be `type` (which is used in the uniform
+    // address space) and fills in the `mUniformBlockMetadata` struct appropriately.
+    void recordTypesUsedInUniformAddressSpace(const TType *type)
+    {
+        if (type->isArray())
+        {
+            TType innerType = *type;
+            innerType.toArrayBaseType();
+            recordTypesUsedInUniformAddressSpace(&innerType);
+        }
+        else if (type->getStruct() != nullptr)
+        {
+            mUniformBlockMetadata->structsInUniformAddressSpace.insert(
+                type->getStruct()->uniqueId().get());
+            // Recurse into the types of the fields of this struct type.
+            for (TField *const field : type->getStruct()->fields())
+            {
+                recordTypesUsedInUniformAddressSpace(field->type());
+            }
+        }
+    }
+
+    UniformBlockMetadata *const mUniformBlockMetadata;
+};
+
+}  // namespace
+
+bool RecordUniformBlockMetadata(TIntermBlock *root, UniformBlockMetadata &outMetadata)
+{
+    FindUniformAddressSpaceStructs traverser(&outMetadata);
+    root->traverse(&traverser);
+    return true;
+}
+
+bool OutputUniformWrapperStructsAndConversions(
+    TInfoSinkBase &output,
+    const WGSLGenerationMetadataForUniforms &wgslGenerationMetadataForUniforms)
+{
+    for (const TType &type : wgslGenerationMetadataForUniforms.arrayElementTypesInUniforms)
+    {
+        // Structs don't need wrapper structs.
+        ASSERT(type.getStruct() == nullptr);
+        // Multidimensional arrays not currently supported in uniforms
+        ASSERT(!type.isArray());
+
+        output << "struct " << MakeUniformWrapperStructName(&type) << "\n{\n";
+        output << "  @align(16) " << kWrappedStructFieldName << " : ";
+        WriteWgslType(output, type, {});
+        output << "\n};\n";
+    }
+
+    for (const TType &type :
+         wgslGenerationMetadataForUniforms.arrayElementTypesThatNeedUnwrappingConversions)
+    {
+        // Should be a subset of the types that have had wrapper structs generated above, otherwise
+        // it's impossible to unwrap them!
+        TType innerType = type;
+        innerType.toArrayElementType();
+        ASSERT(wgslGenerationMetadataForUniforms.arrayElementTypesInUniforms.count(innerType) != 0);
+
+        // This could take ptr<uniform, typeName>, with the unrestricted_pointer_parameters
+        // extension. This is probably fine.
+        output << "fn " << MakeUnwrappingArrayConversionFunctionName(&type) << "(wrappedArr : ";
+        WriteWgslType(output, type, {WgslAddressSpace::Uniform});
+        output << ") -> ";
+        WriteWgslType(output, type, {WgslAddressSpace::NonUniform});
+        output << "\n{\n";
+        output << "  var retVal : ";
+        WriteWgslType(output, type, {WgslAddressSpace::NonUniform});
+        output << ";\n";
+        output << "  for (var i : u32 = 0; i < " << type.getOutermostArraySize() << "; i++) {;\n";
+        output << "    retVal[i] = wrappedArr[i]." << kWrappedStructFieldName << ";\n";
+        output << "  }\n";
+        output << "  return retVal;\n";
+        output << "}\n";
+    }
+
+    return true;
+}
+
+ImmutableString MakeUnwrappingArrayConversionFunctionName(const TType *type)
+{
+    return BuildConcatenatedImmutableString("ANGLE_Convert_", MakeUniformWrapperStructName(type),
+                                            "_ElementsTo_", type->getBuiltInTypeNameString(),
+                                            "_Elements");
+}
 
 bool OutputUniformBlocks(TCompiler *compiler, TIntermBlock *root)
 {
@@ -60,7 +184,7 @@ bool OutputUniformBlocks(TCompiler *compiler, TIntermBlock *root)
 
         TIntermDeclaration *declNode = globalVars.find(shaderVar.name)->second;
         const TVariable *astVar      = &ViewDeclaration(*declNode).symbol.variable();
-        WriteWgslType(output, astVar->getType());
+        WriteWgslType(output, astVar->getType(), {WgslAddressSpace::Uniform});
 
         output << ",\n";
     }

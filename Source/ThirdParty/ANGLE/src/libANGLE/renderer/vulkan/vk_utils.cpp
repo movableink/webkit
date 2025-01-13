@@ -627,7 +627,7 @@ angle::Result InitShaderModule(Context *context,
     createInfo.codeSize                 = shaderCodeSize;
     createInfo.pCode                    = shaderCode;
 
-    ShaderModulePtr newShaderModule = ShaderModulePtr::MakeShared();
+    ShaderModulePtr newShaderModule = ShaderModulePtr::MakeShared(context->getDevice());
     ANGLE_VK_TRY(context, newShaderModule->init(context->getDevice(), createInfo));
 
     *shaderModulePtr = std::move(newShaderModule);
@@ -754,7 +754,7 @@ void GarbageObject::destroy(Renderer *renderer)
             break;
     }
 
-    renderer->onDeallocateHandle(mHandleType);
+    renderer->onDeallocateHandle(mHandleType, 1);
 }
 
 void MakeDebugUtilsLabel(GLenum source, const char *marker, VkDebugUtilsLabelEXT *label)
@@ -1306,12 +1306,6 @@ VkSamplerAddressMode GetSamplerAddressMode(const GLenum wrap)
     }
 }
 
-VkRect2D GetRect(const gl::Rectangle &source)
-{
-    return {{source.x, source.y},
-            {static_cast<uint32_t>(source.width), static_cast<uint32_t>(source.height)}};
-}
-
 VkPrimitiveTopology GetPrimitiveTopology(gl::PrimitiveMode mode)
 {
     switch (mode)
@@ -1708,6 +1702,46 @@ VkImageTiling GetTilingMode(gl::TilingMode tilingMode)
     }
 }
 
+VkImageCompressionFixedRateFlagsEXT ConvertEGLFixedRateToVkFixedRate(
+    const EGLenum eglCompressionRate,
+    const angle::FormatID actualFormatID)
+{
+    switch (eglCompressionRate)
+    {
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_NONE_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_DEFAULT_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_1BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_1BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_2BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_2BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_3BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_3BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_4BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_4BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_5BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_5BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_6BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_6BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_7BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_7BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_8BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_8BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_9BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_9BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_10BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_10BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_11BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_11BPC_BIT_EXT;
+        case EGL_SURFACE_COMPRESSION_FIXED_RATE_12BPC_EXT:
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_12BPC_BIT_EXT;
+        default:
+            UNREACHABLE();
+            return VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT;
+    }
+}
+
 }  // namespace gl_vk
 
 namespace vk_gl
@@ -1788,7 +1822,7 @@ GLenum ConvertVkFixedRateToGLFixedRate(const VkImageCompressionFixedRateFlagsEXT
     }
 }
 
-GLint convertCompressionFlagsToGLFixedRates(
+GLint ConvertCompressionFlagsToGLFixedRates(
     VkImageCompressionFixedRateFlagsEXT imageCompressionFixedRateFlags,
     GLint bufSize,
     GLint *rates)
@@ -1822,6 +1856,62 @@ GLint convertCompressionFlagsToGLFixedRates(
         std::copy(GLRates.begin(), GLRates.end(), rates);
     }
     return size;
+}
+
+EGLenum ConvertVkFixedRateToEGLFixedRate(
+    const VkImageCompressionFixedRateFlagsEXT vkCompressionRate)
+{
+    switch (vkCompressionRate)
+    {
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_NONE_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_NONE_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_1BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_1BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_2BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_2BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_3BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_3BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_4BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_4BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_5BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_5BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_6BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_6BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_7BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_7BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_8BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_8BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_9BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_9BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_10BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_10BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_11BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_11BPC_EXT;
+        case VK_IMAGE_COMPRESSION_FIXED_RATE_12BPC_BIT_EXT:
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_12BPC_EXT;
+        default:
+            UNREACHABLE();
+            return EGL_SURFACE_COMPRESSION_FIXED_RATE_NONE_EXT;
+    }
+}
+
+std::vector<EGLint> ConvertCompressionFlagsToEGLFixedRate(
+    VkImageCompressionFixedRateFlagsEXT imageCompressionFixedRateFlags,
+    size_t rateSize)
+{
+    std::vector<EGLint> EGLRates;
+
+    for (size_t bit : angle::BitSet<32>(imageCompressionFixedRateFlags))
+    {
+        if (EGLRates.size() >= rateSize)
+        {
+            break;
+        }
+
+        EGLRates.push_back(ConvertVkFixedRateToEGLFixedRate(angle::Bit<uint32_t>(bit)));
+    }
+
+    return EGLRates;
 }
 }  // namespace vk_gl
 }  // namespace rx

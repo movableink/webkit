@@ -710,6 +710,12 @@ struct DisplayExtensions
 
     // EGL_ANGLE_global_fence_sync
     bool globalFenceSyncANGLE = false;
+
+    // EGL_ANGLE_memory_usage_report
+    bool memoryUsageReportANGLE = false;
+
+    // EGL_EXT_surface_compression
+    bool surfaceCompressionEXT = false;
 };
 
 struct DeviceExtensions

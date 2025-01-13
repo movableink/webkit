@@ -2083,15 +2083,7 @@ angle::Result OutsideRenderPassCommandBufferHelper::flushToPrimary(Context *cont
     // Commands that are added to primary before beginRenderPass command
     executeBarriers(renderer, commandsState);
 
-    // When using Vulkan secondary command buffers and "asyncCommandQueue" is enabled, command
-    // buffer MUST be already ended in the detachCommandPool() (called in the CommandProcessor).
-    // After the detach, nothing is written to the buffer (the barriers above are written directly
-    // to the primary buffer).
-    // Note: RenderPass Command Buffers are explicitly ended in the endRenderPass().
-    if (ExecutesInline() || !renderer->isAsyncCommandQueueEnabled())
-    {
-        ANGLE_TRY(endCommandBuffer(context));
-    }
+    ANGLE_TRY(endCommandBuffer(context));
     ASSERT(mIsCommandBufferEnded);
     mCommandBuffer.executeCommands(&commandsState->primaryCommands);
 
@@ -3571,7 +3563,7 @@ void SecondaryCommandBufferCollector::collectCommandBuffer(
     mCollectedCommandBuffers.emplace_back(std::move(commandBuffer));
 }
 
-void SecondaryCommandBufferCollector::retireCommandBuffers()
+void SecondaryCommandBufferCollector::releaseCommandBuffers()
 {
     // Note: we currently free the command buffers individually, but we could potentially reset the
     // entire command pool.  https://issuetracker.google.com/issues/166793850
@@ -4226,7 +4218,7 @@ void BufferPool::addStats(std::ostringstream *out) const
 }
 
 // DescriptorSetHelper implementation.
-void DescriptorSetHelper::destroy()
+void DescriptorSetHelper::destroy(VkDevice device)
 {
     if (valid())
     {
@@ -4234,7 +4226,9 @@ void DescriptorSetHelper::destroy()
         // don't call vkFreeDescriptorSets. We always add to garbage list so that it can be
         // recycled. Since we dont actually know if it is GPU completed, we always just add to the
         // pending garbage list assuming the worst case.
-        mPool->addPendingGarbage(std::move(*this));
+        DescriptorPoolPointer pool(device, mPool);
+        DescriptorSetPointer garbage(device, std::move(*this));
+        pool->addPendingGarbage(std::move(garbage));
         ASSERT(!valid());
     }
 }
@@ -4285,15 +4279,17 @@ angle::Result DescriptorPoolHelper::init(Context *context,
 
     ANGLE_VK_TRY(context, mDescriptorPool.init(renderer->getDevice(), descriptorPoolInfo));
 
+    mRenderer = renderer;
+
     return angle::Result::Continue;
 }
 
-void DescriptorPoolHelper::destroy(Renderer *renderer)
+void DescriptorPoolHelper::destroy(VkDevice device)
 {
     ASSERT(mValidDescriptorSets == 0);
     ASSERT(mPendingGarbageList.empty());
     ASSERT(mFinishedGarbageList.empty());
-    mDescriptorPool.destroy(renderer->getDevice());
+    mDescriptorPool.destroy(device);
 }
 
 bool DescriptorPoolHelper::allocateVkDescriptorSet(Context *context,
@@ -4321,12 +4317,12 @@ bool DescriptorPoolHelper::allocateVkDescriptorSet(Context *context,
     return false;
 }
 
-void DescriptorPoolHelper::cleanupPendingGarbage(Renderer *renderer)
+void DescriptorPoolHelper::cleanupPendingGarbage()
 {
     while (!mPendingGarbageList.empty())
     {
         DescriptorSetPointer &garbage = mPendingGarbageList.front();
-        if (!renderer->hasResourceUseFinished(garbage->getResourceUse()))
+        if (!mRenderer->hasResourceUseFinished(garbage->getResourceUse()))
         {
             break;
         }
@@ -4340,7 +4336,7 @@ bool DescriptorPoolHelper::recycleFromGarbage(Renderer *renderer,
 {
     if (mFinishedGarbageList.empty())
     {
-        cleanupPendingGarbage(renderer);
+        cleanupPendingGarbage();
     }
 
     if (!mFinishedGarbageList.empty())
@@ -4365,7 +4361,7 @@ bool DescriptorPoolHelper::allocateDescriptorSet(Context *context,
     if (allocateVkDescriptorSet(context, descriptorSetLayout, &descriptorSet))
     {
         DescriptorSetHelper helper = DescriptorSetHelper(descriptorSet, pool);
-        *descriptorSetOut          = std::move(helper);
+        *descriptorSetOut          = DescriptorSetPointer(context->getDevice(), std::move(helper));
         return true;
     }
     return false;
@@ -4431,7 +4427,7 @@ angle::Result DynamicDescriptorPool::init(Context *context,
     mPoolSizes.assign(setSizes, setSizes + setSizeCount);
     mCachedDescriptorSetLayout = descriptorSetLayout.getHandle();
 
-    DescriptorPoolPointer newPool = DescriptorPoolPointer::MakeShared();
+    DescriptorPoolPointer newPool = DescriptorPoolPointer::MakeShared(context->getDevice());
     ANGLE_TRY(newPool->init(context, mPoolSizes, mMaxSetsPerPool));
 
     mDescriptorPools.emplace_back(std::move(newPool));
@@ -4439,7 +4435,7 @@ angle::Result DynamicDescriptorPool::init(Context *context,
     return angle::Result::Continue;
 }
 
-void DynamicDescriptorPool::destroy(Renderer *renderer)
+void DynamicDescriptorPool::destroy(VkDevice device)
 {
     // Destroy cache
     mDescriptorSetCache.clear();
@@ -4447,17 +4443,16 @@ void DynamicDescriptorPool::destroy(Renderer *renderer)
     // Destroy LRU list and SharedDescriptorSetCacheKey.
     for (auto it = mLRUList.begin(); it != mLRUList.end();)
     {
-        (it->sharedCacheKey)->destroy();
-        it                          = mLRUList.erase(it);
+        (it->sharedCacheKey)->destroy(device);
+        it = mLRUList.erase(it);
     }
     ASSERT(mLRUList.empty());
 
     for (DescriptorPoolPointer &pool : mDescriptorPools)
     {
-        pool->cleanupPendingGarbage(renderer);
+        pool->cleanupPendingGarbage();
         pool->destroyGarbage();
         ASSERT(pool.unique());
-        pool->destroy(renderer);
     }
     mDescriptorPools.clear();
 
@@ -4601,7 +4596,7 @@ angle::Result DynamicDescriptorPool::getOrAllocateDescriptorSet(
     DescriptorSetLRUListIterator listIterator;
     if (mDescriptorSetCache.getDescriptorSet(desc, &listIterator))
     {
-        *descriptorSetOut     = listIterator->descriptorSet;
+        *descriptorSetOut = listIterator->descriptorSet;
         (*newSharedCacheKeyOut).reset();
         // Move it to the front of the LRU list.
         mLRUList.splice(mLRUList.begin(), mLRUList, listIterator);
@@ -4664,7 +4659,7 @@ angle::Result DynamicDescriptorPool::allocateNewPool(Context *context)
     {
         mMaxSetsPerPool *= mMaxSetsPerPoolMultiplier;
     }
-    DescriptorPoolPointer newPool = DescriptorPoolPointer::MakeShared();
+    DescriptorPoolPointer newPool = DescriptorPoolPointer::MakeShared(context->getDevice());
     ANGLE_TRY(newPool->init(context, mPoolSizes, mMaxSetsPerPool));
     mDescriptorPools.emplace_back(std::move(newPool));
 
@@ -4734,7 +4729,7 @@ void DynamicDescriptorPool::destroyUnusedPool(Renderer *renderer,
         {
             ASSERT(pool->valid());
             pool->destroyGarbage();
-            pool->destroy(renderer);
+            ASSERT((*it).unique());
             it = mDescriptorPools.erase(it);
             return;
         }
@@ -4746,7 +4741,7 @@ void DynamicDescriptorPool::checkAndDestroyUnusedPool(Renderer *renderer)
     ASSERT(renderer->getFeatures().descriptorSetCache.enabled);
     for (auto pool : mDescriptorPools)
     {
-        pool->cleanupPendingGarbage(renderer);
+        pool->cleanupPendingGarbage();
     }
 
     // We always keep at least one pool around.
@@ -4761,7 +4756,7 @@ void DynamicDescriptorPool::checkAndDestroyUnusedPool(Renderer *renderer)
         if ((*it)->canDestroy())
         {
             (*it)->destroyGarbage();
-            (*it)->destroy(renderer);
+            ASSERT((*it).unique());
             it = mDescriptorPools.erase(it);
         }
         else
@@ -5575,10 +5570,9 @@ angle::Result BufferHelper::initializeNonZeroMemory(Context *context,
         ANGLE_VK_TRY(context, commandBuffer.end());
 
         QueueSerial queueSerial;
-        ANGLE_TRY(renderer->queueSubmitOneOff(context, std::move(commandBuffer),
-                                              ProtectionType::Unprotected,
-                                              egl::ContextPriority::Medium, VK_NULL_HANDLE, 0,
-                                              vk::SubmitPolicy::AllowDeferred, &queueSerial));
+        ANGLE_TRY(renderer->queueSubmitOneOff(
+            context, std::move(commandBuffer), ProtectionType::Unprotected,
+            egl::ContextPriority::Medium, VK_NULL_HANDLE, 0, &queueSerial));
 
         stagingBuffer.collectGarbage(renderer, queueSerial);
         // Update both ResourceUse objects, since mReadOnlyUse tracks when the buffer can be
@@ -6191,10 +6185,10 @@ angle::Result ImageHelper::copyToBufferOneOff(Context *context,
     ANGLE_VK_TRY(context, commandBuffer.end());
 
     QueueSerial submitQueueSerial;
-    ANGLE_TRY(renderer->queueSubmitOneOff(
-        context, std::move(commandBuffer), ProtectionType::Unprotected,
-        egl::ContextPriority::Medium, acquireNextImageSemaphore,
-        kSwapchainAcquireImageWaitStageFlags, SubmitPolicy::AllowDeferred, &submitQueueSerial));
+    ANGLE_TRY(
+        renderer->queueSubmitOneOff(context, std::move(commandBuffer), ProtectionType::Unprotected,
+                                    egl::ContextPriority::Medium, acquireNextImageSemaphore,
+                                    kSwapchainAcquireImageWaitStageFlags, &submitQueueSerial));
 
     return renderer->finishQueueSerial(context, submitQueueSerial);
 }
@@ -6293,7 +6287,7 @@ angle::Result ImageHelper::initExternal(Context *context,
 
     const angle::Format &actualFormat   = angle::Format::Get(actualFormatID);
     const angle::Format &intendedFormat = angle::Format::Get(intendedFormatID);
-    VkFormat actualVkFormat             = GetVkFormatFromFormatID(actualFormatID);
+    VkFormat actualVkFormat             = GetVkFormatFromFormatID(renderer, actualFormatID);
 
     ANGLE_TRACE_EVENT_INSTANT("gpu.angle.texture_metrics", "ImageHelper::initExternal",
                               "intended_format", intendedFormat.glInternalFormat, "actual_format",
@@ -6382,8 +6376,8 @@ const void *ImageHelper::DeriveCreateInfoPNext(
     const angle::Format &actualFormat = angle::Format::Get(actualFormatID);
     angle::FormatID additionalFormat =
         actualFormat.isSRGB ? ConvertToLinear(actualFormatID) : ConvertToSRGB(actualFormatID);
-    (*imageListFormatsStorage)[0] = vk::GetVkFormatFromFormatID(actualFormatID);
-    (*imageListFormatsStorage)[1] = vk::GetVkFormatFromFormatID(additionalFormat);
+    (*imageListFormatsStorage)[0] = vk::GetVkFormatFromFormatID(renderer, actualFormatID);
+    (*imageListFormatsStorage)[1] = vk::GetVkFormatFromFormatID(renderer, additionalFormat);
 
     if (renderer->getFeatures().supportsImageFormatList.enabled &&
         renderer->haveSameFormatFeatureBits(actualFormatID, additionalFormat))
@@ -6701,7 +6695,7 @@ angle::Result ImageHelper::initializeNonZeroMemory(Context *context,
     QueueSerial queueSerial;
     ANGLE_TRY(renderer->queueSubmitOneOff(context, std::move(commandBuffer), protectionType,
                                           egl::ContextPriority::Medium, VK_NULL_HANDLE, 0,
-                                          vk::SubmitPolicy::AllowDeferred, &queueSerial));
+                                          &queueSerial));
 
     if (isCompressedFormat)
     {
@@ -6839,7 +6833,7 @@ angle::Result ImageHelper::initLayerImageView(Context *context,
 {
     return initLayerImageViewImpl(context, textureType, aspectMask, swizzleMap, imageViewOut,
                                   baseMipLevelVk, levelCount, baseArrayLayer, layerCount,
-                                  GetVkFormatFromFormatID(mActualFormatID),
+                                  GetVkFormatFromFormatID(context->getRenderer(), mActualFormatID),
                                   kDefaultImageViewUsageFlags, gl::YuvSamplingMode::Default);
 }
 
@@ -6856,8 +6850,8 @@ angle::Result ImageHelper::initLayerImageViewWithUsage(Context *context,
 {
     return initLayerImageViewImpl(context, textureType, aspectMask, swizzleMap, imageViewOut,
                                   baseMipLevelVk, levelCount, baseArrayLayer, layerCount,
-                                  GetVkFormatFromFormatID(mActualFormatID), imageUsageFlags,
-                                  gl::YuvSamplingMode::Default);
+                                  GetVkFormatFromFormatID(context->getRenderer(), mActualFormatID),
+                                  imageUsageFlags, gl::YuvSamplingMode::Default);
 }
 
 angle::Result ImageHelper::initLayerImageViewWithYuvModeOverride(
@@ -6875,8 +6869,8 @@ angle::Result ImageHelper::initLayerImageViewWithYuvModeOverride(
 {
     return initLayerImageViewImpl(context, textureType, aspectMask, swizzleMap, imageViewOut,
                                   baseMipLevelVk, levelCount, baseArrayLayer, layerCount,
-                                  GetVkFormatFromFormatID(mActualFormatID), imageUsageFlags,
-                                  yuvSamplingMode);
+                                  GetVkFormatFromFormatID(context->getRenderer(), mActualFormatID),
+                                  imageUsageFlags, yuvSamplingMode);
 }
 
 angle::Result ImageHelper::initLayerImageViewImpl(Context *context,
@@ -6968,10 +6962,11 @@ angle::Result ImageHelper::initReinterpretedLayerImageView(Context *context,
     VkImageUsageFlags usageFlags =
         imageUsageFlags & GetMaximalImageUsageFlags(context->getRenderer(), imageViewFormat);
 
-    return initLayerImageViewImpl(context, textureType, aspectMask, swizzleMap, imageViewOut,
-                                  baseMipLevelVk, levelCount, baseArrayLayer, layerCount,
-                                  vk::GetVkFormatFromFormatID(imageViewFormat), usageFlags,
-                                  gl::YuvSamplingMode::Default);
+    return initLayerImageViewImpl(
+        context, textureType, aspectMask, swizzleMap, imageViewOut, baseMipLevelVk, levelCount,
+        baseArrayLayer, layerCount,
+        vk::GetVkFormatFromFormatID(context->getRenderer(), imageViewFormat), usageFlags,
+        gl::YuvSamplingMode::Default);
 }
 
 void ImageHelper::destroy(Renderer *renderer)
@@ -7019,15 +7014,16 @@ void ImageHelper::init2DWeakReference(Context *context,
     ASSERT(!valid());
     ASSERT(!IsAnySubresourceContentDefined(mContentDefined));
     ASSERT(!IsAnySubresourceContentDefined(mStencilContentDefined));
+    vk::Renderer *renderer = context->getRenderer();
 
     gl_vk::GetExtent(glExtents, &mExtents);
-    mRotatedAspectRatio = rotatedAspectRatio;
-    mIntendedFormatID   = intendedFormatID;
-    mActualFormatID     = actualFormatID;
-    mCreateFlags        = createFlags;
-    mUsage              = usage;
-    mSamples            = std::max(samples, 1);
-    mImageSerial        = context->getRenderer()->getResourceSerialFactory().generateImageSerial();
+    mRotatedAspectRatio      = rotatedAspectRatio;
+    mIntendedFormatID        = intendedFormatID;
+    mActualFormatID          = actualFormatID;
+    mCreateFlags             = createFlags;
+    mUsage                   = usage;
+    mSamples                 = std::max(samples, 1);
+    mImageSerial             = renderer->getResourceSerialFactory().generateImageSerial();
     mCurrentDeviceQueueIndex = context->getDeviceQueueIndex();
     mIsReleasedToExternal    = false;
     mCurrentLayout           = ImageLayout::Undefined;
@@ -7037,7 +7033,8 @@ void ImageHelper::init2DWeakReference(Context *context,
     // The view formats and usage flags are used for imageless framebuffers. Here, the former is set
     // similar to deriveImageViewFormatFromCreateInfoPNext() when there is no pNext from a
     // VkImageCreateInfo object.
-    setImageFormatsFromActualFormat(GetVkFormatFromFormatID(actualFormatID), mViewFormats);
+    setImageFormatsFromActualFormat(GetVkFormatFromFormatID(renderer, actualFormatID),
+                                    mViewFormats);
 
     mImage.setHandle(handle);
 
@@ -7074,6 +7071,7 @@ angle::Result ImageHelper::initStaging(Context *context,
     ASSERT(!valid());
     ASSERT(!IsAnySubresourceContentDefined(mContentDefined));
     ASSERT(!IsAnySubresourceContentDefined(mStencilContentDefined));
+    vk::Renderer *renderer = context->getRenderer();
 
     mImageType          = imageType;
     mExtents            = extents;
@@ -7081,7 +7079,7 @@ angle::Result ImageHelper::initStaging(Context *context,
     mIntendedFormatID   = intendedFormatID;
     mActualFormatID     = actualFormatID;
     mSamples            = std::max(samples, 1);
-    mImageSerial        = context->getRenderer()->getResourceSerialFactory().generateImageSerial();
+    mImageSerial        = renderer->getResourceSerialFactory().generateImageSerial();
     mLayerCount         = layerCount;
     mLevelCount         = mipLevels;
     mUsage              = usage;
@@ -7096,7 +7094,7 @@ angle::Result ImageHelper::initStaging(Context *context,
     imageInfo.sType             = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.flags             = hasProtectedContent ? VK_IMAGE_CREATE_PROTECTED_BIT : 0;
     imageInfo.imageType         = mImageType;
-    imageInfo.format            = GetVkFormatFromFormatID(actualFormatID);
+    imageInfo.format            = GetVkFormatFromFormatID(renderer, actualFormatID);
     imageInfo.extent            = mExtents;
     imageInfo.mipLevels         = mLevelCount;
     imageInfo.arrayLayers       = mLayerCount;
@@ -10872,7 +10870,7 @@ angle::Result ImageHelper::copySurfaceImageToBuffer(DisplayVk *displayVk,
     ANGLE_TRY(renderer->queueSubmitOneOff(
         displayVk, std::move(primaryCommandBuffer), ProtectionType::Unprotected,
         egl::ContextPriority::Medium, acquireNextImageSemaphore,
-        kSwapchainAcquireImageWaitStageFlags, vk::SubmitPolicy::AllowDeferred, &submitQueueSerial));
+        kSwapchainAcquireImageWaitStageFlags, &submitQueueSerial));
 
     return renderer->finishQueueSerial(displayVk, submitQueueSerial);
 }
@@ -10924,7 +10922,7 @@ angle::Result ImageHelper::copyBufferToSurfaceImage(DisplayVk *displayVk,
     ANGLE_TRY(renderer->queueSubmitOneOff(
         displayVk, std::move(commandBuffer), ProtectionType::Unprotected,
         egl::ContextPriority::Medium, acquireNextImageSemaphore,
-        kSwapchainAcquireImageWaitStageFlags, vk::SubmitPolicy::AllowDeferred, &submitQueueSerial));
+        kSwapchainAcquireImageWaitStageFlags, &submitQueueSerial));
 
     return renderer->finishQueueSerial(displayVk, submitQueueSerial);
 }
@@ -12836,7 +12834,8 @@ angle::Result BufferViewHelper::getView(Context *context,
 {
     ASSERT(format.valid());
 
-    VkFormat viewVkFormat = format.getActualBufferVkFormat(false);
+    vk::Renderer *renderer = context->getRenderer();
+    VkFormat viewVkFormat  = format.getActualBufferVkFormat(renderer, false);
 
     auto iter = mViews.find(viewVkFormat);
     if (iter != mViews.end())
@@ -13114,9 +13113,7 @@ void MetaDescriptorPool::destroy(Renderer *renderer)
     {
         DynamicDescriptorPoolPointer &pool = iter.second;
         ASSERT(pool.unique());
-        pool->destroy(renderer);
     }
-
     mPayload.clear();
 }
 
@@ -13149,7 +13146,8 @@ angle::Result MetaDescriptorPool::bindCachedDescriptorPool(
                                         descriptorCountMultiplier, &newDescriptorPool));
 
     ASSERT(newDescriptorPool.valid());
-    DynamicDescriptorPoolPointer newDynamicDescriptorPoolPtr(std::move(newDescriptorPool));
+    DynamicDescriptorPoolPointer newDynamicDescriptorPoolPtr(context->getDevice(),
+                                                             std::move(newDescriptorPool));
     mPayload.emplace(descriptorSetLayoutDesc, newDynamicDescriptorPoolPtr);
     *dynamicDescriptorPoolOut = std::move(newDynamicDescriptorPoolPtr);
 

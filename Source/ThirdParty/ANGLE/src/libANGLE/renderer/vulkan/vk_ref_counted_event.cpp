@@ -132,17 +132,13 @@ template <typename RecyclerT>
 void RefCountedEvent::releaseImpl(Renderer *renderer, RecyclerT *recycler)
 {
     ASSERT(mHandle != nullptr);
-    // This should never called from async submission thread since the refcount is not atomic. It is
-    // expected only called under context share lock.
-    ASSERT(std::this_thread::get_id() != renderer->getCommandProcessorThreadId());
+    // This should never be called from async clean up thread since the refcount is not atomic. It
+    // is expected only called under context share lock.
+    ASSERT(std::this_thread::get_id() != renderer->getCleanUpThreadId());
 
     const bool isLastReference = mHandle->getAndReleaseRef() == 1;
     if (isLastReference)
     {
-        // When async submission is enabled, recycler will be null when release call comes from
-        // CommandProcessor. But in that case it will not be the last reference since garbage
-        // collector should have one reference count and will never release that reference count
-        // until GPU finished.
         ASSERT(recycler != nullptr);
         recycler->recycle(std::move(*this));
         ASSERT(mHandle == nullptr);
@@ -249,8 +245,9 @@ void RefCountedEventRecycler::resetEvents(Context *context,
     }
 }
 
-void RefCountedEventRecycler::cleanupResettingEvents(Renderer *renderer)
+size_t RefCountedEventRecycler::cleanupResettingEvents(Renderer *renderer)
 {
+    size_t eventsReleased = 0;
     std::lock_guard<angle::SimpleMutex> lock(mMutex);
     while (!mResettingQueue.empty())
     {
@@ -258,12 +255,14 @@ void RefCountedEventRecycler::cleanupResettingEvents(Renderer *renderer)
         if (released)
         {
             mResettingQueue.pop();
+            ++eventsReleased;
         }
         else
         {
             break;
         }
     }
+    return eventsReleased;
 }
 
 bool RefCountedEventRecycler::fetchEventsToReuse(RefCountedEventCollector *eventsToReuseOut)

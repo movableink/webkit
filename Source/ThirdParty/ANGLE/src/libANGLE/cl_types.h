@@ -70,8 +70,9 @@ using WorkgroupCount   = std::array<uint32_t, 3>;
 template <typename T>
 using EventStatusMap = std::array<T, 3>;
 
-using Extents = ::gl::Extents;
-using Offset  = ::gl::Offset;
+using Extents = angle::Extents<size_t>;
+using Offset  = angle::Offset<size_t>;
+constexpr Offset kOffsetZero(0, 0, 0);
 
 struct KernelArg
 {
@@ -81,13 +82,13 @@ struct KernelArg
     const void *valuePtr;
 };
 
-struct BufferBox
+struct BufferRect
 {
-    BufferBox(const Offset &offset,
-              const Extents &size,
-              const size_t row_pitch,
-              const size_t slice_pitch,
-              const size_t element_size = 1)
+    BufferRect(const Offset &offset,
+               const Extents &size,
+               const size_t row_pitch,
+               const size_t slice_pitch,
+               const size_t element_size = 1)
         : mOrigin(offset),
           mSize(size),
           mRowPitch(row_pitch == 0 ? element_size * size.width : row_pitch),
@@ -100,12 +101,12 @@ struct BufferBox
                mRowPitch >= mSize.width * mElementSize && mSlicePitch >= mRowPitch * mSize.height &&
                mElementSize > 0;
     }
-    bool operator==(const BufferBox &other) const
+    bool operator==(const BufferRect &other) const
     {
         return (mOrigin == other.mOrigin && mSize == other.mSize && mRowPitch == other.mRowPitch &&
                 mSlicePitch == other.mSlicePitch && mElementSize == other.mElementSize);
     }
-    bool operator!=(const BufferBox &other) const { return !(*this == other); }
+    bool operator!=(const BufferRect &other) const { return !(*this == other); }
 
     size_t getRowOffset(size_t slice, size_t row) const
     {
@@ -156,9 +157,10 @@ struct ImageDescriptor
         if (type == MemObjectType::Image1D || type == MemObjectType::Image1D_Array ||
             type == MemObjectType::Image1D_Buffer)
         {
+            depth  = 1;
             height = 1;
         }
-        if (type == MemObjectType::Image2D)
+        if (type == MemObjectType::Image2D || type == MemObjectType::Image2D_Array)
         {
             depth = 1;
         }
@@ -173,11 +175,13 @@ struct MemOffsets
 {
     size_t x, y, z;
 };
+constexpr MemOffsets kMemOffsetsZero{0, 0, 0};
 
 struct Coordinate
 {
     size_t x, y, z;
 };
+constexpr Coordinate kCoordinateZero{0, 0, 0};
 
 struct NDRange
 {

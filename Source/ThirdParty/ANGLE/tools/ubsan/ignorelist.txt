@@ -8,3 +8,12 @@ src:*/usr/*
 [alignment]
 src:*third_party/zlib*
 
+# https://crbug.com/385062729
+[pointer-overflow]
+fun:*angle*PoolAllocator*allocate*
+
+# https://crbug.com/388039125
+[*]
+fun:*rsg*isConversionOk*
+fun:*rsg*convertValueRange*
+fun:*rsg*convertExecValue*

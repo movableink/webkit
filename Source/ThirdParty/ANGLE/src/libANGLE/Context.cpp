@@ -46,6 +46,7 @@
 #include "libANGLE/VertexArray.h"
 #include "libANGLE/capture/FrameCapture.h"
 #include "libANGLE/capture/serialize.h"
+#include "libANGLE/context_private_call.inl.h"
 #include "libANGLE/context_private_call_autogen.h"
 #include "libANGLE/formatutils.h"
 #include "libANGLE/queryconversions.h"
@@ -736,12 +737,16 @@ void Context::initializeDefaultResources()
             new Texture(mImplementation.get(), {0}, TextureType::_2DMultisample);
         mZeroTextures[TextureType::_2DMultisample].set(this, zeroTexture2DMultisample);
     }
-    if (getClientVersion() >= Version(3, 1))
+    if (getClientVersion() >= Version(3, 2) ||
+        mSupportedExtensions.textureStorageMultisample2dArrayOES)
     {
         Texture *zeroTexture2DMultisampleArray =
             new Texture(mImplementation.get(), {0}, TextureType::_2DMultisampleArray);
         mZeroTextures[TextureType::_2DMultisampleArray].set(this, zeroTexture2DMultisampleArray);
+    }
 
+    if (getClientVersion() >= Version(3, 1))
+    {
         for (int i = 0; i < mState.getCaps().maxAtomicCounterBufferBindings; i++)
         {
             bindBufferRange(BufferBinding::AtomicCounter, i, {0}, 0, 0);
@@ -1184,7 +1189,7 @@ void Context::deleteTexture(TextureID textureID)
             {
                 if (pls->getPlane(i).getTextureID() == textureID)
                 {
-                    endPixelLocalStorageWithStoreOpsStore();
+                    endPixelLocalStorageImplicit();
                     break;
                 }
             }
@@ -1255,8 +1260,13 @@ void Context::deleteFramebuffer(FramebufferID framebufferID)
     std::unique_ptr<PixelLocalStorage> plsToDelete;
 
     Framebuffer *framebuffer = mState.mFramebufferManager->getFramebuffer(framebufferID);
-    if (framebuffer)
+    if (framebuffer != nullptr)
     {
+        if (mState.getPixelLocalStorageActivePlanes() != 0 &&
+            framebuffer == mState.getDrawFramebuffer())
+        {
+            endPixelLocalStorageImplicit();
+        }
         plsToDelete = framebuffer->detachPixelLocalStorage();
         detachFramebuffer(framebufferID);
     }
@@ -1265,7 +1275,7 @@ void Context::deleteFramebuffer(FramebufferID framebufferID)
 
     // Delete the pixel local storage GL objects after the framebuffer, in order to avoid any
     // potential trickyness with orphaning.
-    if (plsToDelete)
+    if (plsToDelete != nullptr)
     {
         plsToDelete->deleteContextObjects(this);
     }
@@ -1479,6 +1489,10 @@ void Context::bindReadFramebuffer(FramebufferID framebufferHandle)
 void Context::bindDrawFramebuffer(FramebufferID framebufferHandle)
 {
     endTilingImplicit();
+    if (mState.getPixelLocalStorageActivePlanes() != 0)
+    {
+        endPixelLocalStorageImplicit();
+    }
     Framebuffer *framebuffer = mState.mFramebufferManager->checkFramebufferAllocation(
         mImplementation.get(), this, framebufferHandle);
     mState.setDrawFramebufferBinding(framebuffer);
@@ -3603,6 +3617,12 @@ void Context::setExtensionEnabled(const char *name, bool enabled)
             // OVR_multiview is implicitly enabled when OVR_multiview2 is enabled
             requestExtension("GL_OVR_multiview");
         }
+        else if (strcmp(name, "GL_OES_texture_storage_multisample_2d_array") == 0)
+        {
+            // This extension implies that the context supports multisample 2D textures
+            // so ANGLE_texture_multisample must be enabled implicitly here.
+            requestExtension("GL_ANGLE_texture_multisample");
+        }
         else if (strcmp(name, "GL_ANGLE_shader_pixel_local_storage") == 0 ||
                  strcmp(name, "GL_ANGLE_shader_pixel_local_storage_coherent") == 0)
         {
@@ -3782,6 +3802,10 @@ Extensions Context::generateSupportedExtensions() const
         // ANGLE_shader_pixel_local_storage requires ES3
         supportedExtensions.shaderPixelLocalStorageANGLE         = false;
         supportedExtensions.shaderPixelLocalStorageCoherentANGLE = false;
+
+        // Multisample arrays could be supported on ES 3.0
+        // although the extension spec requires ES 3.1.
+        supportedExtensions.textureStorageMultisample2dArrayOES = false;
     }
 
     if (getClientVersion() < ES_3_1)
@@ -3799,10 +3823,6 @@ Extensions Context::generateSupportedExtensions() const
         supportedExtensions.tessellationShaderOES   = false;
         supportedExtensions.textureBufferEXT        = false;
         supportedExtensions.textureBufferOES        = false;
-
-        // TODO(http://anglebug.com/42261478): Multisample arrays could be supported on ES 3.0 as
-        // well once 2D multisample texture extension is exposed there.
-        supportedExtensions.textureStorageMultisample2dArrayOES = false;
     }
 
     if (getClientVersion() > ES_2_0)
@@ -4804,6 +4824,13 @@ bool Context::noopClearBuffer(GLenum buffer, GLint drawbuffer) const
 {
     Framebuffer *framebufferObject = mState.getDrawFramebuffer();
 
+    if (buffer == GL_COLOR && getPrivateState().isActivelyOverriddenPLSDrawBuffer(drawbuffer))
+    {
+        // If pixel local storage is active and currently overriding the drawbuffer, do nothing.
+        // From the client's perspective, there is effectively no buffer bound.
+        return true;
+    }
+
     return !IsClearBufferEnabled(framebufferObject->getState(), buffer, drawbuffer) ||
            mState.isRasterizerDiscardEnabled() ||
            isClearBufferMaskedOut(buffer, drawbuffer, framebufferObject->getStencilBitCount());
@@ -5134,6 +5161,12 @@ void Context::framebufferTexture2D(GLenum target,
     Framebuffer *framebuffer = mState.getTargetFramebuffer(target);
     ASSERT(framebuffer);
 
+    if (mState.getPixelLocalStorageActivePlanes() != 0 &&
+        framebuffer == mState.getDrawFramebuffer())
+    {
+        endPixelLocalStorageImplicit();
+    }
+
     if (texture.value != 0)
     {
         Texture *textureObj = getTexture(texture);
@@ -5158,6 +5191,12 @@ void Context::framebufferTexture3D(GLenum target,
     Framebuffer *framebuffer = mState.getTargetFramebuffer(target);
     ASSERT(framebuffer);
 
+    if (mState.getPixelLocalStorageActivePlanes() != 0 &&
+        framebuffer == mState.getDrawFramebuffer())
+    {
+        endPixelLocalStorageImplicit();
+    }
+
     if (texture.value != 0)
     {
         Texture *textureObj = getTexture(texture);
@@ -5179,6 +5218,12 @@ void Context::framebufferRenderbuffer(GLenum target,
 {
     Framebuffer *framebuffer = mState.getTargetFramebuffer(target);
     ASSERT(framebuffer);
+
+    if (mState.getPixelLocalStorageActivePlanes() != 0 &&
+        framebuffer == mState.getDrawFramebuffer())
+    {
+        endPixelLocalStorageImplicit();
+    }
 
     if (renderbuffer.value != 0)
     {
@@ -5205,6 +5250,12 @@ void Context::framebufferTextureLayer(GLenum target,
     Framebuffer *framebuffer = mState.getTargetFramebuffer(target);
     ASSERT(framebuffer);
 
+    if (mState.getPixelLocalStorageActivePlanes() != 0 &&
+        framebuffer == mState.getDrawFramebuffer())
+    {
+        endPixelLocalStorageImplicit();
+    }
+
     if (texture.value != 0)
     {
         Texture *textureObject = getTexture(texture);
@@ -5228,6 +5279,12 @@ void Context::framebufferTextureMultiview(GLenum target,
 {
     Framebuffer *framebuffer = mState.getTargetFramebuffer(target);
     ASSERT(framebuffer);
+
+    if (mState.getPixelLocalStorageActivePlanes() != 0 &&
+        framebuffer == mState.getDrawFramebuffer())
+    {
+        endPixelLocalStorageImplicit();
+    }
 
     if (texture.value != 0)
     {
@@ -5260,6 +5317,12 @@ void Context::framebufferTexture(GLenum target, GLenum attachment, TextureID tex
     Framebuffer *framebuffer = mState.getTargetFramebuffer(target);
     ASSERT(framebuffer);
 
+    if (mState.getPixelLocalStorageActivePlanes() != 0 &&
+        framebuffer == mState.getDrawFramebuffer())
+    {
+        endPixelLocalStorageImplicit();
+    }
+
     if (texture.value != 0)
     {
         Texture *textureObj = getTexture(texture);
@@ -5280,6 +5343,10 @@ void Context::drawBuffers(GLsizei n, const GLenum *bufs)
 {
     Framebuffer *framebuffer = mState.getDrawFramebuffer();
     ASSERT(framebuffer);
+    if (mState.getPixelLocalStorageActivePlanes() != 0)
+    {
+        endPixelLocalStorageImplicit();
+    }
     framebuffer->setDrawBuffers(n, bufs);
     mState.setDrawFramebufferDirty();
     mStateCache.onDrawFramebufferChange(this);
@@ -6417,6 +6484,12 @@ void Context::framebufferTexture2DMultisample(GLenum target,
     Framebuffer *framebuffer = mState.getTargetFramebuffer(target);
     ASSERT(framebuffer);
 
+    if (mState.getPixelLocalStorageActivePlanes() != 0 &&
+        framebuffer == mState.getDrawFramebuffer())
+    {
+        endPixelLocalStorageImplicit();
+    }
+
     if (texture.value != 0)
     {
         Texture *textureObj = getTexture(texture);
@@ -6465,6 +6538,11 @@ void Context::getFramebufferParameterivRobust(GLenum target,
 void Context::framebufferParameteri(GLenum target, GLenum pname, GLint param)
 {
     Framebuffer *framebuffer = mState.getTargetFramebuffer(target);
+    if (mState.getPixelLocalStorageActivePlanes() != 0 &&
+        framebuffer == mState.getDrawFramebuffer())
+    {
+        endPixelLocalStorageImplicit();
+    }
     SetFramebufferParameteri(this, framebuffer, pname, param);
 }
 
@@ -7361,19 +7439,15 @@ void Context::shaderSource(ShaderProgramID shader,
     shaderObject->setSource(this, count, string, length);
 }
 
-Program *Context::getActiveLinkedProgram() const
+Program *Context::getActiveLinkedProgramPPO() const
 {
-    Program *program = mState.getLinkedProgram(this);
-    if (!program)
+    ProgramPipeline *programPipelineObject = mState.getProgramPipeline();
+    if (programPipelineObject)
     {
-        ProgramPipeline *programPipelineObject = mState.getProgramPipeline();
-        if (programPipelineObject)
-        {
-            program = programPipelineObject->getLinkedActiveShaderProgram(this);
-        }
+        return programPipelineObject->getLinkedActiveShaderProgram(this);
     }
 
-    return program;
+    return nullptr;
 }
 
 void Context::uniform1f(UniformLocation location, GLfloat x)
@@ -8921,6 +8995,12 @@ void Context::framebufferMemorylessPixelLocalStorage(GLint plane, GLenum interna
 {
     Framebuffer *framebuffer = mState.getDrawFramebuffer();
     ASSERT(framebuffer);
+
+    if (mState.getPixelLocalStorageActivePlanes() != 0)
+    {
+        endPixelLocalStorageImplicit();
+    }
+
     PixelLocalStorage &pls = framebuffer->getPixelLocalStorage(this);
 
     if (internalformat == GL_NONE)
@@ -8940,6 +9020,12 @@ void Context::framebufferTexturePixelLocalStorage(GLint plane,
 {
     Framebuffer *framebuffer = mState.getDrawFramebuffer();
     ASSERT(framebuffer);
+
+    if (mState.getPixelLocalStorageActivePlanes() != 0)
+    {
+        endPixelLocalStorageImplicit();
+    }
+
     PixelLocalStorage &pls = framebuffer->getPixelLocalStorage(this);
 
     if (backingtexture.value == 0)
@@ -8994,14 +9080,15 @@ void Context::endPixelLocalStorage(GLsizei n, const GLenum storeops[])
     ASSERT(framebuffer);
     PixelLocalStorage &pls = framebuffer->getPixelLocalStorage(this);
 
-    pls.end(this, storeops);
+    ASSERT(n == mState.getPixelLocalStorageActivePlanes());
     mState.setPixelLocalStorageActivePlanes(0);
+    pls.end(this, n, storeops);
 }
 
-void Context::endPixelLocalStorageWithStoreOpsStore()
+void Context::endPixelLocalStorageImplicit()
 {
     GLsizei n = mState.getPixelLocalStorageActivePlanes();
-    ASSERT(n >= 1);
+    ASSERT(n != 0);
     angle::FixedVector<GLenum, IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES> storeops(
         n, GL_STORE_OP_STORE_ANGLE);
     endPixelLocalStorage(n, storeops.data());
@@ -10042,6 +10129,17 @@ void Context::texStorageAttribs3D(GLenum target,
         texture->setStorageAttribs(this, textype, levels, internalFormat, size, attribList));
 }
 
+size_t Context::getMemoryUsage() const
+{
+    size_t memoryUsage = 0;
+
+    memoryUsage += mState.mBufferManager->getTotalMemorySize();
+    memoryUsage += mState.mRenderbufferManager->getTotalMemorySize();
+    memoryUsage += mState.mTextureManager->getTotalMemorySize();
+
+    return memoryUsage;
+}
+
 // ErrorSet implementation.
 ErrorSet::ErrorSet(Debug *debug,
                    const angle::FrontendFeatures &frontendFeatures,
@@ -10347,22 +10445,6 @@ void StateCache::updateVertexElementLimitsImpl(Context *context)
                 std::min(mCachedNonInstancedVertexElementLimit, limit);
         }
     }
-}
-
-void StateCache::updateBasicDrawStatesError()
-{
-    mCachedBasicDrawStatesErrorString = kInvalidPointer;
-    mCachedBasicDrawStatesErrorCode   = GL_NO_ERROR;
-}
-
-void StateCache::updateProgramPipelineError()
-{
-    mCachedProgramPipelineError = kInvalidPointer;
-}
-
-void StateCache::updateBasicDrawElementsError()
-{
-    mCachedBasicDrawElementsError = kInvalidPointer;
 }
 
 intptr_t StateCache::getBasicDrawStatesErrorImpl(const Context *context,

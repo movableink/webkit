@@ -126,6 +126,7 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     egl::Error getUserHeight(const egl::Display *display, EGLint *value) const;
     EGLint getPixelAspectRatio() const;
     EGLenum getRenderBuffer() const;
+    EGLenum getRequestedRenderBuffer() const;
     EGLenum getSwapBehavior() const;
     TextureFormat getTextureFormat() const;
     EGLenum getTextureTarget() const;
@@ -152,6 +153,7 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     EGLint getLuminanceOffset() const;
     EGLint getBitmapPixelSize() const;
     EGLAttribKHR getBitmapPointer() const;
+    EGLint getCompressionRate(const egl::Display *display) const;
     egl::Error lockSurfaceKHR(const egl::Display *display, const AttributeMap &attributes);
     egl::Error unlockSurfaceKHR(const egl::Display *display);
 
@@ -218,6 +220,7 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     Error getBufferAge(const gl::Context *context, EGLint *age);
 
     Error setRenderBuffer(EGLint renderBuffer);
+    void setRequestedRenderBuffer(EGLint requestedRenderBuffer);
 
     bool bufferAgeQueriedSinceLastSwap() const { return mBufferAgeQueriedSinceLastSwap; }
     void setDamageRegion(const EGLint *rects, EGLint n_rects);
@@ -274,8 +277,9 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     TextureFormat mTextureFormat;
     EGLenum mTextureTarget;
 
-    EGLint mPixelAspectRatio;  // Display aspect ratio
-    EGLenum mRenderBuffer;     // Render buffer
+    EGLint mPixelAspectRatio;        // Display aspect ratio
+    EGLenum mRenderBuffer;           // Render buffer
+    EGLenum mRequestedRenderBuffer;  // Requested render buffer
 
     EGLint mOrientation;
 
@@ -305,6 +309,8 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
 
     // ObserverInterface implementation.
     void onSubjectStateChange(angle::SubjectIndex index, angle::SubjectMessage message) override;
+
+    Error setRenderBufferWhileSwap(const gl::Context *context);
 
     gl::InitState mColorInitState;
     gl::InitState mDepthStencilInitState;

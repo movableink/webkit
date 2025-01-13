@@ -16,6 +16,7 @@ basic.host_numeric_constants
 basic.kernel_limit_constants
 basic.vec_type_hint
 basic.local_linear_id
+basic.bufferreadwriterect
 api.get_platform_info
 api.get_command_queue_info
 api.get_command_queue_info_compatibility
@@ -126,3 +127,7 @@ buffers.mem_alloc_ref_flags
 buffers.buffer_read_long
 buffers.buffer_write_char
 profiling.copy_array_to_image
+multiples.context_four_contexts_same_device
+cl_copy_images.1D
+cl_fill_images.2D
+cl_get_info.2D
