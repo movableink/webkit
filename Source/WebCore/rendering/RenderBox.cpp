@@ -4257,7 +4257,8 @@ void RenderBox::computePositionedLogicalWidthUsing(SizeType widthType, Length lo
         // Margins are now the only unknown
         if (marginLogicalLeft.isAuto() && marginLogicalRight.isAuto()) {
             // Both margins auto, solve for equality
-            if (availableSpace >= 0) {
+            // FIXME: See webkit.org/b/285803
+            if (availableSpace >= 0 || isOrthogonal(*this, containerBlock)) {
                 marginLogicalLeftValue = availableSpace / 2; // split the difference
                 marginLogicalRightValue = availableSpace - marginLogicalLeftValue; // account for odd valued differences
             } else {
@@ -4670,10 +4671,17 @@ void RenderBox::computePositionedLogicalHeightUsing(SizeType heightType, Length 
 
         // Margins are now the only unknown
         if (marginBefore.isAuto() && marginAfter.isAuto()) {
-            // Both margins auto, solve for equality
-            // NOTE: This may result in negative values.
-            computedValues.m_margins.m_before = availableSpace / 2; // split the difference
-            computedValues.m_margins.m_after = availableSpace - computedValues.m_margins.m_before; // account for odd valued differences
+            // FIXME: See webkit.org/b/285803
+            if (!isOrthogonal(*this, containerBlock) || availableSpace >= 0) {
+                // Both margins auto, solve for equality
+                // NOTE: This may result in negative values.
+                computedValues.m_margins.m_before = availableSpace / 2; // split the difference
+                computedValues.m_margins.m_after = availableSpace - computedValues.m_margins.m_before; // account for odd valued differences
+            } else {
+                auto isLogicalLeftInlineStart = containerBlock.writingMode().isLogicalLeftInlineStart();
+                computedValues.m_margins.m_before = isLogicalLeftInlineStart ? 0_lu : availableSpace;
+                computedValues.m_margins.m_after = isLogicalLeftInlineStart ? availableSpace : 0_lu;
+            }
         } else if (marginBefore.isAuto()) {
             // Solve for top margin
             computedValues.m_margins.m_after = valueForLength(marginAfter, containerRelativeLogicalWidth);
