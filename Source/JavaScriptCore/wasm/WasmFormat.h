@@ -179,6 +179,11 @@ inline bool isStructref(Type type)
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Structref);
 }
 
+inline bool isExnref(Type type)
+{
+    return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Exn);
+}
+
 inline JSString* typeToJSAPIString(VM& vm, Type type)
 {
     switch (type.kind) {
@@ -307,7 +312,7 @@ inline bool isSubtype(Type sub, Type parent)
             return TypeInformation::get(sub.index).expand().is<FunctionSignature>();
     }
 
-    if ((isI31ref(sub) || isStructref(sub) || isArrayref(sub)) && (isAnyref(parent) || isEqref(parent)))
+    if ((isExnref(sub) || isI31ref(sub) || isStructref(sub) || isArrayref(sub)) && (isAnyref(parent) || isEqref(parent)))
         return true;
 
     if (isEqref(sub) && isAnyref(parent))
