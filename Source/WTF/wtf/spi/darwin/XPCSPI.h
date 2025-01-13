@@ -28,6 +28,7 @@
 #include <dispatch/dispatch.h>
 #include <os/object.h>
 #include <span>
+#include <wtf/StdLibExtras.h>
 
 #if HAVE(XPC_API) || USE(APPLE_INTERNAL_SDK)
 #include <xpc/xpc.h>
@@ -259,7 +260,5 @@ inline std::span<const uint8_t> xpc_dictionary_get_data_span(xpc_object_t xdict,
 {
     size_t dataSize { 0 };
     auto* data = static_cast<const uint8_t*>(xpc_dictionary_get_data(xdict, key, &dataSize));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    return { data, dataSize };
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    return unsafeMakeSpan(data, dataSize);
 }

@@ -27,8 +27,6 @@
 
 #include <wtf/text/StringView.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WTF {
 
 template<typename T>
@@ -46,18 +44,22 @@ public:
     }
 
     constexpr auto position() const LIFETIME_BOUND { return m_data.data(); }
-    constexpr auto end() const LIFETIME_BOUND { return m_data.data() + m_data.size(); }
+    constexpr auto end() const LIFETIME_BOUND { return std::to_address(m_data.end()); }
 
     constexpr bool hasCharactersRemaining() const { return !m_data.empty(); }
     constexpr bool atEnd() const { return m_data.empty(); }
 
     constexpr size_t lengthRemaining() const { return m_data.size(); }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     constexpr void setPosition(const CharacterType* position)
     {
-        ASSERT(position <= m_data.data() + m_data.size());
-        m_data = { position, m_data.data() + m_data.size() };
+        ASSERT(position <= std::to_address(m_data.end()));
+        // FIXME: This can be used to rewind to a position *before* the beginning
+        // of the span, preventing us from doing bounds validation at the moment.
+        m_data = { position, static_cast<size_t>(std::to_address(m_data.end()) - position) };
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     StringView stringViewOfCharactersRemaining() const LIFETIME_BOUND { return span(); }
 
@@ -137,5 +139,3 @@ template<typename StringType, typename Function> decltype(auto) readCharactersFo
 
 using WTF::StringParsingBuffer;
 using WTF::readCharactersForParsing;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

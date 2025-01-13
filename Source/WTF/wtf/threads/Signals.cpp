@@ -26,8 +26,6 @@
 #include "config.h"
 #include <wtf/threads/Signals.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #if OS(UNIX)
 
 #if HAVE(MACH_EXCEPTIONS)
@@ -39,6 +37,7 @@ extern "C" {
 #include <cstdio>
 #include <mutex>
 #include <signal.h>
+#include <wtf/StdLibExtras.h>
 
 #if HAVE(MACH_EXCEPTIONS)
 #include <dispatch/dispatch.h>
@@ -230,7 +229,7 @@ inline ptrauth_generic_signature_t hashThreadState(const thread_state_t source)
 
     hash = ptrauth_sign_generic_data(hash, mach_thread_self());
 
-    const uintptr_t* srcPtr = reinterpret_cast<const uintptr_t*>(source);
+    auto srcPtr = unsafeMakeSpan(reinterpret_cast<const uintptr_t*>(source), threadStateSizeInPointers);
 
     // Exclude the __opaque_flags field which is reserved for OS use.
     // __opaque_flags is at the end of the payload.
@@ -263,6 +262,7 @@ kern_return_t catch_mach_exception_raise_state_identity(mach_port_t, mach_port_t
     return KERN_FAILURE;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 static kern_return_t runSignalHandlers(Signal signal, PlatformRegisters& registers, mach_msg_type_number_t dataCount, mach_exception_data_t exceptionData)
 {
     SigInfo info;
@@ -287,6 +287,7 @@ static kern_return_t runSignalHandlers(Signal signal, PlatformRegisters& registe
     });
     return didHandle ? KERN_SUCCESS : KERN_FAILURE;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #if defined(EXCEPTION_STATE_IDENTITY_PROTECTED)
 
@@ -538,7 +539,9 @@ static void jscSignalHandler(int sig, siginfo_t* info, void* ucontext)
     }
 
     unsigned oldActionIndex = static_cast<size_t>(signal) + (sig == SIGBUS);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     struct sigaction& oldAction = handlers.oldActions[static_cast<size_t>(oldActionIndex)];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     if (signal == Signal::Usr) {
         if (oldAction.sa_sigaction)
             oldAction.sa_sigaction(sig, info, ucontext);
@@ -601,9 +604,11 @@ void SignalHandlers::finalize()
             RELEASE_ASSERT(!result);
             action.sa_flags = SA_SIGINFO;
             auto systemSignals = toSystemSignal(signal);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             result = sigaction(std::get<0>(systemSignals), &action, &handlers.oldActions[offsetForSystemSignal(std::get<0>(systemSignals))]);
             if (std::get<1>(systemSignals))
                 result |= sigaction(*std::get<1>(systemSignals), &action, &handlers.oldActions[offsetForSystemSignal(*std::get<1>(systemSignals))]);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             RELEASE_ASSERT(!result);
         }
     }
@@ -612,5 +617,3 @@ void SignalHandlers::finalize()
 } // namespace WTF
 
 #endif // OS(UNIX)
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

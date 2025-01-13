@@ -33,8 +33,6 @@
 
 #if !UCONFIG_NO_COLLATION
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include <mutex>
 #include <unicode/ucol.h>
 #include <wtf/Lock.h>
@@ -180,6 +178,7 @@ static UBool hasPreviousLatin1(UCharIterator* iterator)
     return iterator->index > iterator->start;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 static UChar32 currentLatin1(UCharIterator* iterator)
 {
     ASSERT(iterator->index >= iterator->start);
@@ -202,6 +201,7 @@ static UChar32 previousLatin1(UCharIterator* iterator)
         return U_SENTINEL;
     return static_cast<const LChar*>(iterator->context)[--iterator->index];
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static uint32_t getStateLatin1(const UCharIterator* iterator)
 {
@@ -273,7 +273,5 @@ int Collator::collate(const char8_t* a, const char8_t* b) const
 }
 
 } // namespace WTF
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif
