@@ -109,6 +109,10 @@ class GLibPort(Port):
         environment['GST_DEBUG'] = '*:ERROR'
         if gst_debug_override:
             environment['GST_DEBUG'] += f',{gst_debug_override}'
+        else:
+            # If there is no user-supplied GST_DEBUG we can assume this runtime is some test bot, so
+            # disable color output, making -stderr files more human-readable.
+            environment['GST_DEBUG_NO_COLOR'] = '1'
 
         environment['WEBKIT_GST_ALLOW_PLAYBACK_OF_INVISIBLE_VIDEOS'] = '1'
         environment['WEBKIT_GST_WEBRTC_FORCE_EARLY_VIDEO_DECODING'] = '1'
