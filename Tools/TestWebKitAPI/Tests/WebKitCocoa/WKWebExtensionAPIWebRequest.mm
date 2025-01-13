@@ -143,6 +143,290 @@ TEST(WKWebExtensionAPIWebRequest, BeforeRequestEventForSubresource)
     [manager run];
 }
 
+TEST(WKWebExtensionAPIWebRequest, BeforeRequestEventWithRequestBodyAndFormData)
+{
+    auto *pageScript = Util::constructScript(@[
+        @"const formData = new FormData()",
+        @"formData.append('username', 'user1')",
+        @"formData.append('username', 'user2')",
+        @"formData.append('age', '42')",
+
+        @"const response = await fetch('/test', {",
+        @"  method: 'POST',",
+        @"  body: formData",
+        @"})",
+
+        @"const text = await response.text()",
+        @"browser.test.assertEq(text, 'OK', 'Response body should be OK')"
+    ]);
+
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, {
+            { { "Content-Type"_s, "text/html"_s } },
+            "<script type='module' src='/form.js'></script>"_s
+        } },
+        { "/form.js"_s, {
+            { { "Content-Type"_s, "application/javascript"_s } },
+            pageScript
+        } },
+        { "/test"_s, {
+            { { "Content-Type"_s, "text/plain"_s } },
+            "OK"_s
+        } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.webRequest.onBeforeRequest.addListener((details) => {",
+        @"  if (!details.url.includes('/test'))",
+        @"    return",
+
+        @"  browser.test.assertEq(details.method, 'POST', 'details.method should be POST')",
+        @"  browser.test.assertEq(details.requestBody?.raw?.length, 1, 'There should be one raw item')",
+
+        @"  const decoder = new TextDecoder()",
+        @"  const rawData = details.requestBody?.raw?.[0]?.bytes",
+        @"  const bodyText = decoder.decode(rawData ?? new Uint8Array())",
+
+        @"  browser.test.log(bodyText)",
+        @"  browser.test.assertTrue(bodyText.includes('Content-Disposition: form-data; name=\"username\"'), 'Username field should exist in multipart data')",
+        @"  browser.test.assertTrue(bodyText.includes('user1'), 'Multipart data should include user1')",
+        @"  browser.test.assertTrue(bodyText.includes('user2'), 'Multipart data should include user2')",
+        @"  browser.test.assertTrue(bodyText.includes('Content-Disposition: form-data; name=\"age\"'), 'Age field should exist in multipart data')",
+        @"  browser.test.assertTrue(bodyText.includes('42'), 'Multipart data should include age value 42')",
+
+        @"  browser.test.notifyPass()",
+        @"}, { urls: [ '<all_urls>' ] }, [ 'requestBody' ])",
+
+        @"browser.test.sendMessage('Load Tab')"
+    ]);
+
+    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:webRequestManifest resources:@{ @"background.js": backgroundScript }]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionWebRequest];
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+
+    [manager load];
+    [manager runUntilTestMessage:@"Load Tab"];
+
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
+TEST(WKWebExtensionAPIWebRequest, BeforeRequestEventWithRequestBodyAndBlob)
+{
+    auto *pageScript = Util::constructScript(@[
+        @"const blob = new Blob(['This is some text blob content'], { type: 'text/plain' })",
+
+        @"const response = await fetch('/test', {",
+        @"  method: 'POST',",
+        @"  body: blob",
+        @"})",
+
+        @"const text = await response.text()",
+        @"browser.test.assertEq(text, 'OK', 'Response body should be')"
+    ]);
+
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, {
+            { { "Content-Type"_s, "text/html"_s } },
+            "<script type='module' src='/blob.js'></script>"_s
+        } },
+        { "/blob.js"_s, {
+            { { "Content-Type"_s, "application/javascript"_s } },
+            pageScript
+        } },
+        { "/test"_s, {
+            { { "Content-Type"_s, "text/plain"_s } },
+            "OK"_s
+        } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.webRequest.onBeforeRequest.addListener((details) => {",
+        @"  if (!details.url.includes('/test'))",
+        @"    return",
+
+        @"  browser.test.assertEq(details.method, 'POST', 'details.method should be')",
+        @"  browser.test.assertEq(details.requestBody?.raw?.length, 1, 'There should be one raw item')",
+
+        @"  const decoder = new TextDecoder()",
+        @"  const bodyText = decoder.decode(details.requestBody?.raw?.[0]?.bytes ?? new Uint8Array())",
+        @"  browser.test.assertTrue(bodyText.includes('This is some text blob content'), 'Blob content should match')",
+
+        @"  browser.test.notifyPass()",
+        @"}, { urls: [ '<all_urls>' ] }, [ 'requestBody' ])",
+
+        @"browser.test.sendMessage('Load Tab')"
+    ]);
+
+    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:webRequestManifest resources:@{ @"background.js": backgroundScript }]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionWebRequest];
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+
+    [manager load];
+    [manager runUntilTestMessage:@"Load Tab"];
+
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
+TEST(WKWebExtensionAPIWebRequest, BeforeRequestEventWithRequestBodyAndJSON)
+{
+    auto *pageScript = Util::constructScript(@[
+        @"const response = await fetch('/test', {",
+        @"  method: 'POST',",
+        @"  headers: { 'Content-Type': 'application/json' },",
+        @"  body: JSON.stringify({ key: 'value', count: 10 })",
+        @"})",
+
+        @"const text = await response.text()",
+        @"browser.test.assertEq(text, 'OK', 'Response body should be')"
+    ]);
+
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, {
+            { { "Content-Type"_s, "text/html"_s } },
+            "<script type='module' src='/fetch.js'></script>"_s
+        } },
+        { "/fetch.js"_s, {
+            { { "Content-Type"_s, "application/javascript"_s } },
+            pageScript
+        } },
+        { "/test"_s, {
+            { { "Content-Type"_s, "text/plain"_s } },
+            "OK"_s
+        } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.webRequest.onBeforeRequest.addListener((details) => {",
+        @"  if (!details.url.includes('/test'))",
+        @"    return",
+
+        @"  browser.test.assertEq(details.method, 'POST', 'details.method should be')",
+        @"  browser.test.assertEq(typeof details.requestBody, 'object', 'details.requestBody type should be')",
+        @"  browser.test.assertTrue(details.requestBody?.raw?.[0]?.bytes?.byteLength > 0, 'details.requestBody.raw should contain data')",
+
+        @"  const decoder = new TextDecoder()",
+        @"  const bodyText = decoder.decode(details.requestBody?.raw?.[0]?.bytes ?? new Uint8Array())",
+        @"  const jsonData = JSON.parse(bodyText ?? '{}')",
+
+        @"  browser.test.assertEq(jsonData?.key, 'value', 'Request body key should be')",
+        @"  browser.test.assertEq(jsonData?.count, 10, 'Request body count should be')",
+
+        @"  browser.test.notifyPass()",
+        @"}, { urls: [ '<all_urls>' ] }, [ 'requestBody' ])",
+
+        @"browser.test.sendMessage('Load Tab')"
+    ]);
+
+    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:webRequestManifest resources:@{ @"background.js": backgroundScript }]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionWebRequest];
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+
+    [manager load];
+    [manager runUntilTestMessage:@"Load Tab"];
+
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
+TEST(WKWebExtensionAPIWebRequest, BeforeRequestEventWithRequestBodyAndForm)
+{
+    auto *pageScript = Util::constructScript(@[
+        @"const form = document.createElement('form')",
+        @"form.action = '/test'",
+        @"form.method = 'POST'",
+
+        @"const inputText1 = document.createElement('input')",
+        @"inputText1.type = 'text'",
+        @"inputText1.name = 'username'",
+        @"inputText1.value = 'user1'",
+        @"form.appendChild(inputText1)",
+
+        @"const inputText2 = document.createElement('input')",
+        @"inputText2.type = 'text'",
+        @"inputText2.name = 'username'",
+        @"inputText2.value = 'user2'",
+        @"form.appendChild(inputText2)",
+
+        @"const inputNumber = document.createElement('input')",
+        @"inputNumber.type = 'number'",
+        @"inputNumber.name = 'age'",
+        @"inputNumber.value = '42'",
+        @"form.appendChild(inputNumber)",
+
+        @"document.body.appendChild(form)",
+        @"form.submit()"
+    ]);
+
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, {
+            { { "Content-Type"_s, "text/html"_s } },
+            "<script type='module' src='/form.js'></script>"_s
+        } },
+        { "/form.js"_s, {
+            { { "Content-Type"_s, "application/javascript"_s } },
+            pageScript
+        } },
+        { "/test"_s, {
+            { { "Content-Type"_s, "text/plain"_s } },
+            "OK"_s
+        } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.webRequest.onBeforeRequest.addListener((details) => {",
+        @"  if (!details.url.includes('/test'))",
+        @"    return",
+
+        @"  browser.test.assertEq(details.method, 'POST', 'details.method should be')",
+        @"  browser.test.assertEq(typeof details.requestBody, 'object', 'details.requestBody type should be')",
+        @"  browser.test.assertEq(typeof details.requestBody?.formData, 'object', 'details.requestBody.formData type should be')",
+
+        @"  const formData = details.requestBody?.formData",
+        @"  browser.test.assertEq(formData?.username?.length, 2, 'username array length should be')",
+        @"  browser.test.assertEq(formData?.username?.[0], 'user1', 'First username should be')",
+        @"  browser.test.assertEq(formData?.username?.[1], 'user2', 'Second username should be')",
+        @"  browser.test.assertEq(formData?.age?.length, 1, 'age array length should be')",
+        @"  browser.test.assertEq(formData?.age?.[0], '42', 'age should be')",
+
+        @"  browser.test.notifyPass()",
+        @"}, { urls: [ '<all_urls>' ] }, [ 'requestBody' ])",
+
+        @"browser.test.sendMessage('Load Tab')"
+    ]);
+
+    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:webRequestManifest resources:@{ @"background.js": backgroundScript }]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionWebRequest];
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+
+    [manager load];
+    [manager runUntilTestMessage:@"Load Tab"];
+
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
 TEST(WKWebExtensionAPIWebRequest, HeadersReceivedEvent)
 {
     TestWebKitAPI::HTTPServer server({

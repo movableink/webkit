@@ -28,11 +28,13 @@
 #endif
 
 #import "config.h"
+#import "FormDataReference.h"
 #import "ResourceLoadInfo.h"
 #import "WebExtensionAPINamespace.h"
 #import "WebExtensionAPIWebRequest.h"
 #import <WebCore/HTTPStatusCodes.h>
 #import <WebCore/ResourceResponse.h>
+#import <wtf/URLParser.h>
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
@@ -128,21 +130,65 @@ WebExtensionAPIWebRequestEvent& WebExtensionAPIWebRequest::onErrorOccurred()
     return *m_onErrorOccurredEvent;
 }
 
-static NSDictionary *convertRequestBodyToWebExtensionFormat(NSData *requestBody)
+static NSString *toWebAPI(const WebCore::FormData& formData, const String& contentType, JSGlobalContextRef context)
 {
-    NSMutableDictionary *dictionary = [NSMutableDictionary dictionary];
+    if (formData.isEmpty() || !context)
+        return nil;
 
-    NSURLComponents *urlComponents = [NSURLComponents componentsWithString:[NSString stringWithFormat:@"https://example.org/?%@", [[NSString alloc] initWithData:requestBody encoding:NSUTF8StringEncoding]]];
-    for (NSURLQueryItem *item in urlComponents.queryItems) {
-        NSMutableArray *array = dictionary[item.name];
-        if (!array) {
-            array = [NSMutableArray array];
-            dictionary[item.name] = array;
+    auto *result = [NSMutableDictionary dictionary];
+    auto *formDataDictionary = [NSMutableDictionary dictionary];
+    auto *rawArray = [NSMutableArray array];
+
+    bool isURLEncoded = equalLettersIgnoringASCIICase(contentType, "application/x-www-form-urlencoded"_s);
+
+    for (const WebCore::FormDataElement& element : formData.elements()) {
+        if (auto* data = std::get_if<Vector<uint8_t>>(&element.data)) {
+            if (isURLEncoded) {
+                auto dataString = String::fromUTF8(data->span());
+
+                for (auto& pair : URLParser::parseURLEncodedForm(dataString)) {
+                    auto *key = static_cast<NSString *>(pair.key);
+                    auto *value = static_cast<NSString *>(pair.value);
+
+                    NSMutableArray *array = formDataDictionary[key];
+                    if (!array) {
+                        array = [NSMutableArray array];
+                        formDataDictionary[key] = array;
+                    }
+
+                    [array addObject:value ?: @""];
+                }
+            } else {
+                auto typedArray = JSObjectMakeTypedArray(context, kJSTypedArrayTypeUint8Array, data->size(), nullptr);
+                if (!typedArray) {
+                    RELEASE_LOG_ERROR(Extensions, "Error creating Typed Array for raw data.");
+                    continue;
+                }
+
+                uint8_t *typedArrayData = reinterpret_cast<uint8_t *>(JSObjectGetTypedArrayBytesPtr(context, typedArray, nullptr));
+                if (!typedArrayData) {
+                    RELEASE_LOG_ERROR(Extensions, "Error accessing Typed Array backing store.");
+                    continue;
+                }
+
+                auto typedArraySpan = unsafeMakeSpan(typedArrayData, data->size());
+                memcpySpan(typedArraySpan, data->span());
+
+                [rawArray addObject:@{ @"bytes": [JSValue valueWithJSValueRef:typedArray inContext:[JSContext contextWithJSGlobalContextRef:context]] }];
+            }
         }
-        [array addObject:item.value];
     }
 
-    return dictionary;
+    if (formDataDictionary.count)
+        result[@"formData"] = [formDataDictionary copy];
+
+    if (rawArray.count)
+        result[@"raw"] = [rawArray copy];
+
+    if (!formDataDictionary.count && !rawArray.count)
+        result[@"error"] = @"Request body data is malformed or unsupported.";
+
+    return [result copy];
 }
 
 static NSString *toWebAPI(ResourceLoadInfo::Type type)
@@ -233,21 +279,29 @@ static NSMutableDictionary *headersReceivedDetails(const ResourceLoadInfo& resou
     return details;
 }
 
-void WebExtensionContextProxy::resourceLoadDidSendRequest(WebExtensionTabIdentifier tabID, WebExtensionWindowIdentifier windowID, const WebCore::ResourceRequest& request, const ResourceLoadInfo& resourceLoad)
+void WebExtensionContextProxy::resourceLoadDidSendRequest(WebExtensionTabIdentifier tabID, WebExtensionWindowIdentifier windowID, const WebCore::ResourceRequest& request, const ResourceLoadInfo& resourceLoad, const std::optional<IPC::FormDataReference>& formDataOptional)
 {
     auto *details = webRequestDetailsForResourceLoad(resourceLoad, tabID);
 
     // FIXME: <rdar://problem/59922101> Chrome documentation says this about requestBody:
     // Only provided if extraInfoSpec contains 'requestBody'.
-    if (auto *requestBody = request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody).HTTPBody)
-        details[@"requestBody"] = convertRequestBodyToWebExtensionFormat(requestBody);
+
+    RefPtr formData = formDataOptional ? formDataOptional->data() : nullptr;
+    auto contentType = request.httpContentType();
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        auto& webRequestObject = namespaceObject.webRequest();
-        webRequestObject.onBeforeRequest().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
+        namespaceObject.webRequest().onBeforeRequest().enumerateListeners(tabID, windowID, resourceLoad, [details = RetainPtr { details }, formData, contentType](WebExtensionCallbackHandler& listener) {
+            if (formData) {
+                if (auto *requestBody = toWebAPI(*formData, contentType, listener.globalContext()))
+                    [details setObject:requestBody forKey:@"requestBody"];
+            }
+
+            listener.call(details.get());
+
+            [details removeObjectForKey:@"requestBody"];
+        });
     });
 
-    [details removeObjectForKey:@"requestBody"];
     details[@"requestHeaders"] = convertHeaderFieldsToWebExtensionFormat(request.httpHeaderFields());
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {

@@ -39,6 +39,7 @@
 #import "APIPageConfiguration.h"
 #import "CocoaHelpers.h"
 #import "ContextMenuContextData.h"
+#import "FormDataReference.h"
 #import "InjectUserScriptImmediately.h"
 #import "Logging.h"
 #import "PageLoadStateObserver.h"
@@ -2697,9 +2698,15 @@ void WebExtensionContext::resourceLoadDidSendRequest(WebPageProxyIdentifier page
     RefPtr window = tab->window();
     auto windowIdentifier = window ? window->identifier() : WebExtensionWindowConstants::NoneIdentifier;
 
+    std::optional<IPC::FormDataReference> formDataReference;
+    if (RefPtr formData = request.httpBody()) {
+        RefPtr resolvedFormData = formData->resolveBlobReferences().ptr();
+        formDataReference = IPC::FormDataReference { WTFMove(resolvedFormData) };
+    }
+
     auto eventTypes = { WebExtensionEventListenerType::WebRequestOnBeforeRequest, WebExtensionEventListenerType::WebRequestOnBeforeSendHeaders, WebExtensionEventListenerType::WebRequestOnSendHeaders };
     wakeUpBackgroundContentIfNecessaryToFireEvents(eventTypes, [=, this, protectedThis = Ref { *this }] {
-        sendToProcessesForEvents(eventTypes, Messages::WebExtensionContextProxy::ResourceLoadDidSendRequest(tab->identifier(), windowIdentifier, request, loadInfo));
+        sendToProcessesForEvents(eventTypes, Messages::WebExtensionContextProxy::ResourceLoadDidSendRequest(tab->identifier(), windowIdentifier, request, loadInfo, formDataReference));
     });
 }
 
