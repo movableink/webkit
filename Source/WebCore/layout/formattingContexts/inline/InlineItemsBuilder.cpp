@@ -188,11 +188,6 @@ void InlineItemsBuilder::computeInlineBoxBoundaryTextSpacingsIfNeeded(const Inli
         inlineContentCache().setInlineBoxBoundaryTextSpacings(WTFMove(spacings));
 }
 
-static inline bool isTextOrLineBreak(const Box& layoutBox)
-{
-    return layoutBox.isInFlow() && (layoutBox.isInlineTextBox() || (layoutBox.isLineBreakBox() && !layoutBox.isWordBreakOpportunity()));
-}
-
 static bool requiresVisualReordering(const Box& layoutBox)
 {
     if (auto* inlineTextBox = dynamicDowncast<InlineTextBox>(layoutBox))
@@ -212,11 +207,8 @@ InlineItemsBuilder::LayoutQueue InlineItemsBuilder::traverseUntilDamaged(const B
         queue.append(layoutBox);
 
         m_contentRequiresVisualReordering = m_contentRequiresVisualReordering || requiresVisualReordering(layoutBox);
-        if (!isTextOrLineBreak(layoutBox)) {
-            m_isTextAndForcedLineBreakOnlyContent = false;
-            if (layoutBox.isInlineBox())
-                ++m_inlineBoxCount;
-        }
+        if (layoutBox.isInlineBox())
+            ++m_inlineBoxCount;
         return &layoutBox == &firstDamagedLayoutBox;
     };
 
@@ -323,19 +315,17 @@ void InlineItemsBuilder::collectInlineItems(InlineItemList& inlineItemList, Inli
 
         while (!layoutQueue.isEmpty()) {
             auto layoutBox = layoutQueue.takeLast();
-            if (layoutBox->isOutOfFlowPositioned()) {
-                m_isTextAndForcedLineBreakOnlyContent = false;
+            if (layoutBox->isOutOfFlowPositioned())
                 inlineItemList.append({ layoutBox, InlineItem::Type::Opaque });
-            } else if (auto* inlineTextBox = dynamicDowncast<InlineTextBox>(layoutBox.get()))
+            else if (auto* inlineTextBox = dynamicDowncast<InlineTextBox>(layoutBox.get()))
                 handleTextContent(*inlineTextBox, inlineItemList, partialContentOffset(*inlineTextBox));
             else if (layoutBox->isAtomicInlineBox() || layoutBox->isLineBreakBox())
                 handleInlineLevelBox(layoutBox, inlineItemList);
             else if (layoutBox->isInlineBox())
                 handleInlineBoxEnd(layoutBox, inlineItemList);
-            else if (layoutBox->isFloatingPositioned()) {
+            else if (layoutBox->isFloatingPositioned())
                 inlineItemList.append({ layoutBox, InlineItem::Type::Float });
-                m_isTextAndForcedLineBreakOnlyContent = false;
-            } else
+            else
                 ASSERT_NOT_REACHED();
 
             if (auto* nextSibling = layoutBox->nextSibling()) {
@@ -754,35 +744,44 @@ static void handleTextSpacing(TextSpacing::SpacingState& spacingState, Trimmable
         spacingState.lastCharacterClassFromPreviousRun = TextSpacing::characterClass(lastCharacterFromPreviousRun);
     } else
         spacingState.lastCharacterClassFromPreviousRun = TextSpacing::CharacterClass::Undefined;
-};
+}
+
+static inline bool isTextOrLineBreak(const Box& layoutBox)
+{
+    return layoutBox.isInFlow() && (layoutBox.isInlineTextBox() || (layoutBox.isLineBreakBox() && !layoutBox.isWordBreakOpportunity()));
+}
 
 void InlineItemsBuilder::computeInlineTextItemWidths(InlineItemList& inlineItemList)
 {
+    if (inlineItemList.isEmpty()) {
+        m_isTextAndForcedLineBreakOnlyContent = false;
+        return;
+    }
+
     TextSpacing::SpacingState spacingState;
     TrimmableTextSpacings trimmableTextSpacings;
+    m_isTextAndForcedLineBreakOnlyContent = true;
 
     auto& inlineBoxBoundaryTextSpacings = inlineContentCache().inlineBoxBoundaryTextSpacings();
     for (size_t inlineItemIndex = 0; inlineItemIndex < inlineItemList.size(); ++inlineItemIndex) {
-        auto extraInlineTextSpacing= 0.f;
+        auto extraInlineTextSpacing = 0.f;
         auto& inlineItem = inlineItemList[inlineItemIndex];
-        auto* inlineTextItem = dynamicDowncast<InlineTextItem>(inlineItem);
-        if (!inlineTextItem) {
-            spacingState.lastCharacterClassFromPreviousRun = TextSpacing::CharacterClass::Undefined;
+
+        if (auto* inlineTextItem = dynamicDowncast<InlineTextItem>(inlineItem)) {
+            auto needsMeasuring = inlineTextItem->length() && !inlineTextItem->isZeroWidthSpaceSeparator() && canCacheMeasuredWidthOnInlineTextItem(inlineTextItem->inlineTextBox(), inlineTextItem->isWhitespace());
+            if (needsMeasuring) {
+                auto start = inlineTextItem->start();
+                if (auto inlineBoxBoundaryTextSpacing = inlineBoxBoundaryTextSpacings.find(inlineItemIndex - 1); inlineBoxBoundaryTextSpacing != inlineBoxBoundaryTextSpacings.end())
+                    extraInlineTextSpacing = inlineBoxBoundaryTextSpacing->value;
+                inlineTextItem->setWidth(TextUtil::width(*inlineTextItem, inlineTextItem->style().fontCascade(), start, start + inlineTextItem->length(), { }, TextUtil::UseTrailingWhitespaceMeasuringOptimization::Yes, spacingState) + extraInlineTextSpacing);
+                handleTextSpacing(spacingState, trimmableTextSpacings, *inlineTextItem, inlineItemIndex);
+            }
             continue;
         }
 
-        auto& inlineTextBox = inlineTextItem->inlineTextBox();
-        auto start = inlineTextItem->start();
-        auto length = inlineTextItem->length();
-        auto needsMeasuring = length && !inlineTextItem->isZeroWidthSpaceSeparator();
-        if (!needsMeasuring || !canCacheMeasuredWidthOnInlineTextItem(inlineTextBox, inlineTextItem->isWhitespace()))
-            continue;
-        if (auto inlineBoxBoundaryTextSpacing = inlineBoxBoundaryTextSpacings.find(inlineItemIndex - 1); inlineBoxBoundaryTextSpacing != inlineBoxBoundaryTextSpacings.end())
-            extraInlineTextSpacing = inlineBoxBoundaryTextSpacing->value;
-
-        inlineTextItem->setWidth(TextUtil::width(*inlineTextItem, inlineTextItem->style().fontCascade(), start, start + length, { }, TextUtil::UseTrailingWhitespaceMeasuringOptimization::Yes, spacingState) + extraInlineTextSpacing);
-
-        handleTextSpacing(spacingState, trimmableTextSpacings, *inlineTextItem, inlineItemIndex);
+        spacingState.lastCharacterClassFromPreviousRun = TextSpacing::CharacterClass::Undefined;
+        if (!inlineItem.isInlineBoxStartOrEnd())
+            m_isTextAndForcedLineBreakOnlyContent = m_isTextAndForcedLineBreakOnlyContent && isTextOrLineBreak(inlineItem.layoutBox());
     }
     inlineContentCache().setTrimmableTextSpacings(WTFMove(trimmableTextSpacings));
 }
@@ -958,8 +957,6 @@ void InlineItemsBuilder::handleInlineBoxEnd(const Box& inlineBox, InlineItemList
 
 void InlineItemsBuilder::handleInlineLevelBox(const Box& layoutBox, InlineItemList& inlineItemList)
 {
-    m_isTextAndForcedLineBreakOnlyContent = m_isTextAndForcedLineBreakOnlyContent && isTextOrLineBreak(layoutBox);
-
     if (layoutBox.isRubyAnnotationBox())
         return inlineItemList.append({ layoutBox, InlineItem::Type::Opaque });
 

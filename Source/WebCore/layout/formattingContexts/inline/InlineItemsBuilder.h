@@ -72,7 +72,7 @@ private:
     const SecurityOrigin& m_securityOrigin;
 
     bool m_contentRequiresVisualReordering { false };
-    bool m_isTextAndForcedLineBreakOnlyContent { true };
+    bool m_isTextAndForcedLineBreakOnlyContent { false };
     size_t m_inlineBoxCount { 0 };
     bool m_hasTextAutospace { !root().style().textAutospace().isNoAutospace() };
 };
