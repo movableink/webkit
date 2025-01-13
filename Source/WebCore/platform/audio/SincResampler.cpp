@@ -338,7 +338,7 @@ float SincResampler::convolve(std::span<const float> inputP, std::span<const flo
     float32x4_t m_sums1 = vmovq_n_f32(0);
     float32x4_t m_sums2 = vmovq_n_f32(0);
     inputP = inputP.first(kernelSize);
-    while (!input.empty()) {
+    while (!inputP.empty()) {
         m_input = vld1q_f32(inputP.data());
         skip(inputP, 4);
         m_sums1 = vmlaq_f32(m_sums1, m_input, vld1q_f32(k1.data()));
