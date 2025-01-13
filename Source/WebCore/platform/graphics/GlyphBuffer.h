@@ -38,8 +38,6 @@
 #include <wtf/CheckedRef.h>
 #include <wtf/Vector.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static const constexpr GlyphBufferGlyph deletedGlyph = 0xFFFF;
@@ -282,5 +280,3 @@ private:
 };
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

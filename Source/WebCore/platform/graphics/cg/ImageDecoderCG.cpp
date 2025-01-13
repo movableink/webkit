@@ -624,9 +624,9 @@ String ImageDecoderCG::decodeUTI(CGImageSourceRef imageSource, const SharedBuffe
         return uti;
     }
 
-    static constexpr auto ftypSignature = FourCC("ftyp");
-    static constexpr auto avifBrand = FourCC("avif");
-    static constexpr auto avisBrand = FourCC("avis");
+    static const FourCC ftypSignature = std::span { "ftyp" };
+    static const FourCC avifBrand = std::span { "avif" };
+    static const FourCC avisBrand = std::span { "avis" };
 
     auto boxUnsigned = [span = data.span()](unsigned index) -> unsigned {
         constexpr bool isLittleEndian = false;
