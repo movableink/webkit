@@ -44,6 +44,7 @@ static auto evaluate(const IndirectNode<Product>&, NumericValue percentResolutio
 static auto evaluate(const IndirectNode<Min>&, NumericValue percentResolutionLength) -> NumericValue;
 static auto evaluate(const IndirectNode<Max>&, NumericValue percentResolutionLength) -> NumericValue;
 static auto evaluate(const IndirectNode<Hypot>&, NumericValue percentResolutionLength) -> NumericValue;
+static auto evaluate(const IndirectNode<Random>&, NumericValue percentResolutionLength) -> NumericValue;
 static auto evaluate(const IndirectNode<Blend>&, NumericValue percentResolutionLength) -> NumericValue;
 template<typename Op>
 static auto evaluate(const IndirectNode<Op>&, NumericValue percentResolutionLength) -> NumericValue;
@@ -120,6 +121,28 @@ NumericValue evaluate(const IndirectNode<Hypot>& root, NumericValue percentResol
     return executeOperation<Hypot>(root->children, [&](const auto& child) -> NumericValue {
         return evaluate(child, percentResolutionLength);
     });
+}
+
+NumericValue evaluate(const IndirectNode<Random>& root, NumericValue percentResolutionLength)
+{
+    auto min = evaluate(root->min, percentResolutionLength);
+    auto max = evaluate(root->max, percentResolutionLength);
+    auto step = evaluate(root->step, percentResolutionLength);
+
+    // RandomKeyMap relies on using NaN for HashTable deleted/empty values but
+    // the result is always NaN if either is NaN, so we can return early here.
+    if (std::isnan(min) || std::isnan(max))
+        return std::numeric_limits<double>::quiet_NaN();
+
+    Ref keyMap = root->cachingOptions.keyMap;
+    auto randomUnitInterval = keyMap->lookupUnitInterval(
+        root->cachingOptions.identifier,
+        min,
+        max,
+        step
+    );
+
+    return executeOperation<Random>(randomUnitInterval, min, max, step);
 }
 
 NumericValue evaluate(const IndirectNode<Blend>& root, NumericValue percentResolutionLength)

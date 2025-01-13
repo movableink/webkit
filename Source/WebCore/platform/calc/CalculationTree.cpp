@@ -37,6 +37,7 @@ static auto dumpVariadic(TextStream&, const IndirectNode<Op>&, ASCIILiteral pref
 
 template<typename Op>
 static auto operator<<(TextStream&, const IndirectNode<Op>&) -> TextStream&;
+static auto operator<<(TextStream&, const Random::CachingOptions&) -> TextStream&;
 static auto operator<<(TextStream&, const None&) -> TextStream&;
 static auto operator<<(TextStream&, const ChildOrNone&) -> TextStream&;
 static auto operator<<(TextStream&, const Child&) -> TextStream&;
@@ -80,6 +81,11 @@ template<typename Op> auto operator<<(TextStream& ts, const IndirectNode<Op>& ro
     ));
 
     return ts << ")";
+}
+
+TextStream& operator<<(TextStream& ts, const Random::CachingOptions& options)
+{
+    return ts << "options(id(" << options.identifier << "), per-element(" << options.perElement << "))";
 }
 
 TextStream& operator<<(TextStream& ts, const None&)

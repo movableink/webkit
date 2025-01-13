@@ -63,6 +63,7 @@ enum class Operator : uint8_t {
     Down,
     ToZero,
     Progress,
+    Random,
     Blend,
 };
 

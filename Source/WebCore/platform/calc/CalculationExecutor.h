@@ -487,6 +487,32 @@ template<> struct OperatorExecutor<Progress> {
     }
 };
 
+template<> struct OperatorExecutor<Random> {
+    double operator()(double randomUnitInterval, double min, double max, std::optional<double> step)
+    {
+        if (!std::isfinite(min) || !std::isfinite(max))
+            return std::numeric_limits<double>::quiet_NaN();
+        if (max <= min)
+            return min;
+
+        if (!step)
+            return min + ((max - min) * randomUnitInterval);
+
+        if (std::isnan(*step))
+            return std::numeric_limits<double>::quiet_NaN();
+        if (std::isinf(*step) || *step <= 0)
+            return min;
+
+        auto stepValue = *step;
+        auto multiples = std::floor(((max - min) / stepValue) + 1.0);
+        auto multiplePicked = std::floor(multiples * randomUnitInterval);
+        auto result = min + (multiplePicked * stepValue);
+        if (result > max)
+            return result - stepValue;
+        return result;
+    }
+};
+
 } // namespace Calculation
 } // namespace WebCore
 

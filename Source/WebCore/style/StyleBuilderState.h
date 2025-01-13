@@ -42,6 +42,10 @@ class RenderStyle;
 class StyleImage;
 class StyleResolver;
 
+namespace Calculation {
+class RandomKeyMap;
+}
+
 namespace CSS {
 struct AppleColorFilterProperty;
 struct FilterProperty;
@@ -123,6 +127,8 @@ public:
 
     bool isCurrentPropertyInvalidAtComputedValueTime() const;
     void setCurrentPropertyInvalidAtComputedValueTime();
+
+    Ref<Calculation::RandomKeyMap> randomKeyMap(bool perElement) const;
 
 private:
     // See the comment in maybeUpdateFontForLetterSpacing() about why this needs to be a friend.

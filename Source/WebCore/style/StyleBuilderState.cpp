@@ -307,5 +307,19 @@ void BuilderState::setCurrentPropertyInvalidAtComputedValueTime()
     m_invalidAtComputedValueTimeProperties.set(cssPropertyID());
 }
 
+Ref<Calculation::RandomKeyMap> BuilderState::randomKeyMap(bool perElement) const
+{
+    if (perElement) {
+        ASSERT(element());
+
+        std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier;
+        if (style().pseudoElementType() != PseudoId::None)
+            pseudoElementIdentifier = Style::PseudoElementIdentifier { style().pseudoElementType(), style().pseudoElementNameArgument() };
+
+        return element()->randomKeyMap(pseudoElementIdentifier);
+    }
+    return document().randomKeyMap();
 }
-}
+
+} // namespace Style
+} // namespace WebCore

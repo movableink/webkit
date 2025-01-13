@@ -53,6 +53,7 @@ static auto evaluate(const IndirectNode<Product>&, const EvaluationOptions&) -> 
 static auto evaluate(const IndirectNode<Min>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Max>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Hypot>&, const EvaluationOptions&) -> std::optional<double>;
+static auto evaluate(const IndirectNode<Random>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<MediaProgress>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<ContainerProgress>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Anchor>&, const EvaluationOptions&) -> std::optional<double>;
@@ -173,6 +174,44 @@ std::optional<double> evaluate(const IndirectNode<Max>& root, const EvaluationOp
 std::optional<double> evaluate(const IndirectNode<Hypot>& root, const EvaluationOptions& options)
 {
     return executeVariadicMathOperationAfterUnwrapping(root, options);
+}
+
+std::optional<double> evaluate(const IndirectNode<Random>& root, const EvaluationOptions& options)
+{
+    if (!options.conversionData || !options.conversionData->styleBuilderState())
+        return { };
+    if (root->cachingOptions.perElement && !options.conversionData->styleBuilderState()->element())
+        return { };
+
+    auto min = evaluate(root->min, options);
+    if (!min)
+        return { };
+
+    auto max = evaluate(root->max, options);
+    if (!min)
+        return { };
+
+    auto step = evaluate(root->step, options);
+    if (!step)
+        return { };
+
+    // RandomKeyMap relies on using NaN for HashTable deleted/empty values but
+    // the result is always NaN if either is NaN, so we can return early here.
+    if (std::isnan(*min) || std::isnan(*max))
+        return std::numeric_limits<double>::quiet_NaN();
+
+    auto keyMap = options.conversionData->styleBuilderState()->randomKeyMap(
+        root->cachingOptions.perElement
+    );
+
+    auto randomUnitInterval = keyMap->lookupUnitInterval(
+        root->cachingOptions.identifier,
+        *min,
+        *max,
+        *step
+    );
+
+    return Calculation::executeOperation<Random::Base>(randomUnitInterval, *min, *max, *step);
 }
 
 std::optional<double> evaluate(const IndirectNode<MediaProgress>& root, const EvaluationOptions& options)

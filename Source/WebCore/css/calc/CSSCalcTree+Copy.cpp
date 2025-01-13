@@ -32,10 +32,11 @@ namespace CSSCalc {
 
 static auto copy(const MQ::MediaProgressProviding*) -> const MQ::MediaProgressProviding*;
 static auto copy(const CQ::ContainerProgressProviding*) -> const CQ::ContainerProgressProviding*;
+static auto copy(const Random::CachingOptions&) -> Random::CachingOptions;
+static auto copy(const CSSValueID&) -> CSSValueID;
 static auto copy(const AtomString&) -> AtomString;
 static auto copy(const CSS::Keyword::None&) -> CSS::Keyword::None;
 static auto copy(const std::optional<Child>& root) -> std::optional<Child>;
-static auto copy(const CSS::Keyword::None&) -> CSS::Keyword::None;
 static auto copy(const ChildOrNone&) -> ChildOrNone;
 static auto copy(const Children&) -> Children;
 static auto copy(const Child&) -> Child;
@@ -46,19 +47,22 @@ static auto copy(const IndirectNode<AnchorSize>&) -> Child;
 
 // MARK: Copying
 
-std::optional<Child> copy(const std::optional<Child>& root)
-{
-    if (root)
-        return copy(*root);
-    return std::nullopt;
-}
-
 const MQ::MediaProgressProviding* copy(const MQ::MediaProgressProviding* root)
 {
     return root;
 }
 
 const CQ::ContainerProgressProviding* copy(const CQ::ContainerProgressProviding* root)
+{
+    return root;
+}
+
+Random::CachingOptions copy(const Random::CachingOptions& root)
+{
+    return root;
+}
+
+CSSValueID copy(const CSSValueID& root)
 {
     return root;
 }
@@ -71,6 +75,13 @@ AtomString copy(const AtomString& root)
 CSS::Keyword::None copy(const CSS::Keyword::None& root)
 {
     return root;
+}
+
+std::optional<Child> copy(const std::optional<Child>& root)
+{
+    if (root)
+        return copy(*root);
+    return std::nullopt;
 }
 
 ChildOrNone copy(const ChildOrNone& root)
@@ -98,15 +109,9 @@ template<typename Op> Child copy(const IndirectNode<Op>& root)
     return makeChild(WTF::apply([](const auto& ...x) { return Op { copy(x)... }; } , *root), root.type);
 }
 
-Anchor::Side copy(const Anchor::Side& side)
+Anchor::Side copy(const Anchor::Side& root)
 {
-    return WTF::switchOn(side,
-        [](CSSValueID value) -> Anchor::Side {
-            return value;
-        }, [](const Child& percentage) -> Anchor::Side {
-            return copy(percentage);
-        }
-    );
+    return WTF::switchOn(root, [&](const auto& root) { return Anchor::Side { copy(root) }; });
 }
 
 Child copy(const IndirectNode<Anchor>& anchor)

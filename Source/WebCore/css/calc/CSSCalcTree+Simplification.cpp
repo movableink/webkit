@@ -50,6 +50,7 @@ namespace CSSCalc {
 
 static auto copyAndSimplify(const MQ::MediaProgressProviding*, const SimplificationOptions&) -> const MQ::MediaProgressProviding*;
 static auto copyAndSimplify(const CQ::ContainerProgressProviding*, const SimplificationOptions&) -> const CQ::ContainerProgressProviding*;
+static auto copyAndSimplify(const Random::CachingOptions&, const SimplificationOptions&) -> Random::CachingOptions;
 static auto copyAndSimplify(const AtomString&, const SimplificationOptions&) -> AtomString;
 static auto copyAndSimplify(const CSS::Keyword::None&, const SimplificationOptions&) -> CSS::Keyword::None;
 static auto copyAndSimplify(const Children&, const SimplificationOptions&) -> Children;
@@ -1294,6 +1295,68 @@ std::optional<Child> simplify(Sign& root, const SimplificationOptions& options)
     );
 }
 
+std::optional<Child> simplify(Random& root, const SimplificationOptions& options)
+{
+    if (!options.conversionData || !options.conversionData->styleBuilderState())
+        return { };
+    if (root.cachingOptions.perElement && !options.conversionData->styleBuilderState()->element())
+        return { };
+    if (root.min.index() != root.max.index() || (root.step && root.step->index() != root.min.index()))
+        return { };
+
+    return WTF::switchOn(root.min,
+        [&]<Numeric T>(T& numericMin) -> std::optional<Child> {
+            auto numericMax = std::get<T>(root.max);
+
+            if (!unitsMatch(numericMin, numericMax, options) || !fullyResolved(numericMin, options))
+                return std::nullopt;
+
+            std::optional<double> valueStep;
+            if (root.step) {
+                auto numericStep = std::get<T>(*root.step);
+
+                if (!unitsMatch(numericMin, numericStep, options))
+                    return { };
+
+                valueStep = numericStep.value;
+            }
+
+            auto valueMin = numericMin.value;
+            auto valueMax = numericMax.value;
+
+            // RandomKeyMap relies on using NaN for HashTable deleted/empty values but
+            // the result is always NaN if either is NaN, so we can return early here.
+            if (std::isnan(valueMin) || std::isnan(valueMax))
+                return makeChildWithValueBasedOn(std::numeric_limits<double>::quiet_NaN(), numericMin);
+
+            auto keyMap = options.conversionData->styleBuilderState()->randomKeyMap(
+                root.cachingOptions.perElement
+            );
+
+            auto randomUnitInterval = keyMap->lookupUnitInterval(
+                root.cachingOptions.identifier,
+                valueMin,
+                valueMax,
+                valueStep
+            );
+
+            auto result = Calculation::executeOperation<Random::Base>(
+                randomUnitInterval,
+                valueMin,
+                valueMax,
+                valueStep
+            );
+
+            return makeChildWithValueBasedOn(result, numericMin);
+        },
+        [](auto&) -> std::optional<Child> {
+            return { };
+        }
+    );
+
+    return { };
+}
+
 std::optional<Child> simplify(Progress& root, const SimplificationOptions& options)
 {
     if (root.value.index() != root.start.index() || root.start.index() != root.end.index())
@@ -1419,6 +1482,11 @@ const MQ::MediaProgressProviding* copyAndSimplify(const MQ::MediaProgressProvidi
 }
 
 const CQ::ContainerProgressProviding* copyAndSimplify(const CQ::ContainerProgressProviding* root, const SimplificationOptions&)
+{
+    return root;
+}
+
+Random::CachingOptions copyAndSimplify(const Random::CachingOptions& root, const SimplificationOptions&)
 {
     return root;
 }

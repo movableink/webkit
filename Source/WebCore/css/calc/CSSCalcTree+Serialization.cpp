@@ -88,6 +88,7 @@ template<typename Op> static void serializeMathFunctionPrefix(StringBuilder&, co
 
 static void serializeMathFunctionArguments(StringBuilder&, const IndirectNode<Sum>&, SerializationState&);
 static void serializeMathFunctionArguments(StringBuilder&, const IndirectNode<Product>&, SerializationState&);
+static void serializeMathFunctionArguments(StringBuilder&, const IndirectNode<Random>&, SerializationState&);
 static void serializeMathFunctionArguments(StringBuilder&, const IndirectNode<ContainerProgress>&, SerializationState&);
 static void serializeMathFunctionArguments(StringBuilder&, const IndirectNode<Anchor>&, SerializationState&);
 static void serializeMathFunctionArguments(StringBuilder&, const IndirectNode<AnchorSize>&, SerializationState&);
@@ -368,6 +369,25 @@ void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<S
 void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<Product>& fn, SerializationState& state)
 {
     serializeCalculationTree(builder, fn, state);
+}
+
+void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<Random>& fn, SerializationState& state)
+{
+    if (!fn->cachingOptions.identifier.isNull() && fn->cachingOptions.perElement)
+        builder.append(fn->cachingOptions.identifier, ' ', nameLiteralForSerialization(CSSValuePerElement), ", "_s);
+    else if (!fn->cachingOptions.identifier.isNull())
+        builder.append(fn->cachingOptions.identifier, ", "_s);
+    else if (fn->cachingOptions.perElement)
+        builder.append(nameLiteralForSerialization(CSSValuePerElement), ", "_s);
+
+    serializeCalculationTree(builder, fn->min, state);
+    builder.append(", "_s);
+    serializeCalculationTree(builder, fn->max, state);
+
+    if (fn->step) {
+        builder.append(", "_s, nameLiteralForSerialization(CSSValueBy), ' ');
+        serializeCalculationTree(builder, *fn->step, state);
+    }
 }
 
 void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<ContainerProgress>& fn, SerializationState& state)

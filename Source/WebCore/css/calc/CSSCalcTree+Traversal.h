@@ -129,6 +129,9 @@ template<typename F, typename Op> void forAllChildNodes(const Op& root, const F&
         void operator()(const CQ::ContainerProgressProviding*)
         {
         }
+        void operator()(const Random::CachingOptions&)
+        {
+        }
     };
     auto caller = Caller { functor };
     WTF::apply([&](const auto& ...x) { (..., caller(x)); }, root);

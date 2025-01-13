@@ -343,6 +343,10 @@ using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
 using PlatformDisplayID = uint32_t;
 
+namespace Calculation {
+class RandomKeyMap;
+}
+
 namespace Style {
 class CustomPropertyRegistry;
 class Resolver;
@@ -1972,6 +1976,8 @@ public:
     ResourceMonitor* parentResourceMonitorIfExists();
 #endif
 
+    Ref<Calculation::RandomKeyMap> randomKeyMap() const;
+
 protected:
     enum class ConstructionFlag : uint8_t {
         Synthesized = 1 << 0,
@@ -2680,6 +2686,8 @@ private:
 #if ENABLE(CONTENT_EXTENSIONS)
     RefPtr<ResourceMonitor> m_resourceMonitor;
 #endif
+
+    mutable RefPtr<Calculation::RandomKeyMap> m_randomKeyMap;
 
     Ref<DocumentSyncData> m_syncData;
 }; // class Document

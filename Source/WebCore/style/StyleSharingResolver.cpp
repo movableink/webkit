@@ -304,6 +304,9 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
         return false;
 #endif
 
+    if (candidateElement.hasRandomKeyMap())
+        return false;
+
     return true;
 }
 

@@ -1521,6 +1521,9 @@ to-zero
 // progress
 media-progress
 container-progress
+random
+per-element
+// by
 infinity
 -infinity id=NegativeInfinity
 NaN

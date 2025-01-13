@@ -83,9 +83,13 @@ struct Log;
 struct Exp;
 struct Abs;
 struct Sign;
+struct Random;
 struct Progress;
+
 struct MediaProgress;
 struct ContainerProgress;
+
+// CSS Anchor Positioning functions.
 struct Anchor;
 struct AnchorSize;
 
@@ -205,6 +209,7 @@ using Node = std::variant<
     IndirectNode<Exp>,
     IndirectNode<Abs>,
     IndirectNode<Sign>,
+    IndirectNode<Random>,
     IndirectNode<Progress>,
     IndirectNode<MediaProgress>,
     IndirectNode<ContainerProgress>,
@@ -227,6 +232,9 @@ struct Tree {
 
     // `requiresConversionData` is used both to both indicate whether eager evaluation of the tree (at parse time) is possible or not and to trigger a warning in `CSSCalcValue::doubleValueDeprecated` that the evaluation results will be incorrect.
     bool requiresConversionData = false;
+
+    // `unique` is used to indicate if the calculation tree disqualifies styles it used by for style sharing.
+    bool unique = false;
 
     bool operator==(const Tree&) const = default;
 };
@@ -700,6 +708,36 @@ struct Sign {
     bool operator==(const Sign&) const = default;
 };
 
+// Random Function - https://drafts.csswg.org/css-values-5/#random
+struct Random {
+    WTF_MAKE_TZONE_ALLOCATED(Random);
+public:
+    using Base = Calculation::Random;
+    static constexpr auto id = CSSValueRandom;
+
+    // <random-caching-options> = <dashed-ident> || per-element
+    struct CachingOptions {
+        AtomString identifier;
+        bool perElement { false };
+
+        bool operator==(const CachingOptions&) const = default;
+    };
+
+    // <random()> = random( <random-caching-options>? , <calc-sum>, <calc-sum>, [by <calc-sum>]? )
+    //     - INPUT: "same" <number>, <dimension>, or <percentage>
+    //     - OUTPUT: same type
+    static constexpr auto input = AllowedTypes::Any;
+    static constexpr auto merge = MergePolicy::Same;
+    static constexpr auto output = OutputTransform::None;
+
+    CachingOptions cachingOptions;
+    Child min;
+    Child max;
+    std::optional<Child> step;
+
+    bool operator==(const Random&) const = default;
+};
+
 // Progress-Related Functions - https://drafts.csswg.org/css-values-5/#progress
 struct Progress {
     WTF_MAKE_STRUCT_TZONE_ALLOCATED(Progress);
@@ -757,6 +795,7 @@ struct ContainerProgress {
     bool operator==(const ContainerProgress&) const = default;
 };
 
+// Anchor Positioning Related Functions - https://drafts.csswg.org/css-anchor-position-1/
 struct Anchor {
     WTF_MAKE_STRUCT_TZONE_ALLOCATED(Anchor);
     static constexpr auto id = CSSValueAnchor;
@@ -825,6 +864,7 @@ template<> struct ReverseMapping<Calculation::Log> { using Op = Log; };
 template<> struct ReverseMapping<Calculation::Exp> { using Op = Exp; };
 template<> struct ReverseMapping<Calculation::Abs> { using Op = Abs; };
 template<> struct ReverseMapping<Calculation::Sign> { using Op = Sign; };
+template<> struct ReverseMapping<Calculation::Random> { using Op = Random; };
 template<> struct ReverseMapping<Calculation::Progress> { using Op = Progress; };
 
 // MARK: TextStream
@@ -927,6 +967,7 @@ std::optional<Type> toType(const Log&);
 std::optional<Type> toType(const Exp&);
 std::optional<Type> toType(const Abs&);
 std::optional<Type> toType(const Sign&);
+std::optional<Type> toType(const Random&);
 std::optional<Type> toType(const Progress&);
 std::optional<Type> toType(const MediaProgress&);
 std::optional<Type> toType(const ContainerProgress&);
@@ -1199,6 +1240,18 @@ template<size_t I> const auto& get(const Sign& root)
     return root.a;
 }
 
+template<size_t I> const auto& get(const Random& root)
+{
+    if constexpr (!I)
+        return root.cachingOptions;
+    else if constexpr (I == 1)
+        return root.min;
+    else if constexpr (I == 2)
+        return root.max;
+    else if constexpr (I == 3)
+        return root.step;
+}
+
 template<size_t I> const auto& get(const Progress& root)
 {
     if constexpr (!I)
@@ -1274,6 +1327,7 @@ OP_TUPLE_LIKE_CONFORMANCE(Sign, 1);
 OP_TUPLE_LIKE_CONFORMANCE(Progress, 3);
 OP_TUPLE_LIKE_CONFORMANCE(MediaProgress, 3);
 OP_TUPLE_LIKE_CONFORMANCE(ContainerProgress, 4);
+OP_TUPLE_LIKE_CONFORMANCE(Random, 4);
 // FIXME (webkit.org/b/280798): make Anchor and AnchorSize tuple-like
 OP_TUPLE_LIKE_CONFORMANCE(Anchor, 0);
 OP_TUPLE_LIKE_CONFORMANCE(AnchorSize, 0);

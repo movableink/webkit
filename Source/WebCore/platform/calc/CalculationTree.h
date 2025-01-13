@@ -25,9 +25,11 @@
 #pragma once
 
 #include "CalculationOperator.h"
+#include "CalculationRandomKeyMap.h"
 #include <optional>
 #include <tuple>
 #include <variant>
+#include <wtf/Ref.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
@@ -75,6 +77,7 @@ struct Hypot;
 struct Abs;
 struct Sign;
 struct Progress;
+struct Random;
 
 // Non-standard
 struct Blend;
@@ -175,6 +178,7 @@ using Child = std::variant<
     IndirectNode<Abs>,
     IndirectNode<Sign>,
     IndirectNode<Progress>,
+    IndirectNode<Random>,
     IndirectNode<Blend>
 >;
 
@@ -496,6 +500,28 @@ public:
     bool operator==(const Progress&) const = default;
 };
 
+// Random Function - https://drafts.csswg.org/css-values-5/#random
+struct Random {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(Random);
+public:
+    static constexpr auto op = Operator::Random;
+
+    struct CachingOptions {
+        AtomString identifier;
+        bool perElement { false };
+        Ref<RandomKeyMap> keyMap;
+
+        bool operator==(const CachingOptions&) const = default;
+    };
+
+    CachingOptions cachingOptions;
+    Child min;
+    Child max;
+    std::optional<Child> step;
+
+    bool operator==(const Random&) const = default;
+};
+
 // Non-standard
 struct Blend {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(Blend);
@@ -783,6 +809,18 @@ template<size_t I> const auto& get(const Progress& root)
         return root.to;
 }
 
+template<size_t I> const auto& get(const Random& root)
+{
+    if constexpr (!I)
+        return root.cachingOptions;
+    else if constexpr (I == 1)
+        return root.min;
+    else if constexpr (I == 2)
+        return root.max;
+    else if constexpr (I == 3)
+        return root.step;
+}
+
 template<size_t I> const auto& get(const Blend& root)
 {
     if constexpr (!I)
@@ -834,6 +872,7 @@ OP_TUPLE_LIKE_CONFORMANCE(Exp, 1);
 OP_TUPLE_LIKE_CONFORMANCE(Abs, 1);
 OP_TUPLE_LIKE_CONFORMANCE(Sign, 1);
 OP_TUPLE_LIKE_CONFORMANCE(Progress, 3);
+OP_TUPLE_LIKE_CONFORMANCE(Random, 4);
 OP_TUPLE_LIKE_CONFORMANCE(Blend, 3);
 
 #undef OP_TUPLE_LIKE_CONFORMANCE

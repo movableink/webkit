@@ -148,6 +148,10 @@ enum class ContentRelevancy : uint8_t {
     Selected = 1 << 3,
 };
 
+namespace Calculation {
+class RandomKeyMap;
+}
+
 namespace Style {
 class Resolver;
 enum class Change : uint8_t;
@@ -831,6 +835,9 @@ public:
 
     AtomString viewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&) const;
     void setViewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&, AtomString);
+
+    Ref<Calculation::RandomKeyMap> randomKeyMap(const std::optional<Style::PseudoElementIdentifier>&) const;
+    bool hasRandomKeyMap() const;
 
 protected:
     Element(const QualifiedName&, Document&, OptionSet<TypeFlag>);

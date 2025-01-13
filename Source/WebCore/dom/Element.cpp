@@ -6064,4 +6064,16 @@ HTMLElement* Element::topmostPopoverAncestor(TopLayerElementType topLayerType)
     return topmostAncestor.get();
 }
 
+Ref<Calculation::RandomKeyMap> Element::randomKeyMap(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier) const
+{
+    return const_cast<Element*>(this)->ensureElementRareData().ensureRandomKeyMap(pseudoElementIdentifier);
+}
+
+bool Element::hasRandomKeyMap() const
+{
+    if (!hasRareData())
+        return false;
+    return elementRareData()->hasRandomKeyMap();
+}
+
 } // namespace WebCore
