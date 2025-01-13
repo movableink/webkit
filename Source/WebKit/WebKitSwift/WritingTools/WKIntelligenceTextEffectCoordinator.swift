@@ -183,8 +183,8 @@ import WebKitSwift
 
         let chunk = Self.Chunk.Replacement(
             range: processedRangeRelativeToCurrentText,
-            rangeAfterReplacement: processedRangeRelativeToCurrentText.lowerBound..<(processedRangeRelativeToCurrentText.upperBound + characterDelta),
             finished: request.finished,
+            characterDelta: characterDelta,
             replacement: request.operation
         )
 
@@ -301,14 +301,7 @@ import WebKitSwift
 extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectViewSource {
     func textPreview(for chunk: Chunk) async -> PlatformTextPreview? {
         let previews = await self.delegate.intelligenceTextEffectCoordinator(self, textPreviewsFor: NSRange(chunk.range))
-
-#if canImport(UIKit)
-        return previews
-#else
-        return previews.map {
-            _WTTextPreview(snapshotImage: $0.previewImage, presentationFrame: $0.presentationFrame)
-        }
-#endif
+        return platformTextPreview(from: previews)
     }
 
     private func updateTextChunkVisibility(_ chunk: Chunk, visible: Bool, force: Bool) async {
@@ -334,15 +327,30 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
         await self.updateTextChunkVisibility(chunk, visible: visible, force: false)
     }
 
-    func performReplacementAndGeneratePreview(for chunk: Chunk, effect: PlatformIntelligenceReplacementTextEffect<Chunk>, animation: PlatformIntelligenceReplacementTextEffect<Chunk>.AnimationParameters) async -> PlatformTextPreview? {
+    func performReplacementAndGeneratePreview(for chunk: Chunk, effect: PlatformIntelligenceReplacementTextEffect<Chunk>) async -> (PlatformTextPreview?, remainder: PlatformContentPreview?) {
         guard let chunk = chunk as? Chunk.Replacement else {
             fatalError()
         }
 
-        let characterDelta = chunk.rangeAfterReplacement.upperBound - chunk.range.upperBound
+        guard let contextRange = self.contextRange else {
+            assertionFailure("Intelligence text effect coordinator: Invariant failed (replacement effect will begin without a context range)")
+            return (nil, nil)
+        }
+
+        // Create a preview of the original text, covering the range that starts from the end of this replacement chunk to the end
+        // of the entire context range, with any prior replacement offsets taken into account.
+
+        let remainderRangeBeforeReplacement = chunk.range.upperBound..<(contextRange.upperBound + self.processedRangeOffset)
+        let contentPreview = await self.delegate.intelligenceTextEffectCoordinator(self, contentPreviewFor: NSRange(remainderRangeBeforeReplacement))
+        let remainderPreview = PlatformContentPreview(previewImage: contentPreview.previewImage, presentationFrame: contentPreview.presentationFrame)
+
+        let characterDelta = chunk.characterDelta
 
         await chunk.replacement()
-        chunk.range = chunk.rangeAfterReplacement
+        chunk.range = chunk.range.lowerBound..<(chunk.range.upperBound + characterDelta)
+
+        // At this point, the resolved end of the entire context range is `contextRange.upperBound + self.processedRangeOffset + characterDelta`
+        // until `processedRangeOffset` gets updated after the replacement effect actually starts.
 
         // If there is an active pondering effect ongoing that predated the replacement, adjust its range to account
         // for the replacement character delta. This ensures that when the pondering effect ends, the semantic chunk
@@ -358,16 +366,37 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
         let previews = await self.delegate.intelligenceTextEffectCoordinator(self, textPreviewsFor: NSRange(chunk.range))
 
 #if canImport(UIKit)
-        return previews
+        let suggestionRects = [NSValue]()
 #else
         let suggestionRects = await self.delegate.intelligenceTextEffectCoordinator(self, rectsForProofreadingSuggestionsIn: NSRange(chunk.range))
-        return previews.map {
-            _WTTextPreview(snapshotImage: $0.previewImage, presentationFrame: $0.presentationFrame, backgroundColor: nil, clippingPath: nil, scale: 1, candidateRects: suggestionRects)
-        }
 #endif
+
+        let platformPreview = platformTextPreview(from: previews, suggestionRects: suggestionRects)
+        return (platformPreview, remainder: remainderPreview)
     }
 
     func replacementEffectWillBegin(_ effect: PlatformIntelligenceReplacementTextEffect<Chunk>) async {
+        guard let chunk = effect.chunk as? Chunk.Replacement else {
+            fatalError()
+        }
+
+        guard let contextRange = self.contextRange else {
+            assertionFailure("Intelligence text effect coordinator: Invariant failed (replacement effect will begin without a context range)")
+            return
+        }
+
+        // Hide the remaining text because the remainder text animation will be happening instead.
+        //
+        // The `upperBound` must include the sum of `self.processedRangeOffset + chunk.offset` because by this point, the
+        // backing text has now been replaced, but `self.processedRangeOffset` hasn't been updated yet by `startReplacementAnimation`
+
+        let lowerBound = effect.chunk.range.upperBound
+        let upperBound = contextRange.upperBound + self.processedRangeOffset + chunk.characterDelta
+
+        let rangeToHide = lowerBound..<upperBound
+
+        await self.delegate.intelligenceTextEffectCoordinator(self, updateTextVisibilityFor: NSRange(rangeToHide), visible: false, identifier: effect.chunk.id)
+
         // Stop the current pondering effect, and then create a new pondering effect once the replacement effect is complete.
         await self.setActivePonderingEffect(nil)
     }
@@ -465,14 +494,14 @@ extension WKIntelligenceTextEffectCoordinator {
         }
 
         fileprivate class Replacement: Chunk {
-            let rangeAfterReplacement: Range<Int>
             let finished: Bool
+            let characterDelta: Int
             let replacement: (() async -> Void)
 
-            init(range: Range<Int>, rangeAfterReplacement: Range<Int>, finished: Bool, replacement: @escaping (() async -> Void)) {
-                self.rangeAfterReplacement = rangeAfterReplacement
+            init(range: Range<Int>, finished: Bool, characterDelta: Int, replacement: @escaping (() async -> Void)) {
                 self.finished = finished
                 self.replacement = replacement
+                self.characterDelta = characterDelta
                 super.init(range: range)
             }
         }
@@ -509,5 +538,17 @@ fileprivate func async(_ block: @escaping (@escaping () -> Void) -> Void) -> (()
         }
     }
 }
+
+#if canImport(UIKit)
+func platformTextPreview(from source: UITargetedPreview, suggestionRects: [NSValue] = []) -> PlatformTextPreview {
+    source
+}
+#else
+func platformTextPreview(from source: [_WKTextPreview], suggestionRects: [NSValue] = []) -> PlatformTextPreview {
+    source.map {
+        _WTTextPreview(snapshotImage: $0.previewImage, presentationFrame: $0.presentationFrame, backgroundColor: nil, clippingPath: nil, scale: 1, candidateRects: suggestionRects)!
+    }
+}
+#endif
 
 #endif

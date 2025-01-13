@@ -31,8 +31,9 @@
 #import <UIKit/UIKit.h>
 #else
 #import <AppKit/AppKit.h>
-#import <WebKit/_WKTextPreview.h>
 #endif
+
+#import <WebKit/_WKTextPreview.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -54,6 +55,8 @@ NS_SWIFT_UI_ACTOR
 #else
 - (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator textPreviewsForRange:(NSRange)range completion:(void (^)(NSArray<_WKTextPreview *> *))completion;
 #endif
+
+- (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator contentPreviewForRange:(NSRange)range completion:(void (^)(_WKTextPreview *))completion;
 
 - (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator rectsForProofreadingSuggestionsInRange:(NSRange)range completion:(void (^)(NSArray<NSValue *> *))completion;
 

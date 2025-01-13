@@ -19,6 +19,7 @@ internal import UIKit_Private
 #endif
 
 import WebKitSwift
+internal import SwiftUI
 
 // MARK: Platform abstraction type aliases
 
@@ -31,6 +32,11 @@ typealias PlatformView = UIView
 typealias PlatformBounds = CGRect
 typealias PlatformTextPreview = UITargetedPreview
 #endif
+
+struct PlatformContentPreview {
+    let previewImage: CGImage?
+    let presentationFrame: CGRect
+}
 
 // MARK: Platform abstraction protocols
 
@@ -70,7 +76,7 @@ extension PlatformIntelligenceTextEffect {
     ///
     /// Clients must also take the responsibility of animating the remaining text away from the replaced text if needed, using
     /// the provided animation parameters.
-    func performReplacementAndGeneratePreview(for chunk: Chunk, effect: PlatformIntelligenceReplacementTextEffect<Chunk>, animation: PlatformIntelligenceReplacementTextEffect<Chunk>.AnimationParameters) async -> PlatformTextPreview?
+    func performReplacementAndGeneratePreview(for chunk: Chunk, effect: PlatformIntelligenceReplacementTextEffect<Chunk>) async -> (PlatformTextPreview?, remainder: PlatformContentPreview?)
 
     /// This function is invoked after preparing the replacement effect, but before the effect is added.
     func replacementEffectWillBegin(_ effect: PlatformIntelligenceReplacementTextEffect<Chunk>) async
@@ -187,7 +193,7 @@ private final class UIReplacementTextEffectTextChunkAdapter<Wrapped>: UITextEffe
     }
     
     func textPreview(for rect: CGRect) async -> _WTTextPreview? {
-        // FIXME: Implement this function so that subsequent text pieces animate out of the way if needed.
+        // This is implemented manually by the system instead of relying on the WTUI interface.
         nil
     }
 
@@ -315,13 +321,138 @@ struct PlatformIntelligenceTextEffectID: Hashable {
     }
 }
 
-/// A replacement effect, which essentially involves the original text fading away while at the same time the new text fades in right above it.
-@MainActor class PlatformIntelligenceReplacementTextEffect<Chunk>: PlatformIntelligenceTextEffect where Chunk: PlatformIntelligenceTextEffectChunk {
-    struct AnimationParameters {
-        let duration: TimeInterval
-        let delay: TimeInterval
+/// An effect which shifts the remaining text (the text after the currently replaced text) either up or down,
+/// depending on if the newly replaced text is taller than the source text.
+@MainActor class PlatformIntelligenceRemainderAffordanceTextEffect<Chunk>: PlatformIntelligenceTextEffect where Chunk: PlatformIntelligenceTextEffectChunk {
+    private enum AnimationKind {
+        case contract
+        case expand
     }
 
+    struct Previews {
+        let source: PlatformTextPreview
+        let destination: PlatformTextPreview
+        let remainder: PlatformContentPreview
+    }
+
+    let id = PlatformIntelligenceTextEffectID()
+    let chunk: Chunk
+    let previews: Previews
+
+    init(chunk: Chunk, previews: Previews) {
+        self.chunk = chunk
+        self.previews = previews
+    }
+
+    private static func animation(for kind: AnimationKind) -> SwiftUI.Animation {
+        // Empirically derived animation values, specifically ensuring that the text avoids being overlapped by the replacement animation.
+
+        switch kind {
+        case .contract: .easeInOut(duration: 0.4).delay(0.5)
+        case .expand: .bouncy(duration: 0.4).delay(0.2)
+        }
+    }
+
+    private func heightDelta() -> Double {
+#if canImport(UIKit)
+        let sourceRect = previews.source.size
+        let destRect = previews.destination.size
+
+        let delta = destRect.height - sourceRect.height
+#else
+        let sourceRect = previews.source
+            .map(\.presentationFrame)
+            .reduce(CGRect.zero) { $0.union($1) }
+
+        let destRect = previews.destination
+            .map(\.presentationFrame)
+            .reduce(CGRect.zero) { $0.union($1) }
+
+        let delta = destRect.size.height - sourceRect.size.height
+#endif
+
+        return delta
+    }
+
+    func _add<Source>(to view: PlatformIntelligenceTextEffectView<Source>) async where Source : PlatformIntelligenceTextEffectViewSource, Source.Chunk == Chunk {
+        guard let remainderPreviewImage = previews.remainder.previewImage else {
+            return
+        }
+
+        // Compute the difference in height between the original text and the replaced text.
+        let delta = heightDelta()
+
+        // Create two rects:
+        // 1. A source frame for the remainder of the text content before the text is replaced.
+        // 2. A destination frame for the remainder of the text content after the text is replaced.
+        //
+        // The y-coordinates are adjusted for AppKit to account for the origin being the bottom left instead of top left.
+
+        let remainderRect = previews.remainder.presentationFrame
+
+#if canImport(UIKit)
+        let remainderViewSourceFrameY = remainderRect.origin.y
+#else
+        // origin-y-coordinate is flipped in AppKit
+        let remainderViewSourceFrameY = view.frame.size.height - remainderRect.size.height - remainderRect.origin.y
+#endif
+
+        let remainderViewSourceFrame = CGRect(
+            x: remainderRect.origin.x,
+            y: remainderViewSourceFrameY,
+            width: remainderRect.size.width,
+            height: remainderRect.size.height
+        )
+
+#if canImport(UIKit)
+        // shift down if the replaced text is taller than the source text
+        let remainderViewDestFrameY = remainderViewSourceFrame.origin.y + delta
+#else
+        // shift down if the replaced text is taller than the source text
+        let remainderViewDestFrameY = remainderViewSourceFrame.origin.y - delta
+#endif
+
+        let remainderViewDestinationFrame = CGRect(
+            x: remainderViewSourceFrame.origin.x,
+            y: remainderViewDestFrameY,
+            width: remainderViewSourceFrame.size.width,
+            height: remainderViewSourceFrame.size.height
+        )
+
+        // Create an empty view with the source frame, and set its layer's contents to the image
+        // of the remaining text content.
+
+        let remainderView = PlatformView(frame: remainderViewSourceFrame)
+
+#if canImport(UIKit)
+        remainderView.layer.contents = remainderPreviewImage
+#else
+        remainderView.wantsLayer = true
+        remainderView.layer!.contents = remainderPreviewImage
+#endif
+
+        // Add the newly created view as a subview to the effect view.
+
+        view.addSubview(remainderView)
+
+        // Perform the animation to animate the frame to make room for the replaced text.
+        // This will run concurrently with the replacement effect, and it must not ever overlap with the effect.
+
+        let animation = Self.animation(for: delta > 0 ? .expand : .contract)
+        let changes = {
+            remainderView.frame = remainderViewDestinationFrame
+        }
+
+#if canImport(UIKit)
+        UIView.animate(animation, changes: changes)
+#else
+        NSAnimationContext.animate(animation, changes: changes)
+#endif
+    }
+}
+
+/// A replacement effect, which essentially involves the original text fading away while at the same time the new text fades in right above it.
+@MainActor class PlatformIntelligenceReplacementTextEffect<Chunk>: PlatformIntelligenceTextEffect where Chunk: PlatformIntelligenceTextEffectChunk {
     let id = PlatformIntelligenceTextEffectID()
     let chunk: Chunk
 
@@ -362,7 +493,9 @@ struct PlatformIntelligenceTextEffectID: Hashable {
 
         await view.source.updateTextChunkVisibility(self.chunk, visible: false)
 
-        guard let destinationPreview = await view.source.performReplacementAndGeneratePreview(for: self.chunk, effect: self, animation: .init(duration: 0, delay: 0)) else {
+        let (destinationPreview, remainderPreview) = await view.source.performReplacementAndGeneratePreview(for: self.chunk, effect: self)
+
+        guard let destinationPreview else {
             assertionFailure("Failed to generate destination text preview for replacement effect")
             return
         }
@@ -418,6 +551,14 @@ struct PlatformIntelligenceTextEffectID: Hashable {
         view.wrappedEffectIDToPlatformEffects[sourceEffectID] = self
         view.platformEffectIDToWrappedEffectIDs[self.id, default: []].insert(sourceEffectID)
 #endif
+
+        guard let remainderPreview else {
+            return
+        }
+
+        let previews = PlatformIntelligenceRemainderAffordanceTextEffect<Chunk>.Previews(source: sourcePreview, destination: destinationPreview, remainder: remainderPreview)
+        let remainderEffect = PlatformIntelligenceRemainderAffordanceTextEffect(chunk: chunk, previews: previews)
+        await remainderEffect._add(to: view)
     }
 }
 

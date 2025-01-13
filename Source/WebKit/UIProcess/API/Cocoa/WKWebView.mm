@@ -2520,6 +2520,45 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 }
 #endif
 
+- (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator contentPreviewForRange:(NSRange)range completion:(void (^)(_WKTextPreview *))completion
+{
+    // FIXME: This logic is currently duplicated in a bunch of places; it should be unified.
+    _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)](auto&& textIndicatorData) {
+        if (!textIndicatorData) {
+            completion(nil);
+            return;
+        }
+
+        RefPtr contentImage = textIndicatorData->contentImage;
+        if (!contentImage) {
+            ASSERT_NOT_REACHED();
+            completion(nil);
+            return;
+        }
+
+        RefPtr nativeImage = contentImage->nativeImage();
+        if (!nativeImage) {
+            ASSERT_NOT_REACHED();
+            completion(nil);
+            return;
+        }
+
+        RetainPtr platformImage = nativeImage->platformImage();
+        if (!platformImage) {
+            ASSERT_NOT_REACHED();
+            completion(nil);
+            return;
+        }
+
+        auto textBoundingRectInRootViewCoordinates = textIndicatorData->textBoundingRectInRootViewCoordinates;
+        auto textRectsInBoundingRectCoordinates = textIndicatorData->textRectsInBoundingRectCoordinates;
+
+        RetainPtr textPreview = adoptNS([[_WKTextPreview alloc] initWithSnapshotImage:platformImage.get() presentationFrame:textBoundingRectInRootViewCoordinates]);
+
+        completion(textPreview.get());
+    });
+}
+
 - (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator decorateReplacementsForRange:(NSRange)range completion:(void (^)(void))completion
 {
     _page->decorateTextReplacementsForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)] {
