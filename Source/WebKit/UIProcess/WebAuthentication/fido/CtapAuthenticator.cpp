@@ -190,6 +190,7 @@ void CtapAuthenticator::getAssertion()
     auto& options = std::get<PublicKeyCredentialRequestOptions>(requestData().options);
     auto internalUVAvailability = m_info.options().userVerificationAvailability();
     Vector<String> authenticatorSupportedExtensions;
+    CTAP_RELEASE_LOG("getAssertion uv: %hhu internalUvAvailability %d", options.userVerification, internalUVAvailability);
     // If UV is required, then either built-in uv or a pin will work.
     if (internalUVAvailability == UVAvailability::kSupportedAndConfigured && options.userVerification != UserVerificationRequirement::Discouraged && m_pinAuth.isEmpty())
         cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions);
@@ -198,7 +199,7 @@ void CtapAuthenticator::getAssertion()
     else
         cborCmd = encodeGetAssertionRequestAsCBOR(requestData().hash, options, internalUVAvailability, authenticatorSupportedExtensions);
     if (m_info.maxMsgSize() && cborCmd.size() >= *m_info.maxMsgSize())
-        CTAP_RELEASE_LOG("CtapAuthenticator::getAssertion cmdSize = %lu maxMsgSize = %u", cborCmd.size(), *m_info.maxMsgSize());
+        CTAP_RELEASE_LOG("getAssertion cmdSize = %lu maxMsgSize = %u", cborCmd.size(), *m_info.maxMsgSize());
     CTAP_RELEASE_LOG("getAssertion: Sending %s", base64EncodeToString(cborCmd).utf8().data());
     driver().transact(WTFMove(cborCmd), [weakThis = WeakPtr { *this }](Vector<uint8_t>&& data) {
         ASSERT(RunLoop::isMain());
