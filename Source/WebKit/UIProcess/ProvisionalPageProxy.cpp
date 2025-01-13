@@ -116,7 +116,7 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
         ASSERT(&suspendedPage->process() == &process());
         suspendedPage->unsuspend();
         m_mainFrame = &suspendedPage->mainFrame();
-    } else if (page.preferences().siteIsolationEnabled() && previousMainFrame->opener())
+    } else if (page.preferences().siteIsolationEnabled())
         m_mainFrame = page.mainFrame();
     else {
         m_mainFrame = WebFrameProxy::create(page, m_frameProcess, FrameIdentifier::generate(), previousMainFrame->effectiveSandboxFlags(), previousMainFrame->scrollingMode(), nullptr, IsMainFrame::Yes);
@@ -137,7 +137,7 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
         else
             m_mainFrame->frameLoadState().didStartProvisionalLoad(m_request.url());
         page.didReceiveServerRedirectForProvisionalLoadForFrameShared(protectedProcess(), m_mainFrame->frameID(), m_navigationID, WTFMove(m_request), { });
-    } else if (previousMainFrame && !previousMainFrame->provisionalURL().isEmpty()) {
+    } else if (previousMainFrame && !previousMainFrame->provisionalURL().isEmpty() && !page.preferences().siteIsolationEnabled()) {
         // In case of a process swap after response policy, the didStartProvisionalLoad already happened but the new main frame doesn't know about it
         // so we need to tell it so it can update its provisional URL.
         m_mainFrame->didStartProvisionalLoad(previousMainFrame->provisionalURL());
@@ -271,12 +271,7 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
     }
 
     protectedProcess->send(Messages::WebProcess::CreateWebPage(m_webPageID, page->creationParametersForProvisionalPage(process(), *m_drawingArea, WTFMove(websitePolicies), m_mainFrame->frameID())), 0);
-    if (protectedProcess.ptr() != &page->legacyMainFrameProcess())
-        protectedProcess->addVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
-#if ASSERT_ENABLED
-    else
-        ASSERT(page->preferences().siteIsolationEnabled());
-#endif
+    protectedProcess->addVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
 
     if (page->isLayerTreeFrozenDueToSwipeAnimation())
         send(Messages::WebPage::SwipeAnimationDidStart());
@@ -438,8 +433,7 @@ void ProvisionalPageProxy::didCommitLoadForFrame(IPC::Connection& connection, Fr
     RefPtr page = m_page.get();
     if (page && page->preferences().siteIsolationEnabled()) {
         RefPtr openerFrame = page->mainFrame()->opener();
-        if (m_frameProcess.ptr() != &page->mainFrame()->frameProcess())
-            page->mainFrame()->setProcess(m_frameProcess);
+        page->mainFrame()->setProcess(m_frameProcess);
         if (RefPtr openerPage = openerFrame ? openerFrame->page() : nullptr) {
             Site openerSite(openerFrame->url());
             Site openedSite(request.url());
