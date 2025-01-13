@@ -1064,7 +1064,7 @@ void RenderBlockFlow::layoutBlockChild(RenderBox& child, MarginInfo& marginInfo,
     }
 
     if (paginated) {
-        if (RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow())
+        if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
             fragmentedFlow->fragmentedFlowDescendantBoxLaidOut(&child);
         // Check for an after page/column break.
         LayoutUnit newHeight = applyAfterBreak(child, logicalHeight(), marginInfo);
@@ -1700,8 +1700,8 @@ static bool inNormalFlow(RenderBox& child)
 LayoutUnit RenderBlockFlow::applyBeforeBreak(RenderBox& child, LayoutUnit logicalOffset)
 {
     // FIXME: Add page break checking here when we support printing.
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    bool isInsideMulticolFlow = fragmentedFlow;
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
+    bool isInsideMulticolFlow = !!fragmentedFlow;
     bool checkColumnBreaks = fragmentedFlow && fragmentedFlow->shouldCheckColumnBreaks() && (!shouldApplyLayoutContainment() || child.previousSibling());
     bool checkPageBreaks = !checkColumnBreaks && view().frameView().layoutContext().layoutState()->pageLogicalHeight(); // FIXME: Once columns can print we have to check this.
     bool checkFragmentBreaks = false;
@@ -1725,8 +1725,8 @@ LayoutUnit RenderBlockFlow::applyBeforeBreak(RenderBox& child, LayoutUnit logica
 LayoutUnit RenderBlockFlow::applyAfterBreak(RenderBox& child, LayoutUnit logicalOffset, MarginInfo& marginInfo)
 {
     // FIXME: Add page break checking here when we support printing.
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    bool isInsideMulticolFlow = fragmentedFlow;
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
+    bool isInsideMulticolFlow = !!fragmentedFlow;
     bool checkColumnBreaks = fragmentedFlow && fragmentedFlow->shouldCheckColumnBreaks();
     bool checkPageBreaks = !checkColumnBreaks && view().frameView().layoutContext().layoutState()->pageLogicalHeight(); // FIXME: Once columns can print we have to check this.
     bool checkFragmentBreaks = false;
@@ -1930,7 +1930,7 @@ RenderBlockFlow::LinePaginationAdjustment RenderBlockFlow::computeLineAdjustment
 
     LayoutUnit pageLogicalHeight = pageLogicalHeightForOffset(logicalOffset);
 
-    auto* fragmentedFlow = enclosingFragmentedFlow();
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
     bool hasUniformPageLogicalHeight = !fragmentedFlow || fragmentedFlow->fragmentsHaveUniformLogicalHeight();
     // If lineHeight is greater than pageLogicalHeight, but logicalVisualOverflow.height() still fits, we are
     // still going to add a strut, so that the visible overflow fits on a single page.
@@ -2044,7 +2044,7 @@ bool RenderBlockFlow::hasNextPage(LayoutUnit logicalOffset, PageBoundaryRule pag
 {
     ASSERT(view().frameView().layoutContext().layoutState() && view().frameView().layoutContext().layoutState()->isPaginated());
 
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
     if (!fragmentedFlow)
         return true; // Printing and multi-column both make new pages to accommodate content.
 
@@ -2075,7 +2075,7 @@ LayoutUnit RenderBlockFlow::adjustForUnsplittableChild(RenderBox& child, LayoutU
         return logicalOffset;
     }
     
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
     LayoutUnit childLogicalHeight = logicalHeightForChild(child) + childBeforeMargin + childAfterMargin;
     LayoutUnit pageLogicalHeight = pageLogicalHeightForOffset(logicalOffset);
     bool hasUniformPageLogicalHeight = !fragmentedFlow || fragmentedFlow->fragmentsHaveUniformLogicalHeight();
@@ -2127,13 +2127,13 @@ bool RenderBlockFlow::pushToNextPageWithMinimumLogicalHeight(LayoutUnit& adjustm
 
 void RenderBlockFlow::setPageBreak(LayoutUnit offset, LayoutUnit spaceShortage)
 {
-    if (RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow())
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
         fragmentedFlow->setPageBreak(this, offsetFromLogicalTopOfFirstPage() + offset, spaceShortage);
 }
 
 void RenderBlockFlow::updateMinimumPageHeight(LayoutUnit offset, LayoutUnit minHeight)
 {
-    if (RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow())
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
         fragmentedFlow->updateMinimumPageHeight(this, offsetFromLogicalTopOfFirstPage() + offset, minHeight);
 }
 
@@ -2163,10 +2163,10 @@ LayoutUnit RenderBlockFlow::pageLogicalTopForOffset(LayoutUnit offset) const
     LayoutUnit blockLogicalTop = isHorizontalWritingMode() ? layoutState->layoutOffset().height() : layoutState->layoutOffset().width();
 
     LayoutUnit cumulativeOffset = offset + blockLogicalTop;
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (!fragmentedFlow)
-        return cumulativeOffset - roundToInt(cumulativeOffset - firstPageLogicalTop) % roundToInt(pageLogicalHeight);
-    return firstPageLogicalTop + fragmentedFlow->pageLogicalTopForOffset(cumulativeOffset - firstPageLogicalTop);
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
+        return firstPageLogicalTop + fragmentedFlow->pageLogicalTopForOffset(cumulativeOffset - firstPageLogicalTop);
+
+    return cumulativeOffset - roundToInt(cumulativeOffset - firstPageLogicalTop) % roundToInt(pageLogicalHeight);
 }
 
 LayoutUnit RenderBlockFlow::pageLogicalHeightForOffset(LayoutUnit offset) const
@@ -2178,29 +2178,26 @@ LayoutUnit RenderBlockFlow::pageLogicalHeightForOffset(LayoutUnit offset) const
         return 0;
     
     // Now check for a flow thread.
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (!fragmentedFlow)
-        return pageLogicalHeight;
-    return fragmentedFlow->pageLogicalHeightForOffset(offset + offsetFromLogicalTopOfFirstPage());
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
+        return fragmentedFlow->pageLogicalHeightForOffset(offset + offsetFromLogicalTopOfFirstPage());
+    return pageLogicalHeight;
 }
 
 LayoutUnit RenderBlockFlow::pageRemainingLogicalHeightForOffset(LayoutUnit offset, PageBoundaryRule pageBoundaryRule) const
 {
     offset += offsetFromLogicalTopOfFirstPage();
     
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (!fragmentedFlow) {
-        LayoutUnit pageLogicalHeight = view().frameView().layoutContext().layoutState()->pageLogicalHeight();
-        LayoutUnit remainingHeight = pageLogicalHeight - intMod(offset, pageLogicalHeight);
-        if (pageBoundaryRule == IncludePageBoundary) {
-            // If includeBoundaryPoint is true the line exactly on the top edge of a
-            // column will act as being part of the previous column.
-            remainingHeight = intMod(remainingHeight, pageLogicalHeight);
-        }
-        return remainingHeight;
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
+        return fragmentedFlow->pageRemainingLogicalHeightForOffset(offset, pageBoundaryRule);
+
+    LayoutUnit pageLogicalHeight = view().frameView().layoutContext().layoutState()->pageLogicalHeight();
+    LayoutUnit remainingHeight = pageLogicalHeight - intMod(offset, pageLogicalHeight);
+    if (pageBoundaryRule == IncludePageBoundary) {
+        // If includeBoundaryPoint is true the line exactly on the top edge of a
+        // column will act as being part of the previous column.
+        remainingHeight = intMod(remainingHeight, pageLogicalHeight);
     }
-    
-    return fragmentedFlow->pageRemainingLogicalHeightForOffset(offset, pageBoundaryRule);
+    return remainingHeight;
 }
 
 LayoutUnit RenderBlockFlow::logicalHeightForChildForFragmentation(const RenderBox& child) const
@@ -2222,7 +2219,7 @@ void RenderBlockFlow::adjustSizeContainmentChildForPagination(RenderBox& child, 
     if (spaceShortage <= 0)
         return;
 
-    if (RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow())
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
         fragmentedFlow->updateSpaceShortageForSizeContainment(this, offsetFromLogicalTopOfFirstPage() + offset, spaceShortage);
 }
 

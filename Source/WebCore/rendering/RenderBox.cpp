@@ -172,7 +172,7 @@ void RenderBox::willBeDestroyed()
 
 RenderFragmentContainer* RenderBox::clampToStartAndEndFragments(RenderFragmentContainer* fragment) const
 {
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
 
     ASSERT(isRenderView() || (fragment && fragmentedFlow));
     if (isRenderView())
@@ -197,11 +197,10 @@ RenderFragmentContainer* RenderBox::clampToStartAndEndFragments(RenderFragmentCo
 
 bool RenderBox::hasFragmentRangeInFragmentedFlow() const
 {
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (!fragmentedFlow || !fragmentedFlow->hasValidFragmentInfo())
-        return false;
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow(); fragmentedFlow && fragmentedFlow->hasValidFragmentInfo())
+        return fragmentedFlow->hasCachedFragmentRangeForBox(*this);
 
-    return fragmentedFlow->hasCachedFragmentRangeForBox(*this);
+    return false;
 }
 
 static RenderBlockFlow* outermostBlockContainingFloatingObject(RenderBox& box)
@@ -655,8 +654,7 @@ void RenderBox::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accu
 
 void RenderBox::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow && fragmentedFlow->absoluteQuadsForBox(quads, wasFixed, *this))
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow(); fragmentedFlow && fragmentedFlow->absoluteQuadsForBox(quads, wasFixed, *this))
         return;
 
     auto localRect = FloatRect { 0, 0, width(), height() };
@@ -3855,8 +3853,7 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxMo
     if (auto* box = dynamicDowncast<RenderBox>(containingBlock)) {
         bool isFixedPosition = isFixedPositioned();
 
-        RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-        if (!fragmentedFlow) {
+        if (!enclosingFragmentedFlow()) {
             if (isFixedPosition) {
                 if (auto* renderView = dynamicDowncast<RenderView>(containingBlock))
                     return renderView->clientLogicalWidthForFixedPosition();
@@ -3907,15 +3904,18 @@ LayoutUnit RenderBox::containingBlockLogicalHeightForPositioned(const RenderBoxM
                 return renderView->clientLogicalHeightForFixedPosition();
         }
 
-        auto* containingBlockAsRenderBlock = dynamicDowncast<RenderBlock>(*box);
-        const RenderBlock& cb = containingBlockAsRenderBlock ? *containingBlockAsRenderBlock : *box->containingBlock();
-        LayoutUnit result = cb.clientLogicalHeight();
-        RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-        if (fragmentedFlow && fragmentedFlow->isHorizontalWritingMode() == containingBlock.isHorizontalWritingMode()) {
-            if (auto* containingBlockFragmentedFlow = dynamicDowncast<RenderFragmentedFlow>(containingBlock))
+        if (enclosingFragmentedFlow() && enclosingFragmentedFlow()->isHorizontalWritingMode() == containingBlock.isHorizontalWritingMode()) {
+            if (CheckedPtr containingBlockFragmentedFlow = dynamicDowncast<RenderFragmentedFlow>(containingBlock))
                 return containingBlockFragmentedFlow->contentLogicalHeightOfFirstFragment();
         }
-        return result;
+
+        auto logicalHeight = LayoutUnit { };
+        if (CheckedPtr containingBlockAsRenderBlock = dynamicDowncast<RenderBlock>(*box))
+            logicalHeight = containingBlockAsRenderBlock->clientLogicalHeight();
+        else
+            logicalHeight = box->containingBlock()->clientLogicalHeight();
+
+        return logicalHeight;
     }
 
     if (auto* inlineBox = dynamicDowncast<RenderInline>(containingBlock))
@@ -4134,8 +4134,7 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
     
     // Adjust logicalLeft if we need to for the flipped version of our writing mode in fragments.
     // FIXME: Add support for other types of objects as containerBlock, not only RenderBlock.
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow && isWritingModeRoot() && isHorizontalWritingMode() == containerBlock.isHorizontalWritingMode()) {
+    if (enclosingFragmentedFlow() && isWritingModeRoot() && isHorizontalWritingMode() == containerBlock.isHorizontalWritingMode()) {
         if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(containerBlock)) {
             ASSERT(containerBlock.canHaveBoxInfoInFragment());
             LayoutUnit logicalLeftPos = computedValues.m_position;
@@ -4553,8 +4552,7 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
     
     // Adjust logicalTop if we need to for perpendicular writing modes in fragments.
     // FIXME: Add support for other types of objects as containerBlock, not only RenderBlock.
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow && isHorizontalWritingMode() != containerBlock.isHorizontalWritingMode()) {
+    if (enclosingFragmentedFlow() && isHorizontalWritingMode() != containerBlock.isHorizontalWritingMode()) {
         if (CheckedPtr renderBox = dynamicDowncast<RenderBlock>(containerBlock)) {
             ASSERT(containerBlock.canHaveBoxInfoInFragment());
             LayoutUnit logicalTopPos = computedValues.m_position;
@@ -5184,7 +5182,7 @@ void RenderBox::addVisualEffectOverflow()
 
     addVisualOverflow(applyVisualEffectOverflow(borderBoxRect()));
 
-    if (auto* fragmentedFlow = enclosingFragmentedFlow())
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
         fragmentedFlow->addFragmentsVisualEffectOverflow(*this);
 }
 
@@ -5238,7 +5236,7 @@ void RenderBox::addOverflowFromChild(const RenderBox& child, const LayoutSize& d
     if (child.isRenderFragmentedFlow())
         return;
 
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
     if (fragmentedFlow)
         fragmentedFlow->addFragmentsOverflowFromChild(*this, child, delta);
 
@@ -5354,8 +5352,7 @@ void RenderBox::addVisualOverflow(const LayoutRect& rect)
 void RenderBox::clearOverflow()
 {
     m_overflow = nullptr;
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow)
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
         fragmentedFlow->clearFragmentsOverflow(*this);
 }
     

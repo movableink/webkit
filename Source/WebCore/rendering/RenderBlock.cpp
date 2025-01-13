@@ -539,8 +539,7 @@ RenderBlockRareData& RenderBlock::ensureBlockRareData()
 void RenderBlock::preparePaginationBeforeBlockLayout(bool& relayoutChildren)
 {
     // Fragments changing widths can force us to relayout our children.
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow)
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
         fragmentedFlow->logicalWidthChangedInFragmentsForBlock(*this, relayoutChildren);
 }
 
@@ -569,7 +568,7 @@ void RenderBlock::addOverflowFromChildren()
     
         // If this block is flowed inside a flow thread, make sure its overflow is propagated to the containing fragments.
         if (m_overflow) {
-            if (auto* flow = enclosingFragmentedFlow())
+            if (CheckedPtr flow = enclosingFragmentedFlow())
                 flow->addFragmentsVisualOverflow(*this, m_overflow->visualOverflowRect());
         }
     } else
@@ -691,7 +690,7 @@ void RenderBlock::addVisualOverflowFromTheme()
     theme().adjustRepaintRect(*this, inflatedRect);
     addVisualOverflow(snappedIntRect(LayoutRect(inflatedRect)));
 
-    if (RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow())
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
         fragmentedFlow->addFragmentsVisualOverflowFromTheme(*this);
 }
 
@@ -2766,7 +2765,7 @@ void RenderBlock::absoluteQuadsIgnoringContinuation(const FloatRect& logicalRect
 {
     // FIXME: This is wrong for block-flows that are horizontal.
     // https://bugs.webkit.org/show_bug.cgi?id=46781
-    auto* fragmentedFlow = enclosingFragmentedFlow();
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
     if (!fragmentedFlow || !fragmentedFlow->absoluteQuadsForBox(quads, wasFixed, *this))
         quads.append(localToAbsoluteQuad(logicalRect, UseTransforms, wasFixed));
 }
@@ -2865,8 +2864,7 @@ LayoutUnit RenderBlock::offsetFromLogicalTopOfFirstPage() const
     if (layoutState && !layoutState->isPaginated())
         return 0;
 
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow)
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
         return fragmentedFlow->offsetFromLogicalTopOfFirstFragment(this);
 
     if (layoutState) {
@@ -2882,30 +2880,26 @@ LayoutUnit RenderBlock::offsetFromLogicalTopOfFirstPage() const
 
 RenderFragmentContainer* RenderBlock::fragmentAtBlockOffset(LayoutUnit blockOffset) const
 {
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (!fragmentedFlow || !fragmentedFlow->hasValidFragmentInfo())
-        return 0;
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow(); fragmentedFlow && fragmentedFlow->hasValidFragmentInfo())
+        return fragmentedFlow->fragmentAtBlockOffset(this, offsetFromLogicalTopOfFirstPage() + blockOffset, true);
 
-    return fragmentedFlow->fragmentAtBlockOffset(this, offsetFromLogicalTopOfFirstPage() + blockOffset, true);
+    return nullptr;
 }
 
-static bool canComputeFragmentRangeForBox(const RenderBlock& parentBlock, const RenderBox& childBox, const RenderFragmentedFlow* enclosingFragmentedFlow)
+static bool canComputeFragmentRangeForBox(const RenderBlock& parentBlock, const RenderBox& childBox, const RenderFragmentedFlow& enclosingFragmentedFlow)
 {
-    if (!enclosingFragmentedFlow)
-        return false;
-
-    if (!enclosingFragmentedFlow->hasFragments())
+    if (!enclosingFragmentedFlow.hasFragments())
         return false;
 
     if (!childBox.canHaveOutsideFragmentRange())
         return false;
 
-    return enclosingFragmentedFlow->hasCachedFragmentRangeForBox(parentBlock);
+    return enclosingFragmentedFlow.hasCachedFragmentRangeForBox(parentBlock);
 }
 
 bool RenderBlock::childBoxIsUnsplittableForFragmentation(const RenderBox& child) const
 {
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
     bool checkColumnBreaks = fragmentedFlow && fragmentedFlow->shouldCheckColumnBreaks();
     bool checkPageBreaks = !checkColumnBreaks && view().frameView().layoutContext().layoutState()->pageLogicalHeight();
     return child.isUnsplittableForPagination() || child.style().breakInside() == BreakInside::Avoid
@@ -2915,8 +2909,8 @@ bool RenderBlock::childBoxIsUnsplittableForFragmentation(const RenderBox& child)
 
 void RenderBlock::computeFragmentRangeForBoxChild(const RenderBox& box) const
 {
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    ASSERT(canComputeFragmentRangeForBox(*this, box, fragmentedFlow));
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
+    ASSERT(fragmentedFlow && canComputeFragmentRangeForBox(*this, box, *fragmentedFlow));
 
     RenderFragmentContainer* startFragment;
     RenderFragmentContainer* endFragment;
@@ -2933,8 +2927,8 @@ void RenderBlock::computeFragmentRangeForBoxChild(const RenderBox& box) const
 
 void RenderBlock::estimateFragmentRangeForBoxChild(const RenderBox& box) const
 {
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (!canComputeFragmentRangeForBox(*this, box, fragmentedFlow))
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
+    if (!fragmentedFlow || !canComputeFragmentRangeForBox(*this, box, *fragmentedFlow))
         return;
 
     if (childBoxIsUnsplittableForFragmentation(box)) {
@@ -2952,8 +2946,8 @@ void RenderBlock::estimateFragmentRangeForBoxChild(const RenderBox& box) const
 
 bool RenderBlock::updateFragmentRangeForBoxChild(const RenderBox& box) const
 {
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (!canComputeFragmentRangeForBox(*this, box, fragmentedFlow))
+    CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
+    if (!fragmentedFlow || !canComputeFragmentRangeForBox(*this, box, *fragmentedFlow))
         return false;
 
     RenderFragmentContainer* startFragment = nullptr;

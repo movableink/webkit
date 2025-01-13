@@ -896,8 +896,7 @@ void RenderReplaced::layoutShadowContent(const LayoutSize& oldSize)
             bool childNeedsLayout = renderBox.needsLayout();
             // If the region chain has changed we also need to relayout the children to update the region box info.
             // FIXME: We can do better once we compute region box info for RenderReplaced, not only for RenderBlock.
-            auto* fragmentedFlow = enclosingFragmentedFlow();
-            if (fragmentedFlow && !childNeedsLayout) {
+            if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow(); fragmentedFlow && !childNeedsLayout) {
                 if (fragmentedFlow->pageLogicalSizeChanged())
                     childNeedsLayout = true;
             }
