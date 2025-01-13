@@ -368,9 +368,6 @@ static Vector<uint8_t> cookieFromOpusCookieContents(const OpusCookieContents& co
 bool isOpusDecoderAvailable()
 {
 #if ENABLE(OPUS)
-    if (!PlatformMediaSessionManager::opusDecoderEnabled())
-        return false;
-
     return registerOpusDecoderIfNeeded();
 #else
     return false;

@@ -38,11 +38,6 @@ namespace WebKit {
 
 void GPUProcessPreferences::copyEnabledWebPreferences(const WebPreferences& webPreferences)
 {
-#if ENABLE(OPUS)
-    if (webPreferences.opusDecoderEnabled())
-        opusDecoderEnabled = true;
-#endif
-
 #if USE(MODERN_AVCONTENTKEYSESSION)
     if (webPreferences.shouldUseModernAVContentKeySession())
         shouldUseModernAVContentKeySession = true;

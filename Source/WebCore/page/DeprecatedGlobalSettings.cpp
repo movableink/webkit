@@ -46,14 +46,6 @@ DeprecatedGlobalSettings& DeprecatedGlobalSettings::shared()
     return deprecatedGlobalSettings;
 }
 
-#if ENABLE(OPUS)
-void DeprecatedGlobalSettings::setOpusDecoderEnabled(bool isEnabled)
-{
-    shared().m_opusDecoderEnabled = isEnabled;
-    PlatformMediaSessionManager::setOpusDecoderEnabled(isEnabled);
-}
-#endif
-
 #if USE(AVFOUNDATION)
 void DeprecatedGlobalSettings::setAVFoundationEnabled(bool enabled)
 {

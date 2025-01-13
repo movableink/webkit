@@ -281,11 +281,6 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters,
 
 void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences)
 {
-#if ENABLE(OPUS)
-    if (updatePreference(m_preferences.opusDecoderEnabled, preferences.opusDecoderEnabled))
-        PlatformMediaSessionManager::setOpusDecoderEnabled(*m_preferences.opusDecoderEnabled);
-#endif
-
 #if USE(MODERN_AVCONTENTKEYSESSION)
     if (updatePreference(m_preferences.shouldUseModernAVContentKeySession, preferences.shouldUseModernAVContentKeySession))
         MediaSessionManagerCocoa::setShouldUseModernAVContentKeySession(*m_preferences.shouldUseModernAVContentKeySession);

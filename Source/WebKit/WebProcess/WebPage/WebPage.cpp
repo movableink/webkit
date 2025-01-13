@@ -4827,10 +4827,6 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     PlatformMediaSessionManager::setUseSCContentSharingPicker(settings.useSCContentSharingPicker());
 #endif
 
-#if ENABLE(OPUS)
-    PlatformMediaSessionManager::setOpusDecoderEnabled(DeprecatedGlobalSettings::opusDecoderEnabled());
-#endif
-
 #if ENABLE(VP9)
     PlatformMediaSessionManager::setSWVPDecodersAlwaysEnabled(store.getBoolValueForKey(WebPreferencesKey::sWVPDecodersAlwaysEnabledKey()));
 #endif

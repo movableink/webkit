@@ -68,7 +68,6 @@
 #endif
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/CPUMonitor.h>
-#import <WebCore/DeprecatedGlobalSettings.h>
 #import <WebCore/DisplayRefreshMonitorManager.h>
 #import <WebCore/FontCache.h>
 #import <WebCore/FontCacheCoreText.h>
@@ -498,10 +497,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 #if TARGET_OS_IPHONE
     // Priority decay on iOS 9 is impacting page load time so we fix the priority of the WebProcess' main thread (rdar://problem/22003112).
     pthread_set_fixedpriority_self();
-#endif
-
-#if ENABLE(OPUS)
-    PlatformMediaSessionManager::setOpusDecoderEnabled(DeprecatedGlobalSettings::opusDecoderEnabled());
 #endif
 
     if (!parameters.mediaMIMETypes.isEmpty())

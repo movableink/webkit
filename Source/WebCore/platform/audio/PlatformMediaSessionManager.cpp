@@ -43,10 +43,6 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformMediaSessionManager);
 
-#if ENABLE(OPUS)
-bool PlatformMediaSessionManager::m_opusDecoderEnabled;
-#endif
-
 #if ENABLE(ALTERNATE_WEBM_PLAYER)
 bool PlatformMediaSessionManager::m_alternateWebMPlayerEnabled;
 #endif
@@ -762,24 +758,6 @@ bool PlatformMediaSessionManager::shouldDeactivateAudioSession()
 void PlatformMediaSessionManager::setShouldDeactivateAudioSession(bool deactivate)
 {
     deactivateAudioSession() = deactivate;
-}
-
-bool PlatformMediaSessionManager::opusDecoderEnabled()
-{
-#if ENABLE(OPUS)
-    return m_opusDecoderEnabled;
-#else
-    return false;
-#endif
-}
-
-void PlatformMediaSessionManager::setOpusDecoderEnabled(bool enabled)
-{
-#if ENABLE(OPUS)
-    m_opusDecoderEnabled = enabled;
-#else
-    UNUSED_PARAM(enabled);
-#endif
 }
 
 void PlatformMediaSessionManager::setAlternateWebMPlayerEnabled(bool enabled)

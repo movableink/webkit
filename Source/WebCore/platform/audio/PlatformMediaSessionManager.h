@@ -65,8 +65,6 @@ public:
     WEBCORE_EXPORT static void setShouldDeactivateAudioSession(bool);
     WEBCORE_EXPORT static bool shouldDeactivateAudioSession();
 
-    WEBCORE_EXPORT static void setOpusDecoderEnabled(bool);
-    WEBCORE_EXPORT static bool opusDecoderEnabled();
     WEBCORE_EXPORT static void setAlternateWebMPlayerEnabled(bool);
     WEBCORE_EXPORT static bool alternateWebMPlayerEnabled();
     WEBCORE_EXPORT static void setUseSCContentSharingPicker(bool);
@@ -267,9 +265,6 @@ private:
     WeakHashSet<NowPlayingMetadataObserver> m_nowPlayingMetadataObservers;
     TaskCancellationGroup m_taskGroup;
 
-#if ENABLE(OPUS)
-    static bool m_opusDecoderEnabled;
-#endif
 #if ENABLE(ALTERNATE_WEBM_PLAYER)
     static bool m_alternateWebMPlayerEnabled;
 #endif

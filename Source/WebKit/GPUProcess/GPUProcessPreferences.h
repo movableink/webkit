@@ -36,10 +36,6 @@ class WebPreferences;
 struct GPUProcessPreferences {
     void copyEnabledWebPreferences(const WebPreferences&);
 
-#if ENABLE(OPUS)
-    std::optional<bool> opusDecoderEnabled;
-#endif
-
 #if USE(MODERN_AVCONTENTKEYSESSION)
     std::optional<bool> shouldUseModernAVContentKeySession;
 #endif

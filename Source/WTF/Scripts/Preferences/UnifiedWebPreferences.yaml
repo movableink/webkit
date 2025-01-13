@@ -5511,20 +5511,6 @@ OptInPartitionedCookiesEnabled:
     WebCore:
       default: true
 
-OpusDecoderEnabled:
-  type: bool
-  status: mature
-  humanReadableName: "Opus audio decoder"
-  humanReadableDescription: "Enable Opus audio decoder"
-  condition: ENABLE(OPUS)
-  webcoreBinding: DeprecatedGlobalSettings
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-
-
 OverlappingBackingStoreProvidersEnabled:
   type: bool
   status: stable
