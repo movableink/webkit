@@ -44,6 +44,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdio>
+#include <limits>
 #include <optional>
 #include <wtf/JSONValues.h>
 #include <wtf/StdLibExtras.h>
@@ -170,21 +171,27 @@ int WebDriverService::run(int argc, char** argv)
 #if ENABLE(WEBDRIVER_BIDI)
     auto bidiPort = parseInteger<uint16_t>(bidiPortString);
     if (!bidiPort) {
-        fprintf(stderr, "Invalid WebSocket port %s provided. Defaulting to 4445.\n", bidiPortString.utf8().data());
-        bidiPort = { 4445 };
+        const int16_t bidiPortIncrement = *port == std::numeric_limits<uint16_t>::max() ? -1 : 1;
+        bidiPort = { *port + bidiPortIncrement };
+        fprintf(stderr, "Invalid WebSocket BiDi port %s provided. Defaulting to %d.\n", bidiPortString.utf8().data(), *bidiPort);
     }
 #endif
 
     WTF::initializeMainThread();
 
+    const char* hostStr = host && host->utf8().data() ? host->utf8().data() : "local";
 #if ENABLE(WEBDRIVER_BIDI)
-    if (!m_bidiServer.listen(host ? *host : nullString(), *bidiPort))
+    if (!m_bidiServer.listen(host ? *host : nullString(), *bidiPort)) {
+        fprintf(stderr, "FATAL: Unable to listen for WebSocket BiDi server at host %s and port %d.\n", hostStr, *bidiPort);
         return EXIT_FAILURE;
-    RELEASE_LOG(WebDriverBiDi, "Started WebSocket server with host %s and port %d", (host ? host->utf8().data() : ""), *bidiPort);
+    }
+    RELEASE_LOG(WebDriverBiDi, "Started WebSocket BiDi server with host %s and port %d", hostStr, *bidiPort);
 #endif // ENABLE(WEBDRIVER_BIDI)
-    if (!m_server.listen(host, *port))
+    if (!m_server.listen(host, *port)) {
+        fprintf(stderr, "FATAL: Unable to listen for HTTP server at host %s and port %d.\n", hostStr, *port);
         return EXIT_FAILURE;
-    RELEASE_LOG(WebDriverClassic, "Started HTTP server with host %s and port %d", (host ? host->utf8().data() : ""), *port);
+    }
+    RELEASE_LOG(WebDriverClassic, "Started HTTP server with host %s and port %d", hostStr, *port);
 
     RunLoop::run();
 
