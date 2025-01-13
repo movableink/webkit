@@ -352,14 +352,10 @@ static void av1DecompressionOutputCallback(void* decoderRef, void* params, OSSta
     OSStatus _error;
     int32_t _width;
     int32_t _height;
-    bool _shouldCheckFormat;
 }
 
 - (instancetype)init {
     self = [super init];
-    if (self)
-        _shouldCheckFormat = true;
-
     return self;
 }
 
@@ -372,7 +368,6 @@ static void av1DecompressionOutputCallback(void* decoderRef, void* params, OSSta
 - (void)setWidth:(uint16_t)width height:(uint16_t)height {
     _width = width;
     _height = height;
-    _shouldCheckFormat = true;
 }
 
 - (NSInteger)decodeData:(const uint8_t *)rawData size:(size_t)size timeStamp:(int64_t)timeStamp {
@@ -383,17 +378,12 @@ static void av1DecompressionOutputCallback(void* decoderRef, void* params, OSSta
     }
     auto data = unsafeMakeSpan(rawData, size);
 
-    if (_shouldCheckFormat || !_videoFormat) {
-        auto inputFormat = computeAV1InputFormat(data, _width, _height);
-        if (inputFormat) {
-            _shouldCheckFormat = false;
-            if (!PAL::CMFormatDescriptionEqual(inputFormat.get(), _videoFormat.get())) {
-                _videoFormat = WTFMove(inputFormat);
-                int resetDecompressionSessionError = [self resetDecompressionSession];
-                if (resetDecompressionSessionError != WEBRTC_VIDEO_CODEC_OK) {
-                    _videoFormat = nullptr;
-                    return resetDecompressionSessionError;
-                }
+    if (auto inputFormat = computeAV1InputFormat(data, _width, _height)) {
+        if (!PAL::CMFormatDescriptionEqual(inputFormat.get(), _videoFormat.get())) {
+            _videoFormat = WTFMove(inputFormat);
+            if (int error = [self resetDecompressionSession]; error != WEBRTC_VIDEO_CODEC_OK) {
+                _videoFormat = nullptr;
+                return error;
             }
         }
     }
