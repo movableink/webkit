@@ -2500,12 +2500,12 @@ RefPtr<ByteArrayPixelBuffer> CanvasRenderingContext2DBase::cacheImageDataIfPossi
     ConstPixelBufferConversionView source {
         .format = { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, colorSpace },
         .bytesPerRow = bytesPerRow,
-        .rows = imageData.data().asUint8ClampedArray()->data(),
+        .rows = imageData.data().asUint8ClampedArray()->span(),
     };
     PixelBufferConversionView destination {
         .format = cachedFormat,
         .bytesPerRow = bytesPerRow,
-        .rows = cachedBuffer->data().data(),
+        .rows = cachedBuffer->data().mutableSpan(),
     };
     convertImagePixels(source, destination, size);
     m_cachedContents.emplace<CachedContentsImageData>(*this, *cachedBuffer);
@@ -2538,12 +2538,12 @@ RefPtr<ImageData> CanvasRenderingContext2DBase::makeImageDataIfContentsCached(co
     ConstPixelBufferConversionView source {
         .format = pixelBuffer->format(),
         .bytesPerRow = bytesPerRow,
-        .rows = data->data(),
+        .rows = data->span(),
     };
     PixelBufferConversionView destination {
         .format = { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, pixelBuffer->format().colorSpace },
         .bytesPerRow = bytesPerRow,
-        .rows = data->data(),
+        .rows = data->mutableSpan(),
     };
     convertImagePixels(source, destination, size);
     return ImageData::create(size, WTFMove(data), m_settings.colorSpace);

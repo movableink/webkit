@@ -96,14 +96,28 @@ RefPtr<NativeImage> ImageBufferCairoSurfaceBackend::cairoSurfaceCoerceToImage()
     return copyNativeImage();
 }
 
+static std::span<const uint8_t> span(cairo_surface_t* surface)
+{
+    size_t stride = cairo_image_surface_get_stride(surface);
+    size_t height = cairo_image_surface_get_height(surface);
+    return unsafeMakeSpan(cairo_image_surface_get_data(surface), stride * height);
+}
+
+static std::span<uint8_t> mutableSpan(cairo_surface_t* surface)
+{
+    size_t stride = cairo_image_surface_get_stride(surface);
+    size_t height = cairo_image_surface_get_height(surface);
+    return unsafeMakeSpan(cairo_image_surface_get_data(surface), stride * height);
+}
+
 void ImageBufferCairoSurfaceBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
 {
-    ImageBufferBackend::getPixelBuffer(srcRect, cairo_image_surface_get_data(m_surface.get()), destination);
+    ImageBufferBackend::getPixelBuffer(srcRect, span(m_surface.get()), destination);
 }
 
 void ImageBufferCairoSurfaceBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
-    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, cairo_image_surface_get_data(m_surface.get()));
+    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, mutableSpan(m_surface.get()));
 
     cairo_surface_mark_dirty_rectangle(m_surface.get(), destPoint.x(), destPoint.y(), srcRect.width(), srcRect.height());
 }

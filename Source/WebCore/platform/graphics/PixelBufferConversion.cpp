@@ -30,6 +30,8 @@
 #include "DestinationColorSpace.h"
 #include "IntSize.h"
 #include "PixelFormat.h"
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #if USE(ACCELERATE) && USE(CG)
 #include <Accelerate/Accelerate.h>
@@ -38,8 +40,6 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkPixmap.h>
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -96,7 +96,7 @@ template<typename View> static vImage_Buffer makeVImageBuffer(const View& view, 
     result.height = static_cast<vImagePixelCount>(size.height());
     result.width = static_cast<vImagePixelCount>(size.width());
     result.rowBytes = view.bytesPerRow;
-    result.data = const_cast<uint8_t*>(view.rows);
+    result.data = const_cast<uint8_t*>(view.rows.data());
 
     return result;
 }
@@ -182,7 +182,7 @@ static void convertImagePixelsSkia(const ConstPixelBufferConversionView& source,
         source.format.colorSpace.platformColorSpace()
     );
     // Utilize SkPixmap which is a raw bytes wrapper capable of performing conversions.
-    SkPixmap sourcePixmap(sourceImageInfo, source.rows, source.bytesPerRow);
+    SkPixmap sourcePixmap(sourceImageInfo, source.rows.data(), source.bytesPerRow);
     SkImageInfo destinationImageInfo = SkImageInfo::Make(
         destinationSize.width(),
         destinationSize.height(),
@@ -191,7 +191,7 @@ static void convertImagePixelsSkia(const ConstPixelBufferConversionView& source,
         destination.format.colorSpace.platformColorSpace()
     );
     // Read pixels from source to destination and convert pixels if necessary.
-    sourcePixmap.readPixels(destinationImageInfo, destination.rows, destination.bytesPerRow);
+    sourcePixmap.readPixels(destinationImageInfo, destination.rows.data(), destination.bytesPerRow);
 }
 
 #endif
@@ -199,16 +199,16 @@ static void convertImagePixelsSkia(const ConstPixelBufferConversionView& source,
 enum class PixelFormatConversion { None, Permute };
 
 template<PixelFormatConversion pixelFormatConversion>
-static void convertSinglePixelPremultipliedToPremultiplied(const uint8_t* sourcePixel, uint8_t* destinationPixel)
+static void convertSinglePixelPremultipliedToPremultiplied(std::span<const uint8_t, 4> sourcePixel, std::span<uint8_t, 4> destinationPixel)
 {
     uint8_t alpha = sourcePixel[3];
     if (!alpha) {
-        reinterpret_cast<uint32_t*>(destinationPixel)[0] = 0;
+        reinterpretCastSpanStartTo<uint32_t>(destinationPixel) = 0;
         return;
     }
 
     if constexpr (pixelFormatConversion == PixelFormatConversion::None)
-        reinterpret_cast<uint32_t*>(destinationPixel)[0] = reinterpret_cast<const uint32_t*>(sourcePixel)[0];
+        reinterpretCastSpanStartTo<uint32_t>(destinationPixel) = reinterpretCastSpanStartTo<const uint32_t>(sourcePixel);
     else {
         // Swap pixel channels BGRA <-> RGBA.
         destinationPixel[0] = sourcePixel[2];
@@ -219,7 +219,7 @@ static void convertSinglePixelPremultipliedToPremultiplied(const uint8_t* source
 }
 
 template<PixelFormatConversion pixelFormatConversion>
-static void convertSinglePixelPremultipliedToUnpremultiplied(const uint8_t* sourcePixel, uint8_t* destinationPixel)
+static void convertSinglePixelPremultipliedToUnpremultiplied(std::span<const uint8_t, 4> sourcePixel, std::span<uint8_t, 4> destinationPixel)
 {
     uint8_t alpha = sourcePixel[3];
     if (!alpha || alpha == 255) {
@@ -242,7 +242,7 @@ static void convertSinglePixelPremultipliedToUnpremultiplied(const uint8_t* sour
 }
 
 template<PixelFormatConversion pixelFormatConversion>
-static void convertSinglePixelUnpremultipliedToPremultiplied(const uint8_t* sourcePixel, uint8_t* destinationPixel)
+static void convertSinglePixelUnpremultipliedToPremultiplied(std::span<const uint8_t, 4> sourcePixel, std::span<uint8_t, 4> destinationPixel)
 {
     uint8_t alpha = sourcePixel[3];
     if (!alpha || alpha == 255) {
@@ -265,10 +265,10 @@ static void convertSinglePixelUnpremultipliedToPremultiplied(const uint8_t* sour
 }
 
 template<PixelFormatConversion pixelFormatConversion>
-static void convertSinglePixelUnpremultipliedToUnpremultiplied(const uint8_t* sourcePixel, uint8_t* destinationPixel)
+static void convertSinglePixelUnpremultipliedToUnpremultiplied(std::span<const uint8_t, 4> sourcePixel, std::span<uint8_t, 4> destinationPixel)
 {
     if constexpr (pixelFormatConversion == PixelFormatConversion::None)
-        reinterpret_cast<uint32_t*>(destinationPixel)[0] = reinterpret_cast<const uint32_t*>(sourcePixel)[0];
+        reinterpretCastSpanStartTo<uint32_t>(destinationPixel) = reinterpretCastSpanStartTo<const uint32_t>(sourcePixel);
     else {
         // Swap pixel channels BGRA <-> RGBA.
         destinationPixel[0] = sourcePixel[2];
@@ -278,18 +278,16 @@ static void convertSinglePixelUnpremultipliedToUnpremultiplied(const uint8_t* so
     }
 }
 
-template<void (*convertFunctor)(const uint8_t*, uint8_t*)>
+template<void (*convertFunctor)(std::span<const uint8_t, 4>, std::span<uint8_t, 4>)>
 static void convertImagePixelsUnaccelerated(const ConstPixelBufferConversionView& source, const PixelBufferConversionView& destination, const IntSize& destinationSize)
 {
-    const uint8_t* sourceRows = source.rows;
-    uint8_t* destinationRows = destination.rows;
+    auto sourceRows = source.rows;
+    auto destinationRows = destination.rows;
 
     size_t bytesPerRow = destinationSize.width() * 4;
-    for (int y = 0; y < destinationSize.height(); ++y) {
+    for (int y = 0; y < destinationSize.height(); ++y, skip(sourceRows, source.bytesPerRow), skip(destinationRows, destination.bytesPerRow)) {
         for (size_t x = 0; x < bytesPerRow; x += 4)
-            convertFunctor(&sourceRows[x], &destinationRows[x]);
-        sourceRows += source.bytesPerRow;
-        destinationRows += destination.bytesPerRow;
+            convertFunctor(sourceRows.subspan(x).subspan<0, 4>(), destinationRows.subspan(x).subspan<0, 4>());
     }
 }
 
@@ -310,7 +308,7 @@ void convertImagePixels(const ConstPixelBufferConversionView& source, const Pixe
         convertImagePixelsAccelerated(source, destination, destinationSize);
 #elif USE(SKIA)
     if (source.format.alphaFormat == destination.format.alphaFormat && source.format.pixelFormat == destination.format.pixelFormat && source.format.colorSpace == destination.format.colorSpace)
-        memcpy(destination.rows, source.rows, source.bytesPerRow * destinationSize.height());
+        memcpySpan(destination.rows, source.rows.first(source.bytesPerRow * destinationSize.height()));
     else
         convertImagePixelsSkia(source, destination, destinationSize);
 #else
@@ -319,7 +317,7 @@ void convertImagePixels(const ConstPixelBufferConversionView& source, const Pixe
     ASSERT(source.format.colorSpace == destination.format.colorSpace);
 
     if (source.format.alphaFormat == destination.format.alphaFormat && source.format.pixelFormat == destination.format.pixelFormat) {
-        memcpy(destination.rows, source.rows, source.bytesPerRow * destinationSize.height());
+        memcpySpan(destination.rows, source.rows.first(source.bytesPerRow * destinationSize.height()));
         return;
     }
 
@@ -353,19 +351,19 @@ void convertImagePixels(const ConstPixelBufferConversionView& source, const Pixe
 #endif
 }
 
-void copyRows(unsigned sourceBytesPerRow, const uint8_t* source, unsigned destinationBytesPerRow, uint8_t* destination, unsigned rows, unsigned copyBytesPerRow)
+void copyRowsInternal(unsigned sourceBytesPerRow, std::span<const uint8_t> source, unsigned destinationBytesPerRow, std::span<uint8_t> destination, unsigned rows, unsigned copyBytesPerRow)
 {
     if (sourceBytesPerRow == destinationBytesPerRow && copyBytesPerRow == sourceBytesPerRow)
-        std::copy(source, source + copyBytesPerRow * rows, destination);
+        memcpySpan(destination, source.first(copyBytesPerRow * rows));
     else {
         for (unsigned row = 0; row < rows; ++row) {
-            std::copy(source, source + copyBytesPerRow, destination);
-            source += sourceBytesPerRow;
-            destination += destinationBytesPerRow;
+            memcpySpan(destination, source.first(copyBytesPerRow));
+            if (sourceBytesPerRow > source.size() || destinationBytesPerRow > destination.size())
+                break;
+            skip(source, sourceBytesPerRow);
+            skip(destination, destinationBytesPerRow);
         }
     }
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

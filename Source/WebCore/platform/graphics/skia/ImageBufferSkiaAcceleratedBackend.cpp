@@ -229,6 +229,11 @@ void ImageBufferSkiaAcceleratedBackend::getPixelBuffer(const IntRect& srcRect, P
     m_surface->readPixels(dstPixmap, sourceRectClipped.x(), sourceRectClipped.y());
 }
 
+static std::span<uint8_t> mutableSpan(SkData* data)
+{
+    return unsafeMakeSpan(static_cast<uint8_t*>(data->writable_data()), data->size());
+}
+
 void ImageBufferSkiaAcceleratedBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     UNUSED_PARAM(destFormat);
@@ -279,8 +284,7 @@ void ImageBufferSkiaAcceleratedBackend::putPixelBuffer(const PixelBuffer& pixelB
 
     // Fall back to converting, but only the part covered by sourceRectClipped/srcPixmap.
     auto data = SkData::MakeUninitialized(srcPixmap.computeByteSize());
-    ImageBufferBackend::putPixelBuffer(pixelBuffer, sourceRectClipped, IntPoint::zero(), destFormat,
-        static_cast<uint8_t*>(data->writable_data()));
+    ImageBufferBackend::putPixelBuffer(pixelBuffer, sourceRectClipped, IntPoint::zero(), destFormat, mutableSpan(data.get()));
     auto convertedSrcInfo = SkImageInfo::Make(srcPixmap.dimensions(), SkColorType::kBGRA_8888_SkColorType,
         SkAlphaType::kPremul_SkAlphaType, colorSpace().platformColorSpace());
     SkPixmap convertedSrcPixmap(convertedSrcInfo, data->writable_data(), convertedSrcInfo.minRowBytes64());

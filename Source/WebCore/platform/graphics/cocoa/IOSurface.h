@@ -118,6 +118,16 @@ public:
             return IOSurfaceGetBaseAddress(m_surface.get());
         }
 
+        std::span<uint8_t> surfaceSpan()
+        {
+            return unsafeMakeSpan(static_cast<uint8_t*>(IOSurfaceGetBaseAddress(m_surface.get())), IOSurfaceGetAllocSize(m_surface.get()));
+        }
+
+        std::span<const uint8_t> surfaceSpan() const
+        {
+            return unsafeMakeSpan(static_cast<const uint8_t*>(IOSurfaceGetBaseAddress(m_surface.get())), IOSurfaceGetAllocSize(m_surface.get()));
+        }
+
     private:
         explicit Locker(RetainPtr<IOSurfaceRef> surface)
             : m_surface(WTFMove(surface))
