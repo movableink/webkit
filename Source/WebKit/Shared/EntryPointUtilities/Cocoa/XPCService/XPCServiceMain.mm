@@ -46,10 +46,6 @@
 #import <wtf/spi/darwin/XPCSPI.h>
 #import <wtf/text/MakeString.h>
 
-#if USE(TZONE_MALLOC)
-#import <bmalloc/TZoneHeapManager.h>
-#endif
-
 #if __has_include(<WebKitAdditions/DyldCallbackAdditions.h>)
 #import <WebKitAdditions/DyldCallbackAdditions.h>
 #endif
@@ -131,9 +127,6 @@ static bool s_isWebProcess = false;
 
 void XPCServiceEventHandler(xpc_connection_t peer)
 {
-#if USE(TZONE_MALLOC)
-    bmalloc::api::TZoneHeapManager::requirePerBootSeed();
-#endif
     OSObjectPtr<xpc_connection_t> retainedPeerConnection(peer);
 
     xpc_connection_set_target_queue(peer, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
