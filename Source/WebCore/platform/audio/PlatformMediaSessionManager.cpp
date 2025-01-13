@@ -340,8 +340,12 @@ void PlatformMediaSessionManager::sessionWillEndPlayback(PlatformMediaSession& s
     if (pausingSessionIndex > lastPlayingSessionIndex)
         return;
 
+    // Removing the pausing session from m_sessions will decrement the index of the
+    // last playing session, and re-inserting that pausing session at the
+    // lastPlayingSessionIndex effectively places the pausing session immediately
+    // after the last playing session.
     m_sessions.remove(pausingSessionIndex);
-    m_sessions.append(session);
+    m_sessions.insert(lastPlayingSessionIndex, session);
 
     ALWAYS_LOG(LOGIDENTIFIER, "session moved from index ", pausingSessionIndex, " to ", lastPlayingSessionIndex);
 }
@@ -538,10 +542,12 @@ void PlatformMediaSessionManager::sessionCanProduceAudioChanged()
 void PlatformMediaSessionManager::processDidReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType command, const PlatformMediaSession::RemoteCommandArgument& argument)
 {
 #if ENABLE(VIDEO) || ENABLE(audio)
-    PlatformMediaSession* activeSession = currentSession();
-    if (!activeSession || !activeSession->canReceiveRemoteControlCommands())
-        return;
-    activeSession->didReceiveRemoteControlCommand(command, argument);
+    auto activeSession = firstSessionMatching([](auto& session) {
+        return session.canReceiveRemoteControlCommands();
+    });
+
+    if (activeSession)
+        activeSession->didReceiveRemoteControlCommand(command, argument);
 #else
     UNUSED_PARAM(command);
     UNUSED_PARAM(argument);
@@ -651,6 +657,15 @@ Vector<WeakPtr<PlatformMediaSession>> PlatformMediaSessionManager::sessionsMatch
             matchingSessions.append(session);
     }
     return matchingSessions;
+}
+
+WeakPtr<PlatformMediaSession> PlatformMediaSessionManager::firstSessionMatching(const Function<bool(const PlatformMediaSession&)>& predicate) const
+{
+    for (auto& session : m_sessions) {
+        if (session && predicate(*session))
+            return session;
+    }
+    return nullptr;
 }
 
 void PlatformMediaSessionManager::forEachMatchingSession(const Function<bool(const PlatformMediaSession&)>& predicate, const Function<void(PlatformMediaSession&)>& callback)

@@ -238,6 +238,7 @@ private:
     virtual void updateSessionState() { }
 
     Vector<WeakPtr<PlatformMediaSession>> sessionsMatching(const Function<bool(const PlatformMediaSession&)>&) const;
+    WeakPtr<PlatformMediaSession> firstSessionMatching(const Function<bool(const PlatformMediaSession&)>&) const;
 
 #if !RELEASE_LOG_DISABLED
     void scheduleStateLog();
