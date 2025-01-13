@@ -5970,7 +5970,7 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
         if (!scrollingNodeID)
             return { };
 
-        return { scrollableArea->scrollPosition(), WTFMove(scrollingNodeID) };
+        return { scrollableArea->scrollOrigin() + scrollableArea->scrollPosition(), WTFMove(scrollingNodeID) };
     };
 
     CheckedPtr<RenderLayer> scrollableLayer;
