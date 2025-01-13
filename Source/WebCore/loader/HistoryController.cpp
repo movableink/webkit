@@ -850,6 +850,8 @@ Ref<HistoryItem> HistoryController::createItemTree(HistoryItemClient& client, Lo
         for (RefPtr child = m_frame->tree().firstLocalDescendant(); child; child = child->tree().nextLocalSibling())
             item->addChildItem(child->loader().checkedHistory()->createItemTree(client, targetFrame, clipAtTarget, itemID));
     }
+    if (m_frame.ptr() == &targetFrame)
+        item->setIsTargetItem(true);
     return item;
 }
 
@@ -949,12 +951,14 @@ void HistoryController::updateCurrentItem()
         return;
 
     if (currentItem->url() != documentLoader->url()) {
+        bool isTargetItem = currentItem->isTargetItem();
         auto uuidIdentifier = currentItem->uuidIdentifier();
         bool sameOrigin = SecurityOrigin::create(currentItem->url())->isSameOriginAs(SecurityOrigin::create(documentLoader->url()));
         currentItem->reset();
         initializeItem(*currentItem, documentLoader);
         if (sameOrigin)
             currentItem->setUUIDIdentifier(uuidIdentifier);
+        currentItem->setIsTargetItem(isTargetItem);
     } else {
         // Even if the final URL didn't change, the form data may have changed.
         currentItem->setFormInfoFromRequest(documentLoader->request());

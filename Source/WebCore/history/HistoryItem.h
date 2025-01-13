@@ -107,6 +107,7 @@ public:
     WEBCORE_EXPORT const String& referrer() const;
     WEBCORE_EXPORT const AtomString& target() const;
     std::optional<FrameIdentifier> frameID() const { return m_frameID; }
+    bool isTargetItem() const { return m_isTargetItem; }
     
     WEBCORE_EXPORT FormData* formData();
     WEBCORE_EXPORT String formContentType() const;
@@ -137,6 +138,7 @@ public:
     WEBCORE_EXPORT void setTarget(const AtomString&);
     void setFrameID(std::optional<FrameIdentifier> frameID) { m_frameID = frameID; }
     WEBCORE_EXPORT void setTitle(const String&);
+    void setIsTargetItem(bool isTargetItem) { m_isTargetItem = isTargetItem; }
     
     WEBCORE_EXPORT void setStateObject(RefPtr<SerializedScriptValue>&&);
     SerializedScriptValue* stateObject() const { return m_stateObject.get(); }
@@ -251,6 +253,7 @@ private:
     bool m_wasRestoredFromSession { false };
     bool m_wasCreatedByJSWithoutUserInteraction { false };
     bool m_shouldRestoreScrollPosition { true };
+    bool m_isTargetItem { false };
 
     // If two HistoryItems have the same item sequence number, then they are
     // clones of one another.  Traversing history from one such HistoryItem to

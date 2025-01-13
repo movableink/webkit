@@ -98,8 +98,13 @@ void WebBackForwardListProxy::goToProvisionalItem(const HistoryItem& item)
 
 void WebBackForwardListProxy::clearProvisionalItem(const HistoryItem& item)
 {
-    if (RefPtr page = m_page.get())
-        page->send(Messages::WebPageProxy::BackForwardClearProvisionalItem(item.itemID(), item.frameItemID()));
+    RefPtr page = m_page.get();
+    if (!page)
+        return;
+
+    auto sendResult = page->sendSync(Messages::WebPageProxy::BackForwardClearProvisionalItem(item.itemID(), item.frameItemID()));
+    auto [backForwardListCounts] = sendResult.takeReplyOr(WebBackForwardListCounts { });
+    m_cachedBackForwardListCounts = backForwardListCounts;
 }
 
 void WebBackForwardListProxy::commitProvisionalItem(const HistoryItem& item)
