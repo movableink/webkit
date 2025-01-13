@@ -351,9 +351,9 @@ void FilterImage::correctPremultipliedPixelBuffer()
             index += 64;
         } while (index < endIndex);
 
-        skip(pixelsBytes, index);
+        skip(pixelBytes, index);
         index = 0;
-        if (pixelsBytes.empty())
+        if (pixelBytes.empty())
             return;
     }
 #endif
