@@ -92,8 +92,8 @@ struct pas_pgm_storage {
  */
 #define PAS_PGM_MAX_VIRTUAL_MEMORY (1024 * 1024 * 1024)
 
-/* Total MAX_PGM_HASH_ENTRIES {0 - (MAX_PGM_HASH_ENTRIES - 1)} PGM entries are allowed for which metadata is kept alive */
-#define MAX_PGM_HASH_ENTRIES    10
+/* Total MAX_PGM_DEALLOCATED_METADATA_ENTRIES {0 - (MAX_PGM_DEALLOCATED_METADATA_ENTRIES - 1)} PGM entries are allowed for which metadata is kept alive */
+#define MAX_PGM_DEALLOCATED_METADATA_ENTRIES    10
 
 extern PAS_API pas_ptr_hash_map pas_pgm_hash_map;
 extern PAS_API pas_ptr_hash_map_in_flux_stash pas_pgm_hash_map_in_flux_stash;

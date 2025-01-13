@@ -45,8 +45,8 @@
 
 static size_t free_wasted_mem  = PAS_PGM_MAX_WASTED_MEMORY;
 static size_t free_virtual_mem = PAS_PGM_MAX_VIRTUAL_MEMORY;
-static pas_ptr_hash_map_entry *pgm_metadata_vector[MAX_PGM_HASH_ENTRIES];
-static size_t pgm_metadata_head_index = 0, pgm_metadata_tail_index = 0, pgm_metadata_count = 0;
+static pas_ptr_hash_map_entry *pgm_metadata_vector[MAX_PGM_DEALLOCATED_METADATA_ENTRIES];
+static size_t pgm_metadata_index = 0;
 
 uint16_t pas_probabilistic_guard_malloc_random;
 uint16_t pas_probabilistic_guard_malloc_counter = 0;
@@ -63,12 +63,6 @@ pas_ptr_hash_map pas_pgm_hash_map = PAS_HASHTABLE_INITIALIZER;
 pas_ptr_hash_map_in_flux_stash pas_pgm_hash_map_in_flux_stash;
 
 static void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas_pgm_storage* value, const char* operation);
-static void pas_probabilistic_guard_malloc_manage_metadata(pas_ptr_hash_map_entry * entry);
-
-static void pas_probabilistic_guard_malloc_pgm_metadata_buffer_add(pas_ptr_hash_map_entry * entry);
-static void pas_probabilistic_guard_malloc_pgm_metadata_buffer_remove(void);
-static bool pas_probabilistic_guard_malloc_pgm_metadata_buffer_full(void);
-static bool pas_probabilistic_guard_malloc_pgm_metadata_buffer_empty(void);
 
 #if PAS_COMPILER(CLANG)
 #pragma mark -
@@ -145,13 +139,13 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     pas_pgm_storage *value = pas_utility_heap_try_allocate(sizeof(pas_pgm_storage), "pas_pgm_hash_map_VALUE");
     PAS_ASSERT(value);
 
-    value->mem_to_waste              = mem_to_waste;
-    value->size_of_data_pages        = size + mem_to_waste;
-    value->start_of_data_pages       = result.begin + page_size;
-    value->allocation_size_requested = size;
-    value->page_size                 = page_size;
-    value->large_heap                = large_heap;
-    value->right_align               = right_align;
+    value->mem_to_waste               = mem_to_waste;
+    value->size_of_data_pages         = size + mem_to_waste;
+    value->start_of_data_pages        = result.begin + page_size;
+    value->allocation_size_requested  = size;
+    value->page_size                  = page_size;
+    value->large_heap                 = large_heap;
+    value->right_align                = right_align;
 
     pas_ptr_hash_map_add_result add_result = pas_ptr_hash_map_add(&pas_pgm_hash_map, (void*)key, NULL, &pas_large_utility_free_heap_allocation_config);
     PAS_ASSERT(add_result.is_new_entry);
@@ -185,19 +179,19 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
     uintptr_t key = (uintptr_t) mem;
     PAS_PROFILE(PGM_DEALLOCATE, key);
 
-    pas_ptr_hash_map_entry * entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void*)key);
+    pas_ptr_hash_map_entry* entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void*)key);
     if (!entry || !entry->value)
         return;
 
-    pas_pgm_storage * value = (pas_pgm_storage *) entry->value;
-    int mprotect_res = mprotect( (void *) value->start_of_data_pages, value->size_of_data_pages, PROT_NONE);
+    pas_pgm_storage* value = (pas_pgm_storage*)entry->value;
+    int mprotect_res = mprotect((void*)value->start_of_data_pages, value->size_of_data_pages, PROT_NONE);
     PAS_ASSERT(!mprotect_res);
 
     /*
      * ensure physical addresses are released
      * TODO: investigate using MADV_FREE_REUSABLE instead
      */
-    int madvise_res = madvise((void *) value->start_of_data_pages, value->size_of_data_pages, MADV_FREE);
+    int madvise_res = madvise((void*)value->start_of_data_pages, value->size_of_data_pages, MADV_FREE);
     PAS_ASSERT(!madvise_res);
 
     free_wasted_mem  += value->mem_to_waste;
@@ -208,7 +202,14 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
      * If so deallocate the space for metadata as well
      */
     value->free_status = true;
-    pas_probabilistic_guard_malloc_manage_metadata(entry);
+    pas_ptr_hash_map_entry* old_entry = pgm_metadata_vector[pgm_metadata_index];
+    if (old_entry) {
+        pas_utility_heap_deallocate(old_entry->value);
+        bool removed = pas_ptr_hash_map_remove(&pas_pgm_hash_map, (void*)old_entry->key, NULL, &pas_large_utility_free_heap_allocation_config);
+        PAS_ASSERT(removed);
+    }
+    pgm_metadata_vector[pgm_metadata_index] = entry;
+    pgm_metadata_index = (pgm_metadata_index + 1) % MAX_PGM_DEALLOCATED_METADATA_ENTRIES;
 
     if (verbose)
         pas_probabilistic_guard_malloc_debug_info((void*)key, value, "Deallocating Memory");
@@ -224,7 +225,7 @@ bool pas_probabilistic_guard_malloc_check_exists(uintptr_t mem)
     if (verbose)
         printf("Checking if is PGM entry\n");
 
-    pas_ptr_hash_map_entry * entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void *) mem);
+    pas_ptr_hash_map_entry* entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void*) mem);
     return (entry && entry->value);
 }
 
@@ -314,62 +315,7 @@ void pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(void)
     pas_probabilistic_guard_malloc_can_use = true;
     pas_probabilistic_guard_malloc_random = 1;
     pas_probabilistic_guard_malloc_counter = 0;
-}
-
-/*
- * Adding the entries into 'tail' index and removing the items from 'head' (FIFO)
- */
-bool pas_probabilistic_guard_malloc_pgm_metadata_buffer_full(void)
-{
-    return (pgm_metadata_count >= MAX_PGM_HASH_ENTRIES);
-}
-
-bool pas_probabilistic_guard_malloc_pgm_metadata_buffer_empty(void)
-{
-    return (pgm_metadata_count == 0);
-}
-
-void pas_probabilistic_guard_malloc_pgm_metadata_buffer_add(pas_ptr_hash_map_entry * entry)
-{
-    PAS_ASSERT(!pas_probabilistic_guard_malloc_pgm_metadata_buffer_full());
-
-    size_t index = pgm_metadata_tail_index;
-    if (index >= MAX_PGM_HASH_ENTRIES)
-        index = 0;
-    pgm_metadata_vector[index] = entry;
-    pgm_metadata_tail_index = index + 1;
-    pgm_metadata_count++;
-}
-
-void pas_probabilistic_guard_malloc_pgm_metadata_buffer_remove(void)
-{
-    PAS_ASSERT(!pas_probabilistic_guard_malloc_pgm_metadata_buffer_empty());
-
-    size_t index = pgm_metadata_head_index;
-    if (index >= MAX_PGM_HASH_ENTRIES)
-        index = 0;
-
-    pas_ptr_hash_map_entry *entry = pgm_metadata_vector[index];
-    if (entry && entry->value) {
-        pas_pgm_storage *value = (pas_pgm_storage *) entry->value;
-        bool removed = pas_ptr_hash_map_remove(&pas_pgm_hash_map, (void*)entry->key, NULL, &pas_large_utility_free_heap_allocation_config);
-        PAS_ASSERT(removed);
-        pas_utility_heap_deallocate(value);
-    }
-    pgm_metadata_head_index = index + 1;
-    pgm_metadata_count--;
-}
-
-void pas_probabilistic_guard_malloc_manage_metadata(pas_ptr_hash_map_entry * entry)
-{
-    /*
-     * Check if PGM metadata circular buffer is full if so free first metadata entry per "FIFO".
-     * Note the length of metadata liveness will depend on how long it takes to fill all 10 entries.
-     */
-    if (pas_probabilistic_guard_malloc_pgm_metadata_buffer_full())
-        pas_probabilistic_guard_malloc_pgm_metadata_buffer_remove();
-
-    pas_probabilistic_guard_malloc_pgm_metadata_buffer_add(entry);
+    memset(pgm_metadata_vector, 0, MAX_PGM_DEALLOCATED_METADATA_ENTRIES * sizeof(pas_ptr_hash_map_entry*));
 }
 
 void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas_pgm_storage* value, const char* operation)

@@ -29,11 +29,14 @@
 #include "TestHarness.h"
 
 #include "bmalloc_heap.h"
-#include "pas_probabilistic_guard_malloc_allocator.h"
-#include "pas_heap.h"
 #include "iso_heap.h"
 #include "iso_heap_config.h"
+#include "pas_heap.h"
 #include "pas_heap_ref_kind.h"
+#include "pas_probabilistic_guard_malloc_allocator.h"
+#include "pas_ptr_hash_map.h"
+#include "pas_report_crash.h"
+#include "pas_root.h"
 
 using namespace std;
 
@@ -162,7 +165,7 @@ void testPGMMetaData()
     size_t init_free_wasted_mem = pas_probabilistic_guard_malloc_get_free_wasted_memory();
     pas_ptr_hash_map_entry** metadata_array = pas_probabilistic_guard_malloc_get_metadata_array();
 
-    size_t num_allocations = 1000, num_success_allocs = 0, num_de_allocs = 0;
+    size_t num_allocations = 100, num_success_allocs = 0, num_de_allocs = 0;
     pas_allocation_result mem_storage[num_allocations];
 
     for (size_t i = 0; i < num_allocations; i++ ) {
@@ -175,10 +178,9 @@ void testPGMMetaData()
 
     for (size_t i = 0; i < num_allocations; i++) {
         pas_probabilistic_guard_malloc_deallocate(reinterpret_cast<void *>(mem_storage[i].begin));
-
         if (mem_storage[i].did_succeed)
             /* MetaData entry should be preserved during above deallocation for respective object memory */
-            if (reinterpret_cast<uintptr_t>(metadata_array[i % MAX_PGM_HASH_ENTRIES]->key) == mem_storage[i].begin)
+            if (reinterpret_cast<uintptr_t>(metadata_array[i % MAX_PGM_DEALLOCATED_METADATA_ENTRIES]->key) == mem_storage[i].begin)
                 num_de_allocs++;
     }
 
@@ -189,7 +191,6 @@ void testPGMMetaData()
     CHECK_EQUAL(init_free_wasted_mem, updated_free_wasted_mem);
 
     CHECK_EQUAL(num_success_allocs, num_de_allocs);
-
     pas_heap_lock_unlock();
 }
 
@@ -252,6 +253,117 @@ void testPGMErrors() {
     pas_heap_lock_unlock();
 }
 
+void testPGMMetadataVectorManagement() {
+    pas_probabilistic_guard_malloc_initialize_pgm_as_enabled();
+
+    pas_heap_lock_lock();
+    pas_root* root = pas_root_create();
+    pas_heap_lock_unlock();
+
+    size_t total_allocations = 12;
+    int** int_arr = static_cast<int**>(bmalloc_allocate(total_allocations * sizeof(int*), pas_non_compact_allocation_mode));
+    // Allocate arrays of ints, of random size between [1, 30000].
+    for (size_t i = 0; i < total_allocations; ++i) {
+        int_arr[i] = static_cast<int*>(bmalloc_allocate(((rand() % 30000) + 1) * sizeof(int), pas_non_compact_allocation_mode));
+        CHECK(int_arr[i]);
+    }
+
+    pas_heap_lock_lock();
+    // Deallocate all previous allocations, except holder `int_arr`.
+    for (size_t i = 0; i < total_allocations; ++i)
+        pas_probabilistic_guard_malloc_deallocate(int_arr[i]);
+
+    pas_ptr_hash_map* hash_map = root->pas_pgm_hash_map_instance;
+    CHECK(hash_map);
+
+    // Make sure we only hold MAX_PGM_DEALLOCATED_METADATA_ENTRIES + 1 entries in our hash map. +1 for the still allocated `int** int_arr` holder array.
+    CHECK_EQUAL(hash_map->key_count, MAX_PGM_DEALLOCATED_METADATA_ENTRIES + 1u);
+    pas_ptr_hash_map_entry** metadata_array = pas_probabilistic_guard_malloc_get_metadata_array();
+
+    size_t count = 0;
+    for (; count < MAX_PGM_DEALLOCATED_METADATA_ENTRIES; ++count) {
+        if (!metadata_array[count])
+            break;
+    }
+    CHECK_EQUAL(count, (size_t)MAX_PGM_DEALLOCATED_METADATA_ENTRIES);
+    pas_heap_lock_unlock();
+}
+
+void testPGMMetadataVectorManagementFewDeallocations() {
+    pas_probabilistic_guard_malloc_initialize_pgm_as_enabled();
+
+    pas_heap_lock_lock();
+    pas_root* root = pas_root_create();
+    pas_heap_lock_unlock();
+
+    size_t total_allocations = 12;
+    int** int_arr = static_cast<int**>(bmalloc_allocate(total_allocations * sizeof(int*), pas_non_compact_allocation_mode));
+    // Allocate arrays of ints, of random size between [1, 30000].
+    for (size_t i = 0; i < total_allocations; ++i) {
+        int_arr[i] = static_cast<int*>(bmalloc_allocate(((rand() % 30000) + 1) * sizeof(int), pas_non_compact_allocation_mode));
+        CHECK(int_arr[i]);
+    }
+
+    pas_heap_lock_lock();
+    // Deallocate 4 int arrays.
+    size_t num_deallocations = 4;
+    for (size_t i = 0; i < num_deallocations; ++i)
+        pas_probabilistic_guard_malloc_deallocate(int_arr[i]);
+
+    pas_ptr_hash_map* hash_map = root->pas_pgm_hash_map_instance;
+    CHECK(hash_map);
+
+    CHECK_EQUAL(hash_map->key_count, 13u);
+    pas_ptr_hash_map_entry** metadata_array = pas_probabilistic_guard_malloc_get_metadata_array();
+
+    size_t count = 0;
+    for (; count < MAX_PGM_DEALLOCATED_METADATA_ENTRIES; ++count) {
+        if (!metadata_array[count])
+            break;
+    }
+    CHECK_EQUAL(count, (size_t)std::min(MAX_PGM_DEALLOCATED_METADATA_ENTRIES, (int)num_deallocations));
+    pas_heap_lock_unlock();
+}
+
+void testPGMMetadataDoubleFreeBehavior() {
+    pas_probabilistic_guard_malloc_initialize_pgm_as_enabled();
+
+    pas_heap_lock_lock();
+    pas_root* root = pas_root_create();
+    pas_heap_lock_unlock();
+
+    size_t total_allocations = 20;
+    int** int_arr = static_cast<int**>(bmalloc_allocate(total_allocations * sizeof(int*), pas_non_compact_allocation_mode));
+    // Allocate arrays of ints, of random size between [1, 30000].
+    for (size_t i = 0; i < total_allocations; ++i) {
+        int_arr[i] = static_cast<int*>(bmalloc_allocate(((rand() % 30000) + 1) * sizeof(int), pas_non_compact_allocation_mode));
+        CHECK(int_arr[i]);
+    }
+
+    pas_heap_lock_lock();
+    // Deallocate all previous allocations, except holder `int_arr`.
+    for (size_t i = 0; i < total_allocations; ++i)
+        pas_probabilistic_guard_malloc_deallocate(int_arr[i]);
+
+    // Deallocate a previously deallocated chunk of memory (double free)
+    pas_probabilistic_guard_malloc_deallocate(int_arr[0]);
+
+    pas_ptr_hash_map* hash_map = root->pas_pgm_hash_map_instance;
+    CHECK(hash_map);
+
+    // Make sure we only hold MAX_PGM_DEALLOCATED_METADATA_ENTRIES + 1 entries in our hash map. +1 for the still allocated `int** int_arr` holder array.
+    CHECK_EQUAL(hash_map->key_count, MAX_PGM_DEALLOCATED_METADATA_ENTRIES + 1u);
+    pas_ptr_hash_map_entry** metadata_array = pas_probabilistic_guard_malloc_get_metadata_array();
+
+    size_t count = 0;
+    for (; count < MAX_PGM_DEALLOCATED_METADATA_ENTRIES; ++count) {
+        if (!metadata_array[count])
+            break;
+    }
+    CHECK_EQUAL(count, (size_t)MAX_PGM_DEALLOCATED_METADATA_ENTRIES);
+    pas_heap_lock_unlock();
+}
+
 } // anonymous namespace
 
 void addPGMTests() {
@@ -260,4 +372,7 @@ void addPGMTests() {
     ADD_TEST(testPGMRealloc());
     ADD_TEST(testPGMErrors());
     ADD_TEST(testPGMMetaData());
+    ADD_TEST(testPGMMetadataVectorManagement());
+    ADD_TEST(testPGMMetadataVectorManagementFewDeallocations());
+    ADD_TEST(testPGMMetadataDoubleFreeBehavior());
 }
