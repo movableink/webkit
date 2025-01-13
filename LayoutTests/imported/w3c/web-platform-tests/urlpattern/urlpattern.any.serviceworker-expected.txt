@@ -293,9 +293,9 @@ FAIL Pattern: [{"hostname":"bad\nhostname"}] Inputs: undefined assert_throws_js:
 FAIL Pattern: [{"hostname":"bad\rhostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
 FAIL Pattern: [{"hostname":"bad\thostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
 PASS Pattern: [{}] Inputs: ["https://example.com/"]
-FAIL Pattern: [] Inputs: ["https://example.com/"] Not implemented.
-FAIL Pattern: [] Inputs: [{}] Not implemented.
-FAIL Pattern: [] Inputs: [] Not implemented.
+PASS Pattern: [] Inputs: ["https://example.com/"]
+PASS Pattern: [] Inputs: [{}]
+PASS Pattern: [] Inputs: []
 PASS Pattern: [{"pathname":"(foo)(.*)"}] Inputs: [{"pathname":"foobarbaz"}]
 PASS Pattern: [{"pathname":"{(foo)bar}(.*)"}] Inputs: [{"pathname":"foobarbaz"}]
 PASS Pattern: [{"pathname":"(foo)?(.*)"}] Inputs: [{"pathname":"foobarbaz"}]

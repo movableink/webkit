@@ -257,10 +257,8 @@ ExceptionOr<Ref<URLPattern>> URLPattern::create(ScriptExecutionContext& context,
 // https://urlpattern.spec.whatwg.org/#urlpattern-initialize
 ExceptionOr<Ref<URLPattern>> URLPattern::create(ScriptExecutionContext& context, std::optional<URLPatternInput>&& input, URLPatternOptions&& options)
 {
-    if (!input) {
-        // FIXME: File a bug to URLPattern owners to tell them that spec does not mention supporting empty URLPattern objects. Spec and test cases have diverged!
-        return Exception { ExceptionCode::NotSupportedError, "Not implemented."_s };
-    }
+    if (!input)
+        input = URLPatternInit { };
 
     return create(context, WTFMove(*input), String { }, WTFMove(options));
 }
@@ -271,21 +269,20 @@ URLPattern::~URLPattern() = default;
 ExceptionOr<bool> URLPattern::test(ScriptExecutionContext& context, std::optional<URLPatternInput>&& input, String&& baseURL) const
 {
     if (!input)
-        return Exception { ExceptionCode::NotSupportedError };
+        input = URLPatternInit { };
 
     auto maybeResult = match(context, WTFMove(*input), WTFMove(baseURL));
     if (maybeResult.hasException())
         return maybeResult.releaseException();
 
     return !!maybeResult.returnValue();
-
 }
 
 // https://urlpattern.spec.whatwg.org/#dom-urlpattern-exec
 ExceptionOr<std::optional<URLPatternResult>> URLPattern::exec(ScriptExecutionContext& context, std::optional<URLPatternInput>&& input, String&& baseURL) const
 {
     if (!input)
-        return Exception { ExceptionCode::NotSupportedError };
+        input = URLPatternInit { };
 
     return match(context, WTFMove(*input), WTFMove(baseURL));
 }
