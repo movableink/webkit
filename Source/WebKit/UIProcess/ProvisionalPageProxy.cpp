@@ -271,7 +271,8 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
     }
 
     protectedProcess->send(Messages::WebProcess::CreateWebPage(m_webPageID, page->creationParametersForProvisionalPage(process(), *m_drawingArea, WTFMove(websitePolicies), m_mainFrame->frameID())), 0);
-    protectedProcess->addVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
+    if (!page->preferences().siteIsolationEnabled())
+        protectedProcess->addVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
 
     if (page->isLayerTreeFrozenDueToSwipeAnimation())
         send(Messages::WebPage::SwipeAnimationDidStart());
