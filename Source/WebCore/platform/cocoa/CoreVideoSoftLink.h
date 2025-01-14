@@ -27,6 +27,7 @@
 
 #include <CoreVideo/CoreVideo.h>
 #include <wtf/SoftLinking.h>
+#include <wtf/StdLibExtras.h>
 
 typedef struct __IOSurface* IOSurfaceRef;
 
@@ -165,3 +166,16 @@ SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferCreateWithBytes, 
 #define CVPixelBufferCreateWithBytes softLink_CoreVideo_CVPixelBufferCreateWithBytes
 SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferCreateWithIOSurface, CVReturn, (CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef * pixelBufferOut), (allocator, surface, pixelBufferAttributes, pixelBufferOut))
 #define CVPixelBufferCreateWithIOSurface softLink_CoreVideo_CVPixelBufferCreateWithIOSurface
+
+namespace WebCore {
+inline std::span<uint8_t> CVPixelBufferGetSpanOfPlane(CVPixelBufferRef pixelBuffer, size_t planeIndex)
+{
+    auto* baseAddress = static_cast<uint8_t*>(WebCore::CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, planeIndex));
+    if (!baseAddress)
+        return { };
+
+    auto bytesPerRow = WebCore::CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, planeIndex);
+    auto height = WebCore::CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+    return unsafeMakeSpan(baseAddress, bytesPerRow * height);
+}
+}
