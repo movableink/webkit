@@ -797,8 +797,6 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
 
             g_value_init(&intValue, G_TYPE_INT);
 
-            WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-
             switch (bitRateAllocation.scalabilityMode()) {
             case WebCore::VideoEncoderScalabilityMode::L1T1:
                 numberLayers = 1;
@@ -808,7 +806,7 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
                     g_value_array_append(bitrates.get(), &intValue);
                 }
                 for (unsigned i = 0; i < 3; i++) {
-                    static const int decimatorValues[] = { 1, 1, 1 };
+                    static const std::array<int, 3> decimatorValues = { 1, 1, 1 };
                     g_value_set_int(&intValue, decimatorValues[i]);
                     g_value_array_append(decimators.get(), &intValue);
                 }
@@ -825,12 +823,12 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
                     g_value_array_append(bitrates.get(), &intValue);
                 }
                 for (unsigned i = 0; i < 3; i++) {
-                    static const int decimatorValues[] = { 1, 1, 1 };
+                    static const std::array<int, 3> decimatorValues = { 1, 1, 1 };
                     g_value_set_int(&intValue, decimatorValues[i]);
                     g_value_array_append(decimators.get(), &intValue);
                 }
                 for (unsigned i = 0; i < 4; i++) {
-                    static const int layerIdValues[] = { 0, 1, 0, 1 };
+                    static const std::array<int, 4> layerIdValues = { 0, 1, 0, 1 };
                     g_value_set_int(&intValue, layerIdValues[i]);
                     g_value_array_append(layerIds.get(), &intValue);
                 }
@@ -862,12 +860,12 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
                     g_value_array_append(bitrates.get(), &intValue);
                 }
                 for (unsigned i = 0; i < 3; i++) {
-                    static const int decimatorValues[] = { 4, 2, 1 };
+                    static const std::array<int, 3> decimatorValues = { 4, 2, 1 };
                     g_value_set_int(&intValue, decimatorValues[i]);
                     g_value_array_append(decimators.get(), &intValue);
                 }
                 for (unsigned i = 0; i < 4; i++) {
-                    static const int layerIdValues[] = { 0, 2, 1, 2 };
+                    static const std::array<int, 4> layerIdValues = { 0, 2, 1, 2 };
                     g_value_set_int(&intValue, layerIdValues[i]);
                     g_value_array_append(layerIds.get(), &intValue);
                 }
@@ -893,7 +891,6 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
                 layerSyncFlags = { false, true, true, false, false, false, false, false };
                 break;
             }
-            WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             g_value_unset(&intValue);
 
             GST_DEBUG_OBJECT(encoder, "Configuring for %s scalability mode", scalabilityString.characters());
