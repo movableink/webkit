@@ -55,6 +55,11 @@ void* tzoneAllocateNonCompactWithFastFallbackSlow(size_t requestedSize, const TZ
         if (tzoneMallocFallback == TZoneMallocFallback::ForceSpecifiedFallBack)
             return bmalloc_allocate_inline(requestedSize, pas_non_compact_allocation_mode);
 
+        if (BUNLIKELY(tzoneMallocFallback == TZoneMallocFallback::Undecided)) {
+            TZoneHeapManager::ensureSingleton();
+            return tzoneAllocateNonCompactWithFastFallbackSlow(requestedSize, spec);
+        }
+
         RELEASE_BASSERT(tzoneMallocFallback == TZoneMallocFallback::ForceDebugMalloc);
         IsoMallocFallback::MallocResult result = IsoMallocFallback::tryMalloc(requestedSize, CompactAllocationMode::NonCompact);
         BASSERT(result.didFallBack);
@@ -78,6 +83,11 @@ void* tzoneAllocateCompactWithFastFallbackSlow(size_t requestedSize, const TZone
     if (BUNLIKELY(tzoneMallocFallback != TZoneMallocFallback::DoNotFallBack)) {
         if (BLIKELY(tzoneMallocFallback == TZoneMallocFallback::ForceSpecifiedFallBack))
             return bmalloc_allocate_inline(requestedSize, pas_maybe_compact_allocation_mode);
+
+        if (BUNLIKELY(tzoneMallocFallback == TZoneMallocFallback::Undecided)) {
+            TZoneHeapManager::ensureSingleton();
+            return tzoneAllocateCompactWithFastFallbackSlow(requestedSize, spec);
+        }
 
         RELEASE_BASSERT(tzoneMallocFallback == TZoneMallocFallback::ForceDebugMalloc);
         IsoMallocFallback::MallocResult result = IsoMallocFallback::tryMalloc(requestedSize, CompactAllocationMode::Compact);
@@ -108,6 +118,11 @@ void* tzoneAllocateNonCompactWithIsoFallbackSlow(size_t requestedSize, const TZo
             return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_non_compact_allocation_mode);
         }
 
+        if (BUNLIKELY(tzoneMallocFallback == TZoneMallocFallback::Undecided)) {
+            TZoneHeapManager::ensureSingleton();
+            return tzoneAllocateNonCompactWithIsoFallbackSlow(requestedSize, spec);
+        }
+
         RELEASE_BASSERT(tzoneMallocFallback == TZoneMallocFallback::ForceDebugMalloc);
         IsoMallocFallback::MallocResult result = IsoMallocFallback::tryMalloc(requestedSize, CompactAllocationMode::NonCompact);
         BASSERT(result.didFallBack);
@@ -135,6 +150,11 @@ void* tzoneAllocateCompactWithIsoFallbackSlow(size_t requestedSize, const TZoneS
                 *spec.addressOfHeapRef = heapRef;
             }
             return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_maybe_compact_allocation_mode);
+        }
+
+        if (BUNLIKELY(tzoneMallocFallback == TZoneMallocFallback::Undecided)) {
+            TZoneHeapManager::ensureSingleton();
+            return tzoneAllocateCompactWithIsoFallbackSlow(requestedSize, spec);
         }
 
         RELEASE_BASSERT(tzoneMallocFallback == TZoneMallocFallback::ForceDebugMalloc);
