@@ -36,7 +36,6 @@
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/SpanCocoa.h>
 
-#import "AppAttestInternalSoftLink.h"
 #import "LocalAuthenticationSoftLink.h"
 
 #if USE(APPLE_INTERNAL_SDK)

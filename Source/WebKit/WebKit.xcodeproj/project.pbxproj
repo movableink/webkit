@@ -1376,9 +1376,6 @@
 		570DAAC623037F7F00E8FC04 /* WKNFReaderSessionDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 570DAAC423037F7E00E8FC04 /* WKNFReaderSessionDelegate.h */; };
 		570DAACA230385FD00E8FC04 /* CtapNfcDriver.h in Headers */ = {isa = PBXBuildFile; fileRef = 570DAAC8230385FD00E8FC04 /* CtapNfcDriver.h */; };
 		572EBBD72537EBAE000552B3 /* ExtraPrivateSymbolsForTAPI.h in Headers */ = {isa = PBXBuildFile; fileRef = ECA680D31E6904B500731D20 /* ExtraPrivateSymbolsForTAPI.h */; };
-		572EBBDA2538F6B4000552B3 /* AppAttestInternalSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = 572EBBD82538F6A1000552B3 /* AppAttestInternalSoftLink.mm */; };
-		572EBBDB2538F6B6000552B3 /* AppAttestInternalSoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = 572EBBD92538F6A1000552B3 /* AppAttestInternalSoftLink.h */; };
-		572EBBDD25392181000552B3 /* AppAttestSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 572EBBDC25392181000552B3 /* AppAttestSPI.h */; };
 		572FD44322265CE200A1ECC3 /* WebViewDidMoveToWindowObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = 572FD44122265CE200A1ECC3 /* WebViewDidMoveToWindowObserver.h */; };
 		574217922400E286002B303D /* LocalAuthenticationSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 574217912400E098002B303D /* LocalAuthenticationSPI.h */; };
 		574728D123456E98001700AF /* _WKWebAuthenticationPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 574728CF23456E98001700AF /* _WKWebAuthenticationPanel.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -5916,9 +5913,6 @@
 		570DAAC523037F7E00E8FC04 /* WKNFReaderSessionDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WKNFReaderSessionDelegate.mm; sourceTree = "<group>"; };
 		570DAAC8230385FD00E8FC04 /* CtapNfcDriver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CtapNfcDriver.h; sourceTree = "<group>"; };
 		570DAAC9230385FD00E8FC04 /* CtapNfcDriver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CtapNfcDriver.cpp; sourceTree = "<group>"; };
-		572EBBD82538F6A1000552B3 /* AppAttestInternalSoftLink.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppAttestInternalSoftLink.mm; sourceTree = "<group>"; };
-		572EBBD92538F6A1000552B3 /* AppAttestInternalSoftLink.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppAttestInternalSoftLink.h; sourceTree = "<group>"; };
-		572EBBDC25392181000552B3 /* AppAttestSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppAttestSPI.h; sourceTree = "<group>"; };
 		572FD44122265CE200A1ECC3 /* WebViewDidMoveToWindowObserver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebViewDidMoveToWindowObserver.h; sourceTree = "<group>"; };
 		574217912400E098002B303D /* LocalAuthenticationSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LocalAuthenticationSPI.h; sourceTree = "<group>"; };
 		5742A2F72535613F00B7BA14 /* .xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = .xpc; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -11458,7 +11452,6 @@
 			children = (
 				E3CAAA432413278A00CED2E2 /* AccessibilitySupportSPI.h */,
 				E3B8F7F72BA8AC4D006E97B6 /* AccessibilityUtilitiesSPI.h */,
-				572EBBDC25392181000552B3 /* AppAttestSPI.h */,
 				9565083726D87A2B00E15CB7 /* AppleMediaServicesSPI.h */,
 				9565083826D87A2B00E15CB7 /* AppleMediaServicesUISPI.h */,
 				EBA8D3AA27A5E31300CB7900 /* ApplePushServiceSPI.h */,
@@ -12952,8 +12945,6 @@
 		57DCED9E2148F9D10016B847 /* Cocoa */ = {
 			isa = PBXGroup;
 			children = (
-				572EBBD92538F6A1000552B3 /* AppAttestInternalSoftLink.h */,
-				572EBBD82538F6A1000552B3 /* AppAttestInternalSoftLink.mm */,
 				57FABB102581827C0059DC95 /* AuthenticationServicesCoreSoftLink.h */,
 				57FABB112581827C0059DC95 /* AuthenticationServicesCoreSoftLink.mm */,
 				52E6057F2B17ECCE0069D2C2 /* AuthenticationServicesForwardDeclarations.h */,
@@ -16436,8 +16427,6 @@
 				577FF7822346E81C004EDFB9 /* APIWebAuthenticationPanelClient.h in Headers */,
 				1AE286841C7F93860069AC4F /* APIWebsiteDataRecord.h in Headers */,
 				1A6563E51B7A8C50009CF787 /* APIWindowFeatures.h in Headers */,
-				572EBBDB2538F6B6000552B3 /* AppAttestInternalSoftLink.h in Headers */,
-				572EBBDD25392181000552B3 /* AppAttestSPI.h in Headers */,
 				074879B92373A90900F5678E /* AppKitSoftLink.h in Headers */,
 				F48D2A8521583A7E00C6752B /* AppKitSPI.h in Headers */,
 				9565083926D87A2B00E15CB7 /* AppleMediaServicesSPI.h in Headers */,
@@ -19763,7 +19752,6 @@
 				337822432947F679002106BB /* _WKWebExtensionWebNavigationURLFilter.mm in Sources */,
 				3370420A2B58A8390077FF78 /* _WKWebExtensionWebRequestFilter.mm in Sources */,
 				07E4BDC82A3A7089000D5509 /* _WKWebViewTextInputNotifications.mm in Sources */,
-				572EBBDA2538F6B4000552B3 /* AppAttestInternalSoftLink.mm in Sources */,
 				EBA8D3B227A5E33F00CB7900 /* ApplePushServiceConnection.mm in Sources */,
 				A1D615722B06C7C2002D0E19 /* AssertionCapability.mm in Sources */,
 				A1D615722B06C7C2002D0E19 /* AssertionCapability.mm in Sources */,
