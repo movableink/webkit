@@ -122,13 +122,13 @@ PASS Pattern: [{"hostname":"(café)"}] Inputs: undefined
 PASS Pattern: [{"pathname":"(café)"}] Inputs: undefined
 PASS Pattern: [{"search":"(café)"}] Inputs: undefined
 PASS Pattern: [{"hash":"(café)"}] Inputs: undefined
-FAIL Pattern: [{"protocol":":café"}] Inputs: [{"protocol":"foo"}] Invalid input to canonicalize a URL protocol string.
-FAIL Pattern: [{"username":":café"}] Inputs: [{"username":"foo"}] assert_equals: compiled pattern property 'username' expected ":café" but got "{:caf}é"
-FAIL Pattern: [{"password":":café"}] Inputs: [{"password":"foo"}] assert_equals: compiled pattern property 'password' expected ":café" but got "{:caf}é"
-FAIL Pattern: [{"hostname":":café"}] Inputs: [{"hostname":"foo"}] assert_equals: compiled pattern property 'hostname' expected ":café" but got "{:caf}é"
-FAIL Pattern: [{"pathname":"/:café"}] Inputs: [{"pathname":"/foo"}] assert_equals: compiled pattern property 'pathname' expected "/:café" but got "/:caf%C3%A9"
-FAIL Pattern: [{"search":":café"}] Inputs: [{"search":"foo"}] assert_equals: compiled pattern property 'search' expected ":café" but got ":caf%C3%A9"
-FAIL Pattern: [{"hash":":café"}] Inputs: [{"hash":"foo"}] assert_equals: compiled pattern property 'hash' expected ":café" but got ":caf%C3%A9"
+PASS Pattern: [{"protocol":":café"}] Inputs: [{"protocol":"foo"}]
+PASS Pattern: [{"username":":café"}] Inputs: [{"username":"foo"}]
+PASS Pattern: [{"password":":café"}] Inputs: [{"password":"foo"}]
+PASS Pattern: [{"hostname":":café"}] Inputs: [{"hostname":"foo"}]
+PASS Pattern: [{"pathname":"/:café"}] Inputs: [{"pathname":"/foo"}]
+PASS Pattern: [{"search":":café"}] Inputs: [{"search":"foo"}]
+PASS Pattern: [{"hash":":café"}] Inputs: [{"hash":"foo"}]
 PASS Pattern: [{"protocol":":℘"}] Inputs: [{"protocol":"foo"}]
 PASS Pattern: [{"username":":℘"}] Inputs: [{"username":"foo"}]
 PASS Pattern: [{"password":":℘"}] Inputs: [{"password":"foo"}]

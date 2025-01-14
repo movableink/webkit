@@ -43,19 +43,19 @@ bool Token::isNull() const
     return false;
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 // https://urlpattern.spec.whatwg.org/#get-the-next-code-point
 void Tokenizer::getNextCodePoint()
 {
-    if (m_input.is8Bit()) {
-        auto characters = m_input.span8();
-        U8_NEXT_OR_FFFD(characters, m_nextIndex, m_input.length(), m_codepoint);
-    } else {
+    if (m_input.is8Bit())
+        m_codepoint = m_input[m_nextIndex++];
+    else {
+        // FIXME: We should handle surrogates if any.
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         auto characters = m_input.span16();
         U16_NEXT_OR_FFFD(characters, m_nextIndex, m_input.length(), m_codepoint);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 // https://urlpattern.spec.whatwg.org/#seek-and-get-the-next-code-point
 void Tokenizer::seekNextCodePoint(size_t index)
