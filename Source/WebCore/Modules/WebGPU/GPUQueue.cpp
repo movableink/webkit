@@ -702,27 +702,20 @@ static MallocSpan<uint8_t> copyToDestinationFormat(std::span<const uint8_t> rgba
 
         auto typedBytes = data.mutableSpan();
         size_t widthInElements = typedBytes.size() / rows;
-        auto oneForAlpha = premultiplyAlpha ? 1 : 0;
         if (premultiplyAlpha) {
             RELEASE_ASSERT(!(widthInElements % 4));
-            for (size_t y = 0, y0 = rows - 1; y < y0 + oneForAlpha; ++y, --y0) {
-                for (size_t x = 0; x < widthInElements; x += 4) {
-                    auto alpha = typedBytes[y * widthInElements + x + 3];
-                    auto alpha0 = typedBytes[y0 * widthInElements + x + 3];
-                    for (size_t c = 0; c < 3; ++c) {
-                        float f = static_cast<float>(typedBytes[y0 * widthInElements + x + c]);
-                        f = f * alpha0 / static_cast<float>(oneValue);
-                        typedBytes[y0 * widthInElements + x + c] = static_cast<decltype(oneValue)>(f);
-                        f = static_cast<float>(typedBytes[y * widthInElements + x + c]);
-                        f = f * alpha / static_cast<float>(oneValue);
-                        typedBytes[y * widthInElements + x + c] = static_cast<decltype(oneValue)>(f);
-                        if (flipY)
-                            std::swap(typedBytes[y0 * widthInElements + x + c], typedBytes[y * widthInElements + x + c]);
-                    }
-                }
+            using T = decltype(oneValue);
+            float invOneValue = 1.f / oneValue;
+            for (size_t i = 0; i < sizeInBytes; i += 4) {
+                float alpha = typedBytes[i + 3];
+                typedBytes[i] = static_cast<T>(typedBytes[i] * alpha * invOneValue);
+                typedBytes[i + 1] = static_cast<T>(typedBytes[i + 1] * alpha * invOneValue);
+                typedBytes[i + 2] = static_cast<T>(typedBytes[i + 2] * alpha * invOneValue);
             }
-        } else if (flipY) {
-            for (size_t y = 0, y0 = rows - 1; y < y0 + oneForAlpha; ++y, --y0) {
+        }
+
+        if (flipY && sourceY < rows && !sourceY && !sourceX) {
+            for (size_t y = 0, y0 = rows - 1 - sourceY; y < y0; ++y, --y0) {
                 for (size_t x = 0; x < widthInElements; ++x)
                     std::swap(typedBytes[y0 * widthInElements + x], typedBytes[y * widthInElements + x]);
             }
@@ -827,8 +820,16 @@ static MallocSpan<uint8_t> copyToDestinationFormat(std::span<const uint8_t> rgba
     }
     case GPUTextureFormat::Rgb10a2unorm: {
         auto data = MallocSpan<uint32_t>::malloc(sizeInBytes);
-        for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, ++i0)
-            data[i0] = convertRGBA8888ToRGB10A2(rgbaBytes[i], rgbaBytes[i + 1], rgbaBytes[i + 2], rgbaBytes[i + 3]);
+        if (flipY || premultiplyAlpha || sourceX || sourceY) {
+            auto copySpan = MallocSpan<uint8_t>::malloc(sizeInBytes);
+            memcpySpan(copySpan.mutableSpan(), rgbaBytes);
+            flipAndPremultiply(copySpan, flipY, premultiplyAlpha, 255);
+            for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, ++i0)
+                data[i0] = convertRGBA8888ToRGB10A2(copySpan[i], copySpan[i + 1], copySpan[i + 2], copySpan[i + 3]);
+        } else {
+            for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, ++i0)
+                data[i0] = convertRGBA8888ToRGB10A2(rgbaBytes[i], rgbaBytes[i + 1], rgbaBytes[i + 2], rgbaBytes[i + 3]);
+        }
 
         return data;
     }
@@ -998,14 +999,19 @@ ExceptionOr<void> GPUQueue::copyExternalImageToTexture(ScriptExecutionContext& c
 
         if (source.origin && supportedFormat) {
             populdateXYFromOrigin(*source.origin, sourceX, sourceY);
+
             if (sourceX || sourceY) {
                 RELEASE_ASSERT(newImageBytes);
-                for (size_t y = sourceY, y0 = 0; y < rows; ++y, ++y0) {
-                    for (size_t x = sourceX, x0 = 0; x < columns; ++x, ++x0) {
+                auto copySizeWidth = dimension(copySize, 0);
+                auto copySizeHeight = dimension(copySize, 1);
+                for (size_t y = 0; y < copySizeHeight; ++y) {
+                    auto targetY = !needsYFlip ? (sourceY + y) : (sourceY + (copySizeHeight - 1 - y));
+                    for (size_t x = sourceX, x0 = 0; x0 < copySizeWidth; ++x, ++x0) {
                         for (size_t c = 0; c < channels; ++c)
-                            newImageBytes[y0 * widthInBytes + x0 * channels + c] = newImageBytes[y * widthInBytes + x * channels + c];
+                            newImageBytes[y * widthInBytes + x0 * channels + c] = newImageBytes[targetY * widthInBytes + x * channels + c];
                     }
                 }
+                needsYFlip = false;
             }
         }
 

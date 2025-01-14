@@ -1662,6 +1662,9 @@ http/tests/webgpu/webgpu/api/validation/queue/submit.html [ Pass ]
 http/tests/webgpu/webgpu/api/validation/queue/destroyed [ Pass ]
 [ arm64 ] http/tests/webgpu/webgpu/api/operation/command_buffer/queries [ Pass ]
 
+# this test is very slow so expect a timeout or pass
+http/tests/webgpu/webgpu/web_platform/copyToTexture/ImageBitmap.html [ Pass Timeout ]
+
 http/tests/webgpu/webgpu/shader/execution/flow_control/switch.html [ Pass ]
 # arm64 release only because the tests are incredibly slow due to their extensiveness
 [ Release arm64 ] http/tests/webgpu/webgpu/shader/execution/shader_io [ Pass ]
