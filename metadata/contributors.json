@@ -6600,6 +6600,14 @@
    },
    {
       "emails" : [
+         "phipson_lee@apple.com",
+         "phipsonleecy@gmail.com"
+      ],
+      "github" : "Phipson",
+      "name" : "Phipson Lee"
+   },
+   {
+      "emails" : [
          "pierre.rossi@gmail.com"
       ],
       "name" : "Pierre Rossi",
