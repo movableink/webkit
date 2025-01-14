@@ -1822,8 +1822,6 @@ webkit.org/b/245324 http/tests/notifications/notification.html  [ Crash Pass ]
 
 webgl/1.0.x/conformance/textures/misc/texture-corner-case-videos.html [ Timeout ]
 
-# Trusted Types aren't implemented yet
-
 # Flaky tests on Aug-2023
 webkit.org/b/261024 http/wpt/mediarecorder/MediaRecorder-video-bitrate.html [ Crash Failure Pass ]
 webkit.org/b/261024 imported/w3c/web-platform-tests/css/css-transforms/animation/transform-interpolation-rotate-slerp.html [ ImageOnlyFailure Pass ]

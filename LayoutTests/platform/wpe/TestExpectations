@@ -1087,10 +1087,6 @@ webkit.org/b/202736 http/wpt/cache-storage/cache-quota-after-restart.any.html [ 
 
 webkit.org/b/190626 imported/w3c/web-platform-tests/html/semantics/forms/the-datalist-element/datalistoptions.html [ Failure ]
 
-# Trusted Types aren't implemented yet
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/WorkerGlobalScope-eval.html [ Failure ]
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/WorkerGlobalScope-importScripts.html [ Failure ]
-
 # The GPU process should not be used in layout tests yet
 webkit.org/b/280604 webgl/webgl-worker.html [ Skip ]
 webkit.org/b/280604 webgl/webgl-fail-platform-context-creation-no-crash.html [ Skip ]

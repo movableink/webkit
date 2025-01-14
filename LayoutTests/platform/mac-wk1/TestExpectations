@@ -1035,6 +1035,9 @@ http/tests/local/blob/navigate-blob.html [ Skip ]
 # Not supported on WK1
 media/no-fullscreen-when-hidden.html [ Skip ]
 
+# The Trusted Types API is not supported in WebKit1.
+imported/w3c/web-platform-tests/trusted-types [ Skip ]
+
 # Beacon is not supported on WK1.
 http/tests/blink/sendbeacon/ [ Skip ]
 http/tests/inspector/network/beacon-type.html [ Skip ]

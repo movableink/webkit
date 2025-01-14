@@ -6709,11 +6709,6 @@ media/video-orientation-canvas.html [ Failure ]
 http/tests/resourceLoadStatistics/capped-lifetime-for-cookie-set-in-js.html [ Skip ]
 http/tests/resourceLoadStatistics/website-data-removal-for-site-without-user-interaction.html [ Skip ]
 
-# Trusted Types aren't implemented yet
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/trusted-types-reporting.html [ Skip ]
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/trusted-types-eval-reporting-report-only.html [ Skip ]
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/trusted-types-eval-reporting-no-unsafe-eval.html [ Skip ]
-
 webkit.org/b/210849 compositing/overflow/rtl-scrollbar-layer-positioning.html [ Pass Timeout ]
 
 webkit.org/b/243515 svg/compositing/svg-poster-circle.html [ Pass ImageOnlyFailure ]

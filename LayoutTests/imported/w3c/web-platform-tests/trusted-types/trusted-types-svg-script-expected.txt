@@ -6,4 +6,5 @@ PASS Assign String to SVGScriptElement.innerHTML.
 PASS Assign TrustedHTML to SVGScriptElement.innerHTML.
 PASS Assign TrustedHTML to SVGScriptElement.innerHTML and execute it.
 PASS Modify SVGScriptElement via DOM manipulation.
+PASS Assign String to SVGScriptElement.innerHTML w/ default policy.
 
