@@ -51,15 +51,12 @@ public:
 
     constexpr size_t lengthRemaining() const { return m_data.size(); }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    constexpr void setPosition(const CharacterType* position)
+    constexpr void setPosition(std::span<const CharacterType> position)
     {
-        ASSERT(position <= std::to_address(m_data.end()));
-        // FIXME: This can be used to rewind to a position *before* the beginning
-        // of the span, preventing us from doing bounds validation at the moment.
-        m_data = { position, static_cast<size_t>(std::to_address(m_data.end()) - position) };
+        ASSERT(position.data() <= std::to_address(m_data.end()));
+        ASSERT(std::to_address(position.end()) <= std::to_address(m_data.end()));
+        m_data = position;
     }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     StringView stringViewOfCharactersRemaining() const LIFETIME_BOUND { return span(); }
 

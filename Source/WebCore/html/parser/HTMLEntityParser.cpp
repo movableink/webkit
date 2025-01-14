@@ -125,8 +125,8 @@ public:
     static bool isEmpty() { return false; }
     UChar currentCharacter() const { return m_source.atEnd() ? 0 : *m_source; }
     void advance() { m_source.advance(); }
-    void pushEverythingBack() { m_source.setPosition(m_startPosition.data()); }
-    void pushBackButKeep(unsigned keepCount) { m_source.setPosition(m_startPosition.subspan(keepCount).data()); }
+    void pushEverythingBack() { m_source.setPosition(m_startPosition); }
+    void pushBackButKeep(unsigned keepCount) { m_source.setPosition(m_startPosition.subspan(keepCount)); }
 
 private:
     StringParsingBuffer<CharacterType>& m_source;
