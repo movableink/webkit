@@ -993,6 +993,14 @@ class RunWorldLeaksTests(RunWebKitTests):
     description = ["world-leaks-tests running"]
     descriptionDone = ["world-leaks-tests"]
     resultDirectory = os.path.join(RunWebKitTests.resultDirectory, "world-leaks-layout-test-results")
+    command = ["python3", "Tools/Scripts/run-webkit-tests",
+               "--no-build",
+               "--no-show-results",
+               "--no-new-test-results",
+               "--clobber-old-results",
+               "--exit-after-n-crashes-or-timeouts", "50",
+               "--exit-after-n-failures", "500",
+               WithProperties("--%(configuration)s")]
 
     def run(self):
         self.command += ["--world-leaks"]
