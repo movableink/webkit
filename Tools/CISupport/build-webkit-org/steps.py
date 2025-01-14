@@ -984,7 +984,7 @@ class RunDashboardTests(RunWebKitTests):
     resultDirectory = os.path.join(RunWebKitTests.resultDirectory, "dashboard-layout-test-results")
 
     def run(self):
-        self.command += ["--layout-tests-directory", "Tools/CISupport/build-webkit-org/public_html/dashboard/Scripts/tests"]
+        self.command += ["--no-http-servers", "--layout-tests-directory", "Tools/CISupport/build-webkit-org/public_html/dashboard/Scripts/tests"]
         return super().run()
 
 

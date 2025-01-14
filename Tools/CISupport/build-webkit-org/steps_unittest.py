@@ -1006,6 +1006,75 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
         return self.runStep()
 
 
+class TestRunDashboardTests(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        self.longMessage = True
+        self.jsonFileName = 'layout-test-results/full_results.json'
+        os.environ['RESULTS_SERVER_API_KEY'] = 'test-api-key'
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        del os.environ['RESULTS_SERVER_API_KEY']
+        return self.tearDownBuildStep()
+
+    def configureStep(self):
+        self.setupStep(RunDashboardTests())
+        self.setProperty('buildername', 'Apple-Sequoia-Release-WK2-Tests')
+        self.setProperty('buildnumber', '101')
+        self.setProperty('workername', 'bot100')
+
+    def test_success(self):
+        self.configureStep()
+        self.setProperty('fullPlatform', 'mac-sequoia')
+        self.setProperty('configuration', 'debug')
+        self.expectRemoteCommands(
+            ExpectShell(
+                workdir='wkdir',
+                logEnviron=False,
+                command=['python3', 'Tools/Scripts/run-webkit-tests', '--no-build', '--no-show-results',
+                         '--no-new-test-results', '--clobber-old-results',
+                         '--builder-name', 'Apple-Sequoia-Release-WK2-Tests',
+                         '--build-number', '101', '--buildbot-worker', 'bot100',
+                         '--buildbot-master', CURRENT_HOSTNAME,
+                         '--report', RESULTS_WEBKIT_URL,
+                         '--exit-after-n-crashes-or-timeouts', '50',
+                         '--exit-after-n-failures', '500',
+                         '--debug', '--no-http-servers',
+                         '--layout-tests-directory', 'Tools/CISupport/build-webkit-org/public_html/dashboard/Scripts/tests',
+                         '--results-directory', 'layout-test-results/dashboard-layout-test-results', '--debug-rwt-logging'],
+                env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
+            ) + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='dashboard-tests')
+        return self.runStep()
+
+    def test_failure(self):
+        self.configureStep()
+        self.setProperty('fullPlatform', 'ios-14')
+        self.setProperty('configuration', 'release')
+        self.expectRemoteCommands(
+            ExpectShell(
+                workdir='wkdir',
+                logEnviron=False,
+                command=['python3', 'Tools/Scripts/run-webkit-tests', '--no-build', '--no-show-results',
+                         '--no-new-test-results', '--clobber-old-results',
+                         '--builder-name', 'Apple-Sequoia-Release-WK2-Tests',
+                         '--build-number', '101', '--buildbot-worker', 'bot100',
+                         '--buildbot-master', CURRENT_HOSTNAME,
+                         '--report', RESULTS_WEBKIT_URL,
+                         '--exit-after-n-crashes-or-timeouts', '50',
+                         '--exit-after-n-failures', '500',
+                         '--release', '--no-http-servers',
+                         '--layout-tests-directory', 'Tools/CISupport/build-webkit-org/public_html/dashboard/Scripts/tests',
+                         '--results-directory', 'layout-test-results/dashboard-layout-test-results', '--debug-rwt-logging'],
+                env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
+            ) + ExpectShell.log('stdio', stdout='9 failures found.')
+            + 2,
+        )
+        self.expectOutcome(result=FAILURE, state_string='dashboard-tests (failure)')
+        return self.runStep()
+
+
 class TestRunWebKit1Tests(BuildStepMixinAdditions, unittest.TestCase):
     def setUp(self):
         self.longMessage = True
