@@ -47,6 +47,7 @@ public:
 private:
     void adjustDisplayLines(InlineContent&, size_t startIndex) const;
     void computeIsFirstIsLastBoxAndBidiReorderingForInlineContent(InlineDisplay::Boxes&) const;
+    FloatRect handlePartialDisplayContentUpdate(Layout::InlineLayoutResult&&, InlineContent&, const Layout::InlineDamage*) const;
 
     const RenderBlockFlow& m_blockFlow;
 };
