@@ -7578,7 +7578,8 @@ void WebPageProxy::decidePolicyForNavigationActionAsync(NavigationActionData&& d
 void WebPageProxy::decidePolicyForNavigationActionAsyncShared(Ref<WebProcessProxy>&& process, NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
 {
     RefPtr frame = WebFrameProxy::webFrame(data.frameInfo.frameID);
-    MESSAGE_CHECK_COMPLETION(process, frame, completionHandler({ }));
+    if (!frame)
+        return completionHandler({ });
 
     auto url = data.request.url();
     decidePolicyForNavigationAction(process.copyRef(), *frame, WTFMove(data), [completionHandler = WTFMove(completionHandler), process, url = WTFMove(url)] (PolicyDecision&& policyDecision) mutable {
@@ -7953,7 +7954,8 @@ void WebPageProxy::decidePolicyForNavigationActionSync(IPC::Connection& connecti
 void WebPageProxy::decidePolicyForNavigationActionSyncShared(Ref<WebProcessProxy>&& process, NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& reply)
 {
     RefPtr frame = WebFrameProxy::webFrame(data.frameInfo.frameID);
-    MESSAGE_CHECK_COMPLETION(process, frame, reply({ }));
+    if (!frame)
+        return reply({ });
 
     class PolicyDecisionSender : public RefCounted<PolicyDecisionSender> {
     public:
@@ -8032,7 +8034,8 @@ void WebPageProxy::decidePolicyForResponseShared(Ref<WebProcessProxy>&& process,
     RefPtr protectedPageClient { pageClient() };
 
     RefPtr frame = WebFrameProxy::webFrame(frameInfo.frameID);
-    MESSAGE_CHECK_COMPLETION(process, frame, completionHandler({ }));
+    if (!frame)
+        return completionHandler({ });
     MESSAGE_CHECK_URL_COMPLETION(process, request.url(), completionHandler({ }));
     MESSAGE_CHECK_URL_COMPLETION(process, response.url(), completionHandler({ }));
     RefPtr navigation = navigationID ? protectedNavigationState()->navigation(*navigationID) : nullptr;
