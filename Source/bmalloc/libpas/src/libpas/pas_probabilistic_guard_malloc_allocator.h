@@ -43,6 +43,10 @@
  * Virtual memory for this allocator is limited to 1GB. Wasted memory, which is the unused memory in the page(s)
  * allocated by the user, is limited to 1MB. These overall limits should ensure that the memory impact on the system
  * is minimal, while helping to tackle the problems of catching use after frees and out of bounds accesses.
+ *
+ * PGM will maintain the metadata of recently deallocated objects. This is beneficial for crash analystics to better 
+ * identify the type and reason for a crash. After enough deallocations an object will no longer be considered 
+ * recently deleted and will have its metadata destroyed.
  */
 
 #ifndef PAS_PROBABILISTIC_GUARD_MALLOC_ALLOCATOR
