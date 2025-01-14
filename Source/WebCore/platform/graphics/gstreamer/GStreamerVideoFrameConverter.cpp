@@ -50,14 +50,7 @@ GStreamerVideoFrameConverter::GStreamerVideoFrameConverter()
     auto videoconvert = makeGStreamerElement("videoconvert", nullptr);
     auto videoscale = makeGStreamerElement("videoscale", nullptr);
     m_sink = makeGStreamerElement("appsink", nullptr);
-
-    if (webkitGstCheckVersion(1, 24, 0)) {
-        g_object_set(m_sink.get(), "emit-signals", TRUE, nullptr);
-        g_signal_connect(m_sink.get(), "propose-allocation", G_CALLBACK(+[](GstElement*, GstQuery* query) -> gboolean {
-            gst_query_add_allocation_meta(query, GST_VIDEO_META_API_TYPE, nullptr);
-            return TRUE;
-        }), nullptr);
-    }
+    g_object_set(m_sink.get(), "enable-last-sample", FALSE, "max-buffers", 1, nullptr);
 
     gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), m_src.get(), gldownload, videoconvert, videoscale, m_sink.get(), nullptr);
     gst_element_link_many(m_src.get(), gldownload, videoconvert, videoscale, m_sink.get(), nullptr);
@@ -101,8 +94,29 @@ GRefPtr<GstSample> GStreamerVideoFrameConverter::convert(const GRefPtr<GstSample
         return nullptr;
     }
 
-    auto convertedSample = adoptGRef(gst_app_sink_pull_preroll(GST_APP_SINK_CAST(m_sink.get())));
+    auto outputSample = adoptGRef(gst_app_sink_pull_preroll(GST_APP_SINK_CAST(m_sink.get())));
+    auto convertedSample = adoptGRef(gst_sample_make_writable(outputSample.leakRef()));
     gst_sample_set_caps(convertedSample.get(), destinationCaps.get());
+
+    GRefPtr buffer = gst_sample_get_buffer(convertedSample.get());
+    auto writableBuffer = adoptGRef(gst_buffer_make_writable(buffer.leakRef()));
+
+    if (auto meta = gst_buffer_get_video_meta(writableBuffer.get()))
+        gst_buffer_remove_meta(writableBuffer.get(), GST_META_CAST(meta));
+
+    if (auto meta = gst_buffer_get_parent_buffer_meta(writableBuffer.get()))
+        gst_buffer_remove_meta(writableBuffer.get(), GST_META_CAST(meta));
+
+    auto structure = gst_caps_get_structure(destinationCaps.get(), 0);
+    auto width = gstStructureGet<int>(structure, "width"_s);
+    auto height = gstStructureGet<int>(structure, "height"_s);
+    auto formatStringView = gstStructureGetString(structure, "format"_s);
+    if (width && height && !formatStringView.isEmpty()) {
+        auto format = gst_video_format_from_string(formatStringView.toStringWithoutCopying().ascii().data());
+        gst_buffer_add_video_meta(writableBuffer.get(), GST_VIDEO_FRAME_FLAG_NONE, format, *width, *height);
+    }
+    gst_sample_set_buffer(convertedSample.get(), writableBuffer.get());
+
     return convertedSample;
 }
 
