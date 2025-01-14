@@ -25,8 +25,8 @@
 
 #pragma once
 
+#include "CachedResource.h"
 #include "ResourceCryptographicDigest.h"
-
 #include <optional>
 #include <wtf/Forward.h>
 

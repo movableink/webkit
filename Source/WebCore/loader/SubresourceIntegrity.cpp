@@ -27,9 +27,12 @@
 #include "SubresourceIntegrity.h"
 
 #include "CachedResource.h"
+#include "LocalFrame.h"
 #include "ResourceCryptographicDigest.h"
 #include "SharedBuffer.h"
 #include "SubresourceLoader.h"
+#include "ViolationReportType.h"
+#include <wtf/text/Base64.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>

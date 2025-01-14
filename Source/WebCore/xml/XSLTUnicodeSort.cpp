@@ -32,6 +32,7 @@
 #if ENABLE(XSLT)
 
 #include <algorithm>
+#include <array>
 #include <libxslt/templates.h>
 #include <libxslt/xsltutils.h>
 #include <wtf/Vector.h>
