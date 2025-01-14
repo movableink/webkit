@@ -157,11 +157,11 @@ FAIL Pattern: [{"hostname":"café.com"}] Inputs: [{"hostname":"café.com"}] asse
 PASS Pattern: [{"port":""}] Inputs: [{"protocol":"http","port":"80"}]
 PASS Pattern: [{"protocol":"http","port":"80"}] Inputs: [{"protocol":"http","port":"80"}]
 PASS Pattern: [{"protocol":"http","port":"80{20}?"}] Inputs: [{"protocol":"http","port":"80"}]
-FAIL Pattern: [{"protocol":"http","port":"80 "}] Inputs: [{"protocol":"http","port":"80"}] assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: [{"protocol":"http","port":"80 "}] Inputs: [{"protocol":"http","port":"80"}]
 PASS Pattern: [{"port":"80"}] Inputs: [{"protocol":"http","port":"80"}]
 PASS Pattern: [{"protocol":"http{s}?","port":"80"}] Inputs: [{"protocol":"http","port":"80"}]
 PASS Pattern: [{"port":"80"}] Inputs: [{"port":"80"}]
-FAIL Pattern: [{"port":"(.*)"}] Inputs: [{"port":"invalid80"}] assert_equals: test() result expected false but got true
+PASS Pattern: [{"port":"(.*)"}] Inputs: [{"port":"invalid80"}]
 PASS Pattern: [{"pathname":"/foo/bar"}] Inputs: [{"pathname":"/foo/./bar"}]
 PASS Pattern: [{"pathname":"/foo/baz"}] Inputs: [{"pathname":"/foo/bar/../baz"}]
 PASS Pattern: [{"pathname":"/caf%C3%A9"}] Inputs: [{"pathname":"/café"}]

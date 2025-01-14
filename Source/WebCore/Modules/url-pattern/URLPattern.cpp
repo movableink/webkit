@@ -240,7 +240,7 @@ ExceptionOr<Ref<URLPattern>> URLPattern::create(ScriptExecutionContext& context,
     if (!processedInit.port)
         processedInit.port = "*"_s;
 
-    if (auto parsedPort = parseInteger<uint16_t>(processedInit.port)) {
+    if (auto parsedPort = parseInteger<uint16_t>(processedInit.port, 10, WTF::ParseIntegerWhitespacePolicy::Disallow)) {
         if (WTF::URLParser::isSpecialScheme(processedInit.protocol) && isDefaultPortForProtocol(*parsedPort, processedInit.protocol))
             processedInit.port = emptyString();
     }

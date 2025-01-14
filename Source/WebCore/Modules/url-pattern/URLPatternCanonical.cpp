@@ -161,17 +161,20 @@ ExceptionOr<String> canonicalizePort(StringView portValue, const std::optional<S
     if (portValueType == BaseURLStringType::Pattern)
         return portValue.toString();
 
+    auto parsedPort = parseInteger<uint16_t>(portValue, 10, WTF::ParseIntegerWhitespacePolicy::Disallow);
+    if (!parsedPort)
+        return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL port string."_s };
+
     URL dummyURL(dummyURLCharacters);
 
     if (protocolValue) {
-        auto parsedPort = parseInteger<uint16_t>(portValue);
-        if (!parsedPort || isDefaultPortForProtocol(*parsedPort, *protocolValue))
+        if (isDefaultPortForProtocol(*parsedPort, *protocolValue))
             return String { emptyString() };
 
         dummyURL.setProtocol(*protocolValue);
     }
 
-    dummyURL.setPort(parseInteger<uint16_t>(portValue));
+    dummyURL.setPort(*parsedPort);
 
     if (!dummyURL.isValid())
         return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL port string."_s };
