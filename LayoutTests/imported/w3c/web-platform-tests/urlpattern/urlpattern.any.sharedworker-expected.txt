@@ -146,12 +146,12 @@ PASS Pattern: [{"hash":":㐀"}] Inputs: [{"hash":"foo"}]
 PASS Pattern: [{"protocol":"(.*)"}] Inputs: [{"protocol":"café"}]
 PASS Pattern: [{"protocol":"(.*)"}] Inputs: [{"protocol":"cafe"}]
 PASS Pattern: [{"protocol":"foo-bar"}] Inputs: [{"protocol":"foo-bar"}]
-FAIL Pattern: [{"username":"caf%C3%A9"}] Inputs: [{"username":"café"}] assert_equals: compiled pattern property 'username' expected "caf%C3%A9" but got "café"
-FAIL Pattern: [{"username":"café"}] Inputs: [{"username":"café"}] assert_equals: compiled pattern property 'username' expected "caf%C3%A9" but got "café"
-FAIL Pattern: [{"username":"caf%c3%a9"}] Inputs: [{"username":"café"}] assert_equals: compiled pattern property 'username' expected "caf%c3%a9" but got "café"
-FAIL Pattern: [{"password":"caf%C3%A9"}] Inputs: [{"password":"café"}] assert_equals: compiled pattern property 'password' expected "caf%C3%A9" but got "café"
-FAIL Pattern: [{"password":"café"}] Inputs: [{"password":"café"}] assert_equals: compiled pattern property 'password' expected "caf%C3%A9" but got "café"
-FAIL Pattern: [{"password":"caf%c3%a9"}] Inputs: [{"password":"café"}] assert_equals: compiled pattern property 'password' expected "caf%c3%a9" but got "café"
+PASS Pattern: [{"username":"caf%C3%A9"}] Inputs: [{"username":"café"}]
+PASS Pattern: [{"username":"café"}] Inputs: [{"username":"café"}]
+PASS Pattern: [{"username":"caf%c3%a9"}] Inputs: [{"username":"café"}]
+PASS Pattern: [{"password":"caf%C3%A9"}] Inputs: [{"password":"café"}]
+PASS Pattern: [{"password":"café"}] Inputs: [{"password":"café"}]
+PASS Pattern: [{"password":"caf%c3%a9"}] Inputs: [{"password":"café"}]
 FAIL Pattern: [{"hostname":"xn--caf-dma.com"}] Inputs: [{"hostname":"café.com"}] assert_equals: test() result expected true but got false
 FAIL Pattern: [{"hostname":"café.com"}] Inputs: [{"hostname":"café.com"}] assert_equals: compiled pattern property 'hostname' expected "xn--caf-dma.com" but got "café.com"
 PASS Pattern: [{"port":""}] Inputs: [{"protocol":"http","port":"80"}]
@@ -247,7 +247,7 @@ PASS Pattern: ["https://\\:bar@example.com"] Inputs: ["https://:bar@example.com"
 PASS Pattern: ["https://:user::pass@example.com"] Inputs: ["https://foo:bar@example.com"]
 PASS Pattern: ["https\\:foo\\:bar@example.com"] Inputs: ["https:foo:bar@example.com"]
 PASS Pattern: ["data\\:foo\\:bar@example.com"] Inputs: ["data:foo:bar@example.com"]
-FAIL Pattern: ["https://foo{\\:}bar@example.com"] Inputs: ["https://foo:bar@example.com"] assert_equals: compiled pattern property 'username' expected "foo%3Abar" but got "foo\\:bar"
+PASS Pattern: ["https://foo{\\:}bar@example.com"] Inputs: ["https://foo:bar@example.com"]
 FAIL Pattern: ["data{\\:}channel.html","https://example.com"] Inputs: ["https://example.com/data:channel.html"] assert_equals: compiled pattern property 'pathname' expected "/data\\:channel.html" but got "data\\:channel.html"
 FAIL Pattern: ["http://[\\:\\:1]/"] Inputs: ["http://[::1]/"] Invalid input to canonicalize a URL host string.
 FAIL Pattern: ["http://[\\:\\:1]:8080/"] Inputs: ["http://[::1]:8080/"] Invalid input to canonicalize a URL host string.
