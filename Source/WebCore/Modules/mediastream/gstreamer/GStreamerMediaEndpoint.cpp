@@ -1819,14 +1819,16 @@ GstElement* GStreamerMediaEndpoint::requestAuxiliarySender(GRefPtr<GstWebRTCDTLS
 
     g_signal_connect_data(estimator, "notify::estimated-bitrate", G_CALLBACK(+[](GstElement* estimator, GParamSpec*, gpointer userData) {
         auto holder = static_cast<AuxiliarySenderDataHolder*>(userData);
-        RefPtr endPoint = holder->endPoint.get();
-        if (!endPoint)
-            return;
 
         uint32_t estimatedBitrate;
         g_object_get(estimator, "estimated-bitrate", &estimatedBitrate, nullptr);
 
-        endPoint->m_peerConnectionBackend.dispatchSenderBitrateRequest(holder->transport, estimatedBitrate);
+        callOnMainThread([holder, estimatedBitrate] {
+            RefPtr endPoint = holder->endPoint.get();
+            if (!endPoint)
+                return;
+            endPoint->m_peerConnectionBackend.dispatchSenderBitrateRequest(holder->transport, estimatedBitrate);
+        });
     }), holder, reinterpret_cast<GClosureNotify>(+[](gpointer data, GClosure*) {
         destroyAuxiliarySenderDataHolder(static_cast<AuxiliarySenderDataHolder*>(data));
     }), static_cast<GConnectFlags>(0));
