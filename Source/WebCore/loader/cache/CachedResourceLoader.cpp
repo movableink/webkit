@@ -1247,6 +1247,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
     CheckedPtr<ContentSecurityPolicy> contentSecurityPolicy;
     if (RefPtr document = this->document()) {
         request.setDomainForCachePartition(*document);
+        request.resourceRequest().setFirstPartyForCookies(document->firstPartyForCookies());
         contentSecurityPolicy = document->contentSecurityPolicy();
     }
 
@@ -1258,7 +1259,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     Ref cookieJar = page->cookieJar();
 
-    FrameLoader::addSameSiteInfoToRequestIfNeeded(request.resourceRequest(), document(), frame->page());
+    FrameLoader::addSameSiteInfoToRequestIfNeeded(request.resourceRequest(), document());
 
     auto mayAddToMemoryCache = computeMayAddToMemoryCache(request, resource.get()) ? MayAddToMemoryCache::Yes : MayAddToMemoryCache::No;
     RevalidationPolicy policy = determineRevalidationPolicy(type, request, resource.get(), forPreload, imageLoading);
