@@ -189,6 +189,9 @@
         "subtests": {
             "/webkit/WebKitWebView/cut-copy-paste/editable": {
                 "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/263417"}}
+            },
+            "/webkit/WebKitWebView/cut-copy-paste/non-editable": {
+                "expected": {"gtk": {"status": ["FAIL"], "bug": "webkit.org/b/285908"}}
             }
         }
     },
