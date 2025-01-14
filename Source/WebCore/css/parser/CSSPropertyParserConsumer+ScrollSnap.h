@@ -43,5 +43,13 @@ RefPtr<CSSValue> consumeScrollSnapAlign(CSSParserTokenRange&, const CSSParserCon
 // https://drafts.csswg.org/css-scroll-snap-1/#scroll-snap-type
 RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange&, const CSSParserContext&);
 
+// MARK: <'scroll-margin-*'> consuming
+// https://drafts.csswg.org/css-scroll-snap-1/#propdef-scroll-margin-top
+RefPtr<CSSValue> consumeScrollMarginEdge(CSSParserTokenRange&, const CSSParserContext&);
+
+// MARK: <'scroll-padding-*'> consuming
+// https://drafts.csswg.org/css-scroll-snap-1/#propdef-scroll-padding-top
+RefPtr<CSSValue> consumeScrollPaddingEdge(CSSParserTokenRange&, const CSSParserContext&);
+
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

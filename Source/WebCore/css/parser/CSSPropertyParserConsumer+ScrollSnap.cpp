@@ -30,6 +30,12 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+KeywordDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
+#include "CSSPropertyParserConsumer+MetaConsumer.h"
+#include "CSSScrollMarginEdgeValue.h"
+#include "CSSScrollPaddingEdgeValue.h"
 #include "CSSValueList.h"
 
 namespace WebCore {
@@ -71,6 +77,38 @@ RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange& range, const CSSPars
         return CSSValueList::createSpaceSeparated(firstValue.releaseNonNull(), secondValue.releaseNonNull());
 
     return CSSValueList::createSpaceSeparated(firstValue.releaseNonNull());
+}
+
+RefPtr<CSSValue> consumeScrollMarginEdge(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <'scroll-margin-*'> = <length>
+    // https://drafts.csswg.org/css-scroll-snap-1/#propdef-scroll-margin-top
+
+    const auto lengthOptions = CSSPropertyParserOptions {
+        .parserMode = context.mode,
+        .unitlessZero = UnitlessZeroQuirk::Allow
+    };
+
+    auto edge = MetaConsumer<CSS::Length<>>::consume(range, context, { }, lengthOptions);
+    if (!edge)
+        return nullptr;
+    return CSSScrollMarginEdgeValue::create(WTFMove(*edge));
+}
+
+RefPtr<CSSValue> consumeScrollPaddingEdge(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <'scroll-padding-*'> = auto | <length-percentage [0,∞]>
+    // https://drafts.csswg.org/css-scroll-snap-1/#propdef-scroll-padding-top
+
+    const auto lengthOptions = CSSPropertyParserOptions {
+        .parserMode = context.mode,
+        .unitlessZero = UnitlessZeroQuirk::Allow
+    };
+
+    auto edge = MetaConsumer<CSS::Keyword::Auto, CSS::LengthPercentage<CSS::Nonnegative>>::consume(range, context, { }, lengthOptions);
+    if (!edge)
+        return nullptr;
+    return CSSScrollPaddingEdgeValue::create(CSS::ScrollPaddingEdgeValue { WTFMove(*edge) });
 }
 
 } // namespace CSSPropertyParserHelpers

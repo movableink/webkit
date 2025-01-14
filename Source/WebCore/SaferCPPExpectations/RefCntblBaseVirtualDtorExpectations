@@ -51,6 +51,8 @@ css/CSSQuadValue.h
 css/CSSRayValue.h
 css/CSSRectValue.h
 css/CSSReflectValue.h
+css/CSSScrollMarginEdgeValue.h
+css/CSSScrollPaddingEdgeValue.h
 css/CSSScrollValue.h
 css/CSSSubgridValue.h
 css/CSSTextShadowPropertyValue.h

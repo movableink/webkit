@@ -1,6 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -114,6 +115,8 @@ public:
     bool isRayValue() const { return m_classType == ClassType::Ray; }
     bool isRect() const { return m_classType == ClassType::Rect; }
     bool isReflectValue() const { return m_classType == ClassType::Reflect; }
+    bool isScrollMarginEdgeValue() const { return m_classType == ClassType::ScrollMarginEdge; }
+    bool isScrollPaddingEdgeValue() const { return m_classType == ClassType::ScrollPaddingEdge; }
     bool isScrollValue() const { return m_classType == ClassType::Scroll; }
     bool isSubgridValue() const { return m_classType == ClassType::Subgrid; }
     bool isTextShadowPropertyValue() const { return m_classType == ClassType::TextShadowProperty; }
@@ -246,6 +249,8 @@ protected:
         Ray,
         Rect,
         Reflect,
+        ScrollMarginEdge,
+        ScrollPaddingEdge,
         Scroll,
         TextShadowProperty,
         UnicodeRange,

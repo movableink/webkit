@@ -110,6 +110,31 @@ Ref<CSSCalcValue> CSSCalcValue::copySimplified(const CSSToLengthConversionData& 
         .allowNonMatchingUnits = false
     };
 
+    if (!canSimplify(m_tree, simplificationOptions))
+        return const_cast<CSSCalcValue&>(*this);
+
+    return create(copyAndSimplify(m_tree, simplificationOptions));
+}
+
+Ref<CSSCalcValue> CSSCalcValue::copySimplified(NoConversionDataRequiredToken token) const
+{
+    return copySimplified(token, { });
+}
+
+Ref<CSSCalcValue> CSSCalcValue::copySimplified(NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable) const
+{
+    auto simplificationOptions = CSSCalc::SimplificationOptions {
+        .category = m_tree.category,
+        .conversionData = std::nullopt,
+        .symbolTable = symbolTable,
+        .allowZeroValueLengthRemovalFromSum = true,
+        .allowUnresolvedUnits = false,
+        .allowNonMatchingUnits = false
+    };
+
+    if (!canSimplify(m_tree, simplificationOptions))
+        return const_cast<CSSCalcValue&>(*this);
+
     return create(copyAndSimplify(m_tree, simplificationOptions));
 }
 

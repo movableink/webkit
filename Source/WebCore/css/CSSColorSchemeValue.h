@@ -25,6 +25,7 @@
 #pragma once
 
 #include "CSSColorScheme.h"
+#include "CSSPrimitiveNumericTypes+CSSValueCreation.h"
 #include "CSSValue.h"
 
 #if ENABLE(DARK_MODE_CSS)
@@ -45,6 +46,13 @@ private:
     CSSColorSchemeValue(CSS::ColorScheme);
 
     CSS::ColorScheme m_colorScheme;
+};
+
+template<> struct CSS::CSSValueCreation<CSS::ColorScheme> {
+    Ref<CSSValue> operator()(const CSS::ColorScheme& value)
+    {
+        return CSSColorSchemeValue::create(value);
+    }
 };
 
 } // namespace WebCore
