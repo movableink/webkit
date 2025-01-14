@@ -58,6 +58,7 @@ namespace WebKit {
 
 class NativeWebMouseEvent;
 class RemotePageDrawingAreaProxy;
+class RemotePageFullscreenManagerProxy;
 class RemotePageVisitedLinkStoreRegistration;
 class UserData;
 class WebFrameProxy;
@@ -113,12 +114,15 @@ private:
 
     const WebCore::PageIdentifier m_webPageID;
     const Ref<WebProcessProxy> m_process;
-    WeakPtr<WebPageProxy> m_page;
+    const WeakPtr<WebPageProxy> m_page;
     const WebCore::Site m_site;
+    const UniqueRef<WebProcessActivityState> m_processActivityState;
     RefPtr<RemotePageDrawingAreaProxy> m_drawingArea;
+#if ENABLE(FULLSCREEN_API)
+    RefPtr<RemotePageFullscreenManagerProxy> m_fullscreenManager;
+#endif
     std::unique_ptr<RemotePageVisitedLinkStoreRegistration> m_visitedLinkStoreRegistration;
     WebPageProxyMessageReceiverRegistration m_messageReceiverRegistration;
-    UniqueRef<WebProcessActivityState> m_processActivityState;
 };
 
 }

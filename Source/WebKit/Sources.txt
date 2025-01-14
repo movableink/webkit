@@ -404,6 +404,7 @@ UIProcess/ProcessThrottler.cpp
 UIProcess/ProvisionalFrameProxy.cpp
 UIProcess/ProvisionalPageProxy.cpp
 UIProcess/RemotePageDrawingAreaProxy.cpp
+UIProcess/RemotePageFullscreenManagerProxy.cpp
 UIProcess/RemotePageProxy.cpp
 UIProcess/ResponsivenessTimer.cpp
 UIProcess/SpeechRecognitionRemoteRealtimeMediaSource.cpp

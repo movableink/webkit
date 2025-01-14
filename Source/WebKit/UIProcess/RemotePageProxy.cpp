@@ -36,6 +36,7 @@
 #include "PageLoadState.h"
 #include "ProvisionalFrameProxy.h"
 #include "RemotePageDrawingAreaProxy.h"
+#include "RemotePageFullscreenManagerProxy.h"
 #include "RemotePageVisitedLinkStoreRegistration.h"
 #include "WebFrameProxy.h"
 #include "WebPageMessages.h"
@@ -87,6 +88,9 @@ void RemotePageProxy::injectPageIntoNewProcess()
     RELEASE_ASSERT(drawingArea);
 
     m_drawingArea = RemotePageDrawingAreaProxy::create(*drawingArea, m_process);
+#if ENABLE(FULLSCREEN_API)
+    m_fullscreenManager = RemotePageFullscreenManagerProxy::create(pageID(), page->fullScreenManager(), m_process);
+#endif
     m_visitedLinkStoreRegistration = makeUnique<RemotePageVisitedLinkStoreRegistration>(*page, m_process);
 
     m_process->send(
@@ -106,6 +110,9 @@ void RemotePageProxy::removePageFromProcess()
     if (!m_drawingArea)
         return;
     m_drawingArea = nullptr;
+#if ENABLE(FULLSCREEN_API)
+    m_fullscreenManager = nullptr;
+#endif
     m_visitedLinkStoreRegistration = nullptr;
     m_process->send(Messages::WebPage::Close(), m_webPageID);
 }

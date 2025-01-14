@@ -128,6 +128,9 @@ public:
     bool lockFullscreenOrientation(WebCore::ScreenOrientationType);
     void unlockFullscreenOrientation();
 
+    void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
+    bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
+
 private:
     WebFullScreenManagerProxy(WebPageProxy&, WebFullScreenManagerProxyClient&);
 
@@ -140,9 +143,6 @@ private:
     void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
     void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
     void callCloseCompletionHandlers();
-
-    void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
-    bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return m_logger; }
