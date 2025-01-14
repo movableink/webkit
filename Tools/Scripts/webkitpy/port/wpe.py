@@ -43,6 +43,7 @@ _log = logging.getLogger(__name__)
 
 class WPEPort(GLibPort):
     port_name = "wpe"
+    webdriver_name = "WPEWebDriver"
     supports_localhost_aliases = True
 
     def __init__(self, *args, **kwargs):
@@ -127,6 +128,14 @@ class WPEPort(GLibPort):
         if self.browser_name() == "cog":
             env['COG_MODULEDIR'] = self.cog_path_to('platform')
 
+        return env
+
+    def setup_environ_for_webdriver(self):
+        env = super(WPEPort, self).setup_environ_for_minibrowser()
+        # The browser is started from the webdriver process and will inherit
+        # the environmnet of the webdriver process. So setup an environmnet
+        # that works for any browser (cog, minibrowser)
+        env['COG_MODULEDIR'] = self.cog_path_to('platform')
         return env
 
     def run_minibrowser(self, args):

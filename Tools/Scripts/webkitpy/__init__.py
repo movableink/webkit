@@ -92,7 +92,8 @@ AutoInstall.register(Package('pyfakefs', Version(5, 7, 3)))
 AutoInstall.register(Package('soupsieve', Version(2, 2, 1)))
 
 if sys.platform == 'linux':
-    AutoInstall.register(Package('selenium', Version(4, 19, 0), wheel=True))
+    AutoInstall.register(Package('selenium', Version(4, 24, 0), wheel=True, implicit_deps=[
+        Package('websocket', Version(1, 8, 0), pypi_name='websocket-client')]))
 else:
     AutoInstall.register(Package('selenium', Version(4, 12, 0), wheel=True))
 
