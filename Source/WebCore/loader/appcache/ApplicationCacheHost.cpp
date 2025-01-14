@@ -260,7 +260,7 @@ bool ApplicationCacheHost::maybeLoadSynchronously(ResourceRequest& request, Reso
         return false;
 
     auto responseData = resource ? bufferFromResource(*resource) : nullptr;
-    if (!responseData) {
+    if (!responseData && m_documentLoader->frameLoader()) {
         error = m_documentLoader->frameLoader()->client().cannotShowURLError(request);
         return true;
     }

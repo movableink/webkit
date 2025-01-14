@@ -273,6 +273,9 @@ bool WebLoaderStrategy::tryLoadingUsingURLSchemeHandler(ResourceLoader& resource
     RefPtr<WebPage> webPage;
     RefPtr<WebFrame> webFrame;
 
+    if (!resourceLoader.frameLoader())
+        return false;
+
     if (auto* webFrameLoaderClient = toWebLocalFrameLoaderClient(resourceLoader.frameLoader()->client())) {
         webFrame = &webFrameLoaderClient->webFrame();
         webPage = webFrame->page();

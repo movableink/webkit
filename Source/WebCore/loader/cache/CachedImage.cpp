@@ -372,7 +372,7 @@ void CachedImage::notifyObservers(const IntRect* changeRect)
 
 void CachedImage::checkShouldPaintBrokenImage()
 {
-    if (!m_loader || m_loader->reachedTerminalState())
+    if (!m_loader || m_loader->reachedTerminalState() || !m_loader->frameLoader())
         return;
 
     m_shouldPaintBrokenImage = m_loader->frameLoader()->client().shouldPaintBrokenImage(url());
