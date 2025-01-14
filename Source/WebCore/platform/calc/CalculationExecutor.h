@@ -30,8 +30,6 @@
 #include <wtf/Forward.h>
 #include <wtf/MathExtras.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 namespace Calculation {
 
@@ -53,7 +51,10 @@ public:
     }
 
     struct const_iterator {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         const_iterator& operator++() { ++it; return *this; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
         auto operator*() const { return transform(*it); }
 
         bool operator==(const const_iterator& other) const { return it == other.it; }
@@ -515,5 +516,3 @@ template<> struct OperatorExecutor<Random> {
 
 } // namespace Calculation
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
