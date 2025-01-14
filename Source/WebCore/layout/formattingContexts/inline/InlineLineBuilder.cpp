@@ -1081,7 +1081,8 @@ LineBuilder::Result LineBuilder::processLineBreakingResult(const LineCandidate& 
 {
     auto& candidateRuns = lineCandidate.inlineContent.continuousContent().runs();
 
-    if (lineBreakingResult.action == InlineContentBreaker::Result::Action::Keep) {
+    switch (lineBreakingResult.action) {
+    case InlineContentBreaker::Result::Action::Keep: {
         // This continuous content can be fully placed on the current line.
         for (auto& run : candidateRuns)
             m_line.append(run.inlineItem, run.style, run.contentWidth(), run.textSpacingAdjustment);
@@ -1107,8 +1108,7 @@ LineBuilder::Result LineBuilder::processLineBreakingResult(const LineCandidate& 
         }
         return { lineBreakingResult.isEndOfLine, { candidateRuns.size(), false } };
     }
-
-    if (lineBreakingResult.action == InlineContentBreaker::Result::Action::Wrap) {
+    case InlineContentBreaker::Result::Action::Wrap: {
         ASSERT(lineBreakingResult.isEndOfLine == InlineContentBreaker::IsEndOfLine::Yes);
         // This continuous content can't be placed on the current line. Nothing to commit at this time.
         // However there are cases when, due to whitespace collapsing, this overflowing content should not be separated from
@@ -1124,28 +1124,25 @@ LineBuilder::Result LineBuilder::processLineBreakingResult(const LineCandidate& 
         }
         return { InlineContentBreaker::IsEndOfLine::Yes, { }, { }, eligibleOverflowWidthAsLeading(candidateRuns, lineBreakingResult, isFirstFormattedLine()) };
     }
-    if (lineBreakingResult.action == InlineContentBreaker::Result::Action::WrapWithHyphen) {
+    case InlineContentBreaker::Result::Action::WrapWithHyphen:
         ASSERT(lineBreakingResult.isEndOfLine == InlineContentBreaker::IsEndOfLine::Yes);
         // This continuous content can't be placed on the current line, nothing to commit.
         // However we need to make sure that the current line gains a trailing hyphen.
         ASSERT(m_line.trailingSoftHyphenWidth());
         m_line.addTrailingHyphen(*m_line.trailingSoftHyphenWidth());
         return { InlineContentBreaker::IsEndOfLine::Yes };
-    }
-    if (lineBreakingResult.action == InlineContentBreaker::Result::Action::RevertToLastWrapOpportunity) {
+    case InlineContentBreaker::Result::Action::RevertToLastWrapOpportunity:
         ASSERT(lineBreakingResult.isEndOfLine == InlineContentBreaker::IsEndOfLine::Yes);
         // Not only this content can't be placed on the current line, but we even need to revert the line back to an earlier position.
         ASSERT(!m_wrapOpportunityList.isEmpty());
         return { InlineContentBreaker::IsEndOfLine::Yes, { rebuildLineWithInlineContent(layoutRange, *m_wrapOpportunityList.last()), true } };
-    }
-    if (lineBreakingResult.action == InlineContentBreaker::Result::Action::RevertToLastNonOverflowingWrapOpportunity) {
+    case InlineContentBreaker::Result::Action::RevertToLastNonOverflowingWrapOpportunity:
         ASSERT(lineBreakingResult.isEndOfLine == InlineContentBreaker::IsEndOfLine::Yes);
         ASSERT(!m_wrapOpportunityList.isEmpty());
         if (auto committedCount = rebuildLineForTrailingSoftHyphen(layoutRange))
             return { InlineContentBreaker::IsEndOfLine::Yes, { committedCount, true } };
         return { InlineContentBreaker::IsEndOfLine::Yes };
-    }
-    if (lineBreakingResult.action == InlineContentBreaker::Result::Action::Break) {
+    case InlineContentBreaker::Result::Action::Break: {
         ASSERT(lineBreakingResult.isEndOfLine == InlineContentBreaker::IsEndOfLine::Yes);
         // Commit the combination of full and partial content on the current line.
         ASSERT(lineBreakingResult.partialTrailingContent);
@@ -1163,8 +1160,9 @@ LineBuilder::Result LineBuilder::processLineBreakingResult(const LineCandidate& 
         auto overflowLength = trailingInlineTextItem.length() - partialRun.length;
         return { InlineContentBreaker::IsEndOfLine::Yes, { committedInlineItemCount, false }, overflowLength, eligibleOverflowWidthAsLeading(candidateRuns, lineBreakingResult, isFirstFormattedLine()) };
     }
-    ASSERT_NOT_REACHED();
-    return { InlineContentBreaker::IsEndOfLine::No };
+    }
+        ASSERT_NOT_REACHED();
+        return { InlineContentBreaker::IsEndOfLine::No };
 }
 
 void LineBuilder::commitPartialContent(const InlineContentBreaker::ContinuousContent::RunList& runs, const InlineContentBreaker::Result::PartialTrailingContent& partialTrailingContent)
