@@ -7645,3 +7645,6 @@ webkit.org/b/279297 fast/block/float/float-avoider-with-negative-margin.html [ I
 # webkit.org/b/280685 imported/w3c/web-platform-tests/css/selectors/featureless-004/5.html are failures.
 imported/w3c/web-platform-tests/css/selectors/featureless-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/selectors/featureless-005.html [ ImageOnlyFailure ]
+
+# webkit.org/b/285913 imported/w3c/web-platform-tests/web-animations/timing-model/timelines/timelines.html is extremely flakey
+imported/w3c/web-platform-tests/web-animations/timing-model/timelines/timelines.html [ Pass Failure ]
