@@ -51,7 +51,7 @@ private:
     LayoutQueue initializeLayoutQueue(InlineItemPosition startPosition);
     LayoutQueue traverseUntilDamaged(const Box& firstDamagedLayoutBox);
     void breakAndComputeBidiLevels(InlineItemList&);
-    void computeInlineTextItemWidths(InlineItemList&);
+    InlineContentCache::InlineItems::ContentAttributes computeContentAttributesAndInlineTextItemWidths(InlineItemList&, InlineItemPosition damagePosition, const InlineItemList& damagedItemList);
 
     void handleTextContent(const InlineTextBox&, InlineItemList&, std::optional<size_t> partialContentOffset);
     bool buildInlineItemListForTextFromBreakingPositionsCache(const InlineTextBox&, InlineItemList&);
@@ -72,7 +72,6 @@ private:
     const SecurityOrigin& m_securityOrigin;
 
     bool m_contentRequiresVisualReordering { false };
-    bool m_isTextAndForcedLineBreakOnlyContent { true };
     size_t m_inlineBoxCount { 0 };
     bool m_hasTextAutospace { !root().style().textAutospace().isNoAutospace() };
 };
