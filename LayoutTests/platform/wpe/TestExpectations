@@ -813,6 +813,8 @@ webkit.org/b/257624 webrtc/canvas-to-peer-connection-2d.html [ Failure Pass Time
 # Fails on WPE EWS, likely when checking the video pixels. Unable to reproduce this failure locally.
 webrtc/video-h264.html [ Failure ]
 
+webkit.org/b/285752 imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-mimetype.html [ Pass Crash ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # 6. SLOW TESTS
 #////////////////////////////////////////////////////////////////////////////////////////

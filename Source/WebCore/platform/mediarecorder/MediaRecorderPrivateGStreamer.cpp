@@ -134,8 +134,12 @@ MediaRecorderPrivateBackend::MediaRecorderPrivateBackend(MediaStreamPrivate& str
         }
     } else {
         containerType = selectedTracks.videoTrack ? "video/mp4"_s : "audio/mp4"_s;
-        if (codecs.isEmpty() && selectedTracks.audioTrack && !selectedTracks.videoTrack)
-            codecs.append("mp4a"_s);
+        if (codecs.isEmpty()) {
+            if (selectedTracks.videoTrack)
+                codecs.append("avc1.4d002a"_s);
+            if (selectedTracks.audioTrack)
+                codecs.append("mp4a"_s);
+        }
     }
 
     StringBuilder builder;

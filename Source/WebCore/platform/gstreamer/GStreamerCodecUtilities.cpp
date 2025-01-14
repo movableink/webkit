@@ -49,9 +49,11 @@ std::pair<const char*, const char*> GStreamerCodecUtilities::parseH264ProfileAnd
 {
     ensureDebugCategoryInitialized();
 
+    uint64_t spsAsInteger = 0;
     auto components = codec.split('.');
+    if (components.size() > 1)
+        spsAsInteger = parseInteger<uint64_t>(components[1], 16).value_or(0);
 
-    auto spsAsInteger = parseInteger<uint64_t>(components[1], 16).value_or(0);
     std::array<uint8_t, 3> sps;
     sps[0] = spsAsInteger >> 16;
     sps[1] = (spsAsInteger >> 8) & 0xff;

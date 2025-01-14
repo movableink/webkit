@@ -1172,7 +1172,6 @@ webkit.org/b/285595 media/video-seek-after-end-play.html [ Skip ]
 
 webkit.org/b/213699 http/wpt/mediarecorder/mute-tracks.html [ Timeout Pass ]
 webkit.org/b/213699 http/wpt/mediarecorder/video-rotation.html [ Failure ]
-webkit.org/b/213699 imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-mimetype.html [ Pass Timeout ]
 webkit.org/b/213699 imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-no-sink.https.html [ Failure ]
 webkit.org/b/213699 imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-peerconnection.https.html [ Failure ]
 webkit.org/b/213699 http/wpt/mediarecorder/set-srcObject-MediaStream-Blob.html [ Pass Failure ]
