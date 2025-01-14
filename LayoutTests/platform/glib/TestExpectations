@@ -2998,9 +2998,11 @@ http/tests/media/modern-media-controls/time-control/10-minutes-to-1-hour.html [ 
 # DASH media playback support is disabled in the GStreamer ports.
 platform/glib/media/media-can-play-dash.html [ Skip ]
 
-# The CookieStore API is not fully implemented on GTK/WPE yet.
+# The Cookie Store API is not fully implemented on GTK/WPE yet.
 imported/w3c/web-platform-tests/cookie-store [ Skip ]
 imported/w3c/web-platform-tests/cookies/partitioned-cookies/partitioned-cookies.tentative.https.html [ Skip ]
+http/tests/cookies/cookie-store-get-secure.https.html [ Skip ]
+http/tests/cookies/cookie-store-set-secure.https.html [ Skip ]
 
 # As of the 23.08 release of the BuildStream SDK the GStreamer kate plugin is no longer shipped.
 media/track/in-band/track-in-band-kate-ogg-addtrack.html [ Skip ]

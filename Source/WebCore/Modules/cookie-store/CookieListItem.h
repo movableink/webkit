@@ -42,7 +42,6 @@ struct CookieListItem {
         , domain(WTFMove(cookie.domain))
         , path(WTFMove(cookie.path))
         , expires(cookie.expires)
-        , secure(cookie.secure)
     {
         switch (cookie.sameSite) {
         case Cookie::SameSitePolicy::Strict:
@@ -62,7 +61,7 @@ struct CookieListItem {
     String domain;
     String path;
     std::optional<DOMHighResTimeStamp> expires;
-    bool secure { false };
+    bool secure { true };
     CookieSameSite sameSite { CookieSameSite::Strict };
 };
 
