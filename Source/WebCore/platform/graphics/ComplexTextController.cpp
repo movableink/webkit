@@ -31,6 +31,7 @@
 #include "RenderBlock.h"
 #include "RenderText.h"
 #include "TextRun.h"
+#include <algorithm>
 #include <unicode/ubrk.h>
 #include <unicode/utf16.h>
 #include <wtf/StdLibExtras.h>
@@ -42,8 +43,6 @@
 #if PLATFORM(IOS_FAMILY)
 #include <CoreText/CoreText.h>
 #endif
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -161,7 +160,7 @@ void ComplexTextController::finishConstruction()
         m_runIndices = Vector<unsigned, 16>(length, [&](size_t i) {
             return length - i - 1;
         });
-        std::sort(m_runIndices.data(), m_runIndices.data() + length,
+        std::ranges::sort(m_runIndices.mutableSpan(),
             [this](auto a, auto b) {
                 return stringBegin(*m_complexTextRuns[a]) < stringBegin(*m_complexTextRuns[b]);
             });
@@ -273,7 +272,7 @@ void ComplexTextController::advanceByCombiningCharacterSequence(const CachedText
     unsigned remainingCharacters = m_end - currentIndex;
     ASSERT(remainingCharacters);
 
-    UChar buffer[2];
+    std::array<UChar, 2> buffer;
     unsigned bufferLength = 1;
     buffer[0] = m_run[currentIndex];
     buffer[1] = 0;
@@ -665,8 +664,8 @@ void ComplexTextController::adjustGlyphsAndAdvances()
         if (!complexTextRun.isLTR())
             m_isLTROnly = false;
 
-        const CGGlyph* glyphs = complexTextRun.glyphs();
-        const FloatSize* advances = complexTextRun.baseAdvances();
+        auto glyphs = complexTextRun.glyphs();
+        auto advances = complexTextRun.baseAdvances();
 
         // Lower in this function, synthetic bold is blanket-applied to everything, so no need to double-apply it here.
         float spaceWidth = font.spaceWidth(Font::SyntheticBoldInclusion::Exclude);
@@ -711,7 +710,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
             if (!glyphIndex) {
                 advance.expand(complexTextRun.initialAdvance().width(), complexTextRun.initialAdvance().height());
-                if (auto* origins = complexTextRun.glyphOrigins())
+                if (auto origins = complexTextRun.glyphOrigins(); !origins.empty())
                     advance.expand(-origins[0].x(), -origins[0].y());
             }
 
@@ -800,7 +799,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             }
 
             m_adjustedBaseAdvances.append(advance);
-            if (auto* origins = complexTextRun.glyphOrigins()) {
+            if (auto origins = complexTextRun.glyphOrigins(); !origins.empty()) {
                 ASSERT(m_glyphOrigins.size() < m_adjustedBaseAdvances.size());
                 m_glyphOrigins.grow(m_adjustedBaseAdvances.size());
                 m_glyphOrigins[m_glyphOrigins.size() - 1] = origins[glyphIndex] + FloatSize(textAutoSpaceSpacing, 0);
@@ -876,5 +875,3 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(const Vector<FloatSize>& a
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -3527,11 +3527,11 @@ void WebGLRenderingContextBase::texImageImpl(TexImageFunctionID functionID, GCGL
 
     std::span pixels { imagePixelData, imagePixelByteLength };
     if (type != GraphicsContextGL::UNSIGNED_BYTE || sourceDataFormat != GraphicsContextGL::DataFormat::RGBA8 || format != GraphicsContextGL::RGBA || alphaOp != GraphicsContextGL::AlphaOp::DoNothing || flipY || selectingSubRectangle || depth != 1) {
-        if (!m_context->packImageData(&image, imagePixelData, format, type, flipY, alphaOp, sourceDataFormat, imageExtractor.imageWidth(), imageExtractor.imageHeight(), adjustedSourceImageRect, depth, imageExtractor.imageSourceUnpackAlignment(), unpackImageHeight, data)) {
+        if (!m_context->packImageData(&image, pixels, format, type, flipY, alphaOp, sourceDataFormat, imageExtractor.imageWidth(), imageExtractor.imageHeight(), adjustedSourceImageRect, depth, imageExtractor.imageSourceUnpackAlignment(), unpackImageHeight, data)) {
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "packImage error"_s);
             return;
         }
-        pixels = std::span { data.data(), data.size() };
+        pixels = data.span();
     }
 
     ScopedTightUnpackParameters temporaryResetUnpack(*this);

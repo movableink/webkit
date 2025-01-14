@@ -41,8 +41,8 @@
 #include "NotImplemented.h"
 #include "PixelBuffer.h"
 #include "VideoFrame.h"
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -284,12 +284,14 @@ ALWAYS_INLINE static unsigned texelBytesForFormat(GraphicsContextGL::DataFormat 
 }
 
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 // Helper for packImageData/extractImageData/extractTextureData which implement packing of pixel
 // data into the specified OpenGL destination format and type.
 // A sourceUnpackAlignment of zero indicates that the source
 // data is tightly packed. Non-zero values may take a slow path.
 // Destination data will have no gaps between rows.
-static bool packPixels(const uint8_t* sourceData, GraphicsContextGL::DataFormat sourceDataFormat, unsigned sourceDataWidth, unsigned sourceDataHeight, const IntRect& sourceDataSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, unsigned destinationFormat, unsigned destinationType, GraphicsContextGL::AlphaOp alphaOp, void* destinationData, bool flipY)
+static bool packPixels(const uint8_t* sourceData, GraphicsContextGL::DataFormat sourceDataFormat, unsigned sourceDataWidth, unsigned sourceDataHeight, const IntRect& sourceDataSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, unsigned destinationFormat, unsigned destinationType, GraphicsContextGL::AlphaOp alphaOp, uint8_t* destinationData, bool flipY)
 {
     ASSERT(depth >= 1);
     UNUSED_PARAM(sourceDataHeight); // Derived from sourceDataSubRectangle.height().
@@ -305,7 +307,7 @@ static bool packPixels(const uint8_t* sourceData, GraphicsContextGL::DataFormat 
         return false;
     int dstStride = sourceDataSubRectangle.width() * texelBytesForFormat(dstDataFormat);
     if (flipY) {
-        destinationData = static_cast<uint8_t*>(destinationData) + dstStride * ((depth * sourceDataSubRectangle.height()) - 1);
+        destinationData = destinationData + dstStride * ((depth * sourceDataSubRectangle.height()) - 1);
         dstStride = -dstStride;
     }
     if (!GraphicsContextGL::hasAlpha(sourceDataFormat) || !GraphicsContextGL::hasColor(sourceDataFormat) || !GraphicsContextGL::hasColor(dstDataFormat))
@@ -352,6 +354,8 @@ static bool packPixels(const uint8_t* sourceData, GraphicsContextGL::DataFormat 
         return false;
     return true;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 GraphicsContextGL::Client::Client() = default;
 
@@ -474,9 +478,9 @@ std::optional<GraphicsContextGL::PixelRectangleSizes> GraphicsContextGL::compute
     return PixelRectangleSizes { initialSkipBytes.value(), imageBytes.value(), alignedRowBytes.value(), lastRowBytes.value() };
 }
 
-bool GraphicsContextGL::packImageData(Image* image, const void* pixels, GCGLenum format, GCGLenum type, bool flipY, AlphaOp alphaOp, DataFormat sourceFormat, unsigned sourceImageWidth, unsigned sourceImageHeight, const IntRect& sourceImageSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, Vector<uint8_t>& data)
+bool GraphicsContextGL::packImageData(Image* image, std::span<const uint8_t> pixels, GCGLenum format, GCGLenum type, bool flipY, AlphaOp alphaOp, DataFormat sourceFormat, unsigned sourceImageWidth, unsigned sourceImageHeight, const IntRect& sourceImageSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, Vector<uint8_t>& data)
 {
-    if (!image || !pixels)
+    if (!image || !pixels.data())
         return false;
 
     // Output data is tightly packed (alignment == 1).
@@ -487,7 +491,7 @@ bool GraphicsContextGL::packImageData(Image* image, const void* pixels, GCGLenum
         return false;
     data.resize(packSizes->imageBytes);
 
-    if (!packPixels(static_cast<const uint8_t*>(pixels), sourceFormat, sourceImageWidth, sourceImageHeight, sourceImageSubRectangle, depth, sourceUnpackAlignment, unpackImageHeight, format, type, alphaOp, data.data(), flipY))
+    if (!packPixels(pixels.data(), sourceFormat, sourceImageWidth, sourceImageHeight, sourceImageSubRectangle, depth, sourceUnpackAlignment, unpackImageHeight, format, type, alphaOp, data.data(), flipY))
         return false;
     if (auto observer = image->imageObserver())
         observer->didDraw(*image);
@@ -526,53 +530,52 @@ bool GraphicsContextGL::extractTextureData(unsigned width, unsigned height, GCGL
     if (!packSizes)
         return false;
     data.resize(width * height * bytesPerPixel);
-    const uint8_t* srcData = static_cast<const uint8_t*>(pixels.data());
-    srcData += packSizes->initialSkipBytes;
-    if (!packPixels(srcData, sourceDataFormat, unpackParams.rowLength ? unpackParams.rowLength : width, height, IntRect(0, 0, width, height), 1, unpackParams.alignment, 0, format, type, (premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing), data.data(), flipY))
+    skip(pixels, packSizes->initialSkipBytes);
+    if (!packPixels(pixels.data(), sourceDataFormat, unpackParams.rowLength ? unpackParams.rowLength : width, height, IntRect(0, 0, width, height), 1, unpackParams.alignment, 0, format, type, (premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing), data.data(), flipY))
         return false;
     return true;
 }
 
 GCGLfloat GraphicsContextGL::getFloat(GCGLenum pname)
 {
-    GCGLfloat value[1] { };
-    getFloatv(pname, value);
-    return value[0];
+    GCGLfloat value { };
+    getFloatv(pname, singleElementSpan(value));
+    return value;
 }
 
 GCGLboolean GraphicsContextGL::getBoolean(GCGLenum pname)
 {
-    GCGLboolean value[1] { };
-    getBooleanv(pname, value);
-    return value[0];
+    GCGLboolean value { };
+    getBooleanv(pname, singleElementSpan(value));
+    return value;
 }
 
 GCGLint GraphicsContextGL::getInteger(GCGLenum pname)
 {
-    GCGLint value[1] { };
-    getIntegerv(pname, value);
-    return value[0];
+    GCGLint value { };
+    getIntegerv(pname, singleElementSpan(value));
+    return value;
 }
 
 GCGLint GraphicsContextGL::getIntegeri(GCGLenum pname, GCGLuint index)
 {
-    GCGLint value[4] { };
-    getIntegeri_v(pname, index, value);
+    std::array<GCGLint, 4> value { };
+    getIntegeri_v(pname, index, std::span { value });
     return value[0];
 }
 
 GCGLint GraphicsContextGL::getActiveUniformBlocki(GCGLuint program, GCGLuint uniformBlockIndex, GCGLenum pname)
 {
-    GCGLint value[1] { };
-    getActiveUniformBlockiv(program, uniformBlockIndex, pname, value);
-    return value[0];
+    GCGLint value { };
+    getActiveUniformBlockiv(program, uniformBlockIndex, pname, singleElementSpan(value));
+    return value;
 }
 
 GCGLint GraphicsContextGL::getInternalformati(GCGLenum target, GCGLenum internalformat, GCGLenum pname)
 {
-    GCGLint value[1] { };
-    getInternalformativ(target, internalformat, pname, value);
-    return value[0];
+    GCGLint value { };
+    getInternalformativ(target, internalformat, pname, singleElementSpan(value));
+    return value;
 }
 
 void GraphicsContextGL::framebufferDiscard(GCGLenum, std::span<const GCGLenum>)
@@ -641,7 +644,5 @@ RefPtr<Image> GraphicsContextGL::videoFrameToImage(VideoFrame& frame)
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBGL)
