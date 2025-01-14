@@ -1546,8 +1546,8 @@ void NetworkSessionCocoa::notifyAdAttributionKitOfSessionTermination()
 #if HAVE(AD_ATTRIBUTION_KIT_PRIVATE_BROWSING)
     if (m_donatedEphemeralImpressionSessionID) {
         // FIXME: Remove this respondsToSelector check in 2026 or so.
-        if ([ASDInstallWebAttributionService.sharedInstance respondsToSelector:@selector(removeInstallWebAttributionParamsFromPrivateBrowsingSessionId:completionHandler:)])
-            [ASDInstallWebAttributionService.sharedInstance removeInstallWebAttributionParamsFromPrivateBrowsingSessionId:*m_donatedEphemeralImpressionSessionID completionHandler:^(NSError *) { }];
+        if ([ASDInstallWebAttributionService.sharedInstance respondsToSelector:@selector(removeInstallWebAttributionParamsFromPrivateBrowsingSessionID:completionHandler:)])
+            [ASDInstallWebAttributionService.sharedInstance removeInstallWebAttributionParamsFromPrivateBrowsingSessionID:*m_donatedEphemeralImpressionSessionID completionHandler:^(NSError *) { }];
     }
 #endif
 }
