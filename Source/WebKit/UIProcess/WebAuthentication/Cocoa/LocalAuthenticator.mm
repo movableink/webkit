@@ -160,9 +160,7 @@ static inline Ref<ArrayBuffer> toArrayBuffer(std::span<const uint8_t> data)
 
 static Vector<AuthenticatorTransport> transports()
 {
-    Vector<WebCore::AuthenticatorTransport> transports = { WebCore::AuthenticatorTransport::Internal };
-    if (shouldUpdateQuery())
-        transports.append(WebCore::AuthenticatorTransport::Hybrid);
+    Vector<WebCore::AuthenticatorTransport> transports = { WebCore::AuthenticatorTransport::Hybrid, WebCore::AuthenticatorTransport::Internal };
     return transports;
 }
 
