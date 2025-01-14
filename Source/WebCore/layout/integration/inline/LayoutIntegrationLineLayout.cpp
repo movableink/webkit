@@ -61,7 +61,6 @@
 #include "SVGTextFragment.h"
 #include "Settings.h"
 #include "ShapeOutsideInfo.h"
-#include "TextBreakingPositionCache.h"
 #include <wtf/Assertions.h>
 #include <wtf/Range.h>
 
