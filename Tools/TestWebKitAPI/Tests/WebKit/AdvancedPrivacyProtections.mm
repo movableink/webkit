@@ -529,7 +529,10 @@ TEST(AdvancedPrivacyProtections, DoNotHideReferrerInPopupWindow)
         return popupWebView.get();
     }];
 
-    RetainPtr webView = createWebViewWithAdvancedPrivacyProtections();
+    RetainPtr preferences = adoptNS([WKWebpagePreferences new]);
+    [preferences _setPopUpPolicy:_WKWebsitePopUpPolicyAllow];
+
+    RetainPtr webView = createWebViewWithAdvancedPrivacyProtections(YES, WTFMove(preferences));
     [webView setUIDelegate:uiDelegate.get()];
 
     // Load the main page on 127.0.0.1, which opens a cross-origin popup window on localhost.
