@@ -4243,7 +4243,7 @@ bool UnifiedPDFPlugin::platformPopulateEditorStateIfNeeded(EditorState& state) c
 
     if (m_scrollingNodeID) {
         state.visualData->enclosingScrollingNodeID = *m_scrollingNodeID;
-        state.visualData->enclosingScrollPosition = scrollPosition();
+        state.visualData->enclosingScrollOffset = scrollOffset();
     }
 
     return true;

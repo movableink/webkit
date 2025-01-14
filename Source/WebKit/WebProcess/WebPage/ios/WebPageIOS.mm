@@ -5954,7 +5954,7 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
         return layer.enclosingScrollableLayer(includeSelf, CrossFrameBoundaries::Yes);
     };
 
-    auto scrollPositionAndNodeIDForLayer = [](RenderLayer* layer) -> std::pair<ScrollPosition, std::optional<ScrollingNodeID>> {
+    auto scrollOffsetAndNodeIDForLayer = [](RenderLayer* layer) -> std::pair<ScrollOffset, std::optional<ScrollingNodeID>> {
         CheckedRef renderer = layer->renderer();
         WeakPtr scrollableArea = [&] -> ScrollableArea* {
             if (renderer->isRenderView())
@@ -5970,13 +5970,13 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
         if (!scrollingNodeID)
             return { };
 
-        return { scrollableArea->scrollOrigin() + scrollableArea->scrollPosition(), WTFMove(scrollingNodeID) };
+        return { scrollableArea->scrollOffset(), WTFMove(scrollingNodeID) };
     };
 
     CheckedPtr<RenderLayer> scrollableLayer;
     for (CheckedPtr layer = nextScroller(*enclosingLayer, IncludeSelfOrNot::IncludeSelf); layer; layer = nextScroller(*layer, IncludeSelfOrNot::ExcludeSelf)) {
-        if (auto [scrollPosition, scrollingNodeID] = scrollPositionAndNodeIDForLayer(layer.get()); scrollingNodeID) {
-            state.visualData->enclosingScrollPosition = scrollPosition;
+        if (auto [scrollOffset, scrollingNodeID] = scrollOffsetAndNodeIDForLayer(layer.get()); scrollingNodeID) {
+            state.visualData->enclosingScrollOffset = scrollOffset;
             state.visualData->enclosingScrollingNodeID = WTFMove(scrollingNodeID);
             scrollableLayer = WTFMove(layer);
             break;
@@ -5994,7 +5994,7 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
 
     auto scrollingNodeIDForEndpoint = [&](RenderLayer* endpointLayer) {
         for (CheckedPtr layer = endpointLayer; layer && layer != scrollableLayer; layer = nextScroller(*layer, IncludeSelfOrNot::ExcludeSelf)) {
-            if (auto scrollingNodeID = scrollPositionAndNodeIDForLayer(layer.get()).second)
+            if (auto scrollingNodeID = scrollOffsetAndNodeIDForLayer(layer.get()).second)
                 return scrollingNodeID;
         }
         return state.visualData->enclosingScrollingNodeID;

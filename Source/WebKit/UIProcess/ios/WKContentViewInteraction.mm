@@ -8506,8 +8506,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!scroller)
         return;
 
-    auto possiblyStaleScrollPosition = state.visualData->enclosingScrollPosition;
-    auto scrollDelta = possiblyStaleScrollPosition - WebCore::roundedIntPoint([scroller contentOffset]);
+    auto possiblyStaleScrollOffset = state.visualData->enclosingScrollOffset;
+    auto scrollDelta = possiblyStaleScrollOffset - WebCore::roundedIntPoint([scroller contentOffset]);
 
     static constexpr auto adjustmentThreshold = 1;
     if (std::abs(scrollDelta.width()) <= adjustmentThreshold && std::abs(scrollDelta.height()) <= adjustmentThreshold)
