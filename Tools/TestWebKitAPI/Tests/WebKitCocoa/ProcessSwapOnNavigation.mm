@@ -3513,7 +3513,12 @@ TEST(ProcessSwap, PageCache1)
     EXPECT_EQ(2u, seenPIDs.size());
 }
 
+// rdar://137984168 (REGRESSION(277622@main?): [ iPad ] TestWebKitAPI.ProcessSwap.NavigateBackAfterCrossOriginClientRedirect is a near constant timeout (281513))
+#if PLATFORM(IOS)
+TEST(ProcessSwap, DISABLED_NavigateBackAfterCrossOriginClientRedirect)
+#else
 TEST(ProcessSwap, NavigateBackAfterCrossOriginClientRedirect)
+#endif
 {
     auto processPoolConfiguration = psonProcessPoolConfiguration();
     auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
