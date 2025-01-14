@@ -39,5 +39,3 @@
 #include <ciso646>
 
 #endif
-
-#include <wtf/DisallowCType.h>

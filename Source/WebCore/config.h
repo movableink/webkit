@@ -52,8 +52,6 @@
 
 #endif
 
-#include <wtf/DisallowCType.h>
-
 #if USE(CG)
 #ifndef CGFLOAT_DEFINED
 #if (defined(__LP64__) && __LP64__) || (defined(__x86_64__) && __x86_64__) || defined(_M_X64) || defined(__amd64__)

@@ -334,7 +334,6 @@
 		DD3DC8C027A4BF8E007E5B61 /* DoublyLinkedList.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A47280151A825A004123FF /* DoublyLinkedList.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC8C127A4BF8E007E5B61 /* SentinelLinkedList.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A47307151A825B004123FF /* SentinelLinkedList.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC8C227A4BF8E007E5B61 /* UUID.h in Headers */ = {isa = PBXBuildFile; fileRef = 7AFEC6AE1EB22AC600DADE36 /* UUID.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		DD3DC8C327A4BF8E007E5B61 /* DisallowCType.h in Headers */ = {isa = PBXBuildFile; fileRef = A9A4727F151A825A004123FF /* DisallowCType.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC8C427A4BF8E007E5B61 /* ParallelJobsLibdispatch.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A472E9151A825B004123FF /* ParallelJobsLibdispatch.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC8C527A4BF8E007E5B61 /* PlatformOS.h in Headers */ = {isa = PBXBuildFile; fileRef = 7C42307323CE2D8B006E54D0 /* PlatformOS.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC8C627A4BF8E007E5B61 /* PtrTag.h in Headers */ = {isa = PBXBuildFile; fileRef = FE7497E4208FFCAA0003565B /* PtrTag.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1572,7 +1571,6 @@
 		A8A47371151A825B004123FF /* VectorTraits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VectorTraits.h; sourceTree = "<group>"; };
 		A8A47372151A825B004123FF /* VMTags.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VMTags.h; sourceTree = "<group>"; };
 		A8A4748B151A8264004123FF /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
-		A9A4727F151A825A004123FF /* DisallowCType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DisallowCType.h; sourceTree = "<group>"; };
 		AD653DA82006B6C200D820D7 /* RawValueTraits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RawValueTraits.h; sourceTree = "<group>"; };
 		AD7C434A1DD2A4A70026888B /* Expected.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Expected.h; sourceTree = "<group>"; };
 		AD89B6B51E6415080090707F /* MemoryPressureHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryPressureHandler.cpp; sourceTree = "<group>"; };
@@ -2248,7 +2246,6 @@
 				996B17841EBA441C007E10EB /* DebugUtilities.h */,
 				0F2B66A417B6B4F700A7AE3F /* DeferrableRefCounted.h */,
 				A8A4727E151A825A004123FF /* Deque.h */,
-				A9A4727F151A825A004123FF /* DisallowCType.h */,
 				0F4570421BE5B58F0062A629 /* Dominators.h */,
 				A8A47280151A825A004123FF /* DoublyLinkedList.h */,
 				A8A47297151A825A004123FF /* dtoa.cpp */,
@@ -3345,7 +3342,6 @@
 				DD3DC90627A4BF8E007E5B61 /* DeferrableRefCounted.h in Headers */,
 				DD3DC94B27A4BF8E007E5B61 /* Deque.h in Headers */,
 				E361DB68289115D000B2A2B8 /* digit_comparison.h in Headers */,
-				DD3DC8C327A4BF8E007E5B61 /* DisallowCType.h in Headers */,
 				DDF306E727C08654006A526F /* DispatchSPI.h in Headers */,
 				FFE39CB32B1D7472004972B0 /* div.h in Headers */,
 				DDF3079427C086CD006A526F /* diy-fp.h in Headers */,
