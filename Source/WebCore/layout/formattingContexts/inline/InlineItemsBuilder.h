@@ -72,7 +72,6 @@ private:
     const SecurityOrigin& m_securityOrigin;
 
     bool m_contentRequiresVisualReordering { false };
-    size_t m_inlineBoxCount { 0 };
     bool m_hasTextAutospace { !root().style().textAutospace().isNoAutospace() };
 };
 

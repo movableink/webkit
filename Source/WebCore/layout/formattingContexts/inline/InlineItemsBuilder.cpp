@@ -205,10 +205,7 @@ InlineItemsBuilder::LayoutQueue InlineItemsBuilder::traverseUntilDamaged(const B
 
     auto appendAndCheckForDamage = [&] (auto& layoutBox) {
         queue.append(layoutBox);
-
         m_contentRequiresVisualReordering = m_contentRequiresVisualReordering || requiresVisualReordering(layoutBox);
-        if (!isTextOrLineBreak(layoutBox) && layoutBox.isInlineBox())
-            ++m_inlineBoxCount;
         return &layoutBox == &firstDamagedLayoutBox;
     };
 
@@ -752,6 +749,7 @@ InlineContentCache::InlineItems::ContentAttributes InlineItemsBuilder::computeCo
         return { };
 
     bool isTextAndForcedLineBreakOnlyContent = true;
+    size_t inlineBoxCount = 0;
 
     auto computeContentAttributesUpToDamage = [&] {
         if (!damagePosition)
@@ -763,7 +761,12 @@ InlineContentCache::InlineItems::ContentAttributes InlineItemsBuilder::computeCo
             if (inlineItem.isText())
                 continue;
 
-            if (!inlineItem.isInlineBoxStartOrEnd())
+            if (inlineItem.isInlineBoxStart()) {
+                ++inlineBoxCount;
+                continue;
+            }
+
+            if (!inlineItem.isInlineBoxEnd())
                 isTextAndForcedLineBreakOnlyContent = isTextAndForcedLineBreakOnlyContent && isTextOrLineBreak(inlineItem.layoutBox());
         }
     };
@@ -790,12 +793,17 @@ InlineContentCache::InlineItems::ContentAttributes InlineItemsBuilder::computeCo
         }
         spacingState.lastCharacterClassFromPreviousRun = TextSpacing::CharacterClass::Undefined;
 
-        if (!inlineItem.isInlineBoxStartOrEnd())
+        if (inlineItem.isInlineBoxStart()) {
+            ++inlineBoxCount;
+            continue;
+        }
+
+        if (!inlineItem.isInlineBoxEnd())
             isTextAndForcedLineBreakOnlyContent = isTextAndForcedLineBreakOnlyContent && isTextOrLineBreak(inlineItem.layoutBox());
     }
     inlineContentCache().setTrimmableTextSpacings(WTFMove(trimmableTextSpacings));
 
-    return { m_contentRequiresVisualReordering, isTextAndForcedLineBreakOnlyContent, m_hasTextAutospace, m_inlineBoxCount };
+    return { m_contentRequiresVisualReordering, isTextAndForcedLineBreakOnlyContent, m_hasTextAutospace, inlineBoxCount };
 }
 
 bool InlineItemsBuilder::buildInlineItemListForTextFromBreakingPositionsCache(const InlineTextBox& inlineTextBox, InlineItemList& inlineItemList)
@@ -956,14 +964,12 @@ void InlineItemsBuilder::handleInlineBoxStart(const Box& inlineBox, InlineItemLi
 {
     inlineItemList.append({ inlineBox, InlineItem::Type::InlineBoxStart });
     m_contentRequiresVisualReordering = m_contentRequiresVisualReordering || requiresVisualReordering(inlineBox);
-    ++m_inlineBoxCount;
 }
 
 void InlineItemsBuilder::handleInlineBoxEnd(const Box& inlineBox, InlineItemList& inlineItemList)
 {
     inlineItemList.append({ inlineBox, InlineItem::Type::InlineBoxEnd });
     // Inline box end item itself can not trigger bidi content.
-    ASSERT(m_inlineBoxCount);
     ASSERT(contentRequiresVisualReordering() || inlineBox.writingMode().isBidiLTR() || inlineBox.style().rtlOrdering() == Order::Visual || inlineBox.style().unicodeBidi() == UnicodeBidi::Normal);
 }
 
