@@ -28,6 +28,7 @@
 #include "NetworkCacheData.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/SHA1.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF::Persistence {
@@ -136,9 +137,7 @@ struct NetworkCacheKeyHash {
     static unsigned hash(const WebKit::NetworkCache::Key& key)
     {
         static_assert(SHA1::hashSize >= sizeof(unsigned), "Hash size must be greater than sizeof(unsigned)");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        return *reinterpret_cast<const unsigned*>(key.hash().data());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        return reinterpretCastSpanStartTo<const unsigned>(std::span { key.hash() });
     }
 
     static bool equal(const WebKit::NetworkCache::Key& a, const WebKit::NetworkCache::Key& b)
