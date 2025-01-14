@@ -104,6 +104,7 @@ public:
     void prepareQuickLookImageURL(CompletionHandler<void(URL&&)>&&) const;
 #endif // QUICKLOOK_FULLSCREEN
     void close();
+    void detachFromClient();
 
     enum class FullscreenState : uint8_t {
         NotInFullscreen,

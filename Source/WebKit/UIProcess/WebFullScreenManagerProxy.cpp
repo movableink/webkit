@@ -214,8 +214,14 @@ void WebFullScreenManagerProxy::setFullscreenAutoHideDuration(Seconds duration)
 
 void WebFullScreenManagerProxy::close()
 {
-    if (CheckedPtr client = std::exchange(m_client, nullptr))
+    if (CheckedPtr client = m_client)
         client->closeFullScreenManager();
+}
+
+void WebFullScreenManagerProxy::detachFromClient()
+{
+    close();
+    m_client = nullptr;
 }
 
 bool WebFullScreenManagerProxy::isFullScreen()

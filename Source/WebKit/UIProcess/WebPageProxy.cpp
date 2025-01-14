@@ -10948,7 +10948,7 @@ void WebPageProxy::resetState(ResetStateReason resetStateReason)
 
 #if ENABLE(FULLSCREEN_API)
     if (m_fullScreenManager) {
-        m_fullScreenManager->close();
+        m_fullScreenManager->detachFromClient();
         m_fullScreenManager = nullptr;
     }
 #endif
