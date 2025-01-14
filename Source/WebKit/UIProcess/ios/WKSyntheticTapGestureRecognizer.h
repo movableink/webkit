@@ -39,6 +39,7 @@
 - (void)setResetTarget:(id)target action:(SEL)action;
 @property (nonatomic, weak) WKTouchEventsGestureRecognizer *supportingTouchEventsGestureRecognizer;
 @property (nonatomic, readonly) NSNumber *lastActiveTouchIdentifier;
+@property (nonatomic, readonly) std::optional<UITouchType> lastActiveTouchType;
 @end
 
 #endif
