@@ -144,10 +144,6 @@ public:
 
     static void setHasDisableTZoneEntitlementCallback(bool (*hasDisableTZoneEntitlement)());
 
-#if BUSE_TZONE_PREINITIALIZATION
-    void preInitializeHeapRefs(const TZoneSpecification* start, const TZoneSpecification* end);
-#endif
-
     pas_heap_ref* heapRefForIsoFallback(const TZoneSpecification&);
     pas_heap_ref* heapRefForTZoneType(const TZoneSpecification&);
     pas_heap_ref* heapRefForTZoneTypeDifferentSize(size_t requestedSize, const TZoneSpecification&);

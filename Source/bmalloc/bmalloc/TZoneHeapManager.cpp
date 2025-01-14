@@ -642,21 +642,6 @@ pas_heap_ref* TZoneHeapManager::TZoneHeapManager::heapRefForTZoneTypeDifferentSi
     return result;
 }
 
-#if BUSE_TZONE_PREINITIALIZATION
-
-void TZoneHeapManager::preInitializeHeapRefs(const TZoneSpecification* start, const TZoneSpecification* end)
-{
-    LockHolder lock(mutex());
-    for (auto* curr = start; curr < end; curr++) {
-        HeapRef& heapRef = *curr->addressOfHeapRef;
-        if (heapRef)
-            continue;
-        heapRef = heapRefForTZoneType(*curr, lock);
-    }
-}
-
-#endif // BUSE_TZONE_PREINITIALIZATION
-
 } } // namespace bmalloc::api
 
 #endif // BUSE(TZONE)

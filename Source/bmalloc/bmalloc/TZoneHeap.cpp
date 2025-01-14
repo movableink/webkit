@@ -175,19 +175,6 @@ void tzoneFreeWithDebugMalloc(void* p)
     IsoMallocFallback::tryFree(p);
 }
 
-#if BUSE_TZONE_PREINITIALIZATION
-void tzonePreInitializeHeapRefs(const TZoneSpecification* start, const TZoneSpecification* end)
-{
-    if (tzoneMallocFallback == TZoneMallocFallback::Undecided)
-        determineTZoneMallocFallback();
-    if (tzoneMallocFallback == TZoneMallocFallback::DoNotFallBack) {
-        if (!tzoneHeapManager)
-            TZoneHeapManager::ensureSingleton();
-        tzoneHeapManager->preInitializeHeapRefs(start, end);
-    }
-}
-#endif // BUSE_TZONE_PREINITIALIZATION
-
 #undef TO_PAS_HEAPREF
 
 } } // namespace bmalloc::api

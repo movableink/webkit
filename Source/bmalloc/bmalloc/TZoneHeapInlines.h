@@ -50,7 +50,7 @@ private: \
     static _exportMacro std::pair<HeapRef&, const TZoneSpecification&> tzoneHeap() \
     { \
         static HeapRef s_heapRef; \
-        static const TZoneSpecification s_heapSpec TZONE_SPEC_ATTRIBUTE = { &s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+        static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
         return { s_heapRef, s_heapSpec }; \
     } \
     \
@@ -98,7 +98,7 @@ private: \
 #define MAKE_BTZONE_MALLOCED_IMPL(_type, _compactMode, _fallbackMode) \
 ::bmalloc::api::HeapRef _type::s_heapRef; \
 \
-const TZoneSpecification _type::s_heapSpec TZONE_SPEC_ATTRIBUTE = { &_type::s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+const TZoneSpecification _type::s_heapSpec = { &_type::s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
 \
 void* _type::operatorNewSlow(size_t size) \
 { \

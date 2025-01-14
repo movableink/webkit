@@ -36,12 +36,6 @@
 #include "Algorithm.h"
 #include "BInline.h"
 
-#if BCOMPILER(CLANG)
-#define BUSE_TZONE_PREINITIALIZATION 1
-#else
-#define BUSE_TZONE_PREINITIALIZATION 0
-#endif
-
 #define BUSE_TZONE_SPEC_NAME_ARG 0
 #if BUSE_TZONE_SPEC_NAME_ARG
 #define TZONE_SPEC_NAME_ARG(x)  , x
@@ -194,7 +188,7 @@ private: \
 private: \
     static _exportMacro BNO_INLINE void* operatorNewSlow(size_t size) \
     { \
-        static const TZoneSpecification s_heapSpec TZONE_SPEC_ATTRIBUTE = { &s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+        static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
         return ::bmalloc::api::tzoneAllocate ## _compactMode ## With ## _fallbackMode ## Slow(size, s_heapSpec); \
     }
 
@@ -226,40 +220,8 @@ private: \
     TZONE_TEMPLATE_PARAMS \
     ::bmalloc::api::HeapRef TZONE_TYPE::s_heapRef
 
-#if BUSE_TZONE_PREINITIALIZATION
-
-BEXPORT void tzonePreInitializeHeapRefs(const TZoneSpecification* start, const TZoneSpecification* end);
-
-#define TZONE_SPEC_ATTRIBUTE __attribute__((used, section("__DATA_CONST,__tzone_spec")))
-
-// The following is for pre-initializing HeapRefs.
-// Use these at each framework/process initialization.
-#define DECLARE_TZONE_HEAPREF_SPECIFICATION_BOUNDS(_regionName) \
-    extern const TZoneSpecification startOf ## _regionName ## TZoneSpecifications __asm("section$start$__DATA_CONST$__tzone_spec"); \
-    extern const TZoneSpecification endOf ## _regionName ## TZoneSpecifications __asm("section$end$__DATA_CONST$__tzone_spec")
-
-#define PREINITIALIZE_TZONE_HEAPREFS(_regionName) \
-    ::bmalloc::api::tzonePreInitializeHeapRefs(&startOf ## _regionName ## TZoneSpecifications, &endOf ## _regionName ## TZoneSpecifications)
-
-#else // BUSE_TZONE_PREINITIALIZATION
-
-#define TZONE_SPEC_ATTRIBUTE
-#define DECLARE_TZONE_HEAPREF_SPECIFICATION_BOUNDS(_regionName) \
-    using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
-#define PREINITIALIZE_TZONE_HEAPREFS(_regionName) \
-    using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
-
-#endif // BUSE_TZONE_PREINITIALIZATION
-
 } } // namespace bmalloc::api
 
 using TZoneSpecification = ::bmalloc::api::TZoneSpecification;
-
-#else
-
-#define DECLARE_TZONE_HEAPREF_SPECIFICATION_BOUNDS(_regionName) \
-    using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
-#define PREINITIALIZE_TZONE_HEAPREFS(_regionName) \
-    using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #endif // BUSE(TZONE)

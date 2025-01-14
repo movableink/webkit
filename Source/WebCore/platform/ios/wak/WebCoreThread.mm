@@ -36,7 +36,6 @@
 #import "ThreadGlobalData.h"
 #import "WAKWindow.h"
 #import "WKUtilities.h"
-#import "WebCoreHeapSupport.h"
 #import "WebCoreJITOperations.h"
 #import "WebCoreThreadInternal.h"
 #import "WebCoreThreadMessage.h"
@@ -645,7 +644,6 @@ static void* RunWebThread(void*)
     // <rdar://problem/8502487>.
     WTF::initializeWebThread();
     JSC::initialize();
-    WebCore::initializeHeapRefs();
     WebCore::populateJITOperations();
     
     // Make sure that the WebThread and the main thread share the same ThreadGlobalData objects.

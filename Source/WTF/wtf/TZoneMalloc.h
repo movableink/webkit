@@ -104,13 +104,6 @@
 #define WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS() \
     using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
-#ifndef DECLARE_TZONE_HEAPREF_SPECIFICATION_BOUNDS
-#define DECLARE_TZONE_HEAPREF_SPECIFICATION_BOUNDS(_regionName) \
-    using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
-#define PREINITIALIZE_TZONE_HEAPREFS(_regionName) \
-    using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
-#endif
-
 #else // !USE(SYSTEM_MALLOC) && USE(TZONE_MALLOC)
 
 #include <bmalloc/TZoneHeap.h>
