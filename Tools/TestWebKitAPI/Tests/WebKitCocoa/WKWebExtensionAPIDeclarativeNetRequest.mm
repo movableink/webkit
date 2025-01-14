@@ -596,8 +596,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, DynamicRules)
     storageDirectory = [storageDirectory stringByAppendingPathComponent:manager.get().context.uniqueIdentifier];
     EXPECT_TRUE([NSFileManager.defaultManager fileExistsAtPath:[storageDirectory stringByAppendingPathComponent:@"DeclarativeNetRequestContentRuleList.data"]]);
 
-    [manager.get().controller unloadExtensionContext:manager.get().context error:nullptr];
-
+    [manager unload];
     [manager loadAndRun];
 
     EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");

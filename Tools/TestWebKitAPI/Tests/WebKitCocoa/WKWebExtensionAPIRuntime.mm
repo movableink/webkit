@@ -1525,10 +1525,8 @@ TEST(WKWebExtensionAPIRuntime, StartupEvent)
 
     EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Startup Event Fired");
 
-    [manager.get().controller unloadExtensionContext:manager.get().context error:nullptr];
-
+    [manager unload];
     [manager runForTimeInterval:5];
-
     [manager loadAndRun];
 
     EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Startup Event Did Not Fire");
@@ -1558,10 +1556,8 @@ TEST(WKWebExtensionAPIRuntime, InstalledEvent)
 
     EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Installed Event Fired");
 
-    [manager.get().controller unloadExtensionContext:manager.get().context error:nullptr];
-
+    [manager unload];
     [manager runForTimeInterval:1];
-
     [manager loadAndRun];
 
     EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Installed Event Fired");

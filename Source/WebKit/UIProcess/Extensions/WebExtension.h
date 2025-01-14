@@ -76,7 +76,7 @@ public:
 
     explicit WebExtension(Resources&& = { });
 
-    ~WebExtension() { }
+    ~WebExtension();
 
     enum class CacheResult : bool { No, Yes };
     enum class SuppressNotFoundErrors : bool { No, Yes };
@@ -352,6 +352,8 @@ public:
 #endif
 
 private:
+    static String processFileAndExtractZipArchive(const String&);
+
     bool parseManifest(StringView);
 
     void parseWebAccessibleResourcesVersion3();
@@ -398,6 +400,7 @@ private:
 #endif
 
     URL m_resourceBaseURL;
+    bool m_resourcesAreTemporary { false };
     Ref<const JSON::Value> m_manifestJSON;
     Resources m_resources;
 

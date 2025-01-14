@@ -1196,7 +1196,7 @@ TEST(WKWebExtensionAPIScripting, RegisteredScriptIsInjectedAfterContextReloads)
 
     EXPECT_TRUE(manager.get().context.hasInjectedContent);
 
-    [manager.get().controller unloadExtensionContext:manager.get().context error:nullptr];
+    [manager unload];
 
     EXPECT_FALSE(manager.get().context.hasInjectedContent);
 

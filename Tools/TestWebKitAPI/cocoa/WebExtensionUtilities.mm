@@ -152,6 +152,11 @@
     return self;
 }
 
+- (void)dealloc
+{
+    [self unload];
+}
+
 - (BOOL)respondsToSelector:(SEL)selector
 {
     return [_controllerDelegate respondsToSelector:selector] || [super respondsToSelector:selector];
@@ -224,6 +229,13 @@
 {
     NSError *error;
     EXPECT_TRUE([_controller loadExtensionContext:_context error:&error]);
+    EXPECT_NULL(error);
+}
+
+- (void)unload
+{
+    NSError *error;
+    EXPECT_TRUE([_controller unloadExtensionContext:_context error:&error]);
     EXPECT_NULL(error);
 }
 

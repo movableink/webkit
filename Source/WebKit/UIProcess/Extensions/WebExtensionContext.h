@@ -187,7 +187,7 @@ public:
     using EventListenerTypeFrameMap = HashMap<WebExtensionEventListenerTypeWorldPair, WeakFrameCountedSet>;
     using EventListenerTypeSet = HashSet<WebExtensionEventListenerType>;
     using ContentWorldTypeSet = HashSet<WebExtensionContentWorldType>;
-    using VoidCompletionHandlerVector = Vector<CompletionHandler<void()>>;
+    using VoidFunctionVector = Vector<Function<void()>>;
 
     using WindowIdentifierMap = HashMap<WebExtensionWindowIdentifier, Ref<WebExtensionWindow>>;
     using WindowIdentifierVector = Vector<WebExtensionWindowIdentifier>;
@@ -582,8 +582,8 @@ public:
 
     void loadBackgroundContent(CompletionHandler<void(NSError *)>&&);
 
-    void wakeUpBackgroundContentIfNecessary(CompletionHandler<void()>&&);
-    void wakeUpBackgroundContentIfNecessaryToFireEvents(EventListenerTypeSet&&, CompletionHandler<void()>&&);
+    void wakeUpBackgroundContentIfNecessary(Function<void()>&&);
+    void wakeUpBackgroundContentIfNecessaryToFireEvents(EventListenerTypeSet&&, Function<void()>&&);
 
     HashSet<Ref<WebProcessProxy>> processes(WebExtensionEventListenerType type, WebExtensionContentWorldType contentWorldType) const
     {
@@ -991,7 +991,7 @@ private:
     bool m_requestedOptionalAccessToAllHosts { false };
     bool m_hasAccessToPrivateData { false };
 
-    VoidCompletionHandlerVector m_actionsToPerformAfterBackgroundContentLoads;
+    VoidFunctionVector m_actionsToPerformAfterBackgroundContentLoads;
     EventListenerTypeCountedSet m_backgroundContentEventListeners;
     EventListenerTypeFrameMap m_eventListenerFrames;
 

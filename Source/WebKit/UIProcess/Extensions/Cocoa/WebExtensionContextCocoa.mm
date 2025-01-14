@@ -3861,7 +3861,7 @@ void WebExtensionContext::performTasksAfterBackgroundContentLoads()
     scheduleBackgroundContentToUnload();
 }
 
-void WebExtensionContext::wakeUpBackgroundContentIfNecessary(CompletionHandler<void()>&& completionHandler)
+void WebExtensionContext::wakeUpBackgroundContentIfNecessary(Function<void()>&& completionHandler)
 {
     if (!protectedExtension()->hasBackgroundContent()) {
         completionHandler();
@@ -3882,7 +3882,7 @@ void WebExtensionContext::wakeUpBackgroundContentIfNecessary(CompletionHandler<v
     loadBackgroundWebViewIfNeeded();
 }
 
-void WebExtensionContext::wakeUpBackgroundContentIfNecessaryToFireEvents(EventListenerTypeSet&& types, CompletionHandler<void()>&& completionHandler)
+void WebExtensionContext::wakeUpBackgroundContentIfNecessaryToFireEvents(EventListenerTypeSet&& types, Function<void()>&& completionHandler)
 {
     RefPtr extension = m_extension;
     if (!extension->hasBackgroundContent()) {

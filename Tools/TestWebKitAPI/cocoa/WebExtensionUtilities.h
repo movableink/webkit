@@ -73,11 +73,15 @@ using CocoaColor = UIColor;
 - (void)sendTestMessage:(NSString *)message;
 - (void)sendTestMessage:(NSString *)message withArgument:(id)argument;
 
+- (void)loadAndRun;
+
 - (void)load;
+- (void)unload;
+
 - (void)run;
 - (void)runForTimeInterval:(NSTimeInterval)interval;
 - (id)runUntilTestMessage:(NSString *)message;
-- (void)loadAndRun;
+
 - (void)done;
 
 @end

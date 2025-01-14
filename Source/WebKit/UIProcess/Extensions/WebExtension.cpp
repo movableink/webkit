@@ -40,6 +40,7 @@
 #include <wtf/FileSystem.h>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/Scope.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -159,6 +160,103 @@ WebExtension::WebExtension(Resources&& resources)
     : m_manifestJSON(JSON::Value::null())
     , m_resources(WTFMove(resources))
 {
+}
+
+WebExtension::~WebExtension()
+{
+    if (m_resourcesAreTemporary && !m_resourceBaseURL.isEmpty())
+        FileSystem::deleteNonEmptyDirectory(m_resourceBaseURL.fileSystemPath());
+}
+
+static String convertChromeExtensionToTemporaryZipFile(const String& inputFilePath)
+{
+    // Converts a Chrome extension file to a temporary ZIP file by checking for a valid Chrome extension signature ('Cr24')
+    // and copying the contents starting from the ZIP signature ('PK\x03\x04'). Returns a null string if the signatures
+    // are not found or any file operations fail.
+
+    auto inputFileHandle = FileSystem::openFile(inputFilePath, FileSystem::FileOpenMode::Read);
+    if (!FileSystem::isHandleValid(inputFileHandle))
+        return nullString();
+
+    auto closeFile = makeScopeExit([&] {
+        FileSystem::unlockAndCloseFile(inputFileHandle);
+    });
+
+    // Read the magic signature.
+    std::array<uint8_t, 4> signature;
+    auto bytesRead = FileSystem::readFromFile(inputFileHandle, signature);
+    if (bytesRead < 0 || static_cast<size_t>(bytesRead) != signature.size())
+        return nullString();
+
+    // Verify Chrome extension magic signature.
+    static std::array<uint8_t, 4> expectedSignature = { 'C', 'r', '2', '4' };
+    if (signature != expectedSignature)
+        return nullString();
+
+    // Create a temporary ZIP file.
+    auto [temporaryFilePath, temporaryFileHandle] = FileSystem::openTemporaryFile("WebKitExtension-"_s, ".zip"_s);
+    if (!FileSystem::isHandleValid(temporaryFileHandle))
+        return nullString();
+
+    auto closeTempFile = makeScopeExit([fileHandle = temporaryFileHandle] {
+        FileSystem::unlockAndCloseFile(fileHandle);
+    });
+
+    std::array<uint8_t, 4096> buffer;
+    bool signatureFound = false;
+
+    while (true) {
+        bytesRead = FileSystem::readFromFile(inputFileHandle, buffer);
+
+        // Error reading file.
+        if (bytesRead < 0)
+            return nullString();
+
+        // Done reading file.
+        if (!bytesRead)
+            break;
+
+        size_t bufferOffset = 0;
+        if (!signatureFound) {
+            // Not enough bytes for the signature.
+            if (bytesRead < 4)
+                return nullString();
+
+            // Search for the ZIP file magic signature in the buffer.
+            for (ssize_t i = 0; i < bytesRead - 3; ++i) {
+                if (buffer[i] == 'P' && buffer[i + 1] == 'K' && buffer[i + 2] == 0x03 && buffer[i + 3] == 0x04) {
+                    signatureFound = true;
+                    bufferOffset = i;
+                    break;
+                }
+            }
+
+            // Continue until the start of the ZIP file is found.
+            if (!signatureFound)
+                continue;
+        }
+
+        auto bytesToWrite = std::span(buffer).subspan(bufferOffset, bytesRead - bufferOffset);
+        auto bytesWritten = FileSystem::writeToFile(temporaryFileHandle, bytesToWrite);
+        if (bytesWritten != static_cast<int64_t>(bytesToWrite.size()))
+            return nullString();
+    }
+
+    return temporaryFilePath;
+}
+
+String WebExtension::processFileAndExtractZipArchive(const String& path)
+{
+    // Check if the file is a Chrome extension archive and extract it.
+    auto temporaryZipFilePath = convertChromeExtensionToTemporaryZipFile(path);
+    if (!temporaryZipFilePath.isNull()) {
+        auto temporaryDirectory = FileSystem::extractTemporaryZipArchive(temporaryZipFilePath);
+        FileSystem::deleteFile(temporaryZipFilePath);
+        return temporaryDirectory;
+    }
+
+    // Assume the file is already a ZIP archive and try to extract it.
+    return FileSystem::extractTemporaryZipArchive(path);
 }
 
 bool WebExtension::parseManifest(StringView manifestString)
