@@ -486,7 +486,7 @@ static inline NodeQualifier ancestorRespondingToClickEventsNodeQualifier(Securit
             *nodeBounds = IntRect();
 
         auto node = hitTestResult.innerNode();
-        if (!node || (securityOrigin && !securityOrigin->isSameOriginAs(node->document().securityOrigin())))
+        if (!node || (securityOrigin && !securityOrigin->isSameOriginAs(node->document().protectedSecurityOrigin())))
             return nullptr;
 
         for (; node && node != terminationNode; node = node->parentInComposedTree()) {

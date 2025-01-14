@@ -159,7 +159,7 @@ inline bool Document::hasMutationObserversOfType(MutationObserverOptionType type
 
 inline ClientOrigin Document::clientOrigin() const { return { topOrigin().data(), securityOrigin().data() }; }
 
-inline bool Document::isSameOriginAsTopDocument() const { return securityOrigin().isSameOriginAs(topOrigin()); }
+inline bool Document::isSameOriginAsTopDocument() const { return protectedSecurityOrigin()->isSameOriginAs(topOrigin()); }
 
 inline bool Document::shouldMaskURLForBindings(const URL& urlToMask) const
 {

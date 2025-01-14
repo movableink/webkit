@@ -563,7 +563,6 @@ dom/DOMImplementation.cpp
 dom/DataTransfer.cpp
 dom/DataTransferItemList.cpp
 dom/DecodedDataDocumentParser.cpp
-dom/DeviceOrientationAndMotionAccessController.cpp
 dom/Document.cpp
 dom/DocumentFontLoader.cpp
 dom/DocumentFragment.cpp
@@ -695,7 +694,6 @@ editing/mac/EditorMac.mm
 editing/mac/FrameSelectionMac.mm
 editing/markup.cpp
 fileapi/Blob.cpp
-fileapi/BlobURL.cpp
 fileapi/FileReader.cpp
 fileapi/FileReaderLoader.cpp
 history/BackForwardCache.cpp
@@ -756,7 +754,6 @@ html/HTMLLinkElement.cpp
 html/HTMLMapElement.cpp
 html/HTMLMaybeFormAssociatedCustomElement.cpp
 html/HTMLMediaElement.cpp
-html/HTMLMediaElement.h
 html/HTMLMetaElement.cpp
 html/HTMLMeterElement.cpp
 html/HTMLNameCollectionInlines.h
@@ -784,7 +781,6 @@ html/HTMLTextFormControlElement.cpp
 html/HTMLTitleElement.cpp
 html/HTMLTrackElement.cpp
 html/HTMLVideoElement.cpp
-html/HTMLVideoElement.h
 html/HiddenInputType.cpp
 html/ImageBitmap.cpp
 html/ImageDocument.cpp
@@ -1001,7 +997,6 @@ page/IntersectionObserver.cpp
 page/LocalDOMWindow.cpp
 page/LocalDOMWindowProperty.cpp
 page/LocalFrame.cpp
-page/LocalFrame.h
 page/LocalFrameView.cpp
 page/LocalFrameViewLayoutContext.cpp
 page/Location.cpp

@@ -151,8 +151,8 @@ public:
     WEBCORE_EXPORT RefPtr<const LocalFrame> localMainFrame() const;
     WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame();
 
-    Editor& editor() { return document()->editor(); }
-    const Editor& editor() const { return document()->editor(); }
+    Editor& editor() { return protectedDocument()->editor(); }
+    const Editor& editor() const { return protectedDocument()->editor(); }
     WEBCORE_EXPORT Ref<Editor> protectedEditor();
     Ref<const Editor> protectedEditor() const;
 
