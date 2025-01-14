@@ -2474,3 +2474,4 @@ webkit.org/b/284597 [ Ventura+ ] http/tests/misc/repeat-open-cancel.html [ Slow 
 
 webkit.org/b/284653 [ Ventura+ ] http/tests/site-isolation/compositing/iframes/resize-from-zero-size.html [ Pass Failure ]
 
+webkit.org/b/285954 [ Ventura+ Debug ] inspector/worker/runtime-basic-subworker.html [ Pass Crash ]
