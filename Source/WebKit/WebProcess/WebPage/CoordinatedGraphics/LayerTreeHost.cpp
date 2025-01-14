@@ -484,7 +484,7 @@ void LayerTreeHost::didComposite(uint32_t compositionResponseID)
     if (!m_isWaitingForRenderer || m_compositionRequestID == compositionResponseID) {
         m_isWaitingForRenderer = false;
         bool scheduledWhileWaitingForRenderer = std::exchange(m_scheduledWhileWaitingForRenderer, false);
-        if (!m_isSuspended && (scheduledWhileWaitingForRenderer || m_layerFlushTimer.isActive())) {
+        if (!m_isSuspended && !m_layerTreeStateIsFrozen && (scheduledWhileWaitingForRenderer || m_layerFlushTimer.isActive())) {
             cancelPendingLayerFlush();
             flushLayers();
         }
