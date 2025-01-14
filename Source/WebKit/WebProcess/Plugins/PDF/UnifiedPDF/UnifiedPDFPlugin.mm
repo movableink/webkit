@@ -96,12 +96,14 @@
 #include <WebCore/RenderLayer.h>
 #include <WebCore/RenderLayerBacking.h>
 #include <WebCore/RenderLayerCompositor.h>
+#include <WebCore/RenderTheme.h>
 #include <WebCore/ScreenProperties.h>
 #include <WebCore/ScrollAnimator.h>
 #include <WebCore/ScrollTypes.h>
 #include <WebCore/ScrollbarTheme.h>
 #include <WebCore/ScrollbarsController.h>
 #include <WebCore/ShadowRoot.h>
+#include <WebCore/StyleColorOptions.h>
 #include <WebCore/VoidCallback.h>
 #include <WebCore/WheelEventDeltaFilter.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
@@ -860,8 +862,10 @@ void UnifiedPDFPlugin::paintPDFSelection(const GraphicsLayer* layer, GraphicsCon
         isVisibleAndActive = page->isVisibleAndActive();
 
     auto selectionColor = [renderer = m_element->renderer(), isVisibleAndActive] {
-        auto& renderTheme = renderer->theme();
-        auto styleColorOptions = renderer->styleColorOptions();
+        auto& renderTheme = renderer ? renderer->theme() : RenderTheme::singleton();
+        OptionSet<StyleColorOptions> styleColorOptions;
+        if (renderer)
+            styleColorOptions = renderer->styleColorOptions();
         auto selectionColor = isVisibleAndActive ? renderTheme.activeSelectionBackgroundColor(styleColorOptions) : renderTheme.inactiveSelectionBackgroundColor(styleColorOptions);
         return blendSourceOver(Color::white, selectionColor);
     }();
@@ -1609,9 +1613,13 @@ void UnifiedPDFPlugin::updateScrollingExtents()
 
     m_presentationController->updateForCurrentScrollability(computeScrollability());
 
+    CheckedPtr renderer = m_element->renderer();
+    if (!renderer)
+        return;
+
     EventRegion eventRegion;
     auto eventRegionContext = eventRegion.makeContext();
-    eventRegionContext.unite(FloatRoundedRect(FloatRect({ }, size())), *m_element->renderer(), m_element->renderer()->style());
+    eventRegionContext.unite(FloatRoundedRect(FloatRect({ }, size())), *renderer, renderer->style());
     m_scrollContainerLayer->setEventRegion(WTFMove(eventRegion));
 }
 
