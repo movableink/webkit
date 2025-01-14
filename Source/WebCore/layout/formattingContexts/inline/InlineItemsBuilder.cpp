@@ -875,7 +875,7 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
     auto currentPosition = partialContentOffset.value_or(0lu);
     ASSERT(currentPosition <= contentLength);
 
-    while (currentPosition < contentLength) {
+    {
         auto handleSegmentBreak = [&] {
             // Segment breaks with preserve new line style (white-space: pre, pre-wrap, break-spaces and pre-line) compute to forced line break.
             auto isSegmentBreakCandidate = text[currentPosition] == newlineCharacter;
@@ -884,9 +884,6 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
             inlineItemList.append(InlineSoftLineBreakItem::createSoftLineBreakItem(inlineTextBox, currentPosition++));
             return true;
         };
-        if (handleSegmentBreak())
-            continue;
-
         auto handleWhitespace = [&] {
             auto stopAtWordSeparatorBoundary = shouldPreserveSpacesAndTabs && style.fontCascade().wordSpacing();
             auto whitespaceContent = text.is8Bit() ?
@@ -907,10 +904,8 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
                 inlineItemList.append(InlineTextItem::createWhitespaceItem(inlineTextBox, currentPosition, whitespaceContent->length, UBIDI_DEFAULT_LTR, whitespaceContent->isWordSeparator, { }));
             currentPosition += whitespaceContent->length;
             return true;
-        };
-        if (handleWhitespace())
-            continue;
 
+        };
         auto handleNonBreakingSpace = [&] {
             if (style.nbspMode() != NBSPMode::Space) {
                 // Let's just defer to regular non-whitespace inline items when non breaking space needs no special handling.
@@ -930,9 +925,6 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
             currentPosition = endPosition;
             return true;
         };
-        if (handleNonBreakingSpace())
-            continue;
-
         auto handleNonWhitespace = [&] {
             auto startPosition = currentPosition;
             auto endPosition = startPosition;
@@ -953,10 +945,18 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
             currentPosition = endPosition;
             return true;
         };
-        if (handleNonWhitespace())
-            continue;
-        // Unsupported content?
-        ASSERT_NOT_REACHED();
+        while (currentPosition < contentLength) {
+            if (handleSegmentBreak())
+                continue;
+            if (handleWhitespace())
+                continue;
+            if (handleNonBreakingSpace())
+                continue;
+            if (handleNonWhitespace())
+                continue;
+            // Unsupported content?
+            ASSERT_NOT_REACHED();
+        }
     }
 }
 
