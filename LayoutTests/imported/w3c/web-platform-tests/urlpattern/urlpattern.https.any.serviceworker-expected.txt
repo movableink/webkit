@@ -200,7 +200,7 @@ PASS Pattern: [{"pathname":"var x = 1;"}] Inputs: [{"pathname":"var x = 1;"}]
 PASS Pattern: [{"pathname":"/foo/bar"}] Inputs: ["./foo/bar","https://example.com"]
 PASS Pattern: [{"pathname":"/foo/bar"}] Inputs: [{"pathname":"/foo/bar"},"https://example.com"]
 PASS Pattern: ["https://example.com:8080/foo?bar#baz"] Inputs: [{"pathname":"/foo","search":"bar","hash":"baz","baseURL":"https://example.com:8080"}]
-FAIL Pattern: ["/foo?bar#baz","https://example.com:8080"] Inputs: [{"pathname":"/foo","search":"bar","hash":"baz","baseURL":"https://example.com:8080"}] Type error
+PASS Pattern: ["/foo?bar#baz","https://example.com:8080"] Inputs: [{"pathname":"/foo","search":"bar","hash":"baz","baseURL":"https://example.com:8080"}]
 PASS Pattern: ["/foo"] Inputs: undefined
 PASS Pattern: ["example.com/foo"] Inputs: undefined
 PASS Pattern: ["http{s}?://{*.}?example.com/:product/:endpoint"] Inputs: ["https://sub.example.com/foo/bar"]
@@ -235,10 +235,10 @@ PASS Pattern: ["foo://bar"] Inputs: ["foo://bad_url_browser_interop"]
 PASS Pattern: ["(café)://foo"] Inputs: undefined
 PASS Pattern: ["https://example.com/foo?bar#baz"] Inputs: [{"protocol":"https:","search":"?bar","hash":"#baz","baseURL":"http://example.com/foo"}]
 PASS Pattern: [{"protocol":"http{s}?:","search":"?bar","hash":"#baz"}] Inputs: ["http://example.com/foo?bar#baz"]
-FAIL Pattern: ["?bar#baz","https://example.com/foo"] Inputs: ["?bar#baz","https://example.com/foo"] Type error
-FAIL Pattern: ["?bar","https://example.com/foo#baz"] Inputs: ["?bar","https://example.com/foo#snafu"] Type error
-FAIL Pattern: ["#baz","https://example.com/foo?bar"] Inputs: ["#baz","https://example.com/foo?bar"] Type error
-FAIL Pattern: ["#baz","https://example.com/foo"] Inputs: ["#baz","https://example.com/foo"] Type error
+PASS Pattern: ["?bar#baz","https://example.com/foo"] Inputs: ["?bar#baz","https://example.com/foo"]
+PASS Pattern: ["?bar","https://example.com/foo#baz"] Inputs: ["?bar","https://example.com/foo#snafu"]
+PASS Pattern: ["#baz","https://example.com/foo?bar"] Inputs: ["#baz","https://example.com/foo?bar"]
+PASS Pattern: ["#baz","https://example.com/foo"] Inputs: ["#baz","https://example.com/foo"]
 PASS Pattern: [{"pathname":"*"}] Inputs: ["foo","data:data-urls-cannot-be-base-urls"]
 PASS Pattern: [{"pathname":"*"}] Inputs: ["foo","not|a|valid|url"]
 PASS Pattern: ["https://foo\\:bar@example.com"] Inputs: ["https://foo:bar@example.com"]
@@ -248,7 +248,7 @@ PASS Pattern: ["https://:user::pass@example.com"] Inputs: ["https://foo:bar@exam
 PASS Pattern: ["https\\:foo\\:bar@example.com"] Inputs: ["https:foo:bar@example.com"]
 PASS Pattern: ["data\\:foo\\:bar@example.com"] Inputs: ["data:foo:bar@example.com"]
 FAIL Pattern: ["https://foo{\\:}bar@example.com"] Inputs: ["https://foo:bar@example.com"] assert_equals: compiled pattern property 'username' expected "foo%3Abar" but got "foo\\:bar"
-FAIL Pattern: ["data{\\:}channel.html","https://example.com"] Inputs: ["https://example.com/data:channel.html"] Type error
+FAIL Pattern: ["data{\\:}channel.html","https://example.com"] Inputs: ["https://example.com/data:channel.html"] assert_equals: compiled pattern property 'pathname' expected "/data\\:channel.html" but got "data\\:channel.html"
 FAIL Pattern: ["http://[\\:\\:1]/"] Inputs: ["http://[::1]/"] Invalid input to canonicalize a URL host string.
 FAIL Pattern: ["http://[\\:\\:1]:8080/"] Inputs: ["http://[::1]:8080/"] Invalid input to canonicalize a URL host string.
 FAIL Pattern: ["http://[\\:\\:a]/"] Inputs: ["http://[::a]/"] Invalid input to canonicalize a URL host string.
@@ -331,11 +331,11 @@ PASS Pattern: [{"pathname":"/:foo\\bar"}] Inputs: [{"pathname":"/bazbar"}]
 PASS Pattern: [{"pathname":"/foo/bar"},{"ignoreCase":true}] Inputs: [{"pathname":"/FOO/BAR"}]
 PASS Pattern: [{"ignoreCase":true}] Inputs: [{"pathname":"/FOO/BAR"}]
 PASS Pattern: ["https://example.com:8080/foo?bar#baz",{"ignoreCase":true}] Inputs: [{"pathname":"/FOO","search":"BAR","hash":"BAZ","baseURL":"https://example.com:8080"}]
-FAIL Pattern: ["/foo?bar#baz","https://example.com:8080",{"ignoreCase":true}] Inputs: [{"pathname":"/FOO","search":"BAR","hash":"BAZ","baseURL":"https://example.com:8080"}] Type error
+PASS Pattern: ["/foo?bar#baz","https://example.com:8080",{"ignoreCase":true}] Inputs: [{"pathname":"/FOO","search":"BAR","hash":"BAZ","baseURL":"https://example.com:8080"}]
 PASS Pattern: ["/foo?bar#baz",{"ignoreCase":true},"https://example.com:8080"] Inputs: [{"pathname":"/FOO","search":"BAR","hash":"BAZ","baseURL":"https://example.com:8080"}]
 PASS Pattern: [{"search":"foo","baseURL":"https://example.com/a/+/b"}] Inputs: [{"search":"foo","baseURL":"https://example.com/a/+/b"}]
 PASS Pattern: [{"hash":"foo","baseURL":"https://example.com/?q=*&v=?&hmm={}&umm=()"}] Inputs: [{"hash":"foo","baseURL":"https://example.com/?q=*&v=?&hmm={}&umm=()"}]
-FAIL Pattern: ["#foo","https://example.com/?q=*&v=?&hmm={}&umm=()"] Inputs: ["https://example.com/?q=*&v=?&hmm={}&umm=()#foo"] Type error
+PASS Pattern: ["#foo","https://example.com/?q=*&v=?&hmm={}&umm=()"] Inputs: ["https://example.com/?q=*&v=?&hmm={}&umm=()#foo"]
 PASS Pattern: [{"pathname":"/([[a-z]--a])"}] Inputs: [{"pathname":"/a"}]
 PASS Pattern: [{"pathname":"/([[a-z]--a])"}] Inputs: [{"pathname":"/z"}]
 PASS Pattern: [{"pathname":"/([\\d&&[0-1]])"}] Inputs: [{"pathname":"/0"}]
