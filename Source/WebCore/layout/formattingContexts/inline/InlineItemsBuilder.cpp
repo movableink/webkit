@@ -97,7 +97,6 @@ void InlineItemsBuilder::build(InlineItemPosition startPosition)
         // FIXME: Add support for partial, yet paragraph level bidi content handling.
         breakAndComputeBidiLevels(inlineItemList);
     }
-    computeInlineBoxBoundaryTextSpacingsIfNeeded(inlineItemList);
 
     auto& inlineItemCache = inlineContentCache().inlineItems();
     auto contentAttributes = computeContentAttributesAndInlineTextItemWidths(inlineItemList, startPosition, inlineItemCache.content());
@@ -129,11 +128,9 @@ void InlineItemsBuilder::build(InlineItemPosition startPosition)
 #endif
 }
 
-void InlineItemsBuilder::computeInlineBoxBoundaryTextSpacingsIfNeeded(const InlineItemList& inlineItemList)
+void InlineItemsBuilder::computeInlineBoxBoundaryTextSpacings(const InlineItemList& inlineItemList)
 {
-    if (!m_hasTextAutospace)
-        return;
-
+    ASSERT(m_hasTextAutospace);
     char32_t lastCharacterFromPreviousRun = 0;
     size_t lastCharacterDepth = 0;
     size_t currentCharacterDepth = 0;
@@ -298,7 +295,6 @@ void InlineItemsBuilder::collectInlineItems(InlineItemList& inlineItemList, Inli
     while (!layoutQueue.isEmpty()) {
         while (true) {
             auto layoutBox = layoutQueue.last();
-            m_hasTextAutospace |= !layoutBox->style().textAutospace().isNoAutospace();
             auto isInlineBoxWithInlineContent = layoutBox->isInlineBox() && !layoutBox->isInlineTextBox() && !layoutBox->isLineBreakBox() && !layoutBox->isOutOfFlowPositioned();
             if (!isInlineBoxWithInlineContent)
                 break;
@@ -741,7 +737,7 @@ static void handleTextSpacing(TextSpacing::SpacingState& spacingState, Trimmable
         spacingState.lastCharacterClassFromPreviousRun = TextSpacing::characterClass(lastCharacterFromPreviousRun);
     } else
         spacingState.lastCharacterClassFromPreviousRun = TextSpacing::CharacterClass::Undefined;
-};
+}
 
 InlineContentCache::InlineItems::ContentAttributes InlineItemsBuilder::computeContentAttributesAndInlineTextItemWidths(InlineItemList& inlineItemList, InlineItemPosition damagePosition, const InlineItemList& damagedItemList)
 {
@@ -772,12 +768,14 @@ InlineContentCache::InlineItems::ContentAttributes InlineItemsBuilder::computeCo
     };
     computeContentAttributesUpToDamage();
 
+    if (m_hasTextAutospace)
+        computeInlineBoxBoundaryTextSpacings(inlineItemList);
+
     TextSpacing::SpacingState spacingState;
     TrimmableTextSpacings trimmableTextSpacings;
-
     auto& inlineBoxBoundaryTextSpacings = inlineContentCache().inlineBoxBoundaryTextSpacings();
     for (size_t inlineItemIndex = 0; inlineItemIndex < inlineItemList.size(); ++inlineItemIndex) {
-        auto extraInlineTextSpacing= 0.f;
+        auto extraInlineTextSpacing = 0.f;
         auto& inlineItem = inlineItemList[inlineItemIndex];
 
         if (auto* inlineTextItem = dynamicDowncast<InlineTextItem>(inlineItem)) {
@@ -963,7 +961,8 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
 void InlineItemsBuilder::handleInlineBoxStart(const Box& inlineBox, InlineItemList& inlineItemList)
 {
     inlineItemList.append({ inlineBox, InlineItem::Type::InlineBoxStart });
-    m_contentRequiresVisualReordering = m_contentRequiresVisualReordering || requiresVisualReordering(inlineBox);
+    m_contentRequiresVisualReordering |= requiresVisualReordering(inlineBox);
+    m_hasTextAutospace |= !inlineBox.style().textAutospace().isNoAutospace();
 }
 
 void InlineItemsBuilder::handleInlineBoxEnd(const Box& inlineBox, InlineItemList& inlineItemList)
