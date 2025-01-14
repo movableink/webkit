@@ -206,6 +206,7 @@ void GStreamerCapturer::setupPipeline()
 
     m_valve = makeElement("valve");
     m_capsfilter = makeElement("capsfilter");
+    auto queue = gst_element_factory_make("queue", nullptr);
     m_sink = makeElement("appsink");
 
     gst_util_set_object_arg(G_OBJECT(m_capsfilter.get()), "caps-change-mode", "delayed");
@@ -214,14 +215,14 @@ void GStreamerCapturer::setupPipeline()
     g_object_set(m_sink.get(), "enable-last-sample", FALSE, nullptr);
     g_object_set(m_capsfilter.get(), "caps", m_caps.get(), nullptr);
 
-    gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), source.get(), m_capsfilter.get(), m_valve.get(), m_sink.get(), nullptr);
+    gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), source.get(), m_capsfilter.get(), m_valve.get(), queue, m_sink.get(), nullptr);
     auto tail = source.get();
     if (converter) {
         gst_bin_add(GST_BIN_CAST(m_pipeline.get()), converter.get());
         gst_element_link(source.get(), converter.get());
         tail = converter.get();
     }
-    gst_element_link_many(tail, m_capsfilter.get(), m_valve.get(), m_sink.get(), nullptr);
+    gst_element_link_many(tail, m_capsfilter.get(), m_valve.get(), queue, m_sink.get(), nullptr);
 }
 
 GstElement* GStreamerCapturer::makeElement(const char* factoryName)
