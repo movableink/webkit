@@ -38,6 +38,42 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+static NSString * const formDataKey = @"formData";
+static NSString * const rawKey = @"raw";
+static NSString * const bytesKey = @"bytes";
+static NSString * const errorKey = @"error";
+
+static NSString * const tabIdKey = @"tabId";
+static NSString * const frameIdKey = @"frameId";
+static NSString * const parentFrameIdKey = @"parentFrameId";
+static NSString * const requestIdKey = @"requestId";
+static NSString * const timeStampKey = @"timeStamp";
+static NSString * const urlKey = @"url";
+static NSString * const typeKey = @"type";
+static NSString * const methodKey = @"method";
+static NSString * const redirectURLKey = @"redirectUrl";
+static NSString * const documentIdKey = @"documentId";
+
+static NSString * const nameKey = @"name";
+static NSString * const valueKey = @"value";
+
+static NSString * const statusLineKey = @"statusLine";
+static NSString * const statusCodeKey = @"statusCode";
+static NSString * const fromCacheKey = @"fromCache";
+
+static NSString * const schemeKey = @"scheme";
+static NSString * const challengerKey = @"challenger";
+static NSString * const hostKey = @"host";
+static NSString * const portKey = @"port";
+static NSString * const isProxyKey = @"isProxy";
+static NSString * const digestSchemeKey = @"digest";
+static NSString * const basicSchemeKey = @"basic";
+static NSString * const realmKey = @"realm";
+
+static NSString * const requestBodyKey = @"requestBody";
+static NSString * const requestHeadersKey = @"requestHeaders";
+static NSString * const responseHeadersKey = @"responseHeaders";
+
 namespace WebKit {
 
 WebExtensionAPIWebRequestEvent& WebExtensionAPIWebRequest::onBeforeRequest()
@@ -174,19 +210,19 @@ static NSString *toWebAPI(const WebCore::FormData& formData, const String& conte
                 auto typedArraySpan = unsafeMakeSpan(typedArrayData, data->size());
                 memcpySpan(typedArraySpan, data->span());
 
-                [rawArray addObject:@{ @"bytes": [JSValue valueWithJSValueRef:typedArray inContext:[JSContext contextWithJSGlobalContextRef:context]] }];
+                [rawArray addObject:@{ bytesKey: [JSValue valueWithJSValueRef:typedArray inContext:[JSContext contextWithJSGlobalContextRef:context]] }];
             }
         }
     }
 
     if (formDataDictionary.count)
-        result[@"formData"] = [formDataDictionary copy];
+        result[formDataKey] = [formDataDictionary copy];
 
     if (rawArray.count)
-        result[@"raw"] = [rawArray copy];
+        result[rawKey] = [rawArray copy];
 
     if (!formDataDictionary.count && !rawArray.count)
-        result[@"error"] = @"Request body data is malformed or unsupported.";
+        result[errorKey] = @"Request body data is malformed or unsupported.";
 
     return [result copy];
 }
@@ -230,18 +266,18 @@ static NSString *toWebAPI(ResourceLoadInfo::Type type)
 static NSMutableDictionary *webRequestDetailsForResourceLoad(const ResourceLoadInfo& resourceLoad, WebExtensionTabIdentifier tabIdentifier)
 {
     NSMutableDictionary *result = [@{
-        @"frameId": resourceLoad.parentFrameID ? @(toWebAPI(toWebExtensionFrameIdentifier(resourceLoad.frameID))) : @(toWebAPI(WebExtensionFrameConstants::MainFrameIdentifier)),
-        @"parentFrameId": resourceLoad.parentFrameID ? @(toWebAPI(toWebExtensionFrameIdentifier(resourceLoad.parentFrameID))) : @(toWebAPI(WebExtensionFrameConstants::NoneIdentifier)),
-        @"requestId": [NSString stringWithFormat:@"%llu", resourceLoad.resourceLoadID.toUInt64()],
-        @"timeStamp": @(floor(resourceLoad.eventTimestamp.approximateWallTime().secondsSinceEpoch().milliseconds())),
-        @"url": resourceLoad.originalURL.string(),
-        @"tabId": @(toWebAPI(tabIdentifier)),
-        @"type": toWebAPI(resourceLoad.type),
-        @"method": resourceLoad.originalHTTPMethod,
+        frameIdKey: resourceLoad.parentFrameID ? @(toWebAPI(toWebExtensionFrameIdentifier(resourceLoad.frameID))) : @(toWebAPI(WebExtensionFrameConstants::MainFrameIdentifier)),
+        parentFrameIdKey: resourceLoad.parentFrameID ? @(toWebAPI(toWebExtensionFrameIdentifier(resourceLoad.parentFrameID))) : @(toWebAPI(WebExtensionFrameConstants::NoneIdentifier)),
+        requestIdKey: [NSString stringWithFormat:@"%llu", resourceLoad.resourceLoadID.toUInt64()],
+        timeStampKey: @(floor(resourceLoad.eventTimestamp.approximateWallTime().secondsSinceEpoch().milliseconds())),
+        urlKey: resourceLoad.originalURL.string(),
+        tabIdKey: @(toWebAPI(tabIdentifier)),
+        typeKey: toWebAPI(resourceLoad.type),
+        methodKey: resourceLoad.originalHTTPMethod,
     } mutableCopy];
 
     if (resourceLoad.documentID)
-        result[@"documentId"] = resourceLoad.documentID.value().toString();
+        result[documentIdKey] = resourceLoad.documentID.value().toString();
 
     return result;
 }
@@ -249,10 +285,10 @@ static NSMutableDictionary *webRequestDetailsForResourceLoad(const ResourceLoadI
 static NSArray *convertHeaderFieldsToWebExtensionFormat(const WebCore::HTTPHeaderMap& headerMap)
 {
     auto *convertedHeaderFields = [NSMutableArray arrayWithCapacity:headerMap.size()];
-    for (auto header : headerMap) {
+    for (auto& header : headerMap) {
         [convertedHeaderFields addObject:@{
-            @"name": header.key,
-            @"value": header.value
+            nameKey: header.key,
+            valueKey: header.value
         }];
     }
 
@@ -265,16 +301,12 @@ static NSMutableDictionary *headersReceivedDetails(const ResourceLoadInfo& resou
 {
     auto *details = webRequestDetailsForResourceLoad(resourceLoad, tabID);
 
-    if (auto *httpResponse = dynamic_objc_cast<NSHTTPURLResponse>(response.nsURLResponse())) {
-        [details addEntriesFromDictionary:@{
-            @"statusLine": bridge_id_cast(CFHTTPMessageCopyResponseStatusLine(CFURLResponseGetHTTPResponse(httpResponse._CFURLResponse))),
-            // FIXME: <rdar://problem/59922101> responseHeaders (here and elsewhere) and all other optional members should check the options object.
-            @"responseHeaders": convertHeaderFieldsToWebExtensionFormat(response.httpHeaderFields()),
-            @"statusCode": @(httpResponse.statusCode),
-            @"fromCache": @(resourceLoad.loadedFromCache)
-            // FIXME: <rdar://problem/57132290> Add ip.
-        }];
-    }
+    [details addEntriesFromDictionary:@{
+        statusLineKey: response.httpStatusText(),
+        statusCodeKey: @(response.httpStatusCode()),
+        fromCacheKey: @(resourceLoad.loadedFromCache),
+        // FIXME: <rdar://problem/57132290> Add ip.
+    }];
 
     return details;
 }
@@ -283,48 +315,71 @@ void WebExtensionContextProxy::resourceLoadDidSendRequest(WebExtensionTabIdentif
 {
     auto *details = webRequestDetailsForResourceLoad(resourceLoad, tabID);
 
-    // FIXME: <rdar://problem/59922101> Chrome documentation says this about requestBody:
-    // Only provided if extraInfoSpec contains 'requestBody'.
-
     RefPtr formData = formDataOptional ? formDataOptional->data() : nullptr;
     auto contentType = request.httpContentType();
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        namespaceObject.webRequest().onBeforeRequest().enumerateListeners(tabID, windowID, resourceLoad, [details = RetainPtr { details }, formData, contentType](WebExtensionCallbackHandler& listener) {
-            if (formData) {
+        namespaceObject.webRequest().onBeforeRequest().enumerateListeners(tabID, windowID, resourceLoad, [&](auto& listener, auto& extraInfo) {
+            if (formData && extraInfo.contains(String(requestBodyKey))) {
                 if (auto *requestBody = toWebAPI(*formData, contentType, listener.globalContext()))
-                    [details setObject:requestBody forKey:@"requestBody"];
+                    [details setObject:requestBody forKey:requestBodyKey];
             }
 
-            listener.call(details.get());
+            listener.call(details);
 
-            [details removeObjectForKey:@"requestBody"];
+            [details removeObjectForKey:requestBodyKey];
         });
     });
 
-    details[@"requestHeaders"] = convertHeaderFieldsToWebExtensionFormat(request.httpHeaderFields());
+    RetainPtr<NSArray> requestHeaders;
+
+    auto handleListeners = [&](auto& listeners) {
+        listeners.enumerateListeners(tabID, windowID, resourceLoad, [&](auto& listener, auto& extraInfo) {
+            if (extraInfo.contains(String(requestHeadersKey))) {
+                if (!requestHeaders)
+                    requestHeaders = convertHeaderFieldsToWebExtensionFormat(request.httpHeaderFields());
+                [details setObject:requestHeaders.get() forKey:requestHeadersKey];
+            }
+
+            listener.call(details);
+
+            [details removeObjectForKey:requestHeadersKey];
+        });
+    };
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        auto& webRequestObject = namespaceObject.webRequest();
-        webRequestObject.onBeforeSendHeaders().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
-        webRequestObject.onSendHeaders().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
+        handleListeners(namespaceObject.webRequest().onBeforeSendHeaders());
+        handleListeners(namespaceObject.webRequest().onSendHeaders());
     });
 }
 
 void WebExtensionContextProxy::resourceLoadDidPerformHTTPRedirection(WebExtensionTabIdentifier tabID, WebExtensionWindowIdentifier windowID, const WebCore::ResourceResponse& response, const ResourceLoadInfo& resourceLoad, const WebCore::ResourceRequest& newRequest)
 {
     auto *details = headersReceivedDetails(resourceLoad, tabID, response);
+    NSArray *responseHeaders;
+
+    auto handleListeners = [&](auto& listeners) {
+        listeners.enumerateListeners(tabID, windowID, resourceLoad, [&](auto& listener, auto& extraInfo) {
+            if (extraInfo.contains(String(responseHeadersKey))) {
+                if (!responseHeaders)
+                    responseHeaders = convertHeaderFieldsToWebExtensionFormat(response.httpHeaderFields());
+                [details setObject:responseHeaders forKey:responseHeadersKey];
+            }
+
+            listener.call(details);
+
+            [details removeObjectForKey:responseHeadersKey];
+        });
+    };
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        auto& webRequestObject = namespaceObject.webRequest();
-        webRequestObject.onHeadersReceived().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
+        handleListeners(namespaceObject.webRequest().onHeadersReceived());
     });
 
-    details[@"redirectUrl"] = newRequest.url().string();
+    details[redirectURLKey] = newRequest.url().string();
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        auto& webRequestObject = namespaceObject.webRequest();
-        webRequestObject.onBeforeRedirect().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
+        handleListeners(namespaceObject.webRequest().onBeforeRedirect());
     });
 }
 
@@ -342,31 +397,44 @@ void WebExtensionContextProxy::resourceLoadDidReceiveChallenge(WebExtensionTabId
 
     auto *details = headersReceivedDetails(resourceLoad, tabID, webCoreChallenge.failureResponse());
     [details addEntriesFromDictionary:@{
-        @"scheme": [challenge.protectionSpace.authenticationMethod isEqualToString:NSURLAuthenticationMethodHTTPDigest] ? @"digest" : @"basic",
-        @"challenger": @{
-            @"host": challenge.protectionSpace.host,
-            @"port": @(challenge.protectionSpace.port)
+        schemeKey: [challenge.protectionSpace.authenticationMethod isEqualToString:NSURLAuthenticationMethodHTTPDigest] ? digestSchemeKey : basicSchemeKey,
+        challengerKey: @{
+            hostKey: challenge.protectionSpace.host,
+            portKey: @(challenge.protectionSpace.port)
         },
-        @"isProxy": @(challenge.protectionSpace.isProxy),
+        isProxyKey: @(challenge.protectionSpace.isProxy),
     }];
 
     if (auto *realm = challenge.protectionSpace.realm)
-        details[@"realm"] = realm;
+        details[realmKey] = realm;
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        auto& webRequestObject = namespaceObject.webRequest();
-        webRequestObject.onAuthRequired().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
+        namespaceObject.webRequest().onAuthRequired().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
     });
 }
 
 void WebExtensionContextProxy::resourceLoadDidReceiveResponse(WebExtensionTabIdentifier tabID, WebExtensionWindowIdentifier windowID, const WebCore::ResourceResponse& response, const ResourceLoadInfo& resourceLoad)
 {
     auto *details = headersReceivedDetails(resourceLoad, tabID, response);
+    NSArray *responseHeaders;
+
+    auto handleListeners = [&](auto& listeners) {
+        listeners.enumerateListeners(tabID, windowID, resourceLoad, [&](auto& listener, auto& extraInfo) {
+            if (extraInfo.contains(String(responseHeadersKey))) {
+                if (!responseHeaders)
+                    responseHeaders = convertHeaderFieldsToWebExtensionFormat(response.httpHeaderFields());
+                [details setObject:responseHeaders forKey:responseHeadersKey];
+            }
+
+            listener.call(details);
+
+            [details removeObjectForKey:responseHeadersKey];
+        });
+    };
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        auto& webRequestObject = namespaceObject.webRequest();
-        webRequestObject.onHeadersReceived().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
-        webRequestObject.onResponseStarted().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
+        handleListeners(namespaceObject.webRequest().onHeadersReceived());
+        handleListeners(namespaceObject.webRequest().onResponseStarted());
     });
 }
 
@@ -376,22 +444,34 @@ void WebExtensionContextProxy::resourceLoadDidCompleteWithError(WebExtensionTabI
 
     if (!error.isNull()) {
         [details addEntriesFromDictionary:@{
-            @"tabId": @(toWebAPI(tabID)),
-            @"error": @"net::ERR_ABORTED"
+            tabIdKey: @(toWebAPI(tabID)),
+            errorKey: @"net::ERR_ABORTED"
         }];
 
         enumerateNamespaceObjects([&](auto& namespaceObject) {
-            auto& webRequestObject = namespaceObject.webRequest();
-            webRequestObject.onErrorOccurred().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
+            namespaceObject.webRequest().onErrorOccurred().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
         });
-    } else {
-        [details addEntriesFromDictionary:headersReceivedDetails(resourceLoad, tabID, response)];
 
-        enumerateNamespaceObjects([&](auto& namespaceObject) {
-            auto& webRequestObject = namespaceObject.webRequest();
-            webRequestObject.onCompleted().invokeListenersWithArgument(details, tabID, windowID, resourceLoad);
-        });
+        return;
     }
+
+    [details addEntriesFromDictionary:headersReceivedDetails(resourceLoad, tabID, response)];
+
+    NSArray *responseHeaders;
+
+    enumerateNamespaceObjects([&](auto& namespaceObject) {
+        namespaceObject.webRequest().onCompleted().enumerateListeners(tabID, windowID, resourceLoad, [&](auto& listener, auto& extraInfo) {
+            if (extraInfo.contains(String(responseHeadersKey))) {
+                if (!responseHeaders)
+                    responseHeaders = convertHeaderFieldsToWebExtensionFormat(response.httpHeaderFields());
+                [details setObject:responseHeaders forKey:responseHeadersKey];
+            }
+
+            listener.call(details);
+
+            [details removeObjectForKey:responseHeadersKey];
+        });
+    });
 }
 
 } // namespace WebKit
