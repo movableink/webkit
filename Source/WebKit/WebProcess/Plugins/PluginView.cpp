@@ -1185,6 +1185,14 @@ bool PluginView::populateEditorStateIfNeeded(EditorState& state) const
     return protectedPlugin()->populateEditorStateIfNeeded(state);
 }
 
+bool PluginView::shouldRespectPageScaleAdjustments() const
+{
+    if (!m_isInitialized)
+        return false;
+
+    return protectedPlugin()->shouldRespectPageScaleAdjustments();
+}
+
 } // namespace WebKit
 
 #endif

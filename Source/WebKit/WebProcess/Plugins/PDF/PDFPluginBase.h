@@ -332,6 +332,8 @@ public:
 
     bool populateEditorStateIfNeeded(EditorState&) const;
 
+    virtual bool shouldRespectPageScaleAdjustments() const { return true; }
+
 protected:
     virtual double contentScaleFactor() const = 0;
     virtual bool platformPopulateEditorStateIfNeeded(EditorState&) const { return false; }

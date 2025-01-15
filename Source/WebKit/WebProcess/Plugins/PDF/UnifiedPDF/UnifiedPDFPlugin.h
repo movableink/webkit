@@ -215,6 +215,8 @@ public:
     double minScaleFactor() const final;
     double maxScaleFactor() const final;
 
+    bool shouldRespectPageScaleAdjustments() const final;
+
 private:
     explicit UnifiedPDFPlugin(WebCore::HTMLPlugInElement&);
     bool isUnifiedPDFPlugin() const override { return true; }

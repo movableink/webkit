@@ -160,6 +160,8 @@ public:
 
     void focusPluginElement();
 
+    bool shouldRespectPageScaleAdjustments() const;
+
 private:
     PluginView(WebCore::HTMLPlugInElement&, const URL&, const String& contentType, bool shouldUseManualLoader, WebPage&);
     virtual ~PluginView();

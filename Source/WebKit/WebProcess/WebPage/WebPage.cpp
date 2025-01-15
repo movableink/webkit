@@ -2576,9 +2576,11 @@ void WebPage::didScalePage(double scale, const IntPoint& origin)
     if (auto* pluginView = mainFramePlugIn()) {
         // Since the main-frame PDF plug-in handles the page scale factor, make sure to reset WebCore's page scale.
         // Otherwise, we can end up with an immutable but non-1 page scale applied by WebCore on top of whatever the plugin does.
-        if (m_page->pageScaleFactor() != 1)
-            m_page->setPageScaleFactor(1, origin);
-        pluginView->setPageScaleFactor(totalScale, { origin });
+        if (pluginView->shouldRespectPageScaleAdjustments()) {
+            if (m_page->pageScaleFactor() != 1)
+                m_page->setPageScaleFactor(1, origin);
+            pluginView->setPageScaleFactor(totalScale, { origin });
+        }
         return;
     }
 #endif
@@ -2590,8 +2592,10 @@ void WebPage::didScalePage(double scale, const IntPoint& origin)
         return;
 
 #if ENABLE(PDF_PLUGIN)
-    for (auto& pluginView : m_pluginViews)
-        pluginView.setPageScaleFactor(totalScale, { origin });
+    for (auto& pluginView : m_pluginViews) {
+        if (pluginView.shouldRespectPageScaleAdjustments())
+            pluginView.setPageScaleFactor(totalScale, { origin });
+    }
 #endif
 
 #if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)

@@ -4336,6 +4336,16 @@ auto UnifiedPDFPlugin::rootViewToPage(FloatPoint pointInRootView) const -> PageA
     return { m_documentLayout.pageAtIndex(pageIndex), pointInPage };
 }
 
+// FIXME: <https://webkit.org/b/285720> Plugin should respect page scale adjustments unconditionally.
+bool UnifiedPDFPlugin::shouldRespectPageScaleAdjustments() const
+{
+#if PLATFORM(IOS_FAMILY)
+    return false;
+#else
+    return true;
+#endif
+}
+
 TextStream& operator<<(TextStream& ts, RepaintRequirement requirement)
 {
     switch (requirement) {
