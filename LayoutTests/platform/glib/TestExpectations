@@ -4258,6 +4258,8 @@ webkit.org/b/213783 webanimations/accelerated-animation-with-easing.html [ Failu
 
 webkit.org/b/216763 webrtc/captureCanvas-webrtc-software-h264-high.html [ Skip ] # Timeout
 
+webkit.org/b/285921 media/media-source/media-source-seek-past-end.html [ Failure ]
+
 # End: Common failures between GTK and WPE.
 
 #////////////////////////////////////////////////////////////////////////////////////////
