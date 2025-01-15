@@ -809,9 +809,11 @@ bool PageClientImpl::isFullScreen()
     return m_impl->fullScreenWindowController().isFullScreen;
 }
 
-void PageClientImpl::enterFullScreen()
+void PageClientImpl::enterFullScreen(CompletionHandler<void(bool)>&& completionHandler)
 {
-    [m_impl->fullScreenWindowController() enterFullScreen:nil];
+    if (!m_impl->fullScreenWindowController())
+        return completionHandler(false);
+    [m_impl->fullScreenWindowController() enterFullScreen:nil completionHandler:WTFMove(completionHandler)];
 }
 
 void PageClientImpl::exitFullScreen()

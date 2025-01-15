@@ -221,10 +221,10 @@ static RetainPtr<CGImageRef> createImageWithCopiedData(CGImageRef sourceImage)
     return adoptCF(CGImageCreate(width, height, bitsPerComponent, bitsPerPixel, bytesPerRow, colorSpace, bitmapInfo, provider.get(), 0, shouldInterpolate, intent));
 }
 
-- (void)enterFullScreen:(NSScreen *)screen
+- (void)enterFullScreen:(NSScreen *)screen completionHandler:(CompletionHandler<void(bool)>&&)completionHandler
 {
     if ([self isFullScreen])
-        return;
+        return completionHandler(false);
     _fullScreenState = WaitingToEnterFullScreen;
 
     if (!screen)
@@ -277,7 +277,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _savedScale = _page->pageScaleFactor();
     _page->scalePageRelativeToScrollPosition(1, { });
     [self _manager]->setAnimatingFullScreen(true);
-    [self _manager]->willEnterFullScreen();
+    [self _manager]->willEnterFullScreen(WTFMove(completionHandler));
 }
 
 - (void)beganEnterFullScreenWithInitialFrame:(NSRect)initialFrame finalFrame:(NSRect)finalFrame

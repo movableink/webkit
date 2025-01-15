@@ -5215,8 +5215,7 @@ Ref<VideoPresentationManager> WebPage::protectedVideoPresentationManager()
 void WebPage::videoControlsManagerDidChange()
 {
 #if ENABLE(FULLSCREEN_API)
-    if (auto* manager = fullScreenManager())
-        manager->videoControlsManagerDidChange();
+    fullScreenManager().videoControlsManagerDidChange();
 #endif
 }
 
@@ -5308,11 +5307,16 @@ void WebPage::setAllowsMediaDocumentInlinePlayback(bool allows)
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-WebFullScreenManager* WebPage::fullScreenManager()
+WebFullScreenManager& WebPage::fullScreenManager()
 {
     if (!m_fullScreenManager)
         m_fullScreenManager = WebFullScreenManager::create(*this);
-    return m_fullScreenManager.get();
+    return *m_fullScreenManager;
+}
+
+Ref<WebFullScreenManager> WebPage::protectedFullscreenManager()
+{
+    return fullScreenManager();
 }
 
 void WebPage::isInFullscreenChanged(IsInFullscreenMode isInFullscreenMode)
@@ -6222,7 +6226,7 @@ bool WebPage::dispatchMessage(IPC::Connection& connection, IPC::Decoder& decoder
 
 #if ENABLE(FULLSCREEN_API)
     if (decoder.messageReceiverName() == Messages::WebFullScreenManager::messageReceiverName()) {
-        fullScreenManager()->didReceiveMessage(connection, decoder);
+        fullScreenManager().didReceiveMessage(connection, decoder);
         return true;
     }
 #endif

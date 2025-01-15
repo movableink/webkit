@@ -621,7 +621,8 @@ public:
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-    WebFullScreenManager* fullScreenManager();
+    WebFullScreenManager& fullScreenManager();
+    Ref<WebFullScreenManager> protectedFullscreenManager();
 
     enum class IsInFullscreenMode : bool { No, Yes };
     void isInFullscreenChanged(IsInFullscreenMode);

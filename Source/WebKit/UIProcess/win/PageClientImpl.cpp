@@ -316,9 +316,10 @@ bool PageClientImpl::isFullScreen()
     return false;
 }
 
-void PageClientImpl::enterFullScreen()
+void PageClientImpl::enterFullScreen(CompletionHandler<void(bool)>&& completionHandler)
 {
     notImplemented();
+    completionHandler(false);
 }
 
 void PageClientImpl::exitFullScreen()

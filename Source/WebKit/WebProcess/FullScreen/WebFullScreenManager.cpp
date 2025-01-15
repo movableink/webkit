@@ -247,15 +247,11 @@ FullScreenMediaDetails WebFullScreenManager::getImageMediaDetails(CheckedPtr<Ren
 }
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
 
-void WebFullScreenManager::enterFullScreenForElement(WebCore::Element* element, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode)
+void WebFullScreenManager::enterFullScreenForElement(WebCore::Element& element, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
-    ASSERT(element);
-    if (!element)
-        return;
+    ALWAYS_LOG(LOGIDENTIFIER, "<", element.tagName(), " id=\"", element.getIdAttribute(), "\">");
 
-    ALWAYS_LOG(LOGIDENTIFIER, "<", element->tagName(), " id=\"", element->getIdAttribute(), "\">");
-
-    setElement(*element);
+    setElement(element);
 
 
     FullScreenMediaDetails mediaDetails;
@@ -286,7 +282,7 @@ void WebFullScreenManager::enterFullScreenForElement(WebCore::Element* element, 
 
         auto mainVideoElementSize = [&]() -> FloatSize {
 #if PLATFORM(VISION)
-            if (!fullscreenElementIsVideoElement && element->document().quirks().shouldDisableFullscreenVideoAspectRatioAdaptiveSizing())
+            if (!fullscreenElementIsVideoElement && element.document().quirks().shouldDisableFullscreenVideoAspectRatioAdaptiveSizing())
                 return { };
 #endif
             return FloatSize(m_mainVideoElement->videoWidth(), m_mainVideoElement->videoHeight());
@@ -300,7 +296,7 @@ void WebFullScreenManager::enterFullScreenForElement(WebCore::Element* element, 
 #endif
 
     m_page->prepareToEnterElementFullScreen();
-    m_page->injectedBundleFullScreenClient().enterFullScreenForElement(m_page.ptr(), element, m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), mode, WTFMove(mediaDetails));
+    m_page->injectedBundleFullScreenClient().enterFullScreenForElement(m_page.get(), element, m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), mode, WTFMove(mediaDetails));
 
     if (mode == WebCore::HTMLMediaElementEnums::VideoFullscreenModeInWindow) {
         willEnterFullScreen(mode);

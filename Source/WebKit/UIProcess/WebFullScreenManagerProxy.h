@@ -67,9 +67,9 @@ public:
     virtual void closeFullScreenManager() = 0;
     virtual bool isFullScreen() = 0;
 #if PLATFORM(IOS_FAMILY)
-    virtual void enterFullScreen(WebCore::FloatSize mediaDimensions) = 0;
+    virtual void enterFullScreen(WebCore::FloatSize mediaDimensions, CompletionHandler<void(bool)>&&) = 0;
 #else
-    virtual void enterFullScreen() = 0;
+    virtual void enterFullScreen(CompletionHandler<void(bool)>&&) = 0;
 #endif
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     virtual void updateImageSource() = 0;
@@ -113,7 +113,7 @@ public:
         ExitingFullscreen,
     };
     FullscreenState fullscreenState() const { return m_fullscreenState; }
-    void willEnterFullScreen(WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard);
+    void willEnterFullScreen(CompletionHandler<void(bool)>&&);
     void didEnterFullScreen();
     void willExitFullScreen();
     void didExitFullScreen();
@@ -135,7 +135,7 @@ private:
     WebFullScreenManagerProxy(WebPageProxy&, WebFullScreenManagerProxyClient&);
 
     void supportsFullScreen(bool withKeyboard, CompletionHandler<void(bool)>&&);
-    void enterFullScreen(bool blocksReturnToFullscreenFromPictureInPicture, FullScreenMediaDetails&&);
+    void enterFullScreen(bool blocksReturnToFullscreenFromPictureInPicture, FullScreenMediaDetails&&, CompletionHandler<void(bool)>&&);
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     void updateImageSource(FullScreenMediaDetails&&);
 #endif

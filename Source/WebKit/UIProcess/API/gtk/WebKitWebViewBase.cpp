@@ -2620,12 +2620,14 @@ static bool webkitWebViewBaseToplevelOnScreenWindowIsFullScreen(WebKitWebViewBas
     return priv->toplevelOnScreenWindow && priv->toplevelOnScreenWindow->isFullscreen();
 }
 
-void webkitWebViewBaseWillEnterFullScreen(WebKitWebViewBase* webkitWebViewBase)
+void webkitWebViewBaseWillEnterFullScreen(WebKitWebViewBase* webkitWebViewBase, CompletionHandler<void(bool)>&& completionHandler)
 {
     WebKitWebViewBasePrivate* priv = webkitWebViewBase->priv;
     ASSERT(priv->fullScreenState == WebFullScreenManagerProxy::FullscreenState::NotInFullscreen);
     if (auto* fullScreenManagerProxy = priv->pageProxy->fullScreenManager())
-        fullScreenManagerProxy->willEnterFullScreen();
+        fullScreenManagerProxy->willEnterFullScreen(WTFMove(completionHandler));
+    else
+        completionHandler(false);
     priv->fullScreenState = WebFullScreenManagerProxy::FullscreenState::EnteringFullscreen;
 }
 

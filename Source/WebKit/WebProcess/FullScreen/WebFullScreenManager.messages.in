@@ -28,7 +28,6 @@
 messages -> WebFullScreenManager {
     RequestRestoreFullScreen() -> (bool succeeded) Async
     RequestExitFullScreen()
-    WillEnterFullScreen(WebCore::MediaPlayerEnums::VideoFullscreenMode mode);
     DidEnterFullScreen()
     WillExitFullScreen()
     DidExitFullScreen()

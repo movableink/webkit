@@ -34,6 +34,7 @@
 #include "WKAPICast.h"
 #include "WKBundleAPICast.h"
 #include "WKSharedAPICast.h"
+#include "WebFullScreenManager.h"
 #include "WebFullScreenManagerProxyMessages.h"
 #include "WebPage.h"
 #include <WebCore/Element.h>
@@ -51,13 +52,17 @@ bool InjectedBundlePageFullScreenClient::supportsFullScreen(WebPage *page, bool 
     return supports;
 }
 
-void InjectedBundlePageFullScreenClient::enterFullScreenForElement(WebPage* page, WebCore::Element* element, bool blocksReturnToFullscreenFromPictureInPicture, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode, FullScreenMediaDetails&& mediaDetails)
+void InjectedBundlePageFullScreenClient::enterFullScreenForElement(WebPage& page, WebCore::Element& element, bool blocksReturnToFullscreenFromPictureInPicture, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode, FullScreenMediaDetails&& mediaDetails)
 {
     if (m_client.enterFullScreenForElement) {
-        RefPtr<InjectedBundleNodeHandle> nodeHandle = InjectedBundleNodeHandle::getOrCreate(element);
+        RefPtr<InjectedBundleNodeHandle> nodeHandle = InjectedBundleNodeHandle::getOrCreate(&element);
         m_client.enterFullScreenForElement(toAPI(page), toAPI(nodeHandle.get()));
-    } else if (mode != WebCore::HTMLMediaElementEnums::VideoFullscreenModeInWindow)
-        page->send(Messages::WebFullScreenManagerProxy::EnterFullScreen(blocksReturnToFullscreenFromPictureInPicture, WTFMove(mediaDetails)));
+    } else if (mode != WebCore::HTMLMediaElementEnums::VideoFullscreenModeInWindow) {
+        page.sendWithAsyncReply(Messages::WebFullScreenManagerProxy::EnterFullScreen(blocksReturnToFullscreenFromPictureInPicture, WTFMove(mediaDetails)), [page = Ref { page }] (bool success) {
+            if (success)
+                page->protectedFullscreenManager()->willEnterFullScreen();
+        });
+    }
 }
 
 void InjectedBundlePageFullScreenClient::exitFullScreenForElement(WebPage *page, WebCore::Element *element, bool isInInWindowFullScreenMode)

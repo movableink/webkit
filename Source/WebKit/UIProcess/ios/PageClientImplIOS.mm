@@ -785,9 +785,11 @@ bool PageClientImpl::isFullScreen()
     return [webView fullScreenWindowController].isFullScreen;
 }
 
-void PageClientImpl::enterFullScreen(FloatSize mediaDimensions)
+void PageClientImpl::enterFullScreen(FloatSize mediaDimensions, CompletionHandler<void(bool)>&& completionHandler)
 {
-    [[webView() fullScreenWindowController] enterFullScreen:mediaDimensions];
+    if (![webView() fullScreenWindowController])
+        return completionHandler(false);
+    [[webView() fullScreenWindowController] enterFullScreen:mediaDimensions completionHandler:WTFMove(completionHandler)];
 }
 
 #if ENABLE(QUICKLOOK_FULLSCREEN)

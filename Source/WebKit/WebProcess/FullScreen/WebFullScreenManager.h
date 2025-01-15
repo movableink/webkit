@@ -66,7 +66,7 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
 
     bool supportsFullScreenForElement(const WebCore::Element&, bool withKeyboard);
-    void enterFullScreenForElement(WebCore::Element*, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
+    void enterFullScreenForElement(WebCore::Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     void updateImageSource(WebCore::Element&);
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
