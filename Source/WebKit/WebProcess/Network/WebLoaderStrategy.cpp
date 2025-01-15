@@ -889,21 +889,15 @@ void WebLoaderStrategy::didFinishPingLoad(WebCore::ResourceLoaderIdentifier ping
 
 void WebLoaderStrategy::preconnectTo(FrameLoader& frameLoader, const URL& url, StoredCredentialsPolicy storedCredentialsPolicy, ShouldPreconnectAsFirstParty shouldPreconnectAsFirstParty, PreconnectCompletionHandler&& completionHandler)
 {
-    auto* webFrameLoaderClient = toWebLocalFrameLoaderClient(frameLoader.client());
-    if (!webFrameLoaderClient) {
-        if (completionHandler)
-            completionHandler(internalError(url));
-        return;
-    }
-    auto& webFrame = webFrameLoaderClient->webFrame();
-    auto* webPage = webFrame.page();
-    if (!webPage) {
-        if (completionHandler)
-            completionHandler(internalError(url));
-        return;
-    }
+    RefPtr webFrame = WebProcess::singleton().webFrame(frameLoader.frameID());
+    if (!webFrame)
+        return completionHandler(internalError(url));
 
-    preconnectTo(ResourceRequest { url }, *webPage, webFrame, storedCredentialsPolicy, shouldPreconnectAsFirstParty, WTFMove(completionHandler));
+    RefPtr webPage = webFrame->page();
+    if (!webPage)
+        return completionHandler(internalError(url));
+
+    preconnectTo(ResourceRequest { url }, *webPage, *webFrame, storedCredentialsPolicy, shouldPreconnectAsFirstParty, WTFMove(completionHandler));
 }
 
 void WebLoaderStrategy::preconnectTo(WebCore::ResourceRequest&& request, WebPage& webPage, WebFrame& webFrame, WebCore::StoredCredentialsPolicy storedCredentialsPolicy, ShouldPreconnectAsFirstParty shouldPreconnectAsFirstParty, PreconnectCompletionHandler&& completionHandler)
