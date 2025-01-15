@@ -206,10 +206,6 @@ static void webKitSettingsConstructed(GObject* object)
     WebKitSettings* settings = WEBKIT_SETTINGS(object);
     [[maybe_unused]] RefPtr prefs = settings->priv->preferences.get();
 
-#if ENABLE(MEDIA_STREAM)
-    ASSERT(prefs->mediaDevicesEnabled() == prefs->mediaStreamEnabled());
-#endif
-
     // FIXME: Expose API for MediaSession when the feature is officially non-experimental.
 }
 
@@ -1388,7 +1384,7 @@ static void webkit_settings_class_init(WebKitSettingsClass* klass)
             _("Enable MediaStream"),
             _("Whether MediaStream content should be handled"),
 #if ENABLE(MEDIA_STREAM)
-            FEATURE_DEFAULT(MediaStreamEnabled),
+            FEATURE_DEFAULT(MediaDevicesEnabled),
 #else
             FALSE,
 #endif
@@ -3450,7 +3446,8 @@ gboolean webkit_settings_get_enable_media_stream(WebKitSettings* settings)
 {
     g_return_val_if_fail(WEBKIT_IS_SETTINGS(settings), FALSE);
 
-    return settings->priv->preferences->mediaStreamEnabled();
+    // FIXME: We may want to deprecate this and add new API for media devices.
+    return settings->priv->preferences->mediaDevicesEnabled();
 }
 
 /**
@@ -3467,12 +3464,11 @@ void webkit_settings_set_enable_media_stream(WebKitSettings* settings, gboolean 
     g_return_if_fail(WEBKIT_IS_SETTINGS(settings));
 
     WebKitSettingsPrivate* priv = settings->priv;
-    bool currentValue = priv->preferences->mediaStreamEnabled();
+    bool currentValue = priv->preferences->mediaDevicesEnabled();
     if (currentValue == enabled)
         return;
 
     priv->preferences->setMediaDevicesEnabled(enabled);
-    priv->preferences->setMediaStreamEnabled(enabled);
     g_object_notify_by_pspec(G_OBJECT(settings), sObjProperties[PROP_ENABLE_MEDIA_STREAM]);
 }
 

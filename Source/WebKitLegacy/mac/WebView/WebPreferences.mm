@@ -2372,16 +2372,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:flag forKey:WebKitMediaDevicesEnabledPreferenceKey];
 }
 
-- (BOOL)mediaStreamEnabled
-{
-    return [self _boolValueForKey:WebKitMediaStreamEnabledPreferenceKey];
-}
-
-- (void)setMediaStreamEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitMediaStreamEnabledPreferenceKey];
-}
-
 - (BOOL)peerConnectionEnabled
 {
     return [self _boolValueForKey:WebKitPeerConnectionEnabledPreferenceKey];
@@ -2724,7 +2714,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:enabled forKey:WebKitSiteSpecificQuirksModeEnabledPreferenceKey];
 }
 
-
 @end
 
 @implementation WebPreferences (WebInternal)
@@ -2982,6 +2971,15 @@ static RetainPtr<NSString>& classIBCreatorID()
 
 // The preferences in this category are deprecated and have no effect. They should
 // be removed when it is considered safe to do so.
+
+- (BOOL)mediaStreamEnabled
+{
+    return YES;
+}
+
+- (void)setMediaStreamEnabled:(BOOL)flag
+{
+}
 
 - (BOOL)linkPreloadResponsiveImagesEnabled
 {

@@ -1128,16 +1128,6 @@ bool WKPreferencesGetMediaDevicesEnabled(WKPreferencesRef preferencesRef)
     return toImpl(preferencesRef)->mediaDevicesEnabled();
 }
 
-void WKPreferencesSetMediaStreamEnabled(WKPreferencesRef preferencesRef, bool enabled)
-{
-    toImpl(preferencesRef)->setMediaStreamEnabled(enabled);
-}
-
-bool WKPreferencesGetMediaStreamEnabled(WKPreferencesRef preferencesRef)
-{
-    return toImpl(preferencesRef)->mediaStreamEnabled();
-}
-
 void WKPreferencesSetPeerConnectionEnabled(WKPreferencesRef preferencesRef, bool enabled)
 {
     toImpl(preferencesRef)->setPeerConnectionEnabled(enabled);
@@ -2114,6 +2104,15 @@ void WKPreferencesSetServerTimingEnabled(WKPreferencesRef, bool)
 }
 
 bool WKPreferencesGetServerTimingEnabled(WKPreferencesRef)
+{
+    return true;
+}
+
+void WKPreferencesSetMediaStreamEnabled(WKPreferencesRef preferencesRef, bool enabled)
+{
+}
+
+bool WKPreferencesGetMediaStreamEnabled(WKPreferencesRef preferencesRef)
 {
     return true;
 }

@@ -129,7 +129,6 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL asyncFrameScrollingEnabled;
 @property (nonatomic, getter=isSpatialNavigationEnabled) BOOL spatialNavigationEnabled;
 @property (nonatomic) BOOL mediaDevicesEnabled;
-@property (nonatomic) BOOL mediaStreamEnabled;
 @property (nonatomic) BOOL peerConnectionEnabled;
 @property (nonatomic) WebKitEditableLinkBehavior editableLinkBehavior;
 @property (nonatomic) WebTextDirectionSubmenuInclusionBehavior textDirectionSubmenuInclusionBehavior;
@@ -353,6 +352,7 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL offlineWebApplicationCacheEnabled;
 @property (nonatomic) int64_t applicationCacheTotalQuota;
 @property (nonatomic) int64_t applicationCacheDefaultOriginQuota;
+@property (nonatomic) BOOL mediaStreamEnabled;
 
 #if TARGET_OS_IPHONE
 @property (nonatomic) BOOL networkDataUsageTrackingEnabled;

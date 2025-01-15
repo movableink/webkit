@@ -1226,16 +1226,6 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return _preferences->mainContentUserGestureOverrideEnabled();
 }
 
-- (void)_setMediaStreamEnabled:(BOOL)enabled
-{
-    _preferences->setMediaStreamEnabled(enabled);
-}
-
-- (BOOL)_mediaStreamEnabled
-{
-    return _preferences->mediaStreamEnabled();
-}
-
 - (void)_setNeedsStorageAccessFromFileURLsQuirk:(BOOL)enabled
 {
     _preferences->setNeedsStorageAccessFromFileURLsQuirk(enabled);
@@ -1917,6 +1907,15 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 
 - (void)_setOfflineApplicationCacheIsEnabled:(BOOL)offlineApplicationCacheIsEnabled
 {
+}
+
+- (void)_setMediaStreamEnabled:(BOOL)enabled
+{
+}
+
+- (BOOL)_mediaStreamEnabled
+{
+    return YES;
 }
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKPreferencesAdditions.mm>)
