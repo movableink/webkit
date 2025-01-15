@@ -7544,11 +7544,11 @@ TEST(ProcessSwap, SameSiteWindowWithOpenerNavigateToFile)
 
     using namespace TestWebKitAPI;
     checkFrameTreesInProcesses(webView.get(), {
-        { "pson://www.webkit.org"_s }
+        { "pson://www.webkit.org"_s }, { RemoteFrame }
     });
 
     checkFrameTreesInProcesses(createdWebView.get(), {
-        { "file://"_s }
+        { RemoteFrame }, { "file://"_s }
     });
 
     [createdWebView goBack];
