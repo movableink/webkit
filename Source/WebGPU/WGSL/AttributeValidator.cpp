@@ -366,7 +366,7 @@ void AttributeValidator::visit(AST::Structure& structure)
         size = offset;
         size += *fieldSize;
         if (UNLIKELY(size.hasOverflowed()))
-            size = currentSize;
+            size = std::numeric_limits<unsigned>::max();
 
         if (previousMember)
             previousMember->m_padding = offset - previousSize;
