@@ -145,7 +145,12 @@ void InlineItemsBuilder::computeInlineBoxBoundaryTextSpacings(const InlineItemLi
             continue;
         }
         if (inlineItem.isInlineBoxEnd()) {
-            --currentCharacterDepth;
+            if (!currentCharacterDepth--) {
+                ASSERT_NOT_REACHED();
+                // Skip unbalanced inline box start/end pairs.
+                processInlineBoxBoundary = false;
+                continue;
+            }
             processInlineBoxBoundary = true;
             continue;
         }
