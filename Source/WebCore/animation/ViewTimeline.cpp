@@ -215,7 +215,11 @@ void ViewTimeline::cacheCurrentTime()
 
         float scrollOffset = scrollDirection->isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
         float scrollContainerSize = scrollDirection->isVertical ? sourceScrollableArea->visibleHeight() : sourceScrollableArea->visibleWidth();
-        auto subjectOffsetFromSource = subjectRenderer->localToContainerPoint(pointForLocalToContainer(*sourceScrollableArea), sourceRenderer.get());
+
+        // https://drafts.csswg.org/scroll-animations-1/#view-timelines-ranges
+        // Transforms are ignored, but relative and absolute positioning are accounted for.
+        OptionSet<MapCoordinatesMode> excludeTransforms { };
+        auto subjectOffsetFromSource = subjectRenderer->localToContainerPoint(pointForLocalToContainer(*sourceScrollableArea), sourceRenderer.get(), excludeTransforms);
         float subjectOffset = scrollDirection->isVertical ? subjectOffsetFromSource.y() : subjectOffsetFromSource.x();
 
         // Ensure borders are subtracted.
