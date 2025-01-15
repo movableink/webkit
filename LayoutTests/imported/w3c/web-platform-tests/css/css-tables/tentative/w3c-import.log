@@ -22,6 +22,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/colspan-redistribution.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/column-widths.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/element-sizing.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/padding-percentage-expected.xht
+/LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/padding-percentage.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/position-sticky-container.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/rowspan-height-redistribution.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/section-no-tbody-fixed-distribution-expected.html
@@ -32,6 +34,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/table-height-redistribution.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/table-minmax.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/table-quirks.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/table-rows-with-zero-columns.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/table-width-redistribution-fixed-padding.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/table-width-redistribution-fixed.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/tentative/table-width-redistribution.html
