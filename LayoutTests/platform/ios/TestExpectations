@@ -360,6 +360,10 @@ platform/ios/ios/fast/forms/range-input-touches.html [ Skip ]
 platform/ios/ios/touch [ Skip ]
 media/modern-media-controls/css/pointer-events-none.html [ Skip ]
 
+# Calls into the Opportunistic Task Scheduler which is currently disabled on IOS
+fast/dom/gc-dom-tree-lifetime.html
+fast/dom/gc-dom-tree-lifetime-shadow-tree.html
+
 platform/ipad/fast/forms [ Skip ]
 
 media/media-sources-selection.html [ ImageOnlyFailure ] # Sources selection on iOS will select a different source.

@@ -815,6 +815,7 @@ enum RenderingMode {
     unsigned long numberOfLiveNodes();
     unsigned long numberOfLiveDocuments();
     unsigned long referencingNodeCount(Document document);
+    undefined executeOpportunisticallyScheduledTasks();
     unsigned long numberOfIntersectionObservers(Document document);
     unsigned long numberOfResizeObservers(Document document);
     WindowProxy? openDummyInspectorFrontend(DOMString url);

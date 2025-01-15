@@ -85,6 +85,7 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     SelectorQueryCache::singleton().clear();
 
     for (auto& document : Document::allDocuments()) {
+        document->asyncNodeDeletionQueue().deleteNodesNow();
         if (CheckedPtr renderView = document->renderView()) {
             LayoutIntegration::LineLayout::releaseCaches(*renderView);
             Layout::TextBreakingPositionCache::singleton().clear();

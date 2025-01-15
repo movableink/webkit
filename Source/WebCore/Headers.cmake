@@ -1024,6 +1024,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/ActiveDOMCallback.h
     dom/ActiveDOMObject.h
     dom/AddEventListenerOptions.h
+    dom/AsyncNodeDeletionQueue.h
     dom/Attr.h
     dom/Attribute.h
     dom/BoundaryPoint.h
