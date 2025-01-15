@@ -118,16 +118,17 @@ void RenderGrid::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
         }
     }
 
-    auto subgridChanged = subgridDidChange(*oldStyle);
+    auto subgridDidChange = this->subgridDidChange(*oldStyle);
     if (explicitGridDidResize(*oldStyle) || namedGridLinesDefinitionDidChange(*oldStyle) || implicitGridLinesDefinitionDidChange(*oldStyle) || oldStyle->gridAutoFlow() != style().gridAutoFlow()
-        || (style().gridAutoRepeatColumns().size() || style().gridAutoRepeatRows().size()) || subgridChanged)
-        dirtyGrid(subgridChanged);
+        || (style().gridAutoRepeatColumns().size() || style().gridAutoRepeatRows().size()) || subgridDidChange == SubgridDidChange::Yes)
+        dirtyGrid(subgridDidChange);
 }
 
-bool RenderGrid::subgridDidChange(const RenderStyle& oldStyle) const
+SubgridDidChange RenderGrid::subgridDidChange(const RenderStyle& oldStyle) const
 {
-    return oldStyle.gridSubgridRows() != style().gridSubgridRows()
-        || oldStyle.gridSubgridColumns() != style().gridSubgridColumns();
+    if (oldStyle.gridSubgridRows() != style().gridSubgridRows() || oldStyle.gridSubgridColumns() != style().gridSubgridColumns())
+        return SubgridDidChange::Yes;
+    return SubgridDidChange::No;
 }
 
 bool RenderGrid::explicitGridDidResize(const RenderStyle& oldStyle) const
@@ -1287,7 +1288,7 @@ GridTrackSizingDirection RenderGrid::autoPlacementMinorAxisDirection() const
     return (autoPlacementMajorAxisDirection() == GridTrackSizingDirection::ForColumns) ? GridTrackSizingDirection::ForRows : GridTrackSizingDirection::ForColumns;
 }
 
-void RenderGrid::dirtyGrid(bool subgridChanged)
+void RenderGrid::dirtyGrid(SubgridDidChange subgridDidChange)
 {
     if (currentGrid().needsItemsPlacement())
         return;
@@ -1295,11 +1296,11 @@ void RenderGrid::dirtyGrid(bool subgridChanged)
     currentGrid().setNeedsItemsPlacement(true);
 
     auto currentChild = this;
-    while (currentChild && (subgridChanged || currentChild->isSubgridRows() || currentChild->isSubgridColumns())) {
+    while (currentChild && (subgridDidChange == SubgridDidChange::Yes || currentChild->isSubgridRows() || currentChild->isSubgridColumns())) {
         currentChild = dynamicDowncast<RenderGrid>(currentChild->parent());
         if (currentChild)
             currentChild->currentGrid().setNeedsItemsPlacement(true);
-        subgridChanged = false;
+        subgridDidChange = SubgridDidChange::No;
     }
 }
 
