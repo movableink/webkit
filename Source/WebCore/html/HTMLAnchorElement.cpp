@@ -216,16 +216,9 @@ void HTMLAnchorElement::attributeChanged(const QualifiedName& name, const AtomSt
 {
     HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
-    if (name == hrefAttr) {
+    if (name == hrefAttr)
         setIsLink(!newValue.isNull() && !shouldProhibitLinks(this));
-        if (isLink()) {
-            auto parsedURL = newValue.string().trim(isASCIIWhitespace);
-            if (document().isDNSPrefetchEnabled() && document().frame()) {
-                if (protocolIsInHTTPFamily(parsedURL) || parsedURL.startsWith("//"_s))
-                    document().frame()->loader().client().prefetchDNS(document().completeURL(parsedURL).host().toString());
-            }
-        }
-    } else if (name == relAttr) {
+    else if (name == relAttr) {
         // Update HTMLAnchorElement::relList() if more rel attributes values are supported.
         static MainThreadNeverDestroyed<const AtomString> noReferrer("noreferrer"_s);
         static MainThreadNeverDestroyed<const AtomString> noOpener("noopener"_s);

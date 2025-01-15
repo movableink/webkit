@@ -111,7 +111,6 @@
 #define WebKitAccelerated2dCanvasEnabledPreferenceKey @"WebKitAccelerated2dCanvasEnabled"
 #define WebKitAsyncFrameScrollingEnabledPreferenceKey @"WebKitAsyncFrameScrollingEnabled"
 #define WebKitSpatialNavigationEnabledPreferenceKey @"WebKitSpatialNavigationEnabled"
-#define WebKitDNSPrefetchingEnabledPreferenceKey @"WebKitDNSPrefetchingEnabled"
 #define WebKitFullScreenEnabledPreferenceKey @"WebKitFullScreenEnabled"
 #define WebKitAsynchronousSpellCheckingEnabledPreferenceKey @"WebKitAsynchronousSpellCheckingEnabled"
 #define WebKitHyperlinkAuditingEnabledPreferenceKey @"WebKitHyperlinkAuditingEnabled"
@@ -251,6 +250,7 @@
 
 // The preference keys below this point are deprecated and have no effect. They should
 // be removed when it is considered safe to do so.
+#define WebKitDNSPrefetchingEnabledPreferenceKey @"WebKitDNSPrefetchingEnabled"
 #define WebKitLinkPreloadResponsiveImagesEnabledPreferenceKey @"WebKitLinkPreloadResponsiveImagesEnabled"
 #define WebKitConstantPropertiesEnabledPreferenceKey @"WebKitConstantPropertiesEnabled"
 #define WebKitMaskWebGLStringsEnabledPreferenceKey @"WebKitMaskWebGLStringsEnabled"

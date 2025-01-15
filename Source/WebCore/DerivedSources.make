@@ -2031,6 +2031,7 @@ HTTP_HEADER_NAMES_FILES = \
     HTTPHeaderNames.cpp \
     HTTPHeaderNames.gperf \
     HTTPHeaderNames.h \
+    HTTPHeaderNames.serialization.in \
 #
 HTTP_HEADER_NAMES_FILES_PATTERNS = $(call to-pattern, $(HTTP_HEADER_NAMES_FILES))
 

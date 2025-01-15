@@ -2871,13 +2871,6 @@ void Page::domTimerAlignmentIntervalIncreaseTimerFired()
     updateDOMTimerAlignmentInterval();
 }
 
-void Page::dnsPrefetchingStateChanged()
-{
-    forEachDocument([] (Document& document) {
-        document.initDNSPrefetch();
-    });
-}
-
 void Page::storageBlockingStateChanged()
 {
     forEachDocument([] (Document& document) {

@@ -4704,10 +4704,6 @@ void Document::processMetaHttpEquiv(const String& equiv, const AtomString& conte
         setContentLanguage(content);
         break;
 
-    case HTTPHeaderName::XDNSPrefetchControl:
-        parseDNSPrefetchControlHeader(content);
-        break;
-
     case HTTPHeaderName::XFrameOptions:
         if (frame) {
             Ref frameLoader = frame->loader();
@@ -7958,42 +7954,6 @@ TextAutoSizing& Document::textAutoSizing()
     return *m_textAutoSizing;
 }
 #endif // ENABLE(TEXT_AUTOSIZING)
-
-void Document::initDNSPrefetch()
-{
-    m_haveExplicitlyDisabledDNSPrefetch = false;
-    m_isDNSPrefetchEnabled = settings().dnsPrefetchingEnabled() && securityOrigin().protocol() == "http"_s ? TriState::True : TriState::False;
-
-    // Inherit DNS prefetch opt-out from parent frame
-    if (RefPtr parent = parentDocument()) {
-        if (!parent->isDNSPrefetchEnabled())
-            m_isDNSPrefetchEnabled = TriState::False;
-    }
-}
-
-bool Document::isDNSPrefetchEnabled() const
-{
-    if (m_isDNSPrefetchEnabled == TriState::Indeterminate)
-        const_cast<Document&>(*this).initDNSPrefetch();
-    return m_isDNSPrefetchEnabled == TriState::True;
-}
-
-void Document::parseDNSPrefetchControlHeader(const String& dnsPrefetchControl)
-{
-    if (!settings().dnsPrefetchingEnabled())
-        return;
-
-    if (m_isDNSPrefetchEnabled == TriState::Indeterminate)
-        initDNSPrefetch();
-
-    if (equalLettersIgnoringASCIICase(dnsPrefetchControl, "on"_s) && !m_haveExplicitlyDisabledDNSPrefetch) {
-        m_isDNSPrefetchEnabled = TriState::True;
-        return;
-    }
-
-    m_isDNSPrefetchEnabled = TriState::False;
-    m_haveExplicitlyDisabledDNSPrefetch = true;
-}
 
 void Document::getParserLocation(String& completedURL, unsigned& line, unsigned& column) const
 {

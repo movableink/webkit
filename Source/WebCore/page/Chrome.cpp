@@ -353,11 +353,6 @@ bool Chrome::runJavaScriptPrompt(LocalFrame& frame, const String& prompt, const 
 
 void Chrome::mouseDidMoveOverElement(const HitTestResult& result, OptionSet<PlatformEventModifier> modifiers)
 {
-    if (RefPtr localMainFrame = m_page->localMainFrame()) {
-        if (result.innerNode() && result.innerNode()->document().isDNSPrefetchEnabled())
-            localMainFrame->protectedLoader()->client().prefetchDNS(result.absoluteLinkURL().host().toString());
-    }
-
     String toolTip;
     TextDirection toolTipDirection;
     getToolTip(result, toolTip, toolTipDirection);
