@@ -809,10 +809,26 @@ String WebExtension::bestMatchLocale()
     if (supportedLocales.size() == 1)
         return supportedLocales.first();
 
+    auto preferredLocale = defaultLanguage(ShouldMinimizeLanguages::No);
+
     bool exactMatch = false;
-    auto bestMatchIndex = indexOfBestMatchingLanguageInList(defaultLanguage(ShouldMinimizeLanguages::No), supportedLocales, exactMatch);
+    auto bestMatchIndex = indexOfBestMatchingLanguageInList(preferredLocale, supportedLocales, exactMatch);
     if (bestMatchIndex != notFound)
         return supportedLocales[bestMatchIndex];
+
+#if PLATFORM(COCOA)
+    auto preferredLocaleComponents = parseLocale(preferredLocale);
+
+    // On Apple platforms, the best match search uses Foundation, which skips "zh" when the preferred locale is "zh-Hant",
+    // likely assuming "zh" refers to simplified Chinese. However, web extensions expect the base language to be selected
+    // if it is supported, regardless of specific variants.
+    auto matchingLanguageIndex = supportedLocales.findIf([&](const auto& locale) {
+        return equalIgnoringASCIICase(locale, preferredLocaleComponents.languageCode);
+    });
+
+    if (matchingLanguageIndex != notFound)
+        return supportedLocales[matchingLanguageIndex];
+#endif
 
     return defaultLocale();
 }

@@ -1141,6 +1141,82 @@ TEST(WKWebExtensionAPILocalization, i18nChineseLanguageFallback)
     [manager loadAndRun];
 }
 
+TEST(WKWebExtensionAPILocalization, i18nChineseTraditionalFallback)
+{
+    // Temporarily set the current locale to Traditional Chinese for the test.
+    [NSUserDefaults.standardUserDefaults setVolatileDomain:@{ @"AppleLanguages": @[ @"zh-Hant" ] } forName:NSArgumentDomain];
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertEq(browser.i18n.getMessage('language_name'), '中文擴展', 'Generic Chinese message should be used')",
+        @"browser.test.assertEq(browser.i18n.getMessage('default_name'), 'Default English String', 'Default fallback message should be used')",
+
+        @"browser.test.notifyPass()",
+    ]);
+
+    auto *defaultMessages = @{
+        @"default_name": @{
+            @"message": @"Default English String",
+            @"description": @"The default name in English."
+        }
+    };
+
+    auto *genericChineseMessages = @{
+        @"language_name": @{
+            @"message": @"中文擴展",
+            @"description": @"The name of the extension in Chinese."
+        }
+    };
+
+    auto *resources = @{
+        @"background.js": backgroundScript,
+        @"_locales/en/messages.json": defaultMessages,
+        @"_locales/zh/messages.json": genericChineseMessages,
+    };
+
+    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager loadAndRun];
+}
+
+TEST(WKWebExtensionAPILocalization, i18nChineseSimplifiedFallback)
+{
+    // Temporarily set the current locale to Simplified Chinese for the test.
+    [NSUserDefaults.standardUserDefaults setVolatileDomain:@{ @"AppleLanguages": @[ @"zh-Hans" ] } forName:NSArgumentDomain];
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertEq(browser.i18n.getMessage('language_name'), '中文扩展', 'Generic Chinese message should be used')",
+        @"browser.test.assertEq(browser.i18n.getMessage('default_name'), 'Default English String', 'Default fallback message should be used')",
+
+        @"browser.test.notifyPass()",
+    ]);
+
+    auto *defaultMessages = @{
+        @"default_name": @{
+            @"message": @"Default English String",
+            @"description": @"The default name in English."
+        }
+    };
+
+    auto *genericChineseMessages = @{
+        @"language_name": @{
+            @"message": @"中文扩展",
+            @"description": @"The name of the extension in Simplified Chinese."
+        }
+    };
+
+    auto *resources = @{
+        @"background.js": backgroundScript,
+        @"_locales/en/messages.json": defaultMessages,
+        @"_locales/zh/messages.json": genericChineseMessages,
+    };
+
+    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager loadAndRun];
+}
+
 TEST(WKWebExtensionAPILocalization, i18nPortugueseBrazilian)
 {
     // Temporarily set the current locale to Brazilian Portuguese for the test.
