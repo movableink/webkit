@@ -168,16 +168,16 @@ PASS Pattern: [{"pathname":"/caf%C3%A9"}] Inputs: [{"pathname":"/café"}]
 PASS Pattern: [{"pathname":"/café"}] Inputs: [{"pathname":"/café"}]
 PASS Pattern: [{"pathname":"/caf%c3%a9"}] Inputs: [{"pathname":"/café"}]
 PASS Pattern: [{"pathname":"/foo/bar"}] Inputs: [{"pathname":"foo/bar"}]
-FAIL Pattern: [{"pathname":"/foo/bar"}] Inputs: [{"pathname":"foo/bar","baseURL":"https://example.com"}] assert_equals: test() result expected true but got false
+PASS Pattern: [{"pathname":"/foo/bar"}] Inputs: [{"pathname":"foo/bar","baseURL":"https://example.com"}]
 PASS Pattern: [{"pathname":"/foo/../bar"}] Inputs: [{"pathname":"/bar"}]
-FAIL Pattern: [{"pathname":"./foo/bar","baseURL":"https://example.com"}] Inputs: [{"pathname":"foo/bar","baseURL":"https://example.com"}] assert_equals: compiled pattern property 'pathname' expected "/foo/bar" but got "./foo/bar"
-FAIL Pattern: [{"pathname":"","baseURL":"https://example.com"}] Inputs: [{"pathname":"/","baseURL":"https://example.com"}] assert_equals: compiled pattern property 'pathname' expected "/" but got ""
+PASS Pattern: [{"pathname":"./foo/bar","baseURL":"https://example.com"}] Inputs: [{"pathname":"foo/bar","baseURL":"https://example.com"}]
+PASS Pattern: [{"pathname":"","baseURL":"https://example.com"}] Inputs: [{"pathname":"/","baseURL":"https://example.com"}]
 PASS Pattern: [{"pathname":"{/bar}","baseURL":"https://example.com/foo/"}] Inputs: [{"pathname":"./bar","baseURL":"https://example.com/foo/"}]
 PASS Pattern: [{"pathname":"\\/bar","baseURL":"https://example.com/foo/"}] Inputs: [{"pathname":"./bar","baseURL":"https://example.com/foo/"}]
-FAIL Pattern: [{"pathname":"b","baseURL":"https://example.com/foo/"}] Inputs: [{"pathname":"./b","baseURL":"https://example.com/foo/"}] assert_equals: compiled pattern property 'pathname' expected "/foo/b" but got "b"
+PASS Pattern: [{"pathname":"b","baseURL":"https://example.com/foo/"}] Inputs: [{"pathname":"./b","baseURL":"https://example.com/foo/"}]
 PASS Pattern: [{"pathname":"foo/bar"}] Inputs: ["https://example.com/foo/bar"]
-FAIL Pattern: [{"pathname":"foo/bar","baseURL":"https://example.com"}] Inputs: ["https://example.com/foo/bar"] assert_equals: compiled pattern property 'pathname' expected "/foo/bar" but got "foo/bar"
-FAIL Pattern: [{"pathname":":name.html","baseURL":"https://example.com"}] Inputs: ["https://example.com/foo.html"] assert_equals: compiled pattern property 'pathname' expected "/:name.html" but got ":name.html"
+PASS Pattern: [{"pathname":"foo/bar","baseURL":"https://example.com"}] Inputs: ["https://example.com/foo/bar"]
+PASS Pattern: [{"pathname":":name.html","baseURL":"https://example.com"}] Inputs: ["https://example.com/foo.html"]
 PASS Pattern: [{"search":"q=caf%C3%A9"}] Inputs: [{"search":"q=café"}]
 PASS Pattern: [{"search":"q=café"}] Inputs: [{"search":"q=café"}]
 PASS Pattern: [{"search":"q=caf%c3%a9"}] Inputs: [{"search":"q=café"}]
@@ -248,7 +248,7 @@ PASS Pattern: ["https://:user::pass@example.com"] Inputs: ["https://foo:bar@exam
 PASS Pattern: ["https\\:foo\\:bar@example.com"] Inputs: ["https:foo:bar@example.com"]
 PASS Pattern: ["data\\:foo\\:bar@example.com"] Inputs: ["data:foo:bar@example.com"]
 PASS Pattern: ["https://foo{\\:}bar@example.com"] Inputs: ["https://foo:bar@example.com"]
-FAIL Pattern: ["data{\\:}channel.html","https://example.com"] Inputs: ["https://example.com/data:channel.html"] assert_equals: compiled pattern property 'pathname' expected "/data\\:channel.html" but got "data\\:channel.html"
+PASS Pattern: ["data{\\:}channel.html","https://example.com"] Inputs: ["https://example.com/data:channel.html"]
 FAIL Pattern: ["http://[\\:\\:1]/"] Inputs: ["http://[::1]/"] Invalid input to canonicalize a URL host string.
 FAIL Pattern: ["http://[\\:\\:1]:8080/"] Inputs: ["http://[::1]:8080/"] Invalid input to canonicalize a URL host string.
 FAIL Pattern: ["http://[\\:\\:a]/"] Inputs: ["http://[::a]/"] Invalid input to canonicalize a URL host string.

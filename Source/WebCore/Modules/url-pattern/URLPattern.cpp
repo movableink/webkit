@@ -163,20 +163,19 @@ static ExceptionOr<URLPatternInit> processInit(URLPatternInit&& init, BaseURLStr
     if (!init.pathname.isNull()) {
         result.pathname = init.pathname;
 
-        if (!baseURL.isNull() && baseURL.hasOpaquePath() && !isAbsolutePathname(result.pathname, type)) {
+        if (!baseURL.isNull() && !baseURL.hasOpaquePath() && !isAbsolutePathname(result.pathname, type)) {
             auto baseURLPath = processBaseURLString(baseURL.path(), type);
             size_t slashIndex = baseURLPath.reverseFind('/');
 
             if (slashIndex != notFound)
                 result.pathname = makeString(StringView { baseURLPath }.left(slashIndex + 1), result.pathname);
-
-            auto pathResult = processPathname(result.pathname, baseURL.protocol(), type);
-
-            if (pathResult.hasException())
-                return pathResult.releaseException();
-
-            result.pathname = pathResult.releaseReturnValue();
         }
+        auto pathResult = processPathname(result.pathname, result.protocol, type);
+
+        if (pathResult.hasException())
+            return pathResult.releaseException();
+
+        result.pathname = pathResult.releaseReturnValue();
     }
 
     if (!init.search.isNull()) {
