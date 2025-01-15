@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Apple Inc. All rights reserved.
+ * Copyright (c) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -20,24 +20,44 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#pragma once
 
-#ifndef PAS_COMPACT_CARTESIAN_TREE_NODE_PTR_H
-#define PAS_COMPACT_CARTESIAN_TREE_NODE_PTR_H
+#if defined(__clang__)
+#define PAS_COMPILER_CLANG 1
+#endif
 
-#include "pas_compact_ptr.h"
+/* PAS_ALLOW_UNSAFE_BUFFER_USAGE */
+#if PAS_COMPILER_CLANG
+#define PAS_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    _Pragma("clang diagnostic push") \
+    _Pragma("clang diagnostic ignored \"-Wunsafe-buffer-usage\"")
 
-PAS_BEGIN_EXTERN_C;
+#define PAS_ALLOW_UNSAFE_BUFFER_USAGE_END \
+    _Pragma("clang diagnostic pop")
+#else
+#define PAS_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#define PAS_ALLOW_UNSAFE_BUFFER_USAGE_END
+#endif
 
-struct pas_cartesian_tree_node;
-typedef struct pas_cartesian_tree_node pas_cartesian_tree_node;
+/* PAS_UNSAFE_BUFFER_USAGE */
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
 
-PAS_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-PAS_DEFINE_COMPACT_PTR(pas_cartesian_tree_node, pas_compact_cartesian_tree_node_ptr);
-PAS_ALLOW_UNSAFE_BUFFER_USAGE_END
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(x) 0
+#endif
 
-PAS_END_EXTERN_C;
-
-#endif /* PAS_COMPACT_CARTESIAN_TREE_NODE_PTR_H */
-
+#if PAS_COMPILER_CLANG
+#if __has_cpp_attribute(clang::unsafe_buffer_usage)
+#define PAS_UNSAFE_BUFFER_USAGE [[clang::unsafe_buffer_usage]]
+#elif __has_attribute(unsafe_buffer_usage)
+#define PAS_UNSAFE_BUFFER_USAGE __attribute__((__unsafe_buffer_usage__))
+#else
+#define PAS_UNSAFE_BUFFER_USAGE
+#endif
+#else
+#define PAS_UNSAFE_BUFFER_USAGE
+#endif
