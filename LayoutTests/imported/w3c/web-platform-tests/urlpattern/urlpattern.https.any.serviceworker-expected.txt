@@ -152,8 +152,8 @@ PASS Pattern: [{"username":"caf%c3%a9"}] Inputs: [{"username":"café"}]
 PASS Pattern: [{"password":"caf%C3%A9"}] Inputs: [{"password":"café"}]
 PASS Pattern: [{"password":"café"}] Inputs: [{"password":"café"}]
 PASS Pattern: [{"password":"caf%c3%a9"}] Inputs: [{"password":"café"}]
-FAIL Pattern: [{"hostname":"xn--caf-dma.com"}] Inputs: [{"hostname":"café.com"}] assert_equals: test() result expected true but got false
-FAIL Pattern: [{"hostname":"café.com"}] Inputs: [{"hostname":"café.com"}] assert_equals: compiled pattern property 'hostname' expected "xn--caf-dma.com" but got "café.com"
+PASS Pattern: [{"hostname":"xn--caf-dma.com"}] Inputs: [{"hostname":"café.com"}]
+PASS Pattern: [{"hostname":"café.com"}] Inputs: [{"hostname":"café.com"}]
 PASS Pattern: [{"port":""}] Inputs: [{"protocol":"http","port":"80"}]
 PASS Pattern: [{"protocol":"http","port":"80"}] Inputs: [{"protocol":"http","port":"80"}]
 PASS Pattern: [{"protocol":"http","port":"80{20}?"}] Inputs: [{"protocol":"http","port":"80"}]

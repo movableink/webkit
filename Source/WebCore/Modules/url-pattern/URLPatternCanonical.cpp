@@ -134,7 +134,7 @@ ExceptionOr<String> canonicalizeHostname(StringView value, BaseURLStringType val
     if (!dummyURL.isValid())
         return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL host string."_s };
 
-    return value.toString();
+    return dummyURL.host().toString();
 }
 
 // https://urlpattern.spec.whatwg.org/#canonicalize-an-ipv6-hostname
