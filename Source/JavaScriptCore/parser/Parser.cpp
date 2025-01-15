@@ -3318,6 +3318,7 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseClassFie
                 // This is very intentional: we need to fail for `foo = 1, 2` but support reparsing `foo = (1, 2)`, which is tricky because open paren
                 // is skipped (meaning start offset points to `1`) by parsePrimaryExpression().
                 initializer = parseExpression(context);
+                failIfFalse(initializer, "Cannot parse expression statement");
             }
 
             DefineFieldNode::Type type = DefineFieldNode::Type::Name;
