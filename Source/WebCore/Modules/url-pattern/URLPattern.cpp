@@ -213,8 +213,11 @@ ExceptionOr<Ref<URLPattern>> URLPattern::create(ScriptExecutionContext& context,
         if (baseURL.isNull() && init.protocol.isEmpty())
             return Exception { ExceptionCode::TypeError, "Relative constructor string must have additional baseURL argument."_s };
         init.baseURL = WTFMove(baseURL);
-    } else if (std::holds_alternative<URLPatternInit>(input))
+    } else if (std::holds_alternative<URLPatternInit>(input)) {
+        if (!baseURL.isNull())
+            return Exception { ExceptionCode::TypeError, "Constructor with a URLPatternInit should have a null baseURL argument."_s };
         init = std::get<URLPatternInit>(input);
+    }
 
     auto maybeProcessedInit = processInit(WTFMove(init), BaseURLStringType::Pattern);
 

@@ -268,7 +268,7 @@ FAIL Pattern: ["data\\:text/javascript,let x = 100/:tens?5;"] Inputs: ["data:tex
 PASS Pattern: [{"pathname":"/:id/:id"}] Inputs: undefined
 PASS Pattern: [{"pathname":"/foo","baseURL":""}] Inputs: undefined
 PASS Pattern: ["/foo",""] Inputs: undefined
-FAIL Pattern: [{"pathname":"/foo"},"https://example.com"] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: [{"pathname":"/foo"},"https://example.com"] Inputs: undefined
 PASS Pattern: [{"pathname":":name*"}] Inputs: [{"pathname":"foobar"}]
 PASS Pattern: [{"pathname":":name+"}] Inputs: [{"pathname":"foobar"}]
 PASS Pattern: [{"pathname":":name"}] Inputs: [{"pathname":"foobar"}]
