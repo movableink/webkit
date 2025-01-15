@@ -83,9 +83,10 @@ private:
     LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ShouldComputePreferred::ComputeActual) const final;
     LayoutUnit minimumReplacedHeight() const final;
 
-    void updatePlayer();
+    bool updatePlayer();
 
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const final;
+    void invalidateLineLayout();
 
     LayoutSize m_cachedImageSize;
 };
