@@ -264,7 +264,7 @@ void WebFullScreenManager::enterFullScreenForElement(WebCore::Element& element, 
 #endif
 
 #if PLATFORM(VISION) && ENABLE(QUICKLOOK_FULLSCREEN)
-    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(element->renderer()))
+    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(element.renderer()))
         mediaDetails = getImageMediaDetails(renderImage, IsUpdating::No);
 
     if (m_willUseQuickLookForFullscreen)
