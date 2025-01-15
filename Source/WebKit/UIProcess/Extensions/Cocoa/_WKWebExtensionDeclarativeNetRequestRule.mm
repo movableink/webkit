@@ -660,6 +660,7 @@ static BOOL isHeaderNameValid(NSString *headerName)
         @"vary",
         @"via",
         @"x-content-type-options",
+        @"x-dns-prefetch-control",
         @"x-frame-options",
         @"x-sourcemap",
         @"x-xss-protection",

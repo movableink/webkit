@@ -204,6 +204,10 @@ static void testWebKitSettings(Test*, gconstpointer)
     webkit_settings_set_enable_tabs_to_links(settings, FALSE);
     g_assert_false(webkit_settings_get_enable_tabs_to_links(settings));
 
+    g_assert_false(webkit_settings_get_enable_dns_prefetching(settings));
+    webkit_settings_set_enable_dns_prefetching(settings, TRUE);
+    g_assert_true(webkit_settings_get_enable_dns_prefetching(settings));
+
     // Caret browsing is disabled by default.
     g_assert_false(webkit_settings_get_enable_caret_browsing(settings));
     webkit_settings_set_enable_caret_browsing(settings, TRUE);

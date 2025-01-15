@@ -1059,6 +1059,16 @@ public:
 
 @implementation WebPreferences (WebPrivate)
 
+- (BOOL)isDNSPrefetchingEnabled
+{
+    return [self _boolValueForKey:WebKitDNSPrefetchingEnabledPreferenceKey];
+}
+
+- (void)setDNSPrefetchingEnabled:(BOOL)flag
+{
+    [self _setBoolValue:flag forKey:WebKitDNSPrefetchingEnabledPreferenceKey];
+}
+
 - (BOOL)developerExtrasEnabled
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -2972,15 +2982,6 @@ static RetainPtr<NSString>& classIBCreatorID()
 
 // The preferences in this category are deprecated and have no effect. They should
 // be removed when it is considered safe to do so.
-
-- (BOOL)isDNSPrefetchingEnabled
-{
-    return NO;
-}
-
-- (void)setDNSPrefetchingEnabled:(BOOL)flag
-{
-}
 
 - (BOOL)linkPreloadResponsiveImagesEnabled
 {

@@ -462,6 +462,12 @@ void SettingsBase::usesBackForwardCacheChanged()
         BackForwardCache::singleton().pruneToSizeNow(0, PruningReason::None);
 }
 
+void SettingsBase::dnsPrefetchingEnabledChanged()
+{
+    if (m_page)
+        m_page->dnsPrefetchingStateChanged();
+}
+
 void SettingsBase::storageBlockingPolicyChanged()
 {
     if (m_page)

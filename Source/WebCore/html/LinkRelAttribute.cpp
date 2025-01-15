@@ -53,7 +53,7 @@ static constexpr std::pair<ComparableLettersLiteral, LinkTypeDetails> linkTypesA
     { "alternate"_s, { [](auto) { return true; }, [](auto relAttribute) { relAttribute.isAlternate = true; } } },
     { "apple-touch-icon"_s, { [](auto) { return true; }, [](auto relAttribute) { relAttribute.iconType = LinkIconType::TouchIcon; } } },
     { "apple-touch-icon-precomposed"_s, { [](auto) { return true; }, [](auto relAttribute) { relAttribute.iconType = LinkIconType::TouchPrecomposedIcon; } } },
-    { "dns-prefetch"_s, { [](auto document) { return document.settings().linkDNSPrefetchEnabled(); }, [](auto relAttribute) { relAttribute.isDNSPrefetch = true; } } },
+    { "dns-prefetch"_s, { [](auto) { return true; }, [](auto relAttribute) { relAttribute.isDNSPrefetch = true; } } },
     { "expect"_s, { [](auto) { return true; }, [](auto relAttribute) { relAttribute.isInternalResourceLink = true; } } },
     { "icon"_s, { [](auto) { return true; }, [](auto relAttribute) { relAttribute.iconType = LinkIconType::Favicon; } } },
 #if ENABLE(APPLICATION_MANIFEST)

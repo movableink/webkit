@@ -417,7 +417,9 @@ void LinkLoader::cancelLoad()
 void LinkLoader::loadLink(const LinkLoadParameters& params, Document& document)
 {
     if (params.relAttribute.isDNSPrefetch) {
-        if (params.href.isValid() && !params.href.isEmpty() && params.href.protocolIsInHTTPFamily() && document.frame())
+        // FIXME: The href attribute of the link element can be in "//hostname" form, and we shouldn't attempt
+        // to complete that as URL <https://bugs.webkit.org/show_bug.cgi?id=48857>.
+        if (document.settings().dnsPrefetchingEnabled() && params.href.isValid() && !params.href.isEmpty() && document.frame())
             document.protectedFrame()->protectedLoader()->client().prefetchDNS(params.href.host().toString());
     }
 

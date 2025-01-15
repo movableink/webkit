@@ -147,6 +147,7 @@ protected:
     void imagesEnabledChanged();
     void userStyleSheetLocationChanged();
     void usesBackForwardCacheChanged();
+    void dnsPrefetchingEnabledChanged();
     void storageBlockingPolicyChanged();
     void backgroundShouldExtendBeyondPageChanged();
     void scrollingPerformanceTestingEnabledChanged();
