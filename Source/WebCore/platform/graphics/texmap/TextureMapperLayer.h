@@ -113,6 +113,7 @@ public:
     bool syncAnimations(MonotonicTime);
     WEBCORE_EXPORT bool descendantsOrSelfHaveRunningAnimations() const;
 
+    WEBCORE_EXPORT void prepareForPainting(TextureMapper&);
     WEBCORE_EXPORT void paint(TextureMapper&);
 
     void addChild(TextureMapperLayer*);
@@ -184,8 +185,10 @@ private:
     void collect3DRenderingContextLayers(Vector<TextureMapperLayer*>&);
 
 #if ENABLE(DAMAGE_TRACKING)
+    bool canInferDamage() const { return !m_damage.isInvalid(); }
     void collectDamageRecursive(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelf(TextureMapperPaintOptions&, Damage&);
+    void damageWholeLayerDueToTransformChange(const TransformationMatrix& beforeChange, const TransformationMatrix& afterChange);
     FloatRect transformRectForDamage(const FloatRect&, const TransformationMatrix&, const TextureMapperPaintOptions&);
 #endif
 

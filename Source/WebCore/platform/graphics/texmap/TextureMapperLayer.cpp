@@ -259,6 +259,9 @@ void TextureMapperLayer::computeTransformsRecursive(ComputeTransformData& data)
         const float originX = m_state.anchorPoint.x() * m_state.size.width();
         const float originY = m_state.anchorPoint.y() * m_state.size.height();
 
+#if ENABLE(DAMAGE_TRACKING)
+        TransformationMatrix oldCombined = m_layerTransforms.combined;
+#endif
         m_layerTransforms.combined = parentTransform;
         m_layerTransforms.combined
             .translate3d(originX + (m_state.pos.x() - m_state.boundsOrigin.x()), originY + (m_state.pos.y() - m_state.boundsOrigin.y()), m_state.anchorPoint.z())
@@ -295,6 +298,11 @@ void TextureMapperLayer::computeTransformsRecursive(ComputeTransformData& data)
             m_layerTransforms.futureCombinedForChildren.flatten();
         m_layerTransforms.futureCombinedForChildren.multiply(m_state.childrenTransform);
         m_layerTransforms.futureCombinedForChildren.translate3d(-originX, -originY, -m_state.anchorPoint.z());
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+        if (canInferDamage() && oldCombined != m_layerTransforms.combined)
+            damageWholeLayerDueToTransformChange(oldCombined, m_layerTransforms.combined);
 #endif
     }
 
@@ -341,14 +349,20 @@ void TextureMapperLayer::computeTransformsRecursive(ComputeTransformData& data)
 #endif
 }
 
-void TextureMapperLayer::paint(TextureMapper& textureMapper)
+void TextureMapperLayer::prepareForPainting(TextureMapper& textureMapper)
 {
     processDescendantLayersFlatteningRequirements();
 
     ComputeTransformData data;
     computeTransformsRecursive(data);
     textureMapper.setDepthRange(data.zNear, data.zFar);
+}
 
+void TextureMapperLayer::paint(TextureMapper& textureMapper)
+{
+#if !ENABLE(DAMAGE_TRACKING)
+    prepareForPainting(textureMapper);
+#endif
     TextureMapperPaintOptions options(textureMapper);
     options.surface = textureMapper.currentSurface();
     paintRecursive(options);
@@ -396,8 +410,11 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
     transform.multiply(options.transform);
     transform.multiply(m_layerTransforms.combined);
 
-    if (m_contentsLayer || m_damage.isInvalid()) {
-        // Layers with content layer are always fully damaged for now...
+    if (m_damage.isInvalid())
+        damage.invalidate();
+    else if (m_contentsLayer && m_damage.isEmpty()) {
+        // Layers with content layer are fully damaged if there's no explicit damage.
+        // FIXME: Remove that special case.
         damage.add(transformRectForDamage(targetRect, transform, options));
     } else {
         // Use the damage information we received from the GraphicsLayer
@@ -413,15 +430,30 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
     m_damage = Damage();
 }
 
+void TextureMapperLayer::damageWholeLayerDueToTransformChange(const TransformationMatrix& beforeChange, const TransformationMatrix& afterChange)
+{
+    // When the layer's transform changes, we must not only damage whole layer using new transform,
+    // but also using old transform to cover the area not affected by layer anymore.
+    // FIXME: Consider extending non-empty m_damage if it makes sense.
+    if (!m_damage.isEmpty())
+        m_damage = { };
+    if (auto inverseTransform = afterChange.inverse()) {
+        // As m_damage stores damage in the non-transformed coordinate space of a layer,
+        // we do calculations in the transformed coordinate space of a layer
+        // and then use inverse transform to map result back to non-transformed coordinate space of a layer.
+        FloatRect transformedLayerRect = afterChange.mapRect(layerRect());
+        transformedLayerRect.unite(beforeChange.mapRect(layerRect()));
+        m_damage.add(inverseTransform->mapRect(transformedLayerRect));
+    } else
+        // If damaged rect cannot be calculated, fall back to invalidating whole frame.
+        m_damage.invalidate();
+}
+
 FloatRect TextureMapperLayer::transformRectForDamage(const FloatRect& rect, const TransformationMatrix& transform, const TextureMapperPaintOptions& options)
 {
     FloatQuad quad(rect);
     quad = transform.mapQuad(quad);
     FloatRect transformedRect = quad.boundingBox();
-
-    // FIXME: Investigate why m_state.pos is not included in transform sometimes.
-    if (transformedRect.location().isZero())
-        transformedRect.moveBy(m_state.pos);
 
     // Some layers are drawn on an intermediate surface and have this offset applied to convert to the
     // intermediate surface coordinates. In order to translate back to actual coordinates,
@@ -1185,6 +1217,13 @@ void TextureMapperLayer::setBoundsOrigin(const FloatPoint& boundsOrigin)
 
 void TextureMapperLayer::setSize(const FloatSize& size)
 {
+#if ENABLE(DAMAGE_TRACKING)
+    if (canInferDamage() && m_state.size != size) {
+        // When layer size changes, we damage whole layer for now.
+        // FIXME: Damage only affected area.
+        m_damage.add(FloatRect(FloatPoint::zero(), size));
+    }
+#endif
     m_state.size = size;
 }
 

@@ -51,9 +51,12 @@ void CoordinatedGraphicsScene::paintToCurrentGLContext(const TransformationMatri
 
     bool sceneHasRunningAnimations = currentRootLayer.applyAnimationsRecursively(MonotonicTime::now());
 
-    bool didChangeClipRect = false;
-    FloatRoundedRect actualClipRect(clipRect);
+    m_textureMapper->beginPainting(flipY ? TextureMapper::FlipY::Yes : TextureMapper::FlipY::No);
+    m_textureMapper->beginClip(TransformationMatrix(), FloatRoundedRect(clipRect));
+
+    std::optional<FloatRoundedRect> rectContainingRegionThatActuallyChanged;
 #if ENABLE(DAMAGE_TRACKING)
+    currentRootLayer.prepareForPainting(*m_textureMapper);
     if (m_client && m_damagePropagation != Damage::Propagation::None) {
         Damage frameDamage;
         if (sceneHasRunningAnimations) {
@@ -64,7 +67,6 @@ void CoordinatedGraphicsScene::paintToCurrentGLContext(const TransformationMatri
             currentRootLayer.collectDamage(*m_textureMapper, frameDamage);
             WTFEndSignpost(this, CollectDamage);
 
-            ASSERT(!frameDamage.isInvalid());
             if (m_damagePropagation == Damage::Propagation::Unified) {
                 Damage boundsDamage;
                 boundsDamage.add(frameDamage.bounds());
@@ -72,36 +74,26 @@ void CoordinatedGraphicsScene::paintToCurrentGLContext(const TransformationMatri
             }
         }
 
-        if (!matrix.isIdentity()) {
-            // FIXME: Add support for viewport scale != 1.
-            frameDamage.add(clipRect);
-        }
-
         const auto& damageSinceLastSurfaceUse = m_client->addSurfaceDamage(!frameDamage.isInvalid() && !frameDamage.isEmpty() ? frameDamage : Damage::invalid());
-        if (!damageSinceLastSurfaceUse.isInvalid()) {
-            actualClipRect = static_cast<FloatRoundedRect>(damageSinceLastSurfaceUse.bounds());
-            didChangeClipRect = true;
-        }
+        if (!damageSinceLastSurfaceUse.isInvalid() && !FloatRect(damageSinceLastSurfaceUse.bounds()).contains(clipRect))
+            rectContainingRegionThatActuallyChanged = FloatRoundedRect(damageSinceLastSurfaceUse.bounds());
     }
 #endif
 
+    if (rectContainingRegionThatActuallyChanged)
+        m_textureMapper->beginClip(TransformationMatrix(), *rectContainingRegionThatActuallyChanged);
+
     WTFBeginSignpost(this, PaintTextureMapperLayerTree);
-    m_textureMapper->beginPainting(flipY ? TextureMapper::FlipY::Yes : TextureMapper::FlipY::No);
-    m_textureMapper->beginClip(TransformationMatrix(), actualClipRect);
     currentRootLayer.paint(*m_textureMapper);
-    if (!didChangeClipRect)
-        m_fpsCounter.updateFPSAndDisplay(*m_textureMapper, clipRect.location(), matrix);
-    m_textureMapper->endClip();
-    m_textureMapper->endPainting();
     WTFEndSignpost(this, PaintTextureMapperLayerTree);
 
-    if (didChangeClipRect && m_fpsCounter.isActive()) {
-        m_textureMapper->beginPainting(flipY ? TextureMapper::FlipY::Yes : TextureMapper::FlipY::No);
-        m_textureMapper->beginClip(TransformationMatrix(), FloatRoundedRect(clipRect));
-        m_fpsCounter.updateFPSAndDisplay(*m_textureMapper, clipRect.location(), matrix);
+    if (rectContainingRegionThatActuallyChanged)
         m_textureMapper->endClip();
-        m_textureMapper->endPainting();
-    }
+
+    m_fpsCounter.updateFPSAndDisplay(*m_textureMapper, clipRect.location(), matrix);
+
+    m_textureMapper->endClip();
+    m_textureMapper->endPainting();
 
     if (sceneHasRunningAnimations)
         updateViewport();
