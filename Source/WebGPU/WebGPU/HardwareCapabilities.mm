@@ -28,6 +28,7 @@
 
 #import <algorithm>
 #import <limits>
+#import <sys/sysctl.h>
 #import <wtf/MathExtras.h>
 #import <wtf/PageBlock.h>
 #import <wtf/StdLibExtras.h>
@@ -419,8 +420,28 @@ static HardwareCapabilities::BaseCapabilities mergeBaseCapabilities(const Hardwa
     };
 }
 
+static bool isPhysicalHardware()
+{
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+    return false;
+#else
+    static bool result = true;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        uint32_t isVM = 0;
+        size_t size = sizeof(isVM);
+        if (!sysctlbyname("kern.hv_vmm_present", &isVM, &size, NULL, 0))
+            result = isVM ? [[NSUserDefaults standardUserDefaults] boolForKey:@"WebKitAllowWebGPUOnVMs"] : true;
+    });
+    return result;
+#endif
+}
+
 static std::optional<HardwareCapabilities> rawHardwareCapabilities(id<MTLDevice> device)
 {
+    if (!isPhysicalHardware())
+        return std::nullopt;
+
     std::optional<HardwareCapabilities> result;
 
     auto merge = [&](const HardwareCapabilities& capabilities) {
