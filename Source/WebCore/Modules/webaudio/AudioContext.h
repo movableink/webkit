@@ -66,6 +66,7 @@ public:
     const DefaultAudioDestinationNode& destination() const final { return m_destinationNode.get(); }
 
     double baseLatency();
+    double outputLatency();
 
     AudioTimestamp getOutputTimestamp();
 

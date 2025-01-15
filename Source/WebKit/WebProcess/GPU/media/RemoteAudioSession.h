@@ -80,6 +80,7 @@ private:
     size_t bufferSize() const final { return configuration().bufferSize; }
     size_t numberOfOutputChannels() const final { return configuration().numberOfOutputChannels; }
     size_t maximumNumberOfOutputChannels() const final { return configuration().maximumNumberOfOutputChannels; }
+    size_t outputLatency() const final { return configuration().outputLatency; }
 
     bool tryToSetActiveInternal(bool) final;
 

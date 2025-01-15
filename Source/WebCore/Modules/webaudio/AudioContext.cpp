@@ -44,6 +44,7 @@
 #include "Performance.h"
 #include "PlatformMediaSessionManager.h"
 #include "Quirks.h"
+#include <wtf/MediaTime.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MEDIA_STREAM)
@@ -185,6 +186,18 @@ double AudioContext::baseLatency()
     lazyInitialize();
 
     return static_cast<double>(destination().framesPerBuffer()) / sampleRate();
+}
+
+double AudioContext::outputLatency()
+{
+    lazyInitialize();
+
+    if (!isPlaying())
+        return 0;
+    if (noiseInjectionPolicies())
+        return 512 / sampleRate(); // A fixed, but reasonable value for most platforms.
+
+    return destination().outputLatency().toDouble();
 }
 
 AudioTimestamp AudioContext::getOutputTimestamp()

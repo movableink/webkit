@@ -483,6 +483,33 @@ bool AudioSessionMac::isMuted() const
     }
 }
 
+size_t AudioSessionMac::outputLatency() const
+{
+    AudioObjectPropertyAddress addr = {
+        0,
+        kAudioDevicePropertyScopeOutput,
+        kAudioObjectPropertyElementMain
+    };
+
+    addr.mSelector = kAudioDevicePropertyLatency;
+    UInt32 size = sizeof(UInt32);
+    UInt32 deviceLatency = 0;
+    if (AudioObjectGetPropertyData(defaultDevice(), &addr, 0, 0, &size, &deviceLatency) != noErr)
+        deviceLatency = 0;
+
+    UInt32 streamLatency = 0;
+    addr.mSelector = kAudioDevicePropertyStreams;
+    AudioStreamID streamID;
+    size = sizeof(AudioStreamID);
+    if (AudioObjectGetPropertyData(defaultDevice(), &addr, 0, 0, &size, &streamID) == noErr) {
+        addr.mSelector = kAudioStreamPropertyLatency;
+        size = sizeof(UInt32);
+        AudioObjectGetPropertyData(streamID, &addr, 0, 0, &size, &streamLatency);
+    }
+
+    return deviceLatency + streamLatency;
+}
+
 static OSStatus handleMutePropertyChange(AudioObjectID, UInt32, const AudioObjectPropertyAddress*, void* inClientData)
 {
     callOnMainThread([inClientData] {

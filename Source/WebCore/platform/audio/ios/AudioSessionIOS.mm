@@ -377,6 +377,12 @@ void AudioSessionIOS::setPreferredBufferSize(size_t bufferSize)
     ASSERT(!error);
 }
 
+size_t AudioSessionIOS::outputLatency() const
+{
+    auto latency = [[PAL::getAVAudioSessionClass() sharedInstance] outputLatency];
+    return latency * sampleRate();
+}
+
 bool AudioSessionIOS::isMuted() const
 {
     return false;

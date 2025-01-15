@@ -139,6 +139,8 @@ public:
     virtual size_t preferredBufferSize() const;
     virtual void setPreferredBufferSize(size_t);
 
+    virtual size_t outputLatency() const { return 0; }
+
     virtual void addConfigurationChangeObserver(AudioSessionConfigurationChangeObserver&);
     virtual void removeConfigurationChangeObserver(AudioSessionConfigurationChangeObserver&);
 
