@@ -195,23 +195,12 @@ ExceptionOr<String> canonicalizeOpaquePathname(StringView value)
     if (value.isEmpty())
         return value.toString();
 
-    bool hasLeadingSlash = value[0] == '/';
-    // Prepend slash to disable URL parser from prepending slash.
-    // Prepend dash to avoid inadvertantly collapsing a leading dot due to the fake leading slash.
-    String maybeAddSlashPrefix = hasLeadingSlash ? value.toString() : makeString("/-"_s, value);
-
-    // FIXME: Set state override to State::OpaquePath after URLParser supports state override.
-    URL dummyURL(dummyURLCharacters);
-    dummyURL.setPath(maybeAddSlashPrefix);
+    URL dummyURL(makeString("a:"_s, value));
 
     if (!dummyURL.isValid())
         return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL opaque path string."_s };
 
-    auto result = dummyURL.path();
-    if (!hasLeadingSlash)
-        result = result.substring(2);
-
-    return result.toString();
+    return dummyURL.path().toString();
 }
 
 // https://urlpattern.spec.whatwg.org/#canonicalize-a-pathname
@@ -246,7 +235,7 @@ ExceptionOr<String> processPathname(StringView pathnameValue, const StringView p
     if (pathnameValueType == BaseURLStringType::Pattern)
         return pathnameValue.toString();
 
-    if (WTF::URLParser::isSpecialScheme(protocolValue))
+    if (WTF::URLParser::isSpecialScheme(protocolValue) || protocolValue.isEmpty())
         return canonicalizePathname(pathnameValue);
 
     return canonicalizeOpaquePathname(pathnameValue);

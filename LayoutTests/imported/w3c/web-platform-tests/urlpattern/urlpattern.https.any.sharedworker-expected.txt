@@ -191,11 +191,11 @@ PASS Pattern: [{"pathname":"/foo!"}] Inputs: [{"pathname":"/foo!"}]
 PASS Pattern: [{"pathname":"/foo\\:"}] Inputs: [{"pathname":"/foo:"}]
 PASS Pattern: [{"pathname":"/foo\\{"}] Inputs: [{"pathname":"/foo{"}]
 PASS Pattern: [{"pathname":"/foo\\("}] Inputs: [{"pathname":"/foo("}]
-FAIL Pattern: [{"protocol":"javascript","pathname":"var x = 1;"}] Inputs: [{"protocol":"javascript","pathname":"var x = 1;"}] assert_equals: compiled pattern property 'pathname' expected "var x = 1;" but got "var%20x%20=%201;"
-FAIL Pattern: [{"pathname":"var x = 1;"}] Inputs: [{"protocol":"javascript","pathname":"var x = 1;"}] assert_equals: test() result expected false but got true
-FAIL Pattern: [{"protocol":"javascript","pathname":"var x = 1;"}] Inputs: [{"baseURL":"javascript:var x = 1;"}] assert_equals: compiled pattern property 'pathname' expected "var x = 1;" but got "var%20x%20=%201;"
-FAIL Pattern: [{"protocol":"(data|javascript)","pathname":"var x = 1;"}] Inputs: [{"protocol":"javascript","pathname":"var x = 1;"}] assert_equals: compiled pattern property 'pathname' expected "var x = 1;" but got "var%20x%20=%201;"
-FAIL Pattern: [{"protocol":"(https|javascript)","pathname":"var x = 1;"}] Inputs: [{"protocol":"javascript","pathname":"var x = 1;"}] assert_equals: test() result expected false but got true
+PASS Pattern: [{"protocol":"javascript","pathname":"var x = 1;"}] Inputs: [{"protocol":"javascript","pathname":"var x = 1;"}]
+PASS Pattern: [{"pathname":"var x = 1;"}] Inputs: [{"protocol":"javascript","pathname":"var x = 1;"}]
+PASS Pattern: [{"protocol":"javascript","pathname":"var x = 1;"}] Inputs: [{"baseURL":"javascript:var x = 1;"}]
+PASS Pattern: [{"protocol":"(data|javascript)","pathname":"var x = 1;"}] Inputs: [{"protocol":"javascript","pathname":"var x = 1;"}]
+PASS Pattern: [{"protocol":"(https|javascript)","pathname":"var x = 1;"}] Inputs: [{"protocol":"javascript","pathname":"var x = 1;"}]
 PASS Pattern: [{"pathname":"var x = 1;"}] Inputs: [{"pathname":"var x = 1;"}]
 PASS Pattern: [{"pathname":"/foo/bar"}] Inputs: ["./foo/bar","https://example.com"]
 PASS Pattern: [{"pathname":"/foo/bar"}] Inputs: [{"pathname":"/foo/bar"},"https://example.com"]
@@ -264,7 +264,7 @@ PASS Pattern: [{"hostname":"[*\\:1]"}] Inputs: [{"hostname":"[::ab:1]"}]
 PASS Pattern: [{"hostname":"*\\:1]"}] Inputs: undefined
 PASS Pattern: ["https://foo{{@}}example.com"] Inputs: ["https://foo@example.com"]
 PASS Pattern: ["https://foo{@example.com"] Inputs: ["https://foo@example.com"]
-FAIL Pattern: ["data\\:text/javascript,let x = 100/:tens?5;"] Inputs: ["data:text/javascript,let x = 100/5;"] assert_equals: compiled pattern property 'pathname' expected "text/javascript,let x = 100/:tens?5;" but got "text/javascript,let%20x%20=%20100/:tens?5;"
+PASS Pattern: ["data\\:text/javascript,let x = 100/:tens?5;"] Inputs: ["data:text/javascript,let x = 100/5;"]
 PASS Pattern: [{"pathname":"/:id/:id"}] Inputs: undefined
 PASS Pattern: [{"pathname":"/foo","baseURL":""}] Inputs: undefined
 PASS Pattern: ["/foo",""] Inputs: undefined
