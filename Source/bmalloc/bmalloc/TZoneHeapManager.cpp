@@ -126,31 +126,14 @@ void determineTZoneMallocFallback()
         if (tzoneMallocFallback != TZoneMallocFallback::Undecided)
             return;
 
-        tzoneFreeWithFastFallback = tzoneFreeFast;
-        tzoneFreeWithIsoFallback = tzoneFreeFast;
-
-        if (Environment::get()->isDebugHeapEnabled())
+        if (Environment::get()->isDebugHeapEnabled()) {
             tzoneMallocFallback = TZoneMallocFallback::ForceDebugMalloc;
-        else {
-            const char* env = getenv("bmalloc_IsoHeap");
-            if (env && (!strcasecmp(env, "false") || !strcasecmp(env, "no") || !strcmp(env, "0")))
-                tzoneMallocFallback = TZoneMallocFallback::ForceDebugMalloc;
-        }
-
-        if (tzoneMallocFallback == TZoneMallocFallback::ForceDebugMalloc) {
-            tzoneFreeWithFastFallback = tzoneFreeWithDebugMalloc;
-            tzoneFreeWithIsoFallback = tzoneFreeWithDebugMalloc;
             return;
         }
 
-        const char* tzoneEnv = getenv("bmalloc_TZoneHeap");
-        if (tzoneEnv && (!strcasecmp(tzoneEnv, "false") || !strcasecmp(tzoneEnv, "no") || !strcmp(tzoneEnv, "0"))) {
-            tzoneMallocFallback = TZoneMallocFallback::ForceSpecifiedFallBack;
-            return;
-        }
-
-        if (hasDisableTZoneEntitlement && hasDisableTZoneEntitlement()) {
-            tzoneMallocFallback = TZoneMallocFallback::ForceSpecifiedFallBack;
+        const char* env = getenv("bmalloc_TZoneHeap");
+        if (env && (!strcasecmp(env, "false") || !strcasecmp(env, "no") || !strcmp(env, "0"))) {
+            tzoneMallocFallback = TZoneMallocFallback::ForceDebugMalloc;
             return;
         }
 
@@ -520,11 +503,6 @@ TZoneHeapManager::TZoneTypeBuckets* TZoneHeapManager::populateBucketsForSizeClas
     s_state = State::StartedRegisteringTypes;
 
     auto bucketCount = bucketCountForSizeClass(sizeAndAlignment);
-    if (tzoneMallocFallback == TZoneMallocFallback::ForceSpecifiedFallBack) {
-        // The only way we can get here is if the TZoneAllocationFallback type is Iso.
-        // heapRefForTZoneType would already have handled the Fast case.
-        bucketCount = 1;
-    }
 
 #if TZONE_VERBOSE_DEBUG
     if constexpr (verbose) {
@@ -561,14 +539,6 @@ TZoneHeapManager::TZoneTypeBuckets* TZoneHeapManager::populateBucketsForSizeClas
     m_heapRefsBySizeAndAlignment.set(sizeAndAlignment, buckets);
 
     return buckets;
-}
-
-pas_heap_ref* TZoneHeapManager::heapRefForIsoFallback(const TZoneSpecification& spec)
-{
-    LockHolder lock(mutex());
-    m_isoTypeDescriptors.append(BMALLOC_TYPE_INITIALIZER(SizeAndAlignment::decodeSize(spec.sizeAndAlignment), SizeAndAlignment::decodeAlignment(spec.sizeAndAlignment), "TZoneIsoHeap"));
-    m_isoHeapRefs.append(BMALLOC_HEAP_REF_INITIALIZER(&m_isoTypeDescriptors.last()));
-    return &m_isoHeapRefs.last();
 }
 
 BINLINE pas_heap_ref* TZoneHeapManager::heapRefForTZoneType(const TZoneSpecification& spec, LockHolder& lock)

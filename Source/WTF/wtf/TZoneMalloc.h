@@ -115,47 +115,47 @@
 // FastMalloc fallback allocators
 
 // class allocators with FastMalloc fallback if TZoneHeap is enabled.
-#define WTF_MAKE_TZONE_ALLOCATED(name) MAKE_BTZONE_MALLOCED(name, NonCompact, FastFallback, WTF_NOEXPORT)
-#define WTF_MAKE_TZONE_ALLOCATED_EXPORT(name, exportMacro) MAKE_BTZONE_MALLOCED(name, NonCompact, FastFallback, exportMacro)
+#define WTF_MAKE_TZONE_ALLOCATED(name) MAKE_BTZONE_MALLOCED(name, NonCompact, WTF_NOEXPORT)
+#define WTF_MAKE_TZONE_ALLOCATED_EXPORT(name, exportMacro) MAKE_BTZONE_MALLOCED(name, NonCompact, exportMacro)
 
 // struct allocators with FastMalloc fallback if TZoneHeap is enabled.
-#define WTF_MAKE_STRUCT_TZONE_ALLOCATED(name) MAKE_STRUCT_BTZONE_MALLOCED(name, NonCompact, FastFallback, WTF_NOEXPORT)
+#define WTF_MAKE_STRUCT_TZONE_ALLOCATED(name) MAKE_STRUCT_BTZONE_MALLOCED(name, NonCompact, WTF_NOEXPORT)
 
 // template allocators with FastMalloc fallback if TZoneHeap is enabled.
-#define WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(name) MAKE_BTZONE_MALLOCED_TEMPLATE(name, NonCompact, FastFallback, WTF_NOEXPORT)
-#define WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_EXPORT(name, exportMacro) MAKE_BTZONE_MALLOCED_TEMPLATE(name, NonCompact, FastFallback, exportMacro)
+#define WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(name) MAKE_BTZONE_MALLOCED_TEMPLATE(name, NonCompact, WTF_NOEXPORT)
+#define WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_EXPORT(name, exportMacro) MAKE_BTZONE_MALLOCED_TEMPLATE(name, NonCompact, exportMacro)
 
 // special class (e.g. those used with CompactPtr) allocators with FastMalloc fallback if TZoneHeap is enabled.
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED(name) MAKE_BTZONE_MALLOCED(name, Compact, FastFallback, WTF_NOEXPORT)
-#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_EXPORT(name, exportMacro) MAKE_BTZONE_MALLOCED(name, Compact, FastFallback, exportMacro)
+#define WTF_MAKE_COMPACT_TZONE_ALLOCATED(name) MAKE_BTZONE_MALLOCED(name, Compact, WTF_NOEXPORT)
+#define WTF_MAKE_COMPACT_TZONE_ALLOCATED_EXPORT(name, exportMacro) MAKE_BTZONE_MALLOCED(name, Compact, exportMacro)
 
 // IsoHeap fallback allocators
 
 // class allocators with IsoHeap fallback if TZoneHeap is enabled.
-#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED(name) MAKE_BTZONE_MALLOCED(name, NonCompact, IsoFallback, WTF_NOEXPORT)
-#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(name, exportMacro) MAKE_BTZONE_MALLOCED(name, NonCompact, IsoFallback, exportMacro)
+#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED(name) MAKE_BTZONE_MALLOCED(name, NonCompact, WTF_NOEXPORT)
+#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(name, exportMacro) MAKE_BTZONE_MALLOCED(name, NonCompact, exportMacro)
 
 // template allocators with IsoHeap fallback if TZoneHeap is enabled.
-#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_TEMPLATE(name) MAKE_BTZONE_MALLOCED_TEMPLATE(name, NonCompact, IsoFallback, WTF_NOEXPORT)
+#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_TEMPLATE(name) MAKE_BTZONE_MALLOCED_TEMPLATE(name, NonCompact, WTF_NOEXPORT)
 
 // special class (e.g. those used with CompactPtr) allocators with IsoHeap fallback if TZoneHeap is enabled.
 #define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED(name) \
     WTF_ALLOW_COMPACT_POINTERS; \
-    MAKE_BTZONE_MALLOCED(name, Compact, IsoFallback, WTF_NOEXPORT)
+    MAKE_BTZONE_MALLOCED(name, Compact, WTF_NOEXPORT)
 #define WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_EXPORT(name, exportMacro) \
     WTF_ALLOW_COMPACT_POINTERS; \
-    MAKE_BTZONE_MALLOCED(name, Compact, IsoFallback, exportMacro)
+    MAKE_BTZONE_MALLOCED(name, Compact, exportMacro)
 
 // Template implementations for instantiating allocator template static / methods
 
 // template implementation to go with WTF_MAKE_TZONE_ALLOCATED_TEMPLATE and
 // WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_EXPORT if TZoneHeap is enabled. This
 // should be added immediately after the template definition.
-#define WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(_templateParameters, _type) MAKE_BTZONE_MALLOCED_TEMPLATE_IMPL(_templateParameters, _type, FastFallback)
+#define WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(_templateParameters, _type) MAKE_BTZONE_MALLOCED_TEMPLATE_IMPL(_templateParameters, _type)
 
 // template implementation to go with WTF_MAKE_TZONE_OR_ISO_ALLOCATED_TEMPLATE
 // if TZoneHeap is enabled. This should be added immediately after the template definition.
-#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_TEMPLATE_IMPL(_templateParameters, _type) MAKE_BTZONE_MALLOCED_TEMPLATE_IMPL(_templateParameters, _type, IsoFallback)
+#define WTF_MAKE_TZONE_OR_ISO_ALLOCATED_TEMPLATE_IMPL(_templateParameters, _type) MAKE_BTZONE_MALLOCED_TEMPLATE_IMPL(_templateParameters, _type)
 
 // template implementation for to go with WTF_MAKE_TZONE_ALLOCATED_TEMPLATE and
 // WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_EXPORT if TZoneHeap is ensabled. This
