@@ -78,7 +78,8 @@ private:
         Keyframes = 1 << 8,
         CompositeOperation = 1 << 9,
         Timeline = 1 << 10,
-        Range = 1 << 11
+        RangeStart = 1 << 11,
+        RangeEnd = 1 << 12,
     };
 
     String m_animationName;

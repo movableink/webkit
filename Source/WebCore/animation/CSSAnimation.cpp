@@ -145,8 +145,10 @@ void CSSAnimation::syncPropertiesWithBackingAnimation()
         );
     }
 
-    if (!m_overriddenProperties.contains(Property::Range))
-        setRange(animation.range());
+    if (!m_overriddenProperties.contains(Property::RangeStart))
+        setRangeStart(animation.range().start);
+    if (!m_overriddenProperties.contains(Property::RangeEnd))
+        setRangeEnd(animation.range().end);
 
     effectTimingDidChange();
 
@@ -175,13 +177,13 @@ void CSSAnimation::setBindingsTimeline(RefPtr<AnimationTimeline>&& timeline)
 
 void CSSAnimation::setBindingsRangeStart(TimelineRangeValue&& range)
 {
-    m_overriddenProperties.add(Property::Range);
+    m_overriddenProperties.add(Property::RangeStart);
     StyleOriginatedAnimation::setBindingsRangeStart(WTFMove(range));
 }
 
 void CSSAnimation::setBindingsRangeEnd(TimelineRangeValue&& range)
 {
-    m_overriddenProperties.add(Property::Range);
+    m_overriddenProperties.add(Property::RangeEnd);
     StyleOriginatedAnimation::setBindingsRangeEnd(WTFMove(range));
 }
 

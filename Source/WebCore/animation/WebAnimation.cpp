@@ -1913,12 +1913,22 @@ void WebAnimation::setBindingsRangeEnd(TimelineRangeValue&& rangeEndValue)
         effect->animationRangeDidChange();
 }
 
-void WebAnimation::setRange(TimelineRange range)
+void WebAnimation::setRangeStart(SingleTimelineRange rangeStart)
 {
-    if (m_timelineRange == range)
+    if (m_timelineRange.start == rangeStart)
         return;
 
-    m_timelineRange = range;
+    m_timelineRange.start = rangeStart;
+    if (RefPtr effect = this->effect())
+        effect->animationRangeDidChange();
+}
+
+void WebAnimation::setRangeEnd(SingleTimelineRange rangeEnd)
+{
+    if (m_timelineRange.end == rangeEnd)
+        return;
+
+    m_timelineRange.end = rangeEnd;
     if (RefPtr effect = this->effect())
         effect->animationRangeDidChange();
 }
