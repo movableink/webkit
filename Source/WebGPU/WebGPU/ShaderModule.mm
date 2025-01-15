@@ -76,9 +76,14 @@ static std::optional<ShaderModuleParameters> findShaderModuleParameters(const WG
 id<MTLLibrary> ShaderModule::createLibrary(id<MTLDevice> device, const String& msl, String&& label, NSError** error)
 {
     auto options = [MTLCompileOptions new];
+#if ENABLE(WEBGPU_BY_DEFAULT)
+    options.mathMode = MTLMathModeRelaxed;
+    options.mathFloatingPointFunctions = MTLMathFloatingPointFunctionsFast;
+#else
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     options.fastMathEnabled = YES;
 ALLOW_DEPRECATED_DECLARATIONS_END
+#endif
     // FIXME(PERFORMANCE): Run the asynchronous version of this
     id<MTLLibrary> library = [device newLibraryWithSource:msl options:options error:error];
     if (error && *error) {
