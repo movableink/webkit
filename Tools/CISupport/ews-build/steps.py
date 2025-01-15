@@ -5517,6 +5517,12 @@ class RunAPITests(shell.TestNewStyle, AddToLogMixin, ShellMixin):
                            '--json-output={0}'.format(self.jsonFileName)]
         else:
             self.command = self.command + customBuildFlag(platform, self.getProperty('fullPlatform'))
+        if self.name == RunAPITestsWithoutChange.name:
+            first_results_failing_tests = set(self.getProperty('first_run_failures', set()))
+            second_results_failing_tests = set(self.getProperty('second_run_failures', set()))
+            list_failed_tests_with_change = sorted(first_results_failing_tests.union(second_results_failing_tests))
+            if list_failed_tests_with_change:
+                self.command = self.command + list_failed_tests_with_change
         self.command = self.shell_command(' '.join(self.command) + ' > logs.txt 2>&1 ; grep "Ran " logs.txt')
 
         rc = yield super().run()
