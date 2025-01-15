@@ -1,6 +1,25 @@
+// Copyright (C) 2024-2025 Apple Inc. All rights reserved.
 //
-// Copyright (C) 2024 Apple Inc. All rights reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
 //
+// THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+// THE POSSIBILITY OF SUCH DAMAGE.
 
 #if canImport(WritingTools)
 
@@ -16,7 +35,7 @@ import WebKitSwift
 
 // MARK: Implementation
 
-@_objcImplementation extension WKIntelligenceTextEffectCoordinator {
+@_objcImplementation extension WKIntelligenceReplacementTextEffectCoordinator {
     private struct ReplacementOperationRequest {
         let processedRange: Range<Int>
         let finished: Bool
@@ -25,14 +44,10 @@ import WebKitSwift
     }
 
     @nonobjc final private let delegate: (any WKIntelligenceTextEffectCoordinatorDelegate)
-    @nonobjc final private var effectView: PlatformIntelligenceTextEffectView<WKIntelligenceTextEffectCoordinator>? = nil
+    @nonobjc final private lazy var viewManager = IntelligenceTextEffectViewManager(source: self, contentView: self.delegate.view(forIntelligenceTextEffectCoordinator: self))
 
     @nonobjc final private var processedRangeOffset = 0
     @nonobjc final private var contextRange: Range<Int>? = nil
-
-    // Use the corresponding setter functions instead of setting these directly.
-    @nonobjc final private var activePonderingEffect: PlatformIntelligencePonderingTextEffect<Chunk>? = nil
-    @nonobjc final private var activeReplacementEffect: PlatformIntelligenceReplacementTextEffect<Chunk>? = nil
 
     // Maintain a replacement operation queue to ensure that no matter how many batches of replacements are received,
     // there is only ever one ongoing effect at a time.
@@ -43,11 +58,9 @@ import WebKitSwift
     // the acceptance/rejection can properly occur.
     @nonobjc final private var onFlushCompletion: (() async -> Void)? = nil
 
-    @nonobjc final private var suppressEffectView = false
-
     @objc(hasActiveEffects)
     public var hasActiveEffects: Bool {
-        self.activePonderingEffect != nil || self.activeReplacementEffect != nil
+        viewManager.hasActiveEffects
     }
 
     @objc(characterDeltaForReceivedSuggestions:)
@@ -66,8 +79,8 @@ import WebKitSwift
     public func startAnimation(for range: NSRange) async {
         self.reset()
 
-        assert(self.activePonderingEffect == nil, "Intelligence text effect coordinator: cannot start a new animation while a pondering effect is already active")
-        assert(self.activeReplacementEffect == nil, "Intelligence text effect coordinator: cannot start a new animation while a replacement effect is already active")
+        self.viewManager.assertPonderingEffectIsInactive()
+        self.viewManager.assertReplacementEffectIsInactive()
 
         guard let contextRange = Range(range) else {
             assertionFailure("Intelligence text effect coordinator: Unable to create Swift.Range from NSRange \(range)")
@@ -76,10 +89,10 @@ import WebKitSwift
 
         self.contextRange = contextRange
 
-        let chunk = Self.Chunk.Pondering(range: contextRange)
-        let effect = PlatformIntelligencePonderingTextEffect(chunk: chunk as Chunk)
+        let chunk = IntelligenceTextEffectChunk.Pondering(range: contextRange)
+        let effect = PlatformIntelligencePonderingTextEffect(chunk: chunk as IntelligenceTextEffectChunk)
 
-        await self.setActivePonderingEffect(effect)
+        await self.viewManager.setActivePonderingEffect(effect)
     }
 
     @objc(requestReplacementWithProcessedRange:finished:characterDelta:operation:completion:)
@@ -136,176 +149,61 @@ import WebKitSwift
 
     @objc(hideEffectsWithCompletion:)
     public func hideEffects() async {
-        guard !self.suppressEffectView else {
-            return
-        }
-
-        // On macOS, the effect view is incapable of scrolling with the web view. Therefore, the effects need to be suppressed
-        // when scrolling, resizing, or zooming.
-        //
-        // Consequently, since the effects will now be hidden, it is critical that the underlying text visibility is restored to be visible.
-
-        self.suppressEffectView = true
-
-        if let activePonderingEffect = self.activePonderingEffect {
-            await self.delegate.intelligenceTextEffectCoordinator(self, updateTextVisibilityFor: NSRange(activePonderingEffect.chunk.range), visible: true, identifier: activePonderingEffect.chunk.id)
-        }
-
-        if let activeReplacementEffect = self.activeReplacementEffect {
-            await self.delegate.intelligenceTextEffectCoordinator(self, updateTextVisibilityFor: NSRange(activeReplacementEffect.chunk.range), visible: true, identifier: activeReplacementEffect.chunk.id)
-        }
-
-        self.effectView?.isHidden = true
+        await self.viewManager.hideEffects()
     }
 
     @objc(showEffectsWithCompletion:)
     public func showEffects() async {
-        // FIXME: Ideally, after scrolling/resizing/zooming, the effects would be restored and visible.
+        await self.viewManager.showEffects()
     }
 
     @nonobjc final private func removeActiveEffects() async {
-        if self.activePonderingEffect != nil {
-            await self.setActivePonderingEffect(nil)
-        }
-
-        if self.activeReplacementEffect != nil {
-            await self.setActiveReplacementEffect(nil)
-        }
+        await self.viewManager.removeActiveEffects()
     }
 
-    @nonobjc final private func startReplacementAnimation(using request: WKIntelligenceTextEffectCoordinator.ReplacementOperationRequest) async {
-        assert(self.activeReplacementEffect == nil, "Intelligence text effect coordinator: cannot start a new replacement animation while one is already active")
+    @nonobjc final private func startReplacementAnimation(using request: WKIntelligenceReplacementTextEffectCoordinator.ReplacementOperationRequest) async {
+        self.viewManager.assertReplacementEffectIsInactive()
 
         let processedRange = request.processedRange
         let characterDelta = request.characterDelta
 
         let processedRangeRelativeToCurrentText = (processedRange.lowerBound + self.processedRangeOffset)..<(processedRange.upperBound + self.processedRangeOffset)
 
-        let chunk = Self.Chunk.Replacement(
+        let chunk = IntelligenceTextEffectChunk.Replacement(
             range: processedRangeRelativeToCurrentText,
             finished: request.finished,
             characterDelta: characterDelta,
             replacement: request.operation
         )
 
-        let effect = PlatformIntelligenceReplacementTextEffect(chunk: chunk as Chunk)
+        let effect = PlatformIntelligenceReplacementTextEffect(chunk: chunk as IntelligenceTextEffectChunk)
 
         // Start the replacement effect while the pondering effect is still ongoing, so that it can perform
         // the async replacement without it being visible to the user and without any flickering.
-        await self.setActiveReplacementEffect(effect)
+        await self.viewManager.setActiveReplacementEffect(effect)
 
         self.processedRangeOffset += characterDelta
     }
 
-    @nonobjc final private func setupViewIfNeeded() {
-        guard self.effectView == nil else {
-            return
-        }
-
-        let contentView = self.delegate.view(for: self)
-        let effectView = PlatformIntelligenceTextEffectView(source: self)
-
-#if os(iOS)
-        effectView.isUserInteractionEnabled = false
-        effectView.frame = contentView.frame
-        contentView.superview!.addSubview(effectView)
-#else
-        effectView.frame = contentView.bounds
-        contentView.addSubview(effectView)
-#endif
-
-        if self.suppressEffectView {
-            effectView.isHidden = true
-        }
-
-        // UIKit expects subviews of the effect view to be added after the effect view is added to its parent.
-        effectView.initializeSubviews()
-
-        self.effectView = effectView
-    }
-
-    @nonobjc final private func destroyViewIfNeeded() {
-        guard self.activePonderingEffect == nil && self.activeReplacementEffect == nil else {
-            return
-        }
-
-        self.effectView?.removeFromSuperview()
-        self.effectView = nil
-    }
-
-    @nonobjc final private func setActivePonderingEffect(_ effect: PlatformIntelligencePonderingTextEffect<Chunk>?) async {
-        guard (self.activePonderingEffect == nil && effect != nil) || (self.activePonderingEffect != nil && effect == nil) else {
-            assertionFailure("Intelligence text effect coordinator: trying to either set a new pondering effect when there is an ongoing one, or trying to remove an effect when there are none.")
-            return
-        }
-
-        let oldEffect = self.activePonderingEffect
-        self.activePonderingEffect = effect
-
-        if let effect {
-            self.setupViewIfNeeded()
-            await self.effectView?.addEffect(effect)
-        } else {
-            // This needs to be manually invoked rather than relying on the associated delegate method being called. This is
-            // because when removing an effect, the delegate method is invoked after the effect removal function ends. Invoking
-            // this method manually ensures that the replacement effect doesn't start until the visibility has actually changed
-            // and this function terminates.
-            //
-            // Therefore, the delegate method itself must avoid any work so that it can be synchronous, which is what the platform
-            // interfaces expect.
-            await self.updateTextChunkVisibility(oldEffect!.chunk, visible: true, force: true)
-
-            await self.effectView?.removeEffect(oldEffect!.id)
-
-            self.destroyViewIfNeeded()
-        }
-    }
-
-    @nonobjc final private func setActiveReplacementEffect(_ effect: PlatformIntelligenceReplacementTextEffect<Chunk>?) async {
-        guard (self.activeReplacementEffect == nil && effect != nil) || (self.activeReplacementEffect != nil && effect == nil) else {
-            assertionFailure("Intelligence text effect coordinator: trying to either set a new replacement effect when there is an ongoing one, or trying to remove an effect when there are none.")
-            return
-        }
-
-        let oldEffect = self.activeReplacementEffect
-        self.activeReplacementEffect = effect
-
-        if let effect {
-            self.setupViewIfNeeded()
-            await self.effectView?.addEffect(effect)
-        } else {
-            await self.effectView?.removeEffect(oldEffect!.id)
-            self.destroyViewIfNeeded()
-        }
-    }
-
     @nonobjc final private func reset() {
-        self.effectView?.removeAllEffects()
-        self.effectView?.removeFromSuperview()
-        self.effectView = nil
+        self.viewManager.reset()
 
         self.processedRangeOffset = 0
         self.contextRange = nil
-
-        self.activePonderingEffect = nil
-        self.activeReplacementEffect = nil
-
         self.replacementQueue = []
-
-        self.suppressEffectView = false
     }
 }
 
-// MARK: WKIntelligenceTextEffectCoordinator + PlatformIntelligenceTextEffectViewSource conformance
+// MARK: WKIntelligenceReplacementTextEffectCoordinator + PlatformIntelligenceTextEffectViewSource conformance
 
-extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectViewSource {
-    func textPreview(for chunk: Chunk) async -> PlatformTextPreview? {
+extension WKIntelligenceReplacementTextEffectCoordinator: PlatformIntelligenceTextEffectViewSource {
+    func textPreview(for chunk: IntelligenceTextEffectChunk) async -> PlatformTextPreview? {
         let previews = await self.delegate.intelligenceTextEffectCoordinator(self, textPreviewsFor: NSRange(chunk.range))
         return platformTextPreview(from: previews)
     }
 
-    private func updateTextChunkVisibility(_ chunk: Chunk, visible: Bool, force: Bool) async {
-        if chunk is Chunk.Pondering && visible && !force {
+    private func updateTextChunkVisibility(_ chunk: IntelligenceTextEffectChunk, visible: Bool, force: Bool) async {
+        if chunk is IntelligenceTextEffectChunk.Pondering && visible && !force {
             // Typically, if `chunk` is part of a pondering effect, this delegate method will get called with `visible == true`
             // once the pondering effect is removed. However, instead of performing that logic here, it is done in `setActivePonderingEffect`
             // instead.
@@ -314,7 +212,7 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
             return
         }
 
-        guard !self.suppressEffectView else {
+        guard !self.viewManager.suppressEffectView else {
             // If the effect view is currently suppressed, WTUI will still request making the text not visible since it does not know
             // it is hidden. However, this needs to not happen since the effect view is hidden and the underlying text needs to remain visible.
             return
@@ -327,8 +225,8 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
         await self.updateTextChunkVisibility(chunk, visible: visible, force: false)
     }
 
-    func performReplacementAndGeneratePreview(for chunk: Chunk, effect: PlatformIntelligenceReplacementTextEffect<Chunk>) async -> (PlatformTextPreview?, remainder: PlatformContentPreview?) {
-        guard let chunk = chunk as? Chunk.Replacement else {
+    func performReplacementAndGeneratePreview(for chunk: IntelligenceTextEffectChunk, effect: PlatformIntelligenceReplacementTextEffect<IntelligenceTextEffectChunk>) async -> (PlatformTextPreview?, remainder: PlatformContentPreview?) {
+        guard let chunk = chunk as? IntelligenceTextEffectChunk.Replacement else {
             fatalError()
         }
 
@@ -359,8 +257,8 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
         // Additionally, the range's start offset can be truncated to now start at the end of the replacement range,
         // since the range [activePonderingEffect.chunk.range.lowerBound, chunk.range.upperBound] will be covered by
         // the replacement range so there's no need for the pondering effect to also try to affect it.
-        if let activePonderingEffect = self.activePonderingEffect {
-            activePonderingEffect.chunk.range = chunk.range.upperBound..<(activePonderingEffect.chunk.range.upperBound + characterDelta)
+        self.viewManager.updateActivePonderingEffect { oldPonderingEffectRange in
+            chunk.range.upperBound..<(oldPonderingEffectRange.upperBound + characterDelta)
         }
 
         let previews = await self.delegate.intelligenceTextEffectCoordinator(self, textPreviewsFor: NSRange(chunk.range))
@@ -375,8 +273,8 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
         return (platformPreview, remainder: remainderPreview)
     }
 
-    func replacementEffectWillBegin(_ effect: PlatformIntelligenceReplacementTextEffect<Chunk>) async {
-        guard let chunk = effect.chunk as? Chunk.Replacement else {
+    func replacementEffectWillBegin(_ effect: PlatformIntelligenceReplacementTextEffect<IntelligenceTextEffectChunk>) async {
+        guard let chunk = effect.chunk as? IntelligenceTextEffectChunk.Replacement else {
             fatalError()
         }
 
@@ -398,7 +296,7 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
         await self.delegate.intelligenceTextEffectCoordinator(self, updateTextVisibilityFor: NSRange(rangeToHide), visible: false, identifier: effect.chunk.id)
 
         // Stop the current pondering effect, and then create a new pondering effect once the replacement effect is complete.
-        await self.setActivePonderingEffect(nil)
+        await self.viewManager.setActivePonderingEffect(nil)
     }
 
     @discardableResult private func flushRemainingReplacementsIfNeeded() async -> Bool {
@@ -437,7 +335,7 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
         let rangeAfterReplacement = chunk.range
 
         // Inform the coordinator the active replacement effect is over, and then inform the delegate to decorate the replacements if needed.
-        await self.setActiveReplacementEffect(nil)
+        await self.viewManager.setActiveReplacementEffect(nil)
         await self.delegate.intelligenceTextEffectCoordinator(self, decorateReplacementsFor: NSRange(rangeAfterReplacement))
 
         // If this is the last chunk, that means that there will be no subsequent replacements, and no replacements other than
@@ -448,6 +346,7 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
         if chunk.finished {
             self.replacementQueue.removeFirst()
             await self.restoreSelectionAcceptedReplacements(true)
+
             return
         }
 
@@ -470,7 +369,7 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
 
         // When all text has been processed, the unprocessed range will be empty, and no pondering effect need be created.
         if !unprocessedRangeChunk.range.isEmpty {
-            await self.setActivePonderingEffect(ponderEffectForUnprocessedRange)
+            await self.viewManager.setActivePonderingEffect(ponderEffectForUnprocessedRange)
         }
 
         // Now that the first replacement is complete, remove it from the queue, and start the next one in line.
@@ -480,51 +379,6 @@ extension WKIntelligenceTextEffectCoordinator: PlatformIntelligenceTextEffectVie
         if let next = self.replacementQueue.first {
             await self.startReplacementAnimation(using: next)
         }
-    }
-}
-
-// MARK: WKIntelligenceTextEffectCoordinator.Chunk
-
-extension WKIntelligenceTextEffectCoordinator {
-    class Chunk: PlatformIntelligenceTextEffectChunk {
-        fileprivate class Pondering: Chunk {
-            override init(range: Range<Int>) {
-                super.init(range: range)
-            }
-        }
-
-        fileprivate class Replacement: Chunk {
-            let finished: Bool
-            let characterDelta: Int
-            let replacement: (() async -> Void)
-
-            init(range: Range<Int>, finished: Bool, characterDelta: Int, replacement: @escaping (() async -> Void)) {
-                self.finished = finished
-                self.replacement = replacement
-                self.characterDelta = characterDelta
-                super.init(range: range)
-            }
-        }
-
-        let id = UUID()
-
-        fileprivate var range: Range<Int>
-
-        private init(range: Range<Int>) {
-            self.range = range
-        }
-    }
-}
-
-// MARK: WKIntelligenceTextEffectCoordinator.Chunk + Hashable & Equatable
-
-extension WKIntelligenceTextEffectCoordinator.Chunk: Hashable, Equatable {
-    static func == (lhs: WKIntelligenceTextEffectCoordinator.Chunk, rhs: WKIntelligenceTextEffectCoordinator.Chunk) -> Bool {
-        lhs.id == rhs.id
-    }
-
-    func hash(into hasher: inout Hasher) {
-        self.id.hash(into: &hasher)
     }
 }
 

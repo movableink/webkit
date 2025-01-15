@@ -3748,7 +3748,7 @@ TEST(WritingTools, IntelligenceTextEffectCoordinatorDelegate_RectsForProofreadin
     id<WKIntelligenceTextEffectCoordinatorDelegate> coordinatorDelegate = (id<WKIntelligenceTextEffectCoordinatorDelegate>)webView.get();
 
     // FIXME: Figure out how to use `WebKitSwiftSoftLink` within TestWebKitAPI so that an actual instance can be created.
-    WKIntelligenceTextEffectCoordinator *coordinator = nil;
+    id<WKIntelligenceTextEffectCoordinating> coordinator = nil;
 
     NSRange subrange = NSMakeRange(18, 43); // "I didn't quite hear him.\n\nWho's over there?"
 
@@ -3801,7 +3801,7 @@ TEST(WritingTools, IntelligenceTextEffectCoordinatorDelegate_UpdateTextVisibilit
     finished = false;
 
     id<WKIntelligenceTextEffectCoordinatorDelegate> coordinatorDelegate = (id<WKIntelligenceTextEffectCoordinatorDelegate>)webView.get();
-    WKIntelligenceTextEffectCoordinator *coordinator = nil;
+    id<WKIntelligenceTextEffectCoordinating> coordinator = nil;
 
     __auto_type moveSelectionToFirstNode = ^{
         NSString *setSelectionJavaScript = @""
@@ -3889,7 +3889,7 @@ TEST(WritingTools, IntelligenceTextEffectCoordinatorDelegate_TextPreviewsForRang
     NSRange subrange = NSMakeRange(17, 45); // "I didn't quite here him.\n\nWho's over they're."
 
     id<WKIntelligenceTextEffectCoordinatorDelegate> coordinatorDelegate = (id<WKIntelligenceTextEffectCoordinatorDelegate>)webView.get();
-    WKIntelligenceTextEffectCoordinator *coordinator = nil;
+    id<WKIntelligenceTextEffectCoordinating> coordinator = nil;
 
 #if PLATFORM(MAC)
     __block RetainPtr<NSArray<_WKTextPreview *>> previews;

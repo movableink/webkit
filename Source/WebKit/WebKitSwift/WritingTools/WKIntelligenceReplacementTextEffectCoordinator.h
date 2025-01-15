@@ -23,11 +23,23 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitSwift/LinearMediaKitExtras.h>
-#import <WebKitSwift/RealityKitBridging.h>
-#import <WebKitSwift/WKIntelligenceReplacementTextEffectCoordinator.h>
-#import <WebKitSwift/WKIntelligenceTextEffectCoordinator.h>
-#import <WebKitSwift/WKSLinearMediaPlayer.h>
-#import <WebKitSwift/WKSLinearMediaTypes.h>
-#import <WebKitSwift/WKSPreviewWindowController.h>
-#import <WebKitSwift/WKSTextAnimationSourceDelegate.h>
+#import <Foundation/Foundation.h>
+
+#if !TARGET_OS_WATCH && !TARGET_OS_TV && __has_include(<WritingTools/WritingTools.h>)
+
+#import "WKIntelligenceTextEffectCoordinator.h"
+
+NS_ASSUME_NONNULL_BEGIN
+
+@class WTTextSuggestion;
+
+NS_SWIFT_UI_ACTOR
+@interface WKIntelligenceReplacementTextEffectCoordinator : NSObject <WKIntelligenceTextEffectCoordinating>
+
++ (NSInteger)characterDeltaForReceivedSuggestions:(NSArray<WTTextSuggestion *> *)suggestions;
+
+@end
+
+NS_ASSUME_NONNULL_END
+
+#endif

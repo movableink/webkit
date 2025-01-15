@@ -2249,7 +2249,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     _page->didBeginWritingToolsSession(*webSession, contextData);
 
     if (session.type == WTSessionTypeProofreading) {
-        _intelligenceTextEffectCoordinator = adoptNS([WebKit::allocWKIntelligenceTextEffectCoordinatorInstance() initWithDelegate:(id<WKIntelligenceTextEffectCoordinatorDelegate>)self]);
+        _intelligenceTextEffectCoordinator = adoptNS([WebKit::allocWKIntelligenceReplacementTextEffectCoordinatorInstance() initWithDelegate:(id<WKIntelligenceTextEffectCoordinatorDelegate>)self]);
         [_intelligenceTextEffectCoordinator startAnimationForRange:contexts.firstObject.range completion:^{ }];
     }
 }
@@ -2281,7 +2281,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
         [_writingToolsTextSuggestions setObject:suggestion forKey:suggestion.uuid];
     }
 
-    NSInteger delta = [WebKit::getWKIntelligenceTextEffectCoordinatorClass() characterDeltaForReceivedSuggestions:suggestions];
+    NSInteger delta = [WebKit::getWKIntelligenceReplacementTextEffectCoordinatorClass() characterDeltaForReceivedSuggestions:suggestions];
 
     auto operation = makeBlockPtr([webSession, replacementData, range, webContext, finished, weakSelf = WeakObjCPtr<WKWebView>(self)](void (^completion)(void)) {
         auto strongSelf = weakSelf.get();
@@ -2410,18 +2410,18 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 #if !PLATFORM(APPLETV) && !PLATFORM(WATCHOS)
 
 #if PLATFORM(IOS_FAMILY)
-- (UIView *)viewForIntelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator
+- (UIView *)viewForIntelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator
 {
     return _contentView.get();
 }
 #else
-- (NSView *)viewForIntelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator
+- (NSView *)viewForIntelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator
 {
     return self;
 }
 #endif
 
-- (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator rectsForProofreadingSuggestionsInRange:(NSRange)range completion:(void (^)(NSArray<NSValue *> *))completion
+- (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator rectsForProofreadingSuggestionsInRange:(NSRange)range completion:(void (^)(NSArray<NSValue *> *))completion
 {
     _page->proofreadingSessionSuggestionTextRectsInRootViewCoordinates(range, [completion = makeBlockPtr(completion)](auto&& rects) {
         RetainPtr nsArray = createNSArray(rects, [](auto& rect) {
@@ -2432,7 +2432,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     });
 }
 
-- (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator updateTextVisibilityForRange:(NSRange)range visible:(BOOL)visible identifier:(NSUUID *)identifier completion:(void (^)(void))completion
+- (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator updateTextVisibilityForRange:(NSRange)range visible:(BOOL)visible identifier:(NSUUID *)identifier completion:(void (^)(void))completion
 {
     auto convertedIdentifier = WTF::UUID::fromNSUUID(identifier);
     if (!convertedIdentifier) {
@@ -2454,7 +2454,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 }
 
 #if PLATFORM(IOS_FAMILY)
-- (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator textPreviewsForRange:(NSRange)range completion:(void (^)(UITargetedPreview *))completion
+- (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator textPreviewsForRange:(NSRange)range completion:(void (^)(UITargetedPreview *))completion
 {
     _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion), weakSelf = WeakObjCPtr<WKWebView>(self)](auto&& textIndicatorData) {
         auto strongSelf = weakSelf.get();
@@ -2473,7 +2473,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     });
 }
 #else
-- (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator textPreviewsForRange:(NSRange)range completion:(void (^)(NSArray<_WKTextPreview *> *))completion
+- (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator textPreviewsForRange:(NSRange)range completion:(void (^)(NSArray<_WKTextPreview *> *))completion
 {
     // FIXME: This logic is currently duplicated in a bunch of places; it should be unified.
     _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)](auto&& textIndicatorData) {
@@ -2520,7 +2520,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 }
 #endif
 
-- (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator contentPreviewForRange:(NSRange)range completion:(void (^)(_WKTextPreview *))completion
+- (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator contentPreviewForRange:(NSRange)range completion:(void (^)(_WKTextPreview *))completion
 {
     // FIXME: This logic is currently duplicated in a bunch of places; it should be unified.
     _page->textPreviewDataForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)](auto&& textIndicatorData) {
@@ -2559,14 +2559,14 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     });
 }
 
-- (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator decorateReplacementsForRange:(NSRange)range completion:(void (^)(void))completion
+- (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator decorateReplacementsForRange:(NSRange)range completion:(void (^)(void))completion
 {
     _page->decorateTextReplacementsForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)] {
         completion();
     });
 }
 
-- (void)intelligenceTextEffectCoordinator:(WKIntelligenceTextEffectCoordinator *)coordinator setSelectionForRange:(NSRange)range completion:(void (^)(void))completion
+- (void)intelligenceTextEffectCoordinator:(id<WKIntelligenceTextEffectCoordinating>)coordinator setSelectionForRange:(NSRange)range completion:(void (^)(void))completion
 {
     _page->setSelectionForActiveWritingToolsSession(range, [completion = makeBlockPtr(completion)] {
         completion();
