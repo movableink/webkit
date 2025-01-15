@@ -71,7 +71,7 @@ static FloatRect inlineVideoFrame(HTMLVideoElement& element)
         return { };
 
     document->updateLayout(LayoutOptions::IgnorePendingStylesheets);
-    auto* renderer = element.renderer();
+    CheckedPtr renderer = element.renderer();
     if (!renderer)
         return { };
 
@@ -81,9 +81,7 @@ static FloatRect inlineVideoFrame(HTMLVideoElement& element)
         return document->view()->contentsToRootView(contentsBox.boundingBox());
     }
 
-    auto rect = renderer->videoBox();
-    rect.moveBy(renderer->absoluteBoundingBoxRect().location());
-    return document->view()->contentsToRootView(rect);
+    return renderer->videoBoxInRootView();
 }
 
 #pragma mark - VideoPresentationInterfaceContext

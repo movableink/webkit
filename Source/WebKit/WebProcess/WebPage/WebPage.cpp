@@ -9484,19 +9484,15 @@ void WebPage::scrollToRect(const WebCore::FloatRect& targetRect, const WebCore::
 #if ENABLE(IMAGE_ANALYSIS) && ENABLE(VIDEO)
 void WebPage::beginTextRecognitionForVideoInElementFullScreen(const HTMLVideoElement& element)
 {
-    RefPtr view = element.document().view();
-    if (!view)
-        return;
-
     auto mediaPlayerIdentifier = element.playerIdentifier();
     if (!mediaPlayerIdentifier)
         return;
 
-    auto* renderer = element.renderer();
+    CheckedPtr renderer = element.renderer();
     if (!renderer)
         return;
 
-    auto rectInRootView = view->contentsToRootView(renderer->videoBox());
+    auto rectInRootView = renderer->videoBoxInRootView();
     if (rectInRootView.isEmpty())
         return;
 

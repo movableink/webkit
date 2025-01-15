@@ -41,7 +41,8 @@ public:
 
     WEBCORE_EXPORT HTMLVideoElement& videoElement() const;
 
-    WEBCORE_EXPORT IntRect videoBox() const;
+    IntRect videoBox() const;
+    WEBCORE_EXPORT IntRect videoBoxInRootView() const;
 
     static IntSize defaultSize();
 

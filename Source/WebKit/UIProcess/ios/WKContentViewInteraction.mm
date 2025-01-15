@@ -12865,8 +12865,6 @@ static BOOL shouldUseMachineReadableCodeMenuFromImageAnalysisResult(CocoaImageAn
 {
     auto unitInteractionRect = _imageAnalysisInteractionBounds;
     WebCore::FloatRect contentViewBounds = self.bounds;
-    auto obscuredInset = self.webView._computedObscuredInset;
-    unitInteractionRect.move(obscuredInset.left, obscuredInset.top);
     unitInteractionRect.moveBy(-contentViewBounds.location());
     unitInteractionRect.scale(1 / contentViewBounds.size());
     return unitInteractionRect;

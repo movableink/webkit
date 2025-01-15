@@ -192,6 +192,17 @@ IntRect RenderVideo::videoBox() const
     return snappedIntRect(replacedContentRect(intrinsicSize));
 }
 
+IntRect RenderVideo::videoBoxInRootView() const
+{
+    RefPtr view = document().view();
+    if (!view)
+        return { };
+
+    auto videoBox = this->videoBox();
+    videoBox.moveBy(absoluteBoundingBoxRect().location());
+    return view->contentsToRootView(videoBox);
+}
+
 bool RenderVideo::shouldDisplayVideo() const
 {
     return !videoElement().shouldDisplayPosterImage();
