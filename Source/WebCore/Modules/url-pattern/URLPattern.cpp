@@ -55,6 +55,20 @@ static String processBaseURLString(StringView input, BaseURLStringType type)
     return URLPatternUtilities::escapePatternString(input);
 }
 
+// https://urlpattern.spec.whatwg.org/#hostname-pattern-is-an-ipv6-address
+static bool isHostnamePatternIPv6(StringView hostname)
+{
+    if (hostname.length() < 2)
+        return false;
+    if (hostname[0] == '[')
+        return true;
+    if (hostname[0] == '{' && hostname[1] == '[')
+        return true;
+    if (hostname[0] == '\\' && hostname[1] == '[')
+        return true;
+    return false;
+}
+
 URLPattern::URLPattern() = default;
 
 // https://urlpattern.spec.whatwg.org/#process-a-urlpatterninit
@@ -309,7 +323,7 @@ ExceptionOr<void> URLPattern::compileAllComponents(ScriptExecutionContext& conte
         return maybePasswordComponent.releaseException();
     m_passwordComponent = maybePasswordComponent.releaseReturnValue();
 
-    auto hostnameEncodingCallbackType = URL::isIPv6Address(processedInit.hostname) ? EncodingCallbackType::IPv6Host : EncodingCallbackType::Host;
+    auto hostnameEncodingCallbackType = isHostnamePatternIPv6(processedInit.hostname) ? EncodingCallbackType::IPv6Host : EncodingCallbackType::Host;
     auto maybeHostnameComponent = URLPatternUtilities::URLPatternComponent::compile(vm, processedInit.hostname, hostnameEncodingCallbackType, URLPatternUtilities::URLPatternStringOptions { .delimiterCodepoint = "."_s });
     if (maybeHostnameComponent.hasException())
         return maybeHostnameComponent.releaseException();

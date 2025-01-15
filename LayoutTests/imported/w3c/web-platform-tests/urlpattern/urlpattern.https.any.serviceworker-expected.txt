@@ -249,18 +249,18 @@ PASS Pattern: ["https\\:foo\\:bar@example.com"] Inputs: ["https:foo:bar@example.
 PASS Pattern: ["data\\:foo\\:bar@example.com"] Inputs: ["data:foo:bar@example.com"]
 PASS Pattern: ["https://foo{\\:}bar@example.com"] Inputs: ["https://foo:bar@example.com"]
 PASS Pattern: ["data{\\:}channel.html","https://example.com"] Inputs: ["https://example.com/data:channel.html"]
-FAIL Pattern: ["http://[\\:\\:1]/"] Inputs: ["http://[::1]/"] Invalid input to canonicalize a URL host string.
-FAIL Pattern: ["http://[\\:\\:1]:8080/"] Inputs: ["http://[::1]:8080/"] Invalid input to canonicalize a URL host string.
-FAIL Pattern: ["http://[\\:\\:a]/"] Inputs: ["http://[::a]/"] Invalid input to canonicalize a URL host string.
-FAIL Pattern: ["http://[:address]/"] Inputs: ["http://[::1]/"] Invalid input to canonicalize a URL host string.
-FAIL Pattern: ["http://[\\:\\:AB\\::num]/"] Inputs: ["http://[::ab:1]/"] Invalid input to canonicalize a URL host string.
-FAIL Pattern: [{"hostname":"[\\:\\:AB\\::num]"}] Inputs: [{"hostname":"[::ab:1]"}] Invalid input to canonicalize a URL host string.
+PASS Pattern: ["http://[\\:\\:1]/"] Inputs: ["http://[::1]/"]
+PASS Pattern: ["http://[\\:\\:1]:8080/"] Inputs: ["http://[::1]:8080/"]
+PASS Pattern: ["http://[\\:\\:a]/"] Inputs: ["http://[::a]/"]
+PASS Pattern: ["http://[:address]/"] Inputs: ["http://[::1]/"]
+PASS Pattern: ["http://[\\:\\:AB\\::num]/"] Inputs: ["http://[::ab:1]/"]
+PASS Pattern: [{"hostname":"[\\:\\:AB\\::num]"}] Inputs: [{"hostname":"[::ab:1]"}]
 PASS Pattern: [{"hostname":"[\\:\\:xY\\::num]"}] Inputs: undefined
-FAIL Pattern: [{"hostname":"{[\\:\\:ab\\::num]}"}] Inputs: [{"hostname":"[::ab:1]"}] Invalid input to canonicalize a URL host string.
+PASS Pattern: [{"hostname":"{[\\:\\:ab\\::num]}"}] Inputs: [{"hostname":"[::ab:1]"}]
 PASS Pattern: [{"hostname":"{[\\:\\:fé\\::num]}"}] Inputs: undefined
-FAIL Pattern: [{"hostname":"{[\\:\\::num\\:1]}"}] Inputs: [{"hostname":"[::ab:1]"}] Invalid input to canonicalize a URL host string.
+PASS Pattern: [{"hostname":"{[\\:\\::num\\:1]}"}] Inputs: [{"hostname":"[::ab:1]"}]
 PASS Pattern: [{"hostname":"{[\\:\\::num\\:fé]}"}] Inputs: undefined
-FAIL Pattern: [{"hostname":"[*\\:1]"}] Inputs: [{"hostname":"[::ab:1]"}] Invalid input to canonicalize a URL host string.
+PASS Pattern: [{"hostname":"[*\\:1]"}] Inputs: [{"hostname":"[::ab:1]"}]
 PASS Pattern: [{"hostname":"*\\:1]"}] Inputs: undefined
 PASS Pattern: ["https://foo{{@}}example.com"] Inputs: ["https://foo@example.com"]
 PASS Pattern: ["https://foo{@example.com"] Inputs: ["https://foo@example.com"]

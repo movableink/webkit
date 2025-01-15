@@ -36,10 +36,10 @@ namespace WebCore {
 
 static constexpr auto dummyURLCharacters { "https://www.webkit.org"_s };
 
-static bool isInvalidIPv6HostCodePoint(auto codepoint)
+static bool isValidIPv6HostCodePoint(auto codepoint)
 {
     static constexpr std::array validSpecialCodepoints { '[', ']', ':' };
-    return !isASCIIHexDigit(codepoint) && std::find(validSpecialCodepoints.begin(), validSpecialCodepoints.end(), codepoint) != validSpecialCodepoints.end();
+    return isASCIIHexDigit(codepoint) || std::find(validSpecialCodepoints.begin(), validSpecialCodepoints.end(), codepoint) != validSpecialCodepoints.end();
 }
 
 // https://urlpattern.spec.whatwg.org/#is-an-absolute-pathname
@@ -125,7 +125,10 @@ ExceptionOr<String> canonicalizeHostname(StringView value, BaseURLStringType val
         return value.toString();
 
     // URL::setHost is not fully validating forbidden host code points, so we do it before, except for IPv6 addresses.
-    if (value[0] != '[' && value.find(WTF::isForbiddenHostCodePoint) != notFound)
+    if (value[0] == '[') {
+        if (value[value.length() - 1] != ']')
+            return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL host string - bad IPv6."_s };
+    } else if (value[0] != '[' && value.find(WTF::isForbiddenHostCodePoint) != notFound)
         return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL host string - forbidden code point."_s };
 
     URL dummyURL(dummyURLCharacters);
@@ -147,7 +150,7 @@ ExceptionOr<String> canonicalizeIPv6Hostname(StringView value, BaseURLStringType
     result.reserveCapacity(result.length());
 
     for (auto codepoint : value.codePoints()) {
-        if (isInvalidIPv6HostCodePoint(codepoint))
+        if (!isValidIPv6HostCodePoint(codepoint))
             return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL IPv6 host string."_s };
 
         result.append(toASCIILower(codepoint));
