@@ -1853,10 +1853,6 @@ editing/input/scroll-viewport-page-up-down.html [ Pass Failure ]
 # webkit.org/b/280413 [ macOS wk2 arm64 ] fast/forms/password-scrolled-after-caps-lock-toggled.html is a flaky failure 
 [ arm64 ] fast/forms/password-scrolled-after-caps-lock-toggled.html  [ Pass Failure ]
 
-# webkit.org/b/280415 [ Sequoia wk2 release arm64 ] 2x fast/selectors/* are flaky image only failures. 
-[ Sequoia+ arm64 Release ] fast/selectors/selection-window-inactive-stroke-color.html [ Pass ImageOnlyFailure ]
-[ Sequoia+ arm64 Release ] fast/selectors/text-field-selection-stroke-color.html [ Pass ImageOnlyFailure ]
-
 # webkit.org/b/280418 [ Sequoia wk2 ] fast/speechsynthesis/mac/samantha-voice-available.html is a constant failure. 
 [ Sequoia+ ] fast/speechsynthesis/mac/samantha-voice-available.html [ Pass Failure ]
 
@@ -1943,3 +1939,7 @@ imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-f
 imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-traverseTo-forward-multiple.html [ Failure ]
 
 webkit.org/b/285934 [ Ventura+ Debug arm64 ] http/tests/security/contentSecurityPolicy/connect-src-star-websocket-allowed.html [ Pass Crash ]
+
+# webkit.org/b/280415 [ Sequoia wk2 release arm64 ] 2x fast/selectors/* are flaky image only failures.
+[ Ventura+ arm64 ] fast/selectors/selection-window-inactive-stroke-color.html [ Pass ImageOnlyFailure ]
+[ Ventura+ arm64 ] fast/selectors/text-field-selection-stroke-color.html [ Pass ImageOnlyFailure ]
