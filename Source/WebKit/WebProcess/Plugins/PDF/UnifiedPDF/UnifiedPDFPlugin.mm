@@ -295,6 +295,11 @@ void UnifiedPDFPlugin::installPDFDocument()
     if (!m_view)
         return;
 
+    auto handlePDFTestCallback = makeScopeExit([testCallback = WTFMove(m_pdfTestCallback)] {
+        if (testCallback)
+            testCallback->handleEvent();
+    });
+
     m_documentLayout.setPDFDocument(m_pdfDocument.get());
 
 #if HAVE(INCREMENTAL_PDF_APIS)
@@ -333,8 +338,30 @@ void UnifiedPDFPlugin::installPDFDocument()
             registerPDFTest(WTFMove(callback));
     }
 
-    if (m_pdfTestCallback)
-        std::exchange(m_pdfTestCallback, nullptr)->handleEvent();
+    sizeToFitContentsIfNeeded();
+}
+
+bool UnifiedPDFPlugin::shouldSizeToFitContent() const
+{
+#if PLATFORM(IOS_FAMILY)
+    return isFullMainFramePlugin();
+#else
+    return false;
+#endif
+}
+
+void UnifiedPDFPlugin::sizeToFitContentsIfNeeded()
+{
+    if (!shouldSizeToFitContent())
+        return;
+
+    if (isLocked())
+        return;
+
+    auto size = contentsSize();
+    Ref pluginElement = m_view->pluginElement();
+    pluginElement->setInlineStyleProperty(CSSPropertyWidth, size.width(), CSSUnitType::CSS_PX);
+    pluginElement->setInlineStyleProperty(CSSPropertyHeight, size.height(), CSSUnitType::CSS_PX);
 }
 
 void UnifiedPDFPlugin::incrementalLoadingDidProgress()
@@ -1273,6 +1300,8 @@ void UnifiedPDFPlugin::updateLayout(AdjustScaleAfterLayout shouldAdjustScale, st
 
     if (anchoringInfo)
         m_presentationController->restorePDFPosition(*anchoringInfo);
+
+    sizeToFitContentsIfNeeded();
 }
 
 FloatSize UnifiedPDFPlugin::centeringOffset() const

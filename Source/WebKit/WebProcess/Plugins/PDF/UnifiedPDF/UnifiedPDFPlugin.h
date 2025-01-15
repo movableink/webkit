@@ -217,6 +217,8 @@ public:
 
     bool shouldRespectPageScaleAdjustments() const final;
 
+    bool shouldSizeToFitContent() const final;
+
 private:
     explicit UnifiedPDFPlugin(WebCore::HTMLPlugInElement&);
     bool isUnifiedPDFPlugin() const override { return true; }
@@ -540,6 +542,8 @@ private:
 
     void setNeedsRepaintForIncrementalLoad();
     void setNeedsRepaintForAnnotation(PDFAnnotation *, RepaintRequirements);
+
+    void sizeToFitContentsIfNeeded();
 
     // "Up" is inside-out.
     template <typename T>

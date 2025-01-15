@@ -45,6 +45,7 @@
 #include <WebCore/CookieJar.h>
 #include <WebCore/Credential.h>
 #include <WebCore/CredentialStorage.h>
+#include <WebCore/DocumentInlines.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/EventNames.h>
@@ -241,6 +242,7 @@ PluginView::PluginView(HTMLPlugInElement& element, const URL& mainResourceURL, c
 {
     protectedPlugin()->startLoading();
     m_webPage->addPluginView(*this);
+    updateDocumentForPluginSizingBehavior();
 }
 
 PluginView::~PluginView()
@@ -1191,6 +1193,15 @@ bool PluginView::shouldRespectPageScaleAdjustments() const
         return false;
 
     return protectedPlugin()->shouldRespectPageScaleAdjustments();
+}
+
+void PluginView::updateDocumentForPluginSizingBehavior()
+{
+    if (!protectedPlugin()->shouldSizeToFitContent())
+        return;
+    // The styles in PluginDocumentParser are constructed to respond to this class.
+    if (RefPtr documentElement = protectedPluginElement()->protectedDocument()->protectedDocumentElement())
+        documentElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, "plugin-fits-content"_s);
 }
 
 } // namespace WebKit

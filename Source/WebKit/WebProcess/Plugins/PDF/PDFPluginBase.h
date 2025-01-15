@@ -334,6 +334,8 @@ public:
 
     virtual bool shouldRespectPageScaleAdjustments() const { return true; }
 
+    virtual bool shouldSizeToFitContent() const { return false; }
+
 protected:
     virtual double contentScaleFactor() const = 0;
     virtual bool platformPopulateEditorStateIfNeeded(EditorState&) const { return false; }
