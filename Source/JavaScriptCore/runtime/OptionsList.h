@@ -585,7 +585,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, dumpWasmWarnings, false, Normal, nullptr) \
     v(Bool, useRecursiveJSONParse, true, Normal, nullptr) \
     v(Unsigned, thresholdForStringReplaceCache, 0x1000, Normal, nullptr) \
-    v(Bool, useWasmIPInt, ipintEnabledByDefault(), Normal, "Use the in-place interpereter for WASM instead of LLInt."_s) \
+    v(Bool, useWasmIPInt, false, Normal, "Use the in-place interpereter for WASM instead of LLInt."_s) \
     v(Bool, useWasmIPIntPrologueOSR, true, Normal, "Allow IPInt to tier up during function prologues"_s) \
     v(Bool, useWasmIPIntLoopOSR, true, Normal, "Allow IPInt to tier up during loop iterations"_s) \
     v(Bool, useWasmIPIntEpilogueOSR, true, Normal, "Allow IPInt to tier up during function epilogues"_s) \
