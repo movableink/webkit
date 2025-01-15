@@ -261,7 +261,7 @@ static inline String computeTagAndAttributeSelector(const Element& element, cons
     static constexpr auto maximumValueLengthForExactMatch = 60;
 
     Vector<std::pair<String, String>> attributesToCheck;
-    auto& attributes = element.attributes();
+    auto& attributes = element.attributesMap();
     attributesToCheck.reserveInitialCapacity(attributes.length());
     for (unsigned i = 0; i < attributes.length(); ++i) {
         RefPtr attribute = attributes.item(i);

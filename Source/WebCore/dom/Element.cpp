@@ -360,7 +360,7 @@ bool Element::isNonceable() const
         static constexpr auto scriptString = "<script"_s;
         static constexpr auto styleString = "<style"_s;
 
-        for (const auto& attribute : attributesIterator()) {
+        for (auto& attribute : attributes()) {
             auto name = attribute.localNameLowercase();
             auto value = attribute.value().convertToASCIILowercase();
             if (name.contains(scriptString)
@@ -703,7 +703,7 @@ void Element::setBooleanAttribute(const QualifiedName& name, bool value)
         removeAttribute(name);
 }
 
-NamedNodeMap& Element::attributes() const
+NamedNodeMap& Element::attributesMap() const
 {
     ElementRareData& rareData = const_cast<Element*>(this)->ensureElementRareData();
     if (NamedNodeMap* attributeMap = rareData.attributeMap())
@@ -805,7 +805,7 @@ Vector<String> Element::getAttributeNames() const
     if (!hasAttributes())
         return { };
 
-    auto attributes = attributesIterator();
+    auto attributes = this->attributes();
     return WTF::map(attributes, [](auto& attribute) {
         return attribute.name().toString();
     });
@@ -5343,7 +5343,7 @@ void Element::detachAllAttrNodesFromElement()
     auto* attrNodeList = attrNodeListForElement(*this);
     ASSERT(attrNodeList);
 
-    for (const Attribute& attribute : attributesIterator()) {
+    for (auto& attribute : attributes()) {
         if (RefPtr<Attr> attrNode = findAttrNodeInList(*attrNodeList, attribute.name()))
             attrNode->detachFromElementWithValue(attribute.value());
     }
@@ -5500,7 +5500,7 @@ void Element::cloneAttributesFromElement(const Element& other)
         inputElement->initializeInputTypeAfterParsingOrCloning();
     }
 
-    for (const Attribute& attribute : attributesIterator())
+    for (auto& attribute : attributes())
         notifyAttributeChanged(attribute.name(), nullAtom(), attribute.value(), AttributeModificationReason::ByCloning);
 
     setNonce(other.nonce());

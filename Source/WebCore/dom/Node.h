@@ -162,7 +162,7 @@ public:
     inline Node* lastChild() const; // Defined in ContainerNode.h
     inline RefPtr<Node> protectedLastChild() const; // Defined in ContainerNode.h
     inline bool hasAttributes() const;
-    inline NamedNodeMap* attributes() const;
+    inline NamedNodeMap* attributesMap() const;
     Node* pseudoAwareNextSibling() const;
     Node* pseudoAwarePreviousSibling() const;
     Node* pseudoAwareFirstChild() const;

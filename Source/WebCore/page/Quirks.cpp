@@ -904,7 +904,7 @@ static bool isKinjaLoginAvatarElement(const Element& element)
         svgElement = element.parentElement();
 
     if (svgElement && svgElement->hasAttributes()) {
-        auto ariaLabelAttr = svgElement->attributes().getNamedItem("aria-label"_s);
+        auto ariaLabelAttr = svgElement->attributesMap().getNamedItem("aria-label"_s);
         if (ariaLabelAttr && ariaLabelAttr->value() == "UserFilled icon"_s)
             return true;
     }

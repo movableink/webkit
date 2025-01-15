@@ -213,7 +213,7 @@ void ElementRuleCollector::collectMatchingRules(const MatchRequest& matchRequest
     }
     if (element.hasAttributesWithoutUpdate() && matchRequest.ruleSet.hasAttributeRules()) {
         Vector<const RuleSet::RuleDataVector*, 4> ruleVectors;
-        for (auto& attribute : element.attributesIterator()) {
+        for (auto& attribute : element.attributes()) {
             if (auto* rules = matchRequest.ruleSet.attributeRules(attribute.localName(), isHTML))
                 ruleVectors.append(rules);
         }

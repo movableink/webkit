@@ -1650,7 +1650,7 @@ static const AtomString& locateDefaultNamespace(const Node& node, const AtomStri
             return namespaceURI;
 
         if (element.hasAttributes()) {
-            for (auto& attribute : element.attributesIterator()) {
+            for (auto& attribute : element.attributes()) {
                 if (attribute.namespaceURI() != XMLNSNames::xmlnsNamespaceURI)
                     continue;
 
@@ -1702,7 +1702,7 @@ static const AtomString& locateNamespacePrefix(const Element& element, const Ato
         return element.prefix();
 
     if (element.hasAttributes()) {
-        for (auto& attribute : element.attributesIterator()) {
+        for (auto& attribute : element.attributes()) {
             if (attribute.prefix() == xmlnsAtom() && attribute.value() == namespaceURI)
                 return attribute.localName();
         }
@@ -1870,7 +1870,7 @@ unsigned short Node::compareDocumentPosition(Node& otherNode)
         // We are comparing two attributes on the same node. Crawl our attribute map and see which one we hit first.
         Element* owner1 = attr1->ownerElement();
         owner1->synchronizeAllAttributes();
-        for (const Attribute& attribute : owner1->attributesIterator()) {
+        for (auto& attribute : owner1->attributes()) {
             // If neither of the two determining nodes is a child node and nodeType is the same for both determining nodes, then an
             // implementation-dependent order between the determining nodes is returned. This order is stable as long as no nodes of
             // the same nodeType are inserted into or removed from the direct container. This would be the case, for example, 

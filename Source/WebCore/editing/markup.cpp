@@ -139,7 +139,7 @@ static void completeURLs(DocumentFragment* fragment, const String& baseURL)
     for (Ref element : descendantsOfType<Element>(*fragment)) {
         if (!element->hasAttributes())
             continue;
-        for (const Attribute& attribute : element->attributesIterator()) {
+        for (auto& attribute : element->attributes()) {
             if (element->attributeContainsURL(attribute) && !attribute.value().isEmpty())
                 changes.append(AttributeChange(element.copyRef(), QualifiedName { attribute.name() }, AtomString { element->completeURLsInAttributeValue(parsedBaseURL, attribute) }));
         }
@@ -155,7 +155,7 @@ void replaceSubresourceURLs(Ref<DocumentFragment>&& fragment, UncheckedKeyHashMa
     for (Ref element : descendantsOfType<Element>(fragment)) {
         if (!element->hasAttributes())
             continue;
-        for (const Attribute& attribute : element->attributesIterator()) {
+        for (auto& attribute : element->attributes()) {
             // FIXME: This won't work for srcset.
             if (element->attributeContainsURL(attribute) && !attribute.value().isEmpty()) {
                 auto replacement = replacementMap.get(attribute.value());
@@ -179,7 +179,7 @@ void removeSubresourceURLAttributes(Ref<DocumentFragment>&& fragment, Function<b
     for (Ref element : descendantsOfType<Element>(fragment)) {
         if (!element->hasAttributes())
             continue;
-        for (const Attribute& attribute : element->attributesIterator()) {
+        for (auto& attribute : element->attributes()) {
             // FIXME: This won't work for srcset.
             if (element->attributeContainsURL(attribute) && !attribute.value().isEmpty()) {
                 if (shouldRemoveURL(URL { attribute.value() }))
@@ -663,7 +663,7 @@ void StyledMarkupAccumulator::appendStartTag(StringBuilder& out, const Element& 
     const bool shouldAnnotateOrForceInline = element.isHTMLElement() && (shouldAnnotate() || addDisplayInline);
     bool shouldOverrideStyleAttr = (shouldAnnotateOrForceInline || shouldApplyWrappingStyle(element) || replacementType != SpanReplacementType::None) && !shouldPreserveMSOListStyleForElement(element);
     if (element.hasAttributes()) {
-        for (const Attribute& attribute : element.attributesIterator()) {
+        for (auto& attribute : element.attributes()) {
             // We'll handle the style attribute separately, below.
             if (attribute.name() == styleAttr && shouldOverrideStyleAttr)
                 continue;

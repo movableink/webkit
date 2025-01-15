@@ -253,7 +253,7 @@ void ReplacementFragment::removeContentsWithSideEffects()
             continue;
         }
         if (element->hasAttributes()) {
-            for (auto& attribute : element->attributesIterator()) {
+            for (auto& attribute : element->attributes()) {
                 if (element->isEventHandlerAttribute(attribute) || element->attributeContainsJavaScriptURL(attribute))
                     attributesToRemove.append({ element.copyRef(), attribute.name() });
             }

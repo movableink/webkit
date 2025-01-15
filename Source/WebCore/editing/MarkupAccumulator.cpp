@@ -592,7 +592,7 @@ void MarkupAccumulator::appendStartTagWithURLReplacement(StringBuilder& result, 
     Vector<Attribute> attributesToAppendIfURLNotReplaced;
 
     if (element.hasAttributes()) {
-        for (const Attribute& attribute : element.attributesIterator()) {
+        for (auto& attribute : element.attributes()) {
             if (attribute.name() == crossoriginAttr || attribute.name() == integrityAttr) {
                 attributesToAppendIfURLNotReplaced.append(attribute);
                 continue;
@@ -626,7 +626,7 @@ void MarkupAccumulator::appendStartTag(StringBuilder& result, const Element& ele
         appendStartTagWithURLReplacement(result, element, namespaces);
     } else {
         if (element.hasAttributes()) {
-            for (const Attribute& attribute : element.attributesIterator())
+            for (auto& attribute : element.attributes())
                 appendAttribute(result, element, attribute, namespaces);
         }
     }
@@ -861,7 +861,7 @@ static bool isElementExcludedByRule(const MarkupExclusionRule& rule, const Eleme
             }
 
             // FIXME: We might optimize this by using a UncheckedKeyHashMap when there are too many attributes.
-            for (const Attribute& attribute : element.attributesIterator()) {
+            for (auto& attribute : element.attributes()) {
                 if (!equalIgnoringASCIICase(attribute.localName(), attributeLocalName))
                     continue;
                 if (attributeValue.isNull() || equalIgnoringASCIICase(attribute.value(), attributeValue)) {

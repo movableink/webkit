@@ -276,7 +276,7 @@ static XMLParsingNamespaces findXMLParsingNamespaces(Element* contextElement)
     for (auto& element : lineageOfType<Element>(*contextElement)) {
         if (!element.hasAttributes())
             continue;
-        for (auto& attribute : element.attributesIterator()) {
+        for (auto& attribute : element.attributes()) {
             if (attribute.prefix() == xmlnsAtom())
                 result.prefixNamespaces.set(attribute.localName(), attribute.value());
         }

@@ -516,7 +516,7 @@ void TextManipulationController::observeParagraphs(const Position& start, const 
                 addItem(ManipulationItemData { Position(), Position(), *currentElement, nullQName(), { TextManipulationToken { TextManipulationTokenIdentifier::generate(), currentElement->textContent(), tokenInfo(currentElement.get()) } } });
 
             if (currentElement->hasAttributes()) {
-                for (auto& attribute : currentElement->attributesIterator()) {
+                for (auto& attribute : currentElement->attributes()) {
                     if (isAttributeForTextManipulation(attribute.name()))
                         addItem(ManipulationItemData { Position(), Position(), *currentElement, attribute.name(), { TextManipulationToken { TextManipulationTokenIdentifier::generate(), attribute.value(), tokenInfo(currentElement.get()) } } });
                 }

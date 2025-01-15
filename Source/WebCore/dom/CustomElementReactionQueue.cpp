@@ -271,7 +271,7 @@ void CustomElementReactionQueue::enqueuePostUpgradeReactions(Element& element)
     auto& queue = *element.reactionQueue();
 
     if (element.hasAttributes()) {
-        for (auto& attribute : element.attributesIterator()) {
+        for (auto& attribute : element.attributes()) {
             if (queue.m_interface->observesAttribute(attribute.localName()))
                 queue.m_items.append({ Item::Type::AttributeChanged, std::make_tuple(attribute.name(), nullAtom(), attribute.value()) });
         }

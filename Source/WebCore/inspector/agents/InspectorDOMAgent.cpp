@@ -813,7 +813,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMAgent::setAttributesAsText(
     }
 
     bool foundOriginalAttribute = false;
-    for (const Attribute& attribute : childElement->attributesIterator()) {
+    for (auto& attribute : childElement->attributes()) {
         // Add attribute pair
         auto attributeName = attribute.name().toAtomString();
         foundOriginalAttribute = foundOriginalAttribute || attributeName == name;
@@ -2032,7 +2032,7 @@ Ref<JSON::ArrayOf<String>> InspectorDOMAgent::buildArrayForElementAttributes(Ele
     // Go through all attributes and serialize them.
     if (!element->hasAttributes())
         return attributesValue;
-    for (const Attribute& attribute : element->attributesIterator()) {
+    for (auto& attribute : element->attributes()) {
         // Add attribute pair
         attributesValue->addItem(attribute.name().toString());
         attributesValue->addItem(attribute.value());

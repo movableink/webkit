@@ -335,7 +335,7 @@ void StyledElement::rebuildPresentationalHintStyle()
 {
     bool isSVG = isSVGElement();
     auto style = MutableStyleProperties::create(isSVG ? SVGAttributeMode : HTMLQuirksMode);
-    for (auto& attribute : attributesIterator())
+    for (auto& attribute : attributes())
         collectPresentationalHintsForAttribute(attribute.name(), attribute.value(), style);
     collectExtraStyleForPresentationalHints(style);
 
