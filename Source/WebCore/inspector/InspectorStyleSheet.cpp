@@ -727,7 +727,7 @@ InspectorStyle::InspectorStyle(const InspectorCSSId& styleId, Ref<CSSStyleDeclar
 
 InspectorStyle::~InspectorStyle() = default;
 
-Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::buildObjectForStyle() const
+Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::buildObjectForStyle()
 {
     auto result = styleWithProperties();
     if (auto styleId = m_styleId.asProtocolValue<Inspector::Protocol::CSS::CSSStyleId>())
@@ -744,7 +744,7 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::buildObjectForStyle() co
     return result;
 }
 
-Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSComputedStyleProperty>> InspectorStyle::buildArrayForComputedStyle() const
+Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSComputedStyleProperty>> InspectorStyle::buildArrayForComputedStyle()
 {
     auto result = JSON::ArrayOf<Inspector::Protocol::CSS::CSSComputedStyleProperty>::create();
     for (auto& property : collectProperties(true)) {
@@ -758,7 +758,7 @@ Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSComputedStyleProperty>> Inspector
     return result;
 }
 
-ExceptionOr<String> InspectorStyle::text() const
+ExceptionOr<String> InspectorStyle::text()
 {
     // Precondition: m_parentStyleSheet->ensureParsedDataReady() has been called successfully.
     auto sourceData = extractSourceData();
@@ -781,7 +781,7 @@ static String lowercasePropertyName(const String& name)
     return name.convertToASCIILowercase();
 }
 
-Vector<InspectorStyleProperty> InspectorStyle::collectProperties(bool includeAll) const
+Vector<InspectorStyleProperty> InspectorStyle::collectProperties(bool includeAll)
 {
     Vector<InspectorStyleProperty> result;
     HashSet<String> sourcePropertyNames;
@@ -826,7 +826,7 @@ Vector<InspectorStyleProperty> InspectorStyle::collectProperties(bool includeAll
     return result;
 }
 
-Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties() const
+Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties()
 {
     auto properties = collectProperties(false);
 
@@ -1059,9 +1059,6 @@ void InspectorStyleSheet::reparseStyleSheet(const String& text)
         m_pageStyleSheet->clearChildRuleCSSOMWrappers();
         fireStyleSheetChanged();
     }
-
-    // We just wiped the entire contents of the stylesheet. Clear the mutation flag.
-    m_pageStyleSheet->clearHadRulesMutation();
 }
 
 ExceptionOr<void> InspectorStyleSheet::setText(const String& text)
@@ -1138,7 +1135,6 @@ ExceptionOr<void> InspectorStyleSheet::setRuleHeaderText(const InspectorCSSId& i
         // Set the style sheet text directly so we don't rebuild our flat rule set. The CSSStyleRule has been directly
         // updated already.
         m_parsedStyleSheet->setText(sheetText);
-        m_pageStyleSheet->clearHadRulesMutation();
         fireStyleSheetChanged();
     } else {
         setText(sheetText);
@@ -1559,13 +1555,12 @@ ExceptionOr<void> InspectorStyleSheet::setRuleStyleText(const InspectorCSSId& id
     String replacementBodyText = newRuleText ? *newRuleText : computeCanonicalRuleText(styleSheetText, newStyleDeclarationText, *logicalContainingRuleSourceData);
 
     m_parsedStyleSheet->setText(makeStringByReplacing(styleSheetText, bodyStart, bodyEnd - bodyStart, replacementBodyText));
-    m_pageStyleSheet->clearHadRulesMutation();
     fireStyleSheetChanged();
 
     return { };
 }
 
-ExceptionOr<String> InspectorStyleSheet::text() const
+ExceptionOr<String> InspectorStyleSheet::text()
 {
     if (!ensureText())
         return Exception { ExceptionCode::NotFoundError };
@@ -1655,18 +1650,12 @@ unsigned InspectorStyleSheet::ruleIndexByStyle(StyleDeclarationOrCSSRule ruleOrD
     return UINT_MAX;
 }
 
-bool InspectorStyleSheet::styleSheetMutated() const
-{
-    return m_pageStyleSheet && m_pageStyleSheet->hadRulesMutation();
-}
-
 bool InspectorStyleSheet::ensureParsedDataReady()
 {
-    bool allowParsedData = m_origin == Inspector::Protocol::CSS::StyleSheetOrigin::Inspector || !styleSheetMutated();
-    return allowParsedData && ensureText() && ensureSourceData();
+    return ensureText() && ensureSourceData();
 }
 
-bool InspectorStyleSheet::ensureText() const
+bool InspectorStyleSheet::ensureText()
 {
     if (!m_parsedStyleSheet)
         return false;
@@ -1674,12 +1663,23 @@ bool InspectorStyleSheet::ensureText() const
         return true;
 
     String text;
-    bool success = originalStyleSheetText(&text);
-    if (success)
-        m_parsedStyleSheet->setText(text);
-    // No need to clear m_flatRules here - it's empty.
+    if (m_pageStyleSheet->wasMutated()) {
+        // This style sheet in memory no longer matches its original text from static source.
+        // Reconstruct its current text by serializing the contained CSSRules.
+        if (!styleSheetTextFromCSSRuleSerialization(&text))
+            return false;
 
-    return success;
+        m_parsedStyleSheet->setText(text);
+        fireStyleSheetChanged();
+        return true;
+    }
+
+    if (!originalStyleSheetText(&text))
+        return false;
+
+    m_parsedStyleSheet->setText(text);
+    // No need to clear m_flatRules here - it's empty.
+    return true;
 }
 
 bool InspectorStyleSheet::ensureSourceData()
@@ -1758,6 +1758,20 @@ bool InspectorStyleSheet::extensionStyleSheetText(String* result) const
     return true;
 }
 
+bool InspectorStyleSheet::styleSheetTextFromCSSRuleSerialization(String* result) const
+{
+    if (!m_pageStyleSheet || m_origin == Inspector::Protocol::CSS::StyleSheetOrigin::UserAgent)
+        return false;
+
+    StringBuilder text;
+    for (unsigned i = 0, length = m_pageStyleSheet->length(); i < length; ++i) {
+        text.append(m_pageStyleSheet->item(i)->cssText());
+        text.append('\n');
+    }
+    *result = text.toString();
+    return true;
+}
+
 Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSRule>> InspectorStyleSheet::buildArrayForRuleList(CSSRuleList* ruleList)
 {
     auto result = JSON::ArrayOf<Inspector::Protocol::CSS::CSSRule>::create();
@@ -1827,7 +1841,7 @@ void InspectorStyleSheetForInlineStyle::didModifyElementAttribute()
     m_ruleSourceData = nullptr;
 }
 
-ExceptionOr<String> InspectorStyleSheetForInlineStyle::text() const
+ExceptionOr<String> InspectorStyleSheetForInlineStyle::text()
 {
     if (!m_isStyleTextValid) {
         m_styleText = elementStyleText();
