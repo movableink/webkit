@@ -197,7 +197,7 @@ private:
     bool m_shouldCallNotifyMutedChange { false };
     std::unique_ptr<Timer> m_startupTimer;
 #endif
-    Timer m_verifyCapturingTimer;
+    std::unique_ptr<Timer> m_verifyCapturingTimer;
     uint64_t m_framesCount { 0 };
     uint64_t m_lastFramesCount { 0 };
     int64_t m_defaultTorchMode { 0 };

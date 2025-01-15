@@ -249,7 +249,6 @@ AVVideoCaptureSource::AVVideoCaptureSource(AVCaptureDevice* avDevice, const Capt
     , m_objcObserver(adoptNS([[WebCoreAVVideoCaptureSourceObserver alloc] initWithCaptureSource:this]))
     , m_device(avDevice)
     , m_zoomScaleFactor(cameraZoomScaleFactor([avDevice deviceType]))
-    , m_verifyCapturingTimer(*this, &AVVideoCaptureSource::verifyIsCapturing)
     , m_defaultTorchMode((int64_t)[m_device torchMode])
 {
     [m_device addObserver:m_objcObserver.get() forKeyPath:@"suspended" options:NSKeyValueObservingOptionNew context:(void *)nil];
@@ -277,21 +276,24 @@ void AVVideoCaptureSource::verifyIsCapturing()
         return;
     }
 
-    RELEASE_LOG_ERROR(WebRTC, "AVVideoCaptureSource::verifyIsCapturing - no frame received in %d seconds, failing", static_cast<int>(m_verifyCapturingTimer.repeatInterval().value()));
+    RELEASE_LOG_ERROR(WebRTC, "AVVideoCaptureSource::verifyIsCapturing - no frame received in %d seconds, failing", static_cast<int>(verifyCaptureInterval.seconds()));
     captureFailed();
 }
 
 void AVVideoCaptureSource::updateVerifyCapturingTimer()
 {
     if (!m_isRunning || m_interrupted) {
-        m_verifyCapturingTimer.stop();
+        if (m_verifyCapturingTimer)
+            m_verifyCapturingTimer->stop();
         return;
     }
 
-    if (m_verifyCapturingTimer.isActive())
+    if (m_verifyCapturingTimer && m_verifyCapturingTimer->isActive())
         return;
 
-    m_verifyCapturingTimer.startRepeating(verifyCaptureInterval);
+    if (!m_verifyCapturingTimer)
+        m_verifyCapturingTimer = makeUnique<Timer>(*this, &AVVideoCaptureSource::verifyIsCapturing);
+    m_verifyCapturingTimer->startRepeating(verifyCaptureInterval);
     m_framesCount = 0;
     m_lastFramesCount = 0;
 }
