@@ -226,9 +226,7 @@ enum class Stage : bool { Specified, Computed };
 struct Tree {
     Child root;
     Type type;
-    Calculation::Category category;
     Stage stage;
-    CSS::Range range;
 
     // `requiresConversionData` is used both to both indicate whether eager evaluation of the tree (at parse time) is possible or not and to trigger a warning in `CSSCalcValue::doubleValueDeprecated` that the evaluation results will be incorrect.
     bool requiresConversionData = false;

@@ -137,9 +137,7 @@ Tree copy(const Tree& tree)
     return Tree {
         .root = copy(tree.root),
         .type = tree.type,
-        .category = tree.category,
         .stage = tree.stage,
-        .range = tree.range,
         .requiresConversionData = tree.requiresConversionData
     };
 }

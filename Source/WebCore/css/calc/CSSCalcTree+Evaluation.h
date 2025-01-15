@@ -37,6 +37,12 @@ struct Anchor;
 struct Tree;
 
 struct EvaluationOptions {
+    // `category` represents the context in which the evaluation is taking place.
+    Calculation::Category category;
+
+    // `range` represents the allowed numeric range for the calculated result.
+    CSS::Range range;
+
     // `conversionData` contains information needed to convert units into their canonical forms.
     std::optional<CSSToLengthConversionData> conversionData;
 

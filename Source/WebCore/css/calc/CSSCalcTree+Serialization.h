@@ -30,12 +30,17 @@
 namespace WebCore {
 namespace CSSCalc {
 
-// https://drafts.csswg.org/css-values-4/#serialize-a-math-function
-void serializationForCSS(StringBuilder&, const Tree&);
-String serializationForCSS(const Tree&);
+struct SerializationOptions {
+    // `range` represents the allowed numeric range for the calculated result.
+    CSS::Range range;
+};
 
-void serializationForCSS(StringBuilder&, const Child&);
-String serializationForCSS(const Child&);
+// https://drafts.csswg.org/css-values-4/#serialize-a-math-function
+void serializationForCSS(StringBuilder&, const Tree&, const SerializationOptions&);
+String serializationForCSS(const Tree&, const SerializationOptions&);
+
+void serializationForCSS(StringBuilder&, const Child&, const SerializationOptions&);
+String serializationForCSS(const Child&, const SerializationOptions&);
 
 } // namespace CSSCalc
 } // namespace WebCore

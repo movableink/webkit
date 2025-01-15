@@ -469,6 +469,7 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::parse(Document& document, Str
             };
             auto simplificationOptions = CSSCalc::SimplificationOptions {
                 .category = Calculation::Category::LengthPercentage,
+                .range = CSS::All,
                 .conversionData = std::nullopt,
                 .symbolTable = { },
                 .allowZeroValueLengthRemovalFromSum = false,

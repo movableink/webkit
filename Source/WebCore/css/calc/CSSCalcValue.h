@@ -67,7 +67,7 @@ public:
     static RefPtr<CSSCalcValue> parse(CSSParserTokenRange&, const CSSParserContext&, Calculation::Category, CSS::Range, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
 
     static Ref<CSSCalcValue> create(const CalculationValue&, const RenderStyle&);
-    static Ref<CSSCalcValue> create(CSSCalc::Tree&&);
+    static Ref<CSSCalcValue> create(Calculation::Category, CSS::Range, CSSCalc::Tree&&);
 
     ~CSSCalcValue();
 
@@ -77,7 +77,9 @@ public:
     Ref<CSSCalcValue> copySimplified(NoConversionDataRequiredToken) const;
     Ref<CSSCalcValue> copySimplified(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
 
-    Calculation::Category category() const { return m_tree.category; }
+    Calculation::Category category() const { return m_category; }
+    CSS::Range range() const { return m_range; }
+
     CSSUnitType primitiveType() const;
 
     // Returns whether the CSSCalc::Tree requires `CSSToLengthConversionData` to fully resolve.
@@ -107,10 +109,12 @@ public:
     const CSSCalc::Tree& tree() const { return m_tree; }
 
 private:
-    explicit CSSCalcValue(CSSCalc::Tree&&);
+    explicit CSSCalcValue(Calculation::Category, CSS::Range, CSSCalc::Tree&&);
 
     double clampToPermittedRange(double) const;
 
+    Calculation::Category m_category;
+    CSS::Range m_range;
     CSSCalc::Tree m_tree;
 };
 

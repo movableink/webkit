@@ -42,6 +42,9 @@ struct SimplificationOptions {
     // `category` represents the context in which the simplification is taking place.
     Calculation::Category category;
 
+    // `range` represents the allowed numeric range for the calculated result.
+    CSS::Range range;
+
     // `conversionData` contains information needed to convert length units into their canonical forms.
     std::optional<CSSToLengthConversionData> conversionData;
 

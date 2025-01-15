@@ -447,7 +447,7 @@ std::optional<Type> toType(const ContainerProgress&)
 
 TextStream& operator<<(TextStream& ts, Tree tree)
 {
-    return ts << "CSSCalc::Tree [ " << serializationForCSS(tree) << " ]";
+    return ts << "CSSCalc::Tree [ " << serializationForCSS(tree, { .range = CSS::All }) << " ]";
 }
 
 } // namespace CSSCalc

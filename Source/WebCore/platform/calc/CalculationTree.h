@@ -191,8 +191,6 @@ using Children = Vector<Child>;
 
 struct Tree {
     Child root;
-    Category category;
-    Range range;
 
     bool operator==(const Tree&) const = default;
 };

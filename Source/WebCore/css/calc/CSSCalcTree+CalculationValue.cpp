@@ -339,13 +339,14 @@ template<typename Op> Calculation::Child toCalculationValue(const IndirectNode<O
 
 Tree fromCalculationValue(const CalculationValue& calculationValue, const RenderStyle& style)
 {
-    auto category = calculationValue.tree().category;
-    auto range = calculationValue.tree().range;
+    auto category = calculationValue.category();
+    auto range = calculationValue.range();
 
     auto conversionOptions = FromConversionOptions {
         .canonicalDimension = determineCanonicalDimension(category),
         .simplification = SimplificationOptions {
             .category = category,
+            .range = { range.min, range.max },
             .conversionData = std::nullopt,
             .symbolTable = { },
             .allowZeroValueLengthRemovalFromSum = true,
@@ -361,21 +362,20 @@ Tree fromCalculationValue(const CalculationValue& calculationValue, const Render
     return Tree {
         .root = WTFMove(root),
         .type = type,
-        .category = category,
         .stage = CSSCalc::Stage::Computed,
-        .range = { range.min, range.max }
     };
 }
 
 Ref<CalculationValue> toCalculationValue(const Tree& tree, const EvaluationOptions& options)
 {
-    ASSERT(tree.category == Calculation::Category::LengthPercentage || tree.category == Calculation::Category::AnglePercentage);
+    ASSERT(options.category == Calculation::Category::LengthPercentage || options.category == Calculation::Category::AnglePercentage);
 
-    auto category = tree.category;
-    auto range = tree.range;
+    auto category = options.category;
+    auto range = options.range;
 
     auto simplificationOptions = SimplificationOptions {
         .category = category,
+        .range = range,
         .conversionData = options.conversionData,
         .symbolTable = options.symbolTable,
         .allowZeroValueLengthRemovalFromSum = true,
@@ -390,11 +390,9 @@ Ref<CalculationValue> toCalculationValue(const Tree& tree, const EvaluationOptio
     auto root = toCalculationValue(simplifiedTree.root, conversionOptions);
 
     return CalculationValue::create(
-        Calculation::Tree {
-            .root = WTFMove(root),
-            .category = category,
-            .range = { range.min, range.max }
-        }
+        category,
+        Calculation::Range { range.min, range.max },
+        Calculation::Tree { WTFMove(root) }
     );
 }
 

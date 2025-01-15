@@ -149,14 +149,12 @@ std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, const CSSParser
     auto result = Tree {
         .root = WTFMove(root->child),
         .type = root->type,
-        .category = parserOptions.category,
         .stage = CSSCalc::Stage::Specified,
-        .range = parserOptions.range,
         .requiresConversionData = state.requiresConversionData,
         .unique = state.unique,
     };
 
-    LOG_WITH_STREAM(Calc, stream << "Completed top level parse/simplification for function '" << nameLiteralForSerialization(function) << "': " << serializationForCSS(result) << ", type: " << getType(result.root) << ", category=" << result.category << ", requires-conversion-data: " << result.requiresConversionData << ", unique: " << result.unique);
+    LOG_WITH_STREAM(Calc, stream << "Completed top level parse/simplification for function '" << nameLiteralForSerialization(function) << "': " << serializationForCSS(result, { parserOptions.range }) << ", type: " << getType(result.root) << ", category=" << parserOptions.category << ", requires-conversion-data: " << result.requiresConversionData << ", unique: " << result.unique);
 
     return result;
 }
@@ -932,20 +930,17 @@ static std::optional<TypedChild> consumeMediaProgress(CSSParserTokenRange& token
         },
         .simplificationOptions = nullptr
     };
-
-    SimplificationOptions nestedSimplificationOptions;
-    if (state.simplificationOptions) {
-        nestedSimplificationOptions = {
-            .category = schemaCategory,
-            .conversionData = state.simplificationOptions->conversionData,
-            .symbolTable = state.simplificationOptions->symbolTable,
-            .allowZeroValueLengthRemovalFromSum = state.simplificationOptions->allowZeroValueLengthRemovalFromSum,
-            .allowUnresolvedUnits = state.simplificationOptions->allowUnresolvedUnits,
-            .allowNonMatchingUnits = state.simplificationOptions->allowNonMatchingUnits,
-
-        };
+    SimplificationOptions nestedSimplificationOptions = {
+        .category = schemaCategory,
+        .range = CSS::All,
+        .conversionData = state.simplificationOptions->conversionData,
+        .symbolTable = state.simplificationOptions->symbolTable,
+        .allowZeroValueLengthRemovalFromSum = state.simplificationOptions->allowZeroValueLengthRemovalFromSum,
+        .allowUnresolvedUnits = state.simplificationOptions->allowUnresolvedUnits,
+        .allowNonMatchingUnits = state.simplificationOptions->allowNonMatchingUnits,
+    };
+    if (state.simplificationOptions)
         nestedState.simplificationOptions = &nestedSimplificationOptions;
-    }
 
     auto start = parseCalcSum(tokens, depth, nestedState);
     if (!start) {
@@ -1040,20 +1035,17 @@ static std::optional<TypedChild> consumeContainerProgress(CSSParserTokenRange& t
         },
         .simplificationOptions = nullptr
     };
-
-    SimplificationOptions nestedSimplificationOptions;
-    if (state.simplificationOptions) {
-        nestedSimplificationOptions = {
-            .category = schemaCategory,
-            .conversionData = state.simplificationOptions->conversionData,
-            .symbolTable = state.simplificationOptions->symbolTable,
-            .allowZeroValueLengthRemovalFromSum = state.simplificationOptions->allowZeroValueLengthRemovalFromSum,
-            .allowUnresolvedUnits = state.simplificationOptions->allowUnresolvedUnits,
-            .allowNonMatchingUnits = state.simplificationOptions->allowNonMatchingUnits,
-
-        };
+    SimplificationOptions nestedSimplificationOptions = {
+        .category = schemaCategory,
+        .range = CSS::All,
+        .conversionData = state.simplificationOptions->conversionData,
+        .symbolTable = state.simplificationOptions->symbolTable,
+        .allowZeroValueLengthRemovalFromSum = state.simplificationOptions->allowZeroValueLengthRemovalFromSum,
+        .allowUnresolvedUnits = state.simplificationOptions->allowUnresolvedUnits,
+        .allowNonMatchingUnits = state.simplificationOptions->allowNonMatchingUnits,
+    };
+    if (state.simplificationOptions)
         nestedState.simplificationOptions = &nestedSimplificationOptions;
-    }
 
     auto start = parseCalcSum(tokens, depth, nestedState);
     if (!start) {

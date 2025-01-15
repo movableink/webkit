@@ -1430,7 +1430,12 @@ std::optional<Child> simplify(Anchor& anchor, const SimplificationOptions& optio
     if (!options.conversionData || !options.conversionData->styleBuilderState())
         return { };
 
-    auto evaluationOptions = EvaluationOptions { .conversionData = options.conversionData, .symbolTable = options.symbolTable };
+    auto evaluationOptions = EvaluationOptions {
+        .category = options.category,
+        .range = CSS::All,
+        .conversionData = options.conversionData,
+        .symbolTable = options.symbolTable
+    };
 
     auto result = evaluateWithoutFallback(anchor, evaluationOptions);
     if (!result) {
@@ -1583,10 +1588,9 @@ Tree copyAndSimplify(const Tree& tree, const SimplificationOptions& options)
     return Tree {
         .root = copyAndSimplify(tree.root, options),
         .type = tree.type,
-        .category = tree.category,
         .stage = tree.stage,
-        .range = tree.range,
-        .requiresConversionData = tree.requiresConversionData
+        .requiresConversionData = tree.requiresConversionData,
+        .unique = tree.unique,
     };
 }
 

@@ -336,12 +336,12 @@ template<auto R> struct ToStyle<CSS::UnevaluatedCalc<CSS::AnglePercentageRaw<R>>
         // should go away once the typed CSSOM learns to set the correct category when creating internal
         // representations of CSSMath* types.
 
-        ASSERT(simplifiedCalc->tree().category == Calculation::Category::AnglePercentage || simplifiedCalc->tree().category == Calculation::Category::Angle || simplifiedCalc->tree().category == Calculation::Category::Percentage);
+        ASSERT(simplifiedCalc->category() == Calculation::Category::AnglePercentage || simplifiedCalc->category() == Calculation::Category::Angle || simplifiedCalc->category() == Calculation::Category::Percentage);
 
-        if (simplifiedCalc->tree().category == Calculation::Category::Angle)
+        if (simplifiedCalc->category() == Calculation::Category::Angle)
             return { Style::Angle<R> { simplifiedCalc->doubleValue(std::forward<Rest>(rest)...) } };
 
-        if (simplifiedCalc->tree().category == Calculation::Category::Percentage) {
+        if (simplifiedCalc->category() == Calculation::Category::Percentage) {
             if (std::holds_alternative<CSSCalc::Percentage>(simplifiedCalc->tree().root))
                 return { Style::Percentage<R> { simplifiedCalc->doubleValue(std::forward<Rest>(rest)...) } };
             return { simplifiedCalc->createCalculationValue(std::forward<Rest>(rest)...) };
@@ -370,12 +370,12 @@ template<auto R> struct ToStyle<CSS::UnevaluatedCalc<CSS::LengthPercentageRaw<R>
         // should go away once the typed CSSOM learns to set the correct category when creating internal
         // representations of CSSMath* types.
 
-        ASSERT(simplifiedCalc->tree().category == Calculation::Category::LengthPercentage || simplifiedCalc->tree().category == Calculation::Category::Length || simplifiedCalc->tree().category == Calculation::Category::Percentage);
+        ASSERT(simplifiedCalc->category() == Calculation::Category::LengthPercentage || simplifiedCalc->category() == Calculation::Category::Length || simplifiedCalc->category() == Calculation::Category::Percentage);
 
-        if (simplifiedCalc->tree().category == Calculation::Category::Length)
+        if (simplifiedCalc->category() == Calculation::Category::Length)
             return { Style::Length<R> { clampLengthToAllowedLimits(simplifiedCalc->doubleValue(std::forward<Rest>(rest)...)) } };
 
-        if (simplifiedCalc->tree().category == Calculation::Category::Percentage) {
+        if (simplifiedCalc->category() == Calculation::Category::Percentage) {
             if (std::holds_alternative<CSSCalc::Percentage>(simplifiedCalc->tree().root))
                 return { Style::Percentage<R> { simplifiedCalc->doubleValue(std::forward<Rest>(rest)...) } };
             return { simplifiedCalc->createCalculationValue(std::forward<Rest>(rest)...) };

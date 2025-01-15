@@ -47,7 +47,7 @@ static auto copy(const IndirectNode<Op>&) -> Child;
 
 Tree copy(const Tree& tree)
 {
-    return Tree { .root = copy(tree.root), .category = tree.category, .range = tree.range };
+    return Tree { .root = copy(tree.root) };
 }
 
 double copy(double value)

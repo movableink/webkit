@@ -45,11 +45,9 @@ template<CSS::Numeric CSSType> struct UnevaluatedCalculation {
     explicit UnevaluatedCalculation(Calculation::Child root)
         : UnevaluatedCalculation {
             CalculationValue::create(
-                Calculation::Tree {
-                    .root = WTFMove(root),
-                    .category = category,
-                    .range = { range.min, range.max },
-                }
+                category,
+                Calculation::Range { range.min, range.max },
+                Calculation::Tree { WTFMove(root) }
             )
         }
     {
