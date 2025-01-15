@@ -10,7 +10,7 @@ FAIL change state from hidden to date assert_implements: Support for input type 
 FAIL change state from hidden to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from hidden to number
 PASS change state from hidden to range
-FAIL change state from hidden to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from hidden to color
 PASS change state from hidden to checkbox
 PASS change state from hidden to radio
 PASS change state from hidden to file
@@ -29,7 +29,7 @@ FAIL change state from text to date assert_implements: Support for input type da
 FAIL change state from text to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from text to number
 PASS change state from text to range
-FAIL change state from text to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from text to color
 PASS change state from text to checkbox
 PASS change state from text to radio
 PASS change state from text to file
@@ -48,7 +48,7 @@ FAIL change state from search to date assert_implements: Support for input type 
 FAIL change state from search to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from search to number
 PASS change state from search to range
-FAIL change state from search to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from search to color
 PASS change state from search to checkbox
 PASS change state from search to radio
 PASS change state from search to file
@@ -67,7 +67,7 @@ FAIL change state from tel to date assert_implements: Support for input type dat
 FAIL change state from tel to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from tel to number
 PASS change state from tel to range
-FAIL change state from tel to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from tel to color
 PASS change state from tel to checkbox
 PASS change state from tel to radio
 PASS change state from tel to file
@@ -86,7 +86,7 @@ FAIL change state from url to date assert_implements: Support for input type dat
 FAIL change state from url to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from url to number
 PASS change state from url to range
-FAIL change state from url to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from url to color
 PASS change state from url to checkbox
 PASS change state from url to radio
 PASS change state from url to file
@@ -105,7 +105,7 @@ FAIL change state from email to date assert_implements: Support for input type d
 FAIL change state from email to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from email to number
 PASS change state from email to range
-FAIL change state from email to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from email to color
 PASS change state from email to checkbox
 PASS change state from email to radio
 PASS change state from email to file
@@ -124,7 +124,7 @@ FAIL change state from password to date assert_implements: Support for input typ
 FAIL change state from password to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from password to number
 PASS change state from password to range
-FAIL change state from password to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from password to color
 PASS change state from password to checkbox
 PASS change state from password to radio
 PASS change state from password to file
@@ -200,7 +200,7 @@ FAIL change state from number to datetime-local assert_implements: Support for i
 FAIL change state from number to date assert_implements: Support for input type date is required for this test. undefined
 FAIL change state from number to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from number to range
-FAIL change state from number to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from number to color
 PASS change state from number to checkbox
 PASS change state from number to radio
 PASS change state from number to file
@@ -219,7 +219,7 @@ FAIL change state from range to datetime-local assert_implements: Support for in
 FAIL change state from range to date assert_implements: Support for input type date is required for this test. undefined
 FAIL change state from range to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from range to number
-FAIL change state from range to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from range to color
 PASS change state from range to checkbox
 PASS change state from range to radio
 PASS change state from range to file
@@ -227,25 +227,25 @@ PASS change state from range to submit
 PASS change state from range to image
 PASS change state from range to reset
 PASS change state from range to button
-FAIL change state from color to hidden assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to text assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to search assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to tel assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to url assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to email assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to password assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to datetime-local assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to date assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to time assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to number assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to range assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to checkbox assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to radio assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to file assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to submit assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to image assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to reset assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to button assert_implements: Support for input type color is required for this test. undefined
+PASS change state from color to hidden
+PASS change state from color to text
+PASS change state from color to search
+PASS change state from color to tel
+PASS change state from color to url
+PASS change state from color to email
+PASS change state from color to password
+FAIL change state from color to datetime-local assert_implements: Support for input type datetime-local is required for this test. undefined
+FAIL change state from color to date assert_implements: Support for input type date is required for this test. undefined
+FAIL change state from color to time assert_implements: Support for input type time is required for this test. undefined
+PASS change state from color to number
+PASS change state from color to range
+PASS change state from color to checkbox
+PASS change state from color to radio
+PASS change state from color to file
+PASS change state from color to submit
+PASS change state from color to image
+PASS change state from color to reset
+PASS change state from color to button
 PASS change state from checkbox to hidden
 PASS change state from checkbox to text
 PASS change state from checkbox to search
@@ -258,7 +258,7 @@ FAIL change state from checkbox to date assert_implements: Support for input typ
 FAIL change state from checkbox to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from checkbox to number
 PASS change state from checkbox to range
-FAIL change state from checkbox to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from checkbox to color
 PASS change state from checkbox to radio
 PASS change state from checkbox to file
 PASS change state from checkbox to submit
@@ -277,7 +277,7 @@ FAIL change state from radio to date assert_implements: Support for input type d
 FAIL change state from radio to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from radio to number
 PASS change state from radio to range
-FAIL change state from radio to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from radio to color
 PASS change state from radio to checkbox
 PASS change state from radio to file
 PASS change state from radio to submit
@@ -296,7 +296,7 @@ FAIL change state from file to date assert_implements: Support for input type da
 FAIL change state from file to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from file to number
 PASS change state from file to range
-FAIL change state from file to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from file to color
 PASS change state from file to checkbox
 PASS change state from file to radio
 PASS change state from file to submit
@@ -315,7 +315,7 @@ FAIL change state from submit to date assert_implements: Support for input type 
 FAIL change state from submit to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from submit to number
 PASS change state from submit to range
-FAIL change state from submit to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from submit to color
 PASS change state from submit to checkbox
 PASS change state from submit to radio
 PASS change state from submit to file
@@ -334,7 +334,7 @@ FAIL change state from image to date assert_implements: Support for input type d
 FAIL change state from image to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from image to number
 PASS change state from image to range
-FAIL change state from image to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from image to color
 PASS change state from image to checkbox
 PASS change state from image to radio
 PASS change state from image to file
@@ -353,7 +353,7 @@ FAIL change state from reset to date assert_implements: Support for input type d
 FAIL change state from reset to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from reset to number
 PASS change state from reset to range
-FAIL change state from reset to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from reset to color
 PASS change state from reset to checkbox
 PASS change state from reset to radio
 PASS change state from reset to file
@@ -372,7 +372,7 @@ FAIL change state from button to date assert_implements: Support for input type 
 FAIL change state from button to time assert_implements: Support for input type time is required for this test. undefined
 PASS change state from button to number
 PASS change state from button to range
-FAIL change state from button to color assert_implements: Support for input type color is required for this test. undefined
+PASS change state from button to color
 PASS change state from button to checkbox
 PASS change state from button to radio
 PASS change state from button to file

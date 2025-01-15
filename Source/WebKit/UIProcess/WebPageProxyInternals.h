@@ -257,9 +257,7 @@ struct WebPageProxy::Internals final : WebPopupMenuProxy::Client
 #if ENABLE(APPLE_PAY)
     , WebPaymentCoordinatorProxy::Client
 #endif
-#if ENABLE(INPUT_TYPE_COLOR)
     , WebColorPickerClient
-#endif
 #if PLATFORM(MACCATALYST)
     , EndowmentStateTrackerClient
 #endif
@@ -376,9 +374,7 @@ public:
     WebCore::DragHandlingMethod currentDragHandlingMethod { WebCore::DragHandlingMethod::None };
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
     RefPtr<WebColorPicker> colorPicker;
-#endif
 
 #if ENABLE(MAC_GESTURE_EVENTS)
     Deque<NativeWebGestureEvent> gestureEventQueue;
@@ -497,11 +493,9 @@ public:
     CocoaWindow *paymentCoordinatorPresentingWindow(const WebPaymentCoordinatorProxy&) const final;
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
     // WebColorPickerClient
     void didChooseColor(const WebCore::Color&) final;
     void didEndColorPicker() final;
-#endif
 
 #if PLATFORM(MACCATALYST)
     // EndowmentStateTrackerClient

@@ -382,9 +382,7 @@ constexpr CSSValueID toCSSValueID(StyleAppearance e)
     case StyleAppearance::ApplePayButton:
         return CSSValueApplePayButton;
 #endif
-#if ENABLE(INPUT_TYPE_COLOR)
     case StyleAppearance::ColorWell:
-#endif
 #if ENABLE(SERVICE_CONTROLS)
     case StyleAppearance::ImageControlsButton:
 #endif

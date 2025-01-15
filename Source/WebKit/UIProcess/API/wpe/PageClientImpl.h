@@ -44,9 +44,12 @@ enum class DOMPasteAccessResponse : uint8_t;
 
 namespace WebKit {
 
+class WebColorPicker;
+
 struct InputMethodState;
 struct UserMessage;
 
+enum class ColorControlSupportsAlpha : bool;
 enum class UndoOrRedo : bool;
 
 class PageClientImpl final : public PageClient
@@ -122,6 +125,8 @@ private:
 #if ENABLE(CONTEXT_MENUS)
     Ref<WebContextMenuProxy> createContextMenuProxy(WebPageProxy&, ContextMenuContextData&&, const UserData&) override;
 #endif
+
+    RefPtr<WebColorPicker> createColorPicker(WebPageProxy*, const WebCore::Color& intialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&) override;
 
     void enterAcceleratedCompositingMode(const LayerTreeContext&) override;
     void exitAcceleratedCompositingMode() override;

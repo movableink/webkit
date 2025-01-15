@@ -65,8 +65,8 @@ FAIL change state from number to month assert_implements: Support for input type
 FAIL change state from number to week assert_implements: Support for input type week is required for this test. undefined
 FAIL change state from range to month assert_implements: Support for input type month is required for this test. undefined
 FAIL change state from range to week assert_implements: Support for input type week is required for this test. undefined
-FAIL change state from color to month assert_implements: Support for input type color is required for this test. undefined
-FAIL change state from color to week assert_implements: Support for input type color is required for this test. undefined
+FAIL change state from color to month assert_implements: Support for input type month is required for this test. undefined
+FAIL change state from color to week assert_implements: Support for input type week is required for this test. undefined
 FAIL change state from checkbox to month assert_implements: Support for input type month is required for this test. undefined
 FAIL change state from checkbox to week assert_implements: Support for input type week is required for this test. undefined
 FAIL change state from radio to month assert_implements: Support for input type month is required for this test. undefined

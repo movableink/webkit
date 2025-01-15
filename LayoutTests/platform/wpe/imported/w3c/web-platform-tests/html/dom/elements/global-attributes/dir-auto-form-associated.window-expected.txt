@@ -16,7 +16,7 @@ FAIL <input dir=auto type=time> directionality assert_equals: expected "time" bu
 FAIL <input dir=auto type=datetime-local> directionality assert_equals: expected "datetime-local" but got "text"
 PASS <input dir=auto type=number> directionality
 PASS <input dir=auto type=range> directionality
-FAIL <input dir=auto type=color> directionality assert_equals: expected "color" but got "text"
+PASS <input dir=auto type=color> directionality
 PASS <input dir=auto type=checkbox> directionality
 PASS <input dir=auto type=radio> directionality
 PASS <input dir=auto type=image> directionality

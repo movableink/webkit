@@ -34,6 +34,7 @@
 #include "TouchGestureController.h"
 #include "WPEWebViewLegacy.h"
 #include "WPEWebViewPlatform.h"
+#include "WebColorPicker.h"
 #include "WebContextMenuProxy.h"
 #include "WebContextMenuProxyWPE.h"
 #include "WebKitPopupMenu.h"
@@ -290,6 +291,11 @@ Ref<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPageProxy& pa
     return WebContextMenuProxyWPE::create(page, WTFMove(context), userData);
 }
 #endif
+
+RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy*, const WebCore::Color& intialColor, const WebCore::IntRect&, ColorControlSupportsAlpha supportsAlpha, Vector<WebCore::Color>&&)
+{
+    return nullptr;
+}
 
 void PageClientImpl::enterAcceleratedCompositingMode(const LayerTreeContext& context)
 {

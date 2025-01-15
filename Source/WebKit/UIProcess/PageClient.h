@@ -30,7 +30,6 @@
 #include "PDFPluginIdentifier.h"
 #include "PasteboardAccessIntent.h"
 #include "SameDocumentNavigationType.h"
-#include "WebColorPicker.h"
 #include "WebDateTimePicker.h"
 #include "WebPopupMenuProxy.h"
 #include "WindowKind.h"
@@ -186,6 +185,7 @@ class BrowsingWarning;
 class UserData;
 class ViewSnapshot;
 class WebBackForwardListItem;
+class WebColorPicker;
 class WebContextMenuProxy;
 class WebEditCommandProxy;
 class WebFrameProxy;
@@ -205,10 +205,6 @@ struct WebHitTestResultData;
 
 #if ENABLE(TOUCH_EVENTS)
 class NativeWebTouchEvent;
-#endif
-
-#if ENABLE(INPUT_TYPE_COLOR)
-class WebColorPicker;
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -447,9 +443,7 @@ public:
     virtual void didDismissContextMenu() { }
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
     virtual RefPtr<WebColorPicker> createColorPicker(WebPageProxy*, const WebCore::Color& initialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&) = 0;
-#endif
 
 #if ENABLE(DATALIST_ELEMENT)
     virtual RefPtr<WebDataListSuggestionsDropdown> createDataListSuggestionsDropdown(WebPageProxy&) = 0;

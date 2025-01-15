@@ -221,6 +221,11 @@ bool PageClientImpl::usesOffscreenRendering() const
 }
 #endif
 
+RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy*, const WebCore::Color&, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&)
+{
+    return nullptr;
+}
+
 void PageClientImpl::enterAcceleratedCompositingMode(const LayerTreeContext& context)
 {
     notImplemented();

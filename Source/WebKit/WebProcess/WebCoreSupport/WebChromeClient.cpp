@@ -838,14 +838,10 @@ void WebChromeClient::print(LocalFrame& frame, const StringWithDirection& title)
     page->sendSyncWithDelayedReply(Messages::WebPageProxy::PrintFrame(webFrame->frameID(), truncatedTitle.string, pdfFirstPageSize));
 }
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
 RefPtr<ColorChooser> WebChromeClient::createColorChooser(ColorChooserClient& client, const Color& initialColor)
 {
     return WebColorChooser::create(protectedPage().ptr(), &client, initialColor);
 }
-
-#endif
 
 #if ENABLE(DATALIST_ELEMENT)
 

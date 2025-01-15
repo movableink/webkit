@@ -355,9 +355,7 @@ public:
     virtual IntDegrees deviceOrientation() const = 0;
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
     virtual RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) = 0;
-#endif
 
 #if ENABLE(DATALIST_ELEMENT)
     virtual RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) = 0;

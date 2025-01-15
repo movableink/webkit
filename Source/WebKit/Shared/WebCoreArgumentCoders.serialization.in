@@ -3715,9 +3715,7 @@ enum class WebCore::StyleAppearance : uint8_t {
 #endif
     TextArea,
     TextField,
-#if ENABLE(INPUT_TYPE_COLOR)
     ColorWell,
-#endif
 #if ENABLE(SERVICE_CONTROLS)
     ImageControlsButton,
 #endif
@@ -3739,6 +3737,7 @@ enum class WebCore::StyleAppearance : uint8_t {
 header: <WebCore/ControlPart.h>
 [RefCounted, AdditionalEncoder=StreamConnectionEncoder] class WebCore::ControlPart subclasses {
     WebCore::ButtonPart,
+    WebCore::ColorWellPart,
     WebCore::InnerSpinButtonPart,
     WebCore::MenuListButtonPart,
     WebCore::MenuListPart,
@@ -3759,9 +3758,6 @@ header: <WebCore/ControlPart.h>
 #endif
 #if ENABLE(SERVICE_CONTROLS)
     WebCore::ImageControlsButtonPart,
-#endif
-#if ENABLE(INPUT_TYPE_COLOR)
-    WebCore::ColorWellPart,
 #endif
 }
 
@@ -3820,11 +3816,9 @@ header: <WebCore/ImageControlsButtonPart.h>
 }
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
 header: <WebCore/ColorWellPart.h>
 [RefCounted, AdditionalEncoder=StreamConnectionEncoder, DisableMissingMemberCheck] class WebCore::ColorWellPart {
 }
-#endif
 
 #if ENABLE(APPLE_PAY)
 header: <WebCore/ApplePayButtonPart.h>

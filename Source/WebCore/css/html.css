@@ -1053,8 +1053,6 @@ input:is([type="checkbox"], [type="radio"]):checked:disabled {
 }
 #endif
 
-#if defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
-
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
 input[type="color"] {
     padding: 3px;
@@ -1084,8 +1082,6 @@ input[type="color"]::-webkit-color-swatch {
 #endif
     flex: 1;
 }
-
-#endif // defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
 
 select {
     box-sizing: border-box;

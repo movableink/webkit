@@ -572,14 +572,10 @@ RefPtr<SearchPopupMenu> EmptyChromeClient::createSearchPopupMenu(PopupMenuClient
     return adoptRef(*new EmptySearchPopupMenu);
 }
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
 RefPtr<ColorChooser> EmptyChromeClient::createColorChooser(ColorChooserClient&, const Color&)
 {
     return nullptr;
 }
-
-#endif
 
 #if ENABLE(DATALIST_ELEMENT)
 

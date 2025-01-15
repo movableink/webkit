@@ -4243,11 +4243,9 @@ bool EventHandler::dragHysteresisExceeded(const FloatPoint& dragViewportLocation
         case DragSourceAction::Link:
             threshold = LinkDragHysteresis;
             break;
-#if ENABLE(INPUT_TYPE_COLOR)
         case DragSourceAction::Color:
             threshold = ColorDragHystersis;
             break;
-#endif
         case DragSourceAction::DHTML:
             break;
         }

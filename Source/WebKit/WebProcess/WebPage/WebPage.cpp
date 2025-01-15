@@ -1914,12 +1914,10 @@ void WebPage::close()
         m_activeOpenPanelResultListener = nullptr;
     }
 
-#if ENABLE(INPUT_TYPE_COLOR)
     if (RefPtr activeColorChooser = m_activeColorChooser.get()) {
         activeColorChooser->disconnectFromPage();
         m_activeColorChooser = nullptr;
     }
-#endif
 
 #if PLATFORM(GTK)
     m_printOperation = nullptr;
@@ -5613,8 +5611,6 @@ void WebPage::setActivePopupMenu(WebPopupMenu* menu)
     m_activePopupMenu = menu;
 }
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
 WebColorChooser* WebPage::activeColorChooser() const
 {
     return m_activeColorChooser.get();
@@ -5636,8 +5632,6 @@ void WebPage::didChooseColor(const WebCore::Color& color)
     if (RefPtr activeColorChooser = m_activeColorChooser.get())
         activeColorChooser->didChooseColor(color);
 }
-
-#endif
 
 #if ENABLE(DATALIST_ELEMENT)
 

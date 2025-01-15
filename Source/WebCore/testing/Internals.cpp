@@ -55,6 +55,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "ClientOrigin.h"
+#include "ColorChooser.h"
 #include "ColorSerialization.h"
 #include "ComposedTreeIterator.h"
 #include "CookieJar.h"
@@ -273,10 +274,6 @@
 
 #if USE(CG)
 #include "PDFDocumentImage.h"
-#endif
-
-#if ENABLE(INPUT_TYPE_COLOR)
-#include "ColorChooser.h"
 #endif
 
 #if ENABLE(MOUSE_CURSOR_SCALE)
