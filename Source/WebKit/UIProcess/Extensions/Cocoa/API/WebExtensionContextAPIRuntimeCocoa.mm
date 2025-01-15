@@ -65,7 +65,7 @@ void WebExtensionContext::runtimeOpenOptionsPage(CompletionHandler<void(Expected
 
     RefPtr extensionController = this->extensionController();
     if (!extensionController) {
-        completionHandler(toWebExtensionError(apiName, nullString(), @"No extensionController"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"the extension is not loaded"));
         return;
     }
 

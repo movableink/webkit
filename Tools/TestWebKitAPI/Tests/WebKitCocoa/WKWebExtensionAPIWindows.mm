@@ -517,20 +517,28 @@ TEST(WKWebExtensionAPIWindows, Create)
         @"  state: 'normal',",
         @"  type: 'popup',",
         @"  url: 'http://example.com/',",
-        @"};",
+        @"}",
 
-        @"const window = await browser.windows.create(windowOptions);",
-        @"browser.test.assertEq(typeof window, 'object', 'The window should be an object');",
-        @"browser.test.assertEq(window.top, 50, 'The window should have the specified top');",
-        @"browser.test.assertEq(window.left, 300, 'The window should have the specified left');",
-        @"browser.test.assertEq(window.width, 800, 'The window should have the specified width');",
-        @"browser.test.assertEq(window.height, 400, 'The window should have the specified height');",
-        @"browser.test.assertFalse(window.incognito, 'The window should not be in incognito mode');",
-        @"browser.test.assertEq(window.type, 'popup', 'The window should be of type popup');",
-        @"browser.test.assertEq(window.state, 'normal', 'The window state should be normal');",
-        @"browser.test.assertTrue(window.focused, 'The window should be focused');",
+        @"const window = await browser.windows.create(windowOptions)",
+        @"browser.test.assertEq(typeof window, 'object', 'The window should be an object')",
+        @"browser.test.assertEq(window?.top, 50, 'The window should have the specified top')",
+        @"browser.test.assertEq(window?.left, 300, 'The window should have the specified left')",
+        @"browser.test.assertEq(window?.width, 800, 'The window should have the specified width')",
+        @"browser.test.assertEq(window?.height, 400, 'The window should have the specified height')",
+        @"browser.test.assertFalse(window?.incognito, 'The window should not be in incognito mode')",
+        @"browser.test.assertEq(window?.type, 'popup', 'The window should be of type popup')",
+        @"browser.test.assertEq(window?.state, 'normal', 'The window state should be normal')",
+        @"browser.test.assertTrue(window?.focused, 'The window should be focused')",
 
-        @"browser.test.notifyPass();"
+        @"browser.test.assertEq(typeof window?.tabs, 'object', 'The window should have a tabs array')",
+        @"browser.test.assertEq(window?.tabs?.length, 1, 'The tabs array should contain one tab')",
+
+        @"const tab = window?.tabs?.[0]",
+        @"browser.test.assertEq(typeof tab, 'object', 'The tab should be an object')",
+        @"browser.test.assertEq(tab?.active, true, 'The tab should be active')",
+        @"browser.test.assertEq(tab?.incognito, false, 'The tab should not be in incognito mode')",
+
+        @"browser.test.notifyPass()"
     ]);
 
     auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
@@ -575,6 +583,16 @@ TEST(WKWebExtensionAPIWindows, CreateWithRelativeURL)
 
         @"const window = await browser.windows.create(windowOptions)",
 
+        @"browser.test.assertEq(typeof window, 'object', 'The window should be an object')",
+        @"browser.test.assertEq(typeof window?.tabs, 'object', 'The window should have a tabs array')",
+        @"browser.test.assertEq(window?.tabs?.length, 1, 'The tabs array should contain one tab')",
+
+        @"const tab = window?.tabs?.[0]",
+        @"browser.test.assertEq(typeof tab, 'object', 'The tab should be an object')",
+        @"browser.test.assertEq(tab?.url, browser.runtime.getURL('/test.html'), 'The tab URL should match the runtime-generated test.html URL')",
+        @"browser.test.assertEq(tab?.active, true, 'The tab should be active')",
+        @"browser.test.assertEq(tab?.incognito, false, 'The tab should not be in incognito mode')",
+
         @"browser.test.notifyPass()"
     ]);
 
@@ -605,6 +623,22 @@ TEST(WKWebExtensionAPIWindows, CreateWithRelativeURLs)
         @"}",
 
         @"const window = await browser.windows.create(windowOptions)",
+
+        @"browser.test.assertEq(typeof window, 'object', 'The window should be an object')",
+        @"browser.test.assertEq(typeof window?.tabs, 'object', 'The window should have a tabs array')",
+        @"browser.test.assertEq(window?.tabs?.length, 2, 'The tabs array should contain two tabs')",
+
+        @"const firstTab = window?.tabs?.[0]",
+        @"browser.test.assertEq(typeof firstTab, 'object', 'The first tab should be an object')",
+        @"browser.test.assertEq(firstTab?.url, browser.runtime.getURL('/one.html'), 'The first tab URL should match the runtime-generated one.html URL')",
+        @"browser.test.assertEq(firstTab?.active, true, 'The first tab should be active')",
+        @"browser.test.assertEq(firstTab?.incognito, false, 'The first tab should not be in incognito mode')",
+
+        @"const secondTab = window?.tabs?.[1]",
+        @"browser.test.assertEq(typeof secondTab, 'object', 'The second tab should be an object')",
+        @"browser.test.assertEq(secondTab?.url, browser.runtime.getURL('/two.html'), 'The second tab URL should match the runtime-generated two.html URL')",
+        @"browser.test.assertEq(secondTab?.active, false, 'The second tab should not be active')",
+        @"browser.test.assertEq(secondTab?.incognito, false, 'The second tab should not be in incognito mode')",
 
         @"browser.test.notifyPass()"
     ]);
@@ -668,20 +702,28 @@ TEST(WKWebExtensionAPIWindows, CreateIncognitoWithPrivateAccess)
         @"  incognito: true,",
         @"  state: 'normal',",
         @"  type: 'popup',",
-        @"};",
+        @"}",
 
-        @"const window = await browser.windows.create(windowOptions);",
-        @"browser.test.assertEq(typeof window, 'object', 'The window should be an object');",
-        @"browser.test.assertEq(window.top, 50, 'The window should have the specified top');",
-        @"browser.test.assertEq(window.left, 300, 'The window should have the specified left');",
-        @"browser.test.assertEq(window.width, 800, 'The window should have the specified width');",
-        @"browser.test.assertEq(window.height, 400, 'The window should have the specified height');",
-        @"browser.test.assertTrue(window.incognito, 'The window should be in incognito mode');",
-        @"browser.test.assertEq(window.type, 'popup', 'The window should be of type popup');",
-        @"browser.test.assertEq(window.state, 'normal', 'The window state should be normal');",
-        @"browser.test.assertTrue(window.focused, 'The window should be focused');",
+        @"const window = await browser.windows.create(windowOptions)",
+        @"browser.test.assertEq(typeof window, 'object', 'The window should be an object')",
+        @"browser.test.assertEq(window?.top, 50, 'The window should have the specified top')",
+        @"browser.test.assertEq(window?.left, 300, 'The window should have the specified left')",
+        @"browser.test.assertEq(window?.width, 800, 'The window should have the specified width')",
+        @"browser.test.assertEq(window?.height, 400, 'The window should have the specified height')",
+        @"browser.test.assertTrue(window?.incognito, 'The window should be in incognito mode')",
+        @"browser.test.assertEq(window?.type, 'popup', 'The window should be of type popup')",
+        @"browser.test.assertEq(window?.state, 'normal', 'The window state should be normal')",
+        @"browser.test.assertTrue(window?.focused, 'The window should be focused')",
 
-        @"browser.test.notifyPass();"
+        @"browser.test.assertEq(typeof window?.tabs, 'object', 'The window should have a tabs array')",
+        @"browser.test.assertEq(window?.tabs?.length, 1, 'The tabs array should contain one tab')",
+
+        @"const tab = window?.tabs?.[0]",
+        @"browser.test.assertEq(typeof tab, 'object', 'The tab should be an object')",
+        @"browser.test.assertEq(tab?.active, true, 'The tab should be active')",
+        @"browser.test.assertTrue(tab?.incognito, 'The tab should be in incognito mode')",
+
+        @"browser.test.notifyPass()"
     ]);
 
     auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);

@@ -785,7 +785,7 @@ void WebExtensionTab::duplicate(const WebExtensionTabParameters& parameters, Com
 
     RefPtr extensionContext = m_extensionContext.get();
     if (!extensionContext) {
-        completionHandler(toWebExtensionError(apiName, nullString(), @"No extensionContext"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"the extension is not loaded"));
         return;
     }
 

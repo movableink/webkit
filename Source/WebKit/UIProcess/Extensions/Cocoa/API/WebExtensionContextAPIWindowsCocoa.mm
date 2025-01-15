@@ -102,9 +102,10 @@ void WebExtensionContext::windowsCreate(const WebExtensionWindowParameters& crea
 
     RefPtr extensionController = this->extensionController();
     if (!extensionController) {
-        completionHandler(toWebExtensionError(apiName, nullString(), @"No extensionController"));
+        completionHandler(toWebExtensionError(apiName, nullString(), @"the extension is not loaded"));
         return;
     }
+
     [extensionController->delegate() webExtensionController:extensionController->wrapper() openNewWindowUsingConfiguration:configuration forExtensionContext:wrapper() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](id<WKWebExtensionWindow> newWindow, NSError *error) mutable {
         if (error) {
             RELEASE_LOG_ERROR(Extensions, "Error for open new window: %{public}@", privacyPreservingDescription(error));
@@ -118,7 +119,7 @@ void WebExtensionContext::windowsCreate(const WebExtensionWindowParameters& crea
         }
 
         RefPtr window = getOrCreateWindow(newWindow);
-        completionHandler(window->extensionHasAccess() ? std::optional(window->parameters()) : std::nullopt);
+        completionHandler(window->extensionHasAccess() ? std::optional(window->parameters(WebExtensionWindow::PopulateTabs::Yes)) : std::nullopt);
     }).get()];
 }
 

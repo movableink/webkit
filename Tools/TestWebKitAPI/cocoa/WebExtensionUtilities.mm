@@ -91,7 +91,7 @@
 #if PLATFORM(MAC)
     __weak TestWebExtensionManager *weakSelf = self;
 
-    _internalDelegate.openNewWindow = ^(WKWebExtensionWindowConfiguration *configuration, WKWebExtensionContext *, void (^completionHandler)(id<WKWebExtensionWindow>, NSError *)) {
+    _internalDelegate.openNewWindow = ^(WKWebExtensionWindowConfiguration *configuration, WKWebExtensionContext *context, void (^completionHandler)(id<WKWebExtensionWindow>, NSError *)) {
         auto *newWindow = [weakSelf openNewWindowUsingPrivateBrowsing:configuration.shouldBePrivate];
 
         newWindow.windowType = configuration.windowType;
@@ -118,6 +118,14 @@
         }
 
         newWindow.frame = desiredFrame;
+
+        bool isFirstURL = true;
+        for (NSURL *url in configuration.tabURLs) {
+            auto *targetTab = isFirstURL ? newWindow.tabs.firstObject : [newWindow openNewTab];
+            [targetTab changeWebViewIfNeededForURL:url forExtensionContext:context];
+            [targetTab.webView loadRequest:[NSURLRequest requestWithURL:url]];
+            isFirstURL = false;
+        }
 
         completionHandler(newWindow, nil);
     };
