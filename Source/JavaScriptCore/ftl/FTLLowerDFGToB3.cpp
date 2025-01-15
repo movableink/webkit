@@ -12215,6 +12215,9 @@ IGNORE_CLANG_WARNINGS_END
                     jit.negPtr(scratchGPR1);
                     jit.getEffectiveAddress(CCallHelpers::BaseIndex(GPRInfo::callFrameRegister, scratchGPR1, CCallHelpers::TimesEight), scratchGPR1);
 
+                    slowCase.append(jit.branchPtr(CCallHelpers::Above, scratchGPR1, GPRInfo::callFrameRegister));
+                    slowCase.append(jit.branchPtr(CCallHelpers::Above, CCallHelpers::AbsoluteAddress(vm->addressOfSoftStackLimit()), scratchGPR1));
+
                     // Before touching stack values, we should update the stack pointer to protect them from signal stack.
                     jit.addPtr(CCallHelpers::TrustedImm32(sizeof(CallerFrameAndPC)), scratchGPR1, CCallHelpers::stackPointerRegister);
 

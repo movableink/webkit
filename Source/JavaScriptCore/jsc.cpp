@@ -3236,9 +3236,11 @@ JSC_DEFINE_HOST_FUNCTION(functionSamplingProfilerStackTraces, (JSGlobalObject* g
 }
 #endif // ENABLE(SAMPLING_PROFILER)
 
-JSC_DEFINE_HOST_FUNCTION(functionMaxArguments, (JSGlobalObject*, CallFrame*))
+JSC_DEFINE_HOST_FUNCTION(functionMaxArguments, (JSGlobalObject* globalObject, CallFrame*))
 {
-    return JSValue::encode(jsNumber(JSC::maxArguments));
+    VM& vm = globalObject->vm();
+    unsigned result = std::min<unsigned>(JSC::maxArguments, static_cast<unsigned>((std::bit_cast<uint8_t*>(Thread::current().stack().origin()) - std::bit_cast<uint8_t*>(vm.softStackLimit())) / sizeof(EncodedJSValue)));
+    return JSValue::encode(jsNumber(result));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionAsyncTestStart, (JSGlobalObject* globalObject, CallFrame* callFrame))
