@@ -131,7 +131,7 @@ void IPIntPlan::compileFunction(FunctionCodeIndex functionIndex)
         ASSERT(!callee->entrypoint());
 
 #if ENABLE(JIT)
-        if (Options::useWasmJIT()) {
+        if (Options::useWasmJIT() && Options::useBBQJIT()) {
             if (m_moduleInformation->usesSIMD(functionIndex))
                 callee->setEntrypoint(LLInt::inPlaceInterpreterSIMDEntryThunk().retaggedCode<WasmEntryPtrTag>());
             else
