@@ -3938,7 +3938,7 @@ AccessibilityObjectInclusion AccessibilityObject::defaultObjectInclusion() const
     if (auto* style = this->style()) {
         if (style->effectiveInert())
             return AccessibilityObjectInclusion::IgnoreObject;
-        if (style->usedVisibility() != Visibility::Visible)
+        if (isVisibilityHidden(*style))
             return AccessibilityObjectInclusion::IgnoreObject;
     }
 
@@ -3972,7 +3972,8 @@ bool AccessibilityObject::isWithinHiddenWebArea() const
     CheckedPtr renderView = webArea ? dynamicDowncast<RenderView>(webArea->renderer()) : nullptr;
     CheckedPtr frameRenderer = renderView ? renderView->frameView().frame().ownerRenderer() : nullptr;
     while (frameRenderer) {
-        if (frameRenderer->style().usedVisibility() != Visibility::Visible || frameRenderer->style().effectiveInert())
+        const auto& style = frameRenderer->style();
+        if (isVisibilityHidden(style) || style.effectiveInert())
             return true;
 
         renderView = frameRenderer->document().renderView();

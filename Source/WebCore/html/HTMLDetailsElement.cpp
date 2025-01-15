@@ -210,12 +210,4 @@ void HTMLDetailsElement::ensureDetailsExclusivityAfterMutation()
     }
 }
 
-void HTMLDetailsElement::toggleOpen()
-{
-    setBooleanAttribute(openAttr, !hasAttribute(openAttr));
-
-    if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->onExpandedChanged(*this);
-}
-
-}
+} // namespace WebCore

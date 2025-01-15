@@ -456,7 +456,7 @@ bool AXObjectCache::isNodeVisible(Node* node) const
         return false;
 
     auto* renderLayer = renderer->enclosingLayer();
-    if (style.usedVisibility() != Visibility::Visible && renderLayer && !renderLayer->hasVisibleContent())
+    if (isVisibilityHidden(style) && renderLayer && !renderLayer->hasVisibleContent())
         return false;
 
     // Check whether this object or any of its ancestors has opacity 0.
@@ -1331,17 +1331,6 @@ void AXObjectCache::onEventListenerRemoved(Node& node, const AtomString& eventTy
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 }
 
-void AXObjectCache::onExpandedChanged(HTMLDetailsElement& detailsElement)
-{
-    postNotification(get(detailsElement), AXNotification::ExpandedChanged);
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    if (!AXIsolatedTree::treeForPageID(m_pageID))
-        return;
-    for (auto& summary : descendantsOfType<HTMLSummaryElement>(detailsElement))
-        updateIsolatedTree(get(summary), AXNotification::ExpandedChanged);
-#endif
-}
-
 void AXObjectCache::updateLoadingProgress(double newProgressValue)
 {
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
@@ -1986,7 +1975,7 @@ void AXObjectCache::onStyleChange(Element& element, Style::Change change, const 
     if (!object)
         return;
 
-    if (!element.renderer() && oldStyle->usedVisibility() != newStyle->usedVisibility()) {
+    if (!element.renderer() && isVisibilityHidden(*oldStyle) != isVisibilityHidden(*newStyle)) {
         // We only need to do this when the given element doesn't have a renderer, as if it did, we would get a normal
         // children-changed event through the render tree.
         childrenChanged(object.get());
@@ -2770,9 +2759,21 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
     } else if (attrName == accesskeyAttr)
         updateIsolatedTree(get(*element), AXNotification::AccessKeyChanged);
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    else if (attrName == openAttr && is<HTMLDialogElement>(*element)) {
-        deferModalChange(*element);
-        recomputeIsIgnored(element->parentNode());
+    else if (attrName == openAttr) {
+        if (is<HTMLDialogElement>(*element)) {
+            deferModalChange(*element);
+            recomputeIsIgnored(element->parentNode());
+        } else if (is<HTMLDetailsElement>(*element)) {
+            if (RefPtr object = get(*element)) {
+                postNotification(*object, AXNotification::ExpandedChanged);
+                childrenChanged(object.get());
+            }
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+            for (auto& summary : descendantsOfType<HTMLSummaryElement>(*element))
+                updateIsolatedTree(get(summary), AXNotification::ExpandedChanged);
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+        }
     } else if (attrName == rowspanAttr) {
         deferRowspanChange(get(*element));
         recomputeParentTableProperties(element, TableProperty::CellSlots);
@@ -4869,11 +4870,16 @@ bool isNodeFocused(Node& node)
     return is<Element>(node) && uncheckedDowncast<Element>(node).focused();
 }
 
+bool isVisibilityHidden(const RenderStyle& style)
+{
+    return style.usedVisibility() != Visibility::Visible || style.usedContentVisibility() == ContentVisibility::Hidden;
+}
+
 // DOM component of hidden definition.
 // https://www.w3.org/TR/wai-aria/#dfn-hidden
 bool isRenderHidden(const RenderStyle& style)
 {
-    return style.display() == DisplayType::None || style.usedVisibility() != Visibility::Visible;
+    return style.display() == DisplayType::None || isVisibilityHidden(style);
 }
 
 bool isRenderHidden(const RenderStyle* style)

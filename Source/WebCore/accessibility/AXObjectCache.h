@@ -358,7 +358,6 @@ public:
     void onDragElementChanged(Element* oldElement, Element* newElement);
     void onEventListenerAdded(Node&, const AtomString& eventType);
     void onEventListenerRemoved(Node&, const AtomString& eventType);
-    void onExpandedChanged(HTMLDetailsElement&);
     void onFocusChange(Element* oldElement, Element* newElement);
     void onInertOrVisibilityChange(RenderElement&);
     void onPopoverToggle(const HTMLElement&);
@@ -944,7 +943,10 @@ bool hasAccNameAttribute(Element&);
 bool isNodeFocused(Node&);
 
 bool isRenderHidden(const RenderStyle*);
+// Checks both CSS display properties, and CSS visibility properties.
 bool isRenderHidden(const RenderStyle&);
+// Only checks CSS visibility properties.
+bool isVisibilityHidden(const RenderStyle&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, AXNotification);
 
