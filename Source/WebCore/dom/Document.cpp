@@ -2733,7 +2733,7 @@ bool Document::updateStyleIfNeeded()
 {
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-    if (isResolvingContainerQueriesForSelfOrAncestor())
+    if (isInStyleInterleavedLayoutForSelfOrAncestor())
         return false;
 
     RefPtr frameView = view();
@@ -3043,15 +3043,6 @@ void Document::setIsResolvingTreeStyle(bool value)
 {
     RELEASE_ASSERT(value != m_isResolvingTreeStyle);
     m_isResolvingTreeStyle = value;
-}
-
-bool Document::isResolvingContainerQueriesForSelfOrAncestor() const
-{
-    if (m_isResolvingContainerQueries)
-        return true;
-    if (RefPtr owner = ownerElement())
-        return owner->document().isResolvingContainerQueriesForSelfOrAncestor();
-    return false;
 }
 
 bool Document::isInStyleInterleavedLayoutForSelfOrAncestor() const
