@@ -124,6 +124,10 @@ ExceptionOr<String> canonicalizeHostname(StringView value, BaseURLStringType val
     if (valueType == BaseURLStringType::Pattern)
         return value.toString();
 
+    // URL::setHost is not fully validating forbidden host code points, so we do it before, except for IPv6 addresses.
+    if (value[0] != '[' && value.find(WTF::isForbiddenHostCodePoint) != notFound)
+        return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL host string - forbidden code point."_s };
+
     URL dummyURL(dummyURLCharacters);
     dummyURL.setHost(value);
 

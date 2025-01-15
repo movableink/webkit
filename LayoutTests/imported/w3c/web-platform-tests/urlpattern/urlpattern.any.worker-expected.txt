@@ -222,7 +222,7 @@ PASS Pattern: ["https://example.com/"] Inputs: ["https://example.com:8080/"]
 PASS Pattern: ["data:foobar"] Inputs: ["data:foobar"]
 PASS Pattern: ["data\\:foobar"] Inputs: ["data:foobar"]
 PASS Pattern: ["https://{sub.}?example.com/foo"] Inputs: ["https://example.com/foo"]
-FAIL Pattern: ["https://{sub.}?example{.com/}foo"] Inputs: ["https://example.com/foo"] assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: ["https://{sub.}?example{.com/}foo"] Inputs: ["https://example.com/foo"]
 PASS Pattern: ["{https://}example.com/foo"] Inputs: ["https://example.com/foo"]
 PASS Pattern: ["https://(sub.)?example.com/foo"] Inputs: ["https://example.com/foo"]
 PASS Pattern: ["https://(sub.)?example(.com/)foo"] Inputs: ["https://example.com/foo"]
@@ -261,9 +261,9 @@ PASS Pattern: [{"hostname":"{[\\:\\:fé\\::num]}"}] Inputs: undefined
 FAIL Pattern: [{"hostname":"{[\\:\\::num\\:1]}"}] Inputs: [{"hostname":"[::ab:1]"}] Invalid input to canonicalize a URL host string.
 PASS Pattern: [{"hostname":"{[\\:\\::num\\:fé]}"}] Inputs: undefined
 FAIL Pattern: [{"hostname":"[*\\:1]"}] Inputs: [{"hostname":"[::ab:1]"}] Invalid input to canonicalize a URL host string.
-FAIL Pattern: [{"hostname":"*\\:1]"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: [{"hostname":"*\\:1]"}] Inputs: undefined
 PASS Pattern: ["https://foo{{@}}example.com"] Inputs: ["https://foo@example.com"]
-FAIL Pattern: ["https://foo{@example.com"] Inputs: ["https://foo@example.com"] assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: ["https://foo{@example.com"] Inputs: ["https://foo@example.com"]
 FAIL Pattern: ["data\\:text/javascript,let x = 100/:tens?5;"] Inputs: ["data:text/javascript,let x = 100/5;"] assert_equals: compiled pattern property 'pathname' expected "text/javascript,let x = 100/:tens?5;" but got "text/javascript,let%20x%20=%20100/:tens?5;"
 PASS Pattern: [{"pathname":"/:id/:id"}] Inputs: undefined
 PASS Pattern: [{"pathname":"/foo","baseURL":""}] Inputs: undefined
@@ -276,22 +276,22 @@ PASS Pattern: [{"protocol":":name*"}] Inputs: [{"protocol":"foobar"}]
 PASS Pattern: [{"protocol":":name+"}] Inputs: [{"protocol":"foobar"}]
 PASS Pattern: [{"protocol":":name"}] Inputs: [{"protocol":"foobar"}]
 PASS Pattern: [{"hostname":"bad hostname"}] Inputs: undefined
-FAIL Pattern: [{"hostname":"bad#hostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: [{"hostname":"bad#hostname"}] Inputs: undefined
 PASS Pattern: [{"hostname":"bad%hostname"}] Inputs: undefined
-FAIL Pattern: [{"hostname":"bad/hostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
-FAIL Pattern: [{"hostname":"bad\\:hostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: [{"hostname":"bad/hostname"}] Inputs: undefined
+PASS Pattern: [{"hostname":"bad\\:hostname"}] Inputs: undefined
 PASS Pattern: [{"hostname":"bad<hostname"}] Inputs: undefined
 PASS Pattern: [{"hostname":"bad>hostname"}] Inputs: undefined
 PASS Pattern: [{"hostname":"bad?hostname"}] Inputs: undefined
-FAIL Pattern: [{"hostname":"bad@hostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: [{"hostname":"bad@hostname"}] Inputs: undefined
 PASS Pattern: [{"hostname":"bad[hostname"}] Inputs: undefined
 PASS Pattern: [{"hostname":"bad]hostname"}] Inputs: undefined
-FAIL Pattern: [{"hostname":"bad\\\\hostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: [{"hostname":"bad\\\\hostname"}] Inputs: undefined
 PASS Pattern: [{"hostname":"bad^hostname"}] Inputs: undefined
 PASS Pattern: [{"hostname":"bad|hostname"}] Inputs: undefined
-FAIL Pattern: [{"hostname":"bad\nhostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
-FAIL Pattern: [{"hostname":"bad\rhostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
-FAIL Pattern: [{"hostname":"bad\thostname"}] Inputs: undefined assert_throws_js: URLPattern() constructor function "_ => new URLPattern(...entry.pattern)" did not throw
+PASS Pattern: [{"hostname":"bad\nhostname"}] Inputs: undefined
+PASS Pattern: [{"hostname":"bad\rhostname"}] Inputs: undefined
+PASS Pattern: [{"hostname":"bad\thostname"}] Inputs: undefined
 PASS Pattern: [{}] Inputs: ["https://example.com/"]
 PASS Pattern: [] Inputs: ["https://example.com/"]
 PASS Pattern: [] Inputs: [{}]
