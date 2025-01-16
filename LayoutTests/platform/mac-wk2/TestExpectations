@@ -1943,3 +1943,5 @@ webkit.org/b/285934 [ Ventura+ Debug arm64 ] http/tests/security/contentSecurity
 # webkit.org/b/280415 [ Sequoia wk2 release arm64 ] 2x fast/selectors/* are flaky image only failures.
 [ Ventura+ arm64 ] fast/selectors/selection-window-inactive-stroke-color.html [ Pass ImageOnlyFailure ]
 [ Ventura+ arm64 ] fast/selectors/text-field-selection-stroke-color.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/286080 fast/webgpu/nocrash/fuzz-284937.html [ Failure Timeout Crash ]
