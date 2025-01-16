@@ -22,7 +22,7 @@
 # THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-[Nested, OptionSet] enum class WebKit::DMABufRendererBufferMode : uint8_t {
+[Nested, OptionSet] enum class WebKit::RendererBufferTransportMode : uint8_t {
     Hardware,
     SharedMemory,
 };

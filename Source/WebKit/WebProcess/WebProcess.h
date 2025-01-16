@@ -74,7 +74,7 @@ OBJC_CLASS NSMutableDictionary;
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-#include "DMABufRendererBufferMode.h"
+#include "RendererBufferTransportMode.h"
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -471,7 +471,7 @@ public:
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-    const OptionSet<DMABufRendererBufferMode>& dmaBufRendererBufferMode() const { return m_dmaBufRendererBufferMode; }
+    const OptionSet<RendererBufferTransportMode>& rendererBufferTransportMode() const { return m_rendererBufferTransportMode; }
     void initializePlatformDisplayIfNeeded() const;
 #endif
 
@@ -837,7 +837,7 @@ private:
     WeakHashMap<WebCore::UserGestureToken, WebCore::UserGestureTokenIdentifier> m_userGestureTokens;
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-    OptionSet<DMABufRendererBufferMode> m_dmaBufRendererBufferMode;
+    OptionSet<RendererBufferTransportMode> m_rendererBufferTransportMode;
 #endif
 
     bool m_hasSuspendedPageProxy { false };

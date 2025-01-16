@@ -27,7 +27,7 @@
 
 namespace WebKit {
 
-enum class DMABufRendererBufferMode : uint8_t {
+enum class RendererBufferTransportMode : uint8_t {
     Hardware = 1 << 0,
     SharedMemory = 1 << 1
 };

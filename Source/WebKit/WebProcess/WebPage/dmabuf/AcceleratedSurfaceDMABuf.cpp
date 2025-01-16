@@ -403,7 +403,7 @@ AcceleratedSurfaceDMABuf::SwapChain::SwapChain(uint64_t surfaceID)
     auto& display = WebCore::PlatformDisplay::sharedDisplay();
     switch (display.type()) {
     case WebCore::PlatformDisplay::Type::Surfaceless:
-        if (display.eglExtensions().MESA_image_dma_buf_export && WebProcess::singleton().dmaBufRendererBufferMode().contains(DMABufRendererBufferMode::Hardware))
+        if (display.eglExtensions().MESA_image_dma_buf_export && WebProcess::singleton().rendererBufferTransportMode().contains(RendererBufferTransportMode::Hardware))
             m_type = Type::Texture;
         else
             m_type = Type::SharedMemory;
