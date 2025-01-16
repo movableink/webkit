@@ -7625,7 +7625,10 @@ css3/color-filters/svg/color-filter-inline-svg.html [ Pass ImageOnlyFailure ]
 css3/filters/hidpi-backdrop-filter-rasterization-scale.html [ Pass ImageOnlyFailure ]
 
 # uncategorized dialog element failures
-webkit.org/b/283668 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/dialog-closedby.tentative.html [ Skip ]
+webkit.org/b/283668 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/dialog-closedby.html [ Skip ]
+webkit.org/b/283668 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/dialog-popover-closedby-complex.html [ Skip ]
+webkit.org/b/283668 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/dialog-popover-closedby-simple.html [ Skip ]
+webkit.org/b/283668 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/non-modal-canceling.html [ Skip ]
 
 webkit.org/b/283991 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-position-try-009.html [ Pass Failure ]
 

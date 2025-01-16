@@ -4142,6 +4142,15 @@
     "imported/w3c/web-platform-tests/html/semantics/forms/the-select-element/show-picker-user-gesture.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/dialog-closedby.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/dialog-popover-closedby-complex.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/dialog-popover-closedby-simple.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/html/semantics/invokers/invoketarget-button-event-dispatch.tentative.html": [
         "slow"
     ],
