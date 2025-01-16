@@ -30,6 +30,7 @@
 
 #include "WebFullScreenManagerProxy.h"
 #include "WebFullScreenManagerProxyMessages.h"
+#include "WebProcessProxy.h"
 
 namespace WebKit {
 

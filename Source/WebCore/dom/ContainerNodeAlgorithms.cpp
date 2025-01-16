@@ -101,12 +101,6 @@ inline void updateObservability(RemovedSubtreeObservability& currentObservabilit
         currentObservability = newStatus;
 }
 
-inline void updateCanDelayNodeDeletion(ContainerNode::CanDelayNodeDeletion& currentCanDelayDeletion, ContainerNode::CanDelayNodeDeletion newStatus)
-{
-    if (newStatus == ContainerNode::CanDelayNodeDeletion::No)
-        currentCanDelayDeletion = ContainerNode::CanDelayNodeDeletion::No;
-}
-
 static RemovedSubtreeResult notifyNodeRemovedFromDocument(ContainerNode& oldParentOfRemovedTree, TreeScopeChange treeScopeChange, Node& node)
 {
     ASSERT(!node.parentNode());

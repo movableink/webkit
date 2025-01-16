@@ -91,4 +91,10 @@ inline void disconnectSubframesIfNeeded(ContainerNode& root, SubframeDisconnectP
     disconnectSubframes(root, policy);
 }
 
+inline void updateCanDelayNodeDeletion(ContainerNode::CanDelayNodeDeletion& currentCanDelayDeletion, ContainerNode::CanDelayNodeDeletion newStatus)
+{
+    if (newStatus == ContainerNode::CanDelayNodeDeletion::No)
+        currentCanDelayDeletion = ContainerNode::CanDelayNodeDeletion::No;
+}
+
 } // namespace WebCore
