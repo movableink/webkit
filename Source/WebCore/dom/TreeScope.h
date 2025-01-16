@@ -48,6 +48,7 @@ class Document;
 class Element;
 class FloatPoint;
 class JSDOMGlobalObject;
+class HTMLAnchorElement;
 class HTMLImageElement;
 class HTMLLabelElement;
 class HTMLMapElement;
@@ -131,6 +132,7 @@ public:
     // Anchor name matching is case sensitive in strict mode and not case sensitive in
     // quirks mode for historical compatibility reasons.
     RefPtr<Element> findAnchor(StringView name);
+    bool isMatchingAnchor(HTMLAnchorElement&, StringView name);
 
     inline ContainerNode& rootNode() const; // Defined in ContainerNode.h
     Ref<ContainerNode> protectedRootNode() const;

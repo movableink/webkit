@@ -847,7 +847,6 @@ html/parser/HTMLConstructionSite.cpp
 html/parser/HTMLConstructionSite.h
 html/parser/HTMLDocumentParser.cpp
 html/parser/HTMLDocumentParserFastPath.cpp
-html/parser/HTMLElementStack.cpp
 html/parser/HTMLParserScheduler.cpp
 html/parser/HTMLScriptRunner.cpp
 html/parser/HTMLTreeBuilder.cpp

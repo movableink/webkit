@@ -160,6 +160,7 @@ class HTMLCanvasElement;
 class HTMLCollection;
 class HTMLDialogElement;
 class HTMLDocument;
+class HTMLDocumentParser;
 class HTMLElement;
 class HTMLFrameOwnerElement;
 class HTMLHeadElement;
@@ -876,7 +877,8 @@ public:
     DocumentParser* parser() const { return m_parser.get(); }
     inline RefPtr<DocumentParser> protectedParser() const; // Defined in DocumentInlines.h.
     ScriptableDocumentParser* scriptableDocumentParser() const;
-    
+    HTMLDocumentParser* htmlDocumentParser() const;
+
     bool printing() const { return m_printing; }
     void setPrinting(bool p) { m_printing = p; }
 
@@ -1830,7 +1832,7 @@ public:
     enum class ImplicitRenderBlocking : bool { No, Yes };
     void blockRenderingOn(Element&, ImplicitRenderBlocking = ImplicitRenderBlocking::No);
     void unblockRenderingOn(Element&);
-    void processInternalResourceLinks(HTMLAnchorElement* = nullptr);
+    void processInternalResourceLinks(Element* = nullptr);
 
 #if ENABLE(VIDEO)
     WEBCORE_EXPORT void forEachMediaElement(const Function<void(HTMLMediaElement&)>&);

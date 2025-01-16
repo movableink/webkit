@@ -51,7 +51,7 @@ public:
     FormAttributeTargetObserver(const AtomString& id, FormListedElement&);
 
 private:
-    void idTargetChanged() override;
+    void idTargetChanged(Element&) override;
 
     FormListedElement& m_element;
 };
@@ -298,7 +298,7 @@ FormAttributeTargetObserver::FormAttributeTargetObserver(const AtomString& id, F
 {
 }
 
-void FormAttributeTargetObserver::idTargetChanged()
+void FormAttributeTargetObserver::idTargetChanged(Element&)
 {
     m_element.formAttributeTargetChanged();
 }

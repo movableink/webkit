@@ -103,7 +103,7 @@ class ListAttributeTargetObserver final : public IdTargetObserver {
 public:
     ListAttributeTargetObserver(const AtomString& id, HTMLInputElement&);
 
-    void idTargetChanged() override;
+    void idTargetChanged(Element&) override;
 
 private:
     WeakPtr<HTMLInputElement, WeakPtrImplWithEventTargetData> m_element;
@@ -2252,7 +2252,7 @@ ListAttributeTargetObserver::ListAttributeTargetObserver(const AtomString& id, H
 {
 }
 
-void ListAttributeTargetObserver::idTargetChanged()
+void ListAttributeTargetObserver::idTargetChanged(Element&)
 {
     m_element->document().eventLoop().queueTask(TaskSource::DOMManipulation, [element = m_element] {
         if (element)

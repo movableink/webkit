@@ -86,7 +86,7 @@ void HTMLDataListElement::optionElementChildrenChanged()
 {
     if (auto& id = getIdAttribute(); !id.isEmpty()) {
         if (CheckedPtr observerRegistry = treeScope().idTargetObserverRegistryIfExists())
-            observerRegistry->notifyObservers(id);
+            observerRegistry->notifyObservers(*this, id);
     }
 }
 

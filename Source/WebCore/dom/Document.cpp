@@ -3595,6 +3595,11 @@ ScriptableDocumentParser* Document::scriptableDocumentParser() const
     return parser() ? parser()->asScriptableDocumentParser() : nullptr;
 }
 
+HTMLDocumentParser* Document::htmlDocumentParser() const
+{
+    return parser() ? parser()->asHTMLDocumentParser() : nullptr;
+}
+
 ExceptionOr<RefPtr<WindowProxy>> Document::openForBindings(LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, const String& url, const AtomString& name, const String& features)
 {
     if (!m_domWindow)
@@ -8582,12 +8587,12 @@ void Document::unblockRenderingOn(Element& element)
 }
 
 // https://html.spec.whatwg.org/multipage/links.html#process-internal-resource-links
-void Document::processInternalResourceLinks(HTMLAnchorElement* anchor)
+void Document::processInternalResourceLinks(Element* element)
 {
     auto copy = copyToVector(m_renderBlockingElements);
-    for (auto& element : copy) {
-        if (RefPtr link = dynamicDowncast<HTMLLinkElement>(element.get()))
-            link->processInternalResourceLink(anchor);
+    for (auto& blockingElement : copy) {
+        if (RefPtr link = dynamicDowncast<HTMLLinkElement>(blockingElement.get()))
+            link->processInternalResourceLink(element);
     }
 }
 

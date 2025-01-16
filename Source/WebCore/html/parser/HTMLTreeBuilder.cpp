@@ -3141,4 +3141,9 @@ inline void HTMLTreeBuilder::parseError(const AtomHTMLToken&)
 {
 }
 
+bool HTMLTreeBuilder::isOnStackOfOpenElements(Element& element) const
+{
+    return m_tree.openElements().contains(element);
+}
+
 }
