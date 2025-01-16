@@ -2419,9 +2419,8 @@ animations/remove-syncing-animation.html [ Pass Failure ]
 editing/execCommand/indent-input-in-image-crash.html [ Failure ]
 
 fast/box-shadow/hidpi-box-shadow-inset-on-subpixel-position.html [ ImageOnlyFailure ]
-fast/text/whitespace-with-zero-width-space-in-between.html [ ImageOnlyFailure ]
-
 fast/text/otsvg-canvas.html [ ImageOnlyFailure ]
+fast/text/whitespace/whitespace-with-zero-width-space-in-between.html [ ImageOnlyFailure ]
 
 fast/gradients/alpha-premultiplied-representable-by-unpremultiplied.html [ ImageOnlyFailure ]
 fast/gradients/alpha-premultiplied.html [ ImageOnlyFailure ]
