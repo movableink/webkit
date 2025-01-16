@@ -688,6 +688,9 @@ Document::Document(LocalFrame* frame, const Settings& settings, const URL& url, 
     // that an engineer writes the relevant manual code whenever a new generated type is added.
     for (const ProcessSyncDataType dataType : allDocumentSyncDataTypes)
         populateDocumentSyncDataForNewlyConstructedDocument(dataType);
+
+    if (!settings.mutationEventsEnabled())
+        m_shouldNotFireMutationEvents = true;
 }
 
 void Document::populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDataType dataType)

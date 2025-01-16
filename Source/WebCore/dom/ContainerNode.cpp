@@ -1070,14 +1070,13 @@ Node* ContainerNode::traverseToChildAt(unsigned index) const
 
 static void dispatchChildInsertionEvents(Node& child)
 {
-    if (child.isInShadowTree())
+    Ref document = child.document();
+    if (child.isInShadowTree() || document->shouldNotFireMutationEvents())
         return;
 
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(child));
 
     RefPtr c = &child;
-    Ref document = child.document();
-
     if (c->parentNode() && document->hasListenerType(Document::ListenerType::DOMNodeInserted))
         c->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeInsertedEvent, Event::CanBubble::Yes, c->protectedParentNode().get()));
 

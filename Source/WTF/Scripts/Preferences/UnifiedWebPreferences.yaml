@@ -5262,6 +5262,18 @@ MouseEventsSimulationEnabled:
     WebCore:
       default: false
 
+MutationEventsEnabled:
+  type: bool
+  status: mature
+  humanReadableName: "DOM mutation events"
+  defaultValue:
+    WebKitLegacy:
+      default: true
+    WebKit:
+      default: true
+    WebCore:
+      default: true
+
 MuteCameraOnMicrophoneInterruptionEnabled:
   type: bool
   status: internal
