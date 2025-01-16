@@ -56,7 +56,7 @@ struct SingleTimelineRange {
     static CSSValueID valueID(Name);
 
     static SingleTimelineRange range(const CSSValue&, Type, const Style::BuilderState* = nullptr, RefPtr<Element> = nullptr);
-    static SingleTimelineRange parse(TimelineRangeValue&&, RefPtr<Element>, Type);
+    static RefPtr<CSSValue> parse(TimelineRangeValue&&, RefPtr<Element>, Type);
     TimelineRangeValue serialize() const;
 };
 

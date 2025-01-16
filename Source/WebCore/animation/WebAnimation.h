@@ -146,7 +146,7 @@ public:
     virtual void setBindingsRangeEnd(TimelineRangeValue&&);
     void setRangeStart(SingleTimelineRange);
     void setRangeEnd(SingleTimelineRange);
-    const TimelineRange& range() const { return m_timelineRange; }
+    const TimelineRange& range();
 
     bool needsTick() const;
     virtual void tick();
@@ -233,6 +233,8 @@ private:
 
     RefPtr<AnimationEffect> m_effect;
     RefPtr<AnimationTimeline> m_timeline;
+    RefPtr<CSSValue> m_specifiedRangeStart;
+    RefPtr<CSSValue> m_specifiedRangeEnd;
     UniqueRef<ReadyPromise> m_readyPromise;
     UniqueRef<FinishedPromise> m_finishedPromise;
     std::optional<WebAnimationTime> m_previousCurrentTime;
