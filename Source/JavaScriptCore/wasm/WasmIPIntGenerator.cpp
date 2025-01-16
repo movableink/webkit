@@ -2444,10 +2444,16 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranchNull(ControlType& bloc
 
     IPIntLocation here = { curPC(), curMC() };
 
+    unsigned toPop = m_stackSize - block.stackSize() - block.branchTargetArity();
+
+    // if we branch_on_null, we'll pop the null first
+    if (!shouldNegate)
+        toPop -= 1;
+
     IPInt::BranchMetadata branch {
         .target = {
             .block = { .deltaPC = 0xbeef, .deltaMC = 0xbeef },
-            .toPop = safeCast<uint16_t>(m_stackSize - block.stackSize() - block.branchTargetArity()),
+            .toPop = safeCast<uint16_t>(toPop),
             .toKeep = safeCast<uint16_t>(block.branchTargetArity()),
         },
         .instructionLength = { .length = safeCast<uint8_t>(getCurrentInstructionLength()) }
@@ -2456,6 +2462,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranchNull(ControlType& bloc
 
     tryToResolveBranchTarget(block, here, m_metadata->m_metadata.data());
 
+    // if we branch_on_non_null, not taking the branch means we pop the null
     if (shouldNegate)
         changeStackSize(-1);
 
