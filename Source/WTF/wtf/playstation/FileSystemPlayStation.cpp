@@ -32,6 +32,7 @@
 
 #include <dirent.h>
 #include <sys/statvfs.h>
+#include <wtf/text/MakeString.h>
 
 namespace WTF {
 
