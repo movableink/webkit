@@ -194,15 +194,10 @@ import WebKitSwift
     }
 }
 
-// MARK: WKIntelligenceReplacementTextEffectCoordinator + PlatformIntelligenceTextEffectViewSource conformance
+// MARK: WKIntelligenceReplacementTextEffectCoordinator + IntelligenceTextEffectViewManager.Delegate conformance
 
-extension WKIntelligenceReplacementTextEffectCoordinator: PlatformIntelligenceTextEffectViewSource {
-    func textPreview(for chunk: IntelligenceTextEffectChunk) async -> PlatformTextPreview? {
-        let previews = await self.delegate.intelligenceTextEffectCoordinator(self, textPreviewsFor: NSRange(chunk.range))
-        return platformTextPreview(from: previews)
-    }
-
-    private func updateTextChunkVisibility(_ chunk: IntelligenceTextEffectChunk, visible: Bool, force: Bool) async {
+extension WKIntelligenceReplacementTextEffectCoordinator: IntelligenceTextEffectViewManagerDelegate {
+    func updateTextChunkVisibility(_ chunk: IntelligenceTextEffectChunk, visible: Bool, force: Bool) async {
         if chunk is IntelligenceTextEffectChunk.Pondering && visible && !force {
             // Typically, if `chunk` is part of a pondering effect, this delegate method will get called with `visible == true`
             // once the pondering effect is removed. However, instead of performing that logic here, it is done in `setActivePonderingEffect`
@@ -219,6 +214,15 @@ extension WKIntelligenceReplacementTextEffectCoordinator: PlatformIntelligenceTe
         }
 
         await self.delegate.intelligenceTextEffectCoordinator(self, updateTextVisibilityFor: NSRange(chunk.range), visible: visible, identifier: chunk.id)
+    }
+}
+
+// MARK: WKIntelligenceReplacementTextEffectCoordinator + PlatformIntelligenceTextEffectViewSource conformance
+
+extension WKIntelligenceReplacementTextEffectCoordinator: PlatformIntelligenceTextEffectViewSource {
+    func textPreview(for chunk: IntelligenceTextEffectChunk) async -> PlatformTextPreview? {
+        let previews = await self.delegate.intelligenceTextEffectCoordinator(self, textPreviewsFor: NSRange(chunk.range))
+        return platformTextPreview(from: previews)
     }
 
     func updateTextChunkVisibility(_ chunk: Chunk, visible: Bool) async {

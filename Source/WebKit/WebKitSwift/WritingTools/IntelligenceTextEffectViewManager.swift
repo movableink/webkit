@@ -29,7 +29,12 @@ import WebKitSwift
 @_spi(Private) import WebKit
 
 @MainActor
-class IntelligenceTextEffectViewManager<Source> where Source: PlatformIntelligenceTextEffectViewSource, Source.Chunk == IntelligenceTextEffectChunk {
+protocol IntelligenceTextEffectViewManagerDelegate  {
+    func updateTextChunkVisibility(_ chunk: IntelligenceTextEffectChunk, visible: Bool, force: Bool) async
+}
+
+@MainActor
+class IntelligenceTextEffectViewManager<Source> where Source: IntelligenceTextEffectViewManagerDelegate, Source: PlatformIntelligenceTextEffectViewSource, Source.Chunk == IntelligenceTextEffectChunk {
     init(source: Source? = nil, contentView: PlatformView) {
         self.source = source
         self.contentView = contentView
@@ -103,7 +108,7 @@ class IntelligenceTextEffectViewManager<Source> where Source: PlatformIntelligen
             //
             // Therefore, the delegate method itself must avoid any work so that it can be synchronous, which is what the platform
             // interfaces expect.
-            await self.source?.updateTextChunkVisibility(oldEffect!.chunk, visible: true)
+            await self.source?.updateTextChunkVisibility(oldEffect!.chunk, visible: true, force: true)
 
             await self.effectView?.removeEffect(oldEffect!.id)
 
