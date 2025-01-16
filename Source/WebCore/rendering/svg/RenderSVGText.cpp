@@ -365,7 +365,7 @@ void RenderSVGText::layout()
         else if (auto* rootObject = lineageOfType<RenderSVGRoot>(*this).first())
             isLayoutSizeChanged = rootObject->isLayoutSizeChanged();
 
-        if (m_needsTextMetricsUpdate || isLayoutSizeChanged) {
+        if (m_needsTextMetricsUpdate || isLayoutSizeChanged || m_needsTransformUpdate) {
             // If the root layout size changed (eg. window size changes) or the transform to the root
             // context has changed then recompute the on-screen font size.
             updateFontInAllDescendants(*this);
