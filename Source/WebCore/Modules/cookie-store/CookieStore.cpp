@@ -425,7 +425,7 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
 
     cookie.created = WallTime::now().secondsSinceEpoch().milliseconds();
 
-    cookie.domain = options.domain.isNull() ? domain : WTFMove(options.domain);
+    cookie.domain = options.domain.isNull() ? domain : options.domain;
     if (!cookie.domain.isNull()) {
         if (cookie.domain.startsWith('.')) {
             promise->reject(Exception { ExceptionCode::TypeError, "The domain must not begin with a '.'"_s });
@@ -433,7 +433,7 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
         }
 
         if (!host.endsWith(cookie.domain) || (host.length() > cookie.domain.length() && !host.substring(0, host.length() - cookie.domain.length()).endsWith('.'))) {
-            promise->reject(Exception { ExceptionCode::TypeError, "The domain must be a part of the current host"_s });
+            promise->reject(Exception { ExceptionCode::TypeError, "The domain must domain-match current host"_s });
             return;
         }
 
@@ -442,6 +442,12 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
             promise->reject(Exception { ExceptionCode::TypeError, makeString("The size of the domain must not be greater than "_s, maximumAttributeValueSize, " bytes"_s) });
             return;
         }
+
+        // In CFNetwork, a domain without a leading dot means host-only cookie.
+        // If a non-null domain was passed in, prepend dot to domain to set
+        // host-only to false and make the cookie accessible by subdomains.
+        if (!options.domain.isNull())
+            cookie.domain = makeString('.', cookie.domain);
     }
 
     cookie.path = WTFMove(options.path);

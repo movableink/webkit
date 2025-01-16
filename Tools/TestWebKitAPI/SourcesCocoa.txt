@@ -90,6 +90,7 @@ Tests/WebKitCocoa/ContentSecurityPolicyTestHelpers.mm
 Tests/WebKitCocoa/ContextMenus.mm
 Tests/WebKitCocoa/CookieAcceptPolicy.mm
 Tests/WebKitCocoa/CookiePrivateBrowsing.mm
+Tests/WebKitCocoa/CookieStoreAPI.mm
 Tests/WebKitCocoa/CopyHTML.mm
 Tests/WebKitCocoa/CopyRTF.mm
 Tests/WebKitCocoa/CopyURL.mm
