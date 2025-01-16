@@ -2911,6 +2911,7 @@ void RenderBlock::computeFragmentRangeForBoxChild(const RenderBox& box) const
 {
     CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
     ASSERT(fragmentedFlow && canComputeFragmentRangeForBox(*this, box, *fragmentedFlow));
+    ASSERT(box.fragmentedFlowState() == FragmentedFlowState::InsideFlow);
 
     RenderFragmentContainer* startFragment;
     RenderFragmentContainer* endFragment;
@@ -2928,7 +2929,7 @@ void RenderBlock::computeFragmentRangeForBoxChild(const RenderBox& box) const
 void RenderBlock::estimateFragmentRangeForBoxChild(const RenderBox& box) const
 {
     CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
-    if (!fragmentedFlow || !canComputeFragmentRangeForBox(*this, box, *fragmentedFlow))
+    if (!fragmentedFlow || box.fragmentedFlowState() == FragmentedFlowState::NotInsideFlow || !canComputeFragmentRangeForBox(*this, box, *fragmentedFlow))
         return;
 
     if (childBoxIsUnsplittableForFragmentation(box)) {
@@ -2947,7 +2948,7 @@ void RenderBlock::estimateFragmentRangeForBoxChild(const RenderBox& box) const
 bool RenderBlock::updateFragmentRangeForBoxChild(const RenderBox& box) const
 {
     CheckedPtr fragmentedFlow = enclosingFragmentedFlow();
-    if (!fragmentedFlow || !canComputeFragmentRangeForBox(*this, box, *fragmentedFlow))
+    if (!fragmentedFlow || box.fragmentedFlowState() == FragmentedFlowState::NotInsideFlow || !canComputeFragmentRangeForBox(*this, box, *fragmentedFlow))
         return false;
 
     RenderFragmentContainer* startFragment = nullptr;
