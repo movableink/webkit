@@ -1405,7 +1405,7 @@ void LocalFrame::setScrollingMode(ScrollbarMode scrollingMode)
 
 static String generateResourceMonitorErrorHTML()
 {
-#if PLATFORM(COCOA) && HAVE(LOCAL_FRAME_ADDITIONS)
+#if PLATFORM(COCOA) && HAVE(CUSTOM_IFRAME_UNLOADING_HTML)
     return generateResourceMonitorErrorHTMLForCocoa();
 #else
     return WEB_UI_STRING("This frame is hidden for using too many system resources.", "Description HTML for frame unloaded by ResourceMonitor");
