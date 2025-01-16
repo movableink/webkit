@@ -136,7 +136,7 @@ String realPath(const String& filePath)
 {
     CString fsRep = fileSystemRepresentation(filePath);
     std::unique_ptr<char, decltype(free)*> resolvedPath(realpath(fsRep.data(), nullptr), free);
-    return resolvedPath ? String::fromUTF8(resolvedPath) : filePath;
+    return resolvedPath ? String::fromUTF8(resolvedPath.get()) : filePath;
 }
 
 
