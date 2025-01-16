@@ -408,7 +408,7 @@
 #endif
 
 #define DOCUMENT_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] Document::" fmt, this, pageID() ? pageID()->toUInt64() : 0, frameID() ? frameID()->object().toUInt64() : 0, this == &topDocument(), ##__VA_ARGS__)
-#define DOCUMENT_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] Document::" fmt, this, pageID() ? pageID()->toUInt64() : 0, frameID() ? frameID()->object().toUInt64() : 0, this == &topDocument(), ##__VA_ARGS__)
+#define DOCUMENT_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] Document::" fmt, this, pageID() ? pageID()->toUInt64() : 0, frameID() ? frameID()->object().toUInt64() : 0, this->isTopDocument(), ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -792,7 +792,7 @@ Document::~Document()
     ASSERT(!m_parser || m_parser->refCount() == 1);
     detachParser();
 
-    if (this == &topDocument())
+    if (isTopDocument())
         clearAXObjectCache();
 
     m_decoder = nullptr;
@@ -1023,8 +1023,10 @@ URL Document::topURL() const
 SecurityOrigin& Document::topOrigin() const
 {
     // Keep exact pre-site-isolation behavior to avoid risking changing behavior when site isolation is not enabled.
-    if (!settings().siteIsolationEnabled())
-        return topDocument().securityOrigin();
+    if (!settings().siteIsolationEnabled()) {
+        ASSERT(mainFrameDocument());
+        return mainFrameDocument()->securityOrigin();
+    }
 
     if (isTopDocument())
         return securityOrigin();
@@ -3059,7 +3061,7 @@ void Document::createRenderTree()
 {
     ASSERT(!renderView());
     ASSERT(m_backForwardCacheState != InBackForwardCache);
-    ASSERT(!m_axObjectCache || this != &topDocument());
+    ASSERT(!m_axObjectCache || isTopDocument());
 
     if (m_isNonRenderedPlaceholder)
         return;
@@ -3172,7 +3174,7 @@ void Document::destroyRenderTree()
 
     SetForScope change(m_renderTreeBeingDestroyed, true);
 
-    if (this == &topDocument())
+    if (isTopDocument())
         clearAXObjectCache();
 
     documentWillBecomeInactive();
@@ -3231,7 +3233,7 @@ void Document::willBeRemovedFromFrame()
 
     m_textManipulationController = nullptr; // Free nodes kept alive by TextManipulationController.
 
-    if (this != &topDocument()) {
+    if (!isTopDocument()) {
         // Let the ax cache know that this subframe goes out of scope.
         if (CheckedPtr cache = existingAXObjectCache())
             cache->prepareForDocumentDestruction(*this);
@@ -3405,7 +3407,7 @@ void Document::stopActiveDOMObjects()
 
 void Document::clearAXObjectCache()
 {
-    ASSERT(&topDocument() == this);
+    ASSERT(isTopDocument());
     // Clear the cache member variable before calling delete because attempts
     // are made to access it during destruction.
     m_axObjectCache = nullptr;
@@ -3414,7 +3416,8 @@ void Document::clearAXObjectCache()
 AXObjectCache* Document::existingAXObjectCacheSlow() const
 {
     ASSERT(hasEverCreatedAnAXObjectCache);
-    return topDocument().m_axObjectCache.get();
+    auto* mainFrameDocument = this->mainFrameDocument();
+    return mainFrameDocument ? mainFrameDocument->m_axObjectCache.get() : nullptr;
 }
 
 AXObjectCache* Document::axObjectCache() const
@@ -3426,18 +3429,23 @@ AXObjectCache* Document::axObjectCache() const
     // document.  This is because we need to be able to get from any WebCoreAXObject
     // to any other WebCoreAXObject on the same page.  Using a single cache allows
     // lookups across nested webareas (i.e. multiple documents).
-    Ref topDocument = this->topDocument();
+    RefPtr mainFrameDocument = this->mainFrameDocument();
+
+    if (!mainFrameDocument) {
+        LOG_ONCE(SiteIsolation, "Unable to reach the main frame documents AXObjectCache ");
+        return nullptr;
+    }
 
     // If the document has already been detached, do not make a new axObjectCache.
-    if (!topDocument->hasLivingRenderTree())
+    if (!mainFrameDocument->hasLivingRenderTree())
         return nullptr;
 
-    ASSERT(topDocument.ptr() == this || !m_axObjectCache);
-    if (!topDocument->m_axObjectCache) {
-        topDocument->m_axObjectCache = makeUnique<AXObjectCache>(topDocument);
+    ASSERT(mainFrameDocument.get() == this || !m_axObjectCache);
+    if (!mainFrameDocument->m_axObjectCache) {
+        mainFrameDocument->m_axObjectCache = makeUnique<AXObjectCache>(*mainFrameDocument);
         hasEverCreatedAnAXObjectCache = true;
     }
-    return topDocument->m_axObjectCache.get();
+    return mainFrameDocument->m_axObjectCache.get();
 }
 
 void Document::setVisuallyOrdered()
@@ -3916,7 +3924,7 @@ void Document::implicitClose()
         // catch new AND page history loads, and that uses AXLoadComplete
 
         axObjectCache()->getOrCreate(renderView());
-        if (this == &topDocument())
+        if (isTopDocument())
             axObjectCache()->postNotification(renderView(), AXNotification::NewDocumentLoadComplete);
         else {
             // AXLoadComplete can only be posted on the top document, so if it's a document
@@ -4183,7 +4191,13 @@ const URL& Document::urlForBindings()
         if (m_url.url().isEmpty() || !loader() || !isTopDocument() || !frame())
             return false;
 
-        RefPtr policySourceLoader = topDocument().loader();
+        RefPtr mainFrameDocument = protectedMainFrameDocument();
+        if (!mainFrameDocument) {
+            LOG_ONCE(SiteIsolation, "Unable to completely calculate Document::urlForBindings() without access to the main frame document ");
+            return false;
+        }
+
+        RefPtr policySourceLoader = mainFrameDocument->loader();
         if (policySourceLoader && !policySourceLoader->request().url().hasSpecialScheme() && url().protocolIsInHTTPFamily())
             policySourceLoader = loader();
 
@@ -5692,7 +5706,11 @@ void Document::flushAutofocusCandidates()
 
     while (!m_autofocusCandidates.isEmpty()) {
         RefPtr element = m_autofocusCandidates.first().get();
-        if (!element || !element->protectedDocument()->isFullyActive() || &element->document().topDocument() != this) {
+        Document* elementMainFrameDocument = element ? element->document().mainFrameDocument() : nullptr;
+        if (!elementMainFrameDocument)
+            LOG_ONCE(SiteIsolation, "Unable to fully perform Document::flushAutofocusCandidates() without access to the elements main frame document ");
+
+        if (!element || !element->document().isFullyActive() || (elementMainFrameDocument && elementMainFrameDocument != this)) {
             m_autofocusCandidates.removeFirst();
             continue;
         }
@@ -6635,7 +6653,13 @@ String Document::referrer()
 
 String Document::referrerForBindings()
 {
-    RefPtr policySourceLoader = topDocument().loader();
+    RefPtr mainFrameDocument = protectedMainFrameDocument();
+    if (!mainFrameDocument) {
+        LOG_ONCE(SiteIsolation, "Unable to fully calculate Document::referrerForBindings() without access to the main frame document ");
+        return referrer();
+    }
+
+    RefPtr policySourceLoader = mainFrameDocument->loader();
     if (!policySourceLoader)
         return referrer();
 
@@ -7394,6 +7418,23 @@ Document& Document::topDocument() const
     return *document;
 }
 
+Document* Document::mainFrameDocument() const
+{
+    // FIXME: This special-casing avoids incorrectly determined top documents during the process
+    // of AXObjectCache teardown or notification posting for cached or being-destroyed documents.
+    if (backForwardCacheState() == NotInBackForwardCache && !m_renderTreeBeingDestroyed) {
+        Document* localMainDocument = nullptr;
+        if (RefPtr localMainFrame = this->localMainFrame())
+            localMainDocument = localMainFrame->document();
+        return localMainDocument ? localMainDocument : const_cast<Document*>(this);
+    }
+
+    Document* document = const_cast<Document*>(this);
+    while (HTMLFrameOwnerElement* element = document->ownerElement())
+        document = &element->document();
+    return document;
+}
+
 bool Document::isTopDocument() const
 {
     if (!settings().siteIsolationEnabled())
@@ -7824,8 +7865,11 @@ bool Document::shouldForceNoOpenerBasedOnCOOP() const
     if (!settings().crossOriginOpenerPolicyEnabled())
         return false;
 
-    auto COOPValue = topDocument().crossOriginOpenerPolicy().value;
-    return (COOPValue == CrossOriginOpenerPolicyValue::SameOrigin || COOPValue == CrossOriginOpenerPolicyValue::SameOriginPlusCOEP) && !isSameOriginAsTopDocument();
+    auto coopValue = CrossOriginOpenerPolicyValue::UnsafeNone;
+    if (RefPtr mainFrameDocument = protectedMainFrameDocument())
+        coopValue = mainFrameDocument->crossOriginOpenerPolicy().value;
+
+    return (coopValue == CrossOriginOpenerPolicyValue::SameOrigin || coopValue == CrossOriginOpenerPolicyValue::SameOriginPlusCOEP) && !isSameOriginAsTopDocument();
 }
 
 bool Document::isContextThread() const
@@ -8831,6 +8875,12 @@ void Document::updateLastHandledUserGestureTimestamp(MonotonicTime time)
         element->protectedDocument()->updateLastHandledUserGestureTimestamp(time);
 }
 
+bool Document::mainFrameDocumentHasHadUserInteraction() const
+{
+    RefPtr mainFrameDocument = protectedMainFrameDocument();
+    return mainFrameDocument ? mainFrameDocument->hasHadUserInteraction() : false;
+}
+
 bool Document::processingUserGestureForMedia() const
 {
     if (UserGestureIndicator::processingUserGestureForMedia())
@@ -8843,11 +8893,11 @@ bool Document::processingUserGestureForMedia() const
         return true;
 
     if (settings().mediaUserGestureInheritsFromDocument())
-        return topDocument().hasHadUserInteraction();
+        return mainFrameDocumentHasHadUserInteraction();
 
     RefPtr loader = this->loader();
     if (loader && loader->allowedAutoplayQuirks().contains(AutoplayQuirk::InheritedUserGestures))
-        return topDocument().hasHadUserInteraction();
+        return mainFrameDocumentHasHadUserInteraction();
 
     return false;
 }
@@ -10576,8 +10626,12 @@ bool Document::hitTest(const HitTestRequest& request, const HitTestLocation& loc
 
 DeviceOrientationAndMotionAccessController& Document::deviceOrientationAndMotionAccessController()
 {
-    if (&topDocument() != this)
-        return topDocument().deviceOrientationAndMotionAccessController();
+    if (!isTopDocument()) {
+        if (RefPtr mainFrameDocument = protectedMainFrameDocument())
+            return mainFrameDocument->deviceOrientationAndMotionAccessController();
+
+        LOG_ONCE(SiteIsolation, "Unable to properly access Document::deviceOrientationAndMotionAccessController() without access to the main frame document ");
+    }
 
     if (!m_deviceOrientationAndMotionAccessController)
         m_deviceOrientationAndMotionAccessController = makeUnique<DeviceOrientationAndMotionAccessController>(*this);
@@ -10625,17 +10679,27 @@ DOMTimerHoldingTank& Document::domTimerHoldingTank()
 
 bool Document::isRunningUserScripts() const
 {
-    auto& top = topDocument();
-    return this == &top ? m_isRunningUserScripts : top.isRunningUserScripts();
+    if (RefPtr mainFrameDocument = protectedMainFrameDocument()) {
+        if (mainFrameDocument.get() == this)
+            return m_isRunningUserScripts;
+        return mainFrameDocument->isRunningUserScripts();
+    }
+
+    LOG_ONCE(SiteIsolation, "Unable to properly calculate Document::isRunningUserScripts() without access to the main frame document ");
+    return false;
 }
 
 void Document::setAsRunningUserScripts()
 {
-    Ref top = topDocument();
-    if (this == top.ptr())
+    if (isTopDocument()) {
         m_isRunningUserScripts = true;
+        return;
+    }
+
+    if (RefPtr mainFrameDocument = protectedMainFrameDocument())
+        mainFrameDocument->setAsRunningUserScripts();
     else
-        top->setAsRunningUserScripts();
+        LOG_ONCE(SiteIsolation, "Unable to properly set Document::setAsRunningUserScripts() without access to the main frame document ");
 }
 
 void Document::didRejectSyncXHRDuringPageDismissal()
@@ -10729,8 +10793,13 @@ LazyLoadImageObserver& Document::lazyLoadImageObserver()
 
 const CrossOriginOpenerPolicy& Document::crossOriginOpenerPolicy() const
 {
-    if (this != &topDocument())
-        return topDocument().crossOriginOpenerPolicy();
+    if (RefPtr mainFrameDocument = protectedMainFrameDocument()) {
+        if (mainFrameDocument.get() == this)
+            return SecurityContext::crossOriginOpenerPolicy();
+        return mainFrameDocument->crossOriginOpenerPolicy();
+    }
+
+    LOG_ONCE(SiteIsolation, "Unable to properly calculate Document::crossOriginOpenerPolicy() without access to the main frame document ");
     return SecurityContext::crossOriginOpenerPolicy();
 }
 
@@ -10947,8 +11016,13 @@ OptionSet<NoiseInjectionPolicy> Document::noiseInjectionPolicies() const
 
 OptionSet<AdvancedPrivacyProtections> Document::advancedPrivacyProtections() const
 {
-    if (RefPtr loader = topDocument().loader())
+    RefPtr mainFrameDocument = protectedMainFrameDocument();
+    if (!mainFrameDocument)
+        return { };
+
+    if (RefPtr loader = mainFrameDocument->loader())
         return loader->advancedPrivacyProtections();
+
     return { };
 }
 

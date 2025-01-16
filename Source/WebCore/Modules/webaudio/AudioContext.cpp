@@ -90,7 +90,8 @@ static bool shouldDocumentAllowWebAudioToAutoPlay(const Document& document)
 {
     if (document.isCapturing())
         return true;
-    if (document.quirks().shouldAutoplayWebAudioForArbitraryUserGesture() && document.topDocument().hasHadUserInteraction())
+    RefPtr mainDocument = document.protectedMainFrameDocument();
+    if (document.quirks().shouldAutoplayWebAudioForArbitraryUserGesture() && mainDocument && mainDocument->hasHadUserInteraction())
         return true;
     RefPtr window = document.domWindow();
     return window && window->hasTransientActivation();
@@ -150,7 +151,8 @@ AudioContext::AudioContext(Document& document, const AudioContextOptions& contex
 void AudioContext::constructCommon()
 {
     ASSERT(document());
-    if (document()->topDocument().requiresUserGestureForAudioPlayback())
+    RefPtr mainFrameDocument = document()->mainFrameDocument();
+    if (!mainFrameDocument || mainFrameDocument->requiresUserGestureForAudioPlayback())
         addBehaviorRestriction(RequireUserGestureForAudioStartRestriction);
     else
         m_restrictions = NoRestrictions;

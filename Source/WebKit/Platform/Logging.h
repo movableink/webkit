@@ -156,6 +156,7 @@ extern "C" {
     M(SessionState) \
     M(SharedDisplayLists) \
     M(SharedWorker) \
+    M(SiteIsolation) \
     M(Storage) \
     M(StorageAPI) \
     M(SystemPreview) \

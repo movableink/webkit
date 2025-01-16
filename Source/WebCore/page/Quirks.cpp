@@ -105,6 +105,13 @@ static inline OptionSet<AutoplayQuirk> allowedAutoplayQuirks(Document& document)
     return loader->allowedAutoplayQuirks();
 }
 
+static inline OptionSet<AutoplayQuirk> allowedAutoplayQuirks(Document* document)
+{
+    if (!document)
+        return { };
+    return allowedAutoplayQuirks(*document);
+}
+
 static HashMap<RegistrableDomain, String>& updatableStorageAccessUserAgentStringQuirks()
 {
     // FIXME: Make this a member of Quirks.
@@ -179,7 +186,7 @@ bool Quirks::needsAutoplayPlayPauseEvents() const
     if (allowedAutoplayQuirks(document).contains(AutoplayQuirk::SynthesizedPauseEvents))
         return true;
 
-    return allowedAutoplayQuirks(document->topDocument()).contains(AutoplayQuirk::SynthesizedPauseEvents);
+    return allowedAutoplayQuirks(document->mainFrameDocument()).contains(AutoplayQuirk::SynthesizedPauseEvents);
 }
 
 // netflix.com https://bugs.webkit.org/show_bug.cgi?id=173030
@@ -197,7 +204,7 @@ bool Quirks::needsPerDocumentAutoplayBehavior() const
 {
 #if PLATFORM(MAC)
     Ref document = *m_document;
-    ASSERT(document.ptr() == &document->topDocument());
+    ASSERT(document->isTopDocument());
     return needsQuirks() && allowedAutoplayQuirks(document).contains(AutoplayQuirk::PerDocumentAutoplayBehavior);
 #else
     return needsQuirks() && m_quirksData.isNetflix;

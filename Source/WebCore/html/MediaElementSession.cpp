@@ -419,8 +419,13 @@ Expected<void, MediaPlaybackDenialReason> MediaElementSession::playbackStateChan
 #endif
 
     // FIXME: Why are we checking top-level document only for PerDocumentAutoplayBehavior?
-    Ref topDocument = document->topDocument();
-    if (topDocument->quirks().requiresUserGestureToPauseInPictureInPicture()
+    RefPtr mainFrameDocument = document->mainFrameDocument();
+    if (!mainFrameDocument) {
+        LOG_ONCE(SiteIsolation, "Unable to properly calculate MediaElementSession::playbackStateChangePermitted() without access to the main frame document ");
+        return makeUnexpected(MediaPlaybackDenialReason::InvalidState);
+    }
+
+    if (mainFrameDocument->quirks().requiresUserGestureToPauseInPictureInPicture()
         && m_element.fullscreenMode() & HTMLMediaElementEnums::VideoFullscreenModePictureInPicture
         && !m_element.paused() && state == MediaPlaybackState::Paused
         && !document->processingUserGestureForMedia()) {
@@ -428,7 +433,7 @@ Expected<void, MediaPlaybackDenialReason> MediaElementSession::playbackStateChan
         return makeUnexpected(MediaPlaybackDenialReason::UserGestureRequired);
     }
 
-    if (topDocument->mediaState() & MediaProducerMediaState::HasUserInteractedWithMediaElement && topDocument->quirks().needsPerDocumentAutoplayBehavior())
+    if (mainFrameDocument->mediaState() & MediaProducerMediaState::HasUserInteractedWithMediaElement && mainFrameDocument->quirks().needsPerDocumentAutoplayBehavior())
         return { };
 
     if (m_restrictions & RequireUserGestureForVideoRateChange && m_element.isVideo() && !document->processingUserGestureForMedia()) {

@@ -3253,13 +3253,18 @@ static inline bool isAssistableElement(Element& element)
 
 static inline bool isObscuredElement(Element& element)
 {
-    Ref topDocument = element.document().topDocument();
+    RefPtr mainFrameDocument = element.document().protectedMainFrameDocument();
+    if (!mainFrameDocument) {
+        LOG_ONCE(SiteIsolation, "Unable to properly perform isObscuredElement() without access to the main frame document ");
+        return false;
+    }
+
     auto elementRectInMainFrame = element.boundingBoxInRootViewCoordinates();
 
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowChildFrameContent, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::IgnoreClipping };
     HitTestResult result(elementRectInMainFrame.center());
 
-    topDocument->hitTest(hitType, result);
+    mainFrameDocument->hitTest(hitType, result);
     result.setToNonUserAgentShadowAncestor();
 
     if (result.targetElement() == &element)

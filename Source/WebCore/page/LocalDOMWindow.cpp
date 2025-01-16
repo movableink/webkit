@@ -1961,7 +1961,7 @@ bool LocalDOMWindow::isSecureContext() const
 
 bool LocalDOMWindow::crossOriginIsolated() const
 {
-    ASSERT(ScriptExecutionContext::crossOriginMode() == CrossOriginMode::Shared || !document() || document()->topDocument().crossOriginOpenerPolicy().value == CrossOriginOpenerPolicyValue::SameOriginPlusCOEP);
+    ASSERT(ScriptExecutionContext::crossOriginMode() == CrossOriginMode::Shared || !document() || !document()->mainFrameDocument() || document()->mainFrameDocument()->crossOriginOpenerPolicy().value == CrossOriginOpenerPolicyValue::SameOriginPlusCOEP);
     return ScriptExecutionContext::crossOriginMode() == CrossOriginMode::Isolated;
 }
 
@@ -2228,7 +2228,7 @@ void LocalDOMWindow::failedToRegisterDeviceMotionEventListener()
 void LocalDOMWindow::incrementScrollEventListenersCount()
 {
     RefPtr document = this->document();
-    if (++m_scrollEventListenerCount == 1 && document == &document->topDocument()) {
+    if (++m_scrollEventListenerCount == 1 && document->isTopDocument()) {
         if (RefPtr frame = this->frame(); frame && frame->page())
             frame->protectedPage()->chrome().client().setNeedsScrollNotifications(*frame, true);
     }
@@ -2237,7 +2237,7 @@ void LocalDOMWindow::incrementScrollEventListenersCount()
 void LocalDOMWindow::decrementScrollEventListenersCount()
 {
     RefPtr document = this->document();
-    if (!--m_scrollEventListenerCount && document == &document->topDocument()) {
+    if (!--m_scrollEventListenerCount && document->isTopDocument()) {
         RefPtr frame = this->frame();
         if (frame && frame->page() && document->backForwardCacheState() == Document::NotInBackForwardCache)
             frame->protectedPage()->chrome().client().setNeedsScrollNotifications(*frame, false);

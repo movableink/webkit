@@ -396,7 +396,10 @@ bool HTMLPlugInElement::setReplacement(PluginUnavailabilityReason reason, const 
 
 bool HTMLPlugInElement::isReplacementObscured()
 {
-    Ref topDocument = document().topDocument();
+    RefPtr topDocument = document().protectedMainFrameDocument();
+    if (!topDocument)
+        return false;
+
     RefPtr topFrameView = topDocument->view();
     if (!topFrameView)
         return false;
@@ -405,7 +408,7 @@ bool HTMLPlugInElement::isReplacementObscured()
 
     // Updating the layout may have detached this document from the top document.
     auto* renderView = topDocument->renderView();
-    if (!renderView || !document().view() || &document().topDocument() != topDocument.ptr())
+    if (!renderView || !document().view() || document().mainFrameDocument() != topDocument.get())
         return false;
 
     CheckedPtr pluginRenderer = dynamicDowncast<RenderEmbeddedObject>(renderer());

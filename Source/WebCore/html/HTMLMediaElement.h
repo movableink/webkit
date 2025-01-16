@@ -1288,8 +1288,8 @@ private:
     bool m_tracksAreReady : 1;
     bool m_haveVisibleTextTrack : 1;
     bool m_processingPreferenceChange : 1;
-    bool m_shouldAudioPlaybackRequireUserGesture : 1;
-    bool m_shouldVideoPlaybackRequireUserGesture : 1;
+    bool m_shouldAudioPlaybackRequireUserGesture : 1 { true };
+    bool m_shouldVideoPlaybackRequireUserGesture : 1 { true };
     bool m_volumeLocked : 1;
     bool m_cachedIsInVisibilityAdjustmentSubtree : 1 { false };
     bool m_requiresTextTrackRepresentation : 1 { false };

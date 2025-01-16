@@ -165,6 +165,7 @@ namespace WebCore {
     M(Services) \
     M(ServiceWorker) \
     M(SharedWorker) \
+    M(SiteIsolation) \
     M(SpellingAndGrammar) \
     M(SQLDatabase) \
     M(Storage) \

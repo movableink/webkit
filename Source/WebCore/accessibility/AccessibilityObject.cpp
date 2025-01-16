@@ -1417,7 +1417,7 @@ Document* AccessibilityObject::topDocument() const
 {
     if (!document())
         return nullptr;
-    return &document()->topDocument();
+    return document()->mainFrameDocument();
 }
 
 RenderView* AccessibilityObject::topRenderer() const

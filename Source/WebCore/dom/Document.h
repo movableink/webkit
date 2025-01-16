@@ -1227,8 +1227,12 @@ public:
 
     WEBCORE_EXPORT Document* parentDocument() const;
     RefPtr<Document> protectedParentDocument() const { return parentDocument(); }
+
+    // topDocument temporarily left in to allow staging other related commits
     WEBCORE_EXPORT Document& topDocument() const;
     Ref<Document> protectedTopDocument() const { return topDocument(); }
+    WEBCORE_EXPORT Document* mainFrameDocument() const;
+    RefPtr<Document> protectedMainFrameDocument() const { return mainFrameDocument(); }
     WEBCORE_EXPORT bool isTopDocument() const;
 
     WEBCORE_EXPORT RefPtr<Document> localTopDocument() const;
@@ -2142,11 +2146,13 @@ private:
     void updateCaptureAccordingToMutedState();
     MediaProducerMediaStateFlags computeCaptureState() const;
 #endif
-    bool isTopDocumentLegacy() const { return &topDocument() == this; }
+    bool isTopDocumentLegacy() const { return mainFrameDocument() == this; }
     void securityOriginDidChange() final;
 
     Ref<DocumentSyncData> syncData() { return m_syncData.get(); }
     void populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDataType);
+
+    bool mainFrameDocumentHasHadUserInteraction() const;
 
     const Ref<const Settings> m_settings;
 

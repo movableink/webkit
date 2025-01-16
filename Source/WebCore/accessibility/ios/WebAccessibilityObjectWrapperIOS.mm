@@ -1823,7 +1823,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     // Verify this is the top document. If not, we might need to go through the platform widget.
     auto* frameView = self.axBackingObject->documentFrameView();
     auto* document = self.axBackingObject->document();
-    if (document && frameView && document != &document->topDocument())
+    if (document && frameView && !document->isTopDocument())
         return frameView->platformWidget();
     
     // The top scroll view's parent is the web document view.

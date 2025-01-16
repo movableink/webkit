@@ -78,9 +78,14 @@ Element* FullscreenManager::fullscreenElement() const
     return nullptr;
 }
 
-Ref<Document> FullscreenManager::protectedTopDocument()
+Document* FullscreenManager::mainFrameDocument()
 {
-    return topDocument();
+    return m_topDocument ? m_topDocument.get() : document().mainFrameDocument();
+}
+
+RefPtr<Document> FullscreenManager::protectedMainFrameDocument()
+{
+    return mainFrameDocument();
 }
 
 // https://fullscreen.spec.whatwg.org/#dom-element-requestfullscreen
@@ -157,7 +162,7 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
     m_pendingFullscreenElement = RefPtr { element.ptr() };
 
     // We cache the top document here, so we still have the correct one when we exit fullscreen after navigation.
-    m_topDocument = document().topDocument();
+    m_topDocument = document().mainFrameDocument();
 
     protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, element = WTFMove(element), promise = WTFMove(promise), completionHandler = WTFMove(completionHandler), checkType, hasKeyboardAccess, handleError, identifier, mode] () mutable {
         if (!weakThis) {
@@ -263,8 +268,11 @@ void FullscreenManager::cancelFullscreen()
     // is defined as:
     // "To fully exit fullscreen act as if the exitFullscreen() method was invoked on the top-level browsing
     // context's document and subsequently empty that document's fullscreen element stack."
-    Ref topDocument = this->topDocument();
-    if (!topDocument->fullscreenManager().fullscreenElement()) {
+    RefPtr mainFrameDocument = this->mainFrameDocument();
+    if (!mainFrameDocument)
+        LOG_ONCE(SiteIsolation, "Unable to fully perform FullscreenManager::cancelFullscreen() without access to the main frame document ");
+
+    if (!mainFrameDocument || !mainFrameDocument->fullscreenManager().fullscreenElement()) {
         // If there is a pending fullscreen element but no top document fullscreen element,
         // there is a pending task in enterFullscreen(). Cause it to cancel and fire an error
         // by clearing the pending fullscreen element.
@@ -281,21 +289,21 @@ void FullscreenManager::cancelFullscreen()
 
     m_pendingExitFullscreen = true;
 
-    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, topDocument = WTFMove(topDocument), identifier = LOGIDENTIFIER] {
+    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, mainFrameDocument = WTFMove(mainFrameDocument), identifier = LOGIDENTIFIER] {
 #if RELEASE_LOG_DISABLED
         UNUSED_PARAM(this);
 #endif
         if (!weakThis)
             return;
 
-        if (!topDocument->page()) {
+        if (!mainFrameDocument->page()) {
             INFO_LOG(identifier, "Top document has no page.");
             return;
         }
 
         // This triggers finishExitFullscreen with ExitMode::Resize, which fully exits the document.
-        if (RefPtr fullscreenElement = topDocument->fullscreenManager().fullscreenElement())
-            topDocument->page()->chrome().client().exitFullScreenForElement(fullscreenElement.get());
+        if (RefPtr fullscreenElement = mainFrameDocument->fullscreenManager().fullscreenElement())
+            mainFrameDocument->page()->chrome().client().exitFullScreenForElement(fullscreenElement.get());
         else
             INFO_LOG(identifier, "Top document has no fullscreen element");
     });
@@ -337,14 +345,17 @@ void FullscreenManager::exitFullscreen(RefPtr<DeferredPromise>&& promise)
     Ref exitingDocument = document();
     auto mode = ExitMode::NoResize;
     auto exitDocuments = documentsToUnfullscreen(exitingDocument);
-    Ref topDocument = this->topDocument();
+
+    RefPtr mainFrameDocument = this->mainFrameDocument();
+    if (!mainFrameDocument)
+        LOG_ONCE(SiteIsolation, "Unable to fully perform FullscreenManager::exitFullscreen() without access to the main frame document ");
 
     bool exitsTopDocument = exitDocuments.containsIf([&](auto& document) {
-        return document.ptr() == topDocument.ptr();
+        return document.ptr() == mainFrameDocument.get();
     });
-    if (exitsTopDocument && topDocument->fullscreenManager().isSimpleFullscreenDocument()) {
+    if (exitsTopDocument && mainFrameDocument && mainFrameDocument->fullscreenManager().isSimpleFullscreenDocument()) {
         mode = ExitMode::Resize;
-        exitingDocument = topDocument;
+        exitingDocument = *mainFrameDocument;
     }
 
     if (RefPtr element = exitingDocument->fullscreenManager().fullscreenElement(); element && !element->isConnected()) {
@@ -600,7 +611,10 @@ bool FullscreenManager::didExitFullscreen()
     }
     INFO_LOG(LOGIDENTIFIER);
 
-    finishExitFullscreen(protectedTopDocument(), ExitMode::Resize);
+    if (RefPtr mainFrameDocument = protectedMainFrameDocument())
+        finishExitFullscreen(*mainFrameDocument, ExitMode::Resize);
+    else
+        LOG_ONCE(SiteIsolation, "Unable to fully perform FullscreenManager::didExitFullscreen() without access to the main frame document ");
 
     if (m_fullscreenElement)
         m_fullscreenElement->didStopBeingFullscreenElement();

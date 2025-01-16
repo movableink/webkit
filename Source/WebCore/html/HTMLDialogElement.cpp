@@ -205,8 +205,10 @@ void HTMLDialogElement::runFocusingSteps()
     if (!control->document().isSameOriginAsTopDocument())
         return;
 
-    Ref topDocument = control->document().topDocument();
-    topDocument->clearAutofocusCandidates();
+    if (RefPtr mainFrameDocument = control->document().mainFrameDocument())
+        mainFrameDocument->clearAutofocusCandidates();
+    else
+        LOG_ONCE(SiteIsolation, "Unable to fully perform HTMLDialogElement::runFocusingSteps() without access to the main frame document ");
     page->setAutofocusProcessed();
 }
 

@@ -40,6 +40,7 @@
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
+#include "Logging.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "RenderBoxInlines.h"
@@ -1013,7 +1014,12 @@ RenderView::RepaintRegionAccumulator::RepaintRegionAccumulator(RenderView* view)
     if (!view)
         return;
 
-    auto* rootRenderView = view->document().topDocument().renderView();
+    RefPtr mainFrameDocument = view->document().protectedMainFrameDocument();
+    if (!mainFrameDocument) {
+        LOG_ONCE(SiteIsolation, "Unable to properly perform RenderView::RepaintRegionAccumulator::RepaintRegionAccumulator() without access to the main frame document ");
+        return;
+    }
+    auto* rootRenderView = mainFrameDocument->renderView();
     if (!rootRenderView)
         return;
 
