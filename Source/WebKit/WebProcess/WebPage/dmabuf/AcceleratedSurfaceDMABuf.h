@@ -77,7 +77,7 @@ public:
 private:
     uint64_t window() const override { return 0; }
     uint64_t surfaceID() const override;
-    void clientResize(const WebCore::IntSize&) override;
+    bool resize(const WebCore::IntSize&) override;
     bool shouldPaintMirrored() const override
     {
 #if PLATFORM(WPE) || (PLATFORM(GTK) && USE(GTK4))

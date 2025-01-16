@@ -649,9 +649,13 @@ uint64_t AcceleratedSurfaceDMABuf::surfaceID() const
     return m_id;
 }
 
-void AcceleratedSurfaceDMABuf::clientResize(const WebCore::IntSize& size)
+bool AcceleratedSurfaceDMABuf::resize(const WebCore::IntSize& size)
 {
-    m_swapChain.resize(size);
+    if (!AcceleratedSurface::resize(size))
+        return false;
+
+    m_swapChain.resize(m_size);
+    return true;
 }
 
 void AcceleratedSurfaceDMABuf::willRenderFrame()

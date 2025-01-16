@@ -102,14 +102,13 @@ public:
 
     void forceRepaint();
     void forceRepaintAsync(CompletionHandler<void()>&&);
-    void sizeDidChange(const WebCore::IntSize& newSize);
+    void sizeDidChange(const WebCore::IntSize&);
 
     void pauseRendering();
     void resumeRendering();
 
     WebCore::GraphicsLayerFactory* graphicsLayerFactory();
 
-    void deviceOrPageScaleFactorChanged();
     void backgroundColorDidChange();
 
     void willRenderFrame();
@@ -183,6 +182,7 @@ private:
     bool m_didInitializeRootCompositingLayer { false };
     bool m_layerTreeStateIsFrozen { false };
     bool m_isPurgingBackingStores { false };
+    bool m_pendingResize { false };
     bool m_isSuspended { false };
     bool m_isWaitingForRenderer { false };
     bool m_scheduledWhileWaitingForRenderer { false };

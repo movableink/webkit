@@ -257,10 +257,6 @@ void LayerTreeHost::setIsDiscardable(bool)
 {
 }
 
-void LayerTreeHost::deviceOrPageScaleFactorChanged()
-{
-}
-
 void LayerTreeHost::backgroundColorDidChange()
 {
 }

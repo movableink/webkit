@@ -2598,10 +2598,6 @@ void WebPage::didScalePage(double scale, const IntPoint& origin)
     }
 #endif
 
-#if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)
-    protectedDrawingArea()->deviceOrPageScaleFactorChanged();
-#endif
-
     platformDidScalePage();
 }
 
@@ -2727,10 +2723,6 @@ void WebPage::setDeviceScaleFactor(float scaleFactor)
         layoutIfNeeded();
         findController().deviceScaleFactorDidChange();
     }
-
-#if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)
-    protectedDrawingArea()->deviceOrPageScaleFactorChanged();
-#endif
 }
 
 float WebPage::deviceScaleFactor() const

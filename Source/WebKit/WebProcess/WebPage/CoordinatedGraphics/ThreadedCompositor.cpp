@@ -63,21 +63,21 @@ static constexpr unsigned c_defaultRefreshRate = 60000;
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ThreadedCompositor);
 
 #if HAVE(DISPLAY_LINK)
-Ref<ThreadedCompositor> ThreadedCompositor::create(LayerTreeHost& layerTreeHost, float scaleFactor)
+Ref<ThreadedCompositor> ThreadedCompositor::create(LayerTreeHost& layerTreeHost)
 {
-    return adoptRef(*new ThreadedCompositor(layerTreeHost, scaleFactor));
+    return adoptRef(*new ThreadedCompositor(layerTreeHost));
 }
 #else
-Ref<ThreadedCompositor> ThreadedCompositor::create(LayerTreeHost& layerTreeHost, ThreadedDisplayRefreshMonitor::Client& displayRefreshMonitorClient, float scaleFactor, PlatformDisplayID displayID)
+Ref<ThreadedCompositor> ThreadedCompositor::create(LayerTreeHost& layerTreeHost, ThreadedDisplayRefreshMonitor::Client& displayRefreshMonitorClient, PlatformDisplayID displayID)
 {
-    return adoptRef(*new ThreadedCompositor(layerTreeHost, displayRefreshMonitorClient, scaleFactor, displayID));
+    return adoptRef(*new ThreadedCompositor(layerTreeHost, displayRefreshMonitorClient, displayID));
 }
 #endif
 
 #if HAVE(DISPLAY_LINK)
-ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, float scaleFactor)
+ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost)
 #else
-ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDisplayRefreshMonitor::Client& displayRefreshMonitorClient, float scaleFactor, PlatformDisplayID displayID)
+ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDisplayRefreshMonitor::Client& displayRefreshMonitorClient, PlatformDisplayID displayID)
 #endif
     : m_layerTreeHost(&layerTreeHost)
     , m_surface(AcceleratedSurface::create(*this, layerTreeHost.webPage(), [this] { frameComplete(); }))
@@ -92,10 +92,6 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
     ASSERT(RunLoop::isMain());
 
     m_surface->didCreateCompositingRunLoop(m_compositingRunLoop->runLoop());
-
-    m_attributes.viewportSize = m_surface->size();
-    m_attributes.needsResize = !m_attributes.viewportSize.isEmpty();
-    m_attributes.scaleFactor = scaleFactor;
 
 #if !HAVE(DISPLAY_LINK)
     m_display.displayID = displayID;
@@ -199,18 +195,6 @@ bool ThreadedCompositor::isActive() const
     return m_compositingRunLoop->isActive();
 }
 
-void ThreadedCompositor::setViewportSize(const IntSize& size, float scaleFactor)
-{
-    ASSERT(RunLoop::isMain());
-    m_surface->hostResize(size);
-
-    Locker locker { m_attributes.lock };
-    m_attributes.viewportSize = m_surface->size();
-    m_attributes.scaleFactor = scaleFactor;
-    m_attributes.needsResize = true;
-    m_compositingRunLoop->scheduleUpdate();
-}
-
 void ThreadedCompositor::backgroundColorDidChange()
 {
     ASSERT(RunLoop::isMain());
@@ -262,35 +246,31 @@ void ThreadedCompositor::renderLayerTree()
 
     // Retrieve the scene attributes in a thread-safe manner.
     WebCore::IntSize viewportSize;
-    float scaleFactor;
-    bool needsResize;
+    float deviceScaleFactor;
     uint32_t compositionRequestID;
     {
         Locker locker { m_attributes.lock };
         viewportSize = m_attributes.viewportSize;
-        scaleFactor = m_attributes.scaleFactor;
-        needsResize = m_attributes.needsResize;
+        deviceScaleFactor = m_attributes.deviceScaleFactor;
         compositionRequestID = m_attributes.compositionRequestID;
 
 #if !HAVE(DISPLAY_LINK)
         // Client has to be notified upon finishing this scene update.
         m_attributes.clientRendersNextFrame = m_scene->state().layersDidChange();
 #endif
-
-        // Reset the needsResize attribute to false.
-        m_attributes.needsResize = false;
     }
 
-    TransformationMatrix viewportTransform;
-    viewportTransform.scale(scaleFactor);
+    if (viewportSize.isEmpty())
+        return;
 
-    // Resize the client, if necessary, before the will-render-frame call is dispatched.
+    TransformationMatrix viewportTransform;
+    viewportTransform.scale(deviceScaleFactor);
+
+    // Resize the surface, if necessary, before the will-render-frame call is dispatched.
     // GL viewport is updated separately, if necessary. This establishes sequencing where
     // everything inside the will-render and did-render scope is done for a constant-sized scene,
     // and similarly all GL operations are done inside that specific scope.
-
-    if (needsResize)
-        m_surface->clientResize(viewportSize);
+    bool needsGLViewportResize = m_surface->resize(viewportSize);
 
     m_surface->willRenderFrame();
     RunLoop::main().dispatch([this, protectedThis = Ref { *this }] {
@@ -298,7 +278,7 @@ void ThreadedCompositor::renderLayerTree()
             m_layerTreeHost->willRenderFrame();
     });
 
-    if (needsResize)
+    if (needsGLViewportResize)
         glViewport(0, 0, viewportSize.width(), viewportSize.height());
 
     m_surface->clearIfNeeded();
@@ -332,6 +312,10 @@ uint32_t ThreadedCompositor::requestComposition()
     uint32_t compositionRequestID;
     {
         Locker locker { m_attributes.lock };
+        auto& webPage = m_layerTreeHost->webPage();
+        m_attributes.viewportSize = webPage.size();
+        m_attributes.deviceScaleFactor = webPage.deviceScaleFactor();
+        m_attributes.viewportSize.scale(m_attributes.deviceScaleFactor);
         compositionRequestID = ++m_attributes.compositionRequestID;
     }
     m_compositingRunLoop->scheduleUpdate();

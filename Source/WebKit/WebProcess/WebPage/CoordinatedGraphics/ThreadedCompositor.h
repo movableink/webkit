@@ -61,15 +61,14 @@ public:
     };
 
 #if HAVE(DISPLAY_LINK)
-    static Ref<ThreadedCompositor> create(LayerTreeHost&, float scaleFactor);
+    static Ref<ThreadedCompositor> create(LayerTreeHost&);
 #else
-    static Ref<ThreadedCompositor> create(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, float scaleFactor, WebCore::PlatformDisplayID);
+    static Ref<ThreadedCompositor> create(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, WebCore::PlatformDisplayID);
 #endif
     virtual ~ThreadedCompositor();
 
     uint64_t surfaceID() const;
 
-    void setViewportSize(const WebCore::IntSize&, float scale);
     void backgroundColorDidChange();
 #if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
     void preferredBufferFormatsDidChange();
@@ -96,9 +95,9 @@ public:
 
 private:
 #if HAVE(DISPLAY_LINK)
-    ThreadedCompositor(LayerTreeHost&, float scaleFactor);
+    explicit ThreadedCompositor(LayerTreeHost&);
 #else
-    ThreadedCompositor(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, float scaleFactor, WebCore::PlatformDisplayID);
+    ThreadedCompositor(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, WebCore::PlatformDisplayID);
 #endif
 
     // CoordinatedGraphicsSceneClient
@@ -130,11 +129,12 @@ private:
     struct {
         Lock lock;
         WebCore::IntSize viewportSize;
-        float scaleFactor { 1 };
-        bool needsResize { false };
-
-        bool clientRendersNextFrame { false };
+        float deviceScaleFactor { 1 };
         uint32_t compositionRequestID { 0 };
+
+#if !HAVE(DISPLAY_LINK)
+        bool clientRendersNextFrame { false };
+#endif
     } m_attributes;
 
 #if HAVE(DISPLAY_LINK)
