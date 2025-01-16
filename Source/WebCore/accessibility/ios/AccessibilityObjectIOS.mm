@@ -208,12 +208,12 @@ void AXRemoteFrame::initializePlatformElementWithRemoteToken(std::span<const uin
         return;
 
     NSString *uuid = [tokenDictionary objectForKey:@"ax-uuid"];
-    AXRemoteElement *remoteElement = [allocAXRemoteElementInstance() initWithUUID:uuid andRemotePid:processIdentifier andContextId:0];
-    remoteElement.onClientSide = YES;
+    RetainPtr remoteElement = adoptNS([allocAXRemoteElementInstance() initWithUUID:uuid andRemotePid:processIdentifier andContextId:0]);
+    remoteElement.get().onClientSide = YES;
     RefPtr parent = parentObjectUnignored();
-    remoteElement.accessibilityContainer = parent ?  parent->wrapper() : nil;
+    remoteElement.get().accessibilityContainer = parent ?  parent->wrapper() : nil;
 
-    m_remoteFramePlatformElement = adoptNS(remoteElement);
+    m_remoteFramePlatformElement = WTFMove(remoteElement);
 
     if (CheckedPtr cache = axObjectCache())
         cache->onRemoteFrameInitialized(*this);

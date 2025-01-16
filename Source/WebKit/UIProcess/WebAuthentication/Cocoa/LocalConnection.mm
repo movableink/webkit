@@ -85,7 +85,7 @@ void LocalConnection::verifyUser(const String& rpId, ClientDataType type, SecAcc
     }
 #endif
 
-    m_context = [allocLAContextInstance() init];
+    m_context = adoptNS([allocLAContextInstance() init]);
 
     auto options = adoptNS([[NSMutableDictionary alloc] init]);
 #if HAVE(UNIFIED_ASC_AUTH_UI)
