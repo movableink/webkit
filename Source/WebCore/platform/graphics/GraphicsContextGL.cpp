@@ -283,31 +283,15 @@ ALWAYS_INLINE static unsigned texelBytesForFormat(GraphicsContextGL::DataFormat 
     }
 }
 
-static std::span<const uint8_t> clampedSubspan(std::span<const uint8_t> span, size_t offset, size_t length)
-{
-    size_t clampedOffset = std::min(offset, span.size());
-    size_t clampedLength = std::min(span.size() - clampedOffset, length);
-    return span.subspan(clampedOffset, clampedLength);
-}
 
-template<typename T>
-static void clampedSkip(std::span<T>& span, size_t offset)
-{
-    skip(span, std::min(offset, span.size()));
-}
-
-static void clampedMoveCursor(std::span<uint8_t>& cursor, std::span<uint8_t> container, int delta)
-{
-    auto clampedNewIndex = std::clamp<int>(cursor.data() - container.data() + delta, 0, container.size());
-    cursor = container.subspan(clampedNewIndex);
-}
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 // Helper for packImageData/extractImageData/extractTextureData which implement packing of pixel
 // data into the specified OpenGL destination format and type.
 // A sourceUnpackAlignment of zero indicates that the source
 // data is tightly packed. Non-zero values may take a slow path.
 // Destination data will have no gaps between rows.
-static bool packPixels(std::span<const uint8_t> sourceData, GraphicsContextGL::DataFormat sourceDataFormat, unsigned sourceDataWidth, unsigned sourceDataHeight, const IntRect& sourceDataSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, unsigned destinationFormat, unsigned destinationType, GraphicsContextGL::AlphaOp alphaOp, std::span<uint8_t> destinationData, bool flipY)
+static bool packPixels(const uint8_t* sourceData, GraphicsContextGL::DataFormat sourceDataFormat, unsigned sourceDataWidth, unsigned sourceDataHeight, const IntRect& sourceDataSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, unsigned destinationFormat, unsigned destinationType, GraphicsContextGL::AlphaOp alphaOp, uint8_t* destinationData, bool flipY)
 {
     ASSERT(depth >= 1);
     UNUSED_PARAM(sourceDataHeight); // Derived from sourceDataSubRectangle.height().
@@ -322,17 +306,16 @@ static bool packPixels(std::span<const uint8_t> sourceData, GraphicsContextGL::D
     if (dstDataFormat == GraphicsContextGL::DataFormat::Invalid)
         return false;
     int dstStride = sourceDataSubRectangle.width() * texelBytesForFormat(dstDataFormat);
-    auto destinationCursor = destinationData;
     if (flipY) {
-        destinationCursor = destinationData.subspan(dstStride * ((depth * sourceDataSubRectangle.height()) - 1));
+        destinationData = destinationData + dstStride * ((depth * sourceDataSubRectangle.height()) - 1);
         dstStride = -dstStride;
     }
     if (!GraphicsContextGL::hasAlpha(sourceDataFormat) || !GraphicsContextGL::hasColor(sourceDataFormat) || !GraphicsContextGL::hasColor(dstDataFormat))
         alphaOp = GraphicsContextGL::AlphaOp::DoNothing;
 
     if (sourceDataFormat == dstDataFormat && alphaOp == GraphicsContextGL::AlphaOp::DoNothing) {
-        ASSERT(srcStride >= 0);
-        size_t baseSpanOffset = srcStride * sourceDataSubRectangle.y();
+        const uint8_t* basePtr = sourceData + srcStride * sourceDataSubRectangle.y();
+        const uint8_t* baseEnd = sourceData + srcStride * sourceDataSubRectangle.maxY();
 
         // If packing multiple images into a 3D texture, and flipY is true,
         // then the sub-rectangle is pointing at the start of the
@@ -341,32 +324,38 @@ static bool packPixels(std::span<const uint8_t> sourceData, GraphicsContextGL::D
         // last, or "topmost", of these images.
         if (flipY && depth > 1) {
             const ptrdiff_t distanceToTopImage = (depth - 1) * srcStride * unpackImageHeight;
-            baseSpanOffset -= distanceToTopImage;
+            basePtr -= distanceToTopImage;
+            baseEnd -= distanceToTopImage;
         }
 
-        auto baseSpan = clampedSubspan(sourceData, baseSpanOffset, srcStride * sourceDataSubRectangle.maxY() - srcStride * sourceDataSubRectangle.y());
         unsigned rowSize = (dstStride > 0) ? dstStride: -dstStride;
+        uint8_t* dst = static_cast<uint8_t*>(destinationData);
+
         for (int i = 0; i < depth; ++i) {
-            auto sourceCursor = baseSpan;
-            while (!sourceCursor.empty()) {
-                memcpySpan(destinationCursor, sourceCursor.subspan(srcRowOffset, rowSize));
-                clampedSkip(sourceCursor, srcStride);
-                clampedMoveCursor(destinationCursor, destinationData, dstStride);
+            const uint8_t* ptr = basePtr;
+            const uint8_t* ptrEnd = baseEnd;
+            while (ptr < ptrEnd) {
+                memcpy(dst, ptr + srcRowOffset, rowSize);
+                ptr += srcStride;
+                dst += dstStride;
             }
-            baseSpan = clampedSubspan(sourceData, baseSpan.data() - sourceData.data() + unpackImageHeight * srcStride, baseSpan.size());
+            basePtr += unpackImageHeight * srcStride;
+            baseEnd += unpackImageHeight * srcStride;
         }
         return true;
     }
 
     FormatConverter converter(
         sourceDataSubRectangle, depth,
-        unpackImageHeight, sourceData.data(), destinationCursor.data(),
+        unpackImageHeight, sourceData, destinationData,
         srcStride, srcRowOffset, dstStride);
     converter.convert(sourceDataFormat, dstDataFormat, alphaOp);
     if (!converter.success())
         return false;
     return true;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 GraphicsContextGL::Client::Client() = default;
 
@@ -502,7 +491,7 @@ bool GraphicsContextGL::packImageData(Image* image, std::span<const uint8_t> pix
         return false;
     data.resize(packSizes->imageBytes);
 
-    if (!packPixels(pixels, sourceFormat, sourceImageWidth, sourceImageHeight, sourceImageSubRectangle, depth, sourceUnpackAlignment, unpackImageHeight, format, type, alphaOp, data.mutableSpan(), flipY))
+    if (!packPixels(pixels.data(), sourceFormat, sourceImageWidth, sourceImageHeight, sourceImageSubRectangle, depth, sourceUnpackAlignment, unpackImageHeight, format, type, alphaOp, data.data(), flipY))
         return false;
     if (auto observer = image->imageObserver())
         observer->didDraw(*image);
@@ -522,7 +511,7 @@ bool GraphicsContextGL::extractPixelBuffer(const PixelBuffer& pixelBuffer, DataF
         return false;
     data.resize(packSizes->imageBytes);
 
-    if (!packPixels(pixelBuffer.bytes(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.mutableSpan(), flipY))
+    if (!packPixels(pixelBuffer.bytes().data(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.data(), flipY))
         return false;
 
     return true;
@@ -542,7 +531,7 @@ bool GraphicsContextGL::extractTextureData(unsigned width, unsigned height, GCGL
         return false;
     data.resize(width * height * bytesPerPixel);
     skip(pixels, packSizes->initialSkipBytes);
-    if (!packPixels(pixels, sourceDataFormat, unpackParams.rowLength ? unpackParams.rowLength : width, height, IntRect(0, 0, width, height), 1, unpackParams.alignment, 0, format, type, (premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing), data.mutableSpan(), flipY))
+    if (!packPixels(pixels.data(), sourceDataFormat, unpackParams.rowLength ? unpackParams.rowLength : width, height, IntRect(0, 0, width, height), 1, unpackParams.alignment, 0, format, type, (premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing), data.data(), flipY))
         return false;
     return true;
 }
