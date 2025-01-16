@@ -104,6 +104,8 @@ private:
     void attachPendingOperations();
     bool isPendingTimelineAttachment(const WebAnimation&) const;
 
+    Ref<Document> protectedDocument() const { return m_document.get(); }
+
     Vector<TimelineMapAttachOperation> m_pendingAttachOperations;
     Vector<std::pair<TimelineScope, WeakPtr<Element, WeakPtrImplWithEventTargetData>>> m_timelineScopeEntries;
     UncheckedKeyHashMap<AtomString, Vector<Ref<ScrollTimeline>>> m_nameToTimelineMap;
@@ -115,7 +117,7 @@ private:
     UncheckedKeyHashMap<FramesPerSecond, ReducedResolutionSeconds> m_animationFrameRateToLastTickTimeMap;
     WeakHashSet<AnimationTimeline> m_timelines;
     TaskCancellationGroup m_currentTimeClearingTaskCancellationGroup;
-    Document& m_document;
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
     FrameRateAligner m_frameRateAligner;
     Markable<Seconds, Seconds::MarkableTraits> m_cachedCurrentTime;
     bool m_isSuspended { false };
