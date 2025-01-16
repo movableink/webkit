@@ -1996,6 +1996,7 @@ void WebProcess::setEnabledServices(bool hasImageServices, bool hasSelectionServ
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
 void WebProcess::setOptInCookiePartitioningEnabled(bool enabled)
 {
+    m_isOptInCookiePartitioningEnabled = enabled;
     m_cookieJar->setOptInCookiePartitioningEnabled(enabled);
 }
 #endif

@@ -43,6 +43,9 @@ NetworkStorageSession& WebCookieCache::inMemoryStorageSession()
         auto storageSession = WebCore::createPrivateStorageSession(sessionName.createCFString().get(), cookieAcceptPolicy);
         auto cookieStorage = adoptCF(_CFURLStorageSessionCopyCookieStorage(kCFAllocatorDefault, storageSession.get()));
         m_inMemoryStorageSession = makeUnique<NetworkStorageSession>(WebProcess::singleton().sessionID(), WTFMove(storageSession), WTFMove(cookieStorage), NetworkStorageSession::IsInMemoryCookieStore::Yes);
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+        setOptInCookiePartitioningEnabled(WebProcess::singleton().isOptInCookiePartitioningEnabled());
+#endif
     }
     return *m_inMemoryStorageSession;
 }
