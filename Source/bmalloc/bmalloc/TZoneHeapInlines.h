@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include "BPlatform.h"
-
 #if BUSE(TZONE)
 
 #include "TZoneHeap.h"

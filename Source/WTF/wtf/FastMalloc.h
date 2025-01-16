@@ -25,6 +25,10 @@
 #include <wtf/DebugHeap.h>
 #include <wtf/StdLibExtras.h>
 
+#if !USE(SYSTEM_MALLOC)
+#include <bmalloc/BPlatform.h>
+#endif
+
 namespace WTF {
 
 // There are several malloc-related macros to annotate class / struct. If these annotations are attached,

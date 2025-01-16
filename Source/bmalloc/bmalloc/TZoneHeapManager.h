@@ -26,7 +26,6 @@
 #pragma once
 
 #include "BExport.h"
-#include "BPlatform.h"
 
 #if BUSE(TZONE)
 
