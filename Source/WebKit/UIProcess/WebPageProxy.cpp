@@ -6067,6 +6067,8 @@ void WebPageProxy::getRenderTreeExternalRepresentation(CompletionHandler<void(co
 
 void WebPageProxy::getSourceForFrame(WebFrameProxy* frame, CompletionHandler<void(const String&)>&& callback)
 {
+    if (!frame)
+        return callback({ });
     sendWithAsyncReply(Messages::WebPage::GetSourceForFrame(frame->frameID()), WTFMove(callback));
 }
 
