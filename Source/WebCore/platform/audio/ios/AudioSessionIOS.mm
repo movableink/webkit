@@ -233,7 +233,7 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
         case Mode::VideoChat:
 #if ENABLE(MEDIA_STREAM)
             if (AVAudioSessionCaptureDeviceManager::singleton().isReceiverPreferredSpeaker())
-                return AVAudioSessionModeDefault;
+                return AVAudioSessionModeVoiceChat;
 #endif
             return AVAudioSessionModeVideoChat;
         case Mode::Default:
@@ -304,7 +304,7 @@ AudioSession::Mode AudioSessionIOS::mode() const
 {
     AVAudioSession *session = [PAL::getAVAudioSessionClass() sharedInstance];
     NSString *modeString = [session mode];
-    if ([modeString isEqual:AVAudioSessionModeVideoChat])
+    if ([modeString isEqual:AVAudioSessionModeVideoChat] || [modeString isEqual:AVAudioSessionModeVoiceChat])
         return Mode::VideoChat;
     if ([modeString isEqual:AVAudioSessionModeMoviePlayback])
         return Mode::MoviePlayback;
