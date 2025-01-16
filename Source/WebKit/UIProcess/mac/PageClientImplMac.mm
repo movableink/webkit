@@ -450,7 +450,12 @@ IntPoint PageClientImpl::screenToRootView(const IntPoint& point)
     NSPoint windowCoord = [m_view.window convertPointFromScreen:point];
     return IntPoint([m_view convertPoint:windowCoord fromView:nil]);
 }
-    
+
+IntPoint PageClientImpl::rootViewToScreen(const IntPoint& point)
+{
+    return IntPoint([m_view.window convertPointToScreen:[m_view convertPoint:point toView:nil]]);
+}
+
 IntRect PageClientImpl::rootViewToScreen(const IntRect& rect)
 {
     NSRect tempRect = rect;

@@ -600,6 +600,12 @@ IntPoint WebChromeClient::screenToRootView(const IntPoint& p) const
     return p;
 }
 
+IntPoint WebChromeClient::rootViewToScreen(const IntPoint& p) const
+{
+    // FIXME: Implement this.
+    return p;
+}
+
 IntRect WebChromeClient::rootViewToScreen(const IntRect& r) const
 {
     // FIXME: Implement this.

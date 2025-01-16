@@ -321,6 +321,8 @@ public:
 
     WEBCORE_EXPORT static NSEvent *currentNSEvent();
     static NSEvent *correspondingPressureEvent();
+
+    WEBCORE_EXPORT static IntSize autoscrollAdjustmentFactorForScreenBoundaries(const FloatPoint& screenPoint, const FloatRect& screenRect);
 #endif
 
 #if PLATFORM(IOS_FAMILY)

@@ -249,6 +249,11 @@ IntPoint PageClientImpl::screenToRootView(const IntPoint& point)
     return result;
 }
 
+IntPoint PageClientImpl::rootViewToScreen(const IntPoint& point)
+{
+    return convertWidgetPointToScreenPoint(m_viewWidget, point);
+}
+
 IntRect PageClientImpl::rootViewToScreen(const IntRect& rect)
 {
     return IntRect(convertWidgetPointToScreenPoint(m_viewWidget, rect.location()), rect.size());

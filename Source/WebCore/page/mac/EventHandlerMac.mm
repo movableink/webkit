@@ -972,7 +972,7 @@ void EventHandler::processWheelEventForScrollSnap(const PlatformWheelEvent& whee
         scrollAnimator->processWheelEventForScrollSnap(wheelEvent);
 }
 
-static IntSize autoscrollAdjustmentFactorForScreenBoundaries(const IntPoint& screenPoint, const FloatRect& screenRect)
+IntSize EventHandler::autoscrollAdjustmentFactorForScreenBoundaries(const FloatPoint& screenPoint, const FloatRect& screenRect)
 {
     // If the window is at the edge of the screen, and the mouse position is also at that edge of the screen,
     // we need to adjust the autoscroll amount in order for the user to be able to autoscroll in that direction.

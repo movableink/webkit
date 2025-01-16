@@ -29,6 +29,7 @@
 #if PLATFORM(MAC)
 
 #import "ContentsFormat.h"
+#import "FloatPoint.h"
 #import "FloatRect.h"
 #import "HostWindow.h"
 #import "LocalFrameView.h"
@@ -433,6 +434,13 @@ FloatRect toUserSpaceForPrimaryScreen(const NSRect& rect)
     FloatRect userRect = rect;
     userRect.setY(NSMaxY(screenRectForDisplay(primaryScreenDisplayID())) - (userRect.y() + userRect.height())); // flip
     return userRect;
+}
+
+FloatPoint toUserSpaceForPrimaryScreen(const NSPoint& point)
+{
+    FloatPoint userPoint = point;
+    userPoint.setY(NSMaxY(screenRectForDisplay(primaryScreenDisplayID())) - userPoint.y()); // flip
+    return userPoint;
 }
 
 NSRect toDeviceSpace(const FloatRect& rect, NSWindow *source)

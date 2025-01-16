@@ -915,6 +915,7 @@ public:
 #endif
 
     WebCore::IntPoint screenToRootView(const WebCore::IntPoint&);
+    WebCore::IntPoint rootViewToScreen(const WebCore::IntPoint&);
     WebCore::IntRect rootViewToScreen(const WebCore::IntRect&);
     WebCore::IntPoint accessibilityScreenToRootView(const WebCore::IntPoint&);
     WebCore::IntRect rootViewToAccessibilityScreen(const WebCore::IntRect&);

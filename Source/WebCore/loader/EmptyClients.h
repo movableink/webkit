@@ -117,6 +117,7 @@ class EmptyChromeClient : public ChromeClient {
     void scroll(const IntSize&, const IntRect&, const IntRect&) final { }
 
     IntPoint screenToRootView(const IntPoint& p) const final { return p; }
+    IntPoint rootViewToScreen(const IntPoint& p) const final { return p; }
     IntRect rootViewToScreen(const IntRect& r) const final { return r; }
     IntPoint accessibilityScreenToRootView(const IntPoint& p) const final { return p; };
     IntRect rootViewToAccessibilityScreen(const IntRect& r) const final { return r; };

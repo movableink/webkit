@@ -121,6 +121,11 @@ IntPoint Chrome::screenToRootView(const IntPoint& point) const
     return m_client->screenToRootView(point);
 }
 
+IntPoint Chrome::rootViewToScreen(const IntPoint& point) const
+{
+    return m_client->rootViewToScreen(point);
+}
+
 IntRect Chrome::rootViewToScreen(const IntRect& rect) const
 {
     return m_client->rootViewToScreen(rect);

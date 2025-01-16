@@ -709,6 +709,11 @@ IntPoint WebChromeClient::screenToRootView(const IntPoint& point) const
     return protectedPage()->screenToRootView(point);
 }
 
+IntPoint WebChromeClient::rootViewToScreen(const IntPoint& point) const
+{
+    return protectedPage()->rootViewToScreen(point);
+}
+
 IntRect WebChromeClient::rootViewToScreen(const IntRect& rect) const
 {
     return protectedPage()->rootViewToScreen(rect);

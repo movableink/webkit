@@ -8654,7 +8654,13 @@ void WebPageProxy::screenToRootView(const IntPoint& screenPoint, CompletionHandl
     reply(pageClient ? pageClient->screenToRootView(screenPoint) : IntPoint { });
 }
 
-void WebPageProxy::rootViewToScreen(const IntRect& viewRect, CompletionHandler<void(const IntRect&)>&& reply)
+void WebPageProxy::rootViewPointToScreen(const IntPoint& viewPoint, CompletionHandler<void(const IntPoint&)>&& reply)
+{
+    RefPtr pageClient = this->pageClient();
+    reply(pageClient ? pageClient->rootViewToScreen(viewPoint) : IntPoint { });
+}
+
+void WebPageProxy::rootViewRectToScreen(const IntRect& viewRect, CompletionHandler<void(const IntRect&)>&& reply)
 {
     RefPtr pageClient = this->pageClient();
     reply(pageClient ? pageClient->rootViewToScreen(viewRect) : IntRect { });

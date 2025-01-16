@@ -458,6 +458,11 @@ IntPoint PageClientImpl::screenToRootView(const IntPoint& point)
     return IntPoint([contentView() convertPoint:point fromView:nil]);
 }
 
+IntPoint PageClientImpl::rootViewToScreen(const IntPoint& point)
+{
+    return IntPoint([contentView() convertPoint:point toView:nil]);
+}
+
 IntRect PageClientImpl::rootViewToScreen(const IntRect& rect)
 {
     return enclosingIntRect([contentView() convertRect:rect toView:nil]);

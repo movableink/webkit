@@ -181,6 +181,11 @@ WebCore::IntPoint PageClientImpl::screenToRootView(const WebCore::IntPoint& poin
     return point;
 }
 
+WebCore::IntPoint PageClientImpl::rootViewToScreen(const WebCore::IntPoint& point)
+{
+    return point;
+}
+
 WebCore::IntRect PageClientImpl::rootViewToScreen(const WebCore::IntRect& rect)
 {
     return rect;
