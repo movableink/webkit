@@ -1108,7 +1108,6 @@ fast/css/outline-auto-empty-rects.html [ Failure ]
 fast/css/visibility-hit-test.html [ Failure ]
 
 webkit.org/b/136484 fast/css-generated-content/initial-letter-first-line-wrapping.html  [ ImageOnlyFailure ]
-webkit.org/b/140767 fast/css/read-only-read-write-input-basics.html [ ImageOnlyFailure ]
 
 # https://bugs.webkit.org/show_bug.cgi?id=138025
 # Larger text and as a result, larger elements containing said text (as compared to Mac port)
@@ -1178,8 +1177,6 @@ css3/filters/backdrop/resource-use-remove-some-layers.html [ Failure ]
 css3/filters/composited-during-animation-layertree.html [ Failure ]
 css3/filters/backdrop/backdrop-filter-with-border-radius-and-reflection-add.html [ ImageOnlyFailure ]
 css3/filters/backdrop/backdrop-filter-with-border-radius-and-reflection.html [ ImageOnlyFailure ]
-
-fast/css/pseudo-visited-background-color-on-input.html [ ImageOnlyFailure ]
 
 fast/css/accent-color/checkbox.html [ Pass ]
 fast/css/accent-color/progress.html [ Pass ]
@@ -4345,8 +4342,8 @@ imported/w3c/web-platform-tests/cookies/ordering/ordering.sub.html [ Skip ]
 http/tests/navigation/keyboard-events-during-provisional-navigation.html [ Failure Pass ]
 
 # waitForCompositorReady().then(takeScreenshot) times out on the internal Buildbot
-imported/w3c/web-platform-tests/scroll-animations/css/animation-range-visual-test.html [ ImageOnlyFailure Timeout ]
-imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/custom-property.html [ Pass Timeout ]
+imported/w3c/web-platform-tests/scroll-animations/css/animation-range-visual-test.html [ Skip ] # Pass ImageOnlyFailure Timeout
+imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/custom-property.html [ Skip ] # Pass Timeout
 [ Debug ] imported/w3c/web-platform-tests/scroll-animations/css/animation-inactive-outside-range-test.html [ Skip ] # Timeout
 
 imported/w3c/web-platform-tests/scroll-animations/view-timelines/animation-events.html [ Failure Pass ]
