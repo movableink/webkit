@@ -692,7 +692,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncPop, (JSGlobalObject* globalObject, CallF
 
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
 
-    if (isJSArray(thisValue))
+    if (LIKELY(isJSArray(thisValue)))
         RELEASE_AND_RETURN(scope, JSValue::encode(asArray(thisValue)->pop(globalObject)));
 
     JSObject* thisObj = thisValue.toObject(globalObject);
@@ -1511,7 +1511,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIndexOf, (JSGlobalObject* globalObject, C
     RETURN_IF_EXCEPTION(scope, { });
     JSValue searchElement = callFrame->argument(0);
 
-    if (isJSArray(thisObject)) {
+    if (LIKELY(isJSArray(thisObject))) {
         JSValue result = fastIndexOf<IndexOfDirection::Forward>(globalObject, vm, asArray(thisObject), length, searchElement, index);
         RETURN_IF_EXCEPTION(scope, { });
         if (result)
@@ -1575,7 +1575,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncLastIndexOf, (JSGlobalObject* globalObjec
 
     JSValue searchElement = callFrame->argument(0);
 
-    if (isJSArray(thisObject)) {
+    if (LIKELY(isJSArray(thisObject))) {
         JSValue result = fastIndexOf<IndexOfDirection::Backward>(globalObject, vm, asArray(thisObject), length, searchElement, index);
         RETURN_IF_EXCEPTION(scope, { });
         if (result)
@@ -1793,7 +1793,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncConcat, (JSGlobalObject* globalObject, Ca
     JSValue thisValue = callFrame->thisValue();
 
     if (!callFrame->argumentCount()) {
-        if (isJSArray(thisValue)) {
+        if (LIKELY(isJSArray(thisValue))) {
             auto* array = jsCast<JSArray*>(thisValue);
             if (LIKELY(arrayMissingIsConcatSpreadable(vm, array) && arraySpeciesWatchpointIsValid(vm, array))) {
                 JSArray* result = tryCloneArrayFromFast<ArrayFillMode::Empty>(globalObject, array);
@@ -1804,7 +1804,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncConcat, (JSGlobalObject* globalObject, Ca
         }
     } else if (callFrame->argumentCount() == 1) {
         JSValue argumentValue = callFrame->uncheckedArgument(0);
-        if (isJSArray(thisValue)) {
+        if (LIKELY(isJSArray(thisValue))) {
             auto* firstArray = jsCast<JSArray*>(thisValue);
             if (LIKELY(arrayMissingIsConcatSpreadable(vm, firstArray) && arraySpeciesWatchpointIsValid(vm, firstArray))) {
                 // This code assumes that neither array has set Symbol.isConcatSpreadable. If the first array
@@ -1964,7 +1964,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncFill, (JSGlobalObject* globalObject, Call
         return JSValue::encode(thisObject);
 
     JSValue value = callFrame->argument(0);
-    if (isJSArray(thisValue)) {
+    if (LIKELY(isJSArray(thisValue))) {
         auto* array = jsCast<JSArray*>(thisValue);
         if (array->fastFill(vm, k, finalIndex, value))
             return JSValue::encode(array);
@@ -1998,7 +1998,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToReversed, (JSGlobalObject* globalObject
         return { };
     }
 
-    if (isJSArray(thisObject)) {
+    if (LIKELY(isJSArray(thisObject))) {
         JSArray* thisArray = jsCast<JSArray*>(thisObject);
         if (auto fastResult = thisArray->fastToReversed(globalObject, length))
             return JSValue::encode(fastResult);
