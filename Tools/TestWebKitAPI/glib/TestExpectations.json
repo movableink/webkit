@@ -439,6 +439,12 @@
         "subtests": {
             "/webkit/WebKitWebView/client-side-certificate": {
                 "expected": {"all": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/264507"}}
+            },
+            "/webkit/WebKitWebView/web-socket-tls-errors": {
+                "expected": {"gtk": {"status": ["TIMEOUT", "CRASH"], "bug": "webkit.org/b/286063"}}
+            },
+            "/webkit/WebKitWebView/web-socket-client-side-certificate": {
+                "expected": {"gtk": {"status": ["TIMEOUT", "CRASH"], "bug": "webkit.org/b/286063"}}
             }
         }
     },
