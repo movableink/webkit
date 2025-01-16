@@ -29,7 +29,6 @@
 #include "ControlPart.h"
 #include "DashArray.h"
 #include "DestinationColorSpace.h"
-#include "DisplayListItem.h"
 #include "FloatRect.h"
 #include "FontCascade.h"
 #include "GraphicsContextState.h"
@@ -61,7 +60,6 @@ class VideoFrame;
 
 namespace DisplayList {
 class DrawNativeImage;
-class ResourceHeap;
 }
 
 class GraphicsContext {
@@ -317,9 +315,6 @@ public:
     WEBCORE_EXPORT void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke);
     virtual void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke) = 0;
     virtual void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) = 0;
-
-    // DisplayList
-    WEBCORE_EXPORT virtual void drawDisplayListItems(const Vector<DisplayList::Item>&, const DisplayList::ResourceHeap&, ControlFactory&, const FloatPoint& destination);
 
     // Transparency Layers
 

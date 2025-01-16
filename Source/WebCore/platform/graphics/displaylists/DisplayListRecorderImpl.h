@@ -128,7 +128,6 @@ private:
 #endif
     void recordStrokePathSegment(const PathSegment&) final;
     void recordStrokePath(const Path&) final;
-    void recordDrawDisplayListItems(const Vector<Item>&, const FloatPoint& destination) final;
 
     bool recordResourceUse(NativeImage&) final;
     bool recordResourceUse(ImageBuffer&) final;

@@ -2460,6 +2460,9 @@ intersection-observer/observe-then-disconnect-target.html [ Skip ]
 # These tests rely on painting during the test, which DRT doesn't do.
 fast/text/glyph-display-lists [ Skip ]
 
+# OpenType-SVG fonts get truncated a little when drawn in 2D canvas. Enabling this test for WK1 will require large pixel tolerance.
+fast/text/otsvg-spacing-canvas.html [ ImageOnlyFailure ]
+
 # rdar://82399990 ([ Catalina EWS ] webgl/2.0.0/* tests are flaky crashing ASSERTION FAILED: !needsLayout() (229580)) Disable webgl tests for mac-wk1
 webgl [ Skip ]
 

@@ -1018,6 +1018,9 @@ webkit.org/b/152993 http/tests/contentdispositionattachmentsandbox/form-submissi
 fast/text/complex-small-caps-non-bmp-capitalize.html [ Skip ]
 fast/text/all-small-caps-whitespace.html [ Skip ]
 
+# OpenType-SVG fonts get shifted a little when drawn in 2D canvas. Enabling this test for iOS will require large pixel tolerance.
+fast/text/otsvg-spacing-canvas.html [ ImageOnlyFailure ]
+
 # These tests rely on EventSender.keydown(), which is not supported on iOS
 compositing/fixed-with-main-thread-scrolling.html [ Skip ]
 editing/caret/emoji.html [ WontFix ]

@@ -1348,7 +1348,6 @@ rendering/StyledMarkedText.cpp
 rendering/TextAutoSizing.cpp
 rendering/TextBoxPainter.cpp
 rendering/TextPaintStyle.cpp
-rendering/TextPainter.cpp
 rendering/cocoa/RenderThemeCocoa.mm
 rendering/mac/RenderThemeMac.mm
 rendering/mathml/MathMLStyle.cpp

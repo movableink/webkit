@@ -538,25 +538,6 @@ private:
     RenderingResourceIdentifier m_decomposedGlyphsIdentifier;
 };
 
-class DrawDisplayListItems {
-public:
-    static constexpr char name[] = "draw-display-list-items";
-
-    DrawDisplayListItems(const Vector<Item>&, const FloatPoint& destination);
-    WEBCORE_EXPORT DrawDisplayListItems(Vector<Item>&&, const FloatPoint& destination);
-
-    const Vector<Item>& items() const { return m_items; }
-    FloatPoint destination() const { return m_destination; }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&, const ResourceHeap&, ControlFactory&) const;
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-    void dump(TextStream&, OptionSet<AsTextFlag>) const;
-
-private:
-    Vector<Item> m_items;
-    FloatPoint m_destination;
-};
-
 class DrawImageBuffer {
 public:
     static constexpr char name[] = "draw-image-buffer";

@@ -1117,6 +1117,10 @@ webkit.org/b/218372 http/tests/canvas/color-fonts/text-sbix-2.html [ ImageOnlyFa
 webkit.org/b/218372 http/tests/canvas/color-fonts/text-sbix-3.html [ ImageOnlyFailure ]
 webkit.org/b/218372 http/tests/canvas/color-fonts/text-sbix-4.html [ ImageOnlyFailure ]
 
+# Missing support for EXIF orientation in OpenType-SVG fonts.
+fast/text/otsvg-spacing.html [ ImageOnlyFailure ]
+fast/text/otsvg-spacing-canvas.html [ ImageOnlyFailure ]
+
 # system-ui support
 webkit.org/b/221445 fast/text/system-font-width-2.html [ Skip ]
 webkit.org/b/221445 fast/text/system-font-width-3.html [ Skip ]

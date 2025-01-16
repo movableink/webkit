@@ -215,13 +215,6 @@ void GraphicsContext::drawBidiText(const FontCascade& font, const TextRun& run, 
     bidiRuns.clear();
 }
 
-void GraphicsContext::drawDisplayListItems(const Vector<DisplayList::Item>& items, const DisplayList::ResourceHeap& resourceHeap, ControlFactory& controlFactory, const FloatPoint& destination)
-{
-    translate(destination);
-    DisplayList::Replayer(*this, items, resourceHeap, controlFactory).replay();
-    translate(-destination);
-}
-
 static IntSize scaledImageBufferSize(const FloatSize& size, const FloatSize& scale)
 {
     // Enlarge the buffer size if the context's transform is scaling it so we need a higher

@@ -327,34 +327,6 @@ void DrawDecomposedGlyphs::dump(TextStream& ts, OptionSet<AsTextFlag> flags) con
     }
 }
 
-DrawDisplayListItems::DrawDisplayListItems(const Vector<Item>& items, const FloatPoint& destination)
-    : m_items(items)
-    , m_destination(destination)
-{
-}
-
-DrawDisplayListItems::DrawDisplayListItems(Vector<Item>&& items, const FloatPoint& destination)
-    : m_items(WTFMove(items))
-    , m_destination(destination)
-{
-}
-
-void DrawDisplayListItems::apply(GraphicsContext& context, const ResourceHeap& resourceHeap, ControlFactory& controlFactory) const
-{
-    context.drawDisplayListItems(m_items, resourceHeap, controlFactory, m_destination);
-}
-
-NO_RETURN_DUE_TO_ASSERT void DrawDisplayListItems::apply(GraphicsContext&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void DrawDisplayListItems::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts << items();
-    ts.dumpProperty("destination", destination());
-}
-
 void DrawImageBuffer::apply(GraphicsContext& context, ImageBuffer& imageBuffer) const
 {
     context.drawImageBuffer(imageBuffer, m_destinationRect, m_srcRect, m_options);
