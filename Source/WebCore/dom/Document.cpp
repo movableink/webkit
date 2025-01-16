@@ -7404,23 +7404,6 @@ Document* Document::parentDocument() const
     return parent->document();
 }
 
-Document& Document::topDocument() const
-{
-    // FIXME: This special-casing avoids incorrectly determined top documents during the process
-    // of AXObjectCache teardown or notification posting for cached or being-destroyed documents.
-    if (backForwardCacheState() == NotInBackForwardCache && !m_renderTreeBeingDestroyed) {
-        Document* localMainDocument = nullptr;
-        if (RefPtr localMainFrame = this->localMainFrame())
-            localMainDocument = localMainFrame->document();
-        return localMainDocument ? *localMainDocument : const_cast<Document&>(*this);
-    }
-
-    Document* document = const_cast<Document*>(this);
-    while (HTMLFrameOwnerElement* element = document->ownerElement())
-        document = &element->document();
-    return *document;
-}
-
 Document* Document::mainFrameDocument() const
 {
     // FIXME: This special-casing avoids incorrectly determined top documents during the process
