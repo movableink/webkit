@@ -839,6 +839,9 @@ void GraphicsLayerCoordinated::updateVisibleRect(const FloatRect& rect)
 #if ENABLE(DAMAGE_TRACKING)
 void GraphicsLayerCoordinated::updateDamage()
 {
+    if (!m_platformLayer->damagePropagation())
+        return;
+
     Damage damage;
     if (m_damagedRectsAreUnreliable)
         damage.invalidate();

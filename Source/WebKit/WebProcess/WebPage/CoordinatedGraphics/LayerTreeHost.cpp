@@ -86,6 +86,9 @@ LayerTreeHost::LayerTreeHost(WebPage& webPage, WebCore::PlatformDisplayID displa
 {
     {
         auto& rootLayer = m_sceneState->rootLayer();
+#if ENABLE(DAMAGE_TRACKING)
+        rootLayer.setDamagePropagation(webPage.corePage()->settings().propagateDamagingInformation());
+#endif
         Locker locker { rootLayer.lock() };
         rootLayer.setAnchorPoint(FloatPoint3D(0, 0, 0));
         rootLayer.setSize(m_webPage.size());
@@ -377,6 +380,9 @@ void LayerTreeHost::backgroundColorDidChange()
 
 void LayerTreeHost::attachLayer(CoordinatedPlatformLayer& layer)
 {
+#if ENABLE(DAMAGE_TRACKING)
+    layer.setDamagePropagation(webPage().corePage()->settings().propagateDamagingInformation());
+#endif
     m_sceneState->addLayer(layer);
 }
 

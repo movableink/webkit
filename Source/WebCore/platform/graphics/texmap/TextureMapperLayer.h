@@ -119,6 +119,7 @@ public:
     void addChild(TextureMapperLayer*);
 
 #if ENABLE(DAMAGE_TRACKING)
+    void setDamagePropagation(bool enabled) { m_damagePropagation = enabled; }
     void setDamage(const Damage&);
     void collectDamage(TextureMapper&, Damage&);
 #endif
@@ -185,7 +186,7 @@ private:
     void collect3DRenderingContextLayers(Vector<TextureMapperLayer*>&);
 
 #if ENABLE(DAMAGE_TRACKING)
-    bool canInferDamage() const { return !m_damage.isInvalid(); }
+    bool canInferDamage() const { return m_damagePropagation && !m_damage.isInvalid(); }
     void collectDamageRecursive(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelf(TextureMapperPaintOptions&, Damage&);
     void damageWholeLayerDueToTransformChange(const TransformationMatrix& beforeChange, const TransformationMatrix& afterChange);
@@ -281,6 +282,7 @@ private:
     bool m_isReplica { false };
 
 #if ENABLE(DAMAGE_TRACKING)
+    bool m_damagePropagation { false };
     Damage m_damage;
 #endif
 

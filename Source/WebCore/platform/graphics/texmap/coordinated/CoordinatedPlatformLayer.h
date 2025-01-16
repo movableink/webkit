@@ -94,6 +94,11 @@ public:
     TextureMapperLayer* target() const;
     void invalidateTarget();
 
+#if ENABLE(DAMAGE_TRACKING)
+    void setDamagePropagation(bool enabled) { m_damagePropagation = enabled; }
+    bool damagePropagation() const { return m_damagePropagation; }
+#endif
+
     void setPosition(FloatPoint&&);
     enum class ForcePositionSync : bool { No, Yes };
     void setPositionForScrolling(const FloatPoint&, ForcePositionSync = ForcePositionSync::No);
@@ -230,6 +235,10 @@ private:
     std::unique_ptr<TextureMapperLayer> m_target;
     bool m_pendingTilesCreation { false };
     bool m_needsTilesUpdate { false };
+
+#if ENABLE(DAMAGE_TRACKING)
+    bool m_damagePropagation { false };
+#endif
 
     Lock m_lock;
     OptionSet<Change> m_pendingChanges WTF_GUARDED_BY_LOCK(m_lock);

@@ -398,6 +398,8 @@ void TextureMapperLayer::collectDamageRecursive(TextureMapperPaintOptions& optio
 
 void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, Damage& damage)
 {
+    ASSERT(m_damagePropagation);
+
     if (!m_state.visible || !m_state.contentsVisible)
         return;
 

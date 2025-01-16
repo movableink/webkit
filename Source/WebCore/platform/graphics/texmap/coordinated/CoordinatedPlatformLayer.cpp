@@ -96,8 +96,12 @@ GraphicsLayerCoordinated* CoordinatedPlatformLayer::owner() const
 TextureMapperLayer& CoordinatedPlatformLayer::ensureTarget()
 {
     ASSERT(!isMainThread());
-    if (!m_target)
+    if (!m_target) {
         m_target = makeUnique<TextureMapperLayer>();
+#if ENABLE(DAMAGE_TRACKING)
+        m_target->setDamagePropagation(m_damagePropagation);
+#endif
+    }
     return *m_target;
 }
 
@@ -876,7 +880,7 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
             layer.setDamage(m_damage);
     }
 
-    if (m_pendingChanges.isEmpty()) {
+    if (m_damagePropagation && m_pendingChanges.isEmpty()) {
         // If there are no changes to the layer and yet m_backingStoreProxy || m_contentsBuffer
         // we must damage the whole layer for now to handle cases such as e.g. scrollbars.
         Damage fullLayerDamage;
