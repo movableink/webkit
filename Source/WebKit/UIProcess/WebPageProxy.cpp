@@ -4048,7 +4048,7 @@ void WebPageProxy::sendWheelEvent(WebCore::FrameIdentifier frameID, const WebWhe
                 return;
             }
 
-            if (RefPtr frame = WebFrameProxy::webFrame(frameID))
+            if (RefPtr frame = WebFrameProxy::webFrame(frameID); frame && frame->process().hasConnection())
                 MESSAGE_CHECK(frame->protectedProcess(), protectedThis->wheelEventCoalescer().hasEventsBeingProcessed());
 
             protectedThis->handleWheelEventReply(wheelEvent, nodeID, gestureState, wasHandledForScrolling, handled);
