@@ -65,6 +65,7 @@ OBJC_CLASS WKAccessibilityPDFDocumentObject;
 #endif
 
 namespace WebCore {
+class Color;
 class FragmentedSharedBuffer;
 class GraphicsContext;
 class Element;
@@ -451,6 +452,8 @@ protected:
 #endif
 
     std::optional<WebCore::PageIdentifier> pageIdentifier() const;
+
+    static WebCore::Color pluginBackgroundColor();
 
     SingleThreadWeakPtr<PluginView> m_view;
     WeakPtr<WebFrame> m_frame;

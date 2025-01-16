@@ -51,7 +51,11 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/ArchiveResource.h>
+#import <WebCore/CSSPropertyNames.h>
 #import <WebCore/Chrome.h>
+#import <WebCore/Color.h>
+#import <WebCore/ColorCocoa.h>
+#import <WebCore/ColorSerialization.h>
 #import <WebCore/Cursor.h>
 #import <WebCore/Document.h>
 #import <WebCore/EventNames.h>
@@ -128,6 +132,10 @@ PDFPluginBase::PDFPluginBase(HTMLPlugInElement& element)
     , m_incrementalPDFLoadingEnabled(element.document().settings().incrementalPDFLoadingEnabled())
 #endif
 {
+    if (isFullFramePlugin()) {
+        Ref document = element.document();
+        RefPtr { document->bodyOrFrameset() }->setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForHTML(pluginBackgroundColor()));
+    }
 }
 
 PDFPluginBase::~PDFPluginBase()
@@ -1458,6 +1466,12 @@ String PDFPluginBase::annotationStyle() const
     ".password-form + input.annotation[type='password'] {"
     "    margin-top: 16px;"
     "}"_s;
+}
+
+Color PDFPluginBase::pluginBackgroundColor()
+{
+    static NeverDestroyed color = roundAndClampToSRGBALossy([CocoaColor grayColor].CGColor);
+    return color.get();
 }
 
 } // namespace WebKit

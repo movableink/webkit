@@ -55,11 +55,7 @@
 #import <Quartz/Quartz.h>
 #import <QuartzCore/QuartzCore.h>
 #import <WebCore/AXObjectCache.h>
-#import <WebCore/CSSPropertyNames.h>
 #import <WebCore/Chrome.h>
-#import <WebCore/Color.h>
-#import <WebCore/ColorCocoa.h>
-#import <WebCore/ColorSerialization.h>
 #import <WebCore/Cursor.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/DocumentLoader.h>
@@ -539,12 +535,6 @@ PDFPlugin::PDFPlugin(HTMLPlugInElement& element)
     m_pdfLayerController.get().delegate = m_pdfLayerControllerDelegate.get();
     m_pdfLayerController.get().parentLayer = m_contentLayer.get();
 
-    bool isFullFrame = isFullFramePlugin();
-    if (isFullFrame) {
-        // FIXME: <rdar://problem/75332948> get the background color from PDFKit instead of hardcoding it
-        RefPtr { document->bodyOrFrameset() }->setInlineStyleProperty(WebCore::CSSPropertyBackgroundColor, WebCore::serializationForHTML(WebCore::roundAndClampToSRGBALossy([WebCore::CocoaColor grayColor].CGColor)));
-    }
-
     if (supportsForms()) {
         RefPtr annotationContainer = m_annotationContainer = document->createElement(divTag, false);
         annotationContainer->setAttributeWithoutSynchronization(idAttr, "annotationContainer"_s);
@@ -559,7 +549,7 @@ PDFPlugin::PDFPlugin(HTMLPlugInElement& element)
     RefPtr frame = m_frame.get();
     m_accessibilityObject = adoptNS([[WKPDFPluginAccessibilityObject alloc] initWithPDFPlugin:this andElement:&element]);
     [m_accessibilityObject setPdfLayerController:m_pdfLayerController.get()];
-    if (isFullFrame && frame->isMainFrame())
+    if (isFullFramePlugin() && frame->isMainFrame())
         [m_accessibilityObject setParent:frame->page()->accessibilityRemoteObject()];
     // If this is not a main-frame (e.g. it originated from an iframe) full-frame plugin, we'll need to set the parent later after the AXObjectCache has been initialized.
 

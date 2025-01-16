@@ -534,7 +534,7 @@ void UnifiedPDFPlugin::ensureLayers()
     if (!m_rootLayer) {
         m_rootLayer = createGraphicsLayer("UnifiedPDFPlugin root"_s, GraphicsLayer::Type::Normal);
         m_rootLayer->setAnchorPoint({ });
-        m_rootLayer->setBackgroundColor(WebCore::roundAndClampToSRGBALossy([WebCore::CocoaColor grayColor].CGColor));
+        m_rootLayer->setBackgroundColor(pluginBackgroundColor());
         m_rootLayer->setAppliesPageScale();
     }
 
@@ -754,7 +754,7 @@ void UnifiedPDFPlugin::paint(GraphicsContext& context, const IntRect&)
     FloatRect clipRect { FloatPoint(m_scrollOffset), size() };
 
     context.clip(clipRect);
-    context.fillRect(clipRect, WebCore::roundAndClampToSRGBALossy([WebCore::CocoaColor grayColor].CGColor));
+    context.fillRect(clipRect, pluginBackgroundColor());
     context.scale(m_scaleFactor);
 
     auto paddingForCentering = centeringOffset();
