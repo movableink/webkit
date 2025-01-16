@@ -750,6 +750,12 @@ int GstMappedFrame::componentStride(int stride) const
     return GST_VIDEO_FRAME_COMP_STRIDE(&m_frame, stride);
 }
 
+int GstMappedFrame::componentWidth(int index) const
+{
+    RELEASE_ASSERT(isValid());
+    return GST_VIDEO_FRAME_COMP_WIDTH(&m_frame, index);
+}
+
 GstVideoInfo* GstMappedFrame::info()
 {
     RELEASE_ASSERT(isValid());

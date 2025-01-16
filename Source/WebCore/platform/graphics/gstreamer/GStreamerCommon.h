@@ -226,6 +226,7 @@ public:
 
     uint8_t* componentData(int) const;
     int componentStride(int) const;
+    int componentWidth(int) const;
 
     GstVideoInfo* info();
 
