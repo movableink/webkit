@@ -126,8 +126,10 @@ bool SocketConnection::readMessage()
     memcpy(&flags, messageData, sizeof(MessageFlags));
     messageData += sizeof(MessageFlags);
     auto messageSize = sizeof(uint32_t) + sizeof(MessageFlags) + bodySize;
-    if (m_readBuffer.size() < messageSize)
+    if (m_readBuffer.size() < messageSize) {
+        m_readBuffer.reserveCapacity(messageSize);
         return false;
+    }
 
     Checked<size_t> messageNameLength = strlen(messageData);
     messageNameLength++;
