@@ -1438,7 +1438,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'compile-webkit',
             'generate-minibrowser-bundle'
         ],
-        'GTK-Linux-64-bit-Release-GTK3-Tests': [
+        'GTK-Linux-64-bit-Release-GTK3-Build': [
             'configure-build',
             'configuration',
             'clean-and-update-working-directory',
@@ -1448,21 +1448,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'delete-WebKitBuild-directory',
             'delete-stale-build-files',
             'jhbuild',
-            'compile-webkit',
-            'layout-test',
-            'dashboard-tests',
-            'archive-test-results',
-            'upload',
-            'extract-test-results',
-            'set-permissions',
-            'webkitpy-test',
-            'webkitperl-test',
-            'bindings-generation-tests',
-            'builtins-generator-tests',
-            'API-tests',
-            'archive-built-product',
-            'upload-built-product',
-            'webdriver-test'
+            'compile-webkit'
         ],
         'GTK-Linux-64-bit-Release-SDK-Container': [
             'configure-build',

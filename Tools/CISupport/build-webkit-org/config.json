@@ -557,7 +557,7 @@
                     "workernames": ["gtk-linux-bot-23"]
                   },
                   {
-                    "name": "GTK-Linux-64-bit-Release-GTK3-Tests", "factory": "BuildAndTestAndArchiveAllButJSCFactory",
+                    "name": "GTK-Linux-64-bit-Release-GTK3-Build", "factory": "BuildFactory",
                     "platform": "gtk-3", "configuration": "release", "architectures": ["x86_64"],
                     "workernames": ["gtk-linux-bot-18"]
                   },
@@ -745,7 +745,7 @@
                                      "GTK-Linux-64-bit-Release-Debian-Stable-Build",
                                      "GTK-Linux-64-bit-Release-Ubuntu-2204-Build",
                                      "GTK-Linux-64-bit-Release-Ubuntu-LTS-Build",
-                                     "GTK-Linux-64-bit-Release-GTK3-Tests",
+                                     "GTK-Linux-64-bit-Release-GTK3-Build",
                                      "GTK-Linux-64-bit-Release-SDK-Container",
                                      "WPE-Linux-64-bit-Release-Ubuntu-2204-Build",
                                      "WPE-Linux-64-bit-Release-Ubuntu-LTS-Build",
