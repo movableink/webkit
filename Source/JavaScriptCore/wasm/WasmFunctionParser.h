@@ -537,6 +537,8 @@ auto FunctionParser<Context>::parseBody() -> PartialResult
         m_context.didParseOpcode();
     }
     WASM_FAIL_IF_HELPER_FAILS(m_context.endTopLevel({ m_signature.as<FunctionSignature>(), nullptr }, m_expressionStack));
+    if (Context::validateFunctionBodySize)
+        WASM_PARSER_FAIL_IF(m_offset != source().size(), "function body size doesn't match the expected size");
 
     ASSERT(op == OpType::End);
     return { };

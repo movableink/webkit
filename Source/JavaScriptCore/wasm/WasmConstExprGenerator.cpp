@@ -180,6 +180,7 @@ public:
 
     static constexpr bool shouldFuseBranchCompare = false;
     static constexpr bool tierSupportsSIMD = true;
+    static constexpr bool validateFunctionBodySize = false;
     static ExpressionType emptyExpression() { return 0; };
 
 protected:

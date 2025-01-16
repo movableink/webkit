@@ -52,6 +52,7 @@ public:
 
     static constexpr bool shouldFuseBranchCompare = false;
     static constexpr bool tierSupportsSIMD = false;
+    static constexpr bool validateFunctionBodySize = true;
 
     struct ControlLoop  {
         Ref<Label> m_body;

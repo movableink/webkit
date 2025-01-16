@@ -589,6 +589,7 @@ public:
     }
 
     static constexpr bool tierSupportsSIMD = false;
+    static constexpr bool validateFunctionBodySize = true;
 private:
     Checked<uint32_t> m_stackSize { 0 };
     uint32_t m_maxStackSize { 0 };
