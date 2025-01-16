@@ -73,6 +73,15 @@ static void wipeAlphaChannelFromPixels(std::span<uint8_t> pixels)
 }
 #endif
 
+static inline const Vector<const void*> asPointers(std::span<const GCGLsizei> offsets)
+{
+    // Must cast offsets from int to void* before passing down to ANGLE.
+
+    return WTF::map(offsets, [](const GCGLsizei offset) {
+        return reinterpret_cast<const void*>(offset);
+    });
+}
+
 GraphicsContextGLANGLE::GraphicsContextGLANGLE(GraphicsContextGLAttributes attributes)
     : GraphicsContextGL(attributes)
 {
@@ -2959,16 +2968,7 @@ void GraphicsContextGLANGLE::multiDrawElementsANGLE(GCGLenum mode, GCGLSpanTuple
     if (!makeContextCurrent())
         return;
 
-    // Must perform conversion from integer offsets to void* pointers before passing down to ANGLE.
-    Vector<void*> offsetsPointers;
-    offsetsPointers.reserveInitialCapacity(countsAndOffsets.bufSize);
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    for (size_t i = 0; i < countsAndOffsets.bufSize; ++i)
-        offsetsPointers.append(reinterpret_cast<void*>(countsAndOffsets.data<1>()[i]));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-
-    GL_MultiDrawElementsANGLE(mode, countsAndOffsets.data<0>(), type, offsetsPointers.data(), countsAndOffsets.bufSize);
+    GL_MultiDrawElementsANGLE(mode, countsAndOffsets.data<0>(), type, asPointers(countsAndOffsets.span<1>()).data(), countsAndOffsets.bufSize);
     checkGPUStatus();
 }
 
@@ -2977,16 +2977,7 @@ void GraphicsContextGLANGLE::multiDrawElementsInstancedANGLE(GCGLenum mode, GCGL
     if (!makeContextCurrent())
         return;
 
-    // Must perform conversion from integer offsets to void* pointers before passing down to ANGLE.
-    Vector<void*> offsetsPointers;
-    offsetsPointers.reserveInitialCapacity(countsOffsetsAndInstanceCounts.bufSize);
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    for (size_t i = 0; i < countsOffsetsAndInstanceCounts.bufSize; ++i)
-        offsetsPointers.append(reinterpret_cast<void*>(countsOffsetsAndInstanceCounts.data<1>()[i]));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-
-    GL_MultiDrawElementsInstancedANGLE(mode, countsOffsetsAndInstanceCounts.data<0>(), type, offsetsPointers.data(), countsOffsetsAndInstanceCounts.data<2>(), countsOffsetsAndInstanceCounts.bufSize);
+    GL_MultiDrawElementsInstancedANGLE(mode, countsOffsetsAndInstanceCounts.data<0>(), type, asPointers(countsOffsetsAndInstanceCounts.span<1>()).data(), countsOffsetsAndInstanceCounts.data<2>(), countsOffsetsAndInstanceCounts.bufSize);
     checkGPUStatus();
 }
 
@@ -3215,16 +3206,7 @@ void GraphicsContextGLANGLE::multiDrawElementsInstancedBaseVertexBaseInstanceANG
     if (!makeContextCurrent())
         return;
 
-    // Must perform conversion from integer offsets to void* pointers before passing down to ANGLE.
-    Vector<void*> offsetsPointers;
-    offsetsPointers.reserveInitialCapacity(countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.bufSize);
-
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    for (size_t i = 0; i < countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.bufSize; ++i)
-        offsetsPointers.append(reinterpret_cast<void*>(countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<1>()[i]));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-
-    GL_MultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(mode, countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<0>(), type, offsetsPointers.data(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<2>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<3>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<4>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.bufSize);
+    GL_MultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(mode, countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<0>(), type, asPointers(countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.span<1>()).data(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<2>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<3>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.data<4>(), countsOffsetsInstanceCountsBaseVerticesAndBaseInstances.bufSize);
     checkGPUStatus();
 }
 
