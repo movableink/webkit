@@ -2376,9 +2376,9 @@ void GraphicsLayerCA::updateSublayerList(bool maxLayerDepthReached)
     bool structuralLayerHostsChildren = !clippingLayerHostsChildren && m_structuralLayer && structuralLayerPurpose() != StructuralLayerPurpose::StructuralLayerForBackdrop;
     if (m_contentsClippingLayer) {
         PlatformCALayerList clippingChildren;
+        appendContentsLayer(clippingChildren);
         if (clippingLayerHostsChildren)
             buildChildLayerList(clippingChildren);
-        appendContentsLayer(clippingChildren);
         m_contentsClippingLayer->setSublayers(clippingChildren);
     }
 
