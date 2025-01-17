@@ -1453,8 +1453,7 @@ void WebPageProxy::swapToProvisionalPage(Ref<ProvisionalPageProxy>&& provisional
     setDrawingArea(provisionalPage->takeDrawingArea());
     ASSERT(!m_mainFrame);
     m_mainFrame = provisionalPage->mainFrame();
-
-    if (!protectedPreferences()->siteIsolationEnabled())
+    if (provisionalPage->didCreateMainFrame())
         m_mainFrame->frameLoadState().addObserver(internals().protectedPageLoadTimingFrameLoadStateObserver());
 
     // FIXME: Think about what to do if the provisional page didn't get its browsing context group from the SuspendedPageProxy.
@@ -4941,7 +4940,7 @@ void WebPageProxy::commitProvisionalPage(IPC::Connection& connection, FrameIdent
     if (mainFrameInPreviousProcess && preferences->siteIsolationEnabled())
         mainFrameInPreviousProcess->removeChildFrames();
 
-    ASSERT(m_legacyMainFrameProcess.ptr() != &provisionalPage->process());
+    ASSERT(m_legacyMainFrameProcess.ptr() != &provisionalPage->process() || preferences->siteIsolationEnabled());
 
     auto shouldDelayClosingUntilFirstLayerFlush = ShouldDelayClosingUntilFirstLayerFlush::No;
 #if PLATFORM(MAC)

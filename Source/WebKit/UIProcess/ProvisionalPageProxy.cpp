@@ -116,11 +116,12 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
         ASSERT(&suspendedPage->process() == &process());
         suspendedPage->unsuspend();
         m_mainFrame = &suspendedPage->mainFrame();
-    } else if (page.preferences().siteIsolationEnabled())
+    } else if (page.preferences().siteIsolationEnabled() && page.openedByDOM() && !page.hasCommittedAnyProvisionalLoads())
         m_mainFrame = page.mainFrame();
     else {
         m_mainFrame = WebFrameProxy::create(page, m_frameProcess, FrameIdentifier::generate(), previousMainFrame->effectiveSandboxFlags(), previousMainFrame->scrollingMode(), nullptr, IsMainFrame::Yes);
 
+        m_didCreateMainFrame = true;
         // Restore the main frame's committed URL as some clients may rely on it until the next load is committed.
         m_mainFrame->frameLoadState().setURL(previousMainFrame->url());
         previousMainFrame->transferNavigationCallbackToFrame(*m_mainFrame);
@@ -137,7 +138,7 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
         else
             m_mainFrame->frameLoadState().didStartProvisionalLoad(m_request.url());
         page.didReceiveServerRedirectForProvisionalLoadForFrameShared(protectedProcess(), m_mainFrame->frameID(), m_navigationID, WTFMove(m_request), { });
-    } else if (previousMainFrame && !previousMainFrame->provisionalURL().isEmpty() && !page.preferences().siteIsolationEnabled()) {
+    } else if (previousMainFrame && !previousMainFrame->provisionalURL().isEmpty()) {
         // In case of a process swap after response policy, the didStartProvisionalLoad already happened but the new main frame doesn't know about it
         // so we need to tell it so it can update its provisional URL.
         m_mainFrame->didStartProvisionalLoad(previousMainFrame->provisionalURL());
@@ -257,6 +258,7 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
         if (auto existingRemotePageProxy = m_browsingContextGroup->takeRemotePageInProcessForProvisionalPage(page, protectedProcess)) {
             m_webPageID = existingRemotePageProxy->pageID();
             m_mainFrame = existingRemotePageProxy->page()->mainFrame();
+            m_didCreateMainFrame = false;
             m_messageReceiverRegistration.stopReceivingMessages();
             m_messageReceiverRegistration.transferMessageReceivingFrom(existingRemotePageProxy->messageReceiverRegistration(), *this);
             send(Messages::WebPage::CreateProvisionalFrame(ProvisionalFrameCreationParameters {
@@ -434,7 +436,8 @@ void ProvisionalPageProxy::didCommitLoadForFrame(IPC::Connection& connection, Fr
     RefPtr page = m_page.get();
     if (page && page->preferences().siteIsolationEnabled()) {
         RefPtr openerFrame = page->mainFrame()->opener();
-        page->mainFrame()->setProcess(m_frameProcess);
+        if (m_frameProcess.ptr() != &page->mainFrame()->frameProcess())
+            page->mainFrame()->setProcess(m_frameProcess);
         if (RefPtr openerPage = openerFrame ? openerFrame->page() : nullptr) {
             Site openerSite(openerFrame->url());
             Site openedSite(request.url());
