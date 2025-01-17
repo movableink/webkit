@@ -1259,7 +1259,10 @@ TextStream& operator<<(TextStream& stream, AXObjectCache& axObjectCache)
     TextStream::GroupScope groupScope(stream);
     stream << "AXObjectCache " << &axObjectCache;
 
-    if (RefPtr root = axObjectCache.get(axObjectCache.document().view())) {
+    RefPtr document = axObjectCache.document();
+    if (!document)
+        stream << "No document!";
+    else if (RefPtr root = axObjectCache.get(document->view())) {
         constexpr OptionSet<AXStreamOptions> options = { AXStreamOptions::ObjectID, AXStreamOptions::Role, AXStreamOptions::ParentID, AXStreamOptions::IdentifierAttribute, AXStreamOptions::OuterHTML, AXStreamOptions::DisplayContents, AXStreamOptions::Address };
         streamSubtree(stream, root.releaseNonNull(), options);
     } else

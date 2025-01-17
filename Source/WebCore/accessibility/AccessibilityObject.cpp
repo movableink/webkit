@@ -165,7 +165,7 @@ void AccessibilityObject::detachRemoteParts(AccessibilityDetachmentType detachme
     // Menu close events need to notify the platform. No element is used in the notification because it's a destruction event.
     if (detachmentType == AccessibilityDetachmentType::ElementDestroyed && roleValue() == AccessibilityRole::Menu) {
         if (auto* cache = axObjectCache())
-            cache->postNotification(nullptr, &cache->document(), AXNotification::MenuClosed);
+            cache->postNotification(nullptr, cache->document(), AXNotification::MenuClosed);
     }
 
     // Clear any children and call detachFromParent on them so that
