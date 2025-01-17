@@ -1361,9 +1361,7 @@ void RenderPassEncoder::setPipeline(const RenderPipeline& pipeline)
     m_pipeline = &pipeline;
 
     m_vertexDynamicOffsets.resize(pipeline.protectedPipelineLayout()->sizeOfVertexDynamicOffsets());
-    m_vertexDynamicOffsets.fill(0);
     m_fragmentDynamicOffsets.resize(pipeline.protectedPipelineLayout()->sizeOfFragmentDynamicOffsets() + RenderBundleEncoder::startIndexForFragmentDynamicOffsets);
-    m_fragmentDynamicOffsets.fill(0);
 
     if (m_fragmentDynamicOffsets.size() < RenderBundleEncoder::startIndexForFragmentDynamicOffsets)
         m_fragmentDynamicOffsets.grow(RenderBundleEncoder::startIndexForFragmentDynamicOffsets);
