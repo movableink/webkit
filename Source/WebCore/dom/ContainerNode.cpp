@@ -89,7 +89,7 @@ ScriptDisallowedScope::EventAllowedScope* ScriptDisallowedScope::EventAllowedSco
 ALWAYS_INLINE auto ContainerNode::removeAllChildrenWithScriptAssertionMaybeAsync(ChildChange::Source source, NodeVector& children, DeferChildrenChanged deferChildrenChanged) -> RemoveAllChildrenResult
 {
     // FIXME: remove this when other platforms support Opportunistic Task Scheduler
-#if PLATFORM(MAC)
+#if HAVE(OPPORTUNISTIC_TASK_SCHEDULER)
     // Keep node deletion synchronous if removing all children will delay destroying the document
     if (isDocumentNode() || isDocumentFragment())
         return removeAllChildrenWithScriptAssertion(source, children, deferChildrenChanged);
