@@ -3014,3 +3014,5 @@ webkit.org/b/284898 [ Ventura+ ] fonts/ligature.html [ Pass Failure ImageOnlyFai
 webkit.org/b/284954 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-box/margin-trim/computed-margin-values/block-container-block-start-child-with-border.html [ Pass Failure ]
 
 webkit.org/b/285089 [ Ventura+ Debug ] imported/w3c/web-platform-tests/editing/crashtests/replace-document-root-and-refocus-window.html [ Skip ]
+
+webkit.org/b/286159 [ Debug ] fast/canvas/webgl/tex-image-and-sub-image-2d-with-video-rgba4444.html [ Pass Failure ]
