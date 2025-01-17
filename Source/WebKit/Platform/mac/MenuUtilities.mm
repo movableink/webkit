@@ -172,6 +172,7 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemTagDictationAlternative:
     case WebCore::ContextMenuItemTagFontMenu:
     case WebCore::ContextMenuItemTagNoAction:
+    case WebCore::ContextMenuItemTagNoGuessesFound:
     case WebCore::ContextMenuItemTagOther:
     case WebCore::ContextMenuItemTagSpellingGuess:
     case WebCore::ContextMenuItemTagSpeechMenu:
@@ -270,16 +271,14 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemTagMediaMute:
         return @"speaker.slash";
     case WebCore::ContextMenuItemTagMediaPlayPause:
-        return useAlternateImage ? @"pause" : @"play";
-    case WebCore::ContextMenuItemTagNoGuessesFound:
-        return @"x.circle";
+        return useAlternateImage ? @"pause.fill" : @"play.fill";
     case WebCore::ContextMenuItemTagOpenFrameInNewWindow:
     case WebCore::ContextMenuItemTagOpenImageInNewWindow:
     case WebCore::ContextMenuItemTagOpenLinkInNewWindow:
     case WebCore::ContextMenuItemTagOpenMediaInNewWindow:
         return @"macwindow.badge.plus";
     case WebCore::ContextMenuItemTagOpenLink:
-        return @"arrow.up.to.line";
+        return @"safari";
     case WebCore::ContextMenuItemTagOpenWithDefaultApplication:
         return @"arrow.up.forward.app";
     case WebCore::ContextMenuItemTagOutline:
@@ -295,7 +294,7 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemTagPlayAnimation:
         return @"play.rectangle";
     case WebCore::ContextMenuItemTagReload:
-        return @"arrow.clockwise.circle";
+        return @"arrow.clockwise";
     case WebCore::ContextMenuItemTagRightToLeft:
         return [NSMenuItem _systemImageNameForAction:@selector(makeTextWritingDirectionRightToLeft:)];
     case WebCore::ContextMenuItemTagShareMenu:
@@ -318,10 +317,10 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemTagSmartQuotes:
         return @"quote.closing";
     case WebCore::ContextMenuItemTagStartSpeaking:
-        return @"play";
+        return @"play.fill";
     case WebCore::ContextMenuItemTagStop:
     case WebCore::ContextMenuItemTagStopSpeaking:
-        return @"stop";
+        return @"stop.fill";
     case WebCore::ContextMenuItemTagStyles:
         return @"bold.italic.underline";
     case WebCore::ContextMenuItemTagTextDirectionLeftToRight:
