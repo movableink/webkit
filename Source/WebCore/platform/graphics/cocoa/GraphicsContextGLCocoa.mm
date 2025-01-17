@@ -180,7 +180,7 @@ GraphicsContextGLCocoa::~GraphicsContextGLCocoa()
 
 IOSurface* GraphicsContextGLCocoa::displayBufferSurface()
 {
-    return displayBuffer().surface.get();
+    return displayBuffer().surface();
 }
 
 std::tuple<GCGLenum, GCGLenum> GraphicsContextGLCocoa::externalImageTextureBindingPoint()
@@ -390,17 +390,17 @@ void GraphicsContextGLCocoa::setDrawingBufferColorSpace(const DestinationColorSp
         forceContextLost();
 }
 
-GraphicsContextGLCocoa::IOSurfacePbuffer& GraphicsContextGLCocoa::drawingBuffer()
+IOSurfacePbuffer& GraphicsContextGLCocoa::drawingBuffer()
 {
     return surfaceBuffer(SurfaceBuffer::DrawingBuffer);
 }
 
-GraphicsContextGLCocoa::IOSurfacePbuffer& GraphicsContextGLCocoa::displayBuffer()
+IOSurfacePbuffer& GraphicsContextGLCocoa::displayBuffer()
 {
     return surfaceBuffer(SurfaceBuffer::DisplayBuffer);
 }
 
-GraphicsContextGLCocoa::IOSurfacePbuffer& GraphicsContextGLCocoa::surfaceBuffer(SurfaceBuffer buffer)
+IOSurfacePbuffer& GraphicsContextGLCocoa::surfaceBuffer(SurfaceBuffer buffer)
 {
     if (buffer == SurfaceBuffer::DisplayBuffer)
         return m_drawingBuffers[(m_currentDrawingBufferIndex + maxReusedDrawingBuffers - 1u) % maxReusedDrawingBuffers];
@@ -410,14 +410,14 @@ GraphicsContextGLCocoa::IOSurfacePbuffer& GraphicsContextGLCocoa::surfaceBuffer(
 bool GraphicsContextGLCocoa::bindNextDrawingBuffer()
 {
     ASSERT(!getInternalFramebufferSize().isEmpty());
-    if (drawingBuffer())
-        EGL_ReleaseTexImage(m_displayObj, drawingBuffer().pbuffer, EGL_BACK_BUFFER);
+    if (auto& buffer = drawingBuffer())
+        EGL_ReleaseTexImage(m_displayObj, buffer.pbuffer(), EGL_BACK_BUFFER);
 
     m_currentDrawingBufferIndex++;
     auto& buffer = drawingBuffer();
 
-    if (buffer && (buffer.surface->isInUse() || m_failNextStatusCheck)) {
-        EGL_DestroySurface(m_displayObj, buffer.pbuffer);
+    if (buffer && (buffer.isInUse() || m_failNextStatusCheck)) {
+        EGL_DestroySurface(m_displayObj, buffer.pbuffer());
         buffer = { };
     }
     if (m_failNextStatusCheck) {
@@ -448,14 +448,14 @@ bool GraphicsContextGLCocoa::bindNextDrawingBuffer()
         EGLSurface pbuffer = EGL_CreatePbufferFromClientBuffer(m_displayObj, EGL_IOSURFACE_ANGLE, surface->surface(), m_configObj, surfaceAttributes);
         if (!pbuffer)
             return false;
-        buffer = { WTFMove(surface), pbuffer };
+        buffer = IOSurfacePbuffer { WTFMove(surface), pbuffer };
     }
 
     auto [textureTarget, textureBinding] = drawingBufferTextureBindingPoint();
     ScopedRestoreTextureBinding restoreBinding(textureBinding, textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
     GL_BindTexture(textureTarget, m_texture);
-    if (!EGL_BindTexImage(m_displayObj, buffer.pbuffer, EGL_BACK_BUFFER)) {
-        EGL_DestroySurface(m_displayObj, buffer.pbuffer);
+    if (!EGL_BindTexImage(m_displayObj, buffer.pbuffer(), EGL_BACK_BUFFER)) {
+        EGL_DestroySurface(m_displayObj, buffer.pbuffer());
         buffer = { };
         return false;
     }
@@ -465,11 +465,11 @@ bool GraphicsContextGLCocoa::bindNextDrawingBuffer()
 void GraphicsContextGLCocoa::freeDrawingBuffers()
 {
     // Note: due to a ANGLE bug in ReleaseTexImage, the current context should be the context owning the pbuffer and the texture.
-    if (drawingBuffer())
-        EGL_ReleaseTexImage(m_displayObj, drawingBuffer().pbuffer, EGL_BACK_BUFFER);
+    if (auto& buffer = drawingBuffer())
+        EGL_ReleaseTexImage(m_displayObj, buffer.pbuffer(), EGL_BACK_BUFFER);
     for (auto& buffer : m_drawingBuffers) {
         if (buffer) {
-            EGL_DestroySurface(m_displayObj, buffer.pbuffer);
+            EGL_DestroySurface(m_displayObj, buffer.pbuffer());
             buffer = { };
         }
     }
@@ -751,7 +751,7 @@ GraphicsContextGLCV* GraphicsContextGLCocoa::cvContext()
 RefPtr<PixelBuffer> GraphicsContextGLCocoa::readCompositedResults()
 {
     auto& buffer = displayBuffer();
-    if (!buffer || buffer.surface->size() != getInternalFramebufferSize())
+    if (!buffer || buffer.size() != getInternalFramebufferSize())
         return nullptr;
     // Note: We are using GL to read the IOSurface. At the time of writing, there are no convinient
     // functions to convert the IOSurface pixel data to ImageData. The image data ends up being
@@ -762,7 +762,7 @@ RefPtr<PixelBuffer> GraphicsContextGLCocoa::readCompositedResults()
     auto [textureTarget, textureBinding] = drawingBufferTextureBindingPoint();
     ScopedRestoreTextureBinding restoreBinding(textureBinding, textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
     GL_BindTexture(textureTarget, texture);
-    if (!EGL_BindTexImage(m_displayObj, buffer.pbuffer, EGL_BACK_BUFFER))
+    if (!EGL_BindTexImage(m_displayObj, buffer.pbuffer(), EGL_BACK_BUFFER))
         return nullptr;
     GL_TexParameteri(textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     ScopedFramebuffer fbo;
@@ -772,7 +772,7 @@ RefPtr<PixelBuffer> GraphicsContextGLCocoa::readCompositedResults()
 
     auto result = readPixelsForPaintResults();
 
-    EGLBoolean releaseOk = EGL_ReleaseTexImage(m_displayObj, buffer.pbuffer, EGL_BACK_BUFFER);
+    EGLBoolean releaseOk = EGL_ReleaseTexImage(m_displayObj, buffer.pbuffer(), EGL_BACK_BUFFER);
     ASSERT_UNUSED(releaseOk, releaseOk);
     return result;
 }
@@ -781,17 +781,18 @@ RefPtr<PixelBuffer> GraphicsContextGLCocoa::readCompositedResults()
 
 RefPtr<VideoFrame> GraphicsContextGLCocoa::surfaceBufferToVideoFrame(SurfaceBuffer buffer)
 {
-    if (!makeContextCurrent())
-        return nullptr;
     if (buffer == SurfaceBuffer::DrawingBuffer) {
+        if (!makeContextCurrent())
+            return nullptr;
         prepareTexture();
         waitUntilWorkScheduled();
     }
+
     auto& source = surfaceBuffer(buffer);
-    if (!source || source.surface->size() != getInternalFramebufferSize())
+    if (!source || source.size() != getInternalFramebufferSize())
         return nullptr;
     // We will mirror and rotate the buffer explicitly. Thus the source being used is always a new one.
-    auto pixelBuffer = createCVPixelBuffer(source.surface->surface());
+    auto pixelBuffer = createCVPixelBuffer(source.surface()->surface());
     if (!pixelBuffer)
         return nullptr;
     // Mirror and rotate the pixel buffer explicitly, as WebRTC encoders cannot mirror.
@@ -823,25 +824,25 @@ void GraphicsContextGLCocoa::invalidateKnownTextureContent(GCGLuint texture)
         m_cv->invalidateKnownTextureContent(texture);
 }
 
-void GraphicsContextGLCocoa::withBufferAsNativeImage(SurfaceBuffer buffer, Function<void(NativeImage&)> func)
+RefPtr<NativeImage> GraphicsContextGLCocoa::bufferAsNativeImage(SurfaceBuffer buffer)
 {
     RetainPtr<CGContextRef> cgContext;
     RefPtr<NativeImage> image;
     if (contextAttributes().premultipliedAlpha) {
         // Use the IOSurface backed image directly
-        if (!makeContextCurrent())
-            return;
         if (buffer == SurfaceBuffer::DrawingBuffer) {
+            if (!makeContextCurrent())
+                return nullptr;
             prepareTexture();
             waitUntilWorkScheduled();
         }
         IOSurfacePbuffer& source = surfaceBuffer(buffer);
-        if (!source || source.surface->size() != getInternalFramebufferSize())
-            return;
-        cgContext = source.surface->createPlatformContext();
-        if (cgContext)
-            image = NativeImage::create(source.surface->createImage(cgContext.get()));
+        if (!source || source.size() != getInternalFramebufferSize())
+            return nullptr;
+        image = source.copyNativeImage();
     } else {
+        if (!makeContextCurrent())
+            return nullptr;
         // Since IOSurface-backed images only support premultiplied alpha, read
         // the image into a PixelBuffer which can be used to create a CGImage
         // that does the conversion.
@@ -853,15 +854,14 @@ void GraphicsContextGLCocoa::withBufferAsNativeImage(SurfaceBuffer buffer, Funct
         else
             pixelBuffer = readCompositedResults();
         if (!pixelBuffer)
-            return;
+            return nullptr;
         image = createNativeImageFromPixelBuffer(contextAttributes(), pixelBuffer.releaseNonNull());
     }
-
     if (!image)
-        return;
+        return nullptr;
 
     CGImageSetCachingFlags(image->platformImage().get(), kCGImageCachingTransient);
-    func(*image);
+    return image;
 }
 
 void GraphicsContextGLCocoa::insertFinishedSignalOrInvoke(Function<void()> signal)
@@ -901,6 +901,12 @@ bool GraphicsContextGLCocoa::copyTextureFromVideoFrame(VideoFrame& videoFrame, P
     return contextCV->copyVideoSampleToTexture(*videoFrameCV, texture, level, internalFormat, format, type, WebCore::GraphicsContextGL::FlipY(flipY));
 }
 #endif
+
+void GraphicsContextGLCocoa::prepareForDrawingBufferWrite()
+{
+    auto& buffer = drawingBuffer();
+    buffer.prepareForWrite();
+}
 
 }
 

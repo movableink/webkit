@@ -77,4 +77,32 @@ inline std::ostream& operator<<(std::ostream& os, const WebCore::FloatRect& valu
     return os << s.release();
 }
 
+inline std::ostream& operator<<(std::ostream& os, const WebCore::FloatPoint& value)
+{
+    TextStream s { TextStream::LineMode::SingleLine };
+    s << value;
+    return os << s.release();
+}
+
+inline std::ostream& operator<<(std::ostream& os, const WebCore::IntRect& value)
+{
+    TextStream s { TextStream::LineMode::SingleLine };
+    s << value;
+    return os << s.release();
+}
+
+inline std::ostream& operator<<(std::ostream& os, const WebCore::IntSize& value)
+{
+    TextStream s { TextStream::LineMode::SingleLine };
+    s << value;
+    return os << s.release();
+}
+
+inline std::ostream& operator<<(std::ostream& os, const WebCore::IntPoint& value)
+{
+    TextStream s { TextStream::LineMode::SingleLine };
+    s << value;
+    return os << s.release();
+}
+
 }

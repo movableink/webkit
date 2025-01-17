@@ -161,7 +161,6 @@ platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/clearkey/CDMClearKey.cpp
 platform/graphics/FontCascadeFonts.cpp
 platform/graphics/SourceBufferPrivate.cpp
-platform/graphics/angle/GraphicsContextGLANGLE.cpp
 platform/graphics/avfoundation/InbandTextTrackPrivateAVF.cpp
 platform/graphics/avfoundation/MediaPlayerPrivateAVFoundation.cpp
 platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.mm
