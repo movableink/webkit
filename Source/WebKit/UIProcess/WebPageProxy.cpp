@@ -6285,31 +6285,8 @@ void WebPageProxy::preferencesDidChange()
     // Preferences need to be updated during synchronous printing to make "print backgrounds" preference work when toggled from a print dialog checkbox.
     forEachWebContentProcess([&](auto& webProcess, auto pageID) {
         std::optional<uint64_t> sharedPreferencesVersion;
-        if (auto sharedPreferences = webProcess.updateSharedPreferencesForWebProcess(preferences().store())) {
+        if (auto sharedPreferences = webProcess.updateSharedPreferences(preferences().store()))
             sharedPreferencesVersion = sharedPreferences->version;
-            if (RefPtr networkProcess = websiteDataStore().networkProcessIfExists()) {
-                networkProcess->sharedPreferencesForWebProcessDidChange(webProcess, WTFMove(*sharedPreferences), [weakWebProcess = WeakPtr { webProcess }, syncedVersion = sharedPreferences->version]() {
-                    if (RefPtr webProcess = weakWebProcess.get())
-                        webProcess->didSyncSharedPreferencesForWebProcessWithNetworkProcess(syncedVersion);
-                });
-            }
-#if ENABLE(GPU_PROCESS)
-            if (RefPtr gpuProcess = webProcess.processPool().gpuProcess()) {
-                gpuProcess->sharedPreferencesForWebProcessDidChange(webProcess, WTFMove(*sharedPreferences), [weakWebProcess = WeakPtr { webProcess }, syncedVersion = sharedPreferences->version]() {
-                    if (RefPtr webProcess = weakWebProcess.get())
-                        webProcess->didSyncSharedPreferencesForWebProcessWithGPUProcess(syncedVersion);
-                });
-            }
-#endif
-#if ENABLE(MODEL_PROCESS)
-            if (RefPtr modelProcess = webProcess.processPool().modelProcess()) {
-                modelProcess->sharedPreferencesForWebProcessDidChange(webProcess, WTFMove(*sharedPreferences), [weakWebProcess = WeakPtr { webProcess }, syncedVersion = sharedPreferences->version]() {
-                    if (RefPtr webProcess = weakWebProcess.get())
-                        webProcess->didSyncSharedPreferencesForWebProcessWithModelProcess(syncedVersion);
-                });
-            }
-#endif
-        }
 
         if (m_isPerformingDOMPrintOperation) {
             ASSERT(!sharedPreferencesVersion);

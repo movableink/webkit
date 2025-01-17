@@ -485,7 +485,7 @@ void WebProcessProxy::initializeWebProcess(WebProcessCreationParameters&& parame
 void WebProcessProxy::initializePreferencesForGPUAndNetworkProcesses(const WebPageProxy& page)
 {
     if (!m_sharedPreferencesForWebProcess.version) {
-        updateSharedPreferencesForWebProcess(page.preferences().store());
+        updateSharedPreferences(page.preferences().store());
         ASSERT(m_sharedPreferencesForWebProcess.version);
     } else {
 #if ASSERT_ENABLED
@@ -2295,11 +2295,52 @@ void WebProcessProxy::enableMediaPlaybackIfNecessary()
 #endif
 }
 
-std::optional<SharedPreferencesForWebProcess> WebProcessProxy::updateSharedPreferencesForWebProcess(const WebPreferencesStore& preferencesStore)
+void WebProcessProxy::sharedPreferencesDidChange()
+{
+    enableMediaPlaybackIfNecessary();
+
+    auto currentVersion = m_sharedPreferencesForWebProcess.version;
+    if (m_sharedPreferencesVersionInNetworkProcess != currentVersion) {
+        RefPtr networkProcess = m_websiteDataStore ? m_websiteDataStore->networkProcessIfExists() : nullptr;
+        if (networkProcess) {
+            auto sharedPreferencesForWebProcess = m_sharedPreferencesForWebProcess;
+            networkProcess->sharedPreferencesForWebProcessDidChange(*this, WTFMove(sharedPreferencesForWebProcess), [weakThis = WeakPtr { this }, syncedVersion = currentVersion]() {
+                if (RefPtr process = weakThis.get())
+                    process->didSyncSharedPreferencesForWebProcessWithNetworkProcess(syncedVersion);
+            });
+        }
+    }
+
+#if ENABLE(GPU_PROCESS)
+    if (m_sharedPreferencesVersionInGPUProcess != currentVersion) {
+        if (RefPtr gpuProcess = processPool().gpuProcess()) {
+            auto sharedPreferencesForWebProcess = m_sharedPreferencesForWebProcess;
+            gpuProcess->sharedPreferencesForWebProcessDidChange(*this, WTFMove(sharedPreferencesForWebProcess), [weakThis = WeakPtr { this }, syncedVersion = currentVersion]() {
+                if (RefPtr process = weakThis.get())
+                    process->didSyncSharedPreferencesForWebProcessWithGPUProcess(syncedVersion);
+            });
+        }
+    }
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+    if (m_sharedPreferencesVersionInModelProcess != currentVersion) {
+        if (RefPtr modelProcess = webProcess.processPool().modelProcess()) {
+            auto sharedPreferencesForWebProcess = m_sharedPreferencesForWebProcess;
+            modelProcess->sharedPreferencesForWebProcessDidChange(*this, WTFMove(sharedPreferencesForWebProcess), [weakThis = WeakPtr { this }, syncedVersion = currentVersion]() {
+                if (RefPtr process = weakThis.get())
+                    process->didSyncSharedPreferencesForWebProcessWithModelProcess(syncedVersion);
+            });
+        }
+    }
+#endif
+}
+
+std::optional<SharedPreferencesForWebProcess> WebProcessProxy::updateSharedPreferences(const WebPreferencesStore& preferencesStore)
 {
     if (WebKit::updateSharedPreferencesForWebProcess(m_sharedPreferencesForWebProcess, preferencesStore)) {
         ++m_sharedPreferencesForWebProcess.version;
-        enableMediaPlaybackIfNecessary();
+        sharedPreferencesDidChange();
 
         return m_sharedPreferencesForWebProcess;
     }
@@ -2508,7 +2549,7 @@ void WebProcessProxy::endBackgroundActivityForFullscreenInput()
 
 void WebProcessProxy::establishRemoteWorkerContext(RemoteWorkerType workerType, const WebPreferencesStore& store, const Site& site, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, CompletionHandler<void()>&& completionHandler)
 {
-    updateSharedPreferencesForWebProcess(store);
+    updateSharedPreferences(store);
     WEBPROCESSPROXY_RELEASE_LOG(Loading, "establishRemoteWorkerContext: Started (workerType=%" PUBLIC_LOG_STRING ")", workerType == RemoteWorkerType::ServiceWorker ? "service" : "shared");
     markProcessAsRecentlyUsed();
     auto& remoteWorkerInformation = workerType == RemoteWorkerType::ServiceWorker ? m_serviceWorkerInformation : m_sharedWorkerInformation;
