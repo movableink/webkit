@@ -2247,6 +2247,9 @@ fast/webgpu/nocrash/fuzz-282052.html [ Pass Failure Slow ]
 [ Debug ] fast/webgpu/regression/repro_275624.html [ Skip ]
 [ Debug ] fast/webgpu/texture-supports-blending.html [ Pass Crash ]
 
+# renable once test reliability is improved webkit.org/b/286080
+fast/webgpu/nocrash/fuzz-284937.html [ Skip ]
+
 # Imported W3C HTML/DOM ref tests that are failing.
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/environment-changes/viewport-change.html [ Failure ]
 
