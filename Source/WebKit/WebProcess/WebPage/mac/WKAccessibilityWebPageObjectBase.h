@@ -24,6 +24,7 @@
  */
 
 #import <WebCore/FloatPoint.h>
+#import <WebCore/FrameIdentifier.h>
 #import <WebCore/LocalFrame.h>
 #import <WebCore/PageIdentifier.h>
 #import <wtf/Lock.h>
@@ -57,6 +58,7 @@ class AXCoreObject;
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     RetainPtr<id> m_parent;
     bool m_hasMainFramePlugin;
+    std::optional<WebCore::FrameIdentifier> m_frameID;
 }
 
 - (void)setWebPage:(NakedPtr<WebKit::WebPage>)page;
@@ -69,6 +71,7 @@ class AXCoreObject;
 - (void)setRemoteParent:(id)parent;
 - (void)setRemoteFrameOffset:(WebCore::IntPoint)offset;
 - (void)setHasMainFramePlugin:(bool)hasPlugin;
+- (void)setFrameIdentifier:(const WebCore::FrameIdentifier&)frameID;
 
 - (id)accessibilityRootObjectWrapper;
 - (id)accessibilityFocusedUIElement;

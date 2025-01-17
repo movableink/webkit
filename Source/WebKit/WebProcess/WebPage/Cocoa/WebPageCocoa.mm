@@ -470,7 +470,7 @@ void WebPage::bindRemoteAccessibilityFrames(int processIdentifier, WebCore::Fram
         return completionHandler({ }, 0);
     }
 
-    registerRemoteFrameAccessibilityTokens(processIdentifier, dataToken.span());
+    registerRemoteFrameAccessibilityTokens(processIdentifier, dataToken.span(), frameID);
 
     // Get our remote token data and send back to the RemoteFrame.
 #if PLATFORM(MAC)

@@ -437,13 +437,14 @@ void WebPage::updateRemotePageAccessibilityOffset(WebCore::FrameIdentifier frame
     [accessibilityRemoteObject() setRemoteFrameOffset:offset];
 }
 
-void WebPage::registerRemoteFrameAccessibilityTokens(pid_t pid, std::span<const uint8_t> elementToken)
+void WebPage::registerRemoteFrameAccessibilityTokens(pid_t pid, std::span<const uint8_t> elementToken, WebCore::FrameIdentifier frameID)
 {
     RetainPtr elementTokenData = toNSData(elementToken);
     auto remoteElement = [elementTokenData length] ? adoptNS([[NSAccessibilityRemoteUIElement alloc] initWithRemoteToken:elementTokenData.get()]) : nil;
 
     createMockAccessibilityElement(pid);
     [accessibilityRemoteObject() setRemoteParent:remoteElement.get()];
+    [accessibilityRemoteObject() setFrameIdentifier:frameID];
 }
 
 void WebPage::registerUIProcessAccessibilityTokens(std::span<const uint8_t> elementToken, std::span<const uint8_t> windowToken)

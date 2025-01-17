@@ -200,6 +200,11 @@ namespace ax = WebCore::Accessibility;
     m_parent = parent;
 }
 
+- (void)setFrameIdentifier:(const WebCore::FrameIdentifier&)frameID
+{
+    m_frameID = frameID;
+}
+
 - (id)accessibilityFocusedUIElement
 {
     return [[self accessibilityRootObjectWrapper] accessibilityFocusedUIElement];
@@ -211,12 +216,12 @@ namespace ax = WebCore::Accessibility;
         return nullptr;
 
     auto* page = m_page->corePage();
-    auto* remoteMainFrame = page ? dynamicDowncast<WebCore::RemoteFrame>(page->mainFrame()) : nullptr;
-    if (!remoteMainFrame)
-        return nullptr;
+    for (auto& rootFrame : page->rootFrames()) {
+        if (rootFrame->frameID() == m_frameID)
+            return rootFrame.ptr();
+    }
 
-    auto& tree = remoteMainFrame->tree();
-    return dynamicDowncast<WebCore::LocalFrame>(tree.firstChild());
+    return nullptr;
 }
 
 @end
