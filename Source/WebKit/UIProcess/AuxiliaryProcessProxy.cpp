@@ -89,6 +89,9 @@ AuxiliaryProcessProxy::AuxiliaryProcessProxy(ShouldTakeUIBackgroundAssertion sho
 
 AuxiliaryProcessProxy::~AuxiliaryProcessProxy()
 {
+    if (state() != State::Terminated)
+        platformStartConnectionTerminationWatchdog();
+
     protectedThrottler()->didDisconnectFromProcess();
 
     if (RefPtr connection = m_connection)
@@ -186,6 +189,9 @@ void AuxiliaryProcessProxy::connect()
 void AuxiliaryProcessProxy::terminate()
 {
     RELEASE_LOG(Process, "AuxiliaryProcessProxy::terminate: PID=%d", processID());
+
+    if (state() != State::Terminated)
+        platformStartConnectionTerminationWatchdog();
 
 #if PLATFORM(COCOA) && !USE(EXTENSIONKIT_PROCESS_TERMINATION)
     if (RefPtr connection = m_connection) {

@@ -1090,6 +1090,12 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     WebKit::NetworkProcessProxy::setSuspensionAllowedForTesting(allowed);
 }
 
+- (void)_forceNetworkProcessToTaskSuspendForTesting
+{
+    if (RefPtr networkProcess = _websiteDataStore->networkProcessIfExists())
+        networkProcess->protectedThrottler()->invalidateAllActivitiesAndDropAssertion();
+}
+
 - (BOOL)_networkProcessExists
 {
     return !!_websiteDataStore->networkProcessIfExists();

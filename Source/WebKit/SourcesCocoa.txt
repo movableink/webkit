@@ -451,7 +451,6 @@ UIProcess/Cocoa/WKTextExtractionUtilities.mm
 UIProcess/Cocoa/WKTextPlaceholder.mm
 UIProcess/Cocoa/WKTextSelectionRect.mm
 UIProcess/Cocoa/WKWebViewContentProviderRegistry.mm
-UIProcess/Cocoa/XPCConnectionTerminationWatchdog.mm
 
 
 UIProcess/Gamepad/cocoa/UIGamepadProviderCocoa.mm

@@ -367,9 +367,7 @@ static ASCIILiteral runningBoardDomainForAssertionType(ProcessAssertionType asse
     }
 }
 
-#if USE(EXTENSIONKIT)
-Lock ProcessAssertion::s_capabilityLock;
-#endif
+#if !USE(EXTENSIONKIT)
 
 ProcessAssertion::ProcessAssertion(pid_t pid, const String& reason, ProcessAssertionType assertionType, const String& environmentIdentifier)
     : m_assertionType(assertionType)
@@ -379,13 +377,16 @@ ProcessAssertion::ProcessAssertion(pid_t pid, const String& reason, ProcessAsser
     init(environmentIdentifier);
 }
 
-ProcessAssertion::ProcessAssertion(AuxiliaryProcessProxy& process, const String& reason, ProcessAssertionType assertionType)
+#else
+
+Lock ProcessAssertion::s_capabilityLock;
+
+ProcessAssertion::ProcessAssertion(pid_t pid, const String& reason, ProcessAssertionType assertionType, const String& environmentIdentifier, std::optional<ExtensionProcess>&& extensionProcess)
     : m_assertionType(assertionType)
-    , m_pid(process.processID())
+    , m_pid(pid)
     , m_reason(reason)
 {
-#if USE(EXTENSIONKIT)
-    if (process.extensionProcess()) {
+    if (extensionProcess) {
         ASCIILiteral runningBoardAssertionName = runningBoardNameForAssertionType(m_assertionType);
         ASCIILiteral runningBoardDomain = runningBoardDomainForAssertionType(m_assertionType);
         auto didInvalidateBlock = [weakThis = ThreadSafeWeakPtr { *this }, runningBoardAssertionName] () {
@@ -404,15 +405,16 @@ ProcessAssertion::ProcessAssertion(AuxiliaryProcessProxy& process, const String&
                     strongThis->processAssertionWillBeInvalidated();
             });
         };
-        m_capability = AssertionCapability { process.environmentIdentifier(), runningBoardDomain, runningBoardAssertionName, WTFMove(willInvalidateBlock), WTFMove(didInvalidateBlock) };
-        m_process = process.extensionProcess();
+        m_capability = AssertionCapability { environmentIdentifier, runningBoardDomain, runningBoardAssertionName, WTFMove(willInvalidateBlock), WTFMove(didInvalidateBlock) };
+        m_process = WTFMove(extensionProcess);
         if (m_capability && m_capability->hasPlatformCapability())
             return;
         RELEASE_LOG(ProcessSuspension, "%p - ProcessAssertion() Failed to create capability %s", this, runningBoardAssertionName.characters());
     }
-#endif
-    init(process.environmentIdentifier());
+    init(environmentIdentifier);
 }
+
+#endif // !USE(EXTENSIONKIT)
 
 void ProcessAssertion::init(const String& environmentIdentifier)
 {
@@ -543,13 +545,29 @@ bool ProcessAssertion::isValid() const
     return !m_wasInvalidated;
 }
 
-ProcessAndUIAssertion::ProcessAndUIAssertion(AuxiliaryProcessProxy& process, const String& reason, ProcessAssertionType assertionType)
-    : ProcessAssertion(process, reason, assertionType)
+
+
+#if !USE(EXTENSIONKIT)
+
+ProcessAndUIAssertion::ProcessAndUIAssertion(pid_t pid, const String& reason, ProcessAssertionType assertionType, const String& environmentIdentifier)
+    : ProcessAssertion(pid, reason, assertionType, environmentIdentifier)
 {
 #if PLATFORM(IOS_FAMILY)
     updateRunInBackgroundCount();
 #endif
 }
+
+#else
+
+ProcessAndUIAssertion::ProcessAndUIAssertion(pid_t pid, const String& reason, ProcessAssertionType assertionType, const String& environmentIdentifier, std::optional<ExtensionProcess>&& extensionProcess)
+    : ProcessAssertion(pid, reason, assertionType, environmentIdentifier, WTFMove(extensionProcess))
+{
+#if PLATFORM(IOS_FAMILY)
+    updateRunInBackgroundCount();
+#endif
+}
+
+#endif
 
 ProcessAndUIAssertion::~ProcessAndUIAssertion()
 {
