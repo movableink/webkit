@@ -171,6 +171,18 @@ macro popFloat64(reg)
     popv reg
 end
 
+# Call site tracking
+
+macro saveCallSiteIndex()
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
+    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
+    move PC, t1
+    subq t0, t1
+    storei t1, CallSiteIndex[cfr]
+end
+
 # Entering IPInt
 
 # PM = location in argumINT bytecode
@@ -334,13 +346,7 @@ end
     nextIPIntInstruction()
 
 instructionLabel(_throw)
-if X86_64
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    move PC, t1
-    subq t0, t1
-    storei t1, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     loadp JSWebAssemblyInstance::m_vm[wasmInstance], t0
     loadp VM::topEntryFrame[t0], t0
@@ -353,13 +359,7 @@ end
     jumpToException()
 
 instructionLabel(_rethrow)
-if X86_64
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    move PC, t1
-    subq t0, t1
-    storei t1, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     loadp JSWebAssemblyInstance::m_vm[wasmInstance], t0
     loadp VM::topEntryFrame[t0], t0
@@ -375,13 +375,7 @@ instructionLabel(_throw_ref)
     popQuad(a2)
     bieq a2, ValueNull, .throw_null_ref
 
-if X86_64
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    move PC, t1
-    subq t0, t1
-    storei t1, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     loadp JSWebAssemblyInstance::m_vm[wasmInstance], t0
     loadp VM::topEntryFrame[t0], t0
@@ -524,13 +518,7 @@ elsif X86_64
 end
 
 instructionLabel(_call)
-if X86_64
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    move PC, t1
-    subq t0, t1
-    storei t1, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     loadb IPInt::CallMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -550,13 +538,7 @@ end
     jmp .ipint_call_common
 
 instructionLabel(_call_indirect)
-if X86_64
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    move PC, t1
-    subq t0, t1
-    storei t1, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     loadb IPInt::CallIndirectMetadata::length[MC], t2
     advancePCByReg(t2)
@@ -580,13 +562,7 @@ end
     jmp _wasm_throw_from_slow_path_trampoline
 
 instructionLabel(_return_call)
-if X86_64
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    move PC, t1
-    subq t0, t1
-    storei t1, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     loadb IPInt::TailCallMetadata::length[MC], t0
     advancePCByReg(t0)
@@ -607,13 +583,7 @@ end
     jmp .ipint_tail_call_common
 
 instructionLabel(_return_call_indirect)
-if X86_64
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    move PC, t1
-    subq t0, t1
-    storei t1, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     loadb IPInt::TailCallIndirectMetadata::length[MC], t2
     advancePCByReg(t2)
@@ -633,6 +603,8 @@ end
     jmp .ipint_tail_call_common
 
 instructionLabel(_call_ref)
+    saveCallSiteIndex()
+
     move cfr, a1
     loadi IPInt::CallRefMetadata::typeIndex[MC], a2
     move sp, a3
@@ -651,13 +623,7 @@ instructionLabel(_call_ref)
     jmp _wasm_throw_from_slow_path_trampoline
 
 instructionLabel(_return_call_ref)
-if X86_64
-    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-end
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    move PC, t1
-    subq t0, t1
-    storei t1, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     loadb IPInt::TailCallRefMetadata::length[MC], t2
     advancePCByReg(t2)
