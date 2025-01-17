@@ -1257,6 +1257,15 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static waitForDataListSuggestionsToChangeVisibility(visible)
+    {
+        return new Promise(async resolve => {
+            while (visible != await this.isShowingDataListSuggestions())
+                continue;
+            resolve();
+        });
+    }
+
     static isShowingDateTimePicker()
     {
         return new Promise(resolve => {

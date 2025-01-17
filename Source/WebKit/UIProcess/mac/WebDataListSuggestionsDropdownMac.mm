@@ -398,15 +398,17 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
 {
     size_t size = _suggestions.size();
     NSInteger oldSelection = [_table selectedRow];
+    NSInteger newSelection = -1;
 
-    size_t newSelection;
-    if (oldSelection != -1) {
-        if (direction == "Up"_s)
-            newSelection = oldSelection ? (oldSelection - 1) : (size - 1);
-        else
-            newSelection = (oldSelection + 1) % size;
-    } else
+    if (oldSelection == -1)
         newSelection = (direction == "Up"_s) ? (size - 1) : 0;
+    else {
+        NSInteger adjustment = (direction == "Up"_s) ? -1 : 1;
+        newSelection = std::clamp<NSInteger>(oldSelection + adjustment, 0, size);
+    }
+
+    if (oldSelection == newSelection)
+        return;
 
     [_table selectRowIndexes:[NSIndexSet indexSetWithIndex:newSelection] byExtendingSelection:NO];
     [_table scrollRowToVisible:newSelection];

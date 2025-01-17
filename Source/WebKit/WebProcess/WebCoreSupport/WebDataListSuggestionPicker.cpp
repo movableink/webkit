@@ -46,6 +46,11 @@ WebDataListSuggestionPicker::~WebDataListSuggestionPicker() = default;
 
 void WebDataListSuggestionPicker::handleKeydownWithIdentifier(const String& key)
 {
+    if (key == "U+001B"_s) {
+        close();
+        return;
+    }
+
     RefPtr page = m_page.get();
     if (!page)
         return;
