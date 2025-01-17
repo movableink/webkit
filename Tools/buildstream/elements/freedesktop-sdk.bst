@@ -24,6 +24,8 @@ sources:
   path: patches/fdo-0011-GStreamer-Vendor-rtpfunnel-patch-scheduled-to-ship-i.patch
 - kind: patch
   path: patches/fdo-0012-GStreamer-Vendor-GstPad-patch-scheduled-to-ship-in-1.patch
+- kind: patch
+  path: patches/fdo-0013-ffmpeg-Bump-to-version-7.0.2.patch
 config:
   options:
     target_arch: '%{arch}'
