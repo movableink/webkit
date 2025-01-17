@@ -709,6 +709,7 @@ void Document::populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDa
     case ProcessSyncDataType::DocumentSecurityOrigin:
     case ProcessSyncDataType::DocumentURL:
     case ProcessSyncDataType::HasFullscreenElement:
+    case ProcessSyncDataType::HasInjectedUserScript:
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:
         break;
@@ -10667,31 +10668,6 @@ DOMTimerHoldingTank& Document::domTimerHoldingTank()
 }
 
 #endif
-
-bool Document::isRunningUserScripts() const
-{
-    if (RefPtr mainFrameDocument = protectedMainFrameDocument()) {
-        if (mainFrameDocument.get() == this)
-            return m_isRunningUserScripts;
-        return mainFrameDocument->isRunningUserScripts();
-    }
-
-    LOG_ONCE(SiteIsolation, "Unable to properly calculate Document::isRunningUserScripts() without access to the main frame document ");
-    return false;
-}
-
-void Document::setAsRunningUserScripts()
-{
-    if (isTopDocument()) {
-        m_isRunningUserScripts = true;
-        return;
-    }
-
-    if (RefPtr mainFrameDocument = protectedMainFrameDocument())
-        mainFrameDocument->setAsRunningUserScripts();
-    else
-        LOG_ONCE(SiteIsolation, "Unable to properly set Document::setAsRunningUserScripts() without access to the main frame document ");
-}
 
 void Document::didRejectSyncXHRDuringPageDismissal()
 {

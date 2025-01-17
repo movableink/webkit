@@ -1858,9 +1858,6 @@ public:
     PaintWorkletGlobalScope* paintWorkletGlobalScopeForName(const String& name);
     void setPaintWorkletGlobalScopeForName(const String& name, Ref<PaintWorkletGlobalScope>&&);
 
-    WEBCORE_EXPORT bool isRunningUserScripts() const;
-    WEBCORE_EXPORT void setAsRunningUserScripts();
-
     WEBCORE_EXPORT bool hitTest(const HitTestRequest&, HitTestResult&);
     bool hitTest(const HitTestRequest&, const HitTestLocation&, HitTestResult&);
 #if ASSERT_ENABLED

@@ -401,6 +401,9 @@ public:
     void setTopDocumentHasFullscreenElement(bool);
     WEBCORE_EXPORT bool topDocumentHasFullscreenElement();
 
+    bool hasInjectedUserScript();
+    WEBCORE_EXPORT void setHasInjectedUserScript();
+
     WEBCORE_EXPORT void updateProcessSyncData(const ProcessSyncData&);
     WEBCORE_EXPORT void updateTopDocumentSyncData(Ref<DocumentSyncData>&&);
 

@@ -757,12 +757,15 @@ void LocalFrame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserS
     RefPtr document = this->document();
     if (!document)
         return;
+    RefPtr page = document->protectedPage();
+    if (!page)
+        return;
     if (script.injectedFrames() == UserContentInjectedFrames::InjectInTopFrameOnly && !isMainFrame())
         return;
     if (!UserContentURLPattern::matchesPatterns(document->url(), script.allowlist(), script.blocklist()))
         return;
 
-    document->setAsRunningUserScripts();
+    page->setHasInjectedUserScript();
     loader->client().willInjectUserScript(world);
     checkedScript()->evaluateInWorldIgnoringException(ScriptSourceCode(script.source(), JSC::SourceTaintedOrigin::Untainted, URL(script.url())), world);
 }

@@ -887,6 +887,20 @@ bool Page::topDocumentHasFullscreenElement()
     return m_topDocumentSyncData->hasFullscreenElement;
 }
 
+bool Page::hasInjectedUserScript()
+{
+    return m_topDocumentSyncData->hasInjectedUserScript;
+}
+
+void Page::setHasInjectedUserScript()
+{
+    if (m_topDocumentSyncData->hasInjectedUserScript)
+        return;
+
+    m_topDocumentSyncData->hasInjectedUserScript = true;
+    processSyncClient().broadcastHasInjectedUserScriptToOtherProcesses(true);
+}
+
 void Page::updateProcessSyncData(const ProcessSyncData& data)
 {
     switch (data.type) {
@@ -894,6 +908,7 @@ void Page::updateProcessSyncData(const ProcessSyncData& data)
     case ProcessSyncDataType::DocumentSecurityOrigin:
     case ProcessSyncDataType::DocumentURL:
     case ProcessSyncDataType::HasFullscreenElement:
+    case ProcessSyncDataType::HasInjectedUserScript:
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:
 #if ENABLE(DOM_AUDIO_SESSION)

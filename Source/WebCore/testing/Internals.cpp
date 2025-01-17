@@ -6089,7 +6089,8 @@ void Internals::setQuickLookPassword(const String& password)
 
 void Internals::setAsRunningUserScripts(Document& document)
 {
-    document.setAsRunningUserScripts();
+    if (RefPtr page = document.protectedPage())
+        page->setHasInjectedUserScript();
 }
 
 #if ENABLE(WEBGL)
