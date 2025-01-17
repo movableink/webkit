@@ -283,7 +283,7 @@ static size_t parseDouble(std::span<const CharacterType> string, char terminator
 }
 
 template <typename CharacterType>
-static std::optional<uint8_t> parseColorIntOrPercentage(std::span<const CharacterType>& string, char terminator, CSSUnitType& expectedUnitType)
+static std::optional<uint8_t> parseColorIntOrPercentage(std::span<const CharacterType>& string, std::optional<char> consumableTerminator, CSSUnitType& expectedUnitType)
 {
     auto current = string;
     double localValue = 0;
@@ -340,7 +340,7 @@ static std::optional<uint8_t> parseColorIntOrPercentage(std::span<const Characte
 
     skipWhile<isASCIIWhitespace>(current);
 
-    if (!skipExactly(current, terminator))
+    if (consumableTerminator && !skipExactly(current, *consumableTerminator))
         return std::nullopt;
 
     string = current;
@@ -611,44 +611,45 @@ static std::optional<SRGBA<uint8_t>> parseNumericColor(std::span<const Character
             return *hexColor;
     }
 
-    // FIXME: rgb() and rgba() are now synonyms, so we should collapse these two clauses together. webkit.org/b/276761
-    if (mightBeRGBA(characters)) {
+    if (mightBeRGB(characters) || mightBeRGBA(characters)) {
         auto expectedUnitType = CSSUnitType::CSS_UNKNOWN;
+        auto current = mightBeRGBA(characters) ? characters.subspan(5) : characters.subspan(4);
 
-        auto current = characters.subspan(5);
+        // Red and green will both terminate with ','.
         auto red = parseColorIntOrPercentage(current, ',', expectedUnitType);
         if (!red)
             return std::nullopt;
         auto green = parseColorIntOrPercentage(current, ',', expectedUnitType);
         if (!green)
             return std::nullopt;
-        auto blue = parseColorIntOrPercentage(current, ',', expectedUnitType);
+
+        // Blue may terminate with ',' or ')', but do not consume either terminator.
+        auto blue = parseColorIntOrPercentage(current, std::nullopt, expectedUnitType);
         if (!blue)
             return std::nullopt;
-        auto alpha = parseRGBAlphaValue(current, ')');
-        if (!alpha)
+        if (current.empty())
             return std::nullopt;
-        if (!current.empty())
-            return std::nullopt;
-        return SRGBA<uint8_t> { *red, *green, *blue, *alpha };
-    }
 
-    if (mightBeRGB(characters)) {
-        auto expectedUnitType = CSSUnitType::CSS_UNKNOWN;
+        // Finish parsing rgb if no alpha value.
+        if (current.front() == ')') {
+            consume(current);
+            if (!current.empty())
+                return std::nullopt;
+            return SRGBA<uint8_t> { *red, *green, *blue };
+        }
 
-        auto current = characters.subspan(4);
-        auto red = parseColorIntOrPercentage(current, ',', expectedUnitType);
-        if (!red)
-            return std::nullopt;
-        auto green = parseColorIntOrPercentage(current, ',', expectedUnitType);
-        if (!green)
-            return std::nullopt;
-        auto blue = parseColorIntOrPercentage(current, ')', expectedUnitType);
-        if (!blue)
-            return std::nullopt;
-        if (!current.empty())
-            return std::nullopt;
-        return SRGBA<uint8_t> { *red, *green, *blue };
+        // Parse alpha value if present.
+        if (current.front() == ',') {
+            consume(current);
+            auto alpha = parseRGBAlphaValue(current, ')');
+            if (!alpha)
+                return std::nullopt;
+            if (!current.empty())
+                return std::nullopt;
+            return SRGBA<uint8_t> { *red, *green, *blue, *alpha };
+        }
+
+        return std::nullopt;
     }
 
     // hsl() and hsla() are synonyms.
