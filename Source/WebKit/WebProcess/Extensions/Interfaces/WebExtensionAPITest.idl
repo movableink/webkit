@@ -34,9 +34,6 @@
     // Notifies that test passed.
     [NeedsScriptContext] void notifyPass([Optional] DOMString message);
 
-    // Yields the running of the extension back to the test harness.
-    [NeedsScriptContext] void yield([Optional] DOMString message);
-
     // Sends a message to the test harness.
     [NeedsScriptContext] void sendMessage(DOMString message, [Optional, ValuesAllowed] any argument);
 

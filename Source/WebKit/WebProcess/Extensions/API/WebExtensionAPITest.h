@@ -44,8 +44,6 @@ public:
     void notifyFail(JSContextRef, NSString *message);
     void notifyPass(JSContextRef, NSString *message);
 
-    void yield(JSContextRef, NSString *message);
-
     void sendMessage(JSContextRef, NSString *message, JSValue *argument);
     WebExtensionAPIEvent& onMessage();
 

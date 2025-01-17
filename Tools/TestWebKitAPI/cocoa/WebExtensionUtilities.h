@@ -68,8 +68,6 @@ using CocoaColor = UIColor;
 - (void)focusWindow:(TestWebExtensionWindow *)window;
 - (void)closeWindow:(TestWebExtensionWindow *)window;
 
-@property (nonatomic, readonly, strong) NSString *yieldMessage;
-
 - (void)sendTestMessage:(NSString *)message;
 - (void)sendTestMessage:(NSString *)message withArgument:(id)argument;
 
@@ -176,10 +174,9 @@ bool compareColors(CocoaColor *, CocoaColor *);
 
 #endif
 
-RetainPtr<TestWebExtensionManager> loadAndRunExtension(WKWebExtension *, WKWebExtensionControllerConfiguration * = nil);
-RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSDictionary *manifest, NSDictionary *resources, WKWebExtensionControllerConfiguration * = nil);
-RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSDictionary *resources, WKWebExtensionControllerConfiguration * = nil);
-RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSURL *baseURL, WKWebExtensionControllerConfiguration * = nil);
+RetainPtr<TestWebExtensionManager> parseExtension(NSDictionary *manifest, NSDictionary *resources, WKWebExtensionControllerConfiguration * = nil);
+RetainPtr<TestWebExtensionManager> loadExtension(NSDictionary *manifest, NSDictionary *resources, WKWebExtensionControllerConfiguration * = nil);
+void loadAndRunExtension(NSDictionary *manifest, NSDictionary *resources, WKWebExtensionControllerConfiguration * = nil);
 
 } // namespace TestWebKitAPI::Util
 

@@ -140,10 +140,7 @@ TEST(WKWebExtensionAPIWindows, GetCurrentFromOptionsPage)
         @"options.js": optionsScript
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager load];
+    auto manager = Util::loadExtension(windowsManifest, resources);
 
     [manager.get().defaultWindow openNewTab];
 
@@ -175,18 +172,15 @@ TEST(WKWebExtensionAPIWindows, GetCurrentWindowAfterTabMove)
         @"  browser.test.notifyPass()",
         @"})",
 
-        @"browser.test.yield('Move Tab')",
+        @"browser.test.sendMessage('Move Tab')",
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     auto *newTab = [manager.get().defaultWindow openNewTab];
     auto *newWindow = [manager openNewWindow];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Move Tab");
+    [manager runUntilTestMessage:@"Move Tab"];
 
     [newWindow moveTab:newTab toIndex:0];
 
@@ -213,8 +207,7 @@ TEST(WKWebExtensionAPIWindows, GetLastFocused)
         @"browser.test.notifyPass();"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     manager.get().internalDelegate.focusedWindow = ^id<WKWebExtensionWindow>(WKWebExtensionContext *) {
         return nil;
@@ -234,12 +227,9 @@ TEST(WKWebExtensionAPIWindows, GetLastFocusedWithPrivateAccess)
         @"browser.test.notifyPass()",
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     manager.get().context.hasAccessToPrivateData = YES;
-
-    [manager load];
 
     auto *privateWindow = [manager openNewWindowUsingPrivateBrowsing:YES];
     [manager focusWindow:privateWindow];
@@ -258,12 +248,9 @@ TEST(WKWebExtensionAPIWindows, GetLastFocusedWithoutPrivateAccess)
         @"browser.test.notifyPass()",
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     manager.get().context.hasAccessToPrivateData = NO;
-
-    [manager load];
 
     auto *privateWindow = [manager openNewWindowUsingPrivateBrowsing:YES];
     [manager focusWindow:privateWindow];
@@ -294,8 +281,7 @@ TEST(WKWebExtensionAPIWindows, GetAll)
         @"browser.test.notifyPass();"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     EXPECT_FALSE(manager.get().context.hasAccessToPrivateData);
 
@@ -344,8 +330,7 @@ TEST(WKWebExtensionAPIWindows, GetAllWithPrivateAccess)
         @"browser.test.notifyPass();"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     manager.get().context.hasAccessToPrivateData = YES;
 
@@ -384,15 +369,12 @@ TEST(WKWebExtensionAPIWindows, CreatedEvent)
 
         @"});",
 
-        @"browser.test.yield('Open Window');"
+        @"browser.test.sendMessage('Open Window');"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Open Window");
+    [manager runUntilTestMessage:@"Open Window"];
 
     [manager openNewWindow];
     [manager run];
@@ -407,7 +389,7 @@ TEST(WKWebExtensionAPIWindows, FocusChangedEvent)
         @"  if (windowId !== browser.windows.WINDOW_ID_NONE) {",
         @"    if (!focusedTwice) {",
         @"      browser.test.assertEq(typeof windowId, 'number', 'The window id should be a number when a window is focused');",
-        @"      browser.test.yield('Focus None');",
+        @"      browser.test.sendMessage('Focus None');",
         @"      focusedTwice = true;",
         @"    } else {",
         @"      browser.test.assertEq(typeof windowId, 'number', 'The window id should be a number when a window is focused again');",
@@ -415,37 +397,30 @@ TEST(WKWebExtensionAPIWindows, FocusChangedEvent)
         @"    }",
         @"  } else {",
         @"    browser.test.assertEq(windowId, browser.windows.WINDOW_ID_NONE, 'The window id should be WINDOW_ID_NONE when nil is focused');",
-        @"    browser.test.yield('Focus Window Again');",
+        @"    browser.test.sendMessage('Focus Window Again');",
         @"  }",
         @"});",
 
-        @"browser.test.yield('Focus Window');"
+        @"browser.test.sendMessage('Focus Window');"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     auto *windowOne = manager.get().defaultWindow;
-
-    [manager load];
-
     auto *windowTwo = [manager openNewWindow];
 
-    [manager run];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Focus Window");
+    [manager runUntilTestMessage:@"Focus Window"];
 
     [manager focusWindow:windowOne];
-    [manager run];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Focus None");
+    [manager runUntilTestMessage:@"Focus None"];
 
     [manager focusWindow:nil];
-    [manager run];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Focus Window Again");
+    [manager runUntilTestMessage:@"Focus Window Again"];
 
     [manager focusWindow:windowTwo];
+
     [manager run];
 }
 
@@ -458,20 +433,17 @@ TEST(WKWebExtensionAPIWindows, RemovedEvent)
         @"  browser.test.notifyPass();",
         @"});",
 
-        @"browser.test.yield('Close Window');"
+        @"browser.test.sendMessage('Close Window');"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager load];
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     [manager openNewWindow];
-    [manager run];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Close Window");
+    [manager runUntilTestMessage:@"Close Window"];
 
     [manager closeWindow:manager.get().defaultWindow];
+
     [manager run];
 }
 
@@ -488,15 +460,12 @@ TEST(WKWebExtensionAPIWindows, RemoveListenerDuringEvent)
 
         @"browser.test.assertTrue(browser.windows.onCreated.hasListener(windowListener), 'Listener should be registered')",
 
-        @"browser.test.yield('Open Window')"
+        @"browser.test.sendMessage('Open Window')"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Open Window");
+    [manager runUntilTestMessage:@"Open Window"];
 
     [manager openNewWindow];
     [manager run];
@@ -541,8 +510,7 @@ TEST(WKWebExtensionAPIWindows, Create)
         @"browser.test.notifyPass()"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     auto originalOpenNewWindow = manager.get().internalDelegate.openNewWindow;
 
@@ -569,7 +537,7 @@ TEST(WKWebExtensionAPIWindows, Create)
     EXPECT_FALSE(manager.get().context.hasAccessToPrivateData);
     EXPECT_EQ(manager.get().windows.count, 1lu);
 
-    [manager loadAndRun];
+    [manager run];
 
     EXPECT_EQ(manager.get().windows.count, 2lu);
 }
@@ -596,8 +564,7 @@ TEST(WKWebExtensionAPIWindows, CreateWithRelativeURL)
         @"browser.test.notifyPass()"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript, @"test.html": @"Hello world!" }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript, @"test.html": @"Hello world!" });
 
     auto originalOpenNewWindow = manager.get().internalDelegate.openNewWindow;
 
@@ -610,7 +577,7 @@ TEST(WKWebExtensionAPIWindows, CreateWithRelativeURL)
 
     EXPECT_EQ(manager.get().windows.count, 1lu);
 
-    [manager loadAndRun];
+    [manager run];
 
     EXPECT_EQ(manager.get().windows.count, 2lu);
 }
@@ -643,8 +610,7 @@ TEST(WKWebExtensionAPIWindows, CreateWithRelativeURLs)
         @"browser.test.notifyPass()"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript, @"one.html": @"Hello one!", @"two.html": @"Hello two!" }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript, @"one.html": @"Hello one!", @"two.html": @"Hello two!" });
 
     auto originalOpenNewWindow = manager.get().internalDelegate.openNewWindow;
 
@@ -658,7 +624,7 @@ TEST(WKWebExtensionAPIWindows, CreateWithRelativeURLs)
 
     EXPECT_EQ(manager.get().windows.count, 1lu);
 
-    [manager loadAndRun];
+    [manager run];
 
     EXPECT_EQ(manager.get().windows.count, 2lu);
 }
@@ -681,13 +647,12 @@ TEST(WKWebExtensionAPIWindows, CreateIncognitoWithoutPrivateAccess)
         @"browser.test.notifyPass();"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     EXPECT_FALSE(manager.get().context.hasAccessToPrivateData);
     EXPECT_EQ(manager.get().windows.count, 1lu);
 
-    [manager loadAndRun];
+    [manager run];
 
     EXPECT_EQ(manager.get().windows.count, 2lu);
 }
@@ -726,14 +691,13 @@ TEST(WKWebExtensionAPIWindows, CreateIncognitoWithPrivateAccess)
         @"browser.test.notifyPass()"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     manager.get().context.hasAccessToPrivateData = YES;
 
     EXPECT_EQ(manager.get().windows.count, 1lu);
 
-    [manager loadAndRun];
+    [manager run];
 
     EXPECT_EQ(manager.get().windows.count, 2lu);
 }
@@ -811,8 +775,7 @@ TEST(WKWebExtensionAPIWindows, RemoveUnsupported)
         @"browser.test.notifyPass()"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:windowsManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(windowsManifest, @{ @"background.js": backgroundScript });
 
     manager.get().context.unsupportedAPIs = [NSSet setWithObject:@"browser.windows.remove"];
 

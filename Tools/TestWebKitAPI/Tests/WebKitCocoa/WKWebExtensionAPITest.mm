@@ -54,15 +54,12 @@ TEST(WKWebExtensionAPITest, MessageEvent)
         @"  browser.test.notifyPass()",
         @"})",
 
-        @"browser.test.yield('Send Test Message')"
+        @"browser.test.sendMessage('Send Test Message')"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Send Test Message");
+    [manager runUntilTestMessage:@"Send Test Message"];
 
     [manager sendTestMessage:@"Test" withArgument:@{ @"key": @"value" }];
 
@@ -82,10 +79,8 @@ TEST(WKWebExtensionAPITest, MessageEventWithSendMessageReply)
         @"browser.test.sendMessage('Ready')",
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
 
-    [manager load];
     [manager runUntilTestMessage:@"Ready"];
     [manager sendTestMessage:@"Test"];
     [manager runUntilTestMessage:@"Received"];
@@ -97,10 +92,7 @@ TEST(WKWebExtensionAPITest, SendMessage)
         @"browser.test.sendMessage('Test', { key: 'value' });"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager load];
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
 
     id receivedMessage = [manager runUntilTestMessage:@"Test"];
     EXPECT_NS_EQUAL(receivedMessage, @{ @"key": @"value" });
@@ -114,10 +106,7 @@ TEST(WKWebExtensionAPITest, SendMessageMultipleTimes)
         @"browser.test.sendMessage('Test', { key: 'Three' });"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager load];
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
 
     id firstMessage = [manager runUntilTestMessage:@"Test"];
     EXPECT_NS_EQUAL(firstMessage, @{ @"key": @"One" });
@@ -137,10 +126,7 @@ TEST(WKWebExtensionAPITest, SendMessageOutOfOrder)
         @"browser.test.sendMessage('Message 3', { key: 'Three' });"
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager load];
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
 
     id secondMessage = [manager runUntilTestMessage:@"Message 2"];
     EXPECT_NS_EQUAL(secondMessage, @{ @"key": @"Two" });

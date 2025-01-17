@@ -108,8 +108,7 @@ TEST(WKWebExtensionAPILocalization, Errors)
         @"browser.test.notifyPass()",
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:@{ @"background.js": backgroundScript, @"_locales/en/messages.json": messages }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(localizationManifest, @{ @"background.js": backgroundScript, @"_locales/en/messages.json": messages });
 
     // Set a base URL so it is a known value and not the default random one.
     [WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
@@ -160,8 +159,7 @@ TEST(WKWebExtensionAPILocalization, i18n)
         @"browser.test.notifyPass()",
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:@{ @"background.js": backgroundScript, @"_locales/en/messages.json": messages }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(localizationManifest, @{ @"background.js": backgroundScript, @"_locales/en/messages.json": messages });
 
     // Set a base URL so it is a known value and not the default random one.
     [WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
@@ -254,8 +252,7 @@ TEST(WKWebExtensionAPILocalization, i18nWithFallback)
         @"_locales/en_US/messages.json": regionalMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(manifest, resources);
 
     // Set a base URL so it is a known value and not the default random one.
     [WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
@@ -301,8 +298,7 @@ TEST(WKWebExtensionAPILocalization, i18nWithoutMessages)
         @"browser.test.notifyPass()",
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(localizationManifest, @{ @"background.js": backgroundScript });
 
     // Set a base URL so it is a known value and not the default random one.
     [WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
@@ -362,8 +358,7 @@ TEST(WKWebExtensionAPILocalization, i18nWithoutDefaultLocale)
         @"browser.test.notifyPass()",
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifestWithoutLocale resources:@{ @"background.js": backgroundScript }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(manifestWithoutLocale, @{ @"background.js": backgroundScript });
 
     // Set a base URL so it is a known value and not the default random one.
     [WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
@@ -472,8 +467,7 @@ TEST(WKWebExtensionAPILocalization, Placeholders)
         @"browser.test.notifyPass()",
     ]);
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:@{ @"background.js": backgroundScript, @"_locales/en/messages.json": localizationDictionary }]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(localizationManifest, @{ @"background.js": backgroundScript, @"_locales/en/messages.json": localizationDictionary });
 
     // Set a base URL so it is a known value and not the default random one.
     [WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
@@ -485,7 +479,7 @@ TEST(WKWebExtensionAPILocalization, Placeholders)
 TEST(WKWebExtensionAPILocalization, CSSLocalization)
 {
     auto *backgroundScript = Util::constructScript(@[
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *htmlContent = @"<link rel='stylesheet' href='test.css'><script src='test.js'></script>";
@@ -517,16 +511,14 @@ TEST(WKWebExtensionAPILocalization, CSSLocalization)
         @"_locales/en/messages.json": messages
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(localizationManifest, resources);
 
     // Set a base URL so it is a known value and not the default random one.
     [WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
     manager.get().context.baseURL = [NSURL URLWithString:baseURLString];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager load];
+    [manager runUntilTestMessage:@"Load Tab"];
 
     auto *testPageURL = [NSURL URLWithString:@"test.html" relativeToURL:manager.get().context.baseURL];
     [manager.get().defaultTab changeWebViewIfNeededForURL:testPageURL forExtensionContext:manager.get().context];
@@ -562,7 +554,7 @@ TEST(WKWebExtensionAPILocalization, CSSLocalizationInContentScript)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *contentStyleSheet = Util::constructScript(@[
@@ -591,8 +583,7 @@ TEST(WKWebExtensionAPILocalization, CSSLocalizationInContentScript)
         @"_locales/en/messages.json": messages
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(manifest, resources);
 
     auto *urlRequest = server.requestWithLocalhost();
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
@@ -601,9 +592,8 @@ TEST(WKWebExtensionAPILocalization, CSSLocalizationInContentScript)
     [WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
     manager.get().context.baseURL = [NSURL URLWithString:baseURLString];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager load];
+    [manager runUntilTestMessage:@"Load Tab"];
 
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
@@ -640,7 +630,7 @@ TEST(WKWebExtensionAPILocalization, CSSLocalizationInRegisteredContentScript)
         @"  js: ['content.js']",
         @"}])",
 
-        @"browser.test.yield('Load Tab')"
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *contentStyleSheet = Util::constructScript(@[
@@ -669,8 +659,7 @@ TEST(WKWebExtensionAPILocalization, CSSLocalizationInRegisteredContentScript)
         @"_locales/en/messages.json": messages
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::parseExtension(localizationManifest, resources);
 
     auto *urlRequest = server.requestWithLocalhost();
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
@@ -679,9 +668,8 @@ TEST(WKWebExtensionAPILocalization, CSSLocalizationInRegisteredContentScript)
     [WKWebExtensionMatchPattern registerCustomURLScheme:@"test-extension"];
     manager.get().context.baseURL = [NSURL URLWithString:baseURLString];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Tab");
+    [manager load];
+    [manager runUntilTestMessage:@"Load Tab"];
 
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
@@ -728,10 +716,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseSimplified)
         @"_locales/zh_TW/messages.json": traditionalChineseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseSimplifiedOnly)
@@ -766,10 +751,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseSimplifiedOnly)
         @"_locales/zh_CN/messages.json": traditionalChineseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseSimplifiedScript)
@@ -812,10 +794,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseSimplifiedScript)
         @"_locales/zh_Hant/messages.json": traditionalChineseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseTraditional)
@@ -858,10 +837,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseTraditional)
         @"_locales/zh_TW/messages.json": traditionalChineseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseSimplifiedInTaiwan)
@@ -904,10 +880,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseSimplifiedInTaiwan)
         @"_locales/zh_TW/messages.json": traditionalChineseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseTraditionalInChina)
@@ -950,10 +923,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseTraditionalInChina)
         @"_locales/zh_TW/messages.json": traditionalChineseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseSimplifiedInHongKong)
@@ -1004,10 +974,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseSimplifiedInHongKong)
         @"_locales/zh_HK/messages.json": cantoneseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseTraditionalOnly)
@@ -1042,10 +1009,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseTraditionalOnly)
         @"_locales/zh_TW/messages.json": traditionalChineseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseTraditionalScript)
@@ -1088,10 +1052,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseTraditionalScript)
         @"_locales/zh_Hant/messages.json": traditionalChineseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseLanguageFallback)
@@ -1135,10 +1096,7 @@ TEST(WKWebExtensionAPILocalization, i18nChineseLanguageFallback)
         @"_locales/zh_CN/messages.json": simplifiedChineseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nChineseTraditionalFallback)
@@ -1249,10 +1207,7 @@ TEST(WKWebExtensionAPILocalization, i18nPortugueseBrazilian)
         @"_locales/pt_BR/messages.json": brazilianPortugueseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nPortugueseEuropean)
@@ -1287,10 +1242,7 @@ TEST(WKWebExtensionAPILocalization, i18nPortugueseEuropean)
         @"_locales/pt_PT/messages.json": europeanPortugueseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nPortugueseUnitedStates)
@@ -1325,10 +1277,7 @@ TEST(WKWebExtensionAPILocalization, i18nPortugueseUnitedStates)
         @"_locales/pt_PT/messages.json": europeanPortugueseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nPortugueseUnitedStatesFallbackToBrazilian)
@@ -1371,10 +1320,7 @@ TEST(WKWebExtensionAPILocalization, i18nPortugueseUnitedStatesFallbackToBrazilia
         @"_locales/pt_PT/messages.json": europeanPortugueseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nPortugueseUnitedStatesFallbackToGeneric)
@@ -1417,10 +1363,7 @@ TEST(WKWebExtensionAPILocalization, i18nPortugueseUnitedStatesFallbackToGeneric)
         @"_locales/pt_PT/messages.json": europeanPortugueseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nPortugueseLanguageFallback)
@@ -1464,10 +1407,7 @@ TEST(WKWebExtensionAPILocalization, i18nPortugueseLanguageFallback)
         @"_locales/pt_BR/messages.json": brazilianPortugueseMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nSpanishLatinAmerica)
@@ -1510,10 +1450,7 @@ TEST(WKWebExtensionAPILocalization, i18nSpanishLatinAmerica)
         @"_locales/es_ES/messages.json": castilianSpanishMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 
@@ -1557,10 +1494,7 @@ TEST(WKWebExtensionAPILocalization, i18nSpanishMexico)
         @"_locales/es_ES/messages.json": castilianSpanishMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nSpanishSpain)
@@ -1603,10 +1537,7 @@ TEST(WKWebExtensionAPILocalization, i18nSpanishSpain)
         @"_locales/es_419/messages.json": latinAmericanSpanishMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 TEST(WKWebExtensionAPILocalization, i18nSwedishDefaultToEnglish)
@@ -1637,10 +1568,7 @@ TEST(WKWebExtensionAPILocalization, i18nSwedishDefaultToEnglish)
         @"_locales/en/messages.json": defaultMessages,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:localizationManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
-
-    [manager loadAndRun];
+    Util::loadAndRunExtension(localizationManifest, resources);
 }
 
 } // namespace TestWebKitAPI
