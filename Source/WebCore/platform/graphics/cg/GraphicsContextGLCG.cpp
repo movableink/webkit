@@ -46,6 +46,7 @@
 
 #include <wtf/RetainPtr.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/cf/VectorCF.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -468,7 +469,7 @@ bool GraphicsContextGLImageExtractor::extractImage(bool premultiplyAlpha, bool i
     if (!m_pixelData)
         return false;
 
-    m_imagePixelData = CFDataGetBytePtr(m_pixelData.get());
+    m_imagePixelData = span(m_pixelData.get());
 
     unsigned srcUnpackAlignment = 0;
     size_t bytesPerRow = CGImageGetBytesPerRow(decodedImage->platformImage().get());
@@ -484,9 +485,9 @@ bool GraphicsContextGLImageExtractor::extractImage(bool premultiplyAlpha, bool i
     // but it would premultiply the alpha channel as a side effect.
     // Prefer to mannually Convert 16bit per-component formats to RGBA8 formats instead.
     if (bitsPerComponent == 16) {
-        m_formalizedRGBA8Data = makeUniqueArray<uint8_t>(Checked<size_t>(m_imageWidth) * m_imageHeight * 4U);
-        const uint16_t* source = reinterpret_cast<const uint16_t*>(m_imagePixelData);
-        uint8_t* destination = m_formalizedRGBA8Data.get();
+        m_formalizedRGBA8Data = MallocSpan<uint8_t>::malloc(Checked<size_t>(m_imageWidth) * m_imageHeight * 4U);
+        const uint16_t* source = reinterpret_cast<const uint16_t*>(m_imagePixelData.data());
+        uint8_t* destination = m_formalizedRGBA8Data.mutableSpan().data();
         const ptrdiff_t srcStrideInElements = bytesPerRow / sizeof(uint16_t);
         const ptrdiff_t dstStrideInElements = 4 * m_imageWidth;
         for (unsigned i =0; i < m_imageHeight; i++) {
@@ -494,7 +495,7 @@ bool GraphicsContextGLImageExtractor::extractImage(bool premultiplyAlpha, bool i
             source += srcStrideInElements;
             destination += dstStrideInElements;
         }
-        m_imagePixelData = m_formalizedRGBA8Data.get();
+        m_imagePixelData = m_formalizedRGBA8Data.span();
         m_imageSourceFormat = DataFormat::RGBA8;
         m_imageSourceUnpackAlignment = 1;
     }

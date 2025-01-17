@@ -30,6 +30,7 @@
 #include "FontRenderOptions.h"
 #include "IntRect.h"
 #include "PixelBuffer.h"
+#include "SkiaSpanExtras.h"
 #include <skia/core/SkPixmap.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -76,16 +77,6 @@ RefPtr<NativeImage> ImageBufferSkiaUnacceleratedBackend::createNativeImageRefere
         }, SkSafeRef(m_surface.get())));
     }
     return nullptr;
-}
-
-static std::span<const uint8_t> span(const SkPixmap& pixmap)
-{
-    return unsafeMakeSpan(static_cast<const uint8_t*>(pixmap.addr()), pixmap.computeByteSize());
-}
-
-static std::span<uint8_t> mutableSpan(SkPixmap& pixmap)
-{
-    return unsafeMakeSpan(static_cast<uint8_t*>(pixmap.writable_addr()), pixmap.computeByteSize());
 }
 
 void ImageBufferSkiaUnacceleratedBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)

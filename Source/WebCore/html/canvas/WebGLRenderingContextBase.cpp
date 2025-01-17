@@ -3516,16 +3516,13 @@ void WebGLRenderingContextBase::texImageImpl(TexImageFunctionID functionID, GCGL
 
     GraphicsContextGL::DataFormat sourceDataFormat = imageExtractor.imageSourceFormat();
     GraphicsContextGL::AlphaOp alphaOp = imageExtractor.imageAlphaOp();
-    const uint8_t* imagePixelData = static_cast<const uint8_t*>(imageExtractor.imagePixelData());
-    CheckedSize imagePixelByteLength(imageExtractor.imageWidth());
-    imagePixelByteLength *= imageExtractor.imageHeight();
-    imagePixelByteLength *= 4u;
-    if (imagePixelByteLength.hasOverflowed()) {
+    auto imagePixelData = imageExtractor.imagePixelData();
+    if (!imagePixelData.data()) {
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, functionName, "image too large"_s);
         return;
     }
 
-    std::span pixels { imagePixelData, imagePixelByteLength };
+    auto pixels = imagePixelData;
     if (type != GraphicsContextGL::UNSIGNED_BYTE || sourceDataFormat != GraphicsContextGL::DataFormat::RGBA8 || format != GraphicsContextGL::RGBA || alphaOp != GraphicsContextGL::AlphaOp::DoNothing || flipY || selectingSubRectangle || depth != 1) {
         if (!m_context->packImageData(&image, pixels, format, type, flipY, alphaOp, sourceDataFormat, imageExtractor.imageWidth(), imageExtractor.imageHeight(), adjustedSourceImageRect, depth, imageExtractor.imageSourceUnpackAlignment(), unpackImageHeight, data)) {
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "packImage error"_s);

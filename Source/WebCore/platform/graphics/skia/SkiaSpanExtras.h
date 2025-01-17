@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <skia/core/SkPixmap.h>
 #include <wtf/StdLibExtras.h>
 
 #if USE(SKIA)
@@ -39,6 +40,16 @@ inline std::span<const uint8_t> span(SkData* data)
 inline std::span<const uint8_t> span(const sk_sp<SkData>& data)
 {
     return span(data.get());
+}
+
+inline std::span<const uint8_t> span(const SkPixmap& pixmap)
+{
+    return unsafeMakeSpan(static_cast<const uint8_t*>(pixmap.addr()), pixmap.computeByteSize());
+}
+
+inline std::span<uint8_t> mutableSpan(SkPixmap& pixmap)
+{
+    return unsafeMakeSpan(static_cast<uint8_t*>(pixmap.writable_addr()), pixmap.computeByteSize());
 }
 
 } // namespace WebCore
