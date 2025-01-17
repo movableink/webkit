@@ -1140,12 +1140,10 @@ void GraphicsContextCG::setCGStyle(const std::optional<GraphicsStyle>& style, bo
         },
         [&] (const GraphicsColorMatrix& colorMatrix) {
 #if HAVE(CGSTYLE_COLORMATRIX_BLUR)
-            CGColorMatrixStyle colorMatrixStyle = { 1, { 0 } };
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-            for (size_t i = 0; i < colorMatrix.values.size(); ++i)
-                colorMatrixStyle.matrix[i] = colorMatrix.values[i];
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-            auto style = adoptCF(CGStyleCreateColorMatrix(&colorMatrixStyle));
+            CGColorMatrixStyle cgColorMatrix = { 1, { 0 } };
+            for (auto [dst, src] : zippedRange(cgColorMatrix.matrix, colorMatrix.values))
+                dst = src;
+            auto style = adoptCF(CGStyleCreateColorMatrix(&cgColorMatrix));
             CGContextSetStyle(context, style.get());
 #else
             ASSERT_NOT_REACHED();
