@@ -246,8 +246,6 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
     }
 
     [computeCommandEncoder() setBytes:&m_computeDynamicOffsets[0] length:m_computeDynamicOffsets.size() * sizeof(m_computeDynamicOffsets[0]) atIndex:m_device->maxBuffersForComputeStage()];
-
-    m_bindGroupDynamicOffsets.clear();
 }
 
 void ComputePassEncoder::dispatch(uint32_t x, uint32_t y, uint32_t z)
@@ -483,6 +481,7 @@ void ComputePassEncoder::setPipeline(const ComputePipeline& pipeline)
 
     m_pipeline = &pipeline;
     m_computeDynamicOffsets.resize(m_pipeline->protectedPipelineLayout()->sizeOfComputeDynamicOffsets());
+    m_computeDynamicOffsets.fill(0);
 
     ASSERT(pipeline.computePipelineState());
     m_threadsPerThreadgroup = pipeline.threadsPerThreadgroup();
