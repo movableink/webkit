@@ -54,7 +54,7 @@ public:
     bool requiresLayer() const override;
 
     bool requiresLayerWithScrollableArea() const;
-    bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect) const final;
+    bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect) const override;
 
     LayoutUnit x() const { return m_frameRect.x(); }
     LayoutUnit y() const { return m_frameRect.y(); }

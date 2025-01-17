@@ -1868,8 +1868,8 @@ bool RenderBox::computeBackgroundIsKnownToBeObscured(const LayoutPoint& paintOff
     // FIXME: This test can be much more comprehensive.
     if (!hasBackground())
         return false;
-    // Table and root background painting is special.
-    if (isRenderTable() || isDocumentElementRenderer())
+    // Root background painting is special.
+    if (isDocumentElementRenderer())
         return false;
 
     LayoutRect backgroundRect;
