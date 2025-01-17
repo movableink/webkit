@@ -5162,7 +5162,7 @@ bool RenderBox::shrinkToAvoidFloats() const
     return style().width().isAuto();
 }
 
-bool RenderBox::establishesIndependentFormattingContext() const
+bool RenderBox::establishesIndependentFormattingContext(const RenderStyle*) const
 {
     return isGridItem() || RenderElement::establishesIndependentFormattingContext();
 }

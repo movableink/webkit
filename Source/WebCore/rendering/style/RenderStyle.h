@@ -1853,6 +1853,7 @@ public:
     constexpr bool isDisplayFlexibleBoxIncludingDeprecatedOrGridBox() const;
     constexpr bool isDisplayRegionType() const;
     constexpr bool isDisplayBlockLevel() const;
+    constexpr bool doesDisplayGenerateBlockContainer() const;
     constexpr bool isOriginalDisplayBlockType() const;
     constexpr bool isDisplayTableOrTablePart() const;
     constexpr bool isInternalTableBox() const;

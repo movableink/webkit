@@ -119,8 +119,19 @@ void RenderGrid::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
     }
 
     auto subgridDidChange = this->subgridDidChange(*oldStyle);
-    if (explicitGridDidResize(*oldStyle) || namedGridLinesDefinitionDidChange(*oldStyle) || implicitGridLinesDefinitionDidChange(*oldStyle) || oldStyle->gridAutoFlow() != style().gridAutoFlow()
-        || (style().gridAutoRepeatColumns().size() || style().gridAutoRepeatRows().size()) || subgridDidChange == SubgridDidChange::Yes)
+    auto isSubgridWithIndependentFormattingContextChange = [&] {
+        if (newStyle.gridSubgridRows() || newStyle.gridSubgridColumns())
+            return RenderElement::establishesIndependentFormattingContext(oldStyle) != RenderElement::establishesIndependentFormattingContext();
+        return false;
+    };
+    if (explicitGridDidResize(*oldStyle)
+        || namedGridLinesDefinitionDidChange(*oldStyle)
+        || implicitGridLinesDefinitionDidChange(*oldStyle)
+        || oldStyle->gridAutoFlow() != style().gridAutoFlow()
+        || style().gridAutoRepeatColumns().size()
+        || style().gridAutoRepeatRows().size()
+        || subgridDidChange == SubgridDidChange::Yes
+        || isSubgridWithIndependentFormattingContextChange())
         dirtyGrid(subgridDidChange);
 }
 
@@ -2583,7 +2594,7 @@ GridSpan RenderGrid::gridSpanForGridItem(const RenderBox& gridItem, GridTrackSiz
     return span;
 }
 
-bool RenderGrid::establishesIndependentFormattingContext() const
+bool RenderGrid::establishesIndependentFormattingContext(const RenderStyle*) const
 {
     // Grid items establish a new independent formatting context, unless
     // they're a subgrid

@@ -1004,6 +1004,17 @@ constexpr bool RenderStyle::isRubyContainerOrInternalRubyBox(DisplayType display
         || display == DisplayType::RubyBase;
 }
 
+constexpr bool RenderStyle::doesDisplayGenerateBlockContainer() const
+{
+    auto display = this->display();
+    return (display == DisplayType::Block
+        || display == DisplayType::InlineBlock
+        || display == DisplayType::FlowRoot
+        || display == DisplayType::ListItem
+        || display == DisplayType::TableCell
+        || display == DisplayType::TableCaption);
+}
+
 inline double RenderStyle::logicalAspectRatio() const
 {
     ASSERT(aspectRatioType() != AspectRatioType::Auto);

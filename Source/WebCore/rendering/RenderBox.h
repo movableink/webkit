@@ -619,7 +619,7 @@ public:
     inline std::optional<LayoutUnit> explicitIntrinsicInnerLogicalWidth() const;
     inline std::optional<LayoutUnit> explicitIntrinsicInnerLogicalHeight() const;
 
-    bool establishesIndependentFormattingContext() const override;
+    bool establishesIndependentFormattingContext(const RenderStyle* overridingStyle = nullptr) const override;
 
     void updateFloatPainterAfterSelfPaintingLayerChange();
 
