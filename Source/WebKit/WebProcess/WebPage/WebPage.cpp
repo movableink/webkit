@@ -2735,6 +2735,17 @@ void WebPage::accessibilitySettingsDidChange()
     m_page->accessibilitySettingsDidChange();
 }
 
+void WebPage::enableAccessibilityForAllProcesses()
+{
+    send(Messages::WebPageProxy::EnableAccessibilityForAllProcesses());
+}
+
+void WebPage::enableAccessibility()
+{
+    if (!WebCore::AXObjectCache::accessibilityEnabled())
+        WebCore::AXObjectCache::enableAccessibility();
+}
+
 void WebPage::screenPropertiesDidChange()
 {
     m_page->screenPropertiesDidChange();

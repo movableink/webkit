@@ -70,6 +70,18 @@ namespace ax = WebCore::Accessibility;
     return nullptr;
 }
 
+- (void)enableAccessibilityForAllProcesses
+{
+    // Immediately enable accessibility in the current web process, otherwise this
+    // will happen asynchronously and could break certain flows (e.g., attribute
+    // requests).
+    if (!WebCore::AXObjectCache::accessibilityEnabled())
+        WebCore::AXObjectCache::enableAccessibility();
+
+    if (m_page)
+        m_page->enableAccessibilityForAllProcesses();
+}
+
 - (id)accessibilityPluginObject
 {
     ASSERT(isMainRunLoop());
@@ -96,7 +108,7 @@ namespace ax = WebCore::Accessibility;
 
     return ax::retrieveAutoreleasedValueFromMainThread<id>([protectedSelf = retainPtr(self)] () -> RetainPtr<id> {
         if (!WebCore::AXObjectCache::accessibilityEnabled())
-            WebCore::AXObjectCache::enableAccessibility();
+            [protectedSelf enableAccessibilityForAllProcesses];
 
         if (protectedSelf.get()->m_hasMainFramePlugin)
             return protectedSelf.get().accessibilityPluginObject;

@@ -5528,6 +5528,13 @@ void WebPageProxy::accessibilitySettingsDidChange()
     send(Messages::WebPage::AccessibilitySettingsDidChange());
 }
 
+void WebPageProxy::enableAccessibilityForAllProcesses()
+{
+    forEachWebContentProcess([&](auto& webProcess, auto pageID) {
+        webProcess.send(Messages::WebPage::EnableAccessibility(), pageID);
+    });
+}
+
 void WebPageProxy::setUseFixedLayout(bool fixed)
 {
     // This check is fine as the value is initialized in the web

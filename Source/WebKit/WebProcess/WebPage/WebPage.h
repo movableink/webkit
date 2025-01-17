@@ -784,6 +784,8 @@ public:
 #if PLATFORM(COCOA)
     void accessibilityManageRemoteElementStatus(bool, int);
 #endif
+    void enableAccessibilityForAllProcesses();
+    void enableAccessibility();
 
     void screenPropertiesDidChange();
 

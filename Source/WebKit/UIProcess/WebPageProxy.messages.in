@@ -61,6 +61,7 @@ messages -> WebPageProxy {
 #if PLATFORM(IOS_FAMILY)
     RelayAccessibilityNotification(String notificationName, std::span<const uint8_t> notificationData)
 #endif
+    EnableAccessibilityForAllProcesses()
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)
     ShowValidationMessage(WebCore::IntRect anchorRect, String message)
