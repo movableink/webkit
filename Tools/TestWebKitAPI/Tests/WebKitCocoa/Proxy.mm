@@ -423,7 +423,11 @@ TEST(WebKit, SecureProxyConnection)
     TestWebKitAPI::Util::run(&receivedValidClientHello);
 }
 
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 150000 && __MAC_OS_X_VERSION_MIN_REQUIRED < 150200)
+TEST(WebKit, DISABLED_RelaxThirdPartyCookieBlocking)
+#else
 TEST(WebKit, RelaxThirdPartyCookieBlocking)
+#endif
 {
     __block bool setDefaultCookieAcceptPolicy = false;
     [[WKWebsiteDataStore defaultDataStore].httpCookieStore _setCookieAcceptPolicy:NSHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain completionHandler:^{
