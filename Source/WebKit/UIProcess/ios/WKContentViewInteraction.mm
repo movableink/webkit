@@ -226,7 +226,7 @@
 
 + (instancetype)selectionRectWithCGRect:(CGRect)rect
 {
-    return [[[WKUITextSelectionRect alloc] initWithCGRect:rect] autorelease];
+    return adoptNS([[WKUITextSelectionRect alloc] initWithCGRect:rect]).autorelease();
 }
 
 - (instancetype)initWithCGRect:(CGRect)rect
