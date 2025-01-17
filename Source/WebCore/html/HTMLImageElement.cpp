@@ -85,7 +85,6 @@ HTMLImageElement::HTMLImageElement(const QualifiedName& tagName, Document& docum
     , FormAssociatedElement(form)
     , ActiveDOMObject(document)
     , m_imageLoader(makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this))
-    , m_compositeOperator(CompositeOperator::SourceOver)
     , m_imageDevicePixelRatio(1.0f)
 {
     ASSERT(hasTagName(imgTag));
@@ -397,13 +396,6 @@ void HTMLImageElement::attributeChanged(const QualifiedName& name, const AtomStr
         if (isInTreeScope() && !m_parsedUsemap.isNull())
             treeScope().addImageElementByUsemap(m_parsedUsemap, *this);
         break;
-    case AttributeNames::compositeAttr: {
-        // FIXME: images don't support blend modes in their compositing attribute.
-        BlendMode blendOp = BlendMode::Normal;
-        if (!parseCompositeAndBlendOperator(newValue, m_compositeOperator, blendOp))
-            m_compositeOperator = CompositeOperator::SourceOver;
-        break;
-    }
     case AttributeNames::loadingAttr:
         // No action needed for eager to lazy transition.
         if (!hasLazyLoadableAttributeValue(newValue))
