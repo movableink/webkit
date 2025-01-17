@@ -2411,13 +2411,10 @@ webkit.org/b/172099 imported/w3c/web-platform-tests/FileAPI/url/url_xmlhttpreque
 imported/w3c/web-platform-tests/WebCryptoAPI/ [ Slow ]
 
 # Needs rebasing.
-imported/w3c/web-platform-tests/WebCryptoAPI/getRandomValues-bigint.tentative.any.html [ Failure ]
-imported/w3c/web-platform-tests/WebCryptoAPI/getRandomValues-bigint.tentative.any.worker.html [ Failure ]
 imported/w3c/web-platform-tests/WebCryptoAPI/historical.any.sharedworker.html [ Failure ]
 
 # TODO: This failure exists in the general TestExpectations, I got in a GTK run.
 # I think marking the whole folder as 'Slow' makes the expected result for this test 'Pass'.
-imported/w3c/web-platform-tests/WebCryptoAPI/generateKey/successes_RSA-OAEP.https.any.worker.html [ Failure ]
 imported/w3c/web-platform-tests/WebCryptoAPI/encrypt_decrypt/aes_ctr.https.any.html [ DumpJSConsoleLogInStdErr ]
 imported/w3c/web-platform-tests/WebCryptoAPI/encrypt_decrypt/aes_cbc.https.any.html [ DumpJSConsoleLogInStdErr ]
 

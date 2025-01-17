@@ -2813,9 +2813,10 @@ imported/w3c/web-platform-tests/WebCryptoAPI/ [ Slow ]
 # Flaky WebCrypto API tests
 imported/w3c/web-platform-tests/WebCryptoAPI/import_export/rsa_importKey.https.any.html [ Failure Pass ]
 imported/w3c/web-platform-tests/WebCryptoAPI/import_export/rsa_importKey.https.any.worker.html [ Failure Pass ]
-
-imported/w3c/web-platform-tests/WebCryptoAPI/getRandomValues-bigint.tentative.any.html [ Skip ]
-imported/w3c/web-platform-tests/WebCryptoAPI/getRandomValues-bigint.tentative.any.worker.html [ Skip ]
+imported/w3c/web-platform-tests/WebCryptoAPI/generateKey/failures_RSA-PSS.https.any.html [ Failure Pass ]
+imported/w3c/web-platform-tests/WebCryptoAPI/generateKey/failures_RSA-PSS.https.any.worker.html [ Failure Pass ]
+imported/w3c/web-platform-tests/WebCryptoAPI/import_export/ec_importKey.https.any.html [ Failure Pass ]
+imported/w3c/web-platform-tests/WebCryptoAPI/import_export/ec_importKey.https.any.worker.html [ Failure Pass ]
 
 # WebCryptoAPI features that haven't been enabled for current OS
 crypto/subtle/ecdh-import-pkcs8-key-p256-validate-ecprivatekey-parameters-publickey.html [ Skip ]
@@ -6216,8 +6217,6 @@ imported/w3c/web-platform-tests/css/css-variables/wide-keyword-fallback-002.html
 
 # WPT tests that are timing out.
 imported/w3c/web-platform-tests/FileAPI/url/unicode-origin.sub.html [ Skip ]
-imported/w3c/web-platform-tests/WebCryptoAPI/generateKey/successes_RSA-OAEP.https.any.html [ Skip ]
-imported/w3c/web-platform-tests/WebCryptoAPI/generateKey/successes_RSA-OAEP.https.any.worker.html [ Skip ]
 imported/w3c/web-platform-tests/clear-site-data/navigation-insecure.html [ Skip ]
 imported/w3c/web-platform-tests/clear-site-data/resource.html [ Skip ]
 imported/w3c/web-platform-tests/content-security-policy/inheritance/history-iframe.sub.html [ Skip ]
