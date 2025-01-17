@@ -349,7 +349,21 @@ extension WKIntelligenceReplacementTextEffectCoordinator: PlatformIntelligenceTe
 
         if chunk.finished {
             self.replacementQueue.removeFirst()
-            await self.restoreSelectionAcceptedReplacements(true)
+
+            if let onFlushCompletion = self.onFlushCompletion {
+                // At this point, the last chunk has been received, and the session has ended, so the flush completion
+                // handler can now be invoked now that the animation is fully complete. There is no need to additionally
+                // restore the selection here since the selection would have already been restored when the session ended.
+
+                await onFlushCompletion()
+                self.onFlushCompletion = nil
+            } else {
+                // At this point, the last chunk has been received, and the animation is now over, but the session has
+                // yet to end. The selection should be restored assuming it has been accepted; once the session does end,
+                // the selection will at that point get adjusted depending on the user's action.
+
+                await self.restoreSelectionAcceptedReplacements(true)
+            }
 
             return
         }
