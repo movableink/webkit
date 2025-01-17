@@ -5505,10 +5505,14 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
             if (RefPtr rootEditableElement = selection.rootEditableElement()) {
                 VisiblePosition startOfEditableRoot { firstPositionInOrBeforeNode(rootEditableElement.get()) };
                 VisiblePosition endOfEditableRoot { lastPositionInOrAfterNode(rootEditableElement.get()) };
-                if (rangeOfInterest.start < startOfEditableRoot)
-                    rangeOfInterest.start = WTFMove(startOfEditableRoot);
-                if (rangeOfInterest.end > endOfEditableRoot)
-                    rangeOfInterest.end = WTFMove(endOfEditableRoot);
+                auto clampToEditableRoot = [&](VisiblePosition& position) {
+                    if (position < startOfEditableRoot)
+                        position = startOfEditableRoot;
+                    else if (position > endOfEditableRoot)
+                        position = endOfEditableRoot;
+                };
+                clampToEditableRoot(rangeOfInterest.start);
+                clampToEditableRoot(rangeOfInterest.end);
             }
         }
     } else if (!selection.isNone())
