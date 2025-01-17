@@ -968,6 +968,18 @@ webkit.org/b/120839 animations/cross-fade-background-image.html [ ImageOnlyFailu
 webkit.org/b/207605 [ Debug ] http/tests/workers/service/registration-clear-redundant-worker.html [ Crash ]
 webkit.org/b/207605 [ Debug ] http/tests/websocket/tests/hybi/no-subprotocol.html [ Crash ]
 
+## THE TESTS BELOW ARE CRASHING DUE TO ENABLED ASSERTIONS IN THE GTK EWS BOTS
+## THEY ARE SKIPPED TO AVOID OOM IN THEM DUE TO GDB COLLECTING COREDUMPS FOR
+## SEVERAL OF THEM IN PARALLEL. THEY SHOULD BE FIXED ASAP.
+
+webkit.org/b/286127 [ Release ] editing/pasteboard/copy-paste-across-shadow-boundaries-with-style-2.html [ Skip ]
+webkit.org/b/286128 [ Release ] editing/inserting/insert-list-user-select-none-crash.html [ Skip ]
+webkit.org/b/286129 [ Release ] fast/forms/textarea-node-removed-from-document-crash.html [ Skip ]
+webkit.org/b/286130 [ Release ] imported/w3c/web-platform-tests/css/css-multicol/crashtests/inline-float-parallel-flow.html [ Skip ]
+webkit.org/b/286131 [ Release ] imported/w3c/web-platform-tests/css/css-transforms/transform-box/cssbox-content-box-002.html [ Skip ]
+webkit.org/b/286132 [ Release ] inspector/debugger/breakpoints/resolved-dump-all-inline-script-pause-locations.html [ Skip ]
+webkit.org/b/286133 [ Release ] imported/w3c/web-platform-tests/css/css-view-transitions/transition-in-hidden-page.html [ Skip ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Crashing tests
 #////////////////////////////////////////////////////////////////////////////////////////
