@@ -541,11 +541,18 @@ String WebExtension::resourceStringForPath(const String& originalPath, RefPtr<AP
     if (path.startsWith('/'))
         path = path.substring(1);
 
-    if (RefPtr cachedData = m_resources.get(path))
-        return String::fromUTF8(cachedData->span());
-
     if (path == generatedBackgroundPageFilename || path == generatedBackgroundServiceWorkerFilename)
         return generatedBackgroundContent();
+
+    if (auto entry = m_resources.find(path); entry != m_resources.end()) {
+        return WTF::switchOn(entry->value,
+            [](const Ref<API::Data>& data) {
+                return String::fromUTF8(data->span());
+            },
+            [](const String& string) {
+                return string;
+            });
+    }
 
     RefPtr data = resourceDataForPath(path, outError, cacheResult, suppressErrors);
     if (!data)
@@ -555,8 +562,13 @@ String WebExtension::resourceStringForPath(const String& originalPath, RefPtr<AP
         return emptyString();
 
     auto mimeType = MIMETypeRegistry::mimeTypeForPath(path);
-    RefPtr decoder = TextResourceDecoder::create(mimeType, { }, true);
-    return decoder->decode(data->span());
+    RefPtr decoder = TextResourceDecoder::create(mimeType, PAL::UTF8Encoding());
+
+    auto result = decoder->decode(data->span());
+    if (cacheResult == CacheResult::Yes)
+        m_resources.set(path, result);
+
+    return result;
 }
 
 static int toAPI(WebExtension::Error error)

@@ -61,7 +61,7 @@ class WebExtension : public API::ObjectImpl<API::Object::Type::WebExtension>, pu
 public:
     using IconCacheEntry = std::variant<RefPtr<WebCore::Icon>, Vector<double>>;
     using IconsCache = HashMap<String, IconCacheEntry>;
-    using Resources = HashMap<String, Ref<API::Data>>;
+    using Resources = HashMap<String, std::variant<String, Ref<API::Data>>>;
 
     template<typename... Args>
     static Ref<WebExtension> create(Args&&... args)
