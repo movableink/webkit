@@ -628,16 +628,23 @@ void IDBConnectionProxy::abortActivitiesForCurrentThread()
                 transaction->didAbort(IDBError { ExceptionCode::InvalidStateError, "Transaction is removed"_s });
         });
     }
+
+    HashSet<RefPtr<TransactionOperation>> activeOperationsForThread;
     {
         Locker locker { m_transactionOperationLock };
-        removeItemsMatchingCurrentThread(m_activeOperations, [](auto& operation) {
-            if (!operation)
-                return;
-
-            auto result = IDBResultData::error(operation->identifier(), IDBError { ExceptionCode::InvalidStateError, "Operation is removed"_s });
-            operation->transitionToComplete(result, Ref { *operation });
-        });
+        for (auto& operation : m_activeOperations.values()) {
+            if (&operation->originThread() == &Thread::current())
+                activeOperationsForThread.add(operation);
+        }
+        for (auto& operation : activeOperationsForThread)
+            m_activeOperations.remove(operation->identifier());
     }
+
+    for (auto& operation : activeOperationsForThread) {
+        auto result = IDBResultData::error(operation->identifier(), IDBError { ExceptionCode::InvalidStateError, "Operation is removed"_s });
+        operation->transitionToCompleteOnThisThread(result);
+    }
+
     {
         Locker locker { m_databaseInfoMapLock };
         removeItemsMatchingCurrentThread(m_databaseInfoCallbacks, [](auto& request) {
