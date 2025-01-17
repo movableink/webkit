@@ -36,7 +36,7 @@
 
 #include "AudioSession.h"
 #include "CaptureDeviceWithCapabilities.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FrameDestructionObserverInlines.h"
@@ -47,6 +47,7 @@
 #include "Logging.h"
 #include "MediaTrackSupportedConstraints.h"
 #include "PermissionsPolicy.h"
+#include "Quirks.h"
 #include "RealtimeMediaSourceSettings.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
@@ -301,11 +302,16 @@ static inline bool checkMicrophoneAccess(const Document& document)
     return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document, PermissionsPolicy::ShouldReportViolation::No);
 }
 
+static bool isFeaturePolicyAllowingSpeakerSelection(const Document& document)
+{
+    return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::SpeakerSelection, document, PermissionsPolicy::ShouldReportViolation::No) || (document.quirks().shouldEnableSpeakerSelectionPermissionsPolicyQuirk() && PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document, PermissionsPolicy::ShouldReportViolation::No));
+}
+
 static inline bool checkSpeakerAccess(const Document& document)
 {
     return document.frame()
         && document.frame()->settings().exposeSpeakersEnabled()
-        && PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::SpeakerSelection, document, PermissionsPolicy::ShouldReportViolation::No);
+        && isFeaturePolicyAllowingSpeakerSelection(document);
 }
 
 static inline bool exposeSpeakersWithoutMicrophoneAccess(const Document& document)

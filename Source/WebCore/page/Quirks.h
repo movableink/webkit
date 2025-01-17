@@ -136,6 +136,7 @@ public:
 #if ENABLE(MEDIA_STREAM)
     bool shouldEnableLegacyGetUserMediaQuirk() const;
     bool shouldDisableImageCaptureQuirk() const;
+    bool shouldEnableSpeakerSelectionPermissionsPolicyQuirk() const;
 #endif
 
     bool needsCanPlayAfterSeekedQuirk() const;

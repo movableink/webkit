@@ -140,6 +140,7 @@ struct WEBCORE_EXPORT QuirksData {
 #if ENABLE(MEDIA_STREAM)
     bool shouldDisableImageCaptureQuirk { false };
     bool shouldEnableLegacyGetUserMediaQuirk { false };
+    bool shouldEnableSpeakerSelectionPermissionsPolicyQuirk { false };
 #endif
 
 #if ENABLE(META_VIEWPORT)

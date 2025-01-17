@@ -864,6 +864,11 @@ bool Quirks::shouldDisableImageCaptureQuirk() const
 {
     return needsQuirks() && m_quirksData.shouldDisableImageCaptureQuirk;
 }
+
+bool Quirks::shouldEnableSpeakerSelectionPermissionsPolicyQuirk() const
+{
+    return needsQuirks() && m_quirksData.shouldEnableSpeakerSelectionPermissionsPolicyQuirk;
+}
 #endif
 
 // hulu.com rdar://55041979
@@ -2089,6 +2094,17 @@ static void handleBaiduQuirks(QuirksData& quirksData, const URL& quirksURL, cons
     quirksData.shouldEnableLegacyGetUserMediaQuirk = true;
 }
 
+static void handleCodepenQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
+{
+    UNUSED_PARAM(quirksDomainString);
+    UNUSED_PARAM(documentURL);
+    auto topDocumentHost = quirksURL.host();
+    if (topDocumentHost != "codepen.io"_s)
+        return;
+
+    quirksData.shouldEnableSpeakerSelectionPermissionsPolicyQuirk = true;
+}
+
 static void handleWarbyParkerQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
 {
     if (quirksDomainString != "warbyparker.com"_s)
@@ -2698,6 +2714,7 @@ void Quirks::determineRelevantQuirks()
         { "bbc"_s, &handleBBCQuirks },
 #if ENABLE(MEDIA_STREAM)
         { "baidu"_s, &handleBaiduQuirks },
+        { "codepen"_s, &handleCodepenQuirks },
 #endif
         { "bankofamerica"_s, &handleBankOfAmericaQuirks },
         { "bing"_s, &handleBingQuirks },
