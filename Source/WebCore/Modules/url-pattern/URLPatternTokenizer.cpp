@@ -28,7 +28,6 @@
 
 #include "URLPatternParser.h"
 #include <unicode/utf16.h>
-#include <unicode/utf8.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -46,15 +45,17 @@ bool Token::isNull() const
 // https://urlpattern.spec.whatwg.org/#get-the-next-code-point
 void Tokenizer::getNextCodePoint()
 {
-    if (m_input.is8Bit())
-        m_codepoint = m_input[m_nextIndex++];
-    else {
-        // FIXME: We should handle surrogates if any.
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        auto characters = m_input.span16();
-        U16_NEXT_OR_FFFD(characters, m_nextIndex, m_input.length(), m_codepoint);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    }
+    m_codepoint = m_input[m_nextIndex++];
+
+    if (m_input.is8Bit() || !U16_IS_LEAD(m_codepoint) || m_nextIndex >= m_input.length())
+        return;
+
+    auto next = m_input[m_nextIndex];
+    if (!U16_IS_TRAIL(next))
+        return;
+
+    m_nextIndex++;
+    m_codepoint = U16_GET_SUPPLEMENTARY(m_codepoint, next);
 }
 
 // https://urlpattern.spec.whatwg.org/#seek-and-get-the-next-code-point
