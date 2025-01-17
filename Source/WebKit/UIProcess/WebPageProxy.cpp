@@ -1453,7 +1453,7 @@ void WebPageProxy::swapToProvisionalPage(Ref<ProvisionalPageProxy>&& provisional
     setDrawingArea(provisionalPage->takeDrawingArea());
     ASSERT(!m_mainFrame);
     m_mainFrame = provisionalPage->mainFrame();
-    if (provisionalPage->didCreateMainFrame())
+    if (provisionalPage->needsMainFrameObserver())
         m_mainFrame->frameLoadState().addObserver(internals().protectedPageLoadTimingFrameLoadStateObserver());
 
     // FIXME: Think about what to do if the provisional page didn't get its browsing context group from the SuspendedPageProxy.

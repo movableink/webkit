@@ -153,7 +153,7 @@ public:
 
     WebPageProxyMessageReceiverRegistration& messageReceiverRegistration() { return m_messageReceiverRegistration; }
 
-    bool didCreateMainFrame() const { return m_didCreateMainFrame; }
+    bool needsMainFrameObserver() const { return m_needsMainFrameObserver; }
 
 private:
     ProvisionalPageProxy(WebPageProxy&, Ref<FrameProcess>&&, BrowsingContextGroup&, RefPtr<SuspendedPageProxy>&&, API::Navigation&, bool isServerRedirect, const WebCore::ResourceRequest&, ProcessSwapRequestedByClient, bool isProcessSwappingOnNavigationResponse, API::WebsitePolicies*, WebsiteDataStore* replacedDataStoreForWebArchiveLoad = nullptr);
@@ -227,7 +227,7 @@ private:
     bool m_needsCookieAccessAddedInNetworkProcess { false };
     bool m_needsDidStartProvisionalLoad { true };
     bool m_shouldClosePage { true };
-    bool m_didCreateMainFrame { false };
+    bool m_needsMainFrameObserver { false };
     URL m_provisionalLoadURL;
     WebPageProxyMessageReceiverRegistration m_messageReceiverRegistration;
     std::unique_ptr<WebsitePoliciesData> m_mainFrameWebsitePoliciesData;

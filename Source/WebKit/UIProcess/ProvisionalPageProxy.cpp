@@ -116,12 +116,13 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
         ASSERT(&suspendedPage->process() == &process());
         suspendedPage->unsuspend();
         m_mainFrame = &suspendedPage->mainFrame();
+        m_needsMainFrameObserver = true;
     } else if (page.preferences().siteIsolationEnabled() && page.openedByDOM() && !page.hasCommittedAnyProvisionalLoads())
         m_mainFrame = page.mainFrame();
     else {
         m_mainFrame = WebFrameProxy::create(page, m_frameProcess, FrameIdentifier::generate(), previousMainFrame->effectiveSandboxFlags(), previousMainFrame->scrollingMode(), nullptr, IsMainFrame::Yes);
 
-        m_didCreateMainFrame = true;
+        m_needsMainFrameObserver = true;
         // Restore the main frame's committed URL as some clients may rely on it until the next load is committed.
         m_mainFrame->frameLoadState().setURL(previousMainFrame->url());
         previousMainFrame->transferNavigationCallbackToFrame(*m_mainFrame);
@@ -258,7 +259,7 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
         if (auto existingRemotePageProxy = m_browsingContextGroup->takeRemotePageInProcessForProvisionalPage(page, protectedProcess)) {
             m_webPageID = existingRemotePageProxy->pageID();
             m_mainFrame = existingRemotePageProxy->page()->mainFrame();
-            m_didCreateMainFrame = false;
+            m_needsMainFrameObserver = false;
             m_messageReceiverRegistration.stopReceivingMessages();
             m_messageReceiverRegistration.transferMessageReceivingFrom(existingRemotePageProxy->messageReceiverRegistration(), *this);
             send(Messages::WebPage::CreateProvisionalFrame(ProvisionalFrameCreationParameters {
