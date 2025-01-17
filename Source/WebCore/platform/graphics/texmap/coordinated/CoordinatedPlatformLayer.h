@@ -267,7 +267,6 @@ private:
     float m_contentsScale WTF_GUARDED_BY_LOCK(m_lock) { 1. };
     RefPtr<TextureMapperPlatformLayerProxy> m_contentsBuffer WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<TextureMapperPlatformLayerProxy> m_committedContentsBuffer WTF_GUARDED_BY_LOCK(m_lock);
-    bool m_contentsBufferNeedsDisplay WTF_GUARDED_BY_LOCK(m_lock) { false };
     RefPtr<CoordinatedBackingStoreProxy> m_backingStoreProxy WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedBackingStore> m_backingStore WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedAnimatedBackingStoreClient> m_animatedBackingStoreClient WTF_GUARDED_BY_LOCK(m_lock);

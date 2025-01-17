@@ -333,7 +333,8 @@ void GraphicsLayerCoordinated::setContentsClippingRect(const FloatRoundedRect& c
 
 void GraphicsLayerCoordinated::setContentsNeedsDisplay()
 {
-    noteLayerPropertyChanged(Change::ContentsBufferNeedsDisplay, ScheduleFlush::Yes);
+    if (m_contentsLayer)
+        noteLayerPropertyChanged(Change::ContentsBufferNeedsDisplay, ScheduleFlush::Yes);
 }
 
 void GraphicsLayerCoordinated::setContentsToPlatformLayer(PlatformLayer* contentsLayer, ContentsLayerPurpose)
@@ -342,7 +343,10 @@ void GraphicsLayerCoordinated::setContentsToPlatformLayer(PlatformLayer* content
         return;
 
     m_contentsLayer = contentsLayer;
-    noteLayerPropertyChanged(Change::ContentsBuffer, ScheduleFlush::Yes);
+    OptionSet<Change> change = { Change::ContentsBuffer };
+    if (m_contentsLayer)
+        change.add(Change::ContentsBufferNeedsDisplay);
+    noteLayerPropertyChanged(change, ScheduleFlush::Yes);
 }
 
 void GraphicsLayerCoordinated::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&& delegate, ContentsLayerPurpose purpose)
@@ -960,6 +964,12 @@ void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, floa
 {
     Locker locker { m_platformLayer->lock() };
 
+    if (m_pendingChanges.contains(Change::ContentsBuffer))
+        m_platformLayer->setContentsBuffer(m_contentsLayer.get());
+
+    if (m_pendingChanges.contains(Change::ContentsBufferNeedsDisplay))
+        m_platformLayer->setContentsBufferNeedsDisplay();
+
     if (m_pendingChanges.containsAny(Change::Geometry))
         updateGeometry(pageScaleFactor, positionRelativeToBase);
 
@@ -1019,12 +1029,6 @@ void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, floa
 
     if (m_pendingChanges.contains(Change::ContentsScale))
         m_platformLayer->setContentsScale(pageScaleFactor * deviceScaleFactor());
-
-    if (m_pendingChanges.contains(Change::ContentsBuffer))
-        m_platformLayer->setContentsBuffer(m_contentsLayer.get());
-
-    if (m_pendingChanges.contains(Change::ContentsBufferNeedsDisplay))
-        m_platformLayer->setContentsBufferNeedsDisplay();
 
     if (m_pendingChanges.contains(Change::ContentsImage))
         m_platformLayer->setContentsImage(WTFMove(m_pendingContentsImage));

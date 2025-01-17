@@ -461,8 +461,6 @@ void CoordinatedPlatformLayer::setContentsBuffer(TextureMapperPlatformLayerProxy
         return;
 
     m_contentsBuffer = contentsBuffer;
-    if (m_contentsBuffer)
-        m_contentsBufferNeedsDisplay = true;
     m_pendingChanges.add(Change::ContentsBuffer);
     notifyCompositionRequired();
 }
@@ -470,10 +468,10 @@ void CoordinatedPlatformLayer::setContentsBuffer(TextureMapperPlatformLayerProxy
 void CoordinatedPlatformLayer::setContentsBufferNeedsDisplay()
 {
     ASSERT(m_lock.isHeld());
-    if (!m_contentsBuffer || m_contentsBufferNeedsDisplay)
+    if (!m_contentsBuffer)
         return;
 
-    m_contentsBufferNeedsDisplay = true;
+    m_contentsBuffer->swapBuffersIfNeeded();
     notifyCompositionRequired();
 }
 
@@ -710,12 +708,6 @@ void CoordinatedPlatformLayer::updateBackingStore()
 void CoordinatedPlatformLayer::updateContents(bool affectedByTransformAnimation)
 {
     Locker locker { m_lock };
-
-    if (m_contentsBufferNeedsDisplay) {
-        if (m_contentsBuffer)
-            m_contentsBuffer->swapBuffersIfNeeded();
-        m_contentsBufferNeedsDisplay = false;
-    }
 
     if (needsBackingStore()) {
         if (!m_backingStoreProxy) {
