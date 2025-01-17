@@ -69,8 +69,6 @@ RefPtr<CSSCalcValue> CSSCalcValue::parse(CSSParserTokenRange& tokens, const CSSP
         .conversionData = std::nullopt,
         .symbolTable = { },
         .allowZeroValueLengthRemovalFromSum = false,
-        .allowUnresolvedUnits = false,
-        .allowNonMatchingUnits = false
     };
 
     auto tree = CSSCalc::parseAndSimplify(tokens, context, parserOptions, simplificationOptions);
@@ -108,8 +106,6 @@ Ref<CSSCalcValue> CSSCalcValue::copySimplified(const CSSToLengthConversionData& 
         .conversionData = conversionData,
         .symbolTable = symbolTable,
         .allowZeroValueLengthRemovalFromSum = true,
-        .allowUnresolvedUnits = false,
-        .allowNonMatchingUnits = false
     };
 
     if (!canSimplify(m_tree, simplificationOptions))
@@ -131,8 +127,6 @@ Ref<CSSCalcValue> CSSCalcValue::copySimplified(NoConversionDataRequiredToken, co
         .conversionData = std::nullopt,
         .symbolTable = symbolTable,
         .allowZeroValueLengthRemovalFromSum = true,
-        .allowUnresolvedUnits = false,
-        .allowNonMatchingUnits = false
     };
 
     if (!canSimplify(m_tree, simplificationOptions))
@@ -260,8 +254,6 @@ double CSSCalcValue::doubleValue(NoConversionDataRequiredToken, const CSSCalcSym
         .range = m_range,
         .conversionData = std::nullopt,
         .symbolTable = symbolTable,
-        .allowUnresolvedUnits = true,
-        .allowNonMatchingUnits = true
     };
     return clampToPermittedRange(CSSCalc::evaluateDouble(m_tree, options).value_or(0));
 }

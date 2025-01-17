@@ -936,8 +936,6 @@ static std::optional<TypedChild> consumeMediaProgress(CSSParserTokenRange& token
         .conversionData = state.simplificationOptions->conversionData,
         .symbolTable = state.simplificationOptions->symbolTable,
         .allowZeroValueLengthRemovalFromSum = state.simplificationOptions->allowZeroValueLengthRemovalFromSum,
-        .allowUnresolvedUnits = state.simplificationOptions->allowUnresolvedUnits,
-        .allowNonMatchingUnits = state.simplificationOptions->allowNonMatchingUnits,
     };
     if (state.simplificationOptions)
         nestedState.simplificationOptions = &nestedSimplificationOptions;
@@ -1041,8 +1039,6 @@ static std::optional<TypedChild> consumeContainerProgress(CSSParserTokenRange& t
         .conversionData = state.simplificationOptions->conversionData,
         .symbolTable = state.simplificationOptions->symbolTable,
         .allowZeroValueLengthRemovalFromSum = state.simplificationOptions->allowZeroValueLengthRemovalFromSum,
-        .allowUnresolvedUnits = state.simplificationOptions->allowUnresolvedUnits,
-        .allowNonMatchingUnits = state.simplificationOptions->allowNonMatchingUnits,
     };
     if (state.simplificationOptions)
         nestedState.simplificationOptions = &nestedSimplificationOptions;

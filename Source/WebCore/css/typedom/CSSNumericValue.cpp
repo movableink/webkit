@@ -473,8 +473,6 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::parse(Document& document, Str
                 .conversionData = std::nullopt,
                 .symbolTable = { },
                 .allowZeroValueLengthRemovalFromSum = false,
-                .allowUnresolvedUnits = false,
-                .allowNonMatchingUnits = false
             };
             auto tree = CSSCalc::parseAndSimplify(componentValueRange, parserContext, parserOptions, simplificationOptions);
             if (!tree)
