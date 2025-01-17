@@ -5043,7 +5043,7 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
         return;
     }
 
-    Ref browsingContextGroup = newProcess->websiteDataStore() == &websiteDataStore() ? m_browsingContextGroup : BrowsingContextGroup::create();
+    Ref browsingContextGroup = newProcess->websiteDataStore() == &websiteDataStore() && !navigation.isRequestFromClientOrUserInput() ? m_browsingContextGroup : BrowsingContextGroup::create();
     Ref frameProcess = browsingContextGroup->ensureProcessForSite(navigationSite, newProcess, preferences);
     // Make sure we destroy any existing ProvisionalPageProxy object *before* we construct a new one.
     // It is important from the previous provisional page to unregister itself before we register a
@@ -8362,6 +8362,7 @@ void WebPageProxy::createNewPage(IPC::Connection& connection, WindowFeatures&& w
             *originatingFrameInfoData.frameID
         } });
         configuration->setOpenedSite(openerFrame->frameProcess().site());
+        configuration->setBrowsingContextGroup(m_browsingContextGroup.copyRef());
     } else {
         configuration->setOpenerInfo(std::nullopt);
         configuration->setBrowsingContextGroup(BrowsingContextGroup::create());
