@@ -1343,7 +1343,6 @@ rendering/RenderVideo.cpp
 rendering/RenderView.cpp
 rendering/RenderViewTransitionCapture.cpp
 rendering/RenderWidget.cpp
-rendering/StyledMarkedText.cpp
 rendering/TextAutoSizing.cpp
 rendering/TextBoxPainter.cpp
 rendering/TextPaintStyle.cpp
