@@ -39,8 +39,8 @@ const ClassInfo WebAssemblyWrapperFunction::s_info = { "WebAssemblyWrapperFuncti
 static JSC_DECLARE_HOST_FUNCTION(callWebAssemblyWrapperFunction);
 static JSC_DECLARE_HOST_FUNCTION(callWebAssemblyWrapperFunctionIncludingV128);
 
-WebAssemblyWrapperFunction::WebAssemblyWrapperFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSWebAssemblyInstance* instance, JSObject* function, Wasm::WasmToWasmImportableFunction importableFunction)
-    : Base(vm, executable, globalObject, structure, instance, { importableFunction, { }, { }, { } })
+WebAssemblyWrapperFunction::WebAssemblyWrapperFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSWebAssemblyInstance* instance, JSObject* function, Wasm::WasmOrJSImportableFunction&& importableFunction, WasmOrJSImportableFunctionCallLinkInfo* callLinkInfo)
+    : Base(vm, executable, globalObject, structure, instance, WTFMove(importableFunction), callLinkInfo)
     , m_function(function, WriteBarrierEarlyInit)
 { }
 
@@ -61,16 +61,17 @@ WebAssemblyWrapperFunction* WebAssemblyWrapperFunction::create(VM& vm, JSGlobalO
         Wasm::WasmOrJSImportableFunction {
             {
                 {
-                    &Wasm::NullWasmCallee, { },
+                    &Wasm::NullWasmCallee,
+                    { },
                     &instance->importFunctionInfo(importIndex)->importFunctionStub
                 },
                 typeIndex,
                 rtt.get()
             },
             { },
-            { },
             { }
-        });
+        },
+        instance->importFunctionInfo(importIndex));
     result->m_importableFunction.importFunction.set(vm, globalObject, function);
     result->finishCreation(vm, executable, signature.argumentCount(), name);
     return result;

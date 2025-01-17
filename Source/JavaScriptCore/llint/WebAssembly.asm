@@ -1012,12 +1012,11 @@ end
 
 .safe:
     loadp WasmCallableFunctionScratch[cfr], t2
-    loadp JSC::Wasm::WasmOrJSImportableFunction::importFunction[t2], t0
+    loadp JSC::Wasm::WasmOrJSImportableFunctionCallLinkInfo::importFunction[t2], t0
 if not JSVALUE64
     move (constexpr JSValue::CellTag), t1
 end
-
-    leap JSC::Wasm::WasmOrJSImportableFunction::callLinkInfo[t2], t2
+    loadp JSC::Wasm::WasmOrJSImportableFunctionCallLinkInfo::callLinkInfo[t2], t2
 
     # calleeGPR = t0
     # callLinkInfoGPR = t2

@@ -647,7 +647,7 @@ static inline UGPRPair doWasmCall(Register* partiallyConstructedCalleeFrame, JSW
         // For the non-jit wasm_to_js case specifically, we also pass along this functionInfo*, since
         // this new callee will have no way to access it.
         if (!functionInfo->targetInstance)
-            functionInfoSlot = reinterpret_cast<uintptr_t>(static_cast<Wasm::WasmOrJSImportableFunction*>(functionInfo));
+            functionInfoSlot = reinterpret_cast<uintptr_t>(functionInfo);
         else
             functionInfoSlot = functionInfo->targetInstance.get();
     } else {
@@ -694,7 +694,7 @@ static inline UGPRPair doWasmCallIndirect(Register* partiallyConstructedCalleeFr
         calleeStackSlot = CalleeBits::encodeNullCallee();
 
     if (!function.m_function.targetInstance)
-        functionInfoSlot = reinterpret_cast<uintptr_t>(static_cast<const Wasm::WasmOrJSImportableFunction*>(&function.m_function));
+        functionInfoSlot = reinterpret_cast<uintptr_t>(function.m_callLinkInfo);
     else
         functionInfoSlot = function.m_instance;
 
@@ -723,25 +723,25 @@ static inline UGPRPair doWasmCallRef(Register* partiallyConstructedCalleeFrame, 
 
     ASSERT(referenceAsObject->inherits<WebAssemblyFunctionBase>());
     auto* wasmFunction = jsCast<WebAssemblyFunctionBase*>(referenceAsObject);
-    auto* function = &wasmFunction->importableFunction();
+    auto& function = wasmFunction->importableFunction();
     JSWebAssemblyInstance* calleeInstance = wasmFunction->instance();
 
     Register& calleeStackSlot = partiallyConstructedCalleeFrame[static_cast<int>(CallFrameSlot::callee)];
     Register& functionInfoSlot = partiallyConstructedCalleeFrame[static_cast<int>(CallFrameSlot::codeBlock)];
     ASSERT(calleeStackSlot.unboxedInt64() == 0xBEEF);
 
-    if (function->boxedWasmCalleeLoadLocation)
-        calleeStackSlot = CalleeBits::encodeBoxedNativeCallee(reinterpret_cast<void*>(*function->boxedWasmCalleeLoadLocation));
+    if (function.boxedWasmCalleeLoadLocation)
+        calleeStackSlot = CalleeBits::encodeBoxedNativeCallee(reinterpret_cast<void*>(*function.boxedWasmCalleeLoadLocation));
     else
         calleeStackSlot = CalleeBits::encodeNullCallee();
-    if (!function->targetInstance)
-        functionInfoSlot = reinterpret_cast<uintptr_t>(static_cast<const Wasm::WasmOrJSImportableFunction*>(function));
+    if (!function.targetInstance)
+        functionInfoSlot = reinterpret_cast<uintptr_t>(wasmFunction->callLinkInfo());
     else
-        functionInfoSlot = function->targetInstance.get();
+        functionInfoSlot = function.targetInstance.get();
 
-    ASSERT(Wasm::isSubtypeIndex(function->typeIndex, CALLEE()->signature(typeIndex).index()));
+    ASSERT(Wasm::isSubtypeIndex(function.typeIndex, CALLEE()->signature(typeIndex).index()));
     UNUSED_PARAM(typeIndex);
-    auto callTarget = *function->entrypointLoadLocation;
+    auto callTarget = *function.entrypointLoadLocation;
     WASM_CALL_RETURN(calleeInstance, callTarget);
 }
 

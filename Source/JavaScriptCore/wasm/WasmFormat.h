@@ -775,7 +775,7 @@ struct InternalFunction {
 
 extern const uintptr_t NullWasmCallee;
 
-struct WasmCallableFunction {
+struct alignas(8) WasmCallableFunction {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     using LoadLocation = CodePtr<WasmEntryPtrTag>*;
     static constexpr ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WasmCallableFunction, entrypointLoadLocation); }
@@ -802,16 +802,19 @@ struct WasmToWasmImportableFunction : public WasmCallableFunction {
 };
 using FunctionIndexSpace = Vector<WasmToWasmImportableFunction>;
 
-struct WasmOrJSImportableFunction final : public WasmToWasmImportableFunction {
+struct WasmOrJSImportableFunction : public WasmToWasmImportableFunction {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     using LoadLocation = CodePtr<WasmEntryPtrTag>*;
 
     CodePtr<WasmEntryPtrTag> importFunctionStub;
     WriteBarrier<JSObject> importFunction { };
-    DataOnlyCallLinkInfo callLinkInfo { };
     uintptr_t boxedCallee { 0xBEEF };
+};
 
-    static constexpr ptrdiff_t offsetOfCallLinkInfo() { return OBJECT_OFFSETOF(WasmOrJSImportableFunction, callLinkInfo); }
+struct WasmOrJSImportableFunctionCallLinkInfo final : public WasmOrJSImportableFunction {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    std::unique_ptr<DataOnlyCallLinkInfo> callLinkInfo { };
+    static constexpr ptrdiff_t offsetOfCallLinkInfo() { return OBJECT_OFFSETOF(WasmOrJSImportableFunctionCallLinkInfo, callLinkInfo); }
 };
 
 } } // namespace JSC::Wasm

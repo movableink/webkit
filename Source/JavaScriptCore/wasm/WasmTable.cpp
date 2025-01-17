@@ -302,6 +302,7 @@ void FuncRefTable::setFunction(uint32_t index, WebAssemblyFunctionBase* function
         slot.m_protectedJSCallee = adoptRef(*new WasmToJSCallee(FunctionSpaceIndex(index), { nullptr, nullptr }));
         slot.m_function.boxedWasmCalleeLoadLocation = slot.m_protectedJSCallee->boxedWasmCalleeLoadLocation();
     }
+    slot.m_callLinkInfo = function->callLinkInfo();
     slot.m_instance = function->instance();
     slot.m_value.set(function->instance()->vm(), m_owner, function);
 }
