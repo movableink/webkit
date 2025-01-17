@@ -145,7 +145,11 @@ String preferredExtensionForImageType(const String& uti)
 
     auto *type = [UTType typeWithIdentifier:uti];
     String extension = type.preferredFilenameExtension;
-    RELEASE_ASSERT(oldExtension == extension);
+    if (UNLIKELY(oldExtension != extension)) {
+        std::array<uint64_t, 6> values { 0, 0, 0, 0, 0, 0 };
+        strncpy(reinterpret_cast<char*>(values.data()), uti.utf8().data(), sizeof(values));
+        CRASH_WITH_INFO(values[0], values[1], values[2], values[3], values[4], values[5]);
+    }
     return extension;
 }
 
