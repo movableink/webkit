@@ -16,7 +16,6 @@
 ./dfg/DFGSSALoweringPhase.cpp
 ./heap/JITStubRoutineSet.h
 ./inspector/agents/InspectorTargetAgent.h
-./interpreter/Interpreter.cpp
 ./jit/JIT.h
 ./jit/JITSafepoint.h
 ./jit/JITWorklistThread.cpp

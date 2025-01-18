@@ -932,6 +932,7 @@ public:
     static TypeInformation& singleton();
 
     static const TypeDefinition& signatureForLLIntBuiltin(LLIntBuiltin);
+    static const TypeDefinition& signatureForJSException();
 
     static RefPtr<TypeDefinition> typeDefinitionForFunction(const Vector<Type, 16>& returnTypes, const Vector<Type, 16>& argumentTypes);
     static RefPtr<TypeDefinition> typeDefinitionForStruct(const Vector<FieldType>& fields);
@@ -977,6 +978,7 @@ private:
     RefPtr<TypeDefinition> m_Ref_RefI32I32;
     RefPtr<TypeDefinition> m_Arrayref_I32I32I32I32;
     RefPtr<TypeDefinition> m_Anyref_Externref;
+    RefPtr<TypeDefinition> m_Void_Externref;
     RefPtr<TypeDefinition> m_Void_I32AnyrefI32;
     RefPtr<TypeDefinition> m_Void_I32AnyrefI32I32I32I32;
     RefPtr<TypeDefinition> m_Void_I32AnyrefI32I32AnyrefI32I32;

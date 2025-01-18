@@ -203,7 +203,6 @@
 ./wasm/js/JSWebAssemblyStruct.cpp
 ./wasm/js/JSWebAssemblyTable.cpp
 ./wasm/js/WasmToJS.cpp
-./wasm/js/WebAssemblyExceptionConstructor.cpp
 ./wasm/js/WebAssemblyGlobalPrototype.cpp
 ./wasm/js/WebAssemblyInstanceConstructor.cpp
 ./wasm/js/WebAssemblyModuleConstructor.cpp
@@ -255,6 +254,7 @@ wasm/WasmIPIntSlowPaths.cpp
 wasm/WasmMemory.h
 wasm/WasmOperationsInlines.h
 wasm/WasmSlowPaths.cpp
+wasm/WasmTag.h
 wasm/WasmTypeDefinition.h
 wasm/WasmTypeDefinitionInlines.h
 wasm/js/JSWebAssemblyInstance.h

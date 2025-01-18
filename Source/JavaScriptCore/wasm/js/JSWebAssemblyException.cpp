@@ -47,9 +47,9 @@ Structure* JSWebAssemblyException::createStructure(VM& vm, JSGlobalObject* globa
     return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
 }
 
-JSWebAssemblyException::JSWebAssemblyException(VM& vm, Structure* structure, const Wasm::Tag& tag, FixedVector<uint64_t>&& payload)
+JSWebAssemblyException::JSWebAssemblyException(VM& vm, Structure* structure, Ref<const Wasm::Tag>&& tag, FixedVector<uint64_t>&& payload)
     : Base(vm, structure)
-    , m_tag(Ref { tag })
+    , m_tag(WTFMove(tag))
     , m_payload(WTFMove(payload))
 {
 }

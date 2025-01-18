@@ -30,6 +30,8 @@
 #include "JSCJSValueInlines.h"
 #include "JSObjectInlines.h"
 #include "StructureInlines.h"
+#include "JSWebAssemblyException.h"
+#include "WasmTag.h"
 
 namespace JSC {
 
@@ -84,5 +86,17 @@ void Exception::finishCreation(VM& vm, StackCaptureAction action)
         vm.interpreter.getStackTrace(this, stackTrace, 0, Options::exceptionStackTraceLimit());
     m_stack = WTFMove(stackTrace);
 }
+
+#if ENABLE(WEBASSEMBLY)
+
+void Exception::wrapValueForJSTag(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    FixedVector<uint64_t> payload { static_cast<uint64_t>(JSValue::encode(m_value.get())) };
+    auto* wrapper = JSWebAssemblyException::create(vm, globalObject->webAssemblyExceptionStructure(), Wasm::Tag::jsExceptionTag(), WTFMove(payload));
+    m_value.set(vm, this, wrapper);
+}
+
+#endif
 
 } // namespace JSC
