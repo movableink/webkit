@@ -121,19 +121,17 @@ RefPtr<PlatformRawAudioData> PlatformRawAudioData::create(std::span<const uint8_
         return nullptr;
     }
     WebAudioBufferList inputList = inputDescription;
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    uint8_t* data = const_cast<uint8_t*>(sourceData.data());
+    auto data = spanConstCast<uint8_t>(sourceData);
     for (auto& buffer : inputList.buffers()) {
-        buffer.mData = data;
+        buffer.mData = data.data();
         buffer.mNumberChannels = inputDescription.numberOfInterleavedChannels();
         buffer.mDataByteSize = sizePlane;
-        data += sizePlane;
+        if (data.size() < sizePlane) {
+            RELEASE_LOG_ERROR(MediaStream, "PlatformRawAudioData::create nonsensical format data");
+            return nullptr;
+        }
+        skip(data, sizePlane);
     }
-    if (data > sourceData.data() + sourceData.size()) {
-        RELEASE_LOG_ERROR(MediaStream, "PlatformRawAudioData::create nonsensical format data");
-        return nullptr;
-    }
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     RetainPtr sample = createSampleBuffer(inputDescription, PAL::CMTimeMake(timestamp, 1000000), numberOfFrames, inputList);
     if (!sample) {
