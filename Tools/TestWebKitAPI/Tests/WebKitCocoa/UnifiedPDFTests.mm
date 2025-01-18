@@ -85,6 +85,9 @@ namespace TestWebKitAPI {
 
 #if PLATFORM(MAC)
 
+static constexpr unsigned short DownArrowKeyCode { 0x7D };
+static constexpr unsigned short RightArrowKeyCode { 0x7C };
+
 UNIFIED_PDF_TEST(KeyboardScrollingInSinglePageMode)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 600) configuration:configurationForWebViewTestingUnifiedPDF().get() addToWindow:YES]);
@@ -99,13 +102,18 @@ UNIFIED_PDF_TEST(KeyboardScrollingInSinglePageMode)
     [webView waitForNextPresentationUpdate];
     [webView setMagnification:2];
 
+    auto pressKey = [&webView](auto key, unsigned short code, Seconds duration = 200_ms) {
+        NSString *keyString = [NSString stringWithFormat:@"%C", static_cast<unichar>(key)];
+        [webView sendKey:keyString code:code isDown:YES modifiers:0];
+        Util::runFor(duration);
+        [webView sendKey:keyString code:code isDown:NO modifiers:0];
+        Util::runFor(50_ms);
+    };
+
     auto colorsBeforeScrolling = [webView sampleColors];
     Vector<WebCore::Color> colorsAfterScrollingDown;
     while (true) {
-        [webView sendKey:@"ArrowDown" code:NSDownArrowFunctionKey isDown:YES modifiers:0];
-        Util::runFor(200_ms);
-        [webView sendKey:@"ArrowDown" code:NSDownArrowFunctionKey isDown:NO modifiers:0];
-        Util::runFor(50_ms);
+        pressKey(NSDownArrowFunctionKey, DownArrowKeyCode);
         colorsAfterScrollingDown = [webView sampleColors];
         if (colorsBeforeScrolling != colorsAfterScrollingDown)
             break;
@@ -113,10 +121,7 @@ UNIFIED_PDF_TEST(KeyboardScrollingInSinglePageMode)
 
     Vector<WebCore::Color> colorsAfterScrollingRight;
     while (true) {
-        [webView sendKey:@"ArrowRight" code:NSRightArrowFunctionKey isDown:YES modifiers:0];
-        Util::runFor(200_ms);
-        [webView sendKey:@"ArrowRight" code:NSRightArrowFunctionKey isDown:NO modifiers:0];
-        Util::runFor(50_ms);
+        pressKey(NSRightArrowFunctionKey, RightArrowKeyCode);
         colorsAfterScrollingRight = [webView sampleColors];
         if (colorsAfterScrollingDown != colorsAfterScrollingRight)
             break;
