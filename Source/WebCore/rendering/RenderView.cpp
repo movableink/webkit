@@ -1014,19 +1014,13 @@ RenderView::RepaintRegionAccumulator::RepaintRegionAccumulator(RenderView* view)
     if (!view)
         return;
 
-    RefPtr mainFrameDocument = view->document().protectedMainFrameDocument();
-    if (!mainFrameDocument) {
-        LOG_ONCE(SiteIsolation, "Unable to properly perform RenderView::RepaintRegionAccumulator::RepaintRegionAccumulator() without access to the main frame document ");
-        return;
-    }
-    auto* rootRenderView = mainFrameDocument->renderView();
-    if (!rootRenderView)
+    if (!view->document().isTopDocument())
         return;
 
-    m_wasAccumulatingRepaintRegion = !!rootRenderView->m_accumulatedRepaintRegion;
+    m_wasAccumulatingRepaintRegion = !!view->m_accumulatedRepaintRegion;
     if (!m_wasAccumulatingRepaintRegion)
-        rootRenderView->m_accumulatedRepaintRegion = makeUnique<Region>();
-    m_rootView = *rootRenderView;
+        view->m_accumulatedRepaintRegion = makeUnique<Region>();
+    m_rootView = *view;
 }
 
 RenderView::RepaintRegionAccumulator::~RepaintRegionAccumulator()
