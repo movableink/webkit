@@ -478,8 +478,8 @@ NSString* Queue::errorValidatingWriteTexture(const WGPUImageCopyTexture& destina
         aspectSpecificFormat = Texture::aspectSpecificFormat(texture.format(), destination.aspect);
     }
 
-    if (!Texture::validateLinearTextureData(dataLayout, dataByteSize, aspectSpecificFormat, size))
-        return ERROR_STRING(@"validateLinearTextureData failed");
+    if (NSString* errorString = Texture::errorValidatingLinearTextureData(dataLayout, dataByteSize, aspectSpecificFormat, size))
+        return ERROR_STRING(errorString);
 
 #undef ERROR_STRING
     return nil;

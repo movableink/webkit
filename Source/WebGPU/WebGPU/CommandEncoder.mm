@@ -929,8 +929,8 @@ NSString* CommandEncoder::errorValidatingCopyBufferToTexture(const WGPUImageCopy
             return ERROR_STRING(@"source.layout.offset is not a multiple of four for depth stencil format");
     }
 
-    if (!Texture::validateLinearTextureData(source.layout, protectedFromAPI(source.buffer)->initialSize(), aspectSpecificFormat, copySize))
-        return ERROR_STRING(@"source.layout.offset is not a multiple of four for depth stencil format");
+    if (NSString* errorString = Texture::errorValidatingLinearTextureData(source.layout, protectedFromAPI(source.buffer)->initialSize(), aspectSpecificFormat, copySize))
+        return ERROR_STRING(errorString);
 #undef ERROR_STRING
     return nil;
 }
@@ -1241,8 +1241,8 @@ NSString* CommandEncoder::errorValidatingCopyTextureToBuffer(const WGPUImageCopy
             return ERROR_STRING(@"destination.layout.offset is not a multiple of 4");
     }
 
-    if (!Texture::validateLinearTextureData(destination.layout, protectedFromAPI(destination.buffer)->initialSize(), aspectSpecificFormat, copySize))
-        return ERROR_STRING(@"validateLinearTextureData fails");
+    if (NSString* errorString = Texture::errorValidatingLinearTextureData(destination.layout, protectedFromAPI(destination.buffer)->initialSize(), aspectSpecificFormat, copySize))
+        return ERROR_STRING(errorString);
 #undef ERROR_STRING
     return nil;
 }

@@ -47,6 +47,7 @@
 #include <wtf/MallocSpan.h>
 
 #if PLATFORM(COCOA)
+#include <Accelerate/Accelerate.h>
 #include <wtf/cf/VectorCF.h>
 
 #include "CoreVideoSoftLink.h"
@@ -372,29 +373,47 @@ static void getImageBytesFromImageBuffer(const RefPtr<ImageBuffer>& imageBuffer,
 }
 
 #if PLATFORM(COCOA) && ENABLE(VIDEO) && ENABLE(WEB_CODECS)
-static void getImageBytesFromVideoFrame(const RefPtr<VideoFrame>& videoFrame, ImageDataCallback&& callback)
+static void getImageBytesFromVideoFrame(WebGPU::Queue& backing, const RefPtr<VideoFrame>& videoFrame, ImageDataCallback&& callback)
 {
-    if (!videoFrame.get() || !videoFrame->pixelBuffer())
+    if (!videoFrame.get())
         return callback({ }, 0, 0);
 
-    auto pixelBuffer = videoFrame->pixelBuffer();
-    if (!pixelBuffer)
+    RefPtr<NativeImage> nativeImage = backing.getNativeImage(*videoFrame.get());
+    if (!nativeImage)
         return callback({ }, 0, 0);
 
-    auto columns = CVPixelBufferGetWidth(pixelBuffer);
-    auto rows = CVPixelBufferGetHeight(pixelBuffer);
-    auto sizeInBytes = rows * CVPixelBufferGetBytesPerRow(pixelBuffer);
+    RetainPtr platformImage = nativeImage->platformImage();
+    if (!platformImage)
+        return callback({ }, 0, 0);
+    RetainPtr pixelDataCfData = adoptCF(CGDataProviderCopyData(CGImageGetDataProvider(platformImage.get())));
+    if (!pixelDataCfData)
+        return callback({ }, 0, 0);
 
-    CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    callback(unsafeMakeSpan(reinterpret_cast<uint8_t*>(CVPixelBufferGetBaseAddress(pixelBuffer)), sizeInBytes), columns, rows);
-    CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    auto width = CGImageGetWidth(platformImage.get());
+    auto height = CGImageGetHeight(platformImage.get());
+    if (!width || !height)
+        return callback({ }, 0, 0);
+
+    auto sizeInBytes = height * CGImageGetBytesPerRow(platformImage.get());
+    auto byteSpan = span(pixelDataCfData.get());
+    vImage_Buffer bgra {
+        .data = const_cast<unsigned char*>(&byteSpan[0]),
+        .height = height,
+        .width = width,
+        .rowBytes = byteSpan.size() / height
+    };
+    uint8_t permuteMap[4] = { 2, 1, 0, 3 };
+    vImagePermuteChannels_ARGB8888(&bgra, &bgra, permuteMap, kvImageNoFlags);
+
+    return callback(byteSpan.first(sizeInBytes), width, height);
 }
 #endif
 
-static void imageBytesForSource(const auto& sourceDescriptor, const auto& destination, bool& needsYFlip, bool& needsPremultipliedAlpha, ImageDataCallback&& callback)
+static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescriptor, const auto& destination, bool& needsYFlip, bool& needsPremultipliedAlpha, ImageDataCallback&& callback)
 {
     UNUSED_PARAM(needsYFlip);
     UNUSED_PARAM(needsPremultipliedAlpha);
+    UNUSED_PARAM(backing);
 
     const auto& source = sourceDescriptor.source;
     using ResultType = void;
@@ -455,6 +474,7 @@ static void imageBytesForSource(const auto& sourceDescriptor, const auto& destin
                 return isBGRA ? channelsXBGR : channelsXRGB;
             }
         }();
+
         if (sizeInBytes == requiredSize && channelLayoutIsRGB)
             return callback(byteSpan.first(sizeInBytes), width, height);
 
@@ -483,14 +503,14 @@ static void imageBytesForSource(const auto& sourceDescriptor, const auto& destin
     }, [&](const RefPtr<HTMLVideoElement> videoElement) -> ResultType {
 #if PLATFORM(COCOA)
         if (RefPtr player = videoElement ? videoElement->player() : nullptr; player && player->isVideoPlayer())
-            return getImageBytesFromVideoFrame(player->videoFrameForCurrentTime(), WTFMove(callback));
+            return getImageBytesFromVideoFrame(backing, player->videoFrameForCurrentTime(), WTFMove(callback));
 #else
         UNUSED_PARAM(videoElement);
 #endif
         return callback({ }, 0, 0);
     }, [&](const RefPtr<WebCodecsVideoFrame> webCodecsFrame) -> ResultType {
 #if PLATFORM(COCOA)
-        return getImageBytesFromVideoFrame(webCodecsFrame->internalFrame(), WTFMove(callback));
+        return getImageBytesFromVideoFrame(backing, webCodecsFrame->internalFrame(), WTFMove(callback));
 #else
         UNUSED_PARAM(webCodecsFrame);
         return callback({ }, 0, 0);
@@ -983,7 +1003,7 @@ ExceptionOr<void> GPUQueue::copyExternalImageToTexture(ScriptExecutionContext& c
     bool callbackScopeIsSafe { true };
     bool needsYFlip = source.flipY;
     bool needsPremultipliedAlpha = destination.premultipliedAlpha;
-    imageBytesForSource(source, destination, needsYFlip, needsPremultipliedAlpha, [&](std::span<const uint8_t> imageBytes, size_t columns, size_t rows) {
+    imageBytesForSource(m_backing.get(), source, destination, needsYFlip, needsPremultipliedAlpha, [&](std::span<const uint8_t> imageBytes, size_t columns, size_t rows) {
         RELEASE_ASSERT(callbackScopeIsSafe);
         auto destinationTexture = destination.texture;
         auto sizeInBytes = imageBytes.size();
