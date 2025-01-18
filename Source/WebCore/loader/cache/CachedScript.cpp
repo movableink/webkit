@@ -3,7 +3,7 @@
     Copyright (C) 2001 Dirk Mueller (mueller@kde.org)
     Copyright (C) 2002 Waldo Bastian (bastian@kde.org)
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -146,22 +146,6 @@ void CachedScript::setBodyDataFrom(const CachedResource& resource)
     m_wasForceDecodedAsUTF8 = script.m_wasForceDecodedAsUTF8;
     m_decodingState = script.m_decodingState;
     m_decoder = script.m_decoder;
-}
-
-bool CachedScript::shouldIgnoreHTTPStatusCodeErrors() const
-{
-#if PLATFORM(MAC)
-    // This is a workaround for <rdar://problem/13916291>
-    // REGRESSION (r119759): Adobe Flash Player "smaller" installer relies on the incorrect firing
-    // of a load event and needs an app-specific hack for compatibility.
-    // The installer in question tries to load .js file that doesn't exist, causing the server to
-    // return a 404 response. Normally, this would trigger an error event to be dispatched, but the
-    // installer expects a load event instead so we work around it here.
-    if (WTF::MacApplication::isSolidStateNetworksDownloader())
-        return true;
-#endif
-
-    return CachedResource::shouldIgnoreHTTPStatusCodeErrors();
 }
 
 } // namespace WebCore

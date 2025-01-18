@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -172,7 +172,6 @@ WTF_EXPORT_PRIVATE bool isAppleMail();
 WTF_EXPORT_PRIVATE bool isMiniBrowser();
 WTF_EXPORT_PRIVATE bool isQuickenEssentials();
 WTF_EXPORT_PRIVATE bool isSafari();
-WTF_EXPORT_PRIVATE bool isSolidStateNetworksDownloader();
 WTF_EXPORT_PRIVATE bool isVersions();
 WTF_EXPORT_PRIVATE bool isHRBlock();
 WTF_EXPORT_PRIVATE bool isEpsonSoftwareUpdater();
