@@ -26,6 +26,7 @@
 #pragma once
 
 #include <CoreVideo/CoreVideo.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/SoftLinking.h>
 #include <wtf/StdLibExtras.h>
 
@@ -174,8 +175,19 @@ inline std::span<uint8_t> CVPixelBufferGetSpanOfPlane(CVPixelBufferRef pixelBuff
     if (!baseAddress)
         return { };
 
-    auto bytesPerRow = WebCore::CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, planeIndex);
+    CheckedSize bytesPerRow = WebCore::CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, planeIndex);
     auto height = WebCore::CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+    return unsafeMakeSpan(baseAddress, bytesPerRow * height);
+}
+
+inline std::span<uint8_t> CVPixelBufferGetSpan(CVPixelBufferRef pixelBuffer)
+{
+    auto* baseAddress = static_cast<uint8_t*>(CVPixelBufferGetBaseAddress(pixelBuffer));
+    if (!baseAddress)
+        return { };
+
+    CheckedSize bytesPerRow = WebCore::CVPixelBufferGetBytesPerRow(pixelBuffer);
+    auto height = WebCore::CVPixelBufferGetHeight(pixelBuffer);
     return unsafeMakeSpan(baseAddress, bytesPerRow * height);
 }
 }
