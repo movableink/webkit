@@ -35,8 +35,6 @@
 
 #import "CoreVideoSoftLink.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 static Expected<RetainPtr<CVPixelBufferPoolRef>, CVReturn> createBufferPool(unsigned minimumBufferCount, NSDictionary *pixelAttributes)
@@ -206,5 +204,3 @@ RetainPtr<CVPixelBufferRef> createBlackPixelBuffer(size_t width, size_t height, 
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
