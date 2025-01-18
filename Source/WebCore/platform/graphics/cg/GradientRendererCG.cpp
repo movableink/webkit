@@ -535,9 +535,8 @@ GradientRendererCG::Strategy GradientRendererCG::makeGradient(ColorInterpolation
 
 // MARK: - Shading strategy.
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 template<typename InterpolationSpace, AlphaPremultiplication alphaPremultiplication>
-void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* in, CGFloat* out)
+void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* rawIn, CGFloat* rawOut)
 {
     using InterpolationSpaceColorType = typename InterpolationSpace::ColorType;
     using OutputSpaceColorType = std::conditional_t<HasCGColorSpaceMapping<ColorSpace::ExtendedSRGB>, ExtendedSRGBA<float>, SRGBA<float>>;
@@ -545,6 +544,8 @@ void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* in,
     auto* data = static_cast<GradientRendererCG::Shading::Data*>(info);
 
     // Compute color at offset 'in[0]' and assign the components to out[0 -> 3].
+    auto in = unsafeMakeSpan(rawIn, 1);
+    auto out = unsafeMakeSpan(rawOut, 4);
 
     float requestedOffset = in[0];
 
@@ -574,7 +575,6 @@ void GradientRendererCG::Shading::shadingFunction(void* info, const CGFloat* in,
     for (size_t componentIndex = 0; componentIndex < interpolatedColorConvertedToOutputSpace.size(); ++componentIndex)
         out[componentIndex] = interpolatedColorConvertedToOutputSpace[componentIndex];
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 GradientRendererCG::Strategy GradientRendererCG::makeShading(ColorInterpolationMethod colorInterpolationMethod, const GradientColorStops& stops) const
 {
