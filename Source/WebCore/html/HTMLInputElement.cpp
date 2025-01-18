@@ -1157,7 +1157,7 @@ void HTMLInputElement::copyNonAttributePropertiesFromElement(const Element& sour
 
 String HTMLInputElement::value() const
 {
-    if (document().requiresScriptExecutionTelemetry(ScriptTelemetryCategory::FormControls))
+    if (protectedDocument()->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::FormControls))
         return m_inputType->defaultValue();
     if (auto* fileInput = dynamicDowncast<FileInputType>(*m_inputType))
         return fileInput->firstElementPathForInputValue();
