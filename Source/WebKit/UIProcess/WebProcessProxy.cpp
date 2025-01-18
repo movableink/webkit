@@ -2325,7 +2325,7 @@ void WebProcessProxy::sharedPreferencesDidChange()
 
 #if ENABLE(MODEL_PROCESS)
     if (m_sharedPreferencesVersionInModelProcess != currentVersion) {
-        if (RefPtr modelProcess = webProcess.processPool().modelProcess()) {
+        if (RefPtr modelProcess = processPool().modelProcess()) {
             auto sharedPreferencesForWebProcess = m_sharedPreferencesForWebProcess;
             modelProcess->sharedPreferencesForWebProcessDidChange(*this, WTFMove(sharedPreferencesForWebProcess), [weakThis = WeakPtr { this }, syncedVersion = currentVersion]() {
                 if (RefPtr process = weakThis.get())
