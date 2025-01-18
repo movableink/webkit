@@ -1117,67 +1117,6 @@ void WebFrameLoaderClient::didRunInsecureContent(WebCore::SecurityOrigin& origin
     }
 }
 
-WebCore::ResourceError WebFrameLoaderClient::cancelledError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:NSURLErrorDomain code:NSURLErrorCancelled URL:request.url()];
-}
-    
-WebCore::ResourceError WebFrameLoaderClient::blockedError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:WebKitErrorDomain code:WebKitErrorCannotUseRestrictedPort URL:request.url()];
-}
-
-WebCore::ResourceError WebFrameLoaderClient::blockedByContentBlockerError(const WebCore::ResourceRequest& request) const
-{
-    RELEASE_ASSERT_NOT_REACHED(); // Content blockers are not enabled in WebKit1.
-}
-
-WebCore::ResourceError WebFrameLoaderClient::cannotShowURLError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:WebKitErrorDomain code:WebKitErrorCannotShowURL URL:request.url()];
-}
-
-WebCore::ResourceError WebFrameLoaderClient::interruptedForPolicyChangeError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:WebKitErrorDomain code:WebKitErrorFrameLoadInterruptedByPolicyChange URL:request.url()];
-}
-
-#if ENABLE(CONTENT_FILTERING)
-WebCore::ResourceError WebFrameLoaderClient::blockedByContentFilterError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:WebKitErrorDomain code:WebKitErrorFrameLoadBlockedByContentFilter URL:request.url()];
-}
-#endif
-
-WebCore::ResourceError WebFrameLoaderClient::cannotShowMIMETypeError(const WebCore::ResourceResponse& response) const
-{
-    return [NSError _webKitErrorWithDomain:NSURLErrorDomain code:WebKitErrorCannotShowMIMEType URL:response.url()];
-}
-
-WebCore::ResourceError WebFrameLoaderClient::fileDoesNotExistError(const WebCore::ResourceResponse& response) const
-{
-    return [NSError _webKitErrorWithDomain:NSURLErrorDomain code:NSURLErrorFileDoesNotExist URL:response.url()];    
-}
-
-WebCore::ResourceError WebFrameLoaderClient::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest&) const
-{
-    RELEASE_ASSERT_NOT_REACHED(); // This error should never be created in WebKit1 because HTTPSOnly/First aren't available.
-}
-
-WebCore::ResourceError WebFrameLoaderClient::httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest&) const
-{
-    RELEASE_ASSERT_NOT_REACHED(); // This error should never be created in WebKit1 because HTTPSOnly/First aren't available.
-}
-
-WebCore::ResourceError WebFrameLoaderClient::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
-{
-    return adoptNS([[NSError alloc] _initWithPluginErrorCode:WebKitErrorPlugInWillHandleLoad
-                                                    contentURL:response.url()
-                                                 pluginPageURL:nil
-                                                    pluginName:nil
-                                                      MIMEType:response.mimeType()]).autorelease();
-}
-
 bool WebFrameLoaderClient::shouldFallBack(const WebCore::ResourceError& error) const
 {
     // FIXME: Needs to check domain.

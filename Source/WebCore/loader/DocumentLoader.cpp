@@ -1138,7 +1138,7 @@ void DocumentLoader::continueAfterContentPolicy(PolicyAction policy)
         // m_mainResource can be null, e.g. when loading a substitute resource from application cache.
         if (!m_mainResource) {
             DOCUMENTLOADER_RELEASE_LOG("continueAfterContentPolicy: cannot show URL");
-            mainReceivedError(protectedFrameLoader()->protectedClient()->cannotShowURLError(m_request));
+            mainReceivedError(platformStrategies()->loaderStrategy()->cannotShowURLError(m_request));
             return;
         }
 
@@ -1240,7 +1240,7 @@ ResourceError DocumentLoader::interruptedForPolicyChangeError() const
         return error;
     }
 
-    auto error = protectedFrameLoader()->protectedClient()->interruptedForPolicyChangeError(request());
+    auto error = platformStrategies()->loaderStrategy()->interruptedForPolicyChangeError(request());
     error.setType(ResourceError::Type::Cancellation);
     return error;
 }
@@ -2146,7 +2146,7 @@ void DocumentLoader::startLoadingMainResource()
     Ref<DocumentLoader> protectedThis(*this);
 
     if (shouldCancelLoadingAboutURL(m_request.url())) {
-        cancelMainResourceLoad(protectedFrameLoader()->protectedClient()->cannotShowURLError(m_request));
+        cancelMainResourceLoad(platformStrategies()->loaderStrategy()->cannotShowURLError(m_request));
         return;
     }
 
@@ -2296,12 +2296,12 @@ void DocumentLoader::loadMainResource(ResourceRequest&& request)
 
         if (!m_request.url().isValid()) {
             DOCUMENTLOADER_RELEASE_LOG("loadMainResource: Unable to load main resource, URL is invalid");
-            cancelMainResourceLoad(protectedFrameLoader()->protectedClient()->cannotShowURLError(m_request));
+            cancelMainResourceLoad(platformStrategies()->loaderStrategy()->cannotShowURLError(m_request));
             return;
         }
 
         if (advancedPrivacyProtections().contains(AdvancedPrivacyProtections::HTTPSOnly)) {
-            if (auto httpNavigationWithHTTPSOnlyError = protectedFrameLoader()->protectedClient()->httpNavigationWithHTTPSOnlyError(m_request); mainResourceOrError.error().domain() == httpNavigationWithHTTPSOnlyError.domain()
+            if (auto httpNavigationWithHTTPSOnlyError = platformStrategies()->loaderStrategy()->httpNavigationWithHTTPSOnlyError(m_request); mainResourceOrError.error().domain() == httpNavigationWithHTTPSOnlyError.domain()
                 && mainResourceOrError.error().errorCode() == httpNavigationWithHTTPSOnlyError.errorCode()) {
                 DOCUMENTLOADER_RELEASE_LOG("loadMainResource: Unable to load main resource, URL has HTTP scheme with HTTPSOnly enabled");
                 cancelMainResourceLoad(mainResourceOrError.error());

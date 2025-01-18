@@ -786,27 +786,29 @@ void ResourceLoader::cancel(const ResourceError& error, LoadWillContinueInAnothe
 
 ResourceError ResourceLoader::cancelledError()
 {
-    return protectedFrameLoader()->cancelledError(m_request);
+    auto error = platformStrategies()->loaderStrategy()->cancelledError(m_request);
+    error.setType(ResourceError::Type::Cancellation);
+    return error;
 }
 
 ResourceError ResourceLoader::blockedError()
 {
-    return protectedFrameLoader()->protectedClient()->blockedError(m_request);
+    return platformStrategies()->loaderStrategy()->blockedError(m_request);
 }
 
 ResourceError ResourceLoader::blockedByContentBlockerError()
 {
-    return protectedFrameLoader()->protectedClient()->blockedByContentBlockerError(m_request);
+    return platformStrategies()->loaderStrategy()->blockedByContentBlockerError(m_request);
 }
 
 ResourceError ResourceLoader::cannotShowURLError()
 {
-    return protectedFrameLoader()->protectedClient()->cannotShowURLError(m_request);
+    return platformStrategies()->loaderStrategy()->cannotShowURLError(m_request);
 }
 
 ResourceError ResourceLoader::httpsUpgradeRedirectLoopError()
 {
-    return protectedFrameLoader()->protectedClient()->httpsUpgradeRedirectLoopError(m_request);
+    return platformStrategies()->loaderStrategy()->httpsUpgradeRedirectLoopError(m_request);
 }
 
 void ResourceLoader::willSendRequestAsync(ResourceHandle* handle, ResourceRequest&& request, ResourceResponse&& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&& completionHandler)

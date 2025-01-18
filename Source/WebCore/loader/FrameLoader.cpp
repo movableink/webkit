@@ -4474,29 +4474,29 @@ void FrameLoader::retryAfterFailedCacheOnlyMainResourceLoad()
     }
 }
 
-ResourceError FrameLoader::cancelledError(const ResourceRequest& request) const
+ResourceError FrameLoader::cancelledError(const ResourceRequest& request)
 {
-    ResourceError error = m_client->cancelledError(request);
+    ResourceError error = platformStrategies()->loaderStrategy()->cancelledError(request);
     error.setType(ResourceError::Type::Cancellation);
     return error;
 }
 
-ResourceError FrameLoader::blockedByContentBlockerError(const ResourceRequest& request) const
+ResourceError FrameLoader::blockedByContentBlockerError(const ResourceRequest& request)
 {
-    return m_client->blockedByContentBlockerError(request);
+    return platformStrategies()->loaderStrategy()->blockedByContentBlockerError(request);
 }
 
-ResourceError FrameLoader::blockedError(const ResourceRequest& request) const
+ResourceError FrameLoader::blockedError(const ResourceRequest& request)
 {
-    ResourceError error = m_client->blockedError(request);
+    ResourceError error = platformStrategies()->loaderStrategy()->blockedError(request);
     error.setType(ResourceError::Type::Cancellation);
     return error;
 }
 
 #if ENABLE(CONTENT_FILTERING)
-ResourceError FrameLoader::blockedByContentFilterError(const ResourceRequest& request) const
+ResourceError FrameLoader::blockedByContentFilterError(const ResourceRequest& request)
 {
-    ResourceError error = m_client->blockedByContentFilterError(request);
+    ResourceError error = platformStrategies()->loaderStrategy()->blockedByContentFilterError(request);
     error.setType(ResourceError::Type::General);
     return error;
 }

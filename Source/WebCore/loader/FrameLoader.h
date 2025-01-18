@@ -200,11 +200,11 @@ public:
 
     bool willLoadMediaElementURL(URL&, Node&);
 
-    WEBCORE_EXPORT ResourceError cancelledError(const ResourceRequest&) const;
-    WEBCORE_EXPORT ResourceError blockedByContentBlockerError(const ResourceRequest&) const;
-    ResourceError blockedError(const ResourceRequest&) const;
+    WEBCORE_EXPORT static ResourceError cancelledError(const ResourceRequest&);
+    WEBCORE_EXPORT static ResourceError blockedByContentBlockerError(const ResourceRequest&);
+    static ResourceError blockedError(const ResourceRequest&);
 #if ENABLE(CONTENT_FILTERING)
-    ResourceError blockedByContentFilterError(const ResourceRequest&) const;
+    static ResourceError blockedByContentFilterError(const ResourceRequest&);
 #endif
 
     bool isReplacing() const;

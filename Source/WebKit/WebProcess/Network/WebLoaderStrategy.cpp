@@ -1070,6 +1070,63 @@ void WebLoaderStrategy::prioritizeResourceLoads(const Vector<WebCore::Subresourc
     connection.send(Messages::NetworkConnectionToWebProcess::PrioritizeResourceLoads(identifiers), 0);
 }
 
+ResourceError WebLoaderStrategy::cancelledError(const ResourceRequest& request) const
+{
+    return WebKit::cancelledError(request);
+}
+
+ResourceError WebLoaderStrategy::blockedError(const ResourceRequest& request) const
+{
+    return WebKit::blockedError(request);
+}
+
+ResourceError WebLoaderStrategy::blockedByContentBlockerError(const ResourceRequest& request) const
+{
+    return WebKit::blockedByContentBlockerError(request);
+}
+
+ResourceError WebLoaderStrategy::cannotShowURLError(const ResourceRequest& request) const
+{
+    return WebKit::cannotShowURLError(request);
+}
+
+ResourceError WebLoaderStrategy::interruptedForPolicyChangeError(const ResourceRequest& request) const
+{
+    return WebKit::interruptedForPolicyChangeError(request);
+}
+
+#if ENABLE(CONTENT_FILTERING)
+ResourceError WebLoaderStrategy::blockedByContentFilterError(const ResourceRequest& request) const
+{
+    return WebKit::blockedByContentFilterError(request);
+}
+#endif
+
+ResourceError WebLoaderStrategy::cannotShowMIMETypeError(const ResourceResponse& response) const
+{
+    return WebKit::cannotShowMIMETypeError(response);
+}
+
+ResourceError WebLoaderStrategy::fileDoesNotExistError(const ResourceResponse& response) const
+{
+    return WebKit::fileDoesNotExistError(response);
+}
+
+ResourceError WebLoaderStrategy::httpsUpgradeRedirectLoopError(const ResourceRequest& request) const
+{
+    return WebKit::httpsUpgradeRedirectLoopError(request);
+}
+
+ResourceError WebLoaderStrategy::httpNavigationWithHTTPSOnlyError(const ResourceRequest& request) const
+{
+    return WebKit::httpNavigationWithHTTPSOnlyError(request);
+}
+
+ResourceError WebLoaderStrategy::pluginWillHandleLoadError(const ResourceResponse& response) const
+{
+    return WebKit::pluginWillHandleLoadError(response);
+}
+
 } // namespace WebKit
 
 #undef WEBLOADERSTRATEGY_RELEASE_LOG_BASIC

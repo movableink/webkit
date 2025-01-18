@@ -1198,7 +1198,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
             && !frame->loader().isHTTPFallbackInProgress()
             && !(committedDocumentURL.protocolIs("http"_s) && request.resourceRequest().isSameSite());
         if (!madeHTTPS && !LegacySchemeRegistry::shouldTreatURLSchemeAsSecure(request.resourceRequest().url().protocol()) && type == CachedResource::Type::MainResource && isHTTPSOnlyActive)
-            return makeUnexpected(protectedDocumentLoader()->protectedFrameLoader()->client().httpNavigationWithHTTPSOnlyError(request.resourceRequest()));
+            return makeUnexpected(platformStrategies()->loaderStrategy()->httpNavigationWithHTTPSOnlyError(request.resourceRequest()));
 
         if (madeHTTPS
             && type == CachedResource::Type::MainResource

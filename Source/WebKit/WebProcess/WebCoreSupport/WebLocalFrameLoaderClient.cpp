@@ -1265,67 +1265,10 @@ void WebLocalFrameLoaderClient::didRunInsecureContent(SecurityOrigin&)
     webPage->send(Messages::WebPageProxy::DidRunInsecureContentForFrame(m_frame->frameID(), UserData(WebProcess::singleton().transformObjectsToHandles(userData.get()).get())));
 }
 
-ResourceError WebLocalFrameLoaderClient::cancelledError(const ResourceRequest& request) const
-{
-    return WebKit::cancelledError(request);
-}
-
-ResourceError WebLocalFrameLoaderClient::blockedError(const ResourceRequest& request) const
-{
-    return WebKit::blockedError(request);
-}
-
-ResourceError WebLocalFrameLoaderClient::blockedByContentBlockerError(const ResourceRequest& request) const
-{
-    return WebKit::blockedByContentBlockerError(request);
-}
-
-ResourceError WebLocalFrameLoaderClient::cannotShowURLError(const ResourceRequest& request) const
-{
-    return WebKit::cannotShowURLError(request);
-}
-
-ResourceError WebLocalFrameLoaderClient::interruptedForPolicyChangeError(const ResourceRequest& request) const
-{
-    return WebKit::interruptedForPolicyChangeError(request);
-}
-
-#if ENABLE(CONTENT_FILTERING)
-ResourceError WebLocalFrameLoaderClient::blockedByContentFilterError(const ResourceRequest& request) const
-{
-    return WebKit::blockedByContentFilterError(request);
-}
-#endif
-
-ResourceError WebLocalFrameLoaderClient::cannotShowMIMETypeError(const ResourceResponse& response) const
-{
-    return WebKit::cannotShowMIMETypeError(response);
-}
-
-ResourceError WebLocalFrameLoaderClient::fileDoesNotExistError(const ResourceResponse& response) const
-{
-    return WebKit::fileDoesNotExistError(response);
-}
-
-ResourceError WebLocalFrameLoaderClient::httpsUpgradeRedirectLoopError(const ResourceRequest& request) const
-{
-    return WebKit::httpsUpgradeRedirectLoopError(request);
-}
-
-ResourceError WebLocalFrameLoaderClient::httpNavigationWithHTTPSOnlyError(const ResourceRequest& request) const
-{
-    return WebKit::httpNavigationWithHTTPSOnlyError(request);
-}
-
-ResourceError WebLocalFrameLoaderClient::pluginWillHandleLoadError(const ResourceResponse& response) const
-{
-    return WebKit::pluginWillHandleLoadError(response);
-}
-
 bool WebLocalFrameLoaderClient::shouldFallBack(const ResourceError& error) const
 {
-    static NeverDestroyed<const ResourceError> cancelledError(this->cancelledError(ResourceRequest()));
-    static NeverDestroyed<const ResourceError> pluginWillHandleLoadError(this->pluginWillHandleLoadError(ResourceResponse()));
+    static NeverDestroyed<const ResourceError> cancelledError(WebKit::cancelledError(ResourceRequest()));
+    static NeverDestroyed<const ResourceError> pluginWillHandleLoadError(WebKit::pluginWillHandleLoadError(ResourceResponse()));
 
     if (error.errorCode() == cancelledError.get().errorCode() && error.domain() == cancelledError.get().domain())
         return false;

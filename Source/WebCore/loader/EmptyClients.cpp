@@ -899,65 +899,6 @@ void EmptyFrameLoaderClient::finishedLoading(DocumentLoader*)
 {
 }
 
-ResourceError EmptyFrameLoaderClient::cancelledError(const ResourceRequest&) const
-{
-    return { ResourceError::Type::Cancellation };
-}
-
-ResourceError EmptyFrameLoaderClient::blockedError(const ResourceRequest&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::blockedByContentBlockerError(const ResourceRequest&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::cannotShowURLError(const ResourceRequest&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::interruptedForPolicyChangeError(const ResourceRequest&) const
-{
-    return { };
-}
-
-#if ENABLE(CONTENT_FILTERING)
-
-ResourceError EmptyFrameLoaderClient::blockedByContentFilterError(const ResourceRequest&) const
-{
-    return { };
-}
-
-#endif
-
-ResourceError EmptyFrameLoaderClient::cannotShowMIMETypeError(const ResourceResponse&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::fileDoesNotExistError(const ResourceResponse&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::httpsUpgradeRedirectLoopError(const ResourceRequest&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::pluginWillHandleLoadError(const ResourceResponse&) const
-{
-    return { };
-}
-
 bool EmptyFrameLoaderClient::shouldFallBack(const ResourceError&) const
 {
     return false;

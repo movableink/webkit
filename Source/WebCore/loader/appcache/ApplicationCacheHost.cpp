@@ -36,9 +36,11 @@
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "InspectorInstrumentation.h"
+#include "LoaderStrategy.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "Page.h"
+#include "PlatformStrategies.h"
 #include "ProgressEvent.h"
 #include "ResourceRequest.h"
 #include "Settings.h"
@@ -260,8 +262,8 @@ bool ApplicationCacheHost::maybeLoadSynchronously(ResourceRequest& request, Reso
         return false;
 
     auto responseData = resource ? bufferFromResource(*resource) : nullptr;
-    if (!responseData && m_documentLoader->frameLoader()) {
-        error = m_documentLoader->frameLoader()->client().cannotShowURLError(request);
+    if (!responseData) {
+        error = platformStrategies()->loaderStrategy()->cannotShowURLError(request);
         return true;
     }
 

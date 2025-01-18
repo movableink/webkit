@@ -228,21 +228,6 @@ public:
     // spread to other frames in the same origin.
     virtual void didRunInsecureContent(SecurityOrigin&) = 0;
 
-    virtual ResourceError cancelledError(const ResourceRequest&) const = 0;
-    virtual ResourceError blockedError(const ResourceRequest&) const = 0;
-    virtual ResourceError blockedByContentBlockerError(const ResourceRequest&) const = 0;
-    virtual ResourceError cannotShowURLError(const ResourceRequest&) const = 0;
-    virtual ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const = 0;
-#if ENABLE(CONTENT_FILTERING)
-    virtual ResourceError blockedByContentFilterError(const ResourceRequest&) const = 0;
-#endif
-
-    virtual ResourceError cannotShowMIMETypeError(const ResourceResponse&) const = 0;
-    virtual ResourceError fileDoesNotExistError(const ResourceResponse&) const = 0;
-    virtual ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const = 0;
-    virtual ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const = 0;
-    virtual ResourceError pluginWillHandleLoadError(const ResourceResponse&) const = 0;
-
     virtual bool shouldFallBack(const ResourceError&) const = 0;
 
     virtual void loadStorageAccessQuirksIfNeeded() = 0;
