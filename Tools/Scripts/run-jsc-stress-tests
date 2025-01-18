@@ -1506,6 +1506,9 @@ BASE_MODES.each { |mode|
     cfgKinds.each { |cfgKind|
         methodName = "#{name}#{cfgKind.extension}".to_sym
         define_method(methodName) { |*args|
+            if not kind.nil? and $skipModes.include?(kind.to_sym)
+                return
+            end
             cfg = nil
             if cfgKind.expectCfg
                 # If we're defining a method that expects a cfg
