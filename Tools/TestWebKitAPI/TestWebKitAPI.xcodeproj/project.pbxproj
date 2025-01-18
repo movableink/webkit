@@ -1187,6 +1187,7 @@
 		BCB68042126FBFF100642A61 /* DocumentStartUserScriptAlertCrash_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BCB68041126FBFF100642A61 /* DocumentStartUserScriptAlertCrash_Bundle.cpp */; };
 		BCE0DFB72D188ADC003F0349 /* CompactVariant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BCE0DFB62D188ADC003F0349 /* CompactVariant.cpp */; };
 		BCEA080E2CD00F5C000AC148 /* VariantList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BCEA080D2CD00F5C000AC148 /* VariantList.cpp */; };
+		BCED51762D3B3C1200C57E2D /* StyleGradient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BCED51752D3B3C1200C57E2D /* StyleGradient.cpp */; };
 		C0BD669F131D3CFF00E18F2A /* ResponsivenessTimerDoesntFireEarly_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0BD669E131D3CFF00E18F2A /* ResponsivenessTimerDoesntFireEarly_Bundle.cpp */; };
 		C0C5D3C61459912900A802A6 /* GetBackingScaleFactor_Bundle.mm in Sources */ = {isa = PBXBuildFile; fileRef = C0C5D3BD14598B6F00A802A6 /* GetBackingScaleFactor_Bundle.mm */; };
 		C104BC1F2547237100C078C9 /* OverrideAppleLanguagesPreference.mm in Sources */ = {isa = PBXBuildFile; fileRef = C104BC1E2547237100C078C9 /* OverrideAppleLanguagesPreference.mm */; };
@@ -3417,6 +3418,7 @@
 		BCC8B95A12611F4700DE46A4 /* FailedLoad.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FailedLoad.cpp; sourceTree = "<group>"; };
 		BCE0DFB62D188ADC003F0349 /* CompactVariant.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CompactVariant.cpp; sourceTree = "<group>"; };
 		BCEA080D2CD00F5C000AC148 /* VariantList.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VariantList.cpp; sourceTree = "<group>"; };
+		BCED51752D3B3C1200C57E2D /* StyleGradient.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StyleGradient.cpp; sourceTree = "<group>"; };
 		C02B77F1126612140026BF0F /* SpacebarScrolling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SpacebarScrolling.cpp; sourceTree = "<group>"; };
 		C02B7853126613AE0026BF0F /* Carbon.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Carbon.framework; sourceTree = SDKROOT; };
 		C02B7882126615410026BF0F /* spacebar-scrolling.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "spacebar-scrolling.html"; sourceTree = "<group>"; };
@@ -4774,6 +4776,7 @@
 				ECA680CD1E68CC0900731D20 /* StringUtilities.mm */,
 				CE4D5DE51F6743BA0072CFC6 /* StringWithDirection.cpp */,
 				41E67A8425D16E83007B0A4C /* STUNMessageParsingTest.cpp */,
+				BCED51752D3B3C1200C57E2D /* StyleGradient.cpp */,
 				1C9DD9222697655B00274DB2 /* SVGImageCasts.cpp */,
 				155B872B2BF55D7800D93968 /* TextBoundaries.cpp */,
 				93A258981F92FF15003E510C /* TextCodec.cpp */,
@@ -7260,6 +7263,7 @@
 				1C8FA53A2685A6D500B7E49E /* StringWidth.mm in Sources */,
 				CE4D5DE71F6743BA0072CFC6 /* StringWithDirection.cpp in Sources */,
 				41E67A8525D16E83007B0A4C /* STUNMessageParsingTest.cpp in Sources */,
+				BCED51762D3B3C1200C57E2D /* StyleGradient.cpp in Sources */,
 				7CCE7ED21A411A7E00447C4C /* SubresourceErrorCrash.mm in Sources */,
 				51EB126724CB8753000CB030 /* SunLightApplicationGenericNES.mm in Sources */,
 				1C9DD9232697655B00274DB2 /* SVGImageCasts.cpp in Sources */,

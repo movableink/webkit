@@ -101,8 +101,8 @@ public:
     Color(WebCore::Color);
     Color(SRGBA<uint8_t>);
 
-    Color(ResolvedColor&&);
-    Color(CurrentColor&&);
+    WEBCORE_EXPORT Color(ResolvedColor&&);
+    WEBCORE_EXPORT Color(CurrentColor&&);
     Color(ColorLayers&&);
     Color(ColorMix&&);
     Color(ContrastColor&&);
@@ -125,7 +125,7 @@ public:
     WEBCORE_EXPORT Color(const Color&);
     Color& operator=(const Color&);
 
-    Color(Color&&);
+    WEBCORE_EXPORT Color(Color&&);
     Color& operator=(Color&&);
 
     WEBCORE_EXPORT ~Color();

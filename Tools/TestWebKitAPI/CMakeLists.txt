@@ -222,6 +222,7 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/SecurityOrigin.cpp
         Tests/WebCore/SharedBuffer.cpp
         Tests/WebCore/SharedBufferTest.cpp
+        Tests/WebCore/StyleGradient.cpp
         Tests/WebCore/TimeRanges.cpp
         Tests/WebCore/TransformationMatrix.cpp
         Tests/WebCore/URLParserTextEncoding.cpp

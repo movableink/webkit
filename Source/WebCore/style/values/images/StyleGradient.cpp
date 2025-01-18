@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2022 Apple Inc. All rights reserved.
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1198,7 +1198,7 @@ static bool stopColorIsCacheable(const Markable<Color>& stopColor)
 
 template<typename Gradient> static bool stopsAreCacheable(const Gradient& gradient)
 {
-    return std::ranges::none_of(gradient.parameters.stops, [](auto& stop) {
+    return std::ranges::all_of(gradient.parameters.stops, [](auto& stop) {
         return stopColorIsCacheable(stop.color);
     });
 }
