@@ -58,8 +58,10 @@ size_t Fuzzilli::numPendingRejectedPromises { 0 };
 void Fuzzilli::resetCoverageEdges()
 {
     uint64_t n = 0;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     for (uint32_t* edge = edgesStart; edge < edgesStop && n < MAX_EDGES; edge++)
         *edge = ++n;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 FilePrintStream& Fuzzilli::logFile()
@@ -171,7 +173,9 @@ extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t* guard)
     // instrumentation ignores the first edge (see libcoverage.c) and so the race is unproblematic.
 
     uint32_t index = *guard;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     Fuzzilli::sharedData->edges[index / 8] |= 1 << (index % 8);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     *guard = 0;
 }
