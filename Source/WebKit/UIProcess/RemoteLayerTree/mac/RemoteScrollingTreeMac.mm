@@ -494,7 +494,7 @@ RefPtr<ScrollingTreeNode> RemoteScrollingTreeMac::scrollingNodeForPoint(FloatPoi
     LOG_WITH_STREAM(UIHitTesting, stream << "RemoteScrollingTreeMac " << this << " scrollingNodeForPoint " << point << " (converted to layer point " << pointInContentsLayer << ") found " << layersAtPoint.size() << " layers");
 #if !LOG_DISABLED
     for (auto [layer, point] : layersAtPoint)
-        LOG_WITH_STREAM(UIHitTesting, stream << " layer " << [layer description] << " scrolling node " << scrollingNodeIDForLayer(layer));
+        LOG_WITH_STREAM(UIHitTesting, stream << " layer " << [layer description] << " scrolling node " << scrollingNodeIDForLayer(layer.get()));
 #endif
 
     if (layersAtPoint.size()) {
@@ -502,7 +502,7 @@ RefPtr<ScrollingTreeNode> RemoteScrollingTreeMac::scrollingNodeForPoint(FloatPoi
         for (size_t i = 0 ; i < layersAtPoint.size() ; i++) {
             auto [layer, point] = layersAtPoint[i];
 
-            if (!layerEventRegionContainsPoint(layer, point))
+            if (!layerEventRegionContainsPoint(layer.get(), point))
                 continue;
 
             if (!frontmostInteractiveLayer)
@@ -510,7 +510,7 @@ RefPtr<ScrollingTreeNode> RemoteScrollingTreeMac::scrollingNodeForPoint(FloatPoi
 
             auto scrollingNodeForLayer = [&] (auto layer, auto point) -> RefPtr<ScrollingTreeNode> {
                 UNUSED_PARAM(point);
-                auto nodeID = scrollingNodeIDForLayer(layer);
+                auto nodeID = scrollingNodeIDForLayer(layer.get());
                 RefPtr scrollingNode = nodeForID(nodeID);
                 if (!is<ScrollingTreeScrollingNode>(scrollingNode))
                     return nullptr;
@@ -562,7 +562,7 @@ OptionSet<EventListenerRegionType> RemoteScrollingTreeMac::eventListenerRegionTy
     if (!hitLayer)
         return { };
 
-    auto* eventRegion = eventRegionForLayer(hitLayer);
+    auto* eventRegion = eventRegionForLayer(hitLayer.get());
     if (!eventRegion)
         return { };
 

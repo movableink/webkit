@@ -147,7 +147,7 @@ RefPtr<ScrollingTreeNode> ScrollingTreeMac::scrollingNodeForPoint(FloatPoint poi
     LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeMac " << this << " scrollingNodeForPoint " << point << " found " << layersAtPoint.size() << " layers");
 #if !LOG_DISABLED
     for (auto [layer, point] : layersAtPoint)
-        LOG_WITH_STREAM(Scrolling, stream << " layer " << [layer description] << " scrolling node " << scrollingNodeIDForLayer(layer));
+        LOG_WITH_STREAM(Scrolling, stream << " layer " << [layer description] << " scrolling node " << scrollingNodeIDForLayer(layer.get()));
 #endif
 
     if (layersAtPoint.size()) {
@@ -155,7 +155,7 @@ RefPtr<ScrollingTreeNode> ScrollingTreeMac::scrollingNodeForPoint(FloatPoint poi
         for (size_t i = 0 ; i < layersAtPoint.size() ; i++) {
             auto [layer, point] = layersAtPoint[i];
 
-            if (!layerEventRegionContainsPoint(layer, point))
+            if (!layerEventRegionContainsPoint(layer.get(), point))
                 continue;
 
             if (!frontmostInteractiveLayer)
@@ -163,7 +163,7 @@ RefPtr<ScrollingTreeNode> ScrollingTreeMac::scrollingNodeForPoint(FloatPoint poi
 
             auto scrollingNodeForLayer = [&] (auto layer, auto point) -> RefPtr<ScrollingTreeNode> {
                 UNUSED_PARAM(point);
-                auto nodeID = scrollingNodeIDForLayer(layer);
+                auto nodeID = scrollingNodeIDForLayer(layer.get());
                 RefPtr scrollingNode = nodeForID(nodeID);
                 if (!is<ScrollingTreeScrollingNode>(scrollingNode))
                     return nullptr;
@@ -215,7 +215,7 @@ OptionSet<EventListenerRegionType> ScrollingTreeMac::eventListenerRegionTypesFor
     if (!hitLayer)
         return { };
 
-    auto platformCALayer = PlatformCALayer::platformCALayerForLayer((__bridge void*)hitLayer);
+    auto platformCALayer = PlatformCALayer::platformCALayerForLayer((__bridge void*)hitLayer.get());
     if (!platformCALayer)
         return { };
 
