@@ -1050,11 +1050,14 @@ struct TextOperationRange {
 
 static std::optional<TextOperationRange> textOperationRangeFromRange(const SimpleRange& range)
 {
-    RefPtr rootEditableElement = range.start.container->rootEditableElement();
+    RefPtr<Element> rootEditableElement = range.startContainer().rootEditableElement();
     if (!rootEditableElement)
         return std::nullopt;
 
-    std::optional<SimpleRange> scope = makeRangeSelectingNode(*rootEditableElement);
+    auto scopeStart = firstPositionInNode(rootEditableElement.get());
+    auto scopeEnd = lastPositionInNode(rootEditableElement.get());
+
+    std::optional<SimpleRange> scope = makeSimpleRange(scopeStart, scopeEnd);
     if (!scope)
         return std::nullopt;
 
