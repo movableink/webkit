@@ -43,14 +43,15 @@ MenuListButtonMac::MenuListButtonMac(MenuListButtonPart& owningPart, ControlFact
 {
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-static void interpolateGradient(const CGFloat* inData, CGFloat* outData, std::span<const float, 4> dark, std::span<const float, 4> light)
+static void interpolateGradient(const CGFloat* rawInData, CGFloat* rawOutData, std::span<const float, 4> dark, std::span<const float, 4> light)
 {
+    auto inData = unsafeMakeSpan(rawInData, 1);
+    auto outData = unsafeMakeSpan(rawOutData, 4);
+
     float a = inData[0];
     for (size_t i = 0; i < 4; ++i)
         outData[i] = (1.0f - a) * dark[i] + a * light[i];
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static void topGradientInterpolate(void*, const CGFloat* inData, CGFloat* outData)
 {
