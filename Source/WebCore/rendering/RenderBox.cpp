@@ -1626,6 +1626,7 @@ BleedAvoidance RenderBox::determineBleedAvoidance(GraphicsContext& context) cons
 
     if (borderObscuresBackgroundEdge(contextScaling))
         return BleedAvoidance::ShrinkBackground;
+
     if (!style.hasUsedAppearance() && borderObscuresBackground() && backgroundHasOpaqueTopLayer())
         return BleedAvoidance::BackgroundOverBorder;
 

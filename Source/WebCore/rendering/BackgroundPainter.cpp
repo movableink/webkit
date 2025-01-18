@@ -281,12 +281,23 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
         return;
     }
 
-    // FillBox::BorderBox radius clipping is taken care of by BleedAvoidance::UseTransparencyLayer
-    bool clipToBorderRadius = hasRoundedBorder && !(isBorderFill && bleedAvoidance == BleedAvoidance::UseTransparencyLayer);
-    GraphicsContextStateSaver clipToBorderStateSaver(context, clipToBorderRadius);
-    if (clipToBorderRadius) {
+    auto clipForBorder = [&]() -> std::optional<FillBox> {
+        if (!hasRoundedBorder)
+            return { };
 
-        switch (layerClip) {
+        // FillBox::BorderBox radius clipping is taken care of by BleedAvoidance::UseTransparencyLayer
+        if (layerClip == FillBox::BorderBox && bleedAvoidance == BleedAvoidance::UseTransparencyLayer)
+            return { };
+
+        if (bleedAvoidance == BleedAvoidance::BackgroundOverBorder)
+            return FillBox::PaddingBox;
+
+        return layerClip;
+    }();
+
+    GraphicsContextStateSaver clipToBorderStateSaver(context, clipForBorder.has_value());
+    if (clipForBorder) {
+        switch (*clipForBorder) {
         case FillBox::BorderBox:
         case FillBox::BorderArea:
         case FillBox::Text:
@@ -367,7 +378,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
     case FillBox::PaddingBox:
     case FillBox::ContentBox: {
         // Clip to the padding or content boxes as necessary.
-        if (!clipToBorderRadius) {
+        if (!clipForBorder) {
             bool includePadding = layerClip == FillBox::ContentBox;
             LayoutRect clipRect = LayoutRect(scrolledPaintRect.x() + bLeft + (includePadding ? pLeft : 0_lu),
                 scrolledPaintRect.y() + m_renderer.borderTop() + (includePadding ? m_renderer.paddingTop() : 0_lu),
