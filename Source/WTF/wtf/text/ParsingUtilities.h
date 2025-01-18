@@ -47,6 +47,14 @@ template<typename T> void skip(std::span<T>& data, size_t amountToSkip)
     data = data.subspan(amountToSkip);
 }
 
+template<typename T> void clampedMoveCursorWithinSpan(std::span<T>& cursor, std::span<T> container, int delta)
+{
+    ASSERT(cursor.data() >= container.data());
+    ASSERT(std::to_address(cursor.end()) == std::to_address(container.end()));
+    auto clampedNewIndex = std::clamp<int>(cursor.data() - container.data() + delta, 0, container.size());
+    cursor = container.subspan(clampedNewIndex);
+}
+
 template<typename CharacterType, typename DelimiterType> bool skipExactly(const CharacterType*& position, const CharacterType* end, DelimiterType delimiter)
 {
     if (position < end && *position == delimiter) {
@@ -272,6 +280,7 @@ static inline bool LCharPredicateAdapter(LChar c) { return characterPredicate(c)
 } // namespace WTF
 
 using WTF::LCharPredicateAdapter;
+using WTF::clampedMoveCursorWithinSpan;
 using WTF::consume;
 using WTF::consumeAndCastTo;
 using WTF::consumeSpan;

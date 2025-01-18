@@ -296,7 +296,7 @@ static void clampedSkip(std::span<T>& span, size_t offset)
     skip(span, std::min(offset, span.size()));
 }
 
-static void clampedMoveCursor(std::span<uint8_t>& cursor, std::span<uint8_t> container, ptrdiff_t delta)
+static void clampedMoveCursorWithinSpan(std::span<uint8_t>& cursor, std::span<uint8_t> container, ptrdiff_t delta)
 {
     ASSERT(cursor.data() >= container.data());
     ASSERT(std::to_address(cursor.end()) == std::to_address(container.end()));
@@ -327,7 +327,7 @@ static bool packPixels(std::span<const uint8_t> sourceData, GraphicsContextGL::D
     int dstStride = sourceDataSubRectangle.width() * texelBytesForFormat(dstDataFormat);
     auto destinationCursor = destinationData;
     if (flipY) {
-        clampedMoveCursor(destinationCursor, destinationData, dstStride * ((depth * sourceDataSubRectangle.height()) - 1));
+        clampedMoveCursorWithinSpan(destinationCursor, destinationData, dstStride * ((depth * sourceDataSubRectangle.height()) - 1));
         dstStride = -dstStride;
     }
     if (!GraphicsContextGL::hasAlpha(sourceDataFormat) || !GraphicsContextGL::hasColor(sourceDataFormat) || !GraphicsContextGL::hasColor(dstDataFormat))
@@ -354,14 +354,14 @@ static bool packPixels(std::span<const uint8_t> sourceData, GraphicsContextGL::D
             while (!sourceCursor.empty()) {
                 memcpySpan(destinationCursor, sourceCursor.subspan(srcRowOffset, rowSize));
                 clampedSkip(sourceCursor, srcStride);
-                clampedMoveCursor(destinationCursor, destinationData, dstStride);
+                clampedMoveCursorWithinSpan(destinationCursor, destinationData, dstStride);
             }
             baseSpan = clampedSubspan(sourceData, baseSpan.data() - sourceData.data() + unpackImageHeight * srcStride, baseSpan.size());
         }
         return true;
     }
 
-    FormatConverter converter(sourceDataSubRectangle, depth, unpackImageHeight, sourceData.data(), destinationCursor.data(), srcStride, srcRowOffset, dstStride);
+    FormatConverter converter(sourceDataSubRectangle, depth, unpackImageHeight, sourceData, destinationCursor, destinationData, srcStride, srcRowOffset, dstStride);
     converter.convert(sourceDataFormat, dstDataFormat, alphaOp);
     return converter.success();
 }
