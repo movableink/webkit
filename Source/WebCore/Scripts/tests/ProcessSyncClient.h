@@ -24,9 +24,9 @@
 
 #pragma once
 
+#include <wtf/URL.h>
 #include "DOMAudioSession.h"
 #include <wtf/TZoneMallocInlines.h>
-#include <wtf/URL.h>
 
 namespace WebCore {
 
