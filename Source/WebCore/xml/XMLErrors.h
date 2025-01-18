@@ -43,9 +43,9 @@ class XMLErrors {
 public:
     explicit XMLErrors(Document&);
 
-    enum ErrorType { warning, nonFatal, fatal };
-    void handleError(ErrorType, const char* message, int lineNumber, int columnNumber);
-    void handleError(ErrorType, const char* message, TextPosition);
+    enum class Type : uint8_t { Warning, NonFatal, Fatal };
+    void handleError(Type, const char* message, int lineNumber, int columnNumber);
+    void handleError(Type, const char* message, TextPosition);
 
     void insertErrorMessageBlock();
 

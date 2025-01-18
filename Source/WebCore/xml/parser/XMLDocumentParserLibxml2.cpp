@@ -197,7 +197,7 @@ public:
         m_callbacks.append(WTFMove(callback));
     }
 
-    void appendErrorCallback(XMLErrors::ErrorType type, const xmlChar* message, OrdinalNumber lineNumber, OrdinalNumber columnNumber)
+    void appendErrorCallback(XMLErrors::Type type, const xmlChar* message, OrdinalNumber lineNumber, OrdinalNumber columnNumber)
     {
         auto callback = makeUnique<PendingErrorCallback>();
 
@@ -351,7 +351,7 @@ private:
             parser->handleError(type, reinterpret_cast<char*>(message), TextPosition(lineNumber, columnNumber));
         }
 
-        XMLErrors::ErrorType type;
+        XMLErrors::Type type;
         xmlChar* message;
         OrdinalNumber lineNumber;
         OrdinalNumber columnNumber;
@@ -697,7 +697,7 @@ void XMLDocumentParser::doWrite(const String& parseString)
     if (document()->decoder() && document()->decoder()->sawError()) {
         // If the decoder saw an error, report it as fatal (stops parsing)
         TextPosition position(OrdinalNumber::fromOneBasedInt(context->context()->input->line), OrdinalNumber::fromOneBasedInt(context->context()->input->col));
-        handleError(XMLErrors::fatal, "Encoding error", position);
+        handleError(XMLErrors::Type::Fatal, "Encoding error", position);
     }
 }
 
@@ -949,7 +949,7 @@ void XMLDocumentParser::characters(std::span<const xmlChar> characters)
     m_bufferedText.append(characters);
 }
 
-void XMLDocumentParser::error(XMLErrors::ErrorType type, const char* message, va_list args)
+void XMLDocumentParser::error(XMLErrors::Type type, const char* message, va_list args)
 {
     if (isStopped())
         return;
@@ -1119,7 +1119,7 @@ static void warningHandler(void* closure, const char* message, ...)
 {
     va_list args;
     va_start(args, message);
-    getParser(closure)->error(XMLErrors::warning, message, args);
+    getParser(closure)->error(XMLErrors::Type::Warning, message, args);
     va_end(args);
 }
 
@@ -1128,7 +1128,7 @@ static void fatalErrorHandler(void* closure, const char* message, ...)
 {
     va_list args;
     va_start(args, message);
-    getParser(closure)->error(XMLErrors::fatal, message, args);
+    getParser(closure)->error(XMLErrors::Type::Fatal, message, args);
     va_end(args);
 }
 
@@ -1137,7 +1137,7 @@ static void normalErrorHandler(void* closure, const char* message, ...)
 {
     va_list args;
     va_start(args, message);
-    getParser(closure)->error(XMLErrors::nonFatal, message, args);
+    getParser(closure)->error(XMLErrors::Type::NonFatal, message, args);
     va_end(args);
 }
 
