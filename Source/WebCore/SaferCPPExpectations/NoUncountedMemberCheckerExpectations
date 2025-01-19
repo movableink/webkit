@@ -8,10 +8,6 @@ Modules/notifications/NotificationResourcesLoader.h
 Modules/push-api/PushManager.h
 Modules/push-api/ServiceWorkerRegistrationPushAPI.h
 Modules/storage/StorageManager.cpp
-Modules/webaudio/AudioNodeInput.h
-Modules/webaudio/AudioNodeOutput.h
-Modules/webaudio/AudioWorkletNode.h
-Modules/webaudio/AudioWorkletProcessor.h
 Modules/webdatabase/DatabaseTask.h
 Modules/webdatabase/SQLTransactionBackend.h
 accessibility/AXCoreObject.h
