@@ -72,6 +72,7 @@
 #include <wtf/NotFound.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 
 using JSON::ArrayOf;
@@ -335,7 +336,7 @@ template <typename CharacterType> inline void StyleSheetHandler::setRuleHeaderEn
 {
     while (data.size() > m_currentRuleDataStack.last()->ruleHeaderRange.start) {
         if (isASCIIWhitespace<CharacterType>(data[data.size() - 1]))
-            data = data.first(data.size() - 1);
+            dropLast(data);
         else
             break;
     }

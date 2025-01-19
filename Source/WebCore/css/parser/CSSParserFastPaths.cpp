@@ -120,10 +120,10 @@ template <typename CharacterType>
 static inline bool parseSimpleLength(std::span<const CharacterType> characters, CSSUnitType& unit, double& number)
 {
     if (characters.size() > 2 && isASCIIAlphaCaselessEqual(characters[characters.size() - 2], 'p') && isASCIIAlphaCaselessEqual(characters[characters.size() - 1], 'x')) {
-        characters = characters.first(characters.size() - 2);
+        dropLast(characters, 2);
         unit = CSSUnitType::CSS_PX;
     } else if (!characters.empty() && characters.back() == '%') {
-        characters = characters.first(characters.size() - 1);
+        dropLast(characters);
         unit = CSSUnitType::CSS_PERCENTAGE;
     }
 
@@ -140,10 +140,10 @@ static inline bool parseSimpleAngle(std::span<const CharacterType> characters, R
     // "0deg" or "1rad"
     if (characters.size() >= 4) {
         if (isASCIIAlphaCaselessEqual(characters[characters.size() - 3], 'd') && isASCIIAlphaCaselessEqual(characters[characters.size() - 2], 'e') && isASCIIAlphaCaselessEqual(characters[characters.size() - 1], 'g')) {
-            characters = characters.first(characters.size() - 3);
+            dropLast(characters, 3);
             unit = CSS::AngleUnit::Deg;
         } else if (isASCIIAlphaCaselessEqual(characters[characters.size() - 3], 'r') && isASCIIAlphaCaselessEqual(characters[characters.size() - 2], 'a') && isASCIIAlphaCaselessEqual(characters[characters.size() - 1], 'd')) {
-            characters = characters.first(characters.size() - 3);
+            dropLast(characters, 3);
             unit = CSS::AngleUnit::Rad;
         } else if (requireUnits == RequireUnits::Yes)
             return false;
@@ -164,7 +164,7 @@ static inline bool parseSimpleNumberOrPercentage(std::span<const CharacterType> 
 {
     unit = CSSUnitType::CSS_NUMBER;
     if (!characters.empty() && characters.back() == '%') {
-        characters = characters.first(characters.size() - 1);
+        dropLast(characters);
         unit = CSSUnitType::CSS_PERCENTAGE;
     }
 

@@ -469,7 +469,7 @@ static bool allCharactersAllowedByTLDRules(std::span<const UChar> buffer)
 {
     // Skip trailing dot for root domain.
     if (buffer.back() == '.')
-        buffer = buffer.first(buffer.size() - 1);
+        dropLast(buffer);
 
     // http://cctld.ru/files/pdf/docs/rules_ru-rf.pdf
     static constexpr std::array<UChar, 3> cyrillicRF {

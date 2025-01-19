@@ -182,9 +182,9 @@ static Vector<ImageCandidate> parseImageCandidatesFromSrcsetAttribute(std::span<
         // 8. If url ends with a U+002C COMMA character (,)
         if (isComma(imageURLSpan.back())) {
             // Remove all trailing U+002C COMMA characters from url.
-            imageURLSpan = imageURLSpan.first(imageURLSpan.size() - 1);
+            dropLast(imageURLSpan);
             while (!imageURLSpan.empty() && isComma(imageURLSpan.back()))
-                imageURLSpan = imageURLSpan.first(imageURLSpan.size() - 1);
+                dropLast(imageURLSpan);
 
             // If url is empty, then jump to the step labeled splitting loop.
             if (imageURLSpan.empty())

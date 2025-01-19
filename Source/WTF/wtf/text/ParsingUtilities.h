@@ -47,6 +47,18 @@ template<typename T> void skip(std::span<T>& data, size_t amountToSkip)
     data = data.subspan(amountToSkip);
 }
 
+template<typename T> void dropLast(std::span<T>& data, size_t amountToDrop = 1)
+{
+    data = data.first(data.size() - amountToDrop);
+}
+
+template<typename T> T& consumeLast(std::span<T>& data)
+{
+    auto* last = &data.back();
+    data = data.first(data.size() - 1);
+    return *last;
+}
+
 template<typename T> void clampedMoveCursorWithinSpan(std::span<T>& cursor, std::span<T> container, int delta)
 {
     ASSERT(cursor.data() >= container.data());
@@ -283,7 +295,9 @@ using WTF::LCharPredicateAdapter;
 using WTF::clampedMoveCursorWithinSpan;
 using WTF::consume;
 using WTF::consumeAndCastTo;
+using WTF::consumeLast;
 using WTF::consumeSpan;
+using WTF::dropLast;
 using WTF::isNotASCIISpace;
 using WTF::skip;
 using WTF::skipCharactersExactly;

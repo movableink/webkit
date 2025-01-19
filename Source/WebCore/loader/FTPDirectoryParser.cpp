@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 // On Windows, use the threadsafe *_r functions provided by pthread.
@@ -377,7 +378,7 @@ FTPEntryType parseOneFTPLine(const char* line, ListState& state, ListResult& res
                     if (pos > 4) {
                         p = &(tokens[0][pos - 4]);
                         if (p[0] == '.' && p[1] == 'D' && p[2] == 'I' && p[3] == 'R') {
-                            result.filename = result.filename.first(result.filename.size() - 4);
+                            dropLast(result.filename, 4);
                             result.type = FTPDirectoryEntry;
                         }
                     }
@@ -995,15 +996,15 @@ FTPEntryType parseOneFTPLine(const char* line, ListState& state, ListResult& res
                     pos = result.type;
                     if (pos == 'd') {
                         if (*p == '/')
-                            result.filename = result.filename.first(result.filename.size() - 1); /* directory */
+                            dropLast(result.filename); /* directory */
                     } else if (pos == 'l') {
                         if (*p == '@')
-                            result.filename = result.filename.first(result.filename.size() - 1); /* symlink */
+                            dropLast(result.filename); /* symlink */
                     } else if (pos == 'f') {
                         if (*p == '*')
-                            result.filename = result.filename.first(result.filename.size() - 1); /* executable */
+                            dropLast(result.filename); /* executable */
                     } else if (*p == '=' || *p == '%' || *p == '|')
-                        result.filename = result.filename.first(result.filename.size() - 1); /* socket, whiteout, fifo */
+                        dropLast(result.filename); /* socket, whiteout, fifo */
                 }
 #endif
 
@@ -1271,7 +1272,7 @@ FTPEntryType parseOneFTPLine(const char* line, ListState& state, ListResult& res
                     if (result.linkname.size() == 1)
                         result.type = FTPJunkEntry;
                     else {
-                        result.filename = result.filename.first(result.filename.size() - 1);
+                        dropLast(result.filename);
                         result.type = FTPDirectoryEntry;
                     }
                 } else if (isASCIIDigit(*tokens[tokmarker])) {
@@ -1349,7 +1350,7 @@ FTPEntryType parseOneFTPLine(const char* line, ListState& state, ListResult& res
                         result.type = FTPLinkEntry;
                         result.linkname = std::span(tokens[pos + 1], p - result.linkname.data());
                         if (result.linkname.size() > 1 && result.linkname[result.linkname.size() - 1] == '/')
-                            result.linkname = result.linkname.first(result.linkname.size() - 1);
+                            dropLast(result.linkname);
                     }
                 } /* if (numtoks > (tokmarker+2)) */
 
