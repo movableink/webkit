@@ -291,12 +291,11 @@ DecodedHTMLEntity consumeHTMLEntity(StringParsingBuffer<UChar>& source)
     return consumeHTMLEntity(StringParsingBufferSource<UChar> { source }, 0);
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 DecodedHTMLEntity decodeNamedHTMLEntityForXMLParser(const char* name)
 {
     HTMLEntitySearch search;
-    while (*name) {
-        search.advance(*name++);
+    for (char character : span(name)) {
+        search.advance(character);
         if (!search.isEntityPrefix())
             return { };
     }
@@ -305,6 +304,5 @@ DecodedHTMLEntity decodeNamedHTMLEntityForXMLParser(const char* name)
         return { };
     return makeEntity(*search.match());
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace WebCore
