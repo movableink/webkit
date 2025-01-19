@@ -248,6 +248,7 @@ private:
     Ref<WebCore::FrameNetworkingContext> createNetworkingContext() final;
 
     void completePageTransitionIfNeeded() final;
+    void setDocumentVisualUpdatesAllowed(bool) final;
 
 #if USE(QUICK_LOOK)
     RefPtr<WebCore::LegacyPreviewLoaderClient> createPreviewLoaderClient(const String& fileName, const String& uti) final;

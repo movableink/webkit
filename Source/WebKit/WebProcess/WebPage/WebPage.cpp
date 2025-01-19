@@ -4249,6 +4249,14 @@ void WebPage::didCompletePageTransition()
     unfreezeLayerTree(LayerTreeFreezeReason::PageTransition);
 }
 
+void WebPage::setMainFrameDocumentVisualUpdatesAllowed(bool allowed)
+{
+    if (allowed)
+        unfreezeLayerTree(LayerTreeFreezeReason::DocumentVisualUpdatesNotAllowed);
+    else
+        freezeLayerTree(LayerTreeFreezeReason::DocumentVisualUpdatesNotAllowed);
+}
+
 void WebPage::show()
 {
     send(Messages::WebPageProxy::ShowPage());

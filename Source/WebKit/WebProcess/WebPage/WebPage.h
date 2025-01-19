@@ -660,6 +660,8 @@ public:
     bool hasCustomUserAgent() const { return m_hasCustomUserAgent; }
     WebCore::KeyboardUIMode keyboardUIMode();
 
+    void setMainFrameDocumentVisualUpdatesAllowed(bool);
+
     bool hoverSupportedByPrimaryPointingDevice() const;
     bool hoverSupportedByAnyAvailablePointingDevice() const;
     std::optional<WebCore::PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const;
@@ -1106,15 +1108,16 @@ public:
     bool hasRichlyEditableSelection() const;
 
     enum class LayerTreeFreezeReason {
-        PageTransition          = 1 << 0,
-        BackgroundApplication   = 1 << 1,
-        ProcessSuspended        = 1 << 2,
-        PageSuspended           = 1 << 3,
-        Printing                = 1 << 4,
-        ProcessSwap             = 1 << 5,
-        SwipeAnimation          = 1 << 6,
+        PageTransition                   = 1 << 0,
+        BackgroundApplication            = 1 << 1,
+        ProcessSuspended                 = 1 << 2,
+        PageSuspended                    = 1 << 3,
+        Printing                         = 1 << 4,
+        ProcessSwap                      = 1 << 5,
+        SwipeAnimation                   = 1 << 6,
+        DocumentVisualUpdatesNotAllowed  = 1 << 7,
 #if ENABLE(QUICKLOOK_FULLSCREEN)
-        OutOfProcessFullscreen  = 1 << 7,
+        OutOfProcessFullscreen           = 1 << 8,
 #endif
     };
     void freezeLayerTree(LayerTreeFreezeReason);

@@ -438,6 +438,8 @@ void WebLocalFrameLoaderClient::dispatchDidChangeMainDocument()
     if (!webPage)
         return;
 
+    webPage->setMainFrameDocumentVisualUpdatesAllowed(true);
+
     std::optional<NavigationIdentifier> navigationID;
     if (RefPtr documentLoader = m_localFrame->loader().documentLoader())
         navigationID = documentLoader->navigationID();
@@ -778,6 +780,18 @@ void WebLocalFrameLoaderClient::completePageTransitionIfNeeded()
     webPage->didCompletePageTransition();
     m_didCompletePageTransition = true;
     WebLocalFrameLoaderClient_RELEASE_LOG(Layout, "completePageTransitionIfNeeded: dispatching didCompletePageTransition");
+}
+
+void WebLocalFrameLoaderClient::setDocumentVisualUpdatesAllowed(bool allowed)
+{
+    if (!m_frame->isMainFrame())
+        return;
+
+    RefPtr webPage = m_frame->page();
+    if (!webPage)
+        return;
+
+    webPage->setMainFrameDocumentVisualUpdatesAllowed(allowed);
 }
 
 void WebLocalFrameLoaderClient::dispatchDidReachLayoutMilestone(OptionSet<WebCore::LayoutMilestone> milestones)

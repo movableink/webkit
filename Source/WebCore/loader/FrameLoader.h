@@ -321,6 +321,7 @@ public:
     bool shouldSkipHTTPSUpgradeForSameSiteNavigation() const { return m_shouldSkipHTTPSUpgradeForSameSiteNavigation; }
 
     WEBCORE_EXPORT void completePageTransitionIfNeeded();
+    WEBCORE_EXPORT void setDocumentVisualUpdatesAllowed(bool);
 
     void setOverrideCachePolicyForTesting(ResourceRequestCachePolicy policy) { m_overrideCachePolicyForTesting = policy; }
     void setOverrideResourceLoadPriorityForTesting(ResourceLoadPriority priority) { m_overrideResourceLoadPriorityForTesting = priority; }

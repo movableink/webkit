@@ -150,6 +150,7 @@ namespace WebCore {
     M(Progress) \
     M(Push) \
     M(RemoteInspector) \
+    M(RenderBlocking) \
     M(RequestAnimationFrame) \
     M(ResizeObserver) \
     M(ResourceLoading) \

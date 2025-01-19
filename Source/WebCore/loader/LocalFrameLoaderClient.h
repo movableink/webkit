@@ -317,6 +317,7 @@ public:
 #endif
 
     virtual void completePageTransitionIfNeeded() { }
+    virtual void setDocumentVisualUpdatesAllowed(bool) { }
 
     // FIXME (bug 116233): We need to get rid of EmptyFrameLoaderClient completely, then this will no longer be needed.
     virtual bool isEmptyFrameLoaderClient() const { return false; }

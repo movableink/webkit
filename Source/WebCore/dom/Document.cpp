@@ -1899,7 +1899,13 @@ void Document::setVisualUpdatesAllowed(ReadyState readyState)
 
 void Document::addVisualUpdatePreventedReason(VisualUpdatesPreventedReason reason, CompletePageTransition completePageTransition)
 {
+    if (m_visualUpdatesPreventedReasons.isEmpty()) {
+        if (RefPtr frame = this->frame(); frame && frame->document() == this)
+            frame->protectedLoader()->setDocumentVisualUpdatesAllowed(false);
+    }
+
     m_visualUpdatesPreventedReasons.add(reason);
+    LOG_WITH_STREAM(RenderBlocking, stream << "Document " << this << " addVisualUpdatePreventedReason " << reason << " m_visualUpdatesPreventedReasons: " << m_visualUpdatesPreventedReasons);
 
     if (visualUpdatePreventRequiresLayoutMilestones().contains(reason))
         m_visualUpdatesAllowedChangeRequiresLayoutMilestones = true;
@@ -1915,11 +1921,15 @@ void Document::removeVisualUpdatePreventedReasons(OptionSet<VisualUpdatesPrevent
 {
     bool wasPrevented = !m_visualUpdatesPreventedReasons.isEmpty();
     m_visualUpdatesPreventedReasons.remove(reasons);
+    LOG_WITH_STREAM(RenderBlocking, stream << "Document " << this << " removeVisualUpdatePreventedReasons " << reasons << " m_visualUpdatesPreventedReasons: " << m_visualUpdatesPreventedReasons);
 
     if (!wasPrevented || !m_visualUpdatesPreventedReasons.isEmpty())
         return;
 
     m_visualUpdatesSuppressionTimer.stop();
+
+    if (RefPtr frame = this->frame(); frame && frame->document() == this)
+        frame->protectedLoader()->setDocumentVisualUpdatesAllowed(true);
 
     if (m_visualUpdatesAllowedChangeRequiresLayoutMilestones) {
         RefPtr frameView = view();
@@ -10845,6 +10855,17 @@ String Document::debugDescription() const
 TextStream& operator<<(TextStream& ts, const Document& document)
 {
     ts << document.debugDescription();
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, const Document::VisualUpdatesPreventedReason& reason)
+{
+    switch (reason) {
+    case Document::VisualUpdatesPreventedReason::Client: ts << "Client"; break;
+    case Document::VisualUpdatesPreventedReason::ReadyState: ts << "ReadyState"; break;
+    case Document::VisualUpdatesPreventedReason::Suspension: ts << "Suspension"; break;
+    case Document::VisualUpdatesPreventedReason::RenderBlocking: ts << "RenderBlocking"; break;
+    }
     return ts;
 }
 

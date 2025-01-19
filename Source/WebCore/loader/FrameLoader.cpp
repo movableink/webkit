@@ -4643,6 +4643,11 @@ void FrameLoader::completePageTransitionIfNeeded()
     m_client->completePageTransitionIfNeeded();
 }
 
+void FrameLoader::setDocumentVisualUpdatesAllowed(bool allowed)
+{
+    m_client->setDocumentVisualUpdatesAllowed(allowed);
+}
+
 void FrameLoader::clearTestingOverrides()
 {
     m_overrideCachePolicyForTesting = std::nullopt;
