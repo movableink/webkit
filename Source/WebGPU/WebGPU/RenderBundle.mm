@@ -54,9 +54,7 @@ RenderBundle::RenderBundle(NSArray<RenderBundleICBWithResources*> *resources, Re
     , m_renderBundleEncoder(encoder)
     , m_renderBundlesResources(resources)
     , m_descriptor(descriptor)
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    , m_descriptorColorFormats(descriptor.colorFormats ? Vector<WGPUTextureFormat>(std::span { descriptor.colorFormats, descriptor.colorFormatCount }) : Vector<WGPUTextureFormat>())
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    , m_descriptorColorFormats(descriptor.colorFormatsSpan())
     , m_commandCount(commandCount)
     , m_makeSubmitInvalid(makeSubmitInvalid)
 {

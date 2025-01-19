@@ -27,7 +27,7 @@
 #include "PASReportCrashPrivate.h"
 #include <wtf/Compiler.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // Apple ports
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #if !USE(SYSTEM_MALLOC)
 #include <bmalloc/BPlatform.h>
@@ -36,7 +36,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // Apple ports
 #endif
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 using namespace JSC;
 
