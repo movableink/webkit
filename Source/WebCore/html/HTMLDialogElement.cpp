@@ -33,6 +33,7 @@
 #include "FocusOptions.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
+#include "Logging.h"
 #include "PopoverData.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderBlock.h"

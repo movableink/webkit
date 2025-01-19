@@ -46,11 +46,13 @@
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLPlugInElement.h"
 #include "HitTestResult.h"
+#include "LoaderStrategy.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "Navigation.h"
+#include "PlatformStrategies.h"
 #include "ThreadableBlobRegistry.h"
 #include "URLKeepingBlobAlive.h"
 #include <wtf/CompletionHandler.h>
