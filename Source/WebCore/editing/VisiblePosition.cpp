@@ -694,12 +694,14 @@ int VisiblePosition::lineDirectionPointForBlockDirectionNavigation() const
 
 void VisiblePosition::debugPosition(const char* msg) const
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (isNull())
         fprintf(stderr, "Position [%s]: null\n", msg);
     else {
         fprintf(stderr, "Position [%s]: %s, ", msg, m_deepPosition.deprecatedNode()->nodeName().utf8().data());
         m_deepPosition.showAnchorTypeAndOffset();
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 String VisiblePosition::debugDescription() const

@@ -142,7 +142,9 @@ UniqueElementData::UniqueElementData(const UniqueElementData& other)
 
 UniqueElementData::UniqueElementData(const ShareableElementData& other)
     : ElementData(other, true)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     , m_attributeVector(std::span { other.m_attributeArray, other.length() })
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 {
     // An ShareableElementData should never have a mutable inline StyleProperties attached.
     ASSERT(!other.m_inlineStyle || !other.m_inlineStyle->isMutable());

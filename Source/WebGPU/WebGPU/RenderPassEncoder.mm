@@ -72,7 +72,9 @@ RenderPassEncoder::RenderPassEncoder(id<MTLRenderCommandEncoder> renderCommandEn
     , m_parentEncoder(rawParentEncoder)
     , m_visibilityResultBuffer(visibilityResultBuffer)
     , m_descriptor(descriptor)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     , m_descriptorColorAttachments(descriptor.colorAttachmentCount ? Vector<WGPURenderPassColorAttachment>(std::span { descriptor.colorAttachments, descriptor.colorAttachmentCount }) : Vector<WGPURenderPassColorAttachment>())
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     , m_descriptorDepthStencilAttachment(descriptor.depthStencilAttachment ? *descriptor.depthStencilAttachment : WGPURenderPassDepthStencilAttachment())
 #if CPU(X86_64)
     , m_metalDescriptor(metalDescriptor)

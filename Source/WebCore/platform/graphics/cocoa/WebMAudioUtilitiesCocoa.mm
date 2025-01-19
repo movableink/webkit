@@ -291,8 +291,10 @@ std::optional<OpusCookieContents> parseOpusPrivateData(std::span<const uint8_t> 
     //
     //     This is an 8-octet (64-bit) field that allows codec
     //     identification and is human readable.
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (strncmp("OpusHead", byteCast<char>(codecPrivateData.data()), 8))
         return { };
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     OpusCookieContents cookie;
 

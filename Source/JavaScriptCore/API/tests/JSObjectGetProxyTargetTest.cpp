@@ -43,7 +43,9 @@ int testJSObjectGetProxyTarget()
     printf("JSObjectGetProxyTargetTest:\n");
     
     auto test = [&] (const char* description, bool currentResult) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         printf("    %s: %s\n", description, currentResult ? "PASS" : "FAIL");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         overallResult &= currentResult;
     };
     
@@ -98,7 +100,9 @@ int testJSObjectGetProxyTarget()
     JSGlobalContextRelease(context);
     JSContextGroupRelease(group);
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("JSObjectGetProxyTargetTest: %s\n", overallResult ? "PASS" : "FAIL");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return !overallResult;
 }
 

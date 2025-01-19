@@ -101,8 +101,10 @@ static bool pdfDocumentContainsPrintScript(RetainPtr<CGPDFDocumentRef> pdfDocume
 
         // A JavaScript action must have an action type of "JavaScript".
         const char* actionType = nullptr;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (!CGPDFDictionaryGetName(javaScriptAction, "S", &actionType) || strcmp(actionType, "JavaScript"))
             continue;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         auto scriptFromBytes = [](std::span<const uint8_t> bytes) {
             CFStringEncoding encoding = (bytes.size() > 1 && bytes[0] == 0xFE && bytes[1] == 0xFF) ? kCFStringEncodingUnicode : kCFStringEncodingUTF8;

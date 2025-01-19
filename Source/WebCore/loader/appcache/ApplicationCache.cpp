@@ -171,7 +171,9 @@ void ApplicationCache::clearStorageID()
 void ApplicationCache::dump()
 {
     for (const auto& urlAndResource : m_resources) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         printf("%s ", urlAndResource.key.utf8().data());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         ApplicationCacheResource::dumpType(urlAndResource.value->type());
     }
 }

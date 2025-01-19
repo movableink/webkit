@@ -347,6 +347,7 @@ static void showTreeAndMark(const CounterNode* node)
         root = root->parent();
 
     for (const CounterNode* current = root; current; current = current->nextInPreOrder()) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         fprintf(stderr, "%c", (current == node) ? '*' : ' ');
         for (const CounterNode* parent = current; parent && parent != root; parent = parent->parent())
             fprintf(stderr, "    ");
@@ -354,6 +355,7 @@ static void showTreeAndMark(const CounterNode* node)
             current, current->actsAsReset() ? "reset____" : "increment", current->value(),
             current->countInParent(), current->parent(), current->previousSibling(),
             current->nextSibling(), &current->owner());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
     fflush(stderr);
 }

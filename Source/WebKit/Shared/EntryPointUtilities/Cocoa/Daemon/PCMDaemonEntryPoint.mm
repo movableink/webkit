@@ -122,6 +122,8 @@ static void connectionRemoved(xpc_connection_t connection)
     PCM::DaemonConnectionSet::singleton().remove(connection);
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 int PCMDaemonMain(int argc, const char** argv)
 {
     auto arguments = unsafeMakeSpan(argv, argc);
@@ -150,5 +152,7 @@ int PCMDaemonMain(int argc, const char** argv)
     CFRunLoopRun();
     return 0;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace WebKit

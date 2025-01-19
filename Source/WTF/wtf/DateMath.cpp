@@ -414,7 +414,9 @@ static int findMonth(std::span<const LChar> monthStr)
         needle[i] = static_cast<char>(toASCIILower(monthStr[i]));
     needle[3] = '\0';
     const char* haystack = "janfebmaraprmayjunjulaugsepoctnovdec";
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     const char* str = strstr(haystack, needle.data());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     if (str) {
         int position = static_cast<int>(str - haystack);
         if (position % 3 == 0)
@@ -426,7 +428,9 @@ static int findMonth(std::span<const LChar> monthStr)
 static bool parseInt(std::span<const LChar>& string, int base, int* result)
 {
     char* stopPosition;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     long longResult = strtol(byteCast<char>(string.data()), &stopPosition, base);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     // Avoid the use of errno as it is not available on Windows CE
     if (byteCast<char>(string.data()) == stopPosition || longResult <= std::numeric_limits<int>::min() || longResult >= std::numeric_limits<int>::max())
         return false;
@@ -438,7 +442,9 @@ static bool parseInt(std::span<const LChar>& string, int base, int* result)
 static bool parseLong(std::span<const LChar>& string, int base, long* result)
 {
     char* stopPosition;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     *result = strtol(byteCast<char>(string.data()), &stopPosition, base);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     // Avoid the use of errno as it is not available on Windows CE
     if (byteCast<char>(string.data()) == stopPosition || *result == std::numeric_limits<long>::min() || *result == std::numeric_limits<long>::max())
         return false;

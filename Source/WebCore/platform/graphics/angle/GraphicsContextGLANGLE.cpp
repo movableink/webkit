@@ -914,7 +914,9 @@ bool GraphicsContextGLANGLE::getBufferSubDataImpl(GCGLenum target, GCGLintptr of
     void* ptr = GL_MapBufferRange(target, offset, data.size(), GraphicsContextGL::MAP_READ_BIT);
     if (!ptr)
         return false;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memcpy(data.data(), ptr, data.size());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     if (!GL_UnmapBuffer(target))
         addError(GCGLErrorCode::InvalidOperation);
     return true;

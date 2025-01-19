@@ -432,7 +432,9 @@ static_assert(sizeof(StyleProperties) == sizeof(SameSizeAsStyleProperties), "sty
 #ifndef NDEBUG
 void StyleProperties::showStyle()
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     fprintf(stderr, "%s\n", asText().ascii().data());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 #endif
 

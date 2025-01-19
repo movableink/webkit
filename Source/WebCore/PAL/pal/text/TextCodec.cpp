@@ -50,12 +50,16 @@ std::span<char> TextCodec::getUnencodableReplacement(char32_t codePoint, Unencod
 
     switch (handling) {
     case UnencodableHandling::Entities: {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         int count = snprintf(replacement.data(), sizeof(UnencodableReplacementArray), "&#%u;", static_cast<unsigned>(codePoint));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         ASSERT(count >= 0);
         return std::span { replacement }.first(std::max<int>(0, count));
     }
     case UnencodableHandling::URLEncodedEntities: {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         int count = snprintf(replacement.data(), sizeof(UnencodableReplacementArray), "%%26%%23%u%%3B", static_cast<unsigned>(codePoint));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         ASSERT(count >= 0);
         return std::span { replacement }.first(std::max<int>(0, count));
     } }

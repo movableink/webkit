@@ -82,7 +82,9 @@ void Connection::connectToService(WaitForServiceToExist waitForServiceToExist)
 
     xpc_connection_set_event_handler(m_connection.get(), [](xpc_object_t event) {
         if (event == XPC_ERROR_CONNECTION_INVALID || event == XPC_ERROR_CONNECTION_INTERRUPTED) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             fprintf(stderr, "Unexpected XPC connection issue: %s\n", event.debugDescription.UTF8String);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             return;
         }
 
@@ -91,8 +93,10 @@ void Connection::connectToService(WaitForServiceToExist waitForServiceToExist)
 
     if (waitForServiceToExist == WaitForServiceToExist::Yes) {
         auto result = maybeConnectToService(m_serviceName);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (result == MACH_PORT_NULL)
             printf("Waiting for service '%s' to be available\n", m_serviceName.characters());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         while (result == MACH_PORT_NULL) {
             usleep(1000);
@@ -100,7 +104,9 @@ void Connection::connectToService(WaitForServiceToExist waitForServiceToExist)
         }
     }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("Connecting to service '%s'\n", m_serviceName.characters());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     xpc_connection_activate(m_connection.get());
 
     sendAuditToken();
@@ -108,21 +114,27 @@ void Connection::connectToService(WaitForServiceToExist waitForServiceToExist)
 
 void Connection::sendPushMessage(PushMessageForTesting&& message, CompletionHandler<void(String)>&& completionHandler)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("Injecting push message\n");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     sendWithAsyncReplyWithoutUsingIPCConnection(Messages::PushClientConnection::InjectPushMessageForTesting(WTFMove(message)), WTFMove(completionHandler));
 }
 
 void Connection::getPushPermissionState(const String& scope, CompletionHandler<void(WebCore::PushPermissionState)>&& completionHandler)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("Getting push permission state\n");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     sendWithAsyncReplyWithoutUsingIPCConnection(Messages::PushClientConnection::GetPushPermissionState(WebCore::SecurityOriginData::fromURL(URL { scope })), WTFMove(completionHandler));
 }
 
 void Connection::requestPushPermission(const String& scope, CompletionHandler<void(bool)>&& completionHandler)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("Request push permission state for %s\n", scope.utf8().data());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     sendWithAsyncReplyWithoutUsingIPCConnection(Messages::PushClientConnection::RequestPushPermission(WebCore::SecurityOriginData::fromURL(URL { scope })), WTFMove(completionHandler));
 }
@@ -132,10 +144,12 @@ void Connection::sendAuditToken()
     audit_token_t token = { 0, 0, 0, 0, 0, 0, 0, 0 };
     mach_msg_type_number_t auditTokenCount = TASK_AUDIT_TOKEN_COUNT;
     kern_return_t result = task_info(mach_task_self(), TASK_AUDIT_TOKEN, (task_info_t)(&token), &auditTokenCount);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (result != KERN_SUCCESS) {
         printf("Unable to get audit token to send\n");
         return;
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     WebKit::WebPushD::WebPushDaemonConnectionConfiguration configuration;
     configuration.bundleIdentifierOverride = m_bundleIdentifier;

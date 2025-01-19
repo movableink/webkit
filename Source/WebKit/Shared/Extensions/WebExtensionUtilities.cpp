@@ -99,6 +99,8 @@ RefPtr<JSON::Object> mergeJSON(RefPtr<JSON::Object> jsonA, RefPtr<JSON::Object> 
     return mergedObject;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 WTF_ATTRIBUTE_PRINTF(1, 0)
 static String formatString(const char* format, va_list arguments)
 {
@@ -157,6 +159,8 @@ ALLOW_NONLITERAL_FORMAT_END
     va_end(args);
     return result;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static inline String lowercaseFirst(const String& input)
 {

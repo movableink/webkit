@@ -1384,6 +1384,8 @@ TextDirection Position::primaryDirection() const
 
 #if ENABLE(TREE_DEBUGGING)
 
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 void Position::debugPosition(const char* msg) const
 {
     if (isNull())
@@ -1422,6 +1424,8 @@ void Position::showAnchorTypeAndOffset() const
     }
     fprintf(stderr, ", offset:%d\n", m_offset);
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void Position::showTreeForThis() const
 {

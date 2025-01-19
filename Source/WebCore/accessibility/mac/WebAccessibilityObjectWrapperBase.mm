@@ -910,8 +910,10 @@ AccessibilitySearchCriteria accessibilitySearchCriteriaForSearchPredicate(AXCore
     if ([startElement isKindOfClass:[WebAccessibilityObjectWrapperBase class]])
         criteria.startObject = startElement.axBackingObject;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if ([startRange isKindOfClass:[NSValue class]] && !strcmp([(NSValue *)startRange objCType], @encode(NSRange)))
         criteria.startRange = [(NSValue *)startRange rangeValue];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #if PLATFORM(MAC)
     else if (startRange && CFGetTypeID((__bridge CFTypeRef)startRange) == AXTextMarkerRangeGetTypeID()) {
         AXTextMarkerRange markerRange { (AXTextMarkerRangeRef)startRange };

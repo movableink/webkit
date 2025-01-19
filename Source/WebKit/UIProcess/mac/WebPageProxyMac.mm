@@ -521,7 +521,9 @@ static NSString *pathToPDFOnDisk(const String& suggestedFilename)
         NSString *pathTemplate = [pathTemplatePrefix stringByAppendingString:suggestedFilename];
         CString pathTemplateRepresentation = [pathTemplate fileSystemRepresentation];
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         int fd = mkstemps(pathTemplateRepresentation.mutableSpanIncludingNullTerminator().data(), pathTemplateRepresentation.length() - strlen([pathTemplatePrefix fileSystemRepresentation]) + 1);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         if (fd < 0) {
             WTFLogAlways("Cannot create PDF file in the temporary directory (%s).", suggestedFilename.utf8().data());
             return nil;

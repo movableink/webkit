@@ -103,7 +103,9 @@ void SQLiteFileSystem::setCanSuspendLockedFileAttribute(const String& filePath)
         auto path = makeString(filePath, suffix);
         char excluded = 0xff;
         auto result = setxattr(FileSystem::fileSystemRepresentation(path).data(), "com.apple.runningboard.can-suspend-locked", &excluded, sizeof(excluded), 0, 0);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (result < 0 && !strcmp(suffix, ""))
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             RELEASE_LOG_ERROR(SQLDatabase, "SQLiteFileSystem::setCanSuspendLockedFileAttribute: setxattr failed: %" PUBLIC_LOG_STRING, strerror(errno));
     }
 }

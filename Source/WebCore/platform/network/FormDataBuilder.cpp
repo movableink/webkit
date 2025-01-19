@@ -95,9 +95,11 @@ static void appendFormURLEncoded(Vector<uint8_t>& buffer, std::span<const uint8_
     static const char safeCharacters[] = "-._*";
     for (size_t i = 0; i < string.size(); ++i) {
         auto character = string[i];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (isASCIIAlphanumeric(character)
             || (character != '\0' && strchr(safeCharacters, character)))
             append(buffer, character);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         else if (character == ' ')
             append(buffer, '+');
         else if (character == '\n' || (character == '\r' && (i + 1 >= string.size() || string[i + 1] != '\n')))

@@ -342,7 +342,9 @@ kern_return_t catch_mach_exception_raise_state(
     ptrauth_generic_signature_t inStateHash = hashThreadState(inState);
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memcpy(outState, inState, inStateCount * sizeof(inState[0]));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #if CPU(X86_64)
     RELEASE_ASSERT(*stateFlavor == x86_THREAD_STATE);

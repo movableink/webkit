@@ -75,12 +75,14 @@ SystemMallocStats WebMemorySampler::sampleSystemMalloc() const
             stats.max_size_in_use = 0;
             stats.size_allocated = 0;
             malloc_zone_statistics(reinterpret_cast<malloc_zone_t*>(zone), &stats);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             if (!strcmp(name, defaultMallocZoneName))
                 mallocStats.defaultMallocZoneStats = stats;
             else if (!strcmp(name, dispatchContinuationMallocZoneName))
                 mallocStats.dispatchContinuationMallocZoneStats = stats;
             else if (!strcmp(name, purgeableMallocZoneName))
                 mallocStats.purgeableMallocZoneStats = stats;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
     }
     return mallocStats;

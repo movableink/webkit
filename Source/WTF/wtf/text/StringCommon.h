@@ -52,27 +52,37 @@ inline std::span<const UChar> span(const UChar& character)
 
 inline std::span<const LChar> span8(const char* string)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return unsafeMakeSpan(byteCast<LChar>(string), string ? strlen(string) : 0);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 inline std::span<const LChar> span8IncludingNullTerminator(const char* string)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return unsafeMakeSpan(byteCast<LChar>(string), string ? strlen(string) + 1 : 0);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 inline std::span<const char> span(const char* string)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return unsafeMakeSpan(string, string ? strlen(string) : 0);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 inline std::span<const char> spanIncludingNullTerminator(const char* string)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return unsafeMakeSpan(string, string ? strlen(string) + 1 : 0);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 inline std::span<const LChar> span(const LChar* string)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return unsafeMakeSpan(string, string ? strlen(byteCast<char>(string)) : 0);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

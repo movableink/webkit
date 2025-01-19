@@ -574,7 +574,9 @@ void printLayoutTreeForLiveDocuments()
             continue;
         if (document->frame() && document->frame()->isMainFrame())
             fprintf(stderr, "----------------------main frame--------------------------\n");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         fprintf(stderr, "%s\n", document->url().string().utf8().data());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         // FIXME: Need to find a way to output geometry without layout context.
         auto& renderView = *document->renderView();
         auto layoutTree = TreeBuilder::buildLayoutTree(renderView);

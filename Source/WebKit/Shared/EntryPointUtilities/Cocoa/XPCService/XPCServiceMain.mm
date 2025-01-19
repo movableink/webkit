@@ -159,6 +159,7 @@ void XPCServiceEventHandler(xpc_connection_t peer)
             RELEASE_LOG_ERROR(IPC, "XPCServiceEventHandler: 'message-name' is not present in the XPC dictionary");
             return;
         }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (!strcmp(messageName, "bootstrap")) {
             WTF::initialize();
 
@@ -209,6 +210,7 @@ void XPCServiceEventHandler(xpc_connection_t peer)
                 RELEASE_LOG_ERROR(IPC, "XPCServiceEventHandler: Unexpected 'service-name': %{public}s", serviceName);
                 return;
             }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
             CFBundleRef webKitBundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebKit"));
             typedef void (*InitializerFunction)(xpc_connection_t, xpc_object_t);

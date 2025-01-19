@@ -70,6 +70,8 @@ void handleXPCEndpointMessage(xpc_object_t message, const char* messageName)
     ASSERT_UNUSED(messageName, messageName);
     RELEASE_ASSERT(xpc_get_type(message) == XPC_TYPE_DICTIONARY);
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #if HAVE(LSDATABASECONTEXT)
     if (!strcmp(messageName, LaunchServicesDatabaseXPCConstants::xpcLaunchServicesDatabaseXPCEndpointMessageName)) {
         handleLaunchServiceDatabaseMessage(message);
@@ -85,6 +87,9 @@ void handleXPCEndpointMessage(xpc_object_t message, const char* messageName)
         return;
     }
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 }
 
 } // namespace WebKit

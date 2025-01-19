@@ -61,11 +61,13 @@ static inline const char* resolveDefaultLocale(const char* locale)
 
 static inline char* copyShortASCIIString(CFStringRef string)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // OK to have a fixed size buffer and to only handle ASCII since we only use this for locale names.
     char buffer[256];
     if (!string || !CFStringGetCString(string, buffer, sizeof(buffer), kCFStringEncodingASCII))
         return strdup("");
     return strdup(buffer);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 static char* copyDefaultLocale()
@@ -96,8 +98,10 @@ static inline const char* resolveDefaultLocale(const char* locale)
 
 static inline bool localesMatch(const char* a, const char* b)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Two null locales are equal, other locales are compared with strcmp.
     return a == b || (a && b && !strcmp(a, b));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 Collator::Collator(const char* locale, bool shouldSortLowercaseFirst)
@@ -258,7 +262,9 @@ int Collator::collate(StringView a, StringView b) const
 static UCharIterator createIterator(const char8_t* string)
 {
     UCharIterator iterator;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     uiter_setUTF8(&iterator, byteCast<char>(string), strlen(byteCast<char>(string)));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return iterator;
 }
 

@@ -476,14 +476,18 @@ void BlockDirectory::dumpBits(PrintStream& out)
     forEachBitVectorWithName(
         [&](auto vectorRef, const char* name) {
             UNUSED_PARAM(vectorRef);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             unsigned length = strlen(name);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             maxNameLength = std::max(maxNameLength, length);
         });
     
     forEachBitVectorWithName(
         [&](auto vectorRef, const char* name) {
             out.print("    ", name, ": ");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             for (unsigned i = maxNameLength - strlen(name); i--;)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                 out.print(" ");
             out.print(vectorRef, "\n");
         });

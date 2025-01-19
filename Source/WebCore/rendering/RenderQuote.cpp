@@ -105,6 +105,7 @@ static SubtagComparison subtagCompare(std::span<const LChar> key, std::span<cons
 
     result.keyLength = key.size();
     result.keyContinue = result.keyLength;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (auto* hyphenPointer = memchr(key.data(), '-', key.size())) {
         result.keyLength = static_cast<const LChar*>(hyphenPointer) - key.data();
         result.keyContinue = result.keyLength + 1;
@@ -116,6 +117,7 @@ static SubtagComparison subtagCompare(std::span<const LChar> key, std::span<cons
         result.rangeLength = static_cast<const LChar*>(hyphenPointer) - range.data();
         result.rangeContinue = result.rangeLength + 1;
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     if (result.keyLength == result.rangeLength)
         result.comparison = compareSpans(key.first(result.keyLength), range.first(result.keyLength));
@@ -400,8 +402,10 @@ static const QuotesForLanguage* quotesForLanguage(const String& language)
 
     QuotesForLanguage languageKey = { languageKeyBuffer.span(), 0, 0, 0, 0, 0 };
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return static_cast<const QuotesForLanguage*>(bsearch(&languageKey,
         quoteTable.data(), std::size(quoteTable), sizeof(quoteTable[0]), quoteTableLanguageComparisonFunction));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 static StringImpl* stringForQuoteCharacter(UChar character)

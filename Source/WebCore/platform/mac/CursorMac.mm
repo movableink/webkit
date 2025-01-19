@@ -131,6 +131,7 @@ static Class coreCursorClass()
 
 static NSCursor *cursor(const char *name)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     __strong NSCursor **slot = nullptr;
     
     if (!strcmp(name, "BusyButClickable"))
@@ -178,6 +179,7 @@ static NSCursor *cursor(const char *name)
     if (!*slot)
         *slot = [[coreCursorClass() alloc] init];
     return *slot;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 #else

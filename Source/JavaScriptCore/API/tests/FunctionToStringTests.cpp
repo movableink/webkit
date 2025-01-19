@@ -106,7 +106,9 @@ int testFunctionToString()
         failed = true;
 
     JSGlobalContextRelease(context);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("%s: function toString tests.\n", failed ? "FAIL" : "PASS");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return failed;
 }

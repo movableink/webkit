@@ -145,8 +145,10 @@ static uint64_t generateReplyIdentifier()
     for (NSUInteger i = 0, count = methodSignature.numberOfArguments; i < count; ++i) {
         const char *type = [methodSignature getArgumentTypeAtIndex:i];
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (strcmp(type, "@?"))
             continue;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         if (replyInfo)
             [NSException raise:NSInvalidArgumentException format:@"Only one reply block is allowed per message send. (%s)", sel_getName(invocation.selector)];
@@ -158,8 +160,10 @@ static uint64_t generateReplyIdentifier()
 
         const char* replyBlockSignature = _Block_signature((__bridge void*)replyBlock);
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (strcmp([NSMethodSignature signatureWithObjCTypes:replyBlockSignature].methodReturnType, "v"))
             [NSException raise:NSInvalidArgumentException format:@"Return value of block argument must be 'void'. (%s)", sel_getName(invocation.selector)];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         replyInfo = makeUnique<WebKit::RemoteObjectInvocation::ReplyInfo>(generateReplyIdentifier(), String::fromLatin1(replyBlockSignature));
 
@@ -231,8 +235,10 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
     for (NSUInteger i = 0, count = methodSignature.numberOfArguments; i < count; ++i) {
         const char *type = [methodSignature getArgumentTypeAtIndex:i];
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (strcmp(type, "@?"))
             continue;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         // We found the block.
         // If the wire had no block signature but we expect one, we drop the message.

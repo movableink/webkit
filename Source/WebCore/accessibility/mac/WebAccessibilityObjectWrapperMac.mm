@@ -2390,8 +2390,10 @@ id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>& backingObje
         markerRef = (AXTextMarkerRef)parameter;
     else if (AXObjectIsTextMarkerRange(parameter))
         markerRangeRef = (AXTextMarkerRangeRef)parameter;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     else if ([parameter isKindOfClass:[NSValue class]] && !strcmp([(NSValue *)parameter objCType], @encode(NSRange)))
         nsRange = [(NSValue*)parameter rangeValue];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     else
         return nil;
 
@@ -3087,7 +3089,9 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 static void formatForDebugger(const VisiblePositionRange& range, char* buffer, unsigned length)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     strlcpy(buffer, makeString("from "_s, range.start.debugDescription(), " to "_s, range.end.debugDescription()).utf8().data(), length);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 #endif
 
@@ -3307,6 +3311,8 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     bool rangeSet = false;
     NSRect rect = NSZeroRect;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
     // common parameter type check/casting.  Nil checks in handlers catch wrong type case.
     // NOTE: This assumes nil is not a valid parameter, because it is indistinguishable from
     // a parameter of the wrong type.
@@ -3338,6 +3344,8 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         // Attribute type is not supported. Allow super to handle.
         return [super accessibilityAttributeValue:attribute forParameter:parameter];
     }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     // dispatch
     if ([attribute isEqualToString:NSAccessibilitySelectTextWithCriteriaParameterizedAttribute]) {

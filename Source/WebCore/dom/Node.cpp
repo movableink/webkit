@@ -314,6 +314,7 @@ void Node::dumpStatistics()
         }
     }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("Number of Nodes: %d\n\n", liveNodeSet().computeSize());
     printf("Number of Nodes with RareData: %zu\n", nodesWithRareData);
     printf("  Mixed use: %zu\n", mixedRareDataUseCount);
@@ -344,7 +345,9 @@ void Node::dumpStatistics()
     printf("  Number of Elements with attribute storage: %zu [%zu]\n", elementsWithAttributeStorage, sizeof(ElementData));
     printf("  Number of Elements with RareData: %zu\n", elementsWithRareData);
     printf("  Number of Elements with NamedNodeMap: %zu [%zu]\n", elementsWithNamedNodeMap, sizeof(NamedNodeMap));
-#endif
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#endif // DUMP_NODE_STATISTICS
 }
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, nodeCounter, ("WebCoreNode"));
@@ -2000,6 +2003,7 @@ static void appendAttributeDesc(const Node* node, StringBuilder& stringBuilder, 
     stringBuilder.append(attr);
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 void Node::showNode(ASCIILiteral prefix) const
 {
     if (prefix.isNull())
@@ -2015,11 +2019,14 @@ void Node::showNode(ASCIILiteral prefix) const
         fprintf(stderr, "%s%s\t%p (renderer %p) %s%s%s\n", prefix.characters(), nodeName().utf8().data(), this, renderer(), attrs.toString().utf8().data(), needsStyleRecalc() ? " (needs style recalc)" : "", childNeedsStyleRecalc() ? " (child needs style recalc)" : "");
     }
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void Node::showTreeForThis() const
 {
     showTreeAndMark(this, "*");
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 void Node::showNodePathForThis() const
 {
@@ -2094,6 +2101,8 @@ static void traverseTreeAndMark(const String& baseIndent, const Node* rootNode, 
     }
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 void Node::showTreeAndMark(const Node* markedNode1, const char* markedLabel1, const Node* markedNode2, const char* markedLabel2) const
 {
     const Node* node = this;
@@ -2115,9 +2124,11 @@ static ContainerNode* parentOrShadowHostOrFrameOwner(const Node* node)
 
 static void showSubTreeAcrossFrame(const Node* node, const Node* markedNode, const String& indent)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (node == markedNode)
         fputs("*", stderr);
     fputs(indent.utf8().data(), stderr);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     node->showNode();
     if (!node->isShadowRoot()) {
         if (auto* frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(node))

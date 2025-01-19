@@ -175,8 +175,10 @@ static bool enableAssembler()
         return false;
 
     char* canUseJITString = getenv("JavaScriptCoreUseJIT");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (canUseJITString && !atoi(canUseJITString))
         return false;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     ExecutableAllocator::initializeUnderlyingAllocator();
     if (!ExecutableAllocator::singleton().isValid()) {

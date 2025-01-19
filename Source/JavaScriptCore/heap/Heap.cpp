@@ -1526,12 +1526,14 @@ NEVER_INLINE bool Heap::runFixpointPhase(GCConductor conn)
                 visitMap.add(visitor.codeName(), visitor.bytesVisited() / 1024);
             });
         
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         auto perVisitorDump = sortedMapDump(
             visitMap,
             [] (const char* a, const char* b) -> bool {
                 return strcmp(a, b) < 0;
             },
             ":"_s, " "_s);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         
         dataLog("v=", bytesVisited() / 1024, "kb (", perVisitorDump, ") o=", m_opaqueRoots.size(), " b=", m_barriersExecuted, " ");
     }

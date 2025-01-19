@@ -311,7 +311,9 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     WebCore::FloatPoint pageOverlayPoint;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if ([parameter isKindOfClass:[NSValue class]] && !strcmp([(NSValue *)parameter objCType], @encode(NSPoint)))
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         pageOverlayPoint = [self convertScreenPointToRootView:[(NSValue *)parameter pointValue]];
     else
         return nil;

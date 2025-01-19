@@ -455,7 +455,9 @@ int HistoryItem::showTreeWithIndent(unsigned indentLevel) const
         prefix.append("  "_span);
     prefix.append('\0');
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     fprintf(stderr, "%s+-%s (%p)\n", prefix.data(), m_urlString.utf8().data(), this);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     
     int totalSubItems = 0;
     for (unsigned i = 0; i < m_children.size(); ++i)

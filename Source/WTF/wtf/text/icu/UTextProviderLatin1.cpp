@@ -83,7 +83,9 @@ static UText* uTextLatin1Clone(UText* destination, const UText* source, UBool de
     result->a = source->a;
     result->pFuncs = &uTextLatin1Funcs;
     result->chunkContents = static_cast<UChar*>(result->pExtra);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memset(const_cast<UChar*>(result->chunkContents), 0, sizeof(UChar) * UTextWithBufferInlineCapacity);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return result;
 }
@@ -234,7 +236,9 @@ UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LC
     text->a = string.size();
     text->pFuncs = &uTextLatin1Funcs;
     text->chunkContents = static_cast<UChar*>(text->pExtra);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memset(const_cast<UChar*>(text->chunkContents), 0, sizeof(UChar) * UTextWithBufferInlineCapacity);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return text;
 }

@@ -162,10 +162,12 @@ void TextCodecICU::createICUConverter() const
     if (cachedConverter) {
         UErrorCode error = U_ZERO_ERROR;
         const char* cachedConverterName = ucnv_getName(cachedConverter.get(), &error);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (U_SUCCESS(error) && !strcmp(m_canonicalConverterName, cachedConverterName)) {
             m_converter = WTFMove(cachedConverter);
             return;
         }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     UErrorCode error = U_ZERO_ERROR;
@@ -207,7 +209,9 @@ public:
             UConverterToUCallback oldAction;
             ucnv_setToUCallBack(&m_converter, m_savedAction, m_savedContext, &oldAction, &oldContext, &err);
             ASSERT(oldAction == UCNV_TO_U_CALLBACK_SUBSTITUTE);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             ASSERT(!strcmp(static_cast<const char*>(oldContext), UCNV_SUB_STOP_ON_ILLEGAL));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             ASSERT(U_SUCCESS(err));
         }
     }

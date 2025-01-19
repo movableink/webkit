@@ -43,22 +43,29 @@ std::unique_ptr<SandboxExtensionImpl> SandboxExtensionImpl::create(const char* p
         return nullptr;
     if (!impl->m_token[0]) // Make sure strlen is > 0 without iterating the whole string.
         return nullptr;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     ASSERT(strlen(impl->m_token));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return impl;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 SandboxExtensionImpl::SandboxExtensionImpl(std::span<const uint8_t> serializedFormat)
     : m_token { strndup(byteCast<char>(serializedFormat.data()), serializedFormat.size()) }
 {
     ASSERT(!serializedFormat.empty());
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 SandboxExtensionImpl::~SandboxExtensionImpl()
 {
     if (!m_token)
         return;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     auto length = strlen(m_token);
     memset_s(m_token, length, 0, length);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     free(m_token);
 }
 
@@ -84,7 +91,9 @@ bool SandboxExtensionImpl::invalidate()
 std::span<const uint8_t> SandboxExtensionImpl::getSerializedFormat()
 {
     ASSERT(m_token);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     ASSERT(strlen(m_token));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return span8(m_token);
 }
 
@@ -236,8 +245,10 @@ auto SandboxExtension::createHandleForTemporaryFile(StringView prefix, Type type
     if (!confstr(_CS_DARWIN_USER_TEMP_DIR, path.data(), path.size()))
         return std::nullopt;
     
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Shrink the vector.   
     path.shrink(strlen(path.data()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     ASSERT(path.last() == '/');
 

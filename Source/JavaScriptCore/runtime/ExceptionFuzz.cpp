@@ -48,7 +48,9 @@ void doExceptionFuzzing(JSGlobalObject* globalObject, ThrowScope& scope, const c
     
     unsigned fireTarget = Options::fireExceptionFuzzAt();
     if (fireTarget == s_numberOfExceptionFuzzChecks) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         printf("JSC EXCEPTION FUZZ: Throwing fuzz exception with call frame %p, seen in %s and return address %p.\n", globalObject, where, returnPC);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         fflush(stdout);
 
         // The ThrowScope also checks for unchecked simulated exceptions before throwing a

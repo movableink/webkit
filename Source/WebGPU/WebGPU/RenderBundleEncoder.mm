@@ -213,7 +213,9 @@ RenderBundleEncoder::RenderBundleEncoder(MTLIndirectCommandBufferDescriptor *ind
     , m_icbDescriptor(indirectCommandBufferDescriptor)
     , m_resources([NSMapTable strongToStrongObjectsMapTable])
     , m_descriptor(descriptor)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     , m_descriptorColorFormats(descriptor.colorFormats ? Vector<WGPUTextureFormat>(std::span { descriptor.colorFormats, descriptor.colorFormatCount }) : Vector<WGPUTextureFormat>())
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 {
     if (m_descriptorColorFormats.size())
         m_descriptor.colorFormats = &m_descriptorColorFormats[0];

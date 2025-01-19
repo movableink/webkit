@@ -115,7 +115,9 @@ TextStream& TextStream::operator<<(const char* string)
 TextStream& TextStream::operator<<(const void* p)
 {
     char buffer[printBufferSize];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     snprintf(buffer, sizeof(buffer) - 1, "%p", p);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return *this << buffer;
 }
 

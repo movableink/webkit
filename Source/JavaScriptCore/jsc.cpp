@@ -163,6 +163,8 @@
 #include <wtf/linux/ProcessMemoryFootprint.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #if OS(DARWIN) || OS(LINUX)
 struct MemoryFootprint : ProcessMemoryFootprint {
     MemoryFootprint(const ProcessMemoryFootprint& src)
@@ -4526,3 +4528,5 @@ int jscmain(int argc, char** argv)
 
     return result;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

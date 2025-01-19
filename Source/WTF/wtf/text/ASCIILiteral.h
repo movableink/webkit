@@ -105,14 +105,16 @@ inline bool operator==(ASCIILiteral a, const char* b)
 {
     if (!a || !b)
         return a.characters() == b;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return !strcmp(a.characters(), b);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 inline bool operator==(ASCIILiteral a, ASCIILiteral b)
 {
     if (!a || !b)
         return a.characters() == b.characters();
-    return !strcmp(a.characters(), b.characters());
+    return equalSpans(a.span(), b.span());
 }
 
 inline unsigned ASCIILiteral::hash() const

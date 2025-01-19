@@ -45,6 +45,8 @@ StringPrintStream::~StringPrintStream()
         fastFree(m_buffer.data());
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 void StringPrintStream::vprintf(const char* format, va_list argList)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(m_length < m_buffer.size());
@@ -112,6 +114,8 @@ String StringPrintStream::toStringWithLatin1Fallback() const
     ASSERT(m_length == strlen(m_buffer.data()));
     return String::fromUTF8WithLatin1Fallback(m_buffer.first(m_length));
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void StringPrintStream::increaseSize(size_t newSize)
 {

@@ -75,7 +75,9 @@ static void fillTypedArray(TypedArray& typedArray, std::span<const uint8_t> opti
         return typedArray.zeroFill();
     auto bufferViewSpan = typedArray.mutableSpan();
     RELEASE_ASSERT(bufferViewSpan.size_bytes() == optionalBytes.size_bytes(), "Caller should provide correctly-sized buffer to copy");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memcpy(bufferViewSpan.data(), optionalBytes.data(), optionalBytes.size_bytes());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 std::optional<ImageDataArray> ImageDataArray::tryCreate(size_t length, ImageDataStorageFormat storageFormat, std::span<const uint8_t> optionalBytes)

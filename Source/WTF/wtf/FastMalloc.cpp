@@ -117,6 +117,8 @@ void fastSetMaxSingleAllocationSize(size_t size)
 
 #endif // !defined(NDEBUG)
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 char* fastStrDup(const char* src)
 {
     size_t len = strlen(src) + 1;
@@ -152,6 +154,8 @@ void* fastCompactMemDup(const void* mem, size_t bytes)
     memcpy(result, mem, bytes);
     return result;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace WTF
 

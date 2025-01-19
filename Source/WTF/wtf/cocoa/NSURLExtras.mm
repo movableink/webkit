@@ -51,6 +51,7 @@ static BOOL readIDNAllowedScriptListFile(NSString *filename)
     if (!file)
         return NO;
     
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Read a word at a time.
     // Allow comments, starting with # character to the end of the line.
     while (1) {
@@ -69,6 +70,8 @@ static BOOL readIDNAllowedScriptListFile(NSString *filename)
             URLHelpers::addScriptToIDNAllowedScriptList(word);
         }
     }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
     fclose(file);
     return YES;
 }

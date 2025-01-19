@@ -334,7 +334,9 @@ void AudioSourceProviderAVFObjC::prepare(CMItemCount maxFrames, const AudioStrea
     // with a custom size, and initialize the struct manually.
     size_t bufferListSize = sizeof(AudioBufferList) + (sizeof(AudioBuffer) * std::max(1, numberOfChannels - 1));
     m_list = std::unique_ptr<AudioBufferList>((AudioBufferList*) ::operator new (bufferListSize));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memset(m_list.get(), 0, bufferListSize);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     m_list->mNumberBuffers = numberOfChannels;
 
     callOnMainThread([weakThis = m_weakFactory.createWeakPtr(*this), numberOfChannels, sampleRate] {

@@ -46,11 +46,13 @@ CoreIPCNSValue::CoreIPCNSValue(Value&& value)
 
 auto CoreIPCNSValue::valueFromNSValue(NSValue *nsValue) -> Value
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (!strcmp(nsValue.objCType, @encode(NSRange)))
         return nsValue.rangeValue;
 
     if (!strcmp(nsValue.objCType, @encode(CGRect)))
         return nsValue.rectValue;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return makeUniqueRef<CoreIPCNSCFObject>(nsValue);
 }

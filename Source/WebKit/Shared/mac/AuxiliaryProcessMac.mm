@@ -414,6 +414,7 @@ static SandboxProfilePtr compileAndCacheSandboxProfile(const SandboxInfo& info)
         CachedSandboxVersionNumber,
         static_cast<uint32_t>(libsandboxVersion),
         safeCast<uint32_t>(info.header.length()),
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         haveBuiltin ? safeCast<uint32_t>(strlen(sandboxProfile->builtin)) : std::numeric_limits<uint32_t>::max(),
         safeCast<uint32_t>(sandboxProfile->size),
         { 0 },
@@ -424,6 +425,7 @@ static SandboxProfilePtr compileAndCacheSandboxProfile(const SandboxInfo& info)
     ASSERT_UNUSED(copied, copied == guidSize - 1);
     copied = strlcpy(cachedHeader.osVersion, osVersion.utf8().data(), sizeof(cachedHeader.osVersion));
     ASSERT(copied < versionSize - 1);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     const size_t expectedFileSize = sizeof(cachedHeader) + cachedHeader.headerSize + (haveBuiltin ? cachedHeader.builtinSize : 0) + cachedHeader.dataSize;
 
@@ -469,8 +471,10 @@ static bool tryApplyCachedSandbox(const SandboxInfo& info)
         return false;
     if (static_cast<uint32_t>(libsandboxVersion) != cachedSandboxHeader.libsandboxVersion)
         return false;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (std::strcmp(cachedSandboxHeader.sandboxBuildID, SANDBOX_BUILD_ID))
         return false;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     if (StringView::fromLatin1(cachedSandboxHeader.osVersion) != osVersion)
         return false;
 

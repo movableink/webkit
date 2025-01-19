@@ -53,7 +53,9 @@ void startMultithreadedMultiVMExecutionTest()
 
 #define CHECK(condition, threadNumber, count, message) do { \
         if (!condition) { \
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
             printf("FAIL: MultithreadedMultiVMExecutionTest: %d %d %s\n", threadNumber, count, message); \
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END \
             failuresFound++; \
         } \
     } while (false)
@@ -86,11 +88,15 @@ void startMultithreadedMultiVMExecutionTest()
                     buffer.resize(JSStringGetMaximumUTF8CStringSize(string));
                     JSStringGetUTF8CString(string, buffer.data(), buffer.size());
 IGNORE_GCC_WARNINGS_BEGIN("format-overflow")
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
                     printf("FAIL: MultithreadedMultiVMExecutionTest: %d %d %s\n", threadNumber, i, buffer.data());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 IGNORE_GCC_WARNINGS_END
                     JSStringRelease(string);
                 } else
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
                     printf("FAIL: MultithreadedMultiVMExecutionTest: %d %d stringifying exception failed\n", threadNumber, i);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             }
             CHECK(jsScript, threadNumber, i, "script eval");
             JSStringRelease(jsScriptString);
@@ -112,6 +118,8 @@ int finalizeMultithreadedMultiVMExecutionTest()
     for (auto& thread : threads)
         thread.join();
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("%s: MultithreadedMultiVMExecutionTest\n", failuresFound ? "FAIL" : "PASS");
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return (failuresFound > 0);
 }

@@ -112,8 +112,10 @@ bool WTFSignpostHandleIndirectLog(os_log_t log, pid_t pid, std::span<const char>
     uint64_t timestamp = 0;
     int bytesConsumed = 0;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (sscanf(nullTerminatedLogString.data(), "type=%d name=%d p=%" SCNuPTR " ts=%llu %n", &signpostType, &signpostName, &signpostIdentifierPointer, &timestamp, &bytesConsumed) != 4)
         return false;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     if (signpostType < 0 || signpostType >= WTFOSSignpostTypeCount)
         return false;

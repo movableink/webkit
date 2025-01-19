@@ -722,6 +722,8 @@ bool VisibleSelection::isInAutoFilledAndViewableField() const
 
 #if ENABLE(TREE_DEBUGGING)
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 void VisibleSelection::debugPosition() const
 {
     fprintf(stderr, "VisibleSelection ===============\n");
@@ -758,6 +760,8 @@ void VisibleSelection::showTreeForThis() const
         end().showAnchorTypeAndOffset();
     }
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif
 

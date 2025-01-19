@@ -373,6 +373,8 @@ String PrintContext::pageProperty(LocalFrame* frame, const char* propertyName, i
     document->updateLayout();
     auto style = document->styleScope().resolver().styleForPage(pageNumber);
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
     // Implement formatters for properties we care about.
     if (!strcmp(propertyName, "margin-left")) {
         if (style->marginLeft().isAuto())
@@ -387,6 +389,8 @@ String PrintContext::pageProperty(LocalFrame* frame, const char* propertyName, i
         return style->fontDescription().firstFamily();
     if (!strcmp(propertyName, "size"))
         return makeString(style->pageSize().width.value(), ' ', style->pageSize().height.value());
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return makeString("pageProperty() unimplemented for: "_s, span(propertyName));
 }
