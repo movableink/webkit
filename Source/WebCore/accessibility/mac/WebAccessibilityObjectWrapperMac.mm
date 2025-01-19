@@ -49,6 +49,7 @@
 #import "AccessibilityTableCell.h"
 #import "AccessibilityTableColumn.h"
 #import "AccessibilityTableRow.h"
+#import "CGUtilities.h"
 #import "Chrome.h"
 #import "ChromeClient.h"
 #import "ContextMenuController.h"
@@ -1433,19 +1434,19 @@ static void convertToVector(NSArray* array, AccessibilityObject::AccessibilityCh
 
 static void WebTransformCGPathToNSBezierPath(void* info, const CGPathElement *element)
 {
+    auto points = pointsSpan(element);
     NSBezierPath *bezierPath = (__bridge NSBezierPath *)info;
     switch (element->type) {
     case kCGPathElementMoveToPoint:
-        [bezierPath moveToPoint:NSPointFromCGPoint(element->points[0])];
+        [bezierPath moveToPoint:NSPointFromCGPoint(points[0])];
         break;
     case kCGPathElementAddLineToPoint:
-        [bezierPath lineToPoint:NSPointFromCGPoint(element->points[0])];
+        [bezierPath lineToPoint:NSPointFromCGPoint(points[0])];
         break;
-    case kCGPathElementAddCurveToPoint:
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        [bezierPath curveToPoint:NSPointFromCGPoint(element->points[0]) controlPoint1:NSPointFromCGPoint(element->points[1]) controlPoint2:NSPointFromCGPoint(element->points[2])];
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    case kCGPathElementAddCurveToPoint: {
+        [bezierPath curveToPoint:NSPointFromCGPoint(points[0]) controlPoint1:NSPointFromCGPoint(points[1]) controlPoint2:NSPointFromCGPoint(points[2])];
         break;
+    }
     case kCGPathElementCloseSubpath:
         [bezierPath closePath];
         break;

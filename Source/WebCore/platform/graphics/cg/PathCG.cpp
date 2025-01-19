@@ -29,6 +29,7 @@
 
 #if USE(CG)
 
+#include "CGUtilities.h"
 #include "GraphicsContextCG.h"
 #include "PathStream.h"
 #include <wtf/NeverDestroyed.h>
@@ -38,23 +39,6 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PathCG);
-
-static std::span<CGPoint> pointsSpan(const CGPathElement* element)
-{
-    switch (element->type) {
-    case kCGPathElementMoveToPoint:
-        return unsafeMakeSpan(element->points, 1);
-    case kCGPathElementAddLineToPoint:
-        return unsafeMakeSpan(element->points, 1);
-    case kCGPathElementAddQuadCurveToPoint:
-        return unsafeMakeSpan(element->points, 2);
-    case kCGPathElementAddCurveToPoint:
-        return unsafeMakeSpan(element->points, 3);
-    case kCGPathElementCloseSubpath:
-        break;
-    }
-    return { };
-}
 
 Ref<PathCG> PathCG::create()
 {
