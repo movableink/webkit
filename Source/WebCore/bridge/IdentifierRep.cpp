@@ -33,8 +33,6 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 using namespace JSC;
 
@@ -59,13 +57,13 @@ static IntIdentifierMap& intIdentifierMap()
 IdentifierRep* IdentifierRep::get(int intID)
 {
     if (intID == 0 || intID == -1) {
-        static IdentifierRep* negativeOneAndZeroIdentifiers[2];
+        static NeverDestroyed<std::array<IdentifierRep*, 2>> negativeOneAndZeroIdentifiers;
 
-        IdentifierRep* identifier = negativeOneAndZeroIdentifiers[intID + 1];
+        auto* identifier = negativeOneAndZeroIdentifiers.get()[intID + 1];
         if (!identifier) {
             identifier = new IdentifierRep(intID);
 
-            negativeOneAndZeroIdentifiers[intID + 1] = identifier;
+            negativeOneAndZeroIdentifiers.get()[intID + 1] = identifier;
         }
         
         return identifier;
@@ -114,5 +112,3 @@ bool IdentifierRep::isValid(IdentifierRep* identifier)
 }
     
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

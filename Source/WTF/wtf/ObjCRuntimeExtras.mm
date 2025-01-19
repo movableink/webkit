@@ -52,6 +52,13 @@ MallocSpan<objc_property_t, SystemMalloc> class_copyPropertyListSpan(Class cls)
     return adoptMallocSpan<objc_property_t, SystemMalloc>(unsafeMakeSpan(properties, propertyCount));
 }
 
+MallocSpan<Ivar, SystemMalloc> class_copyIvarListSpan(Class cls)
+{
+    unsigned ivarCount = 0;
+    auto* ivars = class_copyIvarList(cls, &ivarCount);
+    return adoptMallocSpan<Ivar, SystemMalloc>(unsafeMakeSpan(ivars, ivarCount));
+}
+
 MallocSpan<objc_method_description, SystemMalloc> protocol_copyMethodDescriptionListSpan(Protocol *protocol, BOOL isRequiredMethod, BOOL isInstanceMethod)
 {
     unsigned methodCount = 0;

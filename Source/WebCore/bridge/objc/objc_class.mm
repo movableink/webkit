@@ -34,8 +34,6 @@
 #import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/RetainPtr.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace JSC {
 namespace Bindings {
 
@@ -87,22 +85,16 @@ ObjcClass* ObjcClass::classForIsA(ClassStructPtr isa)
 typedef Vector<char, 256> JSNameConversionBuffer;
 static inline void convertJSMethodNameToObjc(const CString& jsName, JSNameConversionBuffer& buffer)
 {
-    buffer.reserveInitialCapacity(jsName.length() + 1);
-
-    const char* source = jsName.data();
-    while (true) {
-        if (*source == '$') {
-            ++source;
-            buffer.append(*source);
-        } else if (*source == '_')
+    auto characters = jsName.spanIncludingNullTerminator();
+    buffer.reserveInitialCapacity(characters.size());
+    for (size_t i = 0; i < characters.size(); ++i) {
+        if (characters[i] == '$') {
+            ++i;
+            buffer.append(characters[i]);
+        } else if (characters[i] == '_')
             buffer.append(':');
         else
-            buffer.append(*source);
-
-        if (!*source)
-            return;
-
-        ++source;
+            buffer.append(characters[i]);
     }
 }
 
@@ -205,13 +197,10 @@ Field* ObjcClass::fieldNamed(PropertyName propertyName, Instance* instance) cons
         // introspection.
 
         while (thisClass) {
-            unsigned numFieldsInClass = 0;
-            IvarStructPtr* ivarsInClass = class_copyIvarList(thisClass, &numFieldsInClass);
-
-            for (unsigned i = 0; i < numFieldsInClass; i++) {
-                IvarStructPtr objcIVar = ivarsInClass[i];
+            auto ivarsInClass = class_copyIvarListSpan(thisClass);
+            for (auto& objcIVar : ivarsInClass.span()) {
                 const char* objcIvarName = ivar_getName(objcIVar);
-                NSString* mappedName = 0;
+                NSString *mappedName = nullptr;
 
                 // See if the class wants to exclude the selector from visibility in JavaScript.
                 if ([thisClass respondsToSelector:@selector(isKeyExcludedFromWebScript:)])
@@ -233,7 +222,6 @@ Field* ObjcClass::fieldNamed(PropertyName propertyName, Instance* instance) cons
             }
 
             thisClass = class_getSuperclass(thisClass);
-            free(ivarsInClass);
         }
     }
 
@@ -256,5 +244,3 @@ JSValue ObjcClass::fallbackObject(JSGlobalObject* lexicalGlobalObject, Instance*
 
 }
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
