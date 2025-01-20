@@ -178,7 +178,6 @@ private:
     void updateAnimations();
     void updateVisibleRect(const FloatRect&);
     void updateIndicators();
-    void updateContents(bool affectedByTransformAnimation);
     bool isRunningTransformAnimation() const;
     bool filtersCanBeComposited(const FilterOperations&) const;
 
@@ -190,6 +189,9 @@ private:
     void commitLayerChanges(CommitState&, float pageScaleFactor, const FloatPoint&, bool affectedByTransformAnimation);
     bool needsCommit(CommitState&) const;
     void recursiveCommitChanges(CommitState&, float pageScaleFactor = 1, const FloatPoint& positionRelativeToBase = FloatPoint(), bool affectedByPageScale = false);
+
+    bool updateBackingStoresIfNeeded();
+    bool updateBackingStoreIfNeeded();
 
     Ref<CoordinatedPlatformLayer> m_platformLayer;
     OptionSet<Change> m_pendingChanges;

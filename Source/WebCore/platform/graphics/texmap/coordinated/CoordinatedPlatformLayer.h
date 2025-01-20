@@ -170,6 +170,8 @@ public:
     void setShowRepaintCounter(bool);
 
     void updateContents(bool affectedByTransformAnimation);
+    void updateBackingStore();
+
     void flushCompositingState(TextureMapper&);
 
     bool hasPendingTilesCreation() const { return m_pendingTilesCreation; }
@@ -186,7 +188,6 @@ private:
     void notifyCompositionRequired();
 
     bool needsBackingStore() const;
-    void updateBackingStore();
     void purgeBackingStores();
 
     enum class Change : uint32_t {

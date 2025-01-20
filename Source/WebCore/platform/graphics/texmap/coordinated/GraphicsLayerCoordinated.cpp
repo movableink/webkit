@@ -677,6 +677,10 @@ void GraphicsLayerCoordinated::flushCompositingState(const FloatRect& visibleRec
     }
 
     recursiveCommitChanges(commitState);
+
+    bool hasPendingTilesCreation = updateBackingStoresIfNeeded();
+    if (hasPendingTilesCreation)
+        client().notifySubsequentFlushRequired(this);
 }
 
 void GraphicsLayerCoordinated::flushCompositingStateForThisLayerOnly()
@@ -684,7 +688,6 @@ void GraphicsLayerCoordinated::flushCompositingStateForThisLayerOnly()
     CommitState commitState;
     auto [positionRelativeToBase, pageScaleFactor] = computePositionRelativeToBase();
     commitLayerChanges(commitState, pageScaleFactor, positionRelativeToBase, false);
-    updateContents(false);
 }
 
 std::pair<FloatPoint, float> GraphicsLayerCoordinated::computePositionRelativeToBase() const
@@ -953,13 +956,6 @@ void GraphicsLayerCoordinated::updateIndicators()
     m_platformLayer->setShowRepaintCounter(m_showRepaintCounter);
 }
 
-void GraphicsLayerCoordinated::updateContents(bool affectedByTransformAnimation)
-{
-    m_platformLayer->updateContents(affectedByTransformAnimation);
-    if (m_platformLayer->hasPendingTilesCreation())
-        client().notifySubsequentFlushRequired(this);
-}
-
 void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, float pageScaleFactor, const FloatPoint& positionRelativeToBase, bool affectedByTransformAnimation)
 {
     Locker locker { m_platformLayer->lock() };
@@ -1069,6 +1065,8 @@ void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, floa
         }));
     }
 
+    m_platformLayer->updateContents(affectedByTransformAnimation);
+
     m_pendingChanges = { };
 }
 
@@ -1141,13 +1139,30 @@ void GraphicsLayerCoordinated::recursiveCommitChanges(CommitState& commitState, 
     m_hasDescendantsWithPendingChanges = false;
     m_hasDescendantsWithPendingTilesCreation = hasDescendantsWithPendingTilesCreation;
     m_hasDescendantsWithRunningTransformAnimations = hasDescendantsWithRunningTransformAnimations;
+}
 
+bool GraphicsLayerCoordinated::updateBackingStoresIfNeeded()
+{
+    bool hasPendingTilesCreation = false;
     if (auto maskLayer = downcast<GraphicsLayerCoordinated>(m_maskLayer))
-        maskLayer->updateContents(affectedByTransformAnimation);
+        hasPendingTilesCreation |= maskLayer->updateBackingStoreIfNeeded();
     if (auto replicaLayer = downcast<GraphicsLayerCoordinated>(m_replicaLayer))
-        replicaLayer->updateContents(affectedByTransformAnimation);
+        hasPendingTilesCreation |= replicaLayer->updateBackingStoreIfNeeded();
 
-    updateContents(affectedByTransformAnimation);
+    hasPendingTilesCreation |= updateBackingStoreIfNeeded();
+
+    for (auto& currentChild : children()) {
+        auto& child = downcast<GraphicsLayerCoordinated>(currentChild.get());
+        hasPendingTilesCreation |= child.updateBackingStoresIfNeeded();
+    }
+
+    return hasPendingTilesCreation;
+}
+
+bool GraphicsLayerCoordinated::updateBackingStoreIfNeeded()
+{
+    m_platformLayer->updateBackingStore();
+    return m_platformLayer->hasPendingTilesCreation();
 }
 
 } // namespace WebCore

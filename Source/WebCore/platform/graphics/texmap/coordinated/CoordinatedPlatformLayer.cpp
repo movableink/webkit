@@ -683,6 +683,10 @@ bool CoordinatedPlatformLayer::needsBackingStore() const
 
 void CoordinatedPlatformLayer::updateBackingStore()
 {
+    Locker locker { m_lock };
+    if (!m_backingStoreProxy)
+        return;
+
     bool scaleChanged = m_backingStoreProxy->setContentsScale(m_contentsScale);
     if (!scaleChanged && m_dirtyRegion.isEmpty() && !m_pendingTilesCreation && !m_needsTilesUpdate)
         return;
@@ -707,7 +711,7 @@ void CoordinatedPlatformLayer::updateBackingStore()
 
 void CoordinatedPlatformLayer::updateContents(bool affectedByTransformAnimation)
 {
-    Locker locker { m_lock };
+    ASSERT(m_lock.isHeld());
 
     if (needsBackingStore()) {
         if (!m_backingStoreProxy) {
@@ -722,8 +726,6 @@ void CoordinatedPlatformLayer::updateContents(bool affectedByTransformAnimation)
             m_animatedBackingStoreClient->invalidate();
             m_animatedBackingStoreClient = nullptr;
         }
-
-        updateBackingStore();
     } else {
         m_backingStoreProxy = nullptr;
         if (m_animatedBackingStoreClient) {
@@ -739,8 +741,10 @@ void CoordinatedPlatformLayer::updateContents(bool affectedByTransformAnimation)
             m_pendingChanges.add(Change::ContentsImage);
     }
 
-    if (m_backdrop)
+    if (m_backdrop) {
+        Locker locker { m_backdrop->lock() };
         m_backdrop->updateContents(affectedByTransformAnimation);
+    }
 }
 
 void CoordinatedPlatformLayer::purgeBackingStores()
