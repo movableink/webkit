@@ -537,10 +537,8 @@ void CoordinatedPlatformLayer::setDirtyRegion(Vector<IntRect, 1>&& dirtyRegion)
 void CoordinatedPlatformLayer::setDamage(Damage&& damage)
 {
     ASSERT(m_lock.isHeld());
-    if (m_damage == damage)
-        return;
-
-    m_damage = WTFMove(damage);
+    if (m_damage != damage)
+        m_damage = WTFMove(damage);
     m_pendingChanges.add(Change::Damage);
 }
 #endif
@@ -874,14 +872,6 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
             layer.setDamage({ });
         } else
             layer.setDamage(m_damage);
-    }
-
-    if (m_damagePropagation && m_pendingChanges.isEmpty()) {
-        // If there are no changes to the layer and yet m_backingStoreProxy || m_contentsBuffer
-        // we must damage the whole layer for now to handle cases such as e.g. scrollbars.
-        Damage fullLayerDamage;
-        fullLayerDamage.add(layer.effectiveLayerRect());
-        layer.setDamage(fullLayerDamage);
     }
 #endif
 

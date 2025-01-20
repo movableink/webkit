@@ -168,6 +168,7 @@ private:
         Region& nonOverlapRegion;
     };
     void computeOverlapRegions(ComputeOverlapRegionData&, const TransformationMatrix&, bool includesReplica = true);
+    Vector<IntRect, 1> computeConsolidatedOverlapRegionRects(TextureMapperPaintOptions&);
 
     void paintRecursive(TextureMapperPaintOptions&);
     void paintFlattened(TextureMapperPaintOptions&);
@@ -188,7 +189,10 @@ private:
 #if ENABLE(DAMAGE_TRACKING)
     bool canInferDamage() const { return m_damagePropagation && !m_damage.isInvalid(); }
     void collectDamageRecursive(TextureMapperPaintOptions&, Damage&);
+    void collectDamageSelfAndChildren(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelf(TextureMapperPaintOptions&, Damage&);
+    void collectDamageSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions&, Damage&);
+    void collectDamageSelfChildrenFilterAndMask(TextureMapperPaintOptions&, Damage&);
     void damageWholeLayerDueToTransformChange(const TransformationMatrix& beforeChange, const TransformationMatrix& afterChange);
     FloatRect transformRectForDamage(const FloatRect&, const TransformationMatrix&, const TextureMapperPaintOptions&);
 #endif
@@ -284,6 +288,7 @@ private:
 #if ENABLE(DAMAGE_TRACKING)
     bool m_damagePropagation { false };
     Damage m_damage;
+    FloatRect m_accumulatedOverlapRegionDamage;
 #endif
 
     struct {

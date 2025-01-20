@@ -390,8 +390,15 @@ void TextureMapperLayer::collectDamageRecursive(TextureMapperPaintOptions& optio
 
     SetForScope scopedOpacity(options.opacity, options.opacity * m_currentOpacity);
 
-    collectDamageSelf(options, damage);
+    if (preserves3D() || isFlattened() || shouldBlend())
+        collectDamageSelfAndChildren(options, damage);
+    else
+        collectDamageSelfChildrenReplicaFilterAndMask(options, damage);
+}
 
+void TextureMapperLayer::collectDamageSelfAndChildren(TextureMapperPaintOptions& options, Damage& damage)
+{
+    collectDamageSelf(options, damage);
     for (auto* child : m_children)
         child->collectDamageRecursive(options, damage);
 }
@@ -430,6 +437,43 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
     }
 
     m_damage = Damage();
+}
+
+void TextureMapperLayer::collectDamageSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions& options, Damage& damage)
+{
+    const bool hasFilterOrMask = hasFilters() || m_state.maskLayer || (m_state.replicaLayer && m_state.replicaLayer->m_state.maskLayer);
+    auto collectDamageSelfAndOthers = [&]() {
+        if (hasFilterOrMask)
+            collectDamageSelfChildrenFilterAndMask(options, damage);
+        else
+            collectDamageSelfAndChildren(options, damage);
+    };
+
+    if (m_state.replicaLayer) {
+        SetForScope scopedReplicaLayer(options.replicaLayer, this);
+        SetForScope scopedTransform(options.transform, options.transform);
+        options.transform.multiply(replicaTransform());
+        collectDamageSelfAndOthers();
+    }
+    collectDamageSelfAndOthers();
+}
+
+void TextureMapperLayer::collectDamageSelfChildrenFilterAndMask(TextureMapperPaintOptions& options, Damage& damage)
+{
+    const IntSize maxTextureSize = options.textureMapper.maxTextureSize();
+    for (auto& rect : computeConsolidatedOverlapRegionRects(options)) {
+        for (int x = rect.x(); x < rect.maxX(); x += maxTextureSize.width()) {
+            for (int y = rect.y(); y < rect.maxY(); y += maxTextureSize.height()) {
+                IntRect tileRect(IntPoint(x, y), maxTextureSize);
+                tileRect.intersect(rect);
+
+                m_accumulatedOverlapRegionDamage.unite(transformRectForDamage(tileRect, options.transform, options));
+            }
+        }
+    }
+
+    if (!m_accumulatedOverlapRegionDamage.isEmpty())
+        damage.add(m_accumulatedOverlapRegionDamage);
 }
 
 void TextureMapperLayer::damageWholeLayerDueToTransformChange(const TransformationMatrix& beforeChange, const TransformationMatrix& afterChange)
@@ -927,7 +971,7 @@ void TextureMapperLayer::paintUsingOverlapRegions(TextureMapperPaintOptions& opt
     }
 }
 
-void TextureMapperLayer::paintSelfChildrenFilterAndMask(TextureMapperPaintOptions& options)
+Vector<IntRect, 1> TextureMapperLayer::computeConsolidatedOverlapRegionRects(TextureMapperPaintOptions& options)
 {
     Region overlapRegion;
     Region nonOverlapRegion;
@@ -951,8 +995,13 @@ void TextureMapperLayer::paintSelfChildrenFilterAndMask(TextureMapperPaintOption
         rects.append(overlapRegion.bounds());
     }
 
+    return rects;
+}
+
+void TextureMapperLayer::paintSelfChildrenFilterAndMask(TextureMapperPaintOptions& options)
+{
     IntSize maxTextureSize = options.textureMapper.maxTextureSize();
-    for (auto& rect : rects) {
+    for (auto& rect : computeConsolidatedOverlapRegionRects(options)) {
         for (int x = rect.x(); x < rect.maxX(); x += maxTextureSize.width()) {
             for (int y = rect.y(); y < rect.maxY(); y += maxTextureSize.height()) {
                 IntRect tileRect(IntPoint(x, y), maxTextureSize);

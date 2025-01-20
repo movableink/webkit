@@ -59,19 +59,14 @@ void CoordinatedGraphicsScene::paintToCurrentGLContext(const TransformationMatri
     currentRootLayer.prepareForPainting(*m_textureMapper);
     if (m_client && m_damagePropagation != Damage::Propagation::None) {
         Damage frameDamage;
-        if (sceneHasRunningAnimations) {
-            // When running animations for now we need to damage the whole frame.
-            frameDamage.add(clipRect);
-        } else {
-            WTFBeginSignpost(this, CollectDamage);
-            currentRootLayer.collectDamage(*m_textureMapper, frameDamage);
-            WTFEndSignpost(this, CollectDamage);
+        WTFBeginSignpost(this, CollectDamage);
+        currentRootLayer.collectDamage(*m_textureMapper, frameDamage);
+        WTFEndSignpost(this, CollectDamage);
 
-            if (m_damagePropagation == Damage::Propagation::Unified) {
-                Damage boundsDamage;
-                boundsDamage.add(frameDamage.bounds());
-                frameDamage = WTFMove(boundsDamage);
-            }
+        if (m_damagePropagation == Damage::Propagation::Unified) {
+            Damage boundsDamage;
+            boundsDamage.add(frameDamage.bounds());
+            frameDamage = WTFMove(boundsDamage);
         }
 
         const auto& damageSinceLastSurfaceUse = m_client->addSurfaceDamage(!frameDamage.isInvalid() && !frameDamage.isEmpty() ? frameDamage : Damage::invalid());
