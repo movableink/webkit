@@ -440,15 +440,36 @@ static uint64_t makeValue(uint32_t vertexCount, MTLIndexType indexType)
     return vertexCount | (static_cast<uint64_t>(indexType) << 32);
 }
 
-bool Buffer::canSkipDrawIndexedValidation(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType indexType) const
+bool Buffer::canSkipDrawIndexedValidation(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType indexType, id<MTLIndirectCommandBuffer> icb) const
 {
-    auto it = m_drawIndexedCache.find(makeKey(firstIndex, indexCount));
-    return it != m_drawIndexedCache.end() && it->value == makeValue(vertexCount, indexType);
+    auto containerIt = m_drawIndexedCache.find(icb.gpuResourceID._impl);
+    if (containerIt == m_drawIndexedCache.end())
+        return false;
+
+    auto& drawIndexedCache = containerIt->value;
+    auto it = drawIndexedCache.find(makeKey(firstIndex, indexCount));
+    return it != drawIndexedCache.end() && it->value == makeValue(vertexCount, indexType);
 }
 
-void Buffer::drawIndexedValidated(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType indexType)
+void Buffer::drawIndexedValidated(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType indexType, id<MTLIndirectCommandBuffer> icb)
 {
-    m_drawIndexedCache.set(makeKey(firstIndex, indexCount), makeValue(vertexCount, indexType));
+    auto containerIt = m_drawIndexedCache.find(icb.gpuResourceID._impl);
+    if (containerIt == m_drawIndexedCache.end())
+        containerIt = m_drawIndexedCache.add(icb.gpuResourceID._impl, DrawIndexCacheContainer()).iterator;
+
+    auto& drawIndexedCache = containerIt->value;
+    drawIndexedCache.set(makeKey(firstIndex, indexCount), makeValue(vertexCount, indexType));
+}
+
+bool Buffer::didReadOOB(id<MTLIndirectCommandBuffer> icb) const
+{
+    auto it = m_didReadOOB.find(icb.gpuResourceID._impl);
+    return it == m_didReadOOB.end() ? false : it->value;
+}
+
+void Buffer::didReadOOB(uint32_t v, id<MTLIndirectCommandBuffer> icb)
+{
+    m_didReadOOB.set(icb.gpuResourceID._impl, !!v);
 }
 
 bool Buffer::indirectBufferRequiresRecomputation(uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount) const

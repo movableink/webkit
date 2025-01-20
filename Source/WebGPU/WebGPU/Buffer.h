@@ -111,11 +111,11 @@ public:
     void indirectBufferRecomputed(uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
     void indirectIndexedBufferRecomputed(MTLIndexType, NSUInteger indexBufferOffsetInBytes, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
 
-    bool canSkipDrawIndexedValidation(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType) const;
-    void drawIndexedValidated(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType);
+    bool canSkipDrawIndexedValidation(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType, id<MTLIndirectCommandBuffer> = nil) const;
+    void drawIndexedValidated(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType, id<MTLIndirectCommandBuffer> = nil);
 
-    bool didReadOOB() const { return m_didReadOOB; }
-    void didReadOOB(uint32_t v) { m_didReadOOB = !!v; }
+    bool didReadOOB(id<MTLIndirectCommandBuffer> = nil) const;
+    void didReadOOB(uint32_t v, id<MTLIndirectCommandBuffer> = nil);
 
     void indirectBufferInvalidated();
 #if ENABLE(WEBGPU_SWIFT)
@@ -163,14 +163,15 @@ private:
         MTLIndexType indexType { MTLIndexTypeUInt16 };
     } m_indirectCache;
 
-    HashMap<uint64_t, uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_drawIndexedCache;
+    using DrawIndexCacheContainer = HashMap<uint64_t, uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
+    HashMap<uint64_t, DrawIndexCacheContainer, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_drawIndexedCache;
 
     const Ref<Device> m_device;
     mutable WeakHashSet<CommandEncoder> m_commandEncoders;
 #if CPU(X86_64)
     bool m_mappedAtCreation { false };
 #endif
-    bool m_didReadOOB { false };
+    HashMap<uint64_t, bool, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_didReadOOB;
 } SWIFT_SHARED_REFERENCE(refBuffer, derefBuffer);
 
 } // namespace WebGPU

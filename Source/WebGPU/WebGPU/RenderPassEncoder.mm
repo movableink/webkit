@@ -1105,7 +1105,9 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
                     auto minVertexCount = data.indexData.minVertexCount;
                     auto indexType = data.indexType;
                     auto baseVertex = data.indexData.baseVertex;
-                    if (!indexBuffer || indexBuffer->canSkipDrawIndexedValidation(firstIndex, indexCount, minVertexCount + baseVertex, indexType))
+                    if (!indexBuffer)
+                        continue;
+                    if (indexBuffer->canSkipDrawIndexedValidation(firstIndex, indexCount, minVertexCount + baseVertex, indexType, icb.indirectCommandBuffer) && !indexBuffer->didReadOOB(icb.indirectCommandBuffer))
                         continue;
 
                     id<MTLRenderPipelineState> renderPipelineState = Ref { m_device }->icbCommandClampPipeline(data.indexType, m_rasterSampleCount);
@@ -1125,8 +1127,8 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
                     [protectedParentEncoder()->commandBuffer() addCompletedHandler:[protectedDevice = Ref { m_device }, firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = Ref { *indexBuffer }, icb](id<MTLCommandBuffer>) {
                         protectedDevice->protectedQueue()->scheduleWork([icb, firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = WTFMove(refIndexBuffer)]() mutable {
                             id<MTLBuffer> indirectCommandBufferContainer = icb.indirectCommandBufferContainer;
-                            refIndexBuffer->didReadOOB(*static_cast<uint32_t*>(indirectCommandBufferContainer.contents));
-                            refIndexBuffer->drawIndexedValidated(firstIndex, indexCount, minVertexCount + baseVertex, indexType);
+                            refIndexBuffer->didReadOOB(*static_cast<uint32_t*>(indirectCommandBufferContainer.contents), icb.indirectCommandBuffer);
+                            refIndexBuffer->drawIndexedValidated(firstIndex, indexCount, minVertexCount + baseVertex, indexType, icb.indirectCommandBuffer);
                         });
                     }];
                     splitPass = true;
