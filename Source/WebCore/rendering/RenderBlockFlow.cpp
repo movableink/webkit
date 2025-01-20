@@ -1900,7 +1900,7 @@ RenderBlockFlow::LinePaginationAdjustment RenderBlockFlow::computeLineAdjustment
     auto computeLeafBoxTopAndBottom = [&] {
         auto lineTop = LayoutUnit::max();
         auto lineBottom = LayoutUnit::min();
-        for (auto box = lineBox->firstLeafBox(); box; box.traverseNextOnLine()) {
+        for (auto box = lineBox->lineLeftmostLeafBox(); box; box.traverseLineRightwardOnLine()) {
             if (box->logicalTop() < lineTop)
                 lineTop = box->logicalTop();
             if (box->logicalBottom() > lineBottom)
@@ -3343,7 +3343,7 @@ GapRects RenderBlockFlow::inlineSelectionGaps(RenderBlock& rootBlock, const Layo
         GapRects result;
 
         auto firstSelectedBox = [&]() -> InlineIterator::LeafBoxIterator {
-            for (auto box = lineBox->firstLeafBox(); box; box.traverseNextOnLine()) {
+            for (auto box = lineBox->lineLeftmostLeafBox(); box; box.traverseLineRightwardOnLine()) {
                 if (box->selectionState() != RenderObject::HighlightState::None)
                     return box;
             }
@@ -3351,7 +3351,7 @@ GapRects RenderBlockFlow::inlineSelectionGaps(RenderBlock& rootBlock, const Layo
         }();
 
         auto lastSelectedBox = [&]() -> InlineIterator::LeafBoxIterator {
-            for (auto box = lineBox->lastLeafBox(); box; box.traversePreviousOnLine()) {
+            for (auto box = lineBox->lineRightmostLeafBox(); box; box.traverseLineLeftwardOnLine()) {
                 if (box->selectionState() != RenderObject::HighlightState::None)
                     return box;
             }
@@ -3378,7 +3378,7 @@ GapRects RenderBlockFlow::inlineSelectionGaps(RenderBlock& rootBlock, const Layo
             // Now fill in any gaps on the line that occurred between two selected elements.
             LayoutUnit lastLogicalLeft { firstSelectedBox->logicalRightIgnoringInlineDirection() };
             bool isPreviousBoxSelected = firstSelectedBox->selectionState() != RenderObject::HighlightState::None;
-            for (auto box = firstSelectedBox; box; box.traverseNextOnLine()) {
+            for (auto box = firstSelectedBox; box; box.traverseLineRightwardOnLine()) {
                 if (box->selectionState() != RenderObject::HighlightState::None) {
                     LayoutRect logicalRect { lastLogicalLeft, selTop, LayoutUnit(box->logicalLeftIgnoringInlineDirection() - lastLogicalLeft), selHeight };
                     logicalRect.move(isHorizontalWritingMode() ? offsetFromRootBlock : LayoutSize(offsetFromRootBlock.height(), offsetFromRootBlock.width()));
@@ -3482,7 +3482,7 @@ int RenderBlockFlow::lineCount() const
 bool RenderBlockFlow::containsNonZeroBidiLevel() const
 {
     for (auto lineBox = InlineIterator::firstLineBoxFor(*this); lineBox; lineBox.traverseNext()) {
-        for (auto box = lineBox->firstLeafBox(); box; box = box.traverseNextOnLine()) {
+        for (auto box = lineBox->lineLeftmostLeafBox(); box; box = box.traverseLineRightwardOnLine()) {
             if (box->bidiLevel())
                 return true;
         }
@@ -3557,7 +3557,7 @@ RenderText* RenderBlockFlow::findClosestTextAtAbsolutePoint(const FloatPoint& po
     // experience has shown that hit tests on an exploded text node can fail when within the
     // overflow fragment.
     auto previousRootInlineBoxBottom = std::optional<float> { };
-    for (auto box = InlineIterator::firstRootInlineBoxFor(blockFlow); box; box.traverseNextInlineBox()) {
+    for (auto box = InlineIterator::firstRootInlineBoxFor(blockFlow); box; box.traverseInlineBoxLineRightward()) {
         if (previousRootInlineBoxBottom) {
             if (localPoint.y() < *previousRootInlineBoxBottom)
                 return nullptr;
@@ -3591,7 +3591,7 @@ VisiblePosition RenderBlockFlow::positionForPointWithInlineChildren(const Layout
     InlineIterator::LineBoxIterator firstLineBoxWithChildren;
     InlineIterator::LineBoxIterator lastLineBoxWithChildren;
     for (auto lineBox = firstLineBox; lineBox; lineBox.traverseNext()) {
-        if (!lineBox->firstLeafBox())
+        if (!lineBox->lineLeftmostLeafBox())
             continue;
         if (!firstLineBoxWithChildren)
             firstLineBoxWithChildren = lineBox;
@@ -3607,7 +3607,7 @@ VisiblePosition RenderBlockFlow::positionForPointWithInlineChildren(const Layout
         if (pointInLogicalContents.y() < selectionBottom || (blocksAreFlipped && pointInLogicalContents.y() == selectionBottom)) {
             if (linesAreFlipped) {
                 auto nextLineBoxWithChildren = lineBox->next();
-                while (nextLineBoxWithChildren && !nextLineBoxWithChildren->firstLeafBox())
+                while (nextLineBoxWithChildren && !nextLineBoxWithChildren->lineLeftmostLeafBox())
                     nextLineBoxWithChildren.traverseNext();
 
                 if (nextLineBoxWithChildren && nextLineBoxWithChildren->isFirstAfterPageBreak()
@@ -3632,9 +3632,9 @@ VisiblePosition RenderBlockFlow::positionForPointWithInlineChildren(const Layout
             auto firstLineWithChildrenTop = LayoutUnit { std::min(previousLineBoxContentBottomOrBorderAndPadding(*firstLineBoxWithChildren), firstLineBoxWithChildren->contentLogicalTop()) };
             if (pointInLogicalContents.y() < firstLineWithChildrenTop
                 || (blocksAreFlipped && pointInLogicalContents.y() == firstLineWithChildrenTop)) {
-                auto box = firstLineBoxWithChildren->firstLeafBox();
+                auto box = firstLineBoxWithChildren->lineLeftmostLeafBox();
                 if (box->isLineBreak()) {
-                    if (auto next = box->nextOnLineIgnoringLineBreak())
+                    if (auto next = box->nextLineRightwardOnLineIgnoringLineBreak())
                         box = next;
                 }
                 // y coordinate is above first root line box, so return the start of the first
@@ -3678,7 +3678,7 @@ VisiblePosition RenderBlockFlow::positionForPoint(const LayoutPoint& point, HitT
 void RenderBlockFlow::addFocusRingRectsForInlineChildren(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*) const
 {
     ASSERT(childrenInline());
-    for (auto box = InlineIterator::firstRootInlineBoxFor(*this); box; box.traverseNextInlineBox()) {
+    for (auto box = InlineIterator::firstRootInlineBoxFor(*this); box; box.traverseInlineBoxLineRightward()) {
         auto lineBox = box->lineBox();
         // FIXME: This is mixing physical and logical coordinates.
         auto unflippedVisualRect = box->visualRectIgnoringBlockDirection();

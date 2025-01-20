@@ -185,7 +185,7 @@ void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoi
         auto textLogicalTop = [&]() -> float {
             if (auto* buttonRenderer = downcast<RenderButton>(button->renderer())) {
                 if (auto* buttonTextRenderer = buttonRenderer->textRenderer()) {
-                    if (auto textBox = InlineIterator::firstTextBoxFor(*buttonTextRenderer)) {
+                    if (auto textBox = InlineIterator::lineLeftmostTextBoxFor(*buttonTextRenderer)) {
                         auto textVisualRect = textBox->visualRectIgnoringBlockDirection();
                         textVisualRect.setLocation(buttonTextRenderer->localToContainerPoint(textVisualRect.location(), this));
                         textVisualRect.moveBy(roundPointToDevicePixels(paintOffset, document().deviceScaleFactor()));

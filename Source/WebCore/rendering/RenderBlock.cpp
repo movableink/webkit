@@ -1311,7 +1311,7 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
             // in the same layer. 
             if (!inlineEnclosedInSelfPaintingLayer && !hasLayer())
                 containingBlock->addContinuationWithOutline(inlineRenderer);
-            else if (!InlineIterator::firstInlineBoxFor(*inlineRenderer) || (!inlineEnclosedInSelfPaintingLayer && hasLayer()))
+            else if (!InlineIterator::lineLeftmostInlineBoxFor(*inlineRenderer) || (!inlineEnclosedInSelfPaintingLayer && hasLayer()))
                 inlineRenderer->paintOutline(paintInfo, paintOffset - locationOffset() + inlineRenderer->containingBlock()->location());
         }
         paintContinuationOutlines(paintInfo, paintOffset);

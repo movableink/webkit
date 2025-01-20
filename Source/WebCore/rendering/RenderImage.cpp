@@ -127,8 +127,8 @@ void RenderImage::collectSelectionGeometries(Vector<SelectionGeometry>& geometri
         int selectionTop = !containingBlock->writingMode().isBlockFlipped() ? selectionLogicalRect.y() - logicalTop() : logicalBottom() - selectionLogicalRect.maxY();
         int selectionHeight = selectionLogicalRect.height();
         imageRect = IntRect { 0,  selectionTop, logicalWidth(), selectionHeight };
-        isFirstOnLine = !run->previousOnLine();
-        isLastOnLine = !run->nextOnLine();
+        isFirstOnLine = !run->nextLineLeftwardOnLine();
+        isLastOnLine = !run->nextLineRightwardOnLine();
         LogicalSelectionOffsetCaches cache(*containingBlock);
         LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);
         LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);

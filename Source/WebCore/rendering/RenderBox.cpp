@@ -4173,13 +4173,13 @@ static std::optional<float> positionWithRTLInlineBoxContainingBlock(const Render
     if (!renderInline || containingBlock.writingMode().isLogicalLeftInlineStart())
         return { };
 
-    auto firstInlineBox = InlineIterator::firstInlineBoxFor(*renderInline);
+    auto firstInlineBox = InlineIterator::lineLeftmostInlineBoxFor(*renderInline);
     if (!firstInlineBox)
         return { };
 
     auto lastInlineBox = [&] {
         auto inlineBox = firstInlineBox;
-        for (; inlineBox->nextInlineBox(); inlineBox.traverseNextInlineBox()) { }
+        for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
         return inlineBox;
     }();
     if (firstInlineBox == lastInlineBox)

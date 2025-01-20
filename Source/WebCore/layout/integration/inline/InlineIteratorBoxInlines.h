@@ -51,5 +51,30 @@ inline FloatRect Box::logicalRectIgnoringInlineDirection() const
     return isHorizontal() ? rect : rect.transposedRect();
 }
 
+// Coordinate-relative left/right
+inline LeafBoxIterator Box::nextLogicalRightwardOnLine() const
+{
+    return writingMode().isLogicalLeftLineLeft()
+        ? nextLineRightwardOnLine() : nextLineLeftwardOnLine();
+}
+
+inline LeafBoxIterator Box::nextLogicalLeftwardOnLine() const
+{
+    return writingMode().isLogicalLeftLineLeft()
+        ? nextLineLeftwardOnLine() : nextLineRightwardOnLine();
+}
+
+inline LeafBoxIterator Box::nextLogicalRightwardOnLineIgnoringLineBreak() const
+{
+    return writingMode().isLogicalLeftLineLeft()
+        ? nextLineRightwardOnLineIgnoringLineBreak() : nextLineLeftwardOnLineIgnoringLineBreak();
+}
+
+inline LeafBoxIterator Box::nextLogicalLeftwardOnLineIgnoringLineBreak() const
+{
+    return writingMode().isLogicalLeftLineLeft()
+        ? nextLineLeftwardOnLineIgnoringLineBreak() : nextLineRightwardOnLineIgnoringLineBreak();
+}
+
 }
 }

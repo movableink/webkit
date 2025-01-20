@@ -56,7 +56,7 @@ static bool isAncestorAndWithinBlock(const RenderInline& ancestor, const RenderO
 static float minLogicalTopForTextDecorationLineUnder(const InlineIterator::LineBoxIterator& lineBox, float textRunLogicalTop, const RenderElement& decoratingBoxRendererForUnderline)
 {
     auto minLogicalTop = textRunLogicalTop;
-    for (auto run = lineBox->firstLeafBox(); run; run.traverseNextOnLine()) {
+    for (auto run = lineBox->lineLeftmostLeafBox(); run; run.traverseLineRightwardOnLine()) {
         if (run->renderer().isOutOfFlowPositioned())
             continue; // Positioned placeholders don't affect calculations.
 
@@ -75,7 +75,7 @@ static float minLogicalTopForTextDecorationLineUnder(const InlineIterator::LineB
 static float maxLogicalBottomForTextDecorationLineUnder(const InlineIterator::LineBoxIterator& lineBox, float textRunLogicalBottom, const RenderElement& decoratingBoxRendererForUnderline)
 {
     auto maxLogicalBottom = textRunLogicalBottom;
-    for (auto run = lineBox->firstLeafBox(); run; run.traverseNextOnLine()) {
+    for (auto run = lineBox->lineLeftmostLeafBox(); run; run.traverseLineRightwardOnLine()) {
         if (run->renderer().isOutOfFlowPositioned())
             continue; // Positioned placeholders don't affect calculations.
 

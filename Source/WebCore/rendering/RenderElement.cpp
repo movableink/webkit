@@ -1923,12 +1923,12 @@ bool RenderElement::getLeadingCorner(FloatPoint& point, bool& insideFixed) const
             return true;
         }
 
-        if (p->node() && p->node() == element() && is<RenderText>(*o) && !InlineIterator::firstTextBoxFor(downcast<RenderText>(*o))) {
+        if (p->node() && p->node() == element() && is<RenderText>(*o) && !InlineIterator::lineLeftmostTextBoxFor(downcast<RenderText>(*o))) {
             // do nothing - skip unrendered whitespace that is a child or next sibling of the anchor
         } else if (is<RenderText>(*o) || o->isReplacedOrAtomicInline()) {
             point = FloatPoint();
             if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(*o)) {
-                if (auto run = InlineIterator::firstTextBoxFor(*textRenderer))
+                if (auto run = InlineIterator::lineLeftmostTextBoxFor(*textRenderer))
                     point.move(textRenderer->linesBoundingBox().x(), run->lineBox()->contentLogicalTop());
             } else if (auto* box = dynamicDowncast<RenderBox>(*o))
                 point.moveBy(box->location());

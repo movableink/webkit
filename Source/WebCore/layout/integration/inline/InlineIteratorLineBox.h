@@ -88,8 +88,8 @@ public:
     bool isFirst() const;
     bool isFirstAfterPageBreak() const;
 
-    LeafBoxIterator firstLeafBox() const;
-    LeafBoxIterator lastLeafBox() const;
+    LeafBoxIterator lineLeftmostLeafBox() const;
+    LeafBoxIterator lineRightmostLeafBox() const;
 
     LineBoxIterator next() const;
     LineBoxIterator previous() const;

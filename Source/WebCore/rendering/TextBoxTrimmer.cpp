@@ -58,7 +58,7 @@ static bool shouldIgnoreAsFirstLastFormattedLineContainer(const RenderBlockFlow&
     // Empty continuation pre/post blocks should be ignored as they are implementation detail.
     if (container.isAnonymousBlock()) {
         if (auto firstLineBox = InlineIterator::firstLineBoxFor(container))
-            return !firstLineBox->firstLeafBox();
+            return !firstLineBox->lineLeftmostLeafBox();
         return true;
     }
     return false;

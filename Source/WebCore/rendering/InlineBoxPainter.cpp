@@ -185,7 +185,7 @@ void InlineBoxPainter::paintMask()
         return; // Don't paint anything while we wait for the image to load.
     }
 
-    bool hasSingleLine = !m_inlineBox.previousInlineBox() && !m_inlineBox.nextInlineBox();
+    bool hasSingleLine = !m_inlineBox.nextInlineBoxLineLeftward() && !m_inlineBox.nextInlineBoxLineRightward();
 
     BorderPainter borderPainter { renderer(), m_paintInfo };
 
@@ -195,10 +195,10 @@ void InlineBoxPainter::paintMask()
         // We have a mask image that spans multiple lines.
         // We need to adjust _tx and _ty by the width of all previous lines.
         LayoutUnit logicalOffsetOnLine;
-        for (auto box = m_inlineBox.previousInlineBox(); box; box.traversePreviousInlineBox())
+        for (auto box = m_inlineBox.nextInlineBoxLineLeftward(); box; box.traverseInlineBoxLineLeftward())
             logicalOffsetOnLine += box->logicalWidth();
         LayoutUnit totalLogicalWidth = logicalOffsetOnLine;
-        for (auto box = m_inlineBox.iterator(); box; box.traverseNextInlineBox())
+        for (auto box = m_inlineBox.iterator(); box; box.traverseInlineBoxLineRightward())
             totalLogicalWidth += box->logicalWidth();
         LayoutUnit stripX = adjustedPaintOffset.x() - (isHorizontal() ? logicalOffsetOnLine : 0_lu);
         LayoutUnit stripY = adjustedPaintOffset.y() - (isHorizontal() ? 0_lu : logicalOffsetOnLine);
@@ -259,7 +259,7 @@ void InlineBoxPainter::paintDecorations()
 
     BorderPainter borderPainter { renderer(), m_paintInfo };
 
-    bool hasSingleLine = !m_inlineBox.previousInlineBox() && !m_inlineBox.nextInlineBox();
+    bool hasSingleLine = !m_inlineBox.nextInlineBoxLineLeftward() && !m_inlineBox.nextInlineBoxLineRightward();
     if (!hasBorderImage || hasSingleLine) {
         auto closedEdges = m_inlineBox.closedEdges();
         borderPainter.paintBorder(paintRect, style, BleedAvoidance::None, closedEdges);
@@ -275,10 +275,10 @@ void InlineBoxPainter::paintDecorations()
     // FIXME: What the heck do we do with RTL here? The math we're using is obviously not right,
     // but it isn't even clear how this should work at all.
     LayoutUnit logicalOffsetOnLine;
-    for (auto box = m_inlineBox.previousInlineBox(); box; box.traversePreviousInlineBox())
+    for (auto box = m_inlineBox.nextInlineBoxLineLeftward(); box; box.traverseInlineBoxLineLeftward())
         logicalOffsetOnLine += box->logicalWidth();
     LayoutUnit totalLogicalWidth = logicalOffsetOnLine;
-    for (auto box = m_inlineBox.iterator(); box; box.traverseNextInlineBox())
+    for (auto box = m_inlineBox.iterator(); box; box.traverseInlineBoxLineRightward())
         totalLogicalWidth += box->logicalWidth();
 
     LayoutUnit stripX = adjustedPaintoffset.x() - (isHorizontal() ? logicalOffsetOnLine : 0_lu);
@@ -307,7 +307,7 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
     auto* image = fillLayer.image();
     bool hasFillImage = image && image->canRender(&renderer(), renderer().style().usedZoom());
     bool hasFillImageOrBorderRadious = hasFillImage || renderer().style().hasBorderRadius();
-    bool hasSingleLine = !m_inlineBox.previousInlineBox() && !m_inlineBox.nextInlineBox();
+    bool hasSingleLine = !m_inlineBox.nextInlineBoxLineLeftward() && !m_inlineBox.nextInlineBoxLineRightward();
 
     BackgroundPainter backgroundPainter { renderer(), m_paintInfo };
 
@@ -332,16 +332,16 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
     LayoutUnit logicalOffsetOnLine;
     LayoutUnit totalLogicalWidth;
     if (renderer().writingMode().isBidiLTR()) {
-        for (auto box = m_inlineBox.previousInlineBox(); box; box.traversePreviousInlineBox())
+        for (auto box = m_inlineBox.nextInlineBoxLineLeftward(); box; box.traverseInlineBoxLineLeftward())
             logicalOffsetOnLine += box->logicalWidth();
         totalLogicalWidth = logicalOffsetOnLine;
-        for (auto box = m_inlineBox.iterator(); box; box.traverseNextInlineBox())
+        for (auto box = m_inlineBox.iterator(); box; box.traverseInlineBoxLineRightward())
             totalLogicalWidth += box->logicalWidth();
     } else {
-        for (auto box = m_inlineBox.nextInlineBox(); box; box.traverseNextInlineBox())
+        for (auto box = m_inlineBox.nextInlineBoxLineRightward(); box; box.traverseInlineBoxLineRightward())
             logicalOffsetOnLine += box->logicalWidth();
         totalLogicalWidth = logicalOffsetOnLine;
-        for (auto box = m_inlineBox.iterator(); box; box.traversePreviousInlineBox())
+        for (auto box = m_inlineBox.iterator(); box; box.traverseInlineBoxLineLeftward())
             totalLogicalWidth += box->logicalWidth();
     }
     LayoutRect backgroundImageStrip {
@@ -360,7 +360,7 @@ void InlineBoxPainter::paintBoxShadow(ShadowStyle shadowStyle, const LayoutRect&
 {
     BackgroundPainter backgroundPainter { renderer(), m_paintInfo };
 
-    bool hasSingleLine = !m_inlineBox.previousInlineBox() && !m_inlineBox.nextInlineBox();
+    bool hasSingleLine = !m_inlineBox.nextInlineBoxLineLeftward() && !m_inlineBox.nextInlineBoxLineRightward();
     if (hasSingleLine || m_isRootInlineBox) {
         backgroundPainter.paintBoxShadow(paintRect, style(), shadowStyle);
         return;

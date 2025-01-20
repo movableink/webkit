@@ -1022,7 +1022,7 @@ bool BackgroundPainter::boxShadowShouldBeAppliedToBackground(const RenderBoxMode
         // would be clipped out, so it has to be drawn separately).
         if (inlineBox->isRootInlineBox())
             return true;
-        if (!inlineBox->previousInlineBox() && !inlineBox->nextInlineBox())
+        if (!inlineBox->nextInlineBoxLineLeftward() && !inlineBox->nextInlineBoxLineRightward())
             return true;
         auto* image = lastBackgroundLayer->image();
         auto& renderer = inlineBox->renderer();

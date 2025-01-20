@@ -812,7 +812,7 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
 
     auto skipToNextSoftLineBreakPosition = [&] {
         while (currentLineBox) {
-            auto lastRun = currentLineBox->lastLeafBox();
+            auto lastRun = currentLineBox->lineRightmostLeafBox();
             ASSERT(lastRun);
             // Skip last line.
             currentLineBox.traverseNext();

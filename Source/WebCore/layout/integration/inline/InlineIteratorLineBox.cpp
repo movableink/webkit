@@ -110,14 +110,14 @@ LineBoxIterator LineBox::previous() const
     return LineBoxIterator(*this).traversePrevious();
 }
 
-LeafBoxIterator LineBox::firstLeafBox() const
+LeafBoxIterator LineBox::lineLeftmostLeafBox() const
 {
     return WTF::switchOn(m_pathVariant, [](auto& path) -> LeafBoxIterator {
         return { path.firstLeafBox() };
     });
 }
 
-LeafBoxIterator LineBox::lastLeafBox() const
+LeafBoxIterator LineBox::lineRightmostLeafBox() const
 {
     return WTF::switchOn(m_pathVariant, [](auto& path) -> LeafBoxIterator {
         return { path.lastLeafBox() };
@@ -130,14 +130,14 @@ LeafBoxIterator closestBoxForHorizontalPosition(const LineBox& lineBox, float ho
         return box && box->renderer().node() && box->renderer().node()->hasEditableStyle();
     };
 
-    auto firstBox = lineBox.firstLeafBox();
-    auto lastBox = lineBox.lastLeafBox();
+    auto firstBox = lineBox.lineLeftmostLeafBox();
+    auto lastBox = lineBox.lineRightmostLeafBox();
 
     if (firstBox != lastBox) {
         if (firstBox->isLineBreak())
-            firstBox = firstBox->nextOnLineIgnoringLineBreak();
+            firstBox = firstBox->nextLineRightwardOnLineIgnoringLineBreak();
         else if (lastBox->isLineBreak())
-            lastBox = lastBox->previousOnLineIgnoringLineBreak();
+            lastBox = lastBox->nextLineLeftwardOnLineIgnoringLineBreak();
     }
 
     if (firstBox == lastBox && (!editableOnly || isEditable(firstBox)))
@@ -150,7 +150,7 @@ LeafBoxIterator closestBoxForHorizontalPosition(const LineBox& lineBox, float ho
         return lastBox;
 
     auto closestBox = lastBox;
-    for (auto box = firstBox; box; box = box.traverseNextOnLineIgnoringLineBreak()) {
+    for (auto box = firstBox; box; box = box.traverseLineRightwardOnLineIgnoringLineBreak()) {
         if (!box->renderer().isRenderListMarker() && (!editableOnly || isEditable(box))) {
             if (horizontalPosition < box->logicalRightIgnoringInlineDirection())
                 return box;
@@ -163,7 +163,7 @@ LeafBoxIterator closestBoxForHorizontalPosition(const LineBox& lineBox, float ho
 
 RenderObject::HighlightState LineBox::ellipsisSelectionState() const
 {
-    auto lastLeafBox = this->lastLeafBox();
+    auto lastLeafBox = this->lineRightmostLeafBox();
     if (!lastLeafBox)
         return RenderObject::HighlightState::None;
 

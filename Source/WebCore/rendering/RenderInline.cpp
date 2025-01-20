@@ -453,15 +453,15 @@ LayoutUnit RenderInline::innerPaddingBoxWidth() const
     auto lastInlineBoxPaddingBoxRight = LayoutUnit { };
 
     if (LayoutIntegration::LineLayout::containing(*this)) {
-        if (auto inlineBox = InlineIterator::firstInlineBoxFor(*this)) {
+        if (auto inlineBox = InlineIterator::lineLeftmostInlineBoxFor(*this)) {
             if (writingMode().isBidiLTR()) {
                 firstInlineBoxPaddingBoxLeft = inlineBox->logicalLeftIgnoringInlineDirection() + borderStart();
-                for (; inlineBox->nextInlineBox(); inlineBox.traverseNextInlineBox()) { }
+                for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
                 ASSERT(inlineBox);
                 lastInlineBoxPaddingBoxRight = inlineBox->logicalRightIgnoringInlineDirection() - borderEnd();
             } else {
                 lastInlineBoxPaddingBoxRight = inlineBox->logicalRightIgnoringInlineDirection() - borderStart();
-                for (; inlineBox->nextInlineBox(); inlineBox.traverseNextInlineBox()) { }
+                for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
                 ASSERT(inlineBox);
                 firstInlineBoxPaddingBoxLeft = inlineBox->logicalLeftIgnoringInlineDirection() + borderEnd();
             }
@@ -505,7 +505,7 @@ IntRect RenderInline::linesBoundingBox() const
             // FIXME: Always build the bounding box like this. LineLayouyt::enclosingBorderBoxRectFor does not include
             // any post-layout box adjustments.
             FloatRect result;
-            for (auto box = InlineIterator::firstInlineBoxFor(*this); box; box.traverseNextInlineBox()) {
+            for (auto box = InlineIterator::lineLeftmostInlineBoxFor(*this); box; box.traverseInlineBoxLineRightward()) {
                 auto rect = box->visualRectIgnoringBlockDirection();
                 result.unite(rect);
             }
@@ -876,7 +876,7 @@ LayoutSize RenderInline::offsetForInFlowPositionedInline(const RenderBox* child)
             ASSERT(needsLayout());
             return LayoutSize();
         }
-        if (auto inlineBox = InlineIterator::firstInlineBoxFor(*this)) {
+        if (auto inlineBox = InlineIterator::lineLeftmostInlineBoxFor(*this)) {
             inlinePosition = LayoutUnit::fromFloatRound(inlineBox->logicalLeftIgnoringInlineDirection());
             blockPosition = inlineBox->logicalTop();
         }
@@ -974,7 +974,7 @@ void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOf
     auto& containingBlock = *this->containingBlock();
     auto isFlipped = containingBlock.writingMode().isBlockFlipped();
     Vector<LayoutRect> rects;
-    for (auto box = InlineIterator::firstInlineBoxFor(*this); box; box.traverseNextInlineBox()) {
+    for (auto box = InlineIterator::lineLeftmostInlineBoxFor(*this); box; box.traverseInlineBoxLineRightward()) {
         auto lineBox = box->lineBox();
         auto logicalTop = std::max(lineBox->contentLogicalTop(), box->logicalTop());
         auto logicalBottom = std::min(lineBox->contentLogicalBottom(), box->logicalBottom());

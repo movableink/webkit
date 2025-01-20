@@ -1249,7 +1249,7 @@ static std::optional<unsigned> visualDistanceOnSameLine(const RenderedPosition& 
     unsigned distance = 0;
     bool foundFirst = false;
     bool foundSecond = false;
-    for (auto box = first.lineBox()->firstLeafBox(); box; box = box->nextOnLine()) {
+    for (auto box = first.lineBox()->lineLeftmostLeafBox(); box; box = box->nextLineRightwardOnLine()) {
         if (box == first.box()) {
             distance += distanceFromOffsetToVisualBoundary(first, foundSecond ? VisualBoundary::Left : VisualBoundary::Right);
             foundFirst = true;
@@ -1292,7 +1292,7 @@ static std::optional<BoundaryPoint> findBidiBoundary(const RenderedPosition& pos
 
 static InlineIterator::LeafBoxIterator advanceInDirection(InlineIterator::LeafBoxIterator box, TextDirection direction, bool iterateInSameDirection)
 {
-    return iterateInSameDirection == (direction == TextDirection::LTR) ? box->nextOnLine() : box->previousOnLine();
+    return iterateInSameDirection == (direction == TextDirection::LTR) ? box->nextLineRightwardOnLine() : box->nextLineLeftwardOnLine();
 }
 
 static void forEachRenderedBoxBetween(const RenderedPosition& first, const RenderedPosition& second, const Function<void(InlineIterator::LeafBoxIterator)>& callback)
@@ -1318,7 +1318,7 @@ static void forEachRenderedBoxBetween(const RenderedPosition& first, const Rende
     }
 
     bool foundEndpoint = false;
-    for (auto box = first.lineBox()->firstLeafBox(); box; box = box->nextOnLine()) {
+    for (auto box = first.lineBox()->lineLeftmostLeafBox(); box; box = box->nextLineRightwardOnLine()) {
         bool atEndpoint = box == first.box() || box == second.box();
         if (!atEndpoint && !foundEndpoint)
             continue;

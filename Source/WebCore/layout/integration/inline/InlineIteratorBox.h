@@ -96,10 +96,17 @@ public:
     const LegacyInlineBox* legacyInlineBox() const;
     const InlineDisplay::Box* inlineBox() const;
 
-    LeafBoxIterator nextOnLine() const;
-    LeafBoxIterator previousOnLine() const;
-    LeafBoxIterator nextOnLineIgnoringLineBreak() const;
-    LeafBoxIterator previousOnLineIgnoringLineBreak() const;
+    // Text-relative left/right
+    LeafBoxIterator nextLineRightwardOnLine() const;
+    LeafBoxIterator nextLineLeftwardOnLine() const;
+    LeafBoxIterator nextLineRightwardOnLineIgnoringLineBreak() const;
+    LeafBoxIterator nextLineLeftwardOnLineIgnoringLineBreak() const;
+
+    // Coordinate-relative left/right
+    inline LeafBoxIterator nextLogicalRightwardOnLine() const;
+    inline LeafBoxIterator nextLogicalLeftwardOnLine() const;
+    inline LeafBoxIterator nextLogicalRightwardOnLineIgnoringLineBreak() const;
+    inline LeafBoxIterator nextLogicalLeftwardOnLineIgnoringLineBreak() const;
 
     InlineBoxIterator parentInlineBox() const;
 
@@ -135,10 +142,10 @@ public:
     const Box& operator*() const { return m_box; }
     const Box* operator->() const { return &m_box; }
 
-    BoxIterator& traverseNextOnLine();
-    BoxIterator& traverseNextOnLineSkippingChildren();
+    BoxIterator& traverseLineRightwardOnLine();
+    BoxIterator& traverseLineRightwardOnLineSkippingChildren();
 
-    BoxIterator& operator++() { return traverseNextOnLine(); }
+    BoxIterator& operator++() { return traverseLineRightwardOnLine(); }
 
     bool atEnd() const;
 
@@ -152,12 +159,19 @@ public:
     LeafBoxIterator(Box::PathVariant&&);
     LeafBoxIterator(const Box&);
 
-    LeafBoxIterator& traverseNextOnLine();
-    LeafBoxIterator& traversePreviousOnLine();
-    LeafBoxIterator& traverseNextOnLineIgnoringLineBreak();
-    LeafBoxIterator& traversePreviousOnLineIgnoringLineBreak();
+    // Text-relative left/right
+    LeafBoxIterator& traverseLineRightwardOnLine();
+    LeafBoxIterator& traverseLineLeftwardOnLine();
+    LeafBoxIterator& traverseLineRightwardOnLineIgnoringLineBreak();
+    LeafBoxIterator& traverseLineLeftwardOnLineIgnoringLineBreak();
 
-    LeafBoxIterator& operator++() { return traverseNextOnLine(); }
+    // Coordinate-relative left/right
+    inline LeafBoxIterator& traverseLogicalRightwardOnLine();
+    inline LeafBoxIterator& traverseLogicalLeftwardOnLine();
+    inline LeafBoxIterator& traverseLogicalRightwardOnLineIgnoringLineBreak();
+    inline LeafBoxIterator& traverseLogicalLeftwardOnLineIgnoringLineBreak();
+
+    LeafBoxIterator& operator++() { return traverseLineRightwardOnLine(); }
 };
 
 template<class IteratorType>

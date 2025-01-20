@@ -481,7 +481,7 @@ void RenderSVGText::layoutCharactersInTextBoxes(const InlineIterator::InlineBoxI
 {
     auto descendants = parent->descendants();
 
-    for (auto child = descendants.begin(), end = descendants.end(); child != end; child.traverseNextOnLineSkippingChildren()) {
+    for (auto child = descendants.begin(), end = descendants.end(); child != end; child.traverseLineRightwardOnLineSkippingChildren()) {
         if (auto* textBox = dynamicDowncast<InlineIterator::SVGTextBox>(*child)) {
             characterLayout.layoutInlineTextBox(*textBox);
             continue;
@@ -910,12 +910,12 @@ void RenderSVGText::paintInlineChildren(PaintInfo& paintInfo, const LayoutPoint&
             contextStack.append({ const_cast<RenderElement&>(*renderer), paintInfo, SVGRenderingContext::SaveGraphicsContext });
 
             if (!contextStack.last().isRenderingPrepared() || renderer->hasSelfPaintingLayer()) {
-                box.traverseNextOnLineSkippingChildren();
+                box.traverseLineRightwardOnLineSkippingChildren();
                 continue;
             }
         }
 
-        box.traverseNextOnLine();
+        box.traverseLineRightwardOnLine();
     }
 
     while (!contextStack.isEmpty())

@@ -179,7 +179,7 @@ static int offsetForPositionInFragment(const InlineIterator::SVGTextBox& textBox
 
 VisiblePosition RenderSVGInlineText::positionForPoint(const LayoutPoint& point, HitTestSource, const RenderFragmentContainer*)
 {
-    if (!InlineIterator::firstTextBoxFor(*this) || text().isEmpty())
+    if (!InlineIterator::lineLeftmostTextBoxFor(*this) || text().isEmpty())
         return createVisiblePosition(0, Affinity::Downstream);
 
     float baseline = m_scaledFont.metricsOfPrimaryFont().ascent();
