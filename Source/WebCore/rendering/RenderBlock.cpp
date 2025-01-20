@@ -1356,7 +1356,9 @@ bool RenderBlock::createsNewFormattingContext() const
     if (isBlockContainer() && !style.alignContent().isNormal())
         return true;
     return isNonReplacedAtomicInline()
+        || style.isDisplayFlexibleBoxIncludingDeprecatedOrGridBox()
         || isFlexItemIncludingDeprecated()
+        || isRenderTable()
         || isRenderTableCell()
         || isRenderTableCaption()
         || isFieldset()
@@ -1366,8 +1368,6 @@ bool RenderBlock::createsNewFormattingContext() const
         || style.specifiesColumns()
         || style.columnSpan() == ColumnSpan::All
         || style.display() == DisplayType::FlowRoot
-        || style.display() == DisplayType::Flex
-        || style.display() == DisplayType::Grid
         || establishesIndependentFormattingContext();
 }
 
