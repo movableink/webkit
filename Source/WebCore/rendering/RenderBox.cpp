@@ -5170,7 +5170,13 @@ bool RenderBox::establishesIndependentFormattingContext(const RenderStyle*) cons
 
 bool RenderBox::avoidsFloats() const
 {
-    return isReplacedOrAtomicInline() || isLegend() || isFieldset() || createsNewFormattingContext() || (element() && element()->isFormControlElement());
+    if (isReplacedOrAtomicInline() || isLegend() || isFieldset() || (element() && element()->isFormControlElement()))
+        return true;
+
+    if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(*this))
+        return renderBlock->createsNewFormattingContext();
+
+    return false;
 }
 
 void RenderBox::addVisualEffectOverflow()

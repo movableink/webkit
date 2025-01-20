@@ -2459,32 +2459,6 @@ Overflow RenderElement::effectiveOverflowY() const
     return overflowY;
 }
 
-bool RenderElement::createsNewFormattingContext() const
-{
-    // Writing-mode changes establish an independent block formatting context
-    // if the box is a block-container.
-    // https://drafts.csswg.org/css-writing-modes/#block-flow
-    if (isWritingModeRoot() && isBlockContainer())
-        return true;
-    auto& style = this->style();
-    if (isBlockContainer() && !style.alignContent().isNormal())
-        return true;
-    return isNonReplacedAtomicInline()
-        || isFlexItemIncludingDeprecated()
-        || isRenderTableCell()
-        || isRenderTableCaption()
-        || isFieldset()
-        || isDocumentElementRenderer()
-        || isRenderFragmentedFlow()
-        || isRenderSVGForeignObject()
-        || style.specifiesColumns()
-        || style.columnSpan() == ColumnSpan::All
-        || style.display() == DisplayType::FlowRoot
-        || style.display() == DisplayType::Flex
-        || style.display() == DisplayType::Grid
-        || establishesIndependentFormattingContext();
-}
-
 bool RenderElement::establishesIndependentFormattingContext(const RenderStyle* overridingStyle) const
 {
     auto& style = overridingStyle ? *overridingStyle : this->style();

@@ -147,6 +147,8 @@ public:
 
     RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
 
+    bool createsNewFormattingContext() const;
+
     static inline bool shouldSkipCreatingRunsForObject(RenderObject&);
 
     static TextRun constructTextRun(StringView, const RenderStyle&,
