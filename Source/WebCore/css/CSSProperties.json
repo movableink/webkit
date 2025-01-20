@@ -800,7 +800,6 @@
             "codegen-properties": {
                 "name-for-methods": "FeatureSettings",
                 "converter": "FontFeatureSettings",
-                "custom": "Initial|Inherit",
                 "font-property": true,
                 "high-priority": true,
                 "parser-grammar": "normal | <feature-tag-value>#@(no-single-item-opt)",
@@ -819,7 +818,6 @@
             "codegen-properties": {
                 "name-for-methods": "VariationSettings",
                 "converter": "FontVariationSettings",
-                "custom": "Initial|Inherit",
                 "font-property": true,
                 "high-priority": true,
                 "enable-if": "ENABLE_VARIATION_FONTS",
