@@ -29,6 +29,7 @@
 #import "APIConversions.h"
 #import "BindGroupLayout.h"
 #import "Device.h"
+#import "IsValidToUseWith.h"
 #import "Pipeline.h"
 #import "RenderBundleEncoder.h"
 #import "WGSLShaderModule.h"
@@ -1336,10 +1337,8 @@ std::pair<Ref<RenderPipeline>, NSString*> Device::createRenderPipeline(const WGP
     Vector<Vector<WGPUBindGroupLayoutEntry>> bindGroupEntries;
     if (descriptor.layout) {
         Ref layout = WebGPU::protectedFromAPI(descriptor.layout);
-        if (!layout->isValid())
-            return returnInvalidRenderPipeline(*this, isAsync, "Pipeline layout is not valid"_s);
-        if (&layout->device() != this)
-            return returnInvalidRenderPipeline(*this, isAsync, "Pipeline layout created from different device"_s);
+        if (!isValidToUseWithDevice(layout.get(), *this))
+            return returnInvalidRenderPipeline(*this, isAsync, "Pipeline layout is not valid or created from different device"_s);
 
         if (!layout->isAutoLayout())
             pipelineLayout = layout.ptr();
