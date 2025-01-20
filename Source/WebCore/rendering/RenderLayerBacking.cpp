@@ -3699,7 +3699,7 @@ OptionSet<RenderLayer::PaintLayerFlag> RenderLayerBacking::paintFlagsForLayer(co
     if (paintingPhase.contains(GraphicsLayerPaintingPhase::ChildClippingMask))
         paintFlags.add(RenderLayer::PaintLayerFlag::PaintingChildClippingMaskPhase);
     if (paintingPhase.contains(GraphicsLayerPaintingPhase::OverflowContents))
-        paintFlags.add(RenderLayer::PaintLayerFlag::PaintingOverflowContents);
+        paintFlags.add({ RenderLayer::PaintLayerFlag::PaintingOverflowContents, RenderLayer::PaintLayerFlag::PaintingOverflowContentsRoot });
 
     if (paintingPhase.contains(GraphicsLayerPaintingPhase::CompositedScroll)) {
         if (&graphicsLayer == m_graphicsLayer.get())

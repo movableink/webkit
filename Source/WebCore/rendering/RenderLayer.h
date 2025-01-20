@@ -637,13 +637,14 @@ public:
         PaintingCompositingMaskPhase          = 1 << 7,
         PaintingCompositingClipPathPhase      = 1 << 8,
         PaintingOverflowContainer             = 1 << 9,
-        PaintingOverflowContents              = 1 << 10,
-        PaintingRootBackgroundOnly            = 1 << 11,
-        PaintingSkipRootBackground            = 1 << 12,
-        PaintingChildClippingMaskPhase        = 1 << 13,
-        PaintingSVGClippingMask               = 1 << 14,
-        CollectingEventRegion                 = 1 << 15,
-        PaintingSkipDescendantViewTransition  = 1 << 16,
+        PaintingOverflowContentsRoot          = 1 << 10,
+        PaintingOverflowContents              = 1 << 11,
+        PaintingRootBackgroundOnly            = 1 << 12,
+        PaintingSkipRootBackground            = 1 << 13,
+        PaintingChildClippingMaskPhase        = 1 << 14,
+        PaintingSVGClippingMask               = 1 << 15,
+        CollectingEventRegion                 = 1 << 16,
+        PaintingSkipDescendantViewTransition  = 1 << 17,
     };
     static constexpr OptionSet<PaintLayerFlag> paintLayerPaintingCompositingAllPhasesFlags() { return { PaintLayerFlag::PaintingCompositingBackgroundPhase, PaintLayerFlag::PaintingCompositingForegroundPhase }; }
 

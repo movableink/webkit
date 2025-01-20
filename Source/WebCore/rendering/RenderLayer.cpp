@@ -3203,7 +3203,7 @@ void RenderLayer::paintSVGResourceLayer(GraphicsContext& context, const AffineTr
 
     OptionSet<PaintLayerFlag> flags { PaintLayerFlag::TemporaryClipRects };
     if (!renderer().hasNonVisibleOverflow())
-        flags.add(PaintLayerFlag::PaintingOverflowContents);
+        flags.add({ PaintLayerFlag::PaintingOverflowContents, PaintLayerFlag::PaintingOverflowContentsRoot });
 
     paintLayer(context, paintingInfo, flags);
 
@@ -3331,7 +3331,7 @@ void RenderLayer::paintLayerContentsAndReflection(GraphicsContext& context, cons
 {
     ASSERT(isSelfPaintingLayer() || hasSelfPaintingLayerDescendant());
 
-    auto localPaintFlags = paintFlags - PaintLayerFlag::AppliedTransform;
+    auto localPaintFlags = paintFlags - OptionSet<PaintLayerFlag> { PaintLayerFlag::AppliedTransform, PaintLayerFlag::PaintingOverflowContentsRoot };
 
     // Paint the reflection first if we have one.
     if (m_reflection && !m_paintingInsideReflection) {
@@ -3581,7 +3581,7 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
             return false;
 
         // For the current layer, the outline has been painted by the primary GraphicsLayer.
-        if (localPaintFlags.contains(PaintLayerFlag::PaintingOverflowContents))
+        if (localPaintFlags.contains(PaintLayerFlag::PaintingOverflowContentsRoot))
             return false;
 
         // Paint outlines in the background phase for a scroll container so that they don't scroll with the content.
@@ -4209,7 +4209,7 @@ void RenderLayer::paintOutlineForFragments(const LayerFragments& layerFragments,
     for (const auto& fragment : layerFragments) {
         if (fragment.backgroundRect.isEmpty())
             continue;
-    
+
         // Paint our own outline
         PaintInfo paintInfo(context, fragment.backgroundRect.rect(), PaintPhase::SelfOutline, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this);
 
@@ -6368,6 +6368,7 @@ TextStream& operator<<(TextStream& ts, RenderLayer::PaintLayerFlag flag)
     case RenderLayer::PaintLayerFlag::PaintingCompositingClipPathPhase: ts << "PaintingCompositingClipPathPhase"; break;
     case RenderLayer::PaintLayerFlag::PaintingOverflowContainer: ts << "PaintingOverflowContainer"; break;
     case RenderLayer::PaintLayerFlag::PaintingOverflowContents: ts << "PaintingOverflowContents"; break;
+    case RenderLayer::PaintLayerFlag::PaintingOverflowContentsRoot: ts << "PaintingOverflowContentsRoot"; break;
     case RenderLayer::PaintLayerFlag::PaintingRootBackgroundOnly: ts << "PaintingRootBackgroundOnly"; break;
     case RenderLayer::PaintLayerFlag::PaintingSkipRootBackground: ts << "PaintingSkipRootBackground"; break;
     case RenderLayer::PaintLayerFlag::PaintingChildClippingMaskPhase: ts << "PaintingChildClippingMaskPhase"; break;
