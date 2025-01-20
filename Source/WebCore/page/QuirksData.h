@@ -125,6 +125,7 @@ struct WEBCORE_EXPORT QuirksData {
     bool isTouchBarUpdateSuppressedForHiddenContentEditableQuirk { false };
     bool needsFormControlToBeMouseFocusableQuirk { false };
     bool needsPrimeVideoUserSelectNoneQuirk { false };
+    bool needsZomatoEmailLoginLabelQuirk { false };
     bool shouldAvoidStartingSelectionOnMouseDown { false };
 #endif
 

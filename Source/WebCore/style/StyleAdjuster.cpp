@@ -42,6 +42,7 @@
 #include "HTMLDialogElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLLabelElement.h"
 #include "HTMLMarqueeElement.h"
 #include "HTMLNames.h"
 #include "HTMLSlotElement.h"
@@ -973,6 +974,16 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
         if (m_element->hasClassName(className))
             style.setUserSelect(UserSelect::None);
     }
+
+#if PLATFORM(MAC)
+    if (m_document->quirks().needsZomatoEmailLoginLabelQuirk()) {
+        static MainThreadNeverDestroyed<const AtomString> class1("eNjKGZ"_s);
+        if (is<HTMLLabelElement>(*m_element)
+            && m_element->hasClassName(class1)
+            && style.backgroundColor() == Color { WebCore::Color::white })
+            style.setBackgroundColor({ WebCore::Color::transparentBlack });
+    }
+#endif
 
 #if PLATFORM(IOS_FAMILY)
     if (m_document->quirks().needsGoogleMapsScrollingQuirk()) {

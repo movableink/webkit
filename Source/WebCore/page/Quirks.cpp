@@ -598,6 +598,16 @@ bool Quirks::needsWeChatScrollingQuirk() const
 #endif
 }
 
+// zomato.com <rdar://problem/128962778>
+bool Quirks::needsZomatoEmailLoginLabelQuirk() const
+{
+#if PLATFORM(MAC)
+    return needsQuirks() && m_quirksData.needsZomatoEmailLoginLabelQuirk;
+#else
+    return false;
+#endif
+}
+
 // maps.google.com rdar://67358928
 bool Quirks::needsGoogleMapsScrollingQuirk() const
 {
@@ -2650,6 +2660,18 @@ static void handleZillowQuirks(QuirksData& quirksData, const URL& quirksURL, con
 #endif
 }
 
+#if PLATFORM(MAC)
+static void handleZomatoQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
+{
+    if (quirksDomainString != "zomato.com"_s)
+        return;
+
+    UNUSED_PARAM(quirksURL);
+    UNUSED_PARAM(documentURL);
+    quirksData.needsZomatoEmailLoginLabelQuirk = true;
+}
+#endif
+
 static void handleZoomQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
 {
     if (quirksDomainString != "zoom.us"_s)
@@ -2813,6 +2835,9 @@ void Quirks::determineRelevantQuirks()
 #endif
         { "youtube"_s, &handleYouTubeQuirks },
         { "zillow"_s, &handleZillowQuirks },
+#if PLATFORM(MAC)
+        { "zomato"_s, &handleZomatoQuirks },
+#endif
         { "zoom"_s, &handleZoomQuirks },
     });
 
