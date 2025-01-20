@@ -38,6 +38,7 @@
 #include "PlatformDisplay.h"
 #include "ProcessCapabilities.h"
 #include "SkiaPaintingEngine.h"
+#include <cmath>
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkColorFilter.h>
 #include <skia/core/SkImage.h>
@@ -906,9 +907,22 @@ void GraphicsContextSkia::setLineCap(LineCap lineCap)
     m_skiaState.m_stroke.cap = toSkiaCap(lineCap);
 }
 
+static bool isValidDashArray(const DashArray& dashArray)
+{
+    // See 'dom-context-2d-setlinedash': if the array contains not finite or negative values, return.
+    DashArray::value_type total = 0;
+    for (const auto& dash : dashArray) {
+        if (dash < 0 || !std::isfinite(dash))
+            return false;
+        total += dash;
+    }
+    // Nothing to be done for all-zero or empty arrays.
+    return total > 0;
+}
+
 void GraphicsContextSkia::setLineDash(const DashArray& dashArray, float dashOffset)
 {
-    if (dashArray.isEmpty()) {
+    if (!isValidDashArray(dashArray)) {
         m_skiaState.m_stroke.dash = nullptr;
         return;
     }
