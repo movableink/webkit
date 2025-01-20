@@ -78,6 +78,7 @@
 #include "RenderLayerInlines.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
+#include "RenderMathMLBlock.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderObjectInlines.h"
 #include "RenderSVGResourceClipper.h"
@@ -5170,7 +5171,7 @@ bool RenderBox::establishesIndependentFormattingContext(const RenderStyle*) cons
 
 bool RenderBox::avoidsFloats() const
 {
-    if (isReplacedOrAtomicInline() || isLegend() || isFieldset() || (element() && element()->isFormControlElement()))
+    if (isReplacedOrAtomicInline() || isLegend() || (element() && element()->isFormControlElement()) || is<RenderMathMLBlock>(*this))
         return true;
 
     if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(*this))

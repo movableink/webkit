@@ -231,8 +231,6 @@ private:
 
     ASCIILiteral renderName() const override { return "RenderTable"_s; }
 
-    bool avoidsFloats() const final { return true; }
-
     void paint(PaintInfo&, const LayoutPoint&) final;
     void paintObject(PaintInfo&, const LayoutPoint&) final;
     void paintBoxDecorations(PaintInfo&, const LayoutPoint&) final;

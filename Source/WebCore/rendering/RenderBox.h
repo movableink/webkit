@@ -507,7 +507,7 @@ public:
     LayoutUnit synthesizeBaseline(FontBaseline baselineType, BaselineSynthesisEdge) const;
 
     bool shrinkToAvoidFloats() const;
-    virtual bool avoidsFloats() const;
+    bool avoidsFloats() const;
 
     virtual void markForPaginationRelayoutIfNeeded() { }
     

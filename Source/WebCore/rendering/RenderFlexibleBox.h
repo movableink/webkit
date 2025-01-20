@@ -54,7 +54,6 @@ public:
 
     ASCIILiteral renderName() const override;
 
-    bool avoidsFloats() const final { return true; }
     bool canDropAnonymousBlockChild() const final { return false; }
     void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) final;
 

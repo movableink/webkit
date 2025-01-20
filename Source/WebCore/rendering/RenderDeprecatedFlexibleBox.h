@@ -47,7 +47,6 @@ public:
 
     bool isStretchingChildren() const { return m_stretchingChildren; }
 
-    bool avoidsFloats() const override { return true; }
     bool canDropAnonymousBlockChild() const override { return false; }
 
 private:
