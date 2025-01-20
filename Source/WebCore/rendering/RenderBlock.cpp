@@ -1345,6 +1345,40 @@ void RenderBlock::addContinuationWithOutline(RenderInline* flow)
     continuations->add(*flow);
 }
 
+bool RenderBlock::establishesIndependentFormattingContext(const RenderStyle* overridingStyle) const
+{
+    if (isGridItem() && !is<RenderGrid>(*this))
+        return true;
+
+    auto& style = overridingStyle ? *overridingStyle : this->style();
+    auto hasPaintContainment = [&] {
+        if (auto* element = this->element())
+            return WebCore::shouldApplyPaintContainment(style, *element);
+        return false;
+    };
+
+    auto isBlockBoxWithPotentiallyScrollableOverflow = [&] {
+        if (auto* element = this->element()) {
+            return style.isDisplayBlockLevel()
+                && style.doesDisplayGenerateBlockContainer()
+                && !element->isReplaced(style)
+                && hasNonVisibleOverflow()
+                && style.overflowX() != Overflow::Clip
+                && style.overflowX() != Overflow::Visible;
+        }
+        return false;
+    };
+
+    return style.isFloating()
+        || style.hasOutOfFlowPosition()
+        || isBlockBoxWithPotentiallyScrollableOverflow()
+        || style.containsLayout()
+        || style.containerType() != ContainerType::Normal
+        || hasPaintContainment()
+        || (style.isDisplayBlockLevel() && style.blockStepSize());
+}
+
+
 bool RenderBlock::createsNewFormattingContext() const
 {
     // Writing-mode changes establish an independent block formatting context

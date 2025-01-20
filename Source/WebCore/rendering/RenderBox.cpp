@@ -5164,11 +5164,6 @@ bool RenderBox::shrinkToAvoidFloats() const
     return style().width().isAuto();
 }
 
-bool RenderBox::establishesIndependentFormattingContext(const RenderStyle*) const
-{
-    return isGridItem() || RenderElement::establishesIndependentFormattingContext();
-}
-
 bool RenderBox::avoidsFloats() const
 {
     if (isReplacedOrAtomicInline() || isLegend() || (element() && element()->isFormControlElement()) || is<RenderMathMLBlock>(*this))

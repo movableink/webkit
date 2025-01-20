@@ -2459,36 +2459,6 @@ Overflow RenderElement::effectiveOverflowY() const
     return overflowY;
 }
 
-bool RenderElement::establishesIndependentFormattingContext(const RenderStyle* overridingStyle) const
-{
-    auto& style = overridingStyle ? *overridingStyle : this->style();
-    auto hasPaintContainment = [&] {
-        if (auto* element = this->element())
-            return WebCore::shouldApplyPaintContainment(style, *element);
-        return false;
-    };
-
-    auto isBlockBoxWithPotentiallyScrollableOverflow = [&] {
-        if (auto* element = this->element()) {
-            return style.isDisplayBlockLevel()
-                && style.doesDisplayGenerateBlockContainer()
-                && !element->isReplaced(style)
-                && hasNonVisibleOverflow()
-                && style.overflowX() != Overflow::Clip
-                && style.overflowX() != Overflow::Visible;
-        }
-        return false;
-    };
-
-    return style.isFloating()
-        || style.hasOutOfFlowPosition()
-        || isBlockBoxWithPotentiallyScrollableOverflow()
-        || style.containsLayout()
-        || style.containerType() != ContainerType::Normal
-        || hasPaintContainment()
-        || (style.isDisplayBlockLevel() && style.blockStepSize());
-}
-
 FloatRect RenderElement::referenceBoxRect(CSSBoxType boxType) const
 {
     // CSS box model code is implemented in RenderBox::referenceBoxRect().

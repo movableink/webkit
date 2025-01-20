@@ -147,6 +147,7 @@ public:
 
     RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
 
+    virtual bool establishesIndependentFormattingContext(const RenderStyle* overridingStyle = nullptr) const;
     bool createsNewFormattingContext() const;
 
     static inline bool shouldSkipCreatingRunsForObject(RenderObject&);

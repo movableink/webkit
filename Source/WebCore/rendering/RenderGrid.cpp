@@ -121,7 +121,7 @@ void RenderGrid::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
     auto subgridDidChange = this->subgridDidChange(*oldStyle);
     auto isSubgridWithIndependentFormattingContextChange = [&] {
         if (newStyle.gridSubgridRows() || newStyle.gridSubgridColumns())
-            return RenderElement::establishesIndependentFormattingContext(oldStyle) != RenderElement::establishesIndependentFormattingContext();
+            return RenderBlock::establishesIndependentFormattingContext(oldStyle) != RenderBlock::establishesIndependentFormattingContext();
         return false;
     };
     if (explicitGridDidResize(*oldStyle)
@@ -2154,7 +2154,7 @@ bool RenderGrid::isSubgrid(GridTrackSizingDirection direction) const
     // context (like contain layout, or position:absolute), then the used value
     // of grid-template-rows/columns is 'none' and the container is not a subgrid.
     // https://drafts.csswg.org/css-grid-2/#subgrid-listing
-    if (RenderElement::establishesIndependentFormattingContext())
+    if (RenderBlock::establishesIndependentFormattingContext())
         return false;
     if (direction == GridTrackSizingDirection::ForColumns ? !style().gridSubgridColumns() : !style().gridSubgridRows())
         return false;
@@ -2596,14 +2596,23 @@ GridSpan RenderGrid::gridSpanForGridItem(const RenderBox& gridItem, GridTrackSiz
 
 bool RenderGrid::establishesIndependentFormattingContext(const RenderStyle*) const
 {
-    // Grid items establish a new independent formatting context, unless
-    // they're a subgrid
-    // https://drafts.csswg.org/css-grid-2/#grid-item-display
+    // If the grid container is forced to establish an independent formatting
+    // context (like contain layout, or position:absolute), then the used value
+    // of grid-template-rows/columns is 'none' and the container is not a subgrid.
+    // https://drafts.csswg.org/css-grid-2/#subgrid-listing
+    if (RenderBlock::establishesIndependentFormattingContext())
+        return true;
+
     if (isGridItem()) {
-        if (!isSubgridRows() && !isSubgridColumns())
+        // Grid items establish a new independent formatting context, unless they're a subgrid
+        // https://drafts.csswg.org/css-grid-2/#grid-item-display
+        if (!style().gridSubgridColumns() && !style().gridSubgridRows())
             return true;
+        // Masonry makes grid items not subgrids.
+        if (CheckedPtr parentGridBox = dynamicDowncast<RenderGrid>(parent()))
+            return parentGridBox->isMasonry();
     }
-    return RenderElement::establishesIndependentFormattingContext();
+    return false;
 }
 
 RenderGrid::GridWrapper::GridWrapper(RenderGrid& renderGrid)
