@@ -522,7 +522,7 @@ std::optional<LayoutRect> LineLayout::layout()
 
     auto adjustments = adjustContentForPagination(parentBlockLayoutState, isPartialLayout);
 
-    updateRenderTreePositions(adjustments, inlineFormattingContext.layoutState());
+    updateRenderTreePositions(adjustments, inlineFormattingContext.layoutState(), layoutResult.didDiscardContent);
 
     if (m_lineDamage) {
         // Pagination may require another layout pass.
@@ -551,9 +551,9 @@ FloatRect LineLayout::constructContent(const Layout::InlineLayoutState& inlineLa
     return damagedRect;
 }
 
-void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdjustments, const Layout::InlineLayoutState& inlineLayoutState)
+void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdjustments, const Layout::InlineLayoutState& inlineLayoutState, bool didDiscardContent)
 {
-    if (!m_inlineContent)
+    if (!m_inlineContent && !didDiscardContent)
         return;
 
     auto& blockFlow = flow();
@@ -567,19 +567,21 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
         return LayoutSize { 0_lu, lineAdjustments[lineIndex].offset };
     };
 
-    for (auto& box : m_inlineContent->displayContent().boxes) {
-        if (box.isInlineBox() || box.isText())
-            continue;
+    if (m_inlineContent) {
+        for (auto& box : m_inlineContent->displayContent().boxes) {
+            if (box.isInlineBox() || box.isText())
+                continue;
 
-        auto& layoutBox = box.layoutBox();
-        if (!layoutBox.isAtomicInlineBox())
-            continue;
+            auto& layoutBox = box.layoutBox();
+            if (!layoutBox.isAtomicInlineBox())
+                continue;
 
-        auto& renderer = downcast<RenderBox>(*box.layoutBox().rendererForIntegration());
-        if (auto* layer = renderer.layer())
-            layer->setIsHiddenByOverflowTruncation(box.isFullyTruncated());
+            auto& renderer = downcast<RenderBox>(*box.layoutBox().rendererForIntegration());
+            if (auto* layer = renderer.layer())
+                layer->setIsHiddenByOverflowTruncation(box.isFullyTruncated());
 
-        renderer.setLocation(Layout::toLayoutPoint(box.visualRectIgnoringBlockDirection().location()));
+            renderer.setLocation(Layout::toLayoutPoint(box.visualRectIgnoringBlockDirection().location()));
+        }
     }
 
     UncheckedKeyHashMap<CheckedRef<const Layout::Box>, LayoutSize> floatPaginationOffsetMap;
@@ -593,6 +595,9 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
     }
 
     for (auto& layoutBox : formattingContextBoxes(rootLayoutBox())) {
+        if (didDiscardContent)
+            layoutBox.rendererForIntegration()->clearNeedsLayout();
+
         if (!layoutBox.isFloatingPositioned() && !layoutBox.isOutOfFlowPositioned())
             continue;
         if (layoutBox.isLineBreakBox())
@@ -601,6 +606,7 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
         auto& logicalGeometry = layoutState().geometryForBox(layoutBox);
 
         if (layoutBox.isFloatingPositioned()) {
+            // FIXME: Find out what to do with discarded (see line-clamp) floats in render tree.
             auto isInitialLetter = layoutBox.style().pseudoElementType() == PseudoId::FirstLetter;
             auto& floatingObject = flow().insertFloatingObjectForIFC(renderer);
             auto [marginBoxVisualRect, borderBoxVisualRect] = toMarginAndBorderBoxVisualRect(logicalGeometry, m_inlineContentConstraints->containerRenderSize(), placedFloatsWritingMode);
