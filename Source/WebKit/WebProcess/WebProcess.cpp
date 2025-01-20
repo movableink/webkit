@@ -461,7 +461,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
 
 #if PLATFORM(COCOA)
             // If this is a process we keep around for performance, kill it on memory pressure instead of trying to free up its memory.
-            if (m_allowExitOnMemoryPressure && (m_processType == ProcessType::CachedWebContent || m_processType == ProcessType::PrewarmedWebContent || areAllPagesSuspended())) {
+            if (m_allowExitOnMemoryPressure && isProcessBeingCachedForPerformance()) {
                 if (m_processType == ProcessType::CachedWebContent)
                     WEBPROCESS_RELEASE_LOG(Process, "initializeWebProcess: Cached WebProcess is exiting due to memory pressure");
                 else if (m_processType == ProcessType::PrewarmedWebContent)
@@ -1673,10 +1673,14 @@ void WebProcess::prepareToSuspend(bool isSuspensionImminent, MonotonicTime estim
         platformMediaSessionManager->processWillSuspend();
 #endif
 
-#if !ENABLE(WEBPROCESS_CACHE)
-    if (!m_suppressMemoryPressureHandler)
+    // Ask the process to slim down before it suspends, in case it suspends for a very long time.
+    // We only allow this once for every time the process contains a visible page, to prevent
+    // ourselves from constantly running releaseMemory if the process suspends and resumes a lot
+    // while in the background. If the process is being cached for perf reasons, we don't dump
+    // caches since we want those memory caches to contain useful state once the process is reused.
+    if (!m_suppressMemoryPressureHandler && m_wasVisibleSinceLastProcessSuspensionEvent && !m_pageMap.isEmpty() && !isProcessBeingCachedForPerformance())
         releaseMemory([] { });
-#endif
+    m_wasVisibleSinceLastProcessSuspensionEvent = false;
 
     freezeAllLayerTrees();
 
@@ -1785,6 +1789,8 @@ void WebProcess::pageDidEnterWindow(PageIdentifier pageID)
 #if ENABLE(NON_VISIBLE_WEBPROCESS_MEMORY_CLEANUP_TIMER)
     m_nonVisibleProcessMemoryCleanupTimer.stop();
 #endif
+
+    m_wasVisibleSinceLastProcessSuspensionEvent = true;
 }
 
 void WebProcess::pageWillLeaveWindow(PageIdentifier pageID)
@@ -1802,7 +1808,16 @@ void WebProcess::pageWillLeaveWindow(PageIdentifier pageID)
 #endif
     }
 }
-    
+
+bool WebProcess::isProcessBeingCachedForPerformance()
+{
+#if PLATFORM(COCOA)
+    return m_processType == ProcessType::CachedWebContent || m_processType == ProcessType::PrewarmedWebContent || areAllPagesSuspended();
+#else
+    return false;
+#endif
+}
+
 void WebProcess::nonVisibleProcessEarlyMemoryCleanupTimerFired()
 {
     ASSERT(m_pagesInWindows.isEmpty());
