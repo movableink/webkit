@@ -878,88 +878,86 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
     auto currentPosition = partialContentOffset.value_or(0lu);
     ASSERT(currentPosition <= contentLength);
 
-    {
-        auto handleSegmentBreak = [&] {
-            // Segment breaks with preserve new line style (white-space: pre, pre-wrap, break-spaces and pre-line) compute to forced line break.
-            auto isSegmentBreakCandidate = text[currentPosition] == newlineCharacter;
-            if (!isSegmentBreakCandidate || !shouldPreserveNewline)
-                return false;
-            inlineItemList.append(InlineSoftLineBreakItem::createSoftLineBreakItem(inlineTextBox, currentPosition++));
-            return true;
-        };
-        auto handleWhitespace = [&] {
-            auto stopAtWordSeparatorBoundary = shouldPreserveSpacesAndTabs && style.fontCascade().wordSpacing();
-            auto whitespaceContent = text.is8Bit() ?
-                moveToNextNonWhitespacePosition(text.span8(), currentPosition, shouldPreserveNewline, shouldPreserveSpacesAndTabs, stopAtWordSeparatorBoundary) :
-                moveToNextNonWhitespacePosition(text.span16(), currentPosition, shouldPreserveNewline, shouldPreserveSpacesAndTabs, stopAtWordSeparatorBoundary);
-            if (!whitespaceContent)
-                return false;
+    auto handleSegmentBreak = [&] {
+        // Segment breaks with preserve new line style (white-space: pre, pre-wrap, break-spaces and pre-line) compute to forced line break.
+        auto isSegmentBreakCandidate = text[currentPosition] == newlineCharacter;
+        if (!isSegmentBreakCandidate || !shouldPreserveNewline)
+            return false;
+        inlineItemList.append(InlineSoftLineBreakItem::createSoftLineBreakItem(inlineTextBox, currentPosition++));
+        return true;
+    };
+    auto handleWhitespace = [&] {
+        auto stopAtWordSeparatorBoundary = shouldPreserveSpacesAndTabs && style.fontCascade().wordSpacing();
+        auto whitespaceContent = text.is8Bit()
+            ? moveToNextNonWhitespacePosition(text.span8(), currentPosition, shouldPreserveNewline, shouldPreserveSpacesAndTabs, stopAtWordSeparatorBoundary)
+            : moveToNextNonWhitespacePosition(text.span16(), currentPosition, shouldPreserveNewline, shouldPreserveSpacesAndTabs, stopAtWordSeparatorBoundary);
+        if (!whitespaceContent)
+            return false;
 
-            ASSERT(whitespaceContent->length);
-            if (style.whiteSpaceCollapse() == WhiteSpaceCollapse::BreakSpaces) {
-                // https://www.w3.org/TR/css-text-3/#white-space-phase-1
-                // For break-spaces, a soft wrap opportunity exists after every space and every tab.
-                // FIXME: if this turns out to be a perf hit with too many individual whitespace inline items, we should transition this logic to line breaking.
-                inlineItemList.appendUsingFunctor(whitespaceContent->length, [&](size_t offset) {
-                    return InlineTextItem::createWhitespaceItem(inlineTextBox, currentPosition + offset, 1, UBIDI_DEFAULT_LTR, whitespaceContent->isWordSeparator, { });
-                });
-            } else
-                inlineItemList.append(InlineTextItem::createWhitespaceItem(inlineTextBox, currentPosition, whitespaceContent->length, UBIDI_DEFAULT_LTR, whitespaceContent->isWordSeparator, { }));
-            currentPosition += whitespaceContent->length;
-            return true;
-
-        };
-        auto handleNonBreakingSpace = [&] {
-            if (style.nbspMode() != NBSPMode::Space) {
-                // Let's just defer to regular non-whitespace inline items when non breaking space needs no special handling.
-                return false;
-            }
-            auto startPosition = currentPosition;
-            auto endPosition = startPosition;
-            for (; endPosition < contentLength; ++endPosition) {
-                if (text[endPosition] != noBreakSpace)
-                    break;
-            }
-            if (startPosition == endPosition)
-                return false;
-            inlineItemList.appendUsingFunctor(endPosition - startPosition, [&](size_t offset) {
-                return InlineTextItem::createNonWhitespaceItem(inlineTextBox, startPosition + offset, 1, UBIDI_DEFAULT_LTR, { }, { });
+        ASSERT(whitespaceContent->length);
+        if (style.whiteSpaceCollapse() == WhiteSpaceCollapse::BreakSpaces) {
+            // https://www.w3.org/TR/css-text-3/#white-space-phase-1
+            // For break-spaces, a soft wrap opportunity exists after every space and every tab.
+            // FIXME: if this turns out to be a perf hit with too many individual whitespace inline items, we should transition this logic to line breaking.
+            inlineItemList.appendUsingFunctor(whitespaceContent->length, [&](size_t offset) {
+                return InlineTextItem::createWhitespaceItem(inlineTextBox, currentPosition + offset, 1, UBIDI_DEFAULT_LTR, whitespaceContent->isWordSeparator, { });
             });
-            currentPosition = endPosition;
-            return true;
-        };
-        auto handleNonWhitespace = [&] {
-            auto startPosition = currentPosition;
-            auto endPosition = startPosition;
-            auto hasTrailingSoftHyphen = false;
-            if (style.hyphens() == Hyphens::None) {
-                // Let's merge candidate InlineTextItems separated by soft hyphen when the style says so.
-                do {
-                    endPosition += moveToNextBreakablePosition(endPosition, lineBreakIteratorFactory, style);
-                    ASSERT(startPosition < endPosition);
-                } while (endPosition < contentLength && text[endPosition - 1] == softHyphen);
-            } else {
-                endPosition += moveToNextBreakablePosition(startPosition, lineBreakIteratorFactory, style);
-                ASSERT(startPosition < endPosition);
-                hasTrailingSoftHyphen = text[endPosition - 1] == softHyphen;
-            }
-            ASSERT_IMPLIES(style.hyphens() == Hyphens::None, !hasTrailingSoftHyphen);
-            inlineItemList.append(InlineTextItem::createNonWhitespaceItem(inlineTextBox, startPosition, endPosition - startPosition, UBIDI_DEFAULT_LTR, hasTrailingSoftHyphen, { }));
-            currentPosition = endPosition;
-            return true;
-        };
-        while (currentPosition < contentLength) {
-            if (handleSegmentBreak())
-                continue;
-            if (handleWhitespace())
-                continue;
-            if (handleNonBreakingSpace())
-                continue;
-            if (handleNonWhitespace())
-                continue;
-            // Unsupported content?
-            ASSERT_NOT_REACHED();
+        } else
+            inlineItemList.append(InlineTextItem::createWhitespaceItem(inlineTextBox, currentPosition, whitespaceContent->length, UBIDI_DEFAULT_LTR, whitespaceContent->isWordSeparator, { }));
+        currentPosition += whitespaceContent->length;
+        return true;
+
+    };
+    auto handleNonBreakingSpace = [&] {
+        if (style.nbspMode() != NBSPMode::Space) {
+            // Let's just defer to regular non-whitespace inline items when non breaking space needs no special handling.
+            return false;
         }
+        auto startPosition = currentPosition;
+        auto endPosition = startPosition;
+        for (; endPosition < contentLength; ++endPosition) {
+            if (text[endPosition] != noBreakSpace)
+                break;
+        }
+        if (startPosition == endPosition)
+            return false;
+        inlineItemList.appendUsingFunctor(endPosition - startPosition, [&](size_t offset) {
+            return InlineTextItem::createNonWhitespaceItem(inlineTextBox, startPosition + offset, 1, UBIDI_DEFAULT_LTR, { }, { });
+        });
+        currentPosition = endPosition;
+        return true;
+    };
+    auto handleNonWhitespace = [&] {
+        auto startPosition = currentPosition;
+        auto endPosition = startPosition;
+        auto hasTrailingSoftHyphen = false;
+        if (style.hyphens() == Hyphens::None) {
+            // Let's merge candidate InlineTextItems separated by soft hyphen when the style says so.
+            do {
+                endPosition += moveToNextBreakablePosition(endPosition, lineBreakIteratorFactory, style);
+                ASSERT(startPosition < endPosition);
+            } while (endPosition < contentLength && text[endPosition - 1] == softHyphen);
+        } else {
+            endPosition += moveToNextBreakablePosition(startPosition, lineBreakIteratorFactory, style);
+            ASSERT(startPosition < endPosition);
+            hasTrailingSoftHyphen = text[endPosition - 1] == softHyphen;
+        }
+        ASSERT_IMPLIES(style.hyphens() == Hyphens::None, !hasTrailingSoftHyphen);
+        inlineItemList.append(InlineTextItem::createNonWhitespaceItem(inlineTextBox, startPosition, endPosition - startPosition, UBIDI_DEFAULT_LTR, hasTrailingSoftHyphen, { }));
+        currentPosition = endPosition;
+        return true;
+    };
+    while (currentPosition < contentLength) {
+        if (handleSegmentBreak())
+            continue;
+        if (handleWhitespace())
+            continue;
+        if (handleNonBreakingSpace())
+            continue;
+        if (handleNonWhitespace())
+            continue;
+        // Unsupported content?
+        ASSERT_NOT_REACHED();
     }
 }
 

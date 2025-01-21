@@ -1161,8 +1161,8 @@ LineBuilder::Result LineBuilder::processLineBreakingResult(const LineCandidate& 
         return { InlineContentBreaker::IsEndOfLine::Yes, { committedInlineItemCount, false }, overflowLength, eligibleOverflowWidthAsLeading(candidateRuns, lineBreakingResult, isFirstFormattedLine()) };
     }
     }
-        ASSERT_NOT_REACHED();
-        return { InlineContentBreaker::IsEndOfLine::No };
+    ASSERT_NOT_REACHED();
+    return { InlineContentBreaker::IsEndOfLine::No };
 }
 
 void LineBuilder::commitPartialContent(const InlineContentBreaker::ContinuousContent::RunList& runs, const InlineContentBreaker::Result::PartialTrailingContent& partialTrailingContent)

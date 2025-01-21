@@ -1388,7 +1388,6 @@ bool RenderBlock::establishesIndependentFormattingContext() const
     return false;
 }
 
-
 bool RenderBlock::createsNewFormattingContext() const
 {
     // Writing-mode changes establish an independent block formatting context
