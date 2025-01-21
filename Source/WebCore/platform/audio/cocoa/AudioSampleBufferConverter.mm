@@ -509,7 +509,9 @@ void AudioSampleBufferConverter::processSampleBuffers()
             if (isPCM()) {
                 for (auto& buffer : fillBufferList.buffers()) {
                     buffer.mDataByteSize = sizeRemaining;
-                    buffer.mData = mutableSpan<uint8_t>(buffer).subspan(bytesWritten).data();
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+                    buffer.mData = static_cast<uint8_t*>(buffer.mData) + bytesWritten;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                 }
             }
             if (auto error = AudioConverterFillComplexBuffer(m_converter, audioConverterComplexInputDataProc, this, &numOutputPackets, fillBufferList.list(), isPCM() ? nullptr : m_destinationPacketDescriptions.data())) {
