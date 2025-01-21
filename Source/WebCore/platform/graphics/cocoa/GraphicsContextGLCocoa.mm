@@ -124,7 +124,7 @@ static EGLDisplay initializeEGLDisplay(const GraphicsContextGLAttributes& attrs)
     }
 #if PLATFORM(MAC)
     else if (attrs.windowGPUID) {
-        ASSERT(contains(clientExtensions, "EGL_ANGLE_platform_angle_device_id"_span));
+        ASSERT(WTF::contains(clientExtensions, "EGL_ANGLE_platform_angle_device_id"_span));
         // If the power preference is default, use the GPU the context window is on.
         // If the power preference is low power, and we know which GPU the context window is on,
         // most likely the lowest power is the GPU that drives the context window, as that GPU
@@ -136,7 +136,7 @@ static EGLDisplay initializeEGLDisplay(const GraphicsContextGLAttributes& attrs)
         displayAttributes.append(static_cast<EGLAttrib>(attrs.windowGPUID));
     }
 #endif
-    ASSERT(contains(clientExtensions, "EGL_ANGLE_feature_control"_span));
+    ASSERT(WTF::contains(clientExtensions, "EGL_ANGLE_feature_control"_span));
     displayAttributes.append(EGL_FEATURE_OVERRIDES_DISABLED_ANGLE);
     displayAttributes.append(reinterpret_cast<EGLAttrib>(disabledANGLEMetalFeatures));
     displayAttributes.append(EGL_NONE);
@@ -152,7 +152,7 @@ static EGLDisplay initializeEGLDisplay(const GraphicsContextGLAttributes& attrs)
 
 #if ASSERT_ENABLED && ENABLE(WEBXR)
     auto displayExtensions = span8(EGL_QueryString(display, EGL_EXTENSIONS));
-    ASSERT(contains(displayExtensions, "EGL_ANGLE_metal_shared_event_sync"_span));
+    ASSERT(WTF::contains(displayExtensions, "EGL_ANGLE_metal_shared_event_sync"_span));
 #endif
 
     return display;
