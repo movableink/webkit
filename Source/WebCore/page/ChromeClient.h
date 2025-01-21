@@ -547,11 +547,6 @@ public:
 
     virtual bool isEmptyChromeClient() const { return false; }
 
-    virtual String plugInStartLabelTitle(const String& mimeType) const { UNUSED_PARAM(mimeType); return String(); }
-    virtual String plugInStartLabelSubtitle(const String& mimeType) const { UNUSED_PARAM(mimeType); return String(); }
-    virtual String plugInExtraStyleSheet() const { return String(); }
-    virtual String plugInExtraScript() const { return String(); }
-
     virtual void didAssociateFormControls(const Vector<RefPtr<Element>>&, LocalFrame&) { };
     virtual bool shouldNotifyOnFormChanges() { return false; };
 

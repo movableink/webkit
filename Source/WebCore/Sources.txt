@@ -3448,7 +3448,6 @@ JSHTMLElementWrapperFactory.cpp
 JSMathMLElementWrapperFactory.cpp
 JSSVGElementWrapperFactory.cpp
 MathMLElementFactory.cpp
-PlugInsResourcesData.cpp
 ProcessSyncClient.cpp
 SVGElementFactory.cpp
 StyleBuilderGenerated.cpp

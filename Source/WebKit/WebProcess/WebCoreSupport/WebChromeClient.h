@@ -380,11 +380,6 @@ private:
     
     void wheelEventHandlersChanged(bool) final;
 
-    String plugInStartLabelTitle(const String& mimeType) const final;
-    String plugInStartLabelSubtitle(const String& mimeType) const final;
-    String plugInExtraStyleSheet() const final;
-    String plugInExtraScript() const final;
-
     void didAddHeaderLayer(WebCore::GraphicsLayer&) final;
     void didAddFooterLayer(WebCore::GraphicsLayer&) final;
 

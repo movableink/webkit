@@ -203,7 +203,6 @@
 #include "PlatformMediaSessionManager.h"
 #include "PlatformScreen.h"
 #include "PlatformStrategies.h"
-#include "PlugInsResources.h"
 #include "PluginDocument.h"
 #include "PointerCaptureController.h"
 #include "PointerEvent.h"
@@ -9380,24 +9379,6 @@ void Document::didLoadResourceSynchronously(const URL& url)
 
     if (RefPtr page = this->page())
         page->cookieJar().clearCacheForHost(url.host().toString());
-}
-
-void Document::ensurePlugInsInjectedScript(DOMWrapperWorld& world)
-{
-    if (m_hasInjectedPlugInsScript)
-        return;
-
-    RefPtr frame = this->frame();
-    auto& scriptController = frame->script();
-
-    // Use the JS file provided by the Chrome client, or fallback to the default one.
-    String jsString = page()->chrome().client().plugInExtraScript();
-    if (!jsString)
-        jsString = StringImpl::createWithoutCopying(plugInsJavaScript);
-
-    scriptController.evaluateInWorldIgnoringException(ScriptSourceCode(jsString, JSC::SourceTaintedOrigin::Untainted), world);
-
-    m_hasInjectedPlugInsScript = true;
 }
 
 std::optional<Vector<uint8_t>> Document::wrapCryptoKey(const Vector<uint8_t>& key)

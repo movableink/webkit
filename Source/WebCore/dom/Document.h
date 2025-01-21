@@ -1613,8 +1613,6 @@ public:
 
     Ref<FontFaceSet> fonts();
 
-    void ensurePlugInsInjectedScript(DOMWrapperWorld&);
-
     void setVisualUpdatesAllowedByClient(bool);
 
     std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) final;
@@ -2608,7 +2606,6 @@ private:
     bool m_sawElementsInKnownNamespaces { false };
     bool m_isSrcdocDocument { false };
 
-    bool m_hasInjectedPlugInsScript { false };
     bool m_renderTreeBeingDestroyed { false };
     bool m_hasPreparedForDestruction { false };
 

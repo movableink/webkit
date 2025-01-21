@@ -1445,26 +1445,6 @@ void WebChromeClient::wheelEventHandlersChanged(bool hasHandlers)
     protectedPage()->wheelEventHandlersChanged(hasHandlers);
 }
 
-String WebChromeClient::plugInStartLabelTitle(const String& mimeType) const
-{
-    return protectedPage()->injectedBundleUIClient().plugInStartLabelTitle(mimeType);
-}
-
-String WebChromeClient::plugInStartLabelSubtitle(const String& mimeType) const
-{
-    return protectedPage()->injectedBundleUIClient().plugInStartLabelSubtitle(mimeType);
-}
-
-String WebChromeClient::plugInExtraStyleSheet() const
-{
-    return protectedPage()->injectedBundleUIClient().plugInExtraStyleSheet();
-}
-
-String WebChromeClient::plugInExtraScript() const
-{
-    return protectedPage()->injectedBundleUIClient().plugInExtraScript();
-}
-
 void WebChromeClient::enableSuddenTermination()
 {
     protectedPage()->send(Messages::WebProcessProxy::EnableSuddenTermination());

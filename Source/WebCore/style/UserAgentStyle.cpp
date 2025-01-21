@@ -84,7 +84,6 @@ StyleSheetContents* UserAgentStyle::mathMLStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaControlsStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
 StyleSheetContents* UserAgentStyle::popoverStyleSheet;
-StyleSheetContents* UserAgentStyle::plugInsStyleSheet;
 StyleSheetContents* UserAgentStyle::horizontalFormControlsStyleSheet;
 StyleSheetContents* UserAgentStyle::htmlSwitchControlStyleSheet;
 StyleSheetContents* UserAgentStyle::counterStylesStyleSheet;
@@ -202,13 +201,13 @@ void UserAgentStyle::initDefaultStyleSheet()
 void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
 {
     if (is<HTMLElement>(element)) {
-        if (is<HTMLObjectElement>(element) || is<HTMLEmbedElement>(element)) {
-            if (!plugInsStyleSheet && element.document().page()) {
-                auto plugInsRules = makeString(RenderTheme::singleton().extraPlugInsStyleSheet(),  element.document().page()->chrome().client().plugInExtraStyleSheet());
-                if (plugInsRules.isEmpty())
-                    plugInsRules = String(StringImpl::createWithoutCopying(plugInsUserAgentStyleSheet));
-                plugInsStyleSheet = parseUASheet(plugInsRules);
-                addToDefaultStyle(*plugInsStyleSheet);
+        if (RefPtr input = dynamicDowncast<HTMLInputElement>(element)) {
+            if (!colorInputStyleSheet && input->isColorControl()) {
+                colorInputStyleSheet = parseUASheet(RenderTheme::singleton().colorInputStyleSheet());
+                addToDefaultStyle(*colorInputStyleSheet);
+            } else if (!htmlSwitchControlStyleSheet && input->isSwitch()) {
+                htmlSwitchControlStyleSheet = parseUASheet(StringImpl::createWithoutCopying(htmlSwitchControlUserAgentStyleSheet));
+                addToDefaultStyle(*htmlSwitchControlStyleSheet);
             }
         }
 #if ENABLE(VIDEO) && !ENABLE(MODERN_MEDIA_CONTROLS)
@@ -234,14 +233,6 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
             addToDefaultStyle(*dataListStyleSheet);
         }
 #endif // ENABLE(DATALIST_ELEMENT)
-        else if (RefPtr input = dynamicDowncast<HTMLInputElement>(element); !colorInputStyleSheet && input && input->isColorControl()) {
-            colorInputStyleSheet = parseUASheet(RenderTheme::singleton().colorInputStyleSheet());
-            addToDefaultStyle(*colorInputStyleSheet);
-        }
-        else if (RefPtr input = dynamicDowncast<HTMLInputElement>(element); !htmlSwitchControlStyleSheet && input && input->isSwitch()) {
-            htmlSwitchControlStyleSheet = parseUASheet(StringImpl::createWithoutCopying(htmlSwitchControlUserAgentStyleSheet));
-            addToDefaultStyle(*htmlSwitchControlStyleSheet);
-        }
     } else if (is<SVGElement>(element)) {
         if (!svgStyleSheet) {
             // SVG rules.

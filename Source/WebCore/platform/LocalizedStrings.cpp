@@ -1455,21 +1455,6 @@ String contextMenuItemTagShowMediaStats()
 
 #endif // ENABLE(VIDEO)
 
-String snapshottedPlugInLabelTitle()
-{
-    return WEB_UI_STRING("Snapshotted Plug-In", "Title of the label to show on a snapshotted plug-in");
-}
-
-String snapshottedPlugInLabelSubtitle()
-{
-    return WEB_UI_STRING("Click to restart", "Subtitle of the label to show on a snapshotted plug-in");
-}
-
-String useBlockedPlugInContextMenuTitle()
-{
-    return WEB_UI_STRING("Show in blocked plug-in", "Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin");
-}
-
 #if PLATFORM(COCOA)
 
 String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)

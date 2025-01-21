@@ -372,11 +372,6 @@ namespace WebCore {
     String contextMenuItemTagShowMediaStats();
 #endif // ENABLE(VIDEO)
 
-    String snapshottedPlugInLabelTitle();
-    String snapshottedPlugInLabelSubtitle();
-
-    WEBCORE_EXPORT String useBlockedPlugInContextMenuTitle();
-
 #if PLATFORM(COCOA)
     String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName);
     String webCryptoMasterKeyKeychainComment();

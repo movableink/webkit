@@ -136,7 +136,6 @@ void InspectorCSSOMWrappers::collectDocumentWrappers(ExtensionStyleSheets& exten
         collectFromStyleSheetContents(UserAgentStyle::dataListStyleSheet);
 #endif
         collectFromStyleSheetContents(UserAgentStyle::colorInputStyleSheet);
-        collectFromStyleSheetContents(UserAgentStyle::plugInsStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::mediaQueryStyleSheet);
 
         collect(extensionStyleSheets.pageUserSheet());

@@ -2111,7 +2111,6 @@ USER_AGENT_STYLE_SHEETS = \
     $(WebCore)/css/htmlSwitchControl.css \
     $(WebCore)/css/mathml.css \
     $(WebCore)/css/mediaControls.css \
-    $(WebCore)/css/plugIns.css \
     $(WebCore)/css/popover.css \
     $(WebCore)/css/quirks.css \
     $(WebCore)/css/svg.css \
@@ -2242,21 +2241,6 @@ all : $(USER_AGENT_SCRIPTS_FILES)
 
 $(USER_AGENT_SCRIPTS_FILES_PATTERNS) : $(JavaScriptCore_SCRIPTS_DIR)/make-js-file-arrays.py $(USER_AGENT_SCRIPTS)
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/make-js-file-arrays.py -n WebCore --fail-if-non-ascii $(USER_AGENT_SCRIPTS_FILES) $(USER_AGENT_SCRIPTS)
-
-# --------
-
-# plug-ins resources
-
-PLUG_INS_RESOURCES = $(WebCore)/Resources/plugIns.js
-
-# order matters -- make-css-file-arrays.pl takes the header and then the source file path
-PLUG_INS_RESOURCES_FILES = PlugInsResources.h PlugInsResourcesData.cpp
-PLUG_INS_RESOURCES_FILES_PATTERNS = $(call to-pattern, $(PLUG_INS_RESOURCES_FILES))
-
-all : $(PLUG_INS_RESOURCES_FILES)
-
-$(PLUG_INS_RESOURCES_FILES_PATTERNS) : $(WebCore)/css/make-css-file-arrays.pl $(WebCore)/bindings/scripts/preprocessor.pm $(PLUG_INS_RESOURCES) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
-	$(PERL) $< --defines "$(FEATURE_AND_PLATFORM_DEFINES)" $(PLUG_INS_RESOURCES_FILES) $(PLUG_INS_RESOURCES)
 
 # --------
 
