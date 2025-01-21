@@ -1467,10 +1467,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
     _isUpdatingAccessoryView = NO;
 
-#if ENABLE(DATALIST_ELEMENT)
     _dataListTextSuggestionsInputView = nil;
     _dataListTextSuggestions = nil;
-#endif
 
 #if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
     _textCheckingController = makeUnique<WebKit::TextCheckingController>(*_page);
@@ -1637,10 +1635,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [_keyboardScrollingAnimator invalidate];
     _keyboardScrollingAnimator = nil;
 
-#if ENABLE(DATALIST_ELEMENT)
     _dataListTextSuggestionsInputView = nil;
     _dataListTextSuggestions = nil;
-#endif
 
 #if ENABLE(IMAGE_ANALYSIS)
     [self _tearDownImageAnalysis];
@@ -1906,9 +1902,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     [_inputPeripheral endEditing];
     [_formInputSession endEditing];
-#if ENABLE(DATALIST_ELEMENT)
     [_dataListTextSuggestionsInputView controlEndEditing];
-#endif
 }
 
 - (void)_cancelPreviousResetInputViewDeferralRequest
@@ -2875,10 +2869,8 @@ static inline WebCore::FloatSize tapHighlightBorderRadius(WebCore::FloatSize bor
     if (UIView *customInputView = [_formInputSession customInputView])
         return customInputView;
 
-#if ENABLE(DATALIST_ELEMENT)
     if (_dataListTextSuggestionsInputView)
         return _dataListTextSuggestionsInputView.get();
-#endif
 
     return [_inputPeripheral assistantView];
 }
@@ -3600,10 +3592,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (gesture == WKBEGestureTypeLoupe && _positionInformation.selectability == WebKit::InteractionInformationAtPosition::Selectability::UnselectableDueToUserSelectNone)
         return NO;
 
-#if ENABLE(DATALIST_ELEMENT)
     if (_positionInformation.preventTextInteraction)
         return NO;
-#endif
 
 #if ENABLE(IMAGE_ANALYSIS)
     if (_elementPendingImageAnalysis && _positionInformation.hostImageOrVideoElementContext == _elementPendingImageAnalysis)
@@ -6209,7 +6199,6 @@ static void logTextInteraction(const char* methodName, UIGestureRecognizer *loup
     }
 #endif
 
-#if ENABLE(DATALIST_ELEMENT)
     if ([_dataListTextSuggestions count] && ![[_formInputSession suggestions] count]) {
         RetainPtr inputText = [textSuggestion inputText];
         for (WKBETextSuggestion *dataListTextSuggestion in _dataListTextSuggestions.get()) {
@@ -6219,7 +6208,6 @@ static void logTextInteraction(const char* methodName, UIGestureRecognizer *loup
             }
         }
     }
-#endif
 
     id <_WKInputDelegate> inputDelegate = [_webView _inputDelegate];
     if ([inputDelegate respondsToSelector:@selector(_webView:insertTextSuggestion:inInputSession:)]) {
@@ -8320,10 +8308,8 @@ static RetainPtr<NSObject <WKFormPeripheral>> createInputPeripheralWithView(WebK
     [_formInputSession invalidate];
     _formInputSession = nil;
 
-#if ENABLE(DATALIST_ELEMENT)
     _dataListTextSuggestionsInputView = nil;
     _dataListTextSuggestions = nil;
-#endif
 
     BOOL editableChanged = [self setIsEditable:NO];
     // FIXME: We should completely invalidate _focusedElementInformation here, instead of a subset of individual members.
@@ -9213,8 +9199,6 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
         [_textInteractionWrapper activateSelection];
 }
 
-#if ENABLE(DATALIST_ELEMENT)
-
 - (UIView <WKFormControl> *)dataListTextSuggestionsInputView
 {
     return _dataListTextSuggestionsInputView.get();
@@ -9247,8 +9231,6 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
         [self updateTextSuggestionsForInputDelegate];
 }
 
-#endif
-
 - (void)updateTextSuggestionsForInputDelegate
 {
     // Text suggestions vended from clients take precedence over text suggestions from a focused form control with a datalist.
@@ -9258,12 +9240,10 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
         return;
     }
 
-#if ENABLE(DATALIST_ELEMENT)
     if ([_dataListTextSuggestions count]) {
         [self _provideSuggestionsToInputDelegate:_dataListTextSuggestions.get()];
         return;
     }
-#endif
 
     [self _provideSuggestionsToInputDelegate:nil];
 }
@@ -14056,7 +14036,6 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
     [self accessoryDone];
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 - (void)_selectDataListOption:(NSInteger)optionIndex
 {
     [_dataListSuggestionsControl didSelectOptionAtIndex:optionIndex];
@@ -14071,7 +14050,6 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
 {
     return [_dataListSuggestionsControl isShowingSuggestions];
 }
-#endif
 
 - (UIWKTextInteractionAssistant *)textInteractionAssistant
 {

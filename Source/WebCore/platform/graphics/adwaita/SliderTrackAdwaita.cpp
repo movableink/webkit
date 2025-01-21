@@ -108,9 +108,7 @@ void SliderTrackAdwaita::draw(GraphicsContext& graphicsContext, const FloatRound
     graphicsContext.setFillColor(accentColor(style));
     graphicsContext.fillPath(path);
 
-#if ENABLE(DATALIST_ELEMENT)
     sliderTrackPart.drawTicks(graphicsContext, borderRect.rect(), style);
-#endif
 
     if (style.states.contains(ControlStyle::State::Focused)) {
         // Sliders support accent-color, so we want to color their focus rings too

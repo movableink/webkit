@@ -371,7 +371,6 @@ bool ColorInputType::supportsAlpha() const
 Vector<Color> ColorInputType::suggestedColors() const
 {
     Vector<Color> suggestions;
-#if ENABLE(DATALIST_ELEMENT)
     ASSERT(element());
     if (auto dataList = element()->dataList()) {
         for (auto& option : dataList->suggestions()) {
@@ -379,7 +378,6 @@ Vector<Color> ColorInputType::suggestedColors() const
                 suggestions.append(*color);
         }
     }
-#endif
     return suggestions;
 }
 

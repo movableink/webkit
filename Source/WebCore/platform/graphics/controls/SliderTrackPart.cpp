@@ -51,7 +51,6 @@ SliderTrackPart::SliderTrackPart(StyleAppearance type, const IntSize& thumbSize,
     ASSERT(type == StyleAppearance::SliderHorizontal || type == StyleAppearance::SliderVertical);
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 void SliderTrackPart::drawTicks(GraphicsContext& context, const FloatRect& rect, const ControlStyle& style) const
 {
     if (m_tickRatios.isEmpty())
@@ -102,7 +101,6 @@ void SliderTrackPart::drawTicks(GraphicsContext& context, const FloatRect& rect,
         context.fillRect(tickRect);
     }
 }
-#endif
 
 std::unique_ptr<PlatformControl> SliderTrackPart::createPlatformControl()
 {

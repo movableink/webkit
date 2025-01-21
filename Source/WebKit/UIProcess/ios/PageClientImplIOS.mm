@@ -988,12 +988,10 @@ RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy&, const We
     return nullptr;
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestionsDropdown(WebPageProxy& page)
 {
     return WebDataListSuggestionsDropdownIOS::create(page, m_contentView.getAutoreleased());
 }
-#endif
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 RefPtr<WebDateTimePicker> PageClientImpl::createDateTimePicker(WebPageProxy&)

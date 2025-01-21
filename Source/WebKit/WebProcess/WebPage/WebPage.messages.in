@@ -170,10 +170,8 @@ messages -> WebPage WantsAsyncDispatchMessage {
     DidEndColorPicker()
     DidChooseColor(WebCore::Color color)
 
-#if ENABLE(DATALIST_ELEMENT)
     DidSelectDataListOption(String selectedOption);
     DidCloseSuggestions();
-#endif
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     DidChooseDate(String date);

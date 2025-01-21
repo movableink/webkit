@@ -201,11 +201,6 @@ RefPtr<InputType> InputType::createIfDifferent(HTMLInputElement& element, const 
 
 InputType::~InputType() = default;
 
-bool InputType::themeSupportsDataListUI(InputType* type)
-{
-    return RenderTheme::singleton().supportsDataListUI(type->formControlType());
-}
-
 template<typename T> static bool validateInputType(const T& inputType, const String& value)
 {
     ASSERT(inputType.canSetStringValue());
@@ -883,11 +878,6 @@ bool InputType::shouldResetOnDocumentActivation()
     return false;
 }
 
-bool InputType::shouldRespectListAttribute()
-{
-    return false;
-}
-
 bool InputType::isInteractiveContent() const
 {
     return m_type != Type::Hidden;
@@ -944,17 +934,11 @@ String InputType::defaultToolTip() const
     return String();
 }
 
-#if ENABLE(DATALIST_ELEMENT)
-void InputType::dataListMayHaveChanged()
-{
-}
-
 std::optional<Decimal> InputType::findClosestTickMarkValue(const Decimal&)
 {
     ASSERT_NOT_REACHED();
     return std::nullopt;
 }
-#endif
 
 bool InputType::matchesIndeterminatePseudoClass() const
 {

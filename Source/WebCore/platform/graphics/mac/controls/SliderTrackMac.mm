@@ -84,9 +84,7 @@ void SliderTrackMac::draw(GraphicsContext& context, const FloatRoundedRect& bord
 
     auto& sliderTrackPart = owningSliderTrackPart();
 
-#if ENABLE(DATALIST_ELEMENT)
     sliderTrackPart.drawTicks(context, borderRect.rect(), style);
-#endif
 
     GraphicsContextStateSaver stateSaver(context);
 

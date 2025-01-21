@@ -577,14 +577,10 @@ RefPtr<ColorChooser> EmptyChromeClient::createColorChooser(ColorChooserClient&, 
     return nullptr;
 }
 
-#if ENABLE(DATALIST_ELEMENT)
-
 RefPtr<DataListSuggestionPicker> EmptyChromeClient::createDataListSuggestionPicker(DataListSuggestionsClient&)
 {
     return nullptr;
 }
-
-#endif
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 

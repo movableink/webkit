@@ -2523,7 +2523,6 @@ class WebCore::SelectionGeometry {
 };
 #endif
 
-#if ENABLE(DATALIST_ELEMENT)
 header: <WebCore/DataListSuggestionInformation.h>
 [CustomHeader] enum class WebCore::DataListSuggestionActivationType : uint8_t {
     ControlClicked,
@@ -2543,7 +2542,6 @@ struct WebCore::DataListSuggestionInformation {
     Vector<WebCore::DataListSuggestion> suggestions;
     WebCore::IntRect elementRect;
 };
-#endif
 
 struct WebCore::ClientOrigin {
     [Validator='!topOrigin->isNull()'] WebCore::SecurityOriginData topOrigin;
@@ -3720,9 +3718,7 @@ enum class WebCore::StyleAppearance : uint8_t {
     ImageControlsButton,
 #endif
     InnerSpinButton,
-#if ENABLE(DATALIST_ELEMENT)
     ListButton,
-#endif
     SearchFieldDecoration,
     SearchFieldResultsDecoration,
     SearchFieldResultsButton,

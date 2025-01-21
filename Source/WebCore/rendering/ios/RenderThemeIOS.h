@@ -112,10 +112,8 @@ private:
 
     bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
-#if ENABLE(DATALIST_ELEMENT)
     IntSize sliderTickSize() const override;
     int sliderTickOffsetFromTrackCenter() const override;
-#endif
 
     void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
     void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const IntRect&) override;
@@ -133,11 +131,9 @@ private:
     bool supportsMeter(StyleAppearance) const final;
     bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
-#if ENABLE(DATALIST_ELEMENT)
     bool paintListButton(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     void paintSliderTicks(const RenderObject&, const PaintInfo&, const FloatRect&) final;
-#endif
 
     String colorInputStyleSheet() const final;
 

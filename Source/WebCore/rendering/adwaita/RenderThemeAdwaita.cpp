@@ -369,7 +369,6 @@ void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element
     style.setHeight(Length(sliderThumbSize, LengthType::Fixed));
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 IntSize RenderThemeAdwaita::sliderTickSize() const
 {
     return { 1, 7 };
@@ -388,7 +387,6 @@ void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element
     else
         style.setMarginLeft(Length(-2, LengthType::Fixed));
 }
-#endif // ENABLE(DATALIST_ELEMENT)
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
 std::optional<Seconds> RenderThemeAdwaita::caretBlinkInterval() const

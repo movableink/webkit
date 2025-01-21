@@ -3252,9 +3252,8 @@ String AccessibilityObject::popupValue() const
 
 bool AccessibilityObject::hasDatalist() const
 {
-#if ENABLE(DATALIST_ELEMENT)
     auto datalistId = getAttribute(listAttr);
-    if (datalistId.isNull() || datalistId.isEmpty())
+    if (datalistId.isEmpty())
         return false;
 
     auto element = this->element();
@@ -3263,9 +3262,6 @@ bool AccessibilityObject::hasDatalist() const
 
     auto datalist = element->treeScope().getElementById(datalistId);
     return is<HTMLDataListElement>(datalist);
-#else
-    return false;
-#endif
 }
 
 bool AccessibilityObject::supportsSetSize() const

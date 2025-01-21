@@ -848,8 +848,6 @@ RefPtr<ColorChooser> WebChromeClient::createColorChooser(ColorChooserClient& cli
     return WebColorChooser::create(protectedPage().ptr(), &client, initialColor);
 }
 
-#if ENABLE(DATALIST_ELEMENT)
-
 RefPtr<DataListSuggestionPicker> WebChromeClient::createDataListSuggestionPicker(DataListSuggestionsClient& client)
 {
     return WebDataListSuggestionPicker::create(protectedPage(), client);
@@ -863,8 +861,6 @@ bool WebChromeClient::canShowDataListSuggestionLabels() const
     return false;
 #endif
 }
-
-#endif
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 

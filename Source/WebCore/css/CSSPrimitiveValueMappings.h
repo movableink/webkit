@@ -387,9 +387,7 @@ constexpr CSSValueID toCSSValueID(StyleAppearance e)
     case StyleAppearance::ImageControlsButton:
 #endif
     case StyleAppearance::InnerSpinButton:
-#if ENABLE(DATALIST_ELEMENT)
     case StyleAppearance::ListButton:
-#endif
     case StyleAppearance::SearchFieldDecoration:
     case StyleAppearance::SearchFieldResultsDecoration:
     case StyleAppearance::SearchFieldResultsButton:

@@ -59,7 +59,7 @@ enum AutofillButtonType {
     [CEReactions=NotNeeded, Reflect] attribute DOMString formTarget;
     [CEReactions=NotNeeded] attribute unsigned long height;
     attribute boolean indeterminate;
-    [Conditional=DATALIST_ELEMENT] readonly attribute HTMLElement list;
+    readonly attribute HTMLElement list;
     [CEReactions=NotNeeded, Reflect] attribute DOMString max;
     [CEReactions=NotNeeded] attribute long minLength;
     [CEReactions=NotNeeded] attribute long maxLength;

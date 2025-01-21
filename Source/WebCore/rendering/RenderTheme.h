@@ -102,9 +102,7 @@ public:
 #if ENABLE(ATTACHMENT_ELEMENT)
     virtual String attachmentStyleSheet() const;
 #endif
-#if ENABLE(DATALIST_ELEMENT)
     String dataListStyleSheet() const;
-#endif
     virtual String colorInputStyleSheet() const;
 
     virtual LayoutRect adjustedPaintRect(const RenderBox&, const LayoutRect& paintRect) const { return paintRect; }
@@ -137,9 +135,6 @@ public:
 
     // A method asking if the theme's controls actually care about redrawing when hovered.
     virtual bool supportsHover() const { return false; }
-
-    // A method asking if the platform is able to show datalist suggestions for a given input type.
-    virtual bool supportsDataListUI(const AtomString&) const { return false; }
 
     virtual bool supportsBoxShadow(const RenderStyle&) const { return false; }
 
@@ -206,16 +201,14 @@ public:
     virtual FloatSize meterSizeForBounds(const RenderMeter&, const FloatRect&) const;
     virtual bool supportsMeter(StyleAppearance) const { return false; }
 
-#if ENABLE(DATALIST_ELEMENT)
     // Returns the threshold distance for snapping to a slider tick mark.
     virtual LayoutUnit sliderTickSnappingThreshold() const { return 0; }
     // Returns size of one slider tick mark for a horizontal track.
     // For vertical tracks we rotate it and use it. i.e. Width is always length along the track.
-    virtual IntSize sliderTickSize() const = 0;
+    virtual IntSize sliderTickSize() const { return IntSize(); };
     // Returns the distance of slider tick origin from the slider track center.
-    virtual int sliderTickOffsetFromTrackCenter() const = 0;
+    virtual int sliderTickOffsetFromTrackCenter() const { return 0; };
     virtual void paintSliderTicks(const RenderObject&, const PaintInfo&, const FloatRect&);
-#endif
 
     virtual bool shouldHaveSpinButton(const HTMLInputElement&) const;
     virtual bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const { return false; }
@@ -328,10 +321,8 @@ protected:
     virtual void paintAttachmentText(GraphicsContext&, AttachmentLayout*) { }
 #endif
 
-#if ENABLE(DATALIST_ELEMENT)
     virtual void adjustListButtonStyle(RenderStyle&, const Element*) const { }
     virtual bool paintListButton(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
-#endif
     
 #if ENABLE(SERVICE_CONTROLS)
     virtual void adjustImageControlsButtonStyle(RenderStyle&, const Element*) const { }
@@ -388,10 +379,8 @@ public:
     bool isPresenting(const RenderObject&) const;
     bool isReadOnlyControl(const RenderObject&) const;
     bool isDefault(const RenderObject&) const;
-#if ENABLE(DATALIST_ELEMENT)
     bool hasListButton(const RenderObject&) const;
     bool hasListButtonPressed(const RenderObject&) const;
-#endif
 
 protected:
     struct ColorCache {

@@ -111,7 +111,6 @@ RenderBox::LogicalExtentComputedValues RenderSliderContainer::computeLogicalHeig
     auto& input = downcast<HTMLInputElement>(*element()->shadowHost());
     bool isVertical = hasVerticalAppearance(input);
 
-#if ENABLE(DATALIST_ELEMENT)
     if (input.renderer()->isRenderSlider() && !isVertical && input.list()) {
         int offsetFromCenter = theme().sliderTickOffsetFromTrackCenter();
         LayoutUnit trackHeight;
@@ -127,7 +126,6 @@ RenderBox::LogicalExtentComputedValues RenderSliderContainer::computeLogicalHeig
 
         return RenderBox::computeLogicalHeight(trackHeight, logicalTop);
     }
-#endif
     if (isVertical && writingMode().isHorizontal())
         logicalHeight = RenderSlider::defaultTrackLength;
     return RenderBox::computeLogicalHeight(logicalHeight, logicalTop);
@@ -275,7 +273,6 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
     auto stepRange = input->createStepRange(AnyStepHandling::Reject);
     auto value = stepRange.clampValue(stepRange.valueFromProportion(fraction));
 
-#if ENABLE(DATALIST_ELEMENT)
     const LayoutUnit snappingThreshold = renderer()->theme().sliderTickSnappingThreshold();
     if (snappingThreshold > 0) {
         if (std::optional<Decimal> closest = input->findClosestTickMarkValue(value)) {
@@ -286,7 +283,6 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
                 value = *closest;
         }
     }
-#endif
 
     String valueString = serializeForNumberType(value);
     if (valueString == input->value())

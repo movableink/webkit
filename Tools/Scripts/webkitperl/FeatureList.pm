@@ -72,7 +72,6 @@ my (
     $cursorVisibilitySupport,
     $darkModeCSSSupport,
     $datacueValueSupport,
-    $datalistElementSupport,
     $deviceOrientationSupport,
     $dfgJITSupport,
     $dragSupportSupport,
@@ -221,9 +220,6 @@ my @features = (
 
     { option => "datacue-value", desc => "Toggle datacue value support",
       define => "ENABLE_DATACUE_VALUE", value => \$datacueValueSupport },
-
-    { option => "datalist-element", desc => "Toggle Datalist Element support",
-      define => "ENABLE_DATALIST_ELEMENT", value => \$datalistElementSupport },
 
     { option => "device-orientation", desc => "Toggle Device Orientation support",
       define => "ENABLE_DEVICE_ORIENTATION", value => \$deviceOrientationSupport },

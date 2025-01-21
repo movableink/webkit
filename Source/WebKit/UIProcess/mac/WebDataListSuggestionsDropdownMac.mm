@@ -26,7 +26,7 @@
 #import "config.h"
 #import "WebDataListSuggestionsDropdownMac.h"
 
-#if ENABLE(DATALIST_ELEMENT) && USE(APPKIT)
+#if USE(APPKIT)
 
 #import "AppKitSPI.h"
 #import "WebPageProxy.h"
@@ -527,4 +527,4 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
 
 @end
 
-#endif // ENABLE(DATALIST_ELEMENT) && USE(APPKIT)
+#endif // USE(APPKIT)

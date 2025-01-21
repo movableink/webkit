@@ -5655,8 +5655,6 @@ void WebPage::didChooseColor(const WebCore::Color& color)
         activeColorChooser->didChooseColor(color);
 }
 
-#if ENABLE(DATALIST_ELEMENT)
-
 void WebPage::setActiveDataListSuggestionPicker(WebDataListSuggestionPicker& dataListSuggestionPicker)
 {
     m_activeDataListSuggestionPicker = dataListSuggestionPicker;
@@ -5673,8 +5671,6 @@ void WebPage::didCloseSuggestions()
     if (RefPtr picker = std::exchange(m_activeDataListSuggestionPicker, nullptr).get())
         picker->didCloseSuggestions();
 }
-
-#endif
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 

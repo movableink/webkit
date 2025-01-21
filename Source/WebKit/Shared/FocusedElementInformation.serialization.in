@@ -91,13 +91,11 @@ enum class WebKit::InputType : uint8_t {
     String placeholder;
     String label;
     String ariaLabel;
-#if ENABLE(DATALIST_ELEMENT)
     bool hasSuggestions;
     bool isFocusingWithDataListDropdown;
     WebCore::Color colorValue;
     WebKit::ColorControlSupportsAlpha supportsAlpha;
     Vector<WebCore::Color> suggestedColors;
-#endif
     bool hasEverBeenPasswordField;
     bool shouldSynthesizeKeyEventsForEditing;
     bool isSpellCheckingEnabled;

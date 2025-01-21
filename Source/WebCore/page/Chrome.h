@@ -195,9 +195,7 @@ public:
 
     RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color& initialColor);
 
-#if ENABLE(DATALIST_ELEMENT)
     RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&);
-#endif
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&);

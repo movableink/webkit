@@ -378,7 +378,6 @@ void ControlMac::drawCell(GraphicsContext& context, const FloatRect& rect, float
     context.drawConsumingImageBuffer(WTFMove(imageBuffer), rect.location() - focusRingPadding);
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 void ControlMac::drawListButton(GraphicsContext& context, const FloatRect& rect, float deviceScaleFactor, const ControlStyle& style)
 {
     if (!style.states.contains(ControlStyle::State::ListButton))
@@ -440,7 +439,6 @@ void ControlMac::drawListButton(GraphicsContext& context, const FloatRect& rect,
 
     context.drawConsumingImageBuffer(WTFMove(comboBoxButtonImageBuffer), listButtonLocation);
 }
-#endif
 
 } // namespace WebCore
 

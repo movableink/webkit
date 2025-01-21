@@ -114,11 +114,9 @@ TextStream& operator<<(TextStream& ts, StyleAppearance appearance)
     case StyleAppearance::InnerSpinButton:
         ts << "inner-spin-button";
         break;
-#if ENABLE(DATALIST_ELEMENT)
     case StyleAppearance::ListButton:
         ts << "list-button";
         break;
-#endif
     case StyleAppearance::SearchFieldDecoration:
         ts << "searchfield-decoration";
         break;

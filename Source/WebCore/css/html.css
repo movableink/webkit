@@ -758,7 +758,6 @@ input::-webkit-caps-lock-indicator {
     -webkit-user-select: none;
 }
 
-#if defined(ENABLE_DATALIST_ELEMENT) && ENABLE_DATALIST_ELEMENT
 input::-webkit-list-button {
     appearance: auto;
     display: block;
@@ -777,7 +776,6 @@ input::-webkit-list-button {
     block-size: 100%;
 #endif
 }
-#endif
 
 textarea {
     appearance: auto;

@@ -272,7 +272,7 @@ bool BaseDateAndTimeInputType::supportsReadOnly() const
 
 bool BaseDateAndTimeInputType::shouldRespectListAttribute()
 {
-    return InputType::themeSupportsDataListUI(this);
+    return false;
 }
 
 bool BaseDateAndTimeInputType::valueMissing(const String& value) const
@@ -621,7 +621,6 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
     parameters.hasSecondField = shouldHaveSecondField(date);
     parameters.hasMillisecondField = shouldHaveMillisecondField(date);
 
-#if ENABLE(DATALIST_ELEMENT)
     if (auto dataList = element.dataList()) {
         for (auto& option : dataList->suggestions()) {
             auto label = option.label();
@@ -633,7 +632,6 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
             parameters.suggestionLabels.append(value == label ? String() : label);
         }
     }
-#endif
 
     return true;
 }

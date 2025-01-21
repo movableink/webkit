@@ -31,8 +31,6 @@
 
 #include "config.h"
 
-#if ENABLE(DATALIST_ELEMENT)
-
 #include "HTMLDataListElement.h"
 
 #include "GenericCachedHTMLCollection.h"
@@ -101,5 +99,3 @@ bool HTMLDataListElement::isSuggestion(const HTMLOptionElement& descendant)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(DATALIST_ELEMENT)

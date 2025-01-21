@@ -26,8 +26,6 @@
 #include "config.h"
 #include "WebDataListSuggestionPicker.h"
 
-#if ENABLE(DATALIST_ELEMENT)
-
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcess.h"
@@ -114,5 +112,3 @@ void WebDataListSuggestionPicker::detach()
 }
 
 } // namespace WebKit
-
-#endif

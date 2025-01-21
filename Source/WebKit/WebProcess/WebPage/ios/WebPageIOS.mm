@@ -3602,7 +3602,6 @@ static void selectionPositionInformation(WebPage& page, const InteractionInforma
 #endif
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 static void textInteractionPositionInformation(WebPage& page, const HTMLInputElement& input, const InteractionInformationRequest& request, InteractionInformationAtPosition& info)
 {
     if (!input.list())
@@ -3616,7 +3615,6 @@ static void textInteractionPositionInformation(WebPage& page, const HTMLInputEle
     if (result.innerNode() == input.dataListButtonElement())
         info.preventTextInteraction = true;
 }
-#endif
 
 RefPtr<ShareableBitmap> WebPage::shareableBitmapSnapshotForNode(Element& element)
 {
@@ -3840,10 +3838,8 @@ InteractionInformationAtPosition WebPage::positionInformation(const InteractionI
     selectionPositionInformation(*this, request, info);
 
     // Prevent the callout bar from showing when tapping on the datalist button.
-#if ENABLE(DATALIST_ELEMENT)
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(nodeRespondingToClickEvents))
         textInteractionPositionInformation(*this, *input, request, info);
-#endif
 
 #if ENABLE(PDF_PLUGIN)
     if (pluginView) {
@@ -4167,15 +4163,11 @@ std::optional<FocusedElementInformation> WebPage::focusedElementInformation()
             information.elementType = InputType::Color;
             information.colorValue = element->valueAsColor();
             information.supportsAlpha = element->alpha() ? WebKit::ColorControlSupportsAlpha::Yes : WebKit::ColorControlSupportsAlpha::No;
-#if ENABLE(DATALIST_ELEMENT)
             information.suggestedColors = element->suggestedColors();
-#endif
         }
 
-#if ENABLE(DATALIST_ELEMENT)
         information.isFocusingWithDataListDropdown = element->isFocusingWithDataListDropdown();
         information.hasSuggestions = !!element->list();
-#endif
         information.inputMode = element->canonicalInputMode();
         information.enterKeyHint = element->canonicalEnterKeyHint();
         information.isReadOnly = element->isReadOnly();

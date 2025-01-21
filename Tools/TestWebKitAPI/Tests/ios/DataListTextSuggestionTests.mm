@@ -25,7 +25,7 @@
 
 #import "config.h"
 
-#if ENABLE(DATALIST_ELEMENT) && PLATFORM(IOS_FAMILY)
+#if PLATFORM(IOS_FAMILY)
 
 #import "PlatformUtilities.h"
 #import "TestInputDelegate.h"
@@ -171,4 +171,4 @@ TEST(DataListTextSuggestionTestView, InsertSuggestion)
 
 } // namespace TestWebKitAPI
 
-#endif // ENABLE(DATALIST_ELEMENT) && PLATFORM(IOS_FAMILY)
+#endif // PLATFORM(IOS_FAMILY)

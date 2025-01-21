@@ -83,7 +83,6 @@ void TextFieldAdwaita::draw(GraphicsContext& graphicsContext, const FloatRounded
     graphicsContext.setFillColor(textFieldBackgroundColor);
     graphicsContext.fillPath(path);
 
-#if ENABLE(DATALIST_ELEMENT)
     if (style.states.contains(ControlStyle::State::ListButton)) {
         auto zoomedArrowSize = menuListButtonArrowSize * style.zoomFactor;
         FloatRect arrowRect = borderRect.rect();
@@ -95,7 +94,6 @@ void TextFieldAdwaita::draw(GraphicsContext& graphicsContext, const FloatRounded
         bool useDarkAppearance = style.states.contains(ControlStyle::State::DarkAppearance);
         Adwaita::paintArrow(graphicsContext, arrowRect, Adwaita::ArrowDirection::Down, useDarkAppearance);
     }
-#endif
 
     if (!enabled)
         graphicsContext.endTransparencyLayer();
