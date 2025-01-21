@@ -302,6 +302,10 @@ Shared/API/c/WKUserContentURLPattern.cpp
 Shared/Databases/IndexedDB/IDBUtilities.cpp
 
 Shared/Extensions/WebExtensionFrameIdentifier.cpp
+Shared/Extensions/WebExtensionSQLiteDatabase.cpp
+Shared/Extensions/WebExtensionSQLiteStatement.cpp
+Shared/Extensions/WebExtensionSQLiteRow.cpp
+Shared/Extensions/WebExtensionSQLiteStore.cpp
 Shared/Extensions/WebExtensionLocalization.cpp
 Shared/Extensions/WebExtensionPermission.cpp
 Shared/Extensions/WebExtensionUtilities.cpp

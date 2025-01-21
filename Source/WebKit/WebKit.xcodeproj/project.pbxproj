@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 55;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -6649,6 +6649,16 @@
 		7CF47FF917275C57008ACB91 /* PageBanner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PageBanner.h; sourceTree = "<group>"; };
 		7CF47FFC17276AE3008ACB91 /* WKBundlePageBannerMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WKBundlePageBannerMac.mm; sourceTree = "<group>"; };
 		7CF47FFD17276AE3008ACB91 /* WKBundlePageBannerMac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKBundlePageBannerMac.h; sourceTree = "<group>"; };
+		7D49D11F2D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteDatabase.h; sourceTree = "<group>"; };
+		7D49D1202D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionSQLiteDatabase.cpp; sourceTree = "<group>"; };
+		7D49D1212D1AA1AE00C6855E /* WebExtensionSQLiteDatatypeTraits.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteDatatypeTraits.h; sourceTree = "<group>"; };
+		7D49D1222D1AA1AE00C6855E /* WebExtensionSQLiteHelpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteHelpers.h; sourceTree = "<group>"; };
+		7D49D1232D1AA1AE00C6855E /* WebExtensionSQLiteRow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteRow.h; sourceTree = "<group>"; };
+		7D49D1242D1AA1AE00C6855E /* WebExtensionSQLiteRow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionSQLiteRow.cpp; sourceTree = "<group>"; };
+		7D49D1252D1AA1AE00C6855E /* WebExtensionSQLiteStatement.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteStatement.h; sourceTree = "<group>"; };
+		7D49D1262D1AA1AE00C6855E /* WebExtensionSQLiteStatement.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionSQLiteStatement.cpp; sourceTree = "<group>"; };
+		7D49D1272D1AA1AE00C6855E /* WebExtensionSQLiteStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteStore.h; sourceTree = "<group>"; };
+		7D49D1282D1AA1AE00C6855E /* WebExtensionSQLiteStore.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionSQLiteStore.cpp; sourceTree = "<group>"; };
 		7D5151492CF818CA0035DD16 /* WebExtensionLocalization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionLocalization.h; sourceTree = "<group>"; };
 		7D51514A2CF818CA0035DD16 /* WebExtensionLocalization.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionLocalization.cpp; sourceTree = "<group>"; };
 		7D51514B2CF818CA0035DD16 /* WebExtensionUtilities.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionUtilities.cpp; sourceTree = "<group>"; };
@@ -13872,6 +13882,16 @@
 				B624FF1A2ABE503000F6EDF6 /* WebExtensionScriptInjectionResultParameters.h */,
 				0237F5E92C4B27F500AD23EF /* WebExtensionSidebarParameters.h */,
 				0237F5E82C4B27DC00AD23EF /* WebExtensionSidebarParameters.serialization.in */,
+				7D49D1202D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.cpp */,
+				7D49D11F2D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.h */,
+				7D49D1212D1AA1AE00C6855E /* WebExtensionSQLiteDatatypeTraits.h */,
+				7D49D1222D1AA1AE00C6855E /* WebExtensionSQLiteHelpers.h */,
+				7D49D1242D1AA1AE00C6855E /* WebExtensionSQLiteRow.cpp */,
+				7D49D1232D1AA1AE00C6855E /* WebExtensionSQLiteRow.h */,
+				7D49D1262D1AA1AE00C6855E /* WebExtensionSQLiteStatement.cpp */,
+				7D49D1252D1AA1AE00C6855E /* WebExtensionSQLiteStatement.h */,
+				7D49D1282D1AA1AE00C6855E /* WebExtensionSQLiteStore.cpp */,
+				7D49D1272D1AA1AE00C6855E /* WebExtensionSQLiteStore.h */,
 				B6B156592B5E1779004F9894 /* WebExtensionStorage.serialization.in */,
 				B6B1565A2B5E177A004F9894 /* WebExtensionStorageAccessLevel.h */,
 				1C4957A22A983E39007D0B64 /* WebExtensionTab.serialization.in */,
@@ -20327,9 +20347,7 @@
 		};
 		5C400E6A29DB8AB500446F6F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 5C139DA129DB82E500D5117B /* WebContentCaptivePortalExtension */;
 			targetProxy = 5C400E6929DB8AB500446F6F /* PBXContainerItemProxy */;
 		};
@@ -20345,25 +20363,19 @@
 		};
 		5CE4B60729CEBB760038F565 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 5CA5A2C929CBBA1A000F1046 /* WebContentExtension */;
 			targetProxy = 5CE4B60629CEBB760038F565 /* PBXContainerItemProxy */;
 		};
 		5CE4B62329CF880B0038F565 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 5CE4B61529CF877F0038F565 /* GPUExtension */;
 			targetProxy = 5CE4B62229CF880B0038F565 /* PBXContainerItemProxy */;
 		};
 		5CE4B62529CF880B0038F565 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 5CE4B60829CF87680038F565 /* NetworkingExtension */;
 			targetProxy = 5CE4B62429CF880B0038F565 /* PBXContainerItemProxy */;
 		};

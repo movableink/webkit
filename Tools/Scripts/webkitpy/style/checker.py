@@ -317,6 +317,10 @@ _PATH_RULES_SPECIFIER = [
      ["-build/include_order",
       "-readability/naming/underscores"]),
 
+    ([  # This file has >= symbols in templates, which looks like a closing bracket to the style checker
+     os.path.join('Source', 'WebKit', 'Shared', 'Extensions', 'WebExtensionSQLiteHelpers.h')],
+     ["-readability/naming/underscores"]),
+
     # For third-party code, keep only the following checks--
     #
     #   No tabs: to avoid having to set the SVN allow-tabs property.
