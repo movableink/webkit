@@ -2471,3 +2471,5 @@ webkit.org/b/285954 [ Ventura+ Debug ] inspector/worker/runtime-basic-subworker.
 webkit.org/b/286039 imported/w3c/web-platform-tests/scroll-to-text-fragment/scroll-to-text-fragment.html [ Pass Failure ]
 
 webkit.org/b/286107 [ Release ] imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-013.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/274792 compositing/repaint/iframes/compositing-iframe-with-fixed-background-doc-repaint.html [ Pass Failure ]
