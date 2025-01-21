@@ -627,12 +627,12 @@ class YarrGenerator final : public YarrJITInfo {
             m_jit.sub32(character, MacroAssembler::Imm32(static_cast<unsigned>(min)), scratch);
             MacroAssembler::Jump notInVector = m_jit.branch32(MacroAssembler::Above, scratch, MacroAssembler::TrustedImm32(max - min));
             m_jit.lshift64(MacroAssembler::TrustedImm32(1), scratch, scratch);
-            matchDest.append(m_jit.branchTest64(MacroAssembler::NonZero, scratch, MacroAssembler::TrustedImm64(*mask.storage())));
+            matchDest.append(m_jit.branchTest64(MacroAssembler::NonZero, scratch, MacroAssembler::TrustedImm64(mask.storage()[0])));
 #else
             m_jit.sub32(character, MacroAssembler::Imm32(static_cast<unsigned>(min)), scratch);
             MacroAssembler::Jump notInVector = m_jit.branch32(MacroAssembler::Above, scratch, MacroAssembler::TrustedImm32(max - min));
             m_jit.lshift32(MacroAssembler::TrustedImm32(1), scratch, scratch);
-            matchDest.append(m_jit.branchTest32(MacroAssembler::NonZero, scratch, MacroAssembler::TrustedImm32(*mask.storage())));
+            matchDest.append(m_jit.branchTest32(MacroAssembler::NonZero, scratch, MacroAssembler::TrustedImm32(mask.storage()[0])));
 #endif
             notInVector.link(&m_jit);
         }
@@ -2904,11 +2904,12 @@ class YarrGenerator final : public YarrJITInfo {
                                 matched.append(m_jit.branch32(MacroAssembler::Equal, m_regs.regT0, MacroAssembler::TrustedImm32(charactersFastPath.at(1))));
                             jumpIfAvailableInput(endIndex - beginIndex).linkTo(loopHead, &m_jit);
                         } else {
-                            const auto* pointer = getBoyerMooreBitmap(map);
+                            auto span = getBoyerMooreBitmap(map);
                             dataLogLnIf(Options::verboseRegExpCompilation(), "Found bitmap lookahead count:(", mapCount, "),range:[", beginIndex, ", ", endIndex, ")");
 
                             JIT_COMMENT(m_jit, "BMSearch bitmap lookahead count:(", mapCount, "),range:[", beginIndex, ", ", endIndex, ")");
-                            m_jit.move(MacroAssembler::TrustedImmPtr(pointer), m_regs.regT1);
+                            ASSERT(span.size());
+                            m_jit.move(MacroAssembler::TrustedImmPtr(span.data()), m_regs.regT1);
                             auto loopHead = m_jit.label();
                             readCharacter(op.m_checkedOffset - endIndex + 1, m_regs.regT0);
 #if CPU(ARM64) || CPU(RISCV64)
@@ -4627,13 +4628,13 @@ class YarrGenerator final : public YarrJITInfo {
         return bmInfo.length();
     }
 
-    const BoyerMooreBitmap::Map::WordType* getBoyerMooreBitmap(const BoyerMooreBitmap::Map& map)
+    std::span<const BoyerMooreBitmap::Map::WordType> getBoyerMooreBitmap(const BoyerMooreBitmap::Map& map)
     {
-        if (const auto* existingPointer = m_boyerMooreData->tryReuseBoyerMooreBitmap(map))
-            return existingPointer;
+        if (auto existing = m_boyerMooreData->tryReuseBoyerMooreBitmap(map); existing.size())
+            return existing;
 
         auto heapMap = makeUniqueRef<BoyerMooreBitmap::Map>(map);
-        const auto* pointer = heapMap->storage();
+        auto pointer = heapMap->storage();
         m_bmMaps.append(WTFMove(heapMap));
         return pointer;
     }
