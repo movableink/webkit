@@ -48,6 +48,7 @@
 
 OBJC_CLASS AVPlayerViewController;
 OBJC_CLASS LMPlayableViewController;
+OBJC_CLASS UIImage;
 OBJC_CLASS UIViewController;
 OBJC_CLASS UIWindow;
 OBJC_CLASS UIView;
@@ -245,10 +246,12 @@ protected:
 private:
     void returnToStandby();
     void watchdogTimerFired();
+    void ensurePipPlacardIsShowing();
 
     bool m_finalizeSetupNeedsVideoContentLayer { false };
     bool m_finalizeSetupNeedsReturnVideoContentLayer { false };
     Ref<PlaybackSessionInterfaceIOS> m_playbackSessionInterface;
+    RetainPtr<UIView> m_pipPlacard;
 };
 
 } // namespace WebCore

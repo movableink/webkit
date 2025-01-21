@@ -34,7 +34,11 @@
 #import "UIViewControllerUtilities.h"
 #import "WebAVPlayerLayer.h"
 #import "WebAVPlayerLayerView.h"
+#import <UIKit/UIImage.h>
+#import <UIKit/UIImageView.h>
 #import <UIKit/UIKit.h>
+#import <UIKit/UILabel.h>
+#import <UIKit/UIView.h>
 #import <UIKit/UIWindow.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
@@ -66,6 +70,16 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(VideoPresentationInterfaceIOS);
 static UIColor *clearUIColor()
 {
     return (UIColor *)[PAL::getUIColorClass() clearColor];
+}
+
+static UIColor *blackUIColor()
+{
+    return (UIColor *)[PAL::getUIColorClass() blackColor];
+}
+
+static UIColor *greyUIColor()
+{
+    return (UIColor *)[PAL::getUIColorClass() colorWithRed:164.0 / 255.0 green:164.0 / 255.0 blue:164.0 / 255.0 alpha:1];
 }
 
 #if !LOG_DISABLED
@@ -136,12 +150,76 @@ void VideoPresentationInterfaceIOS::setVideoPresentationModel(VideoPresentationM
     videoDimensionsChanged(model ? model->videoDimensions() : FloatSize());
 }
 
+void VideoPresentationInterfaceIOS::ensurePipPlacardIsShowing()
+{
+    if (m_pipPlacard) {
+        [m_pipPlacard setHidden:NO];
+        return;
+    }
+
+    RetainPtr pipPlacard = adoptNS([PAL::allocUIViewInstance() initWithFrame:[layerHostView() bounds]]);
+    [pipPlacard setBackgroundColor:blackUIColor()];
+    [pipPlacard setTranslatesAutoresizingMaskIntoConstraints:NO];
+
+    RetainPtr image = [[[PAL::getUIImageClass() systemImageNamed:@"pip"] imageWithTintColor:greyUIColor() renderingMode:UIImageRenderingModeAlwaysOriginal] imageWithConfiguration:[PAL::getUIImageSymbolConfigurationClass() configurationWithWeight:UIImageSymbolWeightThin]];
+
+    RetainPtr imageView = adoptNS([PAL::allocUIImageViewInstance() initWithImage:image.get()]);
+    [imageView setContentMode:UIViewContentModeScaleAspectFit];
+    [imageView setTranslatesAutoresizingMaskIntoConstraints:NO];
+
+    [pipPlacard addSubview:imageView.get()];
+
+    auto pipLabel = adoptNS([PAL::allocUILabelInstance() init]);
+    [pipLabel setText:@"This video is playing in picture in picture."];
+    [pipLabel setTextAlignment:NSTextAlignmentCenter];
+    [pipLabel setTextColor:greyUIColor()];
+    [pipLabel setFont:[PAL::getUIFontClass() systemFontOfSize:16]];
+    [pipLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
+
+    [pipPlacard addSubview:pipLabel.get()];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [[imageView widthAnchor] constraintEqualToConstant:[image size].width * 8],
+        [[imageView heightAnchor] constraintEqualToConstant:[image size].height * 8],
+        [[imageView centerXAnchor] constraintEqualToAnchor:[pipPlacard centerXAnchor]],
+        [[imageView centerYAnchor] constraintEqualToAnchor:[pipPlacard centerYAnchor]],
+        [[pipLabel centerXAnchor] constraintEqualToAnchor:[pipPlacard centerXAnchor]],
+        [[pipLabel topAnchor] constraintEqualToAnchor:[imageView bottomAnchor] constant:10],
+    ]];
+
+    CGFloat placardWidth = [pipPlacard frame].size.width;
+    CGFloat placardHeight = [pipPlacard frame].size.height;
+
+    if (placardWidth < 170 || placardHeight < 170)
+        [imageView setHidden:YES];
+    if (placardHeight < 100)
+        [pipLabel setHidden:YES];
+
+    UIView *parentView = layerHostView().superview;
+    [parentView.superview insertSubview:pipPlacard.get() atIndex:0];
+    [NSLayoutConstraint activateConstraints:@[
+        [parentView.leadingAnchor constraintEqualToAnchor:[pipPlacard leadingAnchor]],
+        [parentView.trailingAnchor constraintEqualToAnchor:[pipPlacard trailingAnchor]],
+        [parentView.topAnchor constraintEqualToAnchor:[pipPlacard topAnchor]],
+        [parentView.bottomAnchor constraintEqualToAnchor:[pipPlacard bottomAnchor]],
+    ]];
+
+    m_pipPlacard = pipPlacard;
+}
+
 void VideoPresentationInterfaceIOS::setupFullscreen(const FloatRect& initialRect, const FloatSize&, UIView* parentView, HTMLMediaElementEnums::VideoFullscreenMode mode, bool allowsPictureInPicturePlayback, bool standby, bool blocksReturnToFullscreenFromPictureInPicture)
 {
     ASSERT(standby || mode != HTMLMediaElementEnums::VideoFullscreenModeNone);
     LOG(Fullscreen, "VideoPresentationInterfaceIOS::setupFullscreen(%p)", this);
 
     hasVideoChanged(true);
+
+        if (mode == HTMLMediaElementEnums::VideoFullscreenModePictureInPicture) {
+            [CATransaction begin];
+            [CATransaction setDisableActions:YES];
+            ensurePipPlacardIsShowing();
+            [CATransaction commit];
+        }
 
     m_changingStandbyOnly = mode == HTMLMediaElementEnums::VideoFullscreenModeNone && standby;
     m_allowsPictureInPicturePlayback = allowsPictureInPicturePlayback;
@@ -186,6 +264,8 @@ void VideoPresentationInterfaceIOS::preparedToReturnToInline(bool visible, const
 {
     LOG(Fullscreen, "VideoPresentationInterfaceIOS::preparedToReturnToInline(%p) - visible(%s)", this, boolString(visible));
     setInlineRect(inlineRect, visible);
+    [m_window setHidden:NO];
+    playerViewController().view.hidden = NO;
     [playerViewController().view setNeedsLayout];
     [playerViewController().view layoutIfNeeded];
     if (m_prepareToInlineCallback) {
@@ -453,6 +533,11 @@ void VideoPresentationInterfaceIOS::doExitFullscreen()
 
     if (m_hasVideoContentLayer && model) {
         m_exitFullscreenNeedsReturnContentLayer = true;
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        if (m_pipPlacard)
+            [m_pipPlacard setHidden:YES];
+        [CATransaction commit];
         model->returnVideoContentLayer();
         return;
     }
