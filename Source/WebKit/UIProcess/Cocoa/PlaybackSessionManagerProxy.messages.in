@@ -22,7 +22,7 @@
 
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
 [
-    ExceptionForEnabledBy,
+    EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled,
     DispatchedFrom=WebContent,
     DispatchedTo=UI
 ]

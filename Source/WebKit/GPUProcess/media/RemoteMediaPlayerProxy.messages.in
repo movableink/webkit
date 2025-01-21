@@ -61,10 +61,10 @@ messages -> RemoteMediaPlayerProxy {
     DidLoadingProgress() -> (bool flag)
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    UpdateVideoFullscreenInlineImage()
-    SetVideoFullscreenMode(WebCore::MediaPlayer::VideoFullscreenMode mode)
-    SetVideoFullscreenGravity(enum:uint8_t WebCore::MediaPlayerVideoGravity gravity)
-    VideoFullscreenStandbyChanged(bool standby)
+    [EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled] UpdateVideoFullscreenInlineImage()
+    [EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled] SetVideoFullscreenMode(WebCore::MediaPlayer::VideoFullscreenMode mode)
+    [EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled] SetVideoFullscreenGravity(enum:uint8_t WebCore::MediaPlayerVideoGravity gravity)
+    [EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled] VideoFullscreenStandbyChanged(bool standby)
 #endif
 
     SetBufferingPolicy(enum:uint8_t WebCore::MediaPlayerBufferingPolicy policy)
