@@ -85,35 +85,65 @@ namespace TestWebKitAPI {
 
 #if PLATFORM(MAC)
 
-static constexpr unsigned short DownArrowKeyCode { 0x7D };
-static constexpr unsigned short RightArrowKeyCode { 0x7C };
+class UnifiedPDFWithKeyboardScrolling : public testing::Test {
+public:
+    RetainPtr<TestWKWebView> webView;
 
-UNIFIED_PDF_TEST(KeyboardScrollingInSinglePageMode)
-{
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 600) configuration:configurationForWebViewTestingUnifiedPDF().get() addToWindow:YES]);
-    [webView setForceWindowToBecomeKey:YES];
+    void SetUp() final
+    {
+        webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 600) configuration:configurationForWebViewTestingUnifiedPDF().get() addToWindow:YES]);
+        [webView setForceWindowToBecomeKey:YES];
+    }
 
-    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"multiple-pages" withExtension:@"pdf"]];
-    [webView synchronouslyLoadRequest:request.get()];
-    [[webView window] makeFirstResponder:webView.get()];
-    [[webView window] makeKeyAndOrderFront:nil];
-    [[webView window] orderFrontRegardless];
-    [webView objectByEvaluatingJavaScript:@"internals.setPDFDisplayModeForTesting(document.querySelector('embed'), 'SinglePageDiscrete')"];
-    [webView waitForNextPresentationUpdate];
-    [webView setMagnification:2];
+    void synchronouslyLoadPDFDocument(String documentName)
+    {
+        RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:documentName withExtension:@"pdf"]];
+        [webView synchronouslyLoadRequest:request.get()];
+        [[webView window] makeFirstResponder:webView.get()];
+        [[webView window] makeKeyAndOrderFront:nil];
+        [[webView window] orderFrontRegardless];
+        [webView waitForNextPresentationUpdate];
+    }
 
-    auto pressKey = [&webView](auto key, unsigned short code, Seconds duration = 200_ms) {
+    void scrollDown(Seconds duration = 200_ms)
+    {
+        pressKey(NSDownArrowFunctionKey, DownArrowKeyCode, duration);
+    }
+
+    void scrollRight(Seconds duration = 200_ms)
+    {
+        pressKey(NSRightArrowFunctionKey, RightArrowKeyCode, duration);
+    }
+
+private:
+    static constexpr unsigned short DownArrowKeyCode { 0x7D };
+    static constexpr unsigned short RightArrowKeyCode { 0x7C };
+
+    void pressKey(auto key, unsigned short code, Seconds duration = 200_ms)
+    {
         NSString *keyString = [NSString stringWithFormat:@"%C", static_cast<unichar>(key)];
         [webView sendKey:keyString code:code isDown:YES modifiers:0];
         Util::runFor(duration);
         [webView sendKey:keyString code:code isDown:NO modifiers:0];
         Util::runFor(50_ms);
-    };
+    }
+};
+
+TEST_F(UnifiedPDFWithKeyboardScrolling, KeyboardScrollingInSinglePageMode)
+{
+    if constexpr (!unifiedPDFForTestingEnabled)
+        return;
+
+    synchronouslyLoadPDFDocument("multiple-pages"_s);
+
+    [webView objectByEvaluatingJavaScript:@"internals.setPDFDisplayModeForTesting(document.querySelector('embed'), 'SinglePageDiscrete')"];
+    [webView waitForNextPresentationUpdate];
+    [webView setMagnification:2];
 
     auto colorsBeforeScrolling = [webView sampleColors];
     Vector<WebCore::Color> colorsAfterScrollingDown;
     while (true) {
-        pressKey(NSDownArrowFunctionKey, DownArrowKeyCode);
+        scrollDown();
         colorsAfterScrollingDown = [webView sampleColors];
         if (colorsBeforeScrolling != colorsAfterScrollingDown)
             break;
@@ -121,11 +151,29 @@ UNIFIED_PDF_TEST(KeyboardScrollingInSinglePageMode)
 
     Vector<WebCore::Color> colorsAfterScrollingRight;
     while (true) {
-        pressKey(NSRightArrowFunctionKey, RightArrowKeyCode);
+        scrollRight();
         colorsAfterScrollingRight = [webView sampleColors];
         if (colorsAfterScrollingDown != colorsAfterScrollingRight)
             break;
     }
+}
+
+TEST_F(UnifiedPDFWithKeyboardScrolling, DisplayModeTransitionLandingPage)
+{
+    if constexpr (!unifiedPDFForTestingEnabled)
+        return;
+
+    synchronouslyLoadPDFDocument("multiple-pages-colored"_s);
+
+    auto colorsBefore = [webView sampleColors];
+
+    scrollDown(800_ms);
+    [webView objectByEvaluatingJavaScript:@"internals.setPDFDisplayModeForTesting(document.querySelector('embed'), 'SinglePageDiscrete')"];
+    [webView waitForNextPresentationUpdate];
+
+    auto colorsAfter = [webView sampleColors];
+
+    EXPECT_NE(colorsBefore, colorsAfter);
 }
 
 UNIFIED_PDF_TEST(CopyEditingCommandOnEmptySelectionShouldNotCrash)

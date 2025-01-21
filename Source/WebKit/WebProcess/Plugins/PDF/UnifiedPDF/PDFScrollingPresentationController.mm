@@ -335,22 +335,9 @@ std::optional<PDFDocumentLayout::PageIndex> PDFScrollingPresentationController::
 
 #pragma mark -
 
-auto PDFScrollingPresentationController::pdfPositionForCurrentView(bool preservePosition) const -> std::optional<VisiblePDFPosition>
+std::optional<PDFDocumentLayout::PageIndex> PDFScrollingPresentationController::pageIndexForCurrentView(DocumentAnchorPoint anchorPoint) const
 {
-    if (!preservePosition)
-        return { };
-
-    auto& documentLayout = m_plugin->documentLayout();
-
-    if (!documentLayout.hasLaidOutPDFDocument())
-        return { };
-
-    auto topLeftInDocumentSpace = m_plugin->convertDown(UnifiedPDFPlugin::CoordinateSpace::Plugin, UnifiedPDFPlugin::CoordinateSpace::PDFDocumentLayout, FloatPoint { });
-    auto [pageIndex, pointInPDFPageSpace] = documentLayout.pageIndexAndPagePointForDocumentYOffset(topLeftInDocumentSpace.y());
-
-    LOG_WITH_STREAM(PDF, stream << "PDFScrollingPresentationController::pdfPositionForCurrentView - point " << pointInPDFPageSpace << " in page " << pageIndex);
-
-    return VisiblePDFPosition { pageIndex, pointInPDFPageSpace };
+    return m_plugin->documentLayout().pageIndexAndPagePointForDocumentYOffset(anchorPointForDocument(anchorPoint).y()).first;
 }
 
 void PDFScrollingPresentationController::restorePDFPosition(const VisiblePDFPosition& info)

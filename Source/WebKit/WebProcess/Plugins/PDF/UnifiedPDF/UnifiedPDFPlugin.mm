@@ -1258,7 +1258,7 @@ void UnifiedPDFPlugin::updateLayout(AdjustScaleAfterLayout shouldAdjustScale, st
     auto autoSizeMode = shouldUpdateAutoSizeScaleOverride.value_or(m_didLayoutWithValidDocument ? m_shouldUpdateAutoSizeScale : ShouldUpdateAutoSizeScale::Yes);
 
     auto computeAnchoringInfo = [&] {
-        return m_presentationController->pdfPositionForCurrentView(shouldAdjustScale == AdjustScaleAfterLayout::Yes || autoSizeMode == ShouldUpdateAutoSizeScale::Yes);
+        return m_presentationController->pdfPositionForCurrentView(PDFPresentationController::DocumentAnchorPoint::TopLeft, shouldAdjustScale == AdjustScaleAfterLayout::Yes || autoSizeMode == ShouldUpdateAutoSizeScale::Yes);
     };
     auto anchoringInfo = computeAnchoringInfo();
 
@@ -3957,7 +3957,7 @@ void UnifiedPDFPlugin::setDisplayModeAndUpdateLayout(PDFDocumentLayout::DisplayM
 {
     auto shouldAdjustPageScale = m_shouldUpdateAutoSizeScale == ShouldUpdateAutoSizeScale::Yes ? AdjustScaleAfterLayout::No : AdjustScaleAfterLayout::Yes;
     bool didWantWheelEvents = m_presentationController->wantsWheelEvents();
-    auto anchoringInfo = m_presentationController->pdfPositionForCurrentView();
+    auto anchoringInfo = m_presentationController->pdfPositionForCurrentView(PDFPresentationController::DocumentAnchorPoint::Center);
 
     setDisplayMode(mode);
     {

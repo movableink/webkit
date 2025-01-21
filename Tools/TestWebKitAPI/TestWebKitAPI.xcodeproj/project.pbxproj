@@ -140,6 +140,7 @@
 		33DB57432CFD46700045C37C /* metalSpecTOC.pdf in Copy Resources */ = {isa = PBXBuildFile; fileRef = 33DB57422CFD46700045C37C /* metalSpecTOC.pdf */; };
 		33DB57462CFD9D100045C37C /* WKWebViewForTestingImmediateActions.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33DB57452CFD9D100045C37C /* WKWebViewForTestingImmediateActions.mm */; };
 		33DC89141419579F00747EF7 /* LoadCanceledNoServerRedirectCallback_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33DC89131419579F00747EF7 /* LoadCanceledNoServerRedirectCallback_Bundle.cpp */; };
+		33F734692D3B4ADB003B8704 /* multiple-pages-colored.pdf in Copy Resources */ = {isa = PBXBuildFile; fileRef = 33F734682D3B4ADB003B8704 /* multiple-pages-colored.pdf */; };
 		3545E58927E2AD1300F1910E /* WritingModeTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3545E58827E2AD1200F1910E /* WritingModeTests.cpp */; };
 		374B7A611DF371CF00ACCB6C /* BundleEditingDelegatePlugIn.mm in Sources */ = {isa = PBXBuildFile; fileRef = 374B7A5F1DF36EEE00ACCB6C /* BundleEditingDelegatePlugIn.mm */; };
 		378E64771632655E00B6C676 /* InjectedBundleFrameHitTest_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 378E64751632655D00B6C676 /* InjectedBundleFrameHitTest_Bundle.cpp */; };
@@ -1913,6 +1914,7 @@
 				A17C47D42C98E5C20023F3C7 /* mso-list-on-h4.html in Copy Resources */,
 				A17C47D52C98E5C20023F3C7 /* mso-list.html in Copy Resources */,
 				A17C47D62C98E5C20023F3C7 /* multiple-images.html in Copy Resources */,
+				33F734692D3B4ADB003B8704 /* multiple-pages-colored.pdf in Copy Resources */,
 				A17C47D72C98E5C20023F3C7 /* multiple-pages.pdf in Copy Resources */,
 				A17C46D82C98E54B0023F3C7 /* navigation-client-default-crypto.html in Copy Resources */,
 				A17C47D82C98E5C20023F3C7 /* nested-frames.html in Copy Resources */,
@@ -2454,6 +2456,7 @@
 		33DC8910141953A300747EF7 /* LoadCanceledNoServerRedirectCallback.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoadCanceledNoServerRedirectCallback.cpp; sourceTree = "<group>"; };
 		33DC89131419579F00747EF7 /* LoadCanceledNoServerRedirectCallback_Bundle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoadCanceledNoServerRedirectCallback_Bundle.cpp; sourceTree = "<group>"; };
 		33E79E05137B5FCE00E32D99 /* mouse-move-listener.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "mouse-move-listener.html"; sourceTree = "<group>"; };
+		33F734682D3B4ADB003B8704 /* multiple-pages-colored.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "multiple-pages-colored.pdf"; sourceTree = "<group>"; };
 		33FFFC3A2CB9CCFB00248AC3 /* UnifiedPDFTestHelpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UnifiedPDFTestHelpers.h; sourceTree = "<group>"; };
 		33FFFC442CBA079500248AC3 /* UnifiedPDFTestHelpers.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = UnifiedPDFTestHelpers.mm; sourceTree = "<group>"; };
 		3545E58827E2AD1200F1910E /* WritingModeTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WritingModeTests.cpp; sourceTree = "<group>"; };
@@ -5286,6 +5289,7 @@
 				9BCD4119206D5ED7001D71BE /* mso-list-on-h4.html */,
 				9BF356CC202D44F200F71160 /* mso-list.html */,
 				F42F0811274497C8007E0D90 /* multiple-images.html */,
+				33F734682D3B4ADB003B8704 /* multiple-pages-colored.pdf */,
 				F4D2C66B2BCF9DE400DADC86 /* multiple-pages.pdf */,
 				F455DB8C2BAE37C100732E1B /* nested-frames.html */,
 				2E4838462169DD42002F4531 /* nested-lists.html */,
