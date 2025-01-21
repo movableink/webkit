@@ -530,9 +530,9 @@ void CompositeEditCommand::applyStyle(const EditingStyle* style, EditAction edit
     applyCommandToComposite(ApplyStyleCommand::create(protectedDocument(), style, editingAction));
 }
 
-void CompositeEditCommand::applyStyle(const EditingStyle* style, const Position& start, const Position& end, EditAction editingAction)
+void CompositeEditCommand::applyStyle(const EditingStyle* style, const Position& start, const Position& end, EditAction editingAction, ApplyStylePropertyLevel level)
 {
-    applyCommandToComposite(ApplyStyleCommand::create(protectedDocument(), style, start, end, editingAction));
+    applyCommandToComposite(ApplyStyleCommand::create(protectedDocument(), style, start, end, editingAction, level));
 }
 
 void CompositeEditCommand::applyStyledElement(Ref<Element>&& element)

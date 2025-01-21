@@ -115,7 +115,7 @@ Ref<HTMLElement> createStyleSpanElement(Document& document)
     return createHTMLElement(document, spanTag);
 }
 
-ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyle* style, EditAction editingAction, PropertyLevel propertyLevel)
+ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyle* style, EditAction editingAction, ApplyStylePropertyLevel propertyLevel)
     : CompositeEditCommand(WTFMove(document), editingAction)
     , m_style(style->copy())
     , m_propertyLevel(propertyLevel)
@@ -126,7 +126,7 @@ ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyl
 {
 }
 
-ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyle* style, const Position& start, const Position& end, EditAction editingAction, PropertyLevel propertyLevel)
+ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyle* style, const Position& start, const Position& end, EditAction editingAction, ApplyStylePropertyLevel propertyLevel)
     : CompositeEditCommand(WTFMove(document), editingAction)
     , m_style(style->copy())
     , m_propertyLevel(propertyLevel)
@@ -192,7 +192,7 @@ Position ApplyStyleCommand::endPosition()
 void ApplyStyleCommand::doApply()
 {
     switch (m_propertyLevel) {
-    case PropertyLevel::Default: {
+    case ApplyStylePropertyLevel::Default: {
         // Apply the block-centric properties of the style.
         auto blockStyle = m_style->extractAndRemoveBlockProperties();
         if (!blockStyle->isEmpty())
@@ -204,7 +204,7 @@ void ApplyStyleCommand::doApply()
         }
         break;
     }
-    case PropertyLevel::ForceBlock:
+    case ApplyStylePropertyLevel::ForceBlock:
         // Force all properties to be applied as block styles.
         applyBlockStyle(*m_style);
         break;

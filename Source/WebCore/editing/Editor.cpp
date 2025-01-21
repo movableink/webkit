@@ -1059,7 +1059,7 @@ void Editor::applyParagraphStyle(StyleProperties* style, EditAction editingActio
     if (document->selection().isNone())
         return;
 
-    ApplyStyleCommand::create(WTFMove(document), EditingStyle::create(style).ptr(), editingAction, ApplyStyleCommand::PropertyLevel::ForceBlock)->apply();
+    ApplyStyleCommand::create(WTFMove(document), EditingStyle::create(style).ptr(), editingAction, ApplyStylePropertyLevel::ForceBlock)->apply();
 
     if (client())
         client()->didApplyStyle();

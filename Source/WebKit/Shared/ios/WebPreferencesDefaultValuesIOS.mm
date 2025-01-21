@@ -132,6 +132,10 @@ bool defaultVisuallyContiguousBidiTextSelectionEnabled()
 {
     return false;
 }
+bool defaultBidiContentAwarePasteEnabled()
+{
+    return false;
+}
 #endif
 
 } // namespace WebKit

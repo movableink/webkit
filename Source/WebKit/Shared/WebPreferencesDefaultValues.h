@@ -140,6 +140,7 @@ bool defaultGamepadVibrationActuatorEnabled();
 #if PLATFORM(IOS_FAMILY)
 bool defaultAutomaticLiveResizeEnabled();
 bool defaultVisuallyContiguousBidiTextSelectionEnabled();
+bool defaultBidiContentAwarePasteEnabled();
 #endif
 
 bool defaultRunningBoardThrottlingEnabled();

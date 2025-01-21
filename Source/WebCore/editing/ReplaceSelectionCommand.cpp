@@ -32,6 +32,7 @@
 #include "BeforeTextInsertedEvent.h"
 #include "BreakBlockquoteCommand.h"
 #include "CSSComputedStyleDeclaration.h"
+#include "CSSPrimitiveValueMappings.h"
 #include "CSSStyleDeclaration.h"
 #include "CommonAtomStrings.h"
 #include "DOMWrapperWorld.h"
@@ -71,6 +72,7 @@
 #include "Text.h"
 #include "TextIterator.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include "UnicodeHelpers.h"
 #include "VisibleUnits.h"
 #include "markup.h"
 #include <wtf/NeverDestroyed.h>
@@ -1509,7 +1511,10 @@ void ReplaceSelectionCommand::doApply()
     // no style matching is necessary.
     if (plainTextFragment)
         m_matchStyle = false;
-        
+
+    if (selectionStartWasStartOfParagraph && selectionEndWasEndOfParagraph)
+        updateDirectionForStartOfInsertedContentIfNeeded();
+
     completeHTMLReplacement(lastPositionToSelect);
 }
 
@@ -1897,6 +1902,31 @@ bool ReplaceSelectionCommand::performTrivialReplace(const ReplacementFragment& f
 std::optional<SimpleRange> ReplaceSelectionCommand::insertedContentRange() const
 {
     return makeSimpleRange(m_startOfInsertedContent, m_endOfInsertedContent);
+}
+
+void ReplaceSelectionCommand::updateDirectionForStartOfInsertedContentIfNeeded()
+{
+    if (!document().settings().bidiContentAwarePasteEnabled())
+        return;
+
+    auto editAction = editingAction();
+    if (editAction != EditAction::Paste && editAction != EditAction::InsertFromDrop)
+        return;
+
+    VisiblePosition visibleStartOfInsertedContent { m_startOfInsertedContent };
+    auto firstParagraphRange = makeSimpleRange({ visibleStartOfInsertedContent, endOfParagraph(visibleStartOfInsertedContent) });
+    if (!firstParagraphRange)
+        return;
+
+    auto direction = baseTextDirection(plainText(*firstParagraphRange));
+    if (!direction)
+        return;
+
+    if (direction == directionOfEnclosingBlock(m_startOfInsertedContent))
+        return;
+
+    Ref style = EditingStyle::create(CSSPropertyDirection, toCSSValueID(*direction));
+    applyStyle(style.ptr(), m_startOfInsertedContent, m_startOfInsertedContent, EditAction::SetBlockWritingDirection, ApplyStylePropertyLevel::ForceBlock);
 }
 
 } // namespace WebCore

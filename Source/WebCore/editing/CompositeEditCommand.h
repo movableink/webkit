@@ -67,6 +67,8 @@ private:
     VisiblePositionIndexRange m_rangeDeletedByReapply;
 };
 
+enum class ApplyStylePropertyLevel : bool { Default, ForceBlock };
+
 class EditCommandComposition : public UndoStep {
 public:
     enum class AddToUndoStack : bool {
@@ -152,7 +154,7 @@ protected:
     void applyCommandToComposite(Ref<EditCommand>&&);
     void applyCommandToComposite(Ref<CompositeEditCommand>&&, const VisibleSelection&);
     void applyStyle(const EditingStyle*, EditAction = EditAction::ChangeAttributes);
-    void applyStyle(const EditingStyle*, const Position& start, const Position& end, EditAction = EditAction::ChangeAttributes);
+    void applyStyle(const EditingStyle*, const Position& start, const Position& end, EditAction = EditAction::ChangeAttributes, ApplyStylePropertyLevel = ApplyStylePropertyLevel::Default);
     void applyStyledElement(Ref<Element>&&);
     void removeStyledElement(Ref<Element>&&);
     void deleteSelection(bool smartDelete = false, bool mergeBlocksAfterDelete = true, bool replace = false, bool expandForSpecialElements = true, bool sanitizeMarkup = true);

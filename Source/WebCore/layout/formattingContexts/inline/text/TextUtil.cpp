@@ -38,8 +38,8 @@
 #include "SurrogatePairAwareTextIterator.h"
 #include "TextRun.h"
 #include "TextSpacing.h"
+#include "UnicodeHelpers.h"
 #include "WidthIterator.h"
-#include <unicode/ubidi.h>
 #include <wtf/text/CharacterProperties.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/TextBreakIterator.h>
@@ -574,8 +574,7 @@ TextDirection TextUtil::directionForTextContent(StringView content)
 {
     if (content.is8Bit())
         return TextDirection::LTR;
-    auto characters = content.span16();
-    return ubidi_getBaseDirection(characters.data(), characters.size()) == UBIDI_RTL ? TextDirection::RTL : TextDirection::LTR;
+    return baseTextDirection(content).value_or(TextDirection::LTR);
 }
 
 AtomString TextUtil::ellipsisTextInInlineDirection(bool isHorizontal)
