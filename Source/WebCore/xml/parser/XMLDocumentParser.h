@@ -30,8 +30,13 @@
 #include "ScriptableDocumentParser.h"
 #include "SegmentedString.h"
 #include "XMLErrors.h"
+// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
+IGNORE_WARNINGS_BEGIN("deprecated-declarations")
+IGNORE_WARNINGS_BEGIN("undef")
 #include <libxml/tree.h>
 #include <libxml/xmlstring.h>
+IGNORE_WARNINGS_END
+IGNORE_WARNINGS_END
 #include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>

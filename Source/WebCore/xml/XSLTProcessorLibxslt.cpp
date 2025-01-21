@@ -112,7 +112,10 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         xsltTransformContextPtr context = (xsltTransformContextPtr)ctxt;
         xmlChar* base = xmlNodeGetBase(context->document->doc, context->node);
         URL url(URL({ }, String::fromLatin1(byteCast<char>(base))), String::fromLatin1(byteCast<char>(uri)));
+// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
+IGNORE_WARNINGS_BEGIN("deprecated-declarations")
         xmlFree(base);
+IGNORE_WARNINGS_END
         ResourceError error;
         ResourceResponse response;
 
