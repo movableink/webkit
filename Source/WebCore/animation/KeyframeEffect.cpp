@@ -94,8 +94,12 @@ KeyframeEffect::ParsedKeyframe::~ParsedKeyframe() = default;
 
 static inline void invalidateElement(const std::optional<const Styleable>& styleable)
 {
-    if (styleable)
-        styleable->element.invalidateStyleForAnimation();
+    if (!styleable)
+        return;
+
+    auto& element = styleable->element;
+    if (!element.document().inStyleRecalc())
+        element.invalidateStyleForAnimation();
 }
 
 String KeyframeEffect::CSSPropertyIDToIDLAttributeName(CSSPropertyID property)

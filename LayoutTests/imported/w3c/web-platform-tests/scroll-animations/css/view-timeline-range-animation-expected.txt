@@ -14,5 +14,5 @@ PASS Animation with ranges [exit 20px, exit 80px]
 PASS Animation with ranges [exit-crossing 20px, exit-crossing 80px]
 PASS Animation with ranges [contain 20px, contain calc(100px - 10%)]
 PASS Animation with ranges [exit 2em, exit 8em]
-FAIL Animation with ranges [exit 2em, exit 8em] (scoped) assert_equals: expected "0" but got "100"
+PASS Animation with ranges [exit 2em, exit 8em] (scoped)
 
