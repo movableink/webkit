@@ -1159,7 +1159,7 @@ sub determineConfigurationProductDir
     return if defined $configurationProductDir;
     determineBaseProductDir();
     determineConfiguration();
-    if (isWin() || isPlayStation()) {
+    if (isWin() || isPlayStation() || (isJSCOnly() && isWindows())) {
         $configurationProductDir = File::Spec->catdir($baseProductDir, $configuration);
     } else {
         if (usesPerConfigurationBuildDirectory()) {

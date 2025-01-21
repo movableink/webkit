@@ -1460,7 +1460,7 @@ set(JavaScriptCore_INTERFACE_DEPENDENCIES
 WEBKIT_FRAMEWORK_DECLARE(JavaScriptCore)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
-if (PORT STREQUAL GTK OR PORT STREQUAL WPE OR PORT STREQUAL JSCOnly)
+if (NOT WIN32)
     WEBKIT_ADD_TARGET_CXX_FLAGS(JavaScriptCore
         -Wunsafe-buffer-usage
         -fsafe-buffer-usage-suggestions
