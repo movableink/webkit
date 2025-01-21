@@ -445,10 +445,22 @@ void HTMLLinkElement::processInternalResourceLink(Element* element)
     // If the change originated from a specific element, then we can just check if that's
     // the right one instead doing a tree search using the name
     if (element) {
-        if (element->isConnected() && (element->getIdAttribute() == m_url.fragmentIdentifier() || (is<HTMLAnchorElement>(*element) && document().isMatchingAnchor(*downcast<HTMLAnchorElement>(element), m_url.fragmentIdentifier()))))
+        auto elementMatchesLinkId = [&](StringView id) {
+            if (element->getIdAttribute() == id)
+                return true;
+            RefPtr anchorElement = dynamicDowncast<HTMLAnchorElement>(element);
+            if (anchorElement && document().isMatchingAnchor(*anchorElement, m_url.fragmentIdentifier()))
+                return true;
+            return false;
+        };
+
+        if (element->isConnected() && (elementMatchesLinkId(m_url.fragmentIdentifier()) || elementMatchesLinkId(PAL::decodeURLEscapeSequences(m_url.fragmentIdentifier()))))
             indicatedElement = element;
-    } else
+    } else {
         indicatedElement = document().findAnchor(m_url.fragmentIdentifier());
+        if (!indicatedElement)
+            indicatedElement = document().findAnchor(PAL::decodeURLEscapeSequences(m_url.fragmentIdentifier()));
+    }
 
     // Don't match if indicatedElement "is on a stack of open elements of an HTML parser whose associated Document is doc"
     if (RefPtr parser = document().htmlDocumentParser(); parser && indicatedElement) {

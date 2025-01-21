@@ -6414,8 +6414,6 @@ imported/w3c/web-platform-tests/webcodecs/videoFrame-createImageBitmap.https.any
 imported/w3c/web-platform-tests/webcodecs/video-encoder.https.any.worker.html [ DumpJSConsoleLogInStdErr ]
 imported/w3c/web-platform-tests/webcodecs/video-encoder.https.any.html [ DumpJSConsoleLogInStdErr ]
 
-webkit.org/b/278192 imported/w3c/web-platform-tests/html/dom/render-blocking/element-render-blocking-033.html [ Failure ]
-
 webkit.org/b/258192 imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.worker.html?h264_avc [ Pass Failure ]
 
 # These tests are timing out since their import.
