@@ -126,6 +126,7 @@ uint32_t BBQJIT::sizeOfType(TypeKind type)
     case TypeKind::Arrayref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -236,6 +237,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::getGlobal(uint32_t index, Value& result
         case TypeKind::I31ref:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
+        case TypeKind::Nullexn:
         case TypeKind::Nullref:
         case TypeKind::Nullfuncref:
         case TypeKind::Nullexternref:
@@ -318,6 +320,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::setGlobal(uint32_t index, Value value)
         case TypeKind::I31ref:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
+        case TypeKind::Nullexn:
         case TypeKind::Nullref:
         case TypeKind::Nullfuncref:
         case TypeKind::Nullexternref:
@@ -2993,6 +2996,7 @@ void BBQJIT::emitCatchImpl(ControlData& dataCatch, const TypeDefinition& excepti
             case TypeKind::Externref:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
+            case TypeKind::Nullexn:
             case TypeKind::Nullref:
             case TypeKind::Nullfuncref:
             case TypeKind::Nullexternref:
@@ -3081,6 +3085,7 @@ void BBQJIT::emitCatchTableImpl(ControlData& entryData, ControlType::TryTableTar
                 case TypeKind::Externref:
                 case TypeKind::Eqref:
                 case TypeKind::Anyref:
+                case TypeKind::Nullexn:
                 case TypeKind::Nullref:
                 case TypeKind::Nullfuncref:
                 case TypeKind::Nullexternref:
@@ -4869,6 +4874,7 @@ void BBQJIT::emitStoreConst(Value constant, Location loc)
     case TypeKind::Externref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -4913,6 +4919,7 @@ void BBQJIT::emitMoveConst(Value constant, Location loc)
     case TypeKind::Externref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -4958,6 +4965,7 @@ void BBQJIT::emitStore(TypeKind type, Location src, Location dst)
     case TypeKind::Structref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -4998,6 +5006,7 @@ void BBQJIT::emitMoveMemory(TypeKind type, Location src, Location dst)
     case TypeKind::Arrayref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -5032,6 +5041,7 @@ void BBQJIT::emitMoveRegister(TypeKind type, Location src, Location dst)
     case TypeKind::Structref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -5077,6 +5087,7 @@ void BBQJIT::emitLoad(TypeKind type, Location src, Location dst)
     case TypeKind::Structref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:

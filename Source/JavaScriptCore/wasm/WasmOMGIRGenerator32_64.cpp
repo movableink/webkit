@@ -3936,6 +3936,7 @@ void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referen
         case Wasm::TypeKind::Anyref:
             // Casts to these types cannot fail as they are the top types of their respective hierarchies, and static type-checking does not allow cross-hierarchy casts.
             break;
+        case Wasm::TypeKind::Nullexn:
         case Wasm::TypeKind::Nullref:
         case Wasm::TypeKind::Nullfuncref:
         case Wasm::TypeKind::Nullexternref:

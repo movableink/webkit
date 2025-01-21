@@ -129,6 +129,11 @@ inline bool isAnyref(Type type)
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Anyref);
 }
 
+inline bool isNullexnref(Type type)
+{
+    return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Nullexn);
+}
+
 inline bool isNullref(Type type)
 {
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Nullref);
@@ -327,6 +332,9 @@ inline bool isSubtype(Type sub, Type parent)
     if (isNullexternref(sub) && isExternref(parent))
         return true;
 
+    if (isNullexnref(sub) && isExnref(parent))
+        return true;
+
     if (sub.isRef() && parent.isRefNull())
         return sub.index == parent.index;
 
@@ -353,6 +361,7 @@ inline bool isValidHeapTypeKind(intptr_t kind)
     case static_cast<intptr_t>(TypeKind::Structref):
     case static_cast<intptr_t>(TypeKind::Eqref):
     case static_cast<intptr_t>(TypeKind::Anyref):
+    case static_cast<intptr_t>(TypeKind::Nullexn):
     case static_cast<intptr_t>(TypeKind::Nullref):
     case static_cast<intptr_t>(TypeKind::Nullfuncref):
     case static_cast<intptr_t>(TypeKind::Nullexternref):
@@ -390,6 +399,8 @@ inline const char* heapTypeKindAsString(TypeKind kind)
         return "noextern";
     case TypeKind::Exn:
         return "exn";
+    case TypeKind::Nullexn:
+        return "nullexn";
     default:
         RELEASE_ASSERT_NOT_REACHED();
         return "";

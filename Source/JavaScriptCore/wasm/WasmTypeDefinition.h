@@ -321,6 +321,7 @@ constexpr size_t typeKindSizeInBytes(TypeKind kind)
     case TypeKind::Rec:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:

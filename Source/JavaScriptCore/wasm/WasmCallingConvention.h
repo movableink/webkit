@@ -224,6 +224,7 @@ public:
             case TypeKind::Arrayref:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
+            case TypeKind::Nullexn:
             case TypeKind::Nullref:
             case TypeKind::Nullfuncref:
             case TypeKind::Nullexternref:
@@ -274,6 +275,7 @@ public:
             case TypeKind::Arrayref:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
+            case TypeKind::Nullexn:
             case TypeKind::Nullref:
             case TypeKind::Nullfuncref:
             case TypeKind::Nullexternref:

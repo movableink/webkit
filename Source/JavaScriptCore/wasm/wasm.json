@@ -12,6 +12,7 @@
         "f32":           { "type": "varint7", "value":   -3, "b3type": "B3::Float",  "width": 32 },
         "f64":           { "type": "varint7", "value":   -4, "b3type": "B3::Double", "width": 64 },
         "v128":          { "type": "varint7", "value":   -5, "b3type": "B3::V128",   "width": 128 },
+        "nullexn":       { "type": "varint7", "value":  -12, "b3type": "B3::Void",   "width": 0 },
         "nullfuncref":   { "type": "varint7", "value":  -13, "b3type": "B3::Void",   "width": 0 },
         "nullexternref": { "type": "varint7", "value":  -14, "b3type": "B3::Void",   "width": 0 },
         "nullref":       { "type": "varint7", "value":  -15, "b3type": "B3::Void",   "width": 0 },

@@ -1114,6 +1114,7 @@ bool TypeInformation::castReference(JSValue refValue, bool allowNull, TypeIndex 
             return jsDynamicCast<WebAssemblyFunctionBase*>(refValue);
         case TypeKind::Eqref:
             return (refValue.isInt32() && refValue.asInt32() <= maxI31ref && refValue.asInt32() >= minI31ref) || jsDynamicCast<JSWebAssemblyArray*>(refValue) || jsDynamicCast<JSWebAssemblyStruct*>(refValue);
+        case TypeKind::Nullexn:
         case TypeKind::Nullref:
         case TypeKind::Nullfuncref:
         case TypeKind::Nullexternref:
