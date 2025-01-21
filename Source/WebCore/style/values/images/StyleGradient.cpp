@@ -38,8 +38,6 @@
 #include "StylePrimitiveNumericTypes+Conversions.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 namespace Style {
 
@@ -494,7 +492,7 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
         }
 
         float midpoint = (offset - offset1) / (offset2 - offset1);
-        ResolvedGradientStop newStops[9];
+        std::array<ResolvedGradientStop, 9> newStops;
         if (midpoint > .5f) {
             for (size_t y = 0; y < 6; ++y)
                 newStops[y].offset = offset1 + (offset - offset1) * (7 + y) / 13;
@@ -518,7 +516,7 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
         }
 
         stops.remove(x);
-        stops.insert(x, newStops, 9);
+        stops.insertSpan(x, std::span { newStops });
         x += 9;
     }
 
@@ -1226,5 +1224,3 @@ bool isOpaque(const Gradient& gradient, const RenderStyle& style)
 
 } // namespace Style
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
