@@ -5166,7 +5166,7 @@ bool RenderBox::shrinkToAvoidFloats() const
 
 bool RenderBox::avoidsFloats() const
 {
-    if (isReplacedOrAtomicInline() || isLegend() || (element() && element()->isFormControlElement()))
+    if (is<RenderReplaced>(*this) || isLegend() || (element() && element()->isFormControlElement()))
         return true;
 
 #if ENABLE(MATHML)
