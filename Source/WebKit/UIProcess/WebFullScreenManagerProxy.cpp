@@ -190,15 +190,6 @@ void WebFullScreenManagerProxy::requestExitFullScreen()
     sendToWebProcess(Messages::WebFullScreenManager::RequestExitFullScreen());
 }
 
-void WebFullScreenManagerProxy::supportsFullScreen(bool withKeyboard, CompletionHandler<void(bool)>&& completionHandler)
-{
-#if PLATFORM(IOS_FAMILY)
-    completionHandler(!withKeyboard);
-#else
-    completionHandler(true);
-#endif
-}
-
 void WebFullScreenManagerProxy::saveScrollPosition()
 {
     sendToWebProcess(Messages::WebFullScreenManager::SaveScrollPosition());

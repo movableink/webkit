@@ -129,12 +129,10 @@ public:
     void unlockFullscreenOrientation();
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
-    bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
 
 private:
     WebFullScreenManagerProxy(WebPageProxy&, WebFullScreenManagerProxyClient&);
 
-    void supportsFullScreen(bool withKeyboard, CompletionHandler<void(bool)>&&);
     void enterFullScreen(IPC::Connection&, bool blocksReturnToFullscreenFromPictureInPicture, FullScreenMediaDetails&&, CompletionHandler<void(bool)>&&);
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     void updateImageSource(FullScreenMediaDetails&&);

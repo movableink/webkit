@@ -47,9 +47,11 @@ bool InjectedBundlePageFullScreenClient::supportsFullScreen(WebPage *page, bool 
     if (m_client.supportsFullScreen) 
         return m_client.supportsFullScreen(toAPI(page), withKeyboard);
 
-    auto sendResult = page->sendSync(Messages::WebFullScreenManagerProxy::SupportsFullScreen(withKeyboard));
-    auto [supports] = sendResult.takeReplyOr(true);
-    return supports;
+#if PLATFORM(IOS_FAMILY)
+    return !withKeyboard;
+#else
+    return true;
+#endif
 }
 
 void InjectedBundlePageFullScreenClient::enterFullScreenForElement(WebPage& page, WebCore::Element& element, bool blocksReturnToFullscreenFromPictureInPicture, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode, FullScreenMediaDetails&& mediaDetails)
