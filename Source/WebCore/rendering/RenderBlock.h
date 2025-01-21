@@ -147,7 +147,7 @@ public:
 
     RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
 
-    virtual bool establishesIndependentFormattingContext(const RenderStyle* overridingStyle = nullptr) const;
+    bool establishesIndependentFormattingContext() const;
     bool createsNewFormattingContext() const;
 
     static inline bool shouldSkipCreatingRunsForObject(RenderObject&);
@@ -258,6 +258,7 @@ public:
 
 protected:
     RenderFragmentedFlow* locateEnclosingFragmentedFlow() const override;
+    bool establishesIndependentFormattingContextIgnoringDisplayType(const RenderStyle&) const;
 
     void layout() override;
 

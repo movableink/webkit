@@ -267,7 +267,6 @@ private:
     LayoutUnit translateRTLCoordinate(LayoutUnit) const;
 
     bool shouldResetLogicalHeightBeforeLayout() const override { return true; }
-    bool establishesIndependentFormattingContext(const RenderStyle* overridingStyle = nullptr) const override;
 
     bool aspectRatioPrefersInline(const RenderBox& gridItem, bool blockFlowIsColumnAxis);
 

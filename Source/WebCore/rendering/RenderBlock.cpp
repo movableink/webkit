@@ -1345,28 +1345,19 @@ void RenderBlock::addContinuationWithOutline(RenderInline* flow)
     continuations->add(*flow);
 }
 
-bool RenderBlock::establishesIndependentFormattingContext(const RenderStyle* overridingStyle) const
+bool RenderBlock::establishesIndependentFormattingContextIgnoringDisplayType(const RenderStyle& style) const
 {
-    if (isGridItem() && !is<RenderGrid>(*this))
-        return true;
-
-    auto& style = overridingStyle ? *overridingStyle : this->style();
-    auto hasPaintContainment = [&] {
-        if (auto* element = this->element())
-            return WebCore::shouldApplyPaintContainment(style, *element);
+    if (!element()) {
+        ASSERT(isAnonymous());
         return false;
-    };
+    }
 
     auto isBlockBoxWithPotentiallyScrollableOverflow = [&] {
-        if (auto* element = this->element()) {
-            return style.isDisplayBlockLevel()
-                && style.doesDisplayGenerateBlockContainer()
-                && !element->isReplaced(style)
-                && hasNonVisibleOverflow()
-                && style.overflowX() != Overflow::Clip
-                && style.overflowX() != Overflow::Visible;
-        }
-        return false;
+        return style.isDisplayBlockLevel()
+            && style.doesDisplayGenerateBlockContainer()
+            && hasNonVisibleOverflow()
+            && style.overflowX() != Overflow::Clip
+            && style.overflowX() != Overflow::Visible;
     };
 
     return style.isFloating()
@@ -1374,8 +1365,27 @@ bool RenderBlock::establishesIndependentFormattingContext(const RenderStyle* ove
         || isBlockBoxWithPotentiallyScrollableOverflow()
         || style.containsLayout()
         || style.containerType() != ContainerType::Normal
-        || hasPaintContainment()
+        || WebCore::shouldApplyPaintContainment(style, *element())
         || (style.isDisplayBlockLevel() && style.blockStepSize());
+}
+
+bool RenderBlock::establishesIndependentFormattingContext() const
+{
+    auto& style = this->style();
+    if (establishesIndependentFormattingContextIgnoringDisplayType(style))
+        return true;
+
+    if (isGridItem()) {
+        // Grid items establish a new independent formatting context, unless they're a subgrid
+        // https://drafts.csswg.org/css-grid-2/#grid-item-display
+        if (!style.gridSubgridColumns() && !style.gridSubgridRows())
+            return true;
+        // Masonry makes grid items not subgrids.
+        if (CheckedPtr parentGridBox = dynamicDowncast<RenderGrid>(parent()))
+            return parentGridBox->isMasonry();
+    }
+
+    return false;
 }
 
 
