@@ -89,7 +89,7 @@ index f36b91e..2d73091 100644
    url: freedesktop:gstreamer/gstreamer.git
    track: 1.*[02468].*
 -  ref: 1.22.5-0-gbf6ce1d64a0697e7910826147b48f8f658366a5a
-+  ref: 1.24.9-0-gb309f90bfde36e6d175b70bfa0c941f2829dd6a5
++  ref: 1.24.11-0-gc0491f96b58a19d637ce0314cf062deba013d455
  - kind: patch_queue
    path: patches/gstreamer
 diff --git a/patches/gstreamer/graceful-error-noopenh264.patch b/patches/gstreamer/graceful-error-noopenh264.patch
