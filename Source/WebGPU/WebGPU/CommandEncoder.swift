@@ -813,7 +813,7 @@ extension WebGPU.CommandEncoder {
                     let blockSizeValue: UInt32 = blockSize.value()
                     let (result, didOverflow) = blockSizeValue.multipliedReportingOverflow(by: device.limitsCopy().maxTextureDimension1D)
                     if !didOverflow {
-                        sourceBytesPerRow = UInt(result)
+                        sourceBytesPerRow = min(sourceBytesPerRow, UInt(result))
                     }
                 }
             case WGPUTextureDimension_2D, WGPUTextureDimension_3D:
@@ -822,7 +822,7 @@ extension WebGPU.CommandEncoder {
                     let blockSizeValue: UInt32 = blockSize.value()
                     let (result, didOverflow) = blockSizeValue.multipliedReportingOverflow(by: device.limitsCopy().maxTextureDimension2D)
                     if !didOverflow {
-                        sourceBytesPerRow = UInt(result)
+                        sourceBytesPerRow = min(sourceBytesPerRow, UInt(result))
                     }
                 }
             case WGPUTextureDimension_Force32:
@@ -1010,7 +1010,7 @@ extension WebGPU.CommandEncoder {
                 let destinationOrigin = MTLOriginMake(Int(destination.origin.x), Int(destination.origin.y), 0);
                 for layer in 0..<copySize.depthOrArrayLayers {
                     var layerTimesSourceBytesPerImage = UInt(layer)
-                    (layerTimesSourceBytesPerImage, didOverflow) = layerTimesSourceBytesPerImage.addingReportingOverflow(sourceBytesPerImage)
+                    (layerTimesSourceBytesPerImage, didOverflow) = layerTimesSourceBytesPerImage.multipliedReportingOverflow(by: sourceBytesPerImage)
                     guard !didOverflow else {
                         return
                     }
