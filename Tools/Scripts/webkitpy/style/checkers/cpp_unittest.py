@@ -1852,7 +1852,6 @@ class CppStyleTest(CppStyleTestBase):
             'strcpy(destination, source)',
             'Almost always, snprintf is better than strcpy.'
             '  [security/printf] [4]')
-        self.assert_lint('strstr(haystack, "needle")', '')
 
     # Test potential format string bugs like printf(foo).
     def test_format_strings(self):
@@ -5227,14 +5226,14 @@ class WebKitStyleTest(CppStyleTestBase):
             '')
         self.assert_multi_line_lint(
             '#define MyMacro(name, status) \\\n'
-            '    if (strstr(arg, #name) { \\\n'
+            '    if (contains(arg, #name)) { \\\n'
             '        name##_ = !status; \\\n'
             '        continue; \\\n'
             '    }\n',
             '')
         self.assert_multi_line_lint(
             '#define MyMacro(name, status) \\\n'
-            '    if (strstr(arg, #name) \\\n'
+            '    if (contains(arg, #name)) \\\n'
             '        name##_ = !status; \\\n'
             '        continue;\n',
             'Multi line control clauses should use braces.  [whitespace/braces] [4]')
@@ -6296,7 +6295,12 @@ class WebKitStyleTest(CppStyleTestBase):
 
         self.assert_lint(
             'char* result = memmem(haystack, strlen(haystack), needle, strlen(needle));',
-            'Use memmemSpan() instead of memmem().  [safercpp/memmem] [4]',
+            'Use WTF::find() or WTF::contains() instead of memmem().  [safercpp/memmem] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'char* result = strstr(haystack, needle);',
+            'Use WTF::find() or WTF::contains() instead of strstr().  [safercpp/strstr] [4]',
             'foo.cpp')
 
     def test_ctype_fucntion(self):

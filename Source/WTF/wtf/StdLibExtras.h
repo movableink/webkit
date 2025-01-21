@@ -1032,7 +1032,7 @@ bool equalSpans(std::span<T, TExtent> a, std::span<U, UExtent> b)
     static_assert(ignoreTypeChecks == IgnoreTypeChecks::Yes || std::has_unique_object_representations_v<U>);
     if (a.size() != b.size())
         return false;
-    return !memcmp(a.data(), b.data(), a.size_bytes());
+    return !memcmp(a.data(), b.data(), a.size_bytes()); // NOLINT
 }
 
 template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
@@ -1043,7 +1043,7 @@ bool spanHasPrefix(std::span<T, TExtent> span, std::span<U, UExtent> prefix)
     static_assert(std::has_unique_object_representations_v<U>);
     if (span.size() < prefix.size())
         return false;
-    return !memcmp(span.data(), prefix.data(), prefix.size_bytes());
+    return !memcmp(span.data(), prefix.data(), prefix.size_bytes()); // NOLINT
 }
 
 template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
@@ -1054,7 +1054,7 @@ bool spanHasSuffix(std::span<T, TExtent> span, std::span<U, UExtent> suffix)
     static_assert(std::has_unique_object_representations_v<U>);
     if (span.size() < suffix.size())
         return false;
-    return !memcmp(span.last(suffix.size()).data(), suffix.data(), suffix.size_bytes());
+    return !memcmp(span.last(suffix.size()).data(), suffix.data(), suffix.size_bytes()); // NOLINT
 }
 
 template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
@@ -1063,7 +1063,7 @@ int compareSpans(std::span<T, TExtent> a, std::span<U, UExtent> b)
     static_assert(sizeof(T) == sizeof(U));
     static_assert(std::has_unique_object_representations_v<T>);
     static_assert(std::has_unique_object_representations_v<U>);
-    int result = memcmp(a.data(), b.data(), std::min(a.size_bytes(), b.size_bytes()));
+    int result = memcmp(a.data(), b.data(), std::min(a.size_bytes(), b.size_bytes())); // NOLINT
     if (!result && a.size() != b.size())
         result = (a.size() > b.size()) ? 1 : -1;
     return result;
@@ -1071,12 +1071,18 @@ int compareSpans(std::span<T, TExtent> a, std::span<U, UExtent> b)
 
 // Returns the index of the first occurrence of |needed| in |haystack| or notFound if not present.
 template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
-size_t memmemSpan(std::span<T, TExtent> haystack, std::span<U, UExtent> needle)
+size_t find(std::span<T, TExtent> haystack, std::span<U, UExtent> needle)
 {
-    auto* result = static_cast<T*>(memmem(haystack.data(), haystack.size(), needle.data(), needle.size()));
+    auto* result = static_cast<T*>(memmem(haystack.data(), haystack.size(), needle.data(), needle.size())); // NOLINT
     if (!result)
         return notFound;
     return result - haystack.data();
+}
+
+template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
+size_t contains(std::span<T, TExtent> haystack, std::span<U, UExtent> needle)
+{
+    return !!memmem(haystack.data(), haystack.size(), needle.data(), needle.size()); // NOLINT
 }
 
 template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
@@ -1086,7 +1092,7 @@ void memcpySpan(std::span<T, TExtent> destination, std::span<U, UExtent> source)
     static_assert(std::is_trivially_copyable_v<T> || std::is_floating_point_v<T>);
     static_assert(std::is_trivially_copyable_v<U> || std::is_floating_point_v<U>);
     RELEASE_ASSERT(destination.size() >= source.size());
-    memcpy(destination.data(), source.data(), source.size_bytes());
+    memcpy(destination.data(), source.data(), source.size_bytes()); // NOLINT
 }
 
 template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
@@ -1096,21 +1102,21 @@ void memmoveSpan(std::span<T, TExtent> destination, std::span<U, UExtent> source
     static_assert(std::is_trivially_copyable_v<T> || std::is_floating_point_v<T>);
     static_assert(std::is_trivially_copyable_v<U> || std::is_floating_point_v<U>);
     RELEASE_ASSERT(destination.size() >= source.size());
-    memmove(destination.data(), source.data(), source.size_bytes());
+    memmove(destination.data(), source.data(), source.size_bytes()); // NOLINT
 }
 
 template<typename T, std::size_t Extent>
 void memsetSpan(std::span<T, Extent> destination, uint8_t byte)
 {
     static_assert(std::is_trivially_copyable_v<T>);
-    memset(destination.data(), byte, destination.size_bytes());
+    memset(destination.data(), byte, destination.size_bytes()); // NOLINT
 }
 
 template<typename T, std::size_t Extent>
 void zeroSpan(std::span<T, Extent> destination)
 {
     static_assert(std::is_trivially_copyable_v<T> || std::is_floating_point_v<T>);
-    memset(destination.data(), 0, destination.size_bytes());
+    memset(destination.data(), 0, destination.size_bytes()); // NOLINT
 }
 
 template<typename T>
@@ -1124,9 +1130,9 @@ void secureMemsetSpan(std::span<T, Extent> destination, uint8_t byte)
 {
     static_assert(std::is_trivially_copyable_v<T>);
 #ifdef __STDC_LIB_EXT1__
-    memset_s(destination.data(), byte, destination.size_bytes());
+    memset_s(destination.data(), byte, destination.size_bytes()); // NOLINT
 #else
-    memset(destination.data(), byte, destination.size_bytes());
+    memset(destination.data(), byte, destination.size_bytes()); // NOLINT
 #endif
 }
 
@@ -1381,8 +1387,10 @@ using WTF::byteCast;
 using WTF::callStatelessLambda;
 using WTF::checkAndSet;
 using WTF::compareSpans;
+using WTF::contains;
 using WTF::constructFixedSizeArrayWithArguments;
 using WTF::equalSpans;
+using WTF::find;
 using WTF::findBitInWord;
 using WTF::insertIntoBoundedVector;
 using WTF::is8ByteAligned;
@@ -1394,7 +1402,6 @@ using WTF::makeUnique;
 using WTF::makeUniqueWithoutFastMallocCheck;
 using WTF::makeUniqueWithoutRefCountedCheck;
 using WTF::memcpySpan;
-using WTF::memmemSpan;
 using WTF::memmoveSpan;
 using WTF::memsetSpan;
 using WTF::mergeDeduplicatedSorted;

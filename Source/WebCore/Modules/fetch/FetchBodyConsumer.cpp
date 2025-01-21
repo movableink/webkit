@@ -144,7 +144,7 @@ FetchBodyConsumer& FetchBodyConsumer::operator=(FetchBodyConsumer&&) = default;
 RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* context, const String& contentType, std::span<const uint8_t> data)
 {
     auto parseMultipartPart = [context] (std::span<const uint8_t> part, DOMFormData& form) -> bool {
-        size_t headerEnd = memmemSpan(part, "\r\n\r\n"_span);
+        size_t headerEnd = find(part, "\r\n\r\n"_span);
         if (headerEnd == notFound)
             return false;
         auto headerBytes = part.first(headerEnd);
@@ -203,12 +203,12 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         CString boundary = boundaryWithDashes.utf8();
         size_t boundaryLength = boundary.length();
 
-        size_t currentBoundaryIndex = memmemSpan(data, boundary.span());
+        size_t currentBoundaryIndex = find(data, boundary.span());
         if (currentBoundaryIndex == notFound)
             return nullptr;
         skip(data, currentBoundaryIndex + boundaryLength);
         size_t nextBoundaryIndex;
-        while ((nextBoundaryIndex = memmemSpan(data, boundary.span())) != notFound) {
+        while ((nextBoundaryIndex = find(data, boundary.span())) != notFound) {
             parseMultipartPart(data.first(nextBoundaryIndex - strlen("\r\n")), form.get());
             currentBoundaryIndex = nextBoundaryIndex;
             skip(data, nextBoundaryIndex + boundaryLength);

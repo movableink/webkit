@@ -80,7 +80,7 @@ static String createWithFormatAndArguments(const char* format, va_list args)
 ALLOW_NONLITERAL_FORMAT_BEGIN
 
 #if USE(CF)
-    if (strstr(format, "%@")) {
+    if (contains(span8(format), "%@"_span)) {
         auto cfFormat = adoptCF(CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, format, kCFStringEncodingUTF8, kCFAllocatorNull));
         auto result = adoptCF(CFStringCreateWithFormatAndArguments(kCFAllocatorDefault, nullptr, cfFormat.get(), args));
         va_end(argsCopy);
@@ -152,7 +152,7 @@ WTF_ATTRIBUTE_PRINTF(2, 0)
 static void vprintf_stderr_common([[maybe_unused]] WTFLogChannel* channel, const char* format, va_list args)
 {
 #if USE(CF)
-    if (strstr(format, "%@")) {
+    if (contains(span8(format), "%@"_span)) {
         auto cfFormat = adoptCF(CFStringCreateWithCStringNoCopy(nullptr, format, kCFStringEncodingUTF8, kCFAllocatorNull));
 
 ALLOW_NONLITERAL_FORMAT_BEGIN

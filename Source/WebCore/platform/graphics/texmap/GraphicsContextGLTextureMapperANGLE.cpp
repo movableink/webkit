@@ -35,6 +35,7 @@
 #include "Logging.h"
 #include "PixelBuffer.h"
 #include "PlatformDisplay.h"
+#include <wtf/StdLibExtras.h>
 
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
 #include "VideoFrame.h"
@@ -275,7 +276,7 @@ bool GraphicsContextGLTextureMapperANGLE::platformInitializeContext()
     eglContextAttributes.append(0);
 #endif
 
-    if (strstr(displayExtensions, "EGL_ANGLE_power_preference")) {
+    if (contains(span8(displayExtensions), "EGL_ANGLE_power_preference"_span)) {
         eglContextAttributes.append(EGL_POWER_PREFERENCE_ANGLE);
         // EGL_LOW_POWER_ANGLE is the default. Change to
         // EGL_HIGH_POWER_ANGLE if desired.

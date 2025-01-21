@@ -43,6 +43,7 @@
 #import <pal/spi/cocoa/MetalSPI.h>
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/RuntimeApplicationChecks.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/darwin/WeakLinking.h>
 #import <wtf/text/CString.h>
 
@@ -104,8 +105,8 @@ static EGLDisplay initializeEGLDisplay(const GraphicsContextGLAttributes& attrs)
     }
 
 #if ASSERT_ENABLED
-    const char* clientExtensions = EGL_QueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
-    ASSERT(clientExtensions);
+    auto clientExtensions = span8(EGL_QueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS));
+    ASSERT(clientExtensions.data());
 #endif
 
     Vector<EGLAttrib> displayAttributes;
@@ -123,9 +124,7 @@ static EGLDisplay initializeEGLDisplay(const GraphicsContextGLAttributes& attrs)
     }
 #if PLATFORM(MAC)
     else if (attrs.windowGPUID) {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        ASSERT(strstr(clientExtensions, "EGL_ANGLE_platform_angle_device_id"));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        ASSERT(contains(clientExtensions, "EGL_ANGLE_platform_angle_device_id"_span));
         // If the power preference is default, use the GPU the context window is on.
         // If the power preference is low power, and we know which GPU the context window is on,
         // most likely the lowest power is the GPU that drives the context window, as that GPU
@@ -137,9 +136,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         displayAttributes.append(static_cast<EGLAttrib>(attrs.windowGPUID));
     }
 #endif
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    ASSERT(strstr(clientExtensions, "EGL_ANGLE_feature_control"));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    ASSERT(contains(clientExtensions, "EGL_ANGLE_feature_control"_span));
     displayAttributes.append(EGL_FEATURE_OVERRIDES_DISABLED_ANGLE);
     displayAttributes.append(reinterpret_cast<EGLAttrib>(disabledANGLEMetalFeatures));
     displayAttributes.append(EGL_NONE);
@@ -154,10 +151,8 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     LOG(WebGL, "ANGLE initialised Major: %d Minor: %d", majorVersion, minorVersion);
 
 #if ASSERT_ENABLED && ENABLE(WEBXR)
-    const char* displayExtensions = EGL_QueryString(display, EGL_EXTENSIONS);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    ASSERT(strstr(displayExtensions, "EGL_ANGLE_metal_shared_event_sync"));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    auto displayExtensions = span8(EGL_QueryString(display, EGL_EXTENSIONS));
+    ASSERT(contains(displayExtensions, "EGL_ANGLE_metal_shared_event_sync"_span));
 #endif
 
     return display;
@@ -265,10 +260,8 @@ bool GraphicsContextGLCocoa::platformInitializeContext()
     eglContextAttributes.append(EGL_FALSE);
 
 #if HAVE(TASK_IDENTITY_TOKEN)
-    auto displayExtensions = EGL_QueryString(m_displayObj, EGL_EXTENSIONS);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    bool supportsOwnershipIdentity = strstr(displayExtensions, "EGL_ANGLE_metal_create_context_ownership_identity");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    auto displayExtensions = span8(EGL_QueryString(m_displayObj, EGL_EXTENSIONS));
+    bool supportsOwnershipIdentity = WTF::contains(displayExtensions, "EGL_ANGLE_metal_create_context_ownership_identity"_span);
     if (m_resourceOwner && supportsOwnershipIdentity) {
         eglContextAttributes.append(EGL_CONTEXT_METAL_OWNERSHIP_IDENTITY_ANGLE);
         eglContextAttributes.append(m_resourceOwner.taskIdToken());

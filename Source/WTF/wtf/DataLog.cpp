@@ -112,8 +112,7 @@ static void initializeLogFileOnce()
 #endif
 #endif // DATA_LOG_TO_FILE
     char actualFilename[maxPathLength + 1];
-
-    if (filename && !strstr(filename, "%pid")) {
+    if (filename && !contains(span8(filename), "%pid"_span)) {
         snprintf(actualFilename, sizeof(actualFilename), "%s.%%pid.txt", filename);
         filename = actualFilename;
     }
@@ -139,10 +138,9 @@ void setDataFile(const char* path)
     const char* pathToOpen = path;
 
     if (path) {
-        const char* pidFormat = strstr(path, "%pid");
-        if (pidFormat) {
-            size_t leadingPathLength = pidFormat - path;
-            size_t pathCharactersAvailable = std::min(maxPathLength, leadingPathLength);
+        auto pathSpan = span(path);
+        if (size_t pidIndex = find(pathSpan, "%pid"_span); pidIndex != notFound) {
+            size_t pathCharactersAvailable = std::min(maxPathLength, pidIndex);
             strncpy(formattedPath, path, pathCharactersAvailable);
             char* nextDest = formattedPath + pathCharactersAvailable;
             pathCharactersAvailable = maxPathLength - pathCharactersAvailable;
@@ -152,7 +150,7 @@ void setDataFile(const char* path)
                 if (pidTextLength >= 0 && static_cast<size_t>(pidTextLength) < pathCharactersAvailable) {
                     pathCharactersAvailable -= static_cast<size_t>(pidTextLength);
                     nextDest += pidTextLength;
-                    strncpy(nextDest, pidFormat + 4, pathCharactersAvailable);
+                    strncpy(nextDest, pathSpan.subspan(pidIndex + 4).data(), pathCharactersAvailable);
                 }
             }
             formattedPath[maxPathLength] = '\0';

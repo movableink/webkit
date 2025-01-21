@@ -453,7 +453,7 @@ private:
     void runTestingServerLoop();
     bool runTest(const char* pathOrURL);
 
-    WKURLRef createTestURL(const char* pathOrURL);
+    WKURLRef createTestURL(std::span<const char> pathOrURL);
 
     // Returns false if timed out.
     bool waitForCompletion(const WTF::Function<void ()>&, WTF::Seconds timeout);

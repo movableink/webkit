@@ -3515,7 +3515,11 @@ def check_safer_cpp(clean_lines, line_number, error):
 
     uses_memmem = search(r'memmem\(', line)
     if uses_memmem:
-        error(line_number, 'safercpp/memmem', 4, "Use memmemSpan() instead of memmem().")
+        error(line_number, 'safercpp/memmem', 4, "Use WTF::find() or WTF::contains() instead of memmem().")
+
+    uses_strstr = search(r'strstr\(', line)
+    if uses_strstr:
+        error(line_number, 'safercpp/strstr', 4, "Use WTF::find() or WTF::contains() instead of strstr().")
 
 
 def check_style(clean_lines, line_number, file_extension, class_state, file_state, enum_state, error):
@@ -4863,6 +4867,7 @@ class CppChecker(object):
         'safercpp/memset',
         'safercpp/memset_s',
         'safercpp/weak_ref_exception',
+        'safercpp/strstr',
         'safercpp/timer_exception',
         'security/assertion',
         'security/assertion_fallthrough',

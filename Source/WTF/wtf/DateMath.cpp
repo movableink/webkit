@@ -81,6 +81,7 @@
 #include <wtf/ASCIICType.h>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
@@ -409,18 +410,13 @@ static int findMonth(std::span<const LChar> monthStr)
     if (monthStr.size() < 3)
         return -1;
 
-    std::array<char, 4> needle;
+    std::array<LChar, 3> needle;
     for (unsigned i = 0; i < 3; ++i)
-        needle[i] = static_cast<char>(toASCIILower(monthStr[i]));
-    needle[3] = '\0';
-    const char* haystack = "janfebmaraprmayjunjulaugsepoctnovdec";
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    const char* str = strstr(haystack, needle.data());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    if (str) {
-        int position = static_cast<int>(str - haystack);
-        if (position % 3 == 0)
-            return position / 3;
+        needle[i] = toASCIILower(monthStr[i]);
+    auto haystack = "janfebmaraprmayjunjulaugsepoctnovdec"_span;
+    if (size_t index = find(haystack, std::span { needle }); index != notFound) {
+        if (!(index % 3))
+            return index / 3;
     }
     return -1;
 }

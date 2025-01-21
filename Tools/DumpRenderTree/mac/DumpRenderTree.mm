@@ -101,6 +101,7 @@
 #import <wtf/OSObjectPtr.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/Threading.h>
 #import <wtf/UniqueArray.h>
 #import <wtf/WTFProcess.h>
@@ -1708,31 +1709,31 @@ void dump()
     CFRunLoopStop(CFRunLoopGetMain());
 }
 
-static bool shouldLogFrameLoadDelegates(const char* pathOrURL)
+static bool shouldLogFrameLoadDelegates(std::span<const char> pathOrURL)
 {
-    return strstr(pathOrURL, "loading/") && !strstr(pathOrURL, "://localhost");
+    return contains(pathOrURL, "loading/"_span) && !contains(pathOrURL, "://localhost"_span);
 }
 
-static bool shouldLogHistoryDelegates(const char* pathOrURL)
+static bool shouldLogHistoryDelegates(std::span<const char> pathOrURL)
 {
-    return strstr(pathOrURL, "globalhistory/");
+    return contains(pathOrURL, "globalhistory/"_span);
 }
 
-static bool shouldDumpAsText(const char* pathOrURL)
+static bool shouldDumpAsText(std::span<const char> pathOrURL)
 {
-    return strstr(pathOrURL, "dumpAsText/");
+    return contains(pathOrURL, "dumpAsText/"_span);
 }
 
 #if PLATFORM(IOS_FAMILY)
-static bool shouldMakeViewportFlexible(const char* pathOrURL)
+static bool shouldMakeViewportFlexible(std::span<const char> pathOrURL)
 {
-    return strstr(pathOrURL, "viewport/") && !strstr(pathOrURL, "visual-viewport/");
+    return contains(pathOrURL, "viewport/"_span) && !contains(pathOrURL, "visual-viewport/"_span);
 }
 #endif
 
-static bool shouldUseEphemeralSession(const char* pathOrURL)
+static bool shouldUseEphemeralSession(std::span<const char> pathOrURL)
 {
-    return strstr(pathOrURL, "w3c/IndexedDB-private-browsing");
+    return contains(pathOrURL, "w3c/IndexedDB-private-browsing"_span);
 }
 
 static void setJSCOptions(const WTR::TestOptions& options)
@@ -1987,27 +1988,28 @@ static void runTest(const std::string& inputLine)
     gTestRunner->clearAllDatabases();
     gTestRunner->clearNotificationPermissionState();
 
+    std::span pathOrURLSpan { pathOrURL };
     if (disallowedURLs)
         CFSetRemoveAllValues(disallowedURLs.get());
-    if (shouldLogFrameLoadDelegates(pathOrURL.c_str()))
+    if (shouldLogFrameLoadDelegates(pathOrURLSpan))
         gTestRunner->setDumpFrameLoadCallbacks(true);
 
-    if (shouldLogHistoryDelegates(pathOrURL.c_str()))
+    if (shouldLogHistoryDelegates(pathOrURLSpan))
         [[mainFrame webView] setHistoryDelegate:historyDelegate().get()];
     else
         [[mainFrame webView] setHistoryDelegate:nil];
 
-    if (shouldDumpAsText(pathOrURL.c_str())) {
+    if (shouldDumpAsText(pathOrURLSpan)) {
         gTestRunner->setDumpAsText(true);
         gTestRunner->setGeneratePixelResults(false);
     }
 
 #if PLATFORM(IOS_FAMILY)
-    if (shouldMakeViewportFlexible(pathOrURL.c_str()))
+    if (shouldMakeViewportFlexible(pathOrURLSpan))
         adjustWebDocumentForFlexibleViewport(gWebBrowserView.get(), gWebScrollView.get());
 #endif
 
-    if (shouldUseEphemeralSession(pathOrURL.c_str()))
+    if (shouldUseEphemeralSession(pathOrURLSpan))
         [[[mainFrame webView] preferences] setPrivateBrowsingEnabled:YES];
 
     if ([WebHistory optionalSharedHistory])
