@@ -31,6 +31,7 @@
 #include "MessageReceiver.h"
 #include <WebCore/HTMLMediaElement.h>
 #include <WebCore/HTMLMediaElementEnums.h>
+#include <WebCore/ProcessIdentifier.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/RefCounted.h>
@@ -38,10 +39,6 @@
 #include <wtf/Seconds.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
-
-namespace WebKit {
-class WebFullScreenManagerProxy;
-}
 
 namespace WebCore {
 class FloatSize;
@@ -55,7 +52,10 @@ using FloatBoxExtent = RectEdges<float>;
 
 namespace WebKit {
 
+class RemotePageFullscreenManagerProxy;
+class WebFullScreenManagerProxy;
 class WebPageProxy;
+class WebProcessProxy;
 struct SharedPreferencesForWebProcess;
 
 class WebFullScreenManagerProxyClient : public CanMakeCheckedPtr<WebFullScreenManagerProxyClient> {
@@ -92,7 +92,7 @@ public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 
-    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess(const IPC::Connection&) const;
 
     bool isFullScreen();
     bool blocksReturnToFullscreenFromPictureInPicture() const;
@@ -135,7 +135,7 @@ private:
     WebFullScreenManagerProxy(WebPageProxy&, WebFullScreenManagerProxyClient&);
 
     void supportsFullScreen(bool withKeyboard, CompletionHandler<void(bool)>&&);
-    void enterFullScreen(bool blocksReturnToFullscreenFromPictureInPicture, FullScreenMediaDetails&&, CompletionHandler<void(bool)>&&);
+    void enterFullScreen(IPC::Connection&, bool blocksReturnToFullscreenFromPictureInPicture, FullScreenMediaDetails&&, CompletionHandler<void(bool)>&&);
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     void updateImageSource(FullScreenMediaDetails&&);
 #endif
@@ -143,6 +143,7 @@ private:
     void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
     void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
     void callCloseCompletionHandlers();
+    template<typename M> void sendToWebProcess(M&&);
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return m_logger; }
@@ -163,6 +164,7 @@ private:
     RefPtr<WebCore::SharedBuffer> m_imageBuffer;
 #endif // QUICKLOOK_FULLSCREEN
     Vector<CompletionHandler<void()>> m_closeCompletionHandlers;
+    WeakPtr<WebProcessProxy> m_fullScreenProcess;
 
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
