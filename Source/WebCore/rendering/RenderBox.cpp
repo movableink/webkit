@@ -5166,8 +5166,13 @@ bool RenderBox::shrinkToAvoidFloats() const
 
 bool RenderBox::avoidsFloats() const
 {
-    if (isReplacedOrAtomicInline() || isLegend() || (element() && element()->isFormControlElement()) || is<RenderMathMLBlock>(*this))
+    if (isReplacedOrAtomicInline() || isLegend() || (element() && element()->isFormControlElement()))
         return true;
+
+#if ENABLE(MATHML)
+    if (is<RenderMathMLBlock>(*this))
+        return true;
+#endif
 
     if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(*this))
         return renderBlock->createsNewFormattingContext();
