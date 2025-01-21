@@ -193,11 +193,11 @@ typedef NS_ENUM(NSInteger, _WKPitchCorrectionAlgorithm) {
 @property (nonatomic, setter=_setManagedMediaSourceLowThreshold:) double _managedMediaSourceLowThreshold WK_API_AVAILABLE(macos(14.0), ios(17.0));
 @property (nonatomic, setter=_setManagedMediaSourceHighThreshold:) double _managedMediaSourceHighThreshold WK_API_AVAILABLE(macos(14.0), ios(17.0));
 @property (nonatomic, setter=_setMediaCapabilityGrantsEnabled:) BOOL _mediaCapabilityGrantsEnabled WK_API_AVAILABLE(ios(17.4), visionos(1.1)) WK_API_UNAVAILABLE(macos);
-@property (nonatomic, setter=_setAllowPrivacySensitiveOperationsInNonPersistentDataStores:) BOOL _allowPrivacySensitiveOperationsInNonPersistentDataStores WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, setter=_setVideoFullscreenRequiresElementFullscreen:) BOOL _videoFullscreenRequiresElementFullscreen WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+@property (nonatomic, setter=_setAllowPrivacySensitiveOperationsInNonPersistentDataStores:) BOOL _allowPrivacySensitiveOperationsInNonPersistentDataStores WK_API_AVAILABLE(macos(15.2), ios(18.2), visionos(2.2));
+@property (nonatomic, setter=_setVideoFullscreenRequiresElementFullscreen:) BOOL _videoFullscreenRequiresElementFullscreen WK_API_AVAILABLE(macos(15.2), ios(18.2), visionos(2.2));
 @property (nonatomic, setter=_setCSSTransformStyleSeparatedEnabled:) BOOL _cssTransformStyleSeparatedEnabled WK_API_AVAILABLE(visionos(WK_XROS_TBA));
 @property (nonatomic, setter=_setOverlayRegionsEnabled:) BOOL _overlayRegionsEnabled WK_API_AVAILABLE(visionos(WK_XROS_TBA));
-@property (nonatomic, setter=_setSpatialVideoEnabled:) BOOL _spatialVideoEnabled WK_API_AVAILABLE(visionos(WK_XROS_TBA));
+@property (nonatomic, setter=_setSpatialVideoEnabled:) BOOL _spatialVideoEnabled WK_API_AVAILABLE(visionos(2.2));
 @property (nonatomic, setter=_setModelElementEnabled:) BOOL _modelElementEnabled WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 @property (nonatomic, setter=_setModelProcessEnabled:) BOOL _modelProcessEnabled WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 @property (nonatomic, setter=_setModelNoPortalAttributeEnabled:) BOOL _modelNoPortalAttributeEnabled WK_API_AVAILABLE(visionos(WK_XROS_TBA));
