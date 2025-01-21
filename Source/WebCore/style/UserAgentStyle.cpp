@@ -183,14 +183,12 @@ void UserAgentStyle::initDefaultStyleSheet()
     defaultStyleSheet = parseUASheet(defaultRules);
     addToDefaultStyle(*defaultStyleSheet);
 
+    // Counter rules.
+    counterStylesStyleSheet = parseUASheet(StringImpl::createWithoutCopying(counterStylesUserAgentStyleSheet));
+    addToCounterStyleRegistry(*counterStylesStyleSheet);
+
     // Quirks-mode rules.
-    String quirksRules;
-    auto extraQuirksStyleSheet = RenderTheme::singleton().extraQuirksStyleSheet();
-    if (extraQuirksStyleSheet.isEmpty())
-        quirksRules = StringImpl::createWithoutCopying(quirksUserAgentStyleSheet);
-    else
-        quirksRules = makeString(std::span { quirksUserAgentStyleSheet }, extraQuirksStyleSheet);
-    quirksStyleSheet = parseUASheet(quirksRules);
+    quirksStyleSheet = parseUASheet(StringImpl::createWithoutCopying(quirksUserAgentStyleSheet));
 
     RuleSetBuilder quirkBuilder(*defaultQuirksStyle, screenEval());
     quirkBuilder.addRulesFromSheet(*quirksStyleSheet);
@@ -254,11 +252,6 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
     if (!popoverStyleSheet && popoverAttributeEnabled && element.hasAttributeWithoutSynchronization(popoverAttr)) {
         popoverStyleSheet = parseUASheet(StringImpl::createWithoutCopying(popoverUserAgentStyleSheet));
         addToDefaultStyle(*popoverStyleSheet);
-    }
-
-    if (!counterStylesStyleSheet) {
-        counterStylesStyleSheet = parseUASheet(StringImpl::createWithoutCopying(counterStylesUserAgentStyleSheet));
-        addToCounterStyleRegistry(*counterStylesStyleSheet);
     }
 
 #if ENABLE(FULLSCREEN_API)
