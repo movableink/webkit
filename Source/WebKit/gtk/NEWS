@@ -1,4 +1,19 @@
 ================
+WebKitGTK 2.47.3
+================
+
+What's new in WebKitGTK 2.47.3?
+
+  - Added new function for creating Promise objects to JavaScripotCore GLib API.
+  - Speed up of reading large messages of remote inspector protocol.
+  - Add metadata (title and creation/modification date) to the PDF document generated for printing.
+  - Pause rendering when suspended state is present in current toplevel window.
+  - Bring back support for OpenType-SVG fonts using Skia SVG module.
+  - Improve performance of preserve-3D intersection rendering.
+  - Fix several crashes and rendering issues.
+  - Translation updates: Slovenian
+
+================
 WebKitGTK 2.47.2
 ================
 
