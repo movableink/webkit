@@ -1944,4 +1944,5 @@ webkit.org/b/285934 [ Ventura+ Debug arm64 ] http/tests/security/contentSecurity
 [ Ventura+ arm64 ] fast/selectors/selection-window-inactive-stroke-color.html [ Pass ImageOnlyFailure ]
 [ Ventura+ arm64 ] fast/selectors/text-field-selection-stroke-color.html [ Pass ImageOnlyFailure ]
 
-webkit.org/b/286080 fast/webgpu/nocrash/fuzz-284937.html [ Failure Timeout Crash ]
+[ x86_64 ] imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.html?mp3 [ Crash ]
+[ x86_64 ] imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.worker.html?mp3 [ Crash ]
