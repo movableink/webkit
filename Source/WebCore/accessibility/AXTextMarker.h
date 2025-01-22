@@ -27,6 +27,19 @@
 #include "AccessibilityObject.h"
 #include <wtf/StdLibExtras.h>
 
+#define TEXT_MARKER_ASSERT(assertion) do { \
+    std::string debugString = "Text marker origin: " + originToString(origin()).utf8().toStdString(); \
+    RELEASE_ASSERT_WITH_MESSAGE(assertion, "%s", debugString.c_str()); \
+} while (0)
+#define TEXT_MARKER_ASSERT_SINGLE(assertion, marker) do { \
+    std::string debugString = "Text marker origin: " + originToString(marker.origin()).utf8().toStdString(); \
+    RELEASE_ASSERT_WITH_MESSAGE(assertion, "%s", debugString.c_str()); \
+} while (0)
+#define TEXT_MARKER_ASSERT_DOBULE(assertion, marker1, marker2) do { \
+    std::string debugString = "Text marker origins: " + originToString(marker1.origin()).utf8().toStdString() + ", " + originToString(marker2.origin()).utf8().data(); \
+    RELEASE_ASSERT_WITH_MESSAGE(assertion, "%s", debugString.c_str()); \
+} while (0)
+
 namespace WebCore {
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
@@ -60,6 +73,62 @@ enum class SentenceRangeType : uint8_t {
     Right,
 };
 
+enum class TextMarkerOrigin : uint16_t {
+    Unknown, // 0
+    PreviousLineStart,
+    NextLineEnd,
+    NextWordStart,
+    NextWordEnd,
+    PreviousWordStart,
+    PreviousWordEnd,
+    PreviousSentenceStart,
+    NextSentenceEnd,
+    PreviousParagraphStart,
+    NextParagraphEnd // 10
+};
+
+inline String originToString(TextMarkerOrigin origin)
+{
+    String result;
+    switch (origin) {
+    case TextMarkerOrigin::PreviousLineStart:
+        result = "PreviousLineStart"_s;
+        break;
+    case TextMarkerOrigin::NextLineEnd:
+        result = "NextLineEnd"_s;
+        break;
+    case TextMarkerOrigin::NextWordStart:
+        result = "NextWordStart"_s;
+        break;
+    case TextMarkerOrigin::NextWordEnd:
+        result = "NextWordEnd"_s;
+        break;
+    case TextMarkerOrigin::PreviousWordStart:
+        result = "PreviousWordStart"_s;
+        break;
+    case TextMarkerOrigin::PreviousWordEnd:
+        result = "PreviousWordEnd"_s;
+        break;
+    case TextMarkerOrigin::PreviousSentenceStart:
+        result = "PreviousSentenceStart"_s;
+        break;
+    case TextMarkerOrigin::NextSentenceEnd:
+        result = "NextSentenceEnd"_s;
+        break;
+    case TextMarkerOrigin::PreviousParagraphStart:
+        result = "PreviousParagraphStart"_s;
+        break;
+    case TextMarkerOrigin::NextParagraphEnd:
+        result = "NextParagraphEnd"_s;
+        break;
+    default:
+        result = "Unknown"_s;
+        break;
+    }
+
+    return result;
+}
+
 // Options for findMarker
 enum class CoalesceObjectBreaks : bool { No, Yes };
 enum class IgnoreBRs : bool { No, Yes };
@@ -78,6 +147,8 @@ struct TextMarkerData {
     unsigned characterOffset;
     bool ignored;
 
+    TextMarkerOrigin origin;
+
     // Constructors of TextMarkerData must zero the struct's block of memory because platform client code may rely on a byte-comparison to determine instances equality.
     // Members initialization alone is not enough to guaranty that all bytes in the struct memeory are initialized, and may cause random inequalities when doing byte-comparisons.
     // For an example of such byte-comparison, see the TestRunner WTR::AccessibilityTextMarker::isEqual.
@@ -90,7 +161,7 @@ struct TextMarkerData {
         unsigned offsetParam = 0,
         Position::AnchorType anchorTypeParam = Position::PositionIsOffsetInAnchor,
         Affinity affinityParam = Affinity::Downstream,
-        unsigned charStart = 0, unsigned charOffset = 0, bool ignoredParam = false)
+        unsigned charStart = 0, unsigned charOffset = 0, bool ignoredParam = false, TextMarkerOrigin originParam = TextMarkerOrigin::Unknown)
     {
         zeroBytes(*this);
         treeID = axTreeID ? axTreeID->toUInt64() : 0;
@@ -101,6 +172,7 @@ struct TextMarkerData {
         characterStart = charStart;
         characterOffset = charOffset;
         ignored = ignoredParam;
+        origin = originParam;
     }
 
     TextMarkerData(AXObjectCache&, const VisiblePosition&, int charStart = 0, int charOffset = 0, bool ignoredParam = false);
@@ -143,11 +215,11 @@ public:
 #if PLATFORM(COCOA)
     AXTextMarker(PlatformTextMarkerData);
 #endif
-    AXTextMarker(std::optional<AXID> treeID, std::optional<AXID> objectID, unsigned offset)
-        : m_data({ treeID, objectID, offset, Position::PositionIsOffsetInAnchor, Affinity::Downstream, 0, offset })
+    AXTextMarker(std::optional<AXID> treeID, std::optional<AXID> objectID, unsigned offset, TextMarkerOrigin origin = TextMarkerOrigin::Unknown)
+        : m_data({ treeID, objectID, offset, Position::PositionIsOffsetInAnchor, Affinity::Downstream, 0, offset, false, origin })
     { }
-    AXTextMarker(const AXCoreObject& object, unsigned offset)
-        : m_data({ object.treeID(), object.objectID(), offset, Position::PositionIsOffsetInAnchor, Affinity::Downstream, 0, offset })
+    AXTextMarker(const AXCoreObject& object, unsigned offset, TextMarkerOrigin origin = TextMarkerOrigin::Unknown)
+        : m_data({ object.treeID(), object.objectID(), offset, Position::PositionIsOffsetInAnchor, Affinity::Downstream, 0, offset, false, origin })
     { }
 
     AXTextMarker() = default;
@@ -177,6 +249,7 @@ public:
     bool isIgnored() const { return m_data.ignored; }
 
     String debugDescription() const;
+    TextMarkerOrigin origin() const { return m_data.origin; }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
     AXTextMarker toTextRunMarker(std::optional<AXID> stopAtID = std::nullopt) const;
