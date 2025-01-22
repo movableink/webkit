@@ -1947,3 +1947,5 @@ imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-t
 webkit.org/b/286080 fast/webgpu/nocrash/fuzz-284937.html [ Failure Timeout Crash ]
 
 webkit.org/b/286371 [ Sequoia Release x86_64 ] webrtc/captureCanvas-webrtc-software-h264-high.html [ Failure ]
+
+webkit.org/b/286375 [ Sequoia+ ] editing/input/scroll-to-edge-if-line-break-at-end-of-document-contenteditable.html [ Pass Failure ]
