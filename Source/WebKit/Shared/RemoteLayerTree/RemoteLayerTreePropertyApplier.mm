@@ -411,7 +411,7 @@ void RemoteLayerTreePropertyApplier::applyProperties(RemoteLayerTreeNode& node, 
         if (node.visibleRect() && node.shouldBeSeparated()) {
             node.layer().separated = true;
             configureSeparatedLayer(node.layer());
-        } else
+        } else if (node.layer().isSeparated)
             node.layer().separated = false;
     }
 #endif
