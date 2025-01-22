@@ -1270,12 +1270,12 @@ public:
     // callers will expect at the time this comment was written.
     Vector<AXID> childrenIDs(bool updateChildrenIfNeeded = true);
     virtual void updateChildrenIfNecessary() = 0;
-    AXCoreObject* nextInPreOrder(bool updateChildrenIfNeeded, AXCoreObject& stayWithin);
+    AXCoreObject* nextInPreOrder(bool updateChildrenIfNeeded = true, AXCoreObject* stayWithin = nullptr);
     AXCoreObject* nextSiblingIncludingIgnored(bool updateChildrenIfNeeded) const;
     AXCoreObject* nextUnignoredSibling(bool updateChildrenIfNeeded, AXCoreObject* unignoredParent = nullptr) const;
     AXCoreObject* nextSiblingIncludingIgnoredOrParent() const;
 
-    AXCoreObject* previousInPreOrder(bool updateChildrenIfNeeded, AXCoreObject& stayWithin);
+    AXCoreObject* previousInPreOrder(bool updateChildrenIfNeeded = true, AXCoreObject* stayWithin = nullptr);
     AXCoreObject* previousSiblingIncludingIgnored(bool updateChildrenIfNeeded);
     AXCoreObject* deepestLastChildIncludingIgnored(bool updateChildrenIfNeeded);
 

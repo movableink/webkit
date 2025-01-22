@@ -1148,20 +1148,25 @@ std::partial_ordering AXTextMarker::partialOrderByTraversal(const AXTextMarker& 
     if (!isValid() || !other.isValid())
         return std::partial_ordering::unordered;
 
-    auto foundOtherInDirection = [&] (AXDirection direction) {
-        auto current = *this;
-        while (current.isValid()) {
-            current = current.findMarker(direction, CoalesceObjectBreaks::No);
-            if (current.hasSameObjectAndOffset(other))
-                return true;
-        }
-        return false;
-    };
+    // If we're here, expect that we've already handled the case where we just need to compare
+    // offsets within the same object.
+    RELEASE_ASSERT(objectID() != other.objectID());
 
-    // `other` comes after us in tree order since we found it by traversing AXDirection::Next.
-    if (foundOtherInDirection(AXDirection::Next))
+    // Search forwards for ther other marker. If we find it, we are before it in tree order,
+    // and thus are std::partial_ordering::less.
+    RefPtr current = object();
+    while (current && current->objectID() != other.objectID())
+        current = current->nextInPreOrder();
+
+    if (current)
         return std::partial_ordering::less;
-    if (foundOtherInDirection(AXDirection::Previous))
+
+    // Reset the object and search backwards.
+    current = object();
+    while (current && current->objectID() != other.objectID())
+        current = current->previousInPreOrder();
+
+    if (current)
         return std::partial_ordering::greater;
 
     RELEASE_ASSERT_NOT_REACHED();

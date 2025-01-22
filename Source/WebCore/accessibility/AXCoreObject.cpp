@@ -234,7 +234,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::unignoredChildren(bool u
             childIsValid = role == AccessibilityRole::Row || role == AccessibilityRole::Column || role == AccessibilityRole::TableHeaderContainer || role == AccessibilityRole::Caption;
         }
         if (!childIsValid || descendant->isIgnored()) {
-            descendant = descendant->nextInPreOrder(updateChildrenIfNeeded, /* stayWithin */ *this);
+            descendant = descendant->nextInPreOrder(updateChildrenIfNeeded, /* stayWithin */ this);
             continue;
         }
 
@@ -250,7 +250,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::unignoredChildren(bool u
 }
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 
-AXCoreObject* AXCoreObject::nextInPreOrder(bool updateChildrenIfNeeded, AXCoreObject& stayWithin)
+AXCoreObject* AXCoreObject::nextInPreOrder(bool updateChildrenIfNeeded, AXCoreObject* stayWithin)
 {
     if (updateChildrenIfNeeded)
         updateChildrenIfNecessary();
@@ -265,25 +265,25 @@ AXCoreObject* AXCoreObject::nextInPreOrder(bool updateChildrenIfNeeded, AXCoreOb
         }
     }
 
-    if (&stayWithin == this)
+    if (stayWithin == this)
         return nullptr;
 
     RefPtr current = this;
     RefPtr next = nextSiblingIncludingIgnored(updateChildrenIfNeeded);
     for (; !next; next = current->nextSiblingIncludingIgnored(updateChildrenIfNeeded)) {
         current = current->parentObject();
-        if (!current || &stayWithin == current)
+        if (!current || stayWithin == current)
             return nullptr;
     }
     return next.get();
 }
 
-AXCoreObject* AXCoreObject::previousInPreOrder(bool updateChildrenIfNeeded, AXCoreObject& stayWithin)
+AXCoreObject* AXCoreObject::previousInPreOrder(bool updateChildrenIfNeeded, AXCoreObject* stayWithin)
 {
     if (updateChildrenIfNeeded)
         updateChildrenIfNecessary();
 
-    if (&stayWithin == this)
+    if (stayWithin == this)
         return nullptr;
 
     if (RefPtr sibling = previousSiblingIncludingIgnored(updateChildrenIfNeeded)) {
@@ -913,7 +913,7 @@ bool AXCoreObject::supportsPressAction() const
             unsigned matches = 0;
             unsigned candidatesChecked = 0;
             RefPtr candidate = clickableAncestor;
-            while ((candidate = candidate->nextInPreOrder(/* updateChildren */ true, /* stayWithin */ *clickableAncestor))) {
+            while ((candidate = candidate->nextInPreOrder(/* updateChildren */ true, /* stayWithin */ clickableAncestor.get()))) {
                 if (candidate->isStaticText() || candidate->isControl() || candidate->isImage() || candidate->isHeading() || candidate->isLink()) {
                     if (!candidate->isIgnored())
                         ++matches;

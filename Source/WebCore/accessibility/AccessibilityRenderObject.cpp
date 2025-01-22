@@ -1404,7 +1404,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
 {
     if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer())) {
         auto box = InlineIterator::boxFor(*renderLineBreak);
-        return { renderLineBreak->containingBlock(), { AXTextRun(box->lineIndex(), makeString('\n').isolatedCopy()) } };
+        return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy()) } };
     }
 
     if (is<HTMLImageElement>(node()) || is<HTMLMediaElement>(node())) {
