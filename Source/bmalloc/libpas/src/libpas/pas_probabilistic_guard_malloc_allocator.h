@@ -119,7 +119,7 @@ void pas_probabilistic_guard_malloc_deallocate(void* memory);
 
 size_t pas_probabilistic_guard_malloc_get_free_virtual_memory(void);
 size_t pas_probabilistic_guard_malloc_get_free_wasted_memory(void);
-pas_ptr_hash_map_entry** pas_probabilistic_guard_malloc_get_metadata_array(void);
+pas_ptr_hash_map_entry* pas_probabilistic_guard_malloc_get_metadata_array(void);
 
 bool pas_probabilistic_guard_malloc_check_exists(uintptr_t mem);
 

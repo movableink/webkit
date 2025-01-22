@@ -45,7 +45,7 @@
 
 static size_t free_wasted_mem  = PAS_PGM_MAX_WASTED_MEMORY;
 static size_t free_virtual_mem = PAS_PGM_MAX_VIRTUAL_MEMORY;
-static pas_ptr_hash_map_entry *pgm_metadata_vector[MAX_PGM_DEALLOCATED_METADATA_ENTRIES];
+static pas_ptr_hash_map_entry pgm_metadata_vector[MAX_PGM_DEALLOCATED_METADATA_ENTRIES];
 static size_t pgm_metadata_index = 0;
 
 uint16_t pas_probabilistic_guard_malloc_random;
@@ -202,13 +202,13 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
      * If so deallocate the space for metadata as well
      */
     value->free_status = true;
-    pas_ptr_hash_map_entry* old_entry = pgm_metadata_vector[pgm_metadata_index];
-    if (old_entry) {
+    pas_ptr_hash_map_entry* old_entry = &pgm_metadata_vector[pgm_metadata_index];
+    if (old_entry->key) {
         pas_utility_heap_deallocate(old_entry->value);
         bool removed = pas_ptr_hash_map_remove(&pas_pgm_hash_map, (void*)old_entry->key, NULL, &pas_large_utility_free_heap_allocation_config);
         PAS_ASSERT(removed);
     }
-    pgm_metadata_vector[pgm_metadata_index] = entry;
+    pgm_metadata_vector[pgm_metadata_index] = *entry;
     pgm_metadata_index = (pgm_metadata_index + 1) % MAX_PGM_DEALLOCATED_METADATA_ENTRIES;
 
     if (verbose)
@@ -267,7 +267,7 @@ size_t pas_probabilistic_guard_malloc_get_free_wasted_memory(void)
     return free_wasted_mem;
 }
 
-pas_ptr_hash_map_entry** pas_probabilistic_guard_malloc_get_metadata_array(void)
+pas_ptr_hash_map_entry* pas_probabilistic_guard_malloc_get_metadata_array(void)
 {
     return pgm_metadata_vector;
 }
@@ -315,7 +315,7 @@ void pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(void)
     pas_probabilistic_guard_malloc_can_use = true;
     pas_probabilistic_guard_malloc_random = 1;
     pas_probabilistic_guard_malloc_counter = 0;
-    memset(pgm_metadata_vector, 0, MAX_PGM_DEALLOCATED_METADATA_ENTRIES * sizeof(pas_ptr_hash_map_entry*));
+    memset(pgm_metadata_vector, 0, sizeof(pgm_metadata_vector));
 }
 
 void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas_pgm_storage* value, const char* operation)
