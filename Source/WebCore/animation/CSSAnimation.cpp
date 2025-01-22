@@ -122,28 +122,7 @@ void CSSAnimation::syncPropertiesWithBackingAnimation()
             keyframeEffect->setComposite(animation.compositeOperation());
     }
 
-    if (!m_overriddenProperties.contains(Property::Timeline)) {
-        ASSERT(owningElement());
-        Ref target = owningElement()->element;
-        Ref document = owningElement()->element.document();
-        WTF::switchOn(animation.timeline(),
-            [&] (Animation::TimelineKeyword keyword) {
-                setTimeline(keyword == Animation::TimelineKeyword::None ? nullptr : RefPtr { document->existingTimeline() });
-            }, [&] (const AtomString& name) {
-                CheckedRef timelinesController = document->ensureTimelinesController();
-                timelinesController->setTimelineForName(name, target, *this);
-            }, [&] (const Animation::AnonymousScrollTimeline& anonymousScrollTimeline) {
-                auto scrollTimeline = ScrollTimeline::create(anonymousScrollTimeline.scroller, anonymousScrollTimeline.axis);
-                scrollTimeline->setSource(target.ptr());
-                setTimeline(WTFMove(scrollTimeline));
-            }, [&] (const Animation::AnonymousViewTimeline& anonymousViewTimeline) {
-                auto insets = anonymousViewTimeline.insets;
-                auto viewTimeline = ViewTimeline::create(nullAtom(), anonymousViewTimeline.axis, WTFMove(insets));
-                viewTimeline->setSubject(target.ptr());
-                setTimeline(WTFMove(viewTimeline));
-            }
-        );
-    }
+    syncStyleOriginatedTimeline();
 
     if (!m_overriddenProperties.contains(Property::RangeStart))
         setRangeStart(animation.range().start);
@@ -159,6 +138,37 @@ void CSSAnimation::syncPropertiesWithBackingAnimation()
         else if (animation.playState() == AnimationPlayState::Paused && playState() == WebAnimation::PlayState::Running)
             pause();
     }
+
+    unsuspendEffectInvalidation();
+}
+
+void CSSAnimation::syncStyleOriginatedTimeline()
+{
+    if (m_overriddenProperties.contains(Property::Timeline) || !effect())
+        return;
+
+    suspendEffectInvalidation();
+
+    ASSERT(owningElement());
+    Ref target = owningElement()->element;
+    Ref document = owningElement()->element.document();
+    WTF::switchOn(backingAnimation().timeline(),
+        [&] (Animation::TimelineKeyword keyword) {
+            setTimeline(keyword == Animation::TimelineKeyword::None ? nullptr : RefPtr { document->existingTimeline() });
+        }, [&] (const AtomString& name) {
+            CheckedRef timelinesController = document->ensureTimelinesController();
+            timelinesController->setTimelineForName(name, target, *this);
+        }, [&] (const Animation::AnonymousScrollTimeline& anonymousScrollTimeline) {
+            auto scrollTimeline = ScrollTimeline::create(anonymousScrollTimeline.scroller, anonymousScrollTimeline.axis);
+            scrollTimeline->setSource(target.ptr());
+            setTimeline(WTFMove(scrollTimeline));
+        }, [&] (const Animation::AnonymousViewTimeline& anonymousViewTimeline) {
+            auto insets = anonymousViewTimeline.insets;
+            auto viewTimeline = ViewTimeline::create(nullAtom(), anonymousViewTimeline.axis, WTFMove(insets));
+            viewTimeline->setSubject(target.ptr());
+            setTimeline(WTFMove(viewTimeline));
+        }
+    );
 
     unsuspendEffectInvalidation();
 }

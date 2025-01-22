@@ -103,6 +103,7 @@ private:
     Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> relatedTimelineScopeElements(const AtomString&);
     void attachPendingOperations();
     bool isPendingTimelineAttachment(const WebAnimation&) const;
+    void updateCSSAnimationsAssociatedWithNamedTimeline(const AtomString&);
 
     Ref<Document> protectedDocument() const { return m_document.get(); }
 

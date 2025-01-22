@@ -50,6 +50,8 @@ public:
     void keyframesRuleDidChange();
     void updateKeyframesIfNeeded(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
 
+    void syncStyleOriginatedTimeline();
+
 private:
     CSSAnimation(const Styleable&, const Animation&);
 

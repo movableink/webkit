@@ -431,7 +431,9 @@ void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString&
         return !is<ViewTimeline>(timeline) && timeline->source() == &source;
     });
 
-    if (existingTimelineIndex != notFound) {
+    auto hasExistingTimeline = existingTimelineIndex != notFound;
+
+    if (hasExistingTimeline) {
         Ref existingScrollTimeline = timelines[existingTimelineIndex].get();
         existingScrollTimeline->setAxis(axis);
     } else {
@@ -441,6 +443,32 @@ void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString&
         timelines.append(WTFMove(newScrollTimeline));
     }
     attachPendingOperations();
+
+    if (!hasExistingTimeline)
+        updateCSSAnimationsAssociatedWithNamedTimeline(name);
+}
+
+void AnimationTimelinesController::updateCSSAnimationsAssociatedWithNamedTimeline(const AtomString& name)
+{
+    // First, we need to gather all CSS Animations attached to existing timelines
+    // with the specified name. We do this prior to updating animation-to-timeline
+    // relationship because this could mutate the timeline's animations list.
+    HashSet<Ref<CSSAnimation>> cssAnimationsWithMatchingTimelineName;
+    for (auto& timeline : timelinesForName(name)) {
+        for (auto& animation : timeline->relevantAnimations()) {
+            if (RefPtr cssAnimation = dynamicDowncast<CSSAnimation>(animation.get())) {
+                if (!cssAnimation->owningElement())
+                    continue;
+                if (auto* timelineName = std::get_if<AtomString>(&cssAnimation->backingAnimation().timeline())) {
+                    if (*timelineName == name)
+                        cssAnimationsWithMatchingTimelineName.add(*cssAnimation);
+                }
+            }
+        }
+    }
+
+    for (auto& cssAnimation : cssAnimationsWithMatchingTimelineName)
+        cssAnimation->syncStyleOriginatedTimeline();
 }
 
 void AnimationTimelinesController::attachPendingOperations()
@@ -464,7 +492,9 @@ void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& n
         return false;
     });
 
-    if (existingTimelineIndex != notFound) {
+    auto hasExistingTimeline = existingTimelineIndex != notFound;
+
+    if (hasExistingTimeline) {
         Ref existingViewTimeline = downcast<ViewTimeline>(timelines[existingTimelineIndex].get());
         existingViewTimeline->setAxis(axis);
         existingViewTimeline->setInsets(WTFMove(insets));
@@ -475,6 +505,9 @@ void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& n
         timelines.append(WTFMove(newViewTimeline));
     }
     attachPendingOperations();
+
+    if (!hasExistingTimeline)
+        updateCSSAnimationsAssociatedWithNamedTimeline(name);
 }
 
 void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& name, const Element& element)
