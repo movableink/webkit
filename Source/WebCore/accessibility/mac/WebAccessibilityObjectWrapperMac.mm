@@ -2517,7 +2517,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     if ([hitTestResult isKindOfClass:[NSAccessibilityRemoteUIElement class]]) {
         RefPtr<AXCoreObject> backingObject = self.updateObjectBackingStore;
         if (!backingObject)
-            return;
+            return callback(@"no backing object");
 
         auto* axObject = backingObject->accessibilityHitTest(IntPoint(point));
         if (axObject && axObject->isRemoteFrame()) {

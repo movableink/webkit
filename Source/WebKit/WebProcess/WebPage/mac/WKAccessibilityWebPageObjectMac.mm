@@ -146,7 +146,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 - (NSArray *)accessibilityChildren
 {
-    id wrapper = [self accessibilityRootObjectWrapper];
+    id wrapper = [self accessibilityRootObjectWrapper:[self focusedLocalFrame]];
     return wrapper ? @[wrapper] : @[];
 }
 
@@ -344,8 +344,8 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 
         if (CheckedPtr localFrameView = protectedSelf->m_page->localMainFrameView())
             convertedPoint.moveBy(localFrameView->scrollPosition());
-        else if (RefPtr remoteLocalFrame = [protectedSelf remoteLocalFrame]) {
-            if (CheckedPtr frameView = remoteLocalFrame->view())
+        else if (RefPtr focusedLocalFrame = [protectedSelf focusedLocalFrame]) {
+            if (CheckedPtr frameView = focusedLocalFrame->view())
                 convertedPoint.moveBy(frameView->scrollPosition());
         }
         if (auto* page = protectedSelf->m_page->corePage())
@@ -353,7 +353,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         return convertedPoint;
     });
     
-    return [[self accessibilityRootObjectWrapper] accessibilityHitTest:convertedPoint];
+    return [[self accessibilityRootObjectWrapper:[self focusedLocalFrame]] accessibilityHitTest:convertedPoint];
 }
 ALLOW_DEPRECATED_DECLARATIONS_END
 
