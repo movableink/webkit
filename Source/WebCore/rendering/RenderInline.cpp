@@ -860,7 +860,7 @@ LayoutSize RenderInline::offsetForInFlowPositionedInline(const RenderBox* child)
 
     ASSERT(isInFlowPositioned());
     if (!isInFlowPositioned())
-        return LayoutSize();
+        return { };
 
     // When we have an enclosing relpositioned inline, we need to add in the offset of the first line
     // box from the rest of the content, but only in the cases where we know we're positioned
@@ -874,11 +874,16 @@ LayoutSize RenderInline::offsetForInFlowPositionedInline(const RenderBox* child)
         if (!layoutBox()) {
             // Repaint may be issued on subtrees during content mutation with newly inserted renderers.
             ASSERT(needsLayout());
-            return LayoutSize();
+            return { };
         }
         if (auto inlineBox = InlineIterator::lineLeftmostInlineBoxFor(*this)) {
             inlinePosition = LayoutUnit::fromFloatRound(inlineBox->logicalLeftIgnoringInlineDirection());
             blockPosition = inlineBox->logicalTop();
+        } else if (auto* blockContainer = containingBlock()) {
+            // This must be a block with no in-flow content e.g. <div><span><abs pos box></span></div> where we don't construct any display box at all.
+            auto contentBoxLocation = blockContainer->contentBoxLocation();
+            inlinePosition = contentBoxLocation.x();
+            blockPosition = contentBoxLocation.y();
         }
     }
 
