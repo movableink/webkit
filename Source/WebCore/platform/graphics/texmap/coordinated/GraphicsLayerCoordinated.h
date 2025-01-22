@@ -111,9 +111,6 @@ private:
 
     void setNeedsDisplay() override;
     void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ClipToLayer) override;
-#if ENABLE(DAMAGE_TRACKING)
-    void markDamageRectsUnreliable() override;
-#endif
 
     FloatSize pixelAlignmentOffset() const override { return m_pixelAlignmentOffset; }
 
@@ -217,9 +214,6 @@ private:
     Color m_contentsColor;
     RefPtr<CoordinatedPlatformLayer> m_backdropLayer;
     TextureMapperAnimations m_animations;
-#if ENABLE(DAMAGE_TRACKING)
-    bool m_damagedRectsAreUnreliable { false };
-#endif
 };
 
 } // namespace WebCore

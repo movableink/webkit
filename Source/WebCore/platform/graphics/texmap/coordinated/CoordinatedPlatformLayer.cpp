@@ -865,14 +865,8 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
         layer.setSolidColor(m_contentsColor);
 
 #if ENABLE(DAMAGE_TRACKING)
-    if (m_pendingChanges.contains(Change::Damage)) {
-        if (m_committedContentsBuffer || (m_imageBackingStore && m_imageBackingStoreVisible)) {
-            // Layers with content layer should have no explicit damage other than inferred one (e.g. due to transform changes).
-            // FIXME: Remove special handling of content layers.
-            layer.setDamage({ });
-        } else
-            layer.setDamage(m_damage);
-    }
+    if (m_pendingChanges.contains(Change::Damage))
+        layer.setDamage(m_damage);
 #endif
 
     if (m_pendingChanges.contains(Change::Filters))

@@ -287,7 +287,8 @@ private:
 
 #if ENABLE(DAMAGE_TRACKING)
     bool m_damagePropagation { false };
-    Damage m_damage;
+    Damage m_damage; // In layer coordinate space.
+    Damage m_inferredDamage; // In global coordinate space.
     FloatRect m_accumulatedOverlapRegionDamage;
 #endif
 

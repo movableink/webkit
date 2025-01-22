@@ -419,9 +419,14 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
     transform.multiply(options.transform);
     transform.multiply(m_layerTransforms.combined);
 
-    if (m_damage.isInvalid())
-        damage.invalidate();
-    else if (m_contentsLayer && m_damage.isEmpty()) {
+    ASSERT(!m_damage.isInvalid());
+    ASSERT(!m_inferredDamage.isInvalid());
+    if (!m_inferredDamage.isEmpty()) {
+        for (const auto& rect : m_inferredDamage.rects()) {
+            ASSERT(!rect.isEmpty());
+            damage.add(rect);
+        }
+    } else if (m_contentsLayer) {
         // Layers with content layer are fully damaged if there's no explicit damage.
         // FIXME: Remove that special case.
         damage.add(transformRectForDamage(targetRect, transform, options));
@@ -436,7 +441,8 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
         }
     }
 
-    m_damage = Damage();
+    m_damage = { };
+    m_inferredDamage = { };
 }
 
 void TextureMapperLayer::collectDamageSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions& options, Damage& damage)
@@ -480,27 +486,13 @@ void TextureMapperLayer::damageWholeLayerDueToTransformChange(const Transformati
 {
     // When the layer's transform changes, we must not only damage whole layer using new transform,
     // but also using old transform to cover the area not affected by layer anymore.
-    // FIXME: Consider extending non-empty m_damage if it makes sense.
-    if (!m_damage.isEmpty())
-        m_damage = { };
-    if (auto inverseTransform = afterChange.inverse()) {
-        // As m_damage stores damage in the non-transformed coordinate space of a layer,
-        // we do calculations in the transformed coordinate space of a layer
-        // and then use inverse transform to map result back to non-transformed coordinate space of a layer.
-        FloatRect transformedLayerRect = afterChange.mapRect(layerRect());
-        transformedLayerRect.unite(beforeChange.mapRect(layerRect()));
-        m_damage.add(inverseTransform->mapRect(transformedLayerRect));
-    } else
-        // If damaged rect cannot be calculated, fall back to invalidating whole frame.
-        m_damage.invalidate();
+    m_inferredDamage.add(afterChange.mapRect(layerRect()));
+    m_inferredDamage.add(beforeChange.mapRect(layerRect()));
 }
 
 FloatRect TextureMapperLayer::transformRectForDamage(const FloatRect& rect, const TransformationMatrix& transform, const TextureMapperPaintOptions& options)
 {
-    FloatQuad quad(rect);
-    quad = transform.mapQuad(quad);
-    FloatRect transformedRect = quad.boundingBox();
-
+    auto transformedRect = transform.mapRect(rect);
     // Some layers are drawn on an intermediate surface and have this offset applied to convert to the
     // intermediate surface coordinates. In order to translate back to actual coordinates,
     // we have to undo it.
@@ -1272,7 +1264,7 @@ void TextureMapperLayer::setSize(const FloatSize& size)
     if (canInferDamage() && m_state.size != size) {
         // When layer size changes, we damage whole layer for now.
         // FIXME: Damage only affected area.
-        m_damage.add(FloatRect(FloatPoint::zero(), size));
+        m_inferredDamage.add(m_state.transform.mapRect(FloatRect(FloatPoint::zero(), size)));
     }
 #endif
     m_state.size = size;

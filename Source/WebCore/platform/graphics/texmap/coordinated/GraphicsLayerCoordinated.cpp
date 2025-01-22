@@ -111,17 +111,6 @@ void GraphicsLayerCoordinated::setNeedsDisplayInRect(const FloatRect& initialRec
     addRepaintRect(rect);
 }
 
-#if ENABLE(DAMAGE_TRACKING)
-void GraphicsLayerCoordinated::markDamageRectsUnreliable()
-{
-    if (m_damagedRectsAreUnreliable)
-        return;
-
-    m_damagedRectsAreUnreliable = true;
-    noteLayerPropertyChanged(Change::DirtyRegion, ScheduleFlush::No);
-}
-#endif
-
 void GraphicsLayerCoordinated::setPosition(const FloatPoint& position)
 {
     if (m_position == position)
@@ -850,9 +839,7 @@ void GraphicsLayerCoordinated::updateDamage()
         return;
 
     Damage damage;
-    if (m_damagedRectsAreUnreliable)
-        damage.invalidate();
-    else if (m_dirtyRegion.fullRepaint)
+    if (m_dirtyRegion.fullRepaint)
         damage.add(FloatRect({ }, m_size));
     else {
         for (const auto& rect : m_dirtyRegion.rects)
