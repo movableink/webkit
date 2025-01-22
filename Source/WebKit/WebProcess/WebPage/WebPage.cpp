@@ -7839,6 +7839,7 @@ void WebPage::didCommitLoad(WebFrame* frame)
     m_shouldRevealCurrentSelectionAfterInsertion = true;
     m_internals->lastLayerTreeTransactionIdAndPageScaleBeforeScalingPage = std::nullopt;
     m_lastSelectedReplacementRange = { };
+    m_bidiSelectionFlippingState = BidiSelectionFlippingState::NotFlipping;
 
     invokePendingSyntheticClickCallback(SyntheticClickResult::PageInvalid);
 

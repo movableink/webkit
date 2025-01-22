@@ -2793,8 +2793,15 @@ private:
     bool m_completingSyntheticClick { false };
     bool m_hasHandledSyntheticClick { false };
 
-    enum SelectionAnchor { Start, End };
-    SelectionAnchor m_selectionAnchor { Start };
+    enum class SelectionAnchor : bool { Start, End };
+    SelectionAnchor m_selectionAnchor { SelectionAnchor::Start };
+
+    enum class BidiSelectionFlippingState : uint8_t {
+        NotFlipping,
+        FlippingToStart,
+        FlippingToEnd
+    };
+    BidiSelectionFlippingState m_bidiSelectionFlippingState { BidiSelectionFlippingState::NotFlipping };
 
     RefPtr<WebCore::Node> m_potentialTapNode;
     WebCore::FloatPoint m_potentialTapLocation;

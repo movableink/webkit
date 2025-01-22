@@ -66,6 +66,7 @@
 #include "VisibleUnits.h"
 #include "WritingMode.h"
 #include <wtf/Assertions.h>
+#include <wtf/IterationStatus.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -1295,7 +1296,7 @@ static InlineIterator::LeafBoxIterator advanceInDirection(InlineIterator::LeafBo
     return iterateInSameDirection == (direction == TextDirection::LTR) ? box->nextLineRightwardOnLine() : box->nextLineLeftwardOnLine();
 }
 
-static void forEachRenderedBoxBetween(const RenderedPosition& first, const RenderedPosition& second, const Function<void(InlineIterator::LeafBoxIterator)>& callback)
+static void forEachRenderedBoxBetween(const RenderedPosition& first, const RenderedPosition& second, const Function<IterationStatus(InlineIterator::LeafBoxIterator)>& callback)
 {
     if (first.isNull()) {
         ASSERT_NOT_REACHED();
@@ -1323,7 +1324,9 @@ static void forEachRenderedBoxBetween(const RenderedPosition& first, const Rende
         if (!atEndpoint && !foundEndpoint)
             continue;
 
-        callback(box);
+        if (callback(box) == IterationStatus::Done)
+            return;
+
         if (atEndpoint && foundEndpoint)
             return;
 
@@ -1345,6 +1348,7 @@ static InlineIterator::LeafBoxIterator boxWithMinimumBidiLevelBetween(const Rend
     forEachRenderedBoxBetween(start, end, [&](auto box) {
         if (!result || box->bidiLevel() < result->bidiLevel())
             result = box;
+        return IterationStatus::Continue;
     });
     return result;
 }
@@ -1456,6 +1460,30 @@ void adjustVisibleExtentPreservingVisualContiguity(const VisiblePosition& base, 
         return;
 
     extent = { makeContainerOffsetPosition(startIsMoving ? adjustedRange->start : adjustedRange->end) };
+}
+
+bool crossesBidiTextBoundaryInSameLine(const VisiblePosition& position, const VisiblePosition& other)
+{
+    if (!inSameLine(position, other))
+        return false;
+
+    std::optional<unsigned char> currentLevel;
+    bool foundDifferentBidiLevel = false;
+    forEachRenderedBoxBetween(RenderedPosition { position }, RenderedPosition { other }, [&](auto box) {
+        auto bidiLevel = box->bidiLevel();
+        if (!currentLevel) {
+            currentLevel = bidiLevel;
+            return IterationStatus::Continue;
+        }
+
+        if (currentLevel == bidiLevel)
+            return IterationStatus::Continue;
+
+        foundDifferentBidiLevel = true;
+        return IterationStatus::Done;
+    });
+
+    return foundDifferentBidiLevel;
 }
 
 } // namespace WebCore

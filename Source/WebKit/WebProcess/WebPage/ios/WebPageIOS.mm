@@ -1810,6 +1810,11 @@ static std::pair<std::optional<SimpleRange>, SelectionWasFlipped> rangeForPointI
     std::optional<SimpleRange> range;
     SelectionWasFlipped selectionFlipped = SelectionWasFlipped::No;
 
+    auto shouldUseOldExtentAsNewBase = [&] {
+        return frame.settings().visuallyContiguousBidiTextSelectionEnabled()
+            && crossesBidiTextBoundaryInSameLine(result, baseIsStart ? selectionEnd : selectionStart);
+    };
+
     if (targetNode)
         result = frame.eventHandler().selectionExtentRespectingEditingBoundary(frame.selection().selection(), hitTest.localPoint(), targetNode.get()).deepEquivalent();
     else
@@ -1824,7 +1829,7 @@ static std::pair<std::optional<SimpleRange>, SelectionWasFlipped> rangeForPointI
             result = VisibleSelection::adjustPositionForEnd(result.deepEquivalent(), containerNode.get());
         
         if (selectionFlippingEnabled && flipSelection) {
-            range = makeSimpleRange(result, selectionStart);
+            range = makeSimpleRange(result, shouldUseOldExtentAsNewBase() ? selectionEnd : selectionStart);
             selectionFlipped = SelectionWasFlipped::Yes;
         } else
             range = makeSimpleRange(selectionStart, result);
@@ -1837,7 +1842,7 @@ static std::pair<std::optional<SimpleRange>, SelectionWasFlipped> rangeForPointI
             result = VisibleSelection::adjustPositionForStart(result.deepEquivalent(), containerNode.get());
 
         if (selectionFlippingEnabled && flipSelection) {
-            range = makeSimpleRange(selectionEnd, result);
+            range = makeSimpleRange(shouldUseOldExtentAsNewBase() ? selectionStart : selectionEnd, result);
             selectionFlipped = SelectionWasFlipped::Yes;
         } else
             range = makeSimpleRange(result, selectionEnd);
@@ -2096,7 +2101,7 @@ void WebPage::updateSelectionWithTouches(const IntPoint& point, SelectionTouch s
 {
     RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
-        return;
+        return completionHandler(point, selectionTouch, { });
 
 #if ENABLE(PDF_PLUGIN)
     if (RefPtr pluginView = focusedPluginViewForFrame(*frame)) {
@@ -2107,6 +2112,14 @@ void WebPage::updateSelectionWithTouches(const IntPoint& point, SelectionTouch s
         return completionHandler(point, selectionTouch, resultFlags);
     }
 #endif
+
+    if (selectionTouch == SelectionTouch::Moved
+        && m_bidiSelectionFlippingState != BidiSelectionFlippingState::NotFlipping
+        && baseIsStart == (m_bidiSelectionFlippingState == BidiSelectionFlippingState::FlippingToStart)) {
+        // The last selection update caused the selection base and extent to swap. Ignore any in-flight selection
+        // update that's still trying to adjust the new selection base (after flipping).
+        return completionHandler(point, selectionTouch, { });
+    }
 
     if (selectionTouch == SelectionTouch::Started)
         addTextInteractionSources(TextInteractionSource::Touch);
@@ -2160,8 +2173,11 @@ void WebPage::updateSelectionWithTouches(const IntPoint& point, SelectionTouch s
         break;
     }
 
-    if (selectionFlipped == SelectionWasFlipped::Yes)
-        flags = SelectionFlags::SelectionFlipped;
+    if (selectionFlipped == SelectionWasFlipped::Yes) {
+        flags.add(SelectionFlags::SelectionFlipped);
+        m_bidiSelectionFlippingState = baseIsStart ? BidiSelectionFlippingState::FlippingToStart : BidiSelectionFlippingState::FlippingToEnd;
+    } else
+        m_bidiSelectionFlippingState = BidiSelectionFlippingState::NotFlipping;
 
     completionHandler(point, selectionTouch, flags);
 }
@@ -2713,6 +2729,7 @@ void WebPage::setSelectionRange(const WebCore::IntPoint& point, WebCore::TextGra
     auto range = rangeForGranularityAtPoint(*frame, point, granularity, isInteractingWithFocusedElement);
     if (range)
         frame->selection().setSelectedRange(*range, Affinity::Upstream, WebCore::FrameSelection::ShouldCloseTyping::Yes, UserTriggered::Yes);
+
     m_initialSelection = range;
 }
 
@@ -2742,8 +2759,8 @@ void WebPage::selectTextWithGranularityAtPoint(const WebCore::IntPoint& point, W
 
 void WebPage::beginSelectionInDirection(WebCore::SelectionDirection direction, CompletionHandler<void(bool)>&& completionHandler)
 {
-    m_selectionAnchor = direction == SelectionDirection::Left ? Start : End;
-    completionHandler(m_selectionAnchor == Start);
+    m_selectionAnchor = direction == SelectionDirection::Left ? SelectionAnchor::Start : SelectionAnchor::End;
+    completionHandler(m_selectionAnchor == SelectionAnchor::Start);
 }
 
 void WebPage::updateSelectionWithExtentPointAndBoundary(const WebCore::IntPoint& point, WebCore::TextGranularity granularity, bool isInteractingWithFocusedElement, TextInteractionSource source, CompletionHandler<void(bool)>&& callback)
@@ -2804,13 +2821,13 @@ void WebPage::updateSelectionWithExtentPoint(const WebCore::IntPoint& point, boo
     VisiblePosition selectionEnd;
     
     if (respectSelectionAnchor == RespectSelectionAnchor::Yes) {
-        if (m_selectionAnchor == Start) {
+        if (m_selectionAnchor == SelectionAnchor::Start) {
             selectionStart = frame->selection().selection().visibleStart();
             selectionEnd = position;
             if (position <= selectionStart) {
                 selectionStart = selectionStart.previous();
                 selectionEnd = frame->selection().selection().visibleEnd();
-                m_selectionAnchor = End;
+                m_selectionAnchor = SelectionAnchor::End;
             }
         } else {
             selectionStart = position;
@@ -2818,7 +2835,7 @@ void WebPage::updateSelectionWithExtentPoint(const WebCore::IntPoint& point, boo
             if (position >= selectionEnd) {
                 selectionStart = frame->selection().selection().visibleStart();
                 selectionEnd = selectionEnd.next();
-                m_selectionAnchor = Start;
+                m_selectionAnchor = SelectionAnchor::Start;
             }
         }
     } else {
@@ -2836,7 +2853,7 @@ void WebPage::updateSelectionWithExtentPoint(const WebCore::IntPoint& point, boo
     if (auto range = makeSimpleRange(selectionStart, selectionEnd))
         frame->selection().setSelectedRange(range, Affinity::Upstream, WebCore::FrameSelection::ShouldCloseTyping::Yes, UserTriggered::Yes);
 
-    callback(m_selectionAnchor == Start);
+    callback(m_selectionAnchor == SelectionAnchor::Start);
 }
 
 void WebPage::didReleaseAllTouchPoints()
