@@ -182,7 +182,7 @@ RefPtr<WebExtensionLocalization> WebExtensionContextProxy::parseLocalization(Ref
     return nullptr;
 }
 
-WebCore::DOMWrapperWorld& WebExtensionContextProxy::toDOMWrapperWorld(WebExtensionContentWorldType contentWorldType) const
+Ref<WebCore::DOMWrapperWorld> WebExtensionContextProxy::toDOMWrapperWorld(WebExtensionContentWorldType contentWorldType) const
 {
     switch (contentWorldType) {
     case WebExtensionContentWorldType::Main:

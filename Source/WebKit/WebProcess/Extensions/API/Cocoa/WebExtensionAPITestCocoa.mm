@@ -33,6 +33,7 @@
 #import "CocoaHelpers.h"
 #import "MessageSenderInlines.h"
 #import "WebExtensionAPINamespace.h"
+#import "WebExtensionAPIWebPageNamespace.h"
 #import "WebExtensionControllerMessages.h"
 #import "WebExtensionControllerProxy.h"
 #import "WebExtensionEventListenerType.h"
@@ -345,13 +346,21 @@ JSValue *WebExtensionAPITest::assertSafeResolve(JSContextRef context, JSValue *f
     return assertResolves(context, result, message);
 }
 
-void WebExtensionContextProxy::dispatchTestMessageEvent(const String& message, const String& argumentJSON)
+void WebExtensionContextProxy::dispatchTestMessageEvent(const String& message, const String& argumentJSON, WebExtensionContentWorldType contentWorldType)
 {
     id argument = parseJSON(argumentJSON, JSONOptions::FragmentsAllowed);
 
-    enumerateNamespaceObjects([&](auto& namespaceObject) {
+    if (contentWorldType == WebExtensionContentWorldType::WebPage) {
+        enumerateFramesAndWebPageNamespaceObjects([&](auto&, auto& namespaceObject) {
+            namespaceObject.test().onMessage().invokeListenersWithArgument(message, argument);
+        });
+
+        return;
+    }
+
+    enumerateFramesAndNamespaceObjects([&](auto&, auto& namespaceObject) {
         namespaceObject.test().onMessage().invokeListenersWithArgument(message, argument);
-    });
+    }, toDOMWrapperWorld(contentWorldType));
 }
 
 } // namespace WebKit

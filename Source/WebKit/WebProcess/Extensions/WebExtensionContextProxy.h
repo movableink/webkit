@@ -45,6 +45,7 @@ namespace WebKit {
 
 class WebExtensionAPINamespace;
 class WebExtensionAPIStorage;
+class WebExtensionAPIWebPageNamespace;
 class WebExtensionControllerProxy;
 class WebExtensionMatchPattern;
 class WebFrame;
@@ -93,7 +94,7 @@ public:
     bool inTestingMode() const;
 
     bool hasDOMWrapperWorld(WebExtensionContentWorldType contentWorldType) const { return contentWorldType != WebExtensionContentWorldType::ContentScript || hasContentScriptWorld(); }
-    WebCore::DOMWrapperWorld& toDOMWrapperWorld(WebExtensionContentWorldType) const;
+    Ref<WebCore::DOMWrapperWorld> toDOMWrapperWorld(WebExtensionContentWorldType) const;
 
     static WebCore::DOMWrapperWorld& mainWorldSingleton() { return WebCore::mainThreadNormalWorld(); }
 
@@ -128,7 +129,8 @@ public:
     Vector<Ref<WebPage>> tabPages(std::optional<WebExtensionTabIdentifier> = std::nullopt, std::optional<WebExtensionWindowIdentifier> = std::nullopt) const;
     void addTabPage(WebPage&, std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>);
 
-    void enumerateFramesAndNamespaceObjects(const Function<void(WebFrame&, WebExtensionAPINamespace&)>&, WebCore::DOMWrapperWorld& = mainWorldSingleton());
+    void enumerateFramesAndNamespaceObjects(const Function<void(WebFrame&, WebExtensionAPINamespace&)>&, Ref<WebCore::DOMWrapperWorld>&& = mainWorldSingleton());
+    void enumerateFramesAndWebPageNamespaceObjects(const Function<void(WebFrame&, WebExtensionAPIWebPageNamespace&)>&);
 
     void enumerateNamespaceObjects(const Function<void(WebExtensionAPINamespace&)>& function)
     {
@@ -205,7 +207,7 @@ private:
     void dispatchTabsRemovedEvent(WebExtensionTabIdentifier, WebExtensionWindowIdentifier, WebExtensionContext::WindowIsClosing);
 
     // Test
-    void dispatchTestMessageEvent(const String& message, const String& argumentJSON);
+    void dispatchTestMessageEvent(const String& message, const String& argumentJSON, WebExtensionContentWorldType);
 
     // Web Navigation
     void dispatchWebNavigationEvent(WebExtensionEventListenerType, WebExtensionTabIdentifier, const WebExtensionFrameParameters&, WallTime);

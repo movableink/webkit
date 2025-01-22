@@ -41,7 +41,12 @@ static auto *manifest = @{
     @"background": @{
         @"scripts": @[ @"background.js" ],
         @"persistent": @NO
-    }
+    },
+
+    @"content_scripts": @[@{
+        @"matches": @[ @"*://*/*" ],
+        @"js": @[ @"content.js" ]
+    }]
 };
 
 TEST(WKWebExtensionAPITest, MessageEvent)
@@ -60,6 +65,81 @@ TEST(WKWebExtensionAPITest, MessageEvent)
     auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
 
     [manager runUntilTestMessage:@"Send Test Message"];
+
+    [manager sendTestMessage:@"Test" withArgument:@{ @"key": @"value" }];
+
+    [manager run];
+}
+
+TEST(WKWebExtensionAPITest, MessageEventInWebPage)
+{
+    auto *pageScript = Util::constructScript(@[
+        @"browser.test.onMessage.addListener((message, data) => {",
+        @"  browser.test.assertEq(message, 'Test', 'message should be')",
+        @"  browser.test.assertEq(data?.key, 'value', 'data.key should be')",
+
+        @"  browser.test.notifyPass()",
+        @"})",
+
+        @"browser.test.sendMessage('Ready for Message')"
+    ]);
+
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<script type='module' src='script.js'></script>"_s } },
+        { "/script.js"_s, { { { "Content-Type"_s, "application/javascript"_s } }, pageScript } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *resources = @{
+        @"background.js": @"// This script is intentionally left blank."
+    };
+
+    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    [manager load];
+
+    [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
+
+    [manager runUntilTestMessage:@"Ready for Message"];
+
+    [manager sendTestMessage:@"Test" withArgument:@{ @"key": @"value" }];
+
+    [manager run];
+}
+
+TEST(WKWebExtensionAPITest, MessageEventInContentScript)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *contentScript = Util::constructScript(@[
+        @"browser.test.onMessage.addListener((message, data) => {",
+        @"  browser.test.assertEq(message, 'Test', 'message should be')",
+        @"  browser.test.assertEq(data?.key, 'value', 'data.key should be')",
+
+        @"  browser.test.notifyPass()",
+        @"})",
+
+        @"browser.test.sendMessage('Ready for Message')"
+    ]);
+
+    auto *resources = @{
+        @"background.js": @"// This script is intentionally left blank.",
+        @"content.js": contentScript
+    };
+
+    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+
+    [manager load];
+
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager runUntilTestMessage:@"Ready for Message"];
 
     [manager sendTestMessage:@"Test" withArgument:@{ @"key": @"value" }];
 
