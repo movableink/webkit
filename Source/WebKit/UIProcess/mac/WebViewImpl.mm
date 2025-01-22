@@ -2974,7 +2974,7 @@ bool WebViewImpl::validateUserInterfaceItem(id <NSValidatedUserInterfaceItem> it
     if (action == @selector(centerSelectionInVisibleArea:))
         return m_page->editorState().selectionIsRange || (m_page->editorState().isContentEditable && !m_page->editorState().selectionIsNone);
 
-#if ENABLE(WRITING_TOOLS)
+#if ENABLE(WRITING_TOOLS) && HAVE(NSRESPONDER_WRITING_TOOLS_SUPPORT)
     if (action == @selector(showWritingTools:))
         return m_page->shouldEnableWritingToolsRequestedTool(convertToWebRequestedTool((WTRequestedTool)[item tag]));
 #endif
