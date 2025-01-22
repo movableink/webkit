@@ -48,7 +48,7 @@ messages -> DrawingArea {
 #endif
 
 #if USE(GRAPHICS_LAYER_WC)
-    UpdateGeometryWC(uint64_t backingStoreStateID, WebCore::IntSize viewSize, float deviceScaleFactor)
+    UpdateGeometryWC(uint64_t backingStoreStateID, WebCore::IntSize viewSize, float deviceScaleFactor, float intrinsicDeviceScaleFactor)
 #endif
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)

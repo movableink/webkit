@@ -68,6 +68,9 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
     bool canRunModal;
 
     float deviceScaleFactor;
+#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
+    float intrinsicDeviceScaleFactor;
+#endif
     float viewScaleFactor;
 
     double textZoomFactor;

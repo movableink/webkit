@@ -156,8 +156,11 @@ public:
     virtual void updateGeometry(const WebCore::IntSize& viewSize, bool flushSynchronously, const WTF::MachSendRight& fencePort, CompletionHandler<void()>&&) = 0;
 #endif
 
+#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
+    virtual void setIntrinsicDeviceScaleFactor(float) { }
+#endif
 #if USE(GRAPHICS_LAYER_WC)
-    virtual void updateGeometryWC(uint64_t, WebCore::IntSize, float deviceScaleFactor) { };
+    virtual void updateGeometryWC(uint64_t, WebCore::IntSize, float deviceScaleFactor, float intrinsicDeviceScaleFactor) { };
 #endif
 
 #if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)

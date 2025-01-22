@@ -1344,6 +1344,11 @@ public:
     void setDeviceScaleFactor(float);
     float deviceScaleFactor() const;
 
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
+    void setIntrinsicDeviceScaleFactor(float f) { m_intrinsicDeviceScaleFactor = f; }
+    float intrinsicDeviceScaleFactor() const { return m_intrinsicDeviceScaleFactor; }
+#endif
+
     void updateRenderingWithForcedRepaintWithoutCallback();
 
     void unmarkAllMisspellings();
@@ -2587,6 +2592,7 @@ private:
 #endif
 
 #if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
+    float m_intrinsicDeviceScaleFactor { 1 };
     uint64_t m_nativeWindowHandle { 0 };
 #endif
 

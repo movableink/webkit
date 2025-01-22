@@ -145,6 +145,9 @@ struct WebPageCreationParameters {
     bool canRunModal { false };
 
     float deviceScaleFactor { 0 };
+#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
+    float intrinsicDeviceScaleFactor { 0 };
+#endif
     float viewScaleFactor { 0 };
 
     double textZoomFactor { 1 };

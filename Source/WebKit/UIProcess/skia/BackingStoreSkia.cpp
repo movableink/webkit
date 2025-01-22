@@ -33,10 +33,6 @@
 #include <skia/core/SkBitmap.h>
 #include <skia/core/SkCanvas.h>
 
-#if PLATFORM(WIN)
-#include <WebCore/BitmapInfo.h>
-#endif
-
 namespace WebKit {
 
 BackingStore::BackingStore(const WebCore::IntSize& size, float deviceScaleFactor)
@@ -54,17 +50,14 @@ BackingStore::~BackingStore() = default;
 
 void BackingStore::paint(PlatformPaintContextPtr cr, const WebCore::IntRect& rect)
 {
-#if PLATFORM(WIN)
-    SkPixmap pixmap;
-    if (m_surface->peekPixels(&pixmap)) {
-        WebCore::IntRect scaledRect = rect;
-        scaledRect.scale(m_deviceScaleFactor);
-        auto bitmapInfo = WebCore::BitmapInfo::createBottomUp({ pixmap.width(), pixmap.height() });
-        SetDIBitsToDevice(cr, 0, 0, pixmap.width(), pixmap.height(), 0, 0, 0, pixmap.height(), pixmap.addr(), &bitmapInfo, DIB_RGB_COLORS);
-    }
-#else
-    m_surface->draw(cr, rect.x(), rect.y());
-#endif
+    cr->save();
+    cr->scale(1 / m_deviceScaleFactor, 1 / m_deviceScaleFactor);
+    WebCore::IntRect scaledRect { rect };
+    scaledRect.scale(m_deviceScaleFactor);
+    cr->clipIRect(scaledRect);
+    SkSamplingOptions option { SkFilterMode::kLinear };
+    m_surface->draw(cr, 0, 0, option, nullptr);
+    cr->restore();
 }
 
 void BackingStore::incorporateUpdate(UpdateInfo&& updateInfo)
