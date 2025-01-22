@@ -1985,9 +1985,8 @@ const Type* TypeChecker::chooseOverload(ASCIILiteral kind, const SourceSpan& spa
             call.m_isConstructor = it->value.kind == OverloadedDeclaration::Constructor;
             call.m_visibility = it->value.visibility;
 
-            if (call.m_isConstructor && satisfies(overload->result, Constraints::Integer) && valueArguments.size() == 1 && satisfies(valueArguments[0], Constraints::Float) && !satisfies(valueArguments[0], Constraints::AbstractInt))
+            if (call.isFloatToIntConversion(overload->result))
                 m_shaderModule.setUsesFtoi();
-
         }
 
         unsigned argumentCount = callArguments.size();

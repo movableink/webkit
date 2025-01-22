@@ -533,9 +533,10 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_stringBuilder.append(m_indent, "auto min = numeric_limits<T>::min();\n"_s,
-                m_indent, "auto max = numeric_limits<T>::max();\n"_s,
-                m_indent, "return T(clamp(value, S(min), S(max)));\n"_s);
+            m_stringBuilder.append(m_indent, "if constexpr (is_same_v<make_scalar_t<S>, half>)\n"_s);
+            m_stringBuilder.append(m_indent, "return T(select(clamp(value, max(S(numeric_limits<T>::min()), numeric_limits<S>::lowest()), numeric_limits<S>::max()), S(0), isnan(value)));\n"_s);
+            m_stringBuilder.append(m_indent, "else\n"_s);
+            m_stringBuilder.append(m_indent, "return T(select(clamp(value, S(numeric_limits<T>::min()), S(numeric_limits<T>::max() - ((128 << (!is_signed_v<T>)) - 1))), S(0), isnan(value)));\n"_s);
         }
         m_stringBuilder.append(m_indent, "}\n\n"_s);
     }
@@ -2044,7 +2045,7 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
         };
         static constexpr SortedArrayMap mappedNames { directMappings };
         if (call.isConstructor()) {
-            if (satisfies(type, Constraints::Integer) && call.arguments().size() == 1 && satisfies(call.arguments()[0].inferredType(), Constraints::Float) && !satisfies(call.arguments()[0].inferredType(), Constraints::AbstractInt)) {
+            if (call.isFloatToIntConversion()) {
                 m_stringBuilder.append("__wgslFtoi<"_s);
                 visit(type);
                 m_stringBuilder.append(">"_s);
