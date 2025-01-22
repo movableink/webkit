@@ -262,7 +262,7 @@ TEST(CopyHTML, CopySelectedTextInTextDocument)
 #if PLATFORM(MAC)
     RetainPtr pastedObjects = [[NSPasteboard generalPasteboard] readObjectsForClasses:@[ NSAttributedString.class ] options:nil];
     RetainPtr copiedText = dynamic_objc_cast<NSAttributedString>([pastedObjects firstObject]);
-#else
+#elif !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
     RetainPtr itemProvider = [[[UIPasteboard generalPasteboard] itemProviders] firstObject];
     __block bool doneLoading = false;
     __block RetainPtr<NSAttributedString> copiedText;
@@ -271,8 +271,8 @@ TEST(CopyHTML, CopySelectedTextInTextDocument)
         doneLoading = true;
     }];
     TestWebKitAPI::Util::run(&doneLoading);
-#endif
     EXPECT_WK_STREQ(expectedString.get(), [copiedText string]);
+#endif
 }
 
 #endif // PLATFORM(COCOA)
