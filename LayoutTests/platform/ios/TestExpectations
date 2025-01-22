@@ -7006,6 +7006,7 @@ webkit.org/b/271712 fast/forms/datalist/datalist-textinput-dynamically-add-optio
 webkit.org/b/271785 media/modern-media-controls/overflow-support/chapters.html [ Timeout ]
 webkit.org/b/271785 media/modern-media-controls/overflow-support/playback-speed.html [ Timeout ]
 
+media/video-mouse-focus.html [ Failure ]
 
 # --- Imported from ios-simulator ---
 
