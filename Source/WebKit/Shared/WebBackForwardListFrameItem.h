@@ -66,6 +66,7 @@ public:
     RefPtr<WebBackForwardListItem> protectedBackForwardListItem() const;
 
     void setChild(Ref<FrameState>&&);
+    void clearChildren() { m_children.clear(); }
 
     void setWasRestoredFromSession();
 

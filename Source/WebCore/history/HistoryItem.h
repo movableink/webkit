@@ -66,6 +66,7 @@ class HistoryItemClient : public RefCounted<HistoryItemClient> {
 public:
     virtual ~HistoryItemClient() = default;
     virtual void historyItemChanged(const HistoryItem&) = 0;
+    virtual void clearChildren(const HistoryItem&) const = 0;
 protected:
     HistoryItemClient() = default;
 };

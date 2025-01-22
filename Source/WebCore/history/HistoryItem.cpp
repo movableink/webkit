@@ -354,7 +354,7 @@ const Vector<Ref<HistoryItem>>& HistoryItem::children() const
 void HistoryItem::clearChildren()
 {
     m_children.clear();
-    notifyChanged();
+    m_client->clearChildren(*this);
 }
 
 // We do same-document navigation if going to a different item and if either of the following is true:

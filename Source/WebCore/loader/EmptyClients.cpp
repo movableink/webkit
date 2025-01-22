@@ -1166,6 +1166,7 @@ public:
     static Ref<EmptyHistoryItemClient> create() { return adoptRef(*new EmptyHistoryItemClient); }
 private:
     void historyItemChanged(const HistoryItem&) { }
+    void clearChildren(const HistoryItem&) const { }
 };
 
 PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier> identifier, PAL::SessionID sessionID)

@@ -9424,6 +9424,12 @@ void WebPageProxy::backForwardSetChildItem(BackForwardFrameItemIdentifier frameI
         frameItem->setChild(WTFMove(frameState));
 }
 
+void WebPageProxy::backForwardClearChildren(BackForwardItemIdentifier itemID, BackForwardFrameItemIdentifier frameItemID)
+{
+    if (RefPtr frameItem = WebBackForwardListFrameItem::itemForID(itemID, frameItemID))
+        frameItem->clearChildren();
+}
+
 void WebPageProxy::backForwardUpdateItem(IPC::Connection& connection, Ref<FrameState>&& frameState)
 {
     RefPtr frameItem = frameState->itemID && frameState->frameItemID ? WebBackForwardListFrameItem::itemForID(*frameState->itemID, *frameState->frameItemID) : nullptr;

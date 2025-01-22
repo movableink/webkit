@@ -207,6 +207,7 @@ messages -> WebPageProxy {
     # BackForward messages
     BackForwardAddItem(Ref<WebKit::FrameState> navigatedFrameState)
     BackForwardSetChildItem(WebCore::BackForwardFrameItemIdentifier frameItemID, Ref<WebKit::FrameState> frameState)
+    BackForwardClearChildren(WebCore::BackForwardItemIdentifier itemID, WebCore::BackForwardFrameItemIdentifier frameItemID)
     BackForwardUpdateItem(Ref<WebKit::FrameState> frameState)
     BackForwardGoToItem(WebCore::BackForwardItemIdentifier itemID) -> (struct WebKit::WebBackForwardListCounts counts) Synchronous
     BackForwardItemAtIndex(int32_t itemIndex, WebCore::FrameIdentifier frameID) -> (RefPtr<WebKit::FrameState> frameState) Synchronous
