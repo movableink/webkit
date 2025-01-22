@@ -2,7 +2,6 @@
  * Copyright (C) 2011 Andreas Kling (kling@webkit.org)
  * Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
  * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,8 +79,6 @@
 #include "CSSRayValue.h"
 #include "CSSRectValue.h"
 #include "CSSReflectValue.h"
-#include "CSSScrollMarginEdgeValue.h"
-#include "CSSScrollPaddingEdgeValue.h"
 #include "CSSScrollValue.h"
 #include "CSSSubgridValue.h"
 #include "CSSTextShadowPropertyValue.h"
@@ -213,10 +210,6 @@ template<typename Visitor> constexpr decltype(auto) CSSValue::visitDerived(Visit
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSRectValue>(*this));
     case Reflect:
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSReflectValue>(*this));
-    case ScrollMarginEdge:
-        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSScrollMarginEdgeValue>(*this));
-    case ScrollPaddingEdge:
-        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSScrollPaddingEdgeValue>(*this));
     case Scroll:
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<CSSScrollValue>(*this));
     case Subgrid:

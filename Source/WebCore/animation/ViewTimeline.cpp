@@ -39,7 +39,6 @@
 #include "RenderSVGModelObject.h"
 #include "ScrollAnchoringController.h"
 #include "StyleBuilderConverter.h"
-#include "StyleScrollPadding.h"
 #include "WebAnimation.h"
 
 namespace WebCore {
@@ -258,24 +257,11 @@ void ViewTimeline::cacheCurrentTime()
             return scrollDirection->isVertical ? style.scrollPaddingBottom() : style.scrollPaddingRight();
         };
 
-        bool hasInsetsStart = m_insets.start.has_value();
-        bool hasInsetsEnd = m_insets.end.has_value();
-
-        float insetStart = 0;
-        float insetEnd = 0;
-        if (hasInsetsStart && hasInsetsEnd) {
-            insetStart = floatValueForOffset(*m_insets.start, scrollContainerSize);
-            insetEnd = floatValueForOffset(*m_insets.end, scrollContainerSize);
-        } else if (hasInsetsStart) {
-            insetStart = floatValueForOffset(*m_insets.start, scrollContainerSize);
-            insetEnd = insetStart;
-        } else if (hasInsetsEnd) {
-            insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);
-            insetEnd = floatValueForOffset(*m_insets.end, scrollContainerSize);
-        } else {
-            insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);
-            insetEnd = Style::evaluate(scrollPadding(PaddingEdge::End), scrollContainerSize);
-        }
+        auto hasAutoStartInset = !m_insets.start;
+        auto insetStartLength = hasAutoStartInset ? scrollPadding(PaddingEdge::Start) : *m_insets.start;
+        auto insetEndLength = m_insets.end.value_or(hasAutoStartInset ? scrollPadding(PaddingEdge::End) : insetStartLength);
+        auto insetStart = floatValueForOffset(insetStartLength, scrollContainerSize);
+        auto insetEnd = floatValueForOffset(insetEndLength, scrollContainerSize);
 
         return {
             scrollOffset,

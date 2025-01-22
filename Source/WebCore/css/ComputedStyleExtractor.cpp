@@ -45,7 +45,6 @@
 #include "CSSGridLineNamesValue.h"
 #include "CSSGridTemplateAreasValue.h"
 #include "CSSPathValue.h"
-#include "CSSPrimitiveNumericTypes+CSSValueCreation.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSProperty.h"
 #include "CSSPropertyAnimation.h"
@@ -54,8 +53,6 @@
 #include "CSSRectValue.h"
 #include "CSSReflectValue.h"
 #include "CSSRegisteredCustomProperty.h"
-#include "CSSScrollMarginEdgeValue.h"
-#include "CSSScrollPaddingEdgeValue.h"
 #include "CSSScrollValue.h"
 #include "CSSTextShadowPropertyValue.h"
 #include "CSSTransformListValue.h"
@@ -94,15 +91,12 @@
 #include "StyleEasingFunction.h"
 #include "StyleFilterProperty.h"
 #include "StylePathData.h"
-#include "StylePrimitiveNumericOrKeyword+Conversions.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 #include "StylePropertyShorthand.h"
 #include "StylePropertyShorthandFunctions.h"
 #include "StyleReflection.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
-#include "StyleScrollMargin.h"
-#include "StyleScrollPadding.h"
 #include "StyleTextShadow.h"
 #include "Styleable.h"
 #include "TimelineRange.h"
@@ -4716,13 +4710,13 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyScrollMargin:
         return getCSSPropertyValuesFor4SidesShorthand(scrollMarginShorthand());
     case CSSPropertyScrollMarginBottom:
-        return CSS::createCSSValue(Style::toCSS(style.scrollMarginBottom(), style));
+        return zoomAdjustedPixelValueForLength(style.scrollMarginBottom(), style);
     case CSSPropertyScrollMarginTop:
-        return CSS::createCSSValue(Style::toCSS(style.scrollMarginTop(), style));
+        return zoomAdjustedPixelValueForLength(style.scrollMarginTop(), style);
     case CSSPropertyScrollMarginRight:
-        return CSS::createCSSValue(Style::toCSS(style.scrollMarginRight(), style));
+        return zoomAdjustedPixelValueForLength(style.scrollMarginRight(), style);
     case CSSPropertyScrollMarginLeft:
-        return CSS::createCSSValue(Style::toCSS(style.scrollMarginLeft(), style));
+        return zoomAdjustedPixelValueForLength(style.scrollMarginLeft(), style);
     case CSSPropertyScrollMarginBlock:
         return getCSSPropertyValuesFor2SidesShorthand(scrollMarginBlockShorthand());
     case CSSPropertyScrollMarginInline:
@@ -4730,13 +4724,13 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyScrollPadding:
         return getCSSPropertyValuesFor4SidesShorthand(scrollPaddingShorthand());
     case CSSPropertyScrollPaddingBottom:
-        return CSS::createCSSValue(Style::toCSS(style.scrollPaddingBottom(), style));
+        return zoomAdjustedPixelValueForLength(style.scrollPaddingBottom(), style);
     case CSSPropertyScrollPaddingTop:
-        return CSS::createCSSValue(Style::toCSS(style.scrollPaddingTop(), style));
+        return zoomAdjustedPixelValueForLength(style.scrollPaddingTop(), style);
     case CSSPropertyScrollPaddingRight:
-        return CSS::createCSSValue(Style::toCSS(style.scrollPaddingRight(), style));
+        return zoomAdjustedPixelValueForLength(style.scrollPaddingRight(), style);
     case CSSPropertyScrollPaddingLeft:
-        return CSS::createCSSValue(Style::toCSS(style.scrollPaddingLeft(), style));
+        return zoomAdjustedPixelValueForLength(style.scrollPaddingLeft(), style);
     case CSSPropertyScrollPaddingBlock:
         return getCSSPropertyValuesFor2SidesShorthand(scrollPaddingBlockShorthand());
     case CSSPropertyScrollPaddingInline:
@@ -4790,7 +4784,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
 
 #if ENABLE(DARK_MODE_CSS)
     case CSSPropertyColorScheme:
-        return CSS::createCSSValue(Style::toCSS(style.colorScheme(), style));
+        return CSSColorSchemeValue::create(Style::toCSS(style.colorScheme(), style));
 #endif
 
     // Length properties for SVG.

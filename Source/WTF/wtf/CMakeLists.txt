@@ -92,7 +92,6 @@ set(WTF_PUBLIC_HEADERS
     FixedBitVector.h
     FixedVector.h
     FixedWidthDouble.h
-    FlatteningVariantAdaptor.h
     FlipBytes.h
     Float16.h
     ForbidHeapAllocation.h

@@ -8930,7 +8930,7 @@
         "scroll-margin-bottom": {
             "codegen-properties": {
                 "initial": "initialScrollMargin",
-                "converter": "ScrollMarginEdge",
+                "converter": "Length",
                 "aliases": [
                     "scroll-snap-margin-bottom"
                 ],
@@ -8938,9 +8938,7 @@
                     "name": "scroll-margin",
                     "resolver": "bottom"
                 },
-                "parser-function": "consumeScrollMarginEdge",
-                "parser-grammar-unused": "<length>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "<length>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -8950,7 +8948,7 @@
         "scroll-margin-left": {
             "codegen-properties": {
                 "initial": "initialScrollMargin",
-                "converter": "ScrollMarginEdge",
+                "converter": "Length",
                 "aliases": [
                     "scroll-snap-margin-left"
                 ],
@@ -8958,9 +8956,7 @@
                     "name": "scroll-margin",
                     "resolver": "left"
                 },
-                "parser-function": "consumeScrollMarginEdge",
-                "parser-grammar-unused": "<length>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "<length>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -8970,7 +8966,7 @@
         "scroll-margin-right": {
             "codegen-properties": {
                 "initial": "initialScrollMargin",
-                "converter": "ScrollMarginEdge",
+                "converter": "Length",
                 "aliases": [
                     "scroll-snap-margin-right"
                 ],
@@ -8978,9 +8974,7 @@
                     "name": "scroll-margin",
                     "resolver": "right"
                 },
-                "parser-function": "consumeScrollMarginEdge",
-                "parser-grammar-unused": "<length>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "<length>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -8990,7 +8984,7 @@
         "scroll-margin-top": {
             "codegen-properties": {
                 "initial": "initialScrollMargin",
-                "converter": "ScrollMarginEdge",
+                "converter": "Length",
                 "aliases": [
                     "scroll-snap-margin-top"
                 ],
@@ -8998,9 +8992,7 @@
                     "name": "scroll-margin",
                     "resolver": "top"
                 },
-                "parser-function": "consumeScrollMarginEdge",
-                "parser-grammar-unused": "<length>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "<length>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9014,9 +9006,7 @@
                     "name": "scroll-margin",
                     "resolver": "inline-start"
                 },
-                "parser-function": "consumeScrollMarginEdge",
-                "parser-grammar-unused": "<length>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "<length>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9030,9 +9020,7 @@
                     "name": "scroll-margin",
                     "resolver": "block-start"
                 },
-                "parser-function": "consumeScrollMarginEdge",
-                "parser-grammar-unused": "<length>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "<length>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9046,9 +9034,7 @@
                     "name": "scroll-margin",
                     "resolver": "inline-end"
                 },
-                "parser-function": "consumeScrollMarginEdge",
-                "parser-grammar-unused": "<length>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "<length>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9062,9 +9048,7 @@
                     "name": "scroll-margin",
                     "resolver": "block-end"
                 },
-                "parser-function": "consumeScrollMarginEdge",
-                "parser-grammar-unused": "<length>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "<length>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9112,14 +9096,12 @@
         "scroll-padding-bottom": {
             "codegen-properties": {
                 "initial": "initialScrollPadding",
-                "converter": "ScrollPaddingEdge",
+                "converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "scroll-padding",
                     "resolver": "bottom"
                 },
-                "parser-function": "consumeScrollPaddingEdge",
-                "parser-grammar-unused": "auto | <length-percentage [0,inf]>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "auto | <length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9129,14 +9111,12 @@
         "scroll-padding-left": {
             "codegen-properties": {
                 "initial": "initialScrollPadding",
-                "converter": "ScrollPaddingEdge",
+                "converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "scroll-padding",
                     "resolver": "left"
                 },
-                "parser-function": "consumeScrollPaddingEdge",
-                "parser-grammar-unused": "auto | <length-percentage [0,inf]>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "auto | <length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9146,14 +9126,12 @@
         "scroll-padding-right": {
             "codegen-properties": {
                 "initial": "initialScrollPadding",
-                "converter": "ScrollPaddingEdge",
+                "converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "scroll-padding",
                     "resolver": "right"
                 },
-                "parser-function": "consumeScrollPaddingEdge",
-                "parser-grammar-unused": "auto | <length-percentage [0,inf]>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "auto | <length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9163,14 +9141,12 @@
         "scroll-padding-top": {
             "codegen-properties": {
                 "initial": "initialScrollPadding",
-                "converter": "ScrollPaddingEdge",
+                "converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "scroll-padding",
                     "resolver": "top"
                 },
-                "parser-function": "consumeScrollPaddingEdge",
-                "parser-grammar-unused": "auto | <length-percentage [0,inf]>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "auto | <length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9184,9 +9160,7 @@
                     "name": "scroll-padding",
                     "resolver": "inline-start"
                 },
-                "parser-function": "consumeScrollPaddingEdge",
-                "parser-grammar-unused": "auto | <length-percentage [0,inf]>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "auto | <length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9200,9 +9174,7 @@
                     "name": "scroll-padding",
                     "resolver": "block-start"
                 },
-                "parser-function": "consumeScrollPaddingEdge",
-                "parser-grammar-unused": "auto | <length-percentage [0,inf]>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "auto | <length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9216,9 +9188,7 @@
                     "name": "scroll-padding",
                     "resolver": "inline-end"
                 },
-                "parser-function": "consumeScrollPaddingEdge",
-                "parser-grammar-unused": "auto | <length-percentage [0,inf]>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "auto | <length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -9232,9 +9202,7 @@
                     "name": "scroll-padding",
                     "resolver": "block-end"
                 },
-                "parser-function": "consumeScrollPaddingEdge",
-                "parser-grammar-unused": "auto | <length-percentage [0,inf]>",
-                "parser-grammar-unused-reason": "Needs custom CSSValue type"
+                "parser-grammar": "auto | <length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-scroll-snap",

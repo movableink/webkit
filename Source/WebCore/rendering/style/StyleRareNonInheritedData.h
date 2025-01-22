@@ -44,9 +44,6 @@
 #include "ShapeValue.h"
 #include "StyleColor.h"
 #include "StyleContentAlignmentData.h"
-#include "StylePrimitiveNumericTypes.h"
-#include "StyleScrollMargin.h"
-#include "StyleScrollPadding.h"
 #include "StyleScrollSnapPoints.h"
 #include "StyleSelfAlignmentData.h"
 #include "StyleTextEdge.h"
@@ -69,8 +66,6 @@ class TextStream;
 }
 
 namespace WebCore {
-
-using namespace CSS::Literals;
 
 class AnimationList;
 class ContentData;
@@ -149,11 +144,9 @@ public:
     DataRef<StyleGridData> grid;
     DataRef<StyleGridItemData> gridItem;
 
-    // Only meaningful when `hasClip` is true.
     LengthBox clip;
-
-    Style::ScrollMargin scrollMargin { Style::ScrollMarginEdge { 0_css_px } };
-    Style::ScrollPadding scrollPadding { Style::ScrollPaddingEdge { CSS::Keyword::Auto { } } };
+    LengthBox scrollMargin { 0, 0, 0, 0 };
+    LengthBox scrollPadding { Length(LengthType::Auto), Length(LengthType::Auto), Length(LengthType::Auto), Length(LengthType::Auto) };
 
     CounterDirectiveMap counterDirectives;
 

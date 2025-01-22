@@ -40,10 +40,7 @@
 #include "CSSNumericFactory.h"
 #include "CSSParser.h"
 #include "CSSPendingSubstitutionValue.h"
-#include "CSSPrimitiveNumericTypes+CSSValueCreation.h"
 #include "CSSPropertyParser.h"
-#include "CSSScrollMarginEdgeValue.h"
-#include "CSSScrollPaddingEdgeValue.h"
 #include "CSSStyleImageValue.h"
 #include "CSSStyleValue.h"
 #include "CSSTextShadowPropertyValue.h"
@@ -367,21 +364,6 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(const CSSValue&
             },
             [&](const auto&) -> ExceptionOr<Ref<CSSStyleValue>> {
                 return CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue)));
-            }
-        );
-    } else if (RefPtr property = dynamicDowncast<CSSScrollMarginEdgeValue>(cssValue)) {
-        return WTF::switchOn(property->edge().value,
-            [&](const auto& value) -> ExceptionOr<Ref<CSSStyleValue>> {
-                return reifyValue(CSS::createCSSValue(value), propertyID, document);
-            }
-        );
-    } else if (RefPtr property = dynamicDowncast<CSSScrollPaddingEdgeValue>(cssValue)) {
-        return WTF::switchOn(property->edge().value,
-            [&]<CSSValueID keyword>(Constant<keyword>) -> ExceptionOr<Ref<CSSStyleValue>> {
-                return static_reference_cast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(keyword)));
-            },
-            [&](const auto& value) -> ExceptionOr<Ref<CSSStyleValue>> {
-                return reifyValue(CSS::createCSSValue(value), propertyID, document);
             }
         );
     } else if (auto* valueList = dynamicDowncast<CSSValueList>(cssValue)) {

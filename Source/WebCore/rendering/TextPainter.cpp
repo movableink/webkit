@@ -86,10 +86,7 @@ inline bool ShadowApplier::isLastShadowIteration()
 
 inline bool ShadowApplier::shadowIsCompletelyCoveredByText(bool textIsOpaque)
 {
-    return textIsOpaque
-        && m_shadow
-        && Style::isZero(m_shadow->location())
-        && Style::isZero(m_shadow->radius());
+    return textIsOpaque && m_shadow && m_shadow->location().isZero() && m_shadow->radius().isZero();
 }
 
 ShadowApplier::~ShadowApplier()
