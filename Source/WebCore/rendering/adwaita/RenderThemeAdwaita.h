@@ -51,12 +51,12 @@ private:
     String mediaControlsStyleSheet() final;
 #endif
 
-#if ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
+#if ENABLE(VIDEO)
     String mediaControlsBase64StringForIconNameAndType(const String&, const String&) final;
     String mediaControlsFormattedStringForDuration(double) final;
 
     String m_mediaControlsStyleSheet;
-#endif // ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
+#endif // ENABLE(VIDEO)
 
     bool supportsHover() const final { return true; }
     bool supportsFocusRing(const RenderStyle&) const final;

@@ -1322,7 +1322,6 @@ $(PROJECT_DIR)/css/html.css
 $(PROJECT_DIR)/css/htmlSwitchControl.css
 $(PROJECT_DIR)/css/make-css-file-arrays.pl
 $(PROJECT_DIR)/css/mathml.css
-$(PROJECT_DIR)/css/mediaControls.css
 $(PROJECT_DIR)/css/popover.css
 $(PROJECT_DIR)/css/process-css-properties.py
 $(PROJECT_DIR)/css/process-css-pseudo-selectors.py

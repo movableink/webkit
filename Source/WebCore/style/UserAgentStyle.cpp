@@ -81,7 +81,6 @@ StyleSheetContents* UserAgentStyle::defaultStyleSheet;
 StyleSheetContents* UserAgentStyle::quirksStyleSheet;
 StyleSheetContents* UserAgentStyle::svgStyleSheet;
 StyleSheetContents* UserAgentStyle::mathMLStyleSheet;
-StyleSheetContents* UserAgentStyle::mediaControlsStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
 StyleSheetContents* UserAgentStyle::popoverStyleSheet;
 StyleSheetContents* UserAgentStyle::horizontalFormControlsStyleSheet;
@@ -205,17 +204,6 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
                 addToDefaultStyle(*htmlSwitchControlStyleSheet);
             }
         }
-#if ENABLE(VIDEO) && !ENABLE(MODERN_MEDIA_CONTROLS)
-        else if (is<HTMLMediaElement>(element)) {
-            if (!mediaControlsStyleSheet) {
-                String mediaRules = RenderTheme::singleton().mediaControlsStyleSheet();
-                if (mediaRules.isEmpty())
-                    mediaRules = makeString(String(StringImpl::createWithoutCopying(mediaControlsUserAgentStyleSheet)), RenderTheme::singleton().extraMediaControlsStyleSheet());
-                mediaControlsStyleSheet = parseUASheet(mediaRules);
-                addToDefaultStyle(*mediaControlsStyleSheet);
-            }
-        }
-#endif // ENABLE(VIDEO) && !ENABLE(MODERN_MEDIA_CONTROLS)
 #if ENABLE(ATTACHMENT_ELEMENT)
         else if (!attachmentStyleSheet && is<HTMLAttachmentElement>(element)) {
             attachmentStyleSheet = parseUASheet(RenderTheme::singleton().attachmentStyleSheet());

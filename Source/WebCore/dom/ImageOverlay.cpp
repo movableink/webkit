@@ -255,7 +255,6 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
     bool hadExistingElements = false;
     Elements elements;
     RefPtr<HTMLElement> mediaControlsContainer;
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     mediaControlsContainer = ([&]() -> RefPtr<HTMLElement> {
         RefPtr mediaElement = dynamicDowncast<HTMLMediaElement>(element);
         if (!mediaElement)
@@ -276,7 +275,6 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
         }
         return nullptr;
     })();
-#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
     if (RefPtr shadowRoot = element.shadowRoot()) {
         if (CheckedPtr renderer = dynamicDowncast<RenderImage>(element.renderer()))

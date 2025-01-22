@@ -92,12 +92,9 @@ public:
     virtual String extraDefaultStyleSheet() { return String(); }
 #if ENABLE(VIDEO)
     virtual String mediaControlsStyleSheet() { return String(); }
-    virtual String extraMediaControlsStyleSheet() { return String(); }
     virtual Vector<String, 2> mediaControlsScripts() { return { }; }
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     virtual String mediaControlsBase64StringForIconNameAndType(const String&, const String&) { return String(); }
     virtual String mediaControlsFormattedStringForDuration(double) { return String(); }
-#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 #endif // ENABLE(VIDEO)
 #if ENABLE(ATTACHMENT_ELEMENT)
     virtual String attachmentStyleSheet() const;

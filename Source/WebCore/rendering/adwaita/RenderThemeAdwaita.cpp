@@ -43,16 +43,13 @@
 #include "RenderStyleSetters.h"
 #include "ThemeAdwaita.h"
 #include "TimeRanges.h"
+#include "UserAgentScripts.h"
 #include "UserAgentStyleSheets.h"
 #include <wtf/text/Base64.h>
 
 #if PLATFORM(WIN)
 #include "WebCoreBundleWin.h"
 #include <wtf/FileSystem.h>
-#endif
-
-#if ENABLE(MODERN_MEDIA_CONTROLS)
-#include "UserAgentScripts.h"
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
@@ -206,25 +203,15 @@ String RenderThemeAdwaita::extraDefaultStyleSheet()
 
 Vector<String, 2> RenderThemeAdwaita::mediaControlsScripts()
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript) };
-#else
-    return { };
-#endif
 }
 
 String RenderThemeAdwaita::mediaControlsStyleSheet()
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     if (m_mediaControlsStyleSheet.isEmpty())
         m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
     return m_mediaControlsStyleSheet;
-#else
-    return emptyString();
-#endif
 }
-
-#if ENABLE(MODERN_MEDIA_CONTROLS)
 
 String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
 {
@@ -250,7 +237,6 @@ String RenderThemeAdwaita::mediaControlsFormattedStringForDuration(double durati
     // FIXME: Format this somehow, maybe through GDateTime?
     return makeString(durationInSeconds);
 }
-#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 #endif // ENABLE(VIDEO)
 
 Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOptions> options) const
