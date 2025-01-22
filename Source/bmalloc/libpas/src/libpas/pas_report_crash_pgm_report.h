@@ -37,8 +37,6 @@
 #include <mach/mach_types.h>
 #include <mach/vm_types.h>
 
-#include "pas_probabilistic_guard_malloc_allocator.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -47,7 +45,7 @@ extern "C" {
 typedef void *(*crash_reporter_memory_reader_t)(task_t task, vm_address_t address, size_t size);
 
 /* Crash Report Version number. This must be in sync between ReportCrash and libpas to generate a report. */
-const unsigned pas_crash_report_version = 3;
+const unsigned pas_crash_report_version = 2;
 
 /* Report sent back to the ReportCrash process. */
 typedef struct {
@@ -56,8 +54,6 @@ typedef struct {
     const char *alignment;
     vm_address_t fault_address;
     size_t allocation_size;
-    backtrace_metadata_t alloc_backtrace;
-    backtrace_metadata_t dealloc_backtrace;
 } pas_report_crash_pgm_report;
 #endif /* __APPLE__ */
 
