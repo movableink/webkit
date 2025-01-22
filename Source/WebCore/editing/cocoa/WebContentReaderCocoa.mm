@@ -194,12 +194,14 @@ public:
     {
         if (m_didDisableImage)
             m_cachedResourceLoader->setImagesEnabled(true);
-        if (m_didEnabledDeferredLoading)
-            m_frame->page()->setDefersLoading(false);
+        if (m_didEnabledDeferredLoading) {
+            if (RefPtr frame = m_frame.get())
+                frame->page()->setDefersLoading(false);
+        }
     }
 
 private:
-    Ref<LocalFrame> m_frame;
+    WeakPtr<LocalFrame> m_frame;
     Ref<CachedResourceLoader> m_cachedResourceLoader;
     bool m_didEnabledDeferredLoading { false };
     bool m_didDisableImage { false };
