@@ -979,6 +979,10 @@ webkit.org/b/286130 [ Release ] imported/w3c/web-platform-tests/css/css-multicol
 webkit.org/b/286131 [ Release ] imported/w3c/web-platform-tests/css/css-transforms/transform-box/cssbox-content-box-002.html [ Skip ]
 webkit.org/b/286132 [ Release ] inspector/debugger/breakpoints/resolved-dump-all-inline-script-pause-locations.html [ Skip ]
 webkit.org/b/286133 [ Release ] imported/w3c/web-platform-tests/css/css-view-transitions/transition-in-hidden-page.html [ Skip ]
+[ Release ] fast/mediastream/video-srcObject-set-twice.html [ Skip ]
+[ Release ] fast/multicol/out-of-flow-child-crash-with-fragments.html [ Skip ]
+[ Release ] imported/w3c/web-platform-tests/css/css-text/hyphens/hyphens-character.html [ Skip ]
+[ Release ] imported/w3c/web-platform-tests/service-workers/service-worker/redirected-response.https.html [ Skip ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Crashing tests
