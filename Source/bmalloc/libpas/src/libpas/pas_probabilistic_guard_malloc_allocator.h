@@ -44,21 +44,38 @@
  * allocated by the user, is limited to 1MB. These overall limits should ensure that the memory impact on the system
  * is minimal, while helping to tackle the problems of catching use after frees and out of bounds accesses.
  *
- * PGM will maintain the metadata of recently deallocated objects. This is beneficial for crash analystics to better 
- * identify the type and reason for a crash. After enough deallocations an object will no longer be considered 
+ * PGM will maintain the metadata of recently deallocated objects. This is beneficial for crash analystics to better
+ * identify the type and reason for a crash. After enough deallocations an object will no longer be considered
  * recently deleted and will have its metadata destroyed.
  */
 
 #ifndef PAS_PROBABILISTIC_GUARD_MALLOC_ALLOCATOR
 #define PAS_PROBABILISTIC_GUARD_MALLOC_ALLOCATOR
 
-#include "pas_utils.h"
-#include "pas_large_heap.h"
-#include "pas_ptr_hash_map.h"
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "pas_large_heap.h"
+#include "pas_large_map_entry.h"
+#include "pas_ptr_hash_map.h"
+#include "pas_utils.h"
+
+/* PlayStation does not current support the backtrace API. */
+#if !PAS_PLATFORM(PLAYSTATION)
+#include <execinfo.h>
+#else
+size_t backtrace(void**, size_t) { return 0; }
+#endif
+
 PAS_BEGIN_EXTERN_C;
+
+#define PGM_BACKTRACE_MAX_FRAMES 31
+
+/* structure for holding the allocation and deallocation backtraces */
+typedef struct {
+    int frame_size;
+    void* backtrace_buffer[PGM_BACKTRACE_MAX_FRAMES];
+} backtrace_metadata_t;
 
 /* structure for holding pgm metadata allocations */
 typedef struct pas_pgm_storage pas_pgm_storage;
@@ -66,6 +83,9 @@ struct pas_pgm_storage {
     size_t allocation_size_requested;
     size_t size_of_data_pages;
     uintptr_t start_of_data_pages;
+
+    backtrace_metadata_t alloc_backtrace;
+    backtrace_metadata_t dealloc_backtrace;
 
     /*
      * These parameter below rely on page sizes being less than 65536.
