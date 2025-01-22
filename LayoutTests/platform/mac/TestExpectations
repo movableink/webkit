@@ -2126,11 +2126,6 @@ fast/box-shadow/inset-box-shadow-fractional-radius.html [ ImageOnlyFailure ]
 # rdar://105307989 (REGRESSION ( Sonoma ): [ Sonoma ] svg/custom/hidpi-masking-clipping.svg is a consistent failure)
 svg/custom/hidpi-masking-clipping.svg [ Pass ImageOnlyFailure ]
 
-# rdar://111077813 (REGRESSION ( Sonoma ): [ Sonoma ] css3/color-filters/color-filter-caret-color.html is a consistent image failure)
-css3/color-filters/color-filter-caret-color.html [ ImageOnlyFailure ]
-fast/css/caret-color-fallback-to-color.html [ ImageOnlyFailure ]
-fast/css/caret-color-span-inside-editable-parent.html [ ImageOnlyFailure ]
-
 # Caps lock indicator is disabled on Sonoma, as it is provided by the OS.
 fast/forms/caps-lock-indicator-width.html [ Skip ]
 
