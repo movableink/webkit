@@ -1531,23 +1531,24 @@ WKURLRef TestController::createTestURL(std::span<const char> pathOrURL)
     auto filePrefix = "file://"_span;
 
     MallocSpan<char> buffer;
+    size_t pathLength = 0;
     if (isAbsolutePath) {
-        buffer = MallocSpan<char>::malloc(filePrefix.size() + length + 1);
+        buffer = MallocSpan<char>::malloc(filePrefix.size() + length);
         memcpySpan(buffer.mutableSpan(), filePrefix);
         memcpySpan(buffer.mutableSpan().subspan(filePrefix.size()), pathOrURL);
-        buffer[filePrefix.size() + length] = '\0';
+        pathLength = buffer.span().size();
     } else {
-        buffer = MallocSpan<char>::malloc(filePrefix.size() + PATH_MAX + length + 2); // 1 for the pathSeparator
+        buffer = MallocSpan<char>::malloc(filePrefix.size() + PATH_MAX + length + 1); // 1 for the pathSeparator
         memcpySpan(buffer.mutableSpan(), filePrefix);
         if (!getcwd(buffer.mutableSpan().subspan(filePrefix.size()).data(), PATH_MAX))
             return nullptr;
         size_t numCharacters = strlen(buffer.span().data());
         buffer[numCharacters] = pathSeparator;
         memcpySpan(buffer.mutableSpan().subspan(numCharacters + 1), pathOrURL);
-        buffer[numCharacters + 1 + pathOrURL.size()] = '\0';
+        pathLength = numCharacters + 1 + pathOrURL.size();
     }
 
-    auto cPath = buffer.span();
+    auto cPath = buffer.span().first(pathLength);
     auto url = adoptWK(WKURLCreateWithUTF8String(cPath.data(), cPath.size()));
     auto path = testPath(url.get());
     auto pathString = String::fromUTF8(std::span { path });
