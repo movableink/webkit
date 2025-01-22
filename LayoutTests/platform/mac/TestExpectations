@@ -2473,3 +2473,5 @@ webkit.org/b/286039 imported/w3c/web-platform-tests/scroll-to-text-fragment/scro
 webkit.org/b/286107 [ Release ] imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-013.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/274792 compositing/repaint/iframes/compositing-iframe-with-fixed-background-doc-repaint.html [ Pass Failure ]
+
+webkit.org/b/286306 [ x86_64 Release ] fast/dom/set-attribute-and-normalize-in-event.html [ Failure ]
