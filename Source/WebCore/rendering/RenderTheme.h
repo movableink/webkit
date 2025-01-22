@@ -102,7 +102,6 @@ public:
 #if ENABLE(ATTACHMENT_ELEMENT)
     virtual String attachmentStyleSheet() const;
 #endif
-    String dataListStyleSheet() const;
     virtual String colorInputStyleSheet() const;
 
     virtual LayoutRect adjustedPaintRect(const RenderBox&, const LayoutRect& paintRect) const { return paintRect; }

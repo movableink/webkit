@@ -58,7 +58,6 @@ public:
 #if ENABLE(ATTACHMENT_ELEMENT)
     static StyleSheetContents* attachmentStyleSheet;
 #endif
-    static StyleSheetContents* dataListStyleSheet;
     static StyleSheetContents* colorInputStyleSheet;
 
     static void initDefaultStyleSheet();

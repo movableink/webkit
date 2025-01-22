@@ -132,7 +132,6 @@ void InspectorCSSOMWrappers::collectDocumentWrappers(ExtensionStyleSheets& exten
 #if ENABLE(FULLSCREEN_API)
         collectFromStyleSheetContents(UserAgentStyle::fullscreenStyleSheet);
 #endif
-        collectFromStyleSheetContents(UserAgentStyle::dataListStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::colorInputStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::mediaQueryStyleSheet);
 

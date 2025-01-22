@@ -97,7 +97,6 @@ StyleSheetContents* UserAgentStyle::imageControlsStyleSheet;
 #if ENABLE(ATTACHMENT_ELEMENT)
 StyleSheetContents* UserAgentStyle::attachmentStyleSheet;
 #endif
-StyleSheetContents* UserAgentStyle::dataListStyleSheet;
 StyleSheetContents* UserAgentStyle::colorInputStyleSheet;
 
 static const MQ::MediaQueryEvaluator& screenEval()
@@ -223,10 +222,6 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
             addToDefaultStyle(*attachmentStyleSheet);
         }
 #endif // ENABLE(ATTACHMENT_ELEMENT)
-        else if (!dataListStyleSheet && is<HTMLDataListElement>(element)) {
-            dataListStyleSheet = parseUASheet(RenderTheme::singleton().dataListStyleSheet());
-            addToDefaultStyle(*dataListStyleSheet);
-        }
     } else if (is<SVGElement>(element)) {
         if (!svgStyleSheet) {
             // SVG rules.
