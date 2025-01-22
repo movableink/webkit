@@ -125,23 +125,12 @@ private:
 };
 
 struct _WebKitVideoSinkPrivate {
-    _WebKitVideoSinkPrivate()
-    {
-        gst_video_info_init(&info);
-    }
-
-    ~_WebKitVideoSinkPrivate()
-    {
-        if (currentCaps)
-            gst_caps_unref(currentCaps);
-    }
-
     VideoRenderRequestScheduler scheduler;
     GstVideoInfo info;
-    GstCaps* currentCaps { nullptr };
+    GRefPtr<GstCaps> currentCaps;
 };
 
-WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitVideoSink, webkit_video_sink, GST_TYPE_VIDEO_SINK, GST_DEBUG_CATEGORY_INIT(webkitVideoSinkDebug, "webkitsink", 0, "webkit video sink"))
+WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitVideoSink, webkit_video_sink, GST_TYPE_VIDEO_SINK, GST_DEBUG_CATEGORY_INIT(webkitVideoSinkDebug, "webkitvideosink", 0, "webkit video sink"))
 
 static void webkitVideoSinkConstructed(GObject* object)
 {
@@ -162,7 +151,7 @@ static void webkitVideoSinkRepaintCancelled(WebKitVideoSink* sink)
 static GRefPtr<GstSample> webkitVideoSinkRequestRender(WebKitVideoSink* sink, GstBuffer* buffer)
 {
     WebKitVideoSinkPrivate* priv = sink->priv;
-    GRefPtr<GstSample> sample = adoptGRef(gst_sample_new(buffer, priv->currentCaps, nullptr, nullptr));
+    GRefPtr<GstSample> sample = adoptGRef(gst_sample_new(buffer, priv->currentCaps.get(), nullptr, nullptr));
 
     // The video info structure is valid only if the sink handled an allocation query.
     GstVideoFormat format = GST_VIDEO_INFO_FORMAT(&priv->info);
@@ -185,7 +174,8 @@ static gboolean webkitVideoSinkUnlock(GstBaseSink* baseSink)
     priv->scheduler.stop();
     webkitVideoSinkRepaintCancelled(WEBKIT_VIDEO_SINK(baseSink));
 
-    return GST_BASE_SINK_CLASS(webkit_video_sink_parent_class)->unlock(baseSink);
+    // basesink doesn't have any default unlock vfunc. So no need to chain to parent class here.
+    return TRUE;
 }
 
 static gboolean webkitVideoSinkUnlockStop(GstBaseSink* baseSink)
@@ -194,7 +184,8 @@ static gboolean webkitVideoSinkUnlockStop(GstBaseSink* baseSink)
 
     priv->scheduler.start();
 
-    return GST_BASE_SINK_CLASS(webkit_video_sink_parent_class)->unlock_stop(baseSink);
+    // basesink doesn't have any default unlock_stop vfunc. So no need to chain to parent class here.
+    return TRUE;
 }
 
 static gboolean webkitVideoSinkStop(GstBaseSink* baseSink)
@@ -203,10 +194,7 @@ static gboolean webkitVideoSinkStop(GstBaseSink* baseSink)
 
     priv->scheduler.stop();
     webkitVideoSinkRepaintCancelled(WEBKIT_VIDEO_SINK(baseSink));
-    if (priv->currentCaps) {
-        gst_caps_unref(priv->currentCaps);
-        priv->currentCaps = nullptr;
-    }
+    priv->currentCaps.clear();
 
     return TRUE;
 }
@@ -225,18 +213,17 @@ static gboolean webkitVideoSinkSetCaps(GstBaseSink* baseSink, GstCaps* caps)
     WebKitVideoSink* sink = WEBKIT_VIDEO_SINK(baseSink);
     WebKitVideoSinkPrivate* priv = sink->priv;
 
-    GST_DEBUG_OBJECT(sink, "Current caps %" GST_PTR_FORMAT ", setting caps %" GST_PTR_FORMAT, priv->currentCaps, caps);
+    GST_DEBUG_OBJECT(sink, "Current caps %" GST_PTR_FORMAT ", setting caps %" GST_PTR_FORMAT, priv->currentCaps.get(), caps);
 
     GstVideoInfo videoInfo;
-    gst_video_info_init(&videoInfo);
     if (!gst_video_info_from_caps(&videoInfo, caps)) {
         GST_ERROR_OBJECT(sink, "Invalid caps %" GST_PTR_FORMAT, caps);
         return FALSE;
     }
 
     priv->info = videoInfo;
-    gst_caps_replace(&priv->currentCaps, caps);
-    return TRUE;
+    priv->currentCaps = caps;
+    return GST_BASE_SINK_CLASS(webkit_video_sink_parent_class)->set_caps(baseSink, caps);
 }
 
 static gboolean webkitVideoSinkProposeAllocation(GstBaseSink* baseSink, GstQuery* query)
@@ -264,7 +251,7 @@ static gboolean webkitVideoSinkEvent(GstBaseSink* baseSink, GstEvent* event)
         sink->priv->scheduler.drain();
 
         GST_DEBUG_OBJECT(sink, "Flush-start, releasing m_sample");
-        }
+    }
         FALLTHROUGH;
     default:
         return GST_BASE_SINK_CLASS(webkit_video_sink_parent_class)->event(baseSink, event);

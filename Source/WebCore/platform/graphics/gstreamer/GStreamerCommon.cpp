@@ -34,6 +34,7 @@
 #include "IntSize.h"
 #include "PlatformDisplay.h"
 #include "SharedBuffer.h"
+#include "VideoSinkGStreamer.h"
 #include "WebKitAudioSinkGStreamer.h"
 #include <gst/audio/audio-info.h>
 #include <gst/gst.h>
@@ -451,6 +452,7 @@ void registerWebKitGStreamerElements()
 #if ENABLE(VIDEO)
         gst_element_register(0, "webkitwebsrc", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_WEB_SRC);
         gst_element_register(0, "webkitglvideosink", GST_RANK_NONE, WEBKIT_TYPE_GL_VIDEO_SINK);
+        gst_element_register(0, "webkitvideosink", GST_RANK_NONE, WEBKIT_TYPE_VIDEO_SINK);
 #endif
         // We don't want autoaudiosink to autoplug our sink.
         gst_element_register(0, "webkitaudiosink", GST_RANK_NONE, WEBKIT_TYPE_AUDIO_SINK);
