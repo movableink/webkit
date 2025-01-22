@@ -26,6 +26,8 @@
 #include "config.h"
 #include "WebExtensionSQLiteDatabase.h"
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+
 #include "APIError.h"
 #include "Logging.h"
 #include "WebExtensionSQLiteHelpers.h"
@@ -40,8 +42,6 @@ static constexpr auto WebExtensionSQLiteErrorMessageKey = "Message"_s;
 static constexpr auto WebExtensionSQLiteErrorSQLKey = "SQL"_s;
 
 using namespace WebKit;
-
-#if ENABLE(WK_WEB_EXTENSIONS)
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebExtensionSQLiteDatabase);
 
