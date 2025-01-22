@@ -108,7 +108,7 @@ void BrowsingContextGroup::addFrameProcess(FrameProcess& process)
 
 void BrowsingContextGroup::removeFrameProcess(FrameProcess& process)
 {
-    ASSERT(process.site().isEmpty() || m_processMap.get(process.site()).get() == &process);
+    ASSERT(process.site().isEmpty() || m_processMap.get(process.site()).get() == &process || process.process().state() == WebProcessProxy::State::Terminated);
     m_processMap.remove(process.site());
 
     m_remotePages.removeIf([&] (auto& pair) {

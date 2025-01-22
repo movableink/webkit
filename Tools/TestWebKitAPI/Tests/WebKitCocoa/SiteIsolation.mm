@@ -3779,8 +3779,9 @@ TEST(SiteIsolation, ProcessReuse)
 TEST(SiteIsolation, ProcessTerminationReason)
 {
     HTTPServer server({
-        { "/example"_s, { "<iframe src='https://webkit.org/iframe'></iframe>"_s } },
-        { "/iframe"_s, { "hi"_s } }
+        { "/example"_s, { "<iframe id='onlyiframe' src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { "hi"_s } },
+        { "/iframe2"_s, { "hi"_s } }
     }, HTTPServer::Protocol::HttpsProxy);
 
     RetainPtr configuration = server.httpsProxyConfiguration();
@@ -3797,9 +3798,13 @@ TEST(SiteIsolation, ProcessTerminationReason)
     Util::runFor(0.1_s);
     EXPECT_EQ(server.totalRequests(), 2u);
 
+    [webView evaluateJavaScript:@"onlyiframe.src='https://webkit.org/iframe2'" completionHandler:nil];
+    while (server.totalRequests() < 3u)
+        Util::spinRunLoop();
+
     kill([webView mainFrame].info._processIdentifier, 9);
     [navigationDelegate waitForDidFinishNavigation];
-    EXPECT_EQ(server.totalRequests(), 4u);
+    EXPECT_EQ(server.totalRequests(), 5u);
 }
 
 TEST(SiteIsolation, FormSubmit)
