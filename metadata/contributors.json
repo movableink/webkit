@@ -4026,6 +4026,14 @@
    },
    {
       "emails" : [
+         "jean.haberer@apple.com",
+         "jean.haberer@hotmail.fr"
+      ],
+      "github" : "jeanhbr",
+      "name" : "Jean Haberer"
+   },
+   {
+      "emails" : [
          "jean-yves.avenard@apple.com",
          "jya@apple.com",
          "jyavenard@gmail.com"
