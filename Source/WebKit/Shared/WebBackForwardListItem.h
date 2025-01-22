@@ -89,6 +89,7 @@ public:
     Ref<WebBackForwardListFrameItem> protectedNavigatedFrameItem() const;
 
     WebBackForwardListFrameItem& mainFrameItem() const;
+    Ref<WebBackForwardListFrameItem> protectedMainFrameItem() const;
 
     void setIsRemoteFrameNavigation(bool isRemoteFrameNavigation) { m_isRemoteFrameNavigation = isRemoteFrameNavigation; }
     bool isRemoteFrameNavigation() const { return m_isRemoteFrameNavigation; }

@@ -255,6 +255,11 @@ WebBackForwardListFrameItem& WebBackForwardListItem::mainFrameItem() const
     return m_mainFrameItem;
 }
 
+Ref<WebBackForwardListFrameItem> WebBackForwardListItem::protectedMainFrameItem() const
+{
+    return m_mainFrameItem;
+}
+
 #if !LOG_DISABLED
 String WebBackForwardListItem::loggingString()
 {
