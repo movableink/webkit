@@ -2345,6 +2345,9 @@ public:
 #endif
 
 #if ENABLE(WRITING_TOOLS)
+#if PLATFORM(MAC)
+    bool shouldEnableWritingToolsRequestedTool(WebCore::WritingTools::RequestedTool) const;
+#endif
 #if ENABLE(CONTEXT_MENUS)
     bool canHandleContextMenuWritingTools() const;
     void handleContextMenuWritingTools(WebCore::WritingTools::RequestedTool);

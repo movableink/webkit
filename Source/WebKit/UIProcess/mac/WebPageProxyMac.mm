@@ -42,6 +42,7 @@
 #import "PageClient.h"
 #import "PageClientImplMac.h"
 #import "PlatformFontInfo.h"
+#import "PlatformWritingToolsUtilities.h"
 #import "RemoteLayerTreeHost.h"
 #import "RemoteLayerTreeNode.h"
 #import "TextChecker.h"
@@ -920,6 +921,25 @@ void WebPageProxy::handleContextMenuCopySubject(const String& preferredMIMEType)
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
 
 #if ENABLE(WRITING_TOOLS)
+
+bool WebPageProxy::shouldEnableWritingToolsRequestedTool(WebCore::WritingTools::RequestedTool tool) const
+{
+    WTRequestedTool requestedTool = convertToPlatformRequestedTool(tool);
+
+    if (requestedTool == WTRequestedToolIndex)
+        return true;
+
+    auto& editorState = this->editorState();
+    bool editorStateIsContentEditable = editorState.isContentEditable;
+
+    if (requestedTool == WTRequestedToolCompose)
+        return editorStateIsContentEditable;
+
+    if (editorStateIsContentEditable)
+        return editorState.hasPostLayoutData() && !editorState.postLayoutData->paragraphContextForCandidateRequest.isEmpty();
+
+    return true;
+}
 
 void WebPageProxy::handleContextMenuWritingTools(WebCore::WritingTools::RequestedTool tool)
 {

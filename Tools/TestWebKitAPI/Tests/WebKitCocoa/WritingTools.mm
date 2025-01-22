@@ -59,6 +59,7 @@
 
 #if PLATFORM(MAC)
 #import <pal/cocoa/WritingToolsUISoftLink.h>
+#import <pal/spi/mac/NSMenuSPI.h>
 #import <pal/spi/mac/NSTextInputContextSPI.h>
 #endif
 
@@ -3268,6 +3269,66 @@ TEST(WritingTools, ContextMenuItemsEditableEmpty)
             continue;
 
         EXPECT_EQ(subItem.enabled, subItem.tag == WTRequestedToolIndex || subItem.tag == WTRequestedToolCompose);
+    }
+}
+
+TEST(WritingTools, AppMenuNonEditable)
+{
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+
+    [webView focusDocumentBodyAndSelectAll];
+
+    RetainPtr writingToolsMenuItem = [NSMenuItem standardWritingToolsMenuItem];
+    EXPECT_NOT_NULL(writingToolsMenuItem.get());
+
+    RetainPtr items = [[writingToolsMenuItem submenu] itemArray];
+    EXPECT_GT([items count], 0U);
+
+    for (NSMenuItem *subItem in items.get()) {
+        if (subItem.isSeparatorItem)
+            continue;
+
+        EXPECT_EQ([webView validateUserInterfaceItem:subItem], subItem.tag != WTRequestedToolCompose);
+    }
+}
+
+TEST(WritingTools, AppMenuEditable)
+{
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+
+    [webView focusDocumentBodyAndSelectAll];
+
+    RetainPtr writingToolsMenuItem = [NSMenuItem standardWritingToolsMenuItem];
+    EXPECT_NOT_NULL(writingToolsMenuItem.get());
+
+    RetainPtr items = [[writingToolsMenuItem submenu] itemArray];
+    EXPECT_GT([items count], 0U);
+
+    for (NSMenuItem *subItem in items.get()) {
+        if (subItem.isSeparatorItem)
+            continue;
+
+        EXPECT_TRUE([webView validateUserInterfaceItem:subItem]);
+    }
+}
+
+TEST(WritingTools, AppMenuEditableEmpty)
+{
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+
+    [webView focusDocumentBodyAndSelectAll];
+
+    RetainPtr writingToolsMenuItem = [NSMenuItem standardWritingToolsMenuItem];
+    EXPECT_NOT_NULL(writingToolsMenuItem.get());
+
+    RetainPtr items = [[writingToolsMenuItem submenu] itemArray];
+    EXPECT_GT([items count], 0U);
+
+    for (NSMenuItem *subItem in items.get()) {
+        if (subItem.isSeparatorItem)
+            continue;
+
+        EXPECT_EQ([webView validateUserInterfaceItem:subItem], subItem.tag == WTRequestedToolIndex || subItem.tag == WTRequestedToolCompose);
     }
 }
 

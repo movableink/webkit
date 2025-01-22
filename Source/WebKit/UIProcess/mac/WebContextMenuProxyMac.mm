@@ -901,25 +901,11 @@ void WebContextMenuProxyMac::getContextMenuItem(const WebContextMenuItemData& it
                     continue;
 
                 bool shouldEnableItem = [&] {
-                    auto tag = [subItem tag];
-                    if (tag == WTRequestedToolIndex)
-                        return true;
+                    RefPtr page = this->page();
+                    if (!page)
+                        return false;
 
-                    bool editorStateIsContentEditable = false;
-                    bool allowProofreadingAndRewritingTools = true;
-
-                    if (RefPtr page = this->page()) {
-                        auto& editorState = page->editorState();
-                        editorStateIsContentEditable = editorState.isContentEditable;
-
-                        if (editorStateIsContentEditable)
-                            allowProofreadingAndRewritingTools = editorState.hasPostLayoutData() && !editorState.postLayoutData->paragraphContextForCandidateRequest.isEmpty();
-                    }
-
-                    if (tag == WTRequestedToolCompose)
-                        return editorStateIsContentEditable;
-
-                    return allowProofreadingAndRewritingTools;
+                    return page->shouldEnableWritingToolsRequestedTool(convertToWebRequestedTool((WTRequestedTool)[subItem tag]));
                 }();
 
                 subItem.enabled = static_cast<BOOL>(shouldEnableItem);
