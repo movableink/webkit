@@ -15,7 +15,6 @@ accessibility/AXSearchManager.h
 bindings/js/IDBBindingUtilities.cpp
 bindings/js/JSEventTargetCustom.h
 bindings/js/JSLazyEventListener.cpp
-bindings/js/ScriptController.h
 css/CSSFontFaceSource.h
 css/CSSFontSelector.h
 css/CSSPrimitiveValueMappings.h
