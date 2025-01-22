@@ -485,7 +485,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, 
     NSView* nodeView = widget.platformWidget();
     if (!nodeView) {
         // WebKit2 code path.
-        auto* frameView = dynamicDowncast<LocalFrameView>(widget);
+        RefPtr frameView = dynamicDowncast<LocalFrameView>(widget);
         if (!frameView)
             return false;
         auto [result, _] = frameView->frame().eventHandler().handleWheelEvent(wheelEvent, processingSteps);
