@@ -1503,14 +1503,13 @@ WKRetainPtr<WKStringRef> TestController::backgroundFetchState(WKStringRef)
 
 WKURLRef TestController::createTestURL(std::span<const char> pathOrURL)
 {
-    if (contains(pathOrURL, "http://"_span) || contains(pathOrURL, "https://"_span))
-        return WKURLCreateWithUTF8String(pathOrURL.data(), pathOrURL.size());
-
-    size_t length = pathOrURL.size();
-    if (!length)
+    if (pathOrURL.empty())
         return nullptr;
 
-    if (length >= 7 && contains(pathOrURL, "file://"_span)) {
+    if (spanHasPrefix(pathOrURL, "http://"_span) || spanHasPrefix(pathOrURL, "https://"_span))
+        return WKURLCreateWithUTF8String(pathOrURL.data(), pathOrURL.size());
+
+    if (spanHasPrefix(pathOrURL, "file://"_span)) {
         auto url = adoptWK(WKURLCreateWithUTF8String(pathOrURL.data(), pathOrURL.size()));
         auto path = testPath(url.get());
         auto pathString = String::fromUTF8(std::span { path });
@@ -1522,37 +1521,11 @@ WKURLRef TestController::createTestURL(std::span<const char> pathOrURL)
     }
 
     // Creating from filesytem path.
-
-#if PLATFORM(WIN)
-    bool isAbsolutePath = !PathIsRelativeA(String::fromUTF8(pathOrURL).utf8().data());
-#else
-    bool isAbsolutePath = pathOrURL[0] == pathSeparator;
-#endif
-    auto filePrefix = "file://"_span;
-
-    MallocSpan<char> buffer;
-    size_t pathLength = 0;
-    if (isAbsolutePath) {
-        buffer = MallocSpan<char>::malloc(filePrefix.size() + length);
-        memcpySpan(buffer.mutableSpan(), filePrefix);
-        memcpySpan(buffer.mutableSpan().subspan(filePrefix.size()), pathOrURL);
-        pathLength = buffer.span().size();
-    } else {
-        buffer = MallocSpan<char>::malloc(filePrefix.size() + PATH_MAX + length + 1); // 1 for the pathSeparator
-        memcpySpan(buffer.mutableSpan(), filePrefix);
-        if (!getcwd(buffer.mutableSpan().subspan(filePrefix.size()).data(), PATH_MAX))
-            return nullptr;
-        size_t numCharacters = strlen(buffer.span().data());
-        buffer[numCharacters] = pathSeparator;
-        memcpySpan(buffer.mutableSpan().subspan(numCharacters + 1), pathOrURL);
-        pathLength = numCharacters + 1 + pathOrURL.size();
-    }
-
-    auto cPath = buffer.span().first(pathLength);
-    auto url = adoptWK(WKURLCreateWithUTF8String(cPath.data(), cPath.size()));
+    auto urlString = makeString("file://"_s, FileSystem::realPath(String::fromUTF8(pathOrURL))).utf8();
+    auto url = adoptWK(WKURLCreateWithUTF8String(urlString.data(), urlString.length()));
     auto path = testPath(url.get());
     auto pathString = String::fromUTF8(std::span { path });
-    if (!m_usingServerMode && !WTF::FileSystemImpl::fileExists(pathString)) {
+    if (!m_usingServerMode && !FileSystem::fileExists(pathString)) {
         printf("Failed: File ‘%s’ was not found or is inaccessible\n", pathString.utf8().data());
         return nullptr;
     }
