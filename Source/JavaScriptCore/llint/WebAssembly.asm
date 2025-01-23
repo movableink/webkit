@@ -931,6 +931,37 @@ end
     jmp ws0, WasmEntryPtrTag
 end)
 
+op(wasm_to_wasm_ipint_wrapper_entry, macro()
+    # We have only pushed PC (intel) or pushed nothing(others), and we
+    # are still in the caller frame.
+    loadp (Callee - CallerFrameAndPCSize)[sp], ws0
+
+if JSVALUE64
+    andp ~(constexpr JSValue::NativeCalleeTag), ws0
+end
+    leap WTFConfig + constexpr WTF::offsetOfWTFConfigLowestAccessibleAddress, ws1
+    loadp [ws1], ws1
+    addp ws1, ws0
+
+    loadp JSC::Wasm::IPIntCallee::m_entrypoint[ws0], ws0
+
+    # Load the instance
+    loadp (CodeBlock - CallerFrameAndPCSize)[sp], wasmInstance
+
+    # Memory
+    if ARM64 or ARM64E
+        loadpairq JSWebAssemblyInstance::m_cachedMemory[wasmInstance], memoryBase, boundsCheckingSize
+    elsif X86_64
+        loadp JSWebAssemblyInstance::m_cachedMemory[wasmInstance], memoryBase
+        loadp JSWebAssemblyInstance::m_cachedBoundsCheckingSize[wasmInstance], boundsCheckingSize
+    end
+    if not ARMv7
+        cagedPrimitiveMayBeNull(memoryBase, ws1)
+    end
+
+    jmp ws0, WasmEntryPtrTag
+end)
+
 # This is the interpreted analogue to WasmToJS.cpp:wasmToJS
 op(wasm_to_js_wrapper_entry, macro()
     # We have only pushed PC (intel) or pushed nothing(others), and we

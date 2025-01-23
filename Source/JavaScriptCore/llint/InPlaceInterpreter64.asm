@@ -513,8 +513,10 @@ end
 
 if ARM64 or ARM64E
     const IPIntCallCallee = sc1
+    const IPIntCallFunctionSlot = sc0
 elsif X86_64
     const IPIntCallCallee = a5
+    const IPIntCallFunctionSlot = t6
 end
 
 instructionLabel(_call)
@@ -531,8 +533,11 @@ instructionLabel(_call)
     move sp, a2
 
     # operation returns the entrypoint in r0 and the target instance in r1
+    # operation stores the target callee to sp[0] and target function info to sp[1]
     operationCall(macro() cCall3(_ipint_extern_prepare_call) end)
-    popQuad(IPIntCallCallee)
+    loadq [sp], IPIntCallCallee
+    loadq 8[sp], IPIntCallFunctionSlot
+    addq 16, sp
 
     # call
     jmp .ipint_call_common
@@ -554,7 +559,9 @@ instructionLabel(_call_indirect)
     operationCall(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
     btpz r1, .ipint_call_indirect_throw
 
-    popQuad(IPIntCallCallee)
+    loadq [sp], IPIntCallCallee
+    loadq 8[sp], IPIntCallFunctionSlot
+    addq 16, sp
 
     jmp .ipint_call_common
 
@@ -576,7 +583,10 @@ instructionLabel(_return_call)
     # operation returns the entrypoint in r0 and the target instance in r1
     # this operation stores the boxed Callee into *r2
     operationCall(macro() cCall3(_ipint_extern_prepare_call) end)
-    popQuad(IPIntCallCallee)
+
+    loadq [sp], IPIntCallCallee
+    loadq 8[sp], IPIntCallFunctionSlot
+    addq 16, sp
 
     loadi IPInt::TailCallMetadata::callerStackArgSize[MC], t3
     advanceMC(IPInt::TailCallMetadata::argumentBytecode)
@@ -596,7 +606,10 @@ instructionLabel(_return_call_indirect)
     move MC, a3
     operationCall(macro() cCall4(_ipint_extern_prepare_call_indirect) end)
     btpz r1, .ipint_call_indirect_throw
-    popQuad(IPIntCallCallee)
+
+    loadq [sp], IPIntCallCallee
+    loadq 8[sp], IPIntCallFunctionSlot
+    addq 16, sp
 
     loadi IPInt::TailCallIndirectMetadata::callerStackArgSize[MC], t3
     advanceMC(IPInt::TailCallIndirectMetadata::argumentBytecode)
@@ -611,8 +624,10 @@ instructionLabel(_call_ref)
 
     operationCall(macro() cCall4(_ipint_extern_prepare_call_ref) end)
     btpz r1, .ipint_call_ref_throw
-    popQuad(IPIntCallCallee)
-
+    loadq [sp], IPIntCallCallee
+    loadq 8[sp], IPIntCallFunctionSlot
+    addq 16, sp
+    
     loadb IPInt::CallRefMetadata::length[MC], t3
     advanceMC(IPInt::CallRefMetadata::signature)
     advancePCByReg(t3)
@@ -633,7 +648,9 @@ instructionLabel(_return_call_ref)
     move sp, a3
     operationCall(macro() cCall4(_ipint_extern_prepare_call_ref) end)
     btpz r1, .ipint_call_ref_throw
-    popQuad(IPIntCallCallee)
+    loadq [sp], IPIntCallCallee
+    loadq 8[sp], IPIntCallFunctionSlot
+    addq 16, sp
 
     loadi IPInt::TailCallRefMetadata::callerStackArgSize[MC], t3
     advanceMC(IPInt::TailCallRefMetadata::argumentBytecode)
@@ -5767,6 +5784,7 @@ end
 
     # set up the Callee slot
     storeq IPIntCallCallee, Callee - CallerFrameAndPCSize[sp]
+    storeq IPIntCallFunctionSlot, CodeBlock - CallerFrameAndPCSize[sp]
 
     push targetEntrypoint, targetInstance
     move t2, sc3
@@ -5797,13 +5815,15 @@ end
 
     # sc1 = target callee => wasmInstance to free up sc1
     const savedCallee = wasmInstance
-    move IPIntCallCallee, savedCallee 
-
-    # keep the top of IPInt stack in sc1 as shadow stack
-    move sp, sc1
 
     # store entrypoint and target instance on the stack for now
     push r0, r1
+    push IPIntCallCallee, IPIntCallFunctionSlot
+
+    # keep the top of IPInt stack in sc1 as shadow stack
+    move sp, sc1
+    # we pushed four values previously, so offset for this
+    addq 32, sc1
 
     #  <caller frame>
     #  return val
@@ -5820,7 +5840,8 @@ end
     #  ...
     #  argument n-1
     #  argument n                  <- sc1
-    #  entrypoint, targetInstance  <- sp
+    #  entrypoint, targetInstance
+    #  callee, function info       <- sp
 
     # determine the location to begin copying stack arguments, starting from the last
     move cfr, sc2
@@ -5842,7 +5863,8 @@ end
     #  ...
     #  argument n-1
     #  argument n                  <- sc1
-    #  entrypoint, targetInstance  <- sp
+    #  entrypoint, targetInstance
+    #  callee, function info       <- sp
 
     # get saved MC and PC
 
@@ -5877,6 +5899,7 @@ end
     #  argument n-1
     #  argument n                  <- sc1
     #  entrypoint, targetInstance
+    #  callee, function info
     #  saved MC/PC
     #  return address, saved CFR   <- sp
 
@@ -6262,6 +6285,7 @@ end
     #  argument n-1
     #  argument n                  <- sc1
     #  entrypoint, targetInstance
+    #  callee, function info
     #  saved MC/PC
     #  return address, saved CFR
     #  stack arguments
@@ -6308,6 +6332,13 @@ end
 
     pop PC, MC
 
+    # function info, callee
+    pop sc3, sc0
+
+    # save new Callee
+    storeq sc0, Callee[sc2]
+    storeq sc3, CodeBlock[sc2]
+
     # take off the last two values we stored, and move SP down to make it look like a fresh frame
     pop targetInstance, ws0
 
@@ -6338,9 +6369,6 @@ if ARM64E
 end
     # saved cfr
     move sc1, cfr
-
-    # save new Callee
-    storeq savedCallee, Callee[sp]
 
     # swap instances
     move targetInstance, wasmInstance

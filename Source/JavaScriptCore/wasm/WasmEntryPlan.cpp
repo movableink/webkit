@@ -302,8 +302,12 @@ bool EntryPlan::generateWasmToWasmStubs()
 #else
         if (false);
 #endif // ENABLE(JIT)
-        else
-            m_wasmToWasmExitStubs[importFunctionIndex++] = LLInt::getCodeRef<WasmEntryPtrTag>(wasm_to_wasm_wrapper_entry);
+        else {
+            if (Options::useWasmIPInt())
+                m_wasmToWasmExitStubs[importFunctionIndex++] = LLInt::getCodeRef<WasmEntryPtrTag>(wasm_to_wasm_ipint_wrapper_entry);
+            else
+                m_wasmToWasmExitStubs[importFunctionIndex++] = LLInt::getCodeRef<WasmEntryPtrTag>(wasm_to_wasm_wrapper_entry);
+        }
     }
     ASSERT(importFunctionIndex == m_wasmToWasmExitStubs.size());
     return true;
