@@ -877,13 +877,17 @@ bool RenderReplaced::needsPreferredWidthsRecalculation() const
 
 LayoutSize RenderReplaced::intrinsicSize() const
 {
-    LayoutSize size = m_intrinsicSize;
-    auto zoomValue = style().usedZoom();
+    if (!view().frameView().layoutContext().isInRenderTreeLayout()) {
+        // 'contain' removes the natural aspect ratio / width / height only for the purposes of sizing and layout of the box.
+        return m_intrinsicSize;
+    }
 
+    auto size = m_intrinsicSize;
+    auto zoomValue = style().usedZoom();
     if (isHorizontalWritingMode() ? shouldApplySizeOrInlineSizeContainment() : shouldApplySizeContainment())
-        size.setWidth(explicitIntrinsicInnerWidth().value_or(0) * zoomValue);
+        size.setWidth(explicitIntrinsicInnerWidth().value_or(0_lu) * zoomValue);
     if (isHorizontalWritingMode() ? shouldApplySizeContainment() : shouldApplySizeOrInlineSizeContainment())
-        size.setHeight(explicitIntrinsicInnerHeight().value_or(0) * zoomValue);
+        size.setHeight(explicitIntrinsicInnerHeight().value_or(0_lu) * zoomValue);
     return size;
 }
 
