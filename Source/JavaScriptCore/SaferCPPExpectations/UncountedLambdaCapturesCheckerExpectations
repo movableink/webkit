@@ -6,6 +6,7 @@
 ./dfg/DFGArgumentsEliminationPhase.cpp
 ./dfg/DFGDesiredWatchpoints.h
 ./dfg/DFGLazyJSValue.cpp
+./dfg/DFGLoopUnrollingPhase.cpp
 ./dfg/DFGObjectAllocationSinkingPhase.cpp
 ./dfg/DFGOperations.cpp
 ./dfg/DFGPhantomInsertionPhase.cpp

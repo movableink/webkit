@@ -1,5 +1,5 @@
 /*
- * Cloneright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,8 +88,6 @@ public:
 
     bool run()
     {
-        bool changed = false;
-
         if (UNLIKELY(Options::verboseLoopUnrolling())) {
             dataLogLn("Graph before Loop Unrolling Phase:");
             m_graph.dump();
@@ -97,37 +95,42 @@ public:
 
         uint32_t unrolledCount = 0;
         while (true) {
-            const NaturalLoop* loop = selectDeepestNestedLoop();
-            if (!loop || unrolledCount >= Options::maxLoopUnrollingCount())
-                break;
-            if (!tryUnroll(loop))
+            auto loops = populateCandidateLoops();
+            if (loops.isEmpty() || unrolledCount >= Options::maxLoopUnrollingCount())
                 break;
 
-            ++unrolledCount;
-            changed = true;
+            bool unrolled = false;
+            for (auto [loop, depth] : loops) {
+                if (!loop)
+                    break;
+                if (tryUnroll(loop)) {
+                    unrolled = true;
+                    ++unrolledCount;
+                    break;
+                }
+            }
+            if (!unrolled)
+                break;
         }
 
         dataLogLnIf(Options::verboseLoopUnrolling(), "Successfully unrolled ", unrolledCount, " loops.");
-        return changed;
+        return !!unrolledCount;
     }
 
-    const NaturalLoop* selectDeepestNestedLoop()
+    Vector<std::tuple<const NaturalLoop*, int32_t>, 16> populateCandidateLoops()
     {
         m_graph.ensureCPSNaturalLoops();
 
-        const NaturalLoop* target = nullptr;
-        int32_t maxDepth = INT_MIN;
         uint32_t loopCount = m_graph.m_cpsNaturalLoops->numLoops();
-        IndexMap<const NaturalLoop*, int32_t> depthCache(loopCount, INT_MIN);
-
+        Vector<std::tuple<const NaturalLoop*, int32_t>, 16> loops(loopCount, std::tuple { nullptr, INT_MIN });
         for (uint32_t loopIndex = loopCount; loopIndex--;) {
             const NaturalLoop& loop = m_graph.m_cpsNaturalLoops->loop(loopIndex);
-            ASSERT(loop.index() == loopIndex && depthCache[loopIndex] == INT_MIN);
+            ASSERT(loop.index() == loopIndex && std::get<1>(loops[loopIndex]) == INT_MIN);
 
             int32_t depth = 0;
             const NaturalLoop* current = &loop;
             while (current) {
-                int32_t cachedDepth = depthCache[current->index()];
+                int32_t cachedDepth = std::get<1>(loops[current->index()]);
                 if (cachedDepth != INT_MIN) {
                     depth += cachedDepth;
                     break;
@@ -135,14 +138,12 @@ public:
                 ++depth;
                 current = m_graph.m_cpsNaturalLoops->innerMostOuterLoop(*current);
             }
-            depthCache[loopIndex] = depth;
-
-            if (depth > maxDepth) {
-                maxDepth = depth;
-                target = &loop;
-            }
+            loops[loopIndex] = std::tuple { &loop, depth };
         }
-        return target;
+        std::sort(loops.begin(), loops.end(), [&](const auto& lhs, const auto& rhs) {
+            return std::get<1>(lhs) > std::get<1>(rhs);
+        });
+        return loops;
     }
 
     bool tryUnroll(const NaturalLoop* loop)
@@ -459,9 +460,7 @@ public:
         BasicBlock* const header = data.header();
         BasicBlock* const tail = data.tail;
 
-        const NodeOrigin tailTerminalOrigin = tail->terminal()->origin;
-        const CodeOrigin tailTerminalOriginSemantic = tailTerminalOrigin.semantic;
-        dataLogLnIf(Options::verboseLoopUnrolling(), "tailTerminalOriginSemantic ", tailTerminalOriginSemantic);
+        dataLogLnIf(Options::verboseLoopUnrolling(), "tailTerminalOriginSemantic ", tail->terminal()->origin.semantic);
 
         // Mapping from the origin to the clones.
         UncheckedKeyHashMap<BasicBlock*, BasicBlock*> blockClones;
@@ -475,6 +474,23 @@ public:
                         node = itr->value;
                 }
             }
+        };
+
+        auto convertTailBranchToNextJump = [&](BasicBlock* tail, BasicBlock* next) {
+            // Why don't we use Jump instead of Branch? The reason is tail's original terminal was Branch.
+            // If we change this from Branch to Jump, we need to preserve how variables are used (via GetLocal, MovHint, SetLocal)
+            // not to confuse these variables liveness, it involves what blocks are used for successors of this tail block.
+            // Here, we can simplify the problem by using Branch and using the original "header" successors as never-taken branch.
+            // FTL's subsequent pass will optimize this and convert this Branch to Jump and/or eliminate this Branch and merge
+            // multiple blocks easily since its condition is constant boolean True. But we do not need to do the complicated analysis
+            // here. So let's just use Branch.
+            ASSERT(tail->terminal()->isBranch());
+            auto* constant = m_graph.addNode(SpecBoolean, JSConstant, tail->terminal()->origin, OpInfo(m_graph.freezeStrong(jsBoolean(true))));
+            tail->insertBeforeTerminal(constant);
+            auto* terminal = tail->terminal();
+            terminal->child1() = Edge(constant, KnownBooleanUse);
+            terminal->branchData()->taken = BranchTarget(next);
+            terminal->branchData()->notTaken = BranchTarget(header);
         };
 
 #if ASSERT_ENABLED
@@ -507,13 +523,8 @@ public:
                 }
 
                 // 3. Clone nodes.
-                for (uint32_t i = 0; i < body->size(); ++i) {
-                    Node* bodyNode = body->at(i);
-                    // Ignore the branch nodes at the end of the tail since we can directly jump to next (See step 5).
-                    if (body == tail && bodyNode->origin.semantic == tailTerminalOriginSemantic)
-                        continue;
-                    cloneNode(nodeClones, clone, bodyNode);
-                }
+                for (Node* node : *body)
+                    cloneNode(nodeClones, clone, node);
 
                 // 4. Clone variables and tail and head.
                 clone->variablesAtTail = body->variablesAtTail;
@@ -522,9 +533,10 @@ public:
                 replaceOperands(clone->variablesAtHead);
 
                 // 5. Clone successors. (predecessors will be fixed in resetReachability below)
-                if (body == tail)
-                    clone->appendNode(m_graph, SpecNone, Jump, tailTerminalOrigin, OpInfo(next));
-                else {
+                if (body == tail) {
+                    ASSERT(tail->terminal()->isBranch());
+                    convertTailBranchToNextJump(clone, next);
+                } else {
                     for (uint32_t i = 0; i < body->numSuccessors(); ++i) {
                         auto& successor = clone->successor(i);
                         ASSERT(successor == body->successor(i));
@@ -538,13 +550,7 @@ public:
         }
 
         // 6. Replace the original loop tail branch with a jump to the last header clone.
-        {
-            for (Node* node : *tail) {
-                if (node->origin.semantic == tailTerminalOriginSemantic)
-                    node->removeWithoutChecks();
-            }
-            tail->appendNode(m_graph, SpecNone, Jump, tailTerminalOrigin, OpInfo(next));
-        }
+        convertTailBranchToNextJump(tail, next);
 
         // Done clone.
         if (!m_blockInsertionSet.execute()) {
