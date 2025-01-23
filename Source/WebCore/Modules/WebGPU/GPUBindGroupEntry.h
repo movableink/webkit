@@ -87,6 +87,10 @@ struct GPUBindGroupEntry {
             return false;
         });
     }
+    static bool equalSizes(const std::optional<GPUSize64>& a, const std::optional<GPUSize64>& b)
+    {
+        return (!a && !b) || (a && b && *a == *b);
+    }
     static bool equal(const GPUBufferBinding& entry, const GPUBindingResource& otherEntry)
     {
         return WTF::switchOn(otherEntry, [&](const RefPtr<GPUSampler>&) -> bool {
@@ -94,7 +98,7 @@ struct GPUBindGroupEntry {
         }, [&](const RefPtr<GPUTextureView>&) -> bool {
             return false;
         }, [&](const GPUBufferBinding& bufferBinding) -> bool {
-            return bufferBinding.buffer.get() == entry.buffer.get();
+            return bufferBinding.buffer.get() == entry.buffer.get() && bufferBinding.offset == entry.offset && equalSizes(bufferBinding.size, entry.size);
         }, [&](const RefPtr<GPUExternalTexture>&) -> bool {
             return false;
         });
