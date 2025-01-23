@@ -1396,7 +1396,7 @@ sub generateFindNameForLength
                     }
                     print F ")) {\n";
                 } else {
-                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span)) {\n";
+                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span8)) {\n";
                 }
             }
             print F "$indent    return ${enumClass}::$enumValue;\n";

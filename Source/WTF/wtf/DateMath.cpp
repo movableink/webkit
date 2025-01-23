@@ -413,7 +413,7 @@ static int findMonth(std::span<const LChar> monthStr)
     std::array<LChar, 3> needle;
     for (unsigned i = 0; i < 3; ++i)
         needle[i] = toASCIILower(monthStr[i]);
-    auto haystack = "janfebmaraprmayjunjulaugsepoctnovdec"_span;
+    constexpr auto haystack = "janfebmaraprmayjunjulaugsepoctnovdec"_span;
     if (size_t index = find(haystack, std::span { needle }); index != notFound) {
         if (!(index % 3))
             return index / 3;
@@ -854,13 +854,13 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
 
             skipSpacesAndComments(dateString);
 
-            if (skipLettersExactlyIgnoringASCIICase(dateString, "am"_span)) {
+            if (skipLettersExactlyIgnoringASCIICase(dateString, "am"_span8)) {
                 if (hour > 12)
                     return std::numeric_limits<double>::quiet_NaN();
                 if (hour == 12)
                     hour = 0;
                 skipSpacesAndComments(dateString);
-            } else if (skipLettersExactlyIgnoringASCIICase(dateString, "pm"_span)) {
+            } else if (skipLettersExactlyIgnoringASCIICase(dateString, "pm"_span8)) {
                 if (hour > 12)
                     return std::numeric_limits<double>::quiet_NaN();
                 if (hour != 12)
@@ -882,7 +882,7 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
     // Don't fail if the time zone is missing. 
     // Some websites omit the time zone (4275206).
     if (!dateString.empty()) {
-        if (skipLettersExactlyIgnoringASCIICase(dateString, "gmt"_span) || skipLettersExactlyIgnoringASCIICase(dateString, "utc"_span))
+        if (skipLettersExactlyIgnoringASCIICase(dateString, "gmt"_span8) || skipLettersExactlyIgnoringASCIICase(dateString, "utc"_span8))
             isLocalTime = false;
 
         if (!dateString.empty() && (dateString.front() == '+' || dateString.front() == '-')) {

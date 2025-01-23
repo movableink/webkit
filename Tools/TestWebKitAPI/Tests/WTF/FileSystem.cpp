@@ -755,7 +755,7 @@ static void runGetFileModificationTimeTest(const String& path, Function<std::opt
     // Modify the file.
     auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite);
     EXPECT_TRUE(FileSystem::isHandleValid(fileHandle));
-    FileSystem::writeToFile(fileHandle, "foo"_span);
+    FileSystem::writeToFile(fileHandle, "foo"_span8);
     FileSystem::closeFile(fileHandle);
 
     auto newModificationTime = fileModificationTime(path);

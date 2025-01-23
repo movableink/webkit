@@ -99,7 +99,7 @@ struct SubtagComparison {
     int comparison;
 };
 
-static SubtagComparison subtagCompare(std::span<const LChar> key, std::span<const LChar> range)
+static SubtagComparison subtagCompare(std::span<const char> key, std::span<const char> range)
 {
     SubtagComparison result;
 
@@ -107,14 +107,14 @@ static SubtagComparison subtagCompare(std::span<const LChar> key, std::span<cons
     result.keyContinue = result.keyLength;
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (auto* hyphenPointer = memchr(key.data(), '-', key.size())) {
-        result.keyLength = static_cast<const LChar*>(hyphenPointer) - key.data();
+        result.keyLength = static_cast<const char*>(hyphenPointer) - key.data();
         result.keyContinue = result.keyLength + 1;
     }
 
     result.rangeLength = range.size();
     result.rangeContinue = result.rangeLength;
     if (auto* hyphenPointer = memchr(range.data(), '-', range.size())) {
-        result.rangeLength = static_cast<const LChar*>(hyphenPointer) - range.data();
+        result.rangeLength = static_cast<const char*>(hyphenPointer) - range.data();
         result.rangeContinue = result.rangeLength + 1;
     }
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
@@ -140,7 +140,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 // However, if the key we're testing against is "de-de", then we should report "equal to",
 // because these are the quotes we should use for all "de" except for "de-ch".
 struct QuotesForLanguage {
-    std::span<const LChar> language;
+    std::span<const char> language;
     UChar checkFurther;
     UChar open1;
     UChar close1;
@@ -212,7 +212,7 @@ static const QuotesForLanguage* quotesForLanguage(const String& language)
 {
     // Table of quotes from http://www.whatwg.org/specs/web-apps/current-work/multipage/rendering.html#quotes
     // FIXME: This table is out-of-date.
-    static const std::array quoteTable {
+    static constexpr std::array quoteTable {
         QuotesForLanguage { "af"_span,         0, 0x201c, 0x201d, 0x2018, 0x2019 },
         QuotesForLanguage { "agq"_span,        0, 0x201e, 0x201d, 0x201a, 0x2019 },
         QuotesForLanguage { "ak"_span,         0, 0x201c, 0x201d, 0x2018, 0x2019 },
@@ -392,12 +392,12 @@ static const QuotesForLanguage* quotesForLanguage(const String& language)
     if (!length)
         return nullptr;
 
-    Vector<LChar> languageKeyBuffer(length);
+    Vector<char> languageKeyBuffer(length);
     for (unsigned i = 0; i < length; ++i) {
         UChar character = toASCIILower(language[i]);
         if (!(isASCIILower(character) || character == '-'))
             return nullptr;
-        languageKeyBuffer[i] = static_cast<LChar>(character);
+        languageKeyBuffer[i] = static_cast<char>(character);
     }
 
     QuotesForLanguage languageKey = { languageKeyBuffer.span(), 0, 0, 0, 0, 0 };

@@ -151,7 +151,17 @@ constexpr ASCIILiteral operator""_s(const char* characters, size_t)
     return result;
 }
 
-constexpr std::span<const LChar> operator""_span(const char* characters, size_t n)
+constexpr std::span<const char> operator""_span(const char* characters, size_t n)
+{
+    auto span = unsafeMakeSpan(characters, n);
+#if ASSERT_ENABLED
+    for (size_t i = 0, size = span.size(); i < size; ++i)
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(isASCII(span[i]));
+#endif
+    return span;
+}
+
+constexpr std::span<const LChar> operator""_span8(const char* characters, size_t n)
 {
     auto span = byteCast<LChar>(unsafeMakeSpan(characters, n));
 #if ASSERT_ENABLED
