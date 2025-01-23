@@ -543,7 +543,7 @@ public:
     BasicBlock* block(BlockIndex blockIndex) const { return m_blocks[blockIndex].get(); }
     BasicBlock* lastBlock() const { return block(numBlocks() - 1); }
 
-    void appendBlock(Ref<BasicBlock>&& basicBlock)
+    void appendBlock(std::unique_ptr<BasicBlock>&& basicBlock)
     {
         basicBlock->index = m_blocks.size();
         m_blocks.append(WTFMove(basicBlock));
@@ -1209,7 +1209,7 @@ public:
     CodeBlock* const m_codeBlock;
     CodeBlock* const m_profiledBlock;
 
-    Vector<RefPtr<BasicBlock>, 8> m_blocks;
+    Vector<std::unique_ptr<BasicBlock>, 8> m_blocks;
     Vector<BasicBlock*, 1> m_roots;
     Vector<Edge, 16> m_varArgChildren;
 

@@ -82,9 +82,9 @@ class Snippet;
 
 namespace DFG {
 
+class BasicBlock;
 class Graph;
 class PromotedLocationDescriptor;
-struct BasicBlock;
 
 struct StorageAccessData {
     PropertyOffset offset;

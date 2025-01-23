@@ -3,14 +3,11 @@
 ./bytecode/ObjectPropertyConditionSet.cpp
 ./bytecompiler/NodesCodegen.cpp
 ./debugger/Debugger.cpp
-./dfg/DFGArgumentsEliminationPhase.cpp
 ./dfg/DFGDesiredWatchpoints.h
 ./dfg/DFGLazyJSValue.cpp
 ./dfg/DFGLoopUnrollingPhase.cpp
 ./dfg/DFGObjectAllocationSinkingPhase.cpp
 ./dfg/DFGOperations.cpp
-./dfg/DFGPhantomInsertionPhase.cpp
-./dfg/DFGValidate.cpp
 ./ftl/FTLCompile.cpp
 ./ftl/FTLOSRExitHandle.cpp
 ./ftl/FTLPatchpointExceptionHandle.cpp
