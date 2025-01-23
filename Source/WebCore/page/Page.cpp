@@ -104,6 +104,7 @@
 #include "LocalFrameView.h"
 #include "LogInitialization.h"
 #include "Logging.h"
+#include "LoginStatus.h"
 #include "LowPowerModeNotifier.h"
 #include "MediaCanStartListener.h"
 #include "MemoryCache.h"
@@ -133,6 +134,7 @@
 #include "ProcessSyncClient.h"
 #include "ProcessSyncData.h"
 #include "ProgressTracker.h"
+#include "RTCController.h"
 #include "Range.h"
 #include "RemoteFrame.h"
 #include "RenderDescendantIterator.h"
@@ -629,10 +631,10 @@ ViewportArguments Page::viewportArguments() const
 
 void Page::setOverrideViewportArguments(const std::optional<ViewportArguments>& viewportArguments)
 {
-    if (viewportArguments == m_overrideViewportArguments)
+    std::optional<ViewportArguments> oldArguments = m_overrideViewportArguments ? std::optional(*m_overrideViewportArguments) : std::nullopt;
+    if (oldArguments == viewportArguments)
         return;
-
-    m_overrideViewportArguments = viewportArguments;
+    m_overrideViewportArguments = viewportArguments ? makeUnique<ViewportArguments>(*viewportArguments) : nullptr;
     if (RefPtr localTopDocument = this->localTopDocument())
         localTopDocument->updateViewportArguments();
 }
@@ -5420,7 +5422,7 @@ void Page::setLastAuthentication(LoginStatus::AuthenticationType authType)
     auto loginStatus = LoginStatus::create(RegistrableDomain(mainFrameURL()), emptyString(), LoginStatus::CredentialTokenType::HTTPStateToken, authType, LoginStatus::TimeToLiveAuthentication);
     if (loginStatus.hasException())
         return;
-    m_lastAuthentication = loginStatus.releaseReturnValue();
+    m_lastAuthentication = loginStatus.releaseReturnValue().moveToUniquePtr();
 }
 
 #if ENABLE(FULLSCREEN_API)

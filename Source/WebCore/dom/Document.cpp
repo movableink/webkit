@@ -215,6 +215,7 @@
 #include "PseudoClassChangeInvalidation.h"
 #include "PublicSuffixStore.h"
 #include "Quirks.h"
+#include "RTCController.h"
 #include "RTCNetworkManager.h"
 #include "Range.h"
 #include "RealtimeMediaSourceCenter.h"
@@ -4798,7 +4799,7 @@ ViewportArguments Document::viewportArguments() const
     RefPtr page = this->page();
     if (!page)
         return m_viewportArguments;
-    return page->overrideViewportArguments().value_or(m_viewportArguments);
+    return page->overrideViewportArguments() ? *page->overrideViewportArguments() : m_viewportArguments;
 }
 
 bool Document::isViewportDocument() const

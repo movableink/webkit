@@ -49,6 +49,7 @@
 #include "NavigatorMediaDevices.h"
 #include "PermissionsPolicy.h"
 #include "PlatformMediaSessionManager.h"
+#include "RTCController.h"
 #include "RealtimeMediaSourceCenter.h"
 #include "Settings.h"
 #include "UserMediaController.h"

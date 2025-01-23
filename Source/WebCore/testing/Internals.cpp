@@ -182,6 +182,7 @@
 #include "PushSubscription.h"
 #include "PushSubscriptionData.h"
 #include "Quirks.h"
+#include "RTCController.h"
 #include "RTCNetworkManager.h"
 #include "RTCRtpSFrameTransform.h"
 #include "Range.h"
