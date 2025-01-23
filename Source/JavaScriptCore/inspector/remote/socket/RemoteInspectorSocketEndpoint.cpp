@@ -342,7 +342,9 @@ void RemoteInspectorSocketEndpoint::send(ConnectionID id, std::span<const uint8_
             return;
 
         // Copy remaining data to send later.
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         connection->sendBuffer.appendRange(data.data() + offset, data.data() + data.size());
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         Socket::markWaitingWritable(connection->poll);
 
         wakeupWorkerThread();
