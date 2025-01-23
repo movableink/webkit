@@ -911,7 +911,7 @@ void Styleable::updateCSSViewTimelines(const RenderStyle* currentStyle, const Re
     };
 
     auto updateNamedViewTimelines = [&]() {
-        if (currentStyle && currentStyle->viewTimelineNames() == afterChangeStyle.viewTimelineNames())
+        if ((currentStyle && currentStyle->viewTimelineNames() == afterChangeStyle.viewTimelineNames()) && (currentStyle && currentStyle->viewTimelineAxes() == afterChangeStyle.viewTimelineAxes()) && (currentStyle && currentStyle->viewTimelineInsets() == afterChangeStyle.viewTimelineInsets()))
             return;
 
         CheckedRef timelinesController = element.protectedDocument()->ensureTimelinesController();
