@@ -93,9 +93,9 @@ void StringBuilder::shrink(unsigned newLength)
         }
         // Allocate a fresh buffer, with a copy of the characters we are keeping.
         if (m_buffer->is8Bit())
-            allocateBuffer<LChar>(m_buffer->span8(), newLength);
+            allocateBuffer<LChar>(m_buffer->span8().first(m_length), newLength);
         else
-            allocateBuffer<UChar>(m_buffer->span16(), newLength);
+            allocateBuffer<UChar>(m_buffer->span16().first(m_length), newLength);
         return;
     }
 

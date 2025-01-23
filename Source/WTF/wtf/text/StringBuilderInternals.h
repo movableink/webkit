@@ -31,17 +31,20 @@
 namespace WTF {
 
 // Allocate a new buffer, copying in currentCharacters (these may come from either m_string or m_buffer.
-template<typename AllocationCharacterType, typename CurrentCharacterType> void StringBuilder::allocateBuffer(std::span<const CurrentCharacterType> currentCharacters, unsigned requiredCapacity)
+template<typename AllocationCharacterType, typename CurrentCharacterType> void StringBuilder::allocateBuffer(std::span<const CurrentCharacterType> currentCharactersToCopy, unsigned requiredCapacity)
 {
-    std::span<AllocationCharacterType> bufferCharacters;
-    auto buffer = StringImpl::tryCreateUninitialized(requiredCapacity, bufferCharacters);
+    std::span<AllocationCharacterType> newBufferCharacters;
+    auto buffer = StringImpl::tryCreateUninitialized(requiredCapacity, newBufferCharacters);
     if (UNLIKELY(!buffer)) {
         didOverflow();
         return;
     }
 
     ASSERT(!hasOverflowed());
-    StringImpl::copyCharacters(bufferCharacters.data(), currentCharacters);
+
+    // FIXME: StringImpl::copyCharacters() should take in 2 spans or we should call memcpySpan().
+    RELEASE_ASSERT(newBufferCharacters.size() >= currentCharactersToCopy.size());
+    StringImpl::copyCharacters(newBufferCharacters.data(), currentCharactersToCopy);
 
     m_buffer = WTFMove(buffer);
     m_string = { };
