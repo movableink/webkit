@@ -295,9 +295,12 @@ void RealtimeOutgoingMediaSourceGStreamer::codecPreferencesChanged()
     while (!m_packetizers.isEmpty()) {
         RefPtr packetizer = m_packetizers.takeLast();
 
-        int payloadType = packetizer->payloadType();
+        auto payloadType = packetizer->payloadType();
+        if (!payloadType)
+            continue;
+
         unsigned sequenceNumber = packetizer->currentSequenceNumberOffset();
-        payloaderStates.add(payloadType, sequenceNumber);
+        payloaderStates.add(*payloadType, sequenceNumber);
 
         auto bin = packetizer->bin();
         auto binSinkPad = adoptGRef(gst_element_get_static_pad(bin, "sink"));
@@ -316,10 +319,12 @@ void RealtimeOutgoingMediaSourceGStreamer::codecPreferencesChanged()
     }
 
     for (auto& packetizer : m_packetizers) {
-        int payloadType = packetizer->payloadType();
-        if (!payloaderStates.contains(payloadType))
+        auto payloadType = packetizer->payloadType();
+        if (!payloadType)
             continue;
-        packetizer->setSequenceNumberOffset(payloaderStates.get(payloadType));
+        if (!payloaderStates.contains(*payloadType))
+            continue;
+        packetizer->setSequenceNumberOffset(payloaderStates.get(*payloadType));
     }
 
     gst_bin_sync_children_states(GST_BIN_CAST(m_bin.get()));
@@ -499,7 +504,8 @@ bool RealtimeOutgoingMediaSourceGStreamer::configurePacketizers(GRefPtr<GstCaps>
     auto payloadType = gstStructureGet<int>(structure, "payload"_s);
     if (!payloadType) {
         auto& firstPacketizer = m_packetizers.first();
-        gst_structure_set(structure, "payload", G_TYPE_INT, firstPacketizer->payloadType(), nullptr);
+        if (auto pt = firstPacketizer->payloadType())
+            gst_structure_set(structure, "payload", G_TYPE_INT, *pt, nullptr);
     }
 
     StringBuilder simulcastBuilder;
