@@ -189,25 +189,6 @@ pas_large_heap_try_allocate(pas_large_heap* heap,
     return result;
 }
 
-pas_allocation_result
-pas_large_heap_try_allocate_pgm(pas_large_heap* heap,
-                            size_t size,
-                            size_t alignment,
-                            pas_allocation_mode allocation_mode,
-                            const pas_heap_config* heap_config,
-                            pas_physical_memory_transaction* transaction)
-{
-    pas_allocation_result result;
-    result = pas_probabilistic_guard_malloc_allocate(heap, size, allocation_mode, heap_config, transaction);
-
-    /* PGM may not succeed for a variety of reasons. We will give it a last ditch effort to try to do a
-       regular allocation instead. */
-    if (!result.did_succeed)
-        result = pas_large_heap_try_allocate(heap, size, alignment, allocation_mode, heap_config, transaction);
-
-    return result;
-}
-
 bool pas_large_heap_try_deallocate(uintptr_t begin,
                                    const pas_heap_config* heap_config)
 {
