@@ -1232,7 +1232,7 @@ public:
 
     WEBCORE_EXPORT Document* mainFrameDocument() const;
     RefPtr<Document> protectedMainFrameDocument() const { return mainFrameDocument(); }
-    WEBCORE_EXPORT bool isTopDocument() const;
+    bool isTopDocument() const { return mainFrameDocument() == this; }
 
     WEBCORE_EXPORT RefPtr<Document> localTopDocument() const;
 
@@ -2141,7 +2141,6 @@ private:
     void updateCaptureAccordingToMutedState();
     MediaProducerMediaStateFlags computeCaptureState() const;
 #endif
-    bool isTopDocumentLegacy() const { return mainFrameDocument() == this; }
     void securityOriginDidChange() final;
 
     Ref<DocumentSyncData> syncData() { return m_syncData.get(); }
