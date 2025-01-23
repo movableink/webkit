@@ -2973,6 +2973,10 @@ std::unique_ptr<FunctionIPIntMetadataGenerator> IPIntGenerator::finalize()
             *reinterpret_cast_ptr<uint32_t*>(m_metadata->m_metadata.data() + catchSPOffset) += m_metadata->m_numAlignedRethrowSlots;
     }
 
+    // Pad the metadata to an even number since we will allocate the rounded up size
+    if (m_metadata->m_numLocals % 2)
+        m_metadata->m_argumINTBytecode.append(0);
+
     m_metadata->m_maxFrameSizeInV128 = roundUpToMultipleOf<2>(m_metadata->m_numLocals) / 2;
     m_metadata->m_maxFrameSizeInV128 += m_metadata->m_numAlignedRethrowSlots / 2;
     m_metadata->m_maxFrameSizeInV128 += m_maxStackSize;
