@@ -163,11 +163,6 @@ GraphicsContextGLTextureMapperANGLE::GraphicsContextGLTextureMapperANGLE(Graphic
 
 GraphicsContextGLTextureMapperANGLE::~GraphicsContextGLTextureMapperANGLE()
 {
-#if USE(COORDINATED_GRAPHICS)
-    if (m_layerContentsDisplayDelegate)
-        static_cast<GraphicsLayerContentsDisplayDelegateTextureMapper*>(m_layerContentsDisplayDelegate.get())->proxy().setSwapBuffersFunction(nullptr);
-#endif
-
     if (m_compositorTexture) {
         if (!makeContextCurrent())
             return;
@@ -301,17 +296,6 @@ bool GraphicsContextGLTextureMapperANGLE::platformInitialize()
 {
 #if USE(COORDINATED_GRAPHICS)
     auto proxy = TextureMapperPlatformLayerProxy::create(TextureMapperPlatformLayerProxy::ContentType::WebGL);
-    proxy->setSwapBuffersFunction([this](TextureMapperPlatformLayerProxy& proxy) mutable {
-        if (!m_isCompositorTextureInitialized)
-            return;
-
-        OptionSet<TextureMapperFlags> flags = TextureMapperFlags::ShouldFlipTexture;
-        if (contextAttributes().alpha)
-            flags.add(TextureMapperFlags::ShouldBlend);
-
-        auto fboSize = getInternalFramebufferSize();
-        proxy.pushNextBuffer(CoordinatedPlatformLayerBufferRGB::create(m_compositorTextureID, fboSize, flags, WTFMove(m_frameFence)));
-    });
     m_layerContentsDisplayDelegate = GraphicsLayerContentsDisplayDelegateTextureMapper::create(WTFMove(proxy));
 #else
     m_texmapLayer = makeUnique<TextureMapperGCGLPlatformLayer>(*this);
@@ -394,8 +378,13 @@ void GraphicsContextGLTextureMapperANGLE::prepareForDisplay()
     prepareTexture();
     swapCompositorTexture();
 
-#if PLATFORM(GTK) || PLATFORM(WPE)
-    m_frameFence = GLFence::create();
+#if USE(COORDINATED_GRAPHICS)
+    OptionSet<TextureMapperFlags> flags = TextureMapperFlags::ShouldFlipTexture;
+    if (contextAttributes().alpha)
+        flags.add(TextureMapperFlags::ShouldBlend);
+    auto fboSize = getInternalFramebufferSize();
+    auto& proxy = static_cast<GraphicsLayerContentsDisplayDelegateTextureMapper*>(m_layerContentsDisplayDelegate.get())->proxy();
+    proxy.pushNextBuffer(CoordinatedPlatformLayerBufferRGB::create(m_compositorTextureID, fboSize, flags, GLFence::create()));
 #endif
 }
 

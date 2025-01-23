@@ -45,21 +45,20 @@ public:
 
     virtual ~RemoteGraphicsLayerContentsDisplayDelegateGBM()
     {
-        m_proxy->setSwapBuffersFunction(nullptr);
     }
 
     void setDisplayBuffer(Ref<DMABufBuffer>&& displayBuffer, UnixFileDescriptor&& fenceFD)
     {
         std::swap(m_drawingBuffer, m_displayBuffer);
         m_displayBuffer = WTFMove(displayBuffer);
-        m_fenceFD = WTFMove(fenceFD);
+        pushDisplayBuffer(WTFMove(fenceFD));
     }
 
     void setDisplayBuffer(uint64_t bufferID, UnixFileDescriptor&& fenceFD)
     {
         if (m_drawingBuffer && m_drawingBuffer->id() == bufferID)
             std::swap(m_drawingBuffer, m_displayBuffer);
-        m_fenceFD = WTFMove(fenceFD);
+        pushDisplayBuffer(WTFMove(fenceFD));
     }
 
 private:
@@ -67,21 +66,22 @@ private:
         : GraphicsLayerContentsDisplayDelegateTextureMapper(TextureMapperPlatformLayerProxy::create(TextureMapperPlatformLayerProxy::ContentType::WebGL))
         , m_isOpaque(isOpaque)
     {
-        m_proxy->setSwapBuffersFunction([this](TextureMapperPlatformLayerProxy& proxy) mutable {
-            if (!m_displayBuffer)
-                return;
+    }
 
-            OptionSet<TextureMapperFlags> flags = TextureMapperFlags::ShouldFlipTexture;
-            if (!m_isOpaque)
-                flags.add(TextureMapperFlags::ShouldBlend);
-            proxy.pushNextBuffer(CoordinatedPlatformLayerBufferDMABuf::create(Ref { *m_displayBuffer }, flags, WTFMove(m_fenceFD)));
-        });
+    void pushDisplayBuffer(UnixFileDescriptor&& fenceFD)
+    {
+        if (!m_displayBuffer)
+            return;
+
+        OptionSet<TextureMapperFlags> flags = TextureMapperFlags::ShouldFlipTexture;
+        if (!m_isOpaque)
+            flags.add(TextureMapperFlags::ShouldBlend);
+        m_proxy->pushNextBuffer(CoordinatedPlatformLayerBufferDMABuf::create(Ref { *m_displayBuffer }, flags, WTFMove(fenceFD)));
     }
 
     bool m_isOpaque { false };
     RefPtr<DMABufBuffer> m_drawingBuffer;
     RefPtr<DMABufBuffer> m_displayBuffer;
-    UnixFileDescriptor m_fenceFD;
 };
 
 class RemoteGraphicsContextGLProxyGBM final : public RemoteGraphicsContextGLProxy {

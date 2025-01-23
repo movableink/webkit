@@ -160,12 +160,6 @@ void TextureMapperPlatformLayerProxy::pushNextBuffer(std::unique_ptr<Coordinated
         m_targetLayer->requestComposition();
 }
 
-void TextureMapperPlatformLayerProxy::swapBuffersIfNeeded()
-{
-    if (m_swapBuffersFunction)
-        m_swapBuffersFunction(*this);
-}
-
 void TextureMapperPlatformLayerProxy::dropCurrentBufferWhilePreservingTexture(bool shouldWait)
 {
     auto dropBufferFunction = [this, protectedThis = Ref { *this }, shouldWait] {

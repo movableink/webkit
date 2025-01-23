@@ -171,6 +171,8 @@ public:
 
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() const { return nullptr; }
 
+    virtual void prepareForDisplay() { }
+
     const Parameters& parameters() const { return m_parameters; }
 
     WEBCORE_EXPORT virtual String debugDescription() const = 0;

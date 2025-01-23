@@ -2437,12 +2437,16 @@ AffineTransform CanvasRenderingContext2DBase::baseTransform() const
 void CanvasRenderingContext2DBase::prepareForDisplay()
 {
     if (auto buffer = canvasBase().buffer())
-        buffer->flushDrawingContextAsync();
+        buffer->prepareForDisplay();
 }
 
 bool CanvasRenderingContext2DBase::needsPreparationForDisplay() const
 {
+#if USE(SKIA)
+    return isAccelerated();
+#else
     return false;
+#endif
 }
 
 ExceptionOr<Ref<ImageData>> CanvasRenderingContext2DBase::createImageData(ImageData& existingImageData) const

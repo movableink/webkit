@@ -103,24 +103,24 @@ ImageBufferSkiaAcceleratedBackend::ImageBufferSkiaAcceleratedBackend(const Param
     // Use a content layer for canvas.
     if (parameters.purpose == RenderingPurpose::Canvas) {
         auto proxy = TextureMapperPlatformLayerProxy::create(TextureMapperPlatformLayerProxy::ContentType::Canvas);
-        proxy->setSwapBuffersFunction([this](TextureMapperPlatformLayerProxy& proxy) {
-            auto image = createNativeImageReference();
-            if (!image)
-                return;
-
-            proxy.pushNextBuffer(CoordinatedPlatformLayerBufferNativeImage::create(image.releaseNonNull(), GLFence::create()));
-        });
         m_layerContentsDisplayDelegate = GraphicsLayerContentsDisplayDelegateTextureMapper::create(WTFMove(proxy));
     }
 #endif
 }
 
-ImageBufferSkiaAcceleratedBackend::~ImageBufferSkiaAcceleratedBackend()
+ImageBufferSkiaAcceleratedBackend::~ImageBufferSkiaAcceleratedBackend() = default;
+
+void ImageBufferSkiaAcceleratedBackend::prepareForDisplay()
 {
-#if USE(COORDINATED_GRAPHICS)
-    if (m_layerContentsDisplayDelegate)
-        static_cast<GraphicsLayerContentsDisplayDelegateTextureMapper*>(m_layerContentsDisplayDelegate.get())->proxy().setSwapBuffersFunction(nullptr);
-#endif
+    if (!m_layerContentsDisplayDelegate)
+        return;
+
+    auto image = createNativeImageReference();
+    if (!image)
+        return;
+
+    auto& proxy = static_cast<GraphicsLayerContentsDisplayDelegateTextureMapper*>(m_layerContentsDisplayDelegate.get())->proxy();
+    proxy.pushNextBuffer(CoordinatedPlatformLayerBufferNativeImage::create(image.releaseNonNull(), GLFence::create()));
 }
 
 void ImageBufferSkiaAcceleratedBackend::finishAcceleratedRenderingAndCreateFence()

@@ -63,8 +63,6 @@ public:
 
     void pushNextBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&);
     void dropCurrentBufferWhilePreservingTexture(bool shouldWait);
-    void setSwapBuffersFunction(Function<void(TextureMapperPlatformLayerProxy&)>&& function) { m_swapBuffersFunction = WTFMove(function); }
-    void swapBuffersIfNeeded();
 
 private:
     explicit TextureMapperPlatformLayerProxy(ContentType);
@@ -85,7 +83,6 @@ private:
     ContentType m_contentType;
     std::unique_ptr<CoordinatedPlatformLayerBuffer> m_currentBuffer;
     std::unique_ptr<CoordinatedPlatformLayerBuffer> m_pendingBuffer;
-    Function<void(TextureMapperPlatformLayerProxy&)> m_swapBuffersFunction;
 
     Lock m_wasBufferDroppedLock;
     Condition m_wasBufferDroppedCondition;

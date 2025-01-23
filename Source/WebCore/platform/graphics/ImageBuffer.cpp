@@ -302,6 +302,13 @@ bool ImageBuffer::flushDrawingContextAsync()
     return true;
 }
 
+void ImageBuffer::prepareForDisplay()
+{
+    flushDrawingContextAsync();
+    if (auto* backend = ensureBackend())
+        backend->prepareForDisplay();
+}
+
 void ImageBuffer::setBackend(std::unique_ptr<ImageBufferBackend>&& backend)
 {
     if (m_backend.get() == backend.get())

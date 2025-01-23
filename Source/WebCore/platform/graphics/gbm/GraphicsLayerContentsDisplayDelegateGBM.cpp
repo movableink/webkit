@@ -39,16 +39,6 @@ GraphicsLayerContentsDisplayDelegateGBM::GraphicsLayerContentsDisplayDelegateGBM
     : GraphicsLayerContentsDisplayDelegateTextureMapper(TextureMapperPlatformLayerProxy::create(TextureMapperPlatformLayerProxy::ContentType::WebGL))
     , m_isOpaque(isOpaque)
 {
-    m_proxy->setSwapBuffersFunction([this](TextureMapperPlatformLayerProxy& proxy) mutable {
-        if (!m_buffer)
-            return;
-
-        OptionSet<TextureMapperFlags> flags = TextureMapperFlags::ShouldFlipTexture;
-        if (!m_isOpaque)
-            flags.add(TextureMapperFlags::ShouldBlend);
-
-        proxy.pushNextBuffer(CoordinatedPlatformLayerBufferDMABuf::create(Ref { *m_buffer }, flags, WTFMove(m_fence)));
-    });
 }
 
 GraphicsLayerContentsDisplayDelegateGBM::~GraphicsLayerContentsDisplayDelegateGBM() = default;
@@ -56,7 +46,13 @@ GraphicsLayerContentsDisplayDelegateGBM::~GraphicsLayerContentsDisplayDelegateGB
 void GraphicsLayerContentsDisplayDelegateGBM::setDisplayBuffer(RefPtr<DMABufBuffer>& displayBuffer, std::unique_ptr<GLFence>&& fence)
 {
     m_buffer = displayBuffer;
-    m_fence = WTFMove(fence);
+    if (!m_buffer)
+        return;
+
+    OptionSet<TextureMapperFlags> flags = TextureMapperFlags::ShouldFlipTexture;
+    if (!m_isOpaque)
+        flags.add(TextureMapperFlags::ShouldBlend);
+    m_proxy->pushNextBuffer(CoordinatedPlatformLayerBufferDMABuf::create(Ref { *m_buffer }, flags, WTFMove(fence)));
 }
 
 } // namespace WebCore

@@ -47,7 +47,6 @@ private:
 
     bool m_isOpaque { false };
     RefPtr<DMABufBuffer> m_buffer;
-    std::unique_ptr<GLFence> m_fence;
 };
 
 } // namespace WebCore

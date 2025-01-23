@@ -471,7 +471,6 @@ void CoordinatedPlatformLayer::setContentsBufferNeedsDisplay()
     if (!m_contentsBuffer)
         return;
 
-    m_contentsBuffer->swapBuffersIfNeeded();
     notifyCompositionRequired();
 }
 
