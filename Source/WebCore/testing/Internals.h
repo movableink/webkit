@@ -492,7 +492,7 @@ public:
     bool isOverwriteModeEnabled();
     void toggleOverwriteModeEnabled();
 
-    bool testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
+    ExceptionOr<bool> testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
 
     ExceptionOr<RefPtr<Range>> rangeOfString(const String&, RefPtr<Range>&&, const Vector<String>& findOptions);
     ExceptionOr<unsigned> countMatchesForText(const String&, const Vector<String>& findOptions, const String& markMatches);
@@ -600,7 +600,7 @@ public:
     unsigned numberOfResizeObservers(const Document&) const;
 
     String documentIdentifier(const Document&) const;
-    bool isDocumentAlive(const String& documentIdentifier) const;
+    ExceptionOr<bool> isDocumentAlive(const String& documentIdentifier) const;
 
     uint64_t messagePortIdentifier(const MessagePort&) const;
     bool isMessagePortAlive(uint64_t messagePortIdentifier) const;
@@ -656,7 +656,7 @@ public:
         float right { 0 };
     };
     void setFullscreenInsets(FullscreenInsets);
-    void setFullscreenAutoHideDuration(double);
+    ExceptionOr<void> setFullscreenAutoHideDuration(double);
 
 #if ENABLE(VIDEO)
     bool isChangingPresentationMode(HTMLVideoElement&) const;
@@ -1089,7 +1089,7 @@ public:
     NO_RETURN_DUE_TO_CRASH void terminateWebContentProcess();
 
 #if ENABLE(APPLE_PAY)
-    MockPaymentCoordinator& mockPaymentCoordinator(Document&);
+    ExceptionOr<Ref<MockPaymentCoordinator>> mockPaymentCoordinator(Document&);
 #endif
 
     struct ImageOverlayText {
@@ -1400,7 +1400,7 @@ public:
 
     String windowLocationHost(DOMWindow&);
 
-    String systemColorForCSSValue(const String& cssValue, bool useDarkModeAppearance, bool useElevatedUserInterfaceLevel);
+    ExceptionOr<String> systemColorForCSSValue(const String& cssValue, bool useDarkModeAppearance, bool useElevatedUserInterfaceLevel);
 
     bool systemHasBattery() const;
 
