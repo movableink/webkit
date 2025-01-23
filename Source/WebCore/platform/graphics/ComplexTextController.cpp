@@ -694,6 +694,10 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                 // Like simple text path in WidthIterator::applyCSSVisibilityRules,
                 // make tabCharacter glyph invisible after advancing.
                 glyph = deletedGlyph;
+            } else if (character == zeroWidthNonJoiner) {
+                // zeroWidthNonJoiner is rendered as deletedGlyph for compatibility with other engines: https://bugs.webkit.org/show_bug.cgi?id=285959
+                advance.setWidth(0);
+                glyph = deletedGlyph;
             } else if (FontCascade::treatAsZeroWidthSpace(character) && !treatAsSpace) {
                 advance.setWidth(0);
                 glyph = font.spaceGlyph();
