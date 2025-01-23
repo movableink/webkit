@@ -3017,3 +3017,5 @@ webkit.org/b/285089 [ Ventura+ Debug ] imported/w3c/web-platform-tests/editing/c
 webkit.org/b/286159 [ Debug ] fast/canvas/webgl/tex-image-and-sub-image-2d-with-video-rgba4444.html [ Pass Failure ]
 
 webkit.org/b/286185 [ Debug ] fast/canvas/webgl/tex-image-and-sub-image-2d-with-video-rgba5551.html [ Pass Failure ]
+
+webkit.org/b/286387 [ Debug ] inspector/worker/worker-create-and-terminate.html [ Pass Failure ]
