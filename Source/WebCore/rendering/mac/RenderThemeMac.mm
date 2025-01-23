@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,10 +23,13 @@
 #if PLATFORM(MAC)
 
 #import "BitmapImage.h"
+#import "CSSPropertyNames.h"
 #import "CSSValueKeywords.h"
 #import "CSSValueList.h"
 #import "Color.h"
+#import "ColorBlending.h"
 #import "ColorMac.h"
+#import "ColorSerialization.h"
 #import "Document.h"
 #import "ElementInlines.h"
 #import "FileList.h"
@@ -926,6 +929,24 @@ FloatSize RenderThemeMac::meterSizeForBounds(const RenderMeter& renderMeter, con
 bool RenderThemeMac::supportsMeter(StyleAppearance appearance) const
 {
     return appearance == StyleAppearance::Meter;
+}
+
+void RenderThemeMac::setColorWellSwatchBackground(HTMLElement& swatch, Color color)
+{
+    if (color.isOpaque()) {
+        swatch.setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForHTML(color));
+        swatch.setInlineStyleProperty(CSSPropertyBackgroundImage, "none"_s);
+        return;
+    }
+
+    auto serializedColorOverBlack = makeStringByReplacingAll(serializationForHTML(blendSourceOver(Color::black, color)), '#', "%23"_s);
+    auto serializedColorOverWhite = makeStringByReplacingAll(serializationForHTML(blendSourceOver(Color::white, color)), '#', "%23"_s);
+
+    auto image = makeString("url(\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><polygon points='0,0 1,0 0,1' fill='"_s, serializedColorOverBlack, "'/><polygon points='1,0 1,1 0,1' fill='"_s, serializedColorOverWhite, "'/></svg>\")"_s);
+
+    swatch.setInlineStyleProperty(CSSPropertyBackgroundColor, "transparent"_s);
+    swatch.setInlineStyleProperty(CSSPropertyBackgroundImage, image);
+    swatch.setInlineStyleProperty(CSSPropertyBackgroundSize, "100% 100%"_s);
 }
 
 IntRect RenderThemeMac::progressBarRectForBounds(const RenderProgress& renderProgress, const IntRect& bounds) const

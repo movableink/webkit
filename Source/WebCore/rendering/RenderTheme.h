@@ -208,6 +208,8 @@ public:
     virtual bool shouldHaveSpinButton(const HTMLInputElement&) const;
     virtual bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const { return false; }
 
+    virtual void setColorWellSwatchBackground(HTMLElement&, Color);
+
     // Functions for <select> elements.
     virtual bool delegatesMenuListRendering() const { return false; }
     virtual bool popsMenuByArrowKeys() const { return false; }

@@ -23,9 +23,11 @@
 
 #include "BorderShape.h"
 #include "ButtonPart.h"
+#include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "ColorBlending.h"
 #include "ColorLuminance.h"
+#include "ColorSerialization.h"
 #include "ColorWellPart.h"
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
@@ -1445,6 +1447,13 @@ void RenderTheme::paintSliderTicks(const RenderObject& renderer, const PaintInfo
 bool RenderTheme::shouldHaveSpinButton(const HTMLInputElement& inputElement) const
 {
     return inputElement.isSteppable() && !inputElement.isRangeControl();
+}
+
+void RenderTheme::setColorWellSwatchBackground(HTMLElement& swatch, Color color)
+{
+    if (!color.isOpaque())
+        color = blendSourceOver(Color::white, color);
+    swatch.setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForHTML(color));
 }
 
 void RenderTheme::adjustSliderThumbStyle(RenderStyle& style, const Element* element) const

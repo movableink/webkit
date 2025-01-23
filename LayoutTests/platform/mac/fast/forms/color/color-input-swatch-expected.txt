@@ -1,0 +1,102 @@
+initial state
+
+getComputedStyle(swatch).backgroundColor is rgb(0, 0, 0)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is auto
+
+alpha: false, colorSpace: limited-srgb, value: papayawhip
+
+getComputedStyle(swatch).backgroundColor is rgb(255, 239, 213)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is auto
+
+alpha: true, colorSpace: limited-srgb, value: papayawhip
+
+getComputedStyle(swatch).backgroundColor is color(srgb 1 0.937255 0.835294)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is auto
+
+alpha: false, colorSpace: display-p3, value: papayawhip
+
+getComputedStyle(swatch).backgroundColor is color(display-p3 0.989244 0.939427 0.846367)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is auto
+
+alpha: true, colorSpace: display-p3, value: papayawhip
+
+getComputedStyle(swatch).backgroundColor is color(display-p3 0.989244 0.939427 0.846367)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is auto
+
+alpha: false, colorSpace: limited-srgb, value: #44444444
+
+getComputedStyle(swatch).backgroundColor is rgb(68, 68, 68)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is auto
+
+alpha: true, colorSpace: limited-srgb, value: #44444444
+
+getComputedStyle(swatch).backgroundColor is rgba(0, 0, 0, 0)
+getComputedStyle(swatch).backgroundImage is url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><polygon points='0,0 1,0 0,1' fill='%23121212'/><polygon points='1,0 1,1 0,1' fill='%23cdcdcd'/></svg>")
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: false, colorSpace: display-p3, value: #44444444
+
+getComputedStyle(swatch).backgroundColor is color(display-p3 0.266667 0.266667 0.266667)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: true, colorSpace: display-p3, value: #44444444
+
+getComputedStyle(swatch).backgroundColor is rgba(0, 0, 0, 0)
+getComputedStyle(swatch).backgroundImage is url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><polygon points='0,0 1,0 0,1' fill='%23121212'/><polygon points='1,0 1,1 0,1' fill='%23cdcdcd'/></svg>")
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: false, colorSpace: limited-srgb, value: color(display-p3 2 none .5 / .7)
+
+getComputedStyle(swatch).backgroundColor is rgb(255, 0, 104)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: true, colorSpace: limited-srgb, value: color(display-p3 2 none .5 / .7)
+
+getComputedStyle(swatch).backgroundColor is rgba(0, 0, 0, 0)
+getComputedStyle(swatch).backgroundImage is url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><polygon points='0,0 1,0 0,1' fill='%23b30049'/><polygon points='1,0 1,1 0,1' fill='%23ff4c95'/></svg>")
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: false, colorSpace: display-p3, value: color(display-p3 2 none .5 / .7)
+
+getComputedStyle(swatch).backgroundColor is color(display-p3 2 0 0.5)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: true, colorSpace: display-p3, value: color(display-p3 2 none .5 / .7)
+
+getComputedStyle(swatch).backgroundColor is rgba(0, 0, 0, 0)
+getComputedStyle(swatch).backgroundImage is url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><polygon points='0,0 1,0 0,1' fill='%23b30049'/><polygon points='1,0 1,1 0,1' fill='%23ff4c95'/></svg>")
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: false, colorSpace: limited-srgb, value: rgba(40,40,40,.6)
+
+getComputedStyle(swatch).backgroundColor is rgb(40, 40, 40)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: true, colorSpace: limited-srgb, value: rgba(40,40,40,.6)
+
+getComputedStyle(swatch).backgroundColor is rgba(0, 0, 0, 0)
+getComputedStyle(swatch).backgroundImage is url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><polygon points='0,0 1,0 0,1' fill='%23181818'/><polygon points='1,0 1,1 0,1' fill='%237e7e7e'/></svg>")
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: false, colorSpace: display-p3, value: rgba(40,40,40,.6)
+
+getComputedStyle(swatch).backgroundColor is color(display-p3 0.156863 0.156863 0.156863)
+getComputedStyle(swatch).backgroundImage is none
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
+alpha: true, colorSpace: display-p3, value: rgba(40,40,40,.6)
+
+getComputedStyle(swatch).backgroundColor is rgba(0, 0, 0, 0)
+getComputedStyle(swatch).backgroundImage is url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><polygon points='0,0 1,0 0,1' fill='%23181818'/><polygon points='1,0 1,1 0,1' fill='%237e7e7e'/></svg>")
+getComputedStyle(swatch).backgroundSize is 100% 100%
+
