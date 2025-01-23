@@ -66,7 +66,6 @@
 #include "TypedElementDescendantIteratorInlines.h"
 #include "UserAgentParts.h"
 #include "UserTypingGestureIndicator.h"
-#include "WheelEvent.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -231,12 +230,6 @@ void TextFieldInputType::handleKeydownEventForSpinButton(KeyboardEvent& event)
 void TextFieldInputType::forwardEvent(Event& event)
 {
     ASSERT(element());
-
-    if (m_innerSpinButton) {
-        m_innerSpinButton->forwardEvent(event);
-        if (event.defaultHandled())
-            return;
-    }
 
     auto& eventNames = WebCore::eventNames();
     bool isFocusEvent = event.type() == eventNames.focusEvent;
@@ -735,12 +728,6 @@ bool TextFieldInputType::shouldSpinButtonRespondToMouseEvents() const
 {
     ASSERT(element());
     return element()->isMutable();
-}
-
-bool TextFieldInputType::shouldSpinButtonRespondToWheelEvents() const
-{
-    ASSERT(element());
-    return shouldSpinButtonRespondToMouseEvents() && element()->focused();
 }
 
 bool TextFieldInputType::shouldDrawCapsLockIndicator() const
