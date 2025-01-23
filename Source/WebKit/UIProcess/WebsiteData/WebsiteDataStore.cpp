@@ -135,7 +135,7 @@ WorkQueue& WebsiteDataStore::websiteDataStoreIOQueue()
     return queue;
 }
 
-void WebsiteDataStore::forEachWebsiteDataStore(Function<void(WebsiteDataStore&)>&& function)
+void WebsiteDataStore::forEachWebsiteDataStore(NOESCAPE Function<void(WebsiteDataStore&)>&& function)
 {
     for (auto& dataStore : allDataStores().values())
         function(Ref { dataStore.get() });

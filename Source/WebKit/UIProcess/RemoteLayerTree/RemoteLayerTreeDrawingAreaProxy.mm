@@ -193,7 +193,7 @@ RemoteLayerTreeDrawingAreaProxy::ProcessState& RemoteLayerTreeDrawingAreaProxy::
     return m_webPageProxyProcessState;
 }
 
-void RemoteLayerTreeDrawingAreaProxy::forEachProcessState(Function<void(ProcessState&, WebProcessProxy&)>&& callback)
+void RemoteLayerTreeDrawingAreaProxy::forEachProcessState(NOESCAPE Function<void(ProcessState&, WebProcessProxy&)>&& callback)
 {
     callback(m_webPageProxyProcessState, m_webProcessProxy);
     for (auto& [key, value] : m_remotePageProcessState) {

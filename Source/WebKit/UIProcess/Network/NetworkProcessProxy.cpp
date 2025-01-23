@@ -112,6 +112,7 @@
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, connection())
 #define MESSAGE_CHECK_COMPLETION(assertion, completion) MESSAGE_CHECK_COMPLETION_BASE(assertion, connection(), completion)
+#define MESSAGE_CHECK_COMPLETION_WITH_CONNECTION(assertion, connection, completion) MESSAGE_CHECK_COMPLETION_BASE(assertion, connection, completion)
 
 namespace WebKit {
 using namespace WebCore;
@@ -179,8 +180,9 @@ void NetworkProcessProxy::sendCreationParametersToNewProcess()
     // We should remove this once we enforce threading violation check on our APIs.
     // https://bugs.webkit.org/show_bug.cgi?id=200246.
     if (!RunLoop::isMain()) {
-        callOnMainRunLoopAndWait([this] {
-            sendCreationParametersToNewProcess();
+        callOnMainRunLoopAndWait([weakThis = WeakPtr { *this }] {
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->sendCreationParametersToNewProcess();
         });
     }
 
@@ -315,13 +317,14 @@ void NetworkProcessProxy::getNetworkProcessConnection(WebProcessProxy& webProces
     parameters.ignoreInvalidMessageForTesting = webProcessProxy.ignoreInvalidMessageForTesting();
 #endif
     parameters.sharedPreferencesForWebProcess = *webProcessProxy.sharedPreferencesForWebProcess();
-    sendWithAsyncReply(Messages::NetworkProcess::CreateNetworkConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), parameters }, [this, weakThis = WeakPtr { *this }, reply = WTFMove(reply)](auto&& identifier, auto cookieAcceptPolicy) mutable {
-        if (!weakThis) {
+    sendWithAsyncReply(Messages::NetworkProcess::CreateNetworkConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), parameters }, [weakThis = WeakPtr { *this }, reply = WTFMove(reply)](auto&& identifier, auto cookieAcceptPolicy) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis) {
             RELEASE_LOG_ERROR(Process, "NetworkProcessProxy::getNetworkProcessConnection: NetworkProcessProxy deallocated during connection establishment");
             return reply({ });
         }
 
-        stopResponsivenessTimer();
+        protectedThis->stopResponsivenessTimer();
         if (!identifier) {
             RELEASE_LOG_ERROR(Process, "NetworkProcessProxy::getNetworkProcessConnection: connection identifier is empty");
             return reply({ });
@@ -329,10 +332,10 @@ void NetworkProcessProxy::getNetworkProcessConnection(WebProcessProxy& webProces
 
 #if USE(UNIX_DOMAIN_SOCKETS) || OS(WINDOWS)
         reply(NetworkProcessConnectionInfo { WTFMove(*identifier), cookieAcceptPolicy });
-        UNUSED_VARIABLE(this);
 #elif OS(DARWIN)
-        MESSAGE_CHECK_COMPLETION(*identifier, reply({ }));
-        reply(NetworkProcessConnectionInfo { WTFMove(*identifier) , cookieAcceptPolicy, protectedConnection()->getAuditToken() });
+        Ref connection = protectedThis->connection();
+        MESSAGE_CHECK_COMPLETION_WITH_CONNECTION(*identifier, connection.get(), reply({ }));
+        reply(NetworkProcessConnectionInfo { WTFMove(*identifier) , cookieAcceptPolicy, connection->getAuditToken() });
 #else
         notImplemented();
 #endif
@@ -522,15 +525,16 @@ void NetworkProcessProxy::didReceiveAuthenticationChallenge(PAL::SessionID sessi
         return;
     }
 
-    WebPageProxy::forMostVisibleWebPageIfAny(sessionID, *topOrigin, [this, weakThis = WeakPtr { *this }, sessionID, authenticationChallenge = WTFMove(authenticationChallenge), negotiatedLegacyTLS](WebPageProxy* page) mutable {
-        if (!weakThis)
+    WebPageProxy::forMostVisibleWebPageIfAny(sessionID, *topOrigin, [weakThis = WeakPtr { *this }, sessionID, authenticationChallenge = WTFMove(authenticationChallenge), negotiatedLegacyTLS](WebPageProxy* page) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
         if (page) {
             page->didReceiveAuthenticationChallengeProxy(WTFMove(authenticationChallenge), negotiatedLegacyTLS ? NegotiatedLegacyTLS::Yes : NegotiatedLegacyTLS::No);
             return;
         }
-        processAuthenticationChallenge(sessionID, WTFMove(authenticationChallenge));
+        protectedThis->processAuthenticationChallenge(sessionID, WTFMove(authenticationChallenge));
     });
 }
 
@@ -1583,11 +1587,9 @@ void NetworkProcessProxy::requestStorageSpace(PAL::SessionID sessionID, const We
 
 void NetworkProcessProxy::increaseQuota(PAL::SessionID sessionID, const WebCore::ClientOrigin& origin, QuotaIncreaseRequestIdentifier identifier, uint64_t currentQuota, uint64_t currentUsage, uint64_t spaceRequested)
 {
-    requestStorageSpace(sessionID, origin, currentQuota, currentUsage, spaceRequested, [this, weakThis = WeakPtr { *this }, sessionID, origin, identifier](auto result) mutable {
-        if (!weakThis)
-            return;
-
-        send(Messages::NetworkProcess::DidIncreaseQuota(sessionID, origin, identifier, result), 0);
+    requestStorageSpace(sessionID, origin, currentQuota, currentUsage, spaceRequested, [weakThis = WeakPtr { *this }, sessionID, origin, identifier](auto result) mutable {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->send(Messages::NetworkProcess::DidIncreaseQuota(sessionID, origin, identifier, result), 0);
     });
 }
 

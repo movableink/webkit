@@ -106,21 +106,23 @@ void WebAuthenticatorCoordinatorProxy::handleRequest(WebAuthenticationRequestDat
     if (shouldRequestConditionalRegistration)
         username = std::get<PublicKeyCredentialCreationOptions>(data.options).user.name;
 
-    CompletionHandler<void(bool)> afterConsent = [this, weakThis = WeakPtr { *this }, data = WTFMove(data), handler = WTFMove(handler)] (bool result) mutable {
-        if (!weakThis)
+    CompletionHandler<void(bool)> afterConsent = [weakThis = WeakPtr { *this }, data = WTFMove(data), handler = WTFMove(handler)] (bool result) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
-        Ref authenticatorManager = m_webPageProxy->websiteDataStore().authenticatorManager();
+
+        Ref authenticatorManager = protectedThis->m_webPageProxy->websiteDataStore().authenticatorManager();
         if (result) {
 #if HAVE(UNIFIED_ASC_AUTH_UI) || HAVE(WEB_AUTHN_AS_MODERN)
             if (!authenticatorManager->isMock() && !authenticatorManager->isVirtual()) {
-                if (!isASCAvailable()) {
+                if (!protectedThis->isASCAvailable()) {
                     handler({ }, AuthenticatorAttachment::Platform, ExceptionData { ExceptionCode::NotSupportedError, "Not implemented."_s });
                     RELEASE_LOG_ERROR(WebAuthn, "Web Authentication is not currently supported in this environment.");
                     return;
                 }
                 // performRequest calls out to ASCAgent which will then call [_WKWebAuthenticationPanel makeCredential/getAssertionWithChallenge]
                 // which calls authenticatorManager->handleRequest(..)
-                performRequest(WTFMove(data), WTFMove(handler));
+                protectedThis->performRequest(WTFMove(data), WTFMove(handler));
                 return;
             }
 #else

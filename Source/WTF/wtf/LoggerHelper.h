@@ -55,6 +55,8 @@ public:
 #define WARNING_LOG(...)    Ref { logger() }->warning(logChannel(), __VA_ARGS__)
 #define INFO_LOG(...)       Ref { logger() }->info(logChannel(), __VA_ARGS__)
 #define DEBUG_LOG(...)      Ref { logger() }->debug(logChannel(), __VA_ARGS__)
+
+#define ALWAYS_LOG_WITH_THIS(thisPtr, ...)     Ref { thisPtr->logger() }->logAlways(thisPtr->logChannel(), __VA_ARGS__)
 #endif
 
 #define WILL_LOG(_level_)   Ref { logger() }->willLog(logChannel(), _level_)

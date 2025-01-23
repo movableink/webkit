@@ -85,19 +85,20 @@ void SpeechRecognitionServer::start(WebCore::SpeechRecognitionConnectionClientId
 
 void SpeechRecognitionServer::requestPermissionForRequest(WebCore::SpeechRecognitionRequest& request)
 {
-    m_permissionChecker(request, [this, weakThis = WeakPtr { *this }, weakRequest = WeakPtr { request }](auto error) mutable {
-        if (!weakThis || !weakRequest)
+    m_permissionChecker(request, [weakThis = WeakPtr { *this }, weakRequest = WeakPtr { request }](auto error) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !weakRequest)
             return;
 
         auto identifier = weakRequest->clientIdentifier();
-        auto request = m_requests.take(identifier);
+        auto request = protectedThis->m_requests.take(identifier);
         if (error) {
-            sendUpdate(identifier, WebCore::SpeechRecognitionUpdateType::Error, WTFMove(error));
+            protectedThis->sendUpdate(identifier, WebCore::SpeechRecognitionUpdateType::Error, WTFMove(error));
             return;
         }
 
         ASSERT(request);
-        handleRequest(makeUniqueRefFromNonNullUniquePtr(WTFMove(request)));
+        protectedThis->handleRequest(makeUniqueRefFromNonNullUniquePtr(WTFMove(request)));
     });
 }
 
@@ -109,16 +110,17 @@ void SpeechRecognitionServer::handleRequest(UniqueRef<WebCore::SpeechRecognition
     }
 
     auto clientIdentifier = request->clientIdentifier();
-    m_recognizer = makeUnique<WebCore::SpeechRecognizer>([this, weakThis = WeakPtr { *this }](auto& update) {
-        if (!weakThis)
+    m_recognizer = makeUnique<WebCore::SpeechRecognizer>([weakThis = WeakPtr { *this }](auto& update) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        sendUpdate(update);
+        protectedThis->sendUpdate(update);
 
         if (update.type() == WebCore::SpeechRecognitionUpdateType::Error)
-            m_recognizer->abort();
+            protectedThis->m_recognizer->abort();
         else if (update.type() == WebCore::SpeechRecognitionUpdateType::End)
-            m_recognizer->setInactive();
+            protectedThis->m_recognizer->setInactive();
     }, WTFMove(request));
 
 #if ENABLE(MEDIA_STREAM)
