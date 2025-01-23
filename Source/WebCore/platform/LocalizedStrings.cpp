@@ -92,19 +92,17 @@ String formatLocalizedString(const char* format, ...)
 #if PLATFORM(COCOA)
 static CFBundleRef webCoreBundle()
 {
-    static NeverDestroyed<RetainPtr<CFBundleRef>> bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore"));
+    static LazyNeverDestroyed<RetainPtr<CFBundleRef>> bundle;
+    static std::once_flag flag;
+    std::call_once(flag, [&] mutable {
+        bundle.construct(CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore")));
+    });
     ASSERT(bundle.get());
     return bundle.get().get();
 }
 
 RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 {
-#if !PLATFORM(IOS_FAMILY)
-    // Can be called on a dispatch queue when initializing strings on iOS.
-    // See LoadWebLocalizedStrings and <rdar://problem/7902473>.
-    ASSERT(isMainThread());
-#endif
-
     static CFStringRef notFound = CFSTR("localized string not found");
 
     auto result = adoptCF(CFBundleCopyLocalizedString(webCoreBundle(), key, notFound, nullptr));
