@@ -52,3 +52,7 @@
     (apply-message-filter
         (allow mach-message-send (message-number 800 804))))
 #endif
+
+;; FIXME: Remove after rdar://138963941 is addressed
+(deny syscall-unix (with no-report) (syscall-number SYS_necp_open))
+(deny syscall-unix (with no-report) (syscall-number SYS_necp_client_action))
