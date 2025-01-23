@@ -7646,3 +7646,7 @@ webkit.org/b/279297 fast/block/float/float-avoider-with-negative-margin.html [ I
 # webkit.org/b/280685 imported/w3c/web-platform-tests/css/selectors/featureless-004/5.html are failures.
 imported/w3c/web-platform-tests/css/selectors/featureless-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/selectors/featureless-005.html [ ImageOnlyFailure ]
+
+# Skip large regular expression tests on Debug to avoid timeout.
+[ Debug ] fast/regex/slow.html [ Skip ]
+[ Debug ] imported/w3c/web-platform-tests/html/semantics/forms/constraints/infinite_backtracking.html [ Skip ]
