@@ -214,7 +214,6 @@ RetainPtr<NSArray> LocalConnection::getExistingCredentials(const String& rpId)
     // Search Keychain for existing credential matched the RP ID.
     NSDictionary *query = @{
         (id)kSecClass: (id)kSecClassKey,
-        (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
         (id)kSecAttrSynchronizable: (id)kSecAttrSynchronizableAny,
         (id)kSecAttrAccessGroup: LocalAuthenticatorAccessGroup,
         (id)kSecAttrLabel: rpId,

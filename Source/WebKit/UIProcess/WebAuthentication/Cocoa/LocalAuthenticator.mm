@@ -375,7 +375,6 @@ std::optional<WebCore::ExceptionData> LocalAuthenticator::processLargeBlobExtens
         auto fetchQuery = adoptNS([[NSMutableDictionary alloc] init]);
         [fetchQuery setDictionary:@{
             (id)kSecClass: (id)kSecClassKey,
-            (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
             (id)kSecAttrSynchronizable: (id)kSecAttrSynchronizableAny,
             (id)kSecUseDataProtectionKeychain: @YES,
             (id)kSecReturnAttributes: @YES,
@@ -528,7 +527,6 @@ void LocalAuthenticator::continueMakeCredentialAfterUserVerification(SecAccessCo
         auto query = adoptNS([[NSMutableDictionary alloc] init]);
         [query setDictionary:@{
             (id)kSecClass: (id)kSecClassKey,
-            (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
             (id)kSecAttrLabel: secAttrLabel,
             (id)kSecAttrApplicationLabel: m_provisionalCredentialId.get(),
             (id)kSecUseDataProtectionKeychain: @YES
@@ -685,7 +683,6 @@ void LocalAuthenticator::continueGetAssertionAfterUserVerification(Ref<WebCore::
         BOOL useAlternateKeychainAttribute = shouldUseAlternateKeychainAttribute();
         NSMutableDictionary *queryDictionary = [@{
             (id)kSecClass: (id)kSecClassKey,
-            (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
             (id)kSecAttrSynchronizable: (id)kSecAttrSynchronizableAny,
             (id)kSecReturnRef: @YES,
             (id)kSecUseDataProtectionKeychain: @YES
@@ -734,7 +731,6 @@ void LocalAuthenticator::continueGetAssertionAfterUserVerification(Ref<WebCore::
     auto query = adoptNS([[NSMutableDictionary alloc] init]);
     [query setDictionary:@{
         (id)kSecClass: (id)kSecClassKey,
-        (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
         (id)kSecAttrSynchronizable: (id)kSecAttrSynchronizableAny,
         (id)kSecUseDataProtectionKeychain: @YES
     }];
