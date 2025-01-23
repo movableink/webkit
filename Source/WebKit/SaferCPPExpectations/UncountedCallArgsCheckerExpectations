@@ -35,7 +35,6 @@ NetworkProcess/cocoa/NetworkTaskCocoa.mm
 NetworkProcess/mac/SecItemShim.cpp
 NetworkProcess/storage/BackgroundFetchStoreImpl.cpp
 NetworkProcess/storage/BackgroundFetchStoreManager.cpp
-NetworkProcess/storage/CacheStorageCache.cpp
 NetworkProcess/storage/CacheStorageDiskStore.cpp
 NetworkProcess/storage/IDBStorageRegistry.cpp
 NetworkProcess/storage/OriginStorageManager.cpp
