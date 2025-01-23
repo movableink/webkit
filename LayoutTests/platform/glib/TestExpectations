@@ -3783,8 +3783,10 @@ imported/w3c/web-platform-tests/preload/preload-type-match.html [ DumpJSConsoleL
 [ Debug ] imported/blink/fast/hidpi/border-background-align.html [ Crash ]
 [ Debug ] imported/blink/svg/zoom/text/lowdpi-zoom-text.html [ Crash ]
 
+# Test causes OOM in the EWS release bots
+webkit.org/b/283558 fast/css-custom-paint/out-of-memory-while-adding-worklet-module.html [ Skip ]
+
 # Tests timing out in Debug only.
-[ Debug ] fast/css-custom-paint/out-of-memory-while-adding-worklet-module.html [ Timeout ]
 [ Debug ] http/tests/xmlhttprequest/simple-cross-origin-progress-events.html [ Pass Timeout ]
 [ Debug ] imported/blink/transitions/remove-accelerated-transition.html [ Timeout ]
 
