@@ -61,4 +61,36 @@ TEST(WebKit, CookieStoreSetCookieForHigherLevelDomain)
     EXPECT_TRUE([result isEqualToString:@"cookieValue"]);
 }
 
+TEST(WebKit, CookieStoreSetCookieForPublicSuffixDomain)
+{
+    HTTPServer server({
+        { "/foo"_s, { "foo"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 300, 300) configuration:configuration.get()]);
+
+    RetainPtr navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [navigationDelegate allowAnyTLSCertificate];
+    [webView setNavigationDelegate:navigationDelegate.get()];
+
+    // Test for "com".
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/foo"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    NSError *error;
+    [webView objectByCallingAsyncFunction:@"await cookieStore.set({ name: 'cookieName', value: 'cookieValue', domain: 'com' });" withArguments:nil error:&error];
+    EXPECT_NOT_NULL(error);
+    EXPECT_TRUE([[error description] containsString:@"The domain must not be a public suffix"]);
+    error = NULL;
+
+    // Test for "co.uk".
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.co.uk/foo"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    [webView objectByCallingAsyncFunction:@"await cookieStore.set({ name: 'cookieName', value: 'cookieValue', domain: 'co.uk' });" withArguments:nil error:&error];
+    EXPECT_NOT_NULL(error);
+    EXPECT_TRUE([[error description] containsString:@"The domain must not be a public suffix"]);
+}
+
 } // namespace TestWebKitAPI
