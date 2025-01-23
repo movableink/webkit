@@ -706,7 +706,7 @@ void WebProcess::setWebsiteDataStoreParameters(WebProcessDataStoreParameters&& p
     ensureNetworkProcessConnection();
 
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-    m_cookieJar->setOptInCookiePartitioningEnabled(parameters.isOptInCookiePartitioningEnabled);
+    setOptInCookiePartitioningEnabled(parameters.isOptInCookiePartitioningEnabled);
 #endif
 }
 
@@ -2011,7 +2011,6 @@ void WebProcess::setEnabledServices(bool hasImageServices, bool hasSelectionServ
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
 void WebProcess::setOptInCookiePartitioningEnabled(bool enabled)
 {
-    m_isOptInCookiePartitioningEnabled = enabled;
     m_cookieJar->setOptInCookiePartitioningEnabled(enabled);
 }
 #endif

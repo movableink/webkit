@@ -491,10 +491,6 @@ public:
     void registerAdditionalFonts(AdditionalFonts&&);
 #endif
 
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-    bool isOptInCookiePartitioningEnabled() { return m_isOptInCookiePartitioningEnabled; }
-#endif
-
 private:
     WebProcess();
     ~WebProcess();
@@ -900,9 +896,6 @@ private:
     bool m_isWebTransportEnabled { false };
 #if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
     bool m_prefersNonBlinkingCursor { false };
-#endif
-#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-    bool m_isOptInCookiePartitioningEnabled { false };
 #endif
 
     String m_mediaKeysStorageDirectory;
