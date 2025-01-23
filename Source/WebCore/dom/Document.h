@@ -2226,6 +2226,7 @@ private:
     StringWithDirection m_rawTitle;
     RefPtr<Element> m_titleElement;
 
+    std::unique_ptr<AXObjectCache> m_axObjectCache;
     const std::unique_ptr<DocumentMarkerController> m_markers;
     
     Timer m_styleRecalcTimer;

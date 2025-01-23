@@ -284,11 +284,13 @@ class AXObjectCache final : public CanMakeWeakPtr<AXObjectCache>, public CanMake
     friend class AXTextMarker;
     friend WTF::TextStream& operator<<(WTF::TextStream&, AXObjectCache&);
 public:
-    explicit AXObjectCache(Page&, Document*);
+    explicit AXObjectCache(Document&);
     ~AXObjectCache();
 
+    // Returns the root object for the entire document.
+    WEBCORE_EXPORT AXCoreObject* rootObject();
     // Returns the root object for a specific frame.
-    WEBCORE_EXPORT AXCoreObject* rootObjectForFrame(LocalFrame&);
+    WEBCORE_EXPORT AccessibilityObject* rootObjectForFrame(LocalFrame*);
 
     // Creation/retrieval of AX objects associated with a DOM or RenderTree object.
     inline AccessibilityObject* getOrCreate(RenderObject* renderer)
