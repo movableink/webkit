@@ -118,6 +118,10 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
 
         setProperty(AXProperty::TextRuns, object.textRuns());
         setProperty(AXProperty::EmitTextAfterBehavior, object.emitTextAfterBehavior());
+        if (roleValue() == AccessibilityRole::ListMarker) {
+            setProperty(AXProperty::ListMarkerText, object.listMarkerText().isolatedCopy());
+            setProperty(AXProperty::ListMarkerLineID, object.listMarkerLineID());
+        }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
     };
 
@@ -626,8 +630,10 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
         [](AXTextRuns& runs) { return !runs.size(); },
         [](RetainPtr<CTFontRef>& typedValue) { return !typedValue; },
         [](TextEmissionBehavior typedValue) { return typedValue == TextEmissionBehavior::None; },
+        [](AXTextRunLineID typedValue) { return !typedValue; },
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
         [] (WallTime& time) { return !time; },
+        [] (TagName& tag) { return tag == TagName::Unknown; },
         [] (DateComponentsType& typedValue) { return typedValue == DateComponentsType::Invalid; },
         [](auto&) {
             ASSERT_NOT_REACHED();

@@ -89,7 +89,17 @@ public:
         return runs && runs->size();
     }
     TextEmissionBehavior emitTextAfterBehavior() const final { return propertyValue<TextEmissionBehavior>(AXProperty::EmitTextAfterBehavior); }
+    AXTextRunLineID listMarkerLineID() const final { return propertyValue<AXTextRunLineID>(AXProperty::ListMarkerLineID); };
+    String listMarkerText() const final { return stringAttributeValue(AXProperty::ListMarkerText); }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
+
+#if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
+    bool isIgnored() const final { return boolAttributeValue(AXProperty::IsIgnored); }
+#else
+    // When not including ignored objects in the core tree, we should never create an isolated object from
+    // an ignored live object, so we can hardcode this to false.
+    bool isIgnored() const final { return false; }
+#endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 
     AXTextMarkerRange textMarkerRange() const final;
 
@@ -237,13 +247,6 @@ private:
     String datetimeAttributeValue() const final { return stringAttributeValue(AXProperty::DatetimeAttributeValue); }
     bool canSetValueAttribute() const final { return boolAttributeValue(AXProperty::CanSetValueAttribute); }
     bool canSetSelectedAttribute() const final { return boolAttributeValue(AXProperty::CanSetSelectedAttribute); }
-#if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
-    bool isIgnored() const final { return boolAttributeValue(AXProperty::IsIgnored); }
-#else
-    // When not including ignored objects in the core tree, we should never create an isolated object from
-    // an ignored live object, so we can hardcode this to false.
-    bool isIgnored() const final { return false; }
-#endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     unsigned blockquoteLevel() const final { return unsignedAttributeValue(AXProperty::BlockquoteLevel); }
     unsigned headingLevel() const final { return unsignedAttributeValue(AXProperty::HeadingLevel); }
     AccessibilityButtonState checkboxOrRadioValue() const final { return propertyValue<AccessibilityButtonState>(AXProperty::ButtonState); }

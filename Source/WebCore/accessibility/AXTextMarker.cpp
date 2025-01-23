@@ -646,13 +646,28 @@ String AXTextMarkerRange::toString() const
     if (!end.isValid())
         return emptyString();
 
-    if (start.isolatedObject() == end.isolatedObject()) {
-        size_t minOffset = std::min(start.offset(), end.offset());
-        size_t maxOffset = std::max(start.offset(), end.offset());
-        return start.runs()->substring(minOffset, maxOffset - minOffset);
+    StringBuilder result;
+    RefPtr startObject = start.isolatedObject();
+    RefPtr listItemAncestor = Accessibility::findAncestor(*startObject, /* includeSelf */ true, [] (const auto& object) {
+        return object.isListItem();
+    });
+    if (listItemAncestor) {
+        if (RefPtr listMarker = findUnignoredDescendant(*listItemAncestor, /* includeSelf */ false, [] (const auto& object) {
+            return object.roleValue() == AccessibilityRole::ListMarker;
+        })) {
+            auto lineID = listMarker->listMarkerLineID();
+            if (lineID && lineID == start.lineID())
+                result.append(listMarker->listMarkerText());
+        }
     }
 
-    StringBuilder result;
+    if (startObject.get() == end.isolatedObject()) {
+        size_t minOffset = std::min(start.offset(), end.offset());
+        size_t maxOffset = std::max(start.offset(), end.offset());
+        result.append(start.runs()->substring(minOffset, maxOffset - minOffset));
+        return result.toString();
+    }
+
     auto emitNewlineOnExit = [&] (AXIsolatedObject& object) {
         // FIXME: This function should not just be emitting newlines, but instead handling every character type in TextEmissionBehavior.
         auto behavior = object.emitTextAfterBehavior();

@@ -396,7 +396,9 @@ public:
     virtual AXTextRuns textRuns() { return { }; }
     bool hasTextRuns() final { return textRuns().size(); }
     TextEmissionBehavior emitTextAfterBehavior() const override { return TextEmissionBehavior::None; }
-#endif
+    AXTextRunLineID listMarkerLineID() const override { return { }; }
+    String listMarkerText() const override { return { }; }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 #if PLATFORM(COCOA)
     // Returns an array of strings and AXObject wrappers corresponding to the
     // textruns and replacement nodes included in the given range.

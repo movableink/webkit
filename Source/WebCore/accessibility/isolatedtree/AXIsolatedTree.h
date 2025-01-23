@@ -207,6 +207,10 @@ enum class AXProperty : uint16_t {
     KeyShortcuts,
     Language,
     LinethroughColor,
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    ListMarkerLineID,
+    ListMarkerText,
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
     LiveRegionAtomic,
     LiveRegionRelevant,
     LiveRegionStatus,
@@ -297,12 +301,13 @@ using AXPropertyValueVariant = std::variant<std::nullptr_t, Markable<AXID>, Stri
 #if PLATFORM(COCOA)
     , RetainPtr<NSAttributedString>
     , RetainPtr<id>
-#endif
+#endif // PLATFORM(COCOA)
 #if ENABLE(AX_THREAD_TEXT_APIS)
     , RetainPtr<CTFontRef>
     , AXTextRuns
     , TextEmissionBehavior
-#endif
+    , AXTextRunLineID
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 >;
 using AXPropertyMap = UncheckedKeyHashMap<AXProperty, AXPropertyValueVariant, IntHash<AXProperty>, WTF::StrongEnumHashTraits<AXProperty>>;
 WTF::TextStream& operator<<(WTF::TextStream&, const AXPropertyMap&);

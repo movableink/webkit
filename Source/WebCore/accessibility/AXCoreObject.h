@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AXTextRun.h"
 #include "CharacterRange.h"
 #include "ColorConversion.h"
 #include "HTMLTextFormControlElement.h"
@@ -1127,6 +1128,8 @@ public:
     virtual bool hasTextRuns() = 0;
     virtual TextEmissionBehavior emitTextAfterBehavior() const = 0;
     bool emitsNewlineAfter() const;
+    virtual AXTextRunLineID listMarkerLineID() const = 0;
+    virtual String listMarkerText() const = 0;
 #endif
 
     // Methods for determining accessibility text.

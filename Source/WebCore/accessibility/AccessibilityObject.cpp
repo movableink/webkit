@@ -1773,7 +1773,7 @@ static RenderListItem* renderListItemContainer(Node* node)
 }
 
 // Returns the text representing a list marker taking into account the position of the text in the line of text.
-static StringView listMarkerText(RenderListItem* listItem, const VisiblePosition& startVisiblePosition, std::optional<StringView> markerText = std::nullopt)
+static StringView lineStartListMarkerText(RenderListItem* listItem, const VisiblePosition& startVisiblePosition, std::optional<StringView> markerText = std::nullopt)
 {
     if (!listItem)
         return { };
@@ -1799,7 +1799,7 @@ StringView AccessibilityObject::listMarkerTextForNodeAndPosition(Node* node, Pos
     auto markerText = listItem->markerTextWithSuffix();
     if (markerText.isEmpty())
         return { };
-    return listMarkerText(listItem, startPosition, markerText);
+    return lineStartListMarkerText(listItem, startPosition, markerText);
 }
 
 String AccessibilityObject::stringForRange(const SimpleRange& range) const
@@ -1840,7 +1840,7 @@ String AccessibilityObject::stringForVisiblePositionRange(const VisiblePositionR
         // non-zero length means textual node, zero length means replaced node (AKA "attachments" in AX)
         if (it.text().length()) {
             // Add a textual representation for list marker text.
-            builder.append(listMarkerText(renderListItemContainer(it.node()), visiblePositionRange.start));
+            builder.append(lineStartListMarkerText(renderListItemContainer(it.node()), visiblePositionRange.start));
             it.appendTextToStringBuilder(builder);
         } else {
             // locate the node and starting offset for this replaced range

@@ -981,6 +981,14 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::LinethroughColor:
         stream << "LinethroughColor";
         break;
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    case AXProperty::ListMarkerLineID:
+        stream << "ListMarkerLineID";
+        break;
+    case AXProperty::ListMarkerText:
+        stream << "ListMarkerText";
+        break;
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
     case AXProperty::LiveRegionAtomic:
         stream << "LiveRegionAtomic";
         break;
