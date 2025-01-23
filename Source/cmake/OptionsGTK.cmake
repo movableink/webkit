@@ -7,6 +7,7 @@ SET_PROJECT_VERSION(2 47 3)
 
 set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
 
+find_package(GLIB 2.70.0 REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
 find_package(Cairo 1.16.0 REQUIRED)
 find_package(LibGcrypt 1.7.0 REQUIRED)
 find_package(Libtasn1 REQUIRED)
@@ -209,13 +210,6 @@ else ()
     SET_AND_EXPOSE_TO_BUILD(ENABLE_2022_GLIB_API OFF)
 endif ()
 
-if (ENABLE_2022_GLIB_API)
-    set(GLIB_MINIMUM_VERSION 2.70.0)
-else ()
-    set(GLIB_MINIMUM_VERSION 2.56.4)
-endif ()
-find_package(GLIB ${GLIB_MINIMUM_VERSION} REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
-
 EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_INFIX)
 EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_VERSION)
 
@@ -286,11 +280,6 @@ endif ()
 if (ENABLED_COMPILER_SANITIZERS)
     set(ENABLE_INTROSPECTION OFF)
     set(ENABLE_DOCUMENTATION OFF)
-endif ()
-
-# GUri is available in GLib since version 2.66, but we only want to use it if version is >= 2.67.1.
-if (PC_GLIB_VERSION VERSION_GREATER "2.67.1" OR PC_GLIB_VERSION STREQUAL "2.67.1")
-    SET_AND_EXPOSE_TO_BUILD(HAVE_GURI 1)
 endif ()
 
 if (ENABLE_GAMEPAD)
