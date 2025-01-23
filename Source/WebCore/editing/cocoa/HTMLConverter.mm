@@ -2458,8 +2458,10 @@ static bool elementQualifiesForWritingToolsPreservation(Element* element)
     if (!renderer)
         return false;
 
-    // If the element has `whitespace:pre` (except for the aforementioned exceptions), it should be preserved.
-    if (renderer->style().whiteSpace() == WhiteSpace::Pre)
+    // If the element has `white-space:pre` (except for the aforementioned exceptions), it should be preserved.
+    // `white-space:pre` is a shorthand for white-space-collapse:preserve && text-wrap-mode::no-wrap.
+    if (renderer->style().whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve
+        && renderer->style().textWrapMode() == TextWrapMode::NoWrap)
         return true;
 
     // Otherwise, it need not be preserved.

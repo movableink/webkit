@@ -631,11 +631,10 @@ public:
     WEBCORE_EXPORT float computedLineHeight() const;
     float computeLineHeight(const Length&) const;
 
-    WhiteSpace whiteSpace() const;
     inline bool autoWrap() const;
-    static constexpr bool preserveNewline(WhiteSpace);
+    static constexpr bool preserveNewline(WhiteSpaceCollapse);
     inline bool preserveNewline() const;
-    static constexpr bool collapseWhiteSpace(WhiteSpace);
+    static constexpr bool collapseWhiteSpace(WhiteSpaceCollapse);
     inline bool collapseWhiteSpace() const;
     inline bool isCollapsibleWhiteSpace(UChar) const;
     inline bool breakOnlyAfterWhiteSpace() const;

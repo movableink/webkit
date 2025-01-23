@@ -607,7 +607,7 @@ bool RenderStyle::isIdempotentTextAutosizingCandidate(AutosizeStatus status) con
 
     if (fields.contains(AutosizeStatus::Fields::FixedHeight)) {
         if (fields.contains(AutosizeStatus::Fields::FixedWidth)) {
-            if (whiteSpace() == WhiteSpace::NoWrap) {
+            if (whiteSpaceCollapse() == WhiteSpaceCollapse::Collapse && textWrapMode() == TextWrapMode::NoWrap) {
                 if (width().isFixed())
                     return false;
                 if (height().isFixed() && specifiedLineHeight().isFixed()) {
@@ -2845,30 +2845,6 @@ float RenderStyle::computeLineHeight(const Length& lineHeightLength) const
         return minimumValueForLength(lineHeightLength, computedFontSize()).toFloat();
 
     return lineHeightLength.value();
-}
-
-// FIXME: Remove this after all old calls to whiteSpace() are replaced with appropriate
-// calls to whiteSpaceCollapse() and textWrapMode().
-WhiteSpace RenderStyle::whiteSpace() const
-{
-    auto whiteSpaceCollapse = static_cast<WhiteSpaceCollapse>(m_inheritedFlags.whiteSpaceCollapse);
-    auto textWrapMode = static_cast<TextWrapMode>(m_inheritedFlags.textWrapMode);
-    if (whiteSpaceCollapse == WhiteSpaceCollapse::BreakSpaces && textWrapMode == TextWrapMode::Wrap)
-        return WhiteSpace::BreakSpaces;
-    if (whiteSpaceCollapse == WhiteSpaceCollapse::Collapse && textWrapMode == TextWrapMode::Wrap)
-        return WhiteSpace::Normal;
-    if (whiteSpaceCollapse == WhiteSpaceCollapse::Collapse && textWrapMode == TextWrapMode::NoWrap)
-        return WhiteSpace::NoWrap;
-    if (whiteSpaceCollapse == WhiteSpaceCollapse::Preserve && textWrapMode == TextWrapMode::NoWrap)
-        return WhiteSpace::Pre;
-    if (whiteSpaceCollapse == WhiteSpaceCollapse::PreserveBreaks && textWrapMode == TextWrapMode::Wrap)
-        return WhiteSpace::PreLine;
-    if (whiteSpaceCollapse == WhiteSpaceCollapse::Preserve && textWrapMode == TextWrapMode::Wrap)
-        return WhiteSpace::PreWrap;
-
-    // Reachable for combinations that can't be represented with the white-space syntax.
-    // Do nothing for now since this is a temporary function.
-    return WhiteSpace::Normal;
 }
 
 void RenderStyle::setLetterSpacing(Length&& spacing)

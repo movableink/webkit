@@ -173,7 +173,7 @@ inline const Length& RenderStyle::clipLeft() const { return m_nonInheritedData->
 inline PathOperation* RenderStyle::clipPath() const { return m_nonInheritedData->rareData->clipPath.get(); }
 inline const Length& RenderStyle::clipRight() const { return m_nonInheritedData->rareData->clip.right(); }
 inline const Length& RenderStyle::clipTop() const { return m_nonInheritedData->rareData->clip.top(); }
-inline bool RenderStyle::collapseWhiteSpace() const { return collapseWhiteSpace(whiteSpace()); }
+inline bool RenderStyle::collapseWhiteSpace() const { return collapseWhiteSpace(whiteSpaceCollapse()); }
 inline ColumnAxis RenderStyle::columnAxis() const { return static_cast<ColumnAxis>(m_nonInheritedData->miscData->multiCol->axis); }
 inline unsigned short RenderStyle::columnCount() const { return m_nonInheritedData->miscData->multiCol->count; }
 inline ColumnFill RenderStyle::columnFill() const { return static_cast<ColumnFill>(m_nonInheritedData->miscData->multiCol->fill); }
@@ -696,7 +696,7 @@ inline const Length& RenderStyle::perspectiveOriginX() const { return m_nonInher
 inline const Length& RenderStyle::perspectiveOriginY() const { return m_nonInheritedData->rareData->perspectiveOriginY; }
 inline const std::optional<Style::ScopedName>& RenderStyle::positionAnchor() const { return m_nonInheritedData->rareData->positionAnchor; }
 inline Style::PositionTryOrder RenderStyle::positionTryOrder() const { return static_cast<Style::PositionTryOrder>(m_nonInheritedData->rareData->positionTryOrder); }
-inline bool RenderStyle::preserveNewline() const { return preserveNewline(whiteSpace()); }
+inline bool RenderStyle::preserveNewline() const { return preserveNewline(whiteSpaceCollapse()); }
 inline bool RenderStyle::preserves3D() const { return usedTransformStyle3D() == TransformStyle3D::Preserve3D; }
 inline QuotesData* RenderStyle::quotes() const { return m_rareInheritedData->quotes.get(); }
 inline Resize RenderStyle::resize() const { return static_cast<Resize>(m_nonInheritedData->miscData->resize); }
@@ -887,7 +887,7 @@ inline bool RenderStyle::NonInheritedFlags::hasAnyPublicPseudoStyles() const
 
 inline bool RenderStyle::breakOnlyAfterWhiteSpace() const
 {
-    return whiteSpace() == WhiteSpace::PreWrap || whiteSpace() == WhiteSpace::BreakSpaces || lineBreak() == LineBreak::AfterWhiteSpace;
+    return whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve || whiteSpaceCollapse() == WhiteSpaceCollapse::PreserveBreaks || whiteSpaceCollapse() == WhiteSpaceCollapse::BreakSpaces || lineBreak() == LineBreak::AfterWhiteSpace;
 }
 
 inline bool RenderStyle::breakWords() const
@@ -895,10 +895,9 @@ inline bool RenderStyle::breakWords() const
     return wordBreak() == WordBreak::BreakWord || overflowWrap() == OverflowWrap::BreakWord || overflowWrap() == OverflowWrap::Anywhere;
 }
 
-constexpr bool RenderStyle::collapseWhiteSpace(WhiteSpace mode)
+constexpr bool RenderStyle::collapseWhiteSpace(WhiteSpaceCollapse mode)
 {
-    // Pre and prewrap do not collapse whitespace.
-    return mode != WhiteSpace::Pre && mode != WhiteSpace::PreWrap && mode != WhiteSpace::BreakSpaces;
+    return mode == WhiteSpaceCollapse::Collapse || mode == WhiteSpaceCollapse::PreserveBreaks;
 }
 
 inline void RenderStyle::getShadowInlineDirectionExtent(const ShadowData* shadow, LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const
@@ -1021,10 +1020,9 @@ inline double RenderStyle::logicalAspectRatio() const
     return aspectRatioHeight() / aspectRatioWidth();
 }
 
-constexpr bool RenderStyle::preserveNewline(WhiteSpace mode)
+constexpr bool RenderStyle::preserveNewline(WhiteSpaceCollapse mode)
 {
-    // Normal and nowrap do not preserve newlines.
-    return mode != WhiteSpace::Normal && mode != WhiteSpace::NoWrap;
+    return mode == WhiteSpaceCollapse::Preserve || mode == WhiteSpaceCollapse::PreserveBreaks || mode == WhiteSpaceCollapse::BreakSpaces;
 }
 
 inline float adjustFloatForAbsoluteZoom(float value, const RenderStyle& style)
