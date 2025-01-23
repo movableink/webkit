@@ -43,6 +43,18 @@
 #include "pas_random.h"
 #include <stdint.h>
 
+/* PlayStation does not currently support the backtrace API. */
+#if !PAS_PLATFORM(PLAYSTATION)
+#include <execinfo.h>
+#else
+size_t backtrace(void** buffer, size_t size)
+{
+    PAS_UNUSED_PARAM(buffer);
+    PAS_UNUSED_PARAM(size);
+    return 0;
+}
+#endif
+
 static size_t free_wasted_mem  = PAS_PGM_MAX_WASTED_MEMORY;
 static size_t free_virtual_mem = PAS_PGM_MAX_VIRTUAL_MEMORY;
 static pas_ptr_hash_map_entry pgm_metadata_vector[MAX_PGM_DEALLOCATED_METADATA_ENTRIES];
