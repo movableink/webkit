@@ -2693,6 +2693,7 @@ DigitalCredentialsEnabled:
     WebCore:
       default: false
   sharedPreferenceForWebProcess: true
+  disableInLockdownMode: true
   richJavaScript: true
 
 DirectoryUploadEnabled:
