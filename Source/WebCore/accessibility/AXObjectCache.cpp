@@ -584,7 +584,7 @@ AccessibilityObject* AXObjectCache::get(Node& node) const
     if (renderID)
         return m_objects.get(*renderID);
 
-    auto nodeID = m_nodeObjectMapping.getOptional(node);
+    auto nodeID = m_nodeObjectMapping.get(node);
     return nodeID ? m_objects.get(*nodeID) : nullptr;
 }
 
@@ -1169,7 +1169,7 @@ void AXObjectCache::remove(Node& node)
 {
     AXTRACE(makeString("AXObjectCache::remove Node& 0x"_s, hex(reinterpret_cast<uintptr_t>(this))));
 
-    remove(m_nodeObjectMapping.takeOptional(node));
+    remove(m_nodeObjectMapping.take(node));
     remove(node.renderer());
 
     // If we're in the middle of a cache update, don't modify any of these vectors because we are currently
@@ -1261,7 +1261,7 @@ void AXObjectCache::onRendererCreated(Element& element)
 
     // If there is already an AXObject that was created for this element,
     // remove it since there will be a new AXRenderObject created using the renderer.
-    if (auto axID = m_nodeObjectMapping.getOptional(element)) {
+    if (auto axID = m_nodeObjectMapping.get(element)) {
         // The removal needs to be async because this is called during a RenderTree
         // update and remove(AXID) updates the isolated tree, that in turn calls
         // parentObjectUnignored() on the object being removed, that may result

@@ -781,7 +781,16 @@ private:
     // The pointers in these mapping HashMaps should never be dereferenced.
     UncheckedKeyHashMap<SingleThreadWeakRef<RenderObject>, AXID> m_renderObjectMapping;
     UncheckedKeyHashMap<SingleThreadWeakRef<Widget>, AXID> m_widgetObjectMapping;
-    UncheckedKeyHashMap<WeakRef<Node, WeakPtrImplWithEventTargetData>, AXID> m_nodeObjectMapping;
+
+    // FIXME: The type for m_nodeObjectMapping really should be:
+    // UncheckedKeyHashMap<WeakRef<Node, WeakPtrImplWithEventTargetData>, AXID>
+    // As this guarantees that we've called AXObjectCache::remove(Node&) for every node we store.
+    // However, in rare circumstances, we can add a node to this map, then later the document associated
+    // with the node loses its m_frame via detachFromFrame(). Then the node gets destroyed, but we can't
+    // clean it up from this map, since existingAXObjectCache fails due to the nullptr m_frame.
+    // This scenario seems extremely rare, and may only happen when the webpage is about to be destroyed anyways,
+    // so, go with WeakHashMap now until we find a completely safe solution based on document / frame lifecycles.
+    WeakHashMap<Node, Markable<AXID>, WeakPtrImplWithEventTargetData> m_nodeObjectMapping;
 
     std::unique_ptr<AXComputedObjectAttributeCache> m_computedObjectAttributeCache;
 

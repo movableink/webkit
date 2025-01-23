@@ -449,13 +449,6 @@ Node::~Node()
         // Not refing document because it may be in the middle of destruction.
         auto& document = this->document(); // Store document before clearing out m_treeScope.
 
-        // FIXME: We also cleanup nodes in the AXObjectCache via Node::willBeDeletedFrom(Document&), and we should really
-        // only have to do this cleanup in one spot. However, only cleaning up in Node::willBeDeletedFrom(Document&) causes
-        // WeakRef crashes, as willBeDeletedFrom seems to miss some Nodes, thus "poisoning" AXObjectCache::m_nodeObjectMapping
-        // with a nullified WeakRef, causing any subsequent operation (e.g. a lookup) to crash.
-        if (CheckedPtr cache = document.existingAXObjectCache())
-            cache->remove(*this);
-
         // The call to decrementReferencingNodeCount() below may destroy the document so we need to clear our
         // m_treeScope CheckedPtr beforehand.
         m_treeScope = nullptr;
