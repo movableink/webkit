@@ -108,11 +108,28 @@ extension PlatformIntelligenceTextEffect {
 
 #if canImport(UIKit)
 
-@MainActor private final class UITextEffectViewSourceAdapter<Wrapped>: UITextEffectViewSource where Wrapped: PlatformIntelligenceTextEffectViewSource {
+@MainActor private final class UITextEffectViewSourceAdapter<Wrapped>: NSObject, UITextEffectViewSource where Wrapped: PlatformIntelligenceTextEffectViewSource {
     private var wrapped: Wrapped
 
     init(wrapping wrapped: Wrapped) {
         self.wrapped = wrapped
+    }
+
+    // This method needs to be `@objc`, and the type itself needs to conform to `NSObject`, otherwise this method will always return `true`.
+    //
+    // This is because internally, UIKit creates a type with a default conformance to this protocol, and a default implementation of this method.
+    // The default implementation ostensibly requires the real conforming type to be an `NSObject`, and if not will return `true`. And then, if
+    // it is an `NSObject`, it performs a selector check, which requires an `@objc` implementation, else it will fail and once again return `true`.
+    @objc func canGenerateTargetedPreviewForChunk(_ chunk: UITextEffectTextChunk) async -> Bool {
+        if let chunk = chunk as? UIPonderingTextEffectTextChunkAdapter<Wrapped.Chunk> {
+            return true
+        }
+
+        if let chunk = chunk as? UIReplacementTextEffectTextChunkAdapter<Wrapped.Chunk> {
+            return chunk.source != nil
+        }
+
+        return false
     }
 
     func targetedPreview(for chunk: UITextEffectTextChunk) async -> UITargetedPreview {
@@ -121,7 +138,9 @@ extension PlatformIntelligenceTextEffect {
         }
 
         if let chunk = chunk as? UIReplacementTextEffectTextChunkAdapter<Wrapped.Chunk> {
-            return chunk.source
+            // The chunk source may be `nil` in the case of a replacement whose source range is an empty range.
+            // This force unwrap is safe because UIKit invokes `canGenerateTargetedPreviewForChunk` prior to this call.
+            return chunk.source!
         }
 
         fatalError("Failed to create a targeted preview: parameter was of unexpected type \(type(of: chunk)).")
@@ -184,10 +203,10 @@ private final class UIPonderingTextEffectTextChunkAdapter<Wrapped>: UITextEffect
 
 private final class UIReplacementTextEffectTextChunkAdapter<Wrapped>: UITextEffectTextChunk where Wrapped: PlatformIntelligenceTextEffectChunk {
     let wrapped: Wrapped
-    let source: UITargetedPreview
+    let source: UITargetedPreview?
     let destination: UITargetedPreview
 
-    init(wrapping wrapped: Wrapped, source: UITargetedPreview, destination: UITargetedPreview) {
+    init(wrapping wrapped: Wrapped, source: UITargetedPreview?, destination: UITargetedPreview) {
         self.wrapped = wrapped
         self.source = source
         self.destination = destination
@@ -349,7 +368,7 @@ struct PlatformIntelligenceTextEffectID: Hashable {
     }
 
     struct Previews {
-        let source: PlatformTextPreview
+        let source: PlatformTextPreview?
         let destination: PlatformTextPreview
         let remainder: PlatformContentPreview
     }
@@ -374,12 +393,12 @@ struct PlatformIntelligenceTextEffectID: Hashable {
 
     private func heightDelta() -> Double {
 #if canImport(UIKit)
-        let sourceRect = previews.source.size
+        let sourceRect = previews.source?.size ?? .zero
         let destRect = previews.destination.size
 
         let delta = destRect.height - sourceRect.height
 #else
-        let sourceRect = previews.source
+        let sourceRect = (previews.source ?? [])
             .map(\.presentationFrame)
             .reduce(CGRect.zero) { $0.union($1) }
 
@@ -505,10 +524,7 @@ struct PlatformIntelligenceTextEffectID: Hashable {
         // prior to this, and the destination preview is generated after. This allows the previews to be cached
         // so that they can later be retrieved by the WT interface delegates.
 
-        guard let sourcePreview = await view.source.textPreview(for: self.chunk) else {
-            assertionFailure("Failed to generate source text preview for replacement effect")
-            return
-        }
+        let sourcePreview = await view.source.textPreview(for: self.chunk)
 
         await view.source.updateTextChunkVisibility(self.chunk, visible: false)
 

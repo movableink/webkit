@@ -153,6 +153,8 @@
 		0735F31C2D3760AA0003D029 /* IntelligenceTextEffectViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735F31B2D3760AA0003D029 /* IntelligenceTextEffectViewManager.swift */; };
 		0735F31E2D3760BC0003D029 /* IntelligenceTextEffectChunk.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735F31D2D3760BC0003D029 /* IntelligenceTextEffectChunk.swift */; };
 		0735F3202D3761A10003D029 /* WKIntelligenceReplacementTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 0735F31F2D3761A10003D029 /* WKIntelligenceReplacementTextEffectCoordinator.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		0735F3222D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735F3212D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift */; };
+		0735F3242D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 0735F3232D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0744DA552CE05FE400AACC81 /* WebKitInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 0744DA542CE05FE400AACC81 /* WebKitInternal.h */; };
 		074879B92373A90900F5678E /* AppKitSoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = 074879B72373A90900F5678E /* AppKitSoftLink.h */; };
 		074E75FE1DF2211900D318EC /* UserMediaProcessManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 074E75FB1DF1FD1300D318EC /* UserMediaProcessManager.h */; };
@@ -3089,6 +3091,8 @@
 		0735F31B2D3760AA0003D029 /* IntelligenceTextEffectViewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntelligenceTextEffectViewManager.swift; sourceTree = "<group>"; };
 		0735F31D2D3760BC0003D029 /* IntelligenceTextEffectChunk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntelligenceTextEffectChunk.swift; sourceTree = "<group>"; };
 		0735F31F2D3761A10003D029 /* WKIntelligenceReplacementTextEffectCoordinator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKIntelligenceReplacementTextEffectCoordinator.h; sourceTree = "<group>"; };
+		0735F3212D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WKIntelligenceSmartReplyTextEffectCoordinator.swift; sourceTree = "<group>"; };
+		0735F3232D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKIntelligenceSmartReplyTextEffectCoordinator.h; sourceTree = "<group>"; };
 		0736B753260D039F00E06994 /* RemoteMediaSessionCoordinator.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = RemoteMediaSessionCoordinator.messages.in; sourceTree = "<group>"; };
 		0736B754260D039F00E06994 /* RemoteMediaSessionCoordinator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RemoteMediaSessionCoordinator.h; sourceTree = "<group>"; };
 		0736B755260D03A000E06994 /* RemoteMediaSessionCoordinator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteMediaSessionCoordinator.cpp; sourceTree = "<group>"; };
@@ -8583,6 +8587,8 @@
 				0785E7FF2CBCDFFD00F68126 /* PlatformIntelligenceTextEffectView.swift */,
 				0735F31F2D3761A10003D029 /* WKIntelligenceReplacementTextEffectCoordinator.h */,
 				077FD19F2CC7569200C5D9E0 /* WKIntelligenceReplacementTextEffectCoordinator.swift */,
+				0735F3232D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h */,
+				0735F3212D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift */,
 				074F34802CC5F7D500CA5301 /* WKIntelligenceTextEffectCoordinator.h */,
 			);
 			path = WritingTools;
@@ -17974,6 +17980,7 @@
 				5289527F2C7077B000D0357E /* RealityKitBridging.h in Headers */,
 				A14F9B672B686E0200AD9C56 /* WebKitSwift.h in Headers */,
 				0735F3202D3761A10003D029 /* WKIntelligenceReplacementTextEffectCoordinator.h in Headers */,
+				0735F3242D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h in Headers */,
 				074F34812CC5F7D500CA5301 /* WKIntelligenceTextEffectCoordinator.h in Headers */,
 				A14F9B762B68CA6C00AD9C56 /* WKSLinearMediaPlayer.h in Headers */,
 				A14F9B632B686DD300AD9C56 /* WKSLinearMediaTypes.h in Headers */,
@@ -20252,6 +20259,7 @@
 				528952812C70797900D0357E /* RKEntity.swift in Sources */,
 				440DB5B72C1914DC0021639B /* TextAnimationManager.swift in Sources */,
 				077FD1A02CC7569200C5D9E0 /* WKIntelligenceReplacementTextEffectCoordinator.swift in Sources */,
+				0735F3222D38B09E0003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.swift in Sources */,
 				F48EC3532B75837F00D1B886 /* WKTextExtractionItem.swift in Sources */,
 				F47AA6CA2B7A80BB00CD8AE9 /* WKWebView+TextExtraction.swift in Sources */,
 			);

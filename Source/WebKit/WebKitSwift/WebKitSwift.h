@@ -26,6 +26,7 @@
 #import <WebKitSwift/LinearMediaKitExtras.h>
 #import <WebKitSwift/RealityKitBridging.h>
 #import <WebKitSwift/WKIntelligenceReplacementTextEffectCoordinator.h>
+#import <WebKitSwift/WKIntelligenceSmartReplyTextEffectCoordinator.h>
 #import <WebKitSwift/WKIntelligenceTextEffectCoordinator.h>
 #import <WebKitSwift/WKSLinearMediaPlayer.h>
 #import <WebKitSwift/WKSLinearMediaTypes.h>

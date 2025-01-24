@@ -964,9 +964,10 @@ void WebPage::didEndWritingToolsSession(const WebCore::WritingTools::Session& se
     corePage()->didEndWritingToolsSession(session, accepted);
 }
 
-void WebPage::compositionSessionDidReceiveTextWithReplacementRange(const WebCore::WritingTools::Session& session, const WebCore::AttributedString& attributedText, const WebCore::CharacterRange& range, const WebCore::WritingTools::Context& context, bool finished)
+void WebPage::compositionSessionDidReceiveTextWithReplacementRange(const WebCore::WritingTools::Session& session, const WebCore::AttributedString& attributedText, const WebCore::CharacterRange& range, const WebCore::WritingTools::Context& context, bool finished, CompletionHandler<void()>&& completionHandler)
 {
     corePage()->compositionSessionDidReceiveTextWithReplacementRange(session, attributedText, range, context, finished);
+    completionHandler();
 }
 
 void WebPage::writingToolsSessionDidReceiveAction(const WritingTools::Session& session, WebCore::WritingTools::Action action)

@@ -2248,10 +2248,14 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 
     _page->didBeginWritingToolsSession(*webSession, contextData);
 
-    if (session.type == WTSessionTypeProofreading) {
+    if (session.type == WTSessionTypeProofreading)
         _intelligenceTextEffectCoordinator = adoptNS([WebKit::allocWKIntelligenceReplacementTextEffectCoordinatorInstance() initWithDelegate:(id<WKIntelligenceTextEffectCoordinatorDelegate>)self]);
-        [_intelligenceTextEffectCoordinator startAnimationForRange:contexts.firstObject.range completion:^{ }];
-    }
+    else if (session.type == WTSessionTypeComposition && session.compositionSessionType == WTCompositionSessionTypeSmartReply)
+        _intelligenceTextEffectCoordinator = adoptNS([WebKit::allocWKIntelligenceSmartReplyTextEffectCoordinatorInstance() initWithDelegate:(id<WKIntelligenceTextEffectCoordinatorDelegate>)self]);
+    else
+        _intelligenceTextEffectCoordinator = nil;
+
+    [_intelligenceTextEffectCoordinator startAnimationForRange:contexts.firstObject.range completion:^{ }];
 }
 
 - (void)proofreadingSession:(WTSession *)session didReceiveSuggestions:(NSArray<WTTextSuggestion *> *)suggestions processedRange:(NSRange)range inContext:(WTContext *)context finished:(BOOL)finished
@@ -2340,7 +2344,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     _activeWritingToolsSession = nil;
     [_writingToolsTextSuggestions removeAllObjects];
 
-    if (session.type != WTSessionTypeProofreading) {
+    if (!_intelligenceTextEffectCoordinator) {
         _page->setWritingToolsActive(false);
         _page->didEndWritingToolsSession(*webSession, accepted);
         return;
@@ -2381,10 +2385,42 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
         return;
     }
 
-    _writingToolsTextReplacementsFinished = finished;
-    _partialIntelligenceTextAnimationCount += 1;
+    // FIXME: This branch can be removed once all composition types use the new effects system.
+    if (!_intelligenceTextEffectCoordinator) {
+        _writingToolsTextReplacementsFinished = finished;
+        _partialIntelligenceTextAnimationCount += 1;
 
-    _page->compositionSessionDidReceiveTextWithReplacementRange(*webSession, WebCore::AttributedString::fromNSAttributedString(attributedText), { range }, *webContext, finished);
+        _page->compositionSessionDidReceiveTextWithReplacementRange(*webSession, WebCore::AttributedString::fromNSAttributedString(attributedText), { range }, *webContext, finished, [] { });
+        return;
+    }
+
+    auto convertedAttributedText = WebCore::AttributedString::fromNSAttributedString(attributedText);
+
+    auto operation = makeBlockPtr([webSession, convertedAttributedText, range, webContext, finished, weakSelf = WeakObjCPtr<WKWebView>(self)](void (^completion)(void)) {
+        auto strongSelf = weakSelf.get();
+        if (!strongSelf) {
+            completion();
+            return;
+        }
+
+        strongSelf->_page->compositionSessionDidReceiveTextWithReplacementRange(*webSession, convertedAttributedText, { range }, *webContext, finished, [completion = makeBlockPtr(completion)] {
+            completion();
+        });
+    });
+
+    // With Smart Replies, the `range` parameter will always be `(0, 0)` instead of the actual replacement range,
+    // which is in fact just the current selection and always starts at the beginning, and so this range is used instead.
+
+    auto& editorState = _page->editorState();
+    auto selectedTextCharacterCount = editorState.postLayoutData
+        .transform([](auto& postLayoutData) { return postLayoutData.selectedTextLength; })
+        .value_or(0);
+
+    // The character delta is the difference between the existing text and the text after the replacement.
+
+    auto characterDelta = attributedText.length - selectedTextCharacterCount;
+
+    [_intelligenceTextEffectCoordinator requestReplacementWithProcessedRange:NSMakeRange(0, selectedTextCharacterCount) finished:finished characterDelta:characterDelta operation:operation.get() completion:^{ }];
 }
 
 - (void)writingToolsSession:(WTSession *)session didReceiveAction:(WTAction)action

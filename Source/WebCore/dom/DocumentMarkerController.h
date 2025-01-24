@@ -63,7 +63,7 @@ public:
     void detach();
 
     WEBCORE_EXPORT void addMarker(const SimpleRange&, DocumentMarkerType, const DocumentMarker::Data& = { });
-    void addMarker(Text&, unsigned startOffset, unsigned length, DocumentMarkerType, DocumentMarker::Data&& = { });
+    void addMarker(Node&, unsigned startOffset, unsigned length, DocumentMarkerType, DocumentMarker::Data&& = { });
     WEBCORE_EXPORT void addMarker(Node&, DocumentMarker&&);
     void addDraggedContentMarker(const SimpleRange&);
     WEBCORE_EXPORT void addTransparentContentMarker(const SimpleRange&, WTF::UUID);
@@ -124,6 +124,8 @@ private:
 
     void forEachOfTypes(OptionSet<DocumentMarkerType>, Function<bool(Node&, RenderedDocumentMarker&)>&&);
 
+    void applyToCollapsedRangeMarker(const SimpleRange&, OptionSet<DocumentMarkerType>, Function<bool(Node&, RenderedDocumentMarker&)>&&);
+
     void fadeAnimationTimerFired();
     void writingToolsTextSuggestionAnimationTimerFired();
 
@@ -146,7 +148,7 @@ template<>
 WEBCORE_EXPORT void DocumentMarkerController::forEach<DocumentMarkerController::IterationDirection::Backwards>(const SimpleRange&, OptionSet<DocumentMarkerType>, Function<bool(Node&, RenderedDocumentMarker&)>&&);
 
 WEBCORE_EXPORT void addMarker(const SimpleRange&, DocumentMarkerType, const DocumentMarker::Data& = { });
-void addMarker(Text&, unsigned startOffset, unsigned length, DocumentMarkerType, DocumentMarker::Data&& = { });
+void addMarker(Node&, unsigned startOffset, unsigned length, DocumentMarkerType, DocumentMarker::Data&& = { });
 void removeMarkers(const SimpleRange&, OptionSet<DocumentMarkerType> = DocumentMarker::allMarkers(), RemovePartiallyOverlappingMarker = RemovePartiallyOverlappingMarker::No);
 
 WEBCORE_EXPORT SimpleRange makeSimpleRange(Node&, const DocumentMarker&);

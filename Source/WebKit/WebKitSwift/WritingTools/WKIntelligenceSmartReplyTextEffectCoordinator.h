@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,25 +23,21 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#import <Foundation/Foundation.h>
 
-#import <wtf/SoftLinking.h>
+#if !TARGET_OS_WATCH && !TARGET_OS_TV && __has_include(<WritingTools/WritingTools.h>)
 
-SOFT_LINK_LIBRARY_FOR_HEADER(WebKit, WebKitSwift)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKGroupSessionObserver)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaContentMetadata)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaPlayer)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaTimeRange)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaTrack)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSPreviewWindowController)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSRKEntity)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSTextAnimationManager)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKIntelligenceReplacementTextEffectCoordinator)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKIntelligenceSmartReplyTextEffectCoordinator)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionContainerItem)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionEditable)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionLink)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionTextItem)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionScrollableItem)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionImageItem)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaSpatialVideoMetadata)
+#import "WKIntelligenceTextEffectCoordinator.h"
+
+NS_ASSUME_NONNULL_BEGIN
+
+@class WTTextSuggestion;
+
+NS_SWIFT_UI_ACTOR
+@interface WKIntelligenceSmartReplyTextEffectCoordinator : NSObject <WKIntelligenceTextEffectCoordinating>
+
+@end
+
+NS_ASSUME_NONNULL_END
+
+#endif

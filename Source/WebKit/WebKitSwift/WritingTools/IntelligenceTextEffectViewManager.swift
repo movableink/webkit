@@ -90,7 +90,12 @@ class IntelligenceTextEffectViewManager<Source> where Source: IntelligenceTextEf
     }
 
     func setActivePonderingEffect(_ effect: PlatformIntelligencePonderingTextEffect<IntelligenceTextEffectChunk>?) async {
-        guard (self.activePonderingEffect == nil && effect != nil) || (self.activePonderingEffect != nil && effect == nil) else {
+        if self.activePonderingEffect == nil && effect == nil {
+            return
+        }
+
+        if self.activePonderingEffect != nil && effect != nil {
+            assertionFailure("Intelligence text effect coordinator: trying to either set a new pondering effect when there is an ongoing one.")
             return
         }
 
@@ -117,8 +122,12 @@ class IntelligenceTextEffectViewManager<Source> where Source: IntelligenceTextEf
     }
 
     func setActiveReplacementEffect(_ effect: PlatformIntelligenceReplacementTextEffect<IntelligenceTextEffectChunk>?) async {
-        guard (self.activeReplacementEffect == nil && effect != nil) || (self.activeReplacementEffect != nil && effect == nil) else {
-            assertionFailure("Intelligence text effect coordinator: trying to either set a new replacement effect when there is an ongoing one, or trying to remove an effect when there are none.")
+        if self.activeReplacementEffect == nil && effect == nil {
+            return
+        }
+
+        if self.activeReplacementEffect != nil && effect != nil {
+            assertionFailure("Intelligence text effect coordinator: trying to either set a new replacement effect when there is an ongoing one.")
             return
         }
 

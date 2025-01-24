@@ -29,6 +29,7 @@
 
 #import "PDFPluginIdentifier.h"
 #import "WKIntelligenceReplacementTextEffectCoordinator.h"
+#import "WKIntelligenceSmartReplyTextEffectCoordinator.h"
 #import "WKIntelligenceTextEffectCoordinator.h"
 #import "WKTextAnimationType.h"
 #import <WebKit/WKShareSheet.h>
