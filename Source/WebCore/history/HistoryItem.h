@@ -137,7 +137,7 @@ public:
     WEBCORE_EXPORT void setOriginalURLString(const String&);
     WEBCORE_EXPORT void setReferrer(const String&);
     WEBCORE_EXPORT void setTarget(const AtomString&);
-    void setFrameID(std::optional<FrameIdentifier> frameID) { m_frameID = frameID; }
+    WEBCORE_EXPORT void setFrameID(std::optional<FrameIdentifier>);
     WEBCORE_EXPORT void setTitle(const String&);
     void setIsTargetItem(bool isTargetItem) { m_isTargetItem = isTargetItem; }
     

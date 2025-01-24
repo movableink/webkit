@@ -1058,6 +1058,7 @@ void FrameLoader::loadURLIntoChildFrame(const URL& url, const String& referer, L
     if (parentItem && parentItem->children().size() && isBackForwardLoadType(loadType()) && !m_frame->document()->loadEventFinished()) {
         if (RefPtr childItem = parentItem->childItemWithTarget(childFrame.tree().uniqueName())) {
             Ref childLoader = childFrame.loader();
+            childItem->setFrameID(childFrame.frameID());
             childLoader->m_requestedHistoryItem = childItem;
             childLoader->loadDifferentDocumentItem(*childItem, nullptr, loadType(), MayAttemptCacheOnlyLoadForFormSubmissionItem, ShouldTreatAsContinuingLoad::No);
             return;

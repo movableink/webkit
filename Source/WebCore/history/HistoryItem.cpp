@@ -224,6 +224,12 @@ void HistoryItem::setTarget(const AtomString& target)
     notifyChanged();
 }
 
+void HistoryItem::setFrameID(std::optional<FrameIdentifier> frameID)
+{
+    m_frameID = frameID;
+    notifyChanged();
+}
+
 const IntPoint& HistoryItem::scrollPosition() const
 {
     return m_scrollPosition;
