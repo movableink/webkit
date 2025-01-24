@@ -84,8 +84,11 @@ static void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas
 pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* large_heap, size_t size, pas_allocation_mode allocation_mode,
                                                               const pas_heap_config* heap_config, pas_physical_memory_transaction* transaction)
 {
-    pas_heap_lock_assert_held();
+    size_t alignment;
+    const pas_heap_type* type;
     static const bool verbose = false;
+
+    pas_heap_lock_assert_held();
 
     pas_allocation_result result = pas_allocation_result_create_failure();
 
@@ -96,6 +99,12 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
         return result;
 
     const size_t page_size = pas_page_malloc_alignment();
+
+    type = pas_heap_for_large_heap(large_heap)->type;
+    alignment = heap_config->get_type_alignment(type);
+    alignment = PAS_MAX(alignment, heap_config->large_alignment);
+
+    size = pas_round_up_to_power_of_2(size, alignment);
 
     size_t mem_to_waste = (page_size - (size % page_size)) % page_size;
     if (mem_to_waste > free_wasted_mem)

@@ -23,6 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <bit>
 #include <mach/arm/kern_return.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -50,9 +51,17 @@ using namespace std;
 
 namespace {
 
+// checkMalloc verifies an allocation returned an aligned non-null pointer.
+void checkMalloc(void* ptr)
+{
+    static const size_t expectedAlignment = 16;
+    CHECK(ptr);
+    CHECK(!(std::bit_cast<uintptr_t>(ptr) % expectedAlignment));
+}
+
 /* Test single PGM Allocation to ensure basic functionality is working. */
 void testPGMSingleAlloc() {
-    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, getpagesize());
+    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, 1);
     pas_heap* heap = iso_heap_ref_get_heap(&heapRef);
     pas_physical_memory_transaction transaction;
     pas_physical_memory_transaction_construct(&transaction);
@@ -86,7 +95,7 @@ void testPGMSingleAlloc() {
 
 /* Testing multiple allocations to ensure numerous allocations are correctly handled. */
 void testPGMMultipleAlloc() {
-    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, getpagesize());
+    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, 1);
     pas_heap* heap = iso_heap_ref_get_heap(&heapRef);
     pas_physical_memory_transaction transaction;
     pas_physical_memory_transaction_construct(&transaction);
@@ -124,7 +133,7 @@ void testPGMRealloc()
 {
 
     /* setup code */
-    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, getpagesize());
+    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, 1);
     pas_heap* heap = iso_heap_ref_get_heap(&heapRef);
     pas_physical_memory_transaction transaction;
     pas_physical_memory_transaction_construct(&transaction);
@@ -162,7 +171,7 @@ void testPGMRealloc()
 
 void testPGMMetaData()
 {
-    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, getpagesize());
+    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, 1);
     pas_heap* heap = iso_heap_ref_get_heap(&heapRef);
     pas_physical_memory_transaction transaction;
     pas_physical_memory_transaction_construct(&transaction);
@@ -205,7 +214,7 @@ void testPGMMetaData()
 
 /* Ensure all PGM errors cases are handled. */
 void testPGMErrors() {
-    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, getpagesize());
+    pas_heap_ref heapRef = ISO_HEAP_REF_INITIALIZER_WITH_ALIGNMENT(getpagesize() * 100, 1);
     pas_heap* heap = iso_heap_ref_get_heap(&heapRef);
 
     pas_physical_memory_transaction transaction;
@@ -274,7 +283,7 @@ void testPGMMetadataVectorManagement() {
     // Allocate arrays of ints, of random size between [1, 30000].
     for (size_t i = 0; i < total_allocations; ++i) {
         int_arr[i] = static_cast<int*>(bmalloc_allocate(((rand() % 30000) + 1) * sizeof(int), pas_non_compact_allocation_mode));
-        CHECK(int_arr[i]);
+        checkMalloc(int_arr[i]);
     }
 
     pas_heap_lock_lock();
@@ -310,7 +319,7 @@ void testPGMMetadataVectorManagementFewDeallocations() {
     // Allocate arrays of ints, of random size between [1, 30000].
     for (size_t i = 0; i < total_allocations; ++i) {
         int_arr[i] = static_cast<int*>(bmalloc_allocate(((rand() % 30000) + 1) * sizeof(int), pas_non_compact_allocation_mode));
-        CHECK(int_arr[i]);
+        checkMalloc(int_arr[i]);
     }
 
     pas_heap_lock_lock();
@@ -348,7 +357,7 @@ void testPGMMetadataDoubleFreeBehavior() {
     // Allocate arrays of ints, of random size between [1, 30000].
     for (size_t i = 0; i < total_allocations; ++i) {
         int_arr[i] = static_cast<int*>(bmalloc_allocate(((rand() % 30000) + 1) * sizeof(int), pas_non_compact_allocation_mode));
-        CHECK(int_arr[i]);
+        checkMalloc(int_arr[i]);
     }
 
     pas_heap_lock_lock();
@@ -386,7 +395,7 @@ void testPGMMetadataVectorManagementRehash() {
     // Allocate arrays of ints, of random size between [1, 30000].
     for (size_t i = 0; i < MAX_PGM_DEALLOCATED_METADATA_ENTRIES; ++i) {
         int_arr[i] = static_cast<int*>(bmalloc_allocate(((rand() % 30000) + 1) * sizeof(int), pas_non_compact_allocation_mode));
-        CHECK(int_arr[i]);
+        checkMalloc(int_arr[i]);
     }
     pas_heap_lock_lock();
     // Fill the pas_probabilistic_guard_malloc_get_metadata_array() metadata array.
@@ -406,7 +415,7 @@ void testPGMMetadataVectorManagementRehash() {
 
     for (size_t i = 0; i < MAX_PGM_DEALLOCATED_METADATA_ENTRIES; ++i) {
         int_arr[i] = static_cast<int*>(bmalloc_allocate(((rand() % 30000) + 1) * sizeof(int), pas_non_compact_allocation_mode));
-        CHECK(int_arr[i]);
+        checkMalloc(int_arr[i]);
     }
     pas_heap_lock_lock();
 
