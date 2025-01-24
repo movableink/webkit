@@ -1322,6 +1322,7 @@
 		F46512192A01E2220037CAD5 /* EditableLegacyWebView.mm in Sources */ = {isa = PBXBuildFile; fileRef = F46512182A01E2220037CAD5 /* EditableLegacyWebView.mm */; };
 		F46849BE1EEF58E400B937FE /* UIPasteboardTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = F46849BD1EEF58E400B937FE /* UIPasteboardTests.mm */; };
 		F46C45C427D42A2F00ECED2C /* ApplicationStateTracking.mm in Sources */ = {isa = PBXBuildFile; fileRef = F46C45C327D42A2F00ECED2C /* ApplicationStateTracking.mm */; };
+		F470A9772D41DAB200F2A137 /* rtl-bidi-text.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = F470A9762D41DAB200F2A137 /* rtl-bidi-text.html */; };
 		F472874727816BCE003EBE7F /* NSResponderTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = F43C3823278133190099ABCE /* NSResponderTests.mm */; };
 		F472E00327D966F200F3A172 /* TextAlternatives.mm in Sources */ = {isa = PBXBuildFile; fileRef = F472E00227D966F200F3A172 /* TextAlternatives.mm */; };
 		F48D6C10224B377000E3E2FB /* PreferredContentMode.mm in Sources */ = {isa = PBXBuildFile; fileRef = F48D6C0F224B377000E3E2FB /* PreferredContentMode.mm */; };
@@ -1965,6 +1966,7 @@
 				A17C47F12C98E5C20023F3C7 /* rich-and-plain-text.html in Copy Resources */,
 				A17C47F22C98E5C20023F3C7 /* rich-color-filtered.html in Copy Resources */,
 				A17C47F32C98E5C20023F3C7 /* rich-text-attributes.html in Copy Resources */,
+				F470A9772D41DAB200F2A137 /* rtl-bidi-text.html in Copy Resources */,
 				A17C46E62C98E54B0023F3C7 /* scroll-to-anchor.html in Copy Resources */,
 				A17C46652C98E4BB0023F3C7 /* scrollable-page.html in Copy Resources */,
 				A17C47F42C98E5C20023F3C7 /* selected-text-and-textarea.html in Copy Resources */,
@@ -3801,6 +3803,7 @@
 		F46BD5682487062D008282D6 /* dragstart-data.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "dragstart-data.html"; sourceTree = "<group>"; };
 		F46C45C327D42A2F00ECED2C /* ApplicationStateTracking.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ApplicationStateTracking.mm; sourceTree = "<group>"; };
 		F46D43AA26D7090300969E5E /* test.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = test.jpg; sourceTree = "<group>"; };
+		F470A9762D41DAB200F2A137 /* rtl-bidi-text.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "rtl-bidi-text.html"; sourceTree = "<group>"; };
 		F472E00227D966F200F3A172 /* TextAlternatives.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = TextAlternatives.mm; sourceTree = "<group>"; };
 		F4740A2C2A97C97E00B657B6 /* cursor-styles.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "cursor-styles.html"; sourceTree = "<group>"; };
 		F47728981E4AE3AD007ABF6A /* full-page-contenteditable.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "full-page-contenteditable.html"; sourceTree = "<group>"; };
@@ -5899,6 +5902,7 @@
 				E57B44C029ABFAA4006069DE /* qr-code.png */,
 				95194CBF28A580E900343FDE /* red.html */,
 				F4476F4A279082EB00931786 /* remove-node-on-drop.html */,
+				F470A9762D41DAB200F2A137 /* rtl-bidi-text.html */,
 				0F5651F81FCE50E800310FBC /* scroll-to-anchor.html */,
 				7A66BDB71EAF150100CCC924 /* set-long-title.html */,
 				CEBABD481B71687C0051210A /* should-open-external-schemes.html */,

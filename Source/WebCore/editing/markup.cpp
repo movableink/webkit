@@ -358,6 +358,27 @@ public:
         m_reversedPrecedingMarkup.append("<head>"_s);
     }
 
+    void wrapInBodyTagWithDirectionAttributeIfNecessary(const VisiblePosition& start, const VisiblePosition& end)
+    {
+        if (!inSameParagraph(start, end))
+            return;
+
+        if (m_highestNodeToBeSerialized && m_highestNodeToBeSerialized->hasTagName(bodyTag))
+            return;
+
+        auto block = enclosingBlock(start.deepEquivalent().protectedContainerNode());
+        if (!block || block != enclosingBlock(end.deepEquivalent().protectedContainerNode()))
+            return;
+
+        auto renderer = block->renderer();
+        if (!renderer)
+            return;
+
+        auto directionValue = renderer->writingMode().bidiDirection() == TextDirection::LTR ? "ltr"_s : "rtl"_s;
+        m_reversedPrecedingMarkup.append(makeString("<body dir=\""_s, WTFMove(directionValue), "\">"_s));
+        append("</body>"_s);
+    }
+
 private:
     bool containsOnlyASCII() const;
     void appendStyleNodeOpenTag(StringBuilder&, StyleProperties*, Document&, bool isBlock = false);
@@ -1004,7 +1025,7 @@ static RefPtr<Node> highestAncestorToWrapMarkup(const Position& start, const Pos
 }
 
 static String serializePreservingVisualAppearanceInternal(const Position& start, const Position& end, Vector<Ref<Node>>* nodes, ResolveURLs resolveURLs, SerializeComposedTree serializeComposedTree, IgnoreUserSelectNone ignoreUserSelectNone,
-    AnnotateForInterchange annotate, ConvertBlocksToInlines convertBlocksToInlines, StandardFontFamilySerializationMode standardFontFamilySerializationMode, MSOListMode msoListMode, PreserveBaseElement preserveBaseElement)
+    AnnotateForInterchange annotate, ConvertBlocksToInlines convertBlocksToInlines, StandardFontFamilySerializationMode standardFontFamilySerializationMode, MSOListMode msoListMode, PreserveBaseElement preserveBaseElement, PreserveDirectionForInlineText preserveDirectionForInlineText)
 {
     static NeverDestroyed<const String> interchangeNewlineString { makeString("<br class=\""_s, AppleInterchangeNewline, "\">"_s) };
 
@@ -1097,6 +1118,9 @@ static String serializePreservingVisualAppearanceInternal(const Position& start,
     if (annotate == AnnotateForInterchange::Yes && needInterchangeNewlineAfter(visibleEnd.previous()))
         accumulator.append(interchangeNewlineString.get());
 
+    if (preserveDirectionForInlineText == PreserveDirectionForInlineText::Yes)
+        accumulator.wrapInBodyTagWithDirectionAttributeIfNecessary(visibleStart, visibleEnd);
+
     RefPtr baseElement = preserveBaseElement == PreserveBaseElement::Yes ? document->firstBaseElement() : nullptr;
     accumulator.prependHeadIfNecessary(baseElement.get());
 
@@ -1107,13 +1131,13 @@ String serializePreservingVisualAppearance(const SimpleRange& range, Vector<Ref<
 {
     return serializePreservingVisualAppearanceInternal(makeDeprecatedLegacyPosition(range.start), makeDeprecatedLegacyPosition(range.end),
         nodes, resolveURLs, SerializeComposedTree::No, IgnoreUserSelectNone::No,
-        annotate, convertBlocksToInlines, StandardFontFamilySerializationMode::Keep, MSOListMode::DoNotPreserve, PreserveBaseElement::No);
+        annotate, convertBlocksToInlines, StandardFontFamilySerializationMode::Keep, MSOListMode::DoNotPreserve, PreserveBaseElement::No, PreserveDirectionForInlineText::No);
 }
 
-String serializePreservingVisualAppearance(const VisibleSelection& selection, ResolveURLs resolveURLs, SerializeComposedTree serializeComposedTree, IgnoreUserSelectNone ignoreUserSelectNone, PreserveBaseElement preserveBaseElement, Vector<Ref<Node>>* nodes)
+String serializePreservingVisualAppearance(const VisibleSelection& selection, ResolveURLs resolveURLs, SerializeComposedTree serializeComposedTree, IgnoreUserSelectNone ignoreUserSelectNone, PreserveBaseElement preserveBaseElement, PreserveDirectionForInlineText preserveDirectionForInlineText, Vector<Ref<Node>>* nodes)
 {
     return serializePreservingVisualAppearanceInternal(selection.start(), selection.end(), nodes, resolveURLs, serializeComposedTree, ignoreUserSelectNone,
-        AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, StandardFontFamilySerializationMode::Keep, MSOListMode::DoNotPreserve, preserveBaseElement);
+        AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, StandardFontFamilySerializationMode::Keep, MSOListMode::DoNotPreserve, preserveBaseElement, preserveDirectionForInlineText);
 }
 
 static bool shouldPreserveMSOLists(StringView markup)
@@ -1139,7 +1163,7 @@ String sanitizedMarkupForFragmentInDocument(Ref<DocumentFragment>&& fragment, Do
 
     // SerializeComposedTree::No because there can't be a shadow tree in the pasted fragment.
     auto result = serializePreservingVisualAppearanceInternal(firstPositionInNode(bodyElement.get()), lastPositionInNode(bodyElement.get()), nullptr,
-        ResolveURLs::YesExcludingURLsForPrivacy, SerializeComposedTree::No, IgnoreUserSelectNone::No, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, StandardFontFamilySerializationMode::Strip, msoListMode, PreserveBaseElement::No);
+        ResolveURLs::YesExcludingURLsForPrivacy, SerializeComposedTree::No, IgnoreUserSelectNone::No, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, StandardFontFamilySerializationMode::Strip, msoListMode, PreserveBaseElement::No, PreserveDirectionForInlineText::No);
 
     if (msoListMode != MSOListMode::Preserve)
         return result;
