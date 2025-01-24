@@ -1368,6 +1368,20 @@ static AdditionalFonts additionalFonts(const Vector<URL>& fontURLs, std::optiona
     return additionalFonts;
 }
 
+static void addUserInstalledFontURLs(NSString *path, Vector<URL>& fontURLs)
+{
+    RetainPtr enumerator = [NSFileManager.defaultManager enumeratorAtPath:path];
+
+    for (NSString *font in enumerator.get()) {
+        if ([font hasSuffix:@"ttf"] || [font hasSuffix:@"ttc"] || [font hasSuffix:@"otf"]) {
+            RetainPtr fontsPath = [path stringByAppendingPathComponent:font];
+            auto fontURL = URL::fileURLWithFileSystemPath(String(fontsPath.get()));
+            fontURLs.append(WTFMove(fontURL));
+            RELEASE_LOG(Process, "Registering font url %s", fontURL.string().utf8().data());
+        }
+    }
+}
+
 void WebProcessPool::registerUserInstalledFonts(WebProcessProxy& process)
 {
     if (m_userInstalledFontURLs) {
@@ -1377,17 +1391,10 @@ void WebProcessPool::registerUserInstalledFonts(WebProcessProxy& process)
 
     auto blockPtr = makeBlockPtr([weakThis = WeakPtr { *this }, weakProcess = WeakPtr { process }] {
         RetainPtr userInstalledFontsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Fonts"];
-        RetainPtr enumerator = [NSFileManager.defaultManager enumeratorAtPath:userInstalledFontsPath.get()];
 
         Vector<URL> fontURLs;
-        for (NSString *font in enumerator.get()) {
-            if ([font hasSuffix:@"ttf"] || [font hasSuffix:@"ttc"] || [font hasSuffix:@"otf"]) {
-                RetainPtr fontsPath = [userInstalledFontsPath stringByAppendingPathComponent:font];
-                auto fontURL = URL::fileURLWithFileSystemPath(String(fontsPath.get()));
-                fontURLs.append(WTFMove(fontURL));
-                RELEASE_LOG(Process, "Registering font url %s", fontURL.string().utf8().data());
-            }
-        }
+        addUserInstalledFontURLs(userInstalledFontsPath.get(), fontURLs);
+        addUserInstalledFontURLs(@"/Library/Fonts", fontURLs);
 
         RunLoop::protectedMain()->dispatch([weakThis = WTFMove(weakThis), weakProcess = WTFMove(weakProcess), fontURLs = crossThreadCopy(WTFMove(fontURLs))] {
             if (weakProcess)
