@@ -72,8 +72,10 @@ template<typename> class ArrayOf;
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 struct VectorBufferMalloc;
+struct EmbeddedFixedVectorMalloc;
 #else
 using VectorBufferMalloc = FastMalloc;
+using EmbeddedFixedVectorMalloc = FastMalloc;
 #endif
 
 template<typename> struct DefaultRefDerefTraits;
@@ -82,7 +84,7 @@ template<typename> class CompactPtr;
 template<typename> class CompletionHandler;
 template<typename, size_t = 0> class Deque;
 template<typename Key, typename, Key> class EnumeratedArray;
-template<typename> class FixedVector;
+template<typename, typename = WTF::EmbeddedFixedVectorMalloc> class FixedVector;
 template<typename> class Function;
 template<typename> struct IsSmartPtr;
 template<typename, typename = AnyThreadsAccessTraits> class LazyNeverDestroyed;
