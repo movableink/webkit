@@ -338,7 +338,7 @@ public:
 
     virtual PlatformVideoTarget mediaPlayerVideoTarget() const { return nullptr; }
 
-    virtual std::optional<MediaPlayerClientIdentifier> mediaPlayerClientIdentifier() const { return std::nullopt; }
+    virtual MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const = 0;
 
 #if !RELEASE_LOG_DISABLED
     virtual uint64_t mediaPlayerLogIdentifier() { return 0; }
@@ -776,7 +776,7 @@ public:
     bool isInFullscreenOrPictureInPicture() const;
 
     PlatformVideoTarget videoTarget() const { return client().mediaPlayerVideoTarget(); }
-    std::optional<MediaPlayerClientIdentifier> clientIdentifier() const { return client().mediaPlayerClientIdentifier(); }
+    MediaPlayerClientIdentifier clientIdentifier() const { return client().mediaPlayerClientIdentifier(); }
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     bool supportsLinearMediaPlayer() const;

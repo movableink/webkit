@@ -53,6 +53,7 @@
 #include "VideoFrame.h"
 #include "VideoFrameMetadata.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <wtf/Identified.h>
 #include <wtf/Lock.h>
 #include <wtf/NativePromise.h>
 #include <wtf/NeverDestroyed.h>
@@ -201,7 +202,9 @@ static const std::optional<Vector<FourCC>>& nullOptionalFourCCVector()
     return vector;
 }
 
-class NullMediaPlayerClient final : public MediaPlayerClient {
+class NullMediaPlayerClient final
+    : public MediaPlayerClient
+    , public Identified<MediaPlayerClientIdentifier> {
 private:
 #if !RELEASE_LOG_DISABLED
     const Logger& mediaPlayerLogger() final
@@ -232,6 +235,8 @@ private:
     const std::optional<Vector<FourCC>>& allowedMediaVideoCodecIDs() const final { return nullOptionalFourCCVector(); }
     const std::optional<Vector<FourCC>>& allowedMediaAudioCodecIDs() const final { return nullOptionalFourCCVector(); }
     const std::optional<Vector<FourCC>>& allowedMediaCaptionFormatTypes() const final { return nullOptionalFourCCVector(); }
+
+    MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const final { return identifier(); }
 
     class NullMediaResourceLoader final : public PlatformMediaResourceLoader {
         WTF_MAKE_TZONE_ALLOCATED_INLINE(NullMediaResourceLoader);

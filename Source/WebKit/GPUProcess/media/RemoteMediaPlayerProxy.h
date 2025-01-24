@@ -316,6 +316,7 @@ private:
 #endif
 
     String mediaPlayerSourceApplicationIdentifier() const final;
+    WebCore::MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const final { return m_clientIdentifier; }
 
     double mediaPlayerRequestedPlaybackRate() const final;
 #if ENABLE(VIDEO_PRESENTATION_MODE)

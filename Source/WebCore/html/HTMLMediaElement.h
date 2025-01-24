@@ -880,7 +880,7 @@ private:
     FloatSize mediaPlayerVideoLayerSize() const final { return videoLayerSize(); }
     void mediaPlayerVideoLayerSizeDidChange(const FloatSize& size) final { m_videoLayerSize = size; }
 
-    std::optional<MediaPlayerClientIdentifier> mediaPlayerClientIdentifier() const final { return identifier(); }
+    MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const final { return identifier(); }
 
     void pendingActionTimerFired();
     void progressEventTimerFired();
