@@ -118,8 +118,8 @@ static pas_allocation_result allocate_impl(pas_large_heap* heap,
     *size = pas_round_up_to_power_of_2(*size, *alignment);
     
     if (verbose) {
-        printf("large heap allocating large object of size %zu\n", *size);
-        printf("large heap cartesian tree minimum = %p, num mapped bytes = %zu\n", pas_cartesian_tree_minimum(&heap->free_heap.tree), heap->free_heap.num_mapped_bytes);
+        pas_log("large heap allocating large object of size %zu\n", *size);
+        pas_log("large heap cartesian tree minimum = %p, num mapped bytes = %zu\n", pas_cartesian_tree_minimum(&heap->free_heap.tree), heap->free_heap.num_mapped_bytes);
     }
     
     initialize_config(&config, &data, heap, heap_config);
