@@ -328,7 +328,7 @@ void InspectorDOMAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, 
     m_domEditor = makeUnique<DOMEditor>(*m_history);
 
     m_instrumentingAgents.setPersistentDOMAgent(this);
-    m_document = m_inspectedPage.localTopDocument();
+    m_document = m_inspectedPage->localTopDocument();
 
     // Force a layout so that we can collect additional information from the layout process.
     relayoutDocument();
@@ -1318,7 +1318,7 @@ void InspectorDOMAgent::setSearchingForNode(Inspector::Protocol::ErrorString& er
 
     protectedOverlay()->didSetSearchingForNode(m_searchingForNode);
 
-    if (InspectorClient* client = m_inspectedPage.inspectorController().inspectorClient())
+    if (InspectorClient* client = m_inspectedPage->inspectorController().inspectorClient())
         client->elementSelectionChanged(m_searchingForNode);
 }
 

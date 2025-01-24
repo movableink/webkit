@@ -37,7 +37,7 @@ WorkerWorkerAgent::WorkerWorkerAgent(WorkerAgentContext& context)
     : InspectorWorkerAgent(context)
     , m_globalScope(context.globalScope)
 {
-    ASSERT(context.globalScope.isContextThread());
+    ASSERT(context.globalScope->isContextThread());
 }
 
 WorkerWorkerAgent::~WorkerWorkerAgent() = default;

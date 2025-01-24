@@ -77,12 +77,12 @@ DOMPatchSupport::DOMPatchSupport(DOMEditor& domEditor, Document& document)
 void DOMPatchSupport::patchDocument(const String& markup)
 {
     RefPtr<Document> newDocument;
-    if (m_document.isHTMLDocument())
-        newDocument = HTMLDocument::create(nullptr, m_document.settings(), URL(), { });
-    else if (m_document.isXHTMLDocument())
-        newDocument = XMLDocument::createXHTML(nullptr, m_document.settings(), URL());
-    else if (m_document.isSVGDocument())
-        newDocument = XMLDocument::create(nullptr, m_document.settings(), URL());
+    if (m_document->isHTMLDocument())
+        newDocument = HTMLDocument::create(nullptr, m_document->settings(), URL(), { });
+    else if (m_document->isXHTMLDocument())
+        newDocument = XMLDocument::createXHTML(nullptr, m_document->settings(), URL());
+    else if (m_document->isSVGDocument())
+        newDocument = XMLDocument::create(nullptr, m_document->settings(), URL());
 
     ASSERT(newDocument);
     RefPtr<DocumentParser> parser;
@@ -94,16 +94,16 @@ void DOMPatchSupport::patchDocument(const String& markup)
     parser->finish();
     parser->detach();
 
-    if (!m_document.documentElement())
+    if (!m_document->documentElement())
         return;
     if (!newDocument->documentElement())
         return;
 
-    std::unique_ptr<Digest> oldInfo = createDigest(*m_document.documentElement(), nullptr);
+    std::unique_ptr<Digest> oldInfo = createDigest(*m_document->documentElement(), nullptr);
     std::unique_ptr<Digest> newInfo = createDigest(*newDocument->documentElement(), &m_unusedNodesMap);
 
     if (innerPatchNode(*oldInfo, *newInfo).hasException()) {
-        Ref document { m_document };
+        Ref document { m_document.get() };
         // Fall back to rewrite.
         document->write(nullptr, markup);
         document->close();
@@ -121,10 +121,10 @@ ExceptionOr<Node*> DOMPatchSupport::patchNode(Node& node, const String& markup)
     Node* previousSibling = node.previousSibling();
     // FIXME: This code should use one of createFragment* in markup.h
     auto fragment = DocumentFragment::create(m_document);
-    if (m_document.isHTMLDocument())
-        fragment->parseHTML(markup, node.parentElement() ? *node.parentElement() : *m_document.documentElement());
+    if (m_document->isHTMLDocument())
+        fragment->parseHTML(markup, node.parentElement() ? *node.parentElement() : *m_document->documentElement());
     else
-        fragment->parseXML(markup, node.parentElement() ? node.parentElement() : m_document.documentElement());
+        fragment->parseXML(markup, node.parentElement() ? node.parentElement() : m_document->documentElement());
 
     // Compose the old list.
     auto* parentNode = node.parentNode();

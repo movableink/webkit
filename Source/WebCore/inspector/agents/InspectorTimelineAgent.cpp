@@ -239,7 +239,7 @@ void InspectorTimelineAgent::internalStart(std::optional<int>&& maxCallStackDept
 
     m_frontendDispatcher->recordingStarted(timestamp());
 
-    if (auto* client = m_inspectedPage.inspectorController().inspectorClient())
+    if (auto* client = m_inspectedPage->inspectorController().inspectorClient())
         client->timelineRecordingChanged(true);
 }
 
@@ -271,7 +271,7 @@ void InspectorTimelineAgent::internalStop()
 
     m_frontendDispatcher->recordingStopped(timestamp());
 
-    if (auto* client = m_inspectedPage.inspectorController().inspectorClient())
+    if (auto* client = m_inspectedPage->inspectorController().inspectorClient())
         client->timelineRecordingChanged(false);
 }
 
@@ -676,7 +676,7 @@ void InspectorTimelineAgent::captureScreenshot()
     SetForScope isTakingScreenshot(m_isCapturingScreenshot, true);
 
     auto snapshotStartTime = timestamp();
-    RefPtr localMainFrame = m_inspectedPage.localMainFrame();
+    RefPtr localMainFrame = m_inspectedPage->localMainFrame();
     if (!localMainFrame)
         return;
 

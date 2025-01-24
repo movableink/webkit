@@ -67,7 +67,7 @@ private:
 #endif
 
     DOMEditor& m_domEditor;
-    Document& m_document;
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 
     UnusedNodesMap m_unusedNodesMap;
 };
