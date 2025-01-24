@@ -7666,4 +7666,4 @@ imported/w3c/web-platform-tests/navigation-api/navigation-activation/activation-
 imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-forward.html [ Failure ]
 imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-traverseTo-forward-multiple.html [ Failure ]
 
-# webkit.org./b/286168 [ iOS Debug ] 3 imported/w3c/web-platform-tests/css/css-contain/contain-size-replaced-003*.html tests are constantly crashing
+webkit.org/b/286500 [ Release ] fast/forms/date/date-pseudo-elements.html [ Pass Failure ]
