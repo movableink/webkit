@@ -339,7 +339,13 @@ Vector<SerializedTypeInfo> allSerializedTypes()
 #endif
                     ", bool"
                 ">"_s,
-                "optionalTuple"_s
+                "OptionalTuple<"
+                    "name"
+#if ENABLE(FEATURE)
+                    ", featureEnabledMember"
+#endif
+                    ", bitFieldMember"
+                ">"_s
             },
         } },
         { "WebKit::TemplateTest"_s, {
@@ -361,7 +367,9 @@ Vector<SerializedTypeInfo> allSerializedTypes()
                 "OptionalTuple<"
                     "std::optional<WebCore::PlatformLayerIdentifier>"
                 ">"_s,
-                "optionalTuple"_s
+                "OptionalTuple<"
+                    "layer().layerIDForEncoding()"
+                ">"_s
             },
         } },
         { "WebCore::ScrollingStateFrameHostingNodeWithStuffAfterTuple"_s, {
@@ -378,7 +386,10 @@ Vector<SerializedTypeInfo> allSerializedTypes()
                     "std::optional<WebCore::PlatformLayerIdentifier>"
                     ", bool"
                 ">"_s,
-                "optionalTuple"_s
+                "OptionalTuple<"
+                    "layer().layerIDForEncoding()"
+                    ", otherMember"
+                ">"_s
             },
             {
                 "int"_s,

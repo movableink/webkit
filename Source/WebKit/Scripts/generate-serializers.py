@@ -1235,20 +1235,19 @@ def generate_impl(serialized_types, serialized_enums, headers, generating_webkit
 
 
 def generate_optional_tuple_type_info(type):
-    result = []
-    result.append('            {')
-    result.append('                "OptionalTuple<"')
+    result = ['                "OptionalTuple<"']
     serialized_members = type.serialized_members()
-    for i in range(1, len(serialized_members)):
+    found_first_optional_tuple_bit_member = False
+    for i in range(len(serialized_members)):
         member = serialized_members[i]
-        if member.condition is not None:
-            result.append(f'#if {member.condition}')
-        result.append(f'                    "{", " if i > 1 else ""}{member.type}"')
-        if member.condition is not None:
-            result.append('#endif')
-    result.append('                ">"_s,')
-    result.append('                "optionalTuple"_s')
-    result.append('            },')
+        if member.optional_tuple_bit():
+            if member.condition is not None:
+                result.append(f'#if {member.condition}')
+            result.append(f'                    "{", " if found_first_optional_tuple_bit_member else ""}{member.name}"')
+            found_first_optional_tuple_bit_member = True
+            if member.condition is not None:
+                result.append('#endif')
+    result.append('                ">"_s')
     return result
 
 
@@ -1314,7 +1313,7 @@ def generate_one_serialized_type_info(type):
         else:
             if optional_tuple_state == 'middle':
                 result.append('                ">"_s,')
-                result.append('                "optionalTuple"_s')
+                result = result + generate_optional_tuple_type_info(type)
                 result.append('            },')
                 optional_tuple_state = None
             result.append('            {')
@@ -1331,7 +1330,7 @@ def generate_one_serialized_type_info(type):
             result.append('#endif')
     if optional_tuple_state == 'middle':
         result.append('                ">"_s,')
-        result.append('                "optionalTuple"_s')
+        result = result + generate_optional_tuple_type_info(type)
         result.append('            },')
     result.append('        } },')
     if type.condition is not None:
