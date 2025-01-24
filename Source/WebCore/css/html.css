@@ -881,15 +881,14 @@ input:is([type="button"], [type="submit"], [type="reset"]), input[type="file"]::
     align-items: flex-start;
     text-align: center;
     cursor: default;
+    padding-inline: 6px;
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
     color: ButtonText;
     padding-block: 2px 3px;
-    padding-inline: 6px;
     border: 2px outset ButtonFace;
     background-color: ButtonFace;
 #else
-    padding-block: 0;
-    padding-inline: 1em;
+    padding-block: 0; /* override input padding */
     border: 1px solid -webkit-control-background;
     font: 11px system-ui;
     color: -apple-system-blue;
