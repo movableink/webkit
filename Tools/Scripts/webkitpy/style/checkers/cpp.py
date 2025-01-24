@@ -1200,16 +1200,17 @@ _RE_PATTERN_XCODE_VERSION_MACRO = re.compile(
 _RE_PATTERN_XCODE_MIN_REQUIRED_MACRO = re.compile(
     r'.+?([A-Z_]+)_VERSION_MIN_REQUIRED [><=]+ (\d+)')
 
+_RE_PATTERN_XCODE_MAX_ALLOWED_MACRO = re.compile(
+    r'.+?([A-Z_]+)_VERSION_MAX_ALLOWED [><=]+ (\d+)')
+
 _RE_PATTERN_PLATFORM_HEADER = re.compile(
     r'Source/WTF/wtf/Platform[a-zA-Z]+\.h')
 
 
 def check_os_version_checks(filename, clean_lines, line_number, error):
     """ Checks for mistakes using VERSION_MIN_REQUIRED and VERSION_MAX_ALLOWED macros:
-    1. These should only be used centrally to defined named HAVE, USE or ENABLE style macros.
-    2. VERSION_MIN_REQUIRED never changes for a minor OS version.
-
-    These should be centralized in the wtf/Platform*.h suite of files.
+    1. These should only be used centrally, in the wtf/Platform*.h suite of files, to define named HAVE, USE or ENABLE style macros.
+    2. Tiny versions should not be compared against.
 
     Args:
       filename: Name of the file that is being processed.
@@ -1221,10 +1222,15 @@ def check_os_version_checks(filename, clean_lines, line_number, error):
     line = clean_lines.elided[line_number]
 
     for version_match in _RE_PATTERN_XCODE_MIN_REQUIRED_MACRO.finditer(line):
-        os_prefix = version_match.group(1)
         version_number = int(version_match.group(2))
-        if os_prefix == '__MAC_OS_X' and version_number % 100 != 0 or os_prefix != '__MAC_OS_X' and version_number % 10000 != 0:
-            error(line_number, 'build/version_check', 5, 'Incorrect OS version check. VERSION_MIN_REQUIRED values never include a minor version. You may be looking for a combination of VERSION_MIN_REQUIRED for target OS version check and VERSION_MAX_ALLOWED for SDK check.')
+        if version_number % 100 != 0:
+            error(line_number, 'build/version_check', 5, 'Incorrect OS version check. VERSION_MIN_REQUIRED values never include a tiny version.')
+            break
+
+    for version_match in _RE_PATTERN_XCODE_MAX_ALLOWED_MACRO.finditer(line):
+        version_number = int(version_match.group(2))
+        if version_number % 100 != 0:
+            error(line_number, 'build/version_check', 5, 'Incorrect OS version check. VERSION_MAX_ALLOWED values never include a tiny version.')
             break
 
     if _RE_PATTERN_PLATFORM_HEADER.match(filename):
