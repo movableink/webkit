@@ -181,10 +181,10 @@ void ScrollableArea::endKeyboardScroll(bool immediate)
         setScrollAnimationStatus(ScrollAnimationStatus::NotAnimating);
 }
 
-void ScrollableArea::scrollToPositionWithoutAnimation(const FloatPoint& position, ScrollClamping clamping)
+bool ScrollableArea::scrollToPositionWithoutAnimation(const FloatPoint& position, ScrollClamping clamping)
 {
     LOG_WITH_STREAM(Scrolling, stream << "ScrollableArea " << this << " scrollToPositionWithoutAnimation " << position);
-    scrollAnimator().scrollToPositionWithoutAnimation(position, clamping);
+    return scrollAnimator().scrollToPositionWithoutAnimation(position, clamping);
 }
 
 void ScrollableArea::scrollToPositionWithAnimation(const FloatPoint& position, const ScrollPositionChangeOptions& options)

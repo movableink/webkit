@@ -495,11 +495,11 @@ private:
     void revealPDFDestination(PDFDestination *);
     void revealPointInPage(WebCore::FloatPoint pointInPDFPageSpace, PDFDocumentLayout::PageIndex);
     void revealRectInPage(const WebCore::FloatRect& rectInPDFPageSpace, PDFDocumentLayout::PageIndex);
-    void revealPage(PDFDocumentLayout::PageIndex);
+    bool revealPage(PDFDocumentLayout::PageIndex);
     void revealFragmentIfNeeded();
 
     // Only use this if some other function has ensured that the correct page is visible.
-    void scrollToPointInContentsSpace(WebCore::FloatPoint);
+    bool scrollToPointInContentsSpace(WebCore::FloatPoint);
 
     OptionSet<WebCore::TiledBackingScrollability> computeScrollability() const;
 

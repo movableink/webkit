@@ -1258,7 +1258,7 @@ void UnifiedPDFPlugin::updateLayout(AdjustScaleAfterLayout shouldAdjustScale, st
     auto autoSizeMode = shouldUpdateAutoSizeScaleOverride.value_or(m_didLayoutWithValidDocument ? m_shouldUpdateAutoSizeScale : ShouldUpdateAutoSizeScale::Yes);
 
     auto computeAnchoringInfo = [&] {
-        return m_presentationController->pdfPositionForCurrentView(PDFPresentationController::DocumentAnchorPoint::TopLeft, shouldAdjustScale == AdjustScaleAfterLayout::Yes || autoSizeMode == ShouldUpdateAutoSizeScale::Yes);
+        return m_presentationController->pdfPositionForCurrentView(PDFPresentationController::AnchorPoint::TopLeft, shouldAdjustScale == AdjustScaleAfterLayout::Yes || autoSizeMode == ShouldUpdateAutoSizeScale::Yes);
     };
     auto anchoringInfo = computeAnchoringInfo();
 
@@ -2196,22 +2196,25 @@ void UnifiedPDFPlugin::revealPointInPage(FloatPoint pointInPDFPageSpace, PDFDocu
     scrollToPointInContentsSpace(contentsPoint);
 }
 
-void UnifiedPDFPlugin::revealPage(PDFDocumentLayout::PageIndex pageIndex)
+bool UnifiedPDFPlugin::revealPage(PDFDocumentLayout::PageIndex pageIndex)
 {
     ASSERT(pageIndex < m_documentLayout.pageCount());
     m_presentationController->ensurePageIsVisible(pageIndex);
 
     auto pageBounds = m_documentLayout.layoutBoundsForPageAtIndex(pageIndex);
     auto boundsInScrolledContents = convertUp(CoordinateSpace::PDFDocumentLayout, CoordinateSpace::ScrolledContents, pageBounds);
-    scrollToPointInContentsSpace(boundsInScrolledContents.location());
+    return scrollToPointInContentsSpace(boundsInScrolledContents.location());
 }
 
-void UnifiedPDFPlugin::scrollToPointInContentsSpace(FloatPoint pointInContentsSpace)
+bool UnifiedPDFPlugin::scrollToPointInContentsSpace(FloatPoint pointInContentsSpace)
 {
     auto oldScrollType = currentScrollType();
     setCurrentScrollType(ScrollType::Programmatic);
-    scrollToPositionWithoutAnimation(roundedIntPoint(pointInContentsSpace));
+    bool success = scrollToPositionWithoutAnimation(roundedIntPoint(pointInContentsSpace));
     setCurrentScrollType(oldScrollType);
+    // We assume that callers have ensured the correct page is visible,
+    // so this should always return true for discrete display modes.
+    return isInDiscreteDisplayMode() || success;
 }
 
 void UnifiedPDFPlugin::revealFragmentIfNeeded()
@@ -2584,7 +2587,13 @@ void UnifiedPDFPlugin::performContextMenuAction(ContextMenuItemTag tag, const In
         break;
     }
     case ContextMenuItemTag::PreviousPage: {
-        auto currentPageIndex = indexForCurrentPageInView();
+        auto maybePageIndex = m_presentationController->pageIndexForCurrentView(PDFPresentationController::AnchorPoint::Center);
+        if (!maybePageIndex)
+            break;
+
+        auto currentPageIndex = *maybePageIndex;
+        auto topLeftInDocumentSpace = convertDown(CoordinateSpace::Plugin, CoordinateSpace::PDFDocumentLayout, FloatPoint { });
+        auto topLeftPageIndex = m_presentationController->nearestPageIndexForDocumentPoint(topLeftInDocumentSpace);
         auto pagesPerRow = m_documentLayout.pagesPerRow();
 
         auto previousPageIsOnPreviousRow = [currentPageIndex, &documentLayout = m_documentLayout]  {
@@ -2593,10 +2602,19 @@ void UnifiedPDFPlugin::performContextMenuAction(ContextMenuItemTag tag, const In
             return documentLayout.isLeftPageIndex(currentPageIndex);
         };
 
-        if (currentPageIndex && previousPageIsOnPreviousRow())
-            revealPage(currentPageIndex - 1);
-        else if (currentPageIndex > 1)
-            revealPage(currentPageIndex - pagesPerRow);
+        if (!currentPageIndex)
+            break;
+
+        auto landingPageIndex = std::min(topLeftPageIndex, currentPageIndex - (previousPageIsOnPreviousRow() ?: pagesPerRow));
+
+        while (landingPageIndex >= 0) {
+            if (revealPage(landingPageIndex))
+                break;
+            if (landingPageIndex < pagesPerRow)
+                break;
+            landingPageIndex -= pagesPerRow;
+        }
+
         break;
     }
     case ContextMenuItemTag::ZoomIn:
@@ -3957,7 +3975,7 @@ void UnifiedPDFPlugin::setDisplayModeAndUpdateLayout(PDFDocumentLayout::DisplayM
 {
     auto shouldAdjustPageScale = m_shouldUpdateAutoSizeScale == ShouldUpdateAutoSizeScale::Yes ? AdjustScaleAfterLayout::No : AdjustScaleAfterLayout::Yes;
     bool didWantWheelEvents = m_presentationController->wantsWheelEvents();
-    auto anchoringInfo = m_presentationController->pdfPositionForCurrentView(PDFPresentationController::DocumentAnchorPoint::Center);
+    auto anchoringInfo = m_presentationController->pdfPositionForCurrentView(PDFPresentationController::AnchorPoint::Center);
 
     setDisplayMode(mode);
     {

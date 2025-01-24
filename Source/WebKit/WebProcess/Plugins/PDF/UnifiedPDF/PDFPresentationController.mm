@@ -237,7 +237,7 @@ std::optional<PDFDocumentLayout::PageIndex> PDFPresentationController::pageIndex
     return { };
 }
 
-auto PDFPresentationController::pdfPositionForCurrentView(DocumentAnchorPoint anchorPoint, bool preservePosition) const -> std::optional<VisiblePDFPosition>
+auto PDFPresentationController::pdfPositionForCurrentView(AnchorPoint anchorPoint, bool preservePosition) const -> std::optional<VisiblePDFPosition>
 {
     if (!preservePosition)
         return { };
@@ -260,13 +260,13 @@ auto PDFPresentationController::pdfPositionForCurrentView(DocumentAnchorPoint an
     return VisiblePDFPosition { pageIndex, pagePoint };
 }
 
-FloatPoint PDFPresentationController::anchorPointForDocument(DocumentAnchorPoint anchorPoint) const
+FloatPoint PDFPresentationController::anchorPointInDocumentSpace(AnchorPoint anchorPoint) const
 {
     auto anchorPointInPluginSpace = [anchorPoint, checkedPlugin = CheckedRef { m_plugin.get() }] -> FloatPoint {
         switch (anchorPoint) {
-        case DocumentAnchorPoint::TopLeft:
+        case AnchorPoint::TopLeft:
             return { };
-        case DocumentAnchorPoint::Center:
+        case AnchorPoint::Center:
             return flooredIntPoint(checkedPlugin->size() / 2);
         }
         ASSERT_NOT_REACHED();

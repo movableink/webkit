@@ -335,9 +335,9 @@ std::optional<PDFDocumentLayout::PageIndex> PDFScrollingPresentationController::
 
 #pragma mark -
 
-std::optional<PDFDocumentLayout::PageIndex> PDFScrollingPresentationController::pageIndexForCurrentView(DocumentAnchorPoint anchorPoint) const
+std::optional<PDFDocumentLayout::PageIndex> PDFScrollingPresentationController::pageIndexForCurrentView(AnchorPoint anchorPoint) const
 {
-    return m_plugin->documentLayout().pageIndexAndPagePointForDocumentYOffset(anchorPointForDocument(anchorPoint).y()).first;
+    return m_plugin->documentLayout().pageIndexAndPagePointForDocumentYOffset(anchorPointInDocumentSpace(anchorPoint).y()).first;
 }
 
 void PDFScrollingPresentationController::restorePDFPosition(const VisiblePDFPosition& info)

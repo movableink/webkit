@@ -1354,7 +1354,7 @@ void PDFDiscretePresentationController::didGeneratePreviewForPage(PDFDocumentLay
 
 #pragma mark -
 
-std::optional<PDFDocumentLayout::PageIndex> PDFDiscretePresentationController::pageIndexForCurrentView(DocumentAnchorPoint) const
+std::optional<PDFDocumentLayout::PageIndex> PDFDiscretePresentationController::pageIndexForCurrentView(AnchorPoint) const
 {
     return visibleRow().transform([](const auto& row) {
         return row.pages[0];
