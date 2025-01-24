@@ -336,8 +336,17 @@ Ref<Page> Page::create(PageConfiguration&& pageConfiguration)
     return adoptRef(*new Page(WTFMove(pageConfiguration)));
 }
 
+struct Page::Internals {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+    Region topRelevantPaintedRegion;
+    Region bottomRelevantPaintedRegion;
+    Region relevantUnpaintedRegion;
+};
+
 Page::Page(PageConfiguration&& pageConfiguration)
-    : m_identifier(pageConfiguration.identifier)
+    : m_internals(makeUniqueRef<Internals>())
+    , m_identifier(pageConfiguration.identifier)
     , m_chrome(makeUniqueRef<Chrome>(*this, WTFMove(pageConfiguration.chromeClient)))
     , m_dragCaretController(makeUniqueRef<DragCaretController>())
 #if ENABLE(DRAG_SUPPORT)
@@ -3489,9 +3498,9 @@ void Page::resetRelevantPaintedObjectCounter()
 {
     m_isCountingRelevantRepaintedObjects = false;
     m_relevantUnpaintedRenderObjects.clear();
-    m_topRelevantPaintedRegion = Region();
-    m_bottomRelevantPaintedRegion = Region();
-    m_relevantUnpaintedRegion = Region();
+    m_internals->topRelevantPaintedRegion = Region();
+    m_internals->bottomRelevantPaintedRegion = Region();
+    m_internals->relevantUnpaintedRegion = Region();
 }
 
 static LayoutRect relevantViewRect(RenderView* view)
@@ -3537,7 +3546,7 @@ void Page::addRelevantRepaintedObject(const RenderObject& object, const LayoutRe
     // If this object was previously counted as an unpainted object, remove it from that HashSet
     // and corresponding Region. FIXME: This doesn't do the right thing if the objects overlap.
     if (m_relevantUnpaintedRenderObjects.remove(object))
-        m_relevantUnpaintedRegion.subtract(snappedPaintRect);
+        m_internals->relevantUnpaintedRegion.subtract(snappedPaintRect);
 
     // Split the relevantRect into a top half and a bottom half. Making sure we have coverage in
     // both halves helps to prevent cases where we have a fully loaded menu bar or masthead with
@@ -3551,23 +3560,23 @@ void Page::addRelevantRepaintedObject(const RenderObject& object, const LayoutRe
     if (topRelevantRect.intersects(snappedPaintRect) && bottomRelevantRect.intersects(snappedPaintRect)) {
         IntRect topIntersection = snappedPaintRect;
         topIntersection.intersect(snappedIntRect(topRelevantRect));
-        m_topRelevantPaintedRegion.unite(topIntersection);
+        m_internals->topRelevantPaintedRegion.unite(topIntersection);
 
         IntRect bottomIntersection = snappedPaintRect;
         bottomIntersection.intersect(snappedIntRect(bottomRelevantRect));
-        m_bottomRelevantPaintedRegion.unite(bottomIntersection);
+        m_internals->bottomRelevantPaintedRegion.unite(bottomIntersection);
     } else if (topRelevantRect.intersects(snappedPaintRect))
-        m_topRelevantPaintedRegion.unite(snappedPaintRect);
+        m_internals->topRelevantPaintedRegion.unite(snappedPaintRect);
     else
-        m_bottomRelevantPaintedRegion.unite(snappedPaintRect);
+        m_internals->bottomRelevantPaintedRegion.unite(snappedPaintRect);
 
-    float topPaintedArea = m_topRelevantPaintedRegion.totalArea();
-    float bottomPaintedArea = m_bottomRelevantPaintedRegion.totalArea();
+    float topPaintedArea = m_internals->topRelevantPaintedRegion.totalArea();
+    float bottomPaintedArea = m_internals->bottomRelevantPaintedRegion.totalArea();
     float viewArea = relevantRect.width() * relevantRect.height();
 
     float ratioThatIsPaintedOnTop = topPaintedArea / viewArea;
     float ratioThatIsPaintedOnBottom = bottomPaintedArea / viewArea;
-    float ratioOfViewThatIsUnpainted = m_relevantUnpaintedRegion.totalArea() / viewArea;
+    float ratioOfViewThatIsUnpainted = m_internals->relevantUnpaintedRegion.totalArea() / viewArea;
 
     if (ratioThatIsPaintedOnTop > (gMinimumPaintedAreaRatio / 2) && ratioThatIsPaintedOnBottom > (gMinimumPaintedAreaRatio / 2)
         && ratioOfViewThatIsUnpainted < gMaximumUnpaintedAreaRatio) {
@@ -3588,7 +3597,7 @@ void Page::addRelevantUnpaintedObject(const RenderObject& object, const LayoutRe
         return;
 
     m_relevantUnpaintedRenderObjects.add(object);
-    m_relevantUnpaintedRegion.unite(snappedIntRect(objectPaintRect));
+    m_internals->relevantUnpaintedRegion.unite(snappedIntRect(objectPaintRect));
 }
 
 void Page::suspendActiveDOMObjectsAndAnimations()

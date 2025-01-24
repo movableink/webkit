@@ -38,7 +38,6 @@
 #include "MediaSessionGroupIdentifier.h"
 #include "Pagination.h"
 #include "PlaybackTargetClientContextIdentifier.h"
-#include "Region.h"
 #include "RegistrableDomain.h"
 #include "ScriptTelemetryCategory.h"
 #include "ScrollTypes.h"
@@ -1361,6 +1360,9 @@ private:
 
     bool hasLocalMainFrame();
 
+    struct Internals;
+    UniqueRef<Internals> m_internals;
+
     std::optional<PageIdentifier> m_identifier;
     UniqueRef<Chrome> m_chrome;
     UniqueRef<DragCaretController> m_dragCaretController;
@@ -1495,9 +1497,6 @@ private:
     std::unique_ptr<RenderingUpdateScheduler> m_renderingUpdateScheduler;
     SingleThreadWeakHashSet<const RenderObject> m_relevantUnpaintedRenderObjects;
 
-    Region m_topRelevantPaintedRegion;
-    Region m_bottomRelevantPaintedRegion;
-    Region m_relevantUnpaintedRegion;
     bool m_isCountingRelevantRepaintedObjects { false };
 #ifndef NDEBUG
     bool m_isPainting { false };
