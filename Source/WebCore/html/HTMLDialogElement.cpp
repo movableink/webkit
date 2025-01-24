@@ -144,6 +144,17 @@ void HTMLDialogElement::close(const String& result)
     queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
+void HTMLDialogElement::requestClose(const String& returnValue)
+{
+    if (!isOpen())
+        return;
+
+    auto cancelEvent = Event::create(eventNames().cancelEvent, Event::CanBubble::No, Event::IsCancelable::Yes);
+    dispatchEvent(cancelEvent);
+    if (!cancelEvent->defaultPrevented())
+        close(returnValue);
+}
+
 bool HTMLDialogElement::isValidCommandType(const CommandType command)
 {
     return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close;
