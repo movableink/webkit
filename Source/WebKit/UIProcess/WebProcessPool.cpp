@@ -1044,6 +1044,11 @@ void WebProcessPool::initializeNewWebProcess(WebProcessProxy& process, WebsiteDa
     process.sendAudioComponentRegistrations();
 #endif
 
+#if PLATFORM(IOS) && ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
+    if (WTF::CocoaApplication::isIBooks())
+        registerAssetFonts(process);
+#endif
+
     registerDisplayConfigurationCallback();
     registerHighDynamicRangeChangeCallback();
 }
