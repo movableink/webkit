@@ -24,14 +24,11 @@
 #include "AnimationFrameRate.h"
 #include "BackForwardItemIdentifier.h"
 #include "Color.h"
-#include "ContentSecurityPolicy.h"
 #include "FindOptions.h"
 #include "FrameLoaderTypes.h"
 #include "IntRectHash.h"
 #include "KeyboardScrollingAnimator.h"
 #include "LayoutMilestone.h"
-#include "LayoutRect.h"
-#include "LengthBox.h"
 #include "LoadSchedulingMode.h"
 #include "LocalFrame.h"
 #include "MediaProducer.h"
@@ -41,7 +38,6 @@
 #include "RegistrableDomain.h"
 #include "ScriptTelemetryCategory.h"
 #include "ScrollTypes.h"
-#include "ShouldRelaxThirdPartyCookieBlocking.h"
 #include "Supplementable.h"
 #include "Timer.h"
 #include "UserInterfaceLayoutDirection.h"
@@ -136,6 +132,7 @@ class InspectorClient;
 class InspectorController;
 class IntSize;
 class WebRTCProvider;
+class LayoutRect;
 class LoginStatus;
 class LowPowerModeNotifier;
 class MediaCanStartListener;
@@ -223,6 +220,7 @@ using SharedStringHash = uint32_t;
 enum class ActivityState : uint16_t;
 enum class AdvancedPrivacyProtections : uint16_t;
 enum class CanWrap : bool;
+enum class ContentSecurityPolicyModeForExtension : uint8_t;
 enum class DidWrap : bool;
 enum class DisabledAdaptations : uint8_t;
 enum class DocumentClass : uint16_t;
@@ -235,6 +233,7 @@ enum class MediaProducerMediaCaptureKind : uint8_t;
 enum class MediaProducerMutedState : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
 enum class ScriptTelemetryCategory : uint8_t;
+enum class ShouldRelaxThirdPartyCookieBlocking : bool;
 enum class ShouldTreatAsContinuingLoad : uint8_t;
 enum class VisibilityState : bool;
 
@@ -1639,7 +1638,7 @@ private:
     bool m_isTakingSnapshotsForApplicationSuspension { false };
     bool m_loadsSubresources { true };
     bool m_canUseCredentialStorage { true };
-    ShouldRelaxThirdPartyCookieBlocking m_shouldRelaxThirdPartyCookieBlocking { ShouldRelaxThirdPartyCookieBlocking::No };
+    ShouldRelaxThirdPartyCookieBlocking m_shouldRelaxThirdPartyCookieBlocking;
     LoadSchedulingMode m_loadSchedulingMode { LoadSchedulingMode::Direct };
     bool m_hasBeenNotifiedToInjectUserScripts { false };
     bool m_isServiceWorkerPage { false };
@@ -1679,7 +1678,7 @@ private:
     WeakPtr<AccessibilityRootAtspi> m_accessibilityRootObject;
 #endif
 
-    ContentSecurityPolicyModeForExtension m_contentSecurityPolicyModeForExtension { ContentSecurityPolicyModeForExtension::None };
+    ContentSecurityPolicyModeForExtension m_contentSecurityPolicyModeForExtension;
 
     Ref<BadgeClient> m_badgeClient;
     Ref<HistoryItemClient> m_historyItemClient;
