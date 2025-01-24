@@ -37,6 +37,7 @@ public:
     CacheStorageRecordInformation(NetworkCache::Key&&, double insertionTime, uint64_t identifier, uint64_t updateResponseCounter, uint64_t size, URL&&, bool hasVaryStar, HashMap<String, String>&& varyHeaders);
     void updateVaryHeaders(const WebCore::ResourceRequest&, const WebCore::ResourceResponse::CrossThreadData&);
     CacheStorageRecordInformation isolatedCopy() &&;
+    CacheStorageRecordInformation isolatedCopy() const &;
 
     const NetworkCache::Key& key() const { return m_key; }
     double insertionTime() const { return m_insertionTime; }

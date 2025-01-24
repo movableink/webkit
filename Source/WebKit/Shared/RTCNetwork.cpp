@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RTCNetwork.h"
 
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/StdLibExtras.h>
 
 #if USE(LIBWEBRTC)
@@ -61,6 +62,23 @@ rtc::Network RTCNetwork::value() const
     network.SetIPs(WTFMove(vector), true);
 
     return network;
+}
+
+RTCNetwork RTCNetwork::isolatedCopy() const
+{
+    return RTCNetwork {
+        crossThreadCopy(name),
+        crossThreadCopy(description),
+        prefix,
+        prefixLength,
+        type,
+        id,
+        preference,
+        active,
+        ignored,
+        scopeID,
+        crossThreadCopy(ips)
+    };
 }
 
 namespace RTC::Network {

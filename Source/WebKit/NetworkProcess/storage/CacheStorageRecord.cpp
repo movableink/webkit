@@ -74,6 +74,20 @@ CacheStorageRecordInformation CacheStorageRecordInformation::isolatedCopy() &&
     };
 }
 
+CacheStorageRecordInformation CacheStorageRecordInformation::isolatedCopy() const &
+{
+    return {
+        crossThreadCopy(m_key),
+        m_insertionTime,
+        m_identifier,
+        m_updateResponseCounter,
+        m_size,
+        crossThreadCopy(m_url),
+        m_hasVaryStar,
+        crossThreadCopy(m_varyHeaders)
+    };
+}
+
 void CacheStorageRecordInformation::setURL(URL&& url)
 {
     RELEASE_ASSERT(!url.string().impl()->isAtom());

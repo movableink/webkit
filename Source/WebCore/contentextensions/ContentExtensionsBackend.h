@@ -30,6 +30,7 @@
 #include "CompiledContentExtension.h"
 #include "ContentExtension.h"
 #include "ContentExtensionRule.h"
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
@@ -84,7 +85,15 @@ public:
 
     WEBCORE_EXPORT static bool shouldBeMadeSecure(const URL&);
 
+    ContentExtensionsBackend() = default;
+    ContentExtensionsBackend isolatedCopy() && { return ContentExtensionsBackend { crossThreadCopy(WTFMove(m_contentExtensions)) }; }
+
 private:
+    explicit ContentExtensionsBackend(UncheckedKeyHashMap<String, Ref<ContentExtension>>&& contentExtensions)
+        : m_contentExtensions(WTFMove(contentExtensions))
+    {
+    }
+
     ActionsFromContentRuleList actionsFromContentRuleList(const ContentExtension&, const String& urlString, const ResourceLoadInfo&, ResourceFlags) const;
 
     UncheckedKeyHashMap<String, Ref<ContentExtension>> m_contentExtensions;

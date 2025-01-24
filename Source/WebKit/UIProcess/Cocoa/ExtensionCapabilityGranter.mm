@@ -64,6 +64,8 @@ static PlatformGrant grantCapability(const PlatformCapability& capability, const
 struct PlatformExtensionCapabilityGrants {
     PlatformGrant gpuProcessGrant;
     PlatformGrant webProcessGrant;
+
+    PlatformExtensionCapabilityGrants isolatedCopy() const & { return { gpuProcessGrant, webProcessGrant }; }
 };
 
 enum class ExtensionCapabilityGrantError: uint8_t {
