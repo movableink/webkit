@@ -52,8 +52,7 @@ void AnimationEffect::setAnimation(WebAnimation* animation)
         return;
 
     m_animation = animation;
-    if (animation)
-        animation->updateRelevance();
+    m_timingDidMutate = true;
 }
 
 EffectTiming AnimationEffect::getBindingsTiming() const

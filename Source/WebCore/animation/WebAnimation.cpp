@@ -228,7 +228,6 @@ void WebAnimation::setEffectInternal(RefPtr<AnimationEffect>&& newEffect, bool d
         oldEffect->setAnimation(nullptr);
         if (!doNotRemoveFromTimeline && previousTarget && previousTarget != newTarget)
             previousTarget->animationWasRemoved(*this);
-        updateRelevance();
     }
 
     if (m_effect) {
@@ -236,6 +235,8 @@ void WebAnimation::setEffectInternal(RefPtr<AnimationEffect>&& newEffect, bool d
         if (newTarget && previousTarget != newTarget)
             newTarget->animationWasAdded(*this);
     }
+
+    updateRelevance();
 
     InspectorInstrumentation::didSetWebAnimationEffect(*this);
 }

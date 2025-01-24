@@ -246,6 +246,7 @@ private:
     void computeHasReferenceFilter();
     void computeHasSizeDependentTransform();
     void analyzeAcceleratedProperties();
+    void updateIsAssociatedWithProgressBasedTimeline();
 
     void abilityToBeAcceleratedDidChange();
     void updateAcceleratedAnimationIfNecessary();

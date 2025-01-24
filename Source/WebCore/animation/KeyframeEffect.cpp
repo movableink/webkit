@@ -1219,9 +1219,9 @@ void KeyframeEffect::computeStackingContextImpact()
     }
 }
 
-void KeyframeEffect::animationTimelineDidChange(const AnimationTimeline* timeline)
+void KeyframeEffect::updateIsAssociatedWithProgressBasedTimeline()
 {
-    AnimationEffect::animationTimelineDidChange(timeline);
+    auto wasAssociatedWithProgressBasedTimeline = m_isAssociatedWithProgressBasedTimeline;
 
     m_isAssociatedWithProgressBasedTimeline = [&] {
         if (RefPtr animation = this->animation()) {
@@ -1230,7 +1230,16 @@ void KeyframeEffect::animationTimelineDidChange(const AnimationTimeline* timelin
         }
         return false;
     }();
-    updateAcceleratedAnimationIfNecessary();
+
+    if (wasAssociatedWithProgressBasedTimeline != m_isAssociatedWithProgressBasedTimeline)
+        updateAcceleratedAnimationIfNecessary();
+}
+
+void KeyframeEffect::animationTimelineDidChange(const AnimationTimeline* timeline)
+{
+    AnimationEffect::animationTimelineDidChange(timeline);
+
+    updateIsAssociatedWithProgressBasedTimeline();
 
     auto target = targetStyleable();
     if (!target)
@@ -1279,12 +1288,17 @@ void KeyframeEffect::updateEffectStackMembership()
 void KeyframeEffect::setAnimation(WebAnimation* animation)
 {
     bool animationChanged = animation != this->animation();
+
     AnimationEffect::setAnimation(animation);
-    if (animationChanged) {
-        if (m_animationType == WebAnimationType::CSSAnimation)
-            clearBlendingKeyframes();
-        updateEffectStackMembership();
-    }
+
+    if (!animationChanged)
+        return;
+
+    if (m_animationType == WebAnimationType::CSSAnimation)
+        clearBlendingKeyframes();
+    updateEffectStackMembership();
+
+    updateIsAssociatedWithProgressBasedTimeline();
 }
 
 const std::optional<const Styleable> KeyframeEffect::targetStyleable() const
