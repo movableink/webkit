@@ -122,8 +122,6 @@ private:
 
     void setBodyDataFrom(const CachedResource&) final;
 
-    bool isPDFResource() const;
-
     void createImage();
     void clearImage();
     // If not null, changeRect is the changed part of the image.

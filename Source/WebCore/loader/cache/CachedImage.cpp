@@ -378,11 +378,6 @@ void CachedImage::checkShouldPaintBrokenImage()
     m_shouldPaintBrokenImage = m_loader->frameLoader()->client().shouldPaintBrokenImage(url());
 }
 
-bool CachedImage::isPDFResource() const
-{
-    return Image::isPDFResource(response().mimeType(), url());
-}
-
 void CachedImage::clear()
 {
     destroyDecodedData();
