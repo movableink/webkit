@@ -112,7 +112,7 @@ struct ContentRuleListMetaData {
     uint32_t unused32bits { false };
     uint64_t unused64bits1 { 0 };
     uint64_t unused64bits2 { 0 }; // Additional space on disk reserved so we can add something without incrementing the version number.
-    
+
     size_t fileSize() const
     {
         return headerSize(version)
@@ -267,7 +267,7 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
             ASSERT(!metaData.topURLFiltersBytecodeSize);
             ASSERT(!metaData.frameURLFiltersBytecodeSize);
         }
-        
+
         void writeSource(WTF::String&& sourceJSON) final
         {
             ASSERT(!m_sourceWritten);
@@ -304,7 +304,7 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
             m_urlFiltersBytecodeWritten += bytecode.size();
             writeToFile(WebKit::NetworkCache::Data(bytecode.span()));
         }
-        
+
         void writeTopURLFiltersBytecode(Vector<DFABytecode>&& bytecode) final
         {
             ASSERT(!m_frameURLFiltersBytecodeWritten);
@@ -317,7 +317,7 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
             m_frameURLFiltersBytecodeWritten += bytecode.size();
             writeToFile(WebKit::NetworkCache::Data(bytecode.span()));
         }
-        
+
         void finalize() final
         {
             m_metaData.sourceSize = m_sourceWritten;
@@ -331,9 +331,10 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
                 closeFile(m_fileHandle);
                 m_fileError = true;
             }
+
             writeToFile(header);
         }
-        
+
         bool hadErrorWhileWritingToFile() { return m_fileError; }
 
     private:
@@ -341,6 +342,7 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
         {
             writeToFile(WebKit::NetworkCache::Data(asByteSpan(value)));
         }
+
         void writeToFile(const WebKit::NetworkCache::Data& data)
         {
             if (!m_fileError && !writeDataToFile(data, m_fileHandle)) {
@@ -348,7 +350,7 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
                 m_fileError = true;
             }
         }
-        
+
         PlatformFileHandle m_fileHandle;
         ContentRuleListMetaData& m_metaData;
         size_t m_sourceWritten { 0 };
@@ -364,9 +366,10 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
         WTFLogAlways("Content Rule List compiling failed: Opening temporary file failed.");
         return makeUnexpected(ContentRuleListStore::Error::CompileFailed);
     }
-    
+
     std::array<uint8_t, CurrentVersionFileHeaderSize> invalidHeader;
     invalidHeader.fill(0xFF);
+
     // This header will be rewritten in CompilationClient::finalize.
     if (writeToFile(temporaryFileHandle, invalidHeader) == -1) {
         WTFLogAlways("Content Rule List compiling failed: Writing header to file failed.");
@@ -382,6 +385,7 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
         closeFile(temporaryFileHandle);
         return makeUnexpected(compilerError);
     }
+
     if (compilationClient.hadErrorWhileWritingToFile()) {
         WTFLogAlways("Content Rule List compiling failed: Writing to file failed.");
         closeFile(temporaryFileHandle);
@@ -445,20 +449,29 @@ static WTF::String getContentRuleListSourceFromMappedFile(const MappedData& mapp
 {
     ASSERT(!RunLoop::isMain());
 
+    if (mappedData.metaData.version == std::numeric_limits<decltype(mappedData.metaData.version)>::max()) {
+        WTFLogAlways("Content Rule List source recovery failed: Version is invalid.");
+        return { };
+    }
+
     if (mappedData.metaData.version < 9) {
         WTFLogAlways("Content Rule List source recovery failed: Version is too old to recover the original JSON source from disk.");
         return { };
     }
 
     auto sourceSizeBytes = mappedData.metaData.sourceSize;
-    if (!sourceSizeBytes) {
+    if (!sourceSizeBytes || sourceSizeBytes == std::numeric_limits<decltype(sourceSizeBytes)>::max()) {
         WTFLogAlways("Content Rule List source recovery failed: No source size specified; cannot retrieve content.");
         return { };
     }
 
-    auto dataSpan = mappedData.data.span();
     auto headerSizeBytes = headerSize(mappedData.metaData.version);
+    if (headerSizeBytes > std::numeric_limits<decltype(headerSizeBytes)>::max() - sourceSizeBytes) {
+        WTFLogAlways("Content Rule List source recovery failed: Source size is invalid and would overflow.");
+        return { };
+    }
 
+    auto dataSpan = mappedData.data.span();
     if (dataSpan.size() < headerSizeBytes + sourceSizeBytes) {
         WTFLogAlways("Content Rule List source recovery failed: Data size is smaller than the header and source size; data is invalid.");
         return { };
@@ -629,7 +642,7 @@ void ContentRuleListStore::invalidateContentRuleListVersion(const WTF::String& i
     closeFile(file);
 }
 
-void ContentRuleListStore::corruptContentRuleList(const WTF::String& identifier, bool usingCurrentVersion)
+void ContentRuleListStore::corruptContentRuleListHeader(const WTF::String& identifier, bool usingCurrentVersion)
 {
     auto file = openFile(constructedPath(m_storePath, identifier), FileOpenMode::ReadWrite);
     if (file == invalidPlatformFileHandle)
@@ -640,6 +653,21 @@ void ContentRuleListStore::corruptContentRuleList(const WTF::String& identifier,
     ContentRuleListMetaData invalidHeader = { CurrentContentRuleListFileVersion - 1, random.getUint64(), random.getUint64(), random.getUint64(), random.getUint64(), random.getUint64() };
     if (usingCurrentVersion)
         invalidHeader.version = CurrentContentRuleListFileVersion;
+
+    auto bytesWritten = writeToFile(file, asByteSpan(invalidHeader));
+    ASSERT_UNUSED(bytesWritten, bytesWritten == sizeof(invalidHeader));
+
+    closeFile(file);
+}
+
+void ContentRuleListStore::invalidateContentRuleListHeader(const WTF::String& identifier)
+{
+    auto file = openFile(constructedPath(m_storePath, identifier), FileOpenMode::ReadWrite);
+    if (file == invalidPlatformFileHandle)
+        return;
+
+    std::array<uint8_t, CurrentVersionFileHeaderSize> invalidHeader;
+    invalidHeader.fill(0xFF);
 
     auto bytesWritten = writeToFile(file, asByteSpan(invalidHeader));
     ASSERT_UNUSED(bytesWritten, bytesWritten == sizeof(invalidHeader));
