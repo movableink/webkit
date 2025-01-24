@@ -86,7 +86,6 @@ public:
     void addStyleSheetCandidateNode(Node&, bool createdByParser);
     void removeStyleSheetCandidateNode(Node&);
 
-    String preferredStylesheetSetName() const { return m_preferredStylesheetSetName; }
     void setPreferredStylesheetSetName(const String&);
 
     void addPendingSheet(const Element&);
