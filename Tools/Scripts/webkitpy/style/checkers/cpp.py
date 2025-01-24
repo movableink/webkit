@@ -3493,6 +3493,10 @@ def check_safer_cpp(clean_lines, line_number, error):
     if uses_deprecated_timer_smart_pointer_exception:
         error(line_number, 'safercpp/timer_exception', 4, "Do not add IsDeprecatedTimerSmartPointerException.")
 
+    uses_atoi = search(r'atoi\(', line)
+    if uses_atoi:
+        error(line_number, 'safercpp/atoi', 4, "Use parseInteger<int>() instead of atoi().")
+
     uses_memset = search(r'memset\(', line)
     if uses_memset:
         error(line_number, 'safercpp/memset', 4, "Use memsetSpan() / zeroSpan() instead of memset().")
@@ -4864,6 +4868,7 @@ class CppChecker(object):
         'runtime/wtf_make_unique',
         'runtime/wtf_move',
         'runtime/wtf_never_destroyed',
+        'safercpp/atoi',
         'safercpp/memchr',
         'safercpp/memcmp',
         'safercpp/memcpy',

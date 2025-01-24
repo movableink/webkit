@@ -6269,6 +6269,11 @@ class WebKitStyleTest(CppStyleTestBase):
             'foo.cpp')
 
         self.assert_lint(
+            'int number = atoi(foo);',
+            'Use parseInteger<int>() instead of atoi().  [safercpp/atoi] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
             'memset(foo, 0);',
             'Use memsetSpan() / zeroSpan() instead of memset().  [safercpp/memset] [4]',
             'foo.cpp')

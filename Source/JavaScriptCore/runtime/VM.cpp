@@ -143,6 +143,7 @@
 #include <wtf/SystemTracing.h>
 #include <wtf/Threading.h>
 #include <wtf/text/AtomStringTable.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 #if ENABLE(C_LOOP)
 #include "CLoopStackInlines.h"
@@ -174,11 +175,9 @@ static bool enableAssembler()
     if (!Options::useJIT())
         return false;
 
-    char* canUseJITString = getenv("JavaScriptCoreUseJIT");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    if (canUseJITString && !atoi(canUseJITString))
+    auto canUseJITString = span(getenv("JavaScriptCoreUseJIT"));
+    if (canUseJITString.data() && !parseInteger<int>(canUseJITString).value_or(0))
         return false;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     ExecutableAllocator::initializeUnderlyingAllocator();
     if (!ExecutableAllocator::singleton().isValid()) {
