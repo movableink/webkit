@@ -174,7 +174,7 @@ void RenderVideo::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
 
     // The intrinsic size is now that of the image, but in case we already had the
     // intrinsic size of the video we call this here to restore the video size.
-    if (updateIntrinsicSize())
+    if (updateIntrinsicSize() || selfNeedsLayout())
         invalidateLineLayout();
 }
 
