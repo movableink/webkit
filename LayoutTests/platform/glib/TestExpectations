@@ -3786,6 +3786,9 @@ imported/w3c/web-platform-tests/preload/preload-type-match.html [ DumpJSConsoleL
 # Test causes OOM in the EWS release bots
 webkit.org/b/283558 fast/css-custom-paint/out-of-memory-while-adding-worklet-module.html [ Skip ]
 
+# Test expected to crash in Debug, but since we are running bots with enabled assertions, skip there too
+fast/multicol/out-of-flow-child-crash-with-fragments.html [ Skip ]
+
 # Tests timing out in Debug only.
 [ Debug ] http/tests/xmlhttprequest/simple-cross-origin-progress-events.html [ Pass Timeout ]
 [ Debug ] imported/blink/transitions/remove-accelerated-transition.html [ Timeout ]
