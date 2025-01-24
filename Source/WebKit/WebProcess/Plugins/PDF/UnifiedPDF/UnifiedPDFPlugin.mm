@@ -2570,8 +2570,13 @@ void UnifiedPDFPlugin::performContextMenuAction(ContextMenuItemTag tag, const In
         }
         break;
     case ContextMenuItemTag::NextPage: {
-        auto currentPageIndex = indexForCurrentPageInView();
-        auto pageCount = m_documentLayout.pageCount();
+        auto maybePageIndex = m_presentationController->pageIndexForCurrentView(PDFPresentationController::AnchorPoint::TopLeft);
+        if (!maybePageIndex)
+            break;
+
+        auto currentPageIndex = *maybePageIndex;
+        auto bottomRightInDocumentSpace = convertDown(CoordinateSpace::Plugin, CoordinateSpace::PDFDocumentLayout, FloatPoint { size() });
+        auto bottomRightPageIndex = m_presentationController->nearestPageIndexForDocumentPoint(bottomRightInDocumentSpace);
         auto pagesPerRow = m_documentLayout.pagesPerRow();
 
         auto nextPageIsOnNextRow = [currentPageIndex, &documentLayout = m_documentLayout] {
@@ -2580,10 +2585,19 @@ void UnifiedPDFPlugin::performContextMenuAction(ContextMenuItemTag tag, const In
             return documentLayout.isRightPageIndex(currentPageIndex);
         };
 
-        if (!m_documentLayout.isLastPageIndex(currentPageIndex) && nextPageIsOnNextRow())
-            revealPage(currentPageIndex + 1);
-        else if (pageCount > pagesPerRow && currentPageIndex < pageCount - pagesPerRow)
-            revealPage(currentPageIndex + pagesPerRow);
+
+        if (currentPageIndex >= m_documentLayout.lastPageIndex())
+            break;
+
+        auto landingPageIndex = std::max(bottomRightPageIndex, currentPageIndex + (nextPageIsOnNextRow() ?: pagesPerRow));
+
+        while (landingPageIndex <= m_documentLayout.lastPageIndex()) {
+            if (revealPage(landingPageIndex))
+                break;
+            if (landingPageIndex + pagesPerRow > m_documentLayout.lastPageIndex())
+                break;
+            landingPageIndex += pagesPerRow;
+        }
         break;
     }
     case ContextMenuItemTag::PreviousPage: {
