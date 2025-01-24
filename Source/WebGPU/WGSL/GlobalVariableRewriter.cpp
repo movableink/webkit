@@ -878,8 +878,11 @@ const Type* RewriteGlobalVariables::packArrayType(const Types::Array* arrayType)
 {
     auto* structType = std::get_if<Types::Struct>(arrayType->element);
     if (!structType) {
-        if (arrayType->element->packing() & Packing::Vec3)
+        if (arrayType->element->packing() & Packing::Vec3) {
+            m_shaderModule.setUsesUnpackArray();
+            m_shaderModule.setUsesPackArray();
             m_shaderModule.setUsesPackedVec3();
+        }
         return nullptr;
     }
 
