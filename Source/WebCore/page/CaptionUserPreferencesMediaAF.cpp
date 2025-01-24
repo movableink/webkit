@@ -336,12 +336,7 @@ String CaptionUserPreferencesMediaAF::captionsWindowCSS() const
     CGFloat opacity = MACaptionAppearanceGetWindowOpacity(kMACaptionAppearanceDomainUser, &behavior);
     if (!important)
         important = behaviorShouldNotBeOverriden(behavior);
-    String windowStyle = colorPropertyCSS(CSSPropertyBackgroundColor, windowColor.colorWithAlpha(opacity), important);
-
-    if (!opacity)
-        return windowStyle;
-
-    return makeString(windowStyle, nameLiteral(CSSPropertyPadding), ": .4em !important;"_s);
+    return colorPropertyCSS(CSSPropertyBackgroundColor, windowColor.colorWithAlpha(opacity), important);
 }
 
 String CaptionUserPreferencesMediaAF::captionsBackgroundCSS() const
@@ -402,6 +397,7 @@ String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
 
     StringBuilder builder;
     appendCSS(builder, CSSPropertyBorderRadius, behaviorShouldNotBeOverriden(behavior), radius, "px"_s);
+    appendCSS(builder, CSSPropertyPadding, behaviorShouldNotBeOverriden(behavior), radius / 4, "px"_s);
     return builder.toString();
 }
 
