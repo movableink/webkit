@@ -635,13 +635,13 @@ bool RenderFragmentedFlow::fragmentInRange(const RenderFragmentContainer* target
 bool RenderFragmentedFlow::objectShouldFragmentInFlowFragment(const RenderObject* object, const RenderFragmentContainer* fragment) const
 {
     ASSERT(object);
-    ASSERT(fragment);
+    ASSERT(fragment || isSkippedContent());
     
     RenderFragmentedFlow* fragmentedFlow = object->enclosingFragmentedFlow();
     if (fragmentedFlow != this)
         return false;
 
-    if (!m_fragmentList.contains(*fragment))
+    if (!fragment || !m_fragmentList.contains(*fragment))
         return false;
     
     RenderFragmentContainer* enclosingBoxStartFragment = nullptr;
@@ -797,8 +797,8 @@ bool RenderFragmentedFlow::addForcedFragmentBreak(const RenderBlock* block, Layo
 
 void RenderFragmentedFlow::collectLayerFragments(LayerFragments& layerFragments, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect)
 {
-    ASSERT(!m_fragmentsInvalidated);
-    
+    ASSERT(!m_fragmentsInvalidated || isSkippedContent());
+
     for (auto& fragment : m_fragmentList)
         fragment.collectLayerFragments(layerFragments, layerBoundingBox, dirtyRect);
 }
