@@ -266,6 +266,7 @@ public:
         // Note that this check works for table initializers too, because no globals are registered when the table section is read and the count is 0.
         WASM_COMPILE_FAIL_IF(index >= m_info.globals.size(), "get_global's index ", index, " exceeds the number of globals ", m_info.globals.size());
         WASM_COMPILE_FAIL_IF(m_info.globals[index].mutability != Mutability::Immutable, "get_global import kind index ", index, " is mutable ");
+        WASM_COMPILE_FAIL_IF(m_info.globals[index].initializationType != GlobalInformation::InitializationType::IsImport, "get_global import kind index ", index, " is non-import");
 
         if (m_mode == Mode::Evaluate)
             result = ConstExprValue(m_instance->loadI64Global(index));

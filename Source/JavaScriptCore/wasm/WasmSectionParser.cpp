@@ -740,6 +740,7 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, bool& isExtendedConstantExpre
 
         WASM_PARSER_FAIL_IF(index >= m_info->globals.size(), "get_global's index "_s, index, " exceeds the number of globals "_s, m_info->globals.size());
         WASM_PARSER_FAIL_IF(m_info->globals[index].mutability != Mutability::Immutable, "get_global import kind index "_s, index, " is mutable "_s);
+        WASM_PARSER_FAIL_IF(m_info->globals[index].initializationType != GlobalInformation::InitializationType::IsImport, "get_global import kind index ", index, " is non-import");
 
         resultType = m_info->globals[index].type;
         bitsOrImportNumber = index;

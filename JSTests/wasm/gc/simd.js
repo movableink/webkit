@@ -405,14 +405,18 @@ function testJSAPI() {
 }
 
 function testSIMDGlobal() {
-  instantiate(`
-    (module
-      (global v128 (v128.const i64x2 0 0))
-      (global v128 (v128.const i64x2 1 1))
-      (global v128 (v128.const i64x2 2 2))
-      (global v128 (global.get 1))
-      (global v128 (global.get 3)))
-  `);
+  assert.throws(
+    () => compile(`
+      (module
+        (global v128 (v128.const i64x2 0 0))
+        (global v128 (v128.const i64x2 1 1))
+        (global v128 (v128.const i64x2 2 2))
+        (global v128 (global.get 1))
+        (global v128 (global.get 3)))
+    `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't parse at byte 82: get_global import kind index 1 is non-import"
+  );
 }
 
 testSIMDStruct();
