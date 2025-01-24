@@ -2236,7 +2236,7 @@ void RenderObject::removeRareData()
 RenderObject::RenderObjectRareData::RenderObjectRareData() = default;
 RenderObject::RenderObjectRareData::~RenderObjectRareData() = default;
 
-bool RenderObject::hasNonEmptyVisibleRectRespectingParentFrames() const
+bool RenderObject::hasEmptyVisibleRectRespectingParentFrames() const
 {
     auto enclosingFrameRenderer = [] (const RenderObject& renderer) {
         auto* ownerElement = renderer.document().ownerElement();

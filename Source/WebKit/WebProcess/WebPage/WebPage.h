@@ -205,6 +205,7 @@ class PrintContext;
 class Range;
 class RegistrableDomain;
 class RenderImage;
+class RenderObject;
 class Report;
 class ResourceRequest;
 class ResourceResponse;
@@ -875,6 +876,7 @@ public:
     void updateHeaderAndFooterLayersForDeviceScaleChange(float scaleFactor);
 
     bool isTransparentOrFullyClipped(const WebCore::Node&) const;
+    bool isTransparentOrFullyClipped(const WebCore::RenderObject&) const;
 #endif
 
     void didUpdateRendering();

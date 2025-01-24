@@ -769,7 +769,7 @@ public:
     // Returns the object containing this one. Can be different from parent for positioned elements.
     // If repaintContainer and repaintContainerSkipped are not null, on return *repaintContainerSkipped
     // is true if the renderer returned is an ancestor of repaintContainer.
-    RenderElement* container() const;
+    WEBCORE_EXPORT RenderElement* container() const;
     RenderElement* container(const RenderLayerModelObject* repaintContainer, bool& repaintContainerSkipped) const;
 
     RenderBoxModelObject* offsetParent() const;
@@ -1054,7 +1054,7 @@ public:
     virtual std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
     virtual std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
 
-    WEBCORE_EXPORT bool hasNonEmptyVisibleRectRespectingParentFrames() const;
+    WEBCORE_EXPORT bool hasEmptyVisibleRectRespectingParentFrames() const;
 
     virtual unsigned length() const { return 1; }
 

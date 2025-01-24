@@ -576,12 +576,49 @@ bool WebPage::isTransparentOrFullyClipped(const Node& node) const
     CheckedPtr renderer = node.renderer();
     if (!renderer)
         return false;
+    return isTransparentOrFullyClipped(*renderer);
+}
 
-    auto* enclosingLayer = renderer->enclosingLayer();
+bool WebPage::isTransparentOrFullyClipped(const RenderObject& renderer) const
+{
+    CheckedPtr enclosingLayer = renderer.enclosingLayer();
     if (enclosingLayer && enclosingLayer->isTransparentRespectingParentFrames())
         return true;
 
-    return renderer->hasNonEmptyVisibleRectRespectingParentFrames();
+    return renderer.hasEmptyVisibleRectRespectingParentFrames();
+}
+
+static RenderObject* closestCommonContainerInRenderTree(const Position& start, const Position& end)
+{
+    RefPtr startContainer = start.containerNode();
+    if (!startContainer)
+        return nullptr;
+
+    RefPtr endContainer = end.containerNode();
+    if (!endContainer)
+        return nullptr;
+
+    CheckedPtr startRenderer = startContainer->renderer();
+    if (!startRenderer)
+        return nullptr;
+
+    CheckedPtr endRenderer = endContainer->renderer();
+    if (!endRenderer)
+        return nullptr;
+
+    if (startRenderer == endRenderer)
+        return startRenderer.get();
+
+    UncheckedKeyHashSet<CheckedPtr<RenderElement>> ancestorsOfStart;
+    for (CheckedPtr container = startRenderer->container(); container; container = container->container())
+        ancestorsOfStart.add(container);
+
+    for (CheckedPtr container = endRenderer->container(); container; container = container->container()) {
+        if (ancestorsOfStart.contains(container))
+            return container.get();
+    }
+
+    return nullptr;
 }
 
 void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState& result) const
@@ -668,7 +705,7 @@ void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState&
         result.visualData->editableRootBounds = rootViewInteractionBounds(Ref { *editableRootOrFormControl });
 #endif
     } else if (result.selectionIsRange) {
-        if (RefPtr ancestorContainer = commonInclusiveAncestor(selection.start(), selection.end()))
+        if (CheckedPtr ancestorContainer = closestCommonContainerInRenderTree(selection.start(), selection.end()))
             postLayoutData.selectionIsTransparentOrFullyClipped = isTransparentOrFullyClipped(*ancestorContainer);
     }
 
