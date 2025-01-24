@@ -3137,7 +3137,7 @@ instructionLabel(_struct_set)
     operationCallMayThrow(macro() cCall4(_ipint_extern_struct_set) end)
 
     loadb IPInt::StructGetSetMetadata::length[MC], t0
-    addp StackValueSize, sp
+    addp 2 * StackValueSize, sp
     advancePCByReg(t0)
     advanceMC(constexpr (sizeof(IPInt::StructGetSetMetadata)))
     nextIPIntInstruction()
@@ -3256,7 +3256,6 @@ instructionLabel(_array_set)
     operationCallMayThrow(macro() cCall3(_ipint_extern_array_set) end)
 
     addq StackValueSize*3, sp
-    pushQuad(r1)
 
     loadb IPInt::ArrayGetSetMetadata::length[MC], t0
     advancePCByReg(t0)
