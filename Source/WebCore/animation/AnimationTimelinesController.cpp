@@ -27,6 +27,7 @@
 #include "AnimationTimelinesController.h"
 
 #include "AnimationEventBase.h"
+#include "CSSAnimation.h"
 #include "CSSTransition.h"
 #include "Document.h"
 #include "DocumentTimeline.h"
