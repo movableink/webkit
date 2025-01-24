@@ -258,9 +258,11 @@ void RemoteScrollingCoordinatorProxyIOS::establishLayerTreeScrollingRelations(co
 
         for (auto overflowNodeID : positionedNode->relatedOverflowScrollingNodes()) {
             auto* node = scrollingTree()->nodeForID(overflowNodeID);
-            MESSAGE_CHECK(is<ScrollingTreeOverflowScrollingNode>(node));
-            auto* overflowNode = downcast<ScrollingTreeOverflowScrollingNode>(node);
-            stationaryScrollContainerIDs.append(*RemoteLayerTreeNode::layerID(static_cast<CALayer*>(overflowNode->scrollContainerLayer())));
+            auto* overflowNode = dynamicDowncast<ScrollingTreeOverflowScrollingNode>(node);
+            MESSAGE_CHECK(overflowNode);
+            auto layerID = RemoteLayerTreeNode::layerID(static_cast<CALayer*>(overflowNode->scrollContainerLayer()));
+            MESSAGE_CHECK(layerID);
+            stationaryScrollContainerIDs.append(*layerID);
         }
 
         if (auto* layerNode = RemoteLayerTreeNode::forCALayer(positionedNode->layer())) {
@@ -271,8 +273,8 @@ void RemoteScrollingCoordinatorProxyIOS::establishLayerTreeScrollingRelations(co
 
     for (auto& scrollProxyNode : scrollingTree()->activeOverflowScrollProxyNodes()) {
         auto* node = scrollingTree()->nodeForID(scrollProxyNode->overflowScrollingNodeID());
-        MESSAGE_CHECK(is<ScrollingTreeOverflowScrollingNode>(node));
-        auto* overflowNode = downcast<ScrollingTreeOverflowScrollingNode>(node);
+        auto* overflowNode = dynamicDowncast<ScrollingTreeOverflowScrollingNode>(node);
+        MESSAGE_CHECK(overflowNode);
 
         if (auto* layerNode = RemoteLayerTreeNode::forCALayer(scrollProxyNode->layer())) {
             layerNode->setActingScrollContainerID(RemoteLayerTreeNode::layerID(static_cast<CALayer*>(overflowNode->scrollContainerLayer())));
