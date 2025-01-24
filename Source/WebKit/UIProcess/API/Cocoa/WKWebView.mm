@@ -369,6 +369,8 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
         if ([_screenTimeWebpageController respondsToSelector:@selector(setProfileIdentifier:)])
             [_screenTimeWebpageController setProfileIdentifier:[_configuration websiteDataStore].identifier.UUIDString];
 
+        [_screenTimeWebpageController setSuppressUsageRecording:![_configuration websiteDataStore].isPersistent];
+
         RetainPtr screenTimeView = [_screenTimeWebpageController view];
         [screenTimeView setTranslatesAutoresizingMaskIntoConstraints:NO];
         [self addSubview:screenTimeView.get()];

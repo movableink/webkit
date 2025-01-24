@@ -55,6 +55,31 @@ static RetainPtr<TestWKWebView> webViewForScreenTimeTests(WKWebViewConfiguration
     return adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 300) configuration:configuration]);
 }
 
+static void testSuppressUsageRecordingWithDataStore(RetainPtr<WKWebsiteDataStore>&& websiteDataStore, bool suppressUsageRecordingExpectation)
+{
+    __block bool done = false;
+    __block bool suppressUsageRecording = false;
+
+    InstanceMethodSwizzler swizzler {
+        PAL::getSTWebpageControllerClass(),
+        @selector(setSuppressUsageRecording:),
+        imp_implementationWithBlock(^(id object, bool value) {
+            suppressUsageRecording = value;
+            done = true;
+        })
+    };
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setWebsiteDataStore:websiteDataStore.get()];
+
+    RetainPtr webView = webViewForScreenTimeTests(configuration.get());
+    [webView synchronouslyLoadHTMLString:@""];
+
+    TestWebKitAPI::Util::run(&done);
+
+    EXPECT_EQ(suppressUsageRecordingExpectation, suppressUsageRecording);
+}
+
 @interface STWebpageController ()
 @property (setter=setURLIsBlocked:) BOOL URLIsBlocked;
 @end
@@ -220,4 +245,15 @@ TEST(ScreenTime, IdentifierString)
 
     EXPECT_WK_STREQ(identifier, uuidString.get());
 }
+
+TEST(ScreenTime, PersistentSession)
+{
+    testSuppressUsageRecordingWithDataStore([WKWebsiteDataStore defaultDataStore], false);
+}
+
+TEST(ScreenTime, NonPersistentSession)
+{
+    testSuppressUsageRecordingWithDataStore([WKWebsiteDataStore nonPersistentDataStore], true);
+}
+
 #endif
