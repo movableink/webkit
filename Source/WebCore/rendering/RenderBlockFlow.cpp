@@ -3214,10 +3214,12 @@ std::optional<LayoutUnit> RenderBlockFlow::inlineBlockBaseline(LineDirectionMode
     if (shouldApplyLayoutContainment())
         return RenderBlock::inlineBlockBaseline(lineDirection);
 
+    RefPtr element = this->element();
+    bool isHTMLFormControlElement = element && element->isFormControlElement();
     if (style().display() == DisplayType::InlineBlock) {
         // The baseline of an 'inline-block' is the baseline of its last line box in the normal flow, unless it has either no in-flow line boxes or if its 'overflow'
         // property has a computed value other than 'visible'. see https://www.w3.org/TR/CSS22/visudet.html
-        auto shouldSynthesizeBaseline = !style().isOverflowVisible() && !is<HTMLFormControlElement>(element()) && !isRenderTextControlInnerBlock();
+        auto shouldSynthesizeBaseline = !style().isOverflowVisible() && !isHTMLFormControlElement && !isRenderTextControlInnerBlock();
         if (shouldSynthesizeBaseline)
             return { };
     }
@@ -3247,10 +3249,24 @@ std::optional<LayoutUnit> RenderBlockFlow::inlineBlockBaseline(LineDirectionMode
         } else if (inlineLayout())
             lastBaseline = floorToInt(inlineLayout()->lastLineLogicalBaseline());
     }
-    // According to the CSS spec http://www.w3.org/TR/CSS21/visudet.html, we shouldn't be performing this min, but should
-    // instead be returning boxHeight directly. However, we feel that a min here is better behavior (and is consistent
-    // enough with the spec to not cause tons of breakages).
-    return LayoutUnit { style().overflowY() == Overflow::Visible ? lastBaseline : std::min(boxHeight, lastBaseline) };
+
+    if (style().overflowY() == Overflow::Visible)
+        return lastBaseline;
+
+    // While css-align-3 defines the last baseline form block containers which are
+    // scroll containers (with an initial baseline-source value) as the block-end margin
+    // edge, we instead maintain our legacy behavior for form controls and content
+    // inside form controls to maintain compatibility.
+    auto isInFormControl = [&] {
+        if (!element)
+            return false;
+        if (auto* shadowHost = element->shadowHost())
+            return shadowHost->isFormControlElement();
+        return false;
+    };
+    if (isHTMLFormControlElement || isInFormControl())
+        return std::min(boxHeight, lastBaseline);
+    return boxHeight;
 }
 
 LayoutUnit RenderBlockFlow::adjustEnclosingTopForPrecedingBlock(LayoutUnit top) const
