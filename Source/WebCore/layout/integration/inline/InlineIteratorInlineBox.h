@@ -51,6 +51,7 @@ public:
     LeafBoxIterator firstLeafBox() const;
     LeafBoxIterator lastLeafBox() const;
     LeafBoxIterator endLeafBox() const;
+    inline bool isSplit() const;
 
     IteratorRange<BoxIterator> descendants() const;
 };
@@ -81,6 +82,11 @@ InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent&, size_t b
 inline InlineBoxIterator InlineBox::iterator() const
 {
     return { *this };
+}
+
+inline bool InlineBox::isSplit() const
+{
+    return nextInlineBoxLineRightward() || nextInlineBoxLineLeftward();
 }
 
 }

@@ -185,11 +185,9 @@ void InlineBoxPainter::paintMask()
         return; // Don't paint anything while we wait for the image to load.
     }
 
-    bool hasSingleLine = !m_inlineBox.nextInlineBoxLineLeftward() && !m_inlineBox.nextInlineBoxLineRightward();
-
     BorderPainter borderPainter { renderer(), m_paintInfo };
 
-    if (hasSingleLine)
+    if (!m_inlineBox.isSplit())
         borderPainter.paintNinePieceImage(LayoutRect(adjustedPaintOffset, localRect.size()), renderer().style(), maskNinePieceImage, compositeOp);
     else {
         // We have a mask image that spans multiple lines.
@@ -259,8 +257,7 @@ void InlineBoxPainter::paintDecorations()
 
     BorderPainter borderPainter { renderer(), m_paintInfo };
 
-    bool hasSingleLine = !m_inlineBox.nextInlineBoxLineLeftward() && !m_inlineBox.nextInlineBoxLineRightward();
-    if (!hasBorderImage || hasSingleLine) {
+    if (!hasBorderImage || !m_inlineBox.isSplit()) {
         auto closedEdges = m_inlineBox.closedEdges();
         borderPainter.paintBorder(paintRect, style, BleedAvoidance::None, closedEdges);
         return;
@@ -307,11 +304,10 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
     auto* image = fillLayer.image();
     bool hasFillImage = image && image->canRender(&renderer(), renderer().style().usedZoom());
     bool hasFillImageOrBorderRadious = hasFillImage || renderer().style().hasBorderRadius();
-    bool hasSingleLine = !m_inlineBox.nextInlineBoxLineLeftward() && !m_inlineBox.nextInlineBoxLineRightward();
 
     BackgroundPainter backgroundPainter { renderer(), m_paintInfo };
 
-    if (!hasFillImageOrBorderRadious || hasSingleLine || m_isRootInlineBox) {
+    if (!hasFillImageOrBorderRadious || !m_inlineBox.isSplit() || m_isRootInlineBox) {
         backgroundPainter.paintFillLayer(color, fillLayer, rect, BleedAvoidance::None, m_inlineBox, { }, op);
         return;
     }
@@ -360,8 +356,7 @@ void InlineBoxPainter::paintBoxShadow(ShadowStyle shadowStyle, const LayoutRect&
 {
     BackgroundPainter backgroundPainter { renderer(), m_paintInfo };
 
-    bool hasSingleLine = !m_inlineBox.nextInlineBoxLineLeftward() && !m_inlineBox.nextInlineBoxLineRightward();
-    if (hasSingleLine || m_isRootInlineBox) {
+    if (!m_inlineBox.isSplit() || m_isRootInlineBox) {
         backgroundPainter.paintBoxShadow(paintRect, style(), shadowStyle);
         return;
     }
