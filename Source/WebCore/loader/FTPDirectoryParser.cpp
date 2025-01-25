@@ -29,6 +29,7 @@
 #include <wtf/ASCIICType.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/ParsingUtilities.h>
+#include <wtf/text/StringCommon.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 // On Windows, use the threadsafe *_r functions provided by pthread.
@@ -83,8 +84,8 @@ FTPEntryType parseOneFTPLine(const char* line, ListState& state, ListResult& res
 
     if (linelen > 0) {
         static const char* monthNames = "JanFebMarAprMayJunJulAugSepOctNovDec";
-        const char* tokens[16]; /* 16 is more than enough */
-        unsigned toklen[std::size(tokens)];
+        std::array<const char*, 16> tokens; /* 16 is more than enough */
+        unsigned toklen[tokens.size()];
         unsigned lineLenSansWsp; // line length sans whitespace
         unsigned numtoks = 0;
         unsigned tokmarker = 0; /* extra info for lstyle handler */
@@ -100,7 +101,7 @@ FTPEntryType parseOneFTPLine(const char* line, ListState& state, ListResult& res
         }
 
         unsigned pos = 0;
-        while (pos < linelen && numtoks < std::size(tokens)) {
+        while (pos < linelen && numtoks < tokens.size()) {
             while (pos < linelen
                 && (line[pos] == ' ' || line[pos] == '\t' || line[pos] == '\r'))
                 pos++;
@@ -120,7 +121,7 @@ FTPEntryType parseOneFTPLine(const char* line, ListState& state, ListResult& res
             return ParsingFailed(state);
 
         lineLenSansWsp = &(tokens[numtoks - 1][toklen[numtoks - 1]]) - tokens[0];
-        if (numtoks == std::size(tokens)) {
+        if (numtoks == tokens.size()) {
             pos = linelen;
             while (pos > 0 && (line[pos - 1] == ' ' || line[pos - 1] == '\t'))
                 pos--;
@@ -850,7 +851,7 @@ FTPEntryType parseOneFTPLine(const char* line, ListState& state, ListResult& res
                         }
                     }
                 } else if ((toklen[0] == 10 || toklen[0] == 11)
-                    && strchr("-bcdlpsw?DFam", *tokens[0])) {
+                    && WTF::contains("-bcdlpsw?DFam"_span, *tokens[0])) {
                     p = &(tokens[0][1]);
                     if ((p[0] == 'r' || p[0] == '-') && (p[1] == 'w' || p[1] == '-') && (p[3] == 'r' || p[3] == '-') && (p[4] == 'w' || p[4] == '-') && (p[6] == 'r' || p[6] == '-') && (p[7] == 'w' || p[7] == '-')) {
                     /* 'x'/p[9] can be S|s|x|-|T|t or implementation specific */

@@ -3529,7 +3529,11 @@ def check_safer_cpp(clean_lines, line_number, error):
 
     uses_memchr = search(r'memchr\(', line)
     if uses_memchr:
-        error(line_number, 'safercpp/memchr', 4, "Use WTF::find() instead of memchr().")
+        error(line_number, 'safercpp/memchr', 4, "Use WTF::find() or WTF::contains() instead of memchr().")
+
+    uses_strchr = search(r'strchr\(', line)
+    if uses_strchr:
+        error(line_number, 'safercpp/strchr', 4, "Use WTF::find() or WTF::contains() instead of strchr().")
 
     uses_strstr = search(r'strstr\(', line)
     if uses_strstr:
@@ -4883,6 +4887,7 @@ class CppChecker(object):
         'safercpp/memset',
         'safercpp/memset_s',
         'safercpp/weak_ref_exception',
+        'safercpp/strchr',
         'safercpp/strstr',
         'safercpp/timer_exception',
         'security/assertion',

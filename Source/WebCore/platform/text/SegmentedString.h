@@ -306,9 +306,7 @@ template<bool lettersIgnoringASCIICase> SegmentedString::AdvancePastResult Segme
 {
     unsigned length = literal.length();
     ASSERT(!literal[length]);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    ASSERT(!strchr(literal.characters(), '\n'));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    ASSERT(!WTF::contains(literal.span(), '\n'));
     if (length + 1 < m_currentSubstring.length()) {
         if (m_currentSubstring.is8Bit) {
             for (unsigned i = 0; i < length; ++i) {

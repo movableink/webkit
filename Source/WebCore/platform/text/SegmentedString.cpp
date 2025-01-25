@@ -246,9 +246,7 @@ void SegmentedString::setCurrentPosition(OrdinalNumber line, OrdinalNumber colum
 SegmentedString::AdvancePastResult SegmentedString::advancePastSlowCase(ASCIILiteral literal, bool lettersIgnoringASCIICase)
 {
     constexpr unsigned maxLength = 10;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    ASSERT(!strchr(literal.characters(), '\n'));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    ASSERT(!WTF::contains(literal.span(), '\n'));
     auto length = literal.length();
     ASSERT(length <= maxLength);
     if (length > this->length())

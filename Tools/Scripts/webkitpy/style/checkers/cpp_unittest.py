@@ -6305,7 +6305,12 @@ class WebKitStyleTest(CppStyleTestBase):
 
         self.assert_lint(
             'char* result = memchr(haystack, c, strlen(haystack));',
-            'Use WTF::find() instead of memchr().  [safercpp/memchr] [4]',
+            'Use WTF::find() or WTF::contains() instead of memchr().  [safercpp/memchr] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'char* result = strchr(haystack, c);',
+            'Use WTF::find() or WTF::contains() instead of strchr().  [safercpp/strchr] [4]',
             'foo.cpp')
 
         self.assert_lint(

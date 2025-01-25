@@ -1066,9 +1066,9 @@ static bool useLongRunningServerMode(int argc, const char *argv[])
     return (argc == optind+1 && strcmp(argv[optind], "-") == 0);
 }
 
-static bool handleControlCommand(const char* command)
+static bool handleControlCommand(std::span<const char> command)
 {
-    if (!strncmp("#CHECK FOR WORLD LEAKS", command, 22) || !strncmp("#LIST CHILD PROCESSES", command, 21)) {
+    if (spanHasPrefix(command, "#CHECK FOR WORLD LEAKS"_span) || spanHasPrefix(command, "#LIST CHILD PROCESSES"_span)) {
         // DumpRenderTree does not support checking for world leaks or listing child processes.
         WTF::String result("\n"_s);
         unsigned resultLength = result.length();
@@ -1088,20 +1088,19 @@ static void runTestingServerLoop()
 {
     // When DumpRenderTree run in server mode, we just wait around for file names
     // to be passed to us and read each in turn, passing the results back to the client
-    char filenameBuffer[2048];
+    std::array<char, 2048> filenameBuffer;
     unsigned testCount = 0;
-    while (fgets(filenameBuffer, sizeof(filenameBuffer), stdin)) {
-        char *newLineCharacter = strchr(filenameBuffer, '\n');
-        if (newLineCharacter)
-            *newLineCharacter = '\0';
+    while (fgets(filenameBuffer.data(), filenameBuffer.size(), stdin)) {
+        if (size_t newLineCharacterIndex = find(std::span<const char> { filenameBuffer }, '\n'); newLineCharacterIndex != notFound)
+            filenameBuffer[newLineCharacterIndex] = '\0';
 
-        if (strlen(filenameBuffer) == 0)
+        if (!strlen(filenameBuffer.data()))
             continue;
 
-        if (handleControlCommand(filenameBuffer))
+        if (handleControlCommand(std::span { filenameBuffer }))
             continue;
 
-        runTest(filenameBuffer);
+        runTest(filenameBuffer.data());
 
         if (printTestCount) {
             ++testCount;

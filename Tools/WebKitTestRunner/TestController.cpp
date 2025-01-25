@@ -1716,9 +1716,9 @@ bool TestController::waitForCompletion(const WTF::Function<void ()>& function, W
     return !m_doneResetting;
 }
 
-bool TestController::handleControlCommand(const char* command)
+bool TestController::handleControlCommand(std::span<const char> command)
 {
-    if (!strncmp("#CHECK FOR WORLD LEAKS", command, 22)) {
+    if (spanHasPrefix(command, "#CHECK FOR WORLD LEAKS"_span)) {
         if (m_checkForWorldLeaks)
             findAndDumpWorldLeaks();
         else
@@ -1726,7 +1726,7 @@ bool TestController::handleControlCommand(const char* command)
         return true;
     }
 
-    if (!strncmp("#LIST CHILD PROCESSES", command, 21)) {
+    if (spanHasPrefix(command, "#LIST CHILD PROCESSES"_span)) {
         findAndDumpWebKitProcessIdentifiers();
         return true;
     }
@@ -1736,19 +1736,18 @@ bool TestController::handleControlCommand(const char* command)
 
 void TestController::runTestingServerLoop()
 {
-    char filenameBuffer[2048];
-    while (fgets(filenameBuffer, sizeof(filenameBuffer), stdin)) {
-        char* newLineCharacter = strchr(filenameBuffer, '\n');
-        if (newLineCharacter)
-            *newLineCharacter = '\0';
+    std::array<char, 2048> filenameBuffer;
+    while (fgets(filenameBuffer.data(), filenameBuffer.size(), stdin)) {
+        if (size_t newLineCharacterIndex = find(std::span<const char> { filenameBuffer }, '\n'); newLineCharacterIndex != notFound)
+            filenameBuffer[newLineCharacterIndex] = '\0';
 
-        if (strlen(filenameBuffer) == 0)
+        if (!strlen(filenameBuffer.data()))
             continue;
 
         if (handleControlCommand(filenameBuffer))
             continue;
 
-        if (!runTest(filenameBuffer))
+        if (!runTest(filenameBuffer.data()))
             break;
     }
 }

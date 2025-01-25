@@ -458,7 +458,7 @@ private:
     // Returns false if timed out.
     bool waitForCompletion(const WTF::Function<void ()>&, WTF::Seconds timeout);
 
-    bool handleControlCommand(const char* command);
+    bool handleControlCommand(std::span<const char> command);
 
     void platformInitialize(const Options&);
     void platformInitializeDataStore(WKPageConfigurationRef, const TestOptions&);
