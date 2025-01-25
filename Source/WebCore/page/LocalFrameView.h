@@ -812,6 +812,8 @@ private:
     void applyOverflowToViewport(const RenderElement&, ScrollbarMode& hMode, ScrollbarMode& vMode);
     void applyPaginationToViewport();
 
+    void updateOverflowStatus(bool horizontalOverflow, bool verticalOverflow);
+
     void forceLayoutParentViewIfNeeded();
     void flushPostLayoutTasksQueue();
     void performPostLayoutTasks();
@@ -1049,6 +1051,9 @@ private:
     std::optional<UserScrollType> m_lastUserScrollType;
 
     bool m_shouldUpdateWhileOffscreen { true };
+    bool m_overflowStatusDirty { true };
+    bool m_horizontalOverflow { false };
+    bool m_verticalOverflow { false };
     bool m_canHaveScrollbars { true };
     bool m_cannotBlitToWindow { false };
     bool m_isOverlapped { false };
