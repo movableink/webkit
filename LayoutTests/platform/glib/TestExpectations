@@ -1322,6 +1322,16 @@ imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.
 webkit.org/b/284626 imported/w3c/web-platform-tests/webcodecs/audio-data.any.html [ Failure ]
 webkit.org/b/284626 imported/w3c/web-platform-tests/webcodecs/audio-data.any.worker.html [ Failure ]
 
+# webkit.org/b/286526 
+imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.html?opus [ Failure ] # Do not drain decoder on flush.
+imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.html?pcm_u8 [ Failure ]
+imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.html?pcm_s16 [ Failure ]
+imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.html?pcm_s24 [ Failure ]
+imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.worker.html?opus [ Failure ]
+imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.worker.html?pcm_u8 [ Failure ]
+imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.worker.html?pcm_s16 [ Failure ]
+imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.worker.html?pcm_s24 [ Failure ]
+
 # Input/output waveforms don't match...
 webkit.org/b/284429 imported/w3c/web-platform-tests/webcodecs/audio-encoder.https.any.html [ Failure ]
 

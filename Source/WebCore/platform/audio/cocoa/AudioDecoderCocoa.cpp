@@ -370,7 +370,7 @@ Ref<GenericPromise> InternalAudioDecoderCocoa::flush()
         LOG(Media, "Decoder closed, nothing to flush");
         return GenericPromise::createAndResolve();
     }
-    return converter()->flush()->whenSettled(queueSingleton(), [protectedThis = Ref { *this }] {
+    return converter()->drain()->whenSettled(queueSingleton(), [protectedThis = Ref { *this }] {
         protectedThis->processedDecodedOutputs();
         return GenericPromise::createAndResolve();
     });
