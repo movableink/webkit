@@ -799,7 +799,7 @@ bool EventHandler::handleMousePressEventSingleClick(const MouseEventWithHitTestR
             else
                 newSelection = VisibleSelection(start, pos);
         } else {
-            if (newSelection.isDirectional()) {
+            if (newSelection.directionality() == Directionality::Strong) {
                 RefPtr baseNode = newSelection.isBaseFirst() ? newSelection.base().computeNodeAfterPosition() : newSelection.base().computeNodeBeforePosition();
                 if (!baseNode)
                     baseNode = newSelection.base().containerNode();
