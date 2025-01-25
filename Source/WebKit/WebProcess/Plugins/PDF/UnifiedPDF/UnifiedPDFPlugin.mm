@@ -3527,11 +3527,13 @@ std::pair<String, RetainPtr<PDFSelection>> UnifiedPDFPlugin::textForImmediateAct
         return { [wordSelection string], wordSelection };
     }
 
+#if ENABLE(REVEAL)
     NSString *lookupText = DictionaryLookup::stringForPDFSelection(wordSelection.get());
-    if (!lookupText || !lookupText.length)
-        return { { }, wordSelection };
+    if (lookupText && lookupText.length)
+        return { lookupText, wordSelection };
+#endif
 
-    return { lookupText, wordSelection };
+    return { { }, wordSelection };
 }
 
 #if PLATFORM(MAC)

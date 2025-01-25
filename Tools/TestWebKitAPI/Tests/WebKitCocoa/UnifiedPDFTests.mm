@@ -37,6 +37,7 @@
 #import "Test.h"
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
+#import "UIKitSPIForTesting.h"
 #import "UISideCompositingScope.h"
 #import "UnifiedPDFTestHelpers.h"
 #import "WKPrinting.h"
