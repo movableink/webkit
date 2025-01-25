@@ -211,7 +211,7 @@ static void dumpPipeline([[maybe_unused]] ASCIILiteral description, [[maybe_unus
 {
 #ifndef GST_DISABLE_GST_DEBUG
     auto pipeline = findPipeline(GRefPtr<GstElement>(GST_ELEMENT(stream->source)));
-    auto fileName = makeString(span(GST_OBJECT_NAME(pipeline.get())), '-', stream->track->id(), '-', description);
+    auto fileName = makeString(unsafeSpan(GST_OBJECT_NAME(pipeline.get())), '-', stream->track->id(), '-', description);
     GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, fileName.utf8().data());
 #endif
 }

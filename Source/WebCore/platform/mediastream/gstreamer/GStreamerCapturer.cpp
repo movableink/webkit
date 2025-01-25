@@ -152,7 +152,7 @@ GstElement* GStreamerCapturer::createSource()
         }
     } else {
         ASSERT(m_device);
-        auto sourceName = makeString(WTF::span(name()), hex(reinterpret_cast<uintptr_t>(this)));
+        auto sourceName = makeString(unsafeSpan(name()), hex(reinterpret_cast<uintptr_t>(this)));
         m_src = gst_device_create_element(m_device->device(), sourceName.ascii().data());
         ASSERT(m_src);
         g_object_set(m_src.get(), "do-timestamp", TRUE, nullptr);
@@ -228,7 +228,7 @@ void GStreamerCapturer::setupPipeline()
 GstElement* GStreamerCapturer::makeElement(const char* factoryName)
 {
     auto* element = makeGStreamerElement(factoryName, nullptr);
-    auto elementName = makeString(span(name()), "_capturer_"_s, span(GST_OBJECT_NAME(element)), '_', hex(reinterpret_cast<uintptr_t>(this)));
+    auto elementName = makeString(unsafeSpan(name()), "_capturer_"_s, unsafeSpan(GST_OBJECT_NAME(element)), '_', hex(reinterpret_cast<uintptr_t>(this)));
     gst_object_set_name(GST_OBJECT(element), elementName.ascii().data());
 
     return element;

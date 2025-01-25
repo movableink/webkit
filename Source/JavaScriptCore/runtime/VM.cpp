@@ -175,7 +175,7 @@ static bool enableAssembler()
     if (!Options::useJIT())
         return false;
 
-    auto canUseJITString = span(getenv("JavaScriptCoreUseJIT"));
+    auto canUseJITString = unsafeSpan(getenv("JavaScriptCoreUseJIT"));
     if (canUseJITString.data() && !parseInteger<int>(canUseJITString).value_or(0))
         return false;
 

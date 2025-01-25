@@ -204,7 +204,7 @@ void GStreamerCaptureDeviceManager::addDevice(GRefPtr<GstDevice>&& device)
     GUniquePtr<char> deviceName(gst_device_get_display_name(device.get()));
     GST_INFO("Registering device %s", deviceName.get());
     auto isDefault = gstStructureGet<bool>(properties.get(), "is-default"_s).value_or(false);
-    auto label = makeString(isDefault ? "default: "_s : ""_s, span(deviceName.get()));
+    auto label = makeString(isDefault ? "default: "_s : ""_s, unsafeSpan(deviceName.get()));
 
     auto identifier = label;
     bool isMock = false;

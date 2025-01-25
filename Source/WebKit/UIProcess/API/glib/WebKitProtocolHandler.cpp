@@ -405,7 +405,7 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
             for (GLint i = 0; i < numExtensions; ++i) {
                 if (i)
                     extensionsBuilder.append(' ');
-                extensionsBuilder.append(span(reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i))));
+                extensionsBuilder.append(unsafeSpan(reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i))));
             }
             addTableRow(jsonObject, "GL_EXTENSIONS"_s, extensionsBuilder.toString());
             break;
@@ -415,31 +415,31 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
         auto eglDisplay = eglGetCurrentDisplay();
         addTableRow(jsonObject, "EGL_VERSION"_s, String::fromUTF8(eglQueryString(eglDisplay, EGL_VERSION)));
         addTableRow(jsonObject, "EGL_VENDOR"_s, String::fromUTF8(eglQueryString(eglDisplay, EGL_VENDOR)));
-        addTableRow(jsonObject, "EGL_EXTENSIONS"_s, makeString(span(eglQueryString(nullptr, EGL_EXTENSIONS)), ' ', span(eglQueryString(eglDisplay, EGL_EXTENSIONS))));
+        addTableRow(jsonObject, "EGL_EXTENSIONS"_s, makeString(unsafeSpan(eglQueryString(nullptr, EGL_EXTENSIONS)), ' ', unsafeSpan(eglQueryString(eglDisplay, EGL_EXTENSIONS))));
     };
 
     auto jsonObject = JSON::Object::create();
 
     startTable("Version Information"_s);
     auto versionObject = JSON::Object::create();
-    addTableRow(versionObject, "WebKit version"_s, makeString(webkitPortName(), ' ', WEBKIT_MAJOR_VERSION, '.', WEBKIT_MINOR_VERSION, '.', WEBKIT_MICRO_VERSION, " ("_s, WTF::span(BUILD_REVISION), ')'));
+    addTableRow(versionObject, "WebKit version"_s, makeString(webkitPortName(), ' ', WEBKIT_MAJOR_VERSION, '.', WEBKIT_MINOR_VERSION, '.', WEBKIT_MICRO_VERSION, " ("_s, unsafeSpan(BUILD_REVISION), ')'));
 
 #if OS(UNIX)
     struct utsname osName;
     uname(&osName);
-    addTableRow(versionObject, "Operating system"_s, makeString(span(osName.sysname), ' ', span(osName.release), ' ', span(osName.version), ' ', span(osName.machine)));
+    addTableRow(versionObject, "Operating system"_s, makeString(unsafeSpan(osName.sysname), ' ', unsafeSpan(osName.release), ' ', unsafeSpan(osName.version), ' ', unsafeSpan(osName.machine)));
 #endif
 
     const char* desktopName = g_getenv("XDG_CURRENT_DESKTOP");
     addTableRow(versionObject, "Desktop"_s, (desktopName && *desktopName) ? String::fromUTF8(desktopName) : "Unknown"_s);
 
 #if USE(CAIRO)
-    addTableRow(versionObject, "Cairo version"_s, makeString(WTF::span(CAIRO_VERSION_STRING), " (build) "_s, WTF::span(cairo_version_string()), " (runtime)"_s));
+    addTableRow(versionObject, "Cairo version"_s, makeString(unsafeSpan(CAIRO_VERSION_STRING), " (build) "_s, unsafeSpan(cairo_version_string()), " (runtime)"_s));
 #endif
 
 #if USE(GSTREAMER)
     GUniquePtr<char> gstVersion(gst_version_string());
-    addTableRow(versionObject, "GStreamer version"_s, makeString(GST_VERSION_MAJOR, '.', GST_VERSION_MINOR, '.', GST_VERSION_MICRO, " (build) "_s, span(gstVersion.get()), " (runtime)"_s));
+    addTableRow(versionObject, "GStreamer version"_s, makeString(GST_VERSION_MAJOR, '.', GST_VERSION_MINOR, '.', GST_VERSION_MICRO, " (build) "_s, unsafeSpan(gstVersion.get()), " (runtime)"_s));
 #endif
 
 #if PLATFORM(GTK)
@@ -584,7 +584,7 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
 #if USE(GBM)
             if (platformDisplay->type() == PlatformDisplay::Type::GBM) {
                 if (drmVersion* version = drmGetVersion(gbm_device_get_fd(device))) {
-                    addTableRow(hardwareAccelerationObject, "DRM version"_s, makeString(span(version->name), " ("_s, span(version->desc), ") "_s, version->version_major, '.', version->version_minor, '.', version->version_patchlevel, ". "_s, span(version->date)));
+                    addTableRow(hardwareAccelerationObject, "DRM version"_s, makeString(unsafeSpan(version->name), " ("_s, unsafeSpan(version->desc), ") "_s, version->version_major, '.', version->version_minor, '.', version->version_patchlevel, ". "_s, unsafeSpan(version->date)));
                     drmFreeVersion(version);
                 }
             }
@@ -643,7 +643,7 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
 #if USE(GBM)
             if (platformDisplay->type() == PlatformDisplay::Type::GBM) {
                 if (drmVersion* version = drmGetVersion(fd.value())) {
-                    addTableRow(hardwareAccelerationObject, "DRM version"_s, makeString(span(version->name), " ("_s, span(version->desc), ") "_s, version->version_major, '.', version->version_minor, '.', version->version_patchlevel, ". "_s, span(version->date)));
+                    addTableRow(hardwareAccelerationObject, "DRM version"_s, makeString(unsafeSpan(version->name), " ("_s, unsafeSpan(version->desc), ") "_s, version->version_major, '.', version->version_minor, '.', version->version_patchlevel, ". "_s, unsafeSpan(version->date)));
                     drmFreeVersion(version);
                 }
             }

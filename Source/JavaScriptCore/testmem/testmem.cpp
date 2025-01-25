@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
 
     size_t iterations = 20;
     if (argc >= 3) {
-        int iters = parseInteger<int>(span(argv[2])).value_or(0);
+        int iters = parseInteger<int>(unsafeSpan(argv[2])).value_or(0);
         if (iters < 0) {
             printf("Iterations argument must be >= 0");
             exit(1);

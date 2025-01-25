@@ -50,7 +50,7 @@ static int connectToServer(sockaddr_in& serverAddress)
 
 void setUpIOSLayoutTestCommunication()
 {
-    auto portFromEnvironment = span(getenv("PORT"));
+    auto portFromEnvironment = unsafeSpan(getenv("PORT"));
     if (!portFromEnvironment.data())
         return;
     int port = parseInteger<int>(portFromEnvironment).value_or(0);

@@ -10400,7 +10400,7 @@ RefPtr<HTMLAttachmentElement> Document::attachmentForIdentifier(const String& id
 
 static MessageSource messageSourceForWTFLogChannel(const WTFLogChannel& channel)
 {
-    auto channelName = span(channel.name);
+    auto channelName = unsafeSpan(channel.name);
     if (equalLettersIgnoringASCIICase(channelName, "media"_s))
         return MessageSource::Media;
 

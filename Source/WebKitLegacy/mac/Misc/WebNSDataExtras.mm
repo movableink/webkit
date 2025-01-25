@@ -165,7 +165,7 @@
 - (BOOL)_web_isCaseInsensitiveEqualToCString:(const char *)string
 {
     ASSERT(string);
-    return equalLettersIgnoringASCIICase(span(self), span(string));
+    return equalLettersIgnoringASCIICase(span(self), unsafeSpan(string));
 }
 
 @end
