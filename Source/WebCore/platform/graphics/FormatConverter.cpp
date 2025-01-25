@@ -254,7 +254,7 @@ template<> ALWAYS_INLINE void unpack<GraphicsContextGL::DataFormat::BGRA8, uint8
 template<> ALWAYS_INLINE void unpack<GraphicsContextGL::DataFormat::RGBA5551, uint16_t, uint8_t>(std::span<const uint16_t> source, std::span<uint8_t> destination, unsigned pixelsPerRow)
 {
 #if HAVE(ARM_NEON_INTRINSICS)
-    SIMD::unpackOneRowOfRGBA5551ToRGBA8(source.data(), destination.data(), pixelsPerRow);
+    SIMD::unpackOneRowOfRGBA5551ToRGBA8(source, destination, pixelsPerRow);
 #endif
     for (unsigned i = 0; i < pixelsPerRow; ++i) {
         uint16_t packedValue = source[0];
@@ -273,7 +273,7 @@ template<> ALWAYS_INLINE void unpack<GraphicsContextGL::DataFormat::RGBA5551, ui
 template<> ALWAYS_INLINE void unpack<GraphicsContextGL::DataFormat::RGBA4444, uint16_t, uint8_t>(std::span<const uint16_t> source, std::span<uint8_t> destination, unsigned pixelsPerRow)
 {
 #if HAVE(ARM_NEON_INTRINSICS)
-    SIMD::unpackOneRowOfRGBA4444ToRGBA8(source.data(), destination.data(), pixelsPerRow);
+    SIMD::unpackOneRowOfRGBA4444ToRGBA8(source, destination, pixelsPerRow);
 #endif
     for (unsigned i = 0; i < pixelsPerRow; ++i) {
         uint16_t packedValue = source[0];
