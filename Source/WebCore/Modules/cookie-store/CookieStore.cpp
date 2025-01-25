@@ -272,7 +272,7 @@ void CookieStore::get(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& pr
     auto url = context->cookieURL();
     if (!options.url.isNull()) {
         auto parsed = context->completeURL(options.url);
-        if (context->isDocument() && parsed != url) {
+        if (context->isDocument() && !equalIgnoringFragmentIdentifier(parsed, url)) {
             promise->reject(Exception { ExceptionCode::TypeError, "URL must match the document URL"_s });
             return;
         }
@@ -335,7 +335,7 @@ void CookieStore::getAll(CookieStoreGetOptions&& options, Ref<DeferredPromise>&&
     auto url = context->cookieURL();
     if (!options.url.isNull()) {
         auto parsed = context->completeURL(options.url);
-        if (context->isDocument() && parsed != url) {
+        if (context->isDocument() && !equalIgnoringFragmentIdentifier(parsed, url)) {
             promise->reject(Exception { ExceptionCode::TypeError, "URL must match the document URL"_s });
             return;
         }
