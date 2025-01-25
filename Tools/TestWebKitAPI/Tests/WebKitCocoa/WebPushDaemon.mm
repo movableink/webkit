@@ -526,13 +526,28 @@ async function queryPermissionFromServiceWorker(name)
     return await promise;
 }
 
+async function getPushSubscriptionFromWindow()
+{
+    try {
+        let subscription = await window.pushManager.getSubscription();
+        return subscription;
+    } catch (error) {
+        return "Error: " + error;
+    }
+}
+
 async function getPushSubscription()
 {
     try {
         let subscription = await globalRegistration.pushManager.getSubscription();
         return subscription ? subscription.toJSON() : null;
     } catch (error) {
-        return "Error: " + error;
+        try {
+            let subscription = await getPushSubscriptionFromWindow();
+            return subscription ? subscription.toJSON() : null;
+        } catch (error2) {
+            return "Error(s): " + error + ", " + error2;
+        }
     }
 }
 
@@ -1417,16 +1432,11 @@ TEST_F(WebPushDTest, UnsubscribesOnServiceWorkerUnregisterTest)
         v->subscribe();
     ASSERT_EQ(subscribedTopicsCount(), webViews().size());
 
-    int i = 1;
     for (auto& v : webViews()) {
         ASSERT_TRUE(v->hasPushSubscription());
         id result = v->unregisterServiceWorker();
         ASSERT_TRUE([result isEqual:@YES]);
-        ASSERT_FALSE(v->hasPushSubscription());
-
-        // Unsubscribing from this data store should not affect subscriptions in other data stores.
-        ASSERT_EQ(subscribedTopicsCount(), webViews().size() - i);
-        i++;
+        ASSERT_TRUE(v->hasPushSubscription());
     }
 }
 

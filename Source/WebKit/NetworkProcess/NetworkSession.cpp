@@ -169,6 +169,9 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
     , m_notificationManager(NetworkNotificationManager::create(parameters.sessionID.isEphemeral() ? String { } : parameters.webPushMachServiceName, configurationWithHostAuditToken(networkProcess, parameters.webPushDaemonConnectionConfiguration), networkProcess))
 #endif
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    , m_isDeclarativeWebPushEnabled(parameters.isDeclarativeWebPushEnabled)
+#endif
 {
     if (!m_sessionID.isEphemeral()) {
         String networkCacheDirectory = parameters.networkCacheDirectory;

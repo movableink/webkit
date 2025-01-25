@@ -287,7 +287,11 @@ public:
     double currentHTTPSConnectionAverageTiming() const { return m_recentHTTPSConnectionTiming.currentMovingAverage; }
 
     virtual bool isNetworkSessionCocoa() const { return false; }
-                                    
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    bool isDeclarativeWebPushEnabled() const { return m_isDeclarativeWebPushEnabled; }
+#endif
+
 protected:
     NetworkSession(NetworkProcess&, const NetworkSessionCreationParameters&);
 
@@ -393,6 +397,9 @@ protected:
 #endif
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     std::optional<int64_t> m_bytesPerSecondLimit;
+#endif
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    bool m_isDeclarativeWebPushEnabled { false };
 #endif
 };
 

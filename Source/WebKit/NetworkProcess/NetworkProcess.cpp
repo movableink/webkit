@@ -1968,6 +1968,10 @@ void NetworkProcess::deleteAndRestrictWebsiteDataForRegistrableDomains(PAL::Sess
                     session->ensureProtectedSWServer()->clear(securityOrigin, [callbackAggregator] { });
 
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+                    if (session->isDeclarativeWebPushEnabled())
+                        continue;
+#endif
                     session->protectedNotificationManager()->removePushSubscriptionsForOrigin(SecurityOriginData { securityOrigin }, [callbackAggregator](auto&&) { });
 #endif
                 }

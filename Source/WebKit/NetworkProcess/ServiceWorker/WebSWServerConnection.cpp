@@ -136,13 +136,18 @@ void WebSWServerConnection::resolveUnregistrationJobInClient(ServiceWorkerJobIde
     ASSERT(m_unregisterJobs.contains(jobIdentifier));
     if (auto completionHandler = m_unregisterJobs.take(jobIdentifier)) {
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
-        if (!session()) {
+        CheckedPtr checkedSession = session();
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+        if (!checkedSession || checkedSession->isDeclarativeWebPushEnabled()) {
+#else
+        if (!checkedSession) {
+#endif
             completionHandler(unregistrationResult);
             return;
         }
 
         auto scopeURL = registrationKey.scope();
-        session()->protectedNotificationManager()->unsubscribeFromPushService(WTFMove(scopeURL), std::nullopt, [completionHandler = WTFMove(completionHandler), unregistrationResult](auto&&) mutable {
+        checkedSession->protectedNotificationManager()->unsubscribeFromPushService(WTFMove(scopeURL), std::nullopt, [completionHandler = WTFMove(completionHandler), unregistrationResult](auto&&) mutable {
             completionHandler(unregistrationResult);
         });
 
