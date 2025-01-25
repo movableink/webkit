@@ -108,8 +108,6 @@ imported/w3c/web-platform-tests/css/css-text/hyphens/hyphens-auto-control.html [
 imported/w3c/web-platform-tests/css/css-ui/resize-child-will-change-transform.html [ Pass ]
 imported/w3c/web-platform-tests/css/css-ui/resize-generated-content.html [ Pass ]
 
-imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/alignment/masonry-align-content-004.html [ Pass ]
-
 # Skip as many tests are flaky.
 imported/w3c/web-platform-tests/pointerevents [ Skip ]
 
@@ -1363,7 +1361,6 @@ webgl/2.0.y/conformance/reading/read-pixels-test.html [ Pass Timeout ]
 imported/blink/fast/text/international/vertical-positioning-with-combining-marks.html [ ImageOnlyFailure ]
 imported/mozilla/svg/tspan-rotate-07.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-animations/flip-running-animation-via-variable.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-backgrounds/background-image-cover-zoomed-1.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-iframe-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-iframe-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-lists/content-property/marker-text-matches-georgian.html [ ImageOnlyFailure ]
@@ -1462,6 +1459,7 @@ webkit.org/b/266577 webgl/2.0.0/conformance2/textures/video/tex-3d-rgb8ui-rgb_in
 webkit.org/b/266577 webgl/2.0.0/conformance2/textures/video/tex-3d-rgba8-rgba-unsigned_byte.html [ Failure Timeout Crash ]
 
 webkit.org/b/266671 http/wpt/webcodecs/videoFrame-rect.html [ Failure ]
+http/wpt/webcodecs/videoFrame-video-element.html [ Failure ]
 
 webkit.org/b/285298 imported/w3c/web-platform-tests/webcodecs/videoFrame-canvasImageSource.html [ Failure ]
 
