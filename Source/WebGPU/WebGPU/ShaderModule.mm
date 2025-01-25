@@ -138,48 +138,8 @@ static RefPtr<ShaderModule> earlyCompileShaderModule(Device& device, std::varian
 static const HashSet<String> buildFeatureSet(const Vector<WGPUFeatureName>& features)
 {
     HashSet<String> result;
-    for (auto feature : features) {
-        switch (feature) {
-        case WGPUFeatureName_Undefined:
-            continue;
-        case WGPUFeatureName_DepthClipControl:
-            result.add("depth-clip-control"_s);
-            break;
-        case WGPUFeatureName_Depth32FloatStencil8:
-            result.add("depth32float-stencil8"_s);
-            break;
-        case WGPUFeatureName_TimestampQuery:
-            result.add("timestamp-query"_s);
-            break;
-        case WGPUFeatureName_TextureCompressionBC:
-            result.add("texture-compression-bc"_s);
-            break;
-        case WGPUFeatureName_TextureCompressionETC2:
-            result.add("texture-compression-etc2"_s);
-            break;
-        case WGPUFeatureName_TextureCompressionASTC:
-            result.add("texture-compression-astc"_s);
-            break;
-        case WGPUFeatureName_IndirectFirstInstance:
-            result.add("indirect-first-instance"_s);
-            break;
-        case WGPUFeatureName_ShaderF16:
-            result.add("shader-f16"_s);
-            break;
-        case WGPUFeatureName_RG11B10UfloatRenderable:
-            result.add("rg11b10ufloat-renderable"_s);
-            break;
-        case WGPUFeatureName_BGRA8UnormStorage:
-            result.add("bgra8unorm-storage"_s);
-            break;
-        case WGPUFeatureName_Float32Filterable:
-            result.add("float32-filterable"_s);
-            break;
-        case WGPUFeatureName_Force32:
-            ASSERT_NOT_REACHED();
-            continue;
-        }
-    }
+    for (auto feature : features)
+        result.add(wgpuAdapterFeatureName(feature));
 
     return result;
 }
@@ -1099,4 +1059,50 @@ void wgpuShaderModuleGetCompilationInfoWithBlock(WGPUShaderModule shaderModule, 
 void wgpuShaderModuleSetLabel(WGPUShaderModule shaderModule, const char* label)
 {
     WebGPU::protectedFromAPI(shaderModule)->setLabel(WebGPU::fromAPI(label));
+}
+
+String wgpuAdapterFeatureName(WGPUFeatureName feature)
+{
+    switch (feature) {
+    case WGPUFeatureName_Undefined:
+        return emptyString();
+    case WGPUFeatureName_DepthClipControl:
+        return "depth-clip-control"_s;
+    case WGPUFeatureName_Depth32FloatStencil8:
+        return "depth32float-stencil8"_s;
+    case WGPUFeatureName_TimestampQuery:
+        return "timestamp-query"_s;
+    case WGPUFeatureName_TextureCompressionBC:
+        return "texture-compression-bc"_s;
+    case WGPUFeatureName_TextureCompressionBCSliced3D:
+        return "texture-compression-bc-sliced-3d"_s;
+    case WGPUFeatureName_TextureCompressionETC2:
+        return "texture-compression-etc2"_s;
+    case WGPUFeatureName_TextureCompressionASTC:
+        return "texture-compression-astc"_s;
+    case WGPUFeatureName_TextureCompressionASTCSliced3D:
+        return "texture-compression-astc-sliced-3d"_s;
+    case WGPUFeatureName_IndirectFirstInstance:
+        return "indirect-first-instance"_s;
+    case WGPUFeatureName_ShaderF16:
+        return "shader-f16"_s;
+    case WGPUFeatureName_RG11B10UfloatRenderable:
+        return "rg11b10ufloat-renderable"_s;
+    case WGPUFeatureName_BGRA8UnormStorage:
+        return "bgra8unorm-storage"_s;
+    case WGPUFeatureName_Float32Filterable:
+        return "float32-filterable"_s;
+    case WGPUFeatureName_Float32Blendable:
+        return "float32-blendable"_s;
+    case WGPUFeatureName_ClipDistances:
+        return "clip-distances"_s;
+    case WGPUFeatureName_DualSourceBlending:
+        return "dual-source-blending"_s;
+    case WGPUFeatureName_Float16Renderable:
+        return "float16-renderable"_s;
+    case WGPUFeatureName_Float32Renderable:
+        return "float32-renderable"_s;
+    case WGPUFeatureName_Force32:
+        return emptyString();
+    }
 }

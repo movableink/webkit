@@ -110,14 +110,21 @@ static Vector<WGPUFeatureName> baseFeatures(id<MTLDevice> device, const Hardware
 {
     Vector<WGPUFeatureName> features;
 
+    features.append(WGPUFeatureName_Float16Renderable);
+    features.append(WGPUFeatureName_Float32Renderable);
+    features.append(WGPUFeatureName_Float32Blendable);
+    features.append(WGPUFeatureName_DualSourceBlending);
+
     features.append(WGPUFeatureName_DepthClipControl);
     features.append(WGPUFeatureName_Depth32FloatStencil8);
 
     UNUSED_PARAM(baseCapabilities);
 
-#if PLATFORM(MAC)
-    if (device.supportsBCTextureCompression)
+#if !PLATFORM(WATCHOS)
+    if (device.supportsBCTextureCompression) {
         features.append(WGPUFeatureName_TextureCompressionBC);
+        features.append(WGPUFeatureName_TextureCompressionBCSliced3D);
+    }
 #else
     UNUSED_PARAM(device);
 #endif
@@ -151,6 +158,7 @@ static HardwareCapabilities apple4(id<MTLDevice> device)
 
     features.append(WGPUFeatureName_TextureCompressionETC2);
     features.append(WGPUFeatureName_TextureCompressionASTC);
+    features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
     std::sort(features.begin(), features.end());
 
@@ -172,6 +180,7 @@ static HardwareCapabilities apple5(id<MTLDevice> device)
 
     features.append(WGPUFeatureName_TextureCompressionETC2);
     features.append(WGPUFeatureName_TextureCompressionASTC);
+    features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
     std::sort(features.begin(), features.end());
 
@@ -194,6 +203,7 @@ static HardwareCapabilities apple6(id<MTLDevice> device)
 
     features.append(WGPUFeatureName_TextureCompressionETC2);
     features.append(WGPUFeatureName_TextureCompressionASTC);
+    features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
     std::sort(features.begin(), features.end());
 
@@ -231,6 +241,8 @@ static HardwareCapabilities apple6(id<MTLDevice> device)
             .maxComputeWorkgroupSizeY =    1024,
             .maxComputeWorkgroupSizeZ =    1024,
             .maxComputeWorkgroupsPerDimension =    largeReasonableLimit(),
+            .maxStorageBuffersInFragmentStage = UINT32_MAX,
+            .maxStorageTexturesInFragmentStage = UINT32_MAX,
         },
         WTFMove(features),
         baseCapabilities,
@@ -248,6 +260,7 @@ static HardwareCapabilities apple7(id<MTLDevice> device)
 
     features.append(WGPUFeatureName_TextureCompressionETC2);
     features.append(WGPUFeatureName_TextureCompressionASTC);
+    features.append(WGPUFeatureName_TextureCompressionASTCSliced3D);
 
     std::sort(features.begin(), features.end());
 
@@ -285,6 +298,8 @@ static HardwareCapabilities apple7(id<MTLDevice> device)
             .maxComputeWorkgroupSizeY =    1024,
             .maxComputeWorkgroupSizeZ =    1024,
             .maxComputeWorkgroupsPerDimension =    largeReasonableLimit(),
+            .maxStorageBuffersInFragmentStage = UINT32_MAX,
+            .maxStorageTexturesInFragmentStage = UINT32_MAX,
         },
         WTFMove(features),
         baseCapabilities,
@@ -337,6 +352,8 @@ static HardwareCapabilities mac2(id<MTLDevice> device)
             .maxComputeWorkgroupSizeY =    1024,
             .maxComputeWorkgroupSizeZ =    1024,
             .maxComputeWorkgroupsPerDimension =    largeReasonableLimit(),
+            .maxStorageBuffersInFragmentStage = UINT32_MAX,
+            .maxStorageTexturesInFragmentStage = UINT32_MAX,
         },
         WTFMove(features),
         baseCapabilities,
@@ -392,6 +409,8 @@ static WGPULimits mergeLimits(const WGPULimits& previous, const WGPULimits& next
         .maxComputeWorkgroupSizeY = mergeMaximum(previous.maxComputeWorkgroupSizeY, next.maxComputeWorkgroupSizeY),
         .maxComputeWorkgroupSizeZ = mergeMaximum(previous.maxComputeWorkgroupSizeZ, next.maxComputeWorkgroupSizeZ),
         .maxComputeWorkgroupsPerDimension = mergeMaximum(previous.maxComputeWorkgroupsPerDimension, next.maxComputeWorkgroupsPerDimension),
+        .maxStorageBuffersInFragmentStage = mergeMaximum(previous.maxStorageBuffersInFragmentStage, next.maxStorageBuffersInFragmentStage),
+        .maxStorageTexturesInFragmentStage = mergeMaximum(previous.maxStorageTexturesInFragmentStage, next.maxStorageTexturesInFragmentStage),
     };
 };
 
@@ -542,6 +561,10 @@ bool anyLimitIsBetterThan(const WGPULimits& target, const WGPULimits& reference)
         return true;
     if (target.maxComputeWorkgroupsPerDimension > reference.maxComputeWorkgroupsPerDimension)
         return true;
+    if (target.maxStorageBuffersInFragmentStage > reference.maxStorageBuffersInFragmentStage)
+        return true;
+    if (target.maxStorageTexturesInFragmentStage > reference.maxStorageTexturesInFragmentStage)
+        return true;
 
     return false;
 }
@@ -593,6 +616,8 @@ WGPULimits defaultLimits()
         .maxComputeWorkgroupSizeY =    256,
         .maxComputeWorkgroupSizeZ =    64,
         .maxComputeWorkgroupsPerDimension =    65535,
+        .maxStorageBuffersInFragmentStage = UINT32_MAX,
+        .maxStorageTexturesInFragmentStage = UINT32_MAX,
     };
 }
 
