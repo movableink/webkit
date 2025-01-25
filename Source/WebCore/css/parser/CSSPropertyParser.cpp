@@ -770,7 +770,7 @@ bool CSSPropertyParser::consumeFont(bool important)
 
     m_range = range;
     auto shorthand = fontShorthand();
-    for (auto [i, longhand] : indexedRange(shorthand.propertiesSpan()))
+    for (auto [i, longhand] : indexedRange(shorthand.properties()))
         addProperty(longhand, CSSPropertyFont, i < values.size() ? WTFMove(values[i]) : nullptr, important, true);
 
     return true;
@@ -1524,7 +1524,7 @@ bool CSSPropertyParser::consumeShorthandGreedily(const StylePropertyShorthand& s
 {
     ASSERT(shorthand.length() <= 6); // Existing shorthands have at most 6 longhands.
     std::array<RefPtr<CSSValue>, 6> longhands;
-    auto shorthandProperties = shorthand.propertiesSpan();
+    auto shorthandProperties = shorthand.properties();
     do {
         bool foundLonghand = false;
         for (size_t i = 0; !foundLonghand && i < shorthand.length(); ++i) {
@@ -1666,7 +1666,7 @@ bool CSSPropertyParser::consumeBorderShorthand(CSSPropertyID widthProperty, CSSP
 bool CSSPropertyParser::consume2ValueShorthand(const StylePropertyShorthand& shorthand, bool important)
 {
     ASSERT(shorthand.length() == 2);
-    auto longhands = shorthand.propertiesSpan();
+    auto longhands = shorthand.properties();
     RefPtr start = parseSingleValue(longhands[0], shorthand.id());
     if (!start)
         return false;
@@ -1684,7 +1684,7 @@ bool CSSPropertyParser::consume2ValueShorthand(const StylePropertyShorthand& sho
 bool CSSPropertyParser::consume4ValueShorthand(const StylePropertyShorthand& shorthand, bool important)
 {
     ASSERT(shorthand.length() == 4);
-    auto longhands = shorthand.propertiesSpan();
+    auto longhands = shorthand.properties();
     RefPtr top = parseSingleValue(longhands[0], shorthand.id());
     if (!top)
         return false;
@@ -1896,7 +1896,7 @@ static RefPtr<CSSValue> consumeAnimationValueForShorthand(CSSPropertyID property
 
 bool CSSPropertyParser::consumeAnimationShorthand(const StylePropertyShorthand& shorthand, bool important)
 {
-    auto shorthandProperties = shorthand.propertiesSpan();
+    auto shorthandProperties = shorthand.properties();
     const unsigned longhandCount = shorthand.length();
     std::array<CSSValueListBuilder, 8> longhands;
     ASSERT(longhandCount <= 8);
@@ -2029,7 +2029,7 @@ static RefPtr<CSSValue> consumeBackgroundComponent(CSSPropertyID property, CSSPa
 // the x properties in the shorthand array.
 bool CSSPropertyParser::consumeBackgroundShorthand(const StylePropertyShorthand& shorthand, bool important)
 {
-    auto shorthandProperties = shorthand.propertiesSpan();
+    auto shorthandProperties = shorthand.properties();
     unsigned longhandCount = shorthand.length();
 
     // mask resets mask-border properties outside of this method.
@@ -2186,7 +2186,7 @@ bool CSSPropertyParser::consumeGridItemPositionShorthand(CSSPropertyID shorthand
     }
     if (!m_range.atEnd())
         return false;
-    auto longhands = shorthand.propertiesSpan();
+    auto longhands = shorthand.properties();
     addProperty(longhands[0], shorthandId, startValue.releaseNonNull(), important);
     addProperty(longhands[1], shorthandId, endValue.releaseNonNull(), important);
     return true;
@@ -2431,7 +2431,7 @@ bool CSSPropertyParser::consumeAlignShorthand(const StylePropertyShorthand& shor
     //   <'gap'>           https://drafts.csswg.org/css-align/#propdef-gap
 
     ASSERT(shorthand.length() == 2);
-    auto longhands = shorthand.propertiesSpan();
+    auto longhands = shorthand.properties();
 
     auto rangeCopy = m_range;
 

@@ -98,7 +98,7 @@ inline bool MutableStyleProperties::removeShorthandProperty(CSSPropertyID proper
     // FIXME: Use serializeShorthandValue here to return the value of the removed shorthand as we do when removing a longhand.
     if (returnText)
         *returnText = String();
-    return removeProperties(shorthandForProperty(propertyID).propertiesSpan());
+    return removeProperties(shorthandForProperty(propertyID).properties());
 }
 
 bool MutableStyleProperties::removePropertyAtIndex(int index, String* returnText)
@@ -183,7 +183,7 @@ void MutableStyleProperties::setProperty(CSSPropertyID propertyID, RefPtr<CSSVal
         return;
     }
     auto shorthand = shorthandForProperty(propertyID);
-    removeProperties(shorthand.propertiesSpan());
+    removeProperties(shorthand.properties());
     for (auto longhand : shorthand)
         m_propertyVector.append(CSSProperty(longhand, value.copyRef(), important));
 }

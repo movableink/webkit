@@ -5045,11 +5045,10 @@ Ref<CSSValueList> ComputedStyleExtractor::getCSSPropertyValuesForShorthandProper
 
 RefPtr<CSSValueList> ComputedStyleExtractor::getCSSPropertyValuesFor2SidesShorthand(const StylePropertyShorthand& shorthand) const
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Assume the properties are in the usual order start, end.
-    auto startValue = propertyValue(shorthand.properties()[0], UpdateLayout::No);
-    auto endValue = propertyValue(shorthand.properties()[1], UpdateLayout::No);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    auto longhands = shorthand.properties();
+    auto startValue = propertyValue(longhands[0], UpdateLayout::No);
+    auto endValue = propertyValue(longhands[1], UpdateLayout::No);
 
     // All 2 properties must be specified.
     if (!startValue || !endValue)
@@ -5062,13 +5061,12 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 RefPtr<CSSValueList> ComputedStyleExtractor::getCSSPropertyValuesFor4SidesShorthand(const StylePropertyShorthand& shorthand) const
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Assume the properties are in the usual order top, right, bottom, left.
-    auto topValue = propertyValue(shorthand.properties()[0], UpdateLayout::No);
-    auto rightValue = propertyValue(shorthand.properties()[1], UpdateLayout::No);
-    auto bottomValue = propertyValue(shorthand.properties()[2], UpdateLayout::No);
-    auto leftValue = propertyValue(shorthand.properties()[3], UpdateLayout::No);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    auto longhands = shorthand.properties();
+    auto topValue = propertyValue(longhands[0], UpdateLayout::No);
+    auto rightValue = propertyValue(longhands[1], UpdateLayout::No);
+    auto bottomValue = propertyValue(longhands[2], UpdateLayout::No);
+    auto leftValue = propertyValue(longhands[3], UpdateLayout::No);
 
     // All 4 properties must be specified.
     if (!topValue || !rightValue || !bottomValue || !leftValue)
@@ -5180,18 +5178,18 @@ Ref<CSSValue> ComputedStyleExtractor::getFillLayerPropertyShorthandValue(CSSProp
 
 Ref<CSSValue> ComputedStyleExtractor::getBackgroundShorthandValue() const
 {
-    static const CSSPropertyID propertiesBeforeSlashSeparator[] = { CSSPropertyBackgroundImage, CSSPropertyBackgroundRepeat, CSSPropertyBackgroundAttachment, CSSPropertyBackgroundPosition };
-    static const CSSPropertyID propertiesAfterSlashSeparator[] = { CSSPropertyBackgroundSize, CSSPropertyBackgroundOrigin, CSSPropertyBackgroundClip };
+    static constexpr std::array propertiesBeforeSlashSeparator { CSSPropertyBackgroundImage, CSSPropertyBackgroundRepeat, CSSPropertyBackgroundAttachment, CSSPropertyBackgroundPosition };
+    static constexpr std::array propertiesAfterSlashSeparator { CSSPropertyBackgroundSize, CSSPropertyBackgroundOrigin, CSSPropertyBackgroundClip };
 
-    return getFillLayerPropertyShorthandValue(CSSPropertyBackground, StylePropertyShorthand(CSSPropertyBackground, propertiesBeforeSlashSeparator), StylePropertyShorthand(CSSPropertyBackground, propertiesAfterSlashSeparator), CSSPropertyBackgroundColor);
+    return getFillLayerPropertyShorthandValue(CSSPropertyBackground, StylePropertyShorthand(CSSPropertyBackground, std::span { propertiesBeforeSlashSeparator }), StylePropertyShorthand(CSSPropertyBackground, std::span { propertiesAfterSlashSeparator }), CSSPropertyBackgroundColor);
 }
 
 Ref<CSSValue> ComputedStyleExtractor::getMaskShorthandValue() const
 {
-    static const CSSPropertyID propertiesBeforeSlashSeparator[2] = { CSSPropertyMaskImage, CSSPropertyMaskPosition };
-    static const CSSPropertyID propertiesAfterSlashSeparator[6] = { CSSPropertyMaskSize, CSSPropertyMaskRepeat, CSSPropertyMaskOrigin, CSSPropertyMaskClip, CSSPropertyMaskComposite, CSSPropertyMaskMode };
+    static constexpr std::array propertiesBeforeSlashSeparator { CSSPropertyMaskImage, CSSPropertyMaskPosition };
+    static constexpr std::array propertiesAfterSlashSeparator { CSSPropertyMaskSize, CSSPropertyMaskRepeat, CSSPropertyMaskOrigin, CSSPropertyMaskClip, CSSPropertyMaskComposite, CSSPropertyMaskMode };
 
-    return getFillLayerPropertyShorthandValue(CSSPropertyMask, StylePropertyShorthand(CSSPropertyMask, propertiesBeforeSlashSeparator), StylePropertyShorthand(CSSPropertyMask, propertiesAfterSlashSeparator), CSSPropertyInvalid);
+    return getFillLayerPropertyShorthandValue(CSSPropertyMask, StylePropertyShorthand(CSSPropertyMask, std::span { propertiesBeforeSlashSeparator }), StylePropertyShorthand(CSSPropertyMask, std::span { propertiesAfterSlashSeparator }), CSSPropertyInvalid);
 }
 
 } // namespace WebCore

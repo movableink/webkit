@@ -44,6 +44,8 @@
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 #include "TimelineRange.h"
+#include <algorithm>
+#include <wtf/IndexedRange.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -152,15 +154,11 @@ inline ShorthandSerializer::ShorthandSerializer(const PropertiesType& properties
 
 inline CSSPropertyID ShorthandSerializer::longhandProperty(unsigned index) const
 {
-    ASSERT(index < length());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return m_shorthand.properties()[index];
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 inline CSSValue& ShorthandSerializer::longhandValue(unsigned index) const
 {
-    ASSERT(index < length());
     return *m_longhandValues[index];
 }
 
@@ -521,10 +519,8 @@ public:
     void set(unsigned index, const CSSValue* value, bool skipSerializing = false)
     {
         ASSERT(index < m_shorthand.length());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         m_skipSerializing[index] = skipSerializing
             || !value || isInitialValueForLonghand(m_shorthand.properties()[index], *value);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         m_values[index] = value;
     }
 
@@ -534,13 +530,10 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         return m_skipSerializing[index];
     }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     std::optional<CSSValueID> valueID(unsigned index) const
     {
-        ASSERT(index < m_shorthand.length());
         return longhandValueID(m_shorthand.properties()[index], m_values[index].get());
     }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     CSSValueID valueIDIncludingCustomIdent(unsigned index) const
     {

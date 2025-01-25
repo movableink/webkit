@@ -3759,7 +3759,7 @@ class GenerateStylePropertyShorthandFunctions:
                             to.write(f"{longhand.id},")
 
                 to.write(f"}};")
-                to.write(f"return StylePropertyShorthand({property.id}, {property.id_without_prefix_with_lowercase_first_letter}Properties);")
+                to.write(f"return StylePropertyShorthand({property.id}, std::span {{ {property.id_without_prefix_with_lowercase_first_letter}Properties }});")
             to.write(f"}}")
             to.newline()
 
