@@ -564,19 +564,17 @@ public:
         return value && value->isPair();
     }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     void serialize(StringBuilder& builder) const
     {
         // If all are skipped, then serialize the first.
-        auto begin = std::begin(m_skipSerializing);
-        auto end = begin + m_shorthand.length();
-        bool allSkipped = std::find(begin, end, false) == end;
+        auto range = std::span { m_skipSerializing }.first(m_shorthand.length());
+        bool allSkipped = std::ranges::find(range, false) == range.end();
 
         auto separator = builder.isEmpty() ? ""_s : ", "_s;
-        for (unsigned j = 0; j < m_shorthand.length(); j++) {
+        auto longhands = m_shorthand.properties();
+        for (auto [j, longhand] : indexedRange(longhands)) {
             if (allSkipped ? j : m_skipSerializing[j])
                 continue;
-            auto longhand = m_shorthand.properties()[j];
             if (longhand == CSSPropertyBackgroundSize || longhand == CSSPropertyMaskSize)
                 separator = " / "_s;
             if (auto& value = m_values[j])
@@ -586,7 +584,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             separator = " "_s;
         }
     }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 private:
     const StylePropertyShorthand& m_shorthand;
