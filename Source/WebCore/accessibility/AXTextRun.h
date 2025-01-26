@@ -82,12 +82,20 @@ struct AXTextRuns {
     // Do not de-reference. Use for comparison purposes only.
     void* containingBlock { nullptr };
     Vector<AXTextRun> runs;
+    bool containsOnlyASCII { true };
 
     AXTextRuns() = default;
-    AXTextRuns(RenderBlock* containingBlock, Vector<AXTextRun>&& runs)
+    AXTextRuns(RenderBlock* containingBlock, Vector<AXTextRun>&& textRuns)
         : containingBlock(containingBlock)
-        , runs(WTFMove(runs))
-    { }
+        , runs(WTFMove(textRuns))
+    {
+        for (const auto& run : runs) {
+            if (!run.text.containsOnlyASCII()) {
+                containsOnlyASCII = false;
+                break;
+            }
+        }
+    }
     String debugDescription() const;
 
     size_t size() const { return runs.size(); }

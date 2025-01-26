@@ -745,8 +745,17 @@ AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreak
     // If the BR isn't in an editable ancestor, we shouldn't be including it (in most cases of findMarker).
     bool shouldSkipBR = ignoreBRs == IgnoreBRs::Yes && object && object->roleValue() == AccessibilityRole::LineBreak && !object->editableAncestor();
     bool isWithinRunBounds = ((direction == AXDirection::Next && offset() < runs()->totalLength()) || (direction == AXDirection::Previous && offset()));
-    if (!shouldSkipBR && isWithinRunBounds)
-        return AXTextMarker { treeID(), objectID(), direction == AXDirection::Next ? offset() + 1 : offset() - 1 };
+    if (!shouldSkipBR && isWithinRunBounds) {
+        if (runs()->containsOnlyASCII) {
+            // In the common case where the text-runs only contain ASCII, all we need to do is the move the offset by 1,
+            // which is more efficient than turning the runs into a string and creating a CachedTextBreakIterator.
+            return AXTextMarker { treeID(), objectID(), direction == AXDirection::Next ? offset() + 1 : offset() - 1 };
+        }
+
+        CachedTextBreakIterator iterator(runs()->toString(), { }, TextBreakIterator::CaretMode { }, nullAtom());
+        unsigned newOffset = direction == AXDirection::Next ? iterator.following(offset()).value_or(offset() + 1) : iterator.preceding(offset()).value_or(offset() - 1);
+        return AXTextMarker { treeID(), objectID(), newOffset };
+    }
 
     // offset() pointed to the last character in the given object's runs, so let's traverse to find the next object with runs.
     if (RefPtr object = findObjectWithRuns(*isolatedObject(), direction, stopAtID)) {
@@ -754,7 +763,7 @@ AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreak
 
         // The startingOffset is used to advance one position farther when we are coalescing object breaks and skipping positions.
         unsigned startingOffset = 0;
-        if ((coalesceObjectBreaks == CoalesceObjectBreaks::Yes || shouldSkipBR) && !isolatedObject()->emitsNewlineAfter())
+        if (coalesceObjectBreaks == CoalesceObjectBreaks::Yes || shouldSkipBR)
             startingOffset = 1;
 
         return AXTextMarker { *object, direction == AXDirection::Next ? startingOffset : object->textRuns()->lastRunLength() - startingOffset };
