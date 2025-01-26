@@ -435,9 +435,9 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
 
         case GIFType: {
             // All GIF files begin with "GIF87a" or "GIF89a".
-            if (!strncmp((char*)currentComponent.data(), "GIF89a", 6))
+            if (spanHasPrefix(currentComponent, "GIF89a"_span))
                 m_version = 89;
-            else if (!strncmp((char*)currentComponent.data(), "GIF87a", 6))
+            else if (spanHasPrefix(currentComponent, "GIF87a"_span))
                 m_version = 87;
             else
                 return false;
@@ -608,8 +608,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         case GIFApplicationExtension: {
             // Check for netscape application extension.
-            if (m_bytesToConsume == 11 
-                && (!strncmp(reinterpret_cast<const char*>(currentComponent.data()), "NETSCAPE2.0", 11) || !strncmp(reinterpret_cast<const char*>(currentComponent.data()), "ANIMEXTS1.0", 11)))
+            if (m_bytesToConsume == 11 && (spanHasPrefix(currentComponent, "NETSCAPE2.0"_span) || spanHasPrefix(currentComponent, "ANIMEXTS1.0"_span)))
                 GETN(1, GIFNetscapeExtensionBlock);
             else
                 GETN(1, GIFConsumeBlock);

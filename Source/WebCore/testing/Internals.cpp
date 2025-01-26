@@ -3816,7 +3816,7 @@ ExceptionOr<String> Internals::pageProperty(const String& propertyName, int page
     if (!frame())
         return Exception { ExceptionCode::InvalidAccessError };
 
-    return PrintContext::pageProperty(frame(), propertyName.utf8().data(), pageNumber);
+    return PrintContext::pageProperty(frame(), propertyName, pageNumber);
 }
 
 ExceptionOr<String> Internals::pageSizeAndMarginsInPixels(int pageNumber, int width, int height, int marginTop, int marginRight, int marginBottom, int marginLeft) const

@@ -46,10 +46,8 @@ ExceptionOr<Ref<TextDecoder>> TextDecoder::create(const String& label, Options o
     if (trimmedLabel.contains(nullCharacter))
         return Exception { ExceptionCode::RangeError };
     auto decoder = adoptRef(*new TextDecoder(trimmedLabel, options));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    if (!decoder->m_textEncoding.isValid() || !strcmp(decoder->m_textEncoding.name(), "replacement"))
+    if (!decoder->m_textEncoding.isValid() || decoder->m_textEncoding.name() == "replacement"_s)
         return Exception { ExceptionCode::RangeError };
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return decoder;
 }
 

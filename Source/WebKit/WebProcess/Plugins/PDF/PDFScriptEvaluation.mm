@@ -30,6 +30,7 @@
 
 #import <CoreGraphics/CGPDFDocument.h>
 #import <JavaScriptCore/RegularExpression.h>
+#import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/OptionSet.h>
 #import <wtf/text/ASCIILiteral.h>
@@ -100,11 +101,8 @@ static bool pdfDocumentContainsPrintScript(RetainPtr<CGPDFDocumentRef> pdfDocume
             continue;
 
         // A JavaScript action must have an action type of "JavaScript".
-        const char* actionType = nullptr;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        if (!CGPDFDictionaryGetName(javaScriptAction, "S", &actionType) || strcmp(actionType, "JavaScript"))
+        if (CGPDFDictionaryGetNameString(javaScriptAction, "S"_s) != "JavaScript"_s)
             continue;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         auto scriptFromBytes = [](std::span<const uint8_t> bytes) {
             CFStringEncoding encoding = (bytes.size() > 1 && bytes[0] == 0xFE && bytes[1] == 0xFF) ? kCFStringEncodingUnicode : kCFStringEncodingUTF8;

@@ -83,7 +83,7 @@ static void PNGAPI decodingWarning(png_structp png, png_const_charp warningMsg)
     // Mozilla did this, so we will too.
     // Convert a tRNS warning to be an error (see
     // http://bugzilla.mozilla.org/show_bug.cgi?id=251381 )
-    if (!strncmp(warningMsg, "Missing PLTE before tRNS", 24))
+    if (spanHasPrefix(unsafeSpan(warningMsg), "Missing PLTE before tRNS"_span))
         png_error(png, warningMsg);
 }
 

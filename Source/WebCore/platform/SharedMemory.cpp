@@ -35,12 +35,10 @@ namespace WebCore {
 bool isMemoryAttributionDisabled()
 {
     static bool result = []() {
-        const char* value = getenv("WEBKIT_DISABLE_MEMORY_ATTRIBUTION");
-        if (!value)
+        auto value = unsafeSpan(getenv("WEBKIT_DISABLE_MEMORY_ATTRIBUTION"));
+        if (!value.data())
             return false;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        return !strcmp(value, "1");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        return equalSpans(value, "1"_span);
     }();
     return result;
 }

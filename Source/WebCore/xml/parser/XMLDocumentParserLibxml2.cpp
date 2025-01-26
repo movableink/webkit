@@ -1502,7 +1502,7 @@ using AttributeParseState = std::optional<HashMap<String, String>>;
 
 static void attributesStartElementNsHandler(void* closure, const xmlChar* xmlLocalName, const xmlChar* /*xmlPrefix*/, const xmlChar* /*xmlURI*/, int /*numNamespaces*/, const xmlChar** /*namespaces*/, int numAttributes, int /*numDefaulted*/, const xmlChar** libxmlAttributes)
 {
-    if (strcmp(byteCast<char>(xmlLocalName), "attrs"))
+    if (!equalSpans(unsafeSpan(byteCast<char>(xmlLocalName)), "attrs"_span))
         return;
 
     auto& state = *static_cast<AttributeParseState*>(static_cast<xmlParserCtxtPtr>(closure)->_private);

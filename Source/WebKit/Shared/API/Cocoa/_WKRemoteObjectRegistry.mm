@@ -143,12 +143,10 @@ static uint64_t generateReplyIdentifier()
 
     NSMethodSignature *methodSignature = invocation.methodSignature;
     for (NSUInteger i = 0, count = methodSignature.numberOfArguments; i < count; ++i) {
-        const char *type = [methodSignature getArgumentTypeAtIndex:i];
+        auto type = unsafeSpan([methodSignature getArgumentTypeAtIndex:i]);
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        if (strcmp(type, "@?"))
+        if (!equalSpans(type, "@?"_span))
             continue;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         if (replyInfo)
             [NSException raise:NSInvalidArgumentException format:@"Only one reply block is allowed per message send. (%s)", sel_getName(invocation.selector)];
@@ -233,12 +231,10 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
 
     // Look for the block argument (if any).
     for (NSUInteger i = 0, count = methodSignature.numberOfArguments; i < count; ++i) {
-        const char *type = [methodSignature getArgumentTypeAtIndex:i];
+        auto type = unsafeSpan([methodSignature getArgumentTypeAtIndex:i]);
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        if (strcmp(type, "@?"))
+        if (!equalSpans(type, "@?"_span))
             continue;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         // We found the block.
         // If the wire had no block signature but we expect one, we drop the message.

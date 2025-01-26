@@ -6318,6 +6318,16 @@ class WebKitStyleTest(CppStyleTestBase):
             'Use WTF::find() or WTF::contains() instead of strstr().  [safercpp/strstr] [4]',
             'foo.cpp')
 
+        self.assert_lint(
+            'int result = strcmp(a, "foo");',
+            'strcmp() is unsafe.  [safercpp/strcmp] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'int result = strncmp(a, "foo", 3);',
+            'strncmp() is unsafe.  [safercpp/strncmp] [4]',
+            'foo.cpp')
+
     def test_ctype_fucntion(self):
         self.assert_lint(
             'int i = isascii(8);',

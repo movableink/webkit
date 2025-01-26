@@ -3539,6 +3539,14 @@ def check_safer_cpp(clean_lines, line_number, error):
     if uses_strstr:
         error(line_number, 'safercpp/strstr', 4, "Use WTF::find() or WTF::contains() instead of strstr().")
 
+    uses_strcmp = search(r'strcmp\(', line)
+    if uses_strcmp:
+        error(line_number, 'safercpp/strcmp', 4, "strcmp() is unsafe.")
+
+    uses_strncmp = search(r'strncmp\(', line)
+    if uses_strncmp:
+        error(line_number, 'safercpp/strncmp', 4, "strncmp() is unsafe.")
+
 
 def check_style(clean_lines, line_number, file_extension, class_state, file_state, enum_state, error):
     """Checks rules from the 'C++ style rules' section of cppguide.html.
@@ -4887,6 +4895,8 @@ class CppChecker(object):
         'safercpp/memset',
         'safercpp/memset_s',
         'safercpp/weak_ref_exception',
+        'safercpp/strcmp',
+        'safercpp/strncmp',
         'safercpp/strchr',
         'safercpp/strstr',
         'safercpp/timer_exception',

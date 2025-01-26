@@ -27,6 +27,7 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreGraphics/CoreGraphics.h>
+#include <wtf/text/WTFString.h>
 
 #if HAVE(IOSURFACE)
 #include <wtf/spi/cocoa/IOSurfaceSPI.h>
@@ -449,3 +450,10 @@ CG_EXTERN void CGEnterLockdownModeForFonts();
 #endif
 
 WTF_EXTERN_C_END
+
+inline String CGPDFDictionaryGetNameString(CGPDFDictionaryRef dictionary, ASCIILiteral key)
+{
+    const char* value = nullptr;
+    CGPDFDictionaryGetName(dictionary, key.characters(), &value);
+    return value ? String::fromUTF8(value) : String();
+}

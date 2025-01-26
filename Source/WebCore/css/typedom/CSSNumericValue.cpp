@@ -52,6 +52,7 @@
 #include "ExceptionOr.h"
 #include <wtf/Algorithms.h>
 #include <wtf/FixedVector.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -403,7 +404,7 @@ ExceptionOr<Ref<CSSMathSum>> CSSNumericValue::toSum(FixedVector<String>&& units)
 
     if (parsedUnits.isEmpty()) {
         std::sort(values.begin(), values.end(), [](auto& a, auto& b) {
-            return strcmp(downcast<CSSUnitValue>(a)->unitSerialization().characters(), downcast<CSSUnitValue>(b)->unitSerialization().characters()) < 0;
+            return compareSpans(downcast<CSSUnitValue>(a)->unitSerialization().span(), downcast<CSSUnitValue>(b)->unitSerialization().span()) < 0;
         });
         return CSSMathSum::create(WTFMove(values));
     }
