@@ -1344,9 +1344,7 @@ void Storage::deleteOldVersions()
                 return;
             if (!subdirName.startsWith(versionDirectoryPrefix))
                 return;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-            auto directoryVersion = parseInteger<unsigned>(StringView { subdirName }.substring(strlen(versionDirectoryPrefix)));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+            auto directoryVersion = parseInteger<unsigned>(StringView { subdirName }.substring(versionDirectoryPrefix.length()));
             if (!directoryVersion || *directoryVersion >= version)
                 return;
             auto oldVersionPath = FileSystem::pathByAppendingComponent(cachePath, subdirName);
