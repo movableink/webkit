@@ -65,30 +65,26 @@ static void handleVideoReceiverEndpointMessage(xpc_object_t message)
 }
 #endif
 
-void handleXPCEndpointMessage(xpc_object_t message, const char* messageName)
+void handleXPCEndpointMessage(xpc_object_t message, const String& messageName)
 {
     ASSERT_UNUSED(messageName, messageName);
     RELEASE_ASSERT(xpc_get_type(message) == XPC_TYPE_DICTIONARY);
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #if HAVE(LSDATABASECONTEXT)
-    if (!strcmp(messageName, LaunchServicesDatabaseXPCConstants::xpcLaunchServicesDatabaseXPCEndpointMessageName)) {
+    if (messageName == LaunchServicesDatabaseXPCConstants::xpcLaunchServicesDatabaseXPCEndpointMessageName) {
         handleLaunchServiceDatabaseMessage(message);
         return;
     }
 #endif
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-    if (!strcmp(messageName, VideoReceiverEndpointMessage::messageName().characters())) {
+    if (messageName == VideoReceiverEndpointMessage::messageName()) {
         RunLoop::main().dispatch([message = OSObjectPtr(message)] {
             handleVideoReceiverEndpointMessage(message.get());
         });
         return;
     }
 #endif
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 }
 

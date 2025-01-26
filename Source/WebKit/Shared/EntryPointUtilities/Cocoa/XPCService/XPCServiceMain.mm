@@ -113,7 +113,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH static void crashDueWebKitFrameworkVersionMi
 }
 static void checkFrameworkVersion(xpc_object_t message)
 {
-    auto uiProcessWebKitBundleVersion = String::fromLatin1(xpc_dictionary_get_string(message, "WebKitBundleVersion"));
+    auto uiProcessWebKitBundleVersion = xpc_dictionary_get_wtfstring(message, "WebKitBundleVersion"_s);
     auto webkitBundleVersion = ASCIILiteral::fromLiteralUnsafe(WEBKIT_BUNDLE_VERSION);
     if (!uiProcessWebKitBundleVersion.isNull() && uiProcessWebKitBundleVersion != webkitBundleVersion) {
         auto errorMessage = makeString("WebKit framework version mismatch: "_s, uiProcessWebKitBundleVersion, " != "_s, webkitBundleVersion);
@@ -154,13 +154,12 @@ void XPCServiceEventHandler(xpc_connection_t peer)
         handleXPCExitMessage(event);
 #endif
 
-        auto* messageName = xpc_dictionary_get_string(event, "message-name");
+        String messageName = xpc_dictionary_get_wtfstring(event, "message-name"_s);
         if (!messageName) {
             RELEASE_LOG_ERROR(IPC, "XPCServiceEventHandler: 'message-name' is not present in the XPC dictionary");
             return;
         }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        if (!strcmp(messageName, "bootstrap")) {
+        if (messageName == "bootstrap"_s) {
             WTF::initialize();
 
             bool disableLogging = xpc_dictionary_get_bool(event, "disable-logging");
@@ -191,26 +190,25 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             });
 #endif
 
-            const char* serviceName = xpc_dictionary_get_string(event, "service-name");
+            String serviceName = xpc_dictionary_get_wtfstring(event, "service-name"_s);
             if (!serviceName) {
                 RELEASE_LOG_ERROR(IPC, "XPCServiceEventHandler: 'service-name' is not present in the XPC dictionary");
                 return;
             }
             CFStringRef entryPointFunctionName = nullptr;
-            if (!strncmp(serviceName, "com.apple.WebKit.WebContent", strlen("com.apple.WebKit.WebContent"))) {
+            if (serviceName.startsWith("com.apple.WebKit.WebContent"_s)) {
                 s_isWebProcess = true;
                 entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(WEBCONTENT_SERVICE_INITIALIZER));
-            } else if (!strcmp(serviceName, "com.apple.WebKit.Networking"))
+            } else if (serviceName == "com.apple.WebKit.Networking"_s)
                 entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(NETWORK_SERVICE_INITIALIZER));
-            else if (!strcmp(serviceName, "com.apple.WebKit.GPU"))
+            else if (serviceName == "com.apple.WebKit.GPU"_s)
                 entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(GPU_SERVICE_INITIALIZER));
-            else if (!strcmp(serviceName, "com.apple.WebKit.Model"))
+            else if (serviceName == "com.apple.WebKit.Model"_s)
                 entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(MODEL_SERVICE_INITIALIZER));
             else {
-                RELEASE_LOG_ERROR(IPC, "XPCServiceEventHandler: Unexpected 'service-name': %{public}s", serviceName);
+                RELEASE_LOG_ERROR(IPC, "XPCServiceEventHandler: Unexpected 'service-name': %{public}s", serviceName.utf8().data());
                 return;
             }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
             CFBundleRef webKitBundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebKit"));
             typedef void (*InitializerFunction)(xpc_connection_t, xpc_object_t);

@@ -6328,6 +6328,16 @@ class WebKitStyleTest(CppStyleTestBase):
             'strncmp() is unsafe.  [safercpp/strncmp] [4]',
             'foo.cpp')
 
+        self.assert_lint(
+            'auto* result = xpc_dictionary_get_data(dictionary, "foo", &size);',
+            'Use xpc_dictionary_get_data_span() instead of xpc_dictionary_get_data().  [safercpp/xpc_dictionary_get_data] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'auto* result = xpc_dictionary_get_string(dictionary, "foo");',
+            'Use xpc_dictionary_get_wtfstring() instead of xpc_dictionary_get_string().  [safercpp/xpc_dictionary_get_string] [4]',
+            'foo.cpp')
+
     def test_ctype_fucntion(self):
         self.assert_lint(
             'int i = isascii(8);',
