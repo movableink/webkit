@@ -91,7 +91,7 @@ struct CacheStorageRecord {
             crossThreadCopy(WTFMove(info)),
             requestHeadersGuard,
             crossThreadCopy(WTFMove(request)),
-            options,
+            crossThreadCopy(WTFMove(options)),
             crossThreadCopy(WTFMove(referrer)),
             responseHeadersGuard,
             crossThreadCopy(WTFMove(responseData)),
