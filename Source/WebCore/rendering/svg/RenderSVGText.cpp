@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexander Kellett <lypanov@kde.org>
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
@@ -1011,5 +1011,10 @@ SVGRootInlineBox* RenderSVGText::legacyRootBox() const
     return downcast<SVGRootInlineBox>(RenderSVGBlock::legacyRootBox());
 }
 
+bool RenderSVGText::isObjectBoundingBoxValid() const
+{
+    // If we don't have any line boxes, then consider the bbox invalid.
+    return legacyRootBox();
+}
 
 }
