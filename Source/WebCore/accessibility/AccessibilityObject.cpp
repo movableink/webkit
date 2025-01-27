@@ -87,6 +87,7 @@
 #include "RenderText.h"
 #include "RenderTextControl.h"
 #include "RenderTheme.h"
+#include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
 #include "RenderedPosition.h"
@@ -2926,17 +2927,12 @@ const RenderStyle* AccessibilityObject::style() const
     if (auto* renderer = this->renderer())
         return &renderer->style();
 
-    auto* element = this->element();
-    return element ? element->computedStyle() : nullptr;
-}
-
-const RenderStyle* AccessibilityObject::existingStyle() const
-{
-    if (auto* renderer = this->renderer())
-        return &renderer->style();
-
-    auto* element = this->element();
-    return element ? element->existingComputedStyle() : nullptr;
+    RefPtr element = this->element();
+    if (!element)
+        return nullptr;
+    // We cannot resolve style (as computedStyle() does) if we are downstream of an existing render tree
+    // update. Otherwise, a RELEASE_ASSERT preventing re-entrancy will be hit inside RenderTreeBuilder.
+    return RenderTreeBuilder::current() ? element->existingComputedStyle() : element->computedStyle();
 }
 
 bool AccessibilityObject::isValueAutofillAvailable() const
@@ -3934,7 +3930,7 @@ String AccessibilityObject::validationMessage() const
 
 AccessibilityObjectInclusion AccessibilityObject::defaultObjectInclusion() const
 {
-    if (auto* style = this->style()) {
+    if (const auto* style = this->style()) {
         if (style->effectiveInert())
             return AccessibilityObjectInclusion::IgnoreObject;
         if (isVisibilityHidden(*style))
@@ -3950,7 +3946,7 @@ AccessibilityObjectInclusion AccessibilityObject::defaultObjectInclusion() const
 
     bool ignoreARIAHidden = isFocused();
     if (Accessibility::findAncestor<AccessibilityObject>(*this, false, [&] (const auto& object) {
-        const auto* style = object.existingStyle();
+        const auto* style = object.style();
         if (style && WebCore::isRenderHidden(*style))
             return true;
 
