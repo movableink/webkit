@@ -124,13 +124,24 @@ void RenderTreeBuilder::Inline::attach(RenderInline& parent, RenderPtr<RenderObj
 
 void RenderTreeBuilder::Inline::insertChildToContinuation(RenderInline& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
-    auto* flow = continuationBefore(parent, beforeChild);
+    if (!beforeChild) {
+        auto& parentCandidate = *continuationBefore(parent, { });
+        auto* lastContinuation = nextContinuation(&parentCandidate);
+        if (!lastContinuation) {
+            // parentCandidate is the last continuation.
+            return m_builder.attachIgnoringContinuation(parentCandidate, WTFMove(child));
+        }
+        // The inline box inside the "post" part of the continuation is the preferred parent but we may not be able to put this child in there.
+        auto& nextToLastContinuation = parentCandidate;
+        auto childIsInline = newChildIsInline(parent, *child);
+        if (childIsInline == lastContinuation->isInline() || childIsInline != nextToLastContinuation.isInline() || child->isFloatingOrOutOfFlowPositioned())
+            return m_builder.attachIgnoringContinuation(*lastContinuation, WTFMove(child));
+        return m_builder.attachIgnoringContinuation(nextToLastContinuation, WTFMove(child));
+    }
+
     // It may or may not be the direct parent of the beforeChild.
     RenderBoxModelObject* beforeChildAncestor = nullptr;
-    if (!beforeChild) {
-        auto* continuation = nextContinuation(flow);
-        beforeChildAncestor = continuation ? continuation : flow;
-    } else if (canUseAsParentForContinuation(beforeChild->parent()))
+    if (canUseAsParentForContinuation(beforeChild->parent()))
         beforeChildAncestor = downcast<RenderBoxModelObject>(beforeChild->parent());
     else if (beforeChild->parent()) {
         // In case of anonymous wrappers, the parent of the beforeChild is mostly irrelevant. What we need is the topmost wrapper.
@@ -149,6 +160,7 @@ void RenderTreeBuilder::Inline::insertChildToContinuation(RenderInline& parent, 
     if (child->isFloatingOrOutOfFlowPositioned())
         return m_builder.attachIgnoringContinuation(*beforeChildAncestor, WTFMove(child), beforeChild);
 
+    auto* flow = continuationBefore(parent, beforeChild);
     if (flow == beforeChildAncestor)
         return m_builder.attachIgnoringContinuation(*flow, WTFMove(child), beforeChild);
     // A continuation always consists of two potential candidates: an inline or an anonymous
