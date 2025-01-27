@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2014-2015 Google Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2016 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1700,13 +1700,14 @@ void HTMLMediaElement::selectMediaResource()
             // 2. Let absolute URL be the absolute URL that would have resulted from parsing the URL
             //    specified by the src attribute’s value relative to the media element when the src
             //    attribute was last changed.
-            URL absoluteURL = getNonEmptyURLAttribute(srcAttr);
-            if (absoluteURL.isEmpty()) {
+            auto& srcValue = attributeWithoutSynchronization(srcAttr);
+            if (srcValue.isEmpty()) {
                 mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
                 ALWAYS_LOG(logSiteIdentifier, "empty 'src'");
                 return;
             }
 
+            auto absoluteURL = document().completeURL(srcValue);
             if (!isSafeToLoadURL(absoluteURL, Complain)) {
                 mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
                 return;
@@ -5576,13 +5577,22 @@ URL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, String* ke
         if (source->parentNode() != this)
             continue;
 
-        // If candidate does not have a src attribute, or if its src attribute's value is the empty string ... jump down to the failed step below
-        auto mediaURL = source->getNonEmptyURLAttribute(srcAttr);
+        // 2. If candidate does not have a src attribute, or if its src
+        // attribute's value is the empty string ... jump down to the failed
+        // step below
+        auto& srcValue = source->attributeWithoutSynchronization(srcAttr);
+        URL mediaURL;
         String type;
         if (shouldLog)
-            INFO_LOG(LOGIDENTIFIER, "'src' is ", mediaURL);
-        if (mediaURL.isEmpty())
+            INFO_LOG(LOGIDENTIFIER, "'src' is ", srcValue);
+        if (srcValue.isEmpty())
             goto CheckAgain;
+
+        // 3. Let urlString be the resulting URL string that would have resulted
+        // from parsing the URL specified by candidate's src attribute's value
+        // relative to the candidate's node document when the src attribute was
+        // last changed.
+        mediaURL = source->document().completeURL(srcValue);
 
         if (auto mediaQueryList = source->parsedMediaAttribute(protectedDocument()); !mediaQueryList.isEmpty()) {
             if (shouldLog)
@@ -5593,6 +5603,13 @@ URL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, String* ke
                 goto CheckAgain;
         }
 
+        // 4. If urlString was not obtained successfully, then end the synchronous section,
+        // and jump down to the failed with elements step below.
+        if (!isSafeToLoadURL(mediaURL, actionIfInvalid))
+            goto CheckAgain;
+
+        // 5. If candidate has a type attribute whose value, when parsed as a
+        // MIME type ...
         type = source->attributeWithoutSynchronization(typeAttr);
         if (type.isEmpty() && mediaURL.protocolIsData())
             type = mimeTypeFromDataURL(mediaURL.string());
@@ -5612,10 +5629,6 @@ URL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, String* ke
             if (MediaPlayer::supportsType(parameters) == MediaPlayer::SupportsType::IsNotSupported)
                 goto CheckAgain;
         }
-
-        // Is it safe to load this url?
-        if (!isSafeToLoadURL(mediaURL, actionIfInvalid))
-            goto CheckAgain;
 
         // A 'beforeload' event handler can mutate the DOM, so check to see if the source element is still a child node.
         if (source->parentNode() != this) {
