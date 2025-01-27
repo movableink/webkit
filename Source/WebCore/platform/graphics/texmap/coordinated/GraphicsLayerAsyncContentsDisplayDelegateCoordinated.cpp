@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Igalia S.L.
+ * Copyright (C) 2024, 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,35 +23,41 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "GraphicsLayerAsyncContentsDisplayDelegateCoordinated.h"
 
 #if USE(COORDINATED_GRAPHICS)
-
-#include "GraphicsLayerContentsDisplayDelegate.h"
-#include "TextureMapperPlatformLayerProxy.h"
+#include "CoordinatedPlatformLayerBufferNativeImage.h"
+#include "GraphicsLayer.h"
+#include "GraphicsLayerContentsDisplayDelegateCoordinated.h"
+#include "ImageBuffer.h"
+#include "NativeImage.h"
+#include "TextureMapperFlags.h"
 
 namespace WebCore {
 
-class GraphicsLayerContentsDisplayDelegateTextureMapper : public GraphicsLayerContentsDisplayDelegate {
-public:
-    static Ref<GraphicsLayerContentsDisplayDelegateTextureMapper> create(Ref<TextureMapperPlatformLayerProxy>&& proxy)
-    {
-        return adoptRef(*new GraphicsLayerContentsDisplayDelegateTextureMapper(WTFMove(proxy)));
-    }
-    virtual ~GraphicsLayerContentsDisplayDelegateTextureMapper() = default;
+GraphicsLayerAsyncContentsDisplayDelegateCoordinated::GraphicsLayerAsyncContentsDisplayDelegateCoordinated(GraphicsLayer& layer)
+    : m_delegate(GraphicsLayerContentsDisplayDelegateCoordinated::create())
+{
+    layer.setContentsDisplayDelegate(m_delegate.ptr(), GraphicsLayer::ContentsLayerPurpose::Canvas);
+}
 
-    TextureMapperPlatformLayerProxy& proxy() const { return m_proxy.get(); }
+GraphicsLayerAsyncContentsDisplayDelegateCoordinated::~GraphicsLayerAsyncContentsDisplayDelegateCoordinated() = default;
 
-protected:
-    explicit GraphicsLayerContentsDisplayDelegateTextureMapper(Ref<TextureMapperPlatformLayerProxy>&& proxy)
-        : m_proxy(WTFMove(proxy))
-    {
-    }
+bool GraphicsLayerAsyncContentsDisplayDelegateCoordinated::tryCopyToLayer(ImageBuffer& imageBuffer)
+{
+    auto image = ImageBuffer::sinkIntoNativeImage(imageBuffer.clone());
+    if (!image)
+        return false;
 
-    PlatformLayer* platformLayer() const final { return m_proxy.ptr(); }
+    m_delegate->setDisplayBuffer(CoordinatedPlatformLayerBufferNativeImage::create(image.releaseNonNull(), nullptr));
+    return true;
+}
 
-    Ref<TextureMapperPlatformLayerProxy> m_proxy;
-};
+void GraphicsLayerAsyncContentsDisplayDelegateCoordinated::updateGraphicsLayer(GraphicsLayer& layer)
+{
+    layer.setContentsDisplayDelegate(m_delegate.ptr(), GraphicsLayer::ContentsLayerPurpose::Canvas);
+}
 
 } // namespace WebCore
 

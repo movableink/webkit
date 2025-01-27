@@ -46,9 +46,8 @@
 
 #if USE(COORDINATED_GRAPHICS)
 #include "CoordinatedPlatformLayerBufferRGB.h"
-#include "GraphicsLayerContentsDisplayDelegateTextureMapper.h"
+#include "GraphicsLayerContentsDisplayDelegateCoordinated.h"
 #include "TextureMapperFlags.h"
-#include "TextureMapperPlatformLayerProxy.h"
 #else
 #include "PlatformLayerDisplayDelegate.h"
 #include "TextureMapperGCGLPlatformLayer.h"
@@ -56,7 +55,6 @@
 
 #if USE(GBM)
 #include "GraphicsContextGLTextureMapperGBM.h"
-#include "GraphicsLayerContentsDisplayDelegateGBM.h"
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
@@ -138,7 +136,7 @@ RefPtr<GraphicsContextGL> createWebProcessGraphicsContextGL(const GraphicsContex
     if (display.type() == PlatformDisplay::Type::GBM && display.eglExtensions().KHR_image_base && display.eglExtensions().EXT_image_dma_buf_import) {
         static const char* disableGBM = getenv("WEBKIT_WEBGL_DISABLE_GBM");
         if (!disableGBM || *disableGBM == '0') {
-            RefPtr delegate = GraphicsLayerContentsDisplayDelegateGBM::create(!attributes.alpha);
+            RefPtr delegate = GraphicsLayerContentsDisplayDelegateCoordinated::create();
             if (auto context = GraphicsContextGLTextureMapperGBM::create(GraphicsContextGLAttributes { attributes }, WTFMove(delegate)))
                 return context;
             WTFLogAlways("Failed to create a graphics context for WebGL using GBM, falling back to textures");
@@ -295,8 +293,7 @@ bool GraphicsContextGLTextureMapperANGLE::platformInitializeContext()
 bool GraphicsContextGLTextureMapperANGLE::platformInitialize()
 {
 #if USE(COORDINATED_GRAPHICS)
-    auto proxy = TextureMapperPlatformLayerProxy::create(TextureMapperPlatformLayerProxy::ContentType::WebGL);
-    m_layerContentsDisplayDelegate = GraphicsLayerContentsDisplayDelegateTextureMapper::create(WTFMove(proxy));
+    m_layerContentsDisplayDelegate = GraphicsLayerContentsDisplayDelegateCoordinated::create();
 #else
     m_texmapLayer = makeUnique<TextureMapperGCGLPlatformLayer>(*this);
     m_layerContentsDisplayDelegate = PlatformLayerDisplayDelegate::create(m_texmapLayer.get());
@@ -383,8 +380,7 @@ void GraphicsContextGLTextureMapperANGLE::prepareForDisplay()
     if (contextAttributes().alpha)
         flags.add(TextureMapperFlags::ShouldBlend);
     auto fboSize = getInternalFramebufferSize();
-    auto& proxy = static_cast<GraphicsLayerContentsDisplayDelegateTextureMapper*>(m_layerContentsDisplayDelegate.get())->proxy();
-    proxy.pushNextBuffer(CoordinatedPlatformLayerBufferRGB::create(m_compositorTextureID, fboSize, flags, GLFence::create()));
+    m_layerContentsDisplayDelegate->setDisplayBuffer(CoordinatedPlatformLayerBufferRGB::create(m_compositorTextureID, fboSize, flags, GLFence::create()));
 #endif
 }
 

@@ -40,11 +40,8 @@ class TextureMapperLayer;
 class TextureMapperPlatformLayerProxy final : public ThreadSafeRefCounted<TextureMapperPlatformLayerProxy> {
 public:
     enum class ContentType : uint8_t {
-        WebGL,
         Video,
-        OffscreenCanvas,
         HolePunch,
-        Canvas
     };
 
     static Ref<TextureMapperPlatformLayerProxy> create(ContentType contentType)

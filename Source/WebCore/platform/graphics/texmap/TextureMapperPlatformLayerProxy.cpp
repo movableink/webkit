@@ -143,19 +143,6 @@ void TextureMapperPlatformLayerProxy::pushNextBuffer(std::unique_ptr<Coordinated
     m_pendingBuffer = WTFMove(newBuffer);
     m_wasBufferDropped = false;
 
-#if HAVE(DISPLAY_LINK)
-    // WebGL and Canvas changes will cause a composition request during layerFlush. We cannot request
-    // a new compostion here as well or we may trigger two compositions instead of one.
-    switch (contentType()) {
-    case ContentType::WebGL:
-    case ContentType::Canvas:
-    case ContentType::OffscreenCanvas:
-        return;
-    default:
-        break;
-    }
-#endif
-
     if (m_targetLayer)
         m_targetLayer->requestComposition();
 }

@@ -114,12 +114,13 @@ TextureMapperLayer* CoordinatedPlatformLayer::target() const
 void CoordinatedPlatformLayer::invalidateTarget()
 {
     ASSERT(!isMainThread());
-    if (m_committedContentsBuffer) {
-        m_committedContentsBuffer->invalidate();
-        m_committedContentsBuffer = nullptr;
+    if (m_contentsBufferProxy.committed) {
+        m_contentsBufferProxy.committed->invalidate();
+        m_contentsBufferProxy.committed = nullptr;
     }
     m_backingStore = nullptr;
     m_committedImageBackingStore = nullptr;
+    m_contentsBuffer.committed = nullptr;
     m_target = nullptr;
 }
 
@@ -454,23 +455,25 @@ void CoordinatedPlatformLayer::setContentsScale(float contentsScale)
     notifyCompositionRequired();
 }
 
-void CoordinatedPlatformLayer::setContentsBuffer(TextureMapperPlatformLayerProxy* contentsBuffer)
+void CoordinatedPlatformLayer::setContentsBufferProxy(TextureMapperPlatformLayerProxy* contentsBufferProxy)
 {
     ASSERT(m_lock.isHeld());
-    if (m_contentsBuffer == contentsBuffer)
+    if (m_contentsBufferProxy.pending == contentsBufferProxy)
         return;
 
-    m_contentsBuffer = contentsBuffer;
-    m_pendingChanges.add(Change::ContentsBuffer);
+    m_contentsBufferProxy.pending = contentsBufferProxy;
+    m_pendingChanges.add(Change::ContentsBufferProxy);
     notifyCompositionRequired();
 }
 
-void CoordinatedPlatformLayer::setContentsBufferNeedsDisplay()
+void CoordinatedPlatformLayer::setContentsBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&& buffer)
 {
     ASSERT(m_lock.isHeld());
-    if (!m_contentsBuffer)
+    if (!buffer && !m_contentsBuffer.pending && !m_contentsBuffer.committed)
         return;
 
+    m_contentsBuffer.pending = WTFMove(buffer);
+    m_pendingChanges.add(Change::ContentsBuffer);
     notifyCompositionRequired();
 }
 
@@ -794,7 +797,7 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
 {
     ASSERT(!isMainThread());
     Locker locker { m_lock };
-    if (m_pendingChanges.isEmpty() && !m_backingStoreProxy && !m_contentsBuffer)
+    if (m_pendingChanges.isEmpty() && !m_backingStoreProxy && !m_contentsBufferProxy.pending)
         return;
 
     auto& layer = ensureTarget();
@@ -848,14 +851,17 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
     if (m_pendingChanges.contains(Change::ContentsClippingRect))
         layer.setContentsClippingRect(m_contentsClippingRect);
 
-    if (m_pendingChanges.contains(Change::ContentsBuffer)) {
-        if (m_committedContentsBuffer && m_committedContentsBuffer != m_contentsBuffer)
-            m_committedContentsBuffer->invalidate();
+    if (m_pendingChanges.contains(Change::ContentsBufferProxy)) {
+        if (m_contentsBufferProxy.committed && m_contentsBufferProxy.committed != m_contentsBufferProxy.pending)
+            m_contentsBufferProxy.committed->invalidate();
 
-        m_committedContentsBuffer = m_contentsBuffer;
-        if (m_committedContentsBuffer)
-            m_committedContentsBuffer->activateOnCompositingThread(*this);
+        m_contentsBufferProxy.committed = m_contentsBufferProxy.pending;
+        if (m_contentsBufferProxy.committed)
+            m_contentsBufferProxy.committed->activateOnCompositingThread(*this);
     }
+
+    if (m_pendingChanges.contains(Change::ContentsBuffer))
+        m_contentsBuffer.committed = WTFMove(m_contentsBuffer.pending);
 
     if (m_pendingChanges.contains(Change::ContentsImage))
         m_committedImageBackingStore = m_imageBackingStore;
@@ -926,8 +932,10 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
         m_backingStore = nullptr;
     }
 
-    if (m_committedContentsBuffer)
-        m_committedContentsBuffer->swapBuffer();
+    if (m_contentsBufferProxy.committed)
+        m_contentsBufferProxy.committed->swapBuffer();
+    else if (m_contentsBuffer.committed)
+        layer.setContentsLayer(m_contentsBuffer.committed.get());
     else if (m_committedImageBackingStore && m_imageBackingStoreVisible)
         layer.setContentsLayer(m_committedImageBackingStore->buffer());
     else

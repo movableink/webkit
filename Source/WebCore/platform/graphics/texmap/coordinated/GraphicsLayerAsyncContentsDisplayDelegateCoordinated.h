@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Igalia S.L.
+ * Copyright (C) 2024, 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,31 +26,31 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS)
-
 #include "GraphicsLayerContentsDisplayDelegate.h"
 
 namespace WebCore {
 
 class GraphicsLayer;
-class TextureMapperPlatformLayerProxy;
 
-class GraphicsLayerAsyncContentsDisplayDelegateTextureMapper final : public GraphicsLayerAsyncContentsDisplayDelegate {
+class GraphicsLayerAsyncContentsDisplayDelegateCoordinated final : public GraphicsLayerAsyncContentsDisplayDelegate {
 public:
-    static Ref<GraphicsLayerAsyncContentsDisplayDelegateTextureMapper> create(GraphicsLayer& layer)
+    static Ref<GraphicsLayerAsyncContentsDisplayDelegateCoordinated> create(GraphicsLayer& layer)
     {
-        return adoptRef(*new GraphicsLayerAsyncContentsDisplayDelegateTextureMapper(layer));
+        return adoptRef(*new GraphicsLayerAsyncContentsDisplayDelegateCoordinated(layer));
     }
-    virtual ~GraphicsLayerAsyncContentsDisplayDelegateTextureMapper();
+    virtual ~GraphicsLayerAsyncContentsDisplayDelegateCoordinated();
 
     void updateGraphicsLayer(GraphicsLayer&);
 
 private:
-    explicit GraphicsLayerAsyncContentsDisplayDelegateTextureMapper(GraphicsLayer&);
+    explicit GraphicsLayerAsyncContentsDisplayDelegateCoordinated(GraphicsLayer&);
 
-    PlatformLayer* platformLayer() const override { return m_proxy.ptr(); }
+    void setDisplayBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&) override { RELEASE_ASSERT_NOT_REACHED(); }
+    bool display(CoordinatedPlatformLayer&) override { RELEASE_ASSERT_NOT_REACHED(); }
+
     bool tryCopyToLayer(ImageBuffer&) override;
 
-    Ref<TextureMapperPlatformLayerProxy> m_proxy;
+    Ref<GraphicsLayerContentsDisplayDelegate> m_delegate;
 };
 
 } // namespace WebCore

@@ -42,6 +42,7 @@ class CoordinatedBackingStore;
 class CoordinatedBackingStoreProxy;
 class CoordinatedImageBackingStore;
 class CoordinatedPlatformLayer;
+class CoordinatedPlatformLayerBuffer;
 class CoordinatedTileBuffer;
 class GraphicsLayerCoordinated;
 class NativeImage;
@@ -141,7 +142,8 @@ public:
     void setContentsRectClipsDescendants(bool);
     void setContentsClippingRect(const FloatRoundedRect&);
     void setContentsScale(float);
-    void setContentsBuffer(TextureMapperPlatformLayerProxy*);
+    void setContentsBufferProxy(TextureMapperPlatformLayerProxy*);
+    void setContentsBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&);
     void setContentsBufferNeedsDisplay();
     void setContentsImage(RefPtr<NativeImage>&&);
     void setContentsColor(const Color&);
@@ -210,20 +212,21 @@ private:
         ContentsClippingRect         = 1 << 16,
         ContentsTiling               = 1 << 17,
         ContentsBuffer               = 1 << 18,
-        ContentsImage                = 1 << 19,
-        ContentsColor                = 1 << 20,
-        Filters                      = 1 << 21,
-        Mask                         = 1 << 22,
-        Replica                      = 1 << 23,
-        Backdrop                     = 1 << 24,
-        BackdropRect                 = 1 << 25,
-        Animations                   = 1 << 26,
-        DebugIndicators              = 1 << 27,
+        ContentsBufferProxy          = 1 << 19,
+        ContentsImage                = 1 << 20,
+        ContentsColor                = 1 << 21,
+        Filters                      = 1 << 22,
+        Mask                         = 1 << 23,
+        Replica                      = 1 << 24,
+        Backdrop                     = 1 << 25,
+        BackdropRect                 = 1 << 26,
+        Animations                   = 1 << 27,
+        DebugIndicators              = 1 << 28,
 #if ENABLE(DAMAGE_TRACKING)
-        Damage                       = 1 << 28,
+        Damage                       = 1 << 29,
 #endif
 #if ENABLE(SCROLLING_THREAD)
-        ScrollingNode                = 1 << 29
+        ScrollingNode                = 1 << 30
 #endif
     };
 
@@ -266,14 +269,20 @@ private:
     FloatSize m_contentsTileSize WTF_GUARDED_BY_LOCK(m_lock);
     FloatSize m_contentsTilePhase WTF_GUARDED_BY_LOCK(m_lock);
     float m_contentsScale WTF_GUARDED_BY_LOCK(m_lock) { 1. };
-    RefPtr<TextureMapperPlatformLayerProxy> m_contentsBuffer WTF_GUARDED_BY_LOCK(m_lock);
-    RefPtr<TextureMapperPlatformLayerProxy> m_committedContentsBuffer WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedBackingStoreProxy> m_backingStoreProxy WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedBackingStore> m_backingStore WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedAnimatedBackingStoreClient> m_animatedBackingStoreClient WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedImageBackingStore> m_imageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedImageBackingStore> m_committedImageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
     bool m_imageBackingStoreVisible WTF_GUARDED_BY_LOCK(m_lock) { false };
+    struct {
+        RefPtr<TextureMapperPlatformLayerProxy> pending;
+        RefPtr<TextureMapperPlatformLayerProxy> committed;
+    } m_contentsBufferProxy WTF_GUARDED_BY_LOCK(m_lock);
+    struct {
+        std::unique_ptr<CoordinatedPlatformLayerBuffer> pending;
+        std::unique_ptr<CoordinatedPlatformLayerBuffer> committed;
+    } m_contentsBuffer WTF_GUARDED_BY_LOCK(m_lock);
     Vector<IntRect, 1> m_dirtyRegion WTF_GUARDED_BY_LOCK(m_lock);
     FilterOperations m_filters WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedPlatformLayer> m_mask WTF_GUARDED_BY_LOCK(m_lock);

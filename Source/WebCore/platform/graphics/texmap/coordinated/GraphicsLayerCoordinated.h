@@ -210,6 +210,7 @@ private:
     } m_layerTransform;
     bool m_needsUpdateLayerTransform { false };
     RefPtr<TextureMapperPlatformLayerProxy> m_contentsLayer;
+    RefPtr<GraphicsLayerContentsDisplayDelegate> m_contentsDisplayDelegate;
     RefPtr<NativeImage> m_pendingContentsImage;
     Color m_contentsColor;
     RefPtr<CoordinatedPlatformLayer> m_backdropLayer;

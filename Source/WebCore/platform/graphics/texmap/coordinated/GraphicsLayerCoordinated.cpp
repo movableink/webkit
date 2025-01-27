@@ -34,8 +34,9 @@
 #if USE(COORDINATED_GRAPHICS)
 #include "CoordinatedImageBackingStore.h"
 #include "CoordinatedPlatformLayer.h"
+#include "CoordinatedPlatformLayerBuffer.h"
 #include "FloatQuad.h"
-#include "GraphicsLayerAsyncContentsDisplayDelegateTextureMapper.h"
+#include "GraphicsLayerAsyncContentsDisplayDelegateCoordinated.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "GraphicsLayerFactory.h"
 #include "Image.h"
@@ -322,7 +323,7 @@ void GraphicsLayerCoordinated::setContentsClippingRect(const FloatRoundedRect& c
 
 void GraphicsLayerCoordinated::setContentsNeedsDisplay()
 {
-    if (m_contentsLayer)
+    if (m_contentsDisplayDelegate)
         noteLayerPropertyChanged(Change::ContentsBufferNeedsDisplay, ScheduleFlush::Yes);
 }
 
@@ -332,24 +333,30 @@ void GraphicsLayerCoordinated::setContentsToPlatformLayer(PlatformLayer* content
         return;
 
     m_contentsLayer = contentsLayer;
-    OptionSet<Change> change = { Change::ContentsBuffer };
-    if (m_contentsLayer)
-        change.add(Change::ContentsBufferNeedsDisplay);
-    noteLayerPropertyChanged(change, ScheduleFlush::Yes);
+    m_contentsDisplayDelegate = nullptr;
+    noteLayerPropertyChanged(Change::ContentsBuffer, ScheduleFlush::Yes);
 }
 
-void GraphicsLayerCoordinated::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&& delegate, ContentsLayerPurpose purpose)
+void GraphicsLayerCoordinated::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&& delegate, ContentsLayerPurpose)
 {
-    setContentsToPlatformLayer(delegate ? delegate->platformLayer() : nullptr, purpose);
+    if (m_contentsDisplayDelegate == delegate)
+        return;
+
+    m_contentsDisplayDelegate = WTFMove(delegate);
+    m_contentsLayer = nullptr;
+    OptionSet<Change> change = { Change::ContentsBuffer };
+    if (m_contentsDisplayDelegate)
+        change.add(Change::ContentsBufferNeedsDisplay);
+    noteLayerPropertyChanged(change, ScheduleFlush::Yes);
 }
 
 RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> GraphicsLayerCoordinated::createAsyncContentsDisplayDelegate(GraphicsLayerAsyncContentsDisplayDelegate* existing)
 {
     if (existing) {
-        static_cast<GraphicsLayerAsyncContentsDisplayDelegateTextureMapper*>(existing)->updateGraphicsLayer(*this);
+        static_cast<GraphicsLayerAsyncContentsDisplayDelegateCoordinated*>(existing)->updateGraphicsLayer(*this);
         return existing;
     }
-    return GraphicsLayerAsyncContentsDisplayDelegateTextureMapper::create(*this);
+    return GraphicsLayerAsyncContentsDisplayDelegateCoordinated::create(*this);
 }
 
 void GraphicsLayerCoordinated::setContentsToImage(Image* image)
@@ -380,7 +387,7 @@ void GraphicsLayerCoordinated::setContentsToSolidColor(const Color& color)
 bool GraphicsLayerCoordinated::usesContentsLayer() const
 {
     // FIXME: convert CoordinatedImageBackingStore into a contents layer?
-    return m_contentsLayer || m_pendingContentsImage || m_platformLayer->hasImageBackingStore();
+    return m_contentsLayer || m_contentsDisplayDelegate || m_pendingContentsImage || m_platformLayer->hasImageBackingStore();
 }
 
 bool GraphicsLayerCoordinated::setChildren(Vector<Ref<GraphicsLayer>>&& children)
@@ -947,11 +954,20 @@ void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, floa
 {
     Locker locker { m_platformLayer->lock() };
 
-    if (m_pendingChanges.contains(Change::ContentsBuffer))
-        m_platformLayer->setContentsBuffer(m_contentsLayer.get());
+    if (m_pendingChanges.contains(Change::ContentsBuffer)) {
+        m_platformLayer->setContentsBufferProxy(m_contentsLayer.get());
 
-    if (m_pendingChanges.contains(Change::ContentsBufferNeedsDisplay))
-        m_platformLayer->setContentsBufferNeedsDisplay();
+        if (!m_contentsDisplayDelegate)
+            m_platformLayer->setContentsBuffer(nullptr);
+    }
+
+    bool contentsBufferNeedsDisplay = false;
+    if (m_pendingChanges.contains(Change::ContentsBufferNeedsDisplay)) {
+        if (m_contentsDisplayDelegate) {
+            if (!m_contentsDisplayDelegate->display(m_platformLayer.get()))
+                contentsBufferNeedsDisplay = true;
+        }
+    }
 
     if (m_pendingChanges.containsAny(Change::Geometry))
         updateGeometry(pageScaleFactor, positionRelativeToBase);
@@ -1055,6 +1071,9 @@ void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, floa
     m_platformLayer->updateContents(affectedByTransformAnimation);
 
     m_pendingChanges = { };
+
+    if (contentsBufferNeedsDisplay)
+        m_pendingChanges.add(Change::ContentsBufferNeedsDisplay);
 }
 
 bool GraphicsLayerCoordinated::needsCommit(CommitState& commitState) const
