@@ -107,7 +107,6 @@ private:
 };
 
 WTF_EXPORT_PRIVATE bool operator==(const CString&, const CString&);
-WTF_EXPORT_PRIVATE bool operator==(const CString&, const char*);
 WTF_EXPORT_PRIVATE bool operator<(const CString&, const CString&);
 
 struct CStringHash {

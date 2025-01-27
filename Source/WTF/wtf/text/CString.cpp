@@ -133,17 +133,6 @@ bool operator==(const CString& a, const CString& b)
     return equal(a.span().data(), b.span());
 }
 
-bool operator==(const CString& a, const char* b)
-{
-    if (a.isNull() != !b)
-        return false;
-    if (!b)
-        return true;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    return !strcmp(a.data(), b);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-}
-
 unsigned CString::hash() const
 {
     if (isNull())
