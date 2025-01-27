@@ -104,6 +104,7 @@ mac/DOM/DOMNamedNodeMap.mm
 mac/DOM/DOMNode.mm
 mac/DOM/DOMNodeIterator.mm
 mac/DOM/DOMNodeList.mm
+mac/DOM/DOMOverflowEvent.mm
 mac/DOM/DOMProcessingInstruction.mm
 mac/DOM/DOMRGBColor.mm
 mac/DOM/DOMRange.mm

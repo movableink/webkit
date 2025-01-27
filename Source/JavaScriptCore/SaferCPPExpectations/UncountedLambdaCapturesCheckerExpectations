@@ -5,7 +5,6 @@
 ./debugger/Debugger.cpp
 ./dfg/DFGDesiredWatchpoints.h
 ./dfg/DFGLazyJSValue.cpp
-./dfg/DFGLoopUnrollingPhase.cpp
 ./dfg/DFGObjectAllocationSinkingPhase.cpp
 ./dfg/DFGOperations.cpp
 ./ftl/FTLCompile.cpp
