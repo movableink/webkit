@@ -1318,19 +1318,33 @@ static void forEachRenderedBoxBetween(const RenderedPosition& first, const Rende
         return;
     }
 
-    bool foundEndpoint = false;
+    bool foundOneEndpoint = false;
     for (auto box = first.lineBox()->lineLeftmostLeafBox(); box; box = box->nextLineRightwardOnLine()) {
-        bool atEndpoint = box == first.box() || box == second.box();
-        if (!atEndpoint && !foundEndpoint)
+        bool atFirstEndpoint = box == first.box();
+        bool atSecondEndpoint = box == second.box();
+        bool atEndpoint = atFirstEndpoint || atSecondEndpoint;
+        bool atLastEndpoint = atEndpoint && foundOneEndpoint;
+        if (!atEndpoint && !foundOneEndpoint)
+            continue;
+
+        foundOneEndpoint = true;
+
+        bool shouldSkipBox = [&] {
+            if (!atEndpoint)
+                return false;
+
+            auto& position = (atFirstEndpoint ? first : second);
+            return atLastEndpoint ? position.atLeftmostOffsetInBox() : position.atRightmostOffsetInBox();
+        }();
+
+        if (shouldSkipBox)
             continue;
 
         if (callback(box) == IterationStatus::Done)
             return;
 
-        if (atEndpoint && foundEndpoint)
+        if (atLastEndpoint)
             return;
-
-        foundEndpoint = true;
     }
 }
 
@@ -1422,7 +1436,7 @@ static std::optional<SimpleRange> makeVisuallyContiguousIfNeeded(const SimpleRan
         }
     }
 
-    if (adjustedEndpoints)
+    if (adjustedEndpoints && !adjustedRange.collapsed())
         return adjustedRange;
 
     return std::nullopt;
