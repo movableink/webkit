@@ -226,6 +226,12 @@
             },
             "ComplexTextControllerTest.TotalWidthWithJustification": {
                 "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug":"webkit.org/b/284628"}}
+            },
+            "ImageBufferTests.ImageBufferSubTypeCreateCreatesSubtypes": {
+                "expected": {"all": {"status": ["CRASH"], "bug":"webkit.org/b/286456"}}
+            },
+            "ImageBufferTests.ImageBufferSubPixelDrawing": {
+                "expected": {"all": {"status": ["CRASH"], "bug":"webkit.org/b/286456"}}
             }
         }
     },

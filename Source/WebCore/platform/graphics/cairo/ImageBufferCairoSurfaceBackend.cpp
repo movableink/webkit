@@ -49,6 +49,7 @@ ImageBufferCairoSurfaceBackend::ImageBufferCairoSurfaceBackend(const Parameters&
     , m_context(m_surface.get())
 {
     ASSERT(cairo_surface_status(m_surface.get()) == CAIRO_STATUS_SUCCESS);
+    m_context.applyDeviceScaleFactor(parameters.resolutionScale);
 }
 
 GraphicsContext& ImageBufferCairoSurfaceBackend::context()
