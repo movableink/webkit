@@ -145,8 +145,8 @@ protected:
 
     template<class T> void checkOrigin(const T* arg)
     {
-        if (m_canvas.originClean() && taintsOrigin(arg))
-            m_canvas.setOriginTainted();
+        if (m_canvas->originClean() && taintsOrigin(arg))
+            m_canvas->setOriginTainted();
     }
     void checkOrigin(const URL&);
     void checkOrigin(const CSSStyleImageValue&);
@@ -157,7 +157,7 @@ protected:
 private:
     static Lock s_instancesLock;
 
-    CanvasBase& m_canvas;
+    WeakRef<CanvasBase> m_canvas;
     const Type m_type;
 };
 

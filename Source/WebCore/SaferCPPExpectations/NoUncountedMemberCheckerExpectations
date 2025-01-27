@@ -42,7 +42,6 @@ editing/cocoa/HTMLConverter.mm
 html/FormListedElement.cpp
 html/LinkIconCollector.h
 html/MediaElementSession.h
-html/canvas/CanvasRenderingContext.h
 html/parser/HTMLTreeBuilder.h
 html/track/TrackBase.h
 html/track/WebVTTParser.h
