@@ -1011,16 +1011,6 @@ void RewriteGlobalVariables::collectDynamicOffsetGlobals(const PipelineLayout& p
             if (!entry.visibility.contains(m_stage))
                 continue;
 
-            auto argumentBufferIndex = [&] {
-                switch (m_stage) {
-                case ShaderStage::Vertex:
-                    return entry.vertexArgumentBufferIndex;
-                case ShaderStage::Fragment:
-                    return entry.fragmentArgumentBufferIndex;
-                case ShaderStage::Compute:
-                    return entry.computeArgumentBufferIndex;
-                }
-            }();
             auto bufferDynamicOffset = [&] {
                 switch (m_stage) {
                 case ShaderStage::Vertex:
@@ -1035,7 +1025,7 @@ void RewriteGlobalVariables::collectDynamicOffsetGlobals(const PipelineLayout& p
             if (!bufferDynamicOffset.has_value())
                 continue;
 
-            m_globalsUsingDynamicOffset.add({ group + 1, *argumentBufferIndex + 1 }, *bufferDynamicOffset);
+            m_globalsUsingDynamicOffset.add({ group + 1, entry.binding + 1 }, *bufferDynamicOffset);
         }
         ++group;
     }
