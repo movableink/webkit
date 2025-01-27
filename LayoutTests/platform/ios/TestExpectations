@@ -2908,6 +2908,7 @@ fast/mediastream/getDisplayMedia-max-constraints2.html [ Skip ]
 fast/mediastream/getDisplayMedia-max-constraints3.html [ Skip ]
 fast/mediastream/getDisplayMedia-max-constraints5.html [ Skip ]
 webkit.org/b/263466 fast/mediastream/getDisplayMedia-max-constraints4.html [ Failure ]
+webrtc/getDisplayMedia-pc.html [ Skip ]
 
 fast/mediastream/getDisplayMedia-size.html [ Skip ]
 

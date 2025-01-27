@@ -350,6 +350,9 @@ void GStreamerRTPPacketizer::applyEncodingParameters(const GstStructure* encodin
         return;
 
     auto peer = adoptGRef(gst_pad_get_peer(srcPad.get()));
+    if (!peer)
+        return;
+
     gst_pad_send_event(peer.get(), gst_event_new_flush_start());
     gst_pad_send_event(peer.get(), gst_event_new_flush_stop(FALSE));
 }

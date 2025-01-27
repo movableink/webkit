@@ -244,6 +244,7 @@ fast/mediastream/mediastreamtrack-video-zoom.html [ Failure ]
 [ Release ] fast/mediastream/resize-trim.html [ Failure ]
 [ Debug ] fast/mediastream/resize-trim.html [ Failure Crash ]
 fast/mediastream/video-created-while-interrupted.html [ Pass Crash ]
+webrtc/getDisplayMedia-pc.html [ Failure ]
 
 # Media Queries
 webkit.org/b/226521 [ Release ] imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/source-media-outside-doc.html [ Pass Failure ]
