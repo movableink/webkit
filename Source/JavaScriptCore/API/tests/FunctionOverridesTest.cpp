@@ -83,9 +83,7 @@ int testFunctionOverrides()
     JSC::Options::functionOverrides() = oldFunctionOverrides;
     JSC::FunctionOverrides::reinstallOverrides();
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    printf("%s: function override tests.\n", failed ? "FAIL" : "PASS");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_PRINTF("%s: function override tests.\n", failed ? "FAIL"_s : "PASS"_s);
 
     return failed;
 }

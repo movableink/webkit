@@ -900,9 +900,7 @@ bool protocolIs(StringView string, ASCIILiteral protocol)
 
 void URL::print() const
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    printf("%s\n", m_string.utf8().data());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_PRINTF("%s\n", m_string.utf8());
 }
 
 #endif

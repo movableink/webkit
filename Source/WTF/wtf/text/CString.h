@@ -151,6 +151,9 @@ inline size_t CString::length() const
     return m_buffer ? m_buffer->length() : 0;
 }
 
+// CString is null terminated
+inline const char* safePrintfType(const CString& cstring) { return cstring.data(); }
+
 } // namespace WTF
 
 using WTF::CString;

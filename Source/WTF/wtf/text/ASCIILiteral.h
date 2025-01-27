@@ -173,6 +173,9 @@ constexpr std::span<const LChar> operator""_span8(const char* characters, size_t
 
 } // inline StringLiterals
 
+// ASCIILiteral is null terminated
+inline const char* safePrintfType(const ASCIILiteral& asciiLiteral) { return asciiLiteral.characters(); }
+
 } // namespace WTF
 
 using namespace WTF::StringLiterals;
