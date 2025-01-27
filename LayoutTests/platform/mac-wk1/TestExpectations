@@ -1172,6 +1172,8 @@ http/tests/media/video-webm-stall-seek.html [ Skip ]
 media/media-rvfc-paused-offscreen-webm.html [ Skip ]
 media/media-rvfc-paused-webm.html [ Skip ]
 media/media-rvfc-playing-webm.html [ Skip ]
+media/video-webm-seek-singlekeyframe.html [ Skip ]
+media/media-source/media-source-webm-seek-singlekeyframe.html [ Skip ]
 
 # Managed MediaSource isn't enabled on WK1
 media/media-source/media-managedmse-append.html [ Skip ]

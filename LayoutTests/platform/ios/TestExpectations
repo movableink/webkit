@@ -143,6 +143,7 @@ media/media-source/media-managedmse-idl.html [ Pass ]
 media/media-source/media-managedmse-video-with-poster.html [ Pass ]
 media/media-source/media-source-vp8-webm-error.html [ Pass ]
 media/media-source/media-source-vp8-webm-error-offscreen.html [ Pass ]
+media/media-source/media-source-webm-seek-singlekeyframe.html [ Pass ]
 
 webkit.org/b/269897 media/media-source/media-managedmse-poster.html [ Skip ]
 
