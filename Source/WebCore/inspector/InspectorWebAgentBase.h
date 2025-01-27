@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "Page.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include <JavaScriptCore/InspectorAgentBase.h>
 #include <wtf/text/WTFString.h>
@@ -33,7 +34,6 @@
 namespace WebCore {
 
 class InstrumentingAgents;
-class Page;
 
 // FIXME: move this to Inspector namespace when remaining agents move.
 struct WebAgentContext : public Inspector::AgentContext {

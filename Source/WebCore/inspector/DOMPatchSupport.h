@@ -40,6 +40,7 @@ class ContainerNode;
 class DOMEditor;
 class Document;
 class Node;
+class WeakPtrImplWithEventTargetData;
 
 class DOMPatchSupport final {
 public:
