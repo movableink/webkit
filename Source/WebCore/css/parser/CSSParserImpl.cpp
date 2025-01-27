@@ -1383,6 +1383,8 @@ RefPtr<StyleRuleBase> CSSParserImpl::consumeStyleRule(CSSParserTokenRange prelud
     return styleRule;
 }
 
+// https://drafts.csswg.org/css-syntax/#consume-block-contents
+// https://drafts.csswg.org/css-syntax/#block-contents
 void CSSParserImpl::consumeBlockContent(CSSParserTokenRange range, StyleRuleType ruleType, OnlyDeclarations onlyDeclarations, ParsingStyleDeclarationsInRuleList isParsingStyleDeclarationsInRuleList)
 {
     auto nestedRulesAllowed = [&] {
@@ -1402,15 +1404,6 @@ void CSSParserImpl::consumeBlockContent(CSSParserTokenRange range, StyleRuleType
     auto consumeUntilSemicolon = [&] {
         while (!range.atEnd() && range.peek().type() != SemicolonToken)
             range.consumeComponentValue();
-    };
-
-    auto consumeNestedQualifiedRule = [&] () -> RefPtr<StyleRuleBase> {
-        RefPtr rule = consumeQualifiedRule(range, AllowedRules::RegularRules);
-        if (!rule)
-            return { };
-        if (!rule->isStyleRule())
-            return { };
-        return rule;
     };
 
     ParsedPropertyVector initialDeclarationBlock;
@@ -1436,10 +1429,27 @@ void CSSParserImpl::consumeBlockContent(CSSParserTokenRange range, StyleRuleType
 
     while (!range.atEnd()) {
         const auto initialRange = range;
-        auto errorRecovery = [&] {
-            range = initialRange;
-            consumeUntilSemicolon();
+
+        auto consumeNestedRuleOrInvalidSyntax = [&] {
+            if (nestedRulesAllowed()) {
+                // For block, we try to consume a qualified rule (~= a style rule).
+                // This consumes tokens and deals with error recovery
+                // in the case of invalid syntax.
+                RefPtr rule = consumeQualifiedRule(range, AllowedRules::RegularRules);
+                if (!rule)
+                    return;
+                if (!rule->isStyleRule())
+                    return;
+                storeDeclarations();
+                topContext().m_parsedRules.append(rule.releaseNonNull());
+            } else {
+                // https://drafts.csswg.org/css-syntax/#typedef-declaration-list
+                // For declaration list, we consume invalid tokens until next recovery point.
+                range = initialRange;
+                consumeUntilSemicolon();
+            }
         };
+
         switch (range.peek().type()) {
         case NonNewlineWhitespaceToken:
         case NewlineToken:
@@ -1455,22 +1465,15 @@ void CSSParserImpl::consumeBlockContent(CSSParserTokenRange range, StyleRuleType
             consumeUntilSemicolon();
 
             const auto declarationRange = range.makeSubRange(declarationStart, &range.peek());
-            auto isValidDeclaration = consumeDeclaration(declarationRange, ruleType);
+            const auto isValidDeclaration = consumeDeclaration(declarationRange, ruleType);
 
             if (useObserver)
                 m_observerWrapper->skipCommentsBefore(range, false);
 
             if (!isValidDeclaration) {
-                // If it's not a valid declaration, we try to parse it as a nested style rule.
+                // If it's not a valid declaration, we rewind the parser and try to parse it as a nested style rule.
                 range = initialRange;
-                if (nestedRulesAllowed()) {
-                    if (auto rule = consumeNestedQualifiedRule()) {
-                        storeDeclarations();
-                        topContext().m_parsedRules.append(rule.releaseNonNull());
-                        break;
-                    }
-                }
-                errorRecovery();
+                consumeNestedRuleOrInvalidSyntax();
             }
             break;
         }
@@ -1481,23 +1484,17 @@ void CSSParserImpl::consumeBlockContent(CSSParserTokenRange range, StyleRuleType
                     break;
                 if (!rule->isGroupRule())
                     break;
-                topContext().m_parsedRules.append(rule.releaseNonNull());
                 storeDeclarations();
+                topContext().m_parsedRules.append(rule.releaseNonNull());
             } else {
+                // Rule will be ignored, but consuming the tokens is necessary.
                 RefPtr rule = consumeAtRule(range, AllowedRules::NoRules);
                 ASSERT_UNUSED(rule, !rule);
             }
             break;
         }
         default:
-            if (nestedRulesAllowed()) {
-                if (auto rule = consumeNestedQualifiedRule()) {
-                    storeDeclarations();
-                    topContext().m_parsedRules.append(rule.releaseNonNull());
-                    break;
-                }
-            }
-            errorRecovery();
+            consumeNestedRuleOrInvalidSyntax();
         }
     }
 
