@@ -1189,7 +1189,8 @@ webkit.org/b/213699 http/wpt/mediarecorder/MediaRecorder-first-frame.html [ Fail
 # due to missing index. GLib baselines reflect this, the Pass expectation is kept here for future reference.
 webkit.org/b/282534 http/wpt/mediarecorder/MediaRecorder-audio-samplingrate-change.html [ Pass ]
 
-webkit.org/b/285813 http/wpt/mediarecorder/pause-recording.html [ Timeout ]
+# The "Pausing and resuming the recording should impact the video duration" test fails.
+webkit.org/b/285813 http/wpt/mediarecorder/pause-recording.html [ Failure ]
 
 webkit.org/b/218317 media/media-source/media-source-trackid-change.html [ Failure ]
 webkit.org/b/238201 media/media-source/media-mp4-hevc-bframes.html [ Failure ]

@@ -367,17 +367,19 @@ public:
             m_audioTrack->play();
     }
 
-    void signalEndOfStream()
+    bool signalEndOfStream()
     {
+        bool result = false;
         if (m_src)
-            gst_app_src_end_of_stream(GST_APP_SRC(m_src.get()));
+            result = gst_app_src_end_of_stream(GST_APP_SRC(m_src.get())) == GST_FLOW_OK;
         callOnMainThreadAndWait([&] {
             stopObserving();
         });
 
         if (!m_track)
-            return;
+            return result;
         trackEnded(*m_track);
+        return result;
     }
 
     void pushSample(GRefPtr<GstSample>&& sample, [[maybe_unused]] const ASCIILiteral logMessage)
@@ -1192,12 +1194,18 @@ void webkitMediaStreamSrcReplaceTrack(WebKitMediaStreamSrc* self, RefPtr<MediaSt
     self->priv->sources[0]->replaceTrack(WTFMove(newTrack));
 }
 
-void webkitMediaStreamSrcSignalEndOfStream(WebKitMediaStreamSrc* self)
+bool webkitMediaStreamSrcSignalEndOfStream(WebKitMediaStreamSrc* self)
 {
+    bool result = true;
     GST_DEBUG_OBJECT(self, "Signaling EOS");
-    for (auto& source : self->priv->sources)
-        source->signalEndOfStream();
+    for (auto& source : self->priv->sources) {
+        if (!source->signalEndOfStream()) {
+            result = false;
+            break;
+        }
+    }
     self->priv->sources.clear();
+    return result;
 }
 
 void webkitMediaStreamSrcCharacteristicsChanged([[maybe_unused]] WebKitMediaStreamSrc* self)
