@@ -213,7 +213,7 @@ struct ApplyItemResult {
 };
 
 enum class ReplayOption : uint8_t {
-    FlushImagesAndWaitForCompletion = 1 << 0,
+    FlushAcceleratedImagesAndWaitForCompletion = 1 << 0,
 };
 
 enum class AsTextFlag : uint8_t {

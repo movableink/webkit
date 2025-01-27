@@ -503,7 +503,7 @@ void RecorderImpl::setURLForRect(const URL& link, const FloatRect& destRect)
 bool RecorderImpl::recordResourceUse(NativeImage& nativeImage)
 {
 #if USE(SKIA)
-    if (m_displayList.replayOptions().contains(ReplayOption::FlushImagesAndWaitForCompletion))
+    if (m_displayList.replayOptions().contains(ReplayOption::FlushAcceleratedImagesAndWaitForCompletion))
         nativeImage.backend().finishAcceleratedRenderingAndCreateFence();
 #endif
 
@@ -514,7 +514,7 @@ bool RecorderImpl::recordResourceUse(NativeImage& nativeImage)
 bool RecorderImpl::recordResourceUse(ImageBuffer& imageBuffer)
 {
 #if USE(SKIA)
-    if (m_displayList.replayOptions().contains(ReplayOption::FlushImagesAndWaitForCompletion))
+    if (m_displayList.replayOptions().contains(ReplayOption::FlushAcceleratedImagesAndWaitForCompletion))
         imageBuffer.finishAcceleratedRenderingAndCreateFence();
 #endif
 
