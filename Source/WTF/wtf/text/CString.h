@@ -44,10 +44,8 @@ class CStringBuffer final : public RefCounted<CStringBuffer> {
 public:
     size_t length() const { return m_length; }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    std::span<const LChar> span() const LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast_ptr<const LChar*>(this + 1), m_length); }
-    std::span<const char> unsafeSpanIncludingNullTerminator() const LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast_ptr<const char*>(this + 1), m_length + 1); }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    std::span<const char> span() const LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length); }
+    std::span<const char> unsafeSpanIncludingNullTerminator() const LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length + 1); }
 
 private:
     friend class CString;
@@ -55,12 +53,11 @@ private:
     static Ref<CStringBuffer> createUninitialized(size_t length);
 
     CStringBuffer(size_t length) : m_length(length) { }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    std::span<char> mutableSpan() LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast_ptr<char*>(this + 1), m_length); }
-    std::span<char> mutableSpanIncludingNullTerminator() LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast_ptr<char*>(this + 1), m_length + 1); }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    std::span<char> mutableSpan() LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length); }
+    std::span<char> mutableSpanIncludingNullTerminator() LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length + 1); }
 
     const size_t m_length;
+    char m_data[0];
 };
 
 // A container for a null-terminated char array supporting copy-on-write assignment.
@@ -134,7 +131,7 @@ inline const char* CString::data() const
 inline std::span<const LChar> CString::span() const
 {
     if (m_buffer)
-        return m_buffer->span();
+        return byteCast<LChar>(m_buffer->span());
     return { };
 }
 
