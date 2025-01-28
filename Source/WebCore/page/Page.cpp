@@ -827,6 +827,9 @@ void Page::setMainFrameURLAndOrigin(const URL& url, RefPtr<SecurityOrigin>&& ori
         return;
     }
 
+    if (!settings().siteIsolationEnabled())
+        return;
+
     // If this page is hosting the local main frame, make sure the url and origin
     // match what we expect, then broadcast them out to other processes.
     RELEASE_ASSERT(url == m_topDocumentSyncData->documentURL);
@@ -842,7 +845,8 @@ void Page::setMainFrameURLAndOrigin(const URL& url, RefPtr<SecurityOrigin>&& ori
 void Page::setAudioSessionType(DOMAudioSessionType audioSessionType)
 {
     m_topDocumentSyncData->audioSessionType = audioSessionType;
-    processSyncClient().broadcastAudioSessionTypeToOtherProcesses(audioSessionType);
+    if (settings().siteIsolationEnabled())
+        processSyncClient().broadcastAudioSessionTypeToOtherProcesses(audioSessionType);
 }
 
 DOMAudioSessionType Page::audioSessionType() const
@@ -857,7 +861,8 @@ void Page::setUserDidInteractWithPage(bool didInteract)
         return;
 
     m_topDocumentSyncData->userDidInteractWithPage = didInteract;
-    processSyncClient().broadcastUserDidInteractWithPageToOtherProcesses(didInteract);
+    if (settings().siteIsolationEnabled())
+        processSyncClient().broadcastUserDidInteractWithPageToOtherProcesses(didInteract);
 }
 
 bool Page::userDidInteractWithPage() const
@@ -871,7 +876,8 @@ void Page::setAutofocusProcessed()
         return;
 
     m_topDocumentSyncData->isAutofocusProcessed = true;
-    processSyncClient().broadcastIsAutofocusProcessedToOtherProcesses(true);
+    if (settings().siteIsolationEnabled())
+        processSyncClient().broadcastIsAutofocusProcessedToOtherProcesses(true);
 }
 
 bool Page::autofocusProcessed() const
@@ -890,7 +896,8 @@ void Page::setTopDocumentHasFullscreenElement(bool hasFullscreenElement)
         return;
 
     m_topDocumentSyncData->hasFullscreenElement = hasFullscreenElement;
-    processSyncClient().broadcastHasFullscreenElementToOtherProcesses(hasFullscreenElement);
+    if (settings().siteIsolationEnabled())
+        processSyncClient().broadcastHasFullscreenElementToOtherProcesses(hasFullscreenElement);
 }
 
 bool Page::topDocumentHasFullscreenElement()
@@ -909,7 +916,8 @@ void Page::setHasInjectedUserScript()
         return;
 
     m_topDocumentSyncData->hasInjectedUserScript = true;
-    processSyncClient().broadcastHasInjectedUserScriptToOtherProcesses(true);
+    if (settings().siteIsolationEnabled())
+        processSyncClient().broadcastHasInjectedUserScriptToOtherProcesses(true);
 }
 
 void Page::updateProcessSyncData(const ProcessSyncData& data)
@@ -4267,7 +4275,8 @@ void Page::didChangeMainDocument(Document* newDocument)
 {
     m_topDocumentSyncData = newDocument ? newDocument->syncData() : DocumentSyncData::create();
 
-    processSyncClient().broadcastTopDocumentSyncDataToOtherProcesses(m_topDocumentSyncData.get());
+    if (settings().siteIsolationEnabled())
+        processSyncClient().broadcastTopDocumentSyncDataToOtherProcesses(m_topDocumentSyncData.get());
 
 #if ENABLE(WEB_RTC)
     m_rtcController->reset(m_shouldEnableICECandidateFilteringByDefault);
