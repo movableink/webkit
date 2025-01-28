@@ -3019,10 +3019,10 @@ void WebProcessProxy::registerServiceWorkerClients(CompletionHandler<void()>&& c
 HashMap<WebCore::PageIdentifier, CoreIPCAuditToken> WebProcessProxy::presentingApplicationAuditTokens() const
 {
     HashMap<WebCore::PageIdentifier, CoreIPCAuditToken> presentingApplicationAuditTokens;
-    WTF::forEach(pages(), [&] (auto& page) {
+    for (auto& page : pages()) {
         if (page->presentingApplicationAuditToken())
             presentingApplicationAuditTokens.add(page->webPageIDInMainFrameProcess(), page->presentingApplicationAuditToken().value());
-    });
+    }
     return presentingApplicationAuditTokens;
 }
 #endif

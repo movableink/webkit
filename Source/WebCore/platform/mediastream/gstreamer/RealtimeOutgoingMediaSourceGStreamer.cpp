@@ -607,17 +607,15 @@ GUniquePtr<GstStructure> RealtimeOutgoingMediaSourceGStreamer::stats()
 void RealtimeOutgoingMediaSourceGStreamer::startUpdatingStats()
 {
     GST_DEBUG_OBJECT(m_bin.get(), "Starting buffer monitoring for stats gathering");
-    forEach(m_packetizers, [](auto& packetizer) {
+    for (auto& packetizer : m_packetizers)
         packetizer->startUpdatingStats();
-    });
 }
 
 void RealtimeOutgoingMediaSourceGStreamer::stopUpdatingStats()
 {
     GST_DEBUG_OBJECT(m_bin.get(), "Stopping buffer monitoring for stats gathering");
-    forEach(m_packetizers, [](auto& packetizer) {
+    for (auto& packetizer : m_packetizers)
         packetizer->stopUpdatingStats();
-    });
 }
 
 void RealtimeOutgoingMediaSourceGStreamer::teardown()
