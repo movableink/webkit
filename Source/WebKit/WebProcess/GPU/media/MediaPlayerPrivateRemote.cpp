@@ -47,7 +47,6 @@
 #include <WebCore/MediaPlayer.h>
 #include <WebCore/MediaStrategy.h>
 #include <WebCore/NotImplemented.h>
-#include <WebCore/PlatformLayer.h>
 #include <WebCore/PlatformScreen.h>
 #include <WebCore/PlatformStrategies.h>
 #include <WebCore/PlatformTimeRanges.h>
@@ -62,15 +61,6 @@
 #include <wtf/StringPrintStream.h>
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
-
-#if PLATFORM(GTK) || PLATFORM(WPE)
-#include <WebCore/TextureMapperPlatformLayerProxy.h>
-#elif USE(COORDINATED_GRAPHICS)
-#include <WebCore/TextureMapperPlatformLayerProxyProvider.h>
-#elif USE(TEXTURE_MAPPER)
-#include <WebCore/TextureMapperPlatformLayer.h>
-#include <WebCore/TextureMapperPlatformLayerProxy.h>
-#endif
 
 #if ENABLE(ENCRYPTED_MEDIA)
 #include "RemoteCDMInstance.h"

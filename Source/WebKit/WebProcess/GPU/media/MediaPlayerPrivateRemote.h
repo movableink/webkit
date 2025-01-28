@@ -39,6 +39,7 @@
 #include "TextTrackPrivateRemote.h"
 #include "VideoTrackPrivateRemote.h"
 #include <WebCore/MediaPlayerPrivate.h>
+#include <WebCore/PlatformLayer.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/VideoFrameMetadata.h>
 #include <wtf/Lock.h>
@@ -487,8 +488,8 @@ private:
     ThreadSafeWeakPtr<WebCore::MediaPlayer> m_player;
 #if PLATFORM(COCOA)
     mutable UniqueRef<WebCore::VideoLayerManager> m_videoLayerManager;
-#endif
     mutable PlatformLayerContainer m_videoLayer;
+#endif
 
     ThreadSafeWeakPtr<RemoteMediaPlayerManager> m_manager; // Cannot be null.
     WebCore::MediaPlayerEnums::MediaEngineIdentifier m_remoteEngineIdentifier;
