@@ -859,11 +859,10 @@ static void createGlobalWebViewAndOffscreenWindow()
 
 static NSString *libraryPathForDumpRenderTree()
 {
-    char* dumpRenderTreeTemp = getenv("DUMPRENDERTREE_TEMP");
-    if (dumpRenderTreeTemp)
-        return [[NSFileManager defaultManager] stringWithFileSystemRepresentation:dumpRenderTreeTemp length:strlen(dumpRenderTreeTemp)];
-    else
-        return [@"~/Library/Application Support/DumpRenderTree" stringByExpandingTildeInPath];
+    auto dumpRenderTreeTemp = unsafeSpan(getenv("DUMPRENDERTREE_TEMP"));
+    if (dumpRenderTreeTemp.data())
+        return [[NSFileManager defaultManager] stringWithFileSystemRepresentation:dumpRenderTreeTemp.data() length:dumpRenderTreeTemp.size()];
+    return [@"~/Library/Application Support/DumpRenderTree" stringByExpandingTildeInPath];
 }
 
 static void setWebPreferencesForTestOptions(WebPreferences *preferences, const WTR::TestOptions& options)
@@ -1094,7 +1093,7 @@ static void runTestingServerLoop()
         if (size_t newLineCharacterIndex = find(std::span<const char> { filenameBuffer }, '\n'); newLineCharacterIndex != notFound)
             filenameBuffer[newLineCharacterIndex] = '\0';
 
-        if (!strlen(filenameBuffer.data()))
+        if (!strlenSpan(std::span { filenameBuffer }))
             continue;
 
         if (handleControlCommand(std::span { filenameBuffer }))

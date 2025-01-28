@@ -32,6 +32,7 @@
 #include <cstring>
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/StringCommon.h>
 
 #ifndef UNIMPLEMENTED
 #define UNIMPLEMENTED() ASSERT_NOT_REACHED()
@@ -307,9 +308,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     buffer_[length] = '\0';
     // Make sure nobody managed to add a 0-character to the
     // buffer while building the string.
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    ASSERT(strlen(buffer_.start().data()) == length);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    ASSERT(strlenSpan(buffer_.start()) == length);
     position_ = -1;
     ASSERT(is_finalized());
     return buffer_.start().first(length);

@@ -143,13 +143,15 @@ FetchBodyConsumer& FetchBodyConsumer::operator=(FetchBodyConsumer&&) = default;
 // https://fetch.spec.whatwg.org/#concept-body-package-data
 RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* context, const String& contentType, std::span<const uint8_t> data)
 {
+    static constexpr auto oneNewLine = "\r\n"_s;
     auto parseMultipartPart = [context] (std::span<const uint8_t> part, DOMFormData& form) -> bool {
-        size_t headerEnd = find(part, "\r\n\r\n"_span);
+        static constexpr auto twoNewLines = "\r\n\r\n"_span;
+        size_t headerEnd = find(part, twoNewLines);
         if (headerEnd == notFound)
             return false;
         auto headerBytes = part.first(headerEnd);
 
-        auto body = part.subspan(headerBytes.size() + strlen("\r\n\r\n"));
+        auto body = part.subspan(headerBytes.size() + twoNewLines.size());
 
         auto header = String::fromUTF8(headerBytes);
 
@@ -157,7 +159,8 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         size_t contentDispositionBegin = header.findIgnoringASCIICase(contentDispositionCharacters);
         if (contentDispositionBegin == notFound)
             return false;
-        size_t contentDispositionEnd = header.find("\r\n"_s, contentDispositionBegin);
+
+        size_t contentDispositionEnd = header.find(oneNewLine, contentDispositionBegin);
         size_t contentDispositionParametersBegin = header.find(';', contentDispositionBegin + contentDispositionCharacters.length());
         if (contentDispositionParametersBegin != notFound)
             contentDispositionParametersBegin++;
@@ -176,7 +179,7 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
             size_t contentTypePrefixLength = contentTypeCharacters.length();
             size_t contentTypeBegin = header.findIgnoringASCIICase(contentTypeCharacters);
             if (contentTypeBegin != notFound) {
-                size_t contentTypeEnd = header.find("\r\n"_s, contentTypeBegin);
+                size_t contentTypeEnd = header.find(oneNewLine, contentTypeBegin);
                 contentType = StringView(header).substring(contentTypeBegin + contentTypePrefixLength, contentTypeEnd - contentTypeBegin - contentTypePrefixLength).trim(isASCIIWhitespaceWithoutFF<UChar>).toString();
             }
 
@@ -209,7 +212,7 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         skip(data, currentBoundaryIndex + boundaryLength);
         size_t nextBoundaryIndex;
         while ((nextBoundaryIndex = find(data, boundary.span())) != notFound) {
-            parseMultipartPart(data.first(nextBoundaryIndex - strlen("\r\n")), form.get());
+            parseMultipartPart(data.first(nextBoundaryIndex - oneNewLine.length()), form.get());
             currentBoundaryIndex = nextBoundaryIndex;
             skip(data, nextBoundaryIndex + boundaryLength);
         }

@@ -85,7 +85,7 @@ void StringPrintStream::vprintf(const char* format, va_list argList)
 
 CString StringPrintStream::toCString() const
 {
-    ASSERT(m_length == strlen(m_buffer.data()));
+    ASSERT(m_length == strlenSpan(m_buffer));
     return CString(m_buffer.first(m_length));
 }
 
@@ -97,7 +97,7 @@ void StringPrintStream::reset()
 
 Expected<String, UTF8ConversionError> StringPrintStream::tryToString() const
 {
-    ASSERT(m_length == strlen(m_buffer.data()));
+    ASSERT(m_length == strlenSpan(m_buffer));
     if (m_length > String::MaxLength)
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
     return String::fromUTF8(m_buffer.first(m_length));
@@ -105,13 +105,13 @@ Expected<String, UTF8ConversionError> StringPrintStream::tryToString() const
 
 String StringPrintStream::toString() const
 {
-    ASSERT(m_length == strlen(m_buffer.data()));
+    ASSERT(m_length == strlenSpan(m_buffer));
     return String::fromUTF8(m_buffer.first(m_length));
 }
 
 String StringPrintStream::toStringWithLatin1Fallback() const
 {
-    ASSERT(m_length == strlen(m_buffer.data()));
+    ASSERT(m_length == strlenSpan(m_buffer));
     return String::fromUTF8WithLatin1Fallback(m_buffer.first(m_length));
 }
 

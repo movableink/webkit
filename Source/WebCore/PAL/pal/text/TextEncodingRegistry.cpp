@@ -136,9 +136,7 @@ static bool isUndesiredAlias(ASCIILiteral alias)
 
 static void addToTextEncodingNameMap(ASCIILiteral alias, ASCIILiteral name) WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    ASSERT(strlen(alias) <= maxEncodingNameLength);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    ASSERT(alias.length() <= maxEncodingNameLength);
     if (isUndesiredAlias(alias))
         return;
     ASCIILiteral atomName = textEncodingNameMap->get(name);

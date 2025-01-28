@@ -245,10 +245,8 @@ auto SandboxExtension::createHandleForTemporaryFile(StringView prefix, Type type
     if (!confstr(_CS_DARWIN_USER_TEMP_DIR, path.data(), path.size()))
         return std::nullopt;
     
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Shrink the vector.   
-    path.shrink(strlen(path.data()));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    path.shrink(strlenSpan(path.span()));
 
     ASSERT(path.last() == '/');
 

@@ -138,10 +138,8 @@ std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, Strin
     if (!confstr(_CS_DARWIN_USER_TEMP_DIR, temporaryFilePath.data(), temporaryFilePath.size()))
         return { String(), invalidPlatformFileHandle };
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // Shrink the vector.
-    temporaryFilePath.shrink(strlen(temporaryFilePath.data()));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    temporaryFilePath.shrink(strlenSpan(temporaryFilePath.span()));
 
     ASSERT(temporaryFilePath.last() == '/');
 

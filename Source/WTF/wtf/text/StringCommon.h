@@ -106,6 +106,15 @@ inline std::span<const char8_t> span(const std::u8string& string)
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
+template<typename T, std::size_t Extent>
+size_t strlenSpan(std::span<T, Extent> span) requires(sizeof(T) == 1)
+{
+    size_t i = 0;
+    while (span[i] != '\0')
+        ++i;
+    return i;
+}
+
 template<typename CharacterType> inline constexpr bool isLatin1(CharacterType character)
 {
     using UnsignedCharacterType = typename std::make_unsigned<CharacterType>::type;
@@ -1247,6 +1256,7 @@ using WTF::equalLettersIgnoringASCIICaseWithLength;
 using WTF::isLatin1;
 using WTF::span;
 using WTF::spanHasPrefixIgnoringASCIICase;
+using WTF::strlenSpan;
 using WTF::unsafeSpan;
 using WTF::unsafeSpan8;
 using WTF::unsafeSpanIncludingNullTerminator;
