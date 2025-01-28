@@ -496,6 +496,12 @@ bool RenderStyle::inheritedEqual(const RenderStyle& other) const
         && m_rareInheritedData == other.m_rareInheritedData;
 }
 
+bool RenderStyle::nonInheritedEqual(const RenderStyle& other) const
+{
+    return m_nonInheritedFlags == other.m_nonInheritedFlags
+        && m_nonInheritedData == other.m_nonInheritedData
+        && (m_svgStyle.ptr() == other.m_svgStyle.ptr() || m_svgStyle->nonInheritedEqual(other.m_svgStyle));
+}
 
 bool RenderStyle::fastPathInheritedEqual(const RenderStyle& other) const
 {

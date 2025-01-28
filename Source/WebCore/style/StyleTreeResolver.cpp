@@ -237,6 +237,7 @@ auto TreeResolver::computeDescendantsToResolve(const ElementUpdate& update, cons
     case Change::NonInherited:
         return DescendantsToResolve::ChildrenWithExplicitInherit;
     case Change::FastPathInherited:
+    case Change::NonInheritedAndFastPathInherited:
     case Change::Inherited:
         return DescendantsToResolve::Children;
     case Change::Descendants:
@@ -976,12 +977,19 @@ auto TreeResolver::determineResolutionType(const Element& element, const RenderS
         return { };
     case DescendantsToResolve::RebuildAllUsingExisting:
         return existingStyle ? ResolutionType::RebuildUsingExisting : ResolutionType::Full;
-    case DescendantsToResolve::Children:
-        if (parentChange == Change::FastPathInherited) {
-            if (existingStyle && !existingStyle->disallowsFastPathInheritance())
-                return ResolutionType::FastPathInherit;
-        }
-        return ResolutionType::Full;
+    case DescendantsToResolve::Children: {
+        auto canFastPathInherit = [&] {
+            if (parentChange != Change::FastPathInherited && parentChange != Change::NonInheritedAndFastPathInherited)
+                return false;
+            if (!existingStyle || existingStyle->disallowsFastPathInheritance())
+                return false;
+            // Some non-inherited property changed along with a fast-path property and we may need to inherit it too.
+            if (parentChange == Change::NonInheritedAndFastPathInherited && existingStyle->hasExplicitlyInheritedProperties())
+                return false;
+            return true;
+        };
+        return canFastPathInherit() ? ResolutionType::FastPathInherit : ResolutionType::Full;
+    }
     case DescendantsToResolve::All:
         return ResolutionType::Full;
     case DescendantsToResolve::ChildrenWithExplicitInherit:
