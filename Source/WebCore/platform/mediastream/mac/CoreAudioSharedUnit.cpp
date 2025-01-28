@@ -292,7 +292,16 @@ OSStatus CoreAudioSharedUnit::setupAudioUnit()
         return result.error();
 
     m_ioUnit = WTFMove(result.value()).moveToUniquePtr();
-    m_canRenderAudio = m_ioUnit->canRenderAudio();
+
+    bool canRenderAudio = m_ioUnit->canRenderAudio();
+    if (m_canRenderAudio != canRenderAudio) {
+        m_canRenderAudio = canRenderAudio;
+        {
+            Locker locker { m_speakerSamplesProducerLock };
+            if (m_speakerSamplesProducer)
+                m_speakerSamplesProducer->canRenderAudioChanged();
+        }
+    }
 
 #if HAVE(VPIO_DUCKING_LEVEL_API)
     if (m_shouldUseVPIO) {

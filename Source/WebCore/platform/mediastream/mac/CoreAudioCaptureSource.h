@@ -120,6 +120,7 @@ public:
     virtual const CAAudioStreamDescription& format() = 0;
     virtual void captureUnitIsStarting() = 0;
     virtual void captureUnitHasStopped() = 0;
+    virtual void canRenderAudioChanged() = 0;
     // Background thread.
     virtual OSStatus produceSpeakerSamples(size_t sampleCount, AudioBufferList&, uint64_t sampleTime, double hostTime, AudioUnitRenderActionFlags&) = 0;
 };
