@@ -2362,7 +2362,6 @@ platform/VideoEncoder.cpp
 platform/VideoDecoder.cpp
 platform/VideoFrame.cpp
 platform/VideoPixelFormat.cpp
-platform/WebCoreCrossThreadCopier.cpp
 platform/WebCorePersistentCoders.cpp
 platform/Widget.cpp
 platform/animation/AcceleratedEffect.cpp
