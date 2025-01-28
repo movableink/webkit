@@ -292,9 +292,14 @@ public:
         // Determine if the condition should be inverted based on whether the "not taken" branch points into the loop.
         Node* terminal = tail->terminal();
         ASSERT(terminal->op() == Branch);
-        bool needToInverseCondition = data.loop->contains(terminal->branchData()->notTaken.block);
-        data.inverseCondition = needToInverseCondition;
-        ASSERT(data.loop->contains(terminal->branchData()->taken.block) == !needToInverseCondition);
+        if (data.loop->contains(terminal->branchData()->notTaken.block)) {
+            // If tail's branch is both jumping into the loop, then it is not a tail.
+            // This happens when we already unrolled this loop before.
+            if (data.loop->contains(terminal->branchData()->taken.block))
+                return false;
+            data.inverseCondition = true;
+        } else
+            data.inverseCondition = false;
 
         return true;
     }
