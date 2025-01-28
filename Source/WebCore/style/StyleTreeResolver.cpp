@@ -978,7 +978,7 @@ auto TreeResolver::determineResolutionType(const Element& element, const RenderS
         return existingStyle ? ResolutionType::RebuildUsingExisting : ResolutionType::Full;
     case DescendantsToResolve::Children:
         if (parentChange == Change::FastPathInherited) {
-            if (existingStyle && !existingStyle->disallowsFastPathInheritance() && !existingStyle->hasExplicitlyInheritedProperties())
+            if (existingStyle && !existingStyle->disallowsFastPathInheritance())
                 return ResolutionType::FastPathInherit;
         }
         return ResolutionType::Full;
