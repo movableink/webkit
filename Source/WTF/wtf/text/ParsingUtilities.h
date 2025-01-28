@@ -76,7 +76,7 @@ template<typename CharacterType, typename DelimiterType> bool skipExactly(const 
     return false;
 }
 
-template<typename CharacterType, typename DelimiterType> bool skipExactly(std::span<const CharacterType>& data, DelimiterType delimiter)
+template<typename CharacterType, typename DelimiterType> bool skipExactly(std::span<CharacterType>& data, DelimiterType delimiter)
 {
     if (!data.empty() && data.front() == delimiter) {
         skip(data, 1);
@@ -112,7 +112,7 @@ template<bool characterPredicate(UChar)> bool skipExactly(StringParsingBuffer<UC
     return false;
 }
 
-template<bool characterPredicate(LChar)> bool skipExactly(std::span<const LChar>& buffer)
+template<bool characterPredicate(LChar), typename CharacterType> bool skipExactly(std::span<CharacterType>& buffer) requires(std::is_same_v<std::remove_const_t<CharacterType>, LChar>)
 {
     if (!buffer.empty() && characterPredicate(buffer[0])) {
         skip(buffer, 1);
@@ -121,7 +121,7 @@ template<bool characterPredicate(LChar)> bool skipExactly(std::span<const LChar>
     return false;
 }
 
-template<bool characterPredicate(UChar)> bool skipExactly(std::span<const UChar>& buffer)
+template<bool characterPredicate(UChar), typename CharacterType> bool skipExactly(std::span<CharacterType>& buffer) requires(std::is_same_v<std::remove_const_t<CharacterType>, UChar>)
 {
     if (!buffer.empty() && characterPredicate(buffer[0])) {
         skip(buffer, 1);
@@ -136,7 +136,7 @@ template<typename CharacterType, typename DelimiterType> void skipUntil(StringPa
         ++buffer;
 }
 
-template<typename CharacterType, typename DelimiterType> void skipUntil(std::span<const CharacterType>& buffer, DelimiterType delimiter)
+template<typename CharacterType, typename DelimiterType> void skipUntil(std::span<CharacterType>& buffer, DelimiterType delimiter)
 {
     size_t index = 0;
     while (index < buffer.size() && buffer[index] != delimiter)
@@ -144,7 +144,7 @@ template<typename CharacterType, typename DelimiterType> void skipUntil(std::spa
     skip(buffer, index);
 }
 
-template<bool characterPredicate(LChar)> void skipUntil(std::span<const LChar>& data)
+template<bool characterPredicate(LChar), typename CharacterType> void skipUntil(std::span<CharacterType>& data) requires(std::is_same_v<std::remove_const_t<CharacterType>, LChar>)
 {
     size_t index = 0;
     while (index < data.size() && !characterPredicate(data[index]))
@@ -152,7 +152,7 @@ template<bool characterPredicate(LChar)> void skipUntil(std::span<const LChar>& 
     skip(data, index);
 }
 
-template<bool characterPredicate(UChar)> void skipUntil(std::span<const UChar>& data)
+template<bool characterPredicate(UChar), typename CharacterType> void skipUntil(std::span<CharacterType>& data) requires(std::is_same_v<std::remove_const_t<CharacterType>, UChar>)
 {
     size_t index = 0;
     while (index < data.size() && !characterPredicate(data[index]))
@@ -178,7 +178,7 @@ template<typename CharacterType, typename DelimiterType> void skipWhile(StringPa
         ++buffer;
 }
 
-template<typename CharacterType, typename DelimiterType> void skipWhile(std::span<const CharacterType>& buffer, DelimiterType delimiter)
+template<typename CharacterType, typename DelimiterType> void skipWhile(std::span<CharacterType>& buffer, DelimiterType delimiter)
 {
     size_t index = 0;
     while (index < buffer.size() && buffer[index] == delimiter)
@@ -186,7 +186,7 @@ template<typename CharacterType, typename DelimiterType> void skipWhile(std::spa
     skip(buffer, index);
 }
 
-template<bool characterPredicate(LChar)> void skipWhile(std::span<const LChar>& data)
+template<bool characterPredicate(LChar), typename CharacterType> void skipWhile(std::span<CharacterType>& data) requires(std::is_same_v<std::remove_const_t<CharacterType>, LChar>)
 {
     size_t index = 0;
     while (index < data.size() && characterPredicate(data[index]))
@@ -194,7 +194,7 @@ template<bool characterPredicate(LChar)> void skipWhile(std::span<const LChar>& 
     skip(data, index);
 }
 
-template<bool characterPredicate(UChar)> void skipWhile(std::span<const UChar>& data)
+template<bool characterPredicate(UChar), typename CharacterType> void skipWhile(std::span<CharacterType>& data) requires(std::is_same_v<std::remove_const_t<CharacterType>, UChar>)
 {
     size_t index = 0;
     while (index < data.size() && characterPredicate(data[index]))

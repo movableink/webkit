@@ -137,14 +137,14 @@ struct ListResult
     bool valid;
     FTPEntryType type;        
     
-    std::span<const LChar> filename;
-    std::span<const LChar> linkname;
+    std::span<LChar> filename;
+    std::span<LChar> linkname;
     
     String fileSize;      
     FTPTime modifiedTime; 
     bool caseSensitive; // file system is definitely case insensitive
 };
 
-FTPEntryType parseOneFTPLine(std::span<const LChar> inputLine, ListState&, ListResult&);
+FTPEntryType parseOneFTPLine(std::span<LChar> inputLine, ListState&, ListResult&);
                  
 } // namespace WebCore

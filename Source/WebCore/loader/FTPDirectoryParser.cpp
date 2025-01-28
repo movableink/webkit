@@ -55,7 +55,7 @@ static bool isSpaceOrTab(LChar c)
     return c == ' ' || c == '\t';
 }
 
-FTPEntryType parseOneFTPLine(std::span<const LChar> line, ListState& state, ListResult& result)
+FTPEntryType parseOneFTPLine(std::span<LChar> line, ListState& state, ListResult& result)
 {
     result.clear();
 
@@ -84,7 +84,7 @@ FTPEntryType parseOneFTPLine(std::span<const LChar> line, ListState& state, List
 
     if (linelen > 0) {
         static constexpr auto monthNames = "JanFebMarAprMayJunJulAugSepOctNovDec"_span;
-        std::array<std::span<const LChar>, 16> tokens; /* 16 is more than enough */
+        std::array<std::span<LChar>, 16> tokens; /* 16 is more than enough */
         std::array<unsigned, tokens.size()> toklen;
         unsigned lineLenSansWsp; // line length sans whitespace
         unsigned numtoks = 0;
@@ -444,19 +444,18 @@ FTPEntryType parseOneFTPLine(std::span<const LChar> line, ListState& state, List
                     if (monthNum >= 12)
                         monthNum = 0;
                     result.modifiedTime.tm_mon = monthNum;
-                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(tokens[2]).value_or(0);
-                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(p.subspan(4)).value_or(0); // NSPR wants year as XXXX
+                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[2] }).value_or(0);
+                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(4) }).value_or(0); // NSPR wants year as XXXX
 
                     p = tokens[3].subspan(2);
                     if (p[0] == ':')
                         skip(p, 1);
                     if (p[2] == ':')
-                        result.modifiedTime.tm_sec = parseIntegerAllowingTrailingJunk<int>(p.subspan(3)).value_or(0);
-                    result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(tokens[3]).value_or(0);
-                    result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(p).value_or(0);
+                        result.modifiedTime.tm_sec = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(3) }).value_or(0);
+                    result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[3] }).value_or(0);
+                    result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(StringView { p }).value_or(0);
 
                     return result.type;
-
                 }
 
                 return FTPJunkEntry; /* junk */
@@ -555,23 +554,23 @@ FTPEntryType parseOneFTPLine(std::span<const LChar> line, ListState& state, List
 
                 p = tokens[tokmarker + 4];
                 if (toklen[tokmarker + 4] == 10) /* newstyle: YYYY-MM-DD format */ {
-                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(p).value_or(0) - 1900;
-                    result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(p.subspan(5)).value_or(0) - 1;
-                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(p.subspan(8)).value_or(0);
+                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(StringView { p }).value_or(0) - 1900;
+                    result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(5) }).value_or(0) - 1;
+                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(8) }).value_or(0);
                 } else /* oldstyle: [M]M/DD/YY format */ {
                     pos = toklen[tokmarker + 4];
-                    result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(p).value_or(0) - 1;
-                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(p.subspan(pos - 5)).value_or(0);
-                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(p.subspan(pos - 2)).value_or(0);
+                    result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(StringView { p }).value_or(0) - 1;
+                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(pos - 5) }).value_or(0);
+                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(pos - 2) }).value_or(0);
                     if (result.modifiedTime.tm_year < 70)
                         result.modifiedTime.tm_year += 100;
                 }
 
                 p = tokens[tokmarker + 5];
                 pos = toklen[tokmarker + 5];
-                result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(p).value_or(0);
-                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(p.subspan(pos - 5)).value_or(0);
-                result.modifiedTime.tm_sec = parseIntegerAllowingTrailingJunk<int>(p.subspan(pos - 2)).value_or(0);
+                result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(StringView { p }).value_or(0);
+                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(pos - 5) }).value_or(0);
+                result.modifiedTime.tm_sec = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(pos - 2) }).value_or(0);
 
                 result.caseSensitive = true;
                 result.filename = tokens[0].first(toklen[0]);
@@ -583,18 +582,12 @@ FTPEntryType parseOneFTPLine(std::span<const LChar> line, ListState& state, List
 
                 if ((/*newstyle*/ toklen[tokmarker + 4] == 10 && tokmarker > 1) || (/*oldstyle*/ toklen[tokmarker + 4] != 10 && tokmarker > 2)) {
                     /* have a filetype column */
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-                    char* dot;
-                    p = tokens[0].subspan(toklen[0]);
-                    memcpySpan(asMutableByteSpan(dot), p.first(sizeof(dot))); /* NASTY! */
-                    *dot++ = '.';
+                    auto dot = tokens[0].subspan(toklen[0]);
+                    consume(dot) = '.';
                     p = tokens[1];
-                    for (pos = 0; pos < toklen[1]; ++pos) {
-                        *dot++ = p[0];
-                        skip(p, 1);
-                    }
-                    result.filename = std::span(result.filename.data(), result.filename.size() + 1 + toklen[1]);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+                    for (pos = 0; pos < toklen[1]; ++pos)
+                        consume(dot) = consume(p);
+                    result.filename = line.subspan(result.filename.data() - line.data(), result.filename.size() + 1 + toklen[1]);
                 }
 
                 /* VM/CMS LISTings have no usable filesize field.
@@ -681,11 +674,11 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                     }
                 }
 
-                result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(tokens[0]).value_or(0);
+                result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[0] }).value_or(0);
                 if (result.modifiedTime.tm_mon) {
                     result.modifiedTime.tm_mon--;
-                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(tokens[0].subspan(3)).value_or(0);
-                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(tokens[0].subspan(6)).value_or(0);
+                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[0].subspan(3) }).value_or(0);
+                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[0].subspan(6) }).value_or(0);
                     /* if year has only two digits then assume that
                          00-79 is 2000-2079
                          80-99 is 1980-1999 */
@@ -695,8 +688,8 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                         result.modifiedTime.tm_year += 1900;
                 }
 
-                result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(tokens[1]).value_or(0);
-                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(tokens[1].subspan(3)).value_or(0);
+                result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[1] }).value_or(0);
+                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[1].subspan(3) }).value_or(0);
                 if (tokens[1][5] == 'P' && result.modifiedTime.tm_hour < 12)
                     result.modifiedTime.tm_hour += 12;
 
@@ -765,13 +758,13 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                     result.fileSize = String(tokens[0].first(pos));
                 }
 
-                result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(p.subspan(35 - 18)).value_or(0) - 1;
-                result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(p.subspan(38 - 18)).value_or(0);
-                result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(p.subspan(41 - 18)).value_or(0);
+                result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(35 - 18) }).value_or(0) - 1;
+                result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(38 - 18) }).value_or(0);
+                result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(41 - 18) }).value_or(0);
                 if (result.modifiedTime.tm_year < 80)
                     result.modifiedTime.tm_year += 100;
-                result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(p.subspan(46 - 18)).value_or(0);
-                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(p.subspan(49 - 18)).value_or(0);
+                result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(46 - 18) }).value_or(0);
+                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(49 - 18) }).value_or(0);
 
                 /* the caller should do this (if dropping "." and ".." is desired)
                 if (result.type == FTPDirectoryEntry && result.filename[0] == '.' &&
@@ -915,21 +908,21 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                 }
 
                 result.modifiedTime.tm_mon = monthNum;
-                result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(tokens[tokmarker + 2]).value_or(0);
+                result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[tokmarker + 2] }).value_or(0);
                 if (!result.modifiedTime.tm_mday)
                     result.modifiedTime.tm_mday++;
 
                 p = tokens[tokmarker + 3];
-                pos = static_cast<unsigned>(parseIntegerAllowingTrailingJunk<int>(p).value_or(0));
+                pos = static_cast<unsigned>(parseIntegerAllowingTrailingJunk<int>(StringView { p }).value_or(0));
                 if (p[1] == ':') /* one digit hour */
                     p = line.subspan(p.data() - line.data() - 1);
                 if (p[2] != ':') /* year */
                     result.modifiedTime.tm_year = pos;
                 else {
                     result.modifiedTime.tm_hour = pos;
-                    result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(p.subspan(3)).value_or(0);
+                    result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(3) }).value_or(0);
                     if (p[5] == ':')
-                        result.modifiedTime.tm_sec = parseIntegerAllowingTrailingJunk<int>(p.subspan(6)).value_or(0);
+                        result.modifiedTime.tm_sec = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(6) }).value_or(0);
 
                     if (!state.now) {
                         time_t now = time(nullptr);
@@ -1091,24 +1084,24 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                     for (pos = 0; pos < (12 * 3); pos += 3) {
                         if (tbuf[0] == monthNames[pos + 0] && tbuf[1] == monthNames[pos + 1] && tbuf[2] == monthNames[pos + 2]) {
                             result.modifiedTime.tm_mon = pos / 3;
-                            result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(tokens[3]).value_or(0);
-                            result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(tokens[4]).value_or(0) - 1900;
+                            result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[3] }).value_or(0);
+                            result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[4] }).value_or(0) - 1900;
                             break;
                         }
                     }
                     pos = 5; /* Chameleon toknum of date field */
                 } else {
-                    result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(p).value_or(0) - 1;
-                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(p.subspan(3)).value_or(0);
-                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(p.subspan(6)).value_or(0);
+                    result.modifiedTime.tm_mon = parseIntegerAllowingTrailingJunk<int>(StringView { p }).value_or(0) - 1;
+                    result.modifiedTime.tm_mday = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(3) }).value_or(0);
+                    result.modifiedTime.tm_year = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(6) }).value_or(0);
                     if (result.modifiedTime.tm_year < 80) /* SuperTCP */
                         result.modifiedTime.tm_year += 100;
 
                     pos = 3; /* SuperTCP toknum of date field */
                 }
 
-                result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(tokens[pos]).value_or(0);
-                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(tokens[pos].subspan(toklen[pos] - 2)).value_or(0);
+                result.modifiedTime.tm_hour = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[pos] }).value_or(0);
+                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[pos].subspan(toklen[pos] - 2) }).value_or(0);
 
                 return result.type;
             }
@@ -1273,7 +1266,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                             && (toklen[pos] == 1 || (toklen[pos] == 2 && isASCIIDigit(tokens[pos][1])))
                             && toklen[monthNum] == 3
                             && isASCIIAlpha(p[0]) && isASCIIAlpha(p[1]) && isASCIIAlpha(p[2])) {
-                            pos = parseIntegerAllowingTrailingJunk<int>(tokens[pos]).value_or(0);
+                            pos = parseIntegerAllowingTrailingJunk<int>(StringView { tokens[pos] }).value_or(0);
                             if (pos > 0 && pos <= 31) {
                                 result.modifiedTime.tm_mday = pos;
                                 monthNum = 1;
@@ -1292,14 +1285,14 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                             tokmarker += 3; /* skip mday/mon/yrtime (to find " -> ") */
                             p = tokens[tokmarker];
 
-                            pos = parseIntegerAllowingTrailingJunk<int>(p).value_or(0);
+                            pos = parseIntegerAllowingTrailingJunk<int>(StringView { p }).value_or(0);
                             if (pos > 24)
                                 result.modifiedTime.tm_year = pos - 1900;
                             else {
                                 if (p[1] == ':')
                                     p = line.subspan(p.data() - line.data() - 1);
                                 result.modifiedTime.tm_hour = pos;
-                                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(p.subspan(3)).value_or(0);
+                                result.modifiedTime.tm_min = parseIntegerAllowingTrailingJunk<int>(StringView { p.subspan(3) }).value_or(0);
                                 if (!state.now) {
                                     time_t now = time(nullptr);
                                     state.now = now * 1000000.0;
