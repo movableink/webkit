@@ -1165,7 +1165,8 @@ StringView gstStructureGetString(const GstStructure* structure, StringView key)
         return { };
     }
 
-    return StringView::fromLatin1(gst_structure_get_string(structure, static_cast<const char*>(key.rawCharacters())));
+    auto utf8String = key.utf8();
+    return StringView::fromLatin1(gst_structure_get_string(structure, utf8String.data()));
 }
 
 StringView gstStructureGetName(const GstStructure* structure)
