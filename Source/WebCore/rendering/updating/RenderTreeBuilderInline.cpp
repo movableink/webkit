@@ -152,8 +152,12 @@ void RenderTreeBuilder::Inline::insertChildToContinuation(RenderInline& parent, 
     } else
         ASSERT_NOT_REACHED();
 
-    if (child->isFloatingOrOutOfFlowPositioned())
-        return m_builder.attachIgnoringContinuation(*beforeChildContinuationAncestor, WTFMove(child), beforeChild);
+    if (child->isFloatingOrOutOfFlowPositioned()) {
+        auto beforeChildIsFirstChild = beforeChild == beforeChild->parent()->firstChild();
+        if (!beforeChildIsFirstChild)
+            return m_builder.attachIgnoringContinuation(*beforeChildContinuationAncestor, WTFMove(child), beforeChild);
+        return m_builder.attachIgnoringContinuation(parentCandidateInContinuation(parent, beforeChild), WTFMove(child));
+    }
 
     auto& parentCandidate = parentCandidateInContinuation(parent, beforeChild);
     if (&parentCandidate == beforeChildContinuationAncestor)
