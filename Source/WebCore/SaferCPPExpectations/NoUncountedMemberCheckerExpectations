@@ -67,7 +67,6 @@ page/scrolling/ScrollingCoordinator.h
 page/scrolling/ScrollingTreeGestureState.h
 page/scrolling/ScrollingTreeScrollingNodeDelegate.h
 page/scrolling/mac/ScrollerMac.h
-platform/DragImage.cpp
 platform/PODInterval.h
 platform/encryptedmedia/CDMProxy.h
 platform/graphics/BitmapImageDescriptor.h
