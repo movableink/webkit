@@ -1092,6 +1092,7 @@ void Options::initialize()
             if (Options::useMachForExceptions())
                 handleSignalsWithMach();
 #endif
+
     });
 }
 
@@ -1107,6 +1108,11 @@ void Options::finalize()
     assertOptionsAreCoherent();
     if (UNLIKELY(Options::dumpOptions()))
         executeDumpOptions();
+
+#if USE(LIBPAS)
+    if (Options::libpasForcePGMWithRate())
+        WTF::forceEnablePGM(Options::libpasForcePGMWithRate());
+#endif
 
     OptionsHelper::releaseMetadata();
 }

@@ -334,11 +334,11 @@ void pas_probabilistic_guard_malloc_initialize_pgm(void)
 /*
  * This function shall be called for testing PGM behavior, since PGM enablement will be non-deterministic otherwise.
  */
-void pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(void)
+void pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(uint16_t pgm_random_rate)
 {
     pas_probabilistic_guard_malloc_is_initialized = true;
     pas_probabilistic_guard_malloc_can_use = true;
-    pas_probabilistic_guard_malloc_random = 1;
+    pas_probabilistic_guard_malloc_random = pgm_random_rate;
     pas_probabilistic_guard_malloc_counter = 0;
     memset(pgm_metadata_vector, 0, sizeof(pgm_metadata_vector));
 }

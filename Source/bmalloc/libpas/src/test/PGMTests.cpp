@@ -272,7 +272,7 @@ void testPGMErrors() {
 }
 
 void testPGMMetadataVectorManagement() {
-    pas_probabilistic_guard_malloc_initialize_pgm_as_enabled();
+    pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(1);
 
     pas_heap_lock_lock();
     pas_root* root = pas_root_create();
@@ -308,7 +308,7 @@ void testPGMMetadataVectorManagement() {
 }
 
 void testPGMMetadataVectorManagementFewDeallocations() {
-    pas_probabilistic_guard_malloc_initialize_pgm_as_enabled();
+    pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(1);
 
     pas_heap_lock_lock();
     pas_root* root = pas_root_create();
@@ -346,7 +346,7 @@ void testPGMMetadataVectorManagementFewDeallocations() {
 /* Backtrace API is currently not supported on PlayStation. */
 #if !PAS_PLATFORM(PLAYSTATION)
 void testPGMMetadataDoubleFreeBehavior() {
-    pas_probabilistic_guard_malloc_initialize_pgm_as_enabled();
+    pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(1);
 
     pas_heap_lock_lock();
     pas_root* root = pas_root_create();

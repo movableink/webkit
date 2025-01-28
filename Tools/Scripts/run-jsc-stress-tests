@@ -1141,7 +1141,8 @@ BASE_MODES = [
         "NoCJIT",
         "ftl-no-cjit",
         [
-            "--validateBytecode=true", "--validateGraphAtEachPhase=true"
+            "--validateBytecode=true", "--validateGraphAtEachPhase=true", "--libpasForcePGMWithRate=#{10 + rand(10)}",
+
         ] +
         FTL_OPTIONS +
         NO_CJIT_OPTIONS +
@@ -1153,6 +1154,7 @@ BASE_MODES = [
         [
             "--useDataICInFTL=true",
             "--allowNonSPTagging=false",
+            "--libpasForcePGMWithRate=#{10 + rand(10)}",
         ] +
         FTL_OPTIONS +
         NO_CJIT_OPTIONS
@@ -1255,6 +1257,7 @@ BASE_MODES = [
             "--validateGraph=true",
             "--validateBCE=true",
             "--airForceIRCAllocator=true",
+            "--libpasForcePGMWithRate=#{10 + rand(10)}",
         ] +
         FTL_OPTIONS +
         NO_CJIT_OPTIONS +
@@ -1354,6 +1357,7 @@ BASE_MODES = [
             "--useZombieMode=true",
             "--allowDoubleShape=false",
             "--alwaysHaveABadTime=true",
+            "--libpasForcePGMWithRate=#{10 + rand(10)}",
         ]
     ],
     [

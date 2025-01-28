@@ -27,6 +27,11 @@
 
 #if !USE(SYSTEM_MALLOC)
 #include <bmalloc/BPlatform.h>
+// Enable USE(LIBPAS)
+// FIXME: Replaces uses of `#if !USE(SYSTEM_MALLOC) \n #if BUSE(LIBPAS)` with `#if USE(LIBPAS)`
+#if BUSE(LIBPAS)
+#define USE_LIBPAS 1
+#endif
 #endif
 
 namespace WTF {
@@ -208,7 +213,8 @@ WTF_EXPORT_PRIVATE void fastEnableMiniMode();
 
 WTF_EXPORT_PRIVATE void fastDisableScavenger();
 
-WTF_EXPORT_PRIVATE void forceEnablePGM();
+// allocate with guard pages at a rate of 1/guardMallocRate
+WTF_EXPORT_PRIVATE void forceEnablePGM(uint16_t guardMallocRate);
 
 class ForbidMallocUseForCurrentThreadScope {
 public:

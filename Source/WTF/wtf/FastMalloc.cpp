@@ -874,9 +874,9 @@ void fastDisableScavenger()
     bmalloc::api::disableScavenger();
 }
 
-void forceEnablePGM()
+void forceEnablePGM(uint16_t guardMallocRate)
 {
-    bmalloc::api::forceEnablePGM();
+    bmalloc::api::forceEnablePGM(guardMallocRate);
 }
 
 } // namespace WTF
