@@ -31,9 +31,6 @@
 (allow iokit-open-user-client
     (iokit-user-client-class "AGXDeviceUserClient"))
 
-(allow mach-lookup
-    (global-name "com.apple.surfboard.applicationservice"))
-
 (allow syscall-mach (machtrap-number MSC_mk_timer_arm_leeway))
 
 (allow syscall-unix

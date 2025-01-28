@@ -772,6 +772,9 @@
         SYS_fcntl
         SYS_fcntl_nocancel
         SYS_fileport_makefd
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+        SYS_fileport_makeport
+#endif
         SYS_flock
         SYS_fsetattrlist
         SYS_fsetxattr
@@ -989,6 +992,11 @@
     (require-all
         (extension-class "com.apple.mediaserverd.read")
         (apply subpath issue-extension-secondary-paths)))
+#endif
+
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+(allow mach-lookup
+    (global-name "com.apple.surfboard.applicationservice"))
 #endif
 
 #if __has_include(<WebKitAdditions/com.apple.WebKit.GPU.sb.in>)

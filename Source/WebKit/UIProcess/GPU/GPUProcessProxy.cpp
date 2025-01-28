@@ -918,6 +918,13 @@ void GPUProcessProxy::setPresentingApplicationAuditToken(WebCore::ProcessIdentif
 }
 #endif
 
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+void GPUProcessProxy::requestSharedSimulationConnection(audit_token_t modelProcessAuditToken, CompletionHandler<void(std::optional<IPC::SharedFileHandle>)>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::GPUProcess::RequestSharedSimulationConnection { modelProcessAuditToken }, WTFMove(completionHandler));
+}
+#endif
+
 } // namespace WebKit
 
 #endif // ENABLE(GPU_PROCESS)

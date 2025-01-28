@@ -584,6 +584,7 @@ UIProcess/Media/cocoa/AudioSessionRoutingArbitratorProxyCocoa.mm
 UIProcess/Media/cocoa/MediaUsageManagerCocoa.mm
 
 UIProcess/Model/ModelPresentationManagerProxy.mm
+UIProcess/Model/cocoa/ModelProcessProxyCocoa.mm
 
 UIProcess/Network/CustomProtocols/LegacyCustomProtocolManagerProxy.cpp
 

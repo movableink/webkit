@@ -120,6 +120,10 @@ void ModelProcessProxy::connectionWillOpen(IPC::Connection&)
 void ModelProcessProxy::processWillShutDown(IPC::Connection& connection)
 {
     ASSERT_UNUSED(connection, &this->connection() == &connection);
+
+#if PLATFORM(VISION) && ENABLE(GPU_PROCESS)
+    m_didInitializeSharedSimulationConnection = false;
+#endif
 }
 
 void ModelProcessProxy::createModelProcessConnection(WebProcessProxy& webProcessProxy, IPC::Connection::Handle&& connectionIdentifier, ModelProcessConnectionParameters&& parameters)

@@ -169,6 +169,10 @@ public:
     void setPresentingApplicationAuditToken(WebCore::ProcessIdentifier, WebCore::PageIdentifier, std::optional<CoreIPCAuditToken>);
 #endif
 
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+    void requestSharedSimulationConnection(audit_token_t, CompletionHandler<void(std::optional<IPC::SharedFileHandle>)>&&);
+#endif
+
 private:
     explicit GPUProcessProxy();
 

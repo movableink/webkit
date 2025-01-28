@@ -540,6 +540,11 @@ fi
     plistbuddy Add :com.apple.private.attribution.explicitly-assumed-identities:0:type string wildcard
 
     plistbuddy add :com.apple.coreaudio.allow-vorbis-decode bool YES
+
+if [[ "${WK_PLATFORM_NAME}" == xros ]]; then
+    plistbuddy Add :com.apple.surfboard.application-service-client bool YES
+    plistbuddy Add :com.apple.surfboard.shared-simulation-connection-request bool YES
+fi
 }
 
 function ios_family_process_model_entitlements()
@@ -550,8 +555,6 @@ function ios_family_process_model_entitlements()
     plistbuddy Add :com.apple.private.memorystatus bool YES
     plistbuddy Add :com.apple.runningboard.assertions.webkit bool YES
     plistbuddy Add :com.apple.private.sandbox.profile string com.apple.WebKit.Model
-    plistbuddy Add :com.apple.surfboard.application-service-client bool YES
-    plistbuddy Add :com.apple.surfboard.shared-simulation-connection-request bool YES
     plistbuddy Add :com.apple.private.pac.exception bool YES
     plistbuddy Add :com.apple.pac.shared_region_id string WebKitModel
 }

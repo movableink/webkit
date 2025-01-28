@@ -56,6 +56,12 @@
 #include <WebCore/DisplayCapturePromptType.h>
 #endif
 
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+namespace IPC {
+class SharedFileHandle;
+}
+#endif
+
 namespace WebCore {
 class CaptureDevice;
 class NowPlayingManager;
@@ -153,6 +159,10 @@ public:
 
 #if PLATFORM(COCOA)
     void didDrawRemoteToPDF(WebCore::PageIdentifier, RefPtr<WebCore::SharedBuffer>&&, WebCore::SnapshotIdentifier);
+#endif
+
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+    void requestSharedSimulationConnection(CoreIPCAuditToken&&, CompletionHandler<void(std::optional<IPC::SharedFileHandle>)>&&);
 #endif
 
 private:

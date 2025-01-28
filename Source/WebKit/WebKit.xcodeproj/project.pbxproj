@@ -5812,6 +5812,7 @@
 		51FBB8962CCC0A6D00B72464 /* WebFrameMetrics.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebFrameMetrics.serialization.in; sourceTree = "<group>"; };
 		51FD18B31651FBAD00DBE1CE /* NetworkResourceLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkResourceLoader.cpp; sourceTree = "<group>"; };
 		51FD18B41651FBAD00DBE1CE /* NetworkResourceLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkResourceLoader.h; sourceTree = "<group>"; };
+		521CBD892D3C2D1C00ED57FB /* ModelProcessProxyCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ModelProcessProxyCocoa.mm; sourceTree = "<group>"; };
 		522746C92C01C02200304409 /* PlatformXRSessionEnums.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformXRSessionEnums.h; sourceTree = "<group>"; };
 		523475D32B68470D0029B9AE /* CoreIPCCFCharacterSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreIPCCFCharacterSet.h; sourceTree = "<group>"; };
 		523475D42B6849A70029B9AE /* CoreIPCCFCharacterSet.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = CoreIPCCFCharacterSet.serialization.in; sourceTree = "<group>"; };
@@ -5835,6 +5836,7 @@
 		528952802C70797900D0357E /* RKEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RKEntity.swift; sourceTree = "<group>"; };
 		52A69BE9286CFFAC00893E8F /* CryptoTokenKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CryptoTokenKit.framework; path = System/Library/Frameworks/CryptoTokenKit.framework; sourceTree = SDKROOT; };
 		52B060F82B745E00009B1666 /* CoreIPCCVPixelBufferRef.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCCVPixelBufferRef.mm; sourceTree = "<group>"; };
+		52B5C0372D40232500110DF0 /* GPUProcessExtension-visionOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GPUProcessExtension-visionOS.entitlements"; sourceTree = "<group>"; };
 		52C05BA72874996C00D80C59 /* MockCcidService.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockCcidService.h; sourceTree = "<group>"; };
 		52C05BA82874996C00D80C59 /* MockCcidService.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; path = MockCcidService.mm; sourceTree = "<group>"; };
 		52C25B422D0C12F700A26AB8 /* ModelPresentationManagerProxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ModelPresentationManagerProxy.h; sourceTree = "<group>"; };
@@ -11202,6 +11204,7 @@
 		2DA8153428A4939700CF811C /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				521CBD882D3C2CCE00ED57FB /* cocoa */,
 				52C25B422D0C12F700A26AB8 /* ModelPresentationManagerProxy.h */,
 				52C25B432D0C12F700A26AB8 /* ModelPresentationManagerProxy.mm */,
 				2DA8153628A4939700CF811C /* ModelProcessProxy.cpp */,
@@ -12763,6 +12766,14 @@
 			path = ios;
 			sourceTree = "<group>";
 		};
+		521CBD882D3C2CCE00ED57FB /* cocoa */ = {
+			isa = PBXGroup;
+			children = (
+				521CBD892D3C2D1C00ED57FB /* ModelProcessProxyCocoa.mm */,
+			);
+			path = cocoa;
+			sourceTree = "<group>";
+		};
 		5260053F2C707686005D813A /* RealityKit */ = {
 			isa = PBXGroup;
 			children = (
@@ -13091,6 +13102,7 @@
 				5C139DB829DB847E00D5117B /* AuxiliaryProcessExtensionBridge.mm */,
 				5C139DB529DB847D00D5117B /* com.apple.WebKit.appexpt */,
 				5C139DB629DB847E00D5117B /* GPUExtension-Info.plist */,
+				52B5C0372D40232500110DF0 /* GPUProcessExtension-visionOS.entitlements */,
 				E37A2F1C2B8523B10087F394 /* GPUProcessExtension.entitlements */,
 				E3B9B5D62AB65822008568FE /* GPUProcessExtension.swift */,
 				5C139DB729DB847E00D5117B /* NetworkingExtension-Info.plist */,
