@@ -338,7 +338,7 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
                 StringView view0 = *rope0->substringBase()->valueInternal().impl();
                 unsigned offset = rope0->substringOffset();
 
-                view0.substring(offset, rope0Length).getCharacters(buffer.first(buffer.size() - rope0Length));
+                view0.substring(offset, rope0Length).getCharacters(buffer);
                 return;
             }
             MUST_TAIL_CALL return resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length), stackLimit);

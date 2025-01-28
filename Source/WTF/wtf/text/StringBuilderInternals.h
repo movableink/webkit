@@ -41,10 +41,7 @@ template<typename AllocationCharacterType, typename CurrentCharacterType> void S
     }
 
     ASSERT(!hasOverflowed());
-
-    // FIXME: StringImpl::copyCharacters() should take in 2 spans or we should call memcpySpan().
-    RELEASE_ASSERT(newBufferCharacters.size() >= currentCharactersToCopy.size());
-    StringImpl::copyCharacters(newBufferCharacters.data(), currentCharactersToCopy);
+    StringImpl::copyCharacters(newBufferCharacters, currentCharactersToCopy);
 
     m_buffer = WTFMove(buffer);
     m_string = { };

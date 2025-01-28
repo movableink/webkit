@@ -32,6 +32,16 @@
 
 namespace WTF {
 
+static std::span<const LChar> latin1ContextSpan(UText* uText)
+{
+    return unsafeMakeSpan(static_cast<const LChar*>(uText->context), uText->a);
+}
+
+static std::span<UChar> chunkSpan(UText* uText)
+{
+    return unsafeMakeSpan(const_cast<UChar*>(uText->chunkContents), uText->chunkLength);
+}
+
 // Latin1 provider
 
 static UText* uTextLatin1Clone(UText*, const UText*, UBool, UErrorCode*);
@@ -142,10 +152,7 @@ static UBool uTextLatin1Access(UText* uText, int64_t index, UBool forward)
         uText->chunkOffset = static_cast<int32_t>(index - uText->chunkNativeStart);
     }
     uText->chunkLength = static_cast<int32_t>(uText->chunkNativeLimit - uText->chunkNativeStart);
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    StringImpl::copyCharacters(const_cast<UChar*>(uText->chunkContents), unsafeMakeSpan(static_cast<const LChar*>(uText->context) + uText->chunkNativeStart, uText->chunkLength));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    StringImpl::copyCharacters(chunkSpan(uText), latin1ContextSpan(uText).subspan(uText->chunkNativeStart, uText->chunkLength));
 
     uText->nativeIndexingLimit = uText->chunkLength;
 
@@ -183,9 +190,7 @@ static int32_t uTextLatin1Extract(UText* uText, int64_t start, int64_t limit, UC
         size_t trimmedLength = length;
         if (trimmedLength > dest.size())
             trimmedLength = dest.size();
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        StringImpl::copyCharacters(dest.data(), unsafeMakeSpan(static_cast<const LChar*>(uText->context) + start, trimmedLength));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        StringImpl::copyCharacters(dest, latin1ContextSpan(uText).subspan(start, trimmedLength));
     }
 
     if (length < dest.size()) {
@@ -301,7 +306,7 @@ static void textLatin1ContextAwareMoveInPrimaryContext(UText* text, int64_t nati
     text->nativeIndexingLimit = text->chunkLength;
     text->chunkOffset = forward ? 0 : text->chunkLength;
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    StringImpl::copyCharacters(const_cast<UChar*>(text->chunkContents), unsafeMakeSpan(static_cast<const LChar*>(text->p) + (text->chunkNativeStart - text->b), text->chunkLength));
+    StringImpl::copyCharacters(chunkSpan(text), unsafeMakeSpan(static_cast<const LChar*>(text->p) + (text->chunkNativeStart - text->b), text->chunkLength));
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 

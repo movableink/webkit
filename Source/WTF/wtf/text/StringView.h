@@ -609,12 +609,12 @@ template<bool isSpecialCharacter(UChar)> inline bool StringView::containsOnly() 
 
 template<typename CharacterType> inline void StringView::getCharacters8(std::span<CharacterType> destination) const
 {
-    StringImpl::copyCharacters(destination.data(), span8());
+    StringImpl::copyCharacters(destination, span8());
 }
 
 template<typename CharacterType> inline void StringView::getCharacters16(std::span<CharacterType> destination) const
 {
-    StringImpl::copyCharacters(destination.data(), span16());
+    StringImpl::copyCharacters(destination, span16());
 }
 
 template<typename CharacterType> inline void StringView::getCharacters(std::span<CharacterType> destination) const
@@ -633,7 +633,7 @@ inline StringView::UpconvertedCharactersWithSize<N>::UpconvertedCharactersWithSi
         return;
     }
     m_upconvertedCharacters.grow(string.m_length);
-    StringImpl::copyCharacters(m_upconvertedCharacters.data(), string.span8());
+    StringImpl::copyCharacters(m_upconvertedCharacters.mutableSpan(), string.span8());
     m_characters = m_upconvertedCharacters.span();
 }
 
