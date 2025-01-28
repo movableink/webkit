@@ -2460,7 +2460,7 @@
         "expected": { "all": { "status": ["SKIP"], "bug": "webkit.org/b/230615"}}
     },
     "imported/w3c/webdriver/tests/bidi/session/status/status.py": {
-        "expected": { "all": { "status": ["SKIP"], "bug": "webkit.org/b/230615"}}
+        "expected": { "gtk": { "status": ["SKIP"], "bug": "webkit.org/b/286506"}}
     },
     "imported/w3c/webdriver/tests/bidi/session/subscribe/contexts.py": {
         "expected": { "all": { "status": ["SKIP"], "bug": "webkit.org/b/230615"}}
@@ -2523,6 +2523,6 @@
         "expected": { "all": { "status": ["SKIP"], "bug": "webkit.org/b/230615"}}
     },
     "imported/selenium/py/test/selenium/webdriver/common/bidi_script_tests.py": {
-        "expected": { "all": { "status": ["SKIP"], "bug": "webkit.org/b/271956"}}
+        "expected": { "gtk": { "status": ["SKIP"], "bug": "webkit.org/b/286506"}}
     }
 }
