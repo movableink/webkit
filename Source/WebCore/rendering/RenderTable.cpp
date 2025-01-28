@@ -133,6 +133,20 @@ RenderTableSection* RenderTable::topSection() const
     return m_foot.get();
 }
 
+RenderTableSection* RenderTable::bottomSection() const
+{
+    recalcSectionsIfNeeded();
+    if (m_foot)
+        return m_foot.get();
+    for (CheckedPtr child = lastChild(); child; child = child->previousSibling()) {
+        if (child.get() == m_head.get())
+            continue;
+        if (auto* tableSection = dynamicDowncast<RenderTableSection>(*child))
+            return tableSection;
+    }
+    return m_head.get();
+}
+
 void RenderTable::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBlock::styleDidChange(diff, oldStyle);
@@ -1466,18 +1480,6 @@ RenderTableSection* RenderTable::sectionBelow(const RenderTableSection* section,
     }
     if (!nextSection && m_foot && (skipEmptySections == DoNotSkipEmptySections || m_foot->numRows()))
         return m_foot.get();
-    return nullptr;
-}
-
-RenderTableSection* RenderTable::bottomSection() const
-{
-    recalcSectionsIfNeeded();
-    if (m_foot)
-        return m_foot.get();
-    for (RenderObject* child = lastChild(); child; child = child->previousSibling()) {
-        if (auto* tableSection = dynamicDowncast<RenderTableSection>(*child))
-            return tableSection;
-    }
     return nullptr;
 }
 
