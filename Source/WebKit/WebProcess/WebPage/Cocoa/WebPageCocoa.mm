@@ -571,15 +571,7 @@ void WebPage::getProcessDisplayName(CompletionHandler<void(String&&)>&& completi
 #endif
 }
 
-bool WebPage::isTransparentOrFullyClipped(const Node& node) const
-{
-    CheckedPtr renderer = node.renderer();
-    if (!renderer)
-        return false;
-    return isTransparentOrFullyClipped(*renderer);
-}
-
-bool WebPage::isTransparentOrFullyClipped(const RenderObject& renderer) const
+static bool rendererIsTransparentOrFullyClipped(const RenderObject& renderer)
 {
     CheckedPtr enclosingLayer = renderer.enclosingLayer();
     if (enclosingLayer && enclosingLayer->isTransparentRespectingParentFrames())
@@ -588,37 +580,36 @@ bool WebPage::isTransparentOrFullyClipped(const RenderObject& renderer) const
     return renderer.hasEmptyVisibleRectRespectingParentFrames();
 }
 
-static RenderObject* closestCommonContainerInRenderTree(const Position& start, const Position& end)
+bool WebPage::isTransparentOrFullyClipped(const Node& node) const
 {
-    RefPtr startContainer = start.containerNode();
-    if (!startContainer)
-        return nullptr;
+    CheckedPtr renderer = node.renderer();
+    if (!renderer)
+        return false;
+    return rendererIsTransparentOrFullyClipped(*renderer);
+}
 
-    RefPtr endContainer = end.containerNode();
+static bool selectionIsTransparentOrFullyClipped(const VisibleSelection& selection)
+{
+    RefPtr startContainer = selection.start().containerNode();
+    if (!startContainer)
+        return false;
+
+    RefPtr endContainer = selection.end().containerNode();
     if (!endContainer)
-        return nullptr;
+        return false;
 
     CheckedPtr startRenderer = startContainer->renderer();
     if (!startRenderer)
-        return nullptr;
+        return false;
 
     CheckedPtr endRenderer = endContainer->renderer();
     if (!endRenderer)
-        return nullptr;
+        return false;
 
-    if (startRenderer == endRenderer)
-        return startRenderer.get();
+    if (!rendererIsTransparentOrFullyClipped(*startRenderer))
+        return false;
 
-    UncheckedKeyHashSet<CheckedPtr<RenderElement>> ancestorsOfStart;
-    for (CheckedPtr container = startRenderer->container(); container; container = container->container())
-        ancestorsOfStart.add(container);
-
-    for (CheckedPtr container = endRenderer->container(); container; container = container->container()) {
-        if (ancestorsOfStart.contains(container))
-            return container.get();
-    }
-
-    return nullptr;
+    return startRenderer == endRenderer || rendererIsTransparentOrFullyClipped(*endRenderer);
 }
 
 void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState& result) const
@@ -704,10 +695,8 @@ void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState&
 #if PLATFORM(IOS_FAMILY)
         result.visualData->editableRootBounds = rootViewInteractionBounds(Ref { *editableRootOrFormControl });
 #endif
-    } else if (result.selectionIsRange) {
-        if (CheckedPtr ancestorContainer = closestCommonContainerInRenderTree(selection.start(), selection.end()))
-            postLayoutData.selectionIsTransparentOrFullyClipped = isTransparentOrFullyClipped(*ancestorContainer);
-    }
+    } else if (result.selectionIsRange)
+        postLayoutData.selectionIsTransparentOrFullyClipped = selectionIsTransparentOrFullyClipped(selection);
 
 #if PLATFORM(IOS_FAMILY)
     bool honorOverflowScrolling = m_page->settings().selectionHonorsOverflowScrolling();
