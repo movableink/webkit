@@ -615,6 +615,7 @@ public:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     WebCompiledContentRuleList* cachedResourceMonitorRuleList();
+    void setResourceMonitorURLsForTesting(const String& rulesText, CompletionHandler<void()>&&);
 #endif
 
 #if PLATFORM(COCOA)
@@ -738,7 +739,8 @@ private:
 #if ENABLE(CONTENT_EXTENSIONS)
     void loadOrUpdateResourceMonitorRuleList();
 
-    void platformLoadResourceMonitorRuleList(CompletionHandler<void()>&&);
+    void platformLoadResourceMonitorRuleList(CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&&);
+    void platformCompileResourceMonitorRuleList(const String& rulesText, CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&&);
 #endif
 
     Ref<API::ProcessPoolConfiguration> m_configuration;

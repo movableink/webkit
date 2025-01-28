@@ -2527,6 +2527,12 @@ void WebProcess::setResourceMonitorContentRuleList(WebCompiledContentRuleListDat
 
     WebCore::ResourceMonitorChecker::singleton().setContentRuleList(WTFMove(backend));
 }
+
+void WebProcess::setResourceMonitorContentRuleListAsync(WebCompiledContentRuleListData&& ruleListData, CompletionHandler<void()>&& completionHandler)
+{
+    setResourceMonitorContentRuleList(WTFMove(ruleListData));
+    completionHandler();
+}
 #endif
 
 } // namespace WebKit

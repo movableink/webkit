@@ -542,7 +542,8 @@ public:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     void requestResourceMonitorRuleLists();
-    void setResourceMonitorRuleListsIfRequired(WebCompiledContentRuleList*);
+    void setResourceMonitorRuleListsIfRequired(RefPtr<WebCompiledContentRuleList>);
+    void setResourceMonitorRuleLists(RefPtr<WebCompiledContentRuleList>, CompletionHandler<void()>&&);
 #endif
 
 private:

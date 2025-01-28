@@ -36,8 +36,10 @@
 
 namespace WebCore {
 
-static constexpr Seconds ruleListPreparationTimeout = 10_s;
-static constexpr auto defaultEligibility = ResourceMonitor::Eligibility::NotEligible;
+static size_t networkUsageThresholdWithRandomNoise(size_t threshold, double randomness)
+{
+    return static_cast<size_t>(threshold * (1 + randomness * cryptographicallyRandomUnitInterval()));
+}
 
 ResourceMonitorChecker& ResourceMonitorChecker::singleton()
 {
@@ -47,6 +49,7 @@ ResourceMonitorChecker& ResourceMonitorChecker::singleton()
 
 ResourceMonitorChecker::ResourceMonitorChecker()
     : m_workQueue { WorkQueue::create("ResourceMonitorChecker Work Queue"_s) }
+    , m_networkUsageThreshold { networkUsageThresholdWithRandomNoise(networkUsageThreshold, networkUsageThresholdRandomness) }
 {
     protectedWorkQueue()->dispatchAfter(ruleListPreparationTimeout, [this] mutable {
         if (m_ruleList)
@@ -91,6 +94,8 @@ ResourceMonitor::Eligibility ResourceMonitorChecker::checkEligibility(const Cont
     ASSERT(m_ruleList);
 
     auto matched = m_ruleList->processContentRuleListsForResourceMonitoring(info.resourceURL, info.mainDocumentURL, info.frameURL, info.type);
+    RESOURCEMONITOR_RELEASE_LOG("The url is %" PUBLIC_LOG_STRING ": %" SENSITIVE_LOG_STRING, (matched ? "eligible" : "not eligible"), info.resourceURL.string().utf8().data());
+
     return matched ? Eligibility::Eligible : Eligibility::NotEligible;
 }
 
@@ -126,6 +131,11 @@ void ResourceMonitorChecker::finishPendingQueries(Function<Eligibility(const Con
         });
     }
     m_pendingQueries.clear();
+}
+
+void ResourceMonitorChecker::setNetworkUsageThreshold(size_t threshold, double randomness)
+{
+    m_networkUsageThreshold = networkUsageThresholdWithRandomNoise(threshold, randomness);
 }
 
 } // namespace WebCore

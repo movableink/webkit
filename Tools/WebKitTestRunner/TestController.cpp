@@ -2188,6 +2188,9 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
     if (WKStringIsEqualToUTF8CString(messageName, "DisplayAndTrackRepaints"))
         return WKPageDisplayAndTrackRepaintsForTesting(TestController::singleton().mainWebView()->page(), completionHandler.leak(), adoptAndCallCompletionHandler);
 
+    if (WKStringIsEqualToUTF8CString(messageName, "SetResourceMonitorList"))
+        return setResourceMonitorList(stringValue(messageBody), WTFMove(completionHandler));
+
     ASSERT_NOT_REACHED();
 }
 
@@ -4457,6 +4460,11 @@ void TestController::setRequestStorageAccessThrowsExceptionUntilReload(bool enab
     auto configuration = adoptWK(WKPageCopyPageConfiguration(m_mainWebView->page()));
     auto preferences = WKPageConfigurationGetPreferences(configuration.get());
     WKPreferencesSetBoolValueForKeyForTesting(preferences, enabled, toWK("RequestStorageAccessThrowsExceptionUntilReload").get());
+}
+
+void TestController::setResourceMonitorList(WKStringRef rulesText, CompletionHandler<void(WKTypeRef)>&& completionHandler)
+{
+    WKContextSetResourceMonitorURLsForTesting(m_context.get(), rulesText, completionHandler.leak(), adoptAndCallCompletionHandler);
 }
 
 } // namespace WTR

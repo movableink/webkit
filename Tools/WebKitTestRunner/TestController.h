@@ -357,6 +357,8 @@ public:
     void cleanUpKeychain(const String& attrLabel, const String& applicationLabelBase64);
     bool keyExistsInKeychain(const String& attrLabel, const String& applicationLabelBase64);
 
+    void setResourceMonitorList(WKStringRef rulesText, CompletionHandler<void(WKTypeRef)>&&);
+
 #if PLATFORM(COCOA)
     NSString *overriddenCalendarIdentifier() const;
     NSString *overriddenCalendarLocaleIdentifier() const;

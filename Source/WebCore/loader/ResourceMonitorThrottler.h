@@ -41,6 +41,8 @@ public:
 
     WEBCORE_EXPORT bool tryAccess(const String& host, ApproximateTime = ApproximateTime::now());
 
+    WEBCORE_EXPORT void setCountPerDuration(size_t, Seconds);
+
 private:
     struct Config {
         size_t count;

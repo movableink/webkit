@@ -235,6 +235,7 @@ messages -> WebProcess : AuxiliaryProcess WantsAsyncDispatchMessage {
 
 #if ENABLE(CONTENT_EXTENSIONS)
     [DeferSendingIfSuspended] SetResourceMonitorContentRuleList(WebKit::WebCompiledContentRuleListData ruleListData)
+    SetResourceMonitorContentRuleListAsync(WebKit::WebCompiledContentRuleListData ruleListData) -> ()
 #endif
 
 #if PLATFORM(COCOA)

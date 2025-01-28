@@ -47,6 +47,7 @@
 #import "TextChecker.h"
 #import "WKBrowsingContextControllerInternal.h"
 #import "WKContentRuleListInternal.h"
+#import "WKContentRuleListStore.h"
 #import "WebBackForwardCache.h"
 #import "WebCompiledContentRuleList.h"
 #import "WebMemoryPressureHandler.h"
@@ -80,6 +81,7 @@
 #import <pal/system/ios/UserInterfaceIdiom.h>
 #import <sys/param.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/CallbackAggregator.h>
 #import <wtf/FileSystem.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/SoftLinking.h>
@@ -166,6 +168,10 @@ static NSString * const WebKitLogCookieInformationDefaultsKey = @"WebKitLogCooki
 
 #if HAVE(POWERLOG_TASK_MODE_QUERY) && ENABLE(GPU_PROCESS)
 static NSString * const kPLTaskingStartNotificationGlobal = @"kPLTaskingStartNotificationGlobal";
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+static NSString * const WebKitResourceMonitorURLsForTestingIdentifier = @"com.apple.WebPrivacy.ResourceMonitorURLsForTesting";
 #endif
 
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
@@ -1337,17 +1343,40 @@ void WebProcessPool::setCachedHardwareKeyboardState(HardwareKeyboardState hardwa
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
-void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void()>&& completionHandler)
+static RefPtr<WebCompiledContentRuleList> createCompiledContentRuleList(WKContentRuleList* list)
+{
+    if (!list)
+        return nullptr;
+
+    auto data = list->_contentRuleList->compiledRuleList().data();
+    return WebCompiledContentRuleList::create(WTFMove(data));
+}
+
+void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&& completionHandler)
 {
     ResourceMonitorURLsController::singleton().prepare([weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](WKContentRuleList *list, bool updated) mutable {
+        RefPtr<WebCompiledContentRuleList> ruleList;
+
         if (RefPtr protectedThis = weakThis.get()) {
-            if (list && (updated || !protectedThis->m_resourceMonitorRuleListCache)) {
-                auto data = list->_contentRuleList->compiledRuleList().data();
-                protectedThis->m_resourceMonitorRuleListCache = WebCompiledContentRuleList::create(WTFMove(data));
-            }
+            if (list && (updated || !protectedThis->m_resourceMonitorRuleListCache))
+                ruleList = createCompiledContentRuleList(list);
         }
-        completionHandler();
+        completionHandler(WTFMove(ruleList));
     });
+}
+
+void WebProcessPool::platformCompileResourceMonitorRuleList(const String& rulesText, CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&& completionHandler)
+{
+    StringView view { rulesText };
+    RetainPtr source = view.createNSStringWithoutCopying();
+    RetainPtr store = [WKContentRuleListStore defaultStore];
+
+    [store compileContentRuleListForIdentifier:WebKitResourceMonitorURLsForTestingIdentifier encodedContentRuleList:source.get() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](WKContentRuleList *list, NSError *error) mutable {
+        if (error || !list)
+            RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to compile test urls");
+
+        completionHandler(createCompiledContentRuleList(list));
+    }).get()];
 }
 #endif
 

@@ -465,4 +465,8 @@ interface TestRunner {
 
     Promise<undefined> setTopContentInset(double contentInset);
     Promise<undefined> setPageScaleFactor(unrestricted double scaleFactor, long x, long y);
+
+    // ResourceMonitor
+    readonly attribute boolean canModifyResourceMonitorList;
+    Promise<undefined> setResourceMonitorList(DOMString rulesText);
 };

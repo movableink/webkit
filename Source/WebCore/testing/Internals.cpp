@@ -7815,4 +7815,25 @@ void Internals::setTopDocumentURLForQuirks(const String& urlString)
     document->quirks().setTopDocumentURLForTesting(URL { urlString });
 }
 
+#if ENABLE(CONTENT_EXTENSIONS)
+void Internals::setResourceMonitorNetworkUsageThreshold(size_t threshold, double randomness)
+{
+    ResourceMonitorChecker::singleton().setNetworkUsageThreshold(threshold, randomness);
+}
+
+bool Internals::shouldSkipResourceMonitorThrottling() const
+{
+    if (RefPtr document = contextDocument())
+        return document->shouldSkipResourceMonitorThrottling();
+
+    return false;
+}
+
+void Internals::setShouldSkipResourceMonitorThrottling(bool flag)
+{
+    if (RefPtr document = contextDocument())
+        document->setShouldSkipResourceMonitorThrottling(flag);
+}
+#endif
+
 } // namespace WebCore

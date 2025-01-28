@@ -3084,17 +3084,24 @@ void WebProcessProxy::requestResourceMonitorRuleLists()
         m_resourceMonitorRuleListRequestedBySomePage = true;
 
         if (RefPtr ruleList = processPool->cachedResourceMonitorRuleList())
-            setResourceMonitorRuleListsIfRequired(ruleList.get());
+            setResourceMonitorRuleListsIfRequired(WTFMove(ruleList));
     }
 }
 
-void WebProcessProxy::setResourceMonitorRuleListsIfRequired(WebCompiledContentRuleList* ruleList)
+void WebProcessProxy::setResourceMonitorRuleListsIfRequired(RefPtr<WebCompiledContentRuleList> ruleList)
 {
-    if (!m_resourceMonitorRuleListRequestedBySomePage || m_resourceMonitorRuleList == ruleList)
+    if (!m_resourceMonitorRuleListRequestedBySomePage || m_resourceMonitorRuleList == ruleList.get())
         return;
 
-    m_resourceMonitorRuleList = ruleList;
-    send(Messages::WebProcess::SetResourceMonitorContentRuleList(ruleList->data()), 0);
+    m_resourceMonitorRuleList = ruleList.get();
+    if (ruleList)
+        send(Messages::WebProcess::SetResourceMonitorContentRuleList(ruleList->data()), 0);
+}
+
+void WebProcessProxy::setResourceMonitorRuleLists(RefPtr<WebCompiledContentRuleList> ruleList, CompletionHandler<void()>&& completionHandler)
+{
+    m_resourceMonitorRuleList = ruleList.get();
+    sendWithAsyncReply(Messages::WebProcess::SetResourceMonitorContentRuleListAsync(ruleList->data()), WTFMove(completionHandler));
 }
 #endif
 

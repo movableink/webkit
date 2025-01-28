@@ -2142,6 +2142,11 @@ void TestRunner::setTopContentInset(JSContextRef context, double contentInset, J
     postMessageWithAsyncReply(context, "SetTopContentInset", adoptWK(WKDoubleCreate(contentInset)), callback);
 }
 
+void TestRunner::setResourceMonitorList(JSContextRef context, JSStringRef rulesText, JSValueRef callback)
+{
+    postMessageWithAsyncReply(context, "SetResourceMonitorList", toWK(rulesText), callback);
+}
+
 ALLOW_DEPRECATED_DECLARATIONS_END
 
 } // namespace WTR

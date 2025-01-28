@@ -42,6 +42,7 @@
 #include "PageConsoleClient.h"
 #include "RealtimeMediaSource.h"
 #include "RenderingMode.h"
+#include "ResourceMonitorChecker.h"
 #include "SleepDisabler.h"
 #include "TextIndicator.h"
 #include "VP9Utilities.h"
@@ -1550,6 +1551,12 @@ public:
     void getImageBufferResourceLimits(ImageBufferResourceLimitsPromise&&);
 
     void setResourceCachingDisabledByWebInspector(bool);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void setResourceMonitorNetworkUsageThreshold(size_t threshold, double randomness = ResourceMonitorChecker::networkUsageThresholdRandomness);
+    bool shouldSkipResourceMonitorThrottling() const;
+    void setShouldSkipResourceMonitorThrottling(bool);
+#endif
 
 private:
     explicit Internals(Document&);

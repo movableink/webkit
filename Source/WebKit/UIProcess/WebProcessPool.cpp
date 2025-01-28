@@ -97,6 +97,7 @@
 #include <WebCore/GamepadProvider.h>
 #include <WebCore/MockRealtimeMediaSourceCenter.h>
 #include <WebCore/NetworkStorageSession.h>
+#include <WebCore/NotImplemented.h>
 #include <WebCore/PlatformMediaSessionManager.h>
 #include <WebCore/PlatformScreen.h>
 #include <WebCore/ProcessIdentifier.h>
@@ -2715,18 +2716,24 @@ void WebProcessPool::loadOrUpdateResourceMonitorRuleList()
 
     m_resourceMonitorRuleListLoading = true;
 
-    platformLoadResourceMonitorRuleList([weakThis = WeakPtr { *this }] {
+    void* savedRuleList = reinterpret_cast<void*>(m_resourceMonitorRuleListCache.get());
+    platformLoadResourceMonitorRuleList([weakThis = WeakPtr { *this }, savedRuleList](RefPtr<WebCompiledContentRuleList> ruleList) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
 
         protectedThis->m_resourceMonitorRuleListLoading = false;
 
-        RefPtr ruleList = protectedThis->m_resourceMonitorRuleListCache;
         if (!ruleList) {
             protectedThis->m_resourceMonitorRuleListFailed = true;
             return;
         }
+
+        // Check somebody already updates the list or not.
+        if (savedRuleList != protectedThis->m_resourceMonitorRuleListCache.get())
+            return;
+
+        protectedThis->m_resourceMonitorRuleListCache = ruleList;
 
         if (!protectedThis->m_resourceMonitorRuleListRefreshTimer.isActive()) {
             auto interval = resourceMonitorRuleListCheckInterval + Seconds::fromHours(cryptographicallyRandomUnitInterval());
@@ -2737,14 +2744,41 @@ void WebProcessPool::loadOrUpdateResourceMonitorRuleList()
             return;
 
         for (Ref process : protectedThis->m_processes)
-            process->setResourceMonitorRuleListsIfRequired(ruleList.get());
+            process->setResourceMonitorRuleListsIfRequired(RefPtr { ruleList });
+    });
+}
+
+void WebProcessPool::setResourceMonitorURLsForTesting(const String& rulesText, CompletionHandler<void()>&& completionHandler)
+{
+    auto callbackAggregator = CallbackAggregator::create(WTFMove(completionHandler));
+
+    platformCompileResourceMonitorRuleList(rulesText, [weakThis = WeakPtr { *this }, callbackAggregator](auto ruleList) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !ruleList)
+            return;
+
+        protectedThis->m_resourceMonitorRuleListCache = ruleList;
+        protectedThis->m_resourceMonitorRuleListRefreshTimer.stop();
+
+        if (protectedThis->m_processes.isEmpty())
+            return;
+
+        for (Ref process : protectedThis->m_processes)
+            process->setResourceMonitorRuleLists(RefPtr { ruleList }, [callbackAggregator] { });
     });
 }
 
 #if !PLATFORM(COCOA)
-void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void()>&& completionHandler)
+void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&& completionHandler)
 {
-    completionHandler();
+    notImplemented();
+    completionHandler(nullptr);
+}
+
+void WebProcessPool::platformCompileResourceMonitorRuleList(const String& rulesText, CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&& completionHandler)
+{
+    notImplemented();
+    completionHandler(nullptr);
 }
 #endif
 

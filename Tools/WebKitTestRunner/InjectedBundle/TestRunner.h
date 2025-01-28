@@ -564,6 +564,16 @@ public:
 
     void setPageScaleFactor(JSContextRef, double scaleFactor, long x, long y, JSValueRef callback);
 
+    bool canModifyResourceMonitorList() const
+    {
+#if PLATFORM(COCOA)
+        return true;
+#else
+        return false;
+#endif
+    }
+    void setResourceMonitorList(JSContextRef, JSStringRef rulesText, JSValueRef callback);
+
 private:
     TestRunner();
 

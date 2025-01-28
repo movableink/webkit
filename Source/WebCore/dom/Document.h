@@ -1975,6 +1975,9 @@ public:
     ResourceMonitor& resourceMonitor();
     Ref<ResourceMonitor> protectedResourceMonitor();
     ResourceMonitor* parentResourceMonitorIfExists();
+
+    bool shouldSkipResourceMonitorThrottling() const { return m_shouldSkipResourceMonitorThrottling; }
+    void setShouldSkipResourceMonitorThrottling(bool flag) { m_shouldSkipResourceMonitorThrottling = flag; }
 #endif
 
     Ref<Calculation::RandomKeyMap> randomKeyMap() const;
@@ -2689,6 +2692,7 @@ private:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     RefPtr<ResourceMonitor> m_resourceMonitor;
+    bool m_shouldSkipResourceMonitorThrottling { false };
 #endif
 
     mutable RefPtr<Calculation::RandomKeyMap> m_randomKeyMap;

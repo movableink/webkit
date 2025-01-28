@@ -130,6 +130,12 @@ bool ResourceMonitorThrottler::AccessThrottler::tryExpire(ApproximateTime time, 
     return true;
 }
 
+void ResourceMonitorThrottler::setCountPerDuration(size_t count, Seconds duration)
+{
+    m_config.count = count;
+    m_config.duration = duration;
+}
+
 } // namespace WebCore
 
 #undef RESOURCEMONITOR_RELEASE_LOG
