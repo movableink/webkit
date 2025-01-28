@@ -159,8 +159,11 @@ String CSSStyleRule::cssText() const
 
 void CSSStyleRule::cssTextForRules(StringBuilder& rules) const
 {
-    for (unsigned index = 0; index < length(); index++)
-        rules.append("\n  "_s, item(index)->cssText());
+    for (unsigned index = 0; index < length(); ++index) {
+        auto ruleText = item(index)->cssText();
+        if (!ruleText.isEmpty())
+            rules.append("\n  "_s, WTFMove(ruleText));
+    }
 }
 
 String CSSStyleRule::cssTextWithReplacementURLs(const UncheckedKeyHashMap<String, String>& replacementURLStrings, const UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const

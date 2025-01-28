@@ -140,9 +140,10 @@ void CSSGroupingRule::appendCSSTextForItems(StringBuilder& builder) const
 void CSSGroupingRule::cssTextForRules(StringBuilder& rules) const
 {
     auto& childRules = m_groupRule->childRules();
-    for (unsigned index = 0; index < childRules.size(); index++) {
-        auto wrappedRule = item(index);
-        rules.append("\n  "_s, wrappedRule->cssText());
+    for (unsigned index = 0; index < childRules.size(); ++index) {
+        auto ruleText = item(index)->cssText();
+        if (!ruleText.isEmpty())
+            rules.append("\n  "_s, WTFMove(ruleText));
     }
 }
 

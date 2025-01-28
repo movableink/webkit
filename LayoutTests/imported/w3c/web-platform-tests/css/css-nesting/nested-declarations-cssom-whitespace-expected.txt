@@ -1,4 +1,4 @@
 
-FAIL Empty CSSNestedDeclarations do not affect outer serialization assert_equals: expected ".a {\n  & { }\n  & { }\n}" but got ".a {\n  & { }\n  \n  & { }\n  \n}"
-FAIL Empty CSSNestedDeclarations do not affect outer serialization (nested grouping rule) assert_equals: expected "@media (width > 1px) {\n  & { }\n  & { }\n}" but got "@media (width > 1px) {\n  & { }\n  \n  & { }\n  \n}"
+PASS Empty CSSNestedDeclarations do not affect outer serialization
+PASS Empty CSSNestedDeclarations do not affect outer serialization (nested grouping rule)
 
