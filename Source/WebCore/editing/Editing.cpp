@@ -1267,28 +1267,35 @@ static std::optional<unsigned> visualDistanceOnSameLine(const RenderedPosition& 
     return std::nullopt;
 }
 
-static std::optional<BoundaryPoint> findBidiBoundary(const RenderedPosition& position, unsigned bidiLevel, SelectionExtentMovement movement)
+static std::optional<BoundaryPoint> findBidiBoundary(const RenderedPosition& position, unsigned bidiLevel, SelectionExtentMovement movement, TextDirection selectionDirection)
 {
     auto leftBoundary = position.leftBoundaryOfBidiRun(bidiLevel);
     auto rightBoundary = position.rightBoundaryOfBidiRun(bidiLevel);
 
+    bool moveLeft = [&] {
+        switch (movement) {
+        case SelectionExtentMovement::Left:
+            return true;
+        case SelectionExtentMovement::Right:
+            return false;
+        case SelectionExtentMovement::Closest: {
+            auto distanceToLeft = visualDistanceOnSameLine(position, leftBoundary);
+            if (!distanceToLeft)
+                return false;
+
+            auto distanceToRight = visualDistanceOnSameLine(position, rightBoundary);
+            if (!distanceToRight)
+                return true;
+
+            return *distanceToLeft < *distanceToRight;
+        }
+        }
+        ASSERT_NOT_REACHED();
+        return false;
+    }();
     // This looks unintuitive, but is necessary to ensure that the boundary is moved
     // (visually) to the left or right, respectively, in both LTR and RTL paragraphs.
-    if (movement == SelectionExtentMovement::Left)
-        return rightBoundary.boundaryPoint();
-
-    if (movement == SelectionExtentMovement::Right)
-        return leftBoundary.boundaryPoint();
-
-    auto visualDistanceToLeft = visualDistanceOnSameLine(position, leftBoundary);
-    if (!visualDistanceToLeft)
-        return std::nullopt;
-
-    auto visualDistanceToRight = visualDistanceOnSameLine(position, rightBoundary);
-    if (!visualDistanceToRight)
-        return std::nullopt;
-
-    return *visualDistanceToLeft < *visualDistanceToRight ? rightBoundary.boundaryPoint() : leftBoundary.boundaryPoint();
+    return (position.box()->direction() == selectionDirection) == moveLeft ? leftBoundary.boundaryPoint() : rightBoundary.boundaryPoint();
 }
 
 static InlineIterator::LeafBoxIterator advanceInDirection(InlineIterator::LeafBoxIterator box, TextDirection direction, bool iterateInSameDirection)
@@ -1390,12 +1397,12 @@ static std::optional<SimpleRange> makeVisuallyContiguousIfNeeded(const SimpleRan
         return std::nullopt;
 
     auto [start, end] = positionsForRange(range);
-    auto firstLineDirection = start.primaryDirection();
+    auto firstLineDirection = TextDirection::LTR;
     RenderedPosition renderedStart { start };
     if (renderedStart.isNull() || renderedStart.lineBox().atEnd())
         return std::nullopt;
 
-    auto lastLineDirection = end.primaryDirection();
+    auto lastLineDirection = TextDirection::LTR;
     RenderedPosition renderedEnd { end };
     if (renderedEnd.isNull() || renderedEnd.lineBox().atEnd())
         return std::nullopt;
@@ -1411,11 +1418,15 @@ static std::optional<SimpleRange> makeVisuallyContiguousIfNeeded(const SimpleRan
         if (auto box = boxWithMinimumBidiLevelBetween(renderedStart, renderedEnd)) {
             targetBidiLevelAtStart = box->bidiLevel();
             targetBidiLevelAtEnd = targetBidiLevelAtStart;
+            firstLineDirection = box->direction();
+            lastLineDirection = firstLineDirection;
         }
     } else {
+        firstLineDirection = start.primaryDirection();
         for (auto box = renderedStart.box(); box; box = advanceInDirection(box, firstLineDirection, true))
             targetBidiLevelAtStart = std::min(targetBidiLevelAtStart, box->bidiLevel());
 
+        lastLineDirection = end.primaryDirection();
         for (auto box = renderedEnd.box(); box; box = advanceInDirection(box, lastLineDirection, false))
             targetBidiLevelAtEnd = std::min(targetBidiLevelAtEnd, box->bidiLevel());
     }
@@ -1423,23 +1434,26 @@ static std::optional<SimpleRange> makeVisuallyContiguousIfNeeded(const SimpleRan
     bool adjustedEndpoints = false;
     auto adjustedRange = range;
     if (bidiLevelAtStart > targetBidiLevelAtStart && start != logicalStartOfLine(start) && endpoints.contains(RangeEndpointsToAdjust::Start)) {
-        if (auto adjustedStart = findBidiBoundary(renderedStart, targetBidiLevelAtStart + 1, movement)) {
+        if (auto adjustedStart = findBidiBoundary(renderedStart, targetBidiLevelAtStart + 1, movement, firstLineDirection)) {
             adjustedEndpoints = true;
             adjustedRange.start = WTFMove(*adjustedStart);
         }
     }
 
     if (bidiLevelAtEnd > targetBidiLevelAtEnd && end != logicalEndOfLine(end) && endpoints.contains(RangeEndpointsToAdjust::End)) {
-        if (auto adjustedEnd = findBidiBoundary(renderedEnd, targetBidiLevelAtEnd + 1, movement)) {
+        if (auto adjustedEnd = findBidiBoundary(renderedEnd, targetBidiLevelAtEnd + 1, movement, lastLineDirection)) {
             adjustedEndpoints = true;
             adjustedRange.end = WTFMove(*adjustedEnd);
         }
     }
 
-    if (adjustedEndpoints && !adjustedRange.collapsed())
-        return adjustedRange;
+    if (!adjustedEndpoints)
+        return std::nullopt;
 
-    return std::nullopt;
+    if (!is_lt(treeOrder(adjustedRange.start, adjustedRange.end)))
+        return std::nullopt;
+
+    return adjustedRange;
 }
 
 SimpleRange adjustToVisuallyContiguousRange(const SimpleRange& range)
