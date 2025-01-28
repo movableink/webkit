@@ -104,6 +104,7 @@ public:
     OptionSet<SynchronousScrollingReason> synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
     void addSynchronousScrollingReason(SynchronousScrollingReason reason) { m_synchronousScrollingReasons.add(reason); }
     bool hasSynchronousScrollingReasons() const { return !m_synchronousScrollingReasons.isEmpty(); }
+    bool hasNonRepaintSynchronousScrollingReasons() const { return !(m_synchronousScrollingReasons - SynchronousScrollingReason::HasSlowRepaintObjects).isEmpty(); }
 #endif
 
     const FloatSize& scrollableAreaSize() const { return m_scrollableAreaSize; }
