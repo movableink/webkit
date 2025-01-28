@@ -18547,18 +18547,18 @@
 /* Begin PBXShellScriptBuildPhase section */
 		1A07D2F51919AA8A00ECDA16 /* Make Frameworks Symbolic Link */ = {
 			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
+			alwaysOutOfDate = 1;
+			buildActionMask = 8;
 			files = (
 			);
 			inputPaths = (
 			);
 			name = "Make Frameworks Symbolic Link";
 			outputPaths = (
-				"$(TARGET_BUILD_DIR)/WebKit.framework/Frameworks",
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
-			shellScript = "if [[ \"${WK_PLATFORM_NAME}\" == macosx || \"${WK_PLATFORM_NAME}\" == maccatalyst || \"${WK_PLATFORM_NAME}\" == iosmac ]]; then\n    ln -sfh \"Versions/Current/Frameworks\" \"${TARGET_BUILD_DIR}/WebKit.framework/Frameworks\"\nfi\n";
+			shellScript = "# FIXME: Remove once rdar://134862667 is available in all build configurations.\nif [[ \"${WK_PLATFORM_NAME}\" == macosx || \"${WK_PLATFORM_NAME}\" == maccatalyst || \"${WK_PLATFORM_NAME}\" == iosmac ]]; then\n    ln -sfh \"Versions/Current/Frameworks\" \"${TARGET_BUILD_DIR}/WebKit.framework/Frameworks\"\nfi\n";
 		};
 		1A2180161B5454620046AEC4 /* Add Symlink in /System/Library/PrivateFrameworks */ = {
 			isa = PBXShellScriptBuildPhase;
