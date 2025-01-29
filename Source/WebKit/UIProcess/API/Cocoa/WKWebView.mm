@@ -2366,9 +2366,20 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
         strongSelf->_page->setWritingToolsActive(false);
 
         strongSelf->_page->willEndWritingToolsSession(*webSession, accepted, [webSession, accepted, weakSelf] {
-            [weakSelf.get()->_intelligenceTextEffectCoordinator restoreSelectionAcceptedReplacements:accepted completion:makeBlockPtr([webSession, accepted, weakSelf] {
+            // At this point, the selection will have been restored by the intelligence effects coordinator
+            // assuming that the replacements have been accepted. If this is not the case, the selection should
+            // be updated accordingly.
+            //
+            // If the user ends a session before the animation ends, and they have accepted the changes, then the
+            // selection should not show up (this case is handled within the intelligence effects coordinator).
+
+            if (accepted)
                 weakSelf.get()->_page->didEndWritingToolsSession(*webSession, accepted);
-            }).get()];
+            else {
+                [weakSelf.get()->_intelligenceTextEffectCoordinator restoreSelectionAcceptedReplacements:accepted completion:makeBlockPtr([webSession, accepted, weakSelf] {
+                    weakSelf.get()->_page->didEndWritingToolsSession(*webSession, accepted);
+                }).get()];
+            }
         });
     }).get()];
 }

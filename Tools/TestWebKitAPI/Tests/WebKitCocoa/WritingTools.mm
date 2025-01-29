@@ -303,7 +303,7 @@ using PlatformTextPlaceholder = NSTextPlaceholder;
 - (void)waitForProofreadingSuggestionsToBeReplaced
 {
     // FIXME: Avoid using a hard-coded delay.
-    TestWebKitAPI::Util::runFor(1.0_s);
+    TestWebKitAPI::Util::runFor(3.0_s);
 }
 
 @end

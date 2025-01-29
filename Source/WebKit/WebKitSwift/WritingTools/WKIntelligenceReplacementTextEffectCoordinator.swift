@@ -353,7 +353,9 @@ extension WKIntelligenceReplacementTextEffectCoordinator: PlatformIntelligenceTe
             if let onFlushCompletion = self.onFlushCompletion {
                 // At this point, the last chunk has been received, and the session has ended, so the flush completion
                 // handler can now be invoked now that the animation is fully complete. There is no need to additionally
-                // restore the selection here since the selection would have already been restored when the session ended.
+                // restore the selection here since the selection would have already been restored when the session ended,
+                // if reverted, or the selection should not be restored at all if the session has already ended
+                // and has been accepted.
 
                 await onFlushCompletion()
                 self.onFlushCompletion = nil
