@@ -65,9 +65,12 @@ template<CSS::DimensionPercentageNumeric CSSType> struct PrimitiveNumeric<CSSTyp
     using Raw = typename CSS::Raw;
     using UnitType = typename CSS::UnitType;
     using UnitTraits = typename CSS::UnitTraits;
-    using ResolvedValueType = float;
+    using ResolvedValueType = typename CSS::ResolvedValueType;
     static constexpr auto range = CSS::range;
     static constexpr auto category = CSS::category;
+
+    // Composite types only currently support float as the `ResolvedValueType`, allowing unconditional use of `CompactVariant`.
+    static_assert(std::same_as<ResolvedValueType, float>);
 
     using Dimension = typename DimensionPercentageMapping<CSS>::Dimension;
     using Percentage = typename DimensionPercentageMapping<CSS>::Percentage;
@@ -155,63 +158,63 @@ template<CSS::Range R = CSS::All, typename V = int> struct Integer : PrimitiveNu
 
 // MARK: Number Primitive
 
-template<CSS::Range R = CSS::All> struct Number : PrimitiveNumeric<CSS::Number<R>> {
-    using Base = PrimitiveNumeric<CSS::Number<R>>;
+template<CSS::Range R = CSS::All, typename V = double> struct Number : PrimitiveNumeric<CSS::Number<R, V>> {
+    using Base = PrimitiveNumeric<CSS::Number<R, V>>;
     using Base::Base;
 };
 
 // MARK: Percentage Primitive
 
-template<CSS::Range R = CSS::All> struct Percentage : PrimitiveNumeric<CSS::Percentage<R>> {
-    using Base = PrimitiveNumeric<CSS::Percentage<R>>;
+template<CSS::Range R = CSS::All, typename V = double> struct Percentage : PrimitiveNumeric<CSS::Percentage<R, V>> {
+    using Base = PrimitiveNumeric<CSS::Percentage<R, V>>;
     using Base::Base;
 };
 
 // MARK: Dimension Primitives
 
-template<CSS::Range R = CSS::All> struct Angle : PrimitiveNumeric<CSS::Angle<R>> {
-    using Base = PrimitiveNumeric<CSS::Angle<R>>;
+template<CSS::Range R = CSS::All, typename V = double> struct Angle : PrimitiveNumeric<CSS::Angle<R, V>> {
+    using Base = PrimitiveNumeric<CSS::Angle<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All> struct Length : PrimitiveNumeric<CSS::Length<R>> {
-    using Base = PrimitiveNumeric<CSS::Length<R>>;
+template<CSS::Range R = CSS::All, typename V = float> struct Length : PrimitiveNumeric<CSS::Length<R, V>> {
+    using Base = PrimitiveNumeric<CSS::Length<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All> struct Time : PrimitiveNumeric<CSS::Time<R>> {
-    using Base = PrimitiveNumeric<CSS::Time<R>>;
+template<CSS::Range R = CSS::All, typename V = double> struct Time : PrimitiveNumeric<CSS::Time<R, V>> {
+    using Base = PrimitiveNumeric<CSS::Time<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All> struct Frequency : PrimitiveNumeric<CSS::Frequency<R>> {
-    using Base = PrimitiveNumeric<CSS::Frequency<R>>;
+template<CSS::Range R = CSS::All, typename V = double> struct Frequency : PrimitiveNumeric<CSS::Frequency<R, V>> {
+    using Base = PrimitiveNumeric<CSS::Frequency<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::Nonnegative> struct Resolution : PrimitiveNumeric<CSS::Resolution<R>> {
-    using Base = PrimitiveNumeric<CSS::Resolution<R>>;
+template<CSS::Range R = CSS::Nonnegative, typename V = double> struct Resolution : PrimitiveNumeric<CSS::Resolution<R, V>> {
+    using Base = PrimitiveNumeric<CSS::Resolution<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All> struct Flex : PrimitiveNumeric<CSS::Flex<R>> {
-    using Base = PrimitiveNumeric<CSS::Flex<R>>;
+template<CSS::Range R = CSS::All, typename V = double> struct Flex : PrimitiveNumeric<CSS::Flex<R, V>> {
+    using Base = PrimitiveNumeric<CSS::Flex<R, V>>;
     using Base::Base;
 };
 
 // MARK: Dimension + Percentage Primitives
 
-template<CSS::Range R = CSS::All> struct AnglePercentage : PrimitiveNumeric<CSS::AnglePercentage<R>> {
-    using Base = PrimitiveNumeric<CSS::AnglePercentage<R>>;
+template<CSS::Range R = CSS::All, typename V = float> struct AnglePercentage : PrimitiveNumeric<CSS::AnglePercentage<R, V>> {
+    using Base = PrimitiveNumeric<CSS::AnglePercentage<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All> struct LengthPercentage : PrimitiveNumeric<CSS::LengthPercentage<R>> {
-    using Base = PrimitiveNumeric<CSS::LengthPercentage<R>>;
+template<CSS::Range R = CSS::All, typename V = float> struct LengthPercentage : PrimitiveNumeric<CSS::LengthPercentage<R, V>> {
+    using Base = PrimitiveNumeric<CSS::LengthPercentage<R, V>>;
     using Base::Base;
 };
 
-template<auto R> struct DimensionPercentageMapping<CSS::AnglePercentage<R>> {
-    using Dimension = Style::Angle<R>;
-    using Percentage = Style::Percentage<R>;
+template<auto R, typename V> struct DimensionPercentageMapping<CSS::AnglePercentage<R, V>> {
+    using Dimension = Style::Angle<R, V>;
+    using Percentage = Style::Percentage<R, V>;
 };
-template<auto R> struct DimensionPercentageMapping<CSS::LengthPercentage<R>> {
-    using Dimension = Style::Length<R>;
-    using Percentage = Style::Percentage<R>;
+template<auto R, typename V> struct DimensionPercentageMapping<CSS::LengthPercentage<R, V>> {
+    using Dimension = Style::Length<R, V>;
+    using Percentage = Style::Percentage<R, V>;
 };
 
 template<typename T> T get(DimensionPercentageNumeric auto const& dimensionPercentage)
@@ -222,18 +225,21 @@ template<typename T> T get(DimensionPercentageNumeric auto const& dimensionPerce
 // MARK: Additional Common Types and Groupings
 
 // NOTE: This is spelled with an explicit "Or" to distinguish it from types like AnglePercentage/LengthPercentage that have behavior distinctions beyond just being a union of the two types (specifically, calc() has specific behaviors for those types).
-template<CSS::Range nR = CSS::All, CSS::Range pR = nR> struct NumberOrPercentage {
-    NumberOrPercentage(std::variant<Number<nR>, Percentage<pR>> value)
+template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> struct NumberOrPercentage {
+    using Number = Style::Number<nR, V>;
+    using Percentage = Style::Percentage<pR, V>;
+
+    NumberOrPercentage(std::variant<Number, Percentage>&& value)
     {
         WTF::switchOn(WTFMove(value), [this](auto&& alternative) { this->value = WTFMove(alternative); });
     }
 
-    NumberOrPercentage(Number<nR> value)
+    NumberOrPercentage(Number value)
         : value { WTFMove(value) }
     {
     }
 
-    NumberOrPercentage(Percentage<pR> value)
+    NumberOrPercentage(Percentage value)
         : value { WTFMove(value) }
     {
     }
@@ -243,16 +249,16 @@ template<CSS::Range nR = CSS::All, CSS::Range pR = nR> struct NumberOrPercentage
     template<typename... F> decltype(auto) switchOn(F&&... f) const
     {
         auto visitor = WTF::makeVisitor(std::forward<F>(f)...);
-        using ResultType = decltype(visitor(std::declval<Number<nR>>()));
+        using ResultType = decltype(visitor(std::declval<Number>()));
 
         return WTF::switchOn(value,
             [](EmptyToken) -> ResultType {
                 RELEASE_ASSERT_NOT_REACHED();
             },
-            [&](const Number<nR>& number) -> ResultType {
+            [&](const Number& number) -> ResultType {
                 return visitor(number);
             },
-            [&](const Percentage<pR>& percentage) -> ResultType {
+            [&](const Percentage& percentage) -> ResultType {
                 return visitor(percentage);
             }
         );
@@ -272,31 +278,34 @@ private:
 
     bool isEmpty() const { return std::holds_alternative<EmptyToken>(value); }
 
-    std::variant<EmptyToken, Number<nR>, Percentage<pR>> value;
+    std::variant<EmptyToken, Number, Percentage> value;
 };
 
-template<CSS::Range nR = CSS::All, CSS::Range pR = nR> struct NumberOrPercentageResolvedToNumber {
-    Number<nR> value { 0 };
+template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> struct NumberOrPercentageResolvedToNumber {
+    using Number = Style::Number<nR, V>;
+    using Percentage = Style::Percentage<pR, V>;
 
-    constexpr NumberOrPercentageResolvedToNumber(typename Number<nR>::ResolvedValueType value)
+    Number value { 0 };
+
+    constexpr NumberOrPercentageResolvedToNumber(typename Number::ResolvedValueType value)
         : value { value }
     {
     }
 
-    constexpr NumberOrPercentageResolvedToNumber(Number<nR> number)
+    constexpr NumberOrPercentageResolvedToNumber(Number number)
         : value { number }
     {
     }
 
-    constexpr NumberOrPercentageResolvedToNumber(Percentage<pR> percentage)
+    constexpr NumberOrPercentageResolvedToNumber(Percentage percentage)
         : value { percentage.value / 100.0 }
     {
     }
 
     constexpr bool isZero() const { return value.isZero(); }
 
-    constexpr bool operator==(const NumberOrPercentageResolvedToNumber<nR, pR>&) const = default;
-    constexpr bool operator==(typename Number<nR>::ResolvedValueType other) const { return value.value == other; };
+    constexpr bool operator==(const NumberOrPercentageResolvedToNumber&) const = default;
+    constexpr bool operator==(typename Number::ResolvedValueType other) const { return value.value == other; };
 };
 
 // Standard Numbers
@@ -315,6 +324,10 @@ using LengthPercentageAll = LengthPercentage<CSS::All>;
 using LengthPercentageNonnegative = LengthPercentage<CSS::Nonnegative>;
 
 // Standard Percentages
+using PercentageAll = Percentage<CSS::All>;
+using PercentageNonnegative = Percentage<CSS::Nonnegative>;
+using PercentageAllFloat = Percentage<CSS::All, float>;
+using PercentageNonnegativeFloat = Percentage<CSS::Nonnegative, float>;
 using Percentage0To100 = LengthPercentage<CSS::Range{0,100}>;
 
 // Standard Points
@@ -327,24 +340,24 @@ using LengthPercentageSpaceSeparatedSizeNonnegative = SpaceSeparatedSize<LengthP
 
 // MARK: CSS -> Style
 
-template<auto R, typename T> struct ToStyleMapping<CSS::Integer<R, T>> { using type = Integer<R, T>; };
-template<auto R> struct ToStyleMapping<CSS::Number<R>>                 { using type = Number<R>; };
-template<auto R> struct ToStyleMapping<CSS::Percentage<R>>             { using type = Percentage<R>; };
-template<auto R> struct ToStyleMapping<CSS::Angle<R>>                  { using type = Angle<R>; };
-template<auto R> struct ToStyleMapping<CSS::Length<R>>                 { using type = Length<R>; };
-template<auto R> struct ToStyleMapping<CSS::Time<R>>                   { using type = Time<R>; };
-template<auto R> struct ToStyleMapping<CSS::Frequency<R>>              { using type = Frequency<R>; };
-template<auto R> struct ToStyleMapping<CSS::Resolution<R>>             { using type = Resolution<R>; };
-template<auto R> struct ToStyleMapping<CSS::Flex<R>>                   { using type = Flex<R>; };
-template<auto R> struct ToStyleMapping<CSS::AnglePercentage<R>>        { using type = AnglePercentage<R>; };
-template<auto R> struct ToStyleMapping<CSS::LengthPercentage<R>>       { using type = LengthPercentage<R>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::Integer<R, V>>          { using type = Integer<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::Number<R, V>>           { using type = Number<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::Percentage<R, V>>       { using type = Percentage<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::Angle<R, V>>            { using type = Angle<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::Length<R, V>>           { using type = Length<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::Time<R, V>>             { using type = Time<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::Frequency<R, V>>        { using type = Frequency<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::Resolution<R, V>>       { using type = Resolution<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::Flex<R, V>>             { using type = Flex<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::AnglePercentage<R, V>>  { using type = AnglePercentage<R, V>; };
+template<auto R, typename V> struct ToStyleMapping<CSS::LengthPercentage<R, V>> { using type = LengthPercentage<R, V>; };
 
-template<auto nR, auto pR> struct ToStyleMapping<CSS::NumberOrPercentage<nR, pR>> {
+template<auto nR, auto pR, typename V> struct ToStyleMapping<CSS::NumberOrPercentage<nR, pR, V>> {
     using type = NumberOrPercentage<nR, pR>;
 };
 
-template<auto nR, auto pR> struct ToStyleMapping<CSS::NumberOrPercentageResolvedToNumber<nR, pR>> {
-    using type = NumberOrPercentageResolvedToNumber<nR, pR>;
+template<auto nR, auto pR, typename V> struct ToStyleMapping<CSS::NumberOrPercentageResolvedToNumber<nR, pR, V>> {
+    using type = NumberOrPercentageResolvedToNumber<nR, pR, V>;
 };
 
 // MARK: Style -> CSS
@@ -353,46 +366,23 @@ template<Numeric T> struct ToCSSMapping<T> {
     using type = typename T::CSS;
 };
 
-template<auto nR, auto pR> struct ToCSSMapping<NumberOrPercentage<nR, pR>> {
-    using type = CSS::NumberOrPercentage<nR, pR>;
+template<auto nR, auto pR, typename V> struct ToCSSMapping<NumberOrPercentage<nR, pR, V>> {
+    using type = CSS::NumberOrPercentage<nR, pR, V>;
 };
 
-template<auto nR, auto pR> struct ToCSSMapping<NumberOrPercentageResolvedToNumber<nR, pR>> {
-    using type = CSS::NumberOrPercentageResolvedToNumber<nR, pR>;
+template<auto nR, auto pR, typename V> struct ToCSSMapping<NumberOrPercentageResolvedToNumber<nR, pR, V>> {
+    using type = CSS::NumberOrPercentageResolvedToNumber<nR, pR, V>;
 };
+
+// MARK: Utility Concepts
+
+template<typename T> concept IsPercentageOrCalc =
+       std::same_as<T, Percentage<T::range, typename T::ResolvedValueType>>
+    || std::same_as<T, UnevaluatedCalculation<typename T::CSS>>;
 
 } // namespace Style
 } // namespace WebCore
 
-namespace WTF {
-
-// Allow primitives numeric types that usually store their value as a `double` to be
-// used with CompactVariant by using a `float`, rather than `double` representation
-// when used in a `CompactVariant`.
-
-template<WebCore::Style::Numeric T>
-    requires std::same_as<typename T::ResolvedValueType, double>
-struct CompactVariantTraits<T> {
-   static constexpr bool hasAlternativeRepresentation = true;
-
-   static constexpr uint64_t encodeFromArguments(double value)
-   {
-       return static_cast<uint64_t>(std::bit_cast<uint32_t>(clampTo<float>(value)));
-   }
-
-   static constexpr uint64_t encode(const T& value)
-   {
-       return static_cast<uint64_t>(std::bit_cast<uint32_t>(clampTo<float>(value.value)));
-   }
-
-   static constexpr T decode(uint64_t value)
-   {
-       return { std::bit_cast<float>(static_cast<uint32_t>(value)) };
-   }
-};
-
-} // namespace WTF
-
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::AnglePercentage<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::LengthPercentage<R>> = true;
-template<auto nR, auto pR> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::NumberOrPercentage<nR, pR>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::AnglePercentage<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::LengthPercentage<R, V>> = true;
+template<auto nR, auto pR, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::NumberOrPercentage<nR, pR, V>> = true;

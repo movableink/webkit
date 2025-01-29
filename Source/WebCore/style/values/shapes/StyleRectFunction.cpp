@@ -49,7 +49,7 @@ auto ToStyle<CSS::Rect>::operator()(const CSS::Rect& value, const BuilderState& 
                 return toStyle(value, state);
             },
             [&](const CSS::Keyword::Auto&) -> LengthPercentage<> {
-                return { Percentage<> { 0 } };
+                return { typename LengthPercentage<>::Percentage { 0 } };
             }
         );
     };
@@ -60,7 +60,7 @@ auto ToStyle<CSS::Rect>::operator()(const CSS::Rect& value, const BuilderState& 
                 return reflect(toStyle(value, state));
             },
             [&](const CSS::Keyword::Auto&) -> LengthPercentage<> {
-                return { Percentage<> { 0 } };
+                return { typename LengthPercentage<>::Percentage { 0 } };
             }
         );
     };

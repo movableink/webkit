@@ -304,91 +304,94 @@ template<Range R = All, typename V = int> struct Integer : PrimitiveNumeric<Inte
 
 // MARK: Number Primitive
 
-template<Range R = All> struct Number : PrimitiveNumeric<NumberRaw<R>> {
-    using Base = PrimitiveNumeric<NumberRaw<R>>;
+template<Range R = All, typename V = double> struct Number : PrimitiveNumeric<NumberRaw<R, V>> {
+    using Base = PrimitiveNumeric<NumberRaw<R, V>>;
     using Base::Base;
     using MarkableTraits = PrimitiveNumericMarkableTraits<Number>;
 };
 
 // MARK: Percentage Primitive
 
-template<Range R = All> struct Percentage : PrimitiveNumeric<PercentageRaw<R>> {
-    using Base = PrimitiveNumeric<PercentageRaw<R>>;
+template<Range R = All, typename V = double> struct Percentage : PrimitiveNumeric<PercentageRaw<R, V>> {
+    using Base = PrimitiveNumeric<PercentageRaw<R, V>>;
     using Base::Base;
     using MarkableTraits = PrimitiveNumericMarkableTraits<Percentage>;
 };
 
 // MARK: Dimension Primitives
 
-template<Range R = All> struct Angle : PrimitiveNumeric<AngleRaw<R>> {
-    using Base = PrimitiveNumeric<AngleRaw<R>>;
+template<Range R = All, typename V = double> struct Angle : PrimitiveNumeric<AngleRaw<R, V>> {
+    using Base = PrimitiveNumeric<AngleRaw<R, V>>;
     using Base::Base;
     using MarkableTraits = PrimitiveNumericMarkableTraits<Angle>;
 };
-template<Range R = All> struct Length : PrimitiveNumeric<LengthRaw<R>> {
-    using Base = PrimitiveNumeric<LengthRaw<R>>;
+template<Range R = All, typename V = float> struct Length : PrimitiveNumeric<LengthRaw<R, V>> {
+    using Base = PrimitiveNumeric<LengthRaw<R, V>>;
     using Base::Base;
     using MarkableTraits = PrimitiveNumericMarkableTraits<Length>;
 };
-template<Range R = All> struct Time : PrimitiveNumeric<TimeRaw<R>> {
-    using Base = PrimitiveNumeric<TimeRaw<R>>;
+template<Range R = All, typename V = double> struct Time : PrimitiveNumeric<TimeRaw<R, V>> {
+    using Base = PrimitiveNumeric<TimeRaw<R, V>>;
     using Base::Base;
     using MarkableTraits = PrimitiveNumericMarkableTraits<Time>;
 };
-template<Range R = All> struct Frequency : PrimitiveNumeric<FrequencyRaw<R>> {
-    using Base = PrimitiveNumeric<FrequencyRaw<R>>;
+template<Range R = All, typename V = double> struct Frequency : PrimitiveNumeric<FrequencyRaw<R, V>> {
+    using Base = PrimitiveNumeric<FrequencyRaw<R, V>>;
     using Base::Base;
     using MarkableTraits = PrimitiveNumericMarkableTraits<Frequency>;
 };
-template<Range R = Nonnegative> struct Resolution : PrimitiveNumeric<ResolutionRaw<R>> {
-    using Base = PrimitiveNumeric<ResolutionRaw<R>>;
+template<Range R = Nonnegative, typename V = double> struct Resolution : PrimitiveNumeric<ResolutionRaw<R, V>> {
+    using Base = PrimitiveNumeric<ResolutionRaw<R, V>>;
     using Base::Base;
     using MarkableTraits = PrimitiveNumericMarkableTraits<Resolution>;
 };
-template<Range R = All> struct Flex : PrimitiveNumeric<FlexRaw<R>> {
-    using Base = PrimitiveNumeric<FlexRaw<R>>;
+template<Range R = All, typename V = double> struct Flex : PrimitiveNumeric<FlexRaw<R, V>> {
+    using Base = PrimitiveNumeric<FlexRaw<R, V>>;
     using Base::Base;
     using MarkableTraits = PrimitiveNumericMarkableTraits<Flex>;
 };
 
 // MARK: Dimension + Percentage Primitives
 
-template<Range R = All> struct AnglePercentage : PrimitiveNumeric<AnglePercentageRaw<R>> {
-    using Base = PrimitiveNumeric<AnglePercentageRaw<R>>;
+template<Range R = All, typename V = float> struct AnglePercentage : PrimitiveNumeric<AnglePercentageRaw<R, V>> {
+    using Base = PrimitiveNumeric<AnglePercentageRaw<R, V>>;
     using Base::Base;
-    using MarkableTraits = PrimitiveNumericMarkableTraits<AnglePercentage<R>>;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<AnglePercentage<R, V>>;
 };
-template<Range R = All> struct LengthPercentage : PrimitiveNumeric<LengthPercentageRaw<R>> {
-    using Base = PrimitiveNumeric<LengthPercentageRaw<R>>;
+template<Range R = All, typename V = float> struct LengthPercentage : PrimitiveNumeric<LengthPercentageRaw<R, V>> {
+    using Base = PrimitiveNumeric<LengthPercentageRaw<R, V>>;
     using Base::Base;
-    using MarkableTraits = PrimitiveNumericMarkableTraits<LengthPercentage<R>>;
+    using MarkableTraits = PrimitiveNumericMarkableTraits<LengthPercentage<R, V>>;
 };
 
 // MARK: Additional Common Groupings
 
 // NOTE: This is spelled with an explicit "Or" to distinguish it from types like AnglePercentage/LengthPercentage that have behavior distinctions beyond just being a union of the two types (specifically, calc() has specific behaviors for those types).
-template<Range nR = All, Range pR = nR> struct NumberOrPercentage {
-    NumberOrPercentage(std::variant<Number<nR>, Percentage<pR>> value)
+template<Range nR = All, Range pR = nR, typename V = double> struct NumberOrPercentage {
+    using Number = CSS::Number<nR, V>;
+    using Percentage = CSS::Percentage<pR, V>;
+
+    NumberOrPercentage(std::variant<Number, Percentage>&& value)
     {
         WTF::switchOn(WTFMove(value), [this](auto&& alternative) { this->value = WTFMove(alternative); });
     }
 
-    NumberOrPercentage(NumberRaw<nR> value)
-        : value { Number<nR> { WTFMove(value) } }
+    NumberOrPercentage(typename Number::Raw value)
+        : value { Number { WTFMove(value) } }
     {
     }
 
-    NumberOrPercentage(Number<nR> value)
+    NumberOrPercentage(Number value)
         : value { WTFMove(value) }
     {
     }
 
-    NumberOrPercentage(PercentageRaw<pR> value)
-        : value { Percentage<pR> { WTFMove(value) } }
+    NumberOrPercentage(typename Percentage::Raw value)
+        : value { Percentage { WTFMove(value) } }
     {
     }
 
-    NumberOrPercentage(Percentage<pR> value)
+    NumberOrPercentage(Percentage value)
         : value { WTFMove(value) }
     {
     }
@@ -398,16 +401,16 @@ template<Range nR = All, Range pR = nR> struct NumberOrPercentage {
     template<typename... F> decltype(auto) switchOn(F&&... f) const
     {
         auto visitor = WTF::makeVisitor(std::forward<F>(f)...);
-        using ResultType = decltype(visitor(std::declval<Number<nR>>()));
+        using ResultType = decltype(visitor(std::declval<Number>()));
 
         return WTF::switchOn(value,
             [](EmptyToken) -> ResultType {
                 RELEASE_ASSERT_NOT_REACHED();
             },
-            [&](const Number<nR>& number) -> ResultType {
+            [&](const Number& number) -> ResultType {
                 return visitor(number);
             },
-            [&](const Percentage<pR>& percentage) -> ResultType {
+            [&](const Percentage& percentage) -> ResultType {
                 return visitor(percentage);
             }
         );
@@ -427,31 +430,34 @@ private:
 
     bool isEmpty() const { return std::holds_alternative<EmptyToken>(value); }
 
-    std::variant<EmptyToken, Number<nR>, Percentage<pR>> value;
+    std::variant<EmptyToken, Number, Percentage> value;
 };
 
-template<Range nR = All, Range pR = nR> struct NumberOrPercentageResolvedToNumber {
-    NumberOrPercentageResolvedToNumber(std::variant<Number<nR>, Percentage<pR>> value)
+template<Range nR = All, Range pR = nR, typename V = double> struct NumberOrPercentageResolvedToNumber {
+    using Number = CSS::Number<nR, V>;
+    using Percentage = CSS::Percentage<pR, V>;
+
+    NumberOrPercentageResolvedToNumber(std::variant<Number, Percentage>&& value)
     {
         WTF::switchOn(WTFMove(value), [this](auto&& alternative) { this->value = WTFMove(alternative); });
     }
 
-    NumberOrPercentageResolvedToNumber(NumberRaw<nR> value)
-        : value { Number<nR> { WTFMove(value) } }
+    NumberOrPercentageResolvedToNumber(typename Number::Raw value)
+        : value { Number { WTFMove(value) } }
     {
     }
 
-    NumberOrPercentageResolvedToNumber(Number<nR> value)
+    NumberOrPercentageResolvedToNumber(Number value)
         : value { WTFMove(value) }
     {
     }
 
-    NumberOrPercentageResolvedToNumber(PercentageRaw<pR> value)
-        : value { Percentage<pR> { WTFMove(value) } }
+    NumberOrPercentageResolvedToNumber(typename Percentage::Raw value)
+        : value { Percentage { WTFMove(value) } }
     {
     }
 
-    NumberOrPercentageResolvedToNumber(Percentage<pR> value)
+    NumberOrPercentageResolvedToNumber(Percentage value)
         : value { WTFMove(value) }
     {
     }
@@ -461,16 +467,16 @@ template<Range nR = All, Range pR = nR> struct NumberOrPercentageResolvedToNumbe
     template<typename... F> decltype(auto) switchOn(F&&... f) const
     {
         auto visitor = WTF::makeVisitor(std::forward<F>(f)...);
-        using ResultType = decltype(visitor(std::declval<Number<nR>>()));
+        using ResultType = decltype(visitor(std::declval<Number>()));
 
         return WTF::switchOn(value,
             [](EmptyToken) -> ResultType {
                 RELEASE_ASSERT_NOT_REACHED();
             },
-            [&](const Number<nR>& number) -> ResultType {
+            [&](const Number& number) -> ResultType {
                 return visitor(number);
             },
-            [&](const Percentage<pR>& percentage) -> ResultType {
+            [&](const Percentage& percentage) -> ResultType {
                 return visitor(percentage);
             }
         );
@@ -490,24 +496,24 @@ private:
 
     bool isEmpty() const { return std::holds_alternative<EmptyToken>(value); }
 
-    std::variant<EmptyToken, Number<nR>, Percentage<pR>> value;
+    std::variant<EmptyToken, Number, Percentage> value;
 };
 
 } // namespace CSS
 } // namespace WebCore
 
-template<auto R, typename T> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Integer<R, T>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Number<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Percentage<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Angle<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Length<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Time<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Frequency<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Resolution<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Flex<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::AnglePercentage<R>> = true;
-template<auto R> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::LengthPercentage<R>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Integer<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Number<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Percentage<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Angle<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Length<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Time<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Frequency<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Resolution<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Flex<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::AnglePercentage<R, V>> = true;
+template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::LengthPercentage<R, V>> = true;
 
 template<typename Raw> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::PrimitiveNumeric<Raw>> = true;
-template<auto nR, auto pR> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::NumberOrPercentage<nR, pR>> = true;
-template<auto nR, auto pR> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::NumberOrPercentageResolvedToNumber<nR, pR>> = true;
+template<auto nR, auto pR, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::NumberOrPercentage<nR, pR, V>> = true;
+template<auto nR, auto pR, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::NumberOrPercentageResolvedToNumber<nR, pR, V>> = true;

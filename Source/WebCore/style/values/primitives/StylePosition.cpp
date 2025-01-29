@@ -38,13 +38,13 @@ auto ToStyle<CSS::TwoComponentPositionHorizontal>::operator()(const CSS::TwoComp
 {
     return WTF::switchOn(value.offset,
         [&](CSS::Keyword::Left) {
-            return TwoComponentPositionHorizontal { .offset = LengthPercentage<> { Percentage<> { 0 } } };
+            return TwoComponentPositionHorizontal { .offset = LengthPercentage<> { typename LengthPercentage<>::Percentage { 0 } } };
         },
         [&](CSS::Keyword::Right)  {
-            return TwoComponentPositionHorizontal { .offset = LengthPercentage<> { Percentage<> { 100 } } };
+            return TwoComponentPositionHorizontal { .offset = LengthPercentage<> { typename LengthPercentage<>::Percentage { 100 } } };
         },
         [&](CSS::Keyword::Center)  {
-            return TwoComponentPositionHorizontal { .offset = LengthPercentage<> { Percentage<> { 50 } } };
+            return TwoComponentPositionHorizontal { .offset = LengthPercentage<> { typename LengthPercentage<>::Percentage { 50 } } };
         },
         [&](const CSS::LengthPercentage<>& value) {
             return TwoComponentPositionHorizontal { .offset = toStyle(value, state) };
@@ -56,13 +56,13 @@ auto ToStyle<CSS::TwoComponentPositionVertical>::operator()(const CSS::TwoCompon
 {
     return WTF::switchOn(value.offset,
         [&](CSS::Keyword::Top) {
-            return TwoComponentPositionVertical { .offset = LengthPercentage<> { Percentage<> { 0 } } };
+            return TwoComponentPositionVertical { .offset = LengthPercentage<> { typename LengthPercentage<>::Percentage { 0 } } };
         },
         [&](CSS::Keyword::Bottom) {
-            return TwoComponentPositionVertical { .offset = LengthPercentage<> { Percentage<> { 100 } } };
+            return TwoComponentPositionVertical { .offset = LengthPercentage<> { typename LengthPercentage<>::Percentage { 100 } } };
         },
         [&](CSS::Keyword::Center) {
-            return TwoComponentPositionVertical { .offset = LengthPercentage<> { Percentage<> { 50 } } };
+            return TwoComponentPositionVertical { .offset = LengthPercentage<> { typename LengthPercentage<>::Percentage { 50 } } };
         },
         [&](const CSS::LengthPercentage<>& value) {
             return TwoComponentPositionVertical { .offset = toStyle(value, state) };

@@ -36,11 +36,11 @@ static WebCore::Style::GradientLinearColorStopList cacheableStops()
     return {
         {
             WebCore::Style::Color { WebCore::Style::ResolvedColor { WebCore::Color::red } },
-            WebCore::Style::Percentage<> { 50 }
+            WebCore::Style::LengthPercentage<>::Percentage { 50.0 }
         },
         {
             WebCore::Style::Color { WebCore::Style::ResolvedColor { WebCore::Color::blue } },
-            WebCore::Style::Percentage<> { 100 }
+            WebCore::Style::LengthPercentage<>::Percentage { 100.0 }
         }
     };
 }
@@ -50,11 +50,11 @@ static WebCore::Style::GradientLinearColorStopList someUncacheableStops()
     return {
         {
             WebCore::Style::Color { WebCore::Style::CurrentColor { } },
-            WebCore::Style::Percentage<> { 50 }
+            WebCore::Style::LengthPercentage<>::Percentage { 50 }
         },
         {
             WebCore::Style::Color { WebCore::Style::ResolvedColor { WebCore::Color::blue } },
-            WebCore::Style::Percentage<> { 100 }
+            WebCore::Style::LengthPercentage<>::Percentage { 100 }
         }
     };
 }
@@ -64,11 +64,11 @@ static WebCore::Style::GradientLinearColorStopList allUncacheableStops()
     return {
         {
             WebCore::Style::Color { WebCore::Style::CurrentColor { } },
-            WebCore::Style::Percentage<> { 50 }
+            WebCore::Style::LengthPercentage<>::Percentage { 50 }
         },
         {
             WebCore::Style::Color { WebCore::Style::CurrentColor { } },
-            WebCore::Style::Percentage<> { 100 }
+            WebCore::Style::LengthPercentage<>::Percentage { 100 }
         }
     };
 }

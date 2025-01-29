@@ -46,12 +46,12 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, DimensionPercentageNumeric auto
     return WTF::switchOn(value, [&](const auto& value) -> WTF::TextStream& { return ts << value; });
 }
 
-template<auto nR, auto pR> WTF::TextStream& operator<<(WTF::TextStream& ts, const NumberOrPercentage<nR, pR>& value)
+template<auto nR, auto pR, typename V> WTF::TextStream& operator<<(WTF::TextStream& ts, const NumberOrPercentage<nR, pR, V>& value)
 {
     return WTF::switchOn(value, [&](const auto& value) -> WTF::TextStream& { return ts << value; });
 }
 
-template<auto nR, auto pR> WTF::TextStream& operator<<(WTF::TextStream& ts, const NumberOrPercentageResolvedToNumber<nR, pR>& value)
+template<auto nR, auto pR, typename V> WTF::TextStream& operator<<(WTF::TextStream& ts, const NumberOrPercentageResolvedToNumber<nR, pR, V>& value)
 {
     return ts << value.value;
 }
