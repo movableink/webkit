@@ -41,7 +41,6 @@
 #include "WaiterListManager.h"
 #include "Watchdog.h"
 #include <wtf/ProcessID.h>
-#include <wtf/WorkQueue.h>
 #include <wtf/ThreadMessage.h>
 #include <wtf/threads/Signals.h>
 
@@ -205,16 +204,6 @@ public:
         activateSignalHandlersFor(Signal::AccessFault);
     }
 
-    static WorkQueue& queue()
-    {
-        static LazyNeverDestroyed<Ref<WorkQueue>> workQueue;
-        static std::once_flag onceKey;
-        std::call_once(onceKey, [&] {
-            workQueue.construct(WorkQueue::create("JSC VMTraps Signal Sender"_s));
-        });
-        return workQueue.get();
-    }
-
     static void initializeSignals()
     {
         static std::once_flag once;
@@ -276,7 +265,7 @@ public:
         if (m_scheduled)
             return;
         m_scheduled = true;
-        queue().dispatch([protectedThis = Ref { *this }] {
+        VMTraps::queue().dispatch([protectedThis = Ref { *this }] {
             protectedThis->work();
         });
     }
@@ -339,7 +328,7 @@ private:
             ASSERT(m_scheduled);
         }
 
-        queue().dispatchAfter(1_ms, [protectedThis = Ref { *this }] {
+        VMTraps::queue().dispatchAfter(1_ms, [protectedThis = Ref { *this }] {
             protectedThis->work();
         });
     }
@@ -351,6 +340,16 @@ private:
 };
 
 #endif // ENABLE(SIGNAL_BASED_VM_TRAPS)
+
+WorkQueue& VMTraps::queue()
+{
+    static LazyNeverDestroyed<Ref<WorkQueue>> workQueue;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        workQueue.construct(WorkQueue::create("JSC VMTraps Signal Sender"_s));
+    });
+    return workQueue.get();
+}
 
 void VMTraps::initializeSignals()
 {

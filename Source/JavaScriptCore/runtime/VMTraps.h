@@ -33,6 +33,7 @@
 #include <wtf/Locker.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StackBounds.h>
+#include <wtf/WorkQueue.h>
 
 namespace JSC {
 
@@ -245,6 +246,8 @@ public:
     struct SignalContext;
     void tryInstallTrapBreakpoints(struct VMTraps::SignalContext&, StackBounds);
 #endif
+
+    static WorkQueue& queue();
 
 private:
     VM& vm() const;
