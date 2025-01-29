@@ -57,6 +57,7 @@
     -webkit-cursor-visibility: inherit;
     position: relative;
     will-change: z-index;
+    overflow: clip;
 }
 
 .media-controls-container,

@@ -987,6 +987,7 @@ void VideoPresentationManagerProxy::setupFullscreenWithID(PlaybackSessionContext
     IntRect initialWindowRect;
     page->rootViewToWindow(enclosingIntRect(screenRect), initialWindowRect);
     interface->setupFullscreen(initialWindowRect, page->platformWindow(), videoFullscreenMode, allowsPictureInPicture);
+    interface->setupCaptionsLayer([view layer], initialSize);
 #endif
 }
 
