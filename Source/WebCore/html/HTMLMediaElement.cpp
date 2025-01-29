@@ -1679,7 +1679,7 @@ void HTMLMediaElement::selectMediaResource()
             );
 
             ContentType contentType;
-            loadResource(URL(), contentType, String());
+            loadResource(URL(), contentType);
             ALWAYS_LOG(logSiteIdentifier, "using 'srcObject' property");
 
             //    If that algorithm returns without aborting this one, then the load failed.
@@ -1708,7 +1708,7 @@ void HTMLMediaElement::selectMediaResource()
             }
 
             auto absoluteURL = document().completeURL(srcValue);
-            if (!isSafeToLoadURL(absoluteURL, Complain)) {
+            if (!isSafeToLoadURL(absoluteURL, InvalidURLAction::Complain)) {
                 mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
                 return;
             }
@@ -1724,7 +1724,7 @@ void HTMLMediaElement::selectMediaResource()
             // from the 'src' attribute so MediaPlayer
             // will have to pick a media engine based on the file extension.
             ContentType contentType;
-            loadResource(absoluteURL, contentType, String());
+            loadResource(absoluteURL, contentType);
             ALWAYS_LOG(logSiteIdentifier, "using 'src' attribute url");
 
             // 6. Failed with attribute: Reaching this step indicates that the media resource failed to load
@@ -1743,8 +1743,7 @@ void HTMLMediaElement::selectMediaResource()
 void HTMLMediaElement::loadNextSourceChild()
 {
     ContentType contentType;
-    String keySystem;
-    URL mediaURL = selectNextSourceChild(&contentType, &keySystem, Complain);
+    auto mediaURL = selectNextSourceChild(&contentType, InvalidURLAction::Complain);
     if (!mediaURL.isValid()) {
         waitForSourceChange();
         return;
@@ -1754,14 +1753,14 @@ void HTMLMediaElement::loadNextSourceChild()
     createMediaPlayer();
 
     m_loadState = LoadingFromSourceElement;
-    loadResource(mediaURL, contentType, keySystem);
+    loadResource(mediaURL, contentType);
 }
 
-void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& initialContentType, const String& keySystem)
+void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& initialContentType)
 {
-    ASSERT(initialURL.isEmpty() || isSafeToLoadURL(initialURL, Complain));
+    ASSERT(initialURL.isEmpty() || isSafeToLoadURL(initialURL, InvalidURLAction::Complain));
 
-    INFO_LOG(LOGIDENTIFIER, initialURL, initialContentType, keySystem);
+    INFO_LOG(LOGIDENTIFIER, initialURL, initialContentType);
 
     RefPtr frame = document().frame();
     if (!frame) {
@@ -1866,7 +1865,7 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
             contentType = ContentType { m_blob->type() };
     }
 
-    auto completionHandler = [url, player = m_player, keySystem, weakThis = WeakPtr { *this }, this](SnifferPromise::Result&& result) {
+    auto completionHandler = [url, player = m_player, weakThis = WeakPtr { *this }, this](SnifferPromise::Result&& result) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -1917,7 +1916,8 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
         }
 #endif
 
-        if (!player->load(url, *result, keySystem, !!m_remotePlaybackConfiguration))
+        // FIXME: Figure out if the third argument can be removed. Was used for a legacy keySystem implementation.
+        if (!player->load(url, *result, emptyString(), !!m_remotePlaybackConfiguration))
             mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
         else
             mediaPlayerRenderingModeChanged();
@@ -2664,7 +2664,7 @@ bool HTMLMediaElement::isSafeToLoadURL(const URL& url, InvalidURLAction actionIf
 
     RefPtr frame = document().frame();
     if (!frame || !document().protectedSecurityOrigin()->canDisplay(url, OriginAccessPatternsForWebProcess::singleton())) {
-        if (actionIfInvalid == Complain) {
+        if (actionIfInvalid == InvalidURLAction::Complain) {
             FrameLoader::reportLocalLoadFailed(frame.get(), url.stringCenterEllipsizedToLength());
             if (shouldLog)
                 ERROR_LOG(LOGIDENTIFIER, url , " was rejected by SecurityOrigin");
@@ -2673,7 +2673,7 @@ bool HTMLMediaElement::isSafeToLoadURL(const URL& url, InvalidURLAction actionIf
     }
 
     if (!portAllowed(url) || isIPAddressDisallowed(url)) {
-        if (actionIfInvalid == Complain) {
+        if (actionIfInvalid == InvalidURLAction::Complain) {
             if (frame)
                 FrameLoader::reportBlockedLoadFailed(*frame, url);
             if (shouldLog) {
@@ -5542,7 +5542,7 @@ bool HTMLMediaElement::havePotentialSourceChild()
     RefPtr currentSourceNode = m_currentSourceNode;
     RefPtr nextNode = m_nextChildNodeToConsider;
 
-    URL nextURL = selectNextSourceChild(0, 0, DoNothing);
+    auto nextURL = selectNextSourceChild(nullptr, InvalidURLAction::DoNothing);
 
     m_currentSourceNode = currentSourceNode;
     m_nextChildNodeToConsider = nextNode;
@@ -5550,12 +5550,10 @@ bool HTMLMediaElement::havePotentialSourceChild()
     return nextURL.isValid();
 }
 
-URL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, String* keySystem, InvalidURLAction actionIfInvalid)
+URL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, InvalidURLAction actionIfInvalid)
 {
-    UNUSED_PARAM(keySystem);
-
     // Don't log if this was just called to find out if there are any valid <source> elements.
-    bool shouldLog = willLog(WTFLogLevel::Always) && actionIfInvalid != DoNothing;
+    bool shouldLog = willLog(WTFLogLevel::Always) && actionIfInvalid != InvalidURLAction::DoNothing;
     if (shouldLog)
         INFO_LOG(LOGIDENTIFIER);
 
@@ -5648,7 +5646,7 @@ URL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, String* ke
         return mediaURL;
 
 CheckAgain:
-        if (actionIfInvalid == Complain)
+        if (actionIfInvalid == InvalidURLAction::Complain)
             source->scheduleErrorEvent();
     }
 
@@ -7040,7 +7038,7 @@ bool HTMLMediaElement::hasWirelessPlaybackTargetAlternative() const
 #if ENABLE(MEDIA_SOURCE)
         maybeSuitable &= !mediaURL.protocolIs(mediaSourceBlobProtocol);
 #endif
-        if (!maybeSuitable || !isSafeToLoadURL(mediaURL, DoNothing, false))
+        if (!maybeSuitable || !isSafeToLoadURL(mediaURL, InvalidURLAction::DoNothing, false))
             continue;
 
         return true;

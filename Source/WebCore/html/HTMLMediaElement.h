@@ -906,7 +906,7 @@ private:
 
     void selectMediaResource();
     void queueLoadMediaResourceTask();
-    void loadResource(const URL&, const ContentType&, const String& keySystem);
+    void loadResource(const URL&, const ContentType&);
     void scheduleNextSourceChild();
     void loadNextSourceChild();
     void userCancelledLoad();
@@ -917,7 +917,7 @@ private:
     void waitForSourceChange();
     void prepareToPlay();
 
-    URL selectNextSourceChild(ContentType*, String* keySystem, InvalidURLAction);
+    URL selectNextSourceChild(ContentType*, InvalidURLAction);
 
     bool ignoreTrackDisplayUpdateRequests() const;
     void beginIgnoringTrackDisplayUpdateRequests();
