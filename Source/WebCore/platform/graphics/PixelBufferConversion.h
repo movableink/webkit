@@ -44,7 +44,7 @@ struct ConstPixelBufferConversionView {
     std::span<const uint8_t> rows;
 };
 
-void convertImagePixels(const ConstPixelBufferConversionView& source, const PixelBufferConversionView& destination, const IntSize&);
+WEBCORE_EXPORT void convertImagePixels(const ConstPixelBufferConversionView& source, const PixelBufferConversionView& destination, const IntSize&);
 
 WEBCORE_EXPORT void copyRowsInternal(unsigned sourceBytesPerRow, std::span<const uint8_t> source, unsigned destinationBytesPerRow, std::span<uint8_t> destination, unsigned rows, unsigned copyBytesPerRow);
 

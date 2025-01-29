@@ -290,6 +290,24 @@ static void convertImagePixelsUnaccelerated(const ConstPixelBufferConversionView
     }
 }
 
+#if !(USE(ACCELERATE) && USE(CG))
+static void copyImagePixels(const ConstPixelBufferConversionView& source, const PixelBufferConversionView& destination, const IntSize& destinationSize)
+{
+    size_t bytesPerRow = destinationSize.width() * 4;
+
+    if (bytesPerRow == source.bytesPerRow && bytesPerRow == destination.bytesPerRow) {
+        memcpySpan(destination.rows, source.rows.first(bytesPerRow * destinationSize.height()));
+        return;
+    }
+
+    for (int y = 0; y < destinationSize.height(); ++y) {
+        auto sourceRow = source.rows.subspan(source.bytesPerRow * y);
+        auto destinationRow = destination.rows.subspan(destination.bytesPerRow * y);
+        memcpySpan(destinationRow, sourceRow.first(bytesPerRow));
+    }
+}
+#endif
+
 void convertImagePixels(const ConstPixelBufferConversionView& source, const PixelBufferConversionView& destination, const IntSize& destinationSize)
 {
     // We currently only support converting between RGBA8, BGRA8, and BGRX8.
@@ -307,7 +325,7 @@ void convertImagePixels(const ConstPixelBufferConversionView& source, const Pixe
         convertImagePixelsAccelerated(source, destination, destinationSize);
 #elif USE(SKIA)
     if (source.format.alphaFormat == destination.format.alphaFormat && source.format.pixelFormat == destination.format.pixelFormat && source.format.colorSpace == destination.format.colorSpace)
-        memcpySpan(destination.rows, source.rows.first(source.bytesPerRow * destinationSize.height()));
+        copyImagePixels(source, destination, destinationSize);
     else
         convertImagePixelsSkia(source, destination, destinationSize);
 #else
@@ -316,7 +334,7 @@ void convertImagePixels(const ConstPixelBufferConversionView& source, const Pixe
     ASSERT(source.format.colorSpace == destination.format.colorSpace);
 
     if (source.format.alphaFormat == destination.format.alphaFormat && source.format.pixelFormat == destination.format.pixelFormat) {
-        memcpySpan(destination.rows, source.rows.first(source.bytesPerRow * destinationSize.height()));
+        copyImagePixels(source, destination, destinationSize);
         return;
     }
 

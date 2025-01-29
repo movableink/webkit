@@ -218,6 +218,7 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/NowPlayingInfoTests.cpp
         Tests/WebCore/ParsedContentRange.cpp
         Tests/WebCore/PathTests.cpp
+        Tests/WebCore/PixelBufferConversionTests.cpp
         Tests/WebCore/PublicSuffix.cpp
         Tests/WebCore/RegionTests.cpp
         Tests/WebCore/RenderStyleChange.cpp
