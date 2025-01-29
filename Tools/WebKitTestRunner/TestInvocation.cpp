@@ -697,6 +697,21 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
     if (WKStringIsEqualToUTF8CString(messageName, "StopLoading"))
         return WKPageStopLoading(TestController::singleton().mainWebView()->page());
 
+    if (WKStringIsEqualToUTF8CString(messageName, "DumpFullScreenCallbacks")) {
+        TestController::singleton().dumpFullScreenCallbacks();
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "WaitBeforeFinishingFullscreenExit")) {
+        TestController::singleton().waitBeforeFinishingFullscreenExit();
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "FinishFullscreenExit")) {
+        TestController::singleton().finishFullscreenExit(TestController::singleton().mainWebView()->page());
+        return;
+    }
+
     ASSERT_NOT_REACHED();
 }
 

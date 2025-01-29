@@ -119,6 +119,7 @@ private:
     // Auxiliary Client Creation
 #if ENABLE(FULLSCREEN_API)
     WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() final;
+    void setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&&) final;
 #endif
 
 #if ENABLE(FULLSCREEN_API)

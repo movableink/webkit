@@ -600,8 +600,6 @@ enum {
     TextDidChangeInTextFieldCallbackID,
     TextFieldDidBeginEditingCallbackID,
     TextFieldDidEndEditingCallbackID,
-    EnterFullscreenForElementCallbackID,
-    ExitFullscreenForElementCallbackID,
     FirstUIScriptCallbackID = 100
 };
 
@@ -711,26 +709,6 @@ void TestRunner::setOnlyAcceptFirstPartyCookies(bool accept)
 void TestRunner::removeAllCookies(JSContextRef context, JSValueRef callback)
 {
     postMessageWithAsyncReply(context, "RemoveAllCookies", callback);
-}
-
-void TestRunner::setEnterFullscreenForElementCallback(JSContextRef context, JSValueRef callback)
-{
-    cacheTestRunnerCallback(context, EnterFullscreenForElementCallbackID, callback);
-}
-
-void TestRunner::callEnterFullscreenForElementCallback()
-{
-    callTestRunnerCallback(EnterFullscreenForElementCallbackID);
-}
-
-void TestRunner::setExitFullscreenForElementCallback(JSContextRef context, JSValueRef callback)
-{
-    cacheTestRunnerCallback(context, ExitFullscreenForElementCallbackID, callback);
-}
-
-void TestRunner::callExitFullscreenForElementCallback()
-{
-    callTestRunnerCallback(ExitFullscreenForElementCallbackID);
 }
 
 double TestRunner::preciseTime()
@@ -944,6 +922,11 @@ void TestRunner::queueLoadHTMLString(JSStringRef content, JSStringRef baseURL, J
 void TestRunner::stopLoading()
 {
     postPageMessage("StopLoading");
+}
+
+void TestRunner::dumpFullScreenCallbacks()
+{
+    postPageMessage("DumpFullScreenCallbacks");
 }
 
 void TestRunner::queueReload()
@@ -2105,6 +2088,21 @@ void TestRunner::takeViewPortSnapshot(JSContextRef context, JSValueRef callback)
 void TestRunner::flushConsoleLogs(JSContextRef context, JSValueRef callback)
 {
     postMessageWithAsyncReply(context, "FlushConsoleLogs", callback);
+}
+
+void TestRunner::updatePresentation(JSContextRef context, JSValueRef callback)
+{
+    postMessageWithAsyncReply(context, "UpdatePresentation", callback);
+}
+
+void TestRunner::waitBeforeFinishingFullscreenExit()
+{
+    postPageMessage("WaitBeforeFinishingFullscreenExit");
+}
+
+void TestRunner::finishFullscreenExit()
+{
+    postPageMessage("FinishFullscreenExit");
 }
 
 void TestRunner::setPageScaleFactor(JSContextRef context, double scaleFactor, long x, long y, JSValueRef callback)

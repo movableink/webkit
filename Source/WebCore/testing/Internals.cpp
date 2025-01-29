@@ -3910,50 +3910,6 @@ void Internals::setFooterHeight(float height)
     document->page()->setFooterHeight(height);
 }
 
-#if ENABLE(FULLSCREEN_API)
-
-void Internals::webkitWillEnterFullScreenForElement(Element& element)
-{
-    Document* document = contextDocument();
-    if (!document)
-        return;
-    document->fullscreenManager().willEnterFullscreen(element);
-}
-
-void Internals::webkitDidEnterFullScreenForElement(Element&)
-{
-    Document* document = contextDocument();
-    if (!document)
-        return;
-    document->fullscreenManager().didEnterFullscreen();
-}
-
-void Internals::webkitWillExitFullScreenForElement(Element&)
-{
-    Document* document = contextDocument();
-    if (!document)
-        return;
-    document->fullscreenManager().willExitFullscreen();
-}
-
-void Internals::webkitDidExitFullScreenForElement(Element&)
-{
-    Document* document = contextDocument();
-    if (!document)
-        return;
-    document->fullscreenManager().didExitFullscreen();
-}
-
-bool Internals::isAnimatingFullScreen() const
-{
-    Document* document = contextDocument();
-    if (!document)
-        return false;
-    return document->fullscreenManager().isAnimatingFullscreen();
-}
-
-#endif
-
 void Internals::setFullscreenInsets(FullscreenInsets insets)
 {
     Page* page = contextDocument()->frame()->page();

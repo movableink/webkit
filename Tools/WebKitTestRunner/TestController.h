@@ -196,6 +196,18 @@ public:
     void setPluginSupportedMode(const String&);
 
     void dumpPolicyDelegateCallbacks() { m_dumpPolicyDelegateCallbacks = true; }
+    void dumpFullScreenCallbacks() { m_dumpFullScreenCallbacks = true; }
+    void waitBeforeFinishingFullscreenExit() { m_waitBeforeFinishingFullscreenExit = true; }
+    void finishFullscreenExit(WKPageRef);
+
+    static bool willEnterFullScreen(WKPageRef, const void*);
+    bool willEnterFullScreen(WKPageRef);
+    static void beganEnterFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, const void*);
+    void beganEnterFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame);
+    static void exitFullScreen(WKPageRef, const void*);
+    void exitFullScreen(WKPageRef);
+    static void beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, const void*);
+    void beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame);
 
     void setShouldLogHistoryClientCallbacks(bool shouldLog) { m_shouldLogHistoryClientCallbacks = shouldLog; }
     void setShouldLogCanAuthenticateAgainstProtectionSpace(bool shouldLog) { m_shouldLogCanAuthenticateAgainstProtectionSpace = shouldLog; }
@@ -292,6 +304,7 @@ public:
     bool didLoadNonAppInitiatedRequest();
 
     void setPageScaleFactor(float scaleFactor, int x, int y, CompletionHandler<void(WKTypeRef)>&&);
+    void updatePresentation(CompletionHandler<void(WKTypeRef)>&&);
 
     void reloadFromOrigin();
 
@@ -795,6 +808,8 @@ private:
     size_t m_downloadIndex { 0 };
     bool m_shouldDownloadContentDispositionAttachments { true };
     bool m_dumpPolicyDelegateCallbacks { false };
+    bool m_dumpFullScreenCallbacks { false };
+    bool m_waitBeforeFinishingFullscreenExit { false };
 
 #if PLATFORM(WPE)
     bool m_useWPEPlatformAPI { false };

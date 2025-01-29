@@ -108,7 +108,7 @@ public:
     void dumpSelectionRect() { m_dumpSelectionRect = true; }
     void dumpStatusCallbacks() { m_dumpStatusCallbacks = true; }
     void dumpTitleChanges() { m_dumpTitleChanges = true; }
-    void dumpFullScreenCallbacks() { m_dumpFullScreenCallbacks = true; }
+    void dumpFullScreenCallbacks();
     void dumpFrameLoadCallbacks() { setShouldDumpFrameLoadCallbacks(true); }
     void dumpProgressFinishedCallback() { setShouldDumpProgressFinishedCallback(true); }
     void dumpResourceLoadCallbacks() { m_dumpResourceLoadCallbacks = true; }
@@ -217,7 +217,6 @@ public:
     bool shouldDumpStatusCallbacks() const { return m_dumpStatusCallbacks; }
     bool shouldDumpTitleChanges() const { return m_dumpTitleChanges; }
     bool shouldDumpPixels() const;
-    bool shouldDumpFullScreenCallbacks() const { return m_dumpFullScreenCallbacks; }
     bool shouldDumpFrameLoadCallbacks();
     bool shouldDumpProgressFinishedCallback() const { return m_dumpProgressFinishedCallback; }
     bool shouldDumpResourceLoadCallbacks() const { return m_dumpResourceLoadCallbacks; }
@@ -294,14 +293,6 @@ public:
     void setAlwaysAcceptCookies(bool);
     void setOnlyAcceptFirstPartyCookies(bool);
     void removeAllCookies(JSContextRef, JSValueRef callback);
-
-    // Custom full screen behavior.
-    void setHasCustomFullScreenBehavior(bool value) { m_customFullScreenBehavior = value; }
-    bool hasCustomFullScreenBehavior() const { return m_customFullScreenBehavior; }
-    void setEnterFullscreenForElementCallback(JSContextRef, JSValueRef);
-    void callEnterFullscreenForElementCallback();
-    void setExitFullscreenForElementCallback(JSContextRef, JSValueRef);
-    void callExitFullscreenForElementCallback();
 
     // Web notifications.
     void grantWebNotificationPermission(JSStringRef origin);
@@ -554,6 +545,9 @@ public:
     void takeViewPortSnapshot(JSContextRef, JSValueRef callback);
 
     void flushConsoleLogs(JSContextRef, JSValueRef callback);
+    void updatePresentation(JSContextRef, JSValueRef callback);
+    void waitBeforeFinishingFullscreenExit();
+    void finishFullscreenExit();
 
     // Reporting API
     void generateTestReport(JSContextRef, JSStringRef message, JSStringRef group);
@@ -606,7 +600,6 @@ private:
     bool m_dumpTitleChanges { false };
     bool m_dumpPixels { false };
     bool m_dumpSelectionRect { false };
-    bool m_dumpFullScreenCallbacks { false };
     bool m_dumpProgressFinishedCallback { false };
     bool m_dumpResourceLoadCallbacks { false };
     bool m_dumpResourceResponseMIMETypes { false };

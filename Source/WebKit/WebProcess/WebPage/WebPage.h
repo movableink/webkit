@@ -139,8 +139,6 @@ OBJC_CLASS WKAccessibilityWebPageObject;
 
 #define ENABLE_VIEWPORT_RESIZING PLATFORM(IOS_FAMILY)
 
-struct WKBundlePageFullScreenClientBase;
-
 namespace WTF {
 enum class Critical : bool;
 }
@@ -356,7 +354,6 @@ class FrameState;
 class GPUProcessConnection;
 class GamepadData;
 class GeolocationPermissionRequestManager;
-class InjectedBundlePageFullScreenClient;
 class InjectedBundleScriptWorld;
 class LayerHostingContext;
 class MediaDeviceSandboxExtensions;
@@ -713,9 +710,6 @@ public:
     void setInjectedBundlePageLoaderClient(std::unique_ptr<API::InjectedBundle::PageLoaderClient>&&);
     void setInjectedBundleResourceLoadClient(std::unique_ptr<API::InjectedBundle::ResourceLoadClient>&&);
     void setInjectedBundleUIClient(std::unique_ptr<API::InjectedBundle::PageUIClient>&&);
-#if ENABLE(FULLSCREEN_API)
-    void initializeInjectedBundleFullScreenClient(WKBundlePageFullScreenClientBase*);
-#endif
 
 #if ENABLE(CONTEXT_MENUS)
     API::InjectedBundle::PageContextMenuClient& injectedBundleContextMenuClient() { return *m_contextMenuClient; }
@@ -725,9 +719,6 @@ public:
     API::InjectedBundle::PageLoaderClient& injectedBundleLoaderClient() { return *m_loaderClient; }
     API::InjectedBundle::ResourceLoadClient& injectedBundleResourceLoadClient() { return *m_resourceLoadClient; }
     API::InjectedBundle::PageUIClient& injectedBundleUIClient() { return *m_uiClient; }
-#if ENABLE(FULLSCREEN_API)
-    InjectedBundlePageFullScreenClient& injectedBundleFullScreenClient();
-#endif
 
     bool findStringFromInjectedBundle(const String&, OptionSet<FindOptions>);
     void replaceStringMatchesFromInjectedBundle(const Vector<uint32_t>& matchIndices, const String& replacementText, bool selectionOnly);

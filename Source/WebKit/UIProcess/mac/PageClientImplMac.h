@@ -212,7 +212,6 @@ private:
     void removePDFHUD(PDFPluginIdentifier) override;
     void removeAllPDFHUDs() override;
 
-    // Auxiliary Client Creation
 #if ENABLE(FULLSCREEN_API)
     WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() override;
 #endif

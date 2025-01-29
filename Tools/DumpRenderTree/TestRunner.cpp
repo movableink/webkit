@@ -491,10 +491,8 @@ static JSValueRef findStringCallback(JSContextRef context, JSObjectRef function,
     return JSValueMakeBoolean(context, controller->findString(context, target.get(), options));
 }
 
-static JSValueRef flushConsoleLogsCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+static JSValueRef alwaysResolvePromiseCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
-    if (argumentCount == 1)
-        JSObjectCallAsFunction(context, JSValueToObject(context, arguments[0], 0), thisObject, 0, 0, 0);
     return TestRunner::alwaysResolvePromise(context);
 }
 
@@ -2011,7 +2009,8 @@ const JSStaticFunction* TestRunner::staticFunctions()
         { "evaluateScriptInIsolatedWorld", evaluateScriptInIsolatedWorldCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "execCommand", execCommandCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "findString", findStringCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "flushConsoleLogs", flushConsoleLogsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "flushConsoleLogs", alwaysResolvePromiseCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "updatePresentation", alwaysResolvePromiseCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "generateTestReport", generateTestReportCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "goBack", goBackCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete }, 
         { "ignoreLegacyWebNotificationPermissionRequests", ignoreLegacyWebNotificationPermissionRequestsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

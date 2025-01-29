@@ -161,6 +161,7 @@ private:
 
 #if ENABLE(FULLSCREEN_API)
     WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() final;
+    void setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&&) final;
 
     void closeFullScreenManager() override;
     bool isFullScreen() override;

@@ -474,6 +474,9 @@ class WebExtensionController;
 class WebFramePolicyListenerProxy;
 class WebFrameProxy;
 class WebFullScreenManagerProxy;
+#if ENABLE(FULLSCREEN_API)
+class WebFullScreenManagerProxyClient;
+#endif
 class WebInspectorUIProxy;
 class WebKeyboardEvent;
 class WebMouseEvent;
@@ -742,6 +745,7 @@ public:
 
 #if ENABLE(FULLSCREEN_API)
     WebFullScreenManagerProxy* fullScreenManager();
+    void setFullScreenClientForTesting(std::unique_ptr<WebKit::WebFullScreenManagerProxyClient>&&);
 
     API::FullscreenClient& fullscreenClient() const { return *m_fullscreenClient; }
     void setFullscreenClient(std::unique_ptr<API::FullscreenClient>&&);

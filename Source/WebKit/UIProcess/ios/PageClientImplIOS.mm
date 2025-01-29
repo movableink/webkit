@@ -771,6 +771,8 @@ void PageClientImpl::disableInspectorNodeSearch()
 
 WebFullScreenManagerProxyClient& PageClientImpl::fullScreenManagerProxyClient()
 {
+    if (m_fullscreenClientForTesting)
+        return *m_fullscreenClientForTesting;
     return *this;
 }
 

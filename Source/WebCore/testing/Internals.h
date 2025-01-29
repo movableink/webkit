@@ -642,14 +642,6 @@ public:
     void setHeaderHeight(float);
     void setFooterHeight(float);
 
-#if ENABLE(FULLSCREEN_API)
-    void webkitWillEnterFullScreenForElement(Element&);
-    void webkitDidEnterFullScreenForElement(Element&);
-    void webkitWillExitFullScreenForElement(Element&);
-    void webkitDidExitFullScreenForElement(Element&);
-    bool isAnimatingFullScreen() const;
-#endif
-
     struct FullscreenInsets {
         float top { 0 };
         float left { 0 };

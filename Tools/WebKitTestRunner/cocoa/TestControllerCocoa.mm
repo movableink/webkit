@@ -830,4 +830,11 @@ WKRetainPtr<WKStringRef> TestController::backgroundFetchState(WKStringRef identi
     return toWK(backgroundFetchState);
 }
 
+void TestController::updatePresentation(CompletionHandler<void(WKTypeRef)>&& completionHandler)
+{
+    [m_mainWebView->platformView() _doAfterNextPresentationUpdate:makeBlockPtr([completionHandler = WTFMove(completionHandler)] mutable {
+        completionHandler(nullptr);
+    }).get()];
+}
+
 } // namespace WTR

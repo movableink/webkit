@@ -222,6 +222,11 @@ void WebFullScreenManagerProxy::detachFromClient()
     m_client = nullptr;
 }
 
+void WebFullScreenManagerProxy::attachToNewClient(WebFullScreenManagerProxyClient& client)
+{
+    m_client = &client;
+}
+
 bool WebFullScreenManagerProxy::isFullScreen()
 {
     return m_client && m_client->isFullScreen();

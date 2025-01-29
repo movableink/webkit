@@ -112,6 +112,7 @@
 #include "WebFrameMetrics.h"
 #include "WebFullScreenManager.h"
 #include "WebFullScreenManagerMessages.h"
+#include "WebFullScreenManagerProxyMessages.h"
 #include "WebGamepadProvider.h"
 #include "WebGeolocationClient.h"
 #include "WebHistoryItemClient.h"
@@ -1526,18 +1527,6 @@ void WebPage::setInjectedBundleUIClient(std::unique_ptr<API::InjectedBundle::Pag
     m_uiClient = WTFMove(uiClient);
 }
 
-#if ENABLE(FULLSCREEN_API)
-void WebPage::initializeInjectedBundleFullScreenClient(WKBundlePageFullScreenClientBase* client)
-{
-    m_internals->fullScreenClient.initialize(client);
-}
-
-InjectedBundlePageFullScreenClient& WebPage::injectedBundleFullScreenClient()
-{
-    return m_internals->fullScreenClient;
-}
-#endif
-
 bool WebPage::hasPendingEditorStateUpdate() const
 {
     return m_pendingEditorStateUpdateStatus != PendingEditorStateUpdateStatus::NotScheduled;
@@ -1947,9 +1936,6 @@ void WebPage::close()
     m_loaderClient = makeUnique<API::InjectedBundle::PageLoaderClient>();
     m_resourceLoadClient = makeUnique<API::InjectedBundle::ResourceLoadClient>();
     m_uiClient = makeUnique<API::InjectedBundle::PageUIClient>();
-#if ENABLE(FULLSCREEN_API)
-    m_internals->fullScreenClient.initialize(0);
-#endif
 
     m_printContext = nullptr;
     if (RefPtr localFrame = m_mainFrame->coreLocalFrame())
@@ -5359,7 +5345,7 @@ void WebPage::closeFullScreen()
 {
     removeReasonsToDisallowLayoutViewportHeightExpansion(DisallowLayoutViewportHeightExpansionReason::ElementFullScreen);
 
-    injectedBundleFullScreenClient().closeFullScreen(this);
+    send(Messages::WebFullScreenManagerProxy::Close());
 }
 
 void WebPage::prepareToEnterElementFullScreen()

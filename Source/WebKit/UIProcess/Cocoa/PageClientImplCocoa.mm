@@ -26,9 +26,9 @@
 #import "config.h"
 #import "PageClientImplCocoa.h"
 
-
 #import "WKTextAnimationType.h"
 #import "WKWebViewInternal.h"
+#import "WebFullScreenManagerProxy.h"
 #import <WebCore/AlternativeTextUIController.h>
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/WritingToolsTypes.h>
@@ -380,5 +380,12 @@ void PageClientImplCocoa::processDidUpdateThrottleState()
     [m_webView willChangeValueForKey:@"_webProcessState"];
     [m_webView didChangeValueForKey:@"_webProcessState"];
 }
+
+#if ENABLE(FULLSCREEN_API)
+void PageClientImplCocoa::setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&& client)
+{
+    m_fullscreenClientForTesting = WTFMove(client);
+}
+#endif
 
 } // namespace WebKit

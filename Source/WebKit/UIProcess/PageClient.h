@@ -600,6 +600,7 @@ public:
     // Auxiliary Client Creation
 #if ENABLE(FULLSCREEN_API)
     virtual WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() = 0;
+    virtual void setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&&) = 0;
 #endif
 
     // Custom representations.

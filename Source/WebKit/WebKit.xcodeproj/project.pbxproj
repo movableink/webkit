@@ -342,7 +342,6 @@
 		1AB474E0184D446A0051B622 /* WKBundlePageEditorClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 1AB474DF184D446A0051B622 /* WKBundlePageEditorClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1AB474E2184D44800051B622 /* WKBundlePageFormClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 1AB474E1184D44800051B622 /* WKBundlePageFormClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1AB474E4184D44980051B622 /* WKBundlePageContextMenuClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 1AB474E3184D44980051B622 /* WKBundlePageContextMenuClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		1AB474E6184D44B40051B622 /* WKBundlePageFullScreenClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 1AB474E5184D44B40051B622 /* WKBundlePageFullScreenClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1AB474EA184D45130051B622 /* WKBundlePagePolicyClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 1AB474E9184D45130051B622 /* WKBundlePagePolicyClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1AB7D4CA1288AAA700CFD08C /* DownloadProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = 1AB7D4C81288AAA700CFD08C /* DownloadProxy.h */; };
 		1AB7D61A1288B9D900CFD08C /* DownloadProxyMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = 1AB7D6181288B9D900CFD08C /* DownloadProxyMessages.h */; };
@@ -2237,7 +2236,6 @@
 		CD491B131E73482100009066 /* UserMediaCaptureManagerProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = CD491B111E73482100009066 /* UserMediaCaptureManagerProxy.h */; };
 		CD491B181E73525500009066 /* UserMediaCaptureManagerProxyMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = CD491B161E73525500009066 /* UserMediaCaptureManagerProxyMessages.h */; };
 		CD4B4D9D1E765E0000D27092 /* SharedCARingBuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = CD4B4D9B1E765E0000D27092 /* SharedCARingBuffer.h */; };
-		CD5C66A1134B9D38004FE2A8 /* InjectedBundlePageFullScreenClient.h in Headers */ = {isa = PBXBuildFile; fileRef = CD5C669F134B9D37004FE2A8 /* InjectedBundlePageFullScreenClient.h */; };
 		CD78E1151DB7D7ED0014A2DE /* FullscreenClient.h in Headers */ = {isa = PBXBuildFile; fileRef = CD78E1131DB7D7ED0014A2DE /* FullscreenClient.h */; };
 		CD78E1171DB7DC0A0014A2DE /* APIFullscreenClient.h in Headers */ = {isa = PBXBuildFile; fileRef = CD78E1161DB7DC0A0014A2DE /* APIFullscreenClient.h */; };
 		CD78E1191DB7E5AD0014A2DE /* _WKFullscreenDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CD78E1181DB7E5AD0014A2DE /* _WKFullscreenDelegate.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -2511,6 +2509,7 @@
 		F634445612A885C8000612D8 /* APISecurityOrigin.h in Headers */ = {isa = PBXBuildFile; fileRef = F634445512A885C8000612D8 /* APISecurityOrigin.h */; };
 		FA1ED3F42B76B93700C90F3B /* CoreIPCCFType.mm in Sources */ = {isa = PBXBuildFile; fileRef = FA1ED3F32B76B90700C90F3B /* CoreIPCCFType.mm */; };
 		FA39AE682B23972B008F93CD /* CoreIPCAuditToken.h in Headers */ = {isa = PBXBuildFile; fileRef = FA39AE662B23972A008F93CD /* CoreIPCAuditToken.h */; };
+		FA4066E02D44733200A2E622 /* WKPageFullScreenClient.h in Headers */ = {isa = PBXBuildFile; fileRef = FA4066DF2D4472CE00A2E622 /* WKPageFullScreenClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FA4FE2662B75EB290016E671 /* CoreIPCNull.mm in Sources */ = {isa = PBXBuildFile; fileRef = FA4FE2642B75EAFF0016E671 /* CoreIPCNull.mm */; };
 		FAA4E3012A1575A5003F5E50 /* WebFrameLoaderClient.h in Headers */ = {isa = PBXBuildFile; fileRef = FAA4E2FF2A1575A4003F5E50 /* WebFrameLoaderClient.h */; };
 		FAB955FB2B75E43D0060829C /* CoreIPCNull.h in Headers */ = {isa = PBXBuildFile; fileRef = FAB955F92B75E43D0060829C /* CoreIPCNull.h */; };
@@ -3576,7 +3575,6 @@
 		1AB474DF184D446A0051B622 /* WKBundlePageEditorClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKBundlePageEditorClient.h; sourceTree = "<group>"; };
 		1AB474E1184D44800051B622 /* WKBundlePageFormClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKBundlePageFormClient.h; sourceTree = "<group>"; };
 		1AB474E3184D44980051B622 /* WKBundlePageContextMenuClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKBundlePageContextMenuClient.h; sourceTree = "<group>"; };
-		1AB474E5184D44B40051B622 /* WKBundlePageFullScreenClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKBundlePageFullScreenClient.h; sourceTree = "<group>"; };
 		1AB474E9184D45130051B622 /* WKBundlePagePolicyClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKBundlePagePolicyClient.h; sourceTree = "<group>"; };
 		1AB7D4C81288AAA700CFD08C /* DownloadProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DownloadProxy.h; sourceTree = "<group>"; };
 		1AB7D4C91288AAA700CFD08C /* DownloadProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DownloadProxy.cpp; sourceTree = "<group>"; };
@@ -7744,8 +7742,6 @@
 		CD491B161E73525500009066 /* UserMediaCaptureManagerProxyMessages.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UserMediaCaptureManagerProxyMessages.h; sourceTree = "<group>"; };
 		CD4B4D9A1E765E0000D27092 /* SharedCARingBuffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SharedCARingBuffer.cpp; sourceTree = "<group>"; };
 		CD4B4D9B1E765E0000D27092 /* SharedCARingBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SharedCARingBuffer.h; sourceTree = "<group>"; };
-		CD5C669E134B9D36004FE2A8 /* InjectedBundlePageFullScreenClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InjectedBundlePageFullScreenClient.cpp; sourceTree = "<group>"; };
-		CD5C669F134B9D37004FE2A8 /* InjectedBundlePageFullScreenClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InjectedBundlePageFullScreenClient.h; sourceTree = "<group>"; };
 		CD73BA37131A29FE00EEDED2 /* WebFullScreenManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = WebFullScreenManager.cpp; path = FullScreen/WebFullScreenManager.cpp; sourceTree = "<group>"; };
 		CD73BA38131A29FE00EEDED2 /* WebFullScreenManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WebFullScreenManager.h; path = FullScreen/WebFullScreenManager.h; sourceTree = "<group>"; };
 		CD73BA39131A29FE00EEDED2 /* WebFullScreenManager.messages.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = WebFullScreenManager.messages.in; path = FullScreen/WebFullScreenManager.messages.in; sourceTree = "<group>"; };
@@ -8326,6 +8322,7 @@
 		FA39AE4E2B22DA68008F93CD /* UserData.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = UserData.serialization.in; sourceTree = "<group>"; };
 		FA39AE662B23972A008F93CD /* CoreIPCAuditToken.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CoreIPCAuditToken.h; sourceTree = "<group>"; };
 		FA39AE672B23972A008F93CD /* CoreIPCAuditToken.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CoreIPCAuditToken.serialization.in; sourceTree = "<group>"; };
+		FA4066DF2D4472CE00A2E622 /* WKPageFullScreenClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKPageFullScreenClient.h; sourceTree = "<group>"; };
 		FA4368C62B811BA3001B993D /* CoreIPCNSURLCredential.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CoreIPCNSURLCredential.serialization.in; sourceTree = "<group>"; };
 		FA4899BD2C5C56E800B04660 /* APISerializedScriptValue.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = APISerializedScriptValue.cpp; sourceTree = "<group>"; };
 		FA4FE2642B75EAFF0016E671 /* CoreIPCNull.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCNull.mm; sourceTree = "<group>"; };
@@ -14626,6 +14623,7 @@
 				1AB8A1F318400B8F00E9AE69 /* WKPageFindClient.h */,
 				1AB8A1F518400B9D00E9AE69 /* WKPageFindMatchesClient.h */,
 				1AB8A1EF18400B0000E9AE69 /* WKPageFormClient.h */,
+				FA4066DF2D4472CE00A2E622 /* WKPageFullScreenClient.h */,
 				BC7B633612A45ABA00D174A4 /* WKPageGroup.cpp */,
 				BC7B633512A45ABA00D174A4 /* WKPageGroup.h */,
 				2D9EA30C1A96CB59002D2807 /* WKPageInjectedBundleClient.h */,
@@ -14782,8 +14780,6 @@
 				E1EE53DC11F8CF9F00CCBEE4 /* InjectedBundlePageEditorClient.h */,
 				BC14E107120B905E00826C0C /* InjectedBundlePageFormClient.cpp */,
 				BC14E108120B905E00826C0C /* InjectedBundlePageFormClient.h */,
-				CD5C669E134B9D36004FE2A8 /* InjectedBundlePageFullScreenClient.cpp */,
-				CD5C669F134B9D37004FE2A8 /* InjectedBundlePageFullScreenClient.h */,
 				BCA8C6A611E3BA5F00812FB7 /* InjectedBundlePageLoaderClient.cpp */,
 				BCA8C6A711E3BA5F00812FB7 /* InjectedBundlePageLoaderClient.h */,
 				6546A82913000164000CEB1C /* InjectedBundlePageResourceLoadClient.cpp */,
@@ -14852,7 +14848,6 @@
 				1AB474E3184D44980051B622 /* WKBundlePageContextMenuClient.h */,
 				1AB474DF184D446A0051B622 /* WKBundlePageEditorClient.h */,
 				1AB474E1184D44800051B622 /* WKBundlePageFormClient.h */,
-				1AB474E5184D44B40051B622 /* WKBundlePageFullScreenClient.h */,
 				1AB474D7184D43FD0051B622 /* WKBundlePageLoaderClient.h */,
 				1A22F1001289FCD90085E74F /* WKBundlePageOverlay.cpp */,
 				1A22F0FF1289FCD90085E74F /* WKBundlePageOverlay.h */,
@@ -16693,7 +16688,6 @@
 				512935E41288D97800A4B695 /* InjectedBundlePageContextMenuClient.h in Headers */,
 				E1EE53E311F8CFC000CCBEE4 /* InjectedBundlePageEditorClient.h in Headers */,
 				BC14E10A120B905E00826C0C /* InjectedBundlePageFormClient.h in Headers */,
-				CD5C66A1134B9D38004FE2A8 /* InjectedBundlePageFullScreenClient.h in Headers */,
 				BCA8C6A911E3BA5F00812FB7 /* InjectedBundlePageLoaderClient.h in Headers */,
 				BCA8C6B011E3C08700812FB7 /* InjectedBundlePageUIClient.h in Headers */,
 				BC33E0D112408E8600360F3F /* InjectedBundleRangeHandle.h in Headers */,
@@ -17546,7 +17540,6 @@
 				1AB474E4184D44980051B622 /* WKBundlePageContextMenuClient.h in Headers */,
 				1AB474E0184D446A0051B622 /* WKBundlePageEditorClient.h in Headers */,
 				1AB474E2184D44800051B622 /* WKBundlePageFormClient.h in Headers */,
-				1AB474E6184D44B40051B622 /* WKBundlePageFullScreenClient.h in Headers */,
 				1AB474D8184D43FD0051B622 /* WKBundlePageLoaderClient.h in Headers */,
 				C6A4CA0B2252899800169289 /* WKBundlePageMac.h in Headers */,
 				ED82A7F2128C6FAF004477B3 /* WKBundlePageOverlay.h in Headers */,
@@ -17745,6 +17738,7 @@
 				1AB8A1F418400B8F00E9AE69 /* WKPageFindClient.h in Headers */,
 				1AB8A1F618400B9D00E9AE69 /* WKPageFindMatchesClient.h in Headers */,
 				1AB8A1F018400B0000E9AE69 /* WKPageFormClient.h in Headers */,
+				FA4066E02D44733200A2E622 /* WKPageFullScreenClient.h in Headers */,
 				BC7B633712A45ABA00D174A4 /* WKPageGroup.h in Headers */,
 				2D9EA30D1A96CB59002D2807 /* WKPageInjectedBundleClient.h in Headers */,
 				1AB8A1EC1840080900E9AE69 /* WKPageLoaderClient.h in Headers */,

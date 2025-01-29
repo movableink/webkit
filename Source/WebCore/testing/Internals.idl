@@ -847,12 +847,6 @@ enum RenderingMode {
     undefined setHeaderHeight(unrestricted float height);
     undefined setFooterHeight(unrestricted float height);
 
-    [Conditional=FULLSCREEN_API] undefined webkitWillEnterFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] undefined webkitDidEnterFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] undefined webkitWillExitFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] undefined webkitDidExitFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] readonly attribute boolean isAnimatingFullScreen;
-
     undefined setFullscreenInsets(FullscreenInsets insets);
     undefined setFullscreenAutoHideDuration(double duration);
 

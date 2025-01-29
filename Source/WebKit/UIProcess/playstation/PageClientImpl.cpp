@@ -247,6 +247,10 @@ WebFullScreenManagerProxyClient& PageClientImpl::fullScreenManagerProxyClient()
     return *(WebFullScreenManagerProxyClient*)this;
 }
 
+void PageClientImpl::setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&&)
+{
+}
+
 void PageClientImpl::closeFullScreenManager()
 {
     m_view.closeFullScreenManager();

@@ -9286,6 +9286,15 @@ void WebPageProxy::setFullscreenClient(std::unique_ptr<API::FullscreenClient>&& 
 
     m_fullscreenClient = WTFMove(client);
 }
+
+void WebPageProxy::setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&& client)
+{
+    if (m_fullScreenManager)
+        m_fullScreenManager->detachFromClient();
+    m_pageClient->setFullScreenClientForTesting(WTFMove(client));
+    if (m_fullScreenManager)
+        m_fullScreenManager->attachToNewClient(m_pageClient->fullScreenManagerProxyClient());
+}
 #endif
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)

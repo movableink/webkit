@@ -235,13 +235,10 @@ private:
     void scrollingNodeScrollDidEndScroll(std::optional<WebCore::ScrollingNodeID>) override;
         
     void requestScrollToRect(const WebCore::FloatRect& targetRect, const WebCore::FloatPoint& origin) override;
-        
-    // Auxiliary Client Creation
-#if ENABLE(FULLSCREEN_API)
-    WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() override;
-#endif
 
 #if ENABLE(FULLSCREEN_API)
+    WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() override;
+
     // WebFullScreenManagerProxyClient
     void closeFullScreenManager() override;
     bool isFullScreen() override;

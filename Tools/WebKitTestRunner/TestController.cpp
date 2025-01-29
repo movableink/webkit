@@ -448,6 +448,88 @@ WKPageRef TestController::createOtherPage(PlatformWebView* parentView, WKPageCon
     return page;
 }
 
+bool TestController::willEnterFullScreen(WKPageRef page, const void* clientInfo)
+{
+    return static_cast<TestController*>(const_cast<void*>(clientInfo))->willEnterFullScreen(page);
+}
+
+bool TestController::willEnterFullScreen(WKPageRef page)
+{
+    if (m_dumpFullScreenCallbacks)
+        protectedCurrentInvocation()->outputText("supportsFullScreen() == true\nenterFullScreenForElement()\n"_s);
+
+    WKPageSaveScrollPositionForFullScreen(page);
+    return true;
+}
+
+void TestController::beganEnterFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame, const void* clientInfo)
+{
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->beganEnterFullScreen(page, initialFrame, finalFrame);
+}
+
+void TestController::beganEnterFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame)
+{
+    if (m_dumpFullScreenCallbacks) {
+        protectedCurrentInvocation()->outputText(makeString(
+            "beganEnterFullScreen() - initialRect.size: {"_s,
+            initialFrame.size.width,
+            ", "_s,
+            initialFrame.size.height,
+            "}, finalRect.size: {"_s,
+            finalFrame.size.width,
+            ", "_s,
+            finalFrame.size.height,
+            "}\n"_s
+        ));
+    }
+
+    WKPageDidEnterFullScreen(page);
+}
+
+void TestController::exitFullScreen(WKPageRef page, const void* clientInfo)
+{
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->exitFullScreen(page);
+}
+
+void TestController::exitFullScreen(WKPageRef page)
+{
+    if (m_dumpFullScreenCallbacks)
+        protectedCurrentInvocation()->outputText("exitFullScreenForElement()\n"_s);
+
+    WKPageWillExitFullScreen(page);
+}
+
+void TestController::beganExitFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame, const void* clientInfo)
+{
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->beganExitFullScreen(page, initialFrame, finalFrame);
+}
+
+void TestController::beganExitFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame)
+{
+    if (m_dumpFullScreenCallbacks) {
+        protectedCurrentInvocation()->outputText(makeString(
+        "beganExitFullScreen() - initialRect.size: {"_s,
+        initialFrame.size.width,
+        ", "_s,
+        initialFrame.size.height,
+        "}, finalRect.size: {"_s,
+        finalFrame.size.width,
+        ", "_s,
+        finalFrame.size.height,
+        "}\n"_s
+        ));
+    }
+
+    if (!m_waitBeforeFinishingFullscreenExit)
+        finishFullscreenExit(page);
+}
+
+void TestController::finishFullscreenExit(WKPageRef page)
+{
+    WKPageDidExitFullScreen(page);
+    WKPageRestoreScrollPositionAfterFullScreen(page);
+}
+
 PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* parentView, WKPageConfigurationRef configuration, WKNavigationActionRef, WKWindowFeaturesRef)
 {
     RefPtr currentInvocation = m_currentInvocation;
@@ -535,7 +617,16 @@ PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* par
         nullptr, // didLosePointerLock
     };
     WKPageSetPageUIClient(newPage, &otherPageUIClient.base);
-    
+
+    WKPageFullScreenClientV0 fullscreenClient = {
+        { 0, this },
+        willEnterFullScreen,
+        beganEnterFullScreen,
+        exitFullScreen,
+        beganExitFullScreen
+    };
+    WKPageSetFullScreenClientForTesting(newPage, &fullscreenClient.base);
+
     WKPageNavigationClientV3 pageNavigationClient = {
         { 3, &TestController::singleton() },
         decidePolicyForNavigationAction,
@@ -867,6 +958,11 @@ bool TestController::denyNotificationPermissionOnPrompt(WKStringRef originString
 }
 
 #if !PLATFORM(COCOA)
+void TestController::updatePresentation(CompletionHandler<void(WKTypeRef)>&& completionHandler)
+{
+    completionHandler(nullptr);
+}
+
 WKRetainPtr<WKStringRef> TestController::getBackgroundFetchIdentifier()
 {
     return { };
@@ -999,6 +1095,15 @@ void TestController::createWebViewWithOptions(const TestOptions& options)
     };
     WKPageSetPageUIClient(m_mainWebView->page(), &pageUIClient.base);
 
+    WKPageFullScreenClientV0 fullscreenClient = {
+        { 0, this },
+        willEnterFullScreen,
+        beganEnterFullScreen,
+        exitFullScreen,
+        beganExitFullScreen
+    };
+    WKPageSetFullScreenClientForTesting(m_mainWebView->page(), &fullscreenClient.base);
+
     WKPageNavigationClientV3 pageNavigationClient = {
         { 3, this },
         decidePolicyForNavigationAction,
@@ -1067,6 +1172,7 @@ void TestController::ensureViewSupportsOptionsForTest(const TestInvocation& test
         willDestroyWebView();
 
         WKPageSetPageUIClient(m_mainWebView->page(), nullptr);
+        WKPageSetFullScreenClientForTesting(m_mainWebView->page(), nullptr);
         WKPageSetPageNavigationClient(m_mainWebView->page(), nullptr);
         WKPageClose(m_mainWebView->page());
 
@@ -1320,6 +1426,8 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
     m_downloadIndex = 0;
     m_shouldDownloadContentDispositionAttachments = true;
     m_dumpPolicyDelegateCallbacks = false;
+    m_dumpFullScreenCallbacks = false;
+    m_waitBeforeFinishingFullscreenExit = false;
 
     return m_doneResetting;
 }
@@ -1981,6 +2089,9 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
 
     if (WKStringIsEqualToUTF8CString(messageName, "FlushConsoleLogs"))
         return completionHandler(nullptr);
+
+    if (WKStringIsEqualToUTF8CString(messageName, "UpdatePresentation"))
+        return updatePresentation(WTFMove(completionHandler));
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetPageScaleFactor")) {
         auto messageBodyDictionary = dictionaryValue(messageBody);

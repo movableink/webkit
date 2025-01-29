@@ -105,6 +105,7 @@ public:
 #endif // QUICKLOOK_FULLSCREEN
     void close();
     void detachFromClient();
+    void attachToNewClient(WebFullScreenManagerProxyClient&);
 
     enum class FullscreenState : uint8_t {
         NotInFullscreen,

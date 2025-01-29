@@ -53,7 +53,6 @@
 #include "WebContextMenu.h"
 #include "WebContextMenuItem.h"
 #include "WebFrame.h"
-#include "WebFullScreenManager.h"
 #include "WebImage.h"
 #include "WebInspectorInternal.h"
 #include "WebPage.h"
@@ -120,54 +119,6 @@ void WKBundlePageSetPolicyClient(WKBundlePageRef, WKBundlePagePolicyClientBase*)
 void WKBundlePageSetUIClient(WKBundlePageRef pageRef, WKBundlePageUIClientBase* wkClient)
 {
     WebKit::toImpl(pageRef)->setInjectedBundleUIClient(makeUnique<WebKit::InjectedBundlePageUIClient>(wkClient));
-}
-
-void WKBundlePageSetFullScreenClient(WKBundlePageRef pageRef, WKBundlePageFullScreenClientBase* wkClient)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->initializeInjectedBundleFullScreenClient(wkClient);
-#else
-    UNUSED_PARAM(pageRef);
-    UNUSED_PARAM(wkClient);
-#endif
-}
-
-void WKBundlePageWillEnterFullScreen(WKBundlePageRef pageRef)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->fullScreenManager().saveScrollPosition();
-    WebKit::toImpl(pageRef)->fullScreenManager().willEnterFullScreen();
-#else
-    UNUSED_PARAM(pageRef);
-#endif
-}
-
-void WKBundlePageDidEnterFullScreen(WKBundlePageRef pageRef)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->fullScreenManager().didEnterFullScreen();
-#else
-    UNUSED_PARAM(pageRef);
-#endif
-}
-
-void WKBundlePageWillExitFullScreen(WKBundlePageRef pageRef)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->fullScreenManager().willExitFullScreen();
-#else
-    UNUSED_PARAM(pageRef);
-#endif
-}
-
-void WKBundlePageDidExitFullScreen(WKBundlePageRef pageRef)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->fullScreenManager().didExitFullScreen();
-    WebKit::toImpl(pageRef)->fullScreenManager().restoreScrollPosition();
-#else
-    UNUSED_PARAM(pageRef);
-#endif
 }
 
 WKBundleFrameRef WKBundlePageGetMainFrame(WKBundlePageRef pageRef)
