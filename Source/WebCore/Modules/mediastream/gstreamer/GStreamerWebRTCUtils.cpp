@@ -760,6 +760,24 @@ Seconds StatsTimestampConverter::convertFromMonotonicTime(Seconds value) const
     return Performance::reduceTimeResolution(newTimestamp.secondsSinceEpoch());
 }
 
+void forEachTransceiver(const GRefPtr<GstElement>& webrtcBin, Function<bool(GRefPtr<GstWebRTCRTPTransceiver>&&)>&& function)
+{
+    GRefPtr<GArray> transceivers;
+    g_signal_emit_by_name(webrtcBin.get(), "get-transceivers", &transceivers.outPtr());
+
+    if (!transceivers || !transceivers->len)
+        return;
+
+    for (unsigned index = 0; index < transceivers->len; index++) {
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN; // GLib port
+        GRefPtr current = g_array_index(transceivers.get(), GstWebRTCRTPTransceiver*, index);
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END;
+
+        if (function(WTFMove(current)))
+            break;
+    }
+}
+
 #undef GST_CAT_DEFAULT
 
 } // namespace WebCore
