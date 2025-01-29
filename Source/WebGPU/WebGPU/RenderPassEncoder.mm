@@ -726,7 +726,9 @@ RenderPassEncoder::IndexCall RenderPassEncoder::clampIndexBufferToValidValues(ui
 
     [renderCommandEncoder memoryBarrierWithScope:MTLBarrierScopeBuffers afterStages:MTLRenderStageVertex beforeStages:MTLRenderStageVertex];
 
-    [encoder.protectedParentEncoder()->commandBuffer() addCompletedHandler:[protectedDevice = Ref { device }, firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = Ref { *apiIndexBuffer }, indexedIndirectBuffer](id<MTLCommandBuffer>) {
+    [encoder.protectedParentEncoder()->commandBuffer() addCompletedHandler:[protectedDevice = Ref { device }, firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = Ref { *apiIndexBuffer }, indexedIndirectBuffer](id<MTLCommandBuffer> completedCommandBuffer) {
+        if (completedCommandBuffer.status != MTLCommandBufferStatusCompleted)
+            return;
         protectedDevice->protectedQueue()->scheduleWork([firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = WTFMove(refIndexBuffer), indexedIndirectBuffer]() mutable {
             if (indexedIndirectBuffer.length != sizeof(MTLDrawIndexedPrimitivesIndirectArguments) + sizeof(uint32_t))
                 return;
@@ -749,7 +751,9 @@ RenderPassEncoder::IndexCall RenderPassEncoder::clampIndexBufferToValidValues(ui
 
 static void checkForIndirectDrawDeviceLost(Device &device, RenderPassEncoder &encoder, id<MTLBuffer> indirectBuffer)
 {
-    [encoder.protectedParentEncoder()->commandBuffer() addCompletedHandler:[protectedDevice = Ref { device }, indirectBuffer](id<MTLCommandBuffer>) {
+    [encoder.protectedParentEncoder()->commandBuffer() addCompletedHandler:[protectedDevice = Ref { device }, indirectBuffer](id<MTLCommandBuffer> completedCommandBuffer) {
+        if (completedCommandBuffer.status != MTLCommandBufferStatusCompleted)
+            return;
         protectedDevice->protectedQueue()->scheduleWork([indirectBuffer, protectedDevice = WTFMove(protectedDevice)]() mutable {
             if (indirectBuffer.length != sizeof(MTLDrawPrimitivesIndirectArguments) + sizeof(uint32_t))
                 return;
@@ -1124,7 +1128,9 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
                     [commandEncoder useResource:icb.outOfBoundsReadFlag usage:MTLResourceUsageWrite stages:MTLRenderStageVertex];
                     [commandEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:data.indexData.indexCount];
 
-                    [protectedParentEncoder()->commandBuffer() addCompletedHandler:[protectedDevice = Ref { m_device }, firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = Ref { *indexBuffer }, icb](id<MTLCommandBuffer>) {
+                    [protectedParentEncoder()->commandBuffer() addCompletedHandler:[protectedDevice = Ref { m_device }, firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = Ref { *indexBuffer }, icb](id<MTLCommandBuffer> completedCommandBuffer) {
+                        if (completedCommandBuffer.status != MTLCommandBufferStatusCompleted)
+                            return;
                         protectedDevice->protectedQueue()->scheduleWork([icb, firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = WTFMove(refIndexBuffer)]() mutable {
                             id<MTLBuffer> indirectCommandBufferContainer = icb.indirectCommandBufferContainer;
                             refIndexBuffer->didReadOOB(*static_cast<uint32_t*>(indirectCommandBufferContainer.contents), icb.indirectCommandBuffer);
