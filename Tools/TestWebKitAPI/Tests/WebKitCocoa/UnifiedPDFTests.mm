@@ -327,6 +327,25 @@ UNIFIED_PDF_TEST(CopySelectedText)
     EXPECT_WK_STREQ(@"Test", [[UIPasteboard generalPasteboard] string]);
 }
 
+UNIFIED_PDF_TEST(SelectTextInRotatedPage)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"test-rotated-cw-90" withExtension:@"pdf"]]];
+    [webView becomeFirstResponder];
+    [webView waitForNextPresentationUpdate];
+
+    [webView selectTextInGranularity:UITextGranularityWord atPoint:CGPointMake(350, 200)];
+    [webView waitForNextPresentationUpdate];
+
+    RetainPtr contentView = [webView textInputContentView];
+    RetainPtr selectionRects = [contentView selectionRectsForRange:[contentView selectedTextRange]];
+    auto firstSelectionRect = [[selectionRects firstObject] rect];
+
+    EXPECT_EQ(1U, [selectionRects count]);
+    EXPECT_GT(firstSelectionRect.size.height, firstSelectionRect.size.width); // Final selection rect should run vertically.
+    EXPECT_WK_STREQ("Test", [contentView selectedText]);
+}
+
 UNIFIED_PDF_TEST(LookUpSelectedText)
 {
     RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);

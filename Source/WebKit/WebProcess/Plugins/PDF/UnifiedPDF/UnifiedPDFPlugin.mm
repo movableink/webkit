@@ -4231,7 +4231,7 @@ SelectionEndpoint UnifiedPDFPlugin::extendInitialSelection(FloatPoint pointInRoo
     return SelectionEndpoint::Start;
 }
 
-auto UnifiedPDFPlugin::selectionCaretPointInPage(PDFSelection *selection, SelectionEndpoint endpoint) -> PageAndPoint
+auto UnifiedPDFPlugin::selectionCaretPointInPage(PDFSelection *selection, SelectionEndpoint endpoint) const -> PageAndPoint
 {
     bool isStart = endpoint == SelectionEndpoint::Start;
     RetainPtr pages = [selection pages];
@@ -4241,13 +4241,50 @@ auto UnifiedPDFPlugin::selectionCaretPointInPage(PDFSelection *selection, Select
 
     RetainPtr selectionsByLine = [selection selectionsByLine];
     RetainPtr selectedLine = isStart ? [selectionsByLine firstObject] : [selectionsByLine lastObject];
-    FloatRect lineBounds = [selectedLine boundsForPage:page.get()];
-    if (lineBounds.isEmpty())
+    FloatRect boundsInRootView;
+
+    AffineTransform cumulativeTransform = [page transformForBox:kPDFDisplayBoxMediaBox];
+    bool appliedLineTransform = false;
+    [selectedLine enumerateRectsAndTransformsForPage:page.get() usingBlock:[&](CGRect rect, CGAffineTransform transform) {
+        if (std::exchange(appliedLineTransform, true)) {
+            ASSERT_NOT_REACHED();
+            return;
+        }
+
+        boundsInRootView = pageToRootView({ CGRectApplyAffineTransform(rect, transform) }, page.get());
+        cumulativeTransform *= transform;
+    }];
+
+    if (boundsInRootView.isEmpty())
         return { nil, { } };
 
-    // FIXME: Account for RTL and vertical text.
-    auto offsetX = isStart ? lineBounds.x() : lineBounds.maxX();
-    return { WTFMove(page), { offsetX, lineBounds.y() + (lineBounds.height() / 2) } };
+    if (!appliedLineTransform)
+        return { nil, { } };
+
+    auto rotationInRadians = atan2(cumulativeTransform.b(), cumulativeTransform.a());
+    if (!std::isfinite(rotationInRadians))
+        return { nil, { } };
+
+    // FIXME: Account for RTL text and vertical writing mode.
+    return rootViewToPage([&] -> FloatPoint {
+        int clockwiseRotationAngle = static_cast<int>(360 + 90 * std::round(-rad2deg(rotationInRadians) / 90)) % 360;
+        switch (clockwiseRotationAngle) {
+        case 0:
+            // The start/end points are along the left/right edges, respectively.
+            return { isStart ? boundsInRootView.x() : boundsInRootView.maxX(), boundsInRootView.y() + (boundsInRootView.height() / 2) };
+        case 90:
+            // The start/end points are along the top/bottom edges, respectively.
+            return { boundsInRootView.x() + (boundsInRootView.width() / 2), isStart ? boundsInRootView.y() : boundsInRootView.maxY() };
+        case 180:
+            // The start/end points are along the right/left edges, respectively.
+            return { isStart ? boundsInRootView.maxX() : boundsInRootView.x(), boundsInRootView.y() + (boundsInRootView.height() / 2) };
+        case 270:
+            // The start/end points are along the bottom/top edges, respectively.
+            return { boundsInRootView.x() + (boundsInRootView.width() / 2), isStart ? boundsInRootView.maxY() : boundsInRootView.y() };
+        }
+        ASSERT_NOT_REACHED();
+        return boundsInRootView.center();
+    }());
 }
 
 auto UnifiedPDFPlugin::selectionCaretPointInPage(SelectionEndpoint endpoint) const -> PageAndPoint
@@ -4269,8 +4306,9 @@ bool UnifiedPDFPlugin::platformPopulateEditorStateIfNeeded(EditorState& state) c
 #if HAVE(PDFSELECTION_ENUMERATE_RECTS_AND_TRANSFORMS)
     for (PDFPage *page in [selection pages]) {
         auto pageIndex = m_documentLayout.indexForPage(page);
-        [selection enumerateRectsAndTransformsForPage:page usingBlock:[&](CGRect rect, CGAffineTransform) {
-            auto rectInRootView = pageToRootView(FloatRect { rect }, pageIndex);
+        [selection enumerateRectsAndTransformsForPage:page usingBlock:[&](CGRect rect, CGAffineTransform transform) {
+            auto transformedRectInPage = CGRectApplyAffineTransform(rect, transform);
+            auto rectInRootView = pageToRootView(FloatRect { transformedRectInPage }, pageIndex);
             if (rectInRootView.isEmpty())
                 return;
 

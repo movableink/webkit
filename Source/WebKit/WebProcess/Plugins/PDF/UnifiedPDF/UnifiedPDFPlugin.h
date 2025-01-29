@@ -604,7 +604,7 @@ private:
     PDFSelection *selectionBetweenPoints(WebCore::FloatPoint fromPoint, PDFPage *fromPage, WebCore::FloatPoint toPoint, PDFPage *toPage) const;
 #endif
 
-    static PageAndPoint selectionCaretPointInPage(PDFSelection *, SelectionEndpoint);
+    PageAndPoint selectionCaretPointInPage(PDFSelection *, SelectionEndpoint) const;
     PageAndPoint selectionCaretPointInPage(SelectionEndpoint) const;
     void resetInitialSelection();
 #endif // PLATFORM(IOS_FAMILY)
