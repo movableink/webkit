@@ -252,6 +252,7 @@ AVVideoCaptureSource::AVVideoCaptureSource(AVCaptureDevice* avDevice, const Capt
     , m_defaultTorchMode((int64_t)[m_device torchMode])
 {
     [m_device addObserver:m_objcObserver.get() forKeyPath:@"suspended" options:NSKeyValueObservingOptionNew context:(void *)nil];
+    [m_device addObserver:m_objcObserver.get() forKeyPath:@"portraitEffectActive" options:NSKeyValueObservingOptionNew context:(void *)nil];
 }
 
 AVVideoCaptureSource::~AVVideoCaptureSource()
@@ -260,6 +261,7 @@ AVVideoCaptureSource::~AVVideoCaptureSource()
 
     [m_objcObserver disconnect];
     [m_device removeObserver:m_objcObserver.get() forKeyPath:@"suspended"];
+    [m_device removeObserver:m_objcObserver.get() forKeyPath:@"portraitEffectActive"];
 
     if (!m_session)
         return;
@@ -430,6 +432,16 @@ void AVVideoCaptureSource::settingsDidChange(OptionSet<RealtimeMediaSourceSettin
             updateTorch();
         endApplyingConstraints();
         m_pendingSettingsChanges = { };
+    });
+}
+
+void AVVideoCaptureSource::configurationChanged()
+{
+    m_currentSettings = { };
+    m_capabilities = { };
+
+    forEachObserver([](auto& observer) {
+        observer.sourceConfigurationChanged();
     });
 }
 
@@ -1484,6 +1496,8 @@ void AVVideoCaptureSource::deviceDisconnected(RetainPtr<NSNotification> notifica
         source->captureSessionIsRunningDidChange([newValue boolValue]);
     if ([keyPath isEqualToString:@"suspended"])
         source->captureDeviceSuspendedDidChange();
+    if ([keyPath isEqualToString:@"portraitEffectActive"])
+        source->configurationChanged();
 }
 
 - (void)deviceConnectedDidChange:(NSNotification*)notification
