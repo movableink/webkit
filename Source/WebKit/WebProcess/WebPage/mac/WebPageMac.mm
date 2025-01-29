@@ -35,7 +35,7 @@
 #import "InjectedBundleHitTestResult.h"
 #import "InjectedBundlePageContextMenuClient.h"
 #import "LaunchServicesDatabaseManager.h"
-#import "PDFPlugin.h"
+#import "PDFPluginBase.h"
 #import "PageBanner.h"
 #import "PlatformFontInfo.h"
 #import "PluginView.h"

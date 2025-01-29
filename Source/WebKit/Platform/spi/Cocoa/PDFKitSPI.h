@@ -180,3 +180,7 @@
 @interface PDFDocument (AX)
 - (NSArray *)accessibilityChildren:(id)parent;
 @end
+
+@interface PDFAnnotation (AccessibilityPrivate)
+- (id)accessibilityNode;
+@end

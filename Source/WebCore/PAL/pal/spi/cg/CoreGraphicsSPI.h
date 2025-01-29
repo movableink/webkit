@@ -54,6 +54,10 @@
 #include <CoreGraphics/CGEventPrivate.h>
 #endif
 
+#if ENABLE(PDF_PLUGIN) && HAVE(INCREMENTAL_PDF_APIS)
+#include <CoreGraphics/CGDataProviderPrivate.h>
+#endif
+
 #else // USE(APPLE_INTERNAL_SDK)
 
 struct CGFontHMetrics {
@@ -257,6 +261,33 @@ WTF_EXTERN_C_END
 
 #endif // ENABLE(UNIFIED_PDF)
 
+#if ENABLE(PDF_PLUGIN) && HAVE(INCREMENTAL_PDF_APIS)
+
+WTF_EXTERN_C_BEGIN
+
+extern const off_t kCGDataProviderIndeterminateSize;
+extern const CFStringRef kCGDataProviderHasHighLatency;
+
+typedef void (*CGDataProviderGetByteRangesCallback)(void *info,
+    CFMutableArrayRef buffers, const CFRange *ranges, size_t count);
+
+struct CGDataProviderDirectAccessRangesCallbacks {
+    unsigned version;
+    CGDataProviderGetBytesAtPositionCallback getBytesAtPosition;
+    CGDataProviderGetByteRangesCallback getBytesInRanges;
+    CGDataProviderReleaseInfoCallback releaseInfo;
+};
+typedef struct CGDataProviderDirectAccessRangesCallbacks CGDataProviderDirectAccessRangesCallbacks;
+
+extern void CGDataProviderSetProperty(CGDataProviderRef, CFStringRef key, CFTypeRef value);
+extern CGDataProviderRef CGDataProviderCreateMultiRangeDirectAccess(
+    void *info, off_t size,
+    const CGDataProviderDirectAccessRangesCallbacks *);
+
+WTF_EXTERN_C_END
+
+#endif // ENABLE(PDF_PLUGIN) && HAVE(INCREMENTAL_PDF_APIS)
+
 #endif // USE(APPLE_INTERNAL_SDK)
 
 #if PLATFORM(COCOA)
@@ -419,29 +450,6 @@ IOHIDEventRef CGEventCopyIOHIDEvent(CGEventRef);
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
 CGError CGSSetDenyWindowServerConnections(bool);
 #endif
-
-#if ENABLE(LEGACY_PDFKIT_PLUGIN) && !USE(APPLE_INTERNAL_SDK)
-
-extern const off_t kCGDataProviderIndeterminateSize;
-extern const CFStringRef kCGDataProviderHasHighLatency;
-
-typedef void (*CGDataProviderGetByteRangesCallback)(void *info,
-    CFMutableArrayRef buffers, const CFRange *ranges, size_t count);
-    
-struct CGDataProviderDirectAccessRangesCallbacks {
-    unsigned version;
-    CGDataProviderGetBytesAtPositionCallback getBytesAtPosition;
-    CGDataProviderGetByteRangesCallback getBytesInRanges;
-    CGDataProviderReleaseInfoCallback releaseInfo;
-};
-typedef struct CGDataProviderDirectAccessRangesCallbacks CGDataProviderDirectAccessRangesCallbacks;
-
-extern void CGDataProviderSetProperty(CGDataProviderRef, CFStringRef key, CFTypeRef value);
-extern CGDataProviderRef CGDataProviderCreateMultiRangeDirectAccess(
-    void *info, off_t size,
-    const CGDataProviderDirectAccessRangesCallbacks *);
-
-#endif // ENABLE(LEGACY_PDFKIT_PLUGIN) && !USE(APPLE_INTERNAL_SDK)
 
 #if HAVE(LOCKDOWN_MODE_PDF_ADDITIONS)
 CG_EXTERN void CGEnterLockdownModeForPDF();
