@@ -1735,6 +1735,15 @@ bool Quirks::shouldAvoidStartingSelectionOnMouseDown(const Node& target) const
     return false;
 }
 
+bool Quirks::shouldReuseLiveRangeForSelectionUpdate() const
+{
+    if (!needsQuirks())
+        return false;
+    if (!m_quirksData.needsReuseLiveRangeForSelectionUpdateQuirk)
+        m_quirksData.needsReuseLiveRangeForSelectionUpdateQuirk = isDomain("scribd.com"_s);
+    return *m_quirksData.needsReuseLiveRangeForSelectionUpdateQuirk;
+}
+
 #if PLATFORM(IOS_FAMILY)
 
 bool Quirks::needsPointerTouchCompatibility(const Element& target) const

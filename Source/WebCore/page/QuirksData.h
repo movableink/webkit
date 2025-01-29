@@ -83,6 +83,8 @@ struct WEBCORE_EXPORT QuirksData {
     // Requires check at moment of use
     std::optional<bool> needsDisableDOMPasteAccessQuirk;
 
+    std::optional<bool> needsReuseLiveRangeForSelectionUpdateQuirk;
+
 #if PLATFORM(IOS_FAMILY)
     bool mayNeedToIgnoreContentObservation { false };
     bool needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk { false };

@@ -65,6 +65,7 @@
 #include "OpacityCaretAnimator.h"
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
+#include "Quirks.h"
 #include "Range.h"
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
@@ -397,8 +398,7 @@ bool FrameSelection::setSelectionWithoutUpdatingAppearance(const VisibleSelectio
             setNodeFlags(m_selection, false);
             m_selection = newSelection;
             setNodeFlags(m_selection, true);
-            if (!options.contains(SetSelectionOption::MaintainLiveRange))
-                disassociateLiveRange();
+            updateOrDisassociateLiveRange(options.contains(SetSelectionOption::MaintainLiveRange));
             return false;
         }
 
@@ -421,8 +421,7 @@ bool FrameSelection::setSelectionWithoutUpdatingAppearance(const VisibleSelectio
         setNodeFlags(m_selection, false);
         m_selection = newSelection;
         setNodeFlags(m_selection, true);
-        if (!options.contains(SetSelectionOption::MaintainLiveRange))
-            disassociateLiveRange();
+        updateOrDisassociateLiveRange(options.contains(SetSelectionOption::MaintainLiveRange));
     }
 
     // Selection offsets should increase when LF is inserted before the caret in InsertLineBreakCommand. See <https://webkit.org/b/56061>.
@@ -3094,6 +3093,25 @@ void FrameSelection::updateFromAssociatedLiveRange()
         auto end = makeContainerOffsetPosition(m_associatedLiveRange->protectedEndContainer(), m_associatedLiveRange->endOffset());
         setSelection({ start, end }, defaultSetSelectionOptions() | SetSelectionOption::MaintainLiveRange);
     }
+}
+
+void FrameSelection::updateOrDisassociateLiveRange(bool shouldMaintainLiveRange)
+{
+    if (RefPtr associatedDocument = document()) {
+        if (associatedDocument->quirks().shouldReuseLiveRangeForSelectionUpdate()) {
+            auto range = m_selection.range();
+            if (!containsEndpoints(m_document, range)) {
+                // The selection was cleared or is now within a shadow tree.
+                disassociateLiveRange();
+            } else {
+                if (m_associatedLiveRange)
+                    m_associatedLiveRange->updateFromSelection(*range);
+            }
+            return;
+        }
+    }
+    if (!shouldMaintainLiveRange)
+        disassociateLiveRange();
 }
 
 }

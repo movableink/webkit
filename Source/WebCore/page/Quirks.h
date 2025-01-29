@@ -241,6 +241,8 @@ public:
 
     bool shouldAvoidStartingSelectionOnMouseDown(const Node&) const;
 
+    bool shouldReuseLiveRangeForSelectionUpdate() const;
+
     bool needsFacebookStoriesCreationFormQuirk(const Element&, const RenderStyle&) const;
 
 private:
