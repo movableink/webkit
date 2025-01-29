@@ -10,8 +10,7 @@ from scratch, and restoring the needed files with Git. Example commands:
   cp -ar ../path/to/skia Source/ThirdParty/
   git checkout -- \
       Source/ThirdParty/skia/README.WebKit \
-      Source/ThirdParty/skia/CMakeLists.txt \
-      Source/ThirdParty/skia/ext-skia-configure \
+      Source/ThirdParty/skia/CMakeLists.txt
   rm -rf Source/ThirdParty/skia/.git/
   git add -A Source/ThirdParty/skia/
 
