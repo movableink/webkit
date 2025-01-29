@@ -109,6 +109,7 @@ ImageBufferSkiaAcceleratedBackend::~ImageBufferSkiaAcceleratedBackend() = defaul
 
 void ImageBufferSkiaAcceleratedBackend::prepareForDisplay()
 {
+#if USE(COORDINATED_GRAPHICS)
     if (!m_layerContentsDisplayDelegate)
         return;
 
@@ -117,6 +118,7 @@ void ImageBufferSkiaAcceleratedBackend::prepareForDisplay()
         return;
 
     m_layerContentsDisplayDelegate->setDisplayBuffer(CoordinatedPlatformLayerBufferNativeImage::create(image.releaseNonNull(), GLFence::create()));
+#endif
 }
 
 void ImageBufferSkiaAcceleratedBackend::finishAcceleratedRenderingAndCreateFence()
