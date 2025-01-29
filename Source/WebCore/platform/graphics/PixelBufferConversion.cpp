@@ -281,13 +281,12 @@ static void convertSinglePixelUnpremultipliedToUnpremultiplied(std::span<const u
 template<void (*convertFunctor)(std::span<const uint8_t, 4>, std::span<uint8_t, 4>)>
 static void convertImagePixelsUnaccelerated(const ConstPixelBufferConversionView& source, const PixelBufferConversionView& destination, const IntSize& destinationSize)
 {
-    auto sourceRows = source.rows;
-    auto destinationRows = destination.rows;
-
     size_t bytesPerRow = destinationSize.width() * 4;
-    for (int y = 0; y < destinationSize.height(); ++y, skip(sourceRows, source.bytesPerRow), skip(destinationRows, destination.bytesPerRow)) {
+    for (int y = 0; y < destinationSize.height(); ++y) {
+        auto sourceRow = source.rows.subspan(source.bytesPerRow * y);
+        auto destinationRow = destination.rows.subspan(destination.bytesPerRow * y);
         for (size_t x = 0; x < bytesPerRow; x += 4)
-            convertFunctor(sourceRows.subspan(x).subspan<0, 4>(), destinationRows.subspan(x).subspan<0, 4>());
+            convertFunctor(sourceRow.subspan(x).subspan<0, 4>(), destinationRow.subspan(x).subspan<0, 4>());
     }
 }
 
