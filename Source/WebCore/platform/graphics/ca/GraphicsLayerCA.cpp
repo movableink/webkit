@@ -2615,9 +2615,8 @@ void GraphicsLayerCA::updateBackdropFilters(CommitState& commitState)
 
     // If nothing actually changed, no need to touch the layer properties.
     if (!(m_uncommittedChanges & BackdropFiltersChanged) && m_backdropLayer) {
-        // Opaque state depends on ancestor state, and is cheap to set, so just unconditionally update it.
-        m_backdropLayer->setBackdropRootIsOpaque(commitState.backdropRootIsOpaque);
-        return;
+        if (m_backdropLayer->backdropRootIsOpaque() == commitState.backdropRootIsOpaque)
+            return;
     }
 
     auto expectedLayerType = PlatformCALayer::LayerType::LayerTypeBackdropLayer;
