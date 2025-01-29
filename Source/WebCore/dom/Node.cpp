@@ -746,7 +746,7 @@ ExceptionOr<void> Node::remove()
     return parent->removeChild(*this);
 }
 
-void Node::normalize()
+ExceptionOr<void> Node::normalize()
 {
     // Go through the subtree beneath us, normalizing all nodes. This means that
     // any two adjacent text nodes are merged and any empty text nodes are removed.
@@ -792,6 +792,11 @@ void Node::normalize()
             // Both non-empty text nodes. Merge them.
             unsigned offset = text->length();
 
+            if (nextText->length() > StringImpl::MaxLength - offset) {
+                return Exception { ExceptionCode::InvalidModificationError,
+                    "Normalized Node String representation exceeds implementation maximum length."_s };
+            }
+
             // Update start/end for any affected Ranges before appendData since modifying contents might trigger mutation events that modify ordering.
             document->textNodesMerged(nextText, offset);
 
@@ -803,6 +808,8 @@ void Node::normalize()
 
         node = NodeTraversal::nextPostOrder(*node);
     }
+
+    return { };
 }
 
 Ref<Node> Node::cloneNode(bool deep)

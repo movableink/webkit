@@ -193,7 +193,7 @@ public:
     virtual const AtomString& namespaceURI() const;
     virtual const AtomString& prefix() const;
     virtual ExceptionOr<void> setPrefix(const AtomString&);
-    WEBCORE_EXPORT void normalize();
+    WEBCORE_EXPORT ExceptionOr<void> normalize();
 
     bool isSameNode(Node* other) const { return this == other; }
     WEBCORE_EXPORT bool isEqualNode(Node*) const;
