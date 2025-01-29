@@ -1419,7 +1419,7 @@ FloatRect AXIsolatedObject::relativeFrame() const
 {
     FloatRect relativeFrame;
 
-    if (auto cachedRelativeFrame = optionalAttributeValue<IntRect>(AXProperty::RelativeFrame)) {
+    if (std::optional cachedRelativeFrame = this->cachedRelativeFrame()) {
         // We should not have cached a relative frame for elements that get their geometry from their children.
         ASSERT(!m_getsGeometryFromChildren);
         relativeFrame = *cachedRelativeFrame;
@@ -1446,15 +1446,45 @@ FloatRect AXIsolatedObject::relativeFrame() const
 
     // Having an empty relative frame at this point means a frame hasn't been cached yet.
     if (relativeFrame.isEmpty()) {
-        // InitialFrameRect stores the correct size, but not position, of the element before it is painted.
-        // We find the position of the nearest painted ancestor to use as the position until the object's frame
-        // is cached during painting.
-        auto* ancestor = Accessibility::findAncestor<AXIsolatedObject>(*this, false, [] (const auto& object) {
-            return object.hasCachedRelativeFrame();
-        });
-        relativeFrame = rectAttributeValue<FloatRect>(AXProperty::InitialFrameRect);
-        if (ancestor && relativeFrame.location() == FloatPoint())
-            relativeFrame.setLocation(ancestor->relativeFrame().location());
+        std::optional<IntRect> rectFromLabels;
+        if (isControl()) {
+            // For controls, we can try to use the frame of any associated labels.
+            auto labels = labeledByObjects();
+            for (const auto& label : labels) {
+                std::optional frame = downcast<AXIsolatedObject>(label)->cachedRelativeFrame();
+                if (!frame)
+                    continue;
+                if (!rectFromLabels)
+                    rectFromLabels = *frame;
+                else if (rectFromLabels->intersects(*frame))
+                    rectFromLabels->unite(*frame);
+            }
+        }
+
+        if (rectFromLabels && !rectFromLabels->isEmpty())
+            relativeFrame = *rectFromLabels;
+        else {
+            // InitialFrameRect stores the correct size, but not position, of the element before it is painted.
+            // We find the position of the nearest painted ancestor to use as the position until the object's frame
+            // is cached during painting.
+            relativeFrame = rectAttributeValue<FloatRect>(AXProperty::InitialFrameRect);
+
+            std::optional<IntRect> ancestorRelativeFrame;
+            Accessibility::findAncestor<AXIsolatedObject>(*this, false, [&] (const auto& object) {
+                ancestorRelativeFrame = object.cachedRelativeFrame();
+                return ancestorRelativeFrame;
+            });
+
+            if (ancestorRelativeFrame)
+                relativeFrame.setLocation(ancestorRelativeFrame->location());
+        }
+
+        // If an assistive technology is requesting the frame for something,
+        // chances are it's on-screen, so clamp to 0,0 if necessary.
+        if (relativeFrame.x() < 0)
+            relativeFrame.setX(0);
+        if (relativeFrame.y() < 0)
+            relativeFrame.setY(0);
     }
 
     relativeFrame.moveBy({ remoteFrameOffset() });

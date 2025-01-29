@@ -895,6 +895,9 @@ accessibility/datalist.html [ WontFix ]
 fast/forms/datalist [ WontFix ]
 imported/w3c/web-platform-tests/html/semantics/forms/the-datalist-element [ WontFix ]
 
+# Missing AccessibilityController::setForceInitialFrameCaching implementation.
+accessibility/mac/clipped-radio-input-frame.html [ WontFix ]
+
 accessibility/range-input-increment-decrement-fires-input-event.html [ WontFix ]
 
 # Default ARIA for custom elements are not yet enabled

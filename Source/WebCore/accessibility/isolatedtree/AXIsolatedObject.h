@@ -235,7 +235,7 @@ private:
     FloatPoint screenRelativePosition() const final;
     IntPoint remoteFrameOffset() const final;
     FloatRect relativeFrame() const final;
-    bool hasCachedRelativeFrame() const { return optionalAttributeValue<IntRect>(AXProperty::RelativeFrame).has_value(); }
+    std::optional<IntRect> cachedRelativeFrame() const { return optionalAttributeValue<IntRect>(AXProperty::RelativeFrame); }
 #if PLATFORM(MAC)
     FloatRect primaryScreenRect() const final;
 #endif
