@@ -496,8 +496,7 @@ private:
         String scriptString;
     };
 
-    std::unique_ptr<WTR::UIScriptContext> m_UIScriptContext;
-    UIScriptInvocationData* m_pendingUIScriptInvocationData { nullptr };
+    RefPtr<WTR::UIScriptContext> m_UIScriptContext;
 
     std::vector<std::string> m_openPanelFiles;
 #if PLATFORM(IOS_FAMILY)

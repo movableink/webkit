@@ -48,7 +48,6 @@ UIScriptContext::UIScriptContext(UIScriptContextDelegate& delegate, UIScriptCont
 UIScriptContext::~UIScriptContext()
 {
     m_controller->waitForOutstandingCallbacks();
-    m_controller->contextDestroyed();
 }
 
 void UIScriptContext::runUIScript(const String& script, unsigned scriptCallbackID)

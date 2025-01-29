@@ -93,11 +93,7 @@ TestInvocation::TestInvocation(WKURLRef url, const TestOptions& options)
     m_dumpFrameLoadCallbacks = urlContains("loading/"_s) && !urlContains("://localhost"_s);
 }
 
-TestInvocation::~TestInvocation()
-{
-    if (m_pendingUIScriptInvocationData)
-        m_pendingUIScriptInvocationData->testInvocation = nullptr;
-}
+TestInvocation::~TestInvocation() = default;
 
 bool TestInvocation::urlContains(StringView searchString) const
 {
@@ -638,7 +634,6 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         invocationData->testInvocation = this;
         invocationData->callbackID = uint64Value(messageBodyDictionary, "CallbackID");
         invocationData->scriptString = stringValue(messageBodyDictionary, "Script");
-        m_pendingUIScriptInvocationData = invocationData;
         WKPageCallAfterNextPresentationUpdate(TestController::singleton().mainWebView()->page(), invocationData, runUISideScriptAfterUpdateCallback);
         return;
     }
@@ -649,7 +644,6 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         invocationData->testInvocation = this;
         invocationData->callbackID = uint64Value(messageBodyDictionary, "CallbackID");
         invocationData->scriptString = stringValue(messageBodyDictionary, "Script");
-        m_pendingUIScriptInvocationData = invocationData;
         runUISideScriptImmediately(nullptr, invocationData);
         return;
     }
@@ -1438,7 +1432,7 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
 void TestInvocation::runUISideScriptImmediately(WKErrorRef, void* context)
 {
     UIScriptInvocationData* data = static_cast<UIScriptInvocationData*>(context);
-    if (TestInvocation* invocation = data->testInvocation) {
+    if (TestInvocation* invocation = data->testInvocation.get()) {
         RELEASE_ASSERT(TestController::singleton().isCurrentInvocation(invocation));
         invocation->runUISideScript(data->scriptString.get(), data->callbackID);
     }
@@ -1452,10 +1446,8 @@ void TestInvocation::runUISideScriptAfterUpdateCallback(WKErrorRef error, void* 
 
 void TestInvocation::runUISideScript(WKStringRef script, unsigned scriptCallbackID)
 {
-    m_pendingUIScriptInvocationData = nullptr;
-
     if (!m_UIScriptContext)
-        m_UIScriptContext = makeUnique<UIScriptContext>(*this, UIScriptController::create);
+        m_UIScriptContext = UIScriptContext::create(*this, UIScriptController::create);
 
     m_UIScriptContext->runUIScript(toWTFString(script), scriptCallbackID);
 }

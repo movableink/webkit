@@ -2283,13 +2283,11 @@ static unsigned nextUIScriptCallbackID()
 
 void TestRunner::runUIScript(JSContextRef context, JSStringRef script, JSValueRef callback)
 {
-    m_pendingUIScriptInvocationData = nullptr;
-
     unsigned callbackID = nextUIScriptCallbackID();
     cacheTestRunnerCallback(callbackID, callback);
 
     if (!m_UIScriptContext)
-        m_UIScriptContext = makeUniqueWithoutFastMallocCheck<WTR::UIScriptContext>(*this, WTR::UIScriptController::create);
+        m_UIScriptContext = WTR::UIScriptContext::create(*this, WTR::UIScriptController::create);
 
     String scriptString({ reinterpret_cast<const UChar*>(JSStringGetCharactersPtr(script)), JSStringGetLength(script) });
     m_UIScriptContext->runUIScript(scriptString, callbackID);

@@ -180,7 +180,7 @@ NSTableView *UIScriptControllerMac::dataListSuggestionsTableView() const
     return nil;
 }
 
-static void playBackEvents(WKWebView *webView, UIScriptContext *context, NSString *eventStream, JSValueRef callback)
+static void playBackEvents(WKWebView *webView, UIScriptContext& context, NSString *eventStream, JSValueRef callback)
 {
     NSError *error = nil;
     NSArray *eventDicts = [NSJSONSerialization JSONObjectWithData:[eventStream dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
@@ -190,10 +190,12 @@ static void playBackEvents(WKWebView *webView, UIScriptContext *context, NSStrin
         return;
     }
 
-    unsigned callbackID = context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
-    [EventStreamPlayer playStream:eventDicts window:webView.window completionHandler:^{
+    unsigned callbackID = context.prepareForAsyncTask(callback, CallbackTypeNonPersistent);
+    [EventStreamPlayer playStream:eventDicts window:webView.window completionHandler:makeBlockPtr([context = WeakPtr { context }, callbackID] {
+        if (!context)
+            return;
         context->asyncTaskComplete(callbackID);
-    }];
+    }).get()];
 }
 
 void UIScriptControllerMac::clearAllCallbacks()
@@ -229,18 +231,27 @@ void UIScriptControllerMac::chooseMenuAction(JSStringRef jsAction, JSValueRef ca
 
 void UIScriptControllerMac::beginBackSwipe(JSValueRef callback)
 {
-    playBackEvents(webView(), m_context, beginSwipeBackEventStream(), callback);
+    RefPtr context = m_context.get();
+    if (!context)
+        return;
+    playBackEvents(webView(), *context, beginSwipeBackEventStream(), callback);
 }
 
 void UIScriptControllerMac::completeBackSwipe(JSValueRef callback)
 {
-    playBackEvents(webView(), m_context, completeSwipeBackEventStream(), callback);
+    RefPtr context = m_context.get();
+    if (!context)
+        return;
+    playBackEvents(webView(),  *context, completeSwipeBackEventStream(), callback);
 }
 
 void UIScriptControllerMac::playBackEventStream(JSStringRef eventStream, JSValueRef callback)
 {
+    RefPtr context = m_context.get();
+    if (!context)
+        return;
     auto stream = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, eventStream));
-    playBackEvents(webView(), m_context, (__bridge NSString *)stream.get(), callback);
+    playBackEvents(webView(), *context, (__bridge NSString *)stream.get(), callback);
 }
 
 void UIScriptControllerMac::firstResponderSuppressionForWebView(bool shouldSuppress)
