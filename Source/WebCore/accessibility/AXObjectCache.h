@@ -780,9 +780,8 @@ private:
     OptionSet<ActivityState> m_pageActivityState;
     UncheckedKeyHashMap<AXID, Ref<AccessibilityObject>> m_objects;
 
-    // The pointers in these mapping HashMaps should never be dereferenced.
-    UncheckedKeyHashMap<SingleThreadWeakRef<RenderObject>, AXID> m_renderObjectMapping;
-    UncheckedKeyHashMap<SingleThreadWeakRef<Widget>, AXID> m_widgetObjectMapping;
+    WeakHashMap<RenderObject, AXID, SingleThreadWeakPtrImpl> m_renderObjectMapping;
+    WeakHashMap<Widget, AXID, SingleThreadWeakPtrImpl> m_widgetObjectMapping;
 
     // FIXME: The type for m_nodeObjectMapping really should be:
     // UncheckedKeyHashMap<WeakRef<Node, WeakPtrImplWithEventTargetData>, AXID>
