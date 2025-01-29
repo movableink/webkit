@@ -27,6 +27,7 @@
 
 #import "ArgumentCodersCocoa.h"
 #import "CoreIPCError.h"
+#import "CoreIPCPlistDictionary.h"
 #import "Encoder.h"
 #import "MessageSenderInlines.h"
 #import "test.h"
@@ -930,6 +931,26 @@ static void runTestCF(const CFHolderForTesting& holderArg)
 {
     runTestCFWithExpectedResult(holderArg, holderArg);
 };
+
+TEST(IPCSerialization, Plist)
+{
+    NSDictionary *plist = @{
+        @"key1": @"A String",
+        @"key2": @1.0,
+        @"key3": @[
+            @{
+                @"date": NSDate.now,
+                @"number": @2.0,
+                @"string": @"A String"
+            },
+        ],
+        @"key4": [NSData dataWithBytes:"Data test" length:strlen("Data test")]
+    };
+
+    auto p = WebKit::CoreIPCPlistDictionary(plist);
+    auto d = p.toID();
+    EXPECT_TRUE([d.get() isEqual:plist]);
+}
 
 TEST(IPCSerialization, Basic)
 {
