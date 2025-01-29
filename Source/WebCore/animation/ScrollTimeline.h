@@ -53,7 +53,8 @@ public:
     static Ref<ScrollTimeline> create(Scroller, ScrollAxis);
 
     virtual Element* source() const;
-    void setSource(const Element*);
+    void setSource(Element*);
+    void setSource(const Styleable&);
 
     ScrollAxis axis() const { return m_axis; }
     void setAxis(ScrollAxis axis) { m_axis = axis; }
@@ -100,6 +101,8 @@ private:
 
     void animationTimingDidChange(WebAnimation&) override;
 
+    void removeTimelineFromDocument(Element*);
+
     struct CurrentTimeData {
         float scrollOffset { 0 };
         float maxScrollOffset { 0 };
@@ -107,7 +110,7 @@ private:
 
     void cacheCurrentTime();
 
-    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_source;
+    WeakStyleable m_source;
     ScrollAxis m_axis { ScrollAxis::Block };
     AtomString m_name;
     Scroller m_scroller { Scroller::Self };

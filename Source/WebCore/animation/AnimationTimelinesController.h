@@ -80,7 +80,7 @@ public:
     WEBCORE_EXPORT void resumeAnimations();
     bool animationsAreSuspended() const { return m_isSuspended; }
 
-    void registerNamedScrollTimeline(const AtomString&, const Element&, ScrollAxis);
+    void registerNamedScrollTimeline(const AtomString&, Element&, ScrollAxis);
     void registerNamedViewTimeline(const AtomString&, const Element&, ScrollAxis, ViewTimelineInsets&&);
     void unregisterNamedTimeline(const AtomString&, const Element&);
     void setTimelineForName(const AtomString&, const Element&, WebAnimation&);

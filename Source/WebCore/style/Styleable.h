@@ -199,11 +199,19 @@ public:
 
     explicit operator bool() const { return !!m_element; }
 
+    bool operator==(const WeakStyleable& other) const = default;
+
     WeakStyleable& operator=(const Styleable& styleable)
     {
         m_element = styleable.element;
         m_pseudoElementIdentifier = styleable.pseudoElementIdentifier;
         return *this;
+    }
+
+    WeakStyleable(const Styleable& styleable)
+    {
+        m_element = styleable.element;
+        m_pseudoElementIdentifier = styleable.pseudoElementIdentifier;
     }
 
     std::optional<Styleable> styleable() const
@@ -212,6 +220,9 @@ public:
             return std::nullopt;
         return Styleable(*m_element, m_pseudoElementIdentifier);
     }
+
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> element() const { return m_element; }
+    std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier() const { return m_pseudoElementIdentifier; }
 
 private:
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_element;

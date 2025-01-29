@@ -424,7 +424,7 @@ void AnimationTimelinesController::updateTimelineForTimelineScope(const Ref<Scro
     }
 }
 
-void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString& name, const Element& source, ScrollAxis axis)
+void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString& name, Element& source, ScrollAxis axis)
 {
     LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::registerNamedScrollTimeline: " << name << " source: " << source);
 
