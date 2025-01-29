@@ -2161,14 +2161,22 @@ Page* AccessibilityObject::page() const
 
 LocalFrameView* AccessibilityObject::documentFrameView() const 
 { 
-    const AccessibilityObject* object = this;
-    while (object && !object->isAccessibilityRenderObject()) 
+    RefPtr<const AccessibilityObject> object = this;
+    while (object) {
+        // Ascend until we find an ancestor with a valid renderer or node, from which we can
+        // actually get a frameview.
+        if (auto* axRenderObject = dynamicDowncast<AccessibilityRenderObject>(*object)) {
+            if (axRenderObject->renderer() || axRenderObject->node()) {
+                object = axRenderObject;
+                break;
+            }
+        } else if (auto* axNodeObject = dynamicDowncast<AccessibilityNodeObject>(*object); axNodeObject && axNodeObject->node()) {
+            object = axNodeObject;
+            break;
+        }
         object = object->parentObject();
-        
-    if (!object)
-        return nullptr;
-
-    return object->documentFrameView();
+    }
+    return object ? object->documentFrameView() : nullptr;
 }
 
 const AccessibilityObject::AccessibilityChildrenVector& AccessibilityObject::children(bool updateChildrenIfNeeded)
