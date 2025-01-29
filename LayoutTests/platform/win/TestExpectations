@@ -1202,6 +1202,11 @@ imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-position-t
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-to-sticky-003.html [ Pass ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-to-sticky-004.html [ Pass ]
 
+# fullscreen isn't supported yet
+imported/w3c/web-platform-tests/css/selectors/invalidation/fullscreen-pseudo-class-in-has.html [ Skip ] # Failure
+imported/w3c/web-platform-tests/css/selectors/invalidation/modal-pseudo-class-in-has.html [ Skip ] # Failure
+imported/w3c/web-platform-tests/css/selectors/modal-pseudo-class.html [ Skip ] # Failure
+
 css3/blending/blend-mode-accelerated-parent-overflow-hidden.html [ Skip ] # ImageOnlyFailure
 css3/blending/blend-mode-body-child-isolate-html-background-color.html [ Skip ] # ImageOnlyFailure
 css3/blending/blend-mode-body-composited-child-background-color.html [ Skip ] # ImageOnlyFailure
@@ -4221,7 +4226,6 @@ fast/constructors/event-source-caching.html [ Failure ]
 fast/events/5056619.html [ Failure ]
 fast/events/keydown-leftright-keys.html [ Failure ]
 fast/events/mouse-cursor-change.html [ Failure ]
-fast/events/mouse-cursor-image-set.html [ Failure ]
 fast/events/mouse-cursor-no-mousemove.html [ Failure ]
 fast/events/mouse-cursor-udpate-during-raf.html [ Failure ]
 fast/events/selectstart-by-single-click-with-shift.html [ Failure ]
