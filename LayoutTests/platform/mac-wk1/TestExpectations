@@ -3023,3 +3023,5 @@ webkit.org/b/286185 [ Debug ] fast/canvas/webgl/tex-image-and-sub-image-2d-with-
 webkit.org/b/286387 [ Debug ] inspector/worker/worker-create-and-terminate.html [ Pass Failure ]
 
 webkit.org/b/286392 imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid-baseline-008.html [ Pass Failure ]
+
+webkit.org/b/286602 media/media-source/media-detachablemse-append.html [ Pass Failure ]
