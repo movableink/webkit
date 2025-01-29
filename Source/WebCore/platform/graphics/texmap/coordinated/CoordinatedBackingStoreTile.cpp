@@ -85,7 +85,7 @@ void CoordinatedBackingStoreTile::processPendingUpdates(TextureMapper& textureMa
             buffer.serverWait();
 
             // Fast path: whole tile content changed -- take ownership of the incoming texture, replacing the existing tile buffer (avoiding texture copies).
-            if (update.sourceRect.size() == update.tileRect.size()) {
+            if (update.sourceRect.size() == update.tileRect.size() && update.sourceRect.size() == update.buffer->size()) {
                 ASSERT(update.sourceRect.location().isZero());
                 m_texture->swapTexture(buffer.texture());
             } else
