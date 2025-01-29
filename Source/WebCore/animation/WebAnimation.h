@@ -35,6 +35,7 @@
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "Styleable.h"
+#include "TimelineRange.h"
 #include "WebAnimationTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>

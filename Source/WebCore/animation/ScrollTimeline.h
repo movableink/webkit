@@ -29,6 +29,7 @@
 #include "Element.h"
 #include "ScrollAxis.h"
 #include "ScrollTimelineOptions.h"
+#include "Styleable.h"
 #include <wtf/Ref.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -42,8 +43,6 @@ class RenderStyle;
 class ScrollableArea;
 
 struct TimelineRange;
-
-enum class Scroller : uint8_t { Nearest, Root, Self };
 
 TextStream& operator<<(TextStream&, Scroller);
 

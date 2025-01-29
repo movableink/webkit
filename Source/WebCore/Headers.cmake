@@ -1138,6 +1138,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/Position.h
     dom/ProcessingInstruction.h
     dom/ProgressEvent.h
+    dom/PseudoElement.h
     dom/QualifiedName.h
     dom/RadioButtonGroups.h
     dom/Range.h

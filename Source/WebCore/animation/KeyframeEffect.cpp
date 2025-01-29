@@ -26,10 +26,10 @@
 #include "config.h"
 #include "KeyframeEffect.h"
 
-#include "Animation.h"
 #include "AnimationTimelinesController.h"
 #include "CSSAnimation.h"
 #include "CSSKeyframeRule.h"
+#include "CSSParserContext.h"
 #include "CSSPropertyAnimation.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"

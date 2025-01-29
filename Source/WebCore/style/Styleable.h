@@ -26,8 +26,6 @@
 #pragma once
 
 #include "Element.h"
-#include "ElementRuleCollector.h"
-#include "KeyframeEffectStack.h"
 #include "PseudoElement.h"
 #include "PseudoElementIdentifier.h"
 #include "RenderStyleConstants.h"
@@ -102,10 +100,7 @@ struct Styleable {
         return element.hasKeyframeEffects(pseudoElementIdentifier);
     }
 
-    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, UncheckedKeyHashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext) const
-    {
-        return element.ensureKeyframeEffectStack(pseudoElementIdentifier).applyKeyframeEffects(targetStyle, affectedProperties, previousLastStyleChangeEventStyle, resolutionContext);
-    }
+    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, UncheckedKeyHashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext&) const;
 
     const AnimationCollection* animations() const
     {

@@ -294,6 +294,11 @@ void Styleable::willChangeRenderer() const
     }
 }
 
+OptionSet<AnimationImpact> Styleable::applyKeyframeEffects(RenderStyle& targetStyle, UncheckedKeyHashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext) const
+{
+    return element.ensureKeyframeEffectStack(pseudoElementIdentifier).applyKeyframeEffects(targetStyle, affectedProperties, previousLastStyleChangeEventStyle, resolutionContext);
+}
+
 void Styleable::cancelStyleOriginatedAnimations() const
 {
     cancelStyleOriginatedAnimations({ });

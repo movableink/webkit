@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AcceleratedEffect.h"
+#include "Animation.h"
 #include "AnimationEffect.h"
 #include "AnimationEffectPhase.h"
 #include "BlendingKeyframes.h"

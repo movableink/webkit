@@ -42,12 +42,6 @@ class Element;
 
 struct TimelineRange;
 
-struct ViewTimelineInsets {
-    std::optional<Length> start;
-    std::optional<Length> end;
-    bool operator==(const ViewTimelineInsets&) const = default;
-};
-
 class ViewTimeline final : public ScrollTimeline {
 public:
     static ExceptionOr<Ref<ViewTimeline>> create(Document&, ViewTimelineOptions&& = { });

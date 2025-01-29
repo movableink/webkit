@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InspectorAnimationAgent.h"
 
+#include "Animation.h"
 #include "AnimationEffect.h"
 #include "AnimationEffectPhase.h"
 #include "BlendingKeyframes.h"

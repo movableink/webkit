@@ -29,11 +29,13 @@
 #include "CSSAnimation.h"
 #include "CSSNumericFactory.h"
 #include "CSSNumericValue.h"
+#include "CSSParserContext.h"
 #include "CSSPropertyParserConsumer+Easing.h"
 #include "CommonAtomStrings.h"
 #include "FillMode.h"
 #include "JSComputedEffectTiming.h"
 #include "ScriptExecutionContext.h"
+#include "ScrollTimeline.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
 #include <wtf/TZoneMallocInlines.h>
