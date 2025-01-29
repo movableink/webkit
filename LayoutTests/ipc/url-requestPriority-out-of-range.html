@@ -38,20 +38,13 @@
                                         timeWindowDelay: 118,
                                         timeWindowDuration: 15,
                                         networkServiceType: 0,
-                                        requestPriority: 0,
+                                        // must be -1 to 4
+                                        requestPriority: 20,
                                         isHTTP: {
                                             optionalValue: true
                                         },
                                         httpMethod: {},
-                                        // This crashes CFNetwork
-                                        headerFields: {
-                                            optionalValue: [{
-                                                alias: ['A', {
-                                                    variantType: 'String',
-                                                    variant: location.href
-                                                }]
-                                            }]
-                                        },
+                                        headerFields: {},
                                         body: {
                                             optionalValue: {
                                                 dataReference: {}
