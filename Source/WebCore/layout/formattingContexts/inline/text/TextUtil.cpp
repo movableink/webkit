@@ -668,6 +668,12 @@ bool TextUtil::canUseSimplifiedTextMeasuring(StringView textContent, const FontC
     if (fontCascade.wordSpacing() || fontCascade.letterSpacing())
         return false;
 
+#if USE(FONT_VARIANT_VIA_FEATURES)
+    auto fontVariantCaps = fontCascade.fontDescription().variantCaps();
+    if (fontVariantCaps == FontVariantCaps::Small || fontVariantCaps == FontVariantCaps::AllSmall || fontVariantCaps ==  FontVariantCaps::Petite || fontVariantCaps == FontVariantCaps::AllPetite)
+        return false;
+#endif
+
     // Additional check on the font codepath.
     auto run = TextRun { textContent };
     run.setCharacterScanForCodePath(false);
