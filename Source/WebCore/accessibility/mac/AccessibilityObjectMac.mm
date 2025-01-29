@@ -660,8 +660,7 @@ Vector<uint8_t> AXRemoteFrame::generateRemoteToken() const
 {
     if (auto* parent = parentObject()) {
         // We use the parent's wrapper so that the remote frame acts as a pass through for the remote token bridge.
-        NSData *data = [NSAccessibilityRemoteUIElement remoteTokenForLocalUIElement:parent->wrapper()];
-        return makeVector(data);
+        return makeVector([NSAccessibilityRemoteUIElement remoteTokenForLocalUIElement:parent->wrapper()]);
     }
 
     return { };
