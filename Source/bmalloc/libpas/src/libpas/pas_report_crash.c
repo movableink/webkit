@@ -173,7 +173,7 @@ kern_return_t pas_report_crash_extract_pgm_failure(vm_address_t fault_address, m
 
     }
 
-    return KERN_FAILURE;
+    return KERN_NOT_FOUND;
 }
 #endif /* __APPLE__ */
 
