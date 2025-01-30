@@ -161,10 +161,6 @@
 #endif
 
 #if OS(DARWIN) && !defined(BUILDING_WITH_CMAKE)
-#define HAVE_STRNSTR 1
-#endif
-
-#if OS(DARWIN) && !defined(BUILDING_WITH_CMAKE)
 #define HAVE_SYS_PARAM_H 1
 #endif
 

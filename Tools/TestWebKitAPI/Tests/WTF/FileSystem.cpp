@@ -30,6 +30,7 @@
 #include "Utilities.h"
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
 #include <wtf/text/MakeString.h>
 
@@ -125,7 +126,7 @@ TEST_F(FileSystemTest, MappingExistingFile)
     EXPECT_TRUE(success);
     EXPECT_TRUE(!!mappedFileData);
     EXPECT_TRUE(mappedFileData.size() == strlen(FileSystemTestData));
-    EXPECT_TRUE(strnstr(FileSystemTestData, byteCast<char>(mappedFileData.span().data()), mappedFileData.size()));
+    EXPECT_TRUE(contains(FileSystemTestData.span(), mappedFileData.span()));
 }
 
 TEST_F(FileSystemTest, MappingExistingEmptyFile)
