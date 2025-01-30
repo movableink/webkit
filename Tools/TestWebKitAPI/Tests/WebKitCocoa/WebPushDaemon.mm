@@ -887,6 +887,13 @@ public:
         return [getPushSubscription() isKindOfClass:[NSDictionary class]];
     }
 
+    bool hasServiceWorkerRegistration()
+    {
+        NSError *error = nil;
+        id obj = [m_webView objectByCallingAsyncFunction:@"return await navigator.serviceWorker.getRegistration()" withArguments:@{ } error:&error];
+        return error ?: obj;
+    }
+
     // Can be used in cases where the service worker was unregistered (in which case
     // hasPushSubscription would fail, since PushManager.getSubscription() fails if there is no
     // active service worker).
@@ -1899,18 +1906,22 @@ TEST_F(WebPushDTest, NotificationClickExtendsITPCleanupTimerBy30Days)
     auto& v = webViews().last();
     v->subscribe();
 
+    EXPECT_TRUE(v->hasServiceWorkerRegistration());
     EXPECT_TRUE(v->hasPushSubscription());
 
     v->assertPushEventSucceeds(0);
     v->assertPushEventSucceeds(29);
     v->simulateNotificationClick();
+    EXPECT_TRUE(v->hasServiceWorkerRegistration());
     EXPECT_TRUE(v->hasPushSubscription());
 
     v->assertPushEventSucceeds(58);
+    EXPECT_TRUE(v->hasServiceWorkerRegistration());
     EXPECT_TRUE(v->hasPushSubscription());
 
-    v->assertPushEventFails(61);
-    EXPECT_FALSE(v->hasPushSubscription());
+    v->setITPTimeAdvance(61);
+    EXPECT_FALSE(v->hasServiceWorkerRegistration());
+    EXPECT_TRUE(v->hasPushSubscription());
 }
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
