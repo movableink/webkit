@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef PAS_UTILS_H
@@ -53,13 +53,13 @@ PAS_IGNORE_CLANG_WARNINGS_BEGIN("qualifier-requires-header")
 #define PAS_BEGIN_EXTERN_C __PAS_BEGIN_EXTERN_C
 #define PAS_END_EXTERN_C __PAS_END_EXTERN_C
 
-#if defined(PAS_BMALLOC) && PAS_BMALLOC
+#if PAS_BMALLOC
 #if defined(__has_include)
 #if __has_include(<WebKitAdditions/pas_utils_additions.h>) && !PAS_ENABLE_TESTING
 #include <WebKitAdditions/pas_utils_additions.h>
-#endif // __has_include(<WebKitAdditions/pas_utils_additions.h>) && !PAS_ENABLE_TESTING
-#endif // defined(__has_include)
-#endif // defined(PAS_BMALLOC) && PAS_BMALLOC
+#endif
+#endif
+#endif
 
 PAS_BEGIN_EXTERN_C;
 
@@ -1135,7 +1135,7 @@ static inline uintptr_t pas_round_up_to_next_power_of_2(uintptr_t value)
         right = _swap_tmp; \
     } while (0)
 
-static inline bool pas_non_empty_ranges_overlap(uintptr_t left_min, uintptr_t left_max,
+static inline bool pas_non_empty_ranges_overlap(uintptr_t left_min, uintptr_t left_max, 
                                                 uintptr_t right_min, uintptr_t right_max)
 {
     PAS_ASSERT(left_min < left_max);
@@ -1153,7 +1153,7 @@ static inline bool pas_ranges_overlap(uintptr_t left_min, uintptr_t left_max,
 {
     PAS_ASSERT(left_min <= left_max);
     PAS_ASSERT(right_min <= right_max);
-
+    
     // Empty ranges interfere with nothing.
     if (left_min == left_max)
         return false;
