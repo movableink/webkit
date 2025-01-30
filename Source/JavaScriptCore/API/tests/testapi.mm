@@ -2095,7 +2095,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         dataVaultURL = [NSURL fileURLWithPath:userDirPath isDirectory:YES];
         dataVaultURL = [dataVaultURL URLByAppendingPathComponent:@"JavaScriptCore" isDirectory:YES];
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         rootless_mkdir_datavault(dataVaultURL.path.UTF8String, 0700, "JavaScriptCore");
+ALLOW_DEPRECATED_DECLARATIONS_END
     });
 
     return [dataVaultURL URLByAppendingPathComponent:name isDirectory:NO];

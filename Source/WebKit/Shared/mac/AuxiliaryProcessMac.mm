@@ -322,8 +322,10 @@ static bool ensureSandboxCacheDirectory(const SandboxInfo& info)
 
     auto makeDataVault = [&] {
         do {
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (!rootless_mkdir_datavault(directoryPath.data(), 0700, storageClass))
                 return true;
+ALLOW_DEPRECATED_DECLARATIONS_END
         } while (errno == EAGAIN);
         return false;
     };
