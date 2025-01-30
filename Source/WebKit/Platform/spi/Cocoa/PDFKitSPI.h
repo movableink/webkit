@@ -98,28 +98,28 @@
 #endif
 @end
 
+@interface PDFDocument (Annotations)
+- (void)resetFormFields:(PDFActionResetForm *)action;
 #if HAVE(PDFDOCUMENT_ANNOTATIONS_FOR_FIELD_NAME)
-@interface PDFDocument (PDFDocumentPriv)
 - (NSArray *)annotationsForFieldName:(NSString *)fieldname;
-@end
 #endif
+@end
 
 @interface PDFAction (PDFActionPriv)
 - (NSArray *)nextActions;
 @end
 
-#endif // HAVE(PDFKIT)
-
-#endif // USE(APPLE_INTERNAL_SDK)
-
 #if HAVE(INCREMENTAL_PDF_APIS)
-@interface PDFDocument ()
+@interface PDFDocument (IncrementalLoading)
 -(instancetype)initWithProvider:(CGDataProviderRef)dataProvider;
 -(void)preloadDataOfPagesInRange:(NSRange)range onQueue:(dispatch_queue_t)queue completion:(void (^)(NSIndexSet* loadedPageIndexes))completionBlock;
--(void)resetFormFields:(PDFActionResetForm *) action;
 @property (readwrite, nonatomic) BOOL hasHighLatencyDataProvider;
 @end
 #endif // HAVE(INCREMENTAL_PDF_APIS)
+
+#endif // HAVE(PDFKIT)
+
+#endif // USE(APPLE_INTERNAL_SDK)
 
 #if ENABLE(UNIFIED_PDF)
 @interface PDFDocument (IPI)

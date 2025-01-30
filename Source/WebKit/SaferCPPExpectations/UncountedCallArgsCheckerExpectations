@@ -414,7 +414,6 @@ WebProcess/Network/webrtc/LibWebRTCProvider.cpp
 WebProcess/Network/webrtc/LibWebRTCSocketFactory.cpp
 WebProcess/Network/webrtc/RTCDataChannelRemoteManager.cpp
 WebProcess/Network/webrtc/WebRTCMonitor.cpp
-WebProcess/Plugins/PDF/PDFIncrementalLoader.mm
 WebProcess/Plugins/PDF/PDFPlugin.mm
 WebProcess/Plugins/PDF/PDFPluginAnnotation.mm
 WebProcess/Plugins/PDF/PDFPluginBase.mm
