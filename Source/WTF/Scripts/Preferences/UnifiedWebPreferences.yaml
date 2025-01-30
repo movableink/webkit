@@ -7756,7 +7756,6 @@ UseAVCaptureDeviceRotationCoordinatorAPI:
   condition: HAVE(AVCAPTUREDEVICEROTATIONCOORDINATOR)
   defaultValue:
     WebKit:
-      "PLATFORM(VISION)": true
       "PLATFORM(APPLETV)": true
       default: false
   sharedPreferenceForWebProcess: true
