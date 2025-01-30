@@ -272,13 +272,13 @@ class GitHubMixin(object):
             except Exception as e:
                 yield self._addToLog('stdio', 'Failed to retrieve number of PRs.\n')
 
-            if attempt > retry:
+            if attempt >= retry:
                 return defer.returnValue(None)
             wait_for = (attempt + 1) * 15
-            yield self._addToLog('stdio', 'Backing off for {} seconds before retrying.\n'.format(wait_for))
+            yield self._addToLog('stdio', f'\nBacking off for {wait_for} seconds before retrying.\n')
             yield task.deferLater(reactor, wait_for, lambda: None)
 
-        yield self._addToLog('stdio', 'There are {} PR(s) in safe-merge-queue.\n'.format(num_prs))
+        yield self._addToLog('stdio', f'There are {num_prs} PR(s) in safe-merge-queue.\n')
         defer.returnValue(num_prs)
 
     @defer.inlineCallbacks
@@ -287,7 +287,7 @@ class GitHubMixin(object):
         if not api_url:
             return defer.returnValue(None)
 
-        pr_url = '{}/pulls/{}'.format(api_url, pr_number)
+        pr_url = f'{api_url}/pulls/{pr_number}'
         content = yield self.fetch_data_from_url_with_authentication_github(pr_url)
         if not content:
             return defer.returnValue(content)
@@ -298,13 +298,13 @@ class GitHubMixin(object):
                 if pr_json and len(pr_json):
                     return defer.returnValue(pr_json)
             except Exception as e:
-                yield self._addToLog('stdio', 'Failed to get pull request data from {}, error: {}'.format(pr_url, e))
+                yield self._addToLog('stdio', f'Failed to get pull request data from {pr_url}, error: {e}')
 
-            yield self._addToLog('stdio', 'Unable to fetch pull request {}.\n'.format(pr_number))
-            if attempt > retry:
+            yield self._addToLog('stdio', f'Unable to fetch pull request {pr_number}.\n')
+            if attempt >= retry:
                 return defer.returnValue(None)
             wait_for = (attempt + 1) * 15
-            yield self._addToLog('stdio', 'Backing off for {} seconds before retrying.\n'.format(wait_for))
+            yield self._addToLog('stdio', f'\nBacking off for {wait_for} seconds before retrying.\n')
             yield task.deferLater(reactor, wait_for, lambda: None)
 
         return defer.returnValue(None)
@@ -2556,7 +2556,7 @@ class RetrievePRDataFromLabel(buildstep.BuildStep, GitHubMixin, AddToLogMixin):
         self.setProperty('failed_status_check', [])
         self.setProperty('pending_prs', [])
 
-        retrieved_pr_data = yield self.getAllPRData(num_prs, self.label)
+        retrieved_pr_data = yield self.getAllPRData(num_prs, self.label, 3)
         if retrieved_pr_data:
             self.build.addStepsAfterCurrentStep([DetermineLabelOwner()])
 
@@ -2570,25 +2570,40 @@ class RetrievePRDataFromLabel(buildstep.BuildStep, GitHubMixin, AddToLogMixin):
         return buildstep.BuildStep.getResultSummary(self)
 
     @defer.inlineCallbacks
-    def getAllPRData(self, limit, label):
+    def getAllPRData(self, limit, label, retry=0):
         project = self.getProperty('project') or GITHUB_PROJECTS[0]
         owner, name = project.split('/', 1)
         query_body = '{repository(owner:"%s", name:"%s") { pullRequests(labels: "%s", last: %s) { edges { node { title number commits(last: 3) { nodes { commit { commitUrl status { state contexts { context state } } } } } } } } } }' % (owner, name, label, limit)
         query = {'query': query_body}
 
-        yield self._addToLog('stdio', "Fetching all PRs with label {}...\n".format(label))
+        yield self._addToLog('stdio', f"Fetching all PRs with label {label}...\n")
 
         response = yield self.query_graph_ql(query)
         if not response:
             yield self._addToLog('stderr', 'Failed to retrieve list of PRs.\n')
             return defer.returnValue(None)
 
-        all_pr_data = response['data']['repository']['pullRequests']['edges']
-        list_of_prs = [pr_data['node']['number'] for pr_data in all_pr_data]
+        for attempt in range(retry + 1):
+            try:
+                response = yield self.query_graph_ql(query)
+                if 'errors' in response:
+                    yield self._addToLog('stdio', response['errors'][0]['message'])
+                else:
+                    all_pr_data = response['data']['repository']['pullRequests']['edges']
+                    break
+            except Exception as e:
+                yield self._addToLog('stdio', 'Failed to retrieve PR data.\n')
 
+            if attempt >= retry:
+                return defer.returnValue(None)
+            wait_for = (attempt + 1) * 15
+            yield self._addToLog('stdio', f'\nBacking off for {wait_for} seconds before retrying.\n')
+            yield task.deferLater(reactor, wait_for, lambda: None)
+
+        list_of_prs = [pr_data['node']['number'] for pr_data in all_pr_data]
         self.setProperty('list_of_prs', list_of_prs)
         self.setProperty('all_pr_data', all_pr_data)
-        yield self._addToLog('stdio', 'All PRs in safe-merge-queue: {}\n'.format(list_of_prs))
+        yield self._addToLog('stdio', f'All PRs in safe-merge-queue: {list_of_prs}\n')
         yield self._addToLog('stdio', 'Done!\n')
 
         defer.returnValue(True)
