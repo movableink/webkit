@@ -5947,13 +5947,13 @@ void RenderLayer::styleChanged(StyleDifference diff, const RenderStyle* oldStyle
         m_scrollableArea->updateAllScrollbarRelatedStyle();
 
     updateDescendantDependentFlags();
-    updateTransform();
     updateBlendMode();
     updateFiltersAfterStyleChange(diff, oldStyle);
     clearClipRects();
 
     compositor().layerStyleChanged(diff, *this, oldStyle);
 
+    updateTransform();
     updateFilterPaintingStrategy();
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(TOUCH_EVENTS)
