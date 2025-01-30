@@ -96,8 +96,8 @@ JSC_DEFINE_JIT_OPERATION(operationJSToWasmEntryWrapperBuildFrame, JSEntrypointCa
     const FunctionSignature& functionSignature = *signature.as<FunctionSignature>();
     CallInformation wasmFrameConvention = wasmCallingConvention().callInformationFor(signature, CallRole::Caller);
 
-    if (UNLIKELY(functionSignature.argumentsOrResultsIncludeV128())) {
-        throwVMTypeError(globalObject, scope, Wasm::errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidV128Use));
+    if (UNLIKELY(functionSignature.argumentsOrResultsIncludeV128() || functionSignature.argumentsOrResultsIncludeExnref())) {
+        throwVMTypeError(globalObject, scope, Wasm::errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidValueUse));
         OPERATION_RETURN(scope, callee);
     }
 
@@ -314,7 +314,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp,
     const auto& wasmCC = wasmCallingConvention().callInformationFor(typeDefinition, CallRole::Caller);
     const auto& jsCC = jsCallingConvention().callInformationFor(typeDefinition, CallRole::Callee);
 
-    if (Options::useWasmSIMD() && (wasmCC.argumentsOrResultsIncludeV128))
+    if (UNLIKELY(wasmCC.argumentsOrResultsIncludeV128 || wasmCC.argumentsOrResultsIncludeExnref))
         OPERATION_RETURN(scope, false);
 
     for (unsigned argNum = 0; argNum < argCount; ++argNum) {

@@ -103,8 +103,8 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(TypeIn
     // https://webassembly.github.io/spec/js-api/index.html#exported-function-exotic-objects
     // If parameters or results contain v128, throw a TypeError.
     // Note: the above error is thrown each time the [[Call]] method is invoked.
-    if (Options::useWasmSIMD() && (wasmCallInfo.argumentsOrResultsIncludeV128))
-        return handleBadImportTypeUse(jit, importIndex, ExceptionType::TypeErrorInvalidV128Use);
+    if (UNLIKELY(wasmCallInfo.argumentsOrResultsIncludeV128 || wasmCallInfo.argumentsOrResultsIncludeExnref))
+        return handleBadImportTypeUse(jit, importIndex, ExceptionType::TypeErrorInvalidValueUse);
 
     // Here we assume that the JS calling convention saves at least all the wasm callee saved. We therefore don't need to save and restore more registers since the wasm callee already took care of this.
 #if ASSERT_ENABLED

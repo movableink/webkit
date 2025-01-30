@@ -111,6 +111,7 @@ struct CallInformation {
     bool argumentsIncludeI64 : 1 { false };
     bool resultsIncludeI64 : 1 { false };
     bool argumentsOrResultsIncludeV128 : 1 { false };
+    bool argumentsOrResultsIncludeExnref : 1 { false };
     ArgumentLocation thisArgument;
     Vector<ArgumentLocation, 8> params;
     Vector<ArgumentLocation, 1> results;
@@ -304,7 +305,6 @@ public:
     {
         bool argumentsIncludeI64 = false;
         bool resultsIncludeI64 = false;
-        bool argumentsOrResultsIncludeV128 = false;
         size_t gpArgumentCount = 0;
         size_t fpArgumentCount = 0;
         size_t headerSize = headerSizeInBytes;
@@ -318,7 +318,6 @@ public:
         Vector<ArgumentLocation, 8> params(signature.argumentCount());
         for (size_t i = 0; i < signature.argumentCount(); ++i) {
             argumentsIncludeI64 |= signature.argumentType(i).isI64();
-            argumentsOrResultsIncludeV128 |= signature.argumentType(i).isV128();
             params[i] = marshallLocation(role, signature.argumentType(i), gpArgumentCount, fpArgumentCount, argStackOffset);
         }
         uint32_t stackArgs = argStackOffset - headerSize;
@@ -331,14 +330,14 @@ public:
         Vector<ArgumentLocation, 1> results(signature.returnCount());
         for (size_t i = 0; i < signature.returnCount(); ++i) {
             resultsIncludeI64 |= signature.returnType(i).isI64();
-            argumentsOrResultsIncludeV128 |= signature.returnType(i).isV128();
             results[i] = marshallLocation(role, signature.returnType(i), gpArgumentCount, fpArgumentCount, resultStackOffset);
         }
 
         CallInformation result(thisArgument, WTFMove(params), WTFMove(results), std::max(argStackOffset, resultStackOffset));
         result.argumentsIncludeI64 = argumentsIncludeI64;
         result.resultsIncludeI64 = resultsIncludeI64;
-        result.argumentsOrResultsIncludeV128 = argumentsOrResultsIncludeV128;
+        result.argumentsOrResultsIncludeV128 = signature.argumentsOrResultsIncludeV128();
+        result.argumentsOrResultsIncludeExnref = signature.argumentsOrResultsIncludeExnref();
         return result;
     }
 

@@ -348,6 +348,8 @@ public:
     Type argumentType(FunctionArgCount i) const { return const_cast<FunctionSignature*>(this)->getArgumentType(i); }
     bool argumentsOrResultsIncludeV128() const { return m_argumentsOrResultsIncludeV128; }
     void setArgumentsOrResultsIncludeV128(bool value) { m_argumentsOrResultsIncludeV128 = value; }
+    bool argumentsOrResultsIncludeExnref() const { return m_argumentsOrResultsIncludeExnref; }
+    void setArgumentsOrResultsIncludeExnref(bool value) { m_argumentsOrResultsIncludeExnref = value; }
 
     size_t numVectors() const
     {
@@ -414,8 +416,9 @@ private:
     mutable Lock m_jitCodeLock;
     // FIXME: Support caching wasmToJSEntrypoints too.
 #endif
-    bool m_hasRecursiveReference { false };
-    bool m_argumentsOrResultsIncludeV128 { false };
+    bool m_hasRecursiveReference : 1 { false };
+    bool m_argumentsOrResultsIncludeV128 : 1 { false };
+    bool m_argumentsOrResultsIncludeExnref : 1 { false };
 };
 
 // FIXME auto-generate this. https://bugs.webkit.org/show_bug.cgi?id=165231

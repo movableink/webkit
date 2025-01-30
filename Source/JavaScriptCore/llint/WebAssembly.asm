@@ -1036,7 +1036,7 @@ end
 
     bineq r0, 0, .safe
     move wasmInstance, r0
-    move (constexpr Wasm::ExceptionType::TypeErrorInvalidV128Use), r1
+    move (constexpr Wasm::ExceptionType::TypeErrorInvalidValueUse), r1
     cCall2(_operationWasmToJSException)
     jumpToException()
     break

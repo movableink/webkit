@@ -58,7 +58,7 @@ public:
     uint32_t length() const { return m_table->length(); }
     uint32_t allocatedLength() const { return m_table->allocatedLength(length()); }
     std::optional<uint32_t> grow(JSGlobalObject*, uint32_t delta, JSValue defaultValue) WARN_UNUSED_RETURN;
-    JSValue get(uint32_t);
+    JSValue get(JSGlobalObject*, uint32_t);
     void set(uint32_t, JSValue);
     void set(JSGlobalObject*, uint32_t, JSValue);
     void clear(uint32_t);

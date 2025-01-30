@@ -1294,7 +1294,7 @@ private:
                 const auto& signature = Wasm::TypeInformation::getFunctionSignature(wasmFunction->typeIndex());
                 const Wasm::WasmCallingConvention& wasmCC = Wasm::wasmCallingConvention();
                 Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(signature);
-                if (wasmCallInfo.argumentsOrResultsIncludeV128)
+                if (wasmCallInfo.argumentsOrResultsIncludeV128 || wasmCallInfo.argumentsOrResultsIncludeExnref)
                     break;
 
                 unsigned numPassedArgs = m_node->numChildren() - /* |callee| and |this| */ 2;

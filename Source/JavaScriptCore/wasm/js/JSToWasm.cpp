@@ -492,7 +492,7 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
 
     const Wasm::WasmCallingConvention& wasmCC = Wasm::wasmCallingConvention();
     Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(*this);
-    if (wasmCallInfo.argumentsOrResultsIncludeV128)
+    if (UNLIKELY(wasmCallInfo.argumentsOrResultsIncludeV128 || wasmCallInfo.argumentsOrResultsIncludeExnref))
         return nullptr;
     Wasm::CallInformation jsCallInfo = Wasm::jsCallingConvention().callInformationFor(*this, Wasm::CallRole::Callee);
     RegisterAtOffsetList savedResultRegisters = wasmCallInfo.computeResultsOffsetList();

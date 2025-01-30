@@ -351,7 +351,9 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
                             }
 
                             m_instance->setGlobal(import.kindIndex, value);
-                        } else {
+                        } else if (Wasm::isExnref(globalType))
+                            return exception(createJSWebAssemblyLinkError(globalObject, vm, importFailMessage(import, "imported global"_s, "cannot be exnref"_s)));
+                        else {
                             value = Wasm::internalizeExternref(value);
                             if (!Wasm::TypeInformation::castReference(value, global.type.isNullable(), global.type.index))
                                 return exception(createJSWebAssemblyLinkError(globalObject, vm, importFailMessage(import, "imported global"_s, "Argument value did not match the reference type"_s)));
