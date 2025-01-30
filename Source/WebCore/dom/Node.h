@@ -855,12 +855,13 @@ ALWAYS_INLINE void Node::deref() const
     ASSERT(isMainThread());
     ASSERT(!m_adoptionIsRequired);
 
-    ASSERT(refCount());
+    ASSERT_WITH_SECURITY_IMPLICATION(refCount());
     auto updatedRefCount = m_refCountAndParentBit - s_refCountIncrement;
     if (!updatedRefCount) {
+        // FIXME: Remove this redundant check.
         if (deletionHasBegun())
             return;
-        // Don't update m_refCountAndParentBit to avoid double destruction through use of Ref<T>/RefPtr<T>.
+
 #if ASSERT_ENABLED
         m_inRemovedLastRefFunction = true;
 #endif

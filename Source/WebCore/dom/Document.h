@@ -467,10 +467,16 @@ public:
 
     ALWAYS_INLINE void decrementReferencingNodeCount(unsigned count = 1)
     {
+        ASSERT_WITH_SECURITY_IMPLICATION(m_referencingNodeCount >= count);
+
         m_referencingNodeCount -= count;
         if (!m_referencingNodeCount && !refCount()) {
+            // FIXME: Remove this redundant check.
             if (deletionHasBegun())
                 return;
+
+            // Restore the the final overlooking ref that deref() maintains.
+            m_refCountAndParentBit = s_refCountIncrement;
             setStateFlag(StateFlag::HasStartedDeletion);
             delete this;
         }

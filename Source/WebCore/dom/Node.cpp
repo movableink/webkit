@@ -413,8 +413,8 @@ Node::Node(Document& document, NodeType type, OptionSet<TypeFlag> flags)
     // Allow code to ref the Document while it is being constructed to make our life easier.
     if (isDocumentNode())
         relaxAdoptionRequirement();
-
-    document.incrementReferencingNodeCount();
+    else
+        document.incrementReferencingNodeCount();
 
 #if !defined(NDEBUG) || DUMP_NODE_STATISTICS
     trackForDebugging();
@@ -451,7 +451,8 @@ Node::~Node()
         // m_treeScope CheckedPtr beforehand.
         m_treeScope = nullptr;
 
-        document.decrementReferencingNodeCount(); // This may destroy the document.
+        if (!isDocumentNode())
+            document.decrementReferencingNodeCount(); // This may destroy the document.
     }
 
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY) && (ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS))
@@ -462,12 +463,11 @@ Node::~Node()
     }
 #endif
 
-// refCount() is 1 during Node destruction (see Node::deref()) but can be 0 during Document destruction (see Document::removedLastRef()).
 #if CHECK_REF_COUNTED_LIFECYCLE
-    if (refCount() > 1)
+    if (m_refCountAndParentBit != s_refCountIncrement)
         WTF::RefCountedBase::printRefDuringDestructionLogAndCrash(this);
 #endif
-    RELEASE_ASSERT(refCount() <= 1);
+    RELEASE_ASSERT(m_refCountAndParentBit == s_refCountIncrement);
 }
 
 void Node::willBeDeletedFrom(Document& document)
@@ -2874,7 +2874,7 @@ bool Node::willRespondToMouseClickEventsWithEditability(Editability editability)
 // delete a Node at each deref call site.
 void Node::removedLastRef()
 {
-    ASSERT(m_refCountAndParentBit == s_refCountIncrement);
+    RELEASE_ASSERT(m_refCountAndParentBit == s_refCountIncrement);
 
     // An explicit check for Document here is better than a virtual function since it is
     // faster for non-Document nodes, and because the call to removedLastRef that is inlined
@@ -2884,9 +2884,15 @@ void Node::removedLastRef()
         return;
     }
 
-    // Now it is time to detach the SVGElement from all its properties. These properties
-    // may outlive the SVGElement. The only difference after the detach is no commit will
-    // be carried out unless these properties are attached to another owner.
+    // This paragraph runs before Node destruction as a workaround for the fact
+    // that detachAllProperties() can transitively call virtual functions on our
+    // derived SVG class.
+
+    // Properties may outlive an SVGElement, but no commit will be carried out
+    // unless a property has attached to a new owner.
+
+    // FIXME: Make the registry automatically weak, or manually clear it in
+    // subclass destructors, so we can remove this workaround.
     if (auto* svgElement = dynamicDowncast<SVGElement>(*this))
         svgElement->detachAllProperties();
 

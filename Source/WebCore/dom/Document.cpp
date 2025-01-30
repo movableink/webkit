@@ -833,18 +833,20 @@ Document::~Document()
 
     // End the loading signpost here in case loadEventEnd never fired.
     WTFEndSignpost(this, NavigationAndPaintTiming);
+
+    RELEASE_ASSERT(!m_referencingNodeCount);
 }
 
 void Document::removedLastRef()
 {
+    RELEASE_ASSERT(m_refCountAndParentBit == s_refCountIncrement);
+
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
     ASSERT(!deletionHasBegun());
     m_wasRemovedLastRefCalled = true;
-    if (m_referencingNodeCount) {
-        // If removing a child removes the last node reference, we don't want the scope to be destroyed
-        // until after removeDetachedChildren returns, so we protect ourselves.
-        incrementReferencingNodeCount();
 
+    // FIXME: This condition is usually true, and can probably be unconditional.
+    if (m_referencingNodeCount) {
         RELEASE_ASSERT(!hasLivingRenderTree());
         // We must make sure not to be retaining any of our children through
         // these extra pointers or we will create a reference cycle.
@@ -883,19 +885,27 @@ void Document::removedLastRef()
             markers->detach();
 
         m_cssCanvasElements.clear();
-
-        commonTeardown();
-
-        // Node::removedLastRef doesn't set refCount() to zero because it's not observable.
-        // But we need to remember that our refCount reached zero in subsequent calls to decrementReferencingNodeCount().
-        m_refCountAndParentBit = 0;
-
-        decrementReferencingNodeCount();
-    } else {
-        commonTeardown();
-        setStateFlag(StateFlag::HasStartedDeletion);
-        delete this;
     }
+
+    commonTeardown();
+
+    if (m_referencingNodeCount || m_refCountAndParentBit != s_refCountIncrement) {
+        // Document can be resurrected if any of the code above escapes a RefPtr,
+        // or if m_referencingNodeCount is not 0. When that happens,
+        // release the final overlooking ref that deref() maintains, so that
+        // refCounting can resume from 0.
+
+        // FIXME: We could be stricter, and forbid escaping RefPtrs in the code
+        // above just like we forbid escaping RefPtrs in destructors. We still
+        // need to support resurrection for m_referencingNodeCount, but we can
+        // establish a simpler model that's less likely to cause leaks or
+        // wasted work.
+        m_refCountAndParentBit -= s_refCountIncrement;
+        return;
+    }
+
+    setStateFlag(StateFlag::HasStartedDeletion);
+    delete this;
 }
 
 void Document::commonTeardown()
