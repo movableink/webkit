@@ -88,19 +88,15 @@ void WebMemorySampler::start(SandboxExtension::Handle&& sampleLogFileHandle, con
 
 void WebMemorySampler::initializeTimers(double interval)
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
     m_sampleTimer.startRepeating(1_s);
-    printf("Started memory sampler for process %s %d", processName().utf8().data(), getCurrentProcessID());
+    SAFE_PRINTF("Started memory sampler for process %s %d", processName().utf8(), getCurrentProcessID());
     if (interval > 0) {
         m_stopTimer.startOneShot(1_s * interval);
         printf(" for a interval of %g seconds", interval);
     }
-    printf("; Sampler log file stored at: %s\n", m_sampleLogFilePath.utf8().data());
+    SAFE_PRINTF("; Sampler log file stored at: %s\n", m_sampleLogFilePath.utf8());
     m_runningTime = interval;
     m_isRunning = true;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 void WebMemorySampler::stop() 

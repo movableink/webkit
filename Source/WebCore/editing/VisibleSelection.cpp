@@ -718,8 +718,6 @@ bool VisibleSelection::isInAutoFilledAndViewableField() const
 
 #if ENABLE(TREE_DEBUGGING)
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 void VisibleSelection::debugPosition() const
 {
     fprintf(stderr, "VisibleSelection ===============\n");
@@ -727,12 +725,12 @@ void VisibleSelection::debugPosition() const
     if (!m_start.anchorNode())
         fputs("pos:   null", stderr);
     else if (m_start == m_end) {
-        fprintf(stderr, "pos:   %s ", m_start.anchorNode()->nodeName().utf8().data());
+        SAFE_FPRINTF(stderr, "pos:   %s ", m_start.anchorNode()->nodeName().utf8());
         m_start.showAnchorTypeAndOffset();
     } else {
-        fprintf(stderr, "start: %s ", m_start.anchorNode()->nodeName().utf8().data());
+        SAFE_FPRINTF(stderr, "start: %s ", m_start.anchorNode()->nodeName().utf8());
         m_start.showAnchorTypeAndOffset();
-        fprintf(stderr, "end:   %s ", m_end.anchorNode()->nodeName().utf8().data());
+        SAFE_FPRINTF(stderr, "end:   %s ", m_end.anchorNode()->nodeName().utf8());
         m_end.showAnchorTypeAndOffset();
     }
 
@@ -749,15 +747,13 @@ String VisibleSelection::debugDescription() const
 void VisibleSelection::showTreeForThis() const
 {
     if (RefPtr startAnchorNode = start().anchorNode()) {
-        startAnchorNode->showTreeAndMark(startAnchorNode.get(), "S", end().protectedAnchorNode().get(), "E");
+        startAnchorNode->showTreeAndMark(startAnchorNode.get(), "S"_s, end().protectedAnchorNode().get(), "E"_s);
         fputs("start: ", stderr);
         start().showAnchorTypeAndOffset();
         fputs("end: ", stderr);
         end().showAnchorTypeAndOffset();
     }
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif
 

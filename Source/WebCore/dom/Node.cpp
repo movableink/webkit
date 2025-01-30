@@ -2019,10 +2019,8 @@ void Node::showNode(ASCIILiteral prefix) const
 
 void Node::showTreeForThis() const
 {
-    showTreeAndMark(this, "*");
+    showTreeAndMark(this, "*"_s);
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 void Node::showNodePathForThis() const
 {
@@ -2044,7 +2042,7 @@ void Node::showNodePathForThis() const
 
         switch (node->nodeType()) {
         case ELEMENT_NODE: {
-            fprintf(stderr, "/%s", node->nodeName().utf8().data());
+            SAFE_FPRINTF(stderr, "/%s", node->nodeName().utf8());
 
             const Element& element = uncheckedDowncast<Element>(*node);
             const AtomString& idattr = element.getIdAttribute();
@@ -2055,18 +2053,18 @@ void Node::showNodePathForThis() const
                     if (previous->nodeName() == node->nodeName())
                         ++count;
                 if (hasIdAttr)
-                    fprintf(stderr, "[@id=\"%s\" and position()=%d]", idattr.string().utf8().data(), count);
+                    SAFE_FPRINTF(stderr, "[@id=\"%s\" and position()=%d]", idattr.string().utf8(), count);
                 else
                     fprintf(stderr, "[%d]", count);
             } else if (hasIdAttr)
-                fprintf(stderr, "[@id=\"%s\"]", idattr.string().utf8().data());
+                SAFE_FPRINTF(stderr, "[@id=\"%s\"]", idattr.string().utf8());
             break;
         }
         case TEXT_NODE:
             fprintf(stderr, "/text()");
             break;
         case ATTRIBUTE_NODE:
-            fprintf(stderr, "/@%s", node->nodeName().utf8().data());
+            SAFE_FPRINTF(stderr, "/@%s", node->nodeName().utf8());
             break;
         default:
             break;
@@ -2075,19 +2073,19 @@ void Node::showNodePathForThis() const
     fprintf(stderr, "\n");
 }
 
-static void traverseTreeAndMark(const String& baseIndent, const Node* rootNode, const Node* markedNode1, const char* markedLabel1, const Node* markedNode2, const char* markedLabel2)
+static void traverseTreeAndMark(const String& baseIndent, const Node* rootNode, const Node* markedNode1, ASCIILiteral markedLabel1, const Node* markedNode2, ASCIILiteral markedLabel2)
 {
     for (const Node* node = rootNode; node; node = NodeTraversal::next(*node)) {
         if (node == markedNode1)
-            fprintf(stderr, "%s", markedLabel1);
+            SAFE_FPRINTF(stderr, "%s", markedLabel1);
         if (node == markedNode2)
-            fprintf(stderr, "%s", markedLabel2);
+            SAFE_FPRINTF(stderr, "%s", markedLabel2);
 
         StringBuilder indent;
         indent.append(baseIndent);
         for (const Node* tmpNode = node; tmpNode && tmpNode != rootNode; tmpNode = tmpNode->parentOrShadowHostNode())
             indent.append('\t');
-        fprintf(stderr, "%s", indent.toString().utf8().data());
+        SAFE_FPRINTF(stderr, "%s", indent.toString().utf8());
         node->showNode();
         indent.append('\t');
         if (!node->isShadowRoot()) {
@@ -2097,9 +2095,7 @@ static void traverseTreeAndMark(const String& baseIndent, const Node* rootNode, 
     }
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-
-void Node::showTreeAndMark(const Node* markedNode1, const char* markedLabel1, const Node* markedNode2, const char* markedLabel2) const
+void Node::showTreeAndMark(const Node* markedNode1, ASCIILiteral markedLabel1, const Node* markedNode2, ASCIILiteral markedLabel2) const
 {
     const Node* node = this;
     while (node->parentOrShadowHostNode() && !node->hasTagName(bodyTag))
@@ -2120,11 +2116,9 @@ static ContainerNode* parentOrShadowHostOrFrameOwner(const Node* node)
 
 static void showSubTreeAcrossFrame(const Node* node, const Node* markedNode, const String& indent)
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (node == markedNode)
         fputs("*", stderr);
-    fputs(indent.utf8().data(), stderr);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_FPRINTF(stderr, "%s\n", indent.utf8());
     node->showNode();
     if (!node->isShadowRoot()) {
         if (auto* frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(node))

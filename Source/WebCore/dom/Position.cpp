@@ -1386,12 +1386,12 @@ TextDirection Position::primaryDirection() const
 
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-void Position::debugPosition(const char* msg) const
+void Position::debugPosition(ASCIILiteral msg) const
 {
     if (isNull())
-        fprintf(stderr, "Position [%s]: null\n", msg);
+        SAFE_FPRINTF(stderr, "Position [%s]: null\n", msg);
     else
-        fprintf(stderr, "Position [%s]: %s [%p] at %d\n", msg, deprecatedNode()->nodeName().utf8().data(), deprecatedNode(), m_offset);
+        SAFE_FPRINTF(stderr, "Position [%s]: %s [%p] at %d\n", msg, deprecatedNode()->nodeName().utf8(), deprecatedNode(), m_offset);
 }
 
 String Position::debugDescription() const

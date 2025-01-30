@@ -593,8 +593,6 @@ bool isTopTargetFrameName(StringView name)
 
 #ifndef NDEBUG
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 static void printIndent(int indent)
 {
     for (int i = 0; i < indent; ++i)
@@ -626,13 +624,11 @@ static void printFrames(const WebCore::Frame& frame, const WebCore::Frame* targe
         printIndent(indent);
         printf("  document=%p (needs style recalc %d)\n", localFrame->document(), localFrame->document() ? localFrame->document()->childNeedsStyleRecalc() : false);
         printIndent(indent);
-        printf("  uri=%s\n", localFrame->document()->documentURI().utf8().data());
+        SAFE_PRINTF("  uri=%s\n", localFrame->document()->documentURI().utf8());
     }
     for (auto* child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
         printFrames(*child, targetFrame, indent + 1);
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void showFrameTree(const WebCore::Frame* frame)
 {

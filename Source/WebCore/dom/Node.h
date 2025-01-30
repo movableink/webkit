@@ -500,7 +500,7 @@ public:
     void showNode(ASCIILiteral prefix = ""_s) const;
     WEBCORE_EXPORT void showTreeForThis() const;
     void showNodePathForThis() const;
-    void showTreeAndMark(const Node* markedNode1, const char* markedLabel1, const Node* markedNode2 = nullptr, const char* markedLabel2 = nullptr) const;
+    void showTreeAndMark(const Node* markedNode1, ASCIILiteral markedLabel1, const Node* markedNode2 = nullptr, ASCIILiteral markedLabel2 = { }) const;
     void showTreeForThisAcrossFrame() const;
 #endif // ENABLE(TREE_DEBUGGING)
 

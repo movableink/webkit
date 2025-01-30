@@ -1187,7 +1187,7 @@ void Range::visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) const
 void showTree(const WebCore::Range* range)
 {
     if (range) {
-        range->startContainer().showTreeAndMark(&range->startContainer(), "S", &range->endContainer(), "E");
+        range->startContainer().showTreeAndMark(&range->startContainer(), "S"_s, &range->endContainer(), "E"_s);
         fprintf(stderr, "start offset: %d, end offset: %d\n", range->startOffset(), range->endOffset());
     }
 }

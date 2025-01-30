@@ -692,16 +692,14 @@ int VisiblePosition::lineDirectionPointForBlockDirectionNavigation() const
 
 #if ENABLE(TREE_DEBUGGING)
 
-void VisiblePosition::debugPosition(const char* msg) const
+void VisiblePosition::debugPosition(ASCIILiteral msg) const
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (isNull())
-        fprintf(stderr, "Position [%s]: null\n", msg);
+        SAFE_FPRINTF(stderr, "Position [%s]: null\n", msg);
     else {
-        fprintf(stderr, "Position [%s]: %s, ", msg, m_deepPosition.deprecatedNode()->nodeName().utf8().data());
+        SAFE_FPRINTF(stderr, "Position [%s]: %s, ", msg, m_deepPosition.deprecatedNode()->nodeName().utf8());
         m_deepPosition.showAnchorTypeAndOffset();
     }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 String VisiblePosition::debugDescription() const
