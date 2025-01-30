@@ -1132,8 +1132,8 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
                         if (completedCommandBuffer.status != MTLCommandBufferStatusCompleted)
                             return;
                         protectedDevice->protectedQueue()->scheduleWork([icb, firstIndex, indexCount, baseVertex, minVertexCount, indexType, refIndexBuffer = WTFMove(refIndexBuffer)]() mutable {
-                            id<MTLBuffer> indirectCommandBufferContainer = icb.indirectCommandBufferContainer;
-                            refIndexBuffer->didReadOOB(*static_cast<uint32_t*>(indirectCommandBufferContainer.contents), icb.indirectCommandBuffer);
+                            id<MTLBuffer> outOfBoundsReadFlag = icb.outOfBoundsReadFlag;
+                            refIndexBuffer->didReadOOB(*static_cast<uint32_t*>(outOfBoundsReadFlag.contents), icb.indirectCommandBuffer);
                             refIndexBuffer->drawIndexedValidated(firstIndex, indexCount, minVertexCount + baseVertex, indexType, icb.indirectCommandBuffer);
                         });
                     }];
