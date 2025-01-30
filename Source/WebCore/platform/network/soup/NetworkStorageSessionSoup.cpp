@@ -404,6 +404,11 @@ void NetworkStorageSession::setCookie(const Cookie& cookie)
     soup_cookie_jar_add_cookie(cookieStorage(), cookie.toSoupCookie());
 }
 
+void NetworkStorageSession::setCookie(const Cookie& cookie, const URL&, const URL&)
+{
+    setCookie(cookie);
+}
+
 void NetworkStorageSession::replaceCookies(const Vector<Cookie>& cookies)
 {
     SoupCookieJar* jar = cookieStorage();
@@ -431,7 +436,7 @@ void NetworkStorageSession::deleteCookie(const Cookie& cookie, CompletionHandler
     completionHandler();
 }
 
-void NetworkStorageSession::deleteCookie(const URL& url, const String& name, CompletionHandler<void()>&& completionHandler) const
+void NetworkStorageSession::deleteCookie(const URL&, const URL& url, const String& name, CompletionHandler<void()>&& completionHandler) const
 {
     auto uri = urlToSoupURI(url);
     if (!uri)

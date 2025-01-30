@@ -324,12 +324,12 @@ bool WebCookieJar::getRawCookies(WebCore::Document& document, const URL& url, Ve
 
 void WebCookieJar::setRawCookie(const WebCore::Document& document, const Cookie& cookie, ShouldPartitionCookie shouldPartitionCookie)
 {
-    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->send(Messages::NetworkConnectionToWebProcess::SetRawCookie(document.firstPartyForCookies(), cookie, shouldPartitionCookie), 0);
+    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->send(Messages::NetworkConnectionToWebProcess::SetRawCookie(document.firstPartyForCookies(), document.cookieURL(), cookie, shouldPartitionCookie), 0);
 }
 
 void WebCookieJar::deleteCookie(const WebCore::Document& document, const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler)
 {
-    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::DeleteCookie(url, cookieName), WTFMove(completionHandler));
+    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::DeleteCookie(document.firstPartyForCookies(), url, cookieName), WTFMove(completionHandler));
 }
 
 void WebCookieJar::getCookiesAsync(WebCore::Document& document, const URL& url, const WebCore::CookieStoreGetOptions& options, CompletionHandler<void(std::optional<Vector<WebCore::Cookie>>&&)>&& completionHandler) const

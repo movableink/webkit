@@ -889,8 +889,13 @@ void NetworkConnectionToWebProcess::getRawCookies(const URL& firstParty, const S
     completionHandler(WTFMove(result));
 }
 
-void NetworkConnectionToWebProcess::setRawCookie(const URL& firstParty, const WebCore::Cookie& cookie, ShouldPartitionCookie shouldPartitionCookie)
+void NetworkConnectionToWebProcess::setRawCookie(const URL& firstParty, const URL& url, const WebCore::Cookie& cookie, ShouldPartitionCookie shouldPartitionCookie)
 {
+    auto allowCookieAccess = m_networkProcess->allowsFirstPartyForCookies(m_webProcessIdentifier, firstParty);
+    MESSAGE_CHECK(allowCookieAccess != NetworkProcess::AllowCookieAccess::Terminate);
+    if (allowCookieAccess != NetworkProcess::AllowCookieAccess::Allow)
+        return;
+
     auto* networkStorageSession = storageSession();
     if (!networkStorageSession)
         return;
@@ -900,16 +905,21 @@ void NetworkConnectionToWebProcess::setRawCookie(const URL& firstParty, const We
 #else
     UNUSED_PARAM(firstParty);
     UNUSED_PARAM(shouldPartitionCookie);
-    networkStorageSession->setCookie(cookie);
+    networkStorageSession->setCookie(cookie, url, firstParty);
 #endif
 }
 
-void NetworkConnectionToWebProcess::deleteCookie(const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler)
+void NetworkConnectionToWebProcess::deleteCookie(const URL& firstParty, const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler)
 {
+    auto allowCookieAccess = m_networkProcess->allowsFirstPartyForCookies(m_webProcessIdentifier, firstParty);
+    MESSAGE_CHECK_COMPLETION(allowCookieAccess != NetworkProcess::AllowCookieAccess::Terminate, completionHandler());
+    if (allowCookieAccess != NetworkProcess::AllowCookieAccess::Allow)
+        return completionHandler();
+
     auto* networkStorageSession = storageSession();
     if (!networkStorageSession)
         return completionHandler();
-    networkStorageSession->deleteCookie(url, cookieName, WTFMove(completionHandler));
+    networkStorageSession->deleteCookie(firstParty, url, cookieName, WTFMove(completionHandler));
 }
 
 void NetworkConnectionToWebProcess::cookiesForDOMAsync(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<WebCore::FrameIdentifier> frameID, std::optional<WebCore::PageIdentifier> pageID, IncludeSecureCookies includeSecureCookies, ApplyTrackingPrevention applyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking, WebCore::CookieStoreGetOptions&& options, CompletionHandler<void(std::optional<Vector<WebCore::Cookie>>&&)>&& completionHandler)
