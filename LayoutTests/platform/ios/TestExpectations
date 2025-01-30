@@ -7682,3 +7682,5 @@ webkit.org/b/286515 fast/forms/datalist/datalist-show-hide.html [ Timeout ]
 webkit.org/b/286594 http/wpt/cache-storage/quota-third-party.https.html [ Pass Failure Slow ]
 
 webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
+
+webkit.org/b/286777 [ Debug ] fast/css/view-transitions-zoom.html [ Skip ]
