@@ -85,12 +85,12 @@ Ref<MutableStyleProperties> MutableStyleProperties::createEmpty()
 
 Ref<ImmutableStyleProperties> MutableStyleProperties::immutableCopy() const
 {
-    return ImmutableStyleProperties::create(m_propertyVector.data(), m_propertyVector.size(), cssParserMode());
+    return ImmutableStyleProperties::create(m_propertyVector.span(), cssParserMode());
 }
 
 Ref<ImmutableStyleProperties> MutableStyleProperties::immutableDeduplicatedCopy() const
 {
-    return ImmutableStyleProperties::createDeduplicating(m_propertyVector.data(), m_propertyVector.size(), cssParserMode());
+    return ImmutableStyleProperties::createDeduplicating(m_propertyVector.span(), cssParserMode());
 }
 
 inline bool MutableStyleProperties::removeShorthandProperty(CSSPropertyID propertyID, String* returnText)

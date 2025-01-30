@@ -163,7 +163,7 @@ static Ref<ImmutableStyleProperties> createStyleProperties(ParsedPropertyVector&
     filterProperties(IsImportant::Yes, parsedProperties, results, unusedEntries, seenProperties, seenCustomProperties);
     filterProperties(IsImportant::No, parsedProperties, results, unusedEntries, seenProperties, seenCustomProperties);
 
-    Ref result = ImmutableStyleProperties::createDeduplicating(results.subspan(unusedEntries).data(), results.size() - unusedEntries, mode);
+    Ref result = ImmutableStyleProperties::createDeduplicating(results.subspan(unusedEntries), mode);
     parsedProperties.clear();
     return result;
 }
