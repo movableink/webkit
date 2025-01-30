@@ -5034,14 +5034,17 @@ public:
             });
         }
 
+        if (m_disassembler) {
+            m_jit.addLateLinkTask([=, this] (LinkBuffer& linkBuffer) {
+                m_disassembler->dump(linkBuffer);
+            });
+        }
+
         LinkBuffer linkBuffer(m_jit, &codeBlock, LinkBuffer::Profile::YarrJIT, JITCompilationCanFail);
         if (linkBuffer.didFailToAllocate()) {
             codeBlock.setFallBackWithFailureReason(JITFailureReason::ExecutableMemoryAllocationFailure);
             return;
         }
-
-        if (m_disassembler)
-            m_disassembler->dump(linkBuffer);
 
         if (m_compileMode == JITCompileMode::MatchOnly) {
             if (m_charSize == CharSize::Char8) {
