@@ -1509,6 +1509,20 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'archive-built-product',
             'upload-built-product-via-sftp'
         ],
+        'GTK-Linux-64-bit-Release-MVT-Tests': [
+            'configure-build',
+            'configuration',
+            'clean-and-update-working-directory',
+            'checkout-specific-revision',
+            'show-identifier',
+            'kill-old-processes',
+            'delete-WebKitBuild-directory',
+            'delete-stale-build-files',
+            'jhbuild',
+            'download-built-product',
+            'extract-built-product',
+            'MVT-tests'
+        ],
         'Windows-64-bit-Release-Build': [
             'configure-build',
             'configuration',
@@ -1926,6 +1940,20 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'API-tests',
             'archive-built-product',
             'upload-built-product'
+        ],
+        'WPE-Linux-64-bit-Release-MVT-Tests': [
+            'configure-build',
+            'configuration',
+            'clean-and-update-working-directory',
+            'checkout-specific-revision',
+            'show-identifier',
+            'kill-old-processes',
+            'delete-WebKitBuild-directory',
+            'delete-stale-build-files',
+            'jhbuild',
+            'download-built-product',
+            'extract-built-product',
+            'MVT-tests'
         ],
     }
 

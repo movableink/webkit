@@ -1255,6 +1255,27 @@ class RunBuiltinsTests(shell.TestNewStyle):
     command = ["python3", "Tools/Scripts/run-builtins-generator-tests"]
 
 
+class RunMVTTests(shell.TestNewStyle):
+    command = ["Tools/Scripts/run-mvt-tests", WithProperties("--%(configuration)s"),
+               WithProperties("--%(fullPlatform)s"), "--headless"]
+    name = "MVT-tests"
+    description = ["MVT tests running"]
+    descriptionDone = ["MVT tests"]
+
+    def evaluateCommand(self, cmd):
+        self.totalUnexpectedFailures = cmd.rc
+        if self.totalUnexpectedFailures != 0:
+            self.commandFailed = True
+            return FAILURE
+        return SUCCESS
+
+    def getResultSummary(self):
+        if self.results != SUCCESS and self.totalUnexpectedFailures > 0:
+            s = "s" if self.totalUnexpectedFailures > 1 else ""
+            return {'step': f"MVT Tests: {self.totalUnexpectedFailures} unexpected failure{s}"}
+        return super().getResultSummary()
+
+
 class RunGLibAPITests(shell.TestNewStyle):
     name = "API-tests"
     description = ["API tests running"]
