@@ -665,6 +665,10 @@ private:
 
     void registerNotificationObservers();
     void unregisterNotificationObservers();
+
+#if ENABLE(NOTIFY_BLOCKING)
+    void setNotifyState(const String&, int, uint64_t);
+#endif
 #endif
 
     void setApplicationIsActive(bool);
@@ -943,6 +947,7 @@ private:
     Vector<int> m_openDirectoryNotifyTokens;
 #endif
 #if ENABLE(NOTIFY_BLOCKING)
+    HashMap<String, uint64_t> m_notifyState;
     Vector<int> m_notifyTokens;
     Vector<RetainPtr<NSObject>> m_notificationObservers;
 #endif

@@ -892,6 +892,21 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
         networkProcess->terminateIdleServiceWorkers(protectedProcessProxy->coreProcessIdentifier(), [] { });
 }
 
+- (void)_getNotifyStateForTesting:(NSString *)notificationName completionHandler:(void(^)(NSNumber *))completionHandler
+{
+#if ENABLE(NOTIFY_BLOCKING)
+    _page->protectedLegacyMainFrameProcess()->getNotifyStateForTesting(notificationName, [completionHandler = WTFMove(completionHandler)](std::optional<uint64_t> result) mutable {
+        if (!result) {
+            completionHandler(nil);
+            return;
+        }
+        completionHandler(@(result.value()));
+    });
+#else
+    completionHandler(nil);
+#endif
+}
+
 @end
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)

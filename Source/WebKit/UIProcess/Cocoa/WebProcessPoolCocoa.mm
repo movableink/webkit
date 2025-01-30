@@ -543,6 +543,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     parameters.scriptTelemetryRules = ScriptTelemetryController::sharedSingleton().cachedListData();
 #endif // ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+
+#if ENABLE(NOTIFY_BLOCKING)
+    parameters.notifyState = WTF::map(m_notifyState, [] (auto&& item) {
+        return std::make_pair(item.key, item.value);
+    });
+#endif
 }
 
 void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationParameters& parameters)
@@ -771,6 +777,7 @@ void WebProcessPool::registerNotificationObservers()
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
                     return;
+                protectedThis->setNotifyState(message, status, state);
                 String messageString(message);
                 for (auto& process : protectedThis->m_processes) {
                     if (process->auditToken() && !WTF::hasEntitlement(process->auditToken().value(), "com.apple.developer.web-browser-engine.restrict.notifyd"_s))
@@ -781,6 +788,13 @@ void WebProcessPool::registerNotificationObservers()
         });
         if (registerStatus)
             return std::nullopt;
+
+        if (RefPtr protectedThis = weakThis.get()) {
+            uint64_t state;
+            int stateStatus = notify_get_state(notifyToken, &state);
+            protectedThis->setNotifyState(message, stateStatus, state);
+        }
+
         return notifyToken;
     });
 
@@ -953,6 +967,7 @@ void WebProcessPool::unregisterNotificationObservers()
         notify_cancel(token);
     for (auto observer : m_notificationObservers)
         [[NSNotificationCenter defaultCenter] removeObserver:observer.get()];
+    m_notifyState.clear();
 #endif
 #if !PLATFORM(IOS_FAMILY)
     m_powerObserver = nullptr;
@@ -1010,6 +1025,18 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
     m_weakObserver = nil;
 }
+
+#if ENABLE(NOTIFY_BLOCKING)
+
+void WebProcessPool::setNotifyState(const String& name, int status, uint64_t state)
+{
+    if (status == NOTIFY_STATUS_OK && state)
+        m_notifyState.set(name, state);
+    else
+        m_notifyState.remove(name);
+}
+
+#endif
 
 bool WebProcessPool::isURLKnownHSTSHost(const String& urlString) const
 {

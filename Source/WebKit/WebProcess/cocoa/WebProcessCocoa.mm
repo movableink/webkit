@@ -341,6 +341,11 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     setupLogStream();
 #endif
 
+#if ENABLE(NOTIFY_BLOCKING)
+    for (const auto& [name, state] : parameters.notifyState)
+        setNotifyState(name, state);
+#endif
+
     RELEASE_LOG_FORWARDABLE(Process, PLATFORM_INITIALIZE_WEBPROCESS);
 
 #if USE(EXTENSIONKIT)
@@ -1509,19 +1514,56 @@ void WebProcess::revokeLaunchServicesSandboxExtension()
 #if ENABLE(NOTIFY_BLOCKING)
 void WebProcess::postNotification(const String& message, std::optional<uint64_t> state)
 {
-    if (state) {
-        int token = 0;
-        if (notify_register_check(message.ascii().data(), &token) == NOTIFY_STATUS_OK) {
-            notify_set_state(token, *state);
-            notify_cancel(token);
-        }
-    }
+    if (state)
+        setNotifyState(message, state.value());
     notify_post(message.ascii().data());
 }
 
 void WebProcess::postObserverNotification(const String& message)
 {
     [[NSNotificationCenter defaultCenter] postNotificationName:message object:nil];
+}
+
+void WebProcess::setNotifyState(const String& name, uint64_t state)
+{
+    // FIXME: explain why caching the token for a non-zero state value is necessary
+    if (!state) {
+        if (auto maybeToken = m_notifyTokens.takeOptional(name)) {
+            notify_set_state(*maybeToken, 0);
+            notify_cancel(*maybeToken);
+        }
+        return;
+    }
+
+    int token = NOTIFY_TOKEN_INVALID;
+    int status = NOTIFY_STATUS_OK;
+    if (auto maybeToken = m_notifyTokens.getOptional(name))
+        token = maybeToken.value();
+    else if ((status = notify_register_check(name.ascii().data(), &token)) == NOTIFY_STATUS_OK)
+        m_notifyTokens.set(name, token);
+
+    if (token == NOTIFY_TOKEN_INVALID) {
+        WEBPROCESS_RELEASE_LOG_ERROR(Process, "setNotifyState: Couldn't create token for %" PUBLIC_LOG_STRING ": %d", name.ascii().data(), status);
+        return;
+    }
+
+    notify_set_state(token, state);
+}
+
+void WebProcess::getNotifyStateForTesting(const String& name, CompletionHandler<void(std::optional<uint64_t>)>&& completionHandler)
+{
+    int token = NOTIFY_TOKEN_INVALID;
+    uint64_t state = 0;
+
+    if (notify_register_check(name.ascii().data(), &token) != NOTIFY_STATUS_OK)
+        completionHandler(std::nullopt);
+    else if (notify_get_state(token, &state) != NOTIFY_STATUS_OK)
+        completionHandler(std::nullopt);
+    else
+        completionHandler(state);
+
+    if (token != NOTIFY_TOKEN_INVALID)
+        notify_cancel(token);
 }
 
 #endif

@@ -252,6 +252,10 @@ public:
 
     void activePagesDomainsForTesting(CompletionHandler<void(Vector<String>&&)>&&); // This is what is reported to ActivityMonitor.
 
+#if ENABLE(NOTIFY_BLOCKING)
+    void getNotifyStateForTesting(const String&, CompletionHandler<void(std::optional<uint64_t>)>&&);
+#endif
+
     bool isRunningServiceWorkers() const { return !!m_serviceWorkerInformation; }
     bool isStandaloneServiceWorkerProcess() const { return isRunningServiceWorkers() && !pageCount(); }
     bool isRunningSharedWorkers() const { return !!m_sharedWorkerInformation; }

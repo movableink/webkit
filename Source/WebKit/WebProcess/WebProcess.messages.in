@@ -231,6 +231,7 @@ messages -> WebProcess : AuxiliaryProcess WantsAsyncDispatchMessage {
 #if ENABLE(NOTIFY_BLOCKING)
     [DeferSendingIfSuspendedWithCoalescingKeys=(message)] PostNotification(String message, std::optional<uint64_t> state)
     [DeferSendingIfSuspended] PostObserverNotification(String message)
+    GetNotifyStateForTesting(String notificationName) -> (std::optional<uint64_t> state)
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
