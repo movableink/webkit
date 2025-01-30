@@ -1459,6 +1459,8 @@ std::optional<TypedChild> parseCalcSum(CSSParserTokenRange& tokens, int depth, P
     if (checkDepth(depth) != ParseStatus::Ok)
         return std::nullopt;
 
+    auto originalTokens = tokens.span();
+
     auto firstValue = parseCalcProduct(tokens, depth, state);
     if (!firstValue)
         return std::nullopt;
@@ -1466,7 +1468,6 @@ std::optional<TypedChild> parseCalcSum(CSSParserTokenRange& tokens, int depth, P
     auto sumType = firstValue->type;
     Children children;
 
-    auto originalTokens = tokens.span();
     while (!tokens.atEnd()) {
         auto& token = tokens.peek();
         char operatorCharacter = token.type() == DelimiterToken ? token.delimiter() : 0;
