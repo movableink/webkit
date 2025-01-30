@@ -27,8 +27,13 @@
 #include "ResourceMonitor.h"
 
 #include "Document.h"
+#include "FrameLoader.h"
 #include "HTMLIFrameElement.h"
+#include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "Logging.h"
+#include "Page.h"
 #include "ResourceMonitorChecker.h"
 #include <wtf/StdLibExtras.h>
 

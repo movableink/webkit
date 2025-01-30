@@ -26,9 +26,11 @@
 #include "config.h"
 #include "ResourceMonitorThrottler.h"
 
+#include "Logging.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Seconds.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/StringHash.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
 

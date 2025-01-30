@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ResourceMonitorChecker.h"
 
+#include "Logging.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Seconds.h>
 #include <wtf/StdLibExtras.h>
@@ -89,7 +90,7 @@ void ResourceMonitorChecker::checkEligibility(ContentExtensions::ResourceLoadInf
     });
 }
 
-ResourceMonitor::Eligibility ResourceMonitorChecker::checkEligibility(const ContentExtensions::ResourceLoadInfo& info)
+ResourceMonitorChecker::Eligibility ResourceMonitorChecker::checkEligibility(const ContentExtensions::ResourceLoadInfo& info)
 {
     ASSERT(m_ruleList);
 

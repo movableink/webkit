@@ -44,6 +44,7 @@
 
 #include <algorithm>
 #include <math.h>
+#include <wtf/IndexedRange.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
