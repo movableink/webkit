@@ -24,11 +24,14 @@
 
 #pragma once
 
-#include "CSSCalcTree.h"
+#include "CSSPrimitiveNumericRange.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 namespace CSSCalc {
+
+struct Child;
+struct Tree;
 
 struct SerializationOptions {
     // `range` represents the allowed numeric range for the calculated result.

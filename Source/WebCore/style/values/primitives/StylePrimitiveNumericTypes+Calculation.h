@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "CalculationValue.h"
 #include "StylePrimitiveNumericTypes.h"
 #include <wtf/Forward.h>
 

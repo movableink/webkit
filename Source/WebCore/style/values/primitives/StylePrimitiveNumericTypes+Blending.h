@@ -83,7 +83,7 @@ template<auto R, typename V> struct Blending<LengthPercentage<R, V>> {
 
         if (WTF::holdsAlternative<Calc>(from) || WTF::holdsAlternative<Calc>(to) || (from.index() != to.index())) {
             if (context.compositeOperation != CompositeOperation::Replace)
-                return Calculation::add(copyCalculation(from), copyCalculation(to));
+                return Calc { Calculation::add(copyCalculation(from), copyCalculation(to)) };
 
             // 0% to 0px -> calc(0px + 0%) to calc(0px + 0%) -> 0px
             // 0px to 0% -> calc(0px + 0%) to calc(0px + 0%) -> 0px
@@ -102,7 +102,7 @@ template<auto R, typename V> struct Blending<LengthPercentage<R, V>> {
                 return WebCore::Style::blend(get<Percentage>(from), Percentage { 0 }, context);
             }
 
-            return Calculation::blend(copyCalculation(from), copyCalculation(to), context.progress);
+            return Calc { Calculation::blend(copyCalculation(from), copyCalculation(to), context.progress) };
         }
 
         if (!context.progress && context.isReplace())

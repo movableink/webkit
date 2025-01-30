@@ -400,7 +400,7 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValueWithProperty(CSSPropertyID propertyID) 
             return nullptr;
         }
 
-        CSSCalc::Children sumChildren;
+        Vector<CSSCalc::Child> sumChildren;
         sumChildren.append(WTFMove(*node));
         auto sum = CSSCalc::makeChild(CSSCalc::Sum { .children = WTFMove(sumChildren) }, type);
 

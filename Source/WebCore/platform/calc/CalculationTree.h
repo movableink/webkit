@@ -30,13 +30,10 @@
 #include <tuple>
 #include <variant>
 #include <wtf/Ref.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
-
-enum class ValueRange : uint8_t;
-
 namespace Calculation {
 
 // `Calculation::Tree` is a reduced representation of `CSSCalc::Tree` used in cases where everything else (e.g all non-canonical dimensions) has been resolved except percentages, which can't be resolved until they are used as they need some value to resolve against. Currently, these are only used by the `Length` type to represent <length-percentage> values, but are implemented generically so can be used for any <*-percentage> type if the need ever arises.
@@ -82,17 +79,6 @@ struct Random;
 // Non-standard
 struct Blend;
 
-using NumericValue = double;
-
-struct Range {
-    NumericValue min;
-    NumericValue max;
-
-    constexpr bool operator==(const Range&) const = default;
-};
-
-inline constexpr auto All = Range { -std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity() };
-
 template<typename Op>
 concept Leaf = requires(Op) {
     Op::isLeaf == true;
@@ -108,7 +94,7 @@ struct Number {
     static constexpr bool isLeaf = true;
     static constexpr bool isNumeric = true;
 
-    NumericValue value;
+    double value;
 
     bool operator==(const Number&) const = default;
 };
@@ -117,7 +103,7 @@ struct Percentage {
     static constexpr bool isLeaf = true;
     static constexpr bool isNumeric = true;
 
-    NumericValue value;
+    double value;
 
     bool operator==(const Percentage&) const = default;
 };
@@ -126,11 +112,14 @@ struct Dimension {
     static constexpr bool isLeaf = true;
     static constexpr bool isNumeric = true;
 
-    NumericValue value;
+    double value;
 
     bool operator==(const Dimension&) const = default;
 };
 
+struct None {
+    constexpr bool operator==(const None&) const = default;
+};
 
 template<typename Op> struct IndirectNode {
     UniqueRef<Op> op;
@@ -146,7 +135,7 @@ template<typename Op> struct IndirectNode {
     bool operator==(const IndirectNode<Op>& other) const { return op.get() == other.op.get(); }
 };
 
-using Child = std::variant<
+using Node = std::variant<
     Number,
     Percentage,
     Dimension,
@@ -182,12 +171,61 @@ using Child = std::variant<
     IndirectNode<Blend>
 >;
 
-struct None {
-    bool operator==(const None&) const = default;
+struct Child {
+    Node value;
+
+    template<typename T>
+        requires std::constructible_from<Node, T>
+    Child(T&&);
+
+    FORWARD_VARIANT_FUNCTIONS(Child, value)
+
+    bool operator==(const Child&) const = default;
 };
 
-using ChildOrNone = std::variant<Child, None>;
-using Children = Vector<Child>;
+struct ChildOrNone {
+    std::variant<Child, None> value;
+
+    ChildOrNone(Child&&);
+    ChildOrNone(None);
+
+    FORWARD_VARIANT_FUNCTIONS(ChildOrNone, value)
+
+    bool operator==(const ChildOrNone&) const = default;
+};
+
+struct Children {
+    using iterator = typename Vector<Child>::iterator;
+    using reverse_iterator = typename Vector<Child>::reverse_iterator;
+    using const_iterator = typename Vector<Child>::const_iterator;
+    using const_reverse_iterator = typename Vector<Child>::const_reverse_iterator;
+    using value_type = typename Vector<Child>::value_type;
+
+    Vector<Child> value;
+
+    Children(Children&&);
+    Children(Vector<Child>&&);
+    Children& operator=(Children&&);
+    Children& operator=(Vector<Child>&&);
+
+    iterator begin();
+    iterator end();
+    reverse_iterator rbegin();
+    reverse_iterator rend();
+
+    const_iterator begin() const;
+    const_iterator end() const;
+    const_reverse_iterator rbegin() const;
+    const_reverse_iterator rend() const;
+
+    bool isEmpty() const;
+    size_t size() const;
+
+    Child& operator[](size_t i);
+    const Child& operator[](size_t i) const;
+
+    bool operator==(const Children&) const = default;
+};
 
 struct Tree {
     Child root;
@@ -198,8 +236,7 @@ struct Tree {
 // Math Operators.
 
 struct Sum {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Sum);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Sum);
     static constexpr auto op = Operator::Sum;
 
     Children children;
@@ -208,8 +245,7 @@ public:
 };
 
 struct Product {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Product);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Product);
     static constexpr auto op = Operator::Product;
 
     Children children;
@@ -218,8 +254,7 @@ public:
 };
 
 struct Negate {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Negate);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Negate);
     static constexpr auto op = Operator::Negate;
 
     Child a;
@@ -228,8 +263,7 @@ public:
 };
 
 struct Invert {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Invert);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Invert);
     static constexpr auto op = Operator::Invert;
 
     Child a;
@@ -241,8 +275,7 @@ public:
 
 // Comparison Functions - https://drafts.csswg.org/css-values-4/#comp-func
 struct Min {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Min);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Min);
     static constexpr auto op = Operator::Min;
 
     Children children;
@@ -251,8 +284,7 @@ public:
 };
 
 struct Max {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Max);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Max);
     static constexpr auto op = Operator::Max;
 
     Children children;
@@ -261,8 +293,7 @@ public:
 };
 
 struct Clamp {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Clamp);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Clamp);
     static constexpr auto op = Operator::Clamp;
 
     ChildOrNone min;
@@ -274,8 +305,7 @@ public:
 
 // Stepped Value Functions - https://drafts.csswg.org/css-values-4/#round-func
 struct RoundNearest {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(RoundNearest);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(RoundNearest);
     static constexpr auto op = Operator::Nearest;
 
     Child a;
@@ -285,8 +315,7 @@ public:
 };
 
 struct RoundUp {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(RoundUp);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(RoundUp);
     static constexpr auto op = Operator::Up;
 
     Child a;
@@ -296,8 +325,7 @@ public:
 };
 
 struct RoundDown {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(RoundDown);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(RoundDown);
     static constexpr auto op = Operator::Down;
 
     Child a;
@@ -307,8 +335,7 @@ public:
 };
 
 struct RoundToZero {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(RoundToZero);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(RoundToZero);
     static constexpr auto op = Operator::ToZero;
 
     Child a;
@@ -318,8 +345,7 @@ public:
 };
 
 struct Mod {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Mod);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Mod);
     static constexpr auto op = Operator::Mod;
 
     Child a;
@@ -329,8 +355,7 @@ public:
 };
 
 struct Rem {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Rem);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Rem);
     static constexpr auto op = Operator::Rem;
 
     Child a;
@@ -341,8 +366,7 @@ public:
 
 // Trigonometric Functions - https://drafts.csswg.org/css-values-4/#trig-funcs
 struct Sin {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Sin);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Sin);
     static constexpr auto op = Operator::Sin;
 
     Child a;
@@ -351,8 +375,7 @@ public:
 };
 
 struct Cos {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Cos);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Cos);
     static constexpr auto op = Operator::Cos;
 
     Child a;
@@ -361,8 +384,7 @@ public:
 };
 
 struct Tan {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Tan);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Tan);
     static constexpr auto op = Operator::Tan;
 
     Child a;
@@ -371,8 +393,7 @@ public:
 };
 
 struct Asin {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Asin);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Asin);
     static constexpr auto op = Operator::Asin;
 
     Child a;
@@ -381,8 +402,7 @@ public:
 };
 
 struct Acos {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Acos);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Acos);
     static constexpr auto op = Operator::Acos;
 
     Child a;
@@ -391,8 +411,7 @@ public:
 };
 
 struct Atan {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Atan);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Atan);
     static constexpr auto op = Operator::Atan;
 
     Child a;
@@ -401,8 +420,7 @@ public:
 };
 
 struct Atan2 {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Atan2);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Atan2);
     static constexpr auto op = Operator::Atan2;
 
     Child a;
@@ -413,8 +431,7 @@ public:
 
 // Exponential Functions - https://drafts.csswg.org/css-values-4/#exponent-funcs
 struct Pow {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Atan2);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Atan2);
     static constexpr auto op = Operator::Pow;
 
     Child a;
@@ -424,8 +441,7 @@ public:
 };
 
 struct Sqrt {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Sqrt);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Sqrt);
     static constexpr auto op = Operator::Sqrt;
 
     Child a;
@@ -434,8 +450,7 @@ public:
 };
 
 struct Hypot {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Hypot);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Hypot);
     static constexpr auto op = Operator::Hypot;
 
     Children children;
@@ -444,8 +459,7 @@ public:
 };
 
 struct Log {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Log);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Log);
     static constexpr auto op = Operator::Log;
 
     Child a;
@@ -455,8 +469,7 @@ public:
 };
 
 struct Exp {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Exp);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Exp);
     static constexpr auto op = Operator::Exp;
 
     Child a;
@@ -466,8 +479,7 @@ public:
 
 // Sign-Related Functions - https://drafts.csswg.org/css-values-4/#sign-funcs
 struct Abs {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Abs);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Abs);
     static constexpr auto op = Operator::Abs;
 
     Child a;
@@ -476,8 +488,7 @@ public:
 };
 
 struct Sign {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Sign);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Sign);
     static constexpr auto op = Operator::Sign;
 
     Child a;
@@ -487,8 +498,7 @@ public:
 
 // Progress-Related Functions - https://drafts.csswg.org/css-values-5/#progress
 struct Progress {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Progress);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Progress);
     static constexpr auto op = Operator::Progress;
 
     Child progress;
@@ -500,8 +510,7 @@ public:
 
 // Random Function - https://drafts.csswg.org/css-values-5/#random
 struct Random {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Random);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Random);
     static constexpr auto op = Operator::Random;
 
     struct CachingOptions {
@@ -522,8 +531,7 @@ public:
 
 // Non-standard
 struct Blend {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(Blend);
-public:
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Blend);
     static constexpr auto op = Operator::Blend;
 
     double progress;
@@ -564,17 +572,17 @@ template<typename Op> Child makeChild(Op&& op)
 
 // Convenience constructors
 
-inline Child number(NumericValue value)
+inline Child number(double value)
 {
     return makeChild(Number { .value = value });
 }
 
-inline Child percentage(NumericValue value)
+inline Child percentage(double value)
 {
     return makeChild(Percentage { .value = value });
 }
 
-inline Child dimension(NumericValue value)
+inline Child dimension(double value)
 {
     return makeChild(Dimension { .value = value });
 }
@@ -827,6 +835,111 @@ template<size_t I> const auto& get(const Blend& root)
         return root.from;
     else if constexpr (I == 2)
         return root.to;
+}
+
+// MARK: Child Definition
+
+template<typename T>
+    requires std::constructible_from<Node, T>
+Child::Child(T&& value)
+    : value(std::forward<T>(value))
+{
+}
+
+// MARK: ChildOrNone Definition
+
+inline ChildOrNone::ChildOrNone(Child&& child)
+    : value(WTFMove(child))
+{
+}
+
+inline ChildOrNone::ChildOrNone(None none)
+    : value(none)
+{
+}
+
+// MARK: Children Definition
+
+inline Children::Children(Children&& other)
+    : value(WTFMove(other.value))
+{
+}
+
+inline Children::Children(Vector<Child>&& other)
+    : value(WTFMove(other))
+{
+}
+
+inline Children& Children::operator=(Children&& other)
+{
+    value = WTFMove(other.value);
+    return *this;
+}
+
+inline Children& Children::operator=(Vector<Child>&& other)
+{
+    value = WTFMove(other);
+    return *this;
+}
+
+inline Children::iterator Children::begin()
+{
+    return value.begin();
+}
+
+inline Children::iterator Children::end()
+{
+    return value.end();
+}
+
+inline Children::reverse_iterator Children::rbegin()
+{
+    return value.rbegin();
+}
+
+inline Children::reverse_iterator Children::rend()
+{
+    return value.rend();
+}
+
+inline Children::const_iterator Children::begin() const
+{
+    return value.begin();
+}
+
+inline Children::const_iterator Children::end() const
+{
+    return value.end();
+}
+
+inline Children::const_reverse_iterator Children::rbegin() const
+{
+    return value.rbegin();
+}
+
+inline Children::const_reverse_iterator Children::rend() const
+{
+    return value.rend();
+}
+
+inline bool Children::isEmpty() const
+{
+    return value.isEmpty();
+}
+
+inline size_t Children::size() const
+{
+    return value.size();
+}
+
+inline Child& Children::operator[](size_t i)
+{
+    return value[i];
+}
+
+inline const Child& Children::operator[](size_t i) const
+{
+    return value[i];
 }
 
 } // namespace Calculation

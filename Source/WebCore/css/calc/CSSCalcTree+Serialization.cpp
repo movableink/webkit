@@ -414,7 +414,8 @@ void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<A
     WTF::switchOn(anchor->side,
         [&](CSSValueID valueID) {
             builder.append(nameLiteralForSerialization(valueID));
-        }, [&](const Child& percentage) {
+        },
+        [&](const Child& percentage) {
             // As anchor() is not actually a "math function", calc() can't be omitted in arguments.
             serializeWithoutOmittingPrefix(builder, percentage, state);
         }

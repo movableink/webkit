@@ -25,6 +25,7 @@
 #pragma once
 
 #include "CSSPosition.h"
+#include "FloatPoint.h"
 #include "StylePrimitiveNumericTypes.h"
 
 namespace WebCore {

@@ -437,7 +437,6 @@ css/CSSCounterValue.cpp
 css/CSSCounterValue.h
 css/CSSCrossfadeValue.cpp
 css/CSSCursorImageValue.cpp
-css/CSSCustomPropertyValue.cpp
 css/CSSFilterImageValue.cpp
 css/CSSFontFace.cpp
 css/CSSFontFaceRule.cpp

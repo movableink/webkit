@@ -30,13 +30,17 @@
 
 #pragma once
 
+#include "CalculationRange.h"
 #include "CalculationTree.h"
-#include "Length.h"
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
+
+namespace Calculation {
+enum class Category : uint8_t;
+}
 
 class CalculationValue : public RefCounted<CalculationValue> {
     WTF_MAKE_FAST_COMPACT_ALLOCATED;
@@ -44,7 +48,7 @@ public:
     WEBCORE_EXPORT static Ref<CalculationValue> create(Calculation::Category, Calculation::Range, Calculation::Tree&&);
     WEBCORE_EXPORT ~CalculationValue();
 
-    Calculation::NumericValue evaluate(Calculation::NumericValue percentResolutionLength) const;
+    double evaluate(double percentResolutionLength) const;
 
     Calculation::Category category() const { return m_category; }
     Calculation::Range range() const { return m_range; }

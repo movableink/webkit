@@ -76,7 +76,7 @@ template<NumericRaw RawType> struct PrimitiveNumeric {
     PrimitiveNumeric(Calc calc)
     {
         m_index = indexForCalc;
-        m_value.calc = &calc.protectedCalc().leakRef();
+        m_value.calc = &calc.leakRef();
     }
 
     PrimitiveNumeric(UnitEnum auto unit, double value) requires (requires { { Raw(unit, value) }; })
@@ -102,7 +102,7 @@ template<NumericRaw RawType> struct PrimitiveNumeric {
         if (other.isCalc()) {
             m_index = indexForCalc;
             m_value.calc = other.m_value.calc;
-            m_value.calc->ref();
+            SUPPRESS_UNCOUNTED_ARG unevaluatedCalcRef(m_value.calc);
         } else {
             m_index = other.m_index;
             m_value.number = other.m_value.number;
@@ -126,12 +126,12 @@ template<NumericRaw RawType> struct PrimitiveNumeric {
     PrimitiveNumeric& operator=(const PrimitiveNumeric& other)
     {
         if (isCalc())
-            m_value.calc->deref();
+            SUPPRESS_UNCOUNTED_ARG unevaluatedCalcDeref(m_value.calc);
 
         if (other.isCalc()) {
             m_index = indexForCalc;
             m_value.calc = other.m_value.calc;
-            m_value.calc->ref();
+            SUPPRESS_UNCOUNTED_ARG unevaluatedCalcRef(m_value.calc);
         } else {
             m_index = other.m_index;
             m_value.number = other.m_value.number;
@@ -143,7 +143,7 @@ template<NumericRaw RawType> struct PrimitiveNumeric {
     PrimitiveNumeric& operator=(PrimitiveNumeric&& other)
     {
         if (isCalc())
-            m_value.calc->deref();
+            SUPPRESS_UNCOUNTED_ARG unevaluatedCalcDeref(m_value.calc);
 
         if (other.isCalc()) {
             m_index = indexForCalc;
@@ -162,7 +162,7 @@ template<NumericRaw RawType> struct PrimitiveNumeric {
     ~PrimitiveNumeric()
     {
         if (isCalc())
-            m_value.calc->deref();
+            SUPPRESS_UNCOUNTED_ARG unevaluatedCalcDeref(m_value.calc);
     }
 
     bool operator==(const PrimitiveNumeric& other) const
@@ -171,7 +171,7 @@ template<NumericRaw RawType> struct PrimitiveNumeric {
             return false;
 
         if (isCalc())
-            return protectedCalc()->equals(other.protectedCalc());
+            return asCalc() == other.asCalc();
         return m_value.number == other.m_value.number;
     }
 
@@ -264,12 +264,6 @@ private:
 
     bool isEmpty() const { return m_index == indexForEmpty; }
 
-    Ref<CSSCalcValue> protectedCalc() const
-    {
-        ASSERT(isCalc());
-        return Ref(*m_value.calc);
-    }
-
     Raw asRaw() const
     {
         ASSERT(isRaw());
@@ -279,7 +273,7 @@ private:
     Calc asCalc() const
     {
         ASSERT(isCalc());
-        return Calc { protectedCalc() };
+        return Calc { *m_value.calc };
     }
 
     // A std::variant is not used here to allow tighter packing.

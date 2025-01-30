@@ -147,13 +147,13 @@ CSSUnitType CSSCalcValue::primitiveType() const
     case Calculation::Category::LengthPercentage:
         if (!m_tree.type.percentHint)
             return CSSUnitType::CSS_PX;
-        if (std::holds_alternative<CSSCalc::Percentage>(m_tree.root))
+        if (WTF::holdsAlternative<CSSCalc::Percentage>(m_tree.root))
             return CSSUnitType::CSS_PERCENTAGE;
         return CSSUnitType::CSS_CALC_PERCENTAGE_WITH_LENGTH;
     case Calculation::Category::AnglePercentage:
         if (!m_tree.type.percentHint)
             return CSSUnitType::CSS_DEG;
-        if (std::holds_alternative<CSSCalc::Percentage>(m_tree.root))
+        if (WTF::holdsAlternative<CSSCalc::Percentage>(m_tree.root))
             return CSSUnitType::CSS_PERCENTAGE;
         return CSSUnitType::CSS_CALC_PERCENTAGE_WITH_ANGLE;
     }

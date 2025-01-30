@@ -92,16 +92,6 @@ template<CSS::DimensionPercentageNumeric CSSType> struct PrimitiveNumeric<CSSTyp
     {
     }
 
-    PrimitiveNumeric(Ref<CalculationValue> calculationValue)
-        : m_value { Calc { WTFMove(calculationValue) } }
-    {
-    }
-
-    PrimitiveNumeric(Calculation::Child calculationValue)
-        : m_value { Calc { WTFMove(calculationValue) } }
-    {
-    }
-
     // NOTE: CalculatedValue is intentionally not part of IPCData.
     using IPCData = std::variant<Dimension, Percentage>;
     PrimitiveNumeric(IPCData&& data)

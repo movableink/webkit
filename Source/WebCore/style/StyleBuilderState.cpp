@@ -44,6 +44,7 @@
 #include "CSSImageValue.h"
 #include "CSSNamedImageValue.h"
 #include "CSSPaintImageValue.h"
+#include "CalculationRandomKeyMap.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"

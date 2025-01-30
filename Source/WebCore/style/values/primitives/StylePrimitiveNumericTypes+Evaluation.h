@@ -134,7 +134,7 @@ template<typename T> FloatSize evaluate(const SpaceSeparatedSize<T>& value, Floa
 // MARK: - Calculated Evaluations
 
 // Convert to `calc(100% - value)`.
-template<auto R, typename V> LengthPercentage<R, V> reflect(const LengthPercentage<R, V>& value)
+template<auto R, typename V> auto reflect(const LengthPercentage<R, V>& value) -> LengthPercentage<R, V>
 {
     using Result = LengthPercentage<R, V>;
     using Dimension = typename Result::Dimension;
@@ -175,8 +175,8 @@ template<auto aR, auto bR, typename V> auto reflectSum(const LengthPercentage<aR
     constexpr auto resultR = mergeRanges(aR, bR);
 
     using Result = LengthPercentage<resultR, V>;
-    using PercentageResult = typename LengthPercentage<resultR, V>::Percentage;
-    using CalcResult = typename LengthPercentage<resultR, V>::Calc;
+    using PercentageResult = typename Result::Percentage;
+    using CalcResult = typename Result::Calc;
     using PercentageA = typename LengthPercentage<aR, V>::Percentage;
     using PercentageB = typename LengthPercentage<bR, V>::Percentage;
 

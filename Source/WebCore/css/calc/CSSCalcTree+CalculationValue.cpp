@@ -27,6 +27,7 @@
 
 #include "CSSCalcSymbolTable.h"
 #include "CSSCalcTree+Evaluation.h"
+#include "CSSCalcTree+Mappings.h"
 #include "CSSCalcTree+Simplification.h"
 #include "CSSCalcTree+Traversal.h"
 #include "CSSCalcTree.h"
@@ -57,7 +58,7 @@ struct ToConversionOptions {
 static auto fromCalculationValue(const Calculation::Random::CachingOptions&, const FromConversionOptions&) -> Random::CachingOptions;
 static auto fromCalculationValue(const Calculation::None&, const FromConversionOptions&) -> CSS::Keyword::None;
 static auto fromCalculationValue(const Calculation::ChildOrNone&, const FromConversionOptions&) -> ChildOrNone;
-static auto fromCalculationValue(const Vector<Calculation::Child>&, const FromConversionOptions&) -> Children;
+static auto fromCalculationValue(const Calculation::Children&, const FromConversionOptions&) -> Children;
 static auto fromCalculationValue(const std::optional<Calculation::Child>&, const FromConversionOptions&) -> std::optional<Child>;
 static auto fromCalculationValue(const Calculation::Child&, const FromConversionOptions&) -> Child;
 static auto fromCalculationValue(const Calculation::Number&, const FromConversionOptions&) -> Child;
@@ -128,9 +129,9 @@ ChildOrNone fromCalculationValue(const Calculation::ChildOrNone& root, const Fro
     return WTF::switchOn(root, [&](const auto& root) { return ChildOrNone { fromCalculationValue(root, options) }; });
 }
 
-Children fromCalculationValue(const Vector<Calculation::Child>& children, const FromConversionOptions& options)
+Children fromCalculationValue(const Calculation::Children& children, const FromConversionOptions& options)
 {
-    return WTF::map(children, [&](const auto& child) -> Child { return fromCalculationValue(child, options); });
+    return WTF::map(children.value, [&](const auto& child) -> Child { return fromCalculationValue(child, options); });
 }
 
 std::optional<Child> fromCalculationValue(const std::optional<Calculation::Child>& root, const FromConversionOptions& options)
@@ -203,9 +204,9 @@ Child fromCalculationValue(const Calculation::IndirectNode<Calculation::Blend>& 
 
 template<typename CalculationOp> Child fromCalculationValue(const Calculation::IndirectNode<CalculationOp>& root, const FromConversionOptions& options)
 {
-    using Op = typename ReverseMapping<CalculationOp>::Op;
+    using CalcOp = ToCalcTreeOp<CalculationOp>;
 
-    auto op = WTF::apply([&](const auto& ...x) -> Op { return Op { fromCalculationValue(x, options)... }; } , *root);
+    auto op = WTF::apply([&](const auto& ...x) { return CalcOp { fromCalculationValue(x, options)... }; } , *root);
 
     if (auto replacement = simplify(op, options.simplification))
         return WTFMove(*replacement);
@@ -330,7 +331,7 @@ Calculation::Child toCalculationValue(const IndirectNode<AnchorSize>&, const ToC
 
 template<typename Op> Calculation::Child toCalculationValue(const IndirectNode<Op>& root, const ToConversionOptions& options)
 {
-    using CalculationOp = typename Op::Base;
+    using CalculationOp = ToCalculationTreeOp<Op>;
 
     return Calculation::makeChild(WTF::apply([&](const auto& ...x) { return CalculationOp { toCalculationValue(x, options)... }; } , *root));
 }

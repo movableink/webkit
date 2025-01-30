@@ -593,7 +593,7 @@ template<class V, class... F> requires (!HasSwitchOn<V>) ALWAYS_INLINE auto swit
 
 #endif
 
-template<class V, class... F> requires (HasSwitchOn<V>) ALWAYS_INLINE auto switchOn(const V& v, F&&... f) -> decltype(v.switchOn(std::forward<F>(f)...))
+template<class V, class... F> requires (HasSwitchOn<V>) ALWAYS_INLINE auto switchOn(V&& v, F&&... f) -> decltype(v.switchOn(std::forward<F>(f)...))
 {
     return v.switchOn(std::forward<F>(f)...);
 }
@@ -662,6 +662,50 @@ template<size_t I, typename V> bool holdsAlternative(const V& v)
 {
     return HoldsAlternative<V>::template holdsAlternative<I>(v);
 }
+
+// MARK: - Utility macro for wrapping a variant in a struct
+
+#define FORWARD_VARIANT_FUNCTIONS(Self, name)                                        \
+    size_t index() const                                                             \
+    {                                                                                \
+        return name.index();                                                         \
+    }                                                                                \
+    template<typename... F> decltype(auto) switchOn(F&&... f) const                  \
+    {                                                                                \
+        return WTF::switchOn(name, std::forward<F>(f)...);                           \
+    }                                                                                \
+    template<typename... F> decltype(auto) switchOn(F&&... f)                        \
+    {                                                                                \
+        return WTF::switchOn(name, std::forward<F>(f)...);                           \
+    }                                                                                \
+    template<typename T> bool holdsAlternative() const                               \
+    {                                                                                \
+        return WTF::holdsAlternative<T>(value);                                      \
+    }                                                                                \
+    template<typename T> friend T& get(Self& self)                                   \
+    {                                                                                \
+        return std::get<T>(self.name);                                               \
+    }                                                                                \
+    template<typename T> friend T&& get(Self&& self)                                 \
+    {                                                                                \
+        return std::get<T>(WTFMove(self.name));                                      \
+    }                                                                                \
+    template<typename T> friend const T& get(const Self& self)                       \
+    {                                                                                \
+        return std::get<T>(self.name);                                               \
+    }                                                                                \
+    template<typename T> friend const T&& get(const Self&& self)                     \
+    {                                                                                \
+        return std::get<T>(WTFMove(self.name));                                      \
+    }                                                                                \
+    template<typename T> friend std::add_pointer_t<T> get_if(Self* self)             \
+    {                                                                                \
+        return std::get_if<T>(&self->name);                                          \
+    }                                                                                \
+    template<typename T> friend std::add_pointer_t<const T> get_if(const Self* self) \
+    {                                                                                \
+        return std::get_if<T>(&self->name);                                          \
+    }
 
 // MARK: - Utility types for working with std::variants in generic contexts
 

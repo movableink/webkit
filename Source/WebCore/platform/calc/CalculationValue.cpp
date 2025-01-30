@@ -53,7 +53,7 @@ CalculationValue::CalculationValue(Calculation::Category category, Calculation::
 
 CalculationValue::~CalculationValue() = default;
 
-Calculation::NumericValue CalculationValue::evaluate(Calculation::NumericValue percentResolutionLength) const
+double CalculationValue::evaluate(double percentResolutionLength) const
 {
     auto result = Calculation::evaluate(m_tree, percentResolutionLength);
     if (std::isnan(result))

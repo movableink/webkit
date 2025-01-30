@@ -24,10 +24,12 @@
 
 #pragma once
 
+#include "CSSCalcValue.h"
 #include "CSSPrimitiveNumericTypes+Canonicalization.h"
 #include "CSSPrimitiveNumericTypes+ComputedStyleDependencies.h"
 #include "CSSSymbol.h"
 #include "CSSToLengthConversionData.h"
+#include "CalculationValue.h"
 #include "FloatConversion.h"
 #include "StyleBuilderState.h"
 #include "StylePrimitiveNumericTypes.h"
@@ -230,8 +232,6 @@ template<auto R, typename V, typename... Rest> LengthPercentage<R, V> canonicali
 
 // MARK: - Conversion from "Style to "CSS"
 
-// Out of line to avoid inclusion of CSSCalcValue.h
-Ref<CSSCalcValue> makeCalc(Ref<CalculationValue>, const RenderStyle&);
 // Out of line to avoid inclusion of RenderStyleInlines.h
 float adjustForZoom(float, const RenderStyle&);
 
@@ -268,8 +268,8 @@ template<auto R, typename V> struct ToCSS<AnglePercentage<R, V>> {
             [&](const Percentage<R, V>& percentage) -> CSS::AnglePercentage<R, V> {
                 return typename CSS::AnglePercentage<R, V>::Raw { percentage.unit, percentage.value };
             },
-            [&](const typename AnglePercentage<R, V>::Calc& calculation) -> CSS::AnglePercentage<R, V> {
-                return toCSS(calculation, style);
+            [&](const typename AnglePercentage<R, V>::Calc& calculation) -> CSS::AnglePercentage<R> {
+                return typename CSS::AnglePercentage<R, V>::Calc { CSSCalcValue::create(calculation.protectedCalculation(), style) };
             }
         );
     }
@@ -285,8 +285,8 @@ template<auto R, typename V> struct ToCSS<LengthPercentage<R, V>> {
             [&](const typename LengthPercentage<R, V>::Percentage& percentage) -> CSS::LengthPercentage<R, V> {
                 return typename CSS::LengthPercentage<R, V>::Raw { percentage.unit, percentage.value };
             },
-            [&](const typename LengthPercentage<R, V>::Calc& calculation) -> CSS::LengthPercentage<R, V> {
-                return toCSS(calculation, style);
+            [&](const typename LengthPercentage<R, V>::Calc& calculation) -> CSS::LengthPercentage<R> {
+                return typename CSS::LengthPercentage<R, V>::Calc { CSSCalcValue::create(calculation.protectedCalculation(), style) };
             }
         );
     }
@@ -318,7 +318,7 @@ template<auto R, typename V> struct ToStyle<CSS::UnevaluatedCalc<CSS::IntegerRaw
 
     template<typename... Rest> auto operator()(const From& value, Rest&&... rest) -> To
     {
-        return { roundForImpreciseConversion<V>(CSS::unevaluatedCalcEvaluate(value.protectedCalc(), From::category, std::forward<Rest>(rest)...)) };
+        return { roundForImpreciseConversion<V>(value.evaluate(From::category, std::forward<Rest>(rest)...)) };
     }
 };
 
@@ -328,7 +328,7 @@ template<auto R, typename V> struct ToStyle<CSS::UnevaluatedCalc<CSS::LengthRaw<
 
     template<typename... Rest> auto operator()(const From& value, Rest&&... rest) -> To
     {
-        return { clampLengthToAllowedLimits(CSS::unevaluatedCalcEvaluate(value.protectedCalc(), From::category, std::forward<Rest>(rest)...)) };
+        return { clampLengthToAllowedLimits(value.evaluate(From::category, std::forward<Rest>(rest)...)) };
     }
 };
 
@@ -343,10 +343,10 @@ template<auto R, typename V> struct ToStyle<CSS::UnevaluatedCalc<CSS::AnglePerce
         ASSERT(calc->category() == From::category);
 
         if (!calc->tree().type.percentHint)
-            return { Style::Angle<R, V> { clampTo<V>(calc->doubleValue(std::forward<Rest>(rest)...)) } };
-        if (std::holds_alternative<CSSCalc::Percentage>(calc->tree().root))
-            return { Style::Percentage<R, V> { clampTo<V>(calc->doubleValue(std::forward<Rest>(rest)...)) } };
-        return { calc->createCalculationValue(std::forward<Rest>(rest)...) };
+            return typename To::Dimension { clampTo<V>(calc->doubleValue(std::forward<Rest>(rest)...)) };
+        if (WTF::holdsAlternative<CSSCalc::Percentage>(calc->tree().root))
+            return typename To::Percentage { clampTo<V>(calc->doubleValue(std::forward<Rest>(rest)...)) };
+        return typename To::Calc { calc->createCalculationValue(std::forward<Rest>(rest)...) };
     }
 };
 
@@ -361,10 +361,10 @@ template<auto R, typename V> struct ToStyle<CSS::UnevaluatedCalc<CSS::LengthPerc
         ASSERT(calc->category() == From::category);
 
         if (!calc->tree().type.percentHint)
-            return { Style::Length<R, V> { clampLengthToAllowedLimits(calc->doubleValue(std::forward<Rest>(rest)...)) } };
-        if (std::holds_alternative<CSSCalc::Percentage>(calc->tree().root))
-            return { Style::Percentage<R, V> { clampTo<V>(calc->doubleValue(std::forward<Rest>(rest)...)) } };
-        return { calc->createCalculationValue(std::forward<Rest>(rest)...) };
+            return typename To::Dimension { clampLengthToAllowedLimits(calc->doubleValue(std::forward<Rest>(rest)...)) };
+        if (WTF::holdsAlternative<CSSCalc::Percentage>(calc->tree().root))
+            return typename To::Percentage { clampTo<V>(calc->doubleValue(std::forward<Rest>(rest)...)) };
+        return typename To::Calc { calc->createCalculationValue(std::forward<Rest>(rest)...) };
     }
 };
 
@@ -386,7 +386,7 @@ template<CSS::NumericRaw RawType> struct ToStyle<CSS::UnevaluatedCalc<RawType>> 
 
     template<typename... Rest> auto operator()(const From& value, Rest&&... rest) -> To
     {
-        return { CSS::unevaluatedCalcEvaluate(value.protectedCalc(), From::category, std::forward<Rest>(rest)...) };
+        return { value.evaluate(From::category, std::forward<Rest>(rest)...) };
     }
 };
 

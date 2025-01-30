@@ -25,7 +25,7 @@
 #pragma once
 
 #include "CSSCalcSymbolTable.h"
-#include "CSSCalcTree.h"
+#include "CSSPrimitiveNumericRange.h"
 #include "CSSToLengthConversionData.h"
 
 namespace WebCore {
@@ -35,6 +35,48 @@ enum class Category : uint8_t;
 }
 
 namespace CSSCalc {
+
+struct Child;
+struct Tree;
+
+struct Abs;
+struct Acos;
+struct Anchor;
+struct AnchorSize;
+struct Asin;
+struct Atan2;
+struct Atan;
+struct CanonicalDimension;
+struct Clamp;
+struct ContainerProgress;
+struct Cos;
+struct Exp;
+struct Hypot;
+struct Invert;
+struct Log;
+struct Max;
+struct MediaProgress;
+struct Min;
+struct Mod;
+struct Negate;
+struct NonCanonicalDimension;
+struct Number;
+struct Percentage;
+struct Pow;
+struct Product;
+struct Progress;
+struct Random;
+struct Rem;
+struct RoundDown;
+struct RoundNearest;
+struct RoundToZero;
+struct RoundUp;
+struct Sign;
+struct Sin;
+struct Sqrt;
+struct Sum;
+struct Symbol;
+struct Tan;
 
 // https://drafts.csswg.org/css-values-4/#calc-simplification
 

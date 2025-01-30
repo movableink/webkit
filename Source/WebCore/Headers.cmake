@@ -1986,6 +1986,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/calc/CalculationOperator.h
     platform/calc/CalculationRandomKey.h
     platform/calc/CalculationRandomKeyMap.h
+    platform/calc/CalculationRange.h
     platform/calc/CalculationTree.h
     platform/calc/CalculationValue.h
 

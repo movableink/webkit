@@ -30,6 +30,7 @@
 #include "CSSCalcTree+ContainerProgressEvaluator.h"
 #include "CSSCalcTree+Copy.h"
 #include "CSSCalcTree+Evaluation.h"
+#include "CSSCalcTree+Mappings.h"
 #include "CSSCalcTree+MediaProgressEvaluator.h"
 #include "CSSCalcTree+NumericIdentity.h"
 #include "CSSCalcTree+Traversal.h"
@@ -54,14 +55,13 @@ static auto copyAndSimplify(const Random::CachingOptions&, const SimplificationO
 static auto copyAndSimplify(const AtomString&, const SimplificationOptions&) -> AtomString;
 static auto copyAndSimplify(const CSS::Keyword::None&, const SimplificationOptions&) -> CSS::Keyword::None;
 static auto copyAndSimplify(const Children&, const SimplificationOptions&) -> Children;
+static auto copyAndSimplify(const ChildOrNone&, const SimplificationOptions&) -> ChildOrNone;
 template<typename T>
 static auto copyAndSimplify(const std::optional<T>&, const SimplificationOptions&) -> std::optional<T>;
-template<typename... Ts>
-static auto copyAndSimplify(const std::variant<Ts...>&, const SimplificationOptions&) -> std::variant<Ts...>;
 
 template<typename Op, typename... Args> static double executeMathOperation(Args&&... args)
 {
-    return Calculation::executeOperation<typename Op::Base>(std::forward<Args>(args)...);
+    return Calculation::executeOperation<ToCalculationTreeOp<Op>>(std::forward<Args>(args)...);
 }
 
 template<typename... F> static decltype(auto) switchTogether(const Child& a, const Child& b, F&&... f)
@@ -74,7 +74,7 @@ template<typename... F> static decltype(auto) switchTogether(const Child& a, con
 
     return WTF::switchOn(a,
         [&]<typename T>(const T& aT) -> ResultType {
-            return visitor(aT, std::get<T>(b));
+            return visitor(aT, get<T>(b));
         }
     );
 }
@@ -183,7 +183,7 @@ std::optional<CanonicalDimension> canonicalize(NonCanonicalDimension root, const
                 return CanonicalDimension { .value = Style::computeNonCalcLengthDouble(value, lengthUnit, *conversionData), .dimension = CanonicalDimension::Dimension::Length };
             return CanonicalDimension { .value = Style::computeNonCalcLengthDouble(value, lengthUnit, *conversionData) / conversionData->style()->usedZoom(), .dimension = CanonicalDimension::Dimension::Length };
         }
-        return std::nullopt;
+        return { };
     };
 
     switch (root.unit) {
@@ -300,7 +300,7 @@ std::optional<CanonicalDimension> canonicalize(NonCanonicalDimension root, const
     }
 
     ASSERT_NOT_REACHED();
-    return std::nullopt;
+    return { };
 }
 
 
@@ -311,12 +311,12 @@ template<typename Op> static std::optional<Child> simplifyForOperation(Child& a,
     return switchTogether(a, b,
         [&]<Numeric T>(const T& numericA, const T& numericB) -> std::optional<Child> {
             if (!unitsMatch(numericA, numericB, options) || !fullyResolved(numericA, options))
-                return std::nullopt;
+                return { };
 
             return makeChildWithValueBasedOn(executeMathOperation<Op>(numericA.value, numericB.value), numericA);
         },
         [](const auto&, const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -326,12 +326,12 @@ template<typename Op, typename Completion> static std::optional<Child> simplifyF
     return switchTogether(a, b,
         [&]<Numeric T>(const T& numericA, const T& numericB) -> std::optional<Child> {
             if (!unitsMatch(numericA, numericB, options) || !fullyResolved(numericA, options))
-                return std::nullopt;
+                return { };
 
             return completion(executeMathOperation<Op>(numericA.value, numericB.value));
         },
         [](const auto&, const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -341,10 +341,10 @@ template<typename Op> static std::optional<Child> simplifyForRound(Op& root, con
     if (root.b)
         return simplifyForOperation<Op>(root.a, *root.b, options);
 
-    if (auto* numberA = std::get_if<Number>(&root.a))
+    if (auto* numberA = get_if<Number>(&root.a))
         return makeChild(Number { .value = executeMathOperation<Op>(numberA->value, 1.0) });
 
-    return std::nullopt;
+    return { };
 }
 
 template<typename Op> static std::optional<Child> simplifyForTrig(Op& root, const SimplificationOptions&)
@@ -354,15 +354,15 @@ template<typename Op> static std::optional<Child> simplifyForTrig(Op& root, cons
     // units via earlier simplification.
 
     return WTF::switchOn(root.a,
-        [&](Number& a) -> std::optional<Child> {
+        [&](const Number& a) -> std::optional<Child> {
             return makeChild(Number { .value = executeMathOperation<Op>(a.value) });
         },
-        [&](CanonicalDimension& a) -> std::optional<Child> {
+        [&](const CanonicalDimension& a) -> std::optional<Child> {
             ASSERT(a.dimension == CanonicalDimension::Dimension::Angle);
             return makeChild(Number { .value = executeMathOperation<Op>(deg2rad(a.value)) });
         },
-        [](auto&) -> std::optional<Child> {
-            return std::nullopt;
+        [](const auto&) -> std::optional<Child> {
+            return { };
         }
     );
 }
@@ -373,11 +373,11 @@ template<typename Op> static std::optional<Child> simplifyForArcTrig(Op& root, c
     // be able to be fully resolved yet.
 
     return WTF::switchOn(root.a,
-        [&](Number& a) -> std::optional<Child> {
+        [&](const Number& a) -> std::optional<Child> {
             return makeChild(CanonicalDimension { .value = executeMathOperation<Op>(a.value), .dimension = CanonicalDimension::Dimension::Angle });
         },
-        [](auto&) -> std::optional<Child> {
-            return std::nullopt;
+        [](const auto&) -> std::optional<Child> {
+            return { };
         }
     );
 }
@@ -408,8 +408,8 @@ template<typename Op> static std::optional<Child> simplifyForMinMax(Op& root, co
 
         return WTF::switchOn(a,
             [&]<Numeric T>(const T& aNumeric) -> Child {
-                ASSERT(toNumericIdentity(aNumeric) == toNumericIdentity(std::get<T>(b)));
-                return makeChildWithValueBasedOn(executeMathOperation<Op>(aNumeric.value, std::get<T>(b).value), aNumeric);
+                ASSERT(toNumericIdentity(aNumeric) == toNumericIdentity(get<T>(b)));
+                return makeChildWithValueBasedOn(executeMathOperation<Op>(aNumeric.value, get<T>(b).value), aNumeric);
             },
             [](const auto&) -> Child {
                 ASSERT_NOT_REACHED();
@@ -461,7 +461,7 @@ template<typename Op> static std::optional<Child> simplifyForMinMax(Op& root, co
 
     // If there are no merge opportunities, no further simplification is possible.
     if (!numberOfMergeOpportunities)
-        return std::nullopt;
+        return { };
 
     auto combinedChildrenSize = root.children.size() - numberOfMergeOpportunities;
 
@@ -469,7 +469,7 @@ template<typename Op> static std::optional<Child> simplifyForMinMax(Op& root, co
     if (combinedChildrenSize == 1)
         return { WTFMove(root.children[0]) };
 
-    Children combinedChildren;
+    Vector<Child> combinedChildren;
     combinedChildren.reserveInitialCapacity(combinedChildrenSize);
 
     for (size_t i = 0; i < root.children.size(); ++i) {
@@ -492,7 +492,7 @@ template<typename Op> static std::optional<Child> simplifyForMinMax(Op& root, co
     }
     root.children = WTFMove(combinedChildren);
 
-    return std::nullopt;
+    return { };
 }
 
 // MARK: In-place simplification / replacement finding.
@@ -500,20 +500,20 @@ template<typename Op> static std::optional<Child> simplifyForMinMax(Op& root, co
 std::optional<Child> simplify(Number&, const SimplificationOptions&)
 {
     // No further simplification possible for <number>.
-    return std::nullopt;
+    return { };
 }
 
 std::optional<Child> simplify(Percentage&, const SimplificationOptions&)
 {
     // 1.1. If root is a percentage that will be resolved against another value, and there is enough information available to resolve it, do so, and express the resulting numeric value in the appropriate canonical unit. Return the value.
     // NOTE: Handled by the Calculation::Tree / CalculationValue types at use time.
-    return std::nullopt;
+    return { };
 }
 
 std::optional<Child> simplify(CanonicalDimension&, const SimplificationOptions&)
 {
     // No further simplification possible for canonical <dimension>.
-    return std::nullopt;
+    return { };
 }
 
 std::optional<Child> simplify(NonCanonicalDimension& root, const SimplificationOptions& options)
@@ -524,7 +524,7 @@ std::optional<Child> simplify(NonCanonicalDimension& root, const SimplificationO
     if (auto canonical = canonicalize(root, options.conversionData))
         return makeChild(WTFMove(*canonical));
 
-    return std::nullopt;
+    return { };
 }
 
 std::optional<Child> simplify(Symbol& root, const SimplificationOptions& options)
@@ -535,7 +535,7 @@ std::optional<Child> simplify(Symbol& root, const SimplificationOptions& options
     if (auto value = options.symbolTable.get(root.id))
         return copyAndSimplify(makeNumeric(value->value, root.unit), options);
 
-    return std::nullopt;
+    return { };
 }
 
 std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
@@ -545,11 +545,11 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
     // 8. If root is a Sum node:
 
     // 8.1. For each of root’s children that are Sum nodes, replace them with their children.
-    if (std::ranges::any_of(root.children, [](auto& child) { return std::holds_alternative<IndirectNode<Sum>>(child); })) {
-        Children newChildren;
+    if (std::ranges::any_of(root.children, [](auto& child) { return WTF::holdsAlternative<IndirectNode<Sum>>(child); })) {
+        Vector<Child> newChildren;
         for (auto& child : root.children) {
-            if (auto* childSum = std::get_if<IndirectNode<Sum>>(&child))
-                newChildren.appendVector(WTFMove((*childSum)->children));
+            if (auto* childSum = get_if<IndirectNode<Sum>>(&child))
+                newChildren.appendVector(WTFMove((*childSum)->children.value));
             else
                 newChildren.append(WTFMove(child));
         }
@@ -573,8 +573,8 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
 
         return WTF::switchOn(a,
             [&]<Numeric T>(const T& aNumeric) -> std::pair<Child, double> {
-                ASSERT(toNumericIdentity(aNumeric) == toNumericIdentity(std::get<T>(b)));
-                auto result = executeMathOperation<Sum>(aNumeric.value, std::get<T>(b).value);
+                ASSERT(toNumericIdentity(aNumeric) == toNumericIdentity(get<T>(b)));
+                auto result = executeMathOperation<Sum>(aNumeric.value, get<T>(b).value);
                 return { makeChildWithValueBasedOn(result, aNumeric), result };
             },
             [](const auto&) -> std::pair<Child, double> {
@@ -644,7 +644,7 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
 
     // If there are no merge/removal opportunities, no further simplification is possible.
     if (!childrenToRemoveTotal)
-        return std::nullopt;
+        return { };
 
     // If all the removal from merges leaves a single child, that means everything merged into the first child.
     if ((root.children.size() - childrenToRemoveFromMerges) == 1)
@@ -669,7 +669,7 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
                         return { WTFMove(root.children[i]) };
 
                     // Otherwise, it's one that can be dropped.
-                    return std::nullopt;
+                    return { };
                 },
                 [&](const auto&) -> std::optional<Child> {
                     return { WTFMove(root.children[i]) };
@@ -680,7 +680,7 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
         }
     }
 
-    Children combinedChildren;
+    Vector<Child> combinedChildren;
     combinedChildren.reserveInitialCapacity(combinedChildrenSize);
 
     for (size_t i = 0; i < root.children.size(); ++i) {
@@ -704,7 +704,7 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
     }
     root.children = WTFMove(combinedChildren);
 
-    return std::nullopt;
+    return { };
 }
 
 std::optional<Child> simplify(Product& root, const SimplificationOptions& options)
@@ -721,11 +721,11 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
     //
     // 9.2. If root has multiple children that are numbers (not percentages or dimensions), remove them and replace them with a single number containing the product of the removed nodes.
 
-    Children newChildren;
+    Vector<Child> newChildren;
     std::optional<Number> numericProduct;
 
     auto processChild = [&newChildren, &numericProduct](Child& child) {
-        if (auto* childValue = std::get_if<Number>(&child)) {
+        if (auto* childValue = get_if<Number>(&child)) {
             if (numericProduct)
                 numericProduct = Number { .value = childValue->value * numericProduct->value };
             else
@@ -735,7 +735,7 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
     };
 
     for (auto& child : root.children) {
-        if (auto* childProduct = std::get_if<IndirectNode<Product>>(&child)) {
+        if (auto* childProduct = get_if<IndirectNode<Product>>(&child)) {
             for (auto& childProductChild : (*childProduct)->children)
                 processChild(childProductChild);
         } else
@@ -760,7 +760,7 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
                 },
                 [&](IndirectNode<Sum>& sum) -> std::optional<Child> {
                     if (!std::ranges::all_of(sum->children, [](auto& child) { return isNumeric(child); }))
-                        return std::nullopt;
+                        return { };
 
                     for (auto& child : sum->children) {
                         WTF::switchOn(child,
@@ -773,16 +773,16 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
                 },
                 [&](IndirectNode<Invert>& invert) -> std::optional<Child> {
                     return WTF::switchOn(invert->a,
-                        [&]<Numeric T>(T& child) -> std::optional<Child> {
+                        [&]<Numeric T>(const T& child) -> std::optional<Child> {
                             return makeChildWithValueBasedOn(child.value * numericProduct->value, child);
                         },
-                        [](auto&) -> std::optional<Child> {
-                            return std::nullopt;
+                        [](const auto&) -> std::optional<Child> {
+                            return { };
                         }
                     );
                 },
                 [](auto&) -> std::optional<Child> {
-                    return std::nullopt;
+                    return { };
                 }
             );
 
@@ -898,7 +898,7 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
     }
 
     // 9.5. Return root.
-    return std::nullopt;
+    return { };
 }
 
 std::optional<Child> simplify(Negate& root, const SimplificationOptions&)
@@ -918,7 +918,7 @@ std::optional<Child> simplify(Negate& root, const SimplificationOptions&)
             // Not stated in spec, but needed for tests.
 
             if (!std::ranges::all_of(a->children, [](auto& child) { return isNumeric(child); }))
-                return std::nullopt;
+                return { };
 
             for (auto& child : a->children) {
                 WTF::switchOn(child,
@@ -933,7 +933,7 @@ std::optional<Child> simplify(Negate& root, const SimplificationOptions&)
             // Not stated in spec, but needed for tests.
 
             if (!std::ranges::all_of(a->children, [](auto& child) { return isNumeric(child); }))
-                return std::nullopt;
+                return { };
 
             for (auto& child : a->children) {
                 WTF::switchOn(child,
@@ -945,7 +945,7 @@ std::optional<Child> simplify(Negate& root, const SimplificationOptions&)
             return { Child { WTFMove(a) } };
         },
         [](auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -964,7 +964,7 @@ std::optional<Child> simplify(Invert& root, const SimplificationOptions&)
             return { WTFMove(a->a) };
         },
         [](auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -981,8 +981,8 @@ std::optional<Child> simplify(Max& root, const SimplificationOptions& options)
 
 std::optional<Child> simplify(Clamp& root, const SimplificationOptions& options)
 {
-    auto minIsNone = std::holds_alternative<CSS::Keyword::None>(root.min);
-    auto maxIsNone = std::holds_alternative<CSS::Keyword::None>(root.max);
+    auto minIsNone = WTF::holdsAlternative<CSS::Keyword::None>(root.min);
+    auto maxIsNone = WTF::holdsAlternative<CSS::Keyword::None>(root.max);
 
     if (minIsNone && maxIsNone) {
         // - clamp(none, VAL, none) is equivalent to just calc(VAL).
@@ -996,60 +996,60 @@ std::optional<Child> simplify(Clamp& root, const SimplificationOptions& options)
     return WTF::switchOn(root.val,
         [&]<Numeric T>(T& val) -> std::optional<Child> {
             if (minIsNone) {
-                auto& maxChild = std::get<Child>(root.max);
-                if (!std::holds_alternative<T>(maxChild))
-                    return std::nullopt;
+                auto& maxChild = get<Child>(root.max);
+                if (!WTF::holdsAlternative<T>(maxChild))
+                    return { };
 
-                auto& max = std::get<T>(maxChild);
+                auto& max = get<T>(maxChild);
 
                 if (!unitsMatch(val, max, options))
-                    return std::nullopt;
+                    return { };
 
                 // As units already match, we only have to check that one of the arguments is `magnitudeComparable`.
                 if (!magnitudeComparable(val, options))
-                    return std::nullopt;
+                    return { };
 
                 // - clamp(none, VAL, MAX) is equivalent to min(VAL, MAX)
                 return makeChildWithValueBasedOn(executeMathOperation<Min>(val.value, max.value), val);
             } else if (maxIsNone) {
-                auto& minChild = std::get<Child>(root.min);
-                if (!std::holds_alternative<T>(minChild))
-                    return std::nullopt;
+                auto& minChild = get<Child>(root.min);
+                if (!WTF::holdsAlternative<T>(minChild))
+                    return { };
 
-                auto& min = std::get<T>(minChild);
+                auto& min = get<T>(minChild);
 
                 if (!unitsMatch(min, val, options))
-                    return std::nullopt;
+                    return { };
 
                 // As units already match, we only have to check that one of the arguments is `magnitudeComparable`.
                 if (!magnitudeComparable(val, options))
-                    return std::nullopt;
+                    return { };
 
                 // - clamp(MIN, VAL, none) is equivalent to max(MIN, VAL)
                 return makeChildWithValueBasedOn(executeMathOperation<Max>(min.value, val.value), val);
             } else {
-                auto& minChild = std::get<Child>(root.min);
-                auto& maxChild = std::get<Child>(root.max);
+                auto& minChild = get<Child>(root.min);
+                auto& maxChild = get<Child>(root.max);
 
                 // If all three parameters have the same unit, we can perform the clamp in full.
-                if (!std::holds_alternative<T>(minChild) || !std::holds_alternative<T>(maxChild))
-                    return std::nullopt;
+                if (!WTF::holdsAlternative<T>(minChild) || !WTF::holdsAlternative<T>(maxChild))
+                    return { };
 
-                auto& min = std::get<T>(minChild);
-                auto& max = std::get<T>(maxChild);
+                auto& min = get<T>(minChild);
+                auto& max = get<T>(maxChild);
 
                 if (!unitsMatch(min, val, options) || !unitsMatch(val, max, options))
-                    return std::nullopt;
+                    return { };
 
                 // As units already match, we only have to check that one of the arguments is `magnitudeComparable`.
                 if (!magnitudeComparable(val, options))
-                    return std::nullopt;
+                    return { };
 
                 return makeChildWithValueBasedOn(executeMathOperation<Clamp>(min.value, val.value, max.value), val);
             }
         },
         [](const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1131,7 +1131,7 @@ std::optional<Child> simplify(Pow& root, const SimplificationOptions&)
             return makeChild(Number { .value = executeMathOperation<Pow>(a.value, b.value) });
         },
         [](const auto&, const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1146,7 +1146,7 @@ std::optional<Child> simplify(Sqrt& root, const SimplificationOptions&)
             return makeChild(Number { .value = executeMathOperation<Sqrt>(a.value) });
         },
         [](const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1161,7 +1161,7 @@ std::optional<Child> simplify(Hypot& root, const SimplificationOptions& options)
     struct FailureTag { };
     std::variant<std::monostate, NumberTag, PercentageTag, DimensionTag, FailureTag> result;
 
-    double value = executeMathOperation<Hypot>(root.children, [&](const auto& child) {
+    double value = executeMathOperation<Hypot>(root.children.value, [&](const auto& child) {
         return WTF::switchOn(result,
             [&](const std::monostate&) -> double {
                 // First iteration.
@@ -1189,19 +1189,19 @@ std::optional<Child> simplify(Hypot& root, const SimplificationOptions& options)
                 );
             },
             [&](const NumberTag&) -> double {
-                if (auto* numberChild = std::get_if<Number>(&child))
+                if (auto* numberChild = get_if<Number>(&child))
                     return numberChild->value;
                 result = FailureTag { };
                 return std::numeric_limits<double>::quiet_NaN();
             },
             [&](const PercentageTag&) -> double {
-                if (auto* percentageChild = std::get_if<Percentage>(&child))
+                if (auto* percentageChild = get_if<Percentage>(&child))
                     return percentageChild->value;
                 result = FailureTag { };
                 return std::numeric_limits<double>::quiet_NaN();
             },
             [&](const DimensionTag& tag) -> double {
-                if (auto* dimensionChild = std::get_if<CanonicalDimension>(&child); dimensionChild && dimensionChild->dimension == tag.dimension)
+                if (auto* dimensionChild = get_if<CanonicalDimension>(&child); dimensionChild && dimensionChild->dimension == tag.dimension)
                     return dimensionChild->value;
                 result = FailureTag { };
                 return std::numeric_limits<double>::quiet_NaN();
@@ -1223,7 +1223,7 @@ std::optional<Child> simplify(Hypot& root, const SimplificationOptions& options)
             return makeChild(CanonicalDimension { .value = value, .dimension = tag.dimension });
         },
         [&](const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1239,7 +1239,7 @@ std::optional<Child> simplify(Log& root, const SimplificationOptions&)
                 return makeChild(Number { .value = executeMathOperation<Log>(a.value, b.value) });
             },
             [](const auto&, const auto&) -> std::optional<Child> {
-                return std::nullopt;
+                return { };
             }
         );
     }
@@ -1249,7 +1249,7 @@ std::optional<Child> simplify(Log& root, const SimplificationOptions&)
             return makeChild(Number { .value = executeMathOperation<Log>(a.value) });
         },
         [](const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1264,7 +1264,7 @@ std::optional<Child> simplify(Exp& root, const SimplificationOptions&)
             return makeChild(Number { .value = executeMathOperation<Exp>(a.value) });
         },
         [](const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1274,11 +1274,11 @@ std::optional<Child> simplify(Abs& root, const SimplificationOptions& options)
     return WTF::switchOn(root.a,
         [&]<Numeric T>(const T& a) -> std::optional<Child> {
             if (!magnitudeComparable(a, options))
-                return std::nullopt;
+                return { };
             return makeChildWithValueBasedOn(executeMathOperation<Abs>(a.value), a);
         },
         [](const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1288,11 +1288,11 @@ std::optional<Child> simplify(Sign& root, const SimplificationOptions& options)
     return WTF::switchOn(root.a,
         [&]<Numeric T>(const T& a) -> std::optional<Child> {
             if (!magnitudeComparable(a, options))
-                return std::nullopt;
+                return { };
             return makeChild(Number { .value = executeMathOperation<Sign>(a.value) });
         },
         [](const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1307,15 +1307,15 @@ std::optional<Child> simplify(Random& root, const SimplificationOptions& options
         return { };
 
     return WTF::switchOn(root.min,
-        [&]<Numeric T>(T& numericMin) -> std::optional<Child> {
-            auto numericMax = std::get<T>(root.max);
+        [&]<Numeric T>(const T& numericMin) -> std::optional<Child> {
+            auto numericMax = get<T>(root.max);
 
             if (!unitsMatch(numericMin, numericMax, options) || !fullyResolved(numericMin, options))
-                return std::nullopt;
+                return { };
 
             std::optional<double> valueStep;
             if (root.step) {
-                auto numericStep = std::get<T>(*root.step);
+                auto numericStep = get<T>(*root.step);
 
                 if (!unitsMatch(numericMin, numericStep, options))
                     return { };
@@ -1342,7 +1342,7 @@ std::optional<Child> simplify(Random& root, const SimplificationOptions& options
                 valueStep
             );
 
-            auto result = Calculation::executeOperation<Random::Base>(
+            auto result = Calculation::executeOperation<ToCalculationTreeOp<Random>>(
                 randomUnitInterval,
                 valueMin,
                 valueMax,
@@ -1351,7 +1351,7 @@ std::optional<Child> simplify(Random& root, const SimplificationOptions& options
 
             return makeChildWithValueBasedOn(result, numericMin);
         },
-        [](auto&) -> std::optional<Child> {
+        [](const auto&) -> std::optional<Child> {
             return { };
         }
     );
@@ -1362,20 +1362,20 @@ std::optional<Child> simplify(Random& root, const SimplificationOptions& options
 std::optional<Child> simplify(Progress& root, const SimplificationOptions& options)
 {
     if (root.value.index() != root.start.index() || root.start.index() != root.end.index())
-        return std::nullopt;
+        return { };
 
     return WTF::switchOn(root.value,
-        [&]<Numeric T>(T& numericValue) -> std::optional<Child> {
-            auto& numericStart = std::get<T>(root.start);
-            auto& numericEnd = std::get<T>(root.end);
+        [&]<Numeric T>(const T& numericValue) -> std::optional<Child> {
+            const auto& numericStart = get<T>(root.start);
+            const auto& numericEnd = get<T>(root.end);
 
             if (!unitsMatch(numericValue, numericStart, options) || !unitsMatch(numericStart, numericEnd, options) || !fullyResolved(numericValue, options))
-                return std::nullopt;
+                return { };
 
             return makeChild(Number { .value = executeMathOperation<Progress>(numericValue.value, numericStart.value, numericEnd.value) });
         },
-        [](auto&) -> std::optional<Child> {
-            return std::nullopt;
+        [](const auto&) -> std::optional<Child> {
+            return { };
         }
     );
 }
@@ -1385,19 +1385,19 @@ std::optional<Child> simplify(MediaProgress& root, const SimplificationOptions& 
     ASSERT(root.feature->category() == options.category);
 
     if (!options.conversionData || !options.conversionData->styleBuilderState())
-        return std::nullopt;
+        return { };
 
     return switchTogether(root.start, root.end,
         [&]<Numeric T>(const T& start, const T& end) -> std::optional<Child> {
             if (!unitsMatch(start, end, options) || !fullyResolved(start, options))
-                return std::nullopt;
+                return { };
 
             Ref document = options.conversionData->styleBuilderState()->document();
             auto value = evaluateMediaProgress(root, document, *options.conversionData);
             return makeChild(Number { .value = executeMathOperation<Progress>(value, start.value, end.value) });
         },
         [](const auto&, const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1407,22 +1407,22 @@ std::optional<Child> simplify(ContainerProgress& root, const SimplificationOptio
     ASSERT(root.feature->category() == options.category);
 
     if (!options.conversionData || !options.conversionData->styleBuilderState() || !options.conversionData->styleBuilderState()->element())
-        return std::nullopt;
+        return { };
 
     return switchTogether(root.start, root.end,
         [&]<Numeric T>(const T& start, const T& end) -> std::optional<Child> {
             if (!unitsMatch(start, end, options) || !fullyResolved(start, options))
-                return std::nullopt;
+                return { };
 
             Ref element = *options.conversionData->styleBuilderState()->element();
             auto value = evaluateContainerProgress(root, element, *options.conversionData);
             if (!value)
-                return std::nullopt;
+                return { };
 
             return makeChild(Number { .value = executeMathOperation<Progress>(*value, start.value, end.value) });
         },
         [](const auto&, const auto&) -> std::optional<Child> {
-            return std::nullopt;
+            return { };
         }
     );
 }
@@ -1513,16 +1513,16 @@ Children copyAndSimplify(const Children& children, const SimplificationOptions& 
     return WTF::map(children, [&](auto& child) { return copyAndSimplify(child, options); });
 }
 
+auto copyAndSimplify(const ChildOrNone& root, const SimplificationOptions& options) -> ChildOrNone
+{
+    return WTF::switchOn(root, [&](auto& root) { return ChildOrNone { copyAndSimplify(root, options) }; });
+}
+
 template<typename T> auto copyAndSimplify(const std::optional<T>& root, const SimplificationOptions& options) -> std::optional<T>
 {
     if (root)
         return copyAndSimplify(*root, options);
-    return std::nullopt;
-}
-
-template<typename... Ts> auto copyAndSimplify(const std::variant<Ts...>& root, const SimplificationOptions& options) -> std::variant<Ts...>
-{
-    return WTF::switchOn(root, [&](auto& root) { return std::variant<Ts...> { copyAndSimplify(root, options) }; });
+    return { };
 }
 
 template<Leaf Op> static auto copyAndSimplifyChildren(const Op& op, const SimplificationOptions&) -> Op

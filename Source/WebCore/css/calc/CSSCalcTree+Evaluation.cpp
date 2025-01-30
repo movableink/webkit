@@ -28,6 +28,7 @@
 #include "AnchorPositionEvaluator.h"
 #include "CSSCalcSymbolTable.h"
 #include "CSSCalcTree+ContainerProgressEvaluator.h"
+#include "CSSCalcTree+Mappings.h"
 #include "CSSCalcTree+MediaProgressEvaluator.h"
 #include "CSSCalcTree+Simplification.h"
 #include "CSSCalcTree.h"
@@ -68,13 +69,13 @@ template<typename Op, typename... Args> static std::optional<double> executeMath
     if ((!args.has_value() || ...))
         return std::nullopt;
 
-    return Calculation::executeOperation<typename Op::Base>(args.value()...);
+    return Calculation::executeOperation<ToCalculationTreeOp<Op>>(args.value()...);
 }
 
 template<typename Op> static std::optional<double> executeVariadicMathOperationAfterUnwrapping(const IndirectNode<Op>& op, const EvaluationOptions& options)
 {
     bool failure = false;
-    auto result = Calculation::executeOperation<typename Op::Base>(op->children, [&](const auto& child) -> double {
+    auto result = Calculation::executeOperation<ToCalculationTreeOp<Op>>(op->children.value, [&](const auto& child) -> double {
         if (auto value = evaluate(child, options))
             return *value;
         failure = true;
@@ -207,7 +208,7 @@ std::optional<double> evaluate(const IndirectNode<Random>& root, const Evaluatio
         *step
     );
 
-    return Calculation::executeOperation<Random::Base>(randomUnitInterval, *min, *max, *step);
+    return Calculation::executeOperation<ToCalculationTreeOp<Random>>(randomUnitInterval, *min, *max, *step);
 }
 
 std::optional<double> evaluate(const IndirectNode<MediaProgress>& root, const EvaluationOptions& options)
@@ -225,7 +226,7 @@ std::optional<double> evaluate(const IndirectNode<MediaProgress>& root, const Ev
 
     Ref document = options.conversionData->styleBuilderState()->document();
     auto value = evaluateMediaProgress(root, document, *options.conversionData);
-    return Calculation::executeOperation<Progress::Base>(value, *start, *end);
+    return Calculation::executeOperation<ToCalculationTreeOp<Progress>>(value, *start, *end);
 }
 
 std::optional<double> evaluate(const IndirectNode<ContainerProgress>& root, const EvaluationOptions& options)
@@ -246,7 +247,7 @@ std::optional<double> evaluate(const IndirectNode<ContainerProgress>& root, cons
     if (!value)
         return { };
 
-    return Calculation::executeOperation<Progress::Base>(*value, *start, *end);
+    return Calculation::executeOperation<ToCalculationTreeOp<Progress>>(*value, *start, *end);
 }
 
 std::optional<double> evaluate(const IndirectNode<Anchor>& anchor, const EvaluationOptions& options)

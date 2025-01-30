@@ -24,10 +24,15 @@
 
 #pragma once
 
+#include "CSSPrimitiveNumericRange.h"
 #include "CSSToLengthConversionData.h"
 #include <optional>
 
 namespace WebCore {
+
+namespace Calculation {
+enum class Category : uint8_t;
+}
 
 class CSSCalcSymbolTable;
 
