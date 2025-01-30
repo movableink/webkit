@@ -37,7 +37,6 @@
 #include "PlatformDisplay.h"
 #include "ProcessCapabilities.h"
 #include "RenderingMode.h"
-#include <bit>
 #include <wtf/NumberOfCores.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -166,14 +165,12 @@ Ref<CoordinatedTileBuffer> SkiaPaintingEngine::createBuffer(RenderingMode render
     if (renderingMode == RenderingMode::Accelerated) {
         PlatformDisplay::sharedDisplay().skiaGLContext()->makeContextCurrent();
 
-        // Use a buffer size rounded to the next power of two to increase the possibilities of reusing the buffer.
-        IntSize roundedSize(std::bit_ceil(static_cast<unsigned>(size.width())), std::bit_ceil(static_cast<unsigned>(size.height())));
         OptionSet<BitmapTexture::Flags> textureFlags;
         if (!contentsOpaque)
             textureFlags.add(BitmapTexture::Flags::SupportsAlpha);
 
         ASSERT(m_texturePool);
-        return CoordinatedAcceleratedTileBuffer::create(m_texturePool->acquireTexture(roundedSize, textureFlags));
+        return CoordinatedAcceleratedTileBuffer::create(m_texturePool->acquireTexture(size, textureFlags));
     }
 
     return CoordinatedUnacceleratedTileBuffer::create(size, contentsOpaque ? CoordinatedTileBuffer::NoFlags : CoordinatedTileBuffer::SupportsAlpha);
