@@ -2623,6 +2623,13 @@ void RenderBox::computeLogicalWidth(LogicalExtentComputedValues& computedValues)
         return;
     }
 
+    // The parent box is flexing us, so it has increased or decreased our width. Use the width from the style context.
+    // FIXME: Account for block-flow in flexible boxes (webkit.org/b/46418)
+    if (auto logicalWidth = (parent()->isFlexibleBoxIncludingDeprecated() ? this->overridingBorderBoxLogicalWidth() : std::nullopt)) {
+        computedValues.m_extent = *logicalWidth;
+        return;
+    }
+
     // FIXME: Stretching is the only reason why we don't want the box to be treated as a replaced element, so we could perhaps
     // refactor all this logic, not only for flex and grid since alignment is intended to be applied to any block.
     auto treatAsReplaced = [&] {
