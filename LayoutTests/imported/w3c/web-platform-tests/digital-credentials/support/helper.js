@@ -1,24 +1,22 @@
 // @ts-check
 // Import the types from the TypeScript file
 /**
- * @typedef {import('../dc-types').ProviderType} ProviderType
+ * @typedef {import('../dc-types').Protocol} protocol
  * @typedef {import('../dc-types').DigitalCredentialRequest} DigitalCredentialRequest
  * @typedef {import('../dc-types').DigitalCredentialRequestOptions} DigitalCredentialRequestOptions
  * @typedef {import('../dc-types').CredentialRequestOptions} CredentialRequestOptions
  * @typedef {import('../dc-types').SendMessageData} SendMessageData
  */
+
 /**
- * @param {ProviderType | ProviderType[]} [requestsToUse=["default"]]
+ * @param {protocol | protocol[]} [requestsToUse=["default"]]
  * @param {CredentialMediationRequirement} [mediation="required"]
  * @returns {CredentialRequestOptions}
  */
-export function makeGetOptions(
-  requestsToUse = ["default"],
-  mediation = "required"
-) {
+export function makeGetOptions(requestsToUse, mediation = "required") {
   if (typeof requestsToUse === "string") {
     if (requestsToUse === "default" || requestsToUse === "openid4vp") {
-      return makeGetOptions([requestsToUse]);
+      return makeGetOptions([requestsToUse], mediation);
     }
   }
   if (!Array.isArray(requestsToUse) || !requestsToUse?.length) {
@@ -53,7 +51,7 @@ function makeDigitalCredentialRequest(protocol = "protocol", data = {}) {
 }
 
 /**
- * Representation of a digital identity object with an OpenID4VP request.
+ * Representation of an OpenID4VP request.
  *
  * @returns {DigitalCredentialRequest}
  **/

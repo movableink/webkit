@@ -7030,7 +7030,6 @@ http/wpt/html/semantics/scripting-1/the-script-element/module/module-meta-url-wi
 http/wpt/html/semantics/text-level-semantics/the-a-element/a-download-click-404.html [ Skip ]
 http/wpt/identity/identitycredentialscontainer-create-basics.https.html [ Skip ]
 http/wpt/identity/identitycredentialscontainer-get-basics.https.html [ Skip ]
-http/wpt/identity/identitycredentialscontainer-store-basics.https.html [ Skip ]
 http/wpt/identity/idl.https.html [ Skip ]
 http/wpt/import-maps/data-driven/resolving-data-url-prefix.html [ Skip ]
 http/wpt/import-maps/data-driven/resolving-empty-import-map.html [ Skip ]

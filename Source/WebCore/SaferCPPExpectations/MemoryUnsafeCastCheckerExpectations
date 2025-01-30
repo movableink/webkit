@@ -21,7 +21,6 @@ Modules/encryptedmedia/MediaKeySystemController.cpp
 Modules/gamepad/NavigatorGamepad.cpp
 Modules/geolocation/GeolocationController.h
 Modules/geolocation/NavigatorGeolocation.cpp
-Modules/identity/NavigatorIdentity.cpp
 Modules/indexeddb/WindowOrWorkerGlobalScopeIndexedDatabase.cpp
 Modules/mediacapabilities/NavigatorMediaCapabilities.cpp
 Modules/mediacapabilities/WorkerNavigatorMediaCapabilities.cpp

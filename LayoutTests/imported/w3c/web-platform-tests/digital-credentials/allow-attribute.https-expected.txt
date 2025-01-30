@@ -1,6 +1,7 @@
 
+
 PASS Policy to use: null, is cross-origin: false, is allowed by policy: true
-PASS Policy to use: null, is cross-origin: true, is allowed by policy: false
+FAIL Policy to use: null, is cross-origin: true, is allowed by policy: false assert_equals: <iframe src="https://127.0.0.1:9443/digital-credentials/support/iframe.html" data-expect-is-allowed="false"></iframe> - Not implemented expected "NotAllowedError" but got "NotSupportedError"
 PASS Policy to use: digital-credentials-get, is cross-origin: false, is allowed by policy: true
 PASS Policy to use: digital-credentials-get, is cross-origin: true, is allowed by policy: true
 PASS Policy to use: digital-credentials-get *, is cross-origin: false, is allowed by policy: true
