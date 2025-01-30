@@ -327,6 +327,14 @@ void ThreadedCompositor::updateScene()
     m_compositingRunLoop->scheduleUpdate();
 }
 
+RunLoop* ThreadedCompositor::runLoop()
+{
+    if (!m_compositingRunLoop)
+        return nullptr;
+
+    return &m_compositingRunLoop->runLoop();
+}
+
 void ThreadedCompositor::frameComplete()
 {
     WTFEmitSignpost(this, FrameComplete);

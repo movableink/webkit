@@ -48,7 +48,6 @@ class GraphicsLayerCoordinated;
 class NativeImage;
 class TextureMapper;
 class TextureMapperLayer;
-class TextureMapperPlatformLayerProxy;
 
 #if USE(SKIA)
 class SkiaPaintingEngine;
@@ -75,6 +74,7 @@ public:
         virtual void notifyCompositionRequired() = 0;
         virtual bool isCompositionRequiredOrOngoing() const = 0;
         virtual void requestComposition() = 0;
+        virtual RunLoop* compositingRunLoop() const = 0;
     };
 
     static Ref<CoordinatedPlatformLayer> create();
@@ -142,8 +142,11 @@ public:
     void setContentsRectClipsDescendants(bool);
     void setContentsClippingRect(const FloatRoundedRect&);
     void setContentsScale(float);
-    void setContentsBufferProxy(TextureMapperPlatformLayerProxy*);
-    void setContentsBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&);
+    enum class RequireComposition : bool { No, Yes };
+    void setContentsBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&, RequireComposition = RequireComposition::Yes);
+#if ENABLE(VIDEO) && USE(GSTREAMER)
+    void replaceCurrentContentsBufferWithCopy();
+#endif
     void setContentsBufferNeedsDisplay();
     void setContentsImage(RefPtr<NativeImage>&&);
     void setContentsColor(const Color&);
@@ -180,6 +183,7 @@ public:
     bool hasImageBackingStore() const { return !!m_imageBackingStore; }
     bool isCompositionRequiredOrOngoing() const;
     void requestComposition();
+    RunLoop* compositingRunLoop() const;
 
     Ref<CoordinatedTileBuffer> paint(const IntRect&);
     void waitUntilPaintingComplete();
@@ -212,21 +216,20 @@ private:
         ContentsClippingRect         = 1 << 16,
         ContentsTiling               = 1 << 17,
         ContentsBuffer               = 1 << 18,
-        ContentsBufferProxy          = 1 << 19,
-        ContentsImage                = 1 << 20,
-        ContentsColor                = 1 << 21,
-        Filters                      = 1 << 22,
-        Mask                         = 1 << 23,
-        Replica                      = 1 << 24,
-        Backdrop                     = 1 << 25,
-        BackdropRect                 = 1 << 26,
-        Animations                   = 1 << 27,
-        DebugIndicators              = 1 << 28,
+        ContentsImage                = 1 << 19,
+        ContentsColor                = 1 << 20,
+        Filters                      = 1 << 21,
+        Mask                         = 1 << 22,
+        Replica                      = 1 << 23,
+        Backdrop                     = 1 << 24,
+        BackdropRect                 = 1 << 25,
+        Animations                   = 1 << 26,
+        DebugIndicators              = 1 << 27,
 #if ENABLE(DAMAGE_TRACKING)
-        Damage                       = 1 << 29,
+        Damage                       = 1 << 28,
 #endif
 #if ENABLE(SCROLLING_THREAD)
-        ScrollingNode                = 1 << 30
+        ScrollingNode                = 1 << 29
 #endif
     };
 
@@ -275,10 +278,6 @@ private:
     RefPtr<CoordinatedImageBackingStore> m_imageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedImageBackingStore> m_committedImageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
     bool m_imageBackingStoreVisible WTF_GUARDED_BY_LOCK(m_lock) { false };
-    struct {
-        RefPtr<TextureMapperPlatformLayerProxy> pending;
-        RefPtr<TextureMapperPlatformLayerProxy> committed;
-    } m_contentsBufferProxy WTF_GUARDED_BY_LOCK(m_lock);
     struct {
         std::unique_ptr<CoordinatedPlatformLayerBuffer> pending;
         std::unique_ptr<CoordinatedPlatformLayerBuffer> committed;

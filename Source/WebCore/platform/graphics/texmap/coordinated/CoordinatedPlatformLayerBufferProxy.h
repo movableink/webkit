@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Igalia S.L.
+ * Copyright (C) 2015, 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,8 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS)
-#include <wtf/Function.h>
 #include <wtf/Lock.h>
+#include <wtf/RefPtr.h>
 #include <wtf/RunLoop.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -37,53 +37,30 @@ class CoordinatedPlatformLayerBuffer;
 class IntSize;
 class TextureMapperLayer;
 
-class TextureMapperPlatformLayerProxy final : public ThreadSafeRefCounted<TextureMapperPlatformLayerProxy> {
+class CoordinatedPlatformLayerBufferProxy final : public ThreadSafeRefCounted<CoordinatedPlatformLayerBufferProxy> {
 public:
-    enum class ContentType : uint8_t {
-        Video,
-        HolePunch,
-    };
+    static Ref<CoordinatedPlatformLayerBufferProxy> create();
+    virtual ~CoordinatedPlatformLayerBufferProxy();
 
-    static Ref<TextureMapperPlatformLayerProxy> create(ContentType contentType)
-    {
-        return adoptRef(*new TextureMapperPlatformLayerProxy(contentType));
-    }
+    void setTargetLayer(CoordinatedPlatformLayer*);
+    void consumePendingBufferIfNeeded();
+    bool setDisplayBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&);
 
-    virtual ~TextureMapperPlatformLayerProxy();
-
-    ContentType contentType() const { return m_contentType; }
-
-    bool isActive();
-    void activateOnCompositingThread(CoordinatedPlatformLayer&);
-    void invalidate();
-    void swapBuffer();
-
-    void pushNextBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&);
-    void dropCurrentBufferWhilePreservingTexture(bool shouldWait);
+#if ENABLE(VIDEO) && USE(GSTREAMER)
+    enum class ShouldWait : bool { No, Yes };
+    void dropCurrentBufferWhilePreservingTexture(ShouldWait);
+#endif
 
 private:
-    explicit TextureMapperPlatformLayerProxy(ContentType);
-
-    bool isActiveLocked() const;
-
-    bool scheduleUpdateOnCompositorThread(Function<void()>&&);
-    void compositorThreadUpdateTimerFired();
+    CoordinatedPlatformLayerBufferProxy();
 
     Lock m_lock;
-    RefPtr<CoordinatedPlatformLayer> m_targetLayer;
-#if ASSERT_ENABLED
-    RefPtr<Thread> m_compositorThread;
+    bool m_isValid WTF_GUARDED_BY_LOCK(m_lock) { true };
+    RefPtr<CoordinatedPlatformLayer> m_layer WTF_GUARDED_BY_LOCK(m_lock);
+    std::unique_ptr<CoordinatedPlatformLayerBuffer> m_pendingBuffer WTF_GUARDED_BY_LOCK(m_lock);
+#if ENABLE(VIDEO) && USE(GSTREAMER)
+    RefPtr<RunLoop> m_compositingRunLoop WTF_GUARDED_BY_LOCK(m_lock);
 #endif
-    std::unique_ptr<RunLoop::Timer> m_compositorThreadUpdateTimer;
-    Function<void()> m_compositorThreadUpdateFunction;
-
-    ContentType m_contentType;
-    std::unique_ptr<CoordinatedPlatformLayerBuffer> m_currentBuffer;
-    std::unique_ptr<CoordinatedPlatformLayerBuffer> m_pendingBuffer;
-
-    Lock m_wasBufferDroppedLock;
-    Condition m_wasBufferDroppedCondition;
-    bool m_wasBufferDropped WTF_GUARDED_BY_LOCK(m_wasBufferDroppedLock) { false };
 };
 
 } // namespace WebCore

@@ -33,6 +33,7 @@
 
 namespace WebCore {
 class CoordinatedPlatformLayer;
+class CoordinatedPlatformLayerBufferProxy;
 class NativeImage;
 
 class GraphicsLayerCoordinated final : public GraphicsLayer {
@@ -209,7 +210,7 @@ private:
         TransformationMatrix cachedCombined;
     } m_layerTransform;
     bool m_needsUpdateLayerTransform { false };
-    RefPtr<TextureMapperPlatformLayerProxy> m_contentsLayer;
+    RefPtr<CoordinatedPlatformLayerBufferProxy> m_contentsBufferProxy;
     RefPtr<GraphicsLayerContentsDisplayDelegate> m_contentsDisplayDelegate;
     RefPtr<NativeImage> m_pendingContentsImage;
     Color m_contentsColor;

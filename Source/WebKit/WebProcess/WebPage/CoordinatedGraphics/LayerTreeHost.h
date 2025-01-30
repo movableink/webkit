@@ -157,6 +157,7 @@ private:
     void notifyCompositionRequired() override;
     bool isCompositionRequiredOrOngoing() const override;
     void requestComposition() override;
+    RunLoop* compositingRunLoop() const override;
 
     // GraphicsLayerFactory
     Ref<WebCore::GraphicsLayer> createGraphicsLayer(WebCore::GraphicsLayer::Type, WebCore::GraphicsLayerClient&) override;

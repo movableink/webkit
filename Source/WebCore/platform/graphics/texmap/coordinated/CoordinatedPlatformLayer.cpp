@@ -32,11 +32,12 @@
 #include "CoordinatedBackingStoreProxy.h"
 #include "CoordinatedImageBackingStore.h"
 #include "CoordinatedPlatformLayerBuffer.h"
+#include "CoordinatedPlatformLayerBufferHolePunch.h"
+#include "CoordinatedPlatformLayerBufferVideo.h"
 #include "CoordinatedTileBuffer.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayerCoordinated.h"
 #include "TextureMapperLayer.h"
-#include "TextureMapperPlatformLayerProxy.h"
 #include <wtf/MainThread.h>
 
 #if USE(CAIRO)
@@ -111,16 +112,30 @@ TextureMapperLayer* CoordinatedPlatformLayer::target() const
     return m_target.get();
 }
 
+static bool shouldReleaseBuffer(CoordinatedPlatformLayerBuffer* buffer)
+{
+    if (!buffer)
+        return false;
+
+#if ENABLE(VIDEO)
+    // Do not release hole punch buffers early. See https://bugs.webkit.org/show_bug.cgi?id=267322.
+    if (is<CoordinatedPlatformLayerBufferHolePunch>(*buffer))
+        return false;
+#endif
+
+    return true;
+}
+
 void CoordinatedPlatformLayer::invalidateTarget()
 {
     ASSERT(!isMainThread());
-    if (m_contentsBufferProxy.committed) {
-        m_contentsBufferProxy.committed->invalidate();
-        m_contentsBufferProxy.committed = nullptr;
+    {
+        Locker locker { m_lock };
+        m_backingStore = nullptr;
+        m_committedImageBackingStore = nullptr;
+        if (shouldReleaseBuffer(m_contentsBuffer.committed.get()))
+            m_contentsBuffer.committed = nullptr;
     }
-    m_backingStore = nullptr;
-    m_committedImageBackingStore = nullptr;
-    m_contentsBuffer.committed = nullptr;
     m_target = nullptr;
 }
 
@@ -455,18 +470,7 @@ void CoordinatedPlatformLayer::setContentsScale(float contentsScale)
     notifyCompositionRequired();
 }
 
-void CoordinatedPlatformLayer::setContentsBufferProxy(TextureMapperPlatformLayerProxy* contentsBufferProxy)
-{
-    ASSERT(m_lock.isHeld());
-    if (m_contentsBufferProxy.pending == contentsBufferProxy)
-        return;
-
-    m_contentsBufferProxy.pending = contentsBufferProxy;
-    m_pendingChanges.add(Change::ContentsBufferProxy);
-    notifyCompositionRequired();
-}
-
-void CoordinatedPlatformLayer::setContentsBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&& buffer)
+void CoordinatedPlatformLayer::setContentsBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&& buffer, RequireComposition requireComposition)
 {
     ASSERT(m_lock.isHeld());
     if (!buffer && !m_contentsBuffer.pending && !m_contentsBuffer.committed)
@@ -474,8 +478,24 @@ void CoordinatedPlatformLayer::setContentsBuffer(std::unique_ptr<CoordinatedPlat
 
     m_contentsBuffer.pending = WTFMove(buffer);
     m_pendingChanges.add(Change::ContentsBuffer);
-    notifyCompositionRequired();
+    if (requireComposition == RequireComposition::Yes)
+        notifyCompositionRequired();
 }
+
+#if ENABLE(VIDEO) && USE(GSTREAMER)
+void CoordinatedPlatformLayer::replaceCurrentContentsBufferWithCopy()
+{
+    Locker locker { m_lock };
+    if (!m_contentsBuffer.committed)
+        return;
+
+    m_contentsBuffer.pending = nullptr;
+    if (is<CoordinatedPlatformLayerBufferVideo>(*m_contentsBuffer.committed))
+        m_contentsBuffer.pending = downcast<CoordinatedPlatformLayerBufferVideo>(*m_contentsBuffer.committed).copyBuffer();
+    m_contentsBuffer.committed = WTFMove(m_contentsBuffer.pending);
+    ensureTarget().setContentsLayer(m_contentsBuffer.committed.get());
+}
+#endif
 
 void CoordinatedPlatformLayer::setContentsImage(RefPtr<NativeImage>&& image)
 {
@@ -756,6 +776,8 @@ void CoordinatedPlatformLayer::purgeBackingStores()
         m_animatedBackingStoreClient = nullptr;
     }
     m_imageBackingStore = nullptr;
+    if (shouldReleaseBuffer(m_contentsBuffer.pending.get()))
+        m_contentsBuffer.pending = nullptr;
 }
 
 bool CoordinatedPlatformLayer::isCompositionRequiredOrOngoing() const
@@ -767,6 +789,11 @@ void CoordinatedPlatformLayer::requestComposition()
 {
     if (m_client)
         m_client->requestComposition();
+}
+
+RunLoop* CoordinatedPlatformLayer::compositingRunLoop() const
+{
+    return m_client ? m_client->compositingRunLoop() : nullptr;
 }
 
 Ref<CoordinatedTileBuffer> CoordinatedPlatformLayer::paint(const IntRect& dirtyRect)
@@ -797,7 +824,7 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
 {
     ASSERT(!isMainThread());
     Locker locker { m_lock };
-    if (m_pendingChanges.isEmpty() && !m_backingStoreProxy && !m_contentsBufferProxy.pending)
+    if (m_pendingChanges.isEmpty() && !m_backingStoreProxy)
         return;
 
     auto& layer = ensureTarget();
@@ -850,15 +877,6 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
 
     if (m_pendingChanges.contains(Change::ContentsClippingRect))
         layer.setContentsClippingRect(m_contentsClippingRect);
-
-    if (m_pendingChanges.contains(Change::ContentsBufferProxy)) {
-        if (m_contentsBufferProxy.committed && m_contentsBufferProxy.committed != m_contentsBufferProxy.pending)
-            m_contentsBufferProxy.committed->invalidate();
-
-        m_contentsBufferProxy.committed = m_contentsBufferProxy.pending;
-        if (m_contentsBufferProxy.committed)
-            m_contentsBufferProxy.committed->activateOnCompositingThread(*this);
-    }
 
     if (m_pendingChanges.contains(Change::ContentsBuffer))
         m_contentsBuffer.committed = WTFMove(m_contentsBuffer.pending);
@@ -932,9 +950,7 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
         m_backingStore = nullptr;
     }
 
-    if (m_contentsBufferProxy.committed)
-        m_contentsBufferProxy.committed->swapBuffer();
-    else if (m_contentsBuffer.committed)
+    if (m_contentsBuffer.committed)
         layer.setContentsLayer(m_contentsBuffer.committed.get());
     else if (m_committedImageBackingStore && m_imageBackingStoreVisible)
         layer.setContentsLayer(m_committedImageBackingStore->buffer());

@@ -30,7 +30,7 @@
 #include <WebCore/NotImplemented.h>
 
 #if USE(COORDINATED_GRAPHICS)
-#include <WebCore/TextureMapperPlatformLayerProxy.h>
+#include <WebCore/CoordinatedPlatformLayerBufferProxy.h>
 #endif
 
 namespace WebKit {

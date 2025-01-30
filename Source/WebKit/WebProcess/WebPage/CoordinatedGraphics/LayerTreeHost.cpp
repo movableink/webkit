@@ -415,6 +415,11 @@ void LayerTreeHost::requestComposition()
     m_compositor->updateScene();
 }
 
+RunLoop* LayerTreeHost::compositingRunLoop() const
+{
+    return m_compositor->runLoop();
+}
+
 #if USE(CAIRO)
 Cairo::PaintingEngine& LayerTreeHost::paintingEngine()
 {

@@ -35,13 +35,13 @@
 #include "CoordinatedImageBackingStore.h"
 #include "CoordinatedPlatformLayer.h"
 #include "CoordinatedPlatformLayerBuffer.h"
+#include "CoordinatedPlatformLayerBufferProxy.h"
 #include "FloatQuad.h"
 #include "GraphicsLayerAsyncContentsDisplayDelegateCoordinated.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "GraphicsLayerFactory.h"
 #include "Image.h"
 #include "NativeImage.h"
-#include "TextureMapperPlatformLayerProxy.h"
 #include <wtf/Locker.h>
 
 namespace WebCore {
@@ -64,6 +64,8 @@ GraphicsLayerCoordinated::GraphicsLayerCoordinated(Type layerType, GraphicsLayer
 
 GraphicsLayerCoordinated::~GraphicsLayerCoordinated()
 {
+    if (m_contentsBufferProxy)
+        m_contentsBufferProxy->setTargetLayer(nullptr);
     m_platformLayer->setOwner(nullptr);
     if (m_parent)
         downcast<GraphicsLayerCoordinated>(*m_parent).noteLayerPropertyChanged(Change::Children, ScheduleFlush::Yes);
@@ -329,12 +331,21 @@ void GraphicsLayerCoordinated::setContentsNeedsDisplay()
 
 void GraphicsLayerCoordinated::setContentsToPlatformLayer(PlatformLayer* contentsLayer, ContentsLayerPurpose)
 {
-    if (m_contentsLayer == contentsLayer)
+    if (m_contentsBufferProxy == contentsLayer)
         return;
 
-    m_contentsLayer = contentsLayer;
-    m_contentsDisplayDelegate = nullptr;
-    noteLayerPropertyChanged(Change::ContentsBuffer, ScheduleFlush::Yes);
+    if (m_contentsBufferProxy)
+        m_contentsBufferProxy->setTargetLayer(nullptr);
+
+    m_contentsBufferProxy = contentsLayer;
+
+    OptionSet<Change> change = { Change::ContentsBuffer };
+    if (m_contentsBufferProxy) {
+        m_contentsBufferProxy->setTargetLayer(m_platformLayer.ptr());
+        m_contentsDisplayDelegate = nullptr;
+        change.add(Change::ContentsBufferNeedsDisplay);
+    }
+    noteLayerPropertyChanged(change, ScheduleFlush::Yes);
 }
 
 void GraphicsLayerCoordinated::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&& delegate, ContentsLayerPurpose)
@@ -343,10 +354,15 @@ void GraphicsLayerCoordinated::setContentsDisplayDelegate(RefPtr<GraphicsLayerCo
         return;
 
     m_contentsDisplayDelegate = WTFMove(delegate);
-    m_contentsLayer = nullptr;
+
     OptionSet<Change> change = { Change::ContentsBuffer };
-    if (m_contentsDisplayDelegate)
+    if (m_contentsDisplayDelegate) {
+        if (m_contentsBufferProxy) {
+            m_contentsBufferProxy->setTargetLayer(nullptr);
+            m_contentsBufferProxy = nullptr;
+        }
         change.add(Change::ContentsBufferNeedsDisplay);
+    }
     noteLayerPropertyChanged(change, ScheduleFlush::Yes);
 }
 
@@ -387,7 +403,7 @@ void GraphicsLayerCoordinated::setContentsToSolidColor(const Color& color)
 bool GraphicsLayerCoordinated::usesContentsLayer() const
 {
     // FIXME: convert CoordinatedImageBackingStore into a contents layer?
-    return m_contentsLayer || m_contentsDisplayDelegate || m_pendingContentsImage || m_platformLayer->hasImageBackingStore();
+    return m_contentsBufferProxy || m_contentsDisplayDelegate || m_pendingContentsImage || m_platformLayer->hasImageBackingStore();
 }
 
 bool GraphicsLayerCoordinated::setChildren(Vector<Ref<GraphicsLayer>>&& children)
@@ -955,9 +971,7 @@ void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, floa
     Locker locker { m_platformLayer->lock() };
 
     if (m_pendingChanges.contains(Change::ContentsBuffer)) {
-        m_platformLayer->setContentsBufferProxy(m_contentsLayer.get());
-
-        if (!m_contentsDisplayDelegate)
+        if (!m_contentsDisplayDelegate && !m_contentsBufferProxy)
             m_platformLayer->setContentsBuffer(nullptr);
     }
 
@@ -966,7 +980,8 @@ void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, floa
         if (m_contentsDisplayDelegate) {
             if (!m_contentsDisplayDelegate->display(m_platformLayer.get()))
                 contentsBufferNeedsDisplay = true;
-        }
+        } else if (m_contentsBufferProxy)
+            m_contentsBufferProxy->consumePendingBufferIfNeeded();
     }
 
     if (m_pendingChanges.containsAny(Change::Geometry))

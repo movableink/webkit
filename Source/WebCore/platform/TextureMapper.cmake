@@ -41,7 +41,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/texmap/TextureMapperLayer.h
     platform/graphics/texmap/TextureMapperLayer3DRenderingContext.h
     platform/graphics/texmap/TextureMapperPlatformLayer.h
-    platform/graphics/texmap/TextureMapperPlatformLayerProxy.h
     platform/graphics/texmap/TextureMapperSolidColorLayer.h
     platform/graphics/texmap/TextureMapperTile.h
     platform/graphics/texmap/TextureMapperTiledBackingStore.h
@@ -64,8 +63,6 @@ if (USE_COORDINATED_GRAPHICS)
         page/scrolling/coordinated/ScrollingTreeScrollingNodeDelegateCoordinated.cpp
         page/scrolling/coordinated/ScrollingTreeStickyNodeCoordinated.cpp
 
-        platform/graphics/texmap/TextureMapperPlatformLayerProxy.cpp
-
         platform/graphics/texmap/coordinated/CoordinatedAnimatedBackingStoreClient.cpp
         platform/graphics/texmap/coordinated/CoordinatedBackingStore.cpp
         platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.cpp
@@ -75,6 +72,7 @@ if (USE_COORDINATED_GRAPHICS)
         platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferExternalOES.cpp
         platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferHolePunch.cpp
         platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferNativeImage.cpp
+        platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferProxy.cpp
         platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferRGB.cpp
         platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferYUV.cpp
         platform/graphics/texmap/coordinated/CoordinatedTileBuffer.cpp
@@ -91,6 +89,7 @@ if (USE_COORDINATED_GRAPHICS)
         platform/graphics/texmap/coordinated/CoordinatedImageBackingStore.h
         platform/graphics/texmap/coordinated/CoordinatedPlatformLayer.h
         platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBuffer.h
+        platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferProxy.h
         platform/graphics/texmap/coordinated/CoordinatedTileBuffer.h
         platform/graphics/texmap/coordinated/GraphicsLayerContentsDisplayDelegateCoordinated.h
         platform/graphics/texmap/coordinated/GraphicsLayerCoordinated.h

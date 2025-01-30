@@ -77,6 +77,7 @@ public:
     uint32_t requestComposition();
 
     void updateScene();
+    RunLoop* runLoop();
 
     void invalidate();
 
