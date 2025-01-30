@@ -1,0 +1,5 @@
+
+
+FAIL CommandEvent propagates across shadow boundaries retargeting source assert_equals: source is child inside shadow boundary expected (object) Element node <slot></slot> but got (undefined) undefined
+FAIL cross shadow CommandEvent retargets source to host element assert_equals: source is host expected (object) Element node <div><div></div></div> but got (undefined) undefined
+

@@ -4187,6 +4187,39 @@
     "imported/w3c/web-platform-tests/html/semantics/tabular-data/processing-model-1/span-limits.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/button-event-dispatch.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/fullscreen-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-audio-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-audio-invalid-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-details-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-details-invalid-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-dialog-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-dialog-invalid-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-popover-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-popover-invalid-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-video-behavior.tentative.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/html/syntax/parsing/html5lib_adoption01.html": [
         "slow"
     ],

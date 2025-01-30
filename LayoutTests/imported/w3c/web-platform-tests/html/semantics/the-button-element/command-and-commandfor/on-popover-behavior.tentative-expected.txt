@@ -1,0 +1,30 @@
+
+
+FAIL changing command attribute inside invokeevent doesn't impact the invocation assert_true: expected true got false
+FAIL invoking (as toggle-popover) closed popover opens assert_true: expected true got false
+PASS invoking (as toggle-popover) closed popover with preventDefault does not open
+FAIL invoking (as show-popover) closed popover opens assert_true: expected true got false
+PASS invoking (as show-popover) closed popover with preventDefault does not open
+FAIL invoking (as tOgGlE-pOpOvEr) closed popover opens assert_true: expected true got false
+PASS invoking (as tOgGlE-pOpOvEr) closed popover with preventDefault does not open
+FAIL invoking (as sHoW-pOpOvEr) closed popover opens assert_true: expected true got false
+PASS invoking (as sHoW-pOpOvEr) closed popover with preventDefault does not open
+FAIL invoking (as toggle-popover) open popover closes assert_false: expected false got true
+PASS invoking (as toggle-popover) open popover with preventDefault does not close
+FAIL invoking (as toggle-popover) from within open popover closes assert_false: expected false got true
+PASS invoking (as toggle-popover) from within open popover with preventDefault does not close
+FAIL invoking (as hide-popover) open popover closes assert_false: expected false got true
+PASS invoking (as hide-popover) open popover with preventDefault does not close
+FAIL invoking (as hide-popover) from within open popover closes assert_false: expected false got true
+PASS invoking (as hide-popover) from within open popover with preventDefault does not close
+FAIL invoking (as tOgGlE-pOpOvEr) open popover closes assert_false: expected false got true
+PASS invoking (as tOgGlE-pOpOvEr) open popover with preventDefault does not close
+FAIL invoking (as tOgGlE-pOpOvEr) from within open popover closes assert_false: expected false got true
+PASS invoking (as tOgGlE-pOpOvEr) from within open popover with preventDefault does not close
+FAIL invoking (as hIdE-pOpOvEr) open popover closes assert_false: expected false got true
+PASS invoking (as hIdE-pOpOvEr) open popover with preventDefault does not close
+FAIL invoking (as hIdE-pOpOvEr) from within open popover closes assert_false: expected false got true
+PASS invoking (as hIdE-pOpOvEr) from within open popover with preventDefault does not close
+PASS invoking (as show-popover) open popover is noop
+PASS invoking (as hide-popover) closed popover is noop
+

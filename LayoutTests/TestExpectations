@@ -2938,11 +2938,14 @@ http/tests/security/contentSecurityPolicy/block-all-mixed-content/insecure-css-i
 # text-spacing: These tests generate a bunch of render tree dumps
 imported/w3c/web-platform-tests/css/css-text/text-spacing-trim [ Skip ]
 
-# invokers v2: These tests cover additions to the invokers API which aren't specced yet
-imported/w3c/web-platform-tests/html/semantics/invokers/invoketarget-fullscreen-behavior.tentative.html [ Skip ]
-imported/w3c/web-platform-tests/html/semantics/invokers/invoketarget-on-audio-behavior.tentative.html [ Skip ]
-imported/w3c/web-platform-tests/html/semantics/invokers/invoketarget-on-video-behavior.tentative.html [ Skip ]
-imported/w3c/web-platform-tests/html/semantics/invokers/invoketarget-on-details-behavior.tentative.html [ Skip ]
+# command/commandfor future: These tests cover additions to the command invokers API which aren't specced yet
+imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/fullscreen-behavior.tentative.html [ Skip ]
+imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-audio-behavior.tentative.html [ Skip ]
+imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-audio-invalid-behavior.tentative.html [ Skip ]
+imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-details-behavior.tentative.html [ Skip ]
+imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-details-invalid-behavior.tentative.html [ Skip ]
+imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-input-number.tentative.html [ Skip ]
+imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-video-behavior.tentative.html [ Skip ]
 
 # text-transform: full-width
 # no full width mapping for characters ( and )

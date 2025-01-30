@@ -1,0 +1,40 @@
+
+
+FAIL event dispatches on click assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command property to --foo (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command attribute to --foo (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command property to --foo- (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command attribute to --foo- (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command property to --cAsE-cArRiEs (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command attribute to --cAsE-cArRiEs (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command property to -- (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command attribute to -- (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command property to --a- (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command attribute to --a- (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command property to --a-b (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command attribute to --a-b (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command property to --- (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command attribute to --- (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command property to --show-picker (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command attribute to --show-picker (must include dash) sets event command assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+FAIL setting custom command property to -foo (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+FAIL setting custom command attribute to -foo (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+FAIL setting custom command property to -foo- (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+FAIL setting custom command attribute to -foo- (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+FAIL setting custom command property to foo-bar (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+FAIL setting custom command attribute to foo-bar (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+FAIL setting custom command property to -foo bar (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+FAIL setting custom command attribute to -foo bar (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+FAIL setting custom command property to —-emdash (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+FAIL setting custom command attribute to —-emdash (no dash) did not dispatch an event assert_equals: event should not have fired expected null but got object "[object CommandEvent]"
+PASS setting custom command property to hidedocument (no dash) did not dispatch an event
+PASS setting custom command attribute to hidedocument (no dash) did not dispatch an event
+PASS event does not dispatch if click:preventDefault is called
+FAIL event does not dispatch on input[type=button] assert_equals: command should not have fired expected null but got object "[object CommandEvent]"
+PASS event does not dispatch if invoker is disabled
+PASS event does NOT dispatch if button is form associated, with implicit type
+FAIL event dispatches if button is form associated, with explicit type=button assert_equals: source expected (object) Element node <button id="invokerbutton" commandfor="invokee" command="... but got (undefined) undefined
+PASS event does NOT dispatch if button is form associated, with explicit type=submit
+PASS event does NOT dispatch if button is form associated, with explicit type=reset
+FAIL event dispatches if invokee is non-HTML Element assert_equals: event.invoker is set to right element expected (object) Element node <button id="invokerbutton" commandfor="svg-invokee" comma... but got (undefined) undefined
+
