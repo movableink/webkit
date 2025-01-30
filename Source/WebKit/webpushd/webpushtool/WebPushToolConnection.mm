@@ -82,9 +82,7 @@ void Connection::connectToService(WaitForServiceToExist waitForServiceToExist)
 
     xpc_connection_set_event_handler(m_connection.get(), [](xpc_object_t event) {
         if (event == XPC_ERROR_CONNECTION_INVALID || event == XPC_ERROR_CONNECTION_INTERRUPTED) {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-            fprintf(stderr, "Unexpected XPC connection issue: %s\n", event.debugDescription.UTF8String);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+            SAFE_FPRINTF(stderr, "Unexpected XPC connection issue: %s\n", String(event.debugDescription).utf8());
             return;
         }
 
@@ -93,10 +91,8 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     if (waitForServiceToExist == WaitForServiceToExist::Yes) {
         auto result = maybeConnectToService(m_serviceName);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (result == MACH_PORT_NULL)
-            printf("Waiting for service '%s' to be available\n", m_serviceName.characters());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+            SAFE_PRINTF("Waiting for service '%s' to be available\n", m_serviceName);
 
         while (result == MACH_PORT_NULL) {
             usleep(1000);
@@ -104,9 +100,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
     }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    printf("Connecting to service '%s'\n", m_serviceName.characters());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_PRINTF("Connecting to service '%s'\n", m_serviceName);
     xpc_connection_activate(m_connection.get());
 
     sendAuditToken();
@@ -114,27 +108,21 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void Connection::sendPushMessage(PushMessageForTesting&& message, CompletionHandler<void(String)>&& completionHandler)
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("Injecting push message\n");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     sendWithAsyncReplyWithoutUsingIPCConnection(Messages::PushClientConnection::InjectPushMessageForTesting(WTFMove(message)), WTFMove(completionHandler));
 }
 
 void Connection::getPushPermissionState(const String& scope, CompletionHandler<void(WebCore::PushPermissionState)>&& completionHandler)
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("Getting push permission state\n");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     sendWithAsyncReplyWithoutUsingIPCConnection(Messages::PushClientConnection::GetPushPermissionState(WebCore::SecurityOriginData::fromURL(URL { scope })), WTFMove(completionHandler));
 }
 
 void Connection::requestPushPermission(const String& scope, CompletionHandler<void(bool)>&& completionHandler)
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    printf("Request push permission state for %s\n", scope.utf8().data());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_PRINTF("Request push permission state for %s\n", scope.utf8());
 
     sendWithAsyncReplyWithoutUsingIPCConnection(Messages::PushClientConnection::RequestPushPermission(WebCore::SecurityOriginData::fromURL(URL { scope })), WTFMove(completionHandler));
 }

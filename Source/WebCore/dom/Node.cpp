@@ -314,12 +314,11 @@ void Node::dumpStatistics()
         }
     }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("Number of Nodes: %d\n\n", liveNodeSet().computeSize());
     printf("Number of Nodes with RareData: %zu\n", nodesWithRareData);
     printf("  Mixed use: %zu\n", mixedRareDataUseCount);
     for (auto it : rareDataSingleUseTypeCounts)
-        printf("  %s: %zu\n", stringForRareDataUseType(static_cast<NodeRareData::UseType>(it.key)).characters(), it.value);
+        SAFE_PRINTF("  %s: %zu\n", stringForRareDataUseType(static_cast<NodeRareData::UseType>(it.key)), it.value);
     printf("\n");
 
 
@@ -337,7 +336,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
     printf("Element tag name distibution:\n");
     for (auto& stringSizePair : perTagCount)
-        printf("  Number of <%s> tags: %zu\n", stringSizePair.key.utf8().data(), stringSizePair.value);
+        SAFE_PRINTF("  Number of <%s> tags: %zu\n", stringSizePair.key.utf8(), stringSizePair.value);
 
     printf("Attributes:\n");
     printf("  Number of Attributes (non-Node and Node): %zu [%zu]\n", attributes, sizeof(Attribute));
@@ -345,7 +344,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("  Number of Elements with attribute storage: %zu [%zu]\n", elementsWithAttributeStorage, sizeof(ElementData));
     printf("  Number of Elements with RareData: %zu\n", elementsWithRareData);
     printf("  Number of Elements with NamedNodeMap: %zu [%zu]\n", elementsWithNamedNodeMap, sizeof(NamedNodeMap));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // DUMP_NODE_STATISTICS
 }
@@ -2003,7 +2001,6 @@ static void appendAttributeDesc(const Node* node, StringBuilder& stringBuilder, 
     stringBuilder.append(attr);
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 void Node::showNode(ASCIILiteral prefix) const
 {
     if (prefix.isNull())
@@ -2011,15 +2008,14 @@ void Node::showNode(ASCIILiteral prefix) const
     if (isTextNode()) {
         String value = makeStringByReplacingAll(nodeValue(), '\\', "\\\\"_s);
         value = makeStringByReplacingAll(value, '\n', "\\n"_s);
-        fprintf(stderr, "%s%s\t%p \"%s\"\n", prefix.characters(), nodeName().utf8().data(), this, value.utf8().data());
+        SAFE_FPRINTF(stderr, "%s%s\t%p \"%s\"\n", prefix, nodeName().utf8(), this, value.utf8());
     } else {
         StringBuilder attrs;
         appendAttributeDesc(this, attrs, classAttr, " CLASS="_s);
         appendAttributeDesc(this, attrs, styleAttr, " STYLE="_s);
-        fprintf(stderr, "%s%s\t%p (renderer %p) %s%s%s\n", prefix.characters(), nodeName().utf8().data(), this, renderer(), attrs.toString().utf8().data(), needsStyleRecalc() ? " (needs style recalc)" : "", childNeedsStyleRecalc() ? " (child needs style recalc)" : "");
+        SAFE_FPRINTF(stderr, "%s%s\t%p (renderer %p) %s%s%s\n", prefix, nodeName().utf8(), this, renderer(), attrs.toString().utf8(), needsStyleRecalc() ? " (needs style recalc)"_s : ""_s, childNeedsStyleRecalc() ? " (child needs style recalc)"_s : ""_s);
     }
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void Node::showTreeForThis() const
 {

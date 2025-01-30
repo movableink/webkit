@@ -6407,9 +6407,7 @@ void showLayerTree(const WebCore::RenderLayer* layer)
         WebCore::RenderAsTextFlag::DontUpdateLayout,
         WebCore::RenderAsTextFlag::ShowLayoutState,
     });
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    fprintf(stderr, "\n%s\n", output.utf8().data());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_FPRINTF(stderr, "\n%s\n", output.utf8());
 }
 
 void showLayerTree(const WebCore::RenderObject* renderer)

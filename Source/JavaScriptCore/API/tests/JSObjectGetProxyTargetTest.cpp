@@ -33,6 +33,7 @@
 #include "JSObjectRefPrivate.h"
 #include "JavaScript.h"
 #include "ProxyObject.h"
+#include <wtf/text/ASCIILiteral.h>
 
 using namespace JSC;
 
@@ -42,10 +43,8 @@ int testJSObjectGetProxyTarget()
     
     printf("JSObjectGetProxyTargetTest:\n");
     
-    auto test = [&] (const char* description, bool currentResult) {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        printf("    %s: %s\n", description, currentResult ? "PASS" : "FAIL");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    auto test = [&] (ASCIILiteral description, bool currentResult) {
+        SAFE_PRINTF("    %s: %s\n", description, currentResult ? "PASS"_s : "FAIL"_s);
         overallResult &= currentResult;
     };
     
@@ -100,9 +99,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     JSGlobalContextRelease(context);
     JSContextGroupRelease(group);
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    printf("JSObjectGetProxyTargetTest: %s\n", overallResult ? "PASS" : "FAIL");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_PRINTF("JSObjectGetProxyTargetTest: %s\n", overallResult ? "PASS"_s : "FAIL"_s);
     return !overallResult;
 }
 

@@ -1354,9 +1354,7 @@ void dumpInnerHTML(WebCore::HTMLElement*);
 
 void dumpInnerHTML(WebCore::HTMLElement* element)
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    printf("%s\n", element->innerHTML().ascii().data());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_PRINTF("%s\n", element->innerHTML().ascii());
 }
 
 #endif

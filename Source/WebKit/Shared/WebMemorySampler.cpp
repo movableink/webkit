@@ -110,9 +110,7 @@ void WebMemorySampler::stop()
     m_sampleTimer.stop();
     FileSystem::closeFile(m_sampleLogFile);
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    printf("Stopped memory sampler for process %s %d\n", processName().utf8().data(), getCurrentProcessID());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_PRINTF("Stopped memory sampler for process %s %d\n", processName().utf8(), getCurrentProcessID());
     // Flush stdout buffer so python script can be guaranteed to read up to this point.
     fflush(stdout);
     m_isRunning = false;
@@ -165,9 +163,7 @@ void WebMemorySampler::stopTimerFired()
 {
     if (!m_isRunning)
         return;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     printf("%g seconds elapsed. Stopping memory sampler...\n", m_runningTime);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     stop();
 }
 

@@ -30,6 +30,7 @@
 #include "InitializeThreading.h"
 #include "JavaScript.h"
 #include <stdio.h>
+#include <wtf/text/ASCIILiteral.h>
 
 int testFunctionToString()
 {
@@ -106,9 +107,7 @@ int testFunctionToString()
         failed = true;
 
     JSGlobalContextRelease(context);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    printf("%s: function toString tests.\n", failed ? "FAIL" : "PASS");
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    SAFE_PRINTF("%s: function toString tests.\n", failed ? "FAIL"_s : "PASS"_s);
 
     return failed;
 }

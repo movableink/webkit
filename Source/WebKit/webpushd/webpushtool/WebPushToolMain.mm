@@ -203,9 +203,7 @@ public:
     void run(WebPushTool::Connection& connection) override
     {
         connection.getPushPermissionState(m_scope, [this](WebCore::PushPermissionState state) mutable {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             printf("Got push permission status: %u\n", static_cast<unsigned>(state));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             done();
         });
     }
@@ -224,9 +222,7 @@ public:
     void run(WebPushTool::Connection& connection) override
     {
         connection.requestPushPermission(m_scope, [this](bool granted) mutable {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             printf("Requested push permission with result: %d\n", granted);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             done();
         });
     }

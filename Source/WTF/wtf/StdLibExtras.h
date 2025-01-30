@@ -1087,7 +1087,7 @@ void secureMemsetSpan(std::span<T, Extent> destination, uint8_t byte)
 #define WTF_EXPAND3(...) WTF_EXPAND2(WTF_EXPAND2(WTF_EXPAND2(WTF_EXPAND2(__VA_ARGS__))))
 #define WTF_EXPAND2(...) WTF_EXPAND1(WTF_EXPAND1(WTF_EXPAND1(WTF_EXPAND1(__VA_ARGS__))))
 #define WTF_EXPAND1(...) __VA_ARGS__
-#define WTF_FOR_EACH_HELPER(macro, a1, ...) macro(a1) __VA_OPT__(WTF_FOR_EACH_AGAIN PARENS (macro, __VA_ARGS__))
+#define WTF_FOR_EACH_HELPER(macro, a1, ...) macro(a1) __VA_OPT__(, WTF_FOR_EACH_AGAIN WTF_PARENS (macro, __VA_ARGS__))
 #define WTF_FOR_EACH_AGAIN() WTF_FOR_EACH_HELPER
 #define WTF_FOR_EACH(macro, ...) __VA_OPT__(WTF_EXPAND(WTF_FOR_EACH_HELPER(macro, __VA_ARGS__)))
 
@@ -1101,7 +1101,7 @@ template <class T> inline typename std::enable_if<std::is_pointer<T>::value, T>:
     return arg;
 }
 
-// This version of printf rejects char* but accepts known null terminated
+// These versions of printf reject char* but accept known null terminated
 // string types, like ASCIILiteral and CString. A type can specialize
 // 'safePrintfType' to advertise conversion to null terminated string.
 
@@ -1111,6 +1111,8 @@ template <class T> inline typename std::enable_if<std::is_pointer<T>::value, T>:
 #define SAFE_PRINTF_TYPE(...) WTF_FOR_EACH(WTF::safePrintfType, __VA_ARGS__)
 
 #define SAFE_PRINTF(format, ...) printf(format, SAFE_PRINTF_TYPE(__VA_ARGS__))
+#define SAFE_FPRINTF(file, format, ...) fprintf(file, format, SAFE_PRINTF_TYPE(__VA_ARGS__))
+#define SAFE_SPRINTF(destinationSpan, format, ...) snprintf(destinationSpan.data(), destinationSpan.size_bytes(), format, SAFE_PRINTF_TYPE(__VA_ARGS__))
 
 template<typename T> concept ByteType = sizeof(T) == 1 && ((std::is_integral_v<T> && !std::same_as<T, bool>) || std::same_as<T, std::byte>) && !std::is_const_v<T>;
 
