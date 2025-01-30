@@ -1426,6 +1426,10 @@ bool Texture::supportsBlending(WGPUTextureFormat format, const Device& device)
         return true;
     case WGPUTextureFormat_RG11B10Ufloat:
         return device.hasFeature(WGPUFeatureName_RG11B10UfloatRenderable);
+    case WGPUTextureFormat_R32Float:
+    case WGPUTextureFormat_RG32Float:
+    case WGPUTextureFormat_RGBA32Float:
+        return device.hasFeature(WGPUFeatureName_Float32Blendable);
     case WGPUTextureFormat_R8Snorm:
     case WGPUTextureFormat_R8Uint:
     case WGPUTextureFormat_R8Sint:
@@ -1434,7 +1438,6 @@ bool Texture::supportsBlending(WGPUTextureFormat format, const Device& device)
     case WGPUTextureFormat_RG8Snorm:
     case WGPUTextureFormat_RG8Uint:
     case WGPUTextureFormat_RG8Sint:
-    case WGPUTextureFormat_R32Float:
     case WGPUTextureFormat_RG16Uint:
     case WGPUTextureFormat_RG16Sint:
     case WGPUTextureFormat_RGBA8Snorm:
@@ -1451,10 +1454,8 @@ bool Texture::supportsBlending(WGPUTextureFormat format, const Device& device)
     case WGPUTextureFormat_Depth32FloatStencil8:
     case WGPUTextureFormat_R32Uint:
     case WGPUTextureFormat_R32Sint:
-    case WGPUTextureFormat_RG32Float:
     case WGPUTextureFormat_RG32Uint:
     case WGPUTextureFormat_RG32Sint:
-    case WGPUTextureFormat_RGBA32Float:
     case WGPUTextureFormat_RGBA32Uint:
     case WGPUTextureFormat_RGBA32Sint:
     case WGPUTextureFormat_RGB9E5Ufloat:
