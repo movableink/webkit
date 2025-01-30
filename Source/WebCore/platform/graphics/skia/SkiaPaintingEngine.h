@@ -49,7 +49,7 @@ class SkiaPaintingEngine {
     WTF_MAKE_NONCOPYABLE(SkiaPaintingEngine);
 public:
     SkiaPaintingEngine(unsigned numberOfCPUThreads, unsigned numberOfGPUThreads);
-    ~SkiaPaintingEngine() = default;
+    ~SkiaPaintingEngine();
 
     static std::unique_ptr<SkiaPaintingEngine> create();
 

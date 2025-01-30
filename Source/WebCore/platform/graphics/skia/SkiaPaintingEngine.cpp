@@ -64,6 +64,8 @@ SkiaPaintingEngine::SkiaPaintingEngine(unsigned numberOfCPUThreads, unsigned num
         m_cpuWorkerPool = WorkerPool::create("SkiaCPUWorker"_s, numberOfCPUThreads);
 }
 
+SkiaPaintingEngine::~SkiaPaintingEngine() = default;
+
 std::unique_ptr<SkiaPaintingEngine> SkiaPaintingEngine::create()
 {
     return makeUnique<SkiaPaintingEngine>(numberOfCPUPaintingThreads(), numberOfGPUPaintingThreads());
