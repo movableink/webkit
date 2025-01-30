@@ -162,9 +162,15 @@ ThirdPartyCookieBlockingDecision NetworkStorageSession::thirdPartyCookieBlocking
     if (!m_isTrackingPreventionEnabled)
         return ThirdPartyCookieBlockingDecision::None;
 
+    if (!firstPartyForCookies.isValid())
+        return ThirdPartyCookieBlockingDecision::All;
+
     RegistrableDomain firstPartyDomain { firstPartyForCookies };
     if (firstPartyDomain.isEmpty())
         return ThirdPartyCookieBlockingDecision::None;
+
+    if (!resource.isValid())
+        return ThirdPartyCookieBlockingDecision::All;
 
     RegistrableDomain resourceDomain { resource };
     if (resourceDomain.isEmpty())
