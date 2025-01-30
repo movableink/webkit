@@ -61,7 +61,7 @@ public:
 
     // A Worker's inspector messages come in and go out through the Page's WorkerAgent.
     class PageChannel : public CanMakeThreadSafeCheckedPtr<PageChannel> {
-        WTF_MAKE_TZONE_ALLOCATED_INLINE(PageChannel);
+        WTF_MAKE_TZONE_ALLOCATED(PageChannel);
         WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PageChannel);
 
     public:

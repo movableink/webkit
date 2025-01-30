@@ -27,6 +27,7 @@
 #include "CloseWatcher.h"
 
 #include "CloseWatcherManager.h"
+#include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "KeyboardEvent.h"
