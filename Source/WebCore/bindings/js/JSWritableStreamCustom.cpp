@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,33 +23,26 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// https://fs.spec.whatwg.org/#api-filesystemwritablefilestream
+#include "config.h"
+#include "JSWritableStream.h"
 
-enum WriteCommandType {
-    "write",
-    "seek",
-    "truncate",
-};
+#include "FileSystemWritableFileStream.h"
+#include "JSDOMBinding.h"
+#include "JSFileSystemWritableFileStream.h"
 
-[
-    EnabledBySetting=FileSystemWritableStreamEnabled,
-    JSGenerateToJSObject,
-    JSGenerateToNativeObject
-] dictionary WriteParams {
-    required WriteCommandType type;
-    unsigned long long? size;
-    unsigned long long? position;
-    (BufferSource or Blob or USVString)? data;
-};
+namespace WebCore {
 
-typedef (BufferSource or Blob or USVString or WriteParams) FileSystemWriteChunkType;
+JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, WritableStream& stream)
+{
+    return wrap(lexicalGlobalObject, globalObject, stream);
+}
 
-[
-    EnabledBySetting=FileSystemWritableStreamEnabled,
-    Exposed=(Window,Worker),
-    SecureContext
-] interface FileSystemWritableFileStream : WritableStream {
-    [CallWith=CurrentGlobalObject] Promise<undefined> write(FileSystemWriteChunkType data);
-    [CallWith=CurrentGlobalObject] Promise<undefined> seek(unsigned long long position);
-    [CallWith=CurrentGlobalObject] Promise<undefined> truncate(unsigned long long size);
-};
+JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<WritableStream>&& stream)
+{
+    if (is<FileSystemWritableFileStream>(stream.get()))
+        return createWrapper<FileSystemWritableFileStream>(globalObject, WTFMove(stream));
+
+    return createWrapper<WritableStream>(globalObject, WTFMove(stream));
+}
+
+}

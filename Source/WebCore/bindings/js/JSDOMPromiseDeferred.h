@@ -276,6 +276,12 @@ public:
         m_promise->reject(std::forward<ErrorType>(error)...);
     }
 
+    template<typename Callback>
+    void rejectWithCallback(Callback callback, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
+    {
+        m_promise->rejectWithCallback(callback, rejectAsHandled);
+    }
+
     template<typename IDLType>
     void rejectType(typename IDLType::ParameterType value, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
     {
