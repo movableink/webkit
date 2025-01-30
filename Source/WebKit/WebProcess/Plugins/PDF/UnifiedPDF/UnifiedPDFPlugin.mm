@@ -3762,8 +3762,10 @@ void UnifiedPDFPlugin::handlePDFActionForAnnotation(PDFAnnotation *annotation, P
         if (!action)
             return;
 
-        if ([action isKindOfClass:getPDFActionResetFormClass()] && [m_pdfDocument respondsToSelector:@selector(resetFormFields:)])
+#if HAVE(PDFDOCUMENT_RESET_FORM_FIELDS)
+        if ([action isKindOfClass:getPDFActionResetFormClass()])
             [m_pdfDocument resetFormFields:static_cast<PDFActionResetForm *>(action)];
+#endif
 
         RetainPtr actionType = [action type];
         if ([actionType isEqualToString:@"Named"]) {

@@ -99,7 +99,9 @@
 @end
 
 @interface PDFDocument (Annotations)
+#if HAVE(PDFDOCUMENT_RESET_FORM_FIELDS)
 - (void)resetFormFields:(PDFActionResetForm *)action;
+#endif
 #if HAVE(PDFDOCUMENT_ANNOTATIONS_FOR_FIELD_NAME)
 - (NSArray *)annotationsForFieldName:(NSString *)fieldname;
 #endif
