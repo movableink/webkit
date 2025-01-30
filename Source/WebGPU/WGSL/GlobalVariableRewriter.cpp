@@ -78,7 +78,7 @@ private:
     };
 
     template<typename Value>
-    using IndexMap = HashMap<unsigned, Value, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>>;
+    using IndexMap = HashMap<uint64_t, Value, WTF::IntHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
 
     using UsedResources = IndexMap<IndexMap<Global*>>;
     using UsedPrivateGlobals = Vector<Global*>;
