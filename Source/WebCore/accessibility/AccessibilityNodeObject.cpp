@@ -2810,9 +2810,16 @@ AccessibilityRole AccessibilityNodeObject::determineAriaRoleAttribute() const
     // In situations where an author has not specified names for the form and
     // region landmarks, it is considered an authoring error. The user agent
     // MUST treat such element as if no role had been provided.
-    if ((role == AccessibilityRole::LandmarkRegion || role == AccessibilityRole::Form) && !hasAccNameAttribute())
-        role = AccessibilityRole::Unknown;
-
+    if ((role == AccessibilityRole::LandmarkRegion || role == AccessibilityRole::Form) && !hasAccNameAttribute()) {
+        // If a region has no label, but it does have a fallback role, use that instead.
+        auto nextRole = ariaRoleToWebCoreRole(ariaRole, [] (const AccessibilityRole& skipRole) {
+            return skipRole == AccessibilityRole::LandmarkRegion;
+        });
+        if (nextRole != role)
+            role = nextRole;
+        else
+            role = AccessibilityRole::Unknown;
+    }
     if (enumToUnderlyingType(role))
         return role;
 

@@ -2756,11 +2756,21 @@ static ARIAReverseRoleMap& reverseAriaRoleMap()
 
 AccessibilityRole AccessibilityObject::ariaRoleToWebCoreRole(const String& value)
 {
+    return ariaRoleToWebCoreRole(value, [] (const AccessibilityRole&) {
+        return false;
+    });
+}
+
+AccessibilityRole AccessibilityObject::ariaRoleToWebCoreRole(const String& value, const Function<bool(const AccessibilityRole&)>& skipRole)
+{
     if (value.isNull() || value.isEmpty())
         return AccessibilityRole::Unknown;
     auto simplifiedValue = value.simplifyWhiteSpace(isASCIIWhitespace);
     for (auto roleName : StringView(simplifiedValue).split(' ')) {
         AccessibilityRole role = ariaRoleMap().get<ASCIICaseInsensitiveStringViewHashTranslator>(roleName);
+        if (skipRole(role))
+            continue;
+
         if (enumToUnderlyingType(role))
             return role;
     }

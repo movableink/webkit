@@ -558,6 +558,7 @@ public:
     bool shouldFocusActiveDescendant() const;
 
     WEBCORE_EXPORT static AccessibilityRole ariaRoleToWebCoreRole(const String&);
+    static AccessibilityRole ariaRoleToWebCoreRole(const String&, const Function<bool(const AccessibilityRole&)>&);
     bool hasAttribute(const QualifiedName&) const;
     const AtomString& getAttribute(const QualifiedName&) const;
     String getAttributeTrimmed(const QualifiedName&) const;
