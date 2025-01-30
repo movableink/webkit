@@ -450,11 +450,9 @@ PlatformLayer* PluginView::platformLayer() const
     if (!m_isInitialized)
         return nullptr;
 
-#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     Ref plugin = m_plugin;
     if (plugin->layerHostingStrategy() == PluginLayerHostingStrategy::PlatformLayer)
         return plugin->platformLayer();
-#endif
 
     return nullptr;
 }

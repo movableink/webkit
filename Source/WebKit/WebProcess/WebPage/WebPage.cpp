@@ -9561,7 +9561,7 @@ void WebPage::setInteractionRegionsEnabled(bool enable)
 
 bool WebPage::handlesPageScaleGesture()
 {
-#if !ENABLE(LEGACY_PDFKIT_PLUGIN)
+#if !ENABLE(PDF_PLUGIN)
     return false;
 #else
     return mainFramePlugIn();
