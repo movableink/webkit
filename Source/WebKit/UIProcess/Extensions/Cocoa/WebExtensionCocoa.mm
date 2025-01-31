@@ -40,6 +40,7 @@
 #import "WebExtensionUtilities.h"
 #import <CoreFoundation/CFBundle.h>
 #import <WebCore/LocalizedStrings.h>
+#import <wtf/FileSystem.h>
 #import <wtf/cf/TypeCastsCF.h>
 #import <wtf/text/MakeString.h>
 
@@ -85,8 +86,7 @@ WebExtension::WebExtension(NSBundle *appExtensionBundle, NSURL *resourceURL, Ref
                 return;
             }
 
-            ASSERT(temporaryDirectory.right(1) != "/"_s);
-            m_resourceBaseURL = URL::fileURLWithFileSystemPath(makeString(temporaryDirectory, '/'));
+            m_resourceBaseURL = URL::fileURLWithFileSystemPath(temporaryDirectory);
             m_resourcesAreTemporary = true;
         }
 
@@ -107,7 +107,9 @@ WebExtension::WebExtension(NSBundle *appExtensionBundle, NSURL *resourceURL, Ref
 
     RELEASE_ASSERT(m_resourceBaseURL.protocolIsFile());
     RELEASE_ASSERT(m_resourceBaseURL.hasPath());
-    RELEASE_ASSERT(m_resourceBaseURL.path().right(1) == "/"_s);
+
+    if (m_resourceBaseURL.path().right(1) != "/"_s)
+        m_resourceBaseURL = URL::fileURLWithFileSystemPath(FileSystem::pathByAppendingComponent(m_resourceBaseURL.path(), "/"_s));
 
     if (!manifestParsedSuccessfully()) {
         ASSERT(!m_errors.isEmpty());
