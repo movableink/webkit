@@ -115,6 +115,7 @@ public:
     bool encoderIsCurrent(id<MTLCommandEncoder>) const;
     bool submitWillBeInvalid() const { return m_makeSubmitInvalid; }
     void addBuffer(id<MTLBuffer>);
+    void addBuffer(id<MTLCounterSampleBuffer>);
     void addICB(id<MTLIndirectCommandBuffer>);
     void addTexture(id<MTLTexture>);
     void addTexture(const Texture&);
@@ -170,6 +171,7 @@ private:
     NSMutableSet<id<MTLTexture>> *m_retainedTextures { nil };
     NSMutableSet<id<MTLBuffer>> *m_retainedBuffers { nil };
     HashSet<RefPtr<const Sampler>> m_retainedSamplers;
+    NSMutableSet<id<MTLCounterSampleBuffer>> *m_retainedTimestampBuffers { nil };
     id<MTLSharedEvent> m_sharedEvent { nil };
     uint64_t m_sharedEventSignalValue { 0 };
 private PUBLIC_IN_WEBGPU_SWIFT:

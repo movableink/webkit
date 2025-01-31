@@ -140,6 +140,7 @@ CommandEncoder::CommandEncoder(id<MTLCommandBuffer> commandBuffer, Device& devic
     m_retainedBuffers = [NSMutableSet set];
     m_retainedTextures = [NSMutableSet set];
     m_retainedICBs = [NSMutableSet set];
+    m_retainedTimestampBuffers = [NSMutableSet set];
 }
 
 CommandEncoder::CommandEncoder(Device& device)
@@ -151,6 +152,7 @@ CommandEncoder::~CommandEncoder()
 {
     finalizeBlitCommandEncoder();
     m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
+    m_commandBuffer = nil; // Do not remove, this is needed to workaround rdar://143905417
 }
 
 id<MTLBlitCommandEncoder> CommandEncoder::ensureBlitCommandEncoder()
@@ -190,6 +192,10 @@ void CommandEncoder::finalizeBlitCommandEncoder()
 static auto timestampWriteIndex(auto writeIndex)
 {
     return writeIndex == WGPU_QUERY_SET_INDEX_UNDEFINED ? 0 : writeIndex;
+}
+static NSUInteger timestampWriteIndex(NSUInteger writeIndex, NSUInteger defaultValue)
+{
+    return writeIndex == WGPU_QUERY_SET_INDEX_UNDEFINED ? defaultValue : writeIndex;
 }
 
 static NSString* errorValidatingTimestampWrites(const auto& timestampWrites, const CommandEncoder& commandEncoder)
@@ -248,13 +254,14 @@ Ref<ComputePassEncoder> CommandEncoder::beginComputePass(const WGPUComputePassDe
     if (auto* wgpuTimestampWrites = descriptor.timestampWrites) {
         Ref timestampWrites = protectedFromAPI(wgpuTimestampWrites->querySet);
         counterSampleBuffer = timestampWrites->counterSampleBuffer();
+        timestampWrites->setCommandEncoder(*this);
     }
 
     if (m_device->enableEncoderTimestamps() || counterSampleBuffer) {
         auto* timestampWrites = descriptor.timestampWrites;
         computePassDescriptor.sampleBufferAttachments[0].sampleBuffer = counterSampleBuffer ?: m_device->timestampsBuffer(m_commandBuffer, 2);
-        computePassDescriptor.sampleBufferAttachments[0].startOfEncoderSampleIndex = timestampWrites ? timestampWrites->beginningOfPassWriteIndex : 0;
-        computePassDescriptor.sampleBufferAttachments[0].endOfEncoderSampleIndex = timestampWrites ? timestampWrites->endOfPassWriteIndex : 1;
+        computePassDescriptor.sampleBufferAttachments[0].startOfEncoderSampleIndex = timestampWrites ? timestampWriteIndex(timestampWrites->beginningOfPassWriteIndex, MTLCounterDontSample) : 0;
+        computePassDescriptor.sampleBufferAttachments[0].endOfEncoderSampleIndex = timestampWrites ? timestampWriteIndex(timestampWrites->endOfPassWriteIndex, MTLCounterDontSample) : 1;
     }
 
     id<MTLComputeCommandEncoder> computeCommandEncoder = [m_commandBuffer computeCommandEncoderWithDescriptor:computePassDescriptor];
@@ -490,16 +497,17 @@ Ref<RenderPassEncoder> CommandEncoder::beginRenderPass(const WGPURenderPassDescr
     id<MTLCounterSampleBuffer> counterSampleBuffer;
     if (auto* wgpuTimestampWrites = descriptor.timestampWrites) {
         Ref timestampWrites = protectedFromAPI(wgpuTimestampWrites->querySet);
+        timestampWrites->setCommandEncoder(*this);
         counterSampleBuffer = timestampWrites->counterSampleBuffer();
     }
 
     if (m_device->enableEncoderTimestamps() || counterSampleBuffer) {
         if (counterSampleBuffer) {
             mtlDescriptor.sampleBufferAttachments[0].sampleBuffer = counterSampleBuffer;
-            mtlDescriptor.sampleBufferAttachments[0].startOfVertexSampleIndex = descriptor.timestampWrites->beginningOfPassWriteIndex;
-            mtlDescriptor.sampleBufferAttachments[0].endOfVertexSampleIndex = descriptor.timestampWrites->endOfPassWriteIndex;
-            mtlDescriptor.sampleBufferAttachments[0].startOfFragmentSampleIndex = descriptor.timestampWrites->endOfPassWriteIndex;
-            mtlDescriptor.sampleBufferAttachments[0].endOfFragmentSampleIndex = descriptor.timestampWrites->endOfPassWriteIndex;
+            mtlDescriptor.sampleBufferAttachments[0].startOfVertexSampleIndex = timestampWriteIndex(descriptor.timestampWrites->beginningOfPassWriteIndex, MTLCounterDontSample);
+            mtlDescriptor.sampleBufferAttachments[0].endOfVertexSampleIndex = timestampWriteIndex(descriptor.timestampWrites->endOfPassWriteIndex, MTLCounterDontSample);
+            mtlDescriptor.sampleBufferAttachments[0].startOfFragmentSampleIndex = timestampWriteIndex(descriptor.timestampWrites->endOfPassWriteIndex, MTLCounterDontSample);
+            mtlDescriptor.sampleBufferAttachments[0].endOfFragmentSampleIndex = timestampWriteIndex(descriptor.timestampWrites->endOfPassWriteIndex, MTLCounterDontSample);
         } else {
             mtlDescriptor.sampleBufferAttachments[0].sampleBuffer = counterSampleBuffer ?: m_device->timestampsBuffer(m_commandBuffer, 4);
             mtlDescriptor.sampleBufferAttachments[0].startOfVertexSampleIndex = 0;
@@ -1386,6 +1394,12 @@ void CommandEncoder::addICB(id<MTLIndirectCommandBuffer> icb)
     if (!icb)
         return;
     [m_retainedICBs addObject:icb];
+}
+void CommandEncoder::addBuffer(id<MTLCounterSampleBuffer> buffer)
+{
+    if (!buffer)
+        return;
+    [m_retainedTimestampBuffers addObject:buffer];
 }
 void CommandEncoder::addBuffer(id<MTLBuffer> buffer)
 {
