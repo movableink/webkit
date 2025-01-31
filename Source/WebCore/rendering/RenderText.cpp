@@ -320,7 +320,7 @@ inline RenderText::RenderText(Type type, Node& node, const String& text)
     , m_containsOnlyASCII(text.impl()->containsOnlyASCII())
 {
     ASSERT(!m_text.isNull());
-    m_canUseSimpleFontCodePath = computeCanUseSimpleFontCodePath();
+    computeFontCodePath();
     ASSERT(isRenderText());
 }
 
@@ -1740,7 +1740,7 @@ void RenderText::setRenderedText(const String& newText)
     }
 
     m_containsOnlyASCII = text().containsOnlyASCII();
-    m_canUseSimpleFontCodePath = computeCanUseSimpleFontCodePath();
+    computeFontCodePath();
     m_canUseSimplifiedTextMeasuring = { };
     m_hasPositionDependentContentWidth = { };
     m_hasStrongDirectionalityContent = { };
@@ -2128,11 +2128,13 @@ int RenderText::nextOffset(int current) const
     return iterator.following(current).value_or(current + 1);
 }
 
-bool RenderText::computeCanUseSimpleFontCodePath() const
+void RenderText::computeFontCodePath()
 {
-    if (m_containsOnlyASCII || text().is8Bit())
-        return true;
-    return FontCascade::characterRangeCodePath(text().span16()) == FontCascade::CodePath::Simple;
+    if (m_containsOnlyASCII || text().is8Bit()) {
+        m_fontCodePath = static_cast<unsigned>(FontCascade::CodePath::Simple);
+        return;
+    }
+    m_fontCodePath = static_cast<unsigned>(FontCascade::characterRangeCodePath(text().span16()));
 }
 
 void RenderText::momentarilyRevealLastTypedCharacter(unsigned offsetAfterLastTypedCharacter)

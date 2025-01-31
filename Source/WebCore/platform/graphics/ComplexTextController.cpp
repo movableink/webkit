@@ -151,6 +151,35 @@ ComplexTextController::ComplexTextController(const FontCascade& font, const Text
     finishConstruction();
 }
 
+ComplexTextController::ComplexTextController(const TextRun& run, const FontCascade& fontCascade)
+    : m_font(fontCascade)
+    , m_run(run)
+    , m_end(run.length())
+{
+}
+
+std::pair<float, float> ComplexTextController::enclosingGlyphBoundsForTextRun(const FontCascade& fontCascade, const TextRun& textRun)
+{
+    auto textController = ComplexTextController { textRun, fontCascade };
+    textController.collectComplexTextRuns();
+
+    auto enclosingAscent = std::optional<float> { };
+    auto enclosingDescent = std::optional<float> { };
+
+    for (size_t runIndex = 0; runIndex < textController.m_complexTextRuns.size(); ++runIndex) {
+        auto& complexTextRun = *textController.m_complexTextRuns[runIndex];
+        auto& font = complexTextRun.font();
+        auto glyphs = complexTextRun.glyphs();
+
+        for (size_t glyphIndex = 0; glyphIndex < complexTextRun.glyphCount(); ++glyphIndex) {
+            auto bounds = font.boundsForGlyph(glyphs[glyphIndex]);
+            enclosingAscent = std::min(enclosingAscent.value_or(bounds.y()), bounds.y());
+            enclosingDescent = std::max(enclosingDescent.value_or(bounds.maxY()), bounds.maxY());
+        }
+    }
+    return { enclosingAscent.value_or(0.f), enclosingDescent.value_or(0.f) };
+}
+
 void ComplexTextController::finishConstruction()
 {
     adjustGlyphsAndAdvances();

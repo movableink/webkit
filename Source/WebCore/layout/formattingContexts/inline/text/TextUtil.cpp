@@ -28,6 +28,7 @@
 #include "TextUtil.h"
 
 #include "BreakLines.h"
+#include "ComplexTextController.h"
 #include "FontCascade.h"
 #include "InlineLineTypes.h"
 #include "InlineTextItem.h"
@@ -208,7 +209,6 @@ static TextUtil::EnclosingAscentDescent enclosingGlyphBoundsForRunWithIterator(c
 
             auto glyphData = fontCascade.glyphDataForCharacter(character, isRTL);
             auto& font = glyphData.font ? *glyphData.font : primaryFont;
-            // FIXME: This may need some adjustment for ComplexTextController. See glyphOrigin.
             auto bounds = font.boundsForGlyph(glyphData.glyph);
 
             enclosingAscent = std::min(enclosingAscent.value_or(bounds.y()), bounds.y());
@@ -220,15 +220,21 @@ static TextUtil::EnclosingAscentDescent enclosingGlyphBoundsForRunWithIterator(c
     return { enclosingAscent.value_or(0.f), enclosingDescent.value_or(0.f) };
 }
 
-TextUtil::EnclosingAscentDescent TextUtil::enclosingGlyphBoundsForText(StringView textContent, const RenderStyle& style)
+TextUtil::EnclosingAscentDescent TextUtil::enclosingGlyphBoundsForText(StringView textContent, const RenderStyle& style, ShouldUseSimpleGlyphOverflowCodePath shouldUseSimpleGlyphOverflowCodePath)
 {
     if (textContent.isEmpty())
         return { };
+
+    if (shouldUseSimpleGlyphOverflowCodePath == ShouldUseSimpleGlyphOverflowCodePath::No) {
+        auto overflow = ComplexTextController::enclosingGlyphBoundsForTextRun(style.fontCascade(), TextRun { textContent });
+        return { overflow.first, overflow.second };
+    }
 
     if (textContent.is8Bit()) {
         Latin1TextIterator textIterator { textContent.span8(), 0, textContent.length() };
         return enclosingGlyphBoundsForRunWithIterator(style.fontCascade(), style.writingMode().isBidiRTL(), textIterator);
     }
+
     SurrogatePairAwareTextIterator textIterator { textContent.span16(), 0, textContent.length() };
     return enclosingGlyphBoundsForRunWithIterator(style.fontCascade(), style.writingMode().isBidiRTL(), textIterator);
 }
