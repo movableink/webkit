@@ -8885,11 +8885,6 @@ void WebPageProxy::setMuted(WebCore::MediaProducerMutedStateFlags state, FromApp
     if (!isAllowedToChangeMuteState())
         state.add(WebCore::MediaProducer::MediaStreamCaptureIsMuted);
 
-#if ENABLE(MEDIA_STREAM) && ENABLE(GPU_PROCESS)
-    if (preferences().captureAudioInGPUProcessEnabled() && internals().mutedState.contains(WebCore::MediaProducerMutedState::AudioCaptureIsMuted) && !state.contains(WebCore::MediaProducerMutedState::AudioCaptureIsMuted))
-        configuration().processPool().ensureProtectedGPUProcess()->setPageUsingMicrophone(identifier());
-#endif
-
     internals().mutedState = state;
 
     if (!hasRunningProcess())
@@ -11980,10 +11975,20 @@ void WebPageProxy::microphoneMuteStatusChanged(bool isMuting)
     // We are updating both the internal and web app muting states so that only microphone changes, and not camera or screenshare.
     auto mutedState = internals().mutedState;
     if (isMuting) {
+#if PLATFORM(MAC)
+        mutedState.add(WebCore::MediaProducer::MediaStreamCaptureIsMuted);
+#else
         mutedState.add(WebCore::MediaProducerMutedState::AudioCaptureIsMuted);
+#endif
         m_mutedCaptureKindsDesiredByWebApp.add(WebCore::MediaProducerMediaCaptureKind::Microphone);
     } else {
+        WebProcessProxy::muteCaptureInPagesExcept(m_webPageID);
+
+#if PLATFORM(MAC)
+        mutedState.remove(WebCore::MediaProducer::MediaStreamCaptureIsMuted);
+#else
         mutedState.remove(WebCore::MediaProducerMutedState::AudioCaptureIsMuted);
+#endif
         m_mutedCaptureKindsDesiredByWebApp.remove(WebCore::MediaProducerMediaCaptureKind::Microphone);
     }
 
@@ -13323,6 +13328,11 @@ void WebPageProxy::updatePlayingMediaDidChange(MediaProducerMediaStateFlags newS
         ASSERT(m_userMediaPermissionRequestManager);
         if (m_userMediaPermissionRequestManager)
             m_userMediaPermissionRequestManager->captureStateChanged(oldMediaCaptureState, newMediaCaptureState);
+
+#if ENABLE(MEDIA_STREAM) && ENABLE(GPU_PROCESS)
+        if (preferences().captureAudioInGPUProcessEnabled() && newMediaCaptureState & WebCore::MediaProducerMediaState::HasActiveAudioCaptureDevice)
+            configuration().processPool().ensureProtectedGPUProcess()->setPageUsingMicrophone(identifier());
+#endif
     }
     updateMediaCaptureStateImmediatelyIfNeeded();
 #endif
