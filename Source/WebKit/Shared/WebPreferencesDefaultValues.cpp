@@ -364,4 +364,13 @@ bool defaultRequiresPageVisibilityForVideoToBeNowPlaying()
     return false;
 }
 
+bool defaultCookieStoreAPIEnabled()
+{
+#if ENABLE(COOKIE_STORE_API_BY_DEFAULT)
+    return true;
+#else
+    return false;
+#endif
+}
+
 } // namespace WebKit

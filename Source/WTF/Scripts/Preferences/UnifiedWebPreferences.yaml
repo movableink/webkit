@@ -2206,11 +2206,9 @@ CookieStoreAPIEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      "PLATFORM(COCOA)" : true
-      default: false
+      default: defaultCookieStoreAPIEnabled()
     WebCore:
-      "PLATFORM(COCOA)" : true
-      default: false
+      default: true
 
 CookieStoreAPIExtendedAttributesEnabled:
   type: bool

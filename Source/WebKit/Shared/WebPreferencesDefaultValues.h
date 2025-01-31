@@ -170,4 +170,6 @@ bool defaultBuiltInNotificationsEnabled();
 
 bool defaultRequiresPageVisibilityForVideoToBeNowPlaying();
 
+bool defaultCookieStoreAPIEnabled();
+
 } // namespace WebKit

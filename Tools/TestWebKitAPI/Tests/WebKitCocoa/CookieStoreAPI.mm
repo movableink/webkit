@@ -25,6 +25,8 @@
 
 #import "config.h"
 
+#if ENABLE(COOKIE_STORE_API_BY_DEFAULT)
+
 #import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
@@ -94,3 +96,5 @@ TEST(WebKit, CookieStoreSetCookieForPublicSuffixDomain)
 }
 
 } // namespace TestWebKitAPI
+
+#endif // if ENABLE(COOKIE_STORE_API_BY_DEFAULT)
