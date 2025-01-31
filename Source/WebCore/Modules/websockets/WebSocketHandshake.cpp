@@ -246,7 +246,7 @@ int WebSocketHandshake::readServerHandshake(std::span<const uint8_t> header)
         return header.size();
     }
     m_mode = Normal;
-    if (!memmem(header.data(), header.size(), "\r\n\r\n", 4)) {
+    if (!WTF::contains(header, "\r\n\r\n"_span8)) {
         // Just hasn't been received fully yet.
         m_mode = Incomplete;
         return -1;
