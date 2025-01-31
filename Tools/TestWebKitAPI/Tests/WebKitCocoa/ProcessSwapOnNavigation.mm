@@ -7782,6 +7782,74 @@ TEST(ProcessSwap, MainFrameURLAfterServerSideRedirectToCOOP)
     EXPECT_WK_STREQ(server.request("/destination.html"_s).URL.absoluteString, [[createdWebView _mainFrameURL] absoluteString]);
 }
 
+TEST(ProcessSwap, COOPAndCOEPOn304Response)
+{
+    using namespace TestWebKitAPI;
+    HTTPResponse response({ { { "Content-Type"_s, "text/html"_s }, { "Cross-Origin-Opener-Policy"_s, "same-origin"_s }, { "cross-origin-embedder-policy"_s, "require-corp"_s }, { "Etag"_s, "123456789"_s } }, "foo"_s });
+    response.setShouldRespondWith304ToConditionalRequests({ { "Cross-Origin-Opener-Policy"_s, "same-origin"_s }, { "cross-origin-embedder-policy"_s, "require-corp"_s } });
+    HTTPServer server({
+        { "/index.html"_s, WTFMove(response) },
+    }, HTTPServer::Protocol::Https);
+
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webView1Configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webView1Configuration setProcessPool:processPool.get()];
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"CrossOriginOpenerPolicyEnabled"])
+            [[webView1Configuration preferences] _setEnabled:YES forFeature:feature];
+        else if ([feature.key isEqualToString:@"CrossOriginEmbedderPolicyEnabled"])
+            [[webView1Configuration preferences] _setEnabled:YES forFeature:feature];
+    }
+
+    auto webView1 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webView1Configuration.get()]);
+    auto navigationDelegate = adoptNS([[PSONNavigationDelegate alloc] init]);
+    [webView1 setNavigationDelegate:navigationDelegate.get()];
+
+    done = false;
+    [webView1 loadRequest:server.request("/index.html"_s)];
+    Util::run(&done);
+
+    done = false;
+    [webView1 _evaluateJavaScriptWithoutUserGesture:@"document.body.innerHTML" completionHandler:^(id result, NSError* error) {
+        NSString* resultString = result;
+        EXPECT_TRUE(!error);
+        EXPECT_WK_STREQ(resultString, @"foo");
+        done = true;
+    }];
+    Util::run(&done);
+    done = false;
+
+    auto webView2Configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webView2Configuration setProcessPool:processPool.get()];
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"CrossOriginOpenerPolicyEnabled"])
+            [[webView2Configuration preferences] _setEnabled:YES forFeature:feature];
+        else if ([feature.key isEqualToString:@"CrossOriginEmbedderPolicyEnabled"])
+            [[webView2Configuration preferences] _setEnabled:YES forFeature:feature];
+    }
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    webView2Configuration.get()._relatedWebView = webView1.get(); // webView2 will be related to webView1 and webView1's URL will be used for process swap decision.
+    ALLOW_DEPRECATED_DECLARATIONS_END
+    auto webView2 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webView2Configuration.get()]);
+    [webView2 setNavigationDelegate:navigationDelegate.get()];
+
+    done = false;
+    [webView2 loadRequest:server.request("/index.html"_s)];
+    Util::run(&done);
+
+    done = false;
+    [webView2 _evaluateJavaScriptWithoutUserGesture:@"document.body.innerHTML" completionHandler:^(id result, NSError* error) {
+        NSString* resultString = result;
+        EXPECT_TRUE(!error);
+        EXPECT_WK_STREQ(resultString, @"foo");
+        done = true;
+    }];
+    Util::run(&done);
+    done = false;
+}
+
 TEST(ProcessSwap, NavigateBackAfterNavigatingAwayFromCOOP)
 {
     using namespace TestWebKitAPI;

@@ -46,6 +46,7 @@
 #include "ContentSecurityPolicy.h"
 #include "CookieJar.h"
 #include "CrossOriginAccessControl.h"
+#include "CrossOriginOpenerPolicy.h"
 #include "CustomHeaderFields.h"
 #include "DNS.h"
 #include "DateComponents.h"
@@ -1582,6 +1583,12 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
             // Revalidating will mean exposing headers to the service worker, let's reload given the service worker already handled it.
             if (cachedResourceRequest.options().serviceWorkerRegistrationIdentifier)
                 return Reload;
+            // Do not revalidate responses with the COOP header since they may cause a process-swap
+            // and we could not make the swap work if the server responded with a 304.
+            if (cachedResourceRequest.options().mode == FetchOptions::Mode::Navigate
+                && obtainCrossOriginOpenerPolicy(existingResource->response()).value != CrossOriginOpenerPolicyValue::UnsafeNone) {
+                return Reload;
+            }
             return Revalidate;
         }
         
