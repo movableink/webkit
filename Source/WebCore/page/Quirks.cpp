@@ -1023,7 +1023,8 @@ void Quirks::triggerOptionalStorageAccessIframeQuirk(const URL& frameURL, Comple
                 return;
             }
         }
-        if (subFrameDomainsForStorageAccessQuirk().contains(RegistrableDomain { frameURL })) {
+        bool isMSOLoginButNotMSTeams = document->url().hasQuery() && document->url().host() == "login.microsoftonline.com"_s && !document->url().query().contains("redirect_uri=https%3A%2F%2Fteams.microsoft.com"_s);
+        if (!isMSOLoginButNotMSTeams && subFrameDomainsForStorageAccessQuirk().contains(RegistrableDomain { frameURL })) {
             return DocumentStorageAccess::requestStorageAccessForNonDocumentQuirk(*document, RegistrableDomain { frameURL }, [completionHandler = WTFMove(completionHandler)](StorageAccessWasGranted) mutable {
                 completionHandler();
             });
