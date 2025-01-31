@@ -382,12 +382,15 @@ void GraphicsLayerCoordinated::setContentsToImage(Image* image)
         if (!nativeImage)
             return;
 
-        if (m_pendingContentsImage && CoordinatedImageBackingStore::uniqueIDForNativeImage(*m_pendingContentsImage) == CoordinatedImageBackingStore::uniqueIDForNativeImage(*nativeImage))
+        if (m_contentsImage && m_contentsImage->uniqueID() == nativeImage->uniqueID())
             return;
 
-        m_pendingContentsImage = WTFMove(nativeImage);
-    } else
-        m_pendingContentsImage = nullptr;
+        m_contentsImage = WTFMove(nativeImage);
+    } else {
+        if (!m_contentsImage)
+            return;
+        m_contentsImage = nullptr;
+    }
     noteLayerPropertyChanged(Change::ContentsImage, ScheduleFlush::Yes);
 }
 
@@ -403,7 +406,7 @@ void GraphicsLayerCoordinated::setContentsToSolidColor(const Color& color)
 bool GraphicsLayerCoordinated::usesContentsLayer() const
 {
     // FIXME: convert CoordinatedImageBackingStore into a contents layer?
-    return m_contentsBufferProxy || m_contentsDisplayDelegate || m_pendingContentsImage || m_platformLayer->hasImageBackingStore();
+    return m_contentsBufferProxy || m_contentsDisplayDelegate || m_contentsImage;
 }
 
 bool GraphicsLayerCoordinated::setChildren(Vector<Ref<GraphicsLayer>>&& children)
@@ -1045,7 +1048,7 @@ void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, floa
         m_platformLayer->setContentsScale(pageScaleFactor * deviceScaleFactor());
 
     if (m_pendingChanges.contains(Change::ContentsImage))
-        m_platformLayer->setContentsImage(WTFMove(m_pendingContentsImage));
+        m_platformLayer->setContentsImage(m_contentsImage.get());
 
     if (m_pendingChanges.contains(Change::ContentsColor))
         m_platformLayer->setContentsColor(m_contentsColor);

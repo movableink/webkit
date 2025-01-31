@@ -429,7 +429,7 @@ Cairo::PaintingEngine& LayerTreeHost::paintingEngine()
 
 Ref<CoordinatedImageBackingStore> LayerTreeHost::imageBackingStore(Ref<NativeImage>&& nativeImage)
 {
-    auto nativeImageID = CoordinatedImageBackingStore::uniqueIDForNativeImage(nativeImage.get());
+    auto nativeImageID = nativeImage->uniqueID();
     auto addResult = m_imageBackingStores.ensure(nativeImageID, [&] {
         return CoordinatedImageBackingStore::create(WTFMove(nativeImage));
     });

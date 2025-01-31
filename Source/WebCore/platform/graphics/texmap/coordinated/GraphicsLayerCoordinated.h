@@ -212,7 +212,7 @@ private:
     bool m_needsUpdateLayerTransform { false };
     RefPtr<CoordinatedPlatformLayerBufferProxy> m_contentsBufferProxy;
     RefPtr<GraphicsLayerContentsDisplayDelegate> m_contentsDisplayDelegate;
-    RefPtr<NativeImage> m_pendingContentsImage;
+    RefPtr<NativeImage> m_contentsImage;
     Color m_contentsColor;
     RefPtr<CoordinatedPlatformLayer> m_backdropLayer;
     TextureMapperAnimations m_animations;

@@ -148,7 +148,7 @@ public:
     void replaceCurrentContentsBufferWithCopy();
 #endif
     void setContentsBufferNeedsDisplay();
-    void setContentsImage(RefPtr<NativeImage>&&);
+    void setContentsImage(NativeImage*);
     void setContentsColor(const Color&);
     void setContentsTileSize(const FloatSize&);
     void setContentsTilePhase(const FloatSize&);
@@ -180,7 +180,6 @@ public:
     void flushCompositingState(TextureMapper&);
 
     bool hasPendingTilesCreation() const { return m_pendingTilesCreation; }
-    bool hasImageBackingStore() const { return !!m_imageBackingStore; }
     bool isCompositionRequiredOrOngoing() const;
     void requestComposition();
     RunLoop* compositingRunLoop() const;
@@ -275,9 +274,10 @@ private:
     RefPtr<CoordinatedBackingStoreProxy> m_backingStoreProxy WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedBackingStore> m_backingStore WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<CoordinatedAnimatedBackingStoreClient> m_animatedBackingStoreClient WTF_GUARDED_BY_LOCK(m_lock);
-    RefPtr<CoordinatedImageBackingStore> m_imageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
-    RefPtr<CoordinatedImageBackingStore> m_committedImageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
-    bool m_imageBackingStoreVisible WTF_GUARDED_BY_LOCK(m_lock) { false };
+    struct {
+        RefPtr<CoordinatedImageBackingStore> current;
+        RefPtr<CoordinatedImageBackingStore> committed;
+    } m_imageBackingStore WTF_GUARDED_BY_LOCK(m_lock);
     struct {
         std::unique_ptr<CoordinatedPlatformLayerBuffer> pending;
         std::unique_ptr<CoordinatedPlatformLayerBuffer> committed;
