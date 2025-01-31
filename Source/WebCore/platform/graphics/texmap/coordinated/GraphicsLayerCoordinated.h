@@ -96,6 +96,10 @@ private:
 
     void deviceOrPageScaleFactorChanged() override;
 
+    float rootRelativeScaleFactor() const { return m_rootRelativeScaleFactor; }
+    void setShouldUpdateRootRelativeScaleFactor(bool value) override { m_shouldUpdateRootRelativeScaleFactor = value; }
+    void updateRootRelativeScale();
+
     bool setFilters(const FilterOperations&) override;
     void setMaskLayer(RefPtr<GraphicsLayer>&&) override;
     void setReplicatedByLayer(RefPtr<GraphicsLayer>&&) override;
@@ -210,6 +214,8 @@ private:
         TransformationMatrix cachedCombined;
     } m_layerTransform;
     bool m_needsUpdateLayerTransform { false };
+    bool m_shouldUpdateRootRelativeScaleFactor : 1 { false };
+    float m_rootRelativeScaleFactor { 1.0f };
     RefPtr<CoordinatedPlatformLayerBufferProxy> m_contentsBufferProxy;
     RefPtr<GraphicsLayerContentsDisplayDelegate> m_contentsDisplayDelegate;
     RefPtr<NativeImage> m_contentsImage;
