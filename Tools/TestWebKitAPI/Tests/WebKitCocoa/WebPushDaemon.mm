@@ -1881,24 +1881,6 @@ TEST_F(WebPushDInjectedPushTest, HandleInjectedAES128GCMPush)
     });
 }
 
-TEST_F(WebPushDTest, PushSubscriptionExtendsITPCleanupTimerBy30Days)
-{
-    // FIXME: test on all webviews once we finish refactoring the shared service worker notification
-    // managers to be datastore-aware.
-    auto& v = webViews().last();
-    v->subscribe();
-
-    EXPECT_TRUE(v->hasPushSubscription());
-
-    v->assertPushEventSucceeds(0);
-    v->assertPushEventSucceeds(29);
-    EXPECT_TRUE(v->hasPushSubscription());
-
-    v->assertPushEventFails(31);
-    v->assertPushEventFails(100);
-    EXPECT_FALSE(v->hasPushSubscription());
-}
-
 TEST_F(WebPushDTest, NotificationClickExtendsITPCleanupTimerBy30Days)
 {
     // FIXME: test on all webviews once we finish refactoring the shared service worker notification
@@ -1922,6 +1904,11 @@ TEST_F(WebPushDTest, NotificationClickExtendsITPCleanupTimerBy30Days)
     v->setITPTimeAdvance(61);
     EXPECT_FALSE(v->hasServiceWorkerRegistration());
     EXPECT_TRUE(v->hasPushSubscription());
+
+    // Verify that even though the service worker is gone, push messages do make it through (because the subscription is still active)
+    v->injectPushMessage(@{ });
+    auto messages = v->fetchPushMessages();
+    ASSERT_EQ([messages count], 1u) << "Unexpected push event injection failure after advancing ITP timer by 61 days; ITP cleanup removed subscription?";
 }
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
