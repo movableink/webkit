@@ -33,17 +33,18 @@
 #import <WebKit/WKNavigationActionPrivate.h>
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/_WKUserInitiatedAction.h>
+#import <wtf/text/MakeString.h>
 
 namespace TestWebKitAPI {
 
 #if PLATFORM(MAC)
-TEST(VerifyUserGesture, WindowOpenMouseEvent)
+static void testWindowOpenMouseEvent(const String& event)
 {
-    auto openerHTML = "<script>"
-    "addEventListener('mouseup', () => {"
+    auto openerHTML = makeString("<script>"
+    "addEventListener('"_s, event, "', () => {"
     "    window.open('https://domain2.com/opened');"
     "})"
-    "</script>"_s;
+    "</script>"_s);
     HTTPServer server({
         { "/opener"_s, { openerHTML } },
         { "/opened"_s, { ""_s } }
@@ -79,6 +80,16 @@ TEST(VerifyUserGesture, WindowOpenMouseEvent)
     while (!openedWebView)
         Util::spinRunLoop();
     EXPECT_FALSE(consumed);
+}
+
+TEST(VerifyUserGesture, WindowOpenMouseDown)
+{
+    testWindowOpenMouseEvent("mousedown"_s);
+}
+
+TEST(VerifyUserGesture, WindowOpenMouseUp)
+{
+    testWindowOpenMouseEvent("mouseup"_s);
 }
 
 TEST(VerifyUserGesture, WindowOpenKeyEvent)
