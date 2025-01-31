@@ -5702,7 +5702,12 @@ struct WebCore::CaptureDeviceWithCapabilities {
     WebCore::RealtimeMediaSourceCapabilities capabilities;
 };
 
-[Nested] enum class WebCore::RealtimeMediaSourceCapabilities::EchoCancellation : bool
+[Nested] enum class WebCore::RealtimeMediaSourceCapabilities::EchoCancellation : uint8_t {
+    Off,
+    On,
+    OnOrOff
+}
+
 [Nested] enum class WebCore::RealtimeMediaSourceCapabilities::BackgroundBlur : uint8_t {
     Off,
     On,
@@ -6396,6 +6401,7 @@ enum class WebCore::IdentityCredentialProtocol : uint8_t {
 header: <WebCore/MockMediaDevice.h>
 [CustomHeader] struct WebCore::MockMicrophoneProperties {
     int defaultSampleRate;
+    std::optional<bool> echoCancellation;
 };
 
 header: <WebCore/MockMediaDevice.h>

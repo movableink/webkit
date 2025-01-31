@@ -82,7 +82,7 @@ MockRealtimeAudioSource::MockRealtimeAudioSource(String&& deviceID, AtomString&&
     m_device = *device;
 
     setSampleRate(std::get<MockMicrophoneProperties>(m_device.properties).defaultSampleRate);
-    initializeEchoCancellation(true);
+    initializeEchoCancellation(std::get<MockMicrophoneProperties>(m_device.properties).echoCancellation.value_or(true));
 }
 
 MockRealtimeAudioSource::~MockRealtimeAudioSource()
@@ -130,7 +130,9 @@ const RealtimeMediaSourceCapabilities& MockRealtimeAudioSource::capabilities()
         capabilities.setDeviceId(hashedId());
         capabilities.setGroupId(hashedGroupId());
         capabilities.setVolume({ 0.0, 1.0 });
-        capabilities.setEchoCancellation(RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
+
+        auto echoCancellation = std::get<MockMicrophoneProperties>(m_device.properties).echoCancellation;
+        capabilities.setEchoCancellation(echoCancellation ? (*echoCancellation ? RealtimeMediaSourceCapabilities::EchoCancellation::On : RealtimeMediaSourceCapabilities::EchoCancellation::Off) : RealtimeMediaSourceCapabilities::EchoCancellation::OnOrOff);
         capabilities.setSampleRate({ 44100, 96000 });
 
         m_capabilities = WTFMove(capabilities);

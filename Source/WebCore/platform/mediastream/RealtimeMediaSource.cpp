@@ -717,10 +717,10 @@ double RealtimeMediaSource::fitnessDistance(MediaConstraintType constraintType, 
 
     switch (constraintType) {
     case MediaConstraintType::EchoCancellation:
-        if (!capabilities.supportsEchoCancellation())
+        if (!capabilities.supportsEchoCancellation() || capabilities.echoCancellation() == RealtimeMediaSourceCapabilities::EchoCancellation::OnOrOff)
             return 0;
 
-        return constraint.fitnessDistance(capabilities.echoCancellation() == RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
+        return constraint.fitnessDistance(capabilities.echoCancellation() == RealtimeMediaSourceCapabilities::EchoCancellation::On);
     case MediaConstraintType::Torch:
         if (!capabilities.supportsTorch())
             return 0;
@@ -799,6 +799,13 @@ void RealtimeMediaSource::setSizeFrameRateAndZoom(const VideoPresetConstraints& 
         setZoom(*constraints.zoom);
 }
 
+static bool booleanSettingFromConstraint(const BooleanConstraint& boolConstraint)
+{
+    bool setting = true;
+    boolConstraint.getExact(setting) || boolConstraint.getIdeal(setting);
+    return setting;
+}
+
 void RealtimeMediaSource::applyConstraint(MediaConstraintType constraintType, const MediaConstraint& constraint)
 {
     ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, constraintType);
@@ -852,17 +859,24 @@ void RealtimeMediaSource::applyConstraint(MediaConstraintType constraintType, co
         break;
     }
 
-    case MediaConstraintType::EchoCancellation: {
+    case MediaConstraintType::EchoCancellation:
         ASSERT(constraint.isBoolean());
         if (!capabilities.supportsEchoCancellation())
             return;
 
-        bool setting;
-        const BooleanConstraint& boolConstraint = downcast<BooleanConstraint>(constraint);
-        if (boolConstraint.getExact(setting) || boolConstraint.getIdeal(setting))
-            setEchoCancellation(setting);
+        setEchoCancellation([&] -> bool {
+            switch (capabilities.echoCancellation()) {
+            case RealtimeMediaSourceCapabilities::EchoCancellation::Off:
+                return false;
+            case RealtimeMediaSourceCapabilities::EchoCancellation::On:
+                return true;
+            case RealtimeMediaSourceCapabilities::EchoCancellation::OnOrOff:
+                return booleanSettingFromConstraint(downcast<BooleanConstraint>(constraint));
+            };
+            ASSERT_NOT_REACHED();
+            return true;
+        }());
         break;
-    }
 
     case MediaConstraintType::FacingMode: {
         ASSERT(constraint.isString());

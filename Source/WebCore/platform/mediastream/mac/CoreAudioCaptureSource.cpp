@@ -97,9 +97,14 @@ CaptureSourceOrError CoreAudioCaptureSource::create(const CaptureDevice& device,
     return initializeCoreAudioCaptureSource(WTFMove(source), constraints);
 }
 
-CaptureSourceOrError CoreAudioCaptureSource::createForTesting(String&& deviceID, AtomString&& label, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier)
+CaptureSourceOrError CoreAudioCaptureSource::createForTesting(String&& deviceID, AtomString&& label, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier, std::optional<bool> echoCancellation)
 {
     auto source = adoptRef(*new CoreAudioCaptureSource(CaptureDevice { WTFMove(deviceID), CaptureDevice::DeviceType::Microphone, WTFMove(label) }, 0, WTFMove(hashSalts), pageIdentifier));
+    if (echoCancellation) {
+        source->m_echoCancellationCapability = *echoCancellation;
+        source->initializeEchoCancellation(*echoCancellation);
+    }
+
     return initializeCoreAudioCaptureSource(WTFMove(source), constraints);
 }
 
@@ -263,7 +268,7 @@ const RealtimeMediaSourceCapabilities& CoreAudioCaptureSource::capabilities()
         RealtimeMediaSourceCapabilities capabilities(settings().supportedConstraints());
         capabilities.setDeviceId(hashedId());
         capabilities.setGroupId(hashedGroupId());
-        capabilities.setEchoCancellation(RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
+        capabilities.setEchoCancellation(m_echoCancellationCapability ? (*m_echoCancellationCapability ? RealtimeMediaSourceCapabilities::EchoCancellation::On : RealtimeMediaSourceCapabilities::EchoCancellation::Off) : RealtimeMediaSourceCapabilities::EchoCancellation::OnOrOff);
         capabilities.setVolume({ 0.0, 1.0 });
         capabilities.setSampleRate(unit.sampleRateCapacities());
         m_capabilities = WTFMove(capabilities);
