@@ -285,8 +285,7 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, Structure* insta
     bool hasMemoryImport = moduleInformation.memory.isImport();
     if (moduleInformation.memory && !hasMemoryImport) {
         // We create a memory when it's a memory definition.
-        auto* jsMemory = JSWebAssemblyMemory::tryCreate(globalObject, vm, globalObject->webAssemblyMemoryStructure());
-        RETURN_IF_EXCEPTION(throwScope, nullptr);
+        auto* jsMemory = JSWebAssemblyMemory::create(vm, globalObject->webAssemblyMemoryStructure());
 
         RefPtr<Memory> memory = Memory::tryCreate(vm, moduleInformation.memory.initial(), moduleInformation.memory.maximum(), moduleInformation.memory.isShared() ? MemorySharingMode::Shared: MemorySharingMode::Default,
             [&vm, jsMemory](Memory::GrowSuccess, PageCount oldPageCount, PageCount newPageCount) { jsMemory->growSuccessCallback(vm, oldPageCount, newPageCount); }
@@ -302,8 +301,7 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, Structure* insta
     if (!jsInstance->memory()) {
         // Make sure we have a dummy memory, so that wasm -> wasm thunks avoid checking for a nullptr Memory when trying to set pinned registers.
         // When there is a memory import, this will be replaced later in the module record import initialization.
-        auto* jsMemory = JSWebAssemblyMemory::tryCreate(globalObject, vm, globalObject->webAssemblyMemoryStructure());
-        RETURN_IF_EXCEPTION(throwScope, nullptr);
+        auto* jsMemory = JSWebAssemblyMemory::create(vm, globalObject->webAssemblyMemoryStructure());
         jsMemory->adopt(Memory::create(vm));
         jsInstance->setMemory(vm, jsMemory);
         RETURN_IF_EXCEPTION(throwScope, nullptr);

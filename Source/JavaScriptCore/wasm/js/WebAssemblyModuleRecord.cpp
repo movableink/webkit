@@ -574,13 +574,8 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
                 ASSERT(initType == Wasm::TableInformation::FromRefNull);
             }
 
-            JSWebAssemblyTable* table = JSWebAssemblyTable::tryCreate(globalObject, vm, globalObject->webAssemblyTableStructure(), wasmTable.releaseNonNull());
-            // We should always be able to allocate a JSWebAssemblyTable we've defined.
-            // If it's defined to be too large, we should have thrown a validation error.
-            scope.assertNoException();
-            ASSERT(table);
+            JSWebAssemblyTable* table = JSWebAssemblyTable::create(vm, globalObject->webAssemblyTableStructure(), wasmTable.releaseNonNull());
             m_instance->setTable(vm, i, table);
-            RETURN_IF_EXCEPTION(scope, void());
 
             if (initType != Wasm::TableInformation::Default) {
                 if (!Wasm::tableFill(m_instance.get(), i, 0, initialBitsOrImportNumber, m_instance->table(i)->length()))
@@ -613,8 +608,7 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
                 case Wasm::GlobalInformation::BindingMode::Portable: {
                     ASSERT(global.mutability == Wasm::Mutable);
                     Ref<Wasm::Global> globalRef = Wasm::Global::create(global.type, Wasm::Mutability::Mutable, initialVector);
-                    JSWebAssemblyGlobal* globalValue = JSWebAssemblyGlobal::tryCreate(globalObject, vm, globalObject->webAssemblyGlobalStructure(), WTFMove(globalRef));
-                    scope.assertNoException();
+                    JSWebAssemblyGlobal* globalValue = JSWebAssemblyGlobal::create(vm, globalObject->webAssemblyGlobalStructure(), WTFMove(globalRef));
                     m_instance->linkGlobal(vm, globalIndex, globalValue);
                     break;
                 }
@@ -651,8 +645,7 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
                 ASSERT(global.mutability == Wasm::Mutable);
                 // For reference types, set to 0 and set the real value via the instance afterwards.
                 Ref<Wasm::Global> globalRef = Wasm::Global::create(global.type, Wasm::Mutability::Mutable, Wasm::isRefType(global.type) ? 0 : initialBits);
-                JSWebAssemblyGlobal* globalValue = JSWebAssemblyGlobal::tryCreate(globalObject, vm, globalObject->webAssemblyGlobalStructure(), WTFMove(globalRef));
-                scope.assertNoException();
+                JSWebAssemblyGlobal* globalValue = JSWebAssemblyGlobal::create(vm, globalObject->webAssemblyGlobalStructure(), WTFMove(globalRef));
                 m_instance->linkGlobal(vm, globalIndex, globalValue);
                 if (Wasm::isRefType(global.type))
                     m_instance->setGlobal(globalIndex, JSValue::decode(initialBits));
@@ -712,8 +705,7 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
                         uint64_t initialValue = m_instance->loadI64Global(exp.kindIndex);
                         globalRef = Wasm::Global::create(global.type, global.mutability, initialValue);
                     }
-                    exportedValue = JSWebAssemblyGlobal::tryCreate(globalObject, vm, globalObject->webAssemblyGlobalStructure(), globalRef.releaseNonNull());
-                    scope.assertNoException();
+                    exportedValue = JSWebAssemblyGlobal::create(vm, globalObject->webAssemblyGlobalStructure(), globalRef.releaseNonNull());
                 } else {
                     ASSERT(global.mutability == Wasm::Mutability::Mutable);
                     RefPtr<Wasm::Global> globalRef = m_instance->getGlobalBinding(exp.kindIndex);

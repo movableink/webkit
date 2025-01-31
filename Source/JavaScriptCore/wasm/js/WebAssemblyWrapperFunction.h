@@ -45,7 +45,7 @@ public:
 
     DECLARE_INFO;
 
-    static WebAssemblyWrapperFunction* create(VM&, JSGlobalObject*, Structure*, JSObject*, unsigned importIndex, JSWebAssemblyInstance*, Wasm::TypeIndex, RefPtr<const Wasm::RTT>);
+    static WebAssemblyWrapperFunction* create(VM&, JSGlobalObject*, Structure*, JSObject*, unsigned importIndex, JSWebAssemblyInstance*, Wasm::TypeIndex, RefPtr<const Wasm::RTT>&&);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     JSObject* function() { return m_function.get(); }

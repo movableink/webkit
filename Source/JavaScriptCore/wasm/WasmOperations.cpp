@@ -1605,8 +1605,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (
     NativeCallFrameTracer tracer(vm, callFrame);
     JSGlobalObject* globalObject = instance->globalObject();
     auto structRTT = instance->module().moduleInformation().rtts[typeIndex];
-    auto newStruct = JSWebAssemblyStruct::tryCreate(globalObject, globalObject->webAssemblyStructStructure(), instance, typeIndex, structRTT);
-    return JSValue::encode(newStruct ? newStruct : jsNull());
+    return JSValue::encode(JSWebAssemblyStruct::create(vm, globalObject->webAssemblyStructStructure(), instance, typeIndex, WTFMove(structRTT)));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructGet, EncodedJSValue, (EncodedJSValue encodedStructReference, uint32_t fieldIndex))
@@ -1818,7 +1817,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (J
     NativeCallFrameTracer tracer(vm, callFrame);
 
     JSGlobalObject* globalObject = instance->globalObject();
-    auto arrayRTT = instance->module().moduleInformation().rtts[typeIndex];
+    RefPtr arrayRTT = instance->module().moduleInformation().rtts[typeIndex];
 
     ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
     const Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
@@ -1830,7 +1829,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (J
         return JSValue::encode(jsNull());
 
     // Create a default-initialized array with the right element type and length
-    return JSValue::encode(JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, arrayRTT));
+    return JSValue::encode(JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(arrayRTT)));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayGet, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index))

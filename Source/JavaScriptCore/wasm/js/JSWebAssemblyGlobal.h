@@ -48,7 +48,7 @@ public:
         return vm.webAssemblyGlobalSpace<mode>();
     }
 
-    static JSWebAssemblyGlobal* tryCreate(JSGlobalObject*, VM&, Structure*, Ref<Wasm::Global>&&);
+    static JSWebAssemblyGlobal* create(VM&, Structure*, Ref<Wasm::Global>&&);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;

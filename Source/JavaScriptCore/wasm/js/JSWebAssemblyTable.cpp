@@ -37,15 +37,8 @@ namespace JSC {
 
 const ClassInfo JSWebAssemblyTable::s_info = { "WebAssembly.Table"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyTable) };
 
-JSWebAssemblyTable* JSWebAssemblyTable::tryCreate(JSGlobalObject* globalObject, VM& vm, Structure* structure, Ref<Wasm::Table>&& table)
+JSWebAssemblyTable* JSWebAssemblyTable::create(VM& vm, Structure* structure, Ref<Wasm::Table>&& table)
 {
-    auto throwScope = DECLARE_THROW_SCOPE(vm);
-
-    if (!globalObject->webAssemblyEnabled()) {
-        throwException(globalObject, throwScope, createEvalError(globalObject, globalObject->webAssemblyDisabledErrorMessage()));
-        return nullptr;
-    }
-
     auto* instance = new (NotNull, allocateCell<JSWebAssemblyTable>(vm)) JSWebAssemblyTable(vm, structure, WTFMove(table));
     instance->table()->setOwner(instance);
     instance->finishCreation(vm);

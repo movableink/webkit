@@ -5130,13 +5130,7 @@ private:
             }
 
             auto& vm = m_lexicalGlobalObject->vm();
-            auto scope = DECLARE_THROW_SCOPE(vm);
-            JSWebAssemblyMemory* result = JSC::JSWebAssemblyMemory::tryCreate(m_lexicalGlobalObject, vm, m_globalObject->webAssemblyMemoryStructure());
-            // Since we are cloning a JSWebAssemblyMemory, it's impossible for that
-            // module to not have been a valid module. Therefore, tryCreate should
-            // not throw.
-            scope.releaseAssertNoException();
-
+            JSWebAssemblyMemory* result = JSC::JSWebAssemblyMemory::create(vm, m_globalObject->webAssemblyMemoryStructure());
             RefPtr<Wasm::Memory> memory;
             auto handler = [&vm, result] (Wasm::Memory::GrowSuccess, PageCount oldPageCount, PageCount newPageCount) { result->growSuccessCallback(vm, oldPageCount, newPageCount); };
             if (RefPtr<SharedArrayBufferContents> contents = m_wasmMemoryHandles->at(index)) {

@@ -46,8 +46,8 @@ Structure* JSWebAssemblyArray::createStructure(VM& vm, JSGlobalObject* globalObj
     return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info());
 }
 
-JSWebAssemblyArray::JSWebAssemblyArray(VM& vm, Structure* structure, Wasm::FieldType elementType, size_t size, RefPtr<const Wasm::RTT> rtt)
-    : Base(vm, structure, rtt)
+JSWebAssemblyArray::JSWebAssemblyArray(VM& vm, Structure* structure, Wasm::FieldType elementType, size_t size, RefPtr<const Wasm::RTT>&& rtt)
+    : Base(vm, structure, WTFMove(rtt))
     , m_elementType(elementType)
     , m_size(size)
 {
