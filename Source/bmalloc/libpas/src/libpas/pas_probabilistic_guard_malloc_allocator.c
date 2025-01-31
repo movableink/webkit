@@ -69,10 +69,9 @@ static void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas
 #pragma mark ALLOC/DEALLOC
 #endif
 
-pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* large_heap, size_t size, pas_allocation_mode allocation_mode,
+pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* large_heap, size_t size, size_t alignment, pas_allocation_mode allocation_mode,
                                                               const pas_heap_config* heap_config, pas_physical_memory_transaction* transaction)
 {
-    size_t alignment;
     const pas_heap_type* type;
     static const bool verbose = false;
 
@@ -81,7 +80,7 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     pas_allocation_result result = pas_allocation_result_create_failure();
 
     if (verbose)
-        pas_log("Memory requested to allocate %zu\n", size);
+        pas_log("Memory requested to allocate %zu with alignment %zu\n", size, alignment);
 
     if (!large_heap || !size || !heap_config || !transaction)
         return result;
@@ -89,14 +88,35 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     const size_t page_size = pas_page_malloc_alignment();
 
     type = pas_heap_for_large_heap(large_heap)->type;
-    alignment = heap_config->get_type_alignment(type);
+    alignment = PAS_MAX(alignment, heap_config->get_type_alignment(type));
     alignment = PAS_MAX(alignment, heap_config->large_alignment);
+    PAS_ASSERT(page_size >= heap_config->large_alignment);
 
-    size = pas_round_up_to_power_of_2(size, alignment);
+    size_t mem_to_waste = 0;
+    size_t mem_to_alloc = 0;
+    if (alignment >= page_size) {
+        /*
+         * In this case, slide becomes always n * page_size since alignment is n * page_size.
+         * Also, to achieve this alignment request, we need this expanded size, and this is not something wasted for PGM.
+         * So we set 0 to mem_to_waste.
+         * The worst scenario is the allocated pointer is off by one page from the alignment boundary. In that case, we need
+         * to add (alignment - page_size) to obtain the next alignment boundary. This means we need to allocate at least
+         * size + (alignment - page_size) memory to find alignment boundary with size.
+         */
+        size_t size_with_alignment_reservation = pas_round_up(size + alignment - page_size, page_size);
+        mem_to_waste = 0;
+        mem_to_alloc = (2 * page_size) + size_with_alignment_reservation;
+    } else {
+        /*
+         * Since both page_size and alignment are power-of-two and alignment is smaller than page_size,
+         * page_size is always n * alignment. Since size_with_alignment_reservation is m * alignment,
+         * mem_to_waste is also x * alignment. Thus right-align will be guaranteed to be aligned.
+         */
+        size_t size_with_alignment_reservation = pas_round_up(size, alignment);
+        mem_to_waste = (page_size - (size_with_alignment_reservation % page_size)) % page_size;
+        mem_to_alloc = (2 * page_size) + size_with_alignment_reservation + mem_to_waste;
+    }
 
-    size_t mem_to_waste = (page_size - (size % page_size)) % page_size;
-    if (mem_to_waste > free_wasted_mem)
-        return result;
     /*
      * calculate virtual memory
      *
@@ -104,7 +124,9 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
      * | lower guard page | | user alloc pages | | upper guard page |
      * *------------------* *------------------* *------------------*
      */
-    size_t mem_to_alloc = (2 * page_size) + size + mem_to_waste;
+    if (mem_to_waste > free_wasted_mem)
+        return result;
+
     if (mem_to_alloc > free_virtual_mem)
         return result;
 
@@ -112,49 +134,62 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     if (!result.did_succeed)
         return result;
 
-    /* protect guard pages from being accessed */
-    uintptr_t lower_guard_page = result.begin;
-    uintptr_t upper_guard_page = result.begin + (mem_to_alloc - page_size);
-
-    int mprotect_res = mprotect( (void *) lower_guard_page, page_size, PROT_NONE);
-    PAS_ASSERT(!mprotect_res);
-
-    mprotect_res = mprotect( (void *) upper_guard_page, page_size, PROT_NONE);
-    PAS_ASSERT(!mprotect_res);
-
-    /*
-     * ensure physical addresses are released
-     * TODO: investigate using MADV_FREE_REUSABLE instead
-     */
-    int madvise_res = madvise((void *) upper_guard_page, page_size, MADV_FREE);
-    PAS_ASSERT(!madvise_res);
-
-    madvise_res = madvise((void *) lower_guard_page, page_size, MADV_FREE);
-    PAS_ASSERT(!madvise_res);
-
     /*
      * the key is the location where the user's starting memory address is located.
      * allocations are right aligned, so the end backs up to the upper guard page.
      *
      * Take random decision to right align or left align in order to be able to catch
      * overflow and underflow conditions with equal probability.
+     *
+     * If alignment >= page_size, then there is only one region we can use to meet the
+     * alignment requirement. Thus we do not consider about right_align.
      */
-    uint8_t right_align = pas_get_fast_random(2);
+    uintptr_t key = pas_round_up(result.begin + page_size, alignment);
+    uint8_t right_align = 0;
+    if (alignment < page_size) {
+        if (pas_get_fast_random(2)) {
+            key = result.begin + page_size + mem_to_waste;
+            right_align = 1;
+        }
+    }
 
-    uintptr_t key = (right_align ? (result.begin + page_size + mem_to_waste) : (result.begin + page_size));
+    /* protect guard pages from being accessed */
+    uintptr_t lower_guard = result.begin;
+    size_t lower_guard_size = pas_round_down(key - lower_guard, page_size);
+    uintptr_t upper_guard = pas_round_up(key + size, page_size);
+    size_t upper_guard_size = (result.begin + mem_to_alloc) - upper_guard;
+
+    int mprotect_res = mprotect((void*)lower_guard, lower_guard_size, PROT_NONE);
+    PAS_ASSERT(!mprotect_res);
+
+    mprotect_res = mprotect((void*)upper_guard, upper_guard_size, PROT_NONE);
+    PAS_ASSERT(!mprotect_res);
+
+    /*
+     * ensure physical addresses are released
+     * TODO: investigate using MADV_FREE_REUSABLE instead
+     */
+    int madvise_res = madvise((void*)upper_guard, upper_guard_size, MADV_FREE);
+    PAS_ASSERT(!madvise_res);
+
+    madvise_res = madvise((void*)lower_guard, lower_guard_size, MADV_FREE);
+    PAS_ASSERT(!madvise_res);
+
     PAS_PROFILE(PGM_ALLOCATE, heap_config, key);
 
     /* create struct to hold hash map value */
-    pas_pgm_storage *value = pas_utility_heap_try_allocate(sizeof(pas_pgm_storage), "pas_pgm_hash_map_VALUE");
+    pas_pgm_storage* value = pas_utility_heap_try_allocate(sizeof(pas_pgm_storage), "pas_pgm_hash_map_VALUE");
     PAS_ASSERT(value);
 
-    value->mem_to_waste               = mem_to_waste;
-    value->size_of_data_pages         = size + mem_to_waste;
-    value->start_of_data_pages        = result.begin + page_size;
-    value->allocation_size_requested  = size;
-    value->page_size                  = page_size;
-    value->large_heap                 = large_heap;
-    value->right_align                = right_align;
+    value->mem_to_waste                = mem_to_waste;
+    value->size_of_data_pages          = mem_to_alloc - (lower_guard_size + upper_guard_size);
+    value->start_of_data_pages         = result.begin + lower_guard_size;
+    value->size_of_allocated_pages     = mem_to_alloc;
+    value->start_of_allocated_pages    = result.begin;
+    value->allocation_size_requested   = size;
+    value->page_size                   = page_size;
+    value->large_heap                  = large_heap;
+    value->right_align                 = right_align;
 
     pas_ptr_hash_map_add_result add_result = pas_ptr_hash_map_add(&pas_pgm_hash_map, (void*)key, NULL, &pas_large_utility_free_heap_allocation_config);
     PAS_ASSERT(add_result.is_new_entry);
@@ -185,7 +220,7 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
     if (verbose)
         pas_log("Memory Address Requested to Deallocate %p\n", mem);
 
-    uintptr_t key = (uintptr_t) mem;
+    uintptr_t key = (uintptr_t)mem;
     PAS_PROFILE(PGM_DEALLOCATE, key);
 
     pas_ptr_hash_map_entry* entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void*)key);
@@ -204,7 +239,7 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
     PAS_ASSERT(!madvise_res);
 
     free_wasted_mem  += value->mem_to_waste;
-    free_virtual_mem += (2 * value->page_size) + value->allocation_size_requested + value->mem_to_waste;
+    free_virtual_mem += value->size_of_allocated_pages;
 
     /*
      * Mark the physical memory status free and check if the max entries reached.
@@ -234,7 +269,7 @@ bool pas_probabilistic_guard_malloc_check_exists(uintptr_t mem)
     if (verbose)
         pas_log("Checking if is PGM entry\n");
 
-    pas_ptr_hash_map_entry* entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void*) mem);
+    pas_ptr_hash_map_entry* entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void*)mem);
     return (entry && entry->value);
 }
 
@@ -248,9 +283,9 @@ pas_large_map_entry pas_probabilistic_guard_malloc_return_as_large_map_entry(uin
     if (verbose)
         pas_log("Grabbing PGM allocated size\n");
 
-    pas_ptr_hash_map_entry * entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void *) mem);
+    pas_ptr_hash_map_entry* entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void*)mem);
     if (entry && entry->value) {
-        pas_pgm_storage *entry_val = (pas_pgm_storage *) entry->value;
+        pas_pgm_storage* entry_val = (pas_pgm_storage*)entry->value;
         ret.begin = mem;
         ret.end = mem + entry_val->allocation_size_requested;
         ret.heap = entry_val->large_heap;
@@ -329,6 +364,11 @@ void pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(uint16_t pgm_rando
 
 void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas_pgm_storage* value, const char* operation)
 {
+    uintptr_t lower_guard = value->start_of_allocated_pages;
+    size_t lower_guard_size = value->start_of_data_pages - value->start_of_allocated_pages;
+    uintptr_t upper_guard = value->start_of_data_pages + value->size_of_data_pages;
+    size_t upper_guard_size = value->size_of_allocated_pages - lower_guard_size - value->size_of_data_pages;
+
     pas_log("******************************************************\n"
         " %s\n\n"
         " Overall System Stats"
@@ -339,10 +379,12 @@ void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas_pgm_st
         " Allocation Size Requested : %zu \n"
         " Page Size                 : %hu \n"
         " Memory Wasted             : %hu \n"
-        " Size of Data Pages        : %zu \n"
-        " Start of Data Pages       : %p  \n"
-        " Lower Guard Page          : %p  \n"
-        " Upper Guard Page          : %p  \n"
+        " Data Pages                : %p  \n"
+        " Data Pages Size           : %zu \n"
+        " Lower Guard               : %p  \n"
+        " Lower Guard Size          : %zu \n"
+        " Upper Guard               : %p  \n"
+        " Upper Guard Size          : %zu \n"
         " Memory Address for User   : %p  \n"
         "******************************************************\n\n\n",
         operation,
@@ -351,10 +393,12 @@ void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas_pgm_st
         value->allocation_size_requested,
         value->page_size,
         value->mem_to_waste,
+        ((void*)value->start_of_data_pages),
         value->size_of_data_pages,
-        (uintptr_t*) value->start_of_data_pages,
-        (uintptr_t*) value->start_of_data_pages - value->page_size,
-        (uintptr_t*) value->start_of_data_pages + value->size_of_data_pages,
+        ((void*)lower_guard),
+        lower_guard_size,
+        ((void*)upper_guard),
+        upper_guard_size,
         key);
 }
 

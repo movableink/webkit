@@ -103,6 +103,7 @@ pas_try_allocate_pgm(
     bool verbose,
     pas_heap* heap,
     size_t size,
+    size_t alignment,
     pas_allocation_mode allocation_mode,
     pas_heap_config config)
 {
@@ -126,7 +127,7 @@ pas_try_allocate_pgm(
         pas_physical_memory_transaction_begin(&transaction);
         pas_heap_lock_lock();
 
-        result = pas_probabilistic_guard_malloc_allocate(&heap->large_heap, size, allocation_mode, config.config_ptr, &transaction);
+        result = pas_probabilistic_guard_malloc_allocate(&heap->large_heap, size, alignment, allocation_mode, config.config_ptr, &transaction);
 
         pas_heap_lock_unlock();
     } while (!pas_physical_memory_transaction_end(&transaction));
@@ -189,7 +190,7 @@ pas_try_allocate_common_impl_slow(
         break;
     }
 
-    result = pas_try_allocate_pgm(verbose, heap, size, allocation_mode, config);
+    result = pas_try_allocate_pgm(verbose, heap, size, alignment, allocation_mode, config);
     if (PAS_UNLIKELY(result.did_succeed))
         return pas_msl_malloc_logging(size, result);
 
