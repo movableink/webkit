@@ -333,9 +333,15 @@ void GStreamerMediaEndpoint::disposeElementChain(GstElement* element)
 
 bool GStreamerMediaEndpoint::setConfiguration(MediaEndpointConfiguration& configuration)
 {
-    auto bundlePolicy = bundlePolicyFromConfiguration(configuration);
+    // Balanced bundle policy is currently not supported in webrtcbin and an error is emitted, so
+    // explicitely configure it only for the other cases.
+    if (configuration.bundlePolicy != RTCBundlePolicy::Balanced) {
+        auto bundlePolicy = bundlePolicyFromConfiguration(configuration);
+        g_object_set(m_webrtcBin.get(), "bundle-policy", bundlePolicy, nullptr);
+    }
+
     auto iceTransportPolicy = iceTransportPolicyFromConfiguration(configuration);
-    g_object_set(m_webrtcBin.get(), "bundle-policy", bundlePolicy, "ice-transport-policy", iceTransportPolicy, nullptr);
+    g_object_set(m_webrtcBin.get(), "ice-transport-policy", iceTransportPolicy, nullptr);
 
     for (auto& server : configuration.iceServers) {
         bool stunSet = false;
