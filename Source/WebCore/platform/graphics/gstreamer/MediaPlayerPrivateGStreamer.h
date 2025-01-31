@@ -625,6 +625,7 @@ private:
 
     bool m_didTryToRecoverPlayingState { false };
 
+    // The state the pipeline should be set back to after the player becomes visible in the viewport again.
     GstState m_invisiblePlayerState { GST_STATE_VOID_PENDING };
 
     // Specific to MediaStream playback.

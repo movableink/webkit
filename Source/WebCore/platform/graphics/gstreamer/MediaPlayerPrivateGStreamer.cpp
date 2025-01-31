@@ -400,9 +400,11 @@ void MediaPlayerPrivateGStreamer::load(MediaStreamPrivate& stream)
 
 void MediaPlayerPrivateGStreamer::cancelLoad()
 {
+    GST_DEBUG_OBJECT(pipeline(), "cancelLoad() requested");
     if (m_networkState < MediaPlayer::NetworkState::Loading || m_networkState == MediaPlayer::NetworkState::Loaded)
         return;
 
+    GST_DEBUG_OBJECT(pipeline(), "Setting pipeline to READY state");
     if (m_pipeline)
         changePipelineState(GST_STATE_READY);
 }
@@ -2875,6 +2877,7 @@ bool MediaPlayerPrivateGStreamer::loadNextLocation()
             return true;
         }
 
+        GST_DEBUG_OBJECT(pipeline(), "Setting pipeline to READY state before loading new url.");
         changePipelineState(GST_STATE_READY);
         auto securityOrigin = SecurityOrigin::create(m_url);
         if (securityOrigin->canRequest(newURL, originAccessPatternsForWebProcessOrEmpty())) {
@@ -3776,18 +3779,23 @@ void MediaPlayerPrivateGStreamer::setVisibleInViewport(bool isVisible)
         return;
 
     if (!isVisible) {
-        GstState currentState;
-        gst_element_get_state(m_pipeline.get(), &currentState, nullptr, 0);
-        if (currentState > GST_STATE_NULL)
-            m_invisiblePlayerState = currentState;
+        GstState currentState, pendingState;
+        gst_element_get_state(m_pipeline.get(), &currentState, &pendingState, 0);
+        GstState targetState = (pendingState != GST_STATE_VOID_PENDING ? pendingState : currentState);
+        if (targetState > GST_STATE_NULL)
+            m_invisiblePlayerState = targetState;
         m_isPausedByViewport = true;
-        GST_DEBUG_OBJECT(pipeline(), "Media element is muted and not visible in viewport, pausing it to save resources.");
+        GST_DEBUG_OBJECT(pipeline(), "Media element is muted and not visible in viewport, pausing it to save resources. Will resume afterwards to %s state.",
+            gst_element_state_get_name(m_invisiblePlayerState));
         gst_element_set_state(m_pipeline.get(), GST_STATE_PAUSED);
+        gst_element_get_state(m_pipeline.get(), &currentState, &pendingState, 0);
+        GST_DEBUG_OBJECT(pipeline(), "Now pipeline is in %s state with %s pending", gst_element_state_get_name(currentState), gst_element_state_get_name(pendingState));
         m_isPipelinePlaying = false;
     } else {
         m_isPausedByViewport = false;
         if (m_invisiblePlayerState != GST_STATE_VOID_PENDING) {
-            GST_DEBUG_OBJECT(pipeline(), "Element in viewport again, resuming playback.");
+            GST_DEBUG_OBJECT(pipeline(), "Element in viewport again, resuming playback via state change to %s.",
+                gst_element_state_get_name(m_invisiblePlayerState));
             changePipelineState(m_invisiblePlayerState);
         }
     }
