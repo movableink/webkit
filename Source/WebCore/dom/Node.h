@@ -592,7 +592,9 @@ public:
     static auto flagIsParsingChildren() { return enumToUnderlyingType(StateFlag::IsParsingChildren); }
 #endif // ENABLE(JIT)
 
-    bool deletionHasBegun() const { return hasStateFlag(StateFlag::HasStartedDeletion); }
+#if ASSERT_ENABLED
+    bool deletionHasBegun() const { return hasStateFlag(StateFlag::DeletionHasBegun); }
+#endif
 
     bool containsSelectionEndPoint() const { return hasStateFlag(StateFlag::ContainsSelectionEndPoint); }
     void setContainsSelectionEndPoint(bool value) { setStateFlag(StateFlag::ContainsSelectionEndPoint, value); }
@@ -630,7 +632,9 @@ protected:
         ContainsOnlyASCIIWhitespace = 1 << 7, // Only used on CharacterData.
         ContainsOnlyASCIIWhitespaceIsValid = 1 << 8, // Only used on CharacterData.
         HasHeldBackChildrenChanged = 1 << 9,
-        HasStartedDeletion = 1 << 10,
+#if ASSERT_ENABLED
+        DeletionHasBegun = 1 << 10,
+#endif
         ContainsSelectionEndPoint = 1 << 11,
         IsSpecialInternalNode = 1 << 12, // DocumentFragment node for innerHTML/outerHTML or EditingText node.
 
@@ -858,10 +862,7 @@ ALWAYS_INLINE void Node::deref() const
     ASSERT_WITH_SECURITY_IMPLICATION(refCount());
     auto updatedRefCount = m_refCountAndParentBit - s_refCountIncrement;
     if (!updatedRefCount) {
-        // FIXME: Remove this redundant check.
-        if (deletionHasBegun())
-            return;
-
+        ASSERT(!deletionHasBegun());
 #if ASSERT_ENABLED
         m_inRemovedLastRefFunction = true;
 #endif

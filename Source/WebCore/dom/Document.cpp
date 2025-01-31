@@ -901,7 +901,9 @@ void Document::removedLastRef()
         return;
     }
 
-    setStateFlag(StateFlag::HasStartedDeletion);
+#if ASSERT_ENABLED
+    setStateFlag(StateFlag::DeletionHasBegun);
+#endif
     delete this;
 }
 

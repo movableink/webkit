@@ -471,13 +471,12 @@ public:
 
         m_referencingNodeCount -= count;
         if (!m_referencingNodeCount && !refCount()) {
-            // FIXME: Remove this redundant check.
-            if (deletionHasBegun())
-                return;
-
             // Restore the the final overlooking ref that deref() maintains.
             m_refCountAndParentBit = s_refCountIncrement;
-            setStateFlag(StateFlag::HasStartedDeletion);
+
+#if ASSERT_ENABLED
+            setStateFlag(StateFlag::DeletionHasBegun);
+#endif
             delete this;
         }
     }
