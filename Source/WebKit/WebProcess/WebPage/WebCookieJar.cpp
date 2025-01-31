@@ -158,11 +158,12 @@ String WebCookieJar::cookies(WebCore::Document& document, const URL& url) const
     auto includeSecureCookies = CookieJar::shouldIncludeSecureCookies(document, url);
     auto frameID = webFrame->frameID();
     auto pageID = page->identifier();
+    auto webPageProxyID = page->webPageProxyIdentifier();
 
     if (isEligibleForCache(*webFrame, document.firstPartyForCookies(), url))
-        return m_cache.cookiesForDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, includeSecureCookies);
+        return m_cache.cookiesForDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, webPageProxyID, includeSecureCookies);
 
-    auto sendResult = WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendSync(Messages::NetworkConnectionToWebProcess::CookiesForDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, includeSecureCookies, applyTrackingPreventionInNetworkProcess, page->webPageProxyIdentifier()), 0);
+    auto sendResult = WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendSync(Messages::NetworkConnectionToWebProcess::CookiesForDOM(document.firstPartyForCookies(), sameSiteInfo, url, frameID, pageID, includeSecureCookies, applyTrackingPreventionInNetworkProcess, webPageProxyID), 0);
     auto [cookieString, secureCookiesAccessed] = sendResult.takeReplyOr(String { }, false);
 
     return cookieString;
@@ -421,7 +422,7 @@ void WebCookieJar::setCookieAsync(WebCore::Document& document, const URL& url, c
 }
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-void WebCookieJar::addChangeListenerWithAccess(const URL& url, const URL& firstParty, WebCore::FrameIdentifier frameID, WebCore::PageIdentifier pageID, WebCore::ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking, const WebCore::CookieChangeListener& listener)
+void WebCookieJar::addChangeListenerWithAccess(const URL& url, const URL& firstParty, WebCore::FrameIdentifier frameID, WebCore::PageIdentifier pageID, WebPageProxyIdentifier webPageProxyID, const WebCore::CookieChangeListener& listener)
 {
     auto host = url.host().toString();
 
@@ -441,20 +442,24 @@ void WebCookieJar::addChangeListenerWithAccess(const URL& url, const URL& firstP
         listenersForHost.add(*listener);
     };
 
-    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::SubscribeToCookieChangeNotifications(url, firstParty, frameID, pageID, shouldRelaxThirdPartyCookieBlocking), WTFMove(completionHandler), 0, IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
+    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::SubscribeToCookieChangeNotifications(url, firstParty, frameID, pageID, webPageProxyID), WTFMove(completionHandler), 0, IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
 }
 
 void WebCookieJar::addChangeListener(const WebCore::Document& document, const WebCore::CookieChangeListener& listener)
 {
     RefPtr webFrame = document.frame() ? WebFrame::fromCoreFrame(*document.protectedFrame()) : nullptr;
-    if (!webFrame || !webFrame->page())
+    if (!webFrame)
+        return;
+
+    RefPtr page = webFrame->page();
+    if (!page)
         return;
 
     ApplyTrackingPrevention applyTrackingPreventionInNetworkProcess = ApplyTrackingPrevention::No;
     if (shouldBlockCookies(webFrame.get(), document.firstPartyForCookies(), document.cookieURL(), applyTrackingPreventionInNetworkProcess))
         return;
 
-    addChangeListenerWithAccess(document.url(), document.firstPartyForCookies(), webFrame->frameID(), webFrame->page()->identifier(), shouldRelaxThirdPartyCookieBlocking(webFrame.get()), listener);
+    addChangeListenerWithAccess(document.url(), document.firstPartyForCookies(), webFrame->frameID(), page->identifier(), page->webPageProxyIdentifier(), listener);
 }
 
 void WebCookieJar::removeChangeListener(const String& host, const WebCore::CookieChangeListener& listener)
