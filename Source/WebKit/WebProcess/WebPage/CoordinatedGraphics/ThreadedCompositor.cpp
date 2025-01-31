@@ -97,7 +97,11 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
 
     m_surface->didCreateCompositingRunLoop(m_compositingRunLoop->runLoop());
 
-#if !HAVE(DISPLAY_LINK)
+#if HAVE(DISPLAY_LINK)
+#if USE(GLIB_EVENT_LOOP)
+    m_didRenderFrameTimer.setPriority(RunLoopSourcePriority::RunLoopTimer - 1);
+#endif
+#else
     m_display.displayID = displayID;
     m_display.displayUpdate = { 0, c_defaultRefreshRate / 1000 };
 #endif
@@ -342,12 +346,6 @@ void ThreadedCompositor::renderLayerTree()
     paintToCurrentGLContext(viewportTransform, viewportSize);
     WTFEndSignpost(this, PaintToGLContext);
 
-    WTFEmitSignpost(this, DidRenderFrame, "compositionResponseID %i", compositionRequestID);
-
-    m_context->swapBuffers();
-
-    m_surface->didRenderFrame();
-
 #if HAVE(DISPLAY_LINK)
     m_compositionResponseID = compositionRequestID;
     if (!m_didRenderFrameTimer.isActive())
@@ -355,6 +353,13 @@ void ThreadedCompositor::renderLayerTree()
 #elif !HAVE(OS_SIGNPOST) && !USE(SYSPROF_CAPTURE)
     UNUSED_VARIABLE(compositionRequestID);
 #endif
+
+    WTFEmitSignpost(this, DidRenderFrame, "compositionResponseID %i", compositionRequestID);
+
+    m_context->swapBuffers();
+
+    m_surface->didRenderFrame();
+
     RunLoop::main().dispatch([this, protectedThis = Ref { *this }] {
         if (m_layerTreeHost)
             m_layerTreeHost->didRenderFrame();
