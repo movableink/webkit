@@ -80,7 +80,11 @@ private:
 
     bool isOpaque() const
     {
-        return m_pixelFormat == WebCore::ImageBufferPixelFormat::RGB10 || m_pixelFormat == WebCore::ImageBufferPixelFormat::BGRX8;
+#if HAVE(IOSURFACE_RGB10)
+        if (m_pixelFormat == WebCore::ImageBufferPixelFormat::RGB10)
+            return true;
+#endif
+        return m_pixelFormat == WebCore::ImageBufferPixelFormat::BGRX8;
     }
 
     const RemoteImageBufferSetIdentifier m_identifier;

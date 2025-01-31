@@ -283,8 +283,10 @@ unsigned RemoteLayerBackingStore::bytesPerPixel() const
     switch (pixelFormat()) {
     case ImageBufferPixelFormat::BGRX8: return 4;
     case ImageBufferPixelFormat::BGRA8: return 4;
+#if HAVE(IOSURFACE_RGB10)
     case ImageBufferPixelFormat::RGB10: return 4;
     case ImageBufferPixelFormat::RGB10A8: return 5;
+#endif
 #if HAVE(HDR_SUPPORT)
     case ImageBufferPixelFormat::RGBA16F: return 8;
 #endif

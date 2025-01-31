@@ -35,8 +35,10 @@ namespace WebCore {
 enum class ImageBufferPixelFormat : uint8_t {
     BGRX8,
     BGRA8,
+#if HAVE(IOSURFACE_RGB10)
     RGB10,
     RGB10A8,
+#endif
 #if HAVE(HDR_SUPPORT)
     RGBA16F,
 #endif
@@ -49,10 +51,12 @@ constexpr PixelFormat convertToPixelFormat(ImageBufferPixelFormat format)
         return PixelFormat::BGRX8;
     case ImageBufferPixelFormat::BGRA8:
         return PixelFormat::BGRA8;
+#if HAVE(IOSURFACE_RGB10)
     case ImageBufferPixelFormat::RGB10:
         return PixelFormat::RGB10;
     case ImageBufferPixelFormat::RGB10A8:
         return PixelFormat::RGB10A8;
+#endif
 #if HAVE(HDR_SUPPORT)
     case ImageBufferPixelFormat::RGBA16F:
         return PixelFormat::RGBA16F;

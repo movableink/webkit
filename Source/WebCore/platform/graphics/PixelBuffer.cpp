@@ -43,8 +43,10 @@ bool PixelBuffer::supportedPixelFormat(PixelFormat pixelFormat)
         return true;
 
     case PixelFormat::BGRX8:
+#if HAVE(IOSURFACE_RGB10)
     case PixelFormat::RGB10:
     case PixelFormat::RGB10A8:
+#endif
         return false;
     }
 

@@ -62,8 +62,10 @@ static inline vImage_CGImageFormat makeVImageCGImageFormat(const PixelBufferForm
                 return std::make_tuple(8u, 32u, static_cast<CGBitmapInfo>(kCGBitmapByteOrder32Little) | static_cast<CGBitmapInfo>(kCGImageAlphaFirst));
 
         case PixelFormat::BGRX8:
+#if HAVE(IOSURFACE_RGB10)
         case PixelFormat::RGB10:
         case PixelFormat::RGB10A8:
+#endif
 #if HAVE(HDR_SUPPORT)
         case PixelFormat::RGBA16F:
 #endif
@@ -157,8 +159,10 @@ static void convertImagePixelsSkia(const ConstPixelBufferConversionView& source,
         case PixelFormat::BGRA8:
             return SkColorType::kBGRA_8888_SkColorType;
         case PixelFormat::BGRX8:
+#if HAVE(IOSURFACE_RGB10)
         case PixelFormat::RGB10:
         case PixelFormat::RGB10A8:
+#endif
             break;
         }
         ASSERT_NOT_REACHED();
