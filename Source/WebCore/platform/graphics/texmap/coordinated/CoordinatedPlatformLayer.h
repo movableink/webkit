@@ -208,27 +208,28 @@ private:
         BackfaceVisibility           = 1 << 9,
         Opacity                      = 1 << 10,
         Children                     = 1 << 11,
-        ContentsVisible              = 1 << 12,
-        ContentsOpaque               = 1 << 13,
-        ContentsRect                 = 1 << 14,
-        ContentsRectClipsDescendants = 1 << 15,
-        ContentsClippingRect         = 1 << 16,
-        ContentsTiling               = 1 << 17,
-        ContentsBuffer               = 1 << 18,
-        ContentsImage                = 1 << 19,
-        ContentsColor                = 1 << 20,
-        Filters                      = 1 << 21,
-        Mask                         = 1 << 22,
-        Replica                      = 1 << 23,
-        Backdrop                     = 1 << 24,
-        BackdropRect                 = 1 << 25,
-        Animations                   = 1 << 26,
-        DebugIndicators              = 1 << 27,
+        BackingStore                 = 1 << 12,
+        ContentsVisible              = 1 << 13,
+        ContentsOpaque               = 1 << 14,
+        ContentsRect                 = 1 << 15,
+        ContentsRectClipsDescendants = 1 << 16,
+        ContentsClippingRect         = 1 << 17,
+        ContentsTiling               = 1 << 18,
+        ContentsBuffer               = 1 << 19,
+        ContentsImage                = 1 << 20,
+        ContentsColor                = 1 << 21,
+        Filters                      = 1 << 22,
+        Mask                         = 1 << 23,
+        Replica                      = 1 << 24,
+        Backdrop                     = 1 << 25,
+        BackdropRect                 = 1 << 26,
+        Animations                   = 1 << 27,
+        DebugIndicators              = 1 << 28,
 #if ENABLE(DAMAGE_TRACKING)
-        Damage                       = 1 << 28,
+        Damage                       = 1 << 29,
 #endif
 #if ENABLE(SCROLLING_THREAD)
-        ScrollingNode                = 1 << 29
+        ScrollingNode                = 1 << 30
 #endif
     };
 

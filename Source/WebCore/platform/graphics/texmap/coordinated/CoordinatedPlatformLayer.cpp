@@ -740,20 +740,28 @@ void CoordinatedPlatformLayer::updateContents(bool affectedByTransformAnimation)
         if (!m_backingStoreProxy) {
             m_backingStoreProxy = CoordinatedBackingStoreProxy::create(m_contentsScale);
             m_needsTilesUpdate = true;
+            m_pendingChanges.add(Change::BackingStore);
         }
 
         if (affectedByTransformAnimation) {
-            if (!m_animatedBackingStoreClient)
+            if (!m_animatedBackingStoreClient) {
                 m_animatedBackingStoreClient = CoordinatedAnimatedBackingStoreClient::create(*m_owner);
+                m_pendingChanges.add(Change::BackingStore);
+            }
         } else if (m_animatedBackingStoreClient) {
             m_animatedBackingStoreClient->invalidate();
             m_animatedBackingStoreClient = nullptr;
+            m_pendingChanges.add(Change::BackingStore);
         }
     } else {
-        m_backingStoreProxy = nullptr;
+        if (m_backingStoreProxy) {
+            m_backingStoreProxy = nullptr;
+            m_pendingChanges.add(Change::BackingStore);
+        }
         if (m_animatedBackingStoreClient) {
             m_animatedBackingStoreClient->invalidate();
             m_animatedBackingStoreClient = nullptr;
+            m_pendingChanges.add(Change::BackingStore);
         }
     }
 
@@ -854,6 +862,21 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
     if (m_pendingChanges.contains(Change::Opacity))
         layer.setOpacity(m_opacity);
 
+    if (m_pendingChanges.contains(Change::BackingStore)) {
+        if (m_backingStoreProxy) {
+            if (!m_backingStore)
+                m_backingStore = CoordinatedBackingStore::create();
+            layer.setBackingStore(m_backingStore.get());
+
+            if (m_animatedBackingStoreClient)
+                layer.setAnimatedBackingStoreClient(m_animatedBackingStoreClient.get());
+        } else {
+            layer.setBackingStore(nullptr);
+            layer.setAnimatedBackingStoreClient(nullptr);
+            m_backingStore = nullptr;
+        }
+    }
+
     if (m_pendingChanges.contains(Change::ContentsVisible))
         layer.setContentsVisible(m_contentsVisible);
 
@@ -922,13 +945,6 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
     }
 
     if (m_backingStoreProxy) {
-        if (!m_backingStore)
-            m_backingStore = CoordinatedBackingStore::create();
-        layer.setBackingStore(m_backingStore.get());
-
-        if (m_animatedBackingStoreClient)
-            layer.setAnimatedBackingStoreClient(m_animatedBackingStoreClient.get());
-
         auto update = m_backingStoreProxy->takePendingUpdate();
         m_backingStore->resize(layer.size(), update.scale());
 
@@ -940,10 +956,6 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
             m_backingStore->updateTile(tileUpdate.tileID, tileUpdate.dirtyRect, tileUpdate.tileRect, tileUpdate.buffer.copyRef(), { });
 
         m_backingStore->processPendingUpdates(textureMapper);
-    } else {
-        layer.setBackingStore(nullptr);
-        layer.setAnimatedBackingStoreClient(nullptr);
-        m_backingStore = nullptr;
     }
 
     if (m_contentsBuffer.committed)
