@@ -31,6 +31,7 @@
 #include "IDBIndexIdentifier.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "IDBResourceIdentifier.h"
+#include <pal/SessionID.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
@@ -60,7 +61,7 @@ class IDBConnectionToServer final : public ThreadSafeRefCounted<IDBConnectionToS
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(IDBConnectionToServer, WEBCORE_EXPORT);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IDBConnectionToServer);
 public:
-    WEBCORE_EXPORT static Ref<IDBConnectionToServer> create(IDBConnectionToServerDelegate&);
+    WEBCORE_EXPORT static Ref<IDBConnectionToServer> create(IDBConnectionToServerDelegate&, PAL::SessionID);
     WEBCORE_EXPORT ~IDBConnectionToServer();
 
     WEBCORE_EXPORT IDBConnectionIdentifier identifier() const;
@@ -148,7 +149,7 @@ public:
     WEBCORE_EXPORT void didGetAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, Vector<IDBDatabaseNameAndVersion>&&);
 
 private:
-    IDBConnectionToServer(IDBConnectionToServerDelegate&);
+    IDBConnectionToServer(IDBConnectionToServerDelegate&, PAL::SessionID);
 
     typedef void (IDBConnectionToServer::*ResultFunction)(const IDBResultData&);
     void callResultFunctionWithErrorLater(ResultFunction, const IDBResourceIdentifier& requestIdentifier);

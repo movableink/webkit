@@ -50,13 +50,13 @@
 namespace WebKit {
 using namespace WebCore;
 
-Ref<WebIDBConnectionToServer> WebIDBConnectionToServer::create()
+Ref<WebIDBConnectionToServer> WebIDBConnectionToServer::create(PAL::SessionID sessionID)
 {
-    return adoptRef(*new WebIDBConnectionToServer());
+    return adoptRef(*new WebIDBConnectionToServer(sessionID));
 }
 
-WebIDBConnectionToServer::WebIDBConnectionToServer()
-    : m_connectionToServer(IDBClient::IDBConnectionToServer::create(*this))
+WebIDBConnectionToServer::WebIDBConnectionToServer(PAL::SessionID sessionID)
+    : m_connectionToServer(IDBClient::IDBConnectionToServer::create(*this, sessionID))
 {
 }
 

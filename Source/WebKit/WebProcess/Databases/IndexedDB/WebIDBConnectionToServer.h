@@ -39,7 +39,7 @@ class WebIDBResult;
 
 class WebIDBConnectionToServer final : private WebCore::IDBClient::IDBConnectionToServerDelegate, private IPC::MessageSender, public RefCounted<WebIDBConnectionToServer> {
 public:
-    static Ref<WebIDBConnectionToServer> create();
+    static Ref<WebIDBConnectionToServer> create(PAL::SessionID);
     virtual ~WebIDBConnectionToServer();
 
     WebCore::IDBClient::IDBConnectionToServer& coreConnectionToServer();
@@ -49,7 +49,7 @@ public:
     void connectionToServerLost();
 
 private:
-    WebIDBConnectionToServer();
+    WebIDBConnectionToServer(PAL::SessionID);
 
     IPC::Connection* messageSenderConnection() const final;
     uint64_t messageSenderDestinationID() const final { return 0; }

@@ -1159,9 +1159,11 @@ void NetworkConnectionToWebProcess::blobSize(const URL& url, CompletionHandler<v
 
 void NetworkConnectionToWebProcess::writeBlobsToTemporaryFilesForIndexedDB(const Vector<String>& blobURLs, CompletionHandler<void(Vector<String>&&)>&& completionHandler)
 {
-    auto* session = networkSession();
+    CheckedPtr session = networkSession();
     if (!session)
         return completionHandler({ });
+
+    MESSAGE_CHECK_COMPLETION(!session->sessionID().isEphemeral(), completionHandler({ }));
 
     Vector<RefPtr<BlobDataFileReference>> fileReferences;
     for (auto& url : blobURLs)

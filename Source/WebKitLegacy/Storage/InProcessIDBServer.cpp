@@ -74,7 +74,7 @@ InProcessIDBServer::InProcessIDBServer(PAL::SessionID sessionID, const String& d
     : m_queue(WorkQueue::create("com.apple.WebKit.IndexedDBServer"_s))
 {
     ASSERT(isMainThread());
-    m_connectionToServer = IDBClient::IDBConnectionToServer::create(*this);
+    m_connectionToServer = IDBClient::IDBConnectionToServer::create(*this, sessionID);
     dispatchTask([this, protectedThis = Ref { *this }, directory = databaseDirectoryPath.isolatedCopy()] () mutable {
         m_connectionToClient = IDBServer::IDBConnectionToClient::create(*this);
 

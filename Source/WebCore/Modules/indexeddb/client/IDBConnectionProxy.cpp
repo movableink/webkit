@@ -47,9 +47,10 @@ namespace IDBClient {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBConnectionProxy);
 
-IDBConnectionProxy::IDBConnectionProxy(IDBConnectionToServer& connection)
+IDBConnectionProxy::IDBConnectionProxy(IDBConnectionToServer& connection, PAL::SessionID sessionID)
     : m_connectionToServer(connection)
     , m_serverConnectionIdentifier(connection.identifier())
+    , m_sessionID(sessionID)
 {
     ASSERT(isMainThread());
 }
@@ -62,6 +63,11 @@ void IDBConnectionProxy::ref()
 void IDBConnectionProxy::deref()
 {
     m_connectionToServer->deref();
+}
+
+PAL::SessionID IDBConnectionProxy::sessionID() const
+{
+    return m_sessionID;
 }
 
 Ref<IDBOpenDBRequest> IDBConnectionProxy::openDatabase(ScriptExecutionContext& context, const IDBDatabaseIdentifier& databaseIdentifier, uint64_t version)

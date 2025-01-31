@@ -6410,10 +6410,14 @@ Vector<String> SerializedScriptValue::blobURLs() const
     });
 }
 
-void SerializedScriptValue::writeBlobsToDiskForIndexedDB(CompletionHandler<void(IDBValue&&)>&& completionHandler)
+void SerializedScriptValue::writeBlobsToDiskForIndexedDB(bool isEphemeral, CompletionHandler<void(IDBValue&&)>&& completionHandler)
 {
     ASSERT(isMainThread());
     ASSERT(hasBlobURLs());
+
+    // FIXME: Blobs are not supported in private browsing yet (webkit.org/b/156347).
+    if (isEphemeral)
+        return completionHandler({ });
 
     blobRegistry().writeBlobsToTemporaryFilesForIndexedDB(blobURLs(), [completionHandler = WTFMove(completionHandler), this, protectedThis = Ref { *this }] (auto&& blobFilePaths) mutable {
         ASSERT(isMainThread());
@@ -6431,14 +6435,14 @@ void SerializedScriptValue::writeBlobsToDiskForIndexedDB(CompletionHandler<void(
     });
 }
 
-IDBValue SerializedScriptValue::writeBlobsToDiskForIndexedDBSynchronously()
+IDBValue SerializedScriptValue::writeBlobsToDiskForIndexedDBSynchronously(bool isEphemeral)
 {
     ASSERT(!isMainThread());
 
     BinarySemaphore semaphore;
     IDBValue value;
-    callOnMainThread([this, &semaphore, &value] {
-        writeBlobsToDiskForIndexedDB([&semaphore, &value](IDBValue&& result) {
+    callOnMainThread([this, &semaphore, &value, isEphemeral] {
+        writeBlobsToDiskForIndexedDB(isEphemeral, [&semaphore, &value](IDBValue&& result) {
             ASSERT(isMainThread());
             value.setAsIsolatedCopy(result);
 

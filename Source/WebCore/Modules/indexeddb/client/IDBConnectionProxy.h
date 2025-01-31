@@ -64,7 +64,7 @@ class IDBConnectionToServer;
 class WEBCORE_EXPORT IDBConnectionProxy final {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(IDBConnectionProxy, WEBCORE_EXPORT);
 public:
-    IDBConnectionProxy(IDBConnectionToServer&);
+    IDBConnectionProxy(IDBConnectionToServer&, PAL::SessionID);
 
     Ref<IDBOpenDBRequest> openDatabase(ScriptExecutionContext&, const IDBDatabaseIdentifier&, uint64_t version);
     void didOpenDatabase(const IDBResultData&);
@@ -129,6 +129,8 @@ public:
     void abortActivitiesForCurrentThread();
     void setContextSuspended(ScriptExecutionContext& currentContext, bool isContextSuspended);
 
+    PAL::SessionID sessionID() const;
+
 private:
     void completeOpenDBRequest(const IDBResultData&);
     bool hasRecordOfTransaction(const IDBTransaction&) const WTF_REQUIRES_LOCK(m_transactionMapLock);
@@ -176,6 +178,7 @@ private:
 
     CrossThreadQueue<CrossThreadTask> m_mainThreadQueue;
     RefPtr<IDBConnectionToServer> m_mainThreadProtector WTF_GUARDED_BY_LOCK(m_mainThreadTaskLock);
+    PAL::SessionID m_sessionID;
 };
 
 } // namespace IDBClient
