@@ -35,6 +35,7 @@
 #include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/ShareableBitmap.h>
+#include <WebCore/SnapshotIdentifier.h>
 #include <memory>
 #include <pal/SessionID.h>
 #include <wtf/TZoneMalloc.h>

@@ -160,7 +160,8 @@ bool WebExtensionSQLiteDatabase::openWithAccessType(AccessType accessType, Prote
         ASSERT(!m_url.isEmpty());
 
         databasePath = m_url.fileSystemPath().utf8().data();
-        if (FileSystem::fileExists(m_url.truncatedForUseAsBase().fileSystemPath())) {
+        auto directory = m_url.truncatedForUseAsBase().fileSystemPath();
+        if (!FileSystem::makeAllDirectories(directory) || FileSystem::fileType(directory) != FileSystem::FileType::Directory) {
             if (outError) {
                 RELEASE_LOG_ERROR(Extensions, "Unable to create parent folder for database at path: %s", m_url.fileSystemPath().utf8().data());
                 outError = errorWithSQLiteErrorCode(SQLITE_CANTOPEN);

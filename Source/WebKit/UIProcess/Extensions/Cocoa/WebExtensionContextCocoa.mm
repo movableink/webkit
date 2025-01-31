@@ -82,7 +82,6 @@
 #import "_WKWebExtensionDeclarativeNetRequestSQLiteStore.h"
 #import "_WKWebExtensionDeclarativeNetRequestTranslator.h"
 #import "_WKWebExtensionRegisteredScriptsSQLiteStore.h"
-#import "_WKWebExtensionStorageSQLiteStore.h"
 #import <UniformTypeIdentifiers/UTType.h>
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/TextResourceDecoder.h>
@@ -4944,28 +4943,28 @@ size_t WebExtensionContext::quotaForStorageType(WebExtensionDataType storageType
     return 0;
 }
 
-_WKWebExtensionStorageSQLiteStore *WebExtensionContext::localStorageStore()
+Ref<WebExtensionStorageSQLiteStore> WebExtensionContext::localStorageStore()
 {
     if (!m_localStorageStore)
-        m_localStorageStore = [[_WKWebExtensionStorageSQLiteStore alloc] initWithUniqueIdentifier:m_uniqueIdentifier storageType:WebExtensionDataType::Local directory:storageDirectory() usesInMemoryDatabase:!storageIsPersistent()];
-    return m_localStorageStore.get();
+        m_localStorageStore = WebExtensionStorageSQLiteStore::create(m_uniqueIdentifier, WebExtensionDataType::Local, storageDirectory(), storageIsPersistent() ? WebExtensionStorageSQLiteStore::UsesInMemoryDatabase::No : WebExtensionStorageSQLiteStore::UsesInMemoryDatabase::Yes);
+    return *m_localStorageStore;
 }
 
-_WKWebExtensionStorageSQLiteStore *WebExtensionContext::sessionStorageStore()
+Ref<WebExtensionStorageSQLiteStore> WebExtensionContext::sessionStorageStore()
 {
     if (!m_sessionStorageStore)
-        m_sessionStorageStore = [[_WKWebExtensionStorageSQLiteStore alloc] initWithUniqueIdentifier:m_uniqueIdentifier storageType:WebExtensionDataType::Session directory:storageDirectory() usesInMemoryDatabase:true];
-    return m_sessionStorageStore.get();
+        m_sessionStorageStore = WebExtensionStorageSQLiteStore::create(m_uniqueIdentifier, WebExtensionDataType::Session, storageDirectory(), WebExtensionStorageSQLiteStore::UsesInMemoryDatabase::Yes);
+    return *m_sessionStorageStore;
 }
 
-_WKWebExtensionStorageSQLiteStore *WebExtensionContext::syncStorageStore()
+Ref<WebExtensionStorageSQLiteStore> WebExtensionContext::syncStorageStore()
 {
     if (!m_syncStorageStore)
-        m_syncStorageStore = [[_WKWebExtensionStorageSQLiteStore alloc] initWithUniqueIdentifier:m_uniqueIdentifier storageType:WebExtensionDataType::Sync directory:storageDirectory() usesInMemoryDatabase:!storageIsPersistent()];
-    return m_syncStorageStore.get();
+        m_syncStorageStore = WebExtensionStorageSQLiteStore::create(m_uniqueIdentifier, WebExtensionDataType::Sync, storageDirectory(), storageIsPersistent() ? WebExtensionStorageSQLiteStore::UsesInMemoryDatabase::No : WebExtensionStorageSQLiteStore::UsesInMemoryDatabase::Yes);
+    return *m_syncStorageStore;
 }
 
-_WKWebExtensionStorageSQLiteStore *WebExtensionContext::storageForType(WebExtensionDataType storageType)
+Ref<WebExtensionStorageSQLiteStore> WebExtensionContext::storageForType(WebExtensionDataType storageType)
 {
     switch (storageType) {
     case WebExtensionDataType::Local:
@@ -4975,9 +4974,6 @@ _WKWebExtensionStorageSQLiteStore *WebExtensionContext::storageForType(WebExtens
     case WebExtensionDataType::Sync:
         return syncStorageStore();
     }
-
-    ASSERT_NOT_REACHED();
-    return nil;
 }
 
 void WebExtensionContext::sendTestMessage(const String& message, id argument)

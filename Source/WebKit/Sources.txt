@@ -572,6 +572,9 @@ UIProcess/Extensions/WebExtensionController.cpp
 UIProcess/Extensions/WebExtensionControllerConfiguration.cpp
 UIProcess/Extensions/WebExtensionDataRecord.cpp
 UIProcess/Extensions/WebExtensionMatchPattern.cpp
+UIProcess/Extensions/WebExtensionStorageSQLiteStore.cpp
+
+UIProcess/Extensions/API/WebExtensionContextAPIStorage.cpp
 
 UIProcess/Gamepad/UIGamepad.cpp
 UIProcess/Gamepad/UIGamepadProvider.cpp
