@@ -140,15 +140,7 @@ static Vector<WGPUFeatureName> baseFeatures(id<MTLDevice> device, const Hardware
         features.append(WGPUFeatureName_Float32Filterable);
 #endif
 
-    static dispatch_once_t onceToken;
-    static bool isDebugDevice = false;
-    dispatch_once(&onceToken, ^{
-        // Workaround for rdar://143905417
-        if ((isDebugDevice = [NSStringFromClass([device class]) containsString:@"Debug"]))
-            WTFLogAlways("WebGPU: Using DEBUG Metal device"); // NOLINT
-    });
-
-    if (!isDebugDevice && baseCapabilities.timestampCounterSet)
+    if (baseCapabilities.timestampCounterSet)
         features.append(WGPUFeatureName_TimestampQuery);
 
     return features;

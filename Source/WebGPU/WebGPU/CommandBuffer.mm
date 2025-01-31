@@ -50,8 +50,6 @@ CommandBuffer::CommandBuffer(Device& device)
 CommandBuffer::~CommandBuffer()
 {
     m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
-    m_commandBuffer = nil;
-    m_cachedCommandBuffer = nil;
 }
 
 void CommandBuffer::setLabel(String&& label)
@@ -67,7 +65,6 @@ void CommandBuffer::makeInvalid(NSString* lastError)
     m_lastErrorString = lastError;
     m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
     m_commandBuffer = nil;
-    m_cachedCommandBuffer = nil;
     m_commandEncoder = nullptr;
 }
 
