@@ -83,10 +83,8 @@ void AnimationTimelinesController::detachFromDocument()
 {
     m_currentTimeClearingTaskCancellationGroup.cancel();
 
-    while (!m_timelines.isEmptyIgnoringNullReferences()) {
-        Ref timeline = *m_timelines.begin();
+    while (RefPtr timeline = m_timelines.takeAny())
         timeline->detachFromDocument();
-    }
 }
 
 void AnimationTimelinesController::updateAnimationsAndSendEvents(ReducedResolutionSeconds timestamp)
@@ -300,9 +298,13 @@ void AnimationTimelinesController::cacheCurrentTime(ReducedResolutionSeconds new
         CancellableTask task(m_currentTimeClearingTaskCancellationGroup, std::bind(&AnimationTimelinesController::maybeClearCachedCurrentTime, this));
         m_document->eventLoop().queueTask(TaskSource::InternalAsyncTask, WTFMove(task));
     }
-    // We extent the associated Document's lifecycle until the VM became idle since the AnimationTimelinesController
-    // is owned by the Document.
-    m_document->vm().whenIdle([this, protectedDocument = protectedDocument()]() {
+
+    // AnimationTimelinesController is owned by Document.
+    m_document->vm().whenIdle([this, weakDocument = WeakPtr<Document, WeakPtrImplWithEventTargetData> { m_document }]() {
+        RefPtr document = weakDocument.get();
+        if (!document)
+            return;
+
         m_waitingOnVMIdle = false;
         maybeClearCachedCurrentTime();
     });
