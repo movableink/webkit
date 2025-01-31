@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,12 +78,6 @@ template<typename... Ts> inline constexpr auto TreatAsTupleLike<std::tuple<Ts...
 
 // - Variant-like
 template<typename... Ts> inline constexpr auto TreatAsVariantLike<std::variant<Ts...>> = true;
-
-// MARK: Utility Concepts
-
-template<typename T> concept HasIsZero = requires(T t) {
-    { t.isZero() } -> std::convertible_to<bool>;
-};
 
 // MARK: - Standard Leaf Types
 
@@ -393,12 +387,6 @@ template<typename T> struct SpaceSeparatedPoint {
     const T& x() const { return get<0>(value); }
     const T& y() const { return get<1>(value); }
 
-    bool isZero() const
-        requires HasIsZero<T>
-    {
-        return x().isZero() && y().isZero();
-    }
-
     SpaceSeparatedPair<T> value;
 };
 
@@ -429,18 +417,6 @@ template<typename T> struct SpaceSeparatedSize {
 
     const T& width() const { return get<0>(value); }
     const T& height() const { return get<1>(value); }
-
-    bool isZero() const
-        requires HasIsZero<T>
-    {
-        return width().isZero() && height().isZero();
-    }
-
-    bool isEmpty() const
-        requires HasIsZero<T>
-    {
-        return width().isZero() || height().isZero();
-    }
 
     SpaceSeparatedPair<T> value;
 };

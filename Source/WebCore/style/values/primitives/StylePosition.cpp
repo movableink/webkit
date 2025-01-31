@@ -108,19 +108,9 @@ auto ToStyle<CSS::Position>::operator()(const CSS::Position& position, const Bui
 
 // MARK: - Evaluation
 
-FloatPoint evaluate(const Position& position, FloatSize referenceBox)
+auto Evaluation<Position>::operator()(const Position& position, FloatSize referenceBox) -> FloatPoint
 {
     return evaluate(position.value, referenceBox);
-}
-
-float evaluate(const TwoComponentPositionHorizontal& component, float referenceWidth)
-{
-    return evaluate(component.offset, referenceWidth);
-}
-
-float evaluate(const TwoComponentPositionVertical& component, float referenceHeight)
-{
-    return evaluate(component.offset, referenceHeight);
 }
 
 } // namespace CSS

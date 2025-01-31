@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -311,6 +311,43 @@ template<typename CSSType, size_t inlineCapacity> struct ToStyle<CommaSeparatedV
     }
 };
 
+// MARK: - Evaluation
+
+// Types that want to participate in evaluation overloading must specialize the following interface:
+//
+//    template<> struct WebCore::Style::Evaluation<StyleType> {
+//        decltype(auto) operator()(const StyleType&, ...);
+//    };
+
+template<typename> struct Evaluation;
+
+// `Evaluation` Invokers
+template<typename StyleType> decltype(auto) evaluate(const StyleType& value)
+{
+    return Evaluation<StyleType>{}(value);
+}
+
+template<typename StyleType, typename Reference> decltype(auto) evaluate(const StyleType& value, Reference&& reference)
+{
+    return Evaluation<StyleType>{}(value, std::forward<Reference>(reference));
+}
+
+// Specialization for `VariantLike`.
+template<VariantLike StyleType> struct Evaluation<StyleType> {
+    template<typename... Rest> decltype(auto) operator()(const StyleType& value, Rest&&... rest)
+    {
+        return WTF::switchOn(value, [&](const auto& alternative) { return evaluate(alternative, std::forward<Rest>(rest)...); });
+    }
+};
+
+// Specialization for `TupleLike` (wrapper).
+template<TupleLike StyleType> requires (std::tuple_size_v<StyleType> == 1) struct Evaluation<StyleType> {
+    template<typename... Rest> decltype(auto) operator()(const StyleType& value, Rest&&... rest)
+    {
+        return evaluate(get<0>(value), std::forward<Rest>(rest)...);
+    }
+};
+
 // MARK: - Blending
 
 // All non-tuple-like leaf types must specialize `Blending` with the following member functions:
@@ -598,6 +635,83 @@ template<typename StyleType, size_t inlineCapacity> struct Blending<CommaSeparat
         for (size_t i = 0; i < size; ++i)
             result.append(WebCore::Style::blend(a[i], b[i], aStyle, bStyle, context));
         return { WTFMove(result) };
+    }
+};
+
+// MARK: - IsZero
+
+// All leaf types that want to conform to IsZero must implement
+// the following:
+//
+//    template<> struct WebCore::Style::IsZero<CSSType> {
+//        bool operator()(const CSSType&);
+//    };
+//
+// or have a member function such that the type matches the
+// `HasIsZero` concept.
+
+template<typename> struct IsZero;
+
+// IsZero Invoker
+template<typename T> bool isZero(const T& value)
+{
+    return IsZero<T>{}(value);
+}
+
+template<HasIsZero T> struct IsZero<T> {
+    bool operator()(const T& value)
+    {
+        return value.isZero();
+    }
+};
+
+// Constrained for `TreatAsTupleLike`.
+template<TupleLike T> struct IsZero<T> {
+    bool operator()(const T& value)
+    {
+        return WTF::apply([&](const auto& ...x) { return (isZero(x) && ...); }, value);
+    }
+};
+
+// Constrained for `TreatAsVariantLike`.
+template<VariantLike T> struct IsZero<T> {
+    bool operator()(const T& value)
+    {
+        return WTF::switchOn(value, [&](const auto& alternative) { return isZero(alternative); });
+    }
+};
+
+// MARK: - IsEmpty
+
+// All leaf types that want to conform to IsEmpty must implement
+// the following:
+//
+//    template<> struct WebCore::Style::IsEmpty<CSSType> {
+//        bool operator()(const CSSType&);
+//    };
+//
+// or have a member function such that the type matches the
+// `HasIsEmpty` concept.
+
+template<typename> struct IsEmpty;
+
+// IsEmpty Invoker
+template<typename T> bool isEmpty(const T& value)
+{
+    return IsEmpty<T>{}(value);
+}
+
+template<HasIsEmpty T> struct IsEmpty<T> {
+    bool operator()(const T& value)
+    {
+        return value.isEmpty();
+    }
+};
+
+template<typename T> struct IsEmpty<SpaceSeparatedSize<T>> {
+    bool operator()(const auto& value)
+    {
+        return isZero(value.width()) || isZero(value.height());
     }
 };
 

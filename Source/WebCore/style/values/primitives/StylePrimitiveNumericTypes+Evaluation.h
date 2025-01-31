@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,109 +27,81 @@
 #include "FloatConversion.h"
 #include "FloatPoint.h"
 #include "FloatSize.h"
+#include "LayoutUnit.h"
 #include "StylePrimitiveNumericTypes+Calculation.h"
 #include "StylePrimitiveNumericTypes.h"
+#include "StyleValueTypes.h"
 
 namespace WebCore {
 namespace Style {
 
-// MARK: - Number
-
-template<auto R, typename V> constexpr float evaluate(const Number<R, V>& number, float)
-{
-    return narrowPrecisionToFloat(number.value);
-}
-
-template<auto R, typename V> constexpr double evaluate(const Number<R, V>& number, double)
-{
-    return number.value;
-}
-
 // MARK: - Percentage
 
-template<auto R, typename V> constexpr float evaluate(const Percentage<R, V>& percentage, float referenceLength)
-{
-    return clampTo<float>(percentage.value) / 100.0f * referenceLength;
-}
+template<auto R, typename V> struct Evaluation<Percentage<R, V>> {
+    constexpr double operator()(const Percentage<R, V>& percentage)
+    {
+        return static_cast<double>(percentage.value) / 100.0;
+    }
 
-template<auto R, typename V> constexpr double evaluate(const Percentage<R, V>& percentage, double referenceLength)
-{
-    return percentage.value / 100.0 * referenceLength;
-}
+    template<typename Reference> constexpr auto operator()(const Percentage<R, V>& percentage, Reference referenceLength) -> Reference
+    {
+        return static_cast<Reference>(percentage.value) / 100.0 * referenceLength;
+    }
+};
 
 // MARK: - Numeric
 
-constexpr float evaluate(Numeric auto const& value, float)
-{
-    return value.value;
-}
+template<NonCompositeNumeric StyleType> struct Evaluation<StyleType> {
+    constexpr double operator()(const StyleType& value)
+    {
+        return static_cast<double>(value.value);
+    }
 
-constexpr double evaluate(Numeric auto const& value, double)
-{
-    return value.value;
-}
+    template<typename Reference> constexpr auto operator()(const StyleType& value, Reference) -> Reference
+    {
+        return static_cast<Reference>(value.value);
+    }
+};
 
-inline float evaluate(const CalculationValue& calculation, float referenceValue)
-{
-    return calculation.evaluate(referenceValue);
-}
+// MARK: - Calculation
 
-inline double evaluate(const CalculationValue& calculation, double referenceValue)
-{
-    return calculation.evaluate(referenceValue);
-}
+template<> struct Evaluation<Ref<CalculationValue>> {
+    template<typename Reference> auto operator()(Ref<CalculationValue> calculation, Reference referenceLength)
+    {
+        return static_cast<Reference>(calculation->evaluate(referenceLength));
+    }
+};
 
-inline float evaluate(Calc auto const& calculation, float referenceValue)
-{
-    return evaluate(calculation.protectedCalculation(), referenceValue);
-}
-
-inline double evaluate(Calc auto const& calculation, double referenceValue)
-{
-    return evaluate(calculation.protectedCalculation(), referenceValue);
-}
-
-// MARK: - DimensionPercentageNumeric (e.g. AnglePercentage/LengthPercentage)
-
-inline float evaluate(DimensionPercentageNumeric auto const& value, float referenceValue)
-{
-    return WTF::switchOn(value, [&referenceValue](const auto& value) -> float { return evaluate(value, referenceValue); });
-}
-
-inline double evaluate(DimensionPercentageNumeric auto const& value, double referenceValue)
-{
-    return WTF::switchOn(value, [&referenceValue](const auto& value) -> double { return evaluate(value, referenceValue); });
-}
-
-// MARK: - NumberOrPercentage
-
-template<auto nR, auto pR, typename V> double evaluate(const NumberOrPercentage<nR, pR, V>& value)
-{
-    return WTF::switchOn(value,
-        [](const typename NumberOrPercentage<nR, pR, V>::Number& number) -> double { return number.value; },
-        [](const typename NumberOrPercentage<nR, pR, V>::Percentage& percentage) -> double { return percentage.value / 100.0; }
-    );
-}
+template<Calc Calculation> struct Evaluation<Calculation> {
+    template<typename... Rest> decltype(auto) operator()(const Calculation& calculation, Rest&&... rest)
+    {
+        return evaluate(calculation.protectedCalculation(), std::forward<Rest>(rest)...);
+    }
+};
 
 // MARK: - SpaceSeparatedPoint
 
-template<typename T> FloatPoint evaluate(const SpaceSeparatedPoint<T>& value, FloatSize referenceBox)
-{
-    return {
-        evaluate(value.x(), referenceBox.width()),
-        evaluate(value.y(), referenceBox.height())
-    };
-}
+template<typename T> struct Evaluation<SpaceSeparatedPoint<T>> {
+    FloatPoint operator()(const SpaceSeparatedPoint<T>& value, FloatSize referenceBox)
+    {
+        return {
+            evaluate(value.x(), referenceBox.width()),
+            evaluate(value.y(), referenceBox.height())
+        };
+    }
+};
 
 // MARK: - SpaceSeparatedSize
 
-template<typename T> FloatSize evaluate(const SpaceSeparatedSize<T>& value, FloatSize referenceBox)
-{
-    return {
-        evaluate(value.width(), referenceBox.width()),
-        evaluate(value.height(), referenceBox.height())
-    };
-}
+template<typename T> struct Evaluation<SpaceSeparatedSize<T>> {
+    FloatSize operator()(const SpaceSeparatedSize<T>& value, FloatSize referenceBox)
+    {
+        return {
+            evaluate(value.width(), referenceBox.width()),
+            evaluate(value.height(), referenceBox.height())
+        };
+    }
+};
 
 // MARK: - Calculated Evaluations
 
