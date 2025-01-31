@@ -442,6 +442,9 @@ WKPageRef TestController::createOtherPage(PlatformWebView* parentView, WKPageCon
     auto* platformWebView = createOtherPlatformWebView(parentView, configuration, navigationAction, windowFeatures);
     if (!platformWebView)
         return nullptr;
+    auto preferences = WKPageConfigurationGetPreferences(configuration);
+    if (WKPreferencesGetVerifyUserGestureInUIProcessEnabled(preferences) && !WKNavigationActionHasUnconsumedUserGesture(navigationAction))
+        return nullptr;
 
     auto* page = platformWebView->page();
     WKRetain(page);
@@ -1202,6 +1205,7 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
         if (enableAllExperimentalFeatures) {
             WKPreferencesEnableAllExperimentalFeatures(preferences);
             WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("SiteIsolationEnabled").get());
+            WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("VerifyWindowOpenUserGestureFromUIProcess").get());
             WKPreferencesSetExperimentalFeatureForKey(preferences, true, toWK("WebGPUEnabled").get());
             WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("HTTPSByDefaultEnabled").get());
             WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("WebRTCL4SEnabled").get()); // FIXME: Remove this once L4S SDP negotation is supported.

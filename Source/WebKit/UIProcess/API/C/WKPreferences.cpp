@@ -678,6 +678,11 @@ bool WKPreferencesGetMainContentUserGestureOverrideEnabled(WKPreferencesRef pref
     return toImpl(preferencesRef)->mainContentUserGestureOverrideEnabled();
 }
 
+bool WKPreferencesGetVerifyUserGestureInUIProcessEnabled(WKPreferencesRef preferencesRef)
+{
+    return toImpl(preferencesRef)->verifyWindowOpenUserGestureFromUIProcess();
+}
+
 void WKPreferencesSetManagedMediaSourceLowThreshold(WKPreferencesRef preferencesRef, double threshold)
 {
     toImpl(preferencesRef)->setManagedMediaSourceLowThreshold(threshold);
