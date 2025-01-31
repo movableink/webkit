@@ -316,7 +316,7 @@ bool SharingResolver::styleSharingCandidateMatchesRuleSet(const StyledElement& e
         return false;
 
     ElementRuleCollector collector(element, m_ruleSets, &m_selectorMatchingState);
-    return collector.hasAnyMatchingRules(*ruleSet);
+    return collector.matchesAnyRules(*ruleSet);
 }
 
 bool SharingResolver::sharingCandidateHasIdenticalStyleAffectingAttributes(const Context& context, const StyledElement& sharingCandidate) const
