@@ -463,7 +463,7 @@ Node::~Node()
     }
 #endif
 
-#if CHECK_REF_COUNTED_LIFECYCLE
+#if ASSERT_ENABLED
     if (m_refCountAndParentBit != s_refCountIncrement)
         WTF::RefCountedBase::printRefDuringDestructionLogAndCrash(this);
 #endif

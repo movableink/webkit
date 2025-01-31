@@ -847,7 +847,7 @@ ALWAYS_INLINE void Node::ref() const
 
 inline void Node::applyRefDuringDestructionCheck() const
 {
-#if CHECK_REF_COUNTED_LIFECYCLE
+#if ASSERT_ENABLED
     if (!deletionHasBegun())
         return;
     WTF::RefCountedBase::logRefDuringDestruction(this);
