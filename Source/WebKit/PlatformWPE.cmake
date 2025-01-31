@@ -755,6 +755,7 @@ GI_DOCGEN(WPEWebKit wpe/wpewebkit.toml.in
     CONTENT_TEMPLATES
         glib/environment-variables.md
         glib/profiling.md
+        glib/remote-inspector.md
 )
 
 if (ENABLE_2022_GLIB_API)
