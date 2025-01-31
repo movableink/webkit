@@ -1953,8 +1953,3 @@ webkit.org/b/286371 [ Sequoia Release x86_64 ] webrtc/captureCanvas-webrtc-softw
 webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
 
 webkit.org/b/286693 [ Sequoia Debug arm64 ] media/video-canvas-createPattern.html [ Pass Failure ]
-
-# webkit.org/b/286777 REGRESSION(289503@main): [macOS iOS wk2 Debug] ASSERTION FAILED: clipRectsContext.rootLayer == m_clipRectsCache->m_clipRec tsRoot (failure in EWS) 
-[ Debug ] fast/css/view-transitions-zoom.html [ Skip ]
-[ Debug ] fast/multicol/assert-with-nested-columns-and-spanner.html [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/css/css-break/table/repeated-section/special-elements-crash.html [ Skip ]

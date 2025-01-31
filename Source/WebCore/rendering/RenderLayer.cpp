@@ -3929,7 +3929,7 @@ void RenderLayer::collectFragments(LayerFragments& fragments, const RenderLayer*
     
     // Calculate clip rects relative to the enclosingPaginationLayer. The purpose of this call is to determine our bounds clipped to intermediate
     // layers between us and the pagination context. It's important to minimize the number of fragments we need to create and this helps with that.
-    ClipRectsContext paginationClipRectsContext(paginationLayer, clipRectsType, clipRectOptions);
+    ClipRectsContext paginationClipRectsContext(paginationLayer, TemporaryClipRects, clipRectOptions);
     LayoutRect layerBoundsInFragmentedFlow;
     ClipRect backgroundRectInFragmentedFlow;
     ClipRect foregroundRectInFragmentedFlow;
