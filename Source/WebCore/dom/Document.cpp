@@ -9300,11 +9300,18 @@ float Document::deviceScaleFactor() const
     return deviceScaleFactor;
 }
 
+#if ENABLE(DARK_MODE_CSS)
+OptionSet<ColorScheme> Document::resolvedColorScheme(const RenderStyle* style) const
+{
+    bool isNormal = !style || style->colorScheme().isNormal();
+    return isNormal ? m_colorScheme : style->colorScheme().colorScheme();
+}
+#endif
+
 bool Document::useDarkAppearance(const RenderStyle* style) const
 {
 #if ENABLE(DARK_MODE_CSS)
-    bool isNormal = !style || style->colorScheme().isNormal();
-    auto colorScheme = isNormal ? m_colorScheme : style->colorScheme().colorScheme();
+    auto colorScheme = resolvedColorScheme(style);
 
     if (colorScheme.contains(ColorScheme::Dark) && !colorScheme.contains(ColorScheme::Light))
         return true;

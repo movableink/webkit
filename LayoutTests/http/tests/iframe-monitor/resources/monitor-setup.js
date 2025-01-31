@@ -42,4 +42,5 @@ async function waitUntilUnload(name) {
 
     // extra wait time
     await pause(100);
+    return iframe;
 }
