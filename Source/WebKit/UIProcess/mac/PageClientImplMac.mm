@@ -534,12 +534,10 @@ RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestions
     return WebDataListSuggestionsDropdownMac::create(page, m_view);
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 RefPtr<WebDateTimePicker> PageClientImpl::createDateTimePicker(WebPageProxy& page)
 {
     return WebDateTimePickerMac::create(page, m_view);
 }
-#endif
 
 Ref<ValidationBubble> PageClientImpl::createValidationBubble(const String& message, const ValidationBubble::Settings& settings)
 {

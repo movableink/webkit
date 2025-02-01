@@ -862,14 +862,10 @@ bool WebChromeClient::canShowDataListSuggestionLabels() const
 #endif
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 RefPtr<DateTimeChooser> WebChromeClient::createDateTimeChooser(DateTimeChooserClient& client)
 {
     return WebDateTimeChooser::create(protectedPage(), client);
 }
-
-#endif
 
 void WebChromeClient::runOpenPanel(LocalFrame& frame, FileChooser& fileChooser)
 {

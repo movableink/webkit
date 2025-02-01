@@ -41,6 +41,7 @@
 #include "DOMPasteAccess.h"
 #include "DataListSuggestionPicker.h"
 #include "DatabaseProvider.h"
+#include "DateTimeChooser.h"
 #include "DiagnosticLoggingClient.h"
 #include "DisplayRefreshMonitor.h"
 #include "DisplayRefreshMonitorFactory.h"
@@ -99,10 +100,6 @@
 
 #if USE(QUICK_LOOK)
 #include "LegacyPreviewLoaderClient.h"
-#endif
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-#include "DateTimeChooser.h"
 #endif
 
 namespace WebCore {
@@ -582,14 +579,10 @@ RefPtr<DataListSuggestionPicker> EmptyChromeClient::createDataListSuggestionPick
     return nullptr;
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 RefPtr<DateTimeChooser> EmptyChromeClient::createDateTimeChooser(DateTimeChooserClient&)
 {
     return nullptr;
 }
-
-#endif
 
 void EmptyChromeClient::setTextIndicator(const TextIndicatorData&) const
 {

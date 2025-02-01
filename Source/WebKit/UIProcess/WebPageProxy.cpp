@@ -143,6 +143,7 @@
 #include "WebBackForwardListItem.h"
 #include "WebContextMenuItem.h"
 #include "WebContextMenuProxy.h"
+#include "WebDateTimePicker.h"
 #include "WebEditCommandProxy.h"
 #include "WebErrors.h"
 #include "WebEventConversion.h"
@@ -372,10 +373,6 @@
 
 #if PLATFORM(COCOA)
 #include "DefaultWebBrowserChecks.h"
-#endif
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-#include "WebDateTimePicker.h"
 #endif
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
@@ -9167,16 +9164,14 @@ void WebPageProxy::didSelectOption(const String& selectedOption)
     send(Messages::WebPage::DidSelectDataListOption(selectedOption));
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 void WebPageProxy::showDateTimePicker(WebCore::DateTimeChooserParameters&& params)
 {
     if (!m_dateTimePicker) {
-        RefPtr pageClient = this->pageClient();
-        if (!pageClient)
-            return;
-        m_dateTimePicker = pageClient->createDateTimePicker(*this);
+        if (RefPtr pageClient = this->pageClient())
+            m_dateTimePicker = pageClient->createDateTimePicker(*this);
     }
+    if (!m_dateTimePicker)
+        return;
 
     Ref { *m_dateTimePicker }->showDateTimePicker(WTFMove(params));
 }
@@ -9207,8 +9202,6 @@ void WebPageProxy::didEndDateTimePicker()
     auto targetFrameID = focusedOrMainFrame() ? std::optional(focusedOrMainFrame()->frameID()) : std::nullopt;
     sendToProcessContainingFrame(targetFrameID, Messages::WebPage::DidEndDateTimePicker());
 }
-
-#endif
 
 WebInspectorUIProxy* WebPageProxy::inspector() const
 {
@@ -13777,9 +13770,7 @@ void WebPageProxy::closeOverlayedViews()
 
     endColorPicker();
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     endDateTimePicker();
-#endif
 }
 
 #if ENABLE(POINTER_LOCK)

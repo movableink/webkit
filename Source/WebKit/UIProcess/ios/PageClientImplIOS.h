@@ -147,15 +147,13 @@ private:
     RefPtr<WebPopupMenuProxy> createPopupMenuProxy(WebPageProxy&) override;
     Ref<WebCore::ValidationBubble> createValidationBubble(const String& message, const WebCore::ValidationBubble::Settings&) final;
 
-    RefPtr<WebColorPicker> createColorPicker(WebPageProxy&, const WebCore::Color& initialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&) final;
+    RefPtr<WebColorPicker> createColorPicker(WebPageProxy&, const WebCore::Color& initialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&) final { return nullptr; }
 
     RefPtr<WebDataListSuggestionsDropdown> createDataListSuggestionsDropdown(WebPageProxy&) final;
 
     WebCore::DataOwnerType dataOwnerForPasteboard(PasteboardAccessIntent) const final;
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    RefPtr<WebDateTimePicker> createDateTimePicker(WebPageProxy&) final;
-#endif
+    RefPtr<WebDateTimePicker> createDateTimePicker(WebPageProxy&) final { return nullptr; }
 
     void setTextIndicator(Ref<WebCore::TextIndicator>, WebCore::TextIndicatorLifetime) override;
     void clearTextIndicator(WebCore::TextIndicatorDismissalAnimation) override;

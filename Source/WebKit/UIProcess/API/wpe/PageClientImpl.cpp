@@ -38,6 +38,7 @@
 #include "WebContextMenuProxy.h"
 #include "WebContextMenuProxyWPE.h"
 #include "WebDataListSuggestionsDropdown.h"
+#include "WebDateTimePicker.h"
 #include "WebKitPopupMenu.h"
 #include <WebCore/ActivityState.h>
 #include <WebCore/Cursor.h>
@@ -304,6 +305,11 @@ RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy&, const We
 }
 
 RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestionsDropdown(WebPageProxy&)
+{
+    return nullptr;
+}
+
+RefPtr<WebDateTimePicker> PageClientImpl::createDateTimePicker(WebPageProxy& page)
 {
     return nullptr;
 }

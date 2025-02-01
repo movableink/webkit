@@ -173,10 +173,8 @@ messages -> WebPage WantsAsyncDispatchMessage {
     DidSelectDataListOption(String selectedOption);
     DidCloseSuggestions();
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     DidChooseDate(String date);
     DidEndDateTimePicker();
-#endif
 
     ScrollBy(enum:uint8_t WebCore::ScrollDirection scrollDirection, enum:uint8_t WebCore::ScrollGranularity scrollGranularity)
     CenterSelectionInVisibleArea()

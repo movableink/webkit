@@ -985,22 +985,10 @@ Ref<ValidationBubble> PageClientImpl::createValidationBubble(const String& messa
     return ValidationBubble::create(m_contentView.getAutoreleased(), message, settings);
 }
 
-RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy&, const WebCore::Color& initialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&)
-{
-    return nullptr;
-}
-
 RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestionsDropdown(WebPageProxy& page)
 {
     return WebDataListSuggestionsDropdownIOS::create(page, m_contentView.getAutoreleased());
 }
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-RefPtr<WebDateTimePicker> PageClientImpl::createDateTimePicker(WebPageProxy&)
-{
-    return nullptr;
-}
-#endif
 
 #if ENABLE(DRAG_SUPPORT)
 void PageClientImpl::didPerformDragOperation(bool handled)

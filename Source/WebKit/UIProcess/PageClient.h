@@ -30,7 +30,6 @@
 #include "PDFPluginIdentifier.h"
 #include "PasteboardAccessIntent.h"
 #include "SameDocumentNavigationType.h"
-#include "WebDateTimePicker.h"
 #include "WebPopupMenuProxy.h"
 #include "WindowKind.h"
 #include <WebCore/ActivityState.h>
@@ -188,6 +187,7 @@ class WebBackForwardListItem;
 class WebColorPicker;
 class WebContextMenuProxy;
 class WebDataListSuggestionsDropdown;
+class WebDateTimePicker;
 class WebEditCommandProxy;
 class WebFrameProxy;
 class WebOpenPanelResultListenerProxy;
@@ -206,10 +206,6 @@ struct WebHitTestResultData;
 
 #if ENABLE(TOUCH_EVENTS)
 class NativeWebTouchEvent;
-#endif
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-class WebDateTimePicker;
 #endif
 
 #if ENABLE(FULLSCREEN_API)
@@ -445,9 +441,7 @@ public:
 
     virtual RefPtr<WebDataListSuggestionsDropdown> createDataListSuggestionsDropdown(WebPageProxy&) = 0;
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     virtual RefPtr<WebDateTimePicker> createDateTimePicker(WebPageProxy&) = 0;
-#endif
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)
     virtual Ref<WebCore::ValidationBubble> createValidationBubble(const String& message, const WebCore::ValidationBubble::Settings&) = 0;

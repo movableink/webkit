@@ -165,9 +165,7 @@ private:
     RefPtr<WebCore::DataListSuggestionPicker> createDataListSuggestionPicker(WebCore::DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final;
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     RefPtr<WebCore::DateTimeChooser> createDateTimeChooser(WebCore::DateTimeChooserClient&) final;
-#endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)
     void didPreventDefaultForEvent() final;

@@ -85,7 +85,6 @@ class WorkerClient;
 struct AppHighlight;
 struct ContactInfo;
 struct ContactsRequestData;
-struct DateTimeChooserParameters;
 struct ShareDataWithParsedURL;
 struct ViewportArguments;
 struct WindowFeatures;
@@ -197,9 +196,7 @@ public:
 
     RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&);
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&);
-#endif
 
     std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&);
 

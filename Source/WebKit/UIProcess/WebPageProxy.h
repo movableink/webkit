@@ -2097,10 +2097,8 @@ public:
     void didSelectOption(const String&);
     void didCloseSuggestions();
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     void didChooseDate(StringView);
     void didEndDateTimePicker();
-#endif
 
     void updateCurrentModifierState();
 
@@ -2852,10 +2850,8 @@ private:
     void handleKeydownInDataList(const String&);
     void endDataListSuggestions();
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     void showDateTimePicker(WebCore::DateTimeChooserParameters&&);
     void endDateTimePicker();
-#endif
 
     void closeOverlayedViews();
 
@@ -3538,9 +3534,7 @@ private:
     uint64_t m_handlingPreventableTouchEndCount { 0 };
     EventPreventionState m_touchMovePreventionState { EventPreventionState::None };
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     RefPtr<WebDateTimePicker> m_dateTimePicker;
-#endif
 #if PLATFORM(COCOA) || PLATFORM(GTK)
     RefPtr<WebCore::ValidationBubble> m_validationBubble;
 #endif

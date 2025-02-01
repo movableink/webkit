@@ -144,9 +144,7 @@ private:
     RefPtr<WebCore::DataListSuggestionPicker> createDataListSuggestionPicker(WebCore::DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final { return false; }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     RefPtr<WebCore::DateTimeChooser> createDateTimeChooser(WebCore::DateTimeChooserClient&) final;
-#endif
 
     void setTextIndicator(const WebCore::TextIndicatorData&) const final;
 

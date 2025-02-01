@@ -37,6 +37,7 @@
 #include "WebColorPickerGtk.h"
 #include "WebContextMenuProxyGtk.h"
 #include "WebDataListSuggestionsDropdownGtk.h"
+#include "WebDateTimePickerGtk.h"
 #include "WebEventFactory.h"
 #include "WebKitClipboardPermissionRequestPrivate.h"
 #include "WebKitColorChooser.h"
@@ -63,10 +64,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unix/UnixFileDescriptor.h>
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-#include "WebDateTimePickerGtk.h"
-#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -316,12 +313,10 @@ RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy& page, con
     return WebColorPickerGtk::create(page, color, rect);
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 RefPtr<WebDateTimePicker> PageClientImpl::createDateTimePicker(WebPageProxy& page)
 {
     return WebDateTimePickerGtk::create(page);
 }
-#endif
 
 RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestionsDropdown(WebPageProxy& page)
 {

@@ -5663,8 +5663,6 @@ void WebPage::didCloseSuggestions()
         picker->didCloseSuggestions();
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 void WebPage::setActiveDateTimeChooser(WebDateTimeChooser& dateTimeChooser)
 {
     m_activeDateTimeChooser = dateTimeChooser;
@@ -5681,8 +5679,6 @@ void WebPage::didEndDateTimePicker()
     if (auto chooser = std::exchange(m_activeDateTimeChooser, nullptr))
         chooser->didEndChooser();
 }
-
-#endif
 
 void WebPage::setActiveOpenPanelResultListener(Ref<WebOpenPanelResultListener>&& openPanelResultListener)
 {

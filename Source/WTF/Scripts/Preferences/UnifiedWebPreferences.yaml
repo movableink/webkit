@@ -2483,7 +2483,6 @@ DateTimeInputsEditableComponentsEnabled:
   status: embedder
   humanReadableName: "Date/Time inputs have editable components"
   humanReadableDescription: "Enable multiple editable components in date/time inputs"
-  condition: ENABLE(DATE_AND_TIME_INPUT_TYPES)
   defaultValue:
     WebKitLegacy:
       default: false
@@ -3775,79 +3774,82 @@ InputTypeColorEnhancementsEnabled:
 
 InputTypeDateEnabled:
   type: bool
-  status: embedder
+  status: mature
   humanReadableName: "Date Input"
   humanReadableDescription: "Enable input elements of type date"
-  condition: ENABLE(INPUT_TYPE_DATE)
   defaultValue:
     WebKitLegacy:
       "PLATFORM(IOS_FAMILY)": true
       default: false
     WebKit:
-      default: true
+      "PLATFORM(COCOA) || PLATFORM(GTK)": true
+      default: false
     WebCore:
       default: false
+  sharedPreferenceForWebProcess: true
 
 InputTypeDateTimeLocalEnabled:
   type: bool
-  status: embedder
+  status: mature
   humanReadableName: "datetime-local Inputs"
   humanReadableDescription: "Enable input elements of type datetime-local"
-  condition: ENABLE(INPUT_TYPE_DATETIMELOCAL)
   defaultValue:
     WebKitLegacy:
       "PLATFORM(IOS_FAMILY)": true
       default: false
     WebKit:
-      default: true
+      "PLATFORM(COCOA) || PLATFORM(GTK)": true
+      default: false
     WebCore:
       default: false
+  sharedPreferenceForWebProcess: true
 
 InputTypeMonthEnabled:
   type: bool
   status: embedder
   humanReadableName: "Month Input"
   humanReadableDescription: "Enable input elements of type month"
-  condition: ENABLE(INPUT_TYPE_MONTH)
   defaultValue:
     WebKitLegacy:
       "PLATFORM(IOS_FAMILY)": true
       default: false
     WebKit:
-      "!PLATFORM(MAC)": true
+      "PLATFORM(IOS_FAMILY) || PLATFORM(GTK)": true
       default: false
     WebCore:
       default: false
+  sharedPreferenceForWebProcess: true
 
 InputTypeTimeEnabled:
   type: bool
-  status: embedder
+  status: mature
   humanReadableName: "Time Input"
   humanReadableDescription: "Enable input elements of type time"
-  condition: ENABLE(INPUT_TYPE_TIME)
   defaultValue:
     WebKitLegacy:
       "PLATFORM(IOS_FAMILY)": true
       default: false
     WebKit:
-      default: true
+      "PLATFORM(COCOA) || PLATFORM(GTK)": true
+      default: false
     WebCore:
       default: false
+  sharedPreferenceForWebProcess: true
 
 InputTypeWeekEnabled:
   type: bool
   status: embedder
   humanReadableName: "Week Input"
   humanReadableDescription: "Enable input elements of type week"
-  condition: ENABLE(INPUT_TYPE_WEEK)
   defaultValue:
     WebKitLegacy:
       default: false
     WebKit:
-      "!PLATFORM(MAC) && !PLATFORM(APPLETV)": true
+      "PLATFORM(IOS_FAMILY) && !PLATFORM(APPLETV) || PLATFORM(GTK)": true
       default: false
     WebCore:
       default: false
+  sharedPreferenceForWebProcess: true
 
 InspectorAttachedHeight:
   type: uint32_t

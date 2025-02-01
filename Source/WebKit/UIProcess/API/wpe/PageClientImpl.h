@@ -131,6 +131,8 @@ private:
 
     RefPtr<WebDataListSuggestionsDropdown> createDataListSuggestionsDropdown(WebPageProxy&) override;
 
+    RefPtr<WebDateTimePicker> createDateTimePicker(WebPageProxy&) override;
+
     void enterAcceleratedCompositingMode(const LayerTreeContext&) override;
     void exitAcceleratedCompositingMode() override;
     void updateAcceleratedCompositingMode(const LayerTreeContext&) override;

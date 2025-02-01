@@ -361,9 +361,7 @@ public:
     virtual RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) = 0;
     virtual bool canShowDataListSuggestionLabels() const = 0;
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     virtual RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) = 0;
-#endif
 
     virtual void setTextIndicator(const TextIndicatorData&) const = 0;
 

@@ -689,11 +689,9 @@ public:
     void didSelectDataListOption(const String&);
     void didCloseSuggestions();
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     void setActiveDateTimeChooser(WebDateTimeChooser&);
     void didChooseDate(const String&);
     void didEndDateTimePicker();
-#endif
 
     WebOpenPanelResultListener* activeOpenPanelResultListener() const { return m_activeOpenPanelResultListener.get(); }
     void setActiveOpenPanelResultListener(Ref<WebOpenPanelResultListener>&&);
@@ -2640,9 +2638,7 @@ private:
 
     WeakPtr<WebDataListSuggestionPicker> m_activeDataListSuggestionPicker;
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     WeakPtr<WebDateTimeChooser> m_activeDateTimeChooser;
-#endif
 
     RefPtr<WebOpenPanelResultListener> m_activeOpenPanelResultListener;
     RefPtr<NotificationPermissionRequestManager> m_notificationPermissionRequestManager;

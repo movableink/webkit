@@ -714,13 +714,11 @@ RefPtr<DataListSuggestionPicker> WebChromeClient::createDataListSuggestionPicker
     return nullptr;
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 RefPtr<DateTimeChooser> WebChromeClient::createDateTimeChooser(DateTimeChooserClient&)
 {
     ASSERT_NOT_REACHED();
     return nullptr;
 }
-#endif
 
 void WebChromeClient::setTextIndicator(const WebCore::TextIndicatorData& indicatorData) const
 {

@@ -32,8 +32,6 @@
 #include "config.h"
 #include "BaseDateAndTimeInputType.h"
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "BaseClickableWithKeyInputType.h"
 #include "Chrome.h"
 #include "DateComponents.h"
@@ -643,5 +641,3 @@ void BaseDateAndTimeInputType::closeDateTimeChooser()
 }
 
 } // namespace WebCore
-
-#endif

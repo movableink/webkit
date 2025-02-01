@@ -2415,7 +2415,6 @@ class WebCore::ContentType {
     bool typeWasInferredFromExtension();
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 struct WebCore::DateTimeChooserParameters {
     AtomString type;
     WebCore::IntRect anchorRectInRootView;
@@ -2434,7 +2433,6 @@ struct WebCore::DateTimeChooserParameters {
     bool hasSecondField;
     bool hasMillisecondField;
 }
-#endif
 
 header: <WebCore/ScreenProperties.h>
 [CustomHeader] struct WebCore::ScreenData {

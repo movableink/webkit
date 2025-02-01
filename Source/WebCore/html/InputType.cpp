@@ -131,19 +131,13 @@ static InputTypeFactoryMap createInputTypeFactoryMap()
         { nullptr, &InputTypeNames::button, &createInputType<ButtonInputType> },
         { nullptr, &InputTypeNames::checkbox, &createInputType<CheckboxInputType> },
         { &Settings::inputTypeColorEnabled, &InputTypeNames::color, &createInputType<ColorInputType> },
-#if ENABLE(INPUT_TYPE_DATE)
         { &Settings::inputTypeDateEnabled, &InputTypeNames::date, &createInputType<DateInputType> },
-#endif
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
         { &Settings::inputTypeDateTimeLocalEnabled, &InputTypeNames::datetimelocal, &createInputType<DateTimeLocalInputType> },
-#endif
         { nullptr, &InputTypeNames::email, &createInputType<EmailInputType> },
         { nullptr, &InputTypeNames::file, &createInputType<FileInputType> },
         { nullptr, &InputTypeNames::hidden, &createInputType<HiddenInputType> },
         { nullptr, &InputTypeNames::image, &createInputType<ImageInputType> },
-#if ENABLE(INPUT_TYPE_MONTH)
         { &Settings::inputTypeMonthEnabled, &InputTypeNames::month, &createInputType<MonthInputType> },
-#endif
         { nullptr, &InputTypeNames::number, &createInputType<NumberInputType> },
         { nullptr, &InputTypeNames::password, &createInputType<PasswordInputType> },
         { nullptr, &InputTypeNames::radio, &createInputType<RadioInputType> },
@@ -153,13 +147,9 @@ static InputTypeFactoryMap createInputTypeFactoryMap()
         { nullptr, &InputTypeNames::submit, &createInputType<SubmitInputType> },
         { nullptr, &InputTypeNames::telephone, &createInputType<TelephoneInputType> },
         { nullptr, &InputTypeNames::text, &createInputType<TextInputType> },
-#if ENABLE(INPUT_TYPE_TIME)
         { &Settings::inputTypeTimeEnabled, &InputTypeNames::time, &createInputType<TimeInputType> },
-#endif
         { nullptr, &InputTypeNames::url, &createInputType<URLInputType> },
-#if ENABLE(INPUT_TYPE_WEEK)
         { &Settings::inputTypeWeekEnabled, &InputTypeNames::week, &createInputType<WeekInputType> },
-#endif
     };
 
     InputTypeFactoryMap map;
@@ -221,14 +211,10 @@ bool InputType::isValidValue(const String& value) const
         return validateInputType(uncheckedDowncast<CheckboxInputType>(*this), value);
     case Type::Color:
         return validateInputType(uncheckedDowncast<ColorInputType>(*this), value);
-#if ENABLE(INPUT_TYPE_DATE)
     case Type::Date:
         return validateInputType(uncheckedDowncast<DateInputType>(*this), value);
-#endif
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
     case Type::DateTimeLocal:
         return validateInputType(uncheckedDowncast<DateTimeLocalInputType>(*this), value);
-#endif
     case Type::Email:
         return validateInputType(uncheckedDowncast<EmailInputType>(*this), value);
     case Type::File:
@@ -237,10 +223,8 @@ bool InputType::isValidValue(const String& value) const
         return validateInputType(uncheckedDowncast<HiddenInputType>(*this), value);
     case Type::Image:
         return validateInputType(uncheckedDowncast<ImageInputType>(*this), value);
-#if ENABLE(INPUT_TYPE_MONTH)
     case Type::Month:
         return validateInputType(uncheckedDowncast<MonthInputType>(*this), value);
-#endif
     case Type::Number:
         return validateInputType(uncheckedDowncast<NumberInputType>(*this), value);
     case Type::Password:
@@ -257,16 +241,12 @@ bool InputType::isValidValue(const String& value) const
         return validateInputType(uncheckedDowncast<SubmitInputType>(*this), value);
     case Type::Telephone:
         return validateInputType(uncheckedDowncast<TelephoneInputType>(*this), value);
-#if ENABLE(INPUT_TYPE_TIME)
     case Type::Time:
         return validateInputType(uncheckedDowncast<TimeInputType>(*this), value);
-#endif
     case Type::URL:
         return validateInputType(uncheckedDowncast<URLInputType>(*this), value);
-#if ENABLE(INPUT_TYPE_WEEK)
     case Type::Week:
         return validateInputType(uncheckedDowncast<WeekInputType>(*this), value);
-#endif
     case Type::Text:
         return validateInputType(uncheckedDowncast<TextInputType>(*this), value);
     default:
@@ -391,17 +371,9 @@ bool InputType::isInvalid(const String& value) const
     case Type::Color:
         return isInvalidInputType<ColorInputType>(*this, value);
     case Type::Date:
-#if ENABLE(INPUT_TYPE_DATE)
         return isInvalidInputType<DateInputType>(*this, value);
-#else
-        return false;
-#endif
     case Type::DateTimeLocal:
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
         return isInvalidInputType<DateTimeLocalInputType>(*this, value);
-#else
-        return false;
-#endif
     case Type::Email:
         return isInvalidInputType<EmailInputType>(*this, value);
     case Type::File:
@@ -411,11 +383,7 @@ bool InputType::isInvalid(const String& value) const
     case Type::Image:
         return isInvalidInputType<ImageInputType>(*this, value);
     case Type::Month:
-#if ENABLE(INPUT_TYPE_MONTH)
         return isInvalidInputType<MonthInputType>(*this, value);
-#else
-        return false;
-#endif
     case Type::Number:
         return isInvalidInputType<NumberInputType>(*this, value);
     case Type::Password:
@@ -433,19 +401,11 @@ bool InputType::isInvalid(const String& value) const
     case Type::Telephone:
         return isInvalidInputType<TelephoneInputType>(*this, value);
     case Type::Time:
-#if ENABLE(INPUT_TYPE_TIME)
         return isInvalidInputType<TimeInputType>(*this, value);
-#else
-        return false;
-#endif
     case Type::URL:
         return isInvalidInputType<URLInputType>(*this, value);
     case Type::Week:
-#if ENABLE(INPUT_TYPE_WEEK)
         return isInvalidInputType<WeekInputType>(*this, value);
-#else
-        return false;
-#endif
     case Type::Text:
         return isInvalidInputType<TextInputType>(*this, value);
     }

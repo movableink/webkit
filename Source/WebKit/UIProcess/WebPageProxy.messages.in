@@ -99,10 +99,8 @@ messages -> WebPageProxy {
     [EnabledBy=DataListElementEnabled] HandleKeydownInDataList(String key);
     [EnabledBy=DataListElementEnabled] EndDataListSuggestions();
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    ShowDateTimePicker(struct WebCore::DateTimeChooserParameters params);
-    EndDateTimePicker();
-#endif
+    [EnabledBy=InputTypeDateEnabled || InputTypeDateTimeLocalEnabled || InputTypeMonthEnabled || InputTypeTimeEnabled || InputTypeWeekEnabled] ShowDateTimePicker(struct WebCore::DateTimeChooserParameters params);
+    [EnabledBy=InputTypeDateEnabled || InputTypeDateTimeLocalEnabled || InputTypeMonthEnabled || InputTypeTimeEnabled || InputTypeWeekEnabled] EndDateTimePicker();
 
     # Policy messages
     DecidePolicyForResponse(struct WebKit::FrameInfoData frameInfo, std::optional<WebCore::NavigationIdentifier> navigationID, WebCore::ResourceResponse response, WebCore::ResourceRequest request, bool canShowMIMEType, String downloadAttribute, bool isShowingInitialAboutBlank, enum:uint8_t WebCore::CrossOriginOpenerPolicyValue activeDocumentCOOPValue) -> (struct WebKit::PolicyDecision PolicyDecision)
