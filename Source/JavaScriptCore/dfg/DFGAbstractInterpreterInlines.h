@@ -5042,16 +5042,34 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case GetGlobalVar: {
         if (node->hasDoubleResult())
             setTypeForNode(node, SpecBytecodeRealNumber);
-        else
+        else {
+            // Emptiness is monotonic. And GetGlobalLexicalVariable and GetGlobalVar are tied to GlobalObject.
+            // So long as it is not unlinked.
+            if (!m_graph.m_plan.isUnlinked()) {
+                if (JSValue concurrentlyRead = node->variablePointer()->get()) {
+                    setTypeForNode(node, SpecHeapTop & ~SpecEmpty);
+                    break;
+                }
+            }
             makeHeapTopForNode(node);
+        }
         break;
     }
 
     case GetGlobalLexicalVariable:
         if (node->hasDoubleResult())
             setTypeForNode(node, SpecBytecodeRealNumber);
-        else
+        else {
+            // Emptiness is monotonic. And GetGlobalLexicalVariable and GetGlobalVar are tied to GlobalObject.
+            // So long as it is not unlinked.
+            if (!m_graph.m_plan.isUnlinked()) {
+                if (JSValue concurrentlyRead = node->variablePointer()->get()) {
+                    setTypeForNode(node, SpecBytecodeTop & ~SpecEmpty);
+                    break;
+                }
+            }
             makeBytecodeTopForNode(node);
+        }
         break;
 
     case GetDynamicVar:
