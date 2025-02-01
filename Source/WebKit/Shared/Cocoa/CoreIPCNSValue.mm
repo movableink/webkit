@@ -28,6 +28,7 @@
 
 #import "CoreIPCNSCFObject.h"
 #import "CoreIPCTypes.h"
+#import <wtf/ObjCRuntimeExtras.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <WebCore/WAKAppKitStubs.h>
@@ -46,13 +47,11 @@ CoreIPCNSValue::CoreIPCNSValue(Value&& value)
 
 auto CoreIPCNSValue::valueFromNSValue(NSValue *nsValue) -> Value
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    if (!strcmp(nsValue.objCType, @encode(NSRange)))
+    if (nsValueHasObjCType<NSRange>(nsValue))
         return nsValue.rangeValue;
 
-    if (!strcmp(nsValue.objCType, @encode(CGRect)))
+    if (nsValueHasObjCType<CGRect>(nsValue))
         return nsValue.rectValue;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return makeUniqueRef<CoreIPCNSCFObject>(nsValue);
 }

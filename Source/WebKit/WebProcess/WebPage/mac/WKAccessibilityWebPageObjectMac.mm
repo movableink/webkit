@@ -47,6 +47,7 @@
 #import <WebCore/Scrollbar.h>
 #import <WebCore/WebAccessibilityObjectWrapperMac.h>
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
+#import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 namespace ax = WebCore::Accessibility;
@@ -311,9 +312,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     WebCore::FloatPoint pageOverlayPoint;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    if ([parameter isKindOfClass:[NSValue class]] && !strcmp([(NSValue *)parameter objCType], @encode(NSPoint)))
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    if ([parameter isKindOfClass:[NSValue class]] && nsValueHasObjCType<NSPoint>((NSValue *)parameter))
         pageOverlayPoint = [self convertScreenPointToRootView:[(NSValue *)parameter pointValue]];
     else
         return nil;

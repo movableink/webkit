@@ -81,6 +81,7 @@
 #import "VisibleUnits.h"
 #import "WebCoreFrameView.h"
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
+#import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
@@ -2390,10 +2391,8 @@ id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>& backingObje
         markerRef = (AXTextMarkerRef)parameter;
     else if (AXObjectIsTextMarkerRange(parameter))
         markerRangeRef = (AXTextMarkerRangeRef)parameter;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    else if ([parameter isKindOfClass:[NSValue class]] && !strcmp([(NSValue *)parameter objCType], @encode(NSRange)))
+    else if ([parameter isKindOfClass:[NSValue class]] && nsValueHasObjCType<NSRange>((NSValue *)parameter))
         nsRange = [(NSValue*)parameter rangeValue];
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     else
         return nil;
 
@@ -3311,8 +3310,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     bool rangeSet = false;
     NSRect rect = NSZeroRect;
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
     // common parameter type check/casting.  Nil checks in handlers catch wrong type case.
     // NOTE: This assumes nil is not a valid parameter, because it is indistinguishable from
     // a parameter of the wrong type.
@@ -3332,20 +3329,18 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         array = parameter;
     else if ([parameter isKindOfClass:[NSDictionary class]])
         dictionary = parameter;
-    else if ([parameter isKindOfClass:[NSValue class]] && !strcmp([(NSValue*)parameter objCType], @encode(NSPoint))) {
+    else if ([parameter isKindOfClass:[NSValue class]] && nsValueHasObjCType<NSPoint>((NSValue*)parameter)) {
         pointSet = true;
         point = [(NSValue*)parameter pointValue];
-    } else if ([parameter isKindOfClass:[NSValue class]] && !strcmp([(NSValue*)parameter objCType], @encode(NSRange))) {
+    } else if ([parameter isKindOfClass:[NSValue class]] && nsValueHasObjCType<NSRange>((NSValue*)parameter)) {
         rangeSet = true;
         range = [(NSValue*)parameter rangeValue];
-    } else if ([parameter isKindOfClass:[NSValue class]] && !strcmp([(NSValue*)parameter objCType], @encode(NSRect)))
+    } else if ([parameter isKindOfClass:[NSValue class]] && nsValueHasObjCType<NSRect>((NSValue*)parameter))
         rect = [(NSValue*)parameter rectValue];
     else {
         // Attribute type is not supported. Allow super to handle.
         return [super accessibilityAttributeValue:attribute forParameter:parameter];
     }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     // dispatch
     if ([attribute isEqualToString:NSAccessibilitySelectTextWithCriteriaParameterizedAttribute]) {

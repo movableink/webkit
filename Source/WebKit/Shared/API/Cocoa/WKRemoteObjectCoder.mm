@@ -36,6 +36,7 @@
 #import "_WKErrorRecoveryAttempting.h"
 #import "_WKRemoteObjectInterfaceInternal.h"
 #import <objc/runtime.h>
+#import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/Scope.h>
 #import <wtf/SetForScope.h>
@@ -152,9 +153,9 @@ static void encodeInvocationArguments(WKRemoteObjectEncoder *encoder, NSInvocati
     ASSERT(firstArgument <= argumentCount);
 
     for (NSUInteger i = firstArgument; i < argumentCount; ++i) {
-        const char* type = [methodSignature getArgumentTypeAtIndex:i];
+        auto type = unsafeSpan([methodSignature getArgumentTypeAtIndex:i]);
 
-        switch (*type) {
+        switch (type[0]) {
         // double
         case 'd': {
             double value;
@@ -286,16 +287,16 @@ static void encodeInvocationArguments(WKRemoteObjectEncoder *encoder, NSInvocati
             break;
         }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         // struct
         case '{':
-            if (!strcmp(type, @encode(NSRange))) {
+            if (equalSpans(type, objcEncode<NSRange>())) {
                 NSRange value;
                 [invocation getArgument:&value atIndex:i];
 
                 encodeToObjectStream(encoder, [NSValue valueWithRange:value]);
                 break;
-            } else if (!strcmp(type, @encode(CGSize))) {
+            }
+            if (equalSpans(type, objcEncode<CGSize>())) {
                 CGSize value;
                 [invocation getArgument:&value atIndex:i];
 
@@ -304,10 +305,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
                 break;
             }
             FALLTHROUGH;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         default:
-            [NSException raise:NSInvalidArgumentException format:@"Unsupported invocation argument type '%s'", type];
+            [NSException raise:NSInvalidArgumentException format:@"Unsupported invocation argument type '%.*s'", static_cast<int>(type.size()), type.data()];
         }
     }
 }
@@ -863,9 +863,9 @@ static void decodeInvocationArguments(WKRemoteObjectDecoder *decoder, NSInvocati
     ASSERT(firstArgument <= argumentCount);
 
     for (NSUInteger i = firstArgument; i < argumentCount; ++i) {
-        const char* type = [methodSignature getArgumentTypeAtIndex:i];
+        auto type = unsafeSpan([methodSignature getArgumentTypeAtIndex:i]);
 
-        switch (*type) {
+        switch (type[0]) {
         // double
         case 'd': {
             double value = [decodeObjectFromObjectStream(decoder, { (__bridge CFTypeRef)[NSNumber class] }) doubleValue];
@@ -968,14 +968,14 @@ static void decodeInvocationArguments(WKRemoteObjectDecoder *decoder, NSInvocati
             break;
         }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         // struct
         case '{':
-            if (!strcmp(type, @encode(NSRange))) {
+            if (equalSpans(type, objcEncode<NSRange>())) {
                 NSRange value = [decodeObjectFromObjectStream(decoder, { (__bridge CFTypeRef)[NSValue class] }) rangeValue];
                 [invocation setArgument:&value atIndex:i];
                 break;
-            } else if (!strcmp(type, @encode(CGSize))) {
+            }
+            if (equalSpans(type, objcEncode<CGSize>())) {
                 CGSize value;
                 value.width = [decodeObjectFromObjectStream(decoder, { (__bridge CFTypeRef)[NSNumber class] }) doubleValue];
                 value.height = [decodeObjectFromObjectStream(decoder, { (__bridge CFTypeRef)[NSNumber class] }) doubleValue];
@@ -983,10 +983,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
                 break;
             }
             FALLTHROUGH;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         default:
-            [NSException raise:NSInvalidArgumentException format:@"Unsupported invocation argument type '%s' for argument %zu", type, (unsigned long)i];
+            [NSException raise:NSInvalidArgumentException format:@"Unsupported invocation argument type '%.*s' for argument %zu", static_cast<int>(type.size()), type.data(), (unsigned long)i];
         }
     }
 }
