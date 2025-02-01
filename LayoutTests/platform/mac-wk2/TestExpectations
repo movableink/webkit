@@ -1953,3 +1953,5 @@ webkit.org/b/286371 [ Sequoia Release x86_64 ] webrtc/captureCanvas-webrtc-softw
 webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
 
 webkit.org/b/286693 [ Sequoia Debug arm64 ] media/video-canvas-createPattern.html [ Pass Failure ]
+
+webkit.org/b/286843 [ Debug ] imported/w3c/web-platform-tests/screen-orientation/orientation-reading.html [ Pass Failure ]
