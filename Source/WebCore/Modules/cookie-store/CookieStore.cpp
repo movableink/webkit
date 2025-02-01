@@ -427,6 +427,18 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
         }
     }
 
+    if (cookie.name.startsWithIgnoringASCIICase("__Host-"_s)) {
+        if (!options.domain.isNull()) {
+            promise->reject(Exception { ExceptionCode::TypeError, "If the cookie name begins with \"__Host-\", the domain must not be specified."_s });
+            return;
+        }
+
+        if (!options.path.isNull() && options.path != "/"_s)  {
+            promise->reject(Exception { ExceptionCode::TypeError, "If the cookie name begins with \"__Host-\", the path must either not be specified or be \"/\"."_s });
+            return;
+        }
+    }
+
     cookie.domain = options.domain.isNull() ? domain : options.domain;
     if (!cookie.domain.isNull()) {
         if (cookie.domain.startsWith('.')) {
