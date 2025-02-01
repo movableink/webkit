@@ -314,7 +314,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp,
     const auto& wasmCC = wasmCallingConvention().callInformationFor(typeDefinition, CallRole::Caller);
     const auto& jsCC = jsCallingConvention().callInformationFor(typeDefinition, CallRole::Callee);
 
-    if (UNLIKELY(wasmCC.argumentsOrResultsIncludeV128 || wasmCC.argumentsOrResultsIncludeExnref))
+    if (UNLIKELY(signature.argumentsOrResultsIncludeV128() || signature.argumentsOrResultsIncludeExnref()))
         OPERATION_RETURN(scope, false);
 
     for (unsigned argNum = 0; argNum < argCount; ++argNum) {

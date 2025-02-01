@@ -1507,7 +1507,7 @@ auto FunctionParser<Context>::parseTableIndex(unsigned& result) -> PartialResult
 }
 
 template<typename Context>
-auto FunctionParser<Context>::parseIndexForLocal(uint32_t& resultIndex) -> PartialResult
+ALWAYS_INLINE auto FunctionParser<Context>::parseIndexForLocal(uint32_t& resultIndex) -> PartialResult
 {
     uint32_t index;
     WASM_PARSER_FAIL_IF(!parseVarUInt32(index), "can't get index for local"_s);

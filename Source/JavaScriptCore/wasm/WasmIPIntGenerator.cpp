@@ -2497,7 +2497,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addSwitch(ExpressionType, const
     };
     m_metadata->appendMetadata(mdSwitch);
 
-    for (auto block : jumps) {
+    for (auto* block : jumps) {
         IPInt::BranchTargetMetadata target {
             .block = { .deltaPC = 0xbeef, .deltaMC = 0xbeef },
             .toPop = safeCast<uint16_t>(m_stackSize - block->stackSize() - block->branchTargetArity()),
@@ -2646,8 +2646,8 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
 
     Vector<uint8_t, 16> mINTBytecode;
     mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::Call));
-    for (size_t i = 0; i < signature.argumentCount(); ++i) {
-        auto loc = callConvention.params[i].location;
+    for (auto& argumentLocation : callConvention.params) {
+        auto loc = argumentLocation.location;
         if (loc.isGPR()) {
 #if USE(JSVALUE64)
             ASSERT_UNUSED(NUM_MINT_CALL_GPRS, GPRInfo::toArgumentIndex(loc.jsr().gpr()) < NUM_MINT_CALL_GPRS);
@@ -2680,9 +2680,8 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
     m_metadata->addBlankSpace(mINTBytecode.size());
     auto data = m_metadata->m_metadata.data() + size;
     while (!mINTBytecode.isEmpty()) {
-        WRITE_TO_METADATA(data, mINTBytecode.last(), uint8_t);
+        WRITE_TO_METADATA(data, mINTBytecode.takeLast(), uint8_t);
         data += 1;
-        mINTBytecode.removeLast();
     }
 
     IPInt::CallReturnMetadata commonReturn {
@@ -2693,8 +2692,6 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
 
     mINTBytecode.clear();
 
-    CallInformation returnConvention = wasmCallingConvention().callInformationFor(signature, CallRole::Caller);
-
     constexpr static int NUM_MINT_RET_GPRS = 8;
     constexpr static int NUM_MINT_RET_FPRS = 8;
     ASSERT_UNUSED(NUM_MINT_RET_GPRS, wasmCallingConvention().jsrArgs.size() <= NUM_MINT_RET_GPRS);
@@ -2703,8 +2700,8 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature& signature, const
     bool hasSeenStackArgument = false;
     uint32_t firstStackArgumentSPOffset = 0;
 
-    for (size_t i = 0; i < signature.returnCount(); ++i) {
-        auto loc = returnConvention.results[i].location;
+    for (auto& returnLocation : callConvention.results) {
+        auto loc = returnLocation.location;
         if (loc.isGPR()) {
             ASSERT_UNUSED(NUM_MINT_RET_GPRS, GPRInfo::toArgumentIndex(loc.jsr().payloadGPR()) < NUM_MINT_RET_GPRS);
 #if USE(JSVALUE64)
@@ -2748,8 +2745,8 @@ void IPIntGenerator::addTailCallCommonData(const FunctionSignature& signature)
 
     Vector<uint8_t, 16> mINTBytecode;
     mINTBytecode.append(static_cast<uint8_t>(IPInt::CallArgumentBytecode::TailCall));
-    for (size_t i = 0; i < signature.argumentCount(); ++i) {
-        auto loc = callConvention.params[i].location;
+    for (auto& argumentLocation : callConvention.params) {
+        auto loc = argumentLocation.location;
         if (loc.isGPR()) {
 #if USE(JSVALUE64)
             ASSERT_UNUSED(NUM_MINT_CALL_GPRS, GPRInfo::toArgumentIndex(loc.jsr().gpr()) < NUM_MINT_CALL_GPRS);
@@ -2782,9 +2779,8 @@ void IPIntGenerator::addTailCallCommonData(const FunctionSignature& signature)
     m_metadata->addBlankSpace(mINTBytecode.size());
     auto data = m_metadata->m_metadata.data() + size;
     while (!mINTBytecode.isEmpty()) {
-        WRITE_TO_METADATA(data, mINTBytecode.last(), uint8_t);
+        WRITE_TO_METADATA(data, mINTBytecode.takeLast(), uint8_t);
         data += 1;
-        mINTBytecode.removeLast();
     }
 
     uint32_t numStackValues = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), wasmCallingConvention().numberOfStackValues(signature));

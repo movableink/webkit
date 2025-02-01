@@ -61,8 +61,8 @@ struct JumpTableEntry;
 
 #define WRITE_TO_METADATA(dst, src, type) \
     do { \
-        type tmp = src; \
-        memcpy(dst, &tmp, sizeof(type)); \
+        type tmp = (src); \
+        memcpy((dst), &tmp, sizeof(type)); \
     } while (false)
 
 class FunctionIPIntMetadataGenerator {

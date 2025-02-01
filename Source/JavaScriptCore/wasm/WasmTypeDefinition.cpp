@@ -685,12 +685,14 @@ struct FunctionParameterTypes {
         RefPtr<TypeDefinition> signature = TypeDefinition::tryCreateFunctionSignature(params.returnTypes.size(), params.argumentTypes.size());
         RELEASE_ASSERT(signature);
         bool hasRecursiveReference = false;
+        bool argumentsOrResultsIncludeI64 = false;
         bool argumentsOrResultsIncludeV128 = false;
         bool argumentsOrResultsIncludeExnref = false;
 
         for (unsigned i = 0; i < params.returnTypes.size(); ++i) {
             signature->as<FunctionSignature>()->getReturnType(i) = params.returnTypes[i];
             hasRecursiveReference |= isRefWithRecursiveReference(params.returnTypes[i]);
+            argumentsOrResultsIncludeI64 |= params.returnTypes[i].isI64();
             argumentsOrResultsIncludeV128 |= params.returnTypes[i].isV128();
             argumentsOrResultsIncludeExnref |= isExnref(params.returnTypes[i]);
         }
@@ -698,11 +700,13 @@ struct FunctionParameterTypes {
         for (unsigned i = 0; i < params.argumentTypes.size(); ++i) {
             signature->as<FunctionSignature>()->getArgumentType(i) = params.argumentTypes[i];
             hasRecursiveReference |= isRefWithRecursiveReference(params.argumentTypes[i]);
+            argumentsOrResultsIncludeI64 |= params.argumentTypes[i].isI64();
             argumentsOrResultsIncludeV128 |= params.argumentTypes[i].isV128();
             argumentsOrResultsIncludeExnref |= isExnref(params.argumentTypes[i]);
         }
 
         signature->as<FunctionSignature>()->setHasRecursiveReference(hasRecursiveReference);
+        signature->as<FunctionSignature>()->setArgumentsOrResultsIncludeI64(argumentsOrResultsIncludeI64);
         signature->as<FunctionSignature>()->setArgumentsOrResultsIncludeV128(argumentsOrResultsIncludeV128);
         signature->as<FunctionSignature>()->setArgumentsOrResultsIncludeExnref(argumentsOrResultsIncludeExnref);
 
@@ -913,6 +917,8 @@ TypeInformation::TypeInformation()
             RefPtr<TypeDefinition> sig = TypeDefinition::tryCreateFunctionSignature(1, 0); \
             sig->ref();                                                                    \
             sig->as<FunctionSignature>()->getReturnType(0) = Types::type;                  \
+            if (Types::type.isI64())                                                       \
+                sig->as<FunctionSignature>()->setArgumentsOrResultsIncludeI64(true);       \
             if (Types::type.isV128())                                                      \
                 sig->as<FunctionSignature>()->setArgumentsOrResultsIncludeV128(true);      \
             if (isExnref(Types::type))                                                     \
