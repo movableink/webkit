@@ -4819,8 +4819,11 @@ private:
 
     JSValue readTerminal()
     {
-        if (!isSafeToRecurse())
+        if (!isSafeToRecurse()) {
+            SERIALIZE_TRACE("FAIL deserialize");
+            fail();
             return JSValue();
+        }
         auto originalData = m_data;
         SerializationTag tag = readTag();
         if (!isTypeExposedToGlobalObject(*m_globalObject, tag)) {
