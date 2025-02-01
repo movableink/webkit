@@ -287,6 +287,24 @@ static UIAxis axesForDelta(WebCore::FloatSize delta)
 
 @end
 
+#if USE(UICONTEXTMENU)
+
+@implementation UIContextMenuInteraction (WebKitInternal)
+
+- (BOOL)_wk_isMenuVisible
+{
+    bool contextMenuIsVisible = false;
+    [self updateVisibleMenuWithBlock:makeBlockPtr([&contextMenuIsVisible](UIMenu *menu) {
+        contextMenuIsVisible = true;
+        return menu;
+    }).get()];
+    return contextMenuIsVisible;
+}
+
+@end
+
+#endif // USE(UICONTEXTMENU)
+
 namespace WebKit {
 
 RetainPtr<UIAlertController> createUIAlertController(NSString *title, NSString *message)

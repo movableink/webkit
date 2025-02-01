@@ -385,7 +385,7 @@ WKSelectionDrawingInfo::WKSelectionDrawingInfo()
 
 WKSelectionDrawingInfo::WKSelectionDrawingInfo(const EditorState& editorState)
 {
-    if (editorState.selectionIsNone) {
+    if (editorState.selectionIsNone || (!editorState.selectionIsRange && !editorState.isContentEditable)) {
         type = SelectionType::None;
         return;
     }
