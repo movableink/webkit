@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,19 +30,12 @@
 #include "PlatformWebView.h"
 #include "TestController.h"
 #include <ImageIO/ImageIO.h>
+#include <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #include <WebKit/WKImageCG.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/SHA1.h>
-
-#if PLATFORM(MAC) && !PLATFORM(IOS_FAMILY)
-#include <CoreServices/CoreServices.h>
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-// FIXME: get kUTTypePNG from MobileCoreServices on iOS
-static const CFStringRef kUTTypePNG = CFSTR("public.png");
-#endif
+#include <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WTR {
 
@@ -78,7 +71,7 @@ static std::optional<std::string> computeSHA1HashStringForContext(CGContextRef b
     size_t pixelsHigh = CGBitmapContextGetHeight(bitmapContext);
     size_t pixelsWide = CGBitmapContextGetWidth(bitmapContext);
     size_t bytesPerRow = CGBitmapContextGetBytesPerRow(bitmapContext);
-    
+
     // We need to swap the bytes to ensure consistent hashes independently of endianness
     SHA1 sha1;
     unsigned char* bitmapData = static_cast<unsigned char*>(CGBitmapContextGetData(bitmapContext));
@@ -101,7 +94,7 @@ static std::optional<std::string> computeSHA1HashStringForContext(CGContextRef b
     }
 
     auto hexString = sha1.computeHexDigest();
-    
+
     auto result = hexString.toStdString();
     std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return toASCIILower(c); });
     return result;
@@ -145,7 +138,7 @@ static void dumpBitmap(CGContextRef bitmapContext, const std::string& checksum, 
 {
     auto image = adoptCF(CGBitmapContextCreateImage(bitmapContext));
     auto imageData = adoptCF(CFDataCreateMutable(0, 0));
-    auto imageDest = adoptCF(CGImageDestinationCreateWithData(imageData.get(), kUTTypePNG, 1, 0));
+    auto imageDest = adoptCF(CGImageDestinationCreateWithData(imageData.get(), bridge_cast(UTTypePNG.identifier), 1, 0));
 
     auto propertiesDictionary = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     double resolutionWidth = 72.0 * imageSize.width / windowSize.width;
@@ -170,11 +163,11 @@ static void paintRepaintRectOverlay(CGContextRef context, WKSize imageSize, WKAr
 
     // Using a transparency layer is easier than futzing with clipping.
     CGContextBeginTransparencyLayer(context, 0);
-    
+
     // Flip the context.
     CGContextScaleCTM(context, 1, -1);
     CGContextTranslateCTM(context, 0, -imageSize.height);
-    
+
     CGContextSetRGBFillColor(context, 0, 0, 0, static_cast<CGFloat>(0.66));
     CGContextFillRect(context, CGRectMake(0, 0, imageSize.width, imageSize.height));
 
@@ -185,7 +178,7 @@ static void paintRepaintRectOverlay(CGContextRef context, WKSize imageSize, WKAr
         CGRect cgRect = CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
         CGContextClearRect(context, cgRect);
     }
-    
+
     CGContextEndTransparencyLayer(context);
     CGContextRestoreGState(context);
 }
