@@ -1060,18 +1060,26 @@
     SYS_shared_region_map_and_slide_2_np ;; <rdar://problem/60294880>
     SYS_sysctlbyname))
 
+(define (syscall-quicklook)
+    (syscall-number
+        SYS_mkdirat
+        SYS_openat_nocancel
+        SYS_pread_nocancel
+        SYS_rmdir
+        SYS_sendto
+        SYS_thread_selfusage
+        SYS_unlink))
+
 (define (syscall-unix-rarely-in-use)
     (syscall-number
         SYS_fgetxattr
         SYS_getxattr
         SYS_iopolicysys
-        SYS_openat_nocancel
 #if ASAN_ENABLED
         SYS_sigaltstack
 #endif
         SYS_sigprocmask
         SYS_umask
-        SYS_unlink
         SYS_writev))
 
 (define (syscall-unix-rarely-in-use-blocked-in-lockdown-mode)
@@ -1082,17 +1090,12 @@
         SYS_fsync
         SYS_getattrlistbulk ;; xpc_realpath and directory enumeration
         SYS_getgid
-        SYS_mkdirat
         SYS_open_dprotected_np
-        SYS_pread_nocancel
         SYS_psynch_rw_wrlock
-        SYS_rmdir
-        SYS_sendto
         SYS_setrlimit
 #if PLATFORM(WATCHOS)
         SYS_sigreturn
 #endif
-        SYS_thread_selfusage
         SYS_write))
 
 (deny syscall-unix (with telemetry))
@@ -1107,22 +1110,18 @@
 (allow syscall-unix (syscall-unix-only-in-use-during-launch))
 #endif
 
-
-#if ENABLE(QUICKLOOK_SANDBOX_RESTRICTIONS)
 (allow syscall-unix
     (syscall-unix-rarely-in-use)
-    (syscall-unix-rarely-in-use-blocked-in-lockdown-mode))
+    (syscall-unix-rarely-in-use-blocked-in-lockdown-mode)
+    (syscall-quicklook))
+
+#if ENABLE(QUICKLOOK_SANDBOX_RESTRICTIONS)
 (with-filter
     (require-all
         (state-flag "ParentProcessCanEnableQuickLookStateFlag")
         (require-not (state-flag "EnableQuickLookSandboxResources")))
-    (allow syscall-unix (with report) (with telemetry-backtrace)
-        (syscall-unix-rarely-in-use)
-        (syscall-unix-rarely-in-use-blocked-in-lockdown-mode)))
-#else
-(allow syscall-unix
-    (syscall-unix-rarely-in-use)
-    (syscall-unix-rarely-in-use-blocked-in-lockdown-mode))
+    (deny syscall-unix (with telemetry-backtrace)
+        (syscall-quicklook)))
 #endif
 
 (deny syscall-unix (with no-report) (syscall-number
@@ -1141,12 +1140,13 @@
 
 (with-filter (system-attribute apple-internal)
     (allow syscall-unix (syscall-number SYS_kdebug_trace_string))) ;; Needed for performance sampling, see <rdar://problem/48829655>.
-    
+
 (with-filter (lockdown-mode)
     (deny syscall-unix (with telemetry) (with message "Lockdown mode")
         (syscall-unix-in-use-after-launch-blocked-in-lockdown-mode))
     (deny syscall-unix (with telemetry) (with message "Lockdown mode")
-        (syscall-unix-rarely-in-use-blocked-in-lockdown-mode)))
+        (syscall-unix-rarely-in-use-blocked-in-lockdown-mode)
+        (syscall-quicklook)))
 
 (deny file-ioctl (with telemetry))
 
