@@ -16,7 +16,7 @@ PASS invoking (as auto) on dialog does nothing
 PASS invoking (as auto) on open dialog does nothing
 PASS invoking (as auto) on open modal dialog does nothing
 PASS invoking (as auto) on open modal while changing the attributer does nothing
-FAIL invoking (as showmodal) on dialog does nothing assert_false: invokee.open expected false got true
+PASS invoking (as showmodal) on dialog does nothing
 PASS invoking (as showmodal) on open dialog does nothing
 PASS invoking (as showmodal) on open modal dialog does nothing
 PASS invoking (as showmodal) on open modal while changing the attributer does nothing

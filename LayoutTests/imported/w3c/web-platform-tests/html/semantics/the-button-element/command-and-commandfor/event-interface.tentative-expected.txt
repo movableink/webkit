@@ -1,7 +1,7 @@
 
 
 PASS command is a readonly defaulting to ''
-FAIL source is readonly defaulting to null assert_equals: expected (object) null but got (undefined) undefined
+PASS source is readonly defaulting to null
 PASS command reflects initialized attribute
 PASS command set to undefined
 PASS command set to null
@@ -13,24 +13,13 @@ PASS command set to []
 PASS command set to [1, 2, 3]
 PASS command set to an object
 PASS command set to an object with a toString function
-FAIL CommandEventInit properties set value assert_equals: expected (object) Element node <body><div id="div"></div>
-<button id="button"></button>
-... but got (undefined) undefined
-FAIL CommandEventInit properties set value 2 assert_equals: expected (object) Element node <div id="div"></div> but got (undefined) undefined
-FAIL CommandEventInit properties set value 3 assert_equals: expected (object) Element node <button id="button"></button> but got (undefined) undefined
-FAIL source set to undefined assert_equals: expected (object) null but got (undefined) undefined
-FAIL source set to null assert_equals: expected (object) null but got (undefined) undefined
-FAIL source set to false assert_throws_js: source is not an object function "function () {
-        new CommandEvent("test", { source: false });
-      }" did not throw
-FAIL source set to true assert_throws_js: source is not an object function "function () {
-        const event = new CommandEvent("test", { source: true });
-      }" did not throw
-FAIL source set to {} assert_throws_js: source is not an object function "function () {
-        const event = new CommandEvent("test", { source: {} });
-      }" did not throw
-FAIL source set to non-Element EventTarget assert_throws_js: source is not an Element function "function () {
-        const eventInit = { command: "closed", source: new XMLHttpRequest() };
-        const event = new CommandEvent("toggle", eventInit);
-      }" did not throw
+PASS CommandEventInit properties set value
+PASS CommandEventInit properties set value 2
+PASS CommandEventInit properties set value 3
+PASS source set to undefined
+PASS source set to null
+PASS source set to false
+PASS source set to true
+PASS source set to {}
+PASS source set to non-Element EventTarget
 

@@ -1346,7 +1346,6 @@ JS_BINDING_IDLS := \
     $(WebCore)/html/ImageData.idl \
     $(WebCore)/html/ImageDataSettings.idl \
     $(WebCore)/html/ImageDataStorageFormat.idl \
-    $(WebCore)/html/InvokerElement.idl \
     $(WebCore)/html/MediaController.idl \
     $(WebCore)/html/MediaEncryptedEvent.idl \
     $(WebCore)/html/MediaError.idl \

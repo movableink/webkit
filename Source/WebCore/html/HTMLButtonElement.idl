@@ -34,6 +34,10 @@
     [CEReactions=NotNeeded, Reflect] attribute DOMString name;
     [CEReactions=NotNeeded, Reflect] attribute DOMString value;
 
+    // Command Invokers
+    [CEReactions=NotNeeded, Reflect=commandfor, EnabledBySetting=InvokerAttributesEnabled] attribute Element? commandForElement;
+    [CEReactions=NotNeeded, Reflect=command, EnabledBySetting=InvokerAttributesEnabled] attribute DOMString command;
+
     readonly attribute boolean willValidate;
     readonly attribute ValidityState validity;
     readonly attribute DOMString validationMessage;
@@ -45,5 +49,3 @@
 };
 
 HTMLButtonElement includes PopoverInvokerElement;
-
-HTMLButtonElement includes InvokerElement;

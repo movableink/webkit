@@ -6,7 +6,7 @@ PASS invoking (as ) on popover does nothing
 PASS invoking (as ) on open popover does nothing
 PASS invoking (as foo-bar) on popover does nothing
 PASS invoking (as foo-bar) on open popover does nothing
-FAIL invoking (as showpopover) on popover does nothing assert_false: expected false got true
+PASS invoking (as showpopover) on popover does nothing
 PASS invoking (as showpopover) on open popover does nothing
 PASS invoking (as show-modal) on popover does nothing
 PASS invoking (as show-modal) on open popover does nothing

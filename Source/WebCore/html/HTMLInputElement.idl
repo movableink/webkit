@@ -122,5 +122,3 @@ enum AutofillButtonType {
 
 HTMLInputElement includes PopoverInvokerElement;
 
-HTMLInputElement includes InvokerElement;
-

@@ -108,6 +108,7 @@
 #include "HTMLAttachmentElement.h"
 #include "HTMLBaseElement.h"
 #include "HTMLBodyElement.h"
+#include "HTMLButtonElement.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLCollectionInlines.h"
 #include "HTMLConstructionSite.h"
@@ -10343,7 +10344,7 @@ void Document::handlePopoverLightDismiss(const PointerEvent& event, Node& target
                         clickedPopover = htmlElement;
 
                     if (!invokerPopover) {
-                        if (RefPtr button = dynamicDowncast<HTMLFormControlElement>(*htmlElement)) {
+                        if (RefPtr button = dynamicDowncast<HTMLButtonElement>(*htmlElement)) {
                             if (RefPtr popover = dynamicDowncast<HTMLElement>(button->commandForElement()); popover && isShowingAutoPopover(*popover))
                                 invokerPopover = WTFMove(popover);
                             else if (RefPtr popover = button->popoverTargetElement(); popover && isShowingAutoPopover(*popover))
