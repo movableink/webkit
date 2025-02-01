@@ -436,10 +436,14 @@ GlyphData FontCascadeFonts::glyphDataForVariant(char32_t character, const FontCa
         if (!data.isValid())
             continue;
 
-        if (resolvedEmojiPolicy == ResolvedEmojiPolicy::RequireText && data.colorGlyphType == ColorGlyphType::Color)
-            continue;
-        if (resolvedEmojiPolicy == ResolvedEmojiPolicy::RequireEmoji && data.colorGlyphType == ColorGlyphType::Outline)
-            continue;
+#if PLATFORM(COCOA)
+        if (fontRanges.isGenericFontFamily()) {
+            if (resolvedEmojiPolicy == ResolvedEmojiPolicy::RequireText && data.colorGlyphType == ColorGlyphType::Color)
+                continue;
+            if (resolvedEmojiPolicy == ResolvedEmojiPolicy::RequireEmoji && data.colorGlyphType == ColorGlyphType::Outline)
+                continue;
+        }
+#endif
 
         if (data.font->isInterstitial()) {
             policy = ExternalResourceDownloadPolicy::Forbid;
