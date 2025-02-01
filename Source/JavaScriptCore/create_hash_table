@@ -447,7 +447,7 @@ sub output() {
         my $hashTableString = "";
 
         if ($compactSize != 0) {
-            $hashTableString .= "static const struct CompactHashIndex ${nameIndex}\[$compactSize\] = {\n";
+            $hashTableString .= "static constinit const struct CompactHashIndex ${nameIndex}\[$compactSize\] = {\n";
             for (my $i = 0; $i < $compactSize; $i++) {
                 my $T = -1;
                 if (defined($table[$i])) { $T = $table[$i]; }
@@ -457,7 +457,7 @@ sub output() {
             }
         } else {
             # MSVC dislikes empty arrays.
-            $hashTableString .= "static const struct CompactHashIndex ${nameIndex}\[1\] = {\n";
+            $hashTableString .= "static constinit const struct CompactHashIndex ${nameIndex}\[1\] = {\n";
             $hashTableString .= "    { 0, 0 }\n";
         }
         $hashTableString .= "};\n";
@@ -465,10 +465,10 @@ sub output() {
 
         my $packedSize = scalar @keys;
         if ($packedSize != 0) {
-            $hashTableString .= "static const struct HashTableValue ${nameEntries}\[$packedSize\] = {\n";
+            $hashTableString .= "static constinit const struct HashTableValue ${nameEntries}\[$packedSize\] = {\n";
         } else {
             # MSVC dislikes empty arrays.
-            $hashTableString .= "static const struct HashTableValue ${nameEntries}\[1\] = {\n";
+            $hashTableString .= "static constinit const struct HashTableValue ${nameEntries}\[1\] = {\n";
             $hashTableString .= "    { { }, 0, NoIntrinsic, { HashTableValue::End } }\n";
         }
 
@@ -520,7 +520,7 @@ sub output() {
         }
         $hashTableString .= "};\n";
         $hashTableString .= "\n";
-        $hashTableString .= "static const struct HashTable $name =\n";
+        $hashTableString .= "static constinit const struct HashTable $name =\n";
         $hashTableString .= "    \{ $packedSize, $compactHashSizeMask, $hasSetter, nullptr, $nameEntries, $nameIndex \};\n";
         $hashTableString .= "\n";
 
