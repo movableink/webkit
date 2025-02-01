@@ -48,8 +48,6 @@
 #include <wtf/IsoMalloc.h>
 #include <wtf/TZoneMalloc.h>
 
-#include <ciso646>
-
 #endif
 
 #if USE(CG)

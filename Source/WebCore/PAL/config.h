@@ -36,6 +36,4 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/TZoneMalloc.h>
 
-#include <ciso646>
-
 #endif
