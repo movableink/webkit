@@ -1112,6 +1112,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         auto privateRelayed = metrics._privacyStance == nw_connection_privacy_stance_direct
             || metrics._privacyStance == nw_connection_privacy_stance_not_eligible
             ? PrivateRelayed::No : PrivateRelayed::Yes;
+        String proxyName;
+        if (metrics._establishmentReport) {
+            if (auto endpoint = nw_establishment_report_copy_proxy_endpoint(metrics._establishmentReport)) {
+                if (const char *hostname = nw_endpoint_get_hostname(endpoint))
+                    proxyName = String::fromUTF8(unsafeMakeSpan(hostname, strlen(hostname)));
+            }
+        }
+
 #else
         auto privateRelayed = PrivateRelayed::No;
 #endif
@@ -1135,7 +1143,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         resourceResponse.disableLazyInitialization();
 
         resourceResponse.setDeprecatedNetworkLoadMetrics(WebCore::copyTimingData(taskMetrics, networkDataTask->networkLoadMetrics()));
-
+        resourceResponse.setProxyName(WTFMove(proxyName));
         networkDataTask->didReceiveResponse(WTFMove(resourceResponse), negotiatedLegacyTLS, privateRelayed, [completionHandler = makeBlockPtr(completionHandler), taskIdentifier](WebCore::PolicyAction policyAction) {
 #if !LOG_DISABLED
             LOG(NetworkSession, "%llu didReceiveResponse completionHandler (%d)", taskIdentifier, policyAction);

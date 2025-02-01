@@ -3583,6 +3583,7 @@ enum class WebCore::WasPrivateRelayed : bool;
     bool isRedirected;
     WebCore::UsedLegacyTLS usedLegacyTLS;
     WebCore::WasPrivateRelayed wasPrivateRelayed;
+    String proxyName;
     bool isRangeRequested;
     std::optional<WebCore::CertificateInfo> certificateInfo;
 };

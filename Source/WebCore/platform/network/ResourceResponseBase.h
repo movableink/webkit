@@ -146,7 +146,9 @@ public:
     void setUsedLegacyTLS(UsedLegacyTLS used) { m_usedLegacyTLS = used; }
     bool wasPrivateRelayed() const { return m_wasPrivateRelayed == WasPrivateRelayed::Yes; }
     void setWasPrivateRelayed(WasPrivateRelayed privateRelayed) { m_wasPrivateRelayed = privateRelayed; }
-    
+    void setProxyName(String&& proxyName) { m_proxyName = proxyName; }
+    String proxyName() const { return m_proxyName; }
+
     // These functions return parsed values of the corresponding response headers.
     WEBCORE_EXPORT bool cacheControlContainsNoCache() const;
     WEBCORE_EXPORT bool cacheControlContainsNoStore() const;
@@ -264,6 +266,7 @@ protected:
     unsigned m_initLevel : 3; // Controlled by ResourceResponse.
     mutable UsedLegacyTLS m_usedLegacyTLS : bitWidthOfUsedLegacyTLS { UsedLegacyTLS::No };
     mutable WasPrivateRelayed m_wasPrivateRelayed : bitWidthOfWasPrivateRelayed { WasPrivateRelayed::No };
+    String m_proxyName { };
 
 private:
     friend struct WTF::Persistence::Coder<ResourceResponse>;
@@ -294,7 +297,7 @@ struct ResourceResponseData {
     ResourceResponseData() = default;
     ResourceResponseData(ResourceResponseData&&) = default;
     ResourceResponseData& operator=(ResourceResponseData&&) = default;
-    ResourceResponseData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, ResourceResponseBaseSource source, ResourceResponseBaseType type, ResourceResponseBaseTainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, bool isRangeRequested, std::optional<CertificateInfo> certificateInfo)
+    ResourceResponseData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, ResourceResponseBaseSource source, ResourceResponseBaseType type, ResourceResponseBaseTainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, String&& proxyName, bool isRangeRequested, std::optional<CertificateInfo> certificateInfo)
         : url(WTFMove(url))
         , mimeType(WTFMove(mimeType))
         , expectedContentLength(expectedContentLength)
@@ -310,6 +313,7 @@ struct ResourceResponseData {
         , isRedirected(isRedirected)
         , usedLegacyTLS(usedLegacyTLS)
         , wasPrivateRelayed(wasPrivateRelayed)
+        , proxyName(WTFMove(proxyName))
         , isRangeRequested(isRangeRequested)
         , certificateInfo(certificateInfo)
     {
@@ -332,6 +336,7 @@ struct ResourceResponseData {
     bool isRedirected;
     UsedLegacyTLS usedLegacyTLS;
     WasPrivateRelayed wasPrivateRelayed;
+    String proxyName;
     bool isRangeRequested;
     std::optional<CertificateInfo> certificateInfo;
 };
