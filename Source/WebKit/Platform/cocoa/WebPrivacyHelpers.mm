@@ -702,9 +702,24 @@ void configureForAdvancedPrivacyProtections(NSURLSession *session)
     });
 }
 
+bool isKnownTrackerAddressOrDomain(StringView host)
+{
+    TrackerAddressLookupInfo::populateIfNeeded();
+    TrackerDomainLookupInfo::populateIfNeeded();
+
+    if (auto address = URL::hostIsIPAddress(host) ? IPAddress::fromString(host.toStringWithoutCopying()) : std::nullopt) {
+        if (TrackerAddressLookupInfo::find(*address))
+            return true;
+    }
+
+    auto domain = WebCore::RegistrableDomain { URL { makeString("http://"_s, host) } };
+    return TrackerDomainLookupInfo::find(domain.string()).owner().length();
+}
+
 #else
 
 void configureForAdvancedPrivacyProtections(NSURLSession *) { }
+bool isKnownTrackerAddressOrDomain(StringView) { return false; }
 
 #endif
 
