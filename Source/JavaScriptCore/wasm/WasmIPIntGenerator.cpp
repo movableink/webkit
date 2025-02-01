@@ -2463,10 +2463,6 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranchNull(ControlType& bloc
 
     tryToResolveBranchTarget(block, here, m_metadata->m_metadata.data());
 
-    // if we branch_on_non_null, not taking the branch means we pop the null
-    if (shouldNegate)
-        changeStackSize(-1);
-
     return { };
 }
 
