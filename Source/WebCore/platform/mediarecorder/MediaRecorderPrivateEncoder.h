@@ -174,9 +174,9 @@ private:
     bool m_firstVideoFrameProcessed WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
     std::optional<MonotonicTime> m_currentVideoSegmentStartTime WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     uint64_t m_previousSegmentVideoDurationUs WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { 0 };
+    MediaTime m_lastRawVideoFrameReceived WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { MediaTime::negativeInfiniteTime() };
     MediaTime m_lastEnqueuedRawVideoFrame WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { MediaTime::negativeInfiniteTime() };
     MediaTime m_lastVideoKeyframeTime WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    MediaTime m_lastReceivedCompressedVideoFrame WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { MediaTime::negativeInfiniteTime() };
     std::optional<CGAffineTransform> m_videoTransform;
     RefPtr<GenericNonExclusivePromise> m_videoEncoderCreationPromise;
 

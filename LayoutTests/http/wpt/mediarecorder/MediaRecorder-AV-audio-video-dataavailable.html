@@ -21,6 +21,8 @@
 <script>
     var context;
     var drawStartTime;
+    // Needs to be a globabl variable to avoid being GCed (webkit.org/b/271227)
+    var oscillator;
 
     function createVideoStream() {
         const canvas = document.getElementById("canvas");
@@ -61,10 +63,11 @@
 
     promise_test(async (test) => {
         const ac = new AudioContext();
-        const osc = ac.createOscillator();
+        oscillator = ac.createOscillator();
         const dest = ac.createMediaStreamDestination();
         const audio = dest.stream;
-        osc.connect(dest);
+        oscillator.connect(dest);
+        oscillator.start();
 
         const video = createVideoStream();
         assert_equals(video.getAudioTracks().length, 0, "video mediastream starts with no audio track");
