@@ -99,7 +99,7 @@ static void strokeWavyTextDecoration(GraphicsContext& context, const FloatRect& 
     FloatPoint controlPoint1(0, yAxis + wavyStrokeParameters.controlPointDistance);
     FloatPoint controlPoint2(0, yAxis - wavyStrokeParameters.controlPointDistance);
 
-    for (float x = x1; x + 2 * wavyStrokeParameters.step <= x2;) {
+    for (double x = x1; x + 2 * wavyStrokeParameters.step <= x2;) {
         controlPoint1.setX(x + wavyStrokeParameters.step);
         controlPoint2.setX(x + wavyStrokeParameters.step);
         x += 2 * wavyStrokeParameters.step;
