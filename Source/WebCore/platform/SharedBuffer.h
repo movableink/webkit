@@ -205,9 +205,9 @@ public:
     WEBCORE_EXPORT void copyTo(std::span<uint8_t> destination) const;
     WEBCORE_EXPORT void copyTo(std::span<uint8_t> destination, size_t offset) const;
 
-    WEBCORE_EXPORT void forEachSegment(const Function<void(std::span<const uint8_t>)>&) const;
+    WEBCORE_EXPORT void forEachSegment(NOESCAPE const Function<void(std::span<const uint8_t>)>&) const;
     WEBCORE_EXPORT bool startsWith(std::span<const uint8_t> prefix) const;
-    WEBCORE_EXPORT void forEachSegmentAsSharedBuffer(const Function<void(Ref<SharedBuffer>&&)>&) const;
+    WEBCORE_EXPORT void forEachSegmentAsSharedBuffer(NOESCAPE const Function<void(Ref<SharedBuffer>&&)>&) const;
 
     using DataSegment = WebCore::DataSegment; // To keep backward compatibility when using FragmentedSharedBuffer::DataSegment
 
