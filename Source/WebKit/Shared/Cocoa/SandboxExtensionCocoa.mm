@@ -39,44 +39,31 @@ namespace WebKit {
 std::unique_ptr<SandboxExtensionImpl> SandboxExtensionImpl::create(const char* path, SandboxExtension::Type type, std::optional<audit_token_t> auditToken, OptionSet<SandboxExtension::Flags> flags)
 {
     std::unique_ptr<SandboxExtensionImpl> impl { new SandboxExtensionImpl(path, type, auditToken, flags) };
-    if (!impl->m_token)
+    if (!impl->m_token.length())
         return nullptr;
-    if (!impl->m_token[0]) // Make sure strlen is > 0 without iterating the whole string.
-        return nullptr;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    ASSERT(strlen(impl->m_token));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return impl;
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 SandboxExtensionImpl::SandboxExtensionImpl(std::span<const uint8_t> serializedFormat)
-    : m_token { strndup(byteCast<char>(serializedFormat.data()), serializedFormat.size()) }
+    : m_token { serializedFormat }
 {
     ASSERT(!serializedFormat.empty());
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 SandboxExtensionImpl::~SandboxExtensionImpl()
 {
-    if (!m_token)
-        return;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    auto length = strlen(m_token);
-    memset_s(m_token, length, 0, length);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    free(m_token);
+    if (!m_token.isNull())
+        secureMemsetSpan(m_token.mutableSpan(), 0);
 }
 
 bool WARN_UNUSED_RETURN SandboxExtensionImpl::consume()
 {
-    m_handle = sandbox_extension_consume(m_token);
+    m_handle = sandbox_extension_consume(m_token.data());
 #if PLATFORM(IOS_FAMILY_SIMULATOR)
     return !sandbox_check(getpid(), 0, SANDBOX_FILTER_NONE);
 #else
     if (m_handle == -1) {
-        RELEASE_LOG_ERROR(Sandbox, "Could not create a sandbox extension for '%s', errno = %d", m_token, errno);
+        RELEASE_LOG_ERROR(Sandbox, "Could not create a sandbox extension for '%s', errno = %d", m_token.data(), errno);
         return false;
     }
     return true;
@@ -90,11 +77,8 @@ bool SandboxExtensionImpl::invalidate()
 
 std::span<const uint8_t> SandboxExtensionImpl::getSerializedFormat()
 {
-    ASSERT(m_token);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    ASSERT(strlen(m_token));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    return unsafeSpan8(m_token);
+    ASSERT(m_token.length());
+    return m_token.span();
 }
 
 char* SandboxExtensionImpl::sandboxExtensionForType(const char* path, SandboxExtension::Type type, std::optional<audit_token_t> auditToken, OptionSet<SandboxExtension::Flags> flags)
