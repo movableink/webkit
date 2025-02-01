@@ -397,11 +397,11 @@ RefPtr<StyleRuleBase> CSSParserImpl::consumeAtRule(CSSParserTokenRange& range, A
 {
     ASSERT(range.peek().type() == AtKeywordToken);
     const StringView name = range.consumeIncludingWhitespace().value();
-    const CSSParserToken* preludeStart = &range.peek();
+    auto preludeStart = range;
     while (!range.atEnd() && range.peek().type() != LeftBraceToken && range.peek().type() != SemicolonToken)
         range.consumeComponentValue();
 
-    CSSParserTokenRange prelude = range.makeSubRange(preludeStart, &range.peek());
+    auto prelude = preludeStart.rangeUntil(range);
     CSSAtRuleID id = cssAtRuleID(name);
 
     if (range.atEnd() || range.peek().type() == SemicolonToken) {
@@ -476,7 +476,7 @@ RefPtr<StyleRuleBase> CSSParserImpl::consumeQualifiedRule(CSSParserTokenRange& r
         return isStyleNestedContext() && allowedRules <= AllowedRules::RegularRules;
     };
 
-    const CSSParserToken* preludeStart = &range.peek();
+    auto preludeStart = range;
 
     // Parsing a selector (aka a component value) should stop at the first semicolon (and goes to error recovery)
     // instead of consuming the whole list of declarations (in nested context).
@@ -513,7 +513,7 @@ RefPtr<StyleRuleBase> CSSParserImpl::consumeQualifiedRule(CSSParserTokenRange& r
         }
     }
 
-    CSSParserTokenRange prelude = range.makeSubRange(preludeStart, &range.peek());
+    auto prelude = preludeStart.rangeUntil(range);
     CSSParserTokenRange block = range.consumeBlockCheckingForEditability(m_styleSheet.get());
 
     if (allowedRules <= AllowedRules::RegularRules)
@@ -831,12 +831,12 @@ RefPtr<StyleRuleFontFeatureValuesBlock> CSSParserImpl::consumeFontFeatureValuesR
             range.consume();
             break;
         case IdentToken: {
-            const CSSParserToken* declarationStart = &range.peek();
+            auto declarationStart = range;
 
             while (!range.atEnd() && range.peek().type() != SemicolonToken)
                 range.consumeComponentValue();
 
-            if (auto tag = consumeTag(range.makeSubRange(declarationStart, &range.peek()), maxValues))
+            if (auto tag = consumeTag(declarationStart.rangeUntil(range), maxValues))
                 tags.append(*tag);
 
             break;
@@ -1086,10 +1086,10 @@ RefPtr<StyleRuleScope> CSSParserImpl::consumeScopeRule(CSSParserTokenRange prelu
                 prelude.consumeIncludingWhitespace();
 
                 // Determine the range for the selector list
-                auto selectorListRangeStart = &prelude.peek();
+                auto selectorListRangeStart = prelude;
                 while (!prelude.atEnd() && prelude.peek().type() != RightParenthesisToken)
                     prelude.consumeComponentValue();
-                CSSParserTokenRange selectorListRange = prelude.makeSubRange(selectorListRangeStart, &prelude.peek());
+                auto selectorListRange = selectorListRangeStart.rangeUntil(prelude);
 
                 // Parse the selector list range
                 auto mutableSelectorList = parseMutableCSSSelectorList(selectorListRange, m_context, protectedStyleSheet().get(), ancestorRuleType, CSSParserEnum::IsForgiving::No, CSSSelectorParser::DisallowPseudoElement::Yes);
@@ -1334,10 +1334,10 @@ static void observeSelectors(CSSParserObserverWrapper& wrapper, CSSParserTokenRa
     wrapper.observer().startRuleHeader(StyleRuleType::Style, wrapper.startOffset(originalRange));
 
     while (!selectors.atEnd()) {
-        const CSSParserToken* selectorStart = &selectors.peek();
+        auto selectorStart = selectors;
         while (!selectors.atEnd() && selectors.peek().type() != CommaToken)
             selectors.consumeComponentValue();
-        CSSParserTokenRange selector = selectors.makeSubRange(selectorStart, &selectors.peek());
+        auto selector = selectorStart.rangeUntil(selectors);
         selectors.consumeIncludingWhitespace();
 
         wrapper.observer().observeSelector(wrapper.startOffset(selector), wrapper.endOffset(selector));
@@ -1457,15 +1457,15 @@ void CSSParserImpl::consumeBlockContent(CSSParserTokenRange range, StyleRuleType
             range.consume();
             break;
         case IdentToken: {
-            const auto declarationStart = &range.peek();
+            auto declarationStart = range;
 
             if (useObserver)
                 m_observerWrapper->yieldCommentsBefore(range);
 
             consumeUntilSemicolon();
 
-            const auto declarationRange = range.makeSubRange(declarationStart, &range.peek());
-            const auto isValidDeclaration = consumeDeclaration(declarationRange, ruleType);
+            auto declarationRange = declarationStart.rangeUntil(range);
+            auto isValidDeclaration = consumeDeclaration(declarationRange, ruleType);
 
             if (useObserver)
                 m_observerWrapper->skipCommentsBefore(range, false);

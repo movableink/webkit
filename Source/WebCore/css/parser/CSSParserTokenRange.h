@@ -45,15 +45,16 @@ class CSSParserTokenRange {
 public:
     CSSParserTokenRange() = default;
 
+    CSSParserTokenRange(std::span<const CSSParserToken> span)
+        : m_tokens(span)
+    { }
+
     template<size_t inlineBuffer>
     CSSParserTokenRange(const Vector<CSSParserToken, inlineBuffer>& vector)
-        : m_tokens(vector.span())
-    {
-    }
+        : CSSParserTokenRange(vector.span())
+    { }
 
-    // This should be called on a range with tokens returned by that range.
-    CSSParserTokenRange makeSubRange(const CSSParserToken* first, const CSSParserToken* last) const;
-    CSSParserTokenRange makeSubRange(std::span<const CSSParserToken> subrange) const;
+    CSSParserTokenRange rangeUntil(const CSSParserTokenRange& end) const { return span().first(end.begin() - begin()); }
 
     bool atEnd() const { return m_tokens.empty(); }
 
@@ -108,10 +109,6 @@ public:
     static CSSParserToken& eofToken();
 
 private:
-    CSSParserTokenRange(std::span<const CSSParserToken> tokens)
-        : m_tokens(tokens)
-    { }
-
     std::span<const CSSParserToken> m_tokens;
 };
 
