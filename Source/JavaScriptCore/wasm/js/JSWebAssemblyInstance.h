@@ -65,7 +65,6 @@ public:
     static void destroy(JSCell*);
 
     static constexpr bool usePreciseAllocationsOnly = true;
-    static constexpr uint8_t numberOfLowerTierPreciseCells = 0;
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {

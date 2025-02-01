@@ -628,8 +628,6 @@ public:
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable | OverridesGetOwnPropertySlot | OverridesPut | IsImmutablePrototypeExoticObject;
 
     static constexpr bool needsDestruction = true;
-    static constexpr bool usePreciseAllocationsOnly = true;
-    static constexpr uint8_t numberOfLowerTierPreciseCells = 0;
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
