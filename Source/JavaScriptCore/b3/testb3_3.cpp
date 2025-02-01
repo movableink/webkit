@@ -4037,6 +4037,8 @@ void addArgTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN(testMulNegArgs32());
     RUN(testMulNegSignExtend32());
     RUN(testMulNegZeroExtend32());
+    RUN(testMulNegArgsDouble());
+    RUN(testMulNegArgsFloat());
     
     RUN_BINARY(testMulArgNegArg, int64Operands(), int64Operands())
     RUN_BINARY(testMulNegArgArg, int64Operands(), int64Operands())

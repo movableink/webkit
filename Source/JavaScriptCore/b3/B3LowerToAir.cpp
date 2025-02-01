@@ -3208,7 +3208,7 @@ private:
                     return false;
                 Value* multiplyLeft = m_value->child(0)->child(0);
                 Value* multiplyRight = m_value->child(0)->child(1);
-                Air::Opcode airOpcode = tryOpcodeForType(MultiplyNeg32, MultiplyNeg64, m_value->type());
+                Air::Opcode airOpcode = tryOpcodeForType(MultiplyNeg32, MultiplyNeg64, MultiplyNegDouble, MultiplyNegFloat, m_value->type());
                 auto tryNewAirOpcode = [&] () -> Air::Opcode {
                     if (airOpcode != MultiplyNeg64)
                         return Air::Oops;
