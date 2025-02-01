@@ -1842,40 +1842,35 @@ class CppStyleTest(CppStyleTestBase):
     def test_insecure_string_operations(self):
         self.assert_lint(
             'sprintf(destination, "%s", arg)',
-            'Never use sprintf.  Use snprintf instead.'
+            'Never use sprintf.  Use SAFE_SPRINTF instead.'
             '  [security/printf] [5]')
         self.assert_lint(
             'strcat(destination, append)',
-            'Almost always, snprintf is better than strcat.'
+            'Almost always, SAFE_SPRINTF is better than strcat.'
             '  [security/printf] [4]')
         self.assert_lint(
             'strcpy(destination, source)',
-            'Almost always, snprintf is better than strcpy.'
+            'Almost always, SAFE_SPRINTF is better than strcpy.'
             '  [security/printf] [4]')
 
-    # Test potential format string bugs like printf(foo).
+    # Test potential format string bugs like SAFE_PRINTF(foo).
     def test_format_strings(self):
-        self.assert_lint('printf("foo")', '')
-        self.assert_lint('printf("foo: %s", foo)', '')
+        self.assert_lint('SAFE_PRINTF("foo")', '')
+        self.assert_lint('SAFE_PRINTF("foo: %s", foo)', '')
         self.assert_lint('DocidForPrintf(docid)', '')  # Should not trigger.
         self.assert_lint(
-            'printf(foo)',
-            'Potential format string bug. Do printf("%s", foo) instead.'
+            'SAFE_PRINTF(foo)',
+            'Potential format string bug. Do SAFE_PRINTF("%s", foo) instead.'
             '  [security/printf] [4]')
         self.assert_lint(
-            'printf(foo.c_str())',
+            'SAFE_PRINTF(foo.c_str())',
             'Potential format string bug. '
-            'Do printf("%s", foo.c_str()) instead.'
+            'Do SAFE_PRINTF("%s", foo.c_str()) instead.'
             '  [security/printf] [4]')
         self.assert_lint(
-            'printf(foo->c_str())',
+            'SAFE_PRINTF(foo->c_str())',
             'Potential format string bug. '
-            'Do printf("%s", foo->c_str()) instead.'
-            '  [security/printf] [4]')
-        self.assert_lint(
-            'StringPrintf(foo)',
-            'Potential format string bug. Do StringPrintf("%s", foo) instead.'
-            ''
+            'Do SAFE_PRINTF("%s", foo->c_str()) instead.'
             '  [security/printf] [4]')
 
     # Test for insecure temp file creation.
@@ -2638,7 +2633,7 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint('}// namespace foo',
                          'One space before end of line comments'
                          '  [whitespace/comments] [5]')
-        self.assert_lint('printf("foo"); // Outside quotes.',
+        self.assert_lint('SAFE_PRINTF("foo"); // Outside quotes.',
                          '')
         self.assert_lint('int i = 0; // Having one space is fine.', '')
         self.assert_lint('int i = 0;  // Having two spaces is bad.',
@@ -2655,9 +2650,9 @@ class CppStyleTest(CppStyleTestBase):
                          '    { // An indented scope is opening.', '')
         self.assert_lint('if (foo) { // not a pure scope',
                          '')
-        self.assert_lint('printf("// In quotes.")', '')
-        self.assert_lint('printf("\\"%s // In quotes.")', '')
-        self.assert_lint('printf("%s", "// In quotes.")', '')
+        self.assert_lint('SAFE_PRINTF("// In quotes.")', '')
+        self.assert_lint('SAFE_PRINTF("\\"%s // In quotes.")', '')
+        self.assert_lint('SAFE_PRINTF("%s", "// In quotes.")', '')
 
     def test_one_spaces_after_punctuation_in_comments(self):
         self.assert_lint('int a; // This is a sentence.',
@@ -3038,17 +3033,17 @@ class CppStyleTest(CppStyleTestBase):
 
     def test_build_printf_format(self):
         self.assert_lint(
-            r'printf("\%%d", value);',
+            r'SAFE_PRINTF("\%%d", value);',
             '%, [, (, and { are undefined character escapes.  Unescape them.'
             '  [build/printf_format] [3]')
 
         self.assert_lint(
-            r'snprintf(buffer, sizeof(buffer), "\[%d", value);',
+            r'SAFE_SPRINTF(buffer, "\[%d", value);',
             '%, [, (, and { are undefined character escapes.  Unescape them.'
             '  [build/printf_format] [3]')
 
         self.assert_lint(
-            r'fprintf(file, "\(%d", value);',
+            r'SAFE_FPRINTF(file, "\(%d", value);',
             '%, [, (, and { are undefined character escapes.  Unescape them.'
             '  [build/printf_format] [3]')
 
@@ -3058,37 +3053,37 @@ class CppStyleTest(CppStyleTestBase):
             '  [build/printf_format] [3]')
 
         # Don't warn if double-slash precedes the symbol
-        self.assert_lint(r'printf("\\%%%d", value);',
+        self.assert_lint(r'SAFE_PRINTF("\\%%%d", value);',
                          '')
 
     def test_runtime_printf_format(self):
         self.assert_lint(
-            r'fprintf(file, "%q", value);',
+            r'SAFE_FPRINTF(file, "%q", value);',
             '%q in format strings is deprecated.  Use %ll instead.'
             '  [runtime/printf_format] [3]')
 
         self.assert_lint(
-            r'aprintf(file, "The number is %12q", value);',
+            r'SAFE_PRINTF("The number is %12q", value);',
             '%q in format strings is deprecated.  Use %ll instead.'
             '  [runtime/printf_format] [3]')
 
         self.assert_lint(
-            r'printf(file, "The number is" "%-12q", value);',
+            r'SAFE_SPRINTF(buffer, "The number is" "%-12q", value);',
             '%q in format strings is deprecated.  Use %ll instead.'
             '  [runtime/printf_format] [3]')
 
         self.assert_lint(
-            r'printf(file, "The number is" "%+12q", value);',
+            r'SAFE_PRINTF("The number is" "%+12q", value);',
             '%q in format strings is deprecated.  Use %ll instead.'
             '  [runtime/printf_format] [3]')
 
         self.assert_lint(
-            r'printf(file, "The number is" "% 12q", value);',
+            r'SAFE_PRINTF("The number is" "% 12q", value);',
             '%q in format strings is deprecated.  Use %ll instead.'
             '  [runtime/printf_format] [3]')
 
         self.assert_lint(
-            r'snprintf(file, "Never mix %d and %1$d parmaeters!", value);',
+            r'SAFE_PRINTF("Never mix %d and %1$d parmaeters!", value);',
             '%N$ formats are unconventional.  Try rewriting to avoid them.'
             '  [runtime/printf_format] [2]')
 
@@ -6326,6 +6321,21 @@ class WebKitStyleTest(CppStyleTestBase):
         self.assert_lint(
             'int result = strncmp(a, "foo", 3);',
             'strncmp() is unsafe.  [safercpp/strncmp] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'printf("%s", s);',
+            'printf is unsafe. Use SAFE_PRINTF instead.  [safercpp/printf] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'fprintf(file, "%s", s);',
+            'fprintf is unsafe. Use SAFE_FPRINTF instead.  [safercpp/printf] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'snprintf(buffer, "%s", s);',
+            'snprintf is unsafe. Use SAFE_SPRINTF instead.  [safercpp/printf] [4]',
             'foo.cpp')
 
         self.assert_lint(

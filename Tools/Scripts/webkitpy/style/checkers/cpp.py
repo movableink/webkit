@@ -1494,11 +1494,11 @@ def check_for_non_standard_constructs(clean_lines, line_number,
     # Remove comments from the line, but leave in strings for now.
     line = clean_lines.lines[line_number]
 
-    if search(r'printf\s*\(.*".*%[-+ ]?\d*q', line):
+    if search(r'PRINTF\s*\(.*".*%[-+ ]?\d*q', line):
         error(line_number, 'runtime/printf_format', 3,
               '%q in format strings is deprecated.  Use %ll instead.')
 
-    if search(r'printf\s*\(.*".*%\d+\$', line):
+    if search(r'PRINTF\s*\(.*".*%\d+\$', line):
         error(line_number, 'runtime/printf_format', 2,
               '%N$ formats are unconventional.  Try rewriting to avoid them.')
 
@@ -3547,6 +3547,18 @@ def check_safer_cpp(clean_lines, line_number, error):
     if uses_strncmp:
         error(line_number, 'safercpp/strncmp', 4, "strncmp() is unsafe.")
 
+    uses_printf = search(r'\bprintf\b', line)
+    if uses_printf:
+        error(line_number, 'safercpp/printf', 4, "printf is unsafe. Use SAFE_PRINTF instead.")
+
+    uses_fprintf = search(r'\bfprintf\b', line)
+    if uses_fprintf:
+        error(line_number, 'safercpp/printf', 4, "fprintf is unsafe. Use SAFE_FPRINTF instead.")
+
+    uses_snprintf = search(r'\bsnprintf\b', line)
+    if uses_snprintf:
+        error(line_number, 'safercpp/printf', 4, "snprintf is unsafe. Use SAFE_SPRINTF instead.")
+
     uses_xpc_dictionary_get_data = search(r'xpc_dictionary_get_data\(', line)
     if uses_xpc_dictionary_get_data:
         error(line_number, 'safercpp/xpc_dictionary_get_data', 4, "Use xpc_dictionary_get_data_span() instead of xpc_dictionary_get_data().")
@@ -4004,13 +4016,6 @@ def check_language(filename, clean_lines, line_number, file_extension, include_s
             error(line_number, 'runtime/int', 4,
                   'Use "unsigned short" for ports, not "short"')
 
-    # When snprintf is used, the second argument shouldn't be a literal.
-    matched = search(r'snprintf\s*\(([^,]*),\s*([0-9]*)\s*,', line)
-    if matched:
-        error(line_number, 'runtime/printf', 3,
-              'If you can, use sizeof(%s) instead of %s as the 2nd arg '
-              'to snprintf.' % (matched.group(1), matched.group(2)))
-
     # Warn when Debug ASSERT_WITH_SECURITY_IMPLICATION() is used.
     if filename != 'Source/WTF/wtf/Assertions.h':
         if search(r'\bASSERT_WITH_SECURITY_IMPLICATION\b\(', line):
@@ -4027,11 +4032,11 @@ def check_language(filename, clean_lines, line_number, file_extension, include_s
     # Check if some verboten C functions are being used.
     if search(r'\bsprintf\b', line):
         error(line_number, 'security/printf', 5,
-              'Never use sprintf.  Use snprintf instead.')
+              'Never use sprintf.  Use SAFE_SPRINTF instead.')
     matched = search(r'\b(strcpy|strcat)\b', line)
     if matched:
         error(line_number, 'security/printf', 4,
-              'Almost always, snprintf is better than %s.' % matched.group(1))
+              'Almost always, SAFE_SPRINTF is better than %s.' % matched.group(1))
 
     if search(r'\bsscanf\b', line):
         error(line_number, 'runtime/printf', 1,
@@ -4085,7 +4090,7 @@ def check_language(filename, clean_lines, line_number, file_extension, include_s
     # Check for potential format string bugs like printf(foo).
     # We constrain the pattern not to pick things like DocidForPrintf(foo).
     # Not perfect but it can catch printf(foo.c_str()) and printf(foo->c_str())
-    matched = re.search(r'\b((?:string)?printf)\s*\(([\w.\->()]+)\)', line, re.I)
+    matched = re.search(r'\b((?:string)?SAFE_PRINTF)\s*\(([\w.\->()]+)\)', line, re.I)
     if matched:
         error(line_number, 'security/printf', 4,
               'Potential format string bug. Do %s("%%s", %s) instead.'
@@ -4905,6 +4910,7 @@ class CppChecker(object):
         'safercpp/weak_ref_exception',
         'safercpp/strcmp',
         'safercpp/strncmp',
+        'safercpp/printf',
         'safercpp/strchr',
         'safercpp/strstr',
         'safercpp/timer_exception',
