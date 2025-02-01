@@ -440,13 +440,15 @@ inline bool arrayInitData(JSWebAssemblyInstance* instance, EncodedJSValue dst, u
     if (lastDstElementIndexChecked > dstObject->size())
         return false;
 
-    CheckedUint32 lastSrcElementIndexChecked = srcOffset;
-    lastSrcElementIndexChecked += size;
+    size_t elementSize = dstObject->elementType().type.elementSize();
 
-    if (lastSrcElementIndexChecked.hasOverflowed())
+    CheckedUint32 lastSrcByteChecked = size;
+    lastSrcByteChecked *= elementSize;
+    lastSrcByteChecked += srcOffset;
+
+    if (lastSrcByteChecked.hasOverflowed())
         return false;
 
-    size_t elementSize = dstObject->elementType().type.elementSize();
     return instance->copyDataSegment(dstObject, srcDataIndex, srcOffset, size * elementSize, dstObject->data() + dstOffset * elementSize);
 }
 
