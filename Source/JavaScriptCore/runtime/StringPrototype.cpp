@@ -2227,7 +2227,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncAt, (JSGlobalObject* globalObject, CallF
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (!checkObjectCoercible(thisValue))
+    if (UNLIKELY(!checkObjectCoercible(thisValue)))
         return throwVMTypeError(globalObject, scope);
     auto* thisString = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -2236,7 +2236,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncAt, (JSGlobalObject* globalObject, CallF
     RETURN_IF_EXCEPTION(scope, { });
     uint32_t length = view->length();
     JSValue argument0 = callFrame->argument(0);
-    if (argument0.isInt32()) {
+    if (LIKELY(argument0.isInt32())) {
         int32_t i = argument0.asInt32();
         int64_t k = i < 0 ? static_cast<int64_t>(length) + i : i;
         if (k < length && k >= 0)
