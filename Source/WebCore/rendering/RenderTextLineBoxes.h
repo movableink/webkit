@@ -44,8 +44,6 @@ public:
 
     LegacyInlineTextBox* createAndAppendLineBox(RenderText&);
 
-    void extract(LegacyInlineTextBox&);
-    void attach(LegacyInlineTextBox&);
     void remove(LegacyInlineTextBox&);
 
     void removeAllFromParent(RenderText&);
@@ -53,8 +51,6 @@ public:
 
     void dirtyAll();
     bool dirtyForTextChange(RenderText&);
-
-    LegacyInlineTextBox* findNext(int offset, int& position) const;
 
 #if ASSERT_ENABLED
     ~RenderTextLineBoxes();

@@ -76,8 +76,6 @@ public:
 
     virtual String originalText() const;
 
-    void extractTextBox(LegacyInlineTextBox& box) { m_legacyLineBoxes.extract(box); }
-    void attachTextBox(LegacyInlineTextBox& box) { m_legacyLineBoxes.attach(box); }
     void removeTextBox(LegacyInlineTextBox& box) { m_legacyLineBoxes.remove(box); }
 
     const String& text() const { return m_text; }
