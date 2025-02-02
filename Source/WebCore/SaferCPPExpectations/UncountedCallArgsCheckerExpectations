@@ -447,7 +447,6 @@ css/CSSFontPaletteValuesOverrideColorsValue.cpp
 css/CSSFontSelector.cpp
 css/CSSFontStyleRangeValue.cpp
 css/CSSFontStyleRangeValue.h
-css/CSSFontStyleWithAngleValue.cpp
 css/CSSFontValue.cpp
 css/CSSFontVariationValue.cpp
 css/CSSGridIntegerRepeatValue.cpp

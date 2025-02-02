@@ -60,6 +60,7 @@
 #include "SimpleRange.h"
 #include "StyleColor.h"
 #include "StyleFontSizeFunctions.h"
+#include "StyleResolveForFont.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
 #include "StyledElement.h"
@@ -158,9 +159,12 @@ static RefPtr<CSSValue> extractPropertyValue(ComputedStyleExtractor& computedSty
 template<typename T> CSSValueID identifierForStyleProperty(T& style, CSSPropertyID propertyID)
 {
     auto value = extractPropertyValue(style, propertyID);
-    if (auto fontStyleValue = dynamicDowncast<CSSFontStyleWithAngleValue>(value.get())) {
+    if (RefPtr fontStyleValue = dynamicDowncast<CSSFontStyleWithAngleValue>(value.get())) {
         ASSERT(propertyID == CSSPropertyFontStyle);
-        return fontStyleValue->obliqueAngle().resolveAsAngleDeprecated() >= italicThreshold() ? CSSValueItalic : CSSValueNormal;
+        auto resolvedAngle = Style::fontStyleAngleFromCSSFontStyleWithAngleValueDeprecated(*fontStyleValue);
+        if (!resolvedAngle)
+            return CSSValueNormal;
+        return *resolvedAngle >= italicThreshold() ? CSSValueItalic : CSSValueNormal;
     }
     if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value.get())) {
         if (propertyID == CSSPropertyFontWeight && primitiveValue->isNumber() && primitiveValue->resolveAsNumberDeprecated() >= boldThreshold())

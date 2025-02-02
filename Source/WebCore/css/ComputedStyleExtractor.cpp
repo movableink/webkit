@@ -2559,7 +2559,7 @@ static Ref<CSSValue> fontStyle(std::optional<FontSelectionValue> italic, FontSty
     if (auto keyword = fontStyleKeyword(italic, axis))
         return CSSPrimitiveValue::create(keyword.value());
     float angle = *italic;
-    return CSSFontStyleWithAngleValue::create(CSSPrimitiveValue::create(angle, CSSUnitType::CSS_DEG));
+    return CSSFontStyleWithAngleValue::create(CSSFontStyleWithAngleValue::ObliqueAngle { CSS::AngleUnit::Deg, angle });
 }
 
 static Ref<CSSValue> fontStyle(const RenderStyle& style)

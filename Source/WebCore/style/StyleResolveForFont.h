@@ -33,6 +33,7 @@
 
 namespace WebCore {
 
+class CSSFontStyleWithAngleValue;
 class CSSToLengthConversionData;
 class CSSValue;
 class FontCascade;
@@ -60,6 +61,9 @@ FontSelectionValue fontStretchFromCSSValue(const CSSValue&, const CSSToLengthCon
 
 FontSelectionValue fontStyleAngleFromCSSValueDeprecated(const CSSValue&);
 FontSelectionValue fontStyleAngleFromCSSValue(const CSSValue&, const CSSToLengthConversionData&);
+
+std::optional<FontSelectionValue> fontStyleAngleFromCSSFontStyleWithAngleValueDeprecated(const CSSFontStyleWithAngleValue&);
+std::optional<FontSelectionValue> fontStyleAngleFromCSSFontStyleWithAngleValue(const CSSFontStyleWithAngleValue&, const CSSToLengthConversionData&);
 
 std::optional<FontSelectionValue> fontStyleFromCSSValueDeprecated(const CSSValue&);
 std::optional<FontSelectionValue> fontStyleFromCSSValue(const CSSValue&, const CSSToLengthConversionData&);

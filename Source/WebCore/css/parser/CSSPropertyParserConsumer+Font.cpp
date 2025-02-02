@@ -223,7 +223,7 @@ RefPtr<CSSValue> consumeFontStyle(CSSParserTokenRange& range, const CSSParserCon
 #if ENABLE(VARIATION_FONTS)
     if (*keyword == CSSValueOblique && !range.atEnd()) {
         if (auto angle = consumeFontStyleAngleUnresolved(range, context))
-            return CSSFontStyleWithAngleValue::create(resolveToCSSPrimitiveValue(WTFMove(*angle)));
+            return CSSFontStyleWithAngleValue::create(WTFMove(*angle));
     }
 #endif
 

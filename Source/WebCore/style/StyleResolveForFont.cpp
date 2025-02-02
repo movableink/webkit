@@ -184,10 +184,22 @@ FontSelectionValue fontStyleAngleFromCSSValue(const CSSValue& value, const CSSTo
     return normalizedFontItalicValue(downcast<CSSPrimitiveValue>(value).resolveAsAngle<float>(conversionData));
 }
 
+std::optional<FontSelectionValue> fontStyleAngleFromCSSFontStyleWithAngleValueDeprecated(const CSSFontStyleWithAngleValue& value)
+{
+    if (requiresConversionData(value.obliqueAngle()))
+        return { };
+    return FontSelectionValue { narrowPrecisionToFloat(Style::toStyle(value.obliqueAngle(), NoConversionDataRequiredToken { }).value) };
+}
+
+std::optional<FontSelectionValue> fontStyleAngleFromCSSFontStyleWithAngleValue(const CSSFontStyleWithAngleValue& value, const CSSToLengthConversionData& conversionData)
+{
+    return FontSelectionValue { narrowPrecisionToFloat(Style::toStyle(value.obliqueAngle(), conversionData).value) };
+}
+
 std::optional<FontSelectionValue> fontStyleFromCSSValueDeprecated(const CSSValue& value)
 {
-    if (auto* fontStyleValue = dynamicDowncast<CSSFontStyleWithAngleValue>(value))
-        return fontStyleAngleFromCSSValueDeprecated(fontStyleValue->protectedObliqueAngle());
+    if (RefPtr fontStyleValue = dynamicDowncast<CSSFontStyleWithAngleValue>(value))
+        return fontStyleAngleFromCSSFontStyleWithAngleValueDeprecated(*fontStyleValue);
 
     auto valueID = value.valueID();
     if (valueID == CSSValueNormal)
@@ -199,8 +211,8 @@ std::optional<FontSelectionValue> fontStyleFromCSSValueDeprecated(const CSSValue
 
 std::optional<FontSelectionValue> fontStyleFromCSSValue(const CSSValue& value, const CSSToLengthConversionData& conversionData)
 {
-    if (auto* fontStyleValue = dynamicDowncast<CSSFontStyleWithAngleValue>(value))
-        return fontStyleAngleFromCSSValue(fontStyleValue->protectedObliqueAngle(), conversionData);
+    if (RefPtr fontStyleValue = dynamicDowncast<CSSFontStyleWithAngleValue>(value))
+        return fontStyleAngleFromCSSFontStyleWithAngleValue(*fontStyleValue, conversionData);
 
     auto valueID = value.valueID();
     if (valueID == CSSValueNormal)
