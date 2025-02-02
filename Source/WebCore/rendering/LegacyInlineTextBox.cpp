@@ -206,22 +206,6 @@ void LegacyInlineTextBox::deleteLine()
     delete this;
 }
 
-void LegacyInlineTextBox::extractLine()
-{
-    if (extracted())
-        return;
-
-    renderer().extractTextBox(*this);
-}
-
-void LegacyInlineTextBox::attachLine()
-{
-    if (!extracted())
-        return;
-    
-    renderer().attachTextBox(*this);
-}
-
 bool LegacyInlineTextBox::isLineBreak() const
 {
     return renderer().style().preserveNewline() && len() == 1 && renderer().text()[start()] == '\n';

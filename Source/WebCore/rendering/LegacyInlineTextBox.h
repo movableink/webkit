@@ -99,8 +99,6 @@ public:
 
 private:
     void deleteLine() final;
-    void extractLine() final;
-    void attachLine() final;
     
 public:
     RenderObject::HighlightState selectionState() const final;

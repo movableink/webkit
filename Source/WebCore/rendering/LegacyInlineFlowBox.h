@@ -78,8 +78,6 @@ public:
 
     void addToLine(LegacyInlineBox* child);
     void deleteLine() final;
-    void extractLine() final;
-    void attachLine() final;
     void adjustPosition(float dx, float dy) override;
 
     virtual void extractLineBoxFromRenderObject();
