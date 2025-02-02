@@ -2440,7 +2440,7 @@ void FunctionDefinitionWriter::visit(AST::ReturnStatement& statement)
 
 void FunctionDefinitionWriter::visit(AST::ForStatement& statement)
 {
-    m_stringBuilder.append("for ("_s);
+    m_stringBuilder.append("{ volatile bool __wgslEnsureForwardProgress = true; if (__wgslEnsureForwardProgress) for ("_s);
     if (auto* initializer = statement.maybeInitializer())
         visit(*initializer);
     m_stringBuilder.append(';');
@@ -2453,14 +2453,15 @@ void FunctionDefinitionWriter::visit(AST::ForStatement& statement)
         m_stringBuilder.append(' ');
         visit(*update);
     }
-    m_stringBuilder.append(") { volatile bool __wgslEnsureForwardProgress = true; "_s);
+    m_stringBuilder.append(") { __wgslEnsureForwardProgress = true; "_s);
     visit(statement.body());
+    m_stringBuilder.append('}');
     m_stringBuilder.append('}');
 }
 
 void FunctionDefinitionWriter::visit(AST::LoopStatement& statement)
 {
-    m_stringBuilder.append("while (true) { volatile bool __wgslEnsureForwardProgress = true; \n"_s);
+    m_stringBuilder.append("{ volatile bool __wgslEnsureForwardProgress = true; if (__wgslEnsureForwardProgress) while (true) { __wgslEnsureForwardProgress = true; \n"_s);
     {
         if (statement.containsSwitch())
             m_stringBuilder.append("bool __continuing = false;\n"_s, m_indent);
@@ -2475,6 +2476,7 @@ void FunctionDefinitionWriter::visit(AST::LoopStatement& statement)
             visit(*continuing);
         }
     }
+    m_stringBuilder.append(m_indent, '}');
     m_stringBuilder.append(m_indent, '}');
 }
 
@@ -2502,10 +2504,11 @@ void FunctionDefinitionWriter::visit(AST::Continuing& continuing)
 
 void FunctionDefinitionWriter::visit(AST::WhileStatement& statement)
 {
-    m_stringBuilder.append("while ("_s);
+    m_stringBuilder.append("{ volatile bool __wgslEnsureForwardProgress = true; if (__wgslEnsureForwardProgress) while ("_s);
     visit(statement.test());
-    m_stringBuilder.append(") { volatile bool __wgslEnsureForwardProgress = true; "_s);
+    m_stringBuilder.append(") { __wgslEnsureForwardProgress = true; "_s);
     visit(statement.body());
+    m_stringBuilder.append('}');
     m_stringBuilder.append('}');
 }
 

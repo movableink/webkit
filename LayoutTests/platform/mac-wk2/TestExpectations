@@ -1602,6 +1602,9 @@ webkit.org/b/263396 css3/color/text.html [ Skip ]
 # WebGPU
 [ Release ] http/tests/webgpu/webgpu/api/validation/encoding/cmds/copyTextureToTexture.html
 
+# skipped due to infinite loop compute shaders normally not terminating on macOS, test must be run locally for now
+fast/webgpu/nocrash/fuzz-286820.html [ Skip ]
+
 # skipped outside of macOS Sequoia due to crash in failed allocation
 [ Ventura Sonoma ] fast/webgpu/nocrash/fuzz-279086.html [ Skip ]
 
