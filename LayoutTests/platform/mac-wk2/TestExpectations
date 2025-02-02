@@ -1627,9 +1627,9 @@ fast/webgpu/nocrash/fuzz-286820.html [ Skip ]
 # skipped due to failing when run in stress test mode
 [ Ventura Sonoma ] fast/webgpu/nocrash/RenderBundle_WRITE.html [ Skip ]
 
-[ Release arm64 ] http/tests/webgpu/webgpu/api [ Pass Failure Timeout ]
-[ Release arm64 ] http/tests/webgpu/webgpu/shader [ Pass Failure Timeout ]
-[ Release arm64 ] http/tests/webgpu/webgpu/web_platform [ Pass Failure Timeout ]
+[ Release arm64 Sequoia+ ] http/tests/webgpu/webgpu/api [ Pass Failure Timeout ]
+[ Release arm64 Sequoia+ ] http/tests/webgpu/webgpu/shader [ Pass Failure Timeout ]
+[ Release arm64 Sequoia+ ] http/tests/webgpu/webgpu/web_platform [ Pass Failure Timeout ]
 
 # timeout on Intel Macs due to difference in handling infinite loops
 [ x86_64 ] fast/webgpu/regression/repro_283595-for.html [ Skip ]
