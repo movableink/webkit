@@ -128,7 +128,6 @@ inline const LengthBox& RenderStyle::borderImageSlices() const { return border()
 inline StyleImage* RenderStyle::borderImageSource() const { return border().image().image(); }
 inline NinePieceImageRule RenderStyle::borderImageVerticalRule() const { return border().image().verticalRule(); }
 inline const LengthBox& RenderStyle::borderImageWidth() const { return border().image().borderSlices(); }
-inline bool RenderStyle::borderIsEquivalentForPainting(const RenderStyle& otherStyle) const { return border().isEquivalentForPainting(otherStyle.border(), color() != otherStyle.color()); }
 inline const BorderValue& RenderStyle::borderLeft() const { return border().left(); }
 inline const Style::Color& RenderStyle::borderLeftColor() const { return border().left().color(); }
 inline bool RenderStyle::borderLeftIsTransparent() const { return border().left().isTransparent(); }
@@ -208,7 +207,6 @@ inline bool RenderStyle::containsSizeOrInlineSize() const { return usedContain()
 inline bool RenderStyle::containsStyle() const { return usedContain().contains(Containment::Style); }
 constexpr OptionSet<Containment> RenderStyle::contentContainment() { return { Containment::Layout, Containment::Paint, Containment::Style }; }
 inline const ContentData* RenderStyle::contentData() const { return m_nonInheritedData->miscData->content.get(); }
-inline bool RenderStyle::contentDataEquivalent(const RenderStyle* otherStyle) const { return m_nonInheritedData->miscData->contentDataEquivalent(*otherStyle->m_nonInheritedData->miscData); }
 inline ContentVisibility RenderStyle::contentVisibility() const { return static_cast<ContentVisibility>(m_nonInheritedData->rareData->contentVisibility); }
 inline CursorList* RenderStyle::cursors() const { return m_rareInheritedData->cursorData.get(); }
 inline StyleAppearance RenderStyle::usedAppearance() const { return static_cast<StyleAppearance>(m_nonInheritedData->miscData->usedAppearance); }
@@ -1070,6 +1068,56 @@ inline bool RenderStyle::isInterCharacterRubyPosition() const
 {
     auto rubyPosition = this->rubyPosition();
     return rubyPosition == RubyPosition::InterCharacter || rubyPosition == RubyPosition::LegacyInterCharacter;
+}
+
+inline bool RenderStyle::columnSpanEqual(const RenderStyle& other) const
+{
+    if (m_nonInheritedData.ptr() == other.m_nonInheritedData.ptr()
+        || m_nonInheritedData->miscData.ptr() == other.m_nonInheritedData->miscData.ptr()
+        || m_nonInheritedData->miscData->multiCol.ptr() == other.m_nonInheritedData->miscData->multiCol.ptr())
+        return true;
+
+    return m_nonInheritedData->miscData->multiCol->columnSpan == other.m_nonInheritedData->miscData->multiCol->columnSpan;
+}
+
+inline bool RenderStyle::borderIsEquivalentForPainting(const RenderStyle& other) const
+{
+    bool colorDiffers = color() != other.color();
+
+    if (!colorDiffers
+        && (m_nonInheritedData.ptr() == other.m_nonInheritedData.ptr()
+        || m_nonInheritedData->surroundData.ptr() == other.m_nonInheritedData->surroundData.ptr()
+        || m_nonInheritedData->surroundData->border == other.m_nonInheritedData->surroundData->border))
+        return true;
+
+    return border().isEquivalentForPainting(other.border(), colorDiffers);
+}
+
+inline bool RenderStyle::contentDataEquivalent(const RenderStyle& other) const
+{
+    if (m_nonInheritedData.ptr() == other.m_nonInheritedData.ptr()
+        || m_nonInheritedData->miscData.ptr() == other.m_nonInheritedData->miscData.ptr())
+        return true;
+
+    return m_nonInheritedData->miscData->contentDataEquivalent(other.m_nonInheritedData->miscData);
+}
+
+inline bool RenderStyle::containerTypeAndNamesEqual(const RenderStyle& other) const
+{
+    if (m_nonInheritedData.ptr() == other.m_nonInheritedData.ptr()
+        || m_nonInheritedData->rareData.ptr() == other.m_nonInheritedData->rareData.ptr())
+        return true;
+
+    return containerType() == other.containerType() && containerNames() == other.containerNames();
+}
+
+inline bool RenderStyle::scrollPaddingEqual(const RenderStyle& other) const
+{
+    if (m_nonInheritedData.ptr() == other.m_nonInheritedData.ptr()
+        || m_nonInheritedData->rareData.ptr() == other.m_nonInheritedData->rareData.ptr())
+        return true;
+
+    return m_nonInheritedData->rareData->scrollPadding == other.m_nonInheritedData->rareData->scrollPadding;
 }
 
 inline bool generatesBox(const RenderStyle& style)

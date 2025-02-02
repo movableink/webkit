@@ -294,6 +294,7 @@ struct Color;
 struct ColorScheme;
 struct ScopedName;
 
+enum class Change : uint8_t;
 enum class PositionTryOrder : uint8_t;
 }
 
@@ -771,6 +772,7 @@ public:
     inline bool containsLayoutOrPaint() const;
     inline ContainerType containerType() const;
     inline const Vector<Style::ScopedName>& containerNames() const;
+    inline bool containerTypeAndNamesEqual(const RenderStyle&) const;
 
     inline ContentVisibility contentVisibility() const;
 
@@ -912,6 +914,7 @@ public:
     inline unsigned short columnRuleWidth() const;
     inline bool columnRuleIsTransparent() const;
     inline ColumnSpan columnSpan() const;
+    inline bool columnSpanEqual(const RenderStyle&) const;
 
     inline const TransformOperations& transform() const;
     inline bool hasTransform() const;
@@ -1073,11 +1076,13 @@ public:
     const Length& scrollPaddingBottom() const;
     const Length& scrollPaddingLeft() const;
     const Length& scrollPaddingRight() const;
+    inline bool scrollPaddingEqual(const RenderStyle&) const;
 
     bool hasSnapPosition() const;
     ScrollSnapType scrollSnapType() const;
     const ScrollSnapAlign& scrollSnapAlign() const;
     ScrollSnapStop scrollSnapStop() const;
+    bool scrollSnapDataEquivalent(const RenderStyle&) const;
 
     Color usedScrollbarThumbColor() const;
     Color usedScrollbarTrackColor() const;
@@ -1794,7 +1799,7 @@ public:
     inline bool hasContent() const;
     inline const ContentData* contentData() const;
     void setContent(std::unique_ptr<ContentData>, bool add);
-    inline bool contentDataEquivalent(const RenderStyle*) const;
+    inline bool contentDataEquivalent(const RenderStyle&) const;
     void clearContent();
     inline void setHasContentNone(bool);
     void setContent(const String&, bool add = false);

@@ -198,8 +198,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             view().frameView().removeViewportConstrainedObject(*this);
     }
 
-    const RenderStyle& newStyle = style();
-    if (oldStyle && oldStyle->scrollPadding() != newStyle.scrollPadding()) {
+    if (oldStyle && !oldStyle->scrollPaddingEqual(style())) {
         if (isDocumentElementRenderer()) {
             LocalFrameView& frameView = view().frameView();
             frameView.updateScrollbarSteps();
@@ -207,10 +206,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             renderLayer->updateScrollbarSteps();
     }
 
-    bool scrollMarginChanged = oldStyle && oldStyle->scrollMargin() != newStyle.scrollMargin();
-    bool scrollAlignChanged = oldStyle && oldStyle->scrollSnapAlign() != newStyle.scrollSnapAlign();
-    bool scrollSnapStopChanged = oldStyle && oldStyle->scrollSnapStop() != newStyle.scrollSnapStop();
-    if (scrollMarginChanged || scrollAlignChanged || scrollSnapStopChanged) {
+    if (oldStyle && !oldStyle->scrollSnapDataEquivalent(style())) {
         if (auto* scrollSnapBox = enclosingScrollableContainer())
             scrollSnapBox->setNeedsLayout();
     }
