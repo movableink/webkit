@@ -39,6 +39,8 @@
 #include "RenderBlock.h"
 #include "RenderElement.h"
 #include "ScopedEventQueue.h"
+#include "ToggleEvent.h"
+#include "ToggleEventTask.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -62,6 +64,16 @@ ExceptionOr<void> HTMLDialogElement::show()
         return Exception { ExceptionCode::InvalidStateError, "Cannot call show() on an open modal dialog."_s };
     }
 
+    Ref event = ToggleEvent::create(eventNames().beforetoggleEvent, { EventInit { }, "closed"_s, "open"_s }, Event::IsCancelable::Yes);
+    dispatchEvent(event);
+    if (event->defaultPrevented())
+        return { };
+
+    if (isOpen())
+        return { };
+
+    queueDialogToggleEventTask(ToggleState::Closed, ToggleState::Open);
+
     setBooleanAttribute(openAttr, true);
 
     m_previouslyFocusedElement = document().focusedElement();
@@ -71,6 +83,7 @@ ExceptionOr<void> HTMLDialogElement::show()
     document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
 
     runFocusingSteps();
+
     return { };
 }
 
@@ -92,6 +105,22 @@ ExceptionOr<void> HTMLDialogElement::showModal()
 
     if (!protectedDocument()->isFullyActive())
         return Exception { ExceptionCode::InvalidStateError, "Invalid for dialogs within documents that are not fully active."_s };
+
+    Ref event = ToggleEvent::create(eventNames().beforetoggleEvent, { EventInit { }, "closed"_s, "open"_s }, Event::IsCancelable::Yes);
+    dispatchEvent(event);
+    if (event->defaultPrevented())
+        return { };
+
+    if (isOpen())
+        return { };
+
+    if (!isConnected())
+        return { };
+
+    if (isPopoverShowing())
+        return { };
+
+    queueDialogToggleEventTask(ToggleState::Closed, ToggleState::Open);
 
     // setBooleanAttribute will dispatch a DOMSubtreeModified event.
     // Postpone callback execution that can potentially make the dialog disconnected.
@@ -124,6 +153,14 @@ void HTMLDialogElement::close(const String& result)
 {
     if (!isOpen())
         return;
+
+    Ref event = ToggleEvent::create(eventNames().beforetoggleEvent, { EventInit { }, "open"_s, "closed"_s }, Event::IsCancelable::No);
+    dispatchEvent(event);
+
+    if (!isOpen())
+        return;
+
+    queueDialogToggleEventTask(ToggleState::Open, ToggleState::Closed);
 
     setBooleanAttribute(openAttr, false);
 
@@ -243,4 +280,12 @@ void HTMLDialogElement::setIsModal(bool newValue)
     m_isModal = newValue;
 }
 
+void HTMLDialogElement::queueDialogToggleEventTask(ToggleState oldState, ToggleState newState)
+{
+    if (!m_toggleEventTask)
+        m_toggleEventTask = ToggleEventTask::create(*this);
+
+    m_toggleEventTask->queue(oldState, newState);
 }
+
+};
