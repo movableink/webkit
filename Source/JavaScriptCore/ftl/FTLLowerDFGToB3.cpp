@@ -781,6 +781,9 @@ private:
         case BooleanToNumber:
             compileBooleanToNumber();
             break;
+        case PurifyNaN:
+            compilePurifyNaN();
+            break;
         case ExtractOSREntryLocal:
             compileExtractOSREntryLocal();
             break;
@@ -2336,6 +2339,14 @@ private:
             RELEASE_ASSERT_NOT_REACHED();
             return;
         }
+    }
+
+    void compilePurifyNaN()
+    {
+        LValue value = lowDouble(m_node->child1());
+        if (abstractValue(m_node->child1()).couldBeType(SpecDoubleImpureNaN))
+            value = purifyNaN(value);
+        setDouble(value);
     }
 
     void compileExtractOSREntryLocal()

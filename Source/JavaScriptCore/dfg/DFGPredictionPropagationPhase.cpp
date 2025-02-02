@@ -1561,6 +1561,7 @@ private:
         case DoubleRep:
         case ValueRep:
         case Int52Rep:
+        case PurifyNaN:
         case Int52Constant:
         case Identity:
         case BooleanToNumber:

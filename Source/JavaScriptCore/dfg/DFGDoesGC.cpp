@@ -202,6 +202,7 @@ bool doesGC(Graph& graph, Node* node)
     case MultiDeleteByOffset:
     case ValueRep:
     case DoubleRep:
+    case PurifyNaN:
     case Int52Rep:
     case GetGetter:
     case GetSetter:

@@ -896,6 +896,13 @@ public:
         m_opInfo = false;
     }
 
+    void convertToPurifyNaN(Node* input)
+    {
+        ASSERT(op() == DoubleRep);
+        setOp(PurifyNaN);
+        children.setChild1(Edge(input, DoubleRepUse));
+    }
+
     JSValue asJSValue()
     {
         return constant()->value();

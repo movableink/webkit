@@ -785,6 +785,20 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         setNonCellTypeForNode(node, SpecInt32Only);
         break;
     }
+
+    case PurifyNaN: {
+        auto abstractValue = forNode(node->child1());
+        JSValue child = abstractValue.value();
+        if (child && child.isNumber()) {
+            setConstant(node, jsDoubleNumber(purifyNaN(child.asNumber())));
+            break;
+        }
+        if (!abstractValue.couldBeType(SpecDoubleImpureNaN))
+            m_state.setShouldTryConstantFolding(true);
+        abstractValue.filter(SpecBytecodeDouble);
+        forNode(node) = abstractValue;
+        break;
+    }
         
     case DoubleRep: {
         JSValue child = forNode(node->child1()).value();
@@ -3906,7 +3920,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                     break;
                 }
             }
-            setTypeForNode(node, SpecBytecodeRealNumber);
+            setTypeForNode(node, SpecBytecodeDouble);
             break;
         }
 
@@ -4572,10 +4586,10 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             m_state.setIsValid(false);
 
         if (node->hasDoubleResult()) {
-            if (value.isType(SpecBytecodeRealNumber))
+            if (value.isType(SpecBytecodeDouble))
                 setForNode(node, value);
             else
-                setTypeForNode(node, SpecBytecodeRealNumber);
+                setTypeForNode(node, SpecBytecodeDouble);
         } else
             setForNode(node, value);
 
@@ -4642,10 +4656,10 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             m_state.setIsValid(false);
         
         if (node->hasDoubleResult()) {
-            if (result.isType(SpecBytecodeRealNumber))
+            if (result.isType(SpecBytecodeDouble))
                 setForNode(node, result);
             else
-                setTypeForNode(node, SpecBytecodeRealNumber);
+                setTypeForNode(node, SpecBytecodeDouble);
         } else
             setForNode(node, result);
         break;
@@ -5041,7 +5055,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
 
     case GetGlobalVar: {
         if (node->hasDoubleResult())
-            setTypeForNode(node, SpecBytecodeRealNumber);
+            setTypeForNode(node, SpecBytecodeDouble);
         else {
             // Emptiness is monotonic. And GetGlobalLexicalVariable and GetGlobalVar are tied to GlobalObject.
             // So long as it is not unlinked.
@@ -5058,7 +5072,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
 
     case GetGlobalLexicalVariable:
         if (node->hasDoubleResult())
-            setTypeForNode(node, SpecBytecodeRealNumber);
+            setTypeForNode(node, SpecBytecodeDouble);
         else {
             // Emptiness is monotonic. And GetGlobalLexicalVariable and GetGlobalVar are tied to GlobalObject.
             // So long as it is not unlinked.

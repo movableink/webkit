@@ -2495,6 +2495,7 @@ private:
         case DoubleAsInt32:
         case ValueToInt32:
         case DoubleRep:
+        case PurifyNaN:
         case ValueRep:
         case Int52Rep:
         case Int52Constant:
@@ -5191,9 +5192,7 @@ private:
                                 Edge(edge.node(), Int52RepUse));
                         } else {
                             UseKind useKind;
-                            if (edge->shouldSpeculateDoubleReal())
-                                useKind = RealNumberUse;
-                            else if (edge->shouldSpeculateNumber())
+                            if (edge->shouldSpeculateNumber())
                                 useKind = NumberUse;
                             else
                                 useKind = NotCellNorBigIntUse;

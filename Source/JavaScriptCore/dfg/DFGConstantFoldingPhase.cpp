@@ -1430,6 +1430,15 @@ private:
                 break;
             }
 
+            case PurifyNaN: {
+                auto abstractValue = m_state.forNode(node->child1());
+                if (!abstractValue.couldBeType(SpecDoubleImpureNaN)) {
+                    node->convertToIdentityOn(node->child1().node());
+                    changed = true;
+                }
+                break;
+            }
+
             case PhantomNewObject:
             case PhantomNewFunction:
             case PhantomNewGeneratorFunction:

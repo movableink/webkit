@@ -320,6 +320,7 @@ inline CapabilityLevel canCompile(Node* node)
     case DoubleRep:
     case ValueRep:
     case Int52Rep:
+    case PurifyNaN:
     case DoubleConstant:
     case Int52Constant:
     case BooleanToNumber:

@@ -248,6 +248,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case CheckInBounds:
     case CheckInBoundsInt52:
     case DoubleRep:
+    case PurifyNaN:
     case ValueRep:
     case Int52Rep:
     case BooleanToNumber:

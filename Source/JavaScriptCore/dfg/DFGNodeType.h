@@ -147,6 +147,7 @@ namespace JSC { namespace DFG {
     macro(DoubleRep, NodeResultDouble) \
     macro(Int52Rep, NodeResultInt52) \
     macro(ValueRep, NodeResultJS) \
+    macro(PurifyNaN, NodeResultDouble) \
     \
     /* Bogus type asserting node. Useful for testing, disappears during Fixup. */\
     macro(FiatInt52, NodeResultJS) \
