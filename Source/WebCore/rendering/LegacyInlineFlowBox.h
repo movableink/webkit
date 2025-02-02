@@ -80,8 +80,6 @@ public:
     void deleteLine() final;
     void adjustPosition(float dx, float dy) override;
 
-    virtual void extractLineBoxFromRenderObject();
-    virtual void attachLineBoxToRenderObject();
     virtual void removeLineBoxFromRenderObject();
 
     void computeOverflow(LayoutUnit lineTop, LayoutUnit lineBottom, GlyphOverflowAndFallbackFontsMap&);

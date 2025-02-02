@@ -169,16 +169,6 @@ void LegacyRootInlineBox::removeLineBoxFromRenderObject()
         legacyLineLayout->lineBoxes().removeLineBox(this);
 }
 
-void LegacyRootInlineBox::extractLineBoxFromRenderObject()
-{
-    blockFlow().svgTextLayout()->lineBoxes().extractLineBox(this);
-}
-
-void LegacyRootInlineBox::attachLineBoxToRenderObject()
-{
-    blockFlow().svgTextLayout()->lineBoxes().attachLineBox(this);
-}
-
 LayoutUnit LegacyRootInlineBox::lineBoxWidth() const
 {
     return blockFlow().availableLogicalWidthForLine(lineBoxTop(), lineBoxHeight());

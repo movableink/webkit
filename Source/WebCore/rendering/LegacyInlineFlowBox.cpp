@@ -185,16 +185,6 @@ void LegacyInlineFlowBox::removeLineBoxFromRenderObject()
     downcast<RenderInline>(renderer()).legacyLineBoxes().removeLineBox(this);
 }
 
-void LegacyInlineFlowBox::extractLineBoxFromRenderObject()
-{
-    downcast<RenderInline>(renderer()).legacyLineBoxes().extractLineBox(this);
-}
-
-void LegacyInlineFlowBox::attachLineBoxToRenderObject()
-{
-    downcast<RenderInline>(renderer()).legacyLineBoxes().attachLineBox(this);
-}
-
 void LegacyInlineFlowBox::adjustPosition(float dx, float dy)
 {
     LegacyInlineBox::adjustPosition(dx, dy);
