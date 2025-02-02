@@ -55,6 +55,7 @@
 #include <wtf/Function.h>
 #include <wtf/glib/GRefPtr.h>
 typedef struct _SoupCookieJar SoupCookieJar;
+typedef struct _SoupCookie SoupCookie;
 #endif
 
 #if USE(CURL)
@@ -157,10 +158,13 @@ public:
     WEBCORE_EXPORT ~NetworkStorageSession();
 #endif
 
+#if PLATFORM(COCOA) || USE(SOUP)
+    enum class IsInMemoryCookieStore : bool { No, Yes };
+#endif
+
 #if PLATFORM(COCOA)
     enum class ShouldDisableCFURLCache : bool { No, Yes };
     WEBCORE_EXPORT static RetainPtr<CFURLStorageSessionRef> createCFStorageSessionForIdentifier(CFStringRef identifier, ShouldDisableCFURLCache = ShouldDisableCFURLCache::No);
-    enum class IsInMemoryCookieStore : bool { No, Yes };
     WEBCORE_EXPORT NetworkStorageSession(PAL::SessionID, RetainPtr<CFURLStorageSessionRef>&&, RetainPtr<CFHTTPCookieStorageRef>&&, IsInMemoryCookieStore = IsInMemoryCookieStore::No);
     WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID);
 
@@ -168,7 +172,7 @@ public:
     CFURLStorageSessionRef platformSession() { return m_platformSession.get(); }
     WEBCORE_EXPORT RetainPtr<CFHTTPCookieStorageRef> cookieStorage() const;
 #elif USE(SOUP)
-    WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID);
+    WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID, IsInMemoryCookieStore = IsInMemoryCookieStore::No);
     ~NetworkStorageSession();
 
     SoupCookieJar* cookieStorage() const { return m_cookieStorage.get(); }
@@ -316,12 +320,15 @@ private:
 
     PAL::SessionID m_sessionID;
 
+#if PLATFORM(COCOA) || USE(SOUP)
+    const bool m_isInMemoryCookieStore { false };
+#endif
+
 #if PLATFORM(COCOA)
     RetainPtr<CFURLStorageSessionRef> m_platformSession;
     RetainPtr<CFHTTPCookieStorageRef> m_platformCookieStorage;
-    const bool m_isInMemoryCookieStore { false };
 #elif USE(SOUP)
-    static void cookiesDidChange(NetworkStorageSession*);
+    static void cookiesDidChange(NetworkStorageSession*, SoupCookie* oldCookie, SoupCookie* newCookie, SoupCookieJar*);
 
     HTTPCookieAcceptPolicy m_cookieAcceptPolicy;
     GRefPtr<SoupCookieJar> m_cookieStorage;
@@ -333,10 +340,12 @@ private:
 #endif
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-    bool m_didRegisterCookieListeners { false };
+#if PLATFORM(COCOA)
     RetainPtr<NSMutableSet> m_subscribedDomainsForCookieChanges;
-    MemoryCompactRobinHoodHashMap<String, WeakHashSet<CookieChangeObserver>> m_cookieChangeObservers;
+    bool m_didRegisterCookieListeners { false };
 #endif
+    MemoryCompactRobinHoodHashMap<String, WeakHashSet<CookieChangeObserver>> m_cookieChangeObservers;
+#endif // HAVE(COOKIE_CHANGE_LISTENER_API)
     WeakHashSet<CookiesEnabledStateObserver> m_cookiesEnabledStateObservers;
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     bool m_isOptInCookiePartitioningEnabled { false };

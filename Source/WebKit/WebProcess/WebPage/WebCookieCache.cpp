@@ -162,7 +162,7 @@ void WebCookieCache::pruneCacheIfNecessary()
         clearForHost(*m_hostsWithInMemoryStorage.random());
 }
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) && !USE(SOUP)
 NetworkStorageSession& WebCookieCache::inMemoryStorageSession()
 {
     ASSERT_NOT_IMPLEMENTED_YET();

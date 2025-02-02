@@ -298,6 +298,8 @@ WebProcess/WebPage/glib/WebPageGLib.cpp
 
 WebProcess/WebPage/libwpe/AcceleratedSurfaceLibWPE.cpp @no-unify
 
+WebProcess/WebPage/soup/WebCookieCacheSoup.cpp
+
 WebProcess/WebPage/wpe/WebPageWPE.cpp
 
 WebProcess/glib/SystemSettingsManager.cpp

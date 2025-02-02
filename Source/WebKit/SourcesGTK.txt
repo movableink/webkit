@@ -338,6 +338,8 @@ WebProcess/WebPage/glib/WebPageGLib.cpp
 WebProcess/WebPage/gtk/WebPageGtk.cpp
 WebProcess/WebPage/gtk/WebPrintOperationGtk.cpp
 
+WebProcess/WebPage/soup/WebCookieCacheSoup.cpp
+
 WebProcess/glib/SystemSettingsManager.cpp
 WebProcess/glib/WebProcessGLib.cpp
 

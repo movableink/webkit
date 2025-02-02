@@ -774,7 +774,7 @@ void NetworkConnectionToWebProcess::registerURLSchemesAsCORSEnabled(Vector<Strin
 
 static bool shouldTreatAsSameSite(const URL& firstParty, const URL& url)
 {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || USE(SOUP)
     if (SecurityPolicy::shouldInheritSecurityOriginFromOwner(url))
         return true;
 

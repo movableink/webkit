@@ -69,13 +69,13 @@ void NetworkStorageSession::permitProcessToUseCookieAPI(bool value)
         removeProcessPrivilege(ProcessPrivilege::CanAccessRawCookies);
 }
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) && !USE(SOUP)
 Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL&)
 {
     ASSERT_NOT_IMPLEMENTED_YET();
     return { };
 }
-#endif // !PLATFORM(COCOA)
+#endif // !PLATFORM(COCOA) && !USE(SOUP)
 
 #if !USE(SOUP)
 void NetworkStorageSession::setTrackingPreventionEnabled(bool enabled)

@@ -409,6 +409,7 @@ list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/WebProcess/WebPage/dmabuf"
     "${WEBKIT_DIR}/WebProcess/WebPage/glib"
     "${WEBKIT_DIR}/WebProcess/WebPage/libwpe"
+    "${WEBKIT_DIR}/WebProcess/WebPage/soup"
     "${WEBKIT_DIR}/WebProcess/WebPage/wpe"
     "${WEBKIT_DIR}/WebProcess/glib"
     "${WEBKIT_DIR}/WebProcess/soup"
