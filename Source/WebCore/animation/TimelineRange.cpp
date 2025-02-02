@@ -117,7 +117,7 @@ Length SingleTimelineRange::lengthForCSSValue(RefPtr<const CSSPrimitiveValue> va
     return { };
 }
 
-SingleTimelineRange SingleTimelineRange::range(const CSSValue& value, Type type, const Style::BuilderState* state, RefPtr<Element> element)
+SingleTimelineRange SingleTimelineRange::range(const CSSValue& value, Type type, Style::BuilderState* state, RefPtr<Element> element)
 {
     if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         // <length-percentage>

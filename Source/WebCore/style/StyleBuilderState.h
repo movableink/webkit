@@ -114,7 +114,7 @@ public:
     void registerContentAttribute(const AtomString& attributeLocalName);
 
     const CSSToLengthConversionData& cssToLengthConversionData() const { return m_cssToLengthConversionData; }
-    const CSSToStyleMap& styleMap() const { return m_styleMap; }
+    CSSToStyleMap& styleMap() { return m_styleMap; }
 
     void setIsBuildingKeyframeStyle() { m_isBuildingKeyframeStyle = true; }
 
