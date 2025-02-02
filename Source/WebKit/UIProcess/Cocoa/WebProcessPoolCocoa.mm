@@ -61,6 +61,8 @@
 #import "WebProcessMessages.h"
 #import "WindowServerConnection.h"
 #import "_WKSystemPreferencesInternal.h"
+#import <UniformTypeIdentifiers/UTCoreTypes.h>
+#import <UniformTypeIdentifiers/UTType.h>
 #import <WebCore/AGXCompilerService.h>
 #import <WebCore/Color.h>
 #import <WebCore/FontCacheCoreText.h>
@@ -1429,10 +1431,11 @@ static void addUserInstalledFontURLs(NSString *path, Vector<URL>& fontURLs)
     RetainPtr enumerator = [NSFileManager.defaultManager enumeratorAtPath:path];
 
     for (NSString *font in enumerator.get()) {
-        if ([font hasSuffix:@"ttf"] || [font hasSuffix:@"ttc"] || [font hasSuffix:@"otf"]) {
-            RetainPtr fontsPath = [path stringByAppendingPathComponent:font];
-            auto fontURL = URL::fileURLWithFileSystemPath(String(fontsPath.get()));
-            fontURLs.append(WTFMove(fontURL));
+        NSURL *nsFontURL = [NSURL fileURLWithPath:[path stringByAppendingPathComponent:font]];
+        UTType *utType = [UTType typeWithFilenameExtension:nsFontURL.pathExtension];
+        if ([utType isSubtypeOfType:UTTypeFont]) {
+            URL fontURL(nsFontURL);
+            fontURLs.append(fontURL);
             RELEASE_LOG(Process, "Registering font url %s", fontURL.string().utf8().data());
         }
     }
