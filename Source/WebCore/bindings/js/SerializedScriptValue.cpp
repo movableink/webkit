@@ -3387,7 +3387,7 @@ private:
         if (span.size() < sizeof(value))
             return false;
 
-        value = consumeAndCastTo<const T>(span);
+        value = consumeAndReinterpretCastTo<const T>(span);
         return true;
     }
 #else

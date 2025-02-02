@@ -1122,6 +1122,51 @@ void secureMemsetSpan(std::span<T, Extent> destination, uint8_t byte)
 #endif
 }
 
+template<typename T> void skip(std::span<T>& data, size_t amountToSkip)
+{
+    data = data.subspan(amountToSkip);
+}
+
+template<typename T> void dropLast(std::span<T>& data, size_t amountToDrop = 1)
+{
+    data = data.first(data.size() - amountToDrop);
+}
+
+template<typename T> T& consumeLast(std::span<T>& data)
+{
+    auto* last = &data.back();
+    data = data.first(data.size() - 1);
+    return *last;
+}
+
+template<typename T> void clampedMoveCursorWithinSpan(std::span<T>& cursor, std::span<T> container, int delta)
+{
+    ASSERT(cursor.data() >= container.data());
+    ASSERT(std::to_address(cursor.end()) == std::to_address(container.end()));
+    auto clampedNewIndex = std::clamp<int>(cursor.data() - container.data() + delta, 0, container.size());
+    cursor = container.subspan(clampedNewIndex);
+}
+
+template<typename T> std::span<T> consumeSpan(std::span<T>& data, size_t amountToConsume)
+{
+    auto consumed = data.first(amountToConsume);
+    skip(data, amountToConsume);
+    return consumed;
+}
+
+template<typename T> T& consume(std::span<T>& data)
+{
+    T& value = data[0];
+    skip(data, 1);
+    return value;
+}
+
+template<typename DestinationType, typename SourceType>
+match_constness_t<SourceType, DestinationType>& consumeAndReinterpretCastTo(std::span<SourceType>& data) requires(sizeof(SourceType) == 1)
+{
+    return spanReinterpretCast<match_constness_t<SourceType, DestinationType>>(consumeSpan(data, sizeof(DestinationType)))[0];
+}
+
 /* WTF_FOR_EACH */
 
 // https://www.scs.stanford.edu/~dm/blog/va-opt.html
@@ -1408,9 +1453,15 @@ using WTF::binarySearch;
 using WTF::byteCast;
 using WTF::callStatelessLambda;
 using WTF::checkAndSet;
+using WTF::clampedMoveCursorWithinSpan;
 using WTF::compareSpans;
-using WTF::contains;
 using WTF::constructFixedSizeArrayWithArguments;
+using WTF::consume;
+using WTF::consumeAndReinterpretCastTo;
+using WTF::consumeLast;
+using WTF::consumeSpan;
+using WTF::contains;
+using WTF::dropLast;
 using WTF::equalSpans;
 using WTF::find;
 using WTF::findBitInWord;
@@ -1434,6 +1485,7 @@ using WTF::roundDownToMultipleOf;
 using WTF::safeCast;
 using WTF::secureMemsetSpan;
 using WTF::singleElementSpan;
+using WTF::skip;
 using WTF::spanConstCast;
 using WTF::spanHasPrefix;
 using WTF::spanHasSuffix;
