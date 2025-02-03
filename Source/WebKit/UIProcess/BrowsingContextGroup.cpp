@@ -64,7 +64,7 @@ Ref<FrameProcess> BrowsingContextGroup::ensureProcessForConnection(IPC::Connecti
                 return *process;
         }
     }
-    return FrameProcess::create(page.legacyMainFrameProcess(), *this, Site(URL(page.currentURL())), preferences);
+    return FrameProcess::create(page.protectedLegacyMainFrameProcess(), *this, Site(URL(page.currentURL())), preferences);
 }
 
 FrameProcess* BrowsingContextGroup::processForSite(const Site& site)
@@ -88,13 +88,14 @@ void BrowsingContextGroup::addFrameProcess(FrameProcess& process)
     auto& site = process.site();
     ASSERT(site.isEmpty() || !m_processMap.get(site) || m_processMap.get(site)->process().state() == WebProcessProxy::State::Terminated || m_processMap.get(site) == &process);
     m_processMap.set(site, process);
-    for (auto& page : m_pages) {
-        if (site == Site(URL(page.currentURL())))
+    Ref processProxy = process.process();
+    for (Ref page : m_pages) {
+        if (site == Site(URL(page->currentURL())))
             return;
         auto& set = m_remotePages.ensure(page, [] {
             return HashSet<Ref<RemotePageProxy>> { };
         }).iterator->value;
-        Ref newRemotePage = RemotePageProxy::create(page, process.process(), site);
+        Ref newRemotePage = RemotePageProxy::create(page, processProxy, site);
         newRemotePage->injectPageIntoNewProcess();
 #if ASSERT_ENABLED
         for (auto& existingPage : set) {
@@ -140,7 +141,8 @@ void BrowsingContextGroup::addPage(WebPageProxy& page)
 
         if (process->process().coreProcessIdentifier() == page.legacyMainFrameProcess().coreProcessIdentifier())
             return false;
-        Ref newRemotePage = RemotePageProxy::create(page, process->process(), site);
+        Ref processProxy = process->process();
+        Ref newRemotePage = RemotePageProxy::create(page, processProxy, site);
         newRemotePage->injectPageIntoNewProcess();
 #if ASSERT_ENABLED
         for (auto& existingPage : set) {
@@ -187,10 +189,10 @@ RefPtr<RemotePageProxy> BrowsingContextGroup::takeRemotePageInProcessForProvisio
     auto it = m_remotePages.find(page);
     if (it == m_remotePages.end())
         return nullptr;
-    auto* remotePage = remotePageInProcess(page, process);
+    RefPtr remotePage = remotePageInProcess(page, process);
     if (!remotePage)
         return nullptr;
-    return it->value.take(remotePage);
+    return it->value.take(remotePage.get());
 }
 
 void BrowsingContextGroup::transitionPageToRemotePage(WebPageProxy& page, const Site& openerSite)
@@ -199,7 +201,7 @@ void BrowsingContextGroup::transitionPageToRemotePage(WebPageProxy& page, const 
         return HashSet<Ref<RemotePageProxy>> { };
     }).iterator->value;
 
-    Ref newRemotePage = RemotePageProxy::create(page, page.legacyMainFrameProcess(), openerSite, &page.messageReceiverRegistration());
+    Ref newRemotePage = RemotePageProxy::create(page, page.protectedLegacyMainFrameProcess(), openerSite, &page.messageReceiverRegistration());
 #if ASSERT_ENABLED
     for (auto& existingPage : set) {
         ASSERT(existingPage->process().coreProcessIdentifier() != newRemotePage->process().coreProcessIdentifier() || existingPage->site() != newRemotePage->site());
@@ -211,11 +213,11 @@ void BrowsingContextGroup::transitionPageToRemotePage(WebPageProxy& page, const 
 
 void BrowsingContextGroup::transitionProvisionalPageToRemotePage(ProvisionalPageProxy& page, const Site& provisionalNavigationFailureSite)
 {
-    auto& set = m_remotePages.ensure(*page.page(), [] {
+    auto& set = m_remotePages.ensure(*page.protectedPage(), [] {
         return HashSet<Ref<RemotePageProxy>> { };
     }).iterator->value;
 
-    Ref newRemotePage = RemotePageProxy::create(*page.page(), page.process(), provisionalNavigationFailureSite, &page.messageReceiverRegistration());
+    Ref newRemotePage = RemotePageProxy::create(*page.protectedPage(), page.protectedProcess(), provisionalNavigationFailureSite, &page.messageReceiverRegistration());
 #if ASSERT_ENABLED
     for (auto& existingPage : set) {
         ASSERT(existingPage->process().coreProcessIdentifier() != newRemotePage->process().coreProcessIdentifier() || existingPage->site() != newRemotePage->site());

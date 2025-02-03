@@ -18,7 +18,6 @@ UIProcess/API/Cocoa/WKBrowsingContextController.mm
 UIProcess/API/Cocoa/WKWebView.mm
 UIProcess/API/Cocoa/WKWebViewTesting.mm
 UIProcess/API/Cocoa/WKWebsiteDataStore.mm
-UIProcess/BrowsingContextGroup.cpp
 UIProcess/Inspector/InspectorTargetProxy.cpp
 UIProcess/Launcher/ProcessLauncher.cpp
 UIProcess/MediaKeySystemPermissionRequestManagerProxy.cpp

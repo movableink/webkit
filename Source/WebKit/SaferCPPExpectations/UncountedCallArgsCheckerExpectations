@@ -203,7 +203,6 @@ UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
 UIProcess/API/mac/WKWebViewMac.mm
 UIProcess/API/mac/WKWebViewTestingMac.mm
 UIProcess/BackgroundProcessResponsivenessTimer.cpp
-UIProcess/BrowsingContextGroup.cpp
 UIProcess/Cocoa/AutomationClient.mm
 UIProcess/Cocoa/GroupActivities/GroupActivitiesCoordinator.mm
 UIProcess/Cocoa/LegacyDownloadClient.mm
