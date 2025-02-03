@@ -41,9 +41,7 @@ void* WebKitSwiftLibrary(bool isOptional)
 
         // Then search in the Frameworks/ directory of the currently loaded version of WebKit.framework:
         Dl_info info { };
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        if (dladdr((const void*)&WebKitSwiftLibrary, &info) && strlen(info.dli_fname)) {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        if (dladdr((const void*)&WebKitSwiftLibrary, &info) && *info.dli_fname) {
             auto dliPath = String::fromUTF8(info.dli_fname);
             if (dliPath.isNull())
                 return;
