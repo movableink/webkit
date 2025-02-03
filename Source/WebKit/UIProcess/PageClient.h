@@ -617,6 +617,10 @@ public:
 
     virtual void themeColorWillChange() { }
     virtual void themeColorDidChange() { }
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    virtual void spatialBackdropSourceWillChange() { }
+    virtual void spatialBackdropSourceDidChange() { }
+#endif
     virtual void underPageBackgroundColorWillChange() { }
     virtual void underPageBackgroundColorDidChange() { }
     virtual void sampledPageTopColorWillChange() { }

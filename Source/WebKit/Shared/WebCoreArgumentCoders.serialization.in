@@ -897,6 +897,14 @@ struct WebCore::ShareData {
 
 enum class WebCore::ShareDataOriginator : bool
 
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+struct WebCore::SpatialBackdropSource {
+    URL m_sourceURL;
+    URL m_modelURL;
+    std::optional<URL> m_environmentMapURL;
+};
+#endif
+
 using WebCore::TargetedElementIdentifiers = std::pair<WebCore::ElementIdentifier, WebCore::ScriptExecutionContextIdentifier>;
 using WebCore::TargetedElementSelectors = Vector<HashSet<String>>;
 

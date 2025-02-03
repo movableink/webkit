@@ -3418,6 +3418,18 @@ Color Page::themeColor() const
     return { };
 }
 
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+std::optional<SpatialBackdropSource> Page::spatialBackdropSource() const
+{
+    RefPtr localMainFrame = this->localMainFrame();
+    RefPtr document = localMainFrame ? localMainFrame->document() : nullptr;
+    if (!document)
+        return std::nullopt;
+
+    return document->spatialBackdropSource();
+}
+#endif
+
 Color Page::pageExtendedBackgroundColor() const
 {
     RefPtr localMainFrame = this->localMainFrame();

@@ -70,6 +70,10 @@ public:
 
     void themeColorWillChange() final;
     void themeColorDidChange() final;
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    void spatialBackdropSourceWillChange() final;
+    void spatialBackdropSourceDidChange() final;
+#endif
     void underPageBackgroundColorWillChange() final;
     void underPageBackgroundColorDidChange() final;
     void sampledPageTopColorWillChange() final;

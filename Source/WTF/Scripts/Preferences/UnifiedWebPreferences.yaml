@@ -8680,6 +8680,23 @@ WebLocksAPIEnabled:
   sharedPreferenceForWebProcess: true
   richJavaScript: true
 
+WebPageSpatialBackdropEnabled:
+  type: bool
+  status: testable
+  category: html
+  condition: ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+  humanReadableName: "Web Page Spatial Backdrop"
+  humanReadableDescription: "Enable Web Page Spatial Backdrop"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+  disableInLockdownMode: true
+  sharedPreferenceForWebProcess: true
+
 WebRTCAV1CodecEnabled:
   type: bool
   status: preview

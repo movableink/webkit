@@ -88,6 +88,19 @@ void PageClientImplCocoa::sampledPageTopColorDidChange()
     [m_webView didChangeValueForKey:@"_sampledPageTopColor"];
 }
 
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+void PageClientImplCocoa::spatialBackdropSourceWillChange()
+{
+    [m_webView willChangeValueForKey:@"_spatialBackdropSource"];
+}
+
+void PageClientImplCocoa::spatialBackdropSourceDidChange()
+{
+    [m_webView _spatialBackdropSourceDidChange];
+    [m_webView didChangeValueForKey:@"_spatialBackdropSource"];
+}
+#endif
+
 void PageClientImplCocoa::isPlayingAudioWillChange()
 {
     [m_webView willChangeValueForKey:NSStringFromSelector(@selector(_isPlayingAudio))];

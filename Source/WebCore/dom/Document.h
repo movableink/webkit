@@ -48,6 +48,7 @@
 #include "RenderPtr.h"
 #include "ReportingClient.h"
 #include "ScriptExecutionContext.h"
+#include "SpatialBackdropSource.h"
 #include "StringWithDirection.h"
 #include "Supplementable.h"
 #include "TextIndicator.h"
@@ -917,6 +918,10 @@ public:
 
     const Color& themeColor();
 
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    const std::optional<SpatialBackdropSource>& spatialBackdropSource() const { return m_cachedSpatialBackdropSource; }
+#endif
+
     void setTextColor(const Color& color) { m_textColor = color; }
     const Color& textColor() const { return m_textColor; }
 
@@ -1106,6 +1111,10 @@ public:
     void processReferrerPolicy(const String& policy, ReferrerPolicySource);
 
     void metaElementThemeColorChanged(HTMLMetaElement&);
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    void spatialBackdropLinkElementChanged();
+#endif
 
 #if ENABLE(DARK_MODE_CSS)
     void processColorScheme(const String& colorScheme);
@@ -2069,6 +2078,11 @@ private:
     WeakPtr<HTMLMetaElement, WeakPtrImplWithEventTargetData> determineActiveThemeColorMetaElement();
     void themeColorChanged();
 
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    std::optional<SpatialBackdropSource> determineActiveSpatialBackdropSource() const;
+    void spatialBackdropSourceChanged();
+#endif
+
     void invalidateAccessKeyCacheSlowCase();
     void buildAccessKeyCache();
 
@@ -2229,6 +2243,10 @@ private:
     std::optional<Vector<WeakPtr<HTMLMetaElement, WeakPtrImplWithEventTargetData>>> m_metaThemeColorElements;
     WeakPtr<HTMLMetaElement, WeakPtrImplWithEventTargetData> m_activeThemeColorMetaElement;
     Color m_applicationManifestThemeColor;
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    std::optional<SpatialBackdropSource> m_cachedSpatialBackdropSource;
+#endif
 
     Color m_textColor { Color::black };
     Color m_linkColor;

@@ -38,6 +38,7 @@
 #include "RegistrableDomain.h"
 #include "ScriptTelemetryCategory.h"
 #include "ScrollTypes.h"
+#include "SpatialBackdropSource.h"
 #include "Supplementable.h"
 #include "Timer.h"
 #include "UserInterfaceLayoutDirection.h"
@@ -876,6 +877,10 @@ public:
     WEBCORE_EXPORT Color themeColor() const;
     WEBCORE_EXPORT Color pageExtendedBackgroundColor() const;
     WEBCORE_EXPORT Color sampledPageTopColor() const;
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    WEBCORE_EXPORT std::optional<SpatialBackdropSource> spatialBackdropSource() const;
+#endif
 
 #if HAVE(APP_ACCENT_COLORS) && PLATFORM(MAC)
     WEBCORE_EXPORT void setAppUsesCustomAccentColor(bool);

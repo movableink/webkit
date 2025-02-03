@@ -7922,6 +7922,10 @@ void WebPage::didFinishLoad(WebFrame& frame)
 #if ENABLE(VIEWPORT_RESIZING)
     shrinkToFitContent(ZoomToInitialScale::Yes);
 #endif
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    spatialBackdropSourceChanged();
+#endif
 }
 
 void WebPage::didSameDocumentNavigationForFrame(WebFrame& frame)
@@ -8092,6 +8096,14 @@ void WebPage::flushPendingSampledPageTopColorChange()
 
     send(Messages::WebPageProxy::SampledPageTopColorChanged(m_page->sampledPageTopColor()));
 }
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+void WebPage::spatialBackdropSourceChanged()
+{
+    if (m_page->settings().webPageSpatialBackdropEnabled())
+        send(Messages::WebPageProxy::SpatialBackdropSourceChanged(m_page->spatialBackdropSource()));
+}
+#endif
 
 void WebPage::flushPendingEditorStateUpdate()
 {

@@ -197,11 +197,18 @@ void HTMLLinkElement::attributeChanged(const QualifiedName& name, const AtomStri
     case AttributeNames::relAttr: {
         auto parsedRel = LinkRelAttribute(document(), newValue);
         auto didMutateRel = parsedRel != m_relAttribute;
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+        auto wasSpatialBackdrop = m_relAttribute.isSpatialBackdrop;
+#endif
         m_relAttribute = WTFMove(parsedRel);
         if (m_relList)
             m_relList->associatedAttributeValueChanged();
         if (didMutateRel)
             process();
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+        if (wasSpatialBackdrop && !m_relAttribute.isSpatialBackdrop)
+            document().spatialBackdropLinkElementChanged();
+#endif
         break;
     }
     case AttributeNames::hrefAttr: {
@@ -212,6 +219,16 @@ void HTMLLinkElement::attributeChanged(const QualifiedName& name, const AtomStri
         process();
         break;
     }
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    case AttributeNames::environmentmapAttr: {
+        URL environmentMapURL = getNonEmptyURLAttribute(environmentmapAttr);
+        if (environmentMapURL == m_environmentMapURL)
+            return;
+        m_environmentMapURL = WTFMove(environmentMapURL);
+        process();
+        break;
+    }
+#endif
     case AttributeNames::typeAttr:
         if (newValue == m_type)
             return;
@@ -299,6 +316,11 @@ void HTMLLinkElement::process()
     // Prevent recursive loading of link.
     if (m_isHandlingBeforeLoad)
         return;
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    if (m_relAttribute.isSpatialBackdrop)
+        document().spatialBackdropLinkElementChanged();
+#endif
 
     processInternalResourceLink();
     if (m_relAttribute.isInternalResourceLink)
@@ -528,6 +550,11 @@ void HTMLLinkElement::removedFromAncestor(RemovalType removalType, ContainerNode
 
     bool wasLoading = styleSheetIsLoading();
 
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    if (m_relAttribute.isSpatialBackdrop)
+        oldParentOfRemovedTree.document().spatialBackdropLinkElementChanged();
+#endif
+
     if (m_sheet)
         clearSheet();
 
@@ -728,7 +755,11 @@ void HTMLLinkElement::startLoadingDynamicSheet()
 
 bool HTMLLinkElement::isURLAttribute(const Attribute& attribute) const
 {
-    return attribute.name().localName() == hrefAttr || HTMLElement::isURLAttribute(attribute);
+    return attribute.name().localName() == hrefAttr
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    || attribute.name().localName() == environmentmapAttr
+#endif
+    || HTMLElement::isURLAttribute(attribute);
 }
 
 URL HTMLLinkElement::href() const
@@ -740,6 +771,13 @@ const AtomString& HTMLLinkElement::rel() const
 {
     return attributeWithoutSynchronization(relAttr);
 }
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+URL HTMLLinkElement::environmentMap() const
+{
+    return document().completeURL(attributeWithoutSynchronization(environmentmapAttr));
+}
+#endif
 
 AtomString HTMLLinkElement::target() const
 {

@@ -84,6 +84,9 @@ messages -> WebPageProxy {
 #if PLATFORM(MAC)
     ThemeColorChanged(WebCore::Color themeColor)
 #endif
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    [EnabledBy=WebPageSpatialBackdropEnabled] SpatialBackdropSourceChanged(std::optional<WebCore::SpatialBackdropSource> spatialBackdropSource)
+#endif
     PageExtendedBackgroundColorDidChange(WebCore::Color backgroundColor)
     SampledPageTopColorChanged(WebCore::Color sampledPageTopColor)
     SetCanShortCircuitHorizontalWheelEvents(bool canShortCircuitHorizontalWheelEvents)

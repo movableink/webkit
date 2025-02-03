@@ -1425,6 +1425,13 @@ void WebChromeClient::sampledPageTopColorChanged() const
     protectedPage()->sampledPageTopColorChanged();
 }
 
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+void WebChromeClient::spatialBackdropSourceChanged() const
+{
+    protectedPage()->spatialBackdropSourceChanged();
+}
+#endif
+
 #if ENABLE(APP_HIGHLIGHTS)
 WebCore::HighlightVisibility WebChromeClient::appHighlightsVisiblility() const
 {

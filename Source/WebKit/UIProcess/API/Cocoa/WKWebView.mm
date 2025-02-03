@@ -126,6 +126,7 @@
 #import "_WKPageLoadTimingInternal.h"
 #import "_WKRemoteObjectRegistryInternal.h"
 #import "_WKSessionStateInternal.h"
+#import "_WKSpatialBackdropSourceInternal.h"
 #import "_WKTargetedElementInfoInternal.h"
 #import "_WKTargetedElementRequestInternal.h"
 #import "_WKTextInputContextInternal.h"
@@ -159,6 +160,7 @@
 #import <WebCore/RunJavaScriptParameters.h>
 #import <WebCore/Settings.h>
 #import <WebCore/SharedBuffer.h>
+#import <WebCore/SpatialBackdropSource.h>
 #import <WebCore/StringUtilities.h>
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/TextManipulationController.h>
@@ -1862,6 +1864,16 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 {
     if (auto handler = std::exchange(_windowSnapshotReadinessHandler, nil))
         handler();
+}
+#endif
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+- (void)_spatialBackdropSourceDidChange
+{
+    if (auto spatialBackdropSource = _page->spatialBackdropSource())
+        _cachedSpatialBackdropSource = adoptNS([[_WKSpatialBackdropSource alloc] initWithSpatialBackdropSource:spatialBackdropSource.value()]);
+    else
+        _cachedSpatialBackdropSource = nil;
 }
 #endif
 
@@ -4714,6 +4726,15 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 - (WebCore::CocoaColor *)_sampledPageTopColor
 {
     return cocoaColorOrNil(_page->sampledPageTopColor()).autorelease();
+}
+
+- (_WKSpatialBackdropSource *)_spatialBackdropSource
+{
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    return _cachedSpatialBackdropSource.get();
+#else
+    return nil;
+#endif
 }
 
 - (id <_WKInputDelegate>)_inputDelegate
