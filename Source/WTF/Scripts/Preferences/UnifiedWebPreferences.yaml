@@ -8452,7 +8452,7 @@ WebCodecsAV1Enabled:
 
 WebCodecsAudioEnabled:
   type: bool
-  status: preview
+  status: stable
   category: media
   humanReadableName: "WebCodecs Audio API"
   humanReadableDescription: "Enable WebCodecs Audio API"
@@ -8461,11 +8461,9 @@ WebCodecsAudioEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      "USE(GSTREAMER)": true
-      default: false
+      default: true
     WebCore:
-      "USE(GSTREAMER)": true
-      default: false
+      default: true
 
 WebCodecsHEVCEnabled:
   type: bool
