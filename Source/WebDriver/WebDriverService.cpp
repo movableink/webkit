@@ -2707,7 +2707,7 @@ void WebDriverService::bidiSessionSubscribe(unsigned id, RefPtr<JSON::Object>&&p
     auto eventNames = parameters->getArray("events"_s);
 
     if (!eventNames) {
-        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt));
+        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt, "Missing 'events' parameter"_s, id));
         return;
     }
 
@@ -2729,7 +2729,7 @@ void WebDriverService::bidiSessionUnsubscribe(unsigned id, RefPtr<JSON::Object>&
     auto eventNames = parameters->getArray("events"_s);
 
     if (!eventNames) {
-        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt));
+        completionHandler(WebSocketMessageHandler::Message::fail(CommandResult::ErrorCode::InvalidArgument, std::nullopt, "Missing 'events' parameter"_s, id));
         return;
     }
 
