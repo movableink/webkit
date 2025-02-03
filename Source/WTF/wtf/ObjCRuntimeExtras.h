@@ -67,12 +67,19 @@ bool nsValueHasObjCType(NSValue *value)
     return equalSpans(unsafeSpan([value objCType]), objcEncode<Type>());
 }
 
+template<typename ReturnType>
+bool methodHasReturnType(NSMethodSignature *signature)
+{
+    return equalSpans(unsafeSpan(signature.methodReturnType), objcEncode<ReturnType>());
+}
+
 } // namespace WTF
 
 using WTF::class_copyIvarListSpan;
 using WTF::class_copyMethodListSpan;
 using WTF::class_copyPropertyListSpan;
 using WTF::class_copyProtocolListSpan;
+using WTF::methodHasReturnType;
 using WTF::nsValueHasObjCType;
 using WTF::objcEncode;
 using WTF::protocol_copyMethodDescriptionListSpan;

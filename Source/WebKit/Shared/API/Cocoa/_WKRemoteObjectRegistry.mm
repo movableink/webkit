@@ -39,6 +39,7 @@
 #import "WebRemoteObjectRegistry.h"
 #import "_WKRemoteObjectInterface.h"
 #import <objc/runtime.h>
+#import <wtf/ObjCRuntimeExtras.h>
 
 extern "C" const char *_protocol_getMethodTypeEncoding(Protocol *p, SEL sel, BOOL isRequiredMethod, BOOL isInstanceMethod);
 extern "C" id __NSMakeSpecialForwardingCaptureBlock(const char *signature, void (^handler)(NSInvocation *inv));
@@ -158,10 +159,8 @@ static uint64_t generateReplyIdentifier()
 
         const char* replyBlockSignature = _Block_signature((__bridge void*)replyBlock);
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        if (strcmp([NSMethodSignature signatureWithObjCTypes:replyBlockSignature].methodReturnType, "v"))
+        if (!methodHasReturnType<void>([NSMethodSignature signatureWithObjCTypes:replyBlockSignature]))
             [NSException raise:NSInvalidArgumentException format:@"Return value of block argument must be 'void'. (%s)", sel_getName(invocation.selector)];
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         replyInfo = makeUnique<WebKit::RemoteObjectInvocation::ReplyInfo>(generateReplyIdentifier(), String::fromLatin1(replyBlockSignature));
 
