@@ -133,6 +133,8 @@ public:
     void setEnvironmentMap(Ref<WebCore::SharedBuffer>&& data) final;
     void setHasPortal(bool) final;
 
+    USING_CAN_MAKE_WEAKPTR(WebCore::REModelLoaderClient);
+
 private:
     ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&);
 
@@ -149,6 +151,8 @@ private:
     RefPtr<WebCore::REModel> m_model;
     RetainPtr<WKSRKEntity> m_modelRKEntity;
     REPtr<RESceneRef> m_scene;
+    REPtr<REEntityRef> m_hostingEntity;
+    REPtr<REEntityRef> m_containerEntity;
     RetainPtr<WKModelProcessModelPlayerProxyObjCAdapter> m_objCAdapter;
 
     WebCore::Color m_backgroundColor;

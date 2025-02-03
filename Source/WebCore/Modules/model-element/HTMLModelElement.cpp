@@ -97,6 +97,8 @@ HTMLModelElement::~HTMLModelElement()
         m_resource->removeClient(*this);
         m_resource = nullptr;
     }
+
+    deleteModelPlayer();
 }
 
 Ref<HTMLModelElement> HTMLModelElement::create(const QualifiedName& tagName, Document& document)

@@ -211,6 +211,12 @@ ModelProcessModelPlayerProxy::~ModelProcessModelPlayerProxy()
     if (m_loader)
         m_loader->cancel();
 
+    if (m_containerEntity.get())
+        REEntityRemoveFromSceneOrParent(m_containerEntity.get());
+
+    if (m_hostingEntity.get())
+        REEntityRemoveFromSceneOrParent(m_hostingEntity.get());
+
     RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayerProxy deallocated id=%" PRIu64, this, m_id.toUInt64());
 }
 
@@ -272,7 +278,7 @@ void ModelProcessModelPlayerProxy::createLayer()
     updatePortalAndClipping();
     updateBackgroundColor();
 
-    [m_layer setPlayer:RefPtr { this }];
+    [m_layer setPlayer:WeakPtr { this }];
 
     LayerHostingContextOptions contextOptions;
     m_layerHostingContext = LayerHostingContext::createForExternalHostingProcess(contextOptions);
@@ -453,11 +459,11 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     m_originalBoundingBoxExtents = [m_modelRKEntity boundingBoxExtents];
     m_originalBoundingBoxCenter = [m_modelRKEntity boundingBoxCenter];
 
-    REPtr<REEntityRef> hostingEntity = adoptRE(REEntityCreate());
-    REEntitySetName(hostingEntity.get(), "WebKit:EntityWithRootComponent");
+    m_hostingEntity = adoptRE(REEntityCreate());
+    REEntitySetName(m_hostingEntity.get(), "WebKit:EntityWithRootComponent");
 
-    REPtr<REComponentRef> layerComponent = adoptRE(RECALayerServiceCreateRootComponent(webDefaultLayerService(), CALayerGetContext(m_layer.get()), hostingEntity.get(), nil));
-    RESceneAddEntity(m_scene.get(), hostingEntity.get());
+    REPtr<REComponentRef> layerComponent = adoptRE(RECALayerServiceCreateRootComponent(webDefaultLayerService(), CALayerGetContext(m_layer.get()), m_hostingEntity.get(), nil));
+    RESceneAddEntity(m_scene.get(), m_hostingEntity.get());
 
     CALayer *contextEntityLayer = RECALayerClientComponentGetCALayer(layerComponent.get());
     [contextEntityLayer setSeparatedState:kCALayerSeparatedStateSeparated];
@@ -476,18 +482,18 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     // containerEntity is required to add a clipping primitive that is independent from model's rootEntity.
     // Adding the primitive directly to clientComponentEntity has no visual effect.
     constexpr float clippingBoxHalfSize = 500; // meters
-    REPtr<REEntityRef> containerEntity = adoptRE(REEntityCreate());
-    REEntitySetName(containerEntity.get(), "WebKit:ContainerEntity");
+    m_containerEntity = adoptRE(REEntityCreate());
+    REEntitySetName(m_containerEntity.get(), "WebKit:ContainerEntity");
 
-    REEntitySetParent(containerEntity.get(), clientComponentEntity);
+    REEntitySetParent(m_containerEntity.get(), clientComponentEntity);
     if (canLoadWithRealityKit)
-        [m_model->rootRKEntity() setParentCoreEntity:containerEntity.get()];
+        [m_model->rootRKEntity() setParentCoreEntity:m_containerEntity.get()];
     else
-        REEntitySetParent(m_model->rootEntity(), containerEntity.get());
+        REEntitySetParent(m_model->rootEntity(), m_containerEntity.get());
 
-    REEntitySubtreeAddNetworkComponentRecursive(containerEntity.get());
+    REEntitySubtreeAddNetworkComponentRecursive(m_containerEntity.get());
 
-    auto clipComponent = REEntityGetOrAddComponentByClass(containerEntity.get(), REClippingPrimitiveComponentGetComponentType());
+    auto clipComponent = REEntityGetOrAddComponentByClass(m_containerEntity.get(), REClippingPrimitiveComponentGetComponentType());
     REClippingPrimitiveComponentSetShouldClipChildren(clipComponent, true);
     REClippingPrimitiveComponentSetShouldClipSelf(clipComponent, true);
 
