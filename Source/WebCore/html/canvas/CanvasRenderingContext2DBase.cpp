@@ -2575,6 +2575,7 @@ ExceptionOr<Ref<ImageData>> CanvasRenderingContext2DBase::getImageData(int sx, i
     }
 
     IntRect imageDataRect { sx, sy, sw, sh };
+    auto overridingStorageFormat = settings ? std::optional(settings->storageFormat) : std::optional<ImageDataStorageFormat>();
 
     if (scriptContext && scriptContext->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::Canvas)) {
         RefPtr buffer = canvasBase().createImageForNoiseInjection();
@@ -2586,13 +2587,15 @@ ExceptionOr<Ref<ImageData>> CanvasRenderingContext2DBase::getImageData(int sx, i
         if (!pixelBuffer)
             return Exception { ExceptionCode::InvalidStateError };
 
-        return { { ImageData::create(pixelBuffer.releaseNonNull()) } };
+        return { { ImageData::create(pixelBuffer.releaseNonNull(), overridingStorageFormat) } };
     }
 
     auto computedColorSpace = ImageData::computeColorSpace(settings, m_settings.colorSpace);
 
-    if (auto imageData = makeImageDataIfContentsCached(imageDataRect, computedColorSpace))
-        return imageData.releaseNonNull();
+    if (!overridingStorageFormat || *overridingStorageFormat == ImageDataStorageFormat::Uint8) {
+        if (auto imageData = makeImageDataIfContentsCached(imageDataRect, computedColorSpace))
+            return imageData.releaseNonNull();
+    }
 
     RefPtr<ImageBuffer> buffer = canvasBase().makeRenderingResultsAvailable();
     if (!buffer)
@@ -2608,7 +2611,7 @@ ExceptionOr<Ref<ImageData>> CanvasRenderingContext2DBase::getImageData(int sx, i
 
     ASSERT(pixelBuffer->format().colorSpace == toDestinationColorSpace(computedColorSpace));
 
-    return { { ImageData::create(pixelBuffer.releaseNonNull()) } };
+    return { { ImageData::create(pixelBuffer.releaseNonNull(), overridingStorageFormat) } };
 }
 
 void CanvasRenderingContext2DBase::putImageData(ImageData& data, int dx, int dy)
