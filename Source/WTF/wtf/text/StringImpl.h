@@ -411,31 +411,25 @@ public:
     template<typename CharacterType>
     ALWAYS_INLINE static void copyCharacters(std::span<CharacterType> destination, std::span<const CharacterType> source)
     {
-        // FIXME: Move this assertion to copyElements().
-        ASSERT(destination.size() >= source.size());
-        return copyElements(destination.data(), source.data(), source.size());
+        return copyElements(destination, source);
     }
 
     ALWAYS_INLINE static void copyCharacters(std::span<UChar> destination, std::span<const LChar> source)
     {
         static_assert(sizeof(UChar) == sizeof(uint16_t));
         static_assert(sizeof(LChar) == sizeof(uint8_t));
-        // FIXME: Move this assertion to copyElements().
-        ASSERT(destination.size() >= source.size());
-        return copyElements(std::bit_cast<uint16_t*>(destination.data()), source.data(), source.size());
+        return copyElements(spanReinterpretCast<uint16_t>(destination), source);
     }
 
     ALWAYS_INLINE static void copyCharacters(std::span<LChar> destination, std::span<const UChar> source)
     {
         static_assert(sizeof(UChar) == sizeof(uint16_t));
         static_assert(sizeof(LChar) == sizeof(uint8_t));
-        // FIXME: Move this assertion to copyElements().
-        ASSERT(destination.size() >= source.size());
 #if ASSERT_ENABLED
         for (auto character : source)
             ASSERT(isLatin1(character));
 #endif
-        return copyElements(std::bit_cast<uint8_t*>(destination.data()), std::bit_cast<const uint16_t*>(source.data()), source.size());
+        return copyElements(destination, spanReinterpretCast<const uint16_t>(source));
     }
 
     // Some string features, like reference counting and the atomicity flag, are not

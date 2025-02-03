@@ -967,16 +967,26 @@ inline bool equalIgnoringASCIICase(ASCIILiteral a, ASCIILiteral b)
 }
 
 template<typename ElementType>
-inline void copyElements(ElementType* __restrict destination, const ElementType* __restrict source, size_t length)
+inline void copyElements(std::span<ElementType> destinationSpan, std::span<const ElementType> sourceSpan)
 {
-    if (length == 1)
+    ASSERT(!spansOverlap(destinationSpan, sourceSpan));
+    ASSERT(destinationSpan.size() >= sourceSpan.size());
+    auto* __restrict destination = destinationSpan.data();
+    auto* __restrict source = sourceSpan.data();
+    if (sourceSpan.size() == 1)
         *destination = *source;
-    else if (length)
-        std::memcpy(destination, source, length * sizeof(ElementType));
+    else if (!sourceSpan.empty())
+        std::memcpy(destination, source, sourceSpan.size_bytes());
 }
 
-inline void copyElements(uint16_t* __restrict destination, const uint8_t* __restrict source, size_t length)
+inline void copyElements(std::span<uint16_t> destinationSpan, std::span<const uint8_t> sourceSpan)
 {
+    ASSERT(!spansOverlap(destinationSpan, sourceSpan));
+    ASSERT(destinationSpan.size() >= sourceSpan.size());
+    auto* __restrict destination = destinationSpan.data();
+    auto* __restrict source = sourceSpan.data();
+    size_t length = sourceSpan.size();
+
 #if CPU(ARM64)
     // SIMD Upconvert.
     const auto* end = destination + length;
@@ -1009,8 +1019,14 @@ inline void copyElements(uint16_t* __restrict destination, const uint8_t* __rest
 #endif
 }
 
-inline void copyElements(uint8_t* __restrict destination, const uint16_t* __restrict source, size_t length)
+inline void copyElements(std::span<uint8_t> destinationSpan, std::span<const uint16_t> sourceSpan)
 {
+    ASSERT(!spansOverlap(destinationSpan, sourceSpan));
+    ASSERT(destinationSpan.size() >= sourceSpan.size());
+    auto* __restrict destination = destinationSpan.data();
+    auto* __restrict source = sourceSpan.data();
+    size_t length = sourceSpan.size();
+
 #if CPU(X86_SSE2)
     const uintptr_t memoryAccessSize = 16; // Memory accesses on 16 byte (128 bit) alignment
     const uintptr_t memoryAccessMask = memoryAccessSize - 1;
@@ -1084,8 +1100,14 @@ inline void copyElements(uint8_t* __restrict destination, const uint16_t* __rest
 #endif
 }
 
-inline void copyElements(uint16_t* __restrict destination, const uint32_t* __restrict source, size_t length)
+inline void copyElements(std::span<uint16_t> destinationSpan, std::span<const uint32_t> sourceSpan)
 {
+    ASSERT(!spansOverlap(destinationSpan, sourceSpan));
+    ASSERT(destinationSpan.size() >= sourceSpan.size());
+    auto* __restrict destination = destinationSpan.data();
+    auto* __restrict source = sourceSpan.data();
+    size_t length = sourceSpan.size();
+
     const auto* end = destination + length;
 #if CPU(ARM64) && CPU(ADDRESS64)
     const uintptr_t memoryAccessSize = 32 / sizeof(uint32_t);
@@ -1107,8 +1129,14 @@ inline void copyElements(uint16_t* __restrict destination, const uint32_t* __res
         *destination++ = *source++;
 }
 
-inline void copyElements(uint32_t* __restrict destination, const uint64_t* __restrict source, size_t length)
+inline void copyElements(std::span<uint32_t> destinationSpan, std::span<const uint64_t> sourceSpan)
 {
+    ASSERT(!spansOverlap(destinationSpan, sourceSpan));
+    ASSERT(destinationSpan.size() >= sourceSpan.size());
+    auto* __restrict destination = destinationSpan.data();
+    auto* __restrict source = sourceSpan.data();
+    size_t length = sourceSpan.size();
+
     const auto* end = destination + length;
 #if CPU(ARM64) && CPU(ADDRESS64)
     const uintptr_t memoryAccessSize = 32 / sizeof(uint64_t);
@@ -1130,8 +1158,14 @@ inline void copyElements(uint32_t* __restrict destination, const uint64_t* __res
         *destination++ = *source++;
 }
 
-inline void copyElements(uint16_t* __restrict destination, const uint64_t* __restrict source, size_t length)
+inline void copyElements(std::span<uint16_t> destinationSpan, std::span<const uint64_t> sourceSpan)
 {
+    ASSERT(!spansOverlap(destinationSpan, sourceSpan));
+    ASSERT(destinationSpan.size() >= sourceSpan.size());
+    auto* __restrict destination = destinationSpan.data();
+    auto* __restrict source = sourceSpan.data();
+    size_t length = sourceSpan.size();
+
     const auto* end = destination + length;
 #if CPU(ARM64) && CPU(ADDRESS64)
     const uintptr_t memoryAccessSize = 64 / sizeof(uint64_t);
@@ -1153,8 +1187,14 @@ inline void copyElements(uint16_t* __restrict destination, const uint64_t* __res
         *destination++ = *source++;
 }
 
-inline void copyElements(uint8_t* __restrict destination, const uint64_t* __restrict source, size_t length)
+inline void copyElements(std::span<uint8_t> destinationSpan, std::span<const uint64_t> sourceSpan)
 {
+    ASSERT(!spansOverlap(destinationSpan, sourceSpan));
+    ASSERT(destinationSpan.size() >= sourceSpan.size());
+    auto* __restrict destination = destinationSpan.data();
+    auto* __restrict source = sourceSpan.data();
+    size_t length = sourceSpan.size();
+
     const auto* end = destination + length;
 #if CPU(ARM64) && CPU(ADDRESS64)
     const uintptr_t memoryAccessSize = 64 / sizeof(uint64_t);
@@ -1179,14 +1219,14 @@ inline void copyElements(uint8_t* __restrict destination, const uint64_t* __rest
 }
 
 #ifndef __swift__ // FIXME: rdar://136156228
-inline void copyElements(UChar* __restrict destination, const LChar* __restrict source, size_t length)
+inline void copyElements(std::span<UChar> destination, std::span<const LChar> source)
 {
-    copyElements(std::bit_cast<uint16_t*>(destination), std::bit_cast<const uint8_t*>(source), length);
+    copyElements(spanReinterpretCast<uint16_t>(destination), byteCast<uint8_t>(source));
 }
 
-inline void copyElements(LChar* __restrict destination, const UChar* __restrict source, size_t length)
+inline void copyElements(std::span<LChar> destination, std::span<const UChar> source)
 {
-    copyElements(std::bit_cast<uint8_t*>(destination), std::bit_cast<const uint16_t*>(source), length);
+    copyElements(byteCast<uint8_t>(destination), spanReinterpretCast<const uint16_t>(source));
 }
 #endif
 

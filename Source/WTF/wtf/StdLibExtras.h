@@ -1167,6 +1167,13 @@ match_constness_t<SourceType, DestinationType>& consumeAndReinterpretCastTo(std:
     return spanReinterpretCast<match_constness_t<SourceType, DestinationType>>(consumeSpan(data, sizeof(DestinationType)))[0];
 }
 
+template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
+bool spansOverlap(std::span<T, TExtent> a, std::span<U, UExtent> b)
+{
+    return static_cast<const void*>(a.data()) < static_cast<const void*>(std::to_address(b.end()))
+        && static_cast<const void*>(b.data()) < static_cast<const void*>(std::to_address(a.end()));
+}
+
 /* WTF_FOR_EACH */
 
 // https://www.scs.stanford.edu/~dm/blog/va-opt.html
@@ -1489,6 +1496,7 @@ using WTF::skip;
 using WTF::spanConstCast;
 using WTF::spanHasPrefix;
 using WTF::spanHasSuffix;
+using WTF::spansOverlap;
 using WTF::spanReinterpretCast;
 using WTF::toTwosComplement;
 using WTF::tryBinarySearch;
