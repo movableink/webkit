@@ -2538,6 +2538,11 @@ static TextDirection directionForLastLine(const Position& end)
     return primaryDirectionForSingleLineRange(startOfLastLine, end);
 }
 
+static bool usesVisuallyContiguousBidiTextSelection(const SimpleRange& range)
+{
+    return range.protectedStartContainer()->protectedDocument()->settings().visuallyContiguousBidiTextSelectionEnabled();
+}
+
 enum class TextDirectionsNeedAdjustment : bool { No, Yes };
 static TextDirectionsNeedAdjustment makeBidiSelectionVisuallyContiguousIfNeeded(const SimpleRange& range, Vector<SelectionGeometry>& geometries)
 {
@@ -2634,7 +2639,7 @@ static TextDirectionsNeedAdjustment makeBidiSelectionVisuallyContiguousIfNeeded(
 
 static void adjustTextDirectionForCoalescedGeometries(const SimpleRange& range, Vector<SelectionGeometry>& geometries)
 {
-    if (!range.protectedStartContainer()->protectedDocument()->settings().visuallyContiguousBidiTextSelectionEnabled())
+    if (!usesVisuallyContiguousBidiTextSelection(range))
         return;
 
     auto [start, end] = positionsForRange(range);
@@ -2788,6 +2793,7 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
         geometries[i] = selectionRect;
     }
 
+    bool visuallyContiguousBidiTextSelection = usesVisuallyContiguousBidiTextSelection(range);
     for (size_t j = 1; j < numberOfGeometries; ++j) {
         if (geometries[j].lineNumber() != geometries[j - 1].lineNumber())
             continue;
@@ -2798,7 +2804,7 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
         if (previousRectMayNotReachRightEdge)
             continue;
         int adjustedWidth = geometries[j].logicalLeft() - previousRect.logicalLeft();
-        if (adjustedWidth > previousRect.logicalWidth())
+        if (adjustedWidth > previousRect.logicalWidth() && (!visuallyContiguousBidiTextSelection || previousRect.direction() == geometries[j].direction()))
             previousRect.setLogicalWidth(adjustedWidth);
     }
 
@@ -2851,6 +2857,24 @@ static bool coalesceSelectionGeometryWithAdjacentQuadsIfPossible(SelectionGeomet
     return true;
 }
 
+static bool canCoalesceGeometries(const SimpleRange& range, const SelectionGeometry& first, const SelectionGeometry& second)
+{
+    auto firstRect = first.rect();
+    auto secondRect = second.rect();
+    if (firstRect.intersects(secondRect))
+        return true;
+
+    if (first.logicalTop() == second.logicalTop() && first.isHorizontal() == second.isHorizontal() && usesVisuallyContiguousBidiTextSelection(range)) {
+        if (first.logicalLeftExtent() == second.logicalLeft())
+            return true;
+
+        if (second.logicalLeftExtent() == first.logicalLeft())
+            return true;
+    }
+
+    return false;
+}
+
 Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleRange& range)
 {
     auto [geometries, maxLineNumber, hasBidirectionalText] = RenderObject::collectSelectionGeometriesInternal(range);
@@ -2874,9 +2898,9 @@ Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleR
         if (currentGeometry.lineNumber() == 1) {
             ASSERT(interiorUnionRect.isEmpty());
             if (!coalescedGeometries.isEmpty()) {
-                auto& previousRect = coalescedGeometries.last();
-                if (previousRect.rect().intersects(currentGeometry.rect())) {
-                    previousRect = coalesceSelectionGeometries(currentGeometry, previousRect);
+                auto& previousGeometry = coalescedGeometries.last();
+                if (canCoalesceGeometries(range, previousGeometry, currentGeometry)) {
+                    previousGeometry = coalesceSelectionGeometries(currentGeometry, previousGeometry);
                     continue;
                 }
             }
@@ -2907,7 +2931,7 @@ Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleR
 
             ASSERT(!coalescedGeometries.isEmpty());
             auto& previousGeometry = coalescedGeometries.last();
-            if (previousGeometry.logicalTop() == currentGeometry.logicalTop() && previousGeometry.rect().intersects(currentGeometry.rect())) {
+            if (previousGeometry.logicalTop() == currentGeometry.logicalTop() && canCoalesceGeometries(range, previousGeometry, currentGeometry)) {
                 // previousRect is also on the last line, and intersects the current one.
                 previousGeometry = coalesceSelectionGeometries(currentGeometry, previousGeometry);
                 continue;

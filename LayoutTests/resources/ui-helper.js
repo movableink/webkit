@@ -1036,8 +1036,8 @@ window.UIHelper = class UIHelper {
         for (const rect of rects) {
             minTop = Math.min(minTop, rect.top);
             minLeft = Math.min(minLeft, rect.left);
-            maxTop = Math.max(maxTop, rect.left + rect.width);
-            maxLeft = Math.max(maxLeft, rect.top + rect.height);
+            maxTop = Math.max(maxTop, rect.top + rect.height);
+            maxLeft = Math.max(maxLeft, rect.left + rect.width);
         }
 
         return { left: minLeft, top: minTop, width: maxLeft - minLeft, height: maxTop - minTop };
