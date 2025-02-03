@@ -49,15 +49,11 @@ TEST(PixelBufferConversionTests, convertImagePixels)
 
     EXPECT_EQ(convert(PixelFormat::RGBA8, PixelFormat::RGBA8), (std::vector<uint8_t> { 1, 2, 3, 4 }));
     EXPECT_EQ(convert(PixelFormat::RGBA8, PixelFormat::BGRA8), (std::vector<uint8_t> { 3, 2, 1, 4 }));
-#if !USE(SKIA) // convertImagePixelsSkia doesn't support this
     EXPECT_EQ(convert(PixelFormat::RGBA8, PixelFormat::BGRX8), (std::vector<uint8_t> { 3, 2, 1, 4 }));
-#endif
 
     EXPECT_EQ(convert(PixelFormat::BGRA8, PixelFormat::RGBA8), (std::vector<uint8_t> { 3, 2, 1, 4 }));
     EXPECT_EQ(convert(PixelFormat::BGRA8, PixelFormat::BGRA8), (std::vector<uint8_t> { 1, 2, 3, 4 }));
-#if !USE(SKIA)
     EXPECT_EQ(convert(PixelFormat::BGRA8, PixelFormat::BGRX8), (std::vector<uint8_t> { 3, 2, 1, 4 }));
-#endif
 }
 
 TEST(PixelBufferConversionTests, convertImagePixels2)
