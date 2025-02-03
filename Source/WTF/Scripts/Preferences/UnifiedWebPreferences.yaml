@@ -5292,15 +5292,16 @@ MouseEventsSimulationEnabled:
 
 MutationEventsEnabled:
   type: bool
-  status: mature
+  status: testable
+  category: dom
   humanReadableName: "DOM mutation events"
   defaultValue:
     WebKitLegacy:
-      default: true
+      default: false
     WebKit:
-      default: true
+      default: false
     WebCore:
-      default: true
+      default: false
 
 MuteCameraOnMicrophoneInterruptionEnabled:
   type: bool
