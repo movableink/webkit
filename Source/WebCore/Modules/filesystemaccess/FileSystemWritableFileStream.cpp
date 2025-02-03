@@ -27,6 +27,7 @@
 #include "FileSystemWritableFileStream.h"
 
 #include "InternalWritableStream.h"
+#include "JSBlob.h"
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFileSystemWritableFileStream.h"

@@ -29,6 +29,7 @@
 #pragma once
 
 #include "CSSRayFunction.h"
+#include "CSSValue.h"
 #include "RenderStyleConstants.h"
 
 namespace WebCore {

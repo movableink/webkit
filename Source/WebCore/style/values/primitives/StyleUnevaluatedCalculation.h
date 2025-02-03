@@ -26,6 +26,7 @@
 
 #include "StylePrimitiveNumericConcepts.h"
 #include <wtf/Forward.h>
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
