@@ -110,8 +110,8 @@ protected:
     const bool m_isCombinedText;
     const bool m_isPrinting;
     const bool m_haveSelection;
-    const bool m_containsComposition;
-    const bool m_useCustomUnderlines;
+    bool m_containsComposition { false };
+    bool m_useCustomUnderlines { false };
     std::optional<bool> m_emphasisMarkExistsAndIsAbove { };
 };
 

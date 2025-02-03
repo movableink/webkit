@@ -79,16 +79,16 @@ TextBoxPainter::TextBoxPainter(const LayoutIntegration::InlineContent& inlineCon
     }())
     , m_isPrinting(m_document.printing())
     , m_haveSelection(computeHaveSelection())
-    , m_containsComposition(m_renderer.textNode() && m_renderer.frame().editor().compositionNode() == m_renderer.textNode())
-    , m_useCustomUnderlines(m_containsComposition && m_renderer.frame().editor().compositionUsesCustomUnderlines())
     , m_emphasisMarkExistsAndIsAbove(RenderText::emphasisMarkExistsAndIsAbove(m_renderer, m_style))
 {
     ASSERT(paintInfo.phase == PaintPhase::Foreground || paintInfo.phase == PaintPhase::Selection || paintInfo.phase == PaintPhase::TextClip || paintInfo.phase == PaintPhase::EventRegion || paintInfo.phase == PaintPhase::Accessibility);
+
+    auto& editor = m_renderer.frame().editor();
+    m_containsComposition = m_renderer.textNode() && editor.compositionNode() == m_renderer.textNode();
+    m_useCustomUnderlines = m_containsComposition && editor.compositionUsesCustomUnderlines();
 }
 
-TextBoxPainter::~TextBoxPainter()
-{
-}
+TextBoxPainter::~TextBoxPainter() = default;
 
 InlineIterator::TextBoxIterator TextBoxPainter::makeIterator() const
 {
@@ -211,9 +211,15 @@ void TextBoxPainter::paintBackground()
 
 void TextBoxPainter::paintCompositionForeground(const StyledMarkedText& markedText)
 {
-    auto& editor = m_renderer.frame().editor();
+    auto hasCompositionCustomHighlights = [&]() {
+        if (!m_containsComposition)
+            return false;
 
-    if (!(editor.compositionUsesCustomHighlights() && m_containsComposition)) {
+        auto& editor = m_renderer.frame().editor();
+        return editor.compositionUsesCustomHighlights();
+    };
+
+    if (!hasCompositionCustomHighlights()) {
         paintForeground(markedText);
         return;
     }
@@ -221,6 +227,7 @@ void TextBoxPainter::paintCompositionForeground(const StyledMarkedText& markedTe
     // The highlight ranges must be "packed" so that there is no non-empty interval between
     // any two adjacent highlight ranges. This is needed since otherwise, `paintForeground`
     // will not be called in those would-be non-empty intervals.
+    auto& editor = m_renderer.frame().editor();
     auto highlights = editor.customCompositionHighlights();
 
     Vector<CompositionHighlight> highlightsWithForeground;
