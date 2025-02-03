@@ -870,6 +870,8 @@ void LibWebRTCMediaEndpoint::OnStatsDelivered(const rtc::scoped_refptr<const web
                 logger().logAlways(LogWebRTCStats, Logger::LogSiteIdentifier("LibWebRTCMediaEndpoint"_s, "OnStatsDelivered"_s, logIdentifier()), statsLogger);
         }
     });
+#else // !RELEASE_LOG_DISABLED
+    UNUSED_PARAM(report);
 #endif
 }
 

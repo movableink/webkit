@@ -986,6 +986,10 @@ void UserMediaPermissionRequestManagerProxy::computeFilteredDeviceList(FrameIden
 
         ALWAYS_LOG(logIdentifier, "exposing ", cameraCount, " camera(s) filtering = ", shouldRestrictCamera, ", ", microphoneCount, " microphone(s) filtering = ", shouldRestrictMicrophone, ", ", speakerCount, " speaker(s) filtering = ", shouldRestrictSpeaker);
 
+#if RELEASE_LOG_DISABLED
+        UNUSED_VARIABLE(speakerCount);
+#endif
+
         completion(WTFMove(filteredDevices));
     });
 }
