@@ -22,6 +22,7 @@
 #include "CSSFontValue.h"
 
 #include "CSSFontStyleWithAngleValue.h"
+#include "CSSPrimitiveValue.h"
 #include "CSSValueList.h"
 #include <wtf/text/StringBuilder.h>
 
