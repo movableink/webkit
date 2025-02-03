@@ -45,7 +45,7 @@ public:
     size_t length() const { return m_length; }
 
     std::span<const char> span() const LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length); }
-    std::span<const char> unsafeSpanIncludingNullTerminator() const LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length + 1); }
+    std::span<const char> spanIncludingNullTerminator() const LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length + 1); }
 
 private:
     friend class CString;
@@ -76,10 +76,10 @@ public:
 
     const char* data() const LIFETIME_BOUND;
 
-    std::string toStdString() const { return m_buffer ? std::string(m_buffer->unsafeSpanIncludingNullTerminator().data()) : std::string(); }
+    std::string toStdString() const { return m_buffer ? std::string(m_buffer->spanIncludingNullTerminator().data()) : std::string(); }
 
     std::span<const LChar> span() const LIFETIME_BOUND;
-    std::span<const char> unsafeSpanIncludingNullTerminator() const LIFETIME_BOUND;
+    std::span<const char> spanIncludingNullTerminator() const LIFETIME_BOUND;
 
     WTF_EXPORT_PRIVATE std::span<char> mutableSpan() LIFETIME_BOUND;
     WTF_EXPORT_PRIVATE std::span<char> mutableSpanIncludingNullTerminator() LIFETIME_BOUND;
@@ -125,7 +125,7 @@ inline CString::CString(std::span<const LChar> bytes)
 
 inline const char* CString::data() const
 {
-    return m_buffer ? m_buffer->unsafeSpanIncludingNullTerminator().data() : nullptr;
+    return m_buffer ? m_buffer->spanIncludingNullTerminator().data() : nullptr;
 }
 
 inline std::span<const LChar> CString::span() const
@@ -135,10 +135,10 @@ inline std::span<const LChar> CString::span() const
     return { };
 }
 
-inline std::span<const char> CString::unsafeSpanIncludingNullTerminator() const
+inline std::span<const char> CString::spanIncludingNullTerminator() const
 {
     if (m_buffer)
-        return m_buffer->unsafeSpanIncludingNullTerminator();
+        return m_buffer->spanIncludingNullTerminator();
     return { };
 }
 

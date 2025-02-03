@@ -85,7 +85,7 @@ ObjcClass* ObjcClass::classForIsA(ClassStructPtr isa)
 typedef Vector<char, 256> JSNameConversionBuffer;
 static inline void convertJSMethodNameToObjc(const CString& jsName, JSNameConversionBuffer& buffer)
 {
-    auto characters = jsName.unsafeSpanIncludingNullTerminator();
+    auto characters = jsName.spanIncludingNullTerminator();
     buffer.reserveInitialCapacity(characters.size());
     for (size_t i = 0; i < characters.size(); ++i) {
         if (characters[i] == '$') {

@@ -149,7 +149,7 @@ std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, Strin
     
     // Append the file name suffix.
     CString suffixUTF8 = suffix.utf8();
-    temporaryFilePath.append(suffixUTF8.unsafeSpanIncludingNullTerminator());
+    temporaryFilePath.append(suffixUTF8.spanIncludingNullTerminator());
 
     platformFileHandle = mkostemps(temporaryFilePath.data(), suffixUTF8.length(), O_CLOEXEC);
     if (platformFileHandle == invalidPlatformFileHandle)

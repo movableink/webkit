@@ -117,8 +117,8 @@ struct CachedSandboxHeader {
     uint32_t headerSize;
     uint32_t builtinSize; // If a builtin doesn't exist, this is UINT_MAX.
     uint32_t dataSize;
-    char sandboxBuildID[guidSize];
-    char osVersion[versionSize];
+    std::array<char, guidSize> sandboxBuildID;
+    std::array<char, versionSize> osVersion;
 };
 // The file is layed out on disk like:
 // byte 0
@@ -418,16 +418,17 @@ static SandboxProfilePtr compileAndCacheSandboxProfile(const SandboxInfo& info)
         safeCast<uint32_t>(info.header.length()),
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         haveBuiltin ? safeCast<uint32_t>(strlen(sandboxProfile->builtin)) : std::numeric_limits<uint32_t>::max(),
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         safeCast<uint32_t>(sandboxProfile->size),
         { 0 },
         { 0 }
     };
 
-    size_t copied = strlcpy(cachedHeader.sandboxBuildID, SANDBOX_BUILD_ID, sizeof(cachedHeader.sandboxBuildID));
-    ASSERT_UNUSED(copied, copied == guidSize - 1);
-    copied = strlcpy(cachedHeader.osVersion, osVersion.utf8().data(), sizeof(cachedHeader.osVersion));
-    ASSERT(copied < versionSize - 1);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    auto sandboxBuildID = unsafeSpanIncludingNullTerminator(SANDBOX_BUILD_ID);
+    memcpySpan(std::span { cachedHeader.sandboxBuildID }, sandboxBuildID);
+
+    auto osVersionUTF8 = osVersion.utf8();
+    memcpySpan(std::span { cachedHeader.osVersion }, osVersionUTF8.spanIncludingNullTerminator());
 
     const size_t expectedFileSize = sizeof(cachedHeader) + cachedHeader.headerSize + (haveBuiltin ? cachedHeader.builtinSize : 0) + cachedHeader.dataSize;
 
@@ -473,11 +474,9 @@ static bool tryApplyCachedSandbox(const SandboxInfo& info)
         return false;
     if (static_cast<uint32_t>(libsandboxVersion) != cachedSandboxHeader.libsandboxVersion)
         return false;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    if (std::strcmp(cachedSandboxHeader.sandboxBuildID, SANDBOX_BUILD_ID))
+    if (!equalSpans(std::span { cachedSandboxHeader.sandboxBuildID }, unsafeSpanIncludingNullTerminator(SANDBOX_BUILD_ID)))
         return false;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    if (StringView::fromLatin1(cachedSandboxHeader.osVersion) != osVersion)
+    if (StringView::fromLatin1(cachedSandboxHeader.osVersion.data()) != osVersion)
         return false;
 
     const bool haveBuiltin = cachedSandboxHeader.builtinSize != std::numeric_limits<uint32_t>::max();

@@ -623,7 +623,7 @@ Vector<char> asciiDebug(StringImpl* impl)
         }
     }
     CString narrowString = buffer.toString().ascii();
-    return { narrowString.unsafeSpanIncludingNullTerminator() };
+    return { narrowString.spanIncludingNullTerminator() };
 }
 
 Vector<char> asciiDebug(String& string)

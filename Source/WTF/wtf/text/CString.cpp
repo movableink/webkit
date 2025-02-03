@@ -107,7 +107,7 @@ void CString::copyBufferIfNeeded()
     RefPtr<CStringBuffer> buffer = WTFMove(m_buffer);
     size_t length = buffer->length();
     m_buffer = CStringBuffer::createUninitialized(length);
-    memcpySpan(m_buffer->mutableSpanIncludingNullTerminator(), buffer->unsafeSpanIncludingNullTerminator());
+    memcpySpan(m_buffer->mutableSpanIncludingNullTerminator(), buffer->spanIncludingNullTerminator());
 }
 
 bool CString::isSafeToSendToAnotherThread() const
@@ -120,7 +120,7 @@ void CString::grow(size_t newLength)
     ASSERT(newLength > length());
 
     auto newBuffer = CStringBuffer::createUninitialized(newLength);
-    memcpySpan(newBuffer->mutableSpanIncludingNullTerminator(), m_buffer->unsafeSpanIncludingNullTerminator());
+    memcpySpan(newBuffer->mutableSpanIncludingNullTerminator(), m_buffer->spanIncludingNullTerminator());
     m_buffer = WTFMove(newBuffer);
 }
 
