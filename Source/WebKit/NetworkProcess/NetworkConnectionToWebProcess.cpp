@@ -121,6 +121,8 @@
 #define MESSAGE_CHECK_COMPLETION(assertion, completion) MESSAGE_CHECK_COMPLETION_BASE(assertion, this->connection(), completion)
 #define MESSAGE_CHECK_WITH_RETURN_VALUE(assertion, returnValue) MESSAGE_CHECK_WITH_RETURN_VALUE_BASE(assertion, this->connection(), returnValue)
 
+#define MESSAGE_CHECK_WITH_THIS(assertion, thisPtr) MESSAGE_CHECK_BASE(assertion, thisPtr->connection())
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -595,7 +597,7 @@ void NetworkConnectionToWebProcess::scheduleResourceLoad(NetworkResourceLoadPara
 
 void NetworkConnectionToWebProcess::performSynchronousLoad(NetworkResourceLoadParameters&& loadParameters, CompletionHandler<void(const ResourceError&, const ResourceResponse, Vector<uint8_t>&&)>&& reply)
 {
-    MESSAGE_CHECK(m_networkProcess->allowsFirstPartyForCookies(m_webProcessIdentifier, loadParameters.request.firstPartyForCookies()) == NetworkProcess::AllowCookieAccess::Allow);
+    MESSAGE_CHECK_WITH_THIS(m_networkProcess->allowsFirstPartyForCookies(m_webProcessIdentifier, loadParameters.request.firstPartyForCookies()) == NetworkProcess::AllowCookieAccess::Allow, Ref { *this });
     CONNECTION_RELEASE_LOG(Loading, "performSynchronousLoad: (parentPID=%d, pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", frameID=%" PRIu64 ", resourceID=%" PRIu64 ")", loadParameters.parentPID, loadParameters.webPageProxyID ? loadParameters.webPageProxyID->toUInt64() : 0, loadParameters.webPageID ? loadParameters.webPageID->toUInt64() : 0, loadParameters.webFrameID ? loadParameters.webFrameID->object().toUInt64() : 0, loadParameters.identifier ? loadParameters.identifier->toUInt64() : 0);
 
     auto identifier = loadParameters.identifier;
@@ -892,7 +894,7 @@ void NetworkConnectionToWebProcess::getRawCookies(const URL& firstParty, const S
 
 void NetworkConnectionToWebProcess::setRawCookie(const URL& firstParty, const URL& url, const WebCore::Cookie& cookie, ShouldPartitionCookie shouldPartitionCookie)
 {
-    auto allowCookieAccess = m_networkProcess->allowsFirstPartyForCookies(m_webProcessIdentifier, firstParty);
+    auto allowCookieAccess = protectedNetworkProcess()->allowsFirstPartyForCookies(m_webProcessIdentifier, firstParty);
     MESSAGE_CHECK(allowCookieAccess != NetworkProcess::AllowCookieAccess::Terminate);
     if (allowCookieAccess != NetworkProcess::AllowCookieAccess::Allow)
         return;
@@ -912,7 +914,7 @@ void NetworkConnectionToWebProcess::setRawCookie(const URL& firstParty, const UR
 
 void NetworkConnectionToWebProcess::deleteCookie(const URL& firstParty, const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler)
 {
-    auto allowCookieAccess = m_networkProcess->allowsFirstPartyForCookies(m_webProcessIdentifier, firstParty);
+    auto allowCookieAccess = protectedNetworkProcess()->allowsFirstPartyForCookies(m_webProcessIdentifier, firstParty);
     MESSAGE_CHECK_COMPLETION(allowCookieAccess != NetworkProcess::AllowCookieAccess::Terminate, completionHandler());
     if (allowCookieAccess != NetworkProcess::AllowCookieAccess::Allow)
         return completionHandler();

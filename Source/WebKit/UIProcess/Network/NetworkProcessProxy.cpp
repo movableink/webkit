@@ -459,7 +459,7 @@ void NetworkProcessProxy::networkProcessDidTerminate(ProcessTerminationReason re
     if (RefPtr downloadProxyMap = m_downloadProxyMap.get())
         downloadProxyMap->invalidate();
 #if ENABLE(LEGACY_CUSTOM_PROTOCOL_MANAGER)
-    m_customProtocolManagerProxy.invalidate();
+    protectedCustomProtocolManagerProxy()->invalidate();
 #endif
 
     m_uploadActivity = std::nullopt;

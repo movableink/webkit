@@ -140,7 +140,7 @@ void ByteRangeRequest::completeUnconditionally(PDFIncrementalLoader& loader)
 
     auto availableRequestBytes = std::min<uint64_t>(m_count, availableBytes - m_position);
 
-    loader.dataSpanForRange(m_position, availableRequestBytes, CheckValidRanges::No, [this, &loader](std::span<const uint8_t> data) {
+    loader.dataSpanForRange(m_position, availableRequestBytes, CheckValidRanges::No, [this, loader = Ref { loader }](std::span<const uint8_t> data) {
         if (data.data())
             completeWithBytes(data, loader);
     });
@@ -298,7 +298,7 @@ void PDFIncrementalLoader::clear()
 {
     // By clearing out the resource data and handling all outstanding range requests,
     // we can force the PDFThread to complete quickly
-    if (m_pdfThread) {
+    if (RefPtr pdfThread = m_pdfThread) {
         unconditionalCompleteOutstandingRangeRequests();
         {
             Locker locker { m_wasPDFThreadTerminationRequestedLock };
@@ -307,7 +307,7 @@ void PDFIncrementalLoader::clear()
                 dataSemaphore.signal();
             });
         }
-        m_pdfThread->waitForCompletion();
+        pdfThread->waitForCompletion();
     }
 }
 
@@ -556,7 +556,7 @@ void PDFIncrementalLoader::requestDidCompleteWithBytes(ByteRangeRequest& request
     UNUSED_PARAM(byteCount);
 #endif
 
-    if (auto* streamLoader = request.streamLoader())
+    if (RefPtr streamLoader = request.streamLoader())
         forgetStreamLoader(*streamLoader);
 }
 
@@ -570,7 +570,7 @@ void PDFIncrementalLoader::requestDidCompleteWithAccumulatedData(ByteRangeReques
 
     appendAccumulatedDataToDataBuffer(request);
 
-    if (auto* streamLoader = request.streamLoader())
+    if (RefPtr streamLoader = request.streamLoader())
         forgetStreamLoader(*streamLoader);
 }
 
@@ -757,7 +757,7 @@ void PDFIncrementalLoader::transitionToMainThreadDocument()
 
     // If the plugin was manually destroyed, the m_pdfThread might already be gone.
     if (m_pdfThread) {
-        m_pdfThread->waitForCompletion();
+        RefPtr { m_pdfThread }->waitForCompletion();
         m_pdfThread = nullptr;
     }
 }
