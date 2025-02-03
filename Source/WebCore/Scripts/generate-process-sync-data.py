@@ -155,10 +155,7 @@ def generate_process_sync_client_header(synched_datas):
     result.append('#pragma once\n')
 
     headers = headers_from_datas(synched_datas)
-
-    headers_set = set(headers)
-    headers_set.add('<wtf/TZoneMallocInlines.h>')
-    headers = list(headers_set)
+    headers.append('<wtf/TZoneMallocInlines.h>')
     for header in headers:
         result.append('#include %s' % header)
 
