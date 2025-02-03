@@ -97,35 +97,6 @@ static id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>&, NSS
 #define NSAccessibilityActiveElementAttribute @"AXActiveElement"
 #endif
 
-// Cell Tables
-#ifndef NSAccessibilitySelectedCellsAttribute
-#define NSAccessibilitySelectedCellsAttribute @"AXSelectedCells"
-#endif
-
-#ifndef NSAccessibilityVisibleCellsAttribute
-#define NSAccessibilityVisibleCellsAttribute @"AXVisibleCells"
-#endif
-
-#ifndef NSAccessibilityRowIndexRangeAttribute
-#define NSAccessibilityRowIndexRangeAttribute @"AXRowIndexRange"
-#endif
-
-#ifndef NSAccessibilityColumnIndexRangeAttribute
-#define NSAccessibilityColumnIndexRangeAttribute @"AXColumnIndexRange"
-#endif
-
-#ifndef NSAccessibilityCellForColumnAndRowParameterizedAttribute
-#define NSAccessibilityCellForColumnAndRowParameterizedAttribute @"AXCellForColumnAndRow"
-#endif
-
-#ifndef NSAccessibilityCellRole
-#define NSAccessibilityCellRole @"AXCell"
-#endif
-
-#ifndef NSAccessibilityDefinitionListSubrole
-#define NSAccessibilityDefinitionListSubrole @"AXDefinitionList"
-#endif
-
 // Miscellaneous
 #ifndef NSAccessibilityAccessKeyAttribute
 #define NSAccessibilityAccessKeyAttribute @"AXAccessKey"
@@ -141,10 +112,6 @@ static id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>&, NSS
 
 #ifndef NSAccessibilityLanguageAttribute
 #define NSAccessibilityLanguageAttribute @"AXLanguage"
-#endif
-
-#ifndef NSAccessibilityRequiredAttribute
-#define NSAccessibilityRequiredAttribute @"AXRequired"
 #endif
 
 #ifndef NSAccessibilityInvalidAttribute
@@ -205,10 +172,6 @@ static id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>&, NSS
 
 #ifndef NSAccessibilityPopupValueAttribute
 #define NSAccessibilityPopupValueAttribute @"AXPopupValue"
-#endif
-
-#ifndef NSAccessibilityPlaceholderValueAttribute
-#define NSAccessibilityPlaceholderValueAttribute @"AXPlaceholderValue"
 #endif
 
 #ifndef NSAccessibilityScrollToVisibleAction
