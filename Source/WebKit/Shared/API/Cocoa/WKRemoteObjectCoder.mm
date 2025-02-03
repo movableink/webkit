@@ -40,6 +40,7 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/Scope.h>
 #import <wtf/SetForScope.h>
+#import <wtf/cocoa/NSStringExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/spi/cocoa/SecuritySPI.h>
 #import <wtf/text/CString.h>
@@ -808,18 +809,18 @@ static const HashSet<CFTypeRef> alwaysAllowedClasses()
     return classes.get();
 }
 
-NO_RETURN static void crashWithClassName(const char* className)
+template<typename CharacterType>
+NO_RETURN static void crashWithClassName(std::span<const CharacterType> className) requires(sizeof(CharacterType) == 1)
 {
     std::array<uint64_t, 6> values { 0, 0, 0, 0, 0, 0 };
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    strncpy(reinterpret_cast<char*>(values.data()), className, sizeof(values));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    auto valuesAsBytes  = asMutableByteSpan(std::span { values });
+    memcpySpan(valuesAsBytes, className.first(valuesAsBytes.size()));
     CRASH_WITH_INFO(values[0], values[1], values[2], values[3], values[4], values[5]);
 }
 
 NO_RETURN static void crashWithClassName(Class objectClass)
 {
-    crashWithClassName(NSStringFromClass(objectClass).UTF8String);
+    crashWithClassName(span(NSStringFromClass(objectClass)));
 }
 
 static void checkIfClassIsAllowed(WKRemoteObjectDecoder *decoder, Class objectClass)
@@ -1055,7 +1056,7 @@ static id decodeObject(WKRemoteObjectDecoder *decoder)
 
     Class objectClass = objc_lookUpClass(className.data());
     if (!objectClass)
-        crashWithClassName(className.data());
+        crashWithClassName(className.span());
 
     validateClass(decoder, objectClass);
 

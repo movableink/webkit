@@ -33,6 +33,10 @@
 
 namespace WTF {
 
+inline std::span<const char> span(NSString *string) { return unsafeSpan(string.UTF8String); }
+
 inline const char* safePrintfType(NSString *string) { return string.UTF8String; }
 
 }
+
+using WTF::span;
