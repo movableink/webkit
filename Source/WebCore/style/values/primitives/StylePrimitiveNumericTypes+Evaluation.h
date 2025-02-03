@@ -49,6 +49,12 @@ template<auto R, typename V> struct Evaluation<Percentage<R, V>> {
     }
 };
 
+template<auto R> constexpr LayoutUnit evaluate(const Percentage<R>& percentage, LayoutUnit referenceLength)
+{
+    // Don't remove the extra cast to float. It is needed for rounding on 32-bit Intel machines that use the FPU stack.
+    return LayoutUnit(static_cast<float>(percentage.value / 100.0 * referenceLength));
+}
+
 // MARK: - Numeric
 
 template<NonCompositeNumeric StyleType> struct Evaluation<StyleType> {
@@ -102,6 +108,20 @@ template<typename T> struct Evaluation<SpaceSeparatedSize<T>> {
         };
     }
 };
+
+// MARK: - VariantLike
+
+template<VariantLike CSSType, typename... Rest> decltype(auto) evaluate(const CSSType& value, Rest&& ...rest)
+{
+    return WTF::switchOn(value, [&](const auto& alternative) { return evaluate(alternative, std::forward<Rest>(rest)...); });
+}
+
+// MARK: - TupleLike
+
+template<TupleLike CSSType, typename... Rest> requires (std::tuple_size_v<CSSType> == 1) decltype(auto) evaluate(const CSSType& value, Rest&& ...rest)
+{
+    return evaluate(get<0>(value), std::forward<Rest>(rest)...);
+}
 
 // MARK: - Calculated Evaluations
 

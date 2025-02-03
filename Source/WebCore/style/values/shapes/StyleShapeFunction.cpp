@@ -327,9 +327,9 @@ private:
     {
         switch (mode) {
         case AbsoluteCoordinates:
-            return typename Command::To { .offset = { LengthPercentage<> { Length<> { offset } } } };
+            return typename Command::To { .offset = { LengthPercentage<>::Dimension { offset } } };
         case RelativeCoordinates:
-            return typename Command::By { .offset = LengthPercentage<> { Length<> { offset } } };
+            return typename Command::By { .offset = LengthPercentage<>::Dimension { offset } };
         }
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -507,7 +507,7 @@ private:
         m_commands.append(
             ArcCommand {
                 .toBy = fromOffsetPoint(offsetPoint, mode),
-                .size = { Length<> { r1 }, Length<> { r2 } },
+                .size = { LengthPercentage<>::Dimension { r1 }, LengthPercentage<>::Dimension { r2 } },
                 .arcSweep = sweepFlag ? ArcSweep { CSS::Keyword::Cw { } } : ArcSweep { CSS::Keyword::Ccw { } },
                 .arcSize = largeArcFlag ? ArcSize { CSS::Keyword::Large { } } : ArcSize { CSS::Keyword::Small { } },
                 .rotation = { angle },
@@ -658,7 +658,7 @@ std::optional<Shape> makeShapeFromPath(const Path& path)
 
     return Shape {
         .fillRule = path.fillRule,
-        .startingPoint = converter.initialMove().value_or(Position { LengthPercentage<> { Length<> { 0 } }, LengthPercentage<> { Length<> { 0 } } }),
+        .startingPoint = converter.initialMove().value_or(Position { LengthPercentage<>::Dimension { 0 }, LengthPercentage<>::Dimension { 0 } }),
         .commands = { WTFMove(shapeCommands) }
     };
 }
