@@ -12,7 +12,6 @@ NetworkProcess/cache/NetworkCache.cpp
 NetworkProcess/cache/NetworkCacheSpeculativeLoad.cpp
 NetworkProcess/cocoa/NetworkSessionCocoa.mm
 NetworkProcess/cocoa/NetworkTaskCocoa.mm
-UIProcess/API/APIDataTask.cpp
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/C/mac/WKPagePrivateMac.mm
 UIProcess/API/Cocoa/WKBrowsingContextController.mm
