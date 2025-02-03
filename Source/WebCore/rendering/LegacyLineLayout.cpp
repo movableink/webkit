@@ -63,8 +63,8 @@ LegacyLineLayout::LegacyLineLayout(RenderBlockFlow& flow)
 
 LegacyLineLayout::~LegacyLineLayout()
 {
-    lineBoxes().deleteLineBoxTree();
-};
+    deleteLegacyRootBox(true);
+}
 
 static void determineDirectionality(TextDirection& dir, LegacyInlineIterator iter)
 {
@@ -146,16 +146,13 @@ std::unique_ptr<LegacyRootInlineBox> LegacyLineLayout::createRootInlineBox()
 
 LegacyRootInlineBox* LegacyLineLayout::createAndAppendRootInlineBox()
 {
-    auto newRootBox = createRootInlineBox();
-    LegacyRootInlineBox* rootBox = newRootBox.get();
-    m_lineBoxes.appendLineBox(WTFMove(newRootBox));
-
-    if (UNLIKELY(AXObjectCache::accessibilityEnabled()) && legacyRootBox() == rootBox) {
+    m_legacyRootInlineBox = createRootInlineBox();
+    if (UNLIKELY(AXObjectCache::accessibilityEnabled())) {
         if (AXObjectCache* cache = m_flow.document().existingAXObjectCache())
             cache->deferRecomputeIsIgnored(m_flow.element());
     }
 
-    return rootBox;
+    return m_legacyRootInlineBox.get();
 }
 
 LegacyInlineBox* LegacyLineLayout::createInlineBoxForRenderer(RenderObject* renderer)
@@ -449,7 +446,7 @@ static void repaintSelfPaintInlineBoxes(const LegacyRootInlineBox& rootInlineBox
 
 void LegacyLineLayout::layoutRunsAndFloats(bool hasInlineChild)
 {
-    m_lineBoxes.deleteLineBoxTree();
+    deleteLegacyRootBox(true);
 
     TextDirection direction = style().writingMode().bidiDirection();
     if (style().unicodeBidi() == UnicodeBidi::Plaintext)
@@ -539,7 +536,7 @@ void LegacyLineLayout::layoutLineBoxes()
 {
     m_flow.setLogicalHeight(0_lu);
 
-    lineBoxes().deleteLineBoxes();
+    deleteLegacyRootBox();
 
     if (m_flow.firstChild()) {
         // In full layout mode, clear the line boxes of children upfront. Otherwise,
@@ -588,5 +585,24 @@ const LocalFrameViewLayoutContext& LegacyLineLayout::layoutContext() const
     return m_flow.view().frameView().layoutContext();
 }
 
+void LegacyLineLayout::shiftLineBy(LayoutUnit shiftX, LayoutUnit shiftY)
+{
+    if (m_legacyRootInlineBox)
+        m_legacyRootInlineBox->adjustPosition(shiftX, shiftY);
+}
+
+void LegacyLineLayout::deleteLegacyRootBox(bool runCleanup)
+{
+    if (!m_legacyRootInlineBox)
+        return;
+
+    if (!runCleanup) {
+        m_legacyRootInlineBox = { };
+        return;
+    }
+
+    auto* rootInlineBoxToDestroy = m_legacyRootInlineBox.release();
+    rootInlineBoxToDestroy->deleteLine();
+}
 
 }

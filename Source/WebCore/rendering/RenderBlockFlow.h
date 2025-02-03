@@ -153,8 +153,8 @@ protected:
 
     void dirtyLineFromChangedChild() final
     {
-        if (svgTextLayout())
-            svgTextLayout()->lineBoxes().dirtyLineFromChangedChild(*this);
+        if (svgTextLayout() && svgTextLayout()->legacyRootBox())
+            svgTextLayout()->legacyRootBox()->markDirty();
     }
 
     void paintColumnRules(PaintInfo&, const LayoutPoint&) override;

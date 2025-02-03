@@ -164,9 +164,6 @@ RenderBlockFlow& LegacyRootInlineBox::blockFlow() const
 
 void LegacyRootInlineBox::removeLineBoxFromRenderObject()
 {
-    // Null if we are destroying LegacyLineLayout.
-    if (auto* legacyLineLayout = blockFlow().svgTextLayout())
-        legacyLineLayout->lineBoxes().removeLineBox(this);
 }
 
 LayoutUnit LegacyRootInlineBox::lineBoxWidth() const

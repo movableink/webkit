@@ -175,7 +175,7 @@ void RenderBlockFlow::willBeDestroyed()
     }
 
     if (svgTextLayout())
-        svgTextLayout()->lineBoxes().deleteLineBoxes();
+        svgTextLayout()->deleteLegacyRootBox();
 
     // NOTE: This jumps down to RenderBox, bypassing RenderBlock since it would do duplicate work.
     RenderBox::willBeDestroyed();
@@ -655,9 +655,9 @@ inline LayoutUnit RenderBlockFlow::shiftForAlignContent(LayoutUnit intrinsicLogi
         }
     } else if (svgTextLayout()) {
         if (isHorizontalWritingMode())
-            svgTextLayout()->lineBoxes().shiftLinesBy(0, space);
+            svgTextLayout()->shiftLineBy(0, space);
         else
-            svgTextLayout()->lineBoxes().shiftLinesBy(-space, 0);
+            svgTextLayout()->shiftLineBy(-space, 0);
     } else if (inlineLayout())
         inlineLayout()->shiftLinesBy(space);
     if (m_floatingObjects)
