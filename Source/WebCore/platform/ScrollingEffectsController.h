@@ -241,6 +241,8 @@ private:
 
     void adjustDeltaForSnappingIfNeeded(float& deltaX, float& deltaY);
 
+    void clampDeltaForAllowedAxes(const PlatformWheelEvent&, FloatSize&);
+
 #if ENABLE(KINETIC_SCROLLING) && !PLATFORM(MAC)
     // Returns true if handled.
     bool processWheelEventForKineticScrolling(const PlatformWheelEvent&);

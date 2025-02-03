@@ -140,7 +140,7 @@ OptionSet<WheelEventProcessingSteps> ScrollingTree::determineWheelEventProcessin
 
     auto latchedNodeAndSteps = m_latchingController.latchingDataForEvent(wheelEvent, m_allowLatching);
     if (latchedNodeAndSteps) {
-        LOG_WITH_STREAM(ScrollLatching, stream << "ScrollingTree::determineWheelEventProcessing " << wheelEvent << " have latched node " << latchedNodeAndSteps->scrollingNodeID << " steps " << latchedNodeAndSteps->processingSteps << " gesture state " << m_treeState.gestureState);
+        LOG_WITH_STREAM(ScrollLatching, stream << "\nScrollingTree::determineWheelEventProcessing " << wheelEvent << " have latched node " << latchedNodeAndSteps->scrollingNodeID << " steps " << latchedNodeAndSteps->processingSteps << " gesture state " << m_treeState.gestureState);
         return latchedNodeAndSteps->processingSteps;
     }
     if (wheelEvent.isGestureStart() || wheelEvent.isNonGestureEvent())
@@ -150,14 +150,14 @@ OptionSet<WheelEventProcessingSteps> ScrollingTree::determineWheelEventProcessin
 
     m_latchingController.receivedWheelEvent(wheelEvent, processingSteps, m_allowLatching);
 
-    LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree::determineWheelEventProcessing: " << wheelEvent << " processingSteps " << processingSteps);
+    LOG_WITH_STREAM(Scrolling, stream << "\nScrollingTree::determineWheelEventProcessing: " << wheelEvent << " processingSteps " << processingSteps);
 
     return processingSteps;
 }
 
 WheelEventHandlingResult ScrollingTree::handleWheelEvent(const PlatformWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps)
 {
-    LOG_WITH_STREAM(Scrolling, stream << "\nScrollingTree " << this << " handleWheelEvent " << wheelEvent);
+    LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree " << this << " handleWheelEvent " << wheelEvent);
 
     Locker locker { m_treeLock };
 
@@ -232,8 +232,10 @@ WheelEventHandlingResult ScrollingTree::handleWheelEventWithNode(const PlatformW
             
             auto scrollPropagationInfo = scrollingNode->computeScrollPropagation(adjustedWheelEvent.delta());
             if (scrollPropagationInfo.shouldBlockScrollPropagation) {
-                if (!scrollPropagationInfo.isHandled)
+                if (!scrollPropagationInfo.isHandled) {
+                    auto deferrer = ScrollingTreeWheelEventTestMonitorCompletionDeferrer { *this, scrollingNode->scrollingNodeID(), WheelEventTestMonitor::DeferReason::None };
                     return WheelEventHandlingResult::unhandled();
+                }
                 m_latchingController.nodeDidHandleEvent(scrollingNode->scrollingNodeID(), processingSteps, adjustedWheelEvent, m_allowLatching);
                 m_gestureState.nodeDidHandleEvent(scrollingNode->scrollingNodeID(), adjustedWheelEvent);
                 return WheelEventHandlingResult::handled();

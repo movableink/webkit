@@ -7585,6 +7585,7 @@ class WebCore::FilterOperations {
 
 header: <WebCore/WheelEventTestMonitor.h>
 [OptionSet] enum class WebCore::WheelEventTestMonitorDeferReason : uint16_t {
+    None,
     HandlingWheelEvent,
     HandlingWheelEventOnMainThread,
     PostMainThreadWheelEventHandling,
