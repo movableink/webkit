@@ -1858,19 +1858,18 @@ RefPtr<FontCascadeFonts> FontCascade::protectedFonts() const
     return m_fonts;
 }
 
-DashArray FontCascade::dashesForIntersectionsWithRect(const TextRun& run, const FloatPoint& textOrigin, const FloatRect& lineExtents) const
+Vector<FloatSegment> FontCascade::lineSegmentsForIntersectionsWithRect(const TextRun& run, const FloatPoint& textOrigin, const FloatRect& lineExtents) const
 {
+    Vector<FloatSegment> result;
     if (isLoadingCustomFonts())
-        return DashArray();
+        return result;
 
     auto glyphBuffer = layoutText(codePath(run), run, 0, run.length());
-
     if (!glyphBuffer.size())
-        return DashArray();
+        return result;
 
     FloatPoint origin = textOrigin + WebCore::size(glyphBuffer.initialAdvance());
     GlyphToPathTranslator translator(run, glyphBuffer, origin);
-    DashArray result;
     for (; translator.containsMorePaths(); translator.advance()) {
         GlyphIterationState info = { FloatPoint(0, 0), FloatPoint(0, 0), lineExtents.y(), lineExtents.y() + lineExtents.height(), lineExtents.x() + lineExtents.width(), lineExtents.x() };
         switch (translator.underlineType()) {
@@ -1879,16 +1878,13 @@ DashArray FontCascade::dashesForIntersectionsWithRect(const TextRun& run, const 
             path.applyElements([&](const PathElement& element) {
                 findPathIntersections(info, element);
             });
-            if (info.minX < info.maxX) {
-                result.append(info.minX - lineExtents.x());
-                result.append(info.maxX - lineExtents.x());
-            }
+            if (info.minX < info.maxX)
+                result.append({ info.minX - lineExtents.x(), info.maxX - lineExtents.x() });
             break;
         }
         case GlyphUnderlineType::SkipGlyph: {
             std::pair<float, float> extents = translator.extents();
-            result.append(extents.first - lineExtents.x());
-            result.append(extents.second - lineExtents.x());
+            result.append({ extents.first - lineExtents.x(), extents.second - lineExtents.x() });
             break;
         }
         case GlyphUnderlineType::DrawOverGlyph:

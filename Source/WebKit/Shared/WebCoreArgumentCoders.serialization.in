@@ -5224,6 +5224,11 @@ header: <WebCore/ImageTypes.h>
     WebCore::Headroom headroom();
 };
 
+[AdditionalEncoder=StreamConnectionEncoder] struct WebCore::FloatSegment {
+    float begin;
+    float end;
+};
+
 struct WebCore::CanvasActivityRecord {
     HashSet<String> textWritten;
     bool wasDataRead;

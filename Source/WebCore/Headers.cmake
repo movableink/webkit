@@ -2060,6 +2060,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/FloatQuad.h
     platform/graphics/FloatRect.h
     platform/graphics/FloatRoundedRect.h
+    platform/graphics/FloatSegment.h
     platform/graphics/FloatSize.h
     platform/graphics/Font.h
     platform/graphics/FontBaseline.h

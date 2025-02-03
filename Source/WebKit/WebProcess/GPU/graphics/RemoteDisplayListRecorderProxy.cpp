@@ -319,10 +319,10 @@ void RemoteDisplayListRecorderProxy::drawLine(const FloatPoint& point1, const Fl
     send(Messages::RemoteDisplayListRecorder::DrawLine(point1, point2));
 }
 
-void RemoteDisplayListRecorderProxy::drawLinesForText(const FloatPoint& point, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle style)
+void RemoteDisplayListRecorderProxy::drawLinesForText(const FloatPoint& point, float thickness, std::span<const FloatSegment> lineSegments, bool printing, bool doubleLines, StrokeStyle style)
 {
     appendStateChangeItemIfNecessary();
-    send(Messages::RemoteDisplayListRecorder::DrawLinesForText(DisplayList::DrawLinesForText { point, widths, thickness, printing, doubleLines, style }));
+    send(Messages::RemoteDisplayListRecorder::DrawLinesForText(DisplayList::DrawLinesForText { point, lineSegments, thickness, printing, doubleLines, style }));
 }
 
 void RemoteDisplayListRecorderProxy::drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)

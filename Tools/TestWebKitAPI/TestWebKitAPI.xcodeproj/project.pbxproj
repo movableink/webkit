@@ -379,6 +379,7 @@
 		7B397C0628BE0EAD00239202 /* ConnectionTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B397C0528BE0EAD00239202 /* ConnectionTests.cpp */; };
 		7B397C0828BE394B00239202 /* UtilitiesCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7C83E0391D0A602700FEBCF3 /* UtilitiesCocoa.mm */; };
 		7B52E86C2A2A1A2200A3251F /* ThreadSafeObjectHeapTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B52E8642A2A1A2200A3251F /* ThreadSafeObjectHeapTests.cpp */; };
+		7B588DED2D47B2E600E6FEC4 /* FloatSegmentTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B588DEC2D47B2E600E6FEC4 /* FloatSegmentTest.cpp */; };
 		7B636FC229700F0700F3670F /* StreamConnectionWorkQueueTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B636FC129700F0700F3670F /* StreamConnectionWorkQueueTests.cpp */; };
 		7B66CFD82D3194B900BD6CB5 /* GraphicsTestUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B66CFD72D3194B900BD6CB5 /* GraphicsTestUtilities.cpp */; };
 		7B6FF89728C22D9400CA76B0 /* WebKit.framework in Product Dependencies */ = {isa = PBXBuildFile; fileRef = 2B648DBA28C1C1F700791F2B /* WebKit.framework */; };
@@ -3042,6 +3043,7 @@
 		7B397C0528BE0EAD00239202 /* ConnectionTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ConnectionTests.cpp; sourceTree = "<group>"; };
 		7B41A8302D08CD9400CE56F9 /* RestoreSessionStorage.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = RestoreSessionStorage.mm; sourceTree = "<group>"; };
 		7B52E8642A2A1A2200A3251F /* ThreadSafeObjectHeapTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ThreadSafeObjectHeapTests.cpp; sourceTree = "<group>"; };
+		7B588DEC2D47B2E600E6FEC4 /* FloatSegmentTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FloatSegmentTest.cpp; sourceTree = "<group>"; };
 		7B636FC129700F0700F3670F /* StreamConnectionWorkQueueTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StreamConnectionWorkQueueTests.cpp; sourceTree = "<group>"; };
 		7B66CFD62D3194B900BD6CB5 /* GraphicsTestUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GraphicsTestUtilities.h; sourceTree = "<group>"; };
 		7B66CFD72D3194B900BD6CB5 /* GraphicsTestUtilities.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GraphicsTestUtilities.cpp; sourceTree = "<group>"; };
@@ -4740,6 +4742,7 @@
 				7A909A701D877475007E10F8 /* FloatPointTests.cpp */,
 				F4AD183725ED791500B1A19F /* FloatQuadTests.cpp */,
 				7A909A711D877475007E10F8 /* FloatRectTests.cpp */,
+				7B588DEC2D47B2E600E6FEC4 /* FloatSegmentTest.cpp */,
 				7A909A721D877475007E10F8 /* FloatSizeTests.cpp */,
 				4C041C6B2C405622002218A4 /* FontCascade.cpp */,
 				95C52728275F35E100DA7E40 /* FontShadowTests.cpp */,
@@ -7068,6 +7071,7 @@
 				7A909A7E1D877480007E10F8 /* FloatPointTests.cpp in Sources */,
 				F4AD183825ED791500B1A19F /* FloatQuadTests.cpp in Sources */,
 				7A909A7F1D877480007E10F8 /* FloatRectTests.cpp in Sources */,
+				7B588DED2D47B2E600E6FEC4 /* FloatSegmentTest.cpp in Sources */,
 				7A909A801D877480007E10F8 /* FloatSizeTests.cpp in Sources */,
 				F4BC0B142146C849002A0478 /* FocusPreservationTests.mm in Sources */,
 				F4A2E64D284541BA0001FEEF /* FocusWebView.mm in Sources */,

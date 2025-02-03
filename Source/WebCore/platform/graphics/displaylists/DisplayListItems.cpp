@@ -423,9 +423,9 @@ void DrawLine::dump(TextStream& ts, OptionSet<AsTextFlag>) const
     ts.dumpProperty("point-2", point2());
 }
 
-DrawLinesForText::DrawLinesForText(const FloatPoint& point, const DashArray& widths, float thickness, bool printing, bool doubleLines, StrokeStyle style)
+DrawLinesForText::DrawLinesForText(const FloatPoint& point, std::span<const FloatSegment> lineSegments, float thickness, bool printing, bool doubleLines, StrokeStyle style)
     : m_point(point)
-    , m_widths(widths)
+    , m_lineSegments(lineSegments)
     , m_thickness(thickness)
     , m_printing(printing)
     , m_doubleLines(doubleLines)
@@ -435,7 +435,7 @@ DrawLinesForText::DrawLinesForText(const FloatPoint& point, const DashArray& wid
 
 void DrawLinesForText::apply(GraphicsContext& context) const
 {
-    context.drawLinesForText(m_point, m_thickness, m_widths, m_printing, m_doubleLines, m_style);
+    context.drawLinesForText(m_point, m_thickness, m_lineSegments, m_printing, m_doubleLines, m_style);
 }
 
 void DrawLinesForText::dump(TextStream& ts, OptionSet<AsTextFlag>) const
@@ -443,7 +443,7 @@ void DrawLinesForText::dump(TextStream& ts, OptionSet<AsTextFlag>) const
     ts.dumpProperty("point", point());
     ts.dumpProperty("thickness", thickness());
     ts.dumpProperty("double", doubleLines());
-    ts.dumpProperty("widths", widths());
+    ts.dumpProperty("lineSegments", lineSegments());
     ts.dumpProperty("is-printing", isPrinting());
     ts.dumpProperty("double", doubleLines());
 }

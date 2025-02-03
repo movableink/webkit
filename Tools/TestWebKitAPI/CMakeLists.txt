@@ -201,6 +201,7 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/FileMonitor.cpp
         Tests/WebCore/FloatPointTests.cpp
         Tests/WebCore/FloatRectTests.cpp
+        Tests/WebCore/FloatSegmentTest.cpp
         Tests/WebCore/FloatSizeTests.cpp
         Tests/WebCore/GridPosition.cpp
         Tests/WebCore/HTMLParserIdioms.cpp

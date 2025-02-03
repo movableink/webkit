@@ -88,7 +88,7 @@ private:
     void endTransparencyLayer() final;
     void drawRect(const WebCore::FloatRect&, float) final;
     void drawLine(const WebCore::FloatPoint& point1, const WebCore::FloatPoint& point2) final;
-    void drawLinesForText(const WebCore::FloatPoint&, float thickness, const WebCore::DashArray& widths, bool printing, bool doubleLines, WebCore::StrokeStyle) final;
+    void drawLinesForText(const WebCore::FloatPoint&, float thickness, std::span<const WebCore::FloatSegment>, bool isPrinting, bool doubleLines, WebCore::StrokeStyle) final;
     void drawDotsForDocumentMarker(const WebCore::FloatRect&, WebCore::DocumentMarkerLineStyle) final;
     void drawEllipse(const WebCore::FloatRect&) final;
     void drawPath(const WebCore::Path&) final;

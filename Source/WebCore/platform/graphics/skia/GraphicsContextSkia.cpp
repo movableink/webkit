@@ -682,54 +682,13 @@ void GraphicsContextSkia::drawFocusRing(const Vector<FloatRect>& rects, float, f
 #endif
 }
 
-void GraphicsContextSkia::drawLinesForText(const FloatPoint& point, float thickness, const DashArray& widths, bool printing, bool doubleUnderlines, StrokeStyle strokeStyle)
+void GraphicsContextSkia::drawLinesForText(const FloatPoint& point, float thickness, std::span<const FloatSegment> lineSegments, bool printing, bool doubleUnderlines, StrokeStyle strokeStyle)
 {
-    if (widths.isEmpty())
+    auto [rects, strokeColor] = computeRectsAndStrokeColorForLinesForText(point, thickness, lineSegments, printing, doubleUnderlines, strokeStyle);
+    if (rects.isEmpty())
         return;
-
-    Color localStrokeColor(strokeColor());
-    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(FloatRect(point, FloatSize(widths.last(), thickness)), printing, localStrokeColor);
-    if (bounds.isEmpty())
-        return;
-
-    Vector<FloatRect, 4> dashBounds;
-    ASSERT(!(widths.size() % 2));
-    dashBounds.reserveInitialCapacity(dashBounds.size() / 2);
-
-    float dashWidth = 0;
-    switch (strokeStyle) {
-    case StrokeStyle::DottedStroke:
-        dashWidth = bounds.height();
-        break;
-    case StrokeStyle::DashedStroke:
-        dashWidth = 2 * bounds.height();
-        break;
-    case StrokeStyle::SolidStroke:
-    default:
-        break;
-    }
-
-    for (size_t i = 0; i < widths.size(); i += 2) {
-        auto left = widths[i];
-        auto width = widths[i+1] - widths[i];
-        if (!dashWidth)
-            dashBounds.append({ bounds.x() + left, bounds.y(), width, bounds.height() });
-        else {
-            auto startParticle = static_cast<int>(std::ceil(left / (2 * dashWidth)));
-            auto endParticle = static_cast<int>((left + width) / (2 * dashWidth));
-            for (auto j = startParticle; j < endParticle; ++j)
-                dashBounds.append({ bounds.x() + j * 2 * dashWidth, bounds.y(), dashWidth, bounds.height() });
-        }
-    }
-
-    if (doubleUnderlines) {
-        // The space between double underlines is equal to the height of the underline
-        for (size_t i = 0; i < widths.size(); i += 2)
-            dashBounds.append({ bounds.x() + widths[i], bounds.y() + 2 * bounds.height(), widths[i+1] - widths[i], bounds.height() });
-    }
-
-    for (auto& dash : dashBounds)
-        fillRect(dash, localStrokeColor);
+    for (auto& rect : rects)
+        fillRect(rect, strokeColor);
 }
 
 // Creates a path comprising of two triangle waves separated by some empty space in Y axis.

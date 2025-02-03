@@ -739,11 +739,11 @@ class DrawLinesForText {
 public:
     static constexpr char name[] = "draw-lines-for-text";
 
-    WEBCORE_EXPORT DrawLinesForText(const FloatPoint&, const DashArray& widths, float thickness, bool printing, bool doubleLines, StrokeStyle);
+    WEBCORE_EXPORT DrawLinesForText(const FloatPoint&, std::span<const FloatSegment> lineSegments, float thickness, bool printing, bool doubleLines, StrokeStyle);
 
     FloatPoint point() const { return m_point; }
     float thickness() const { return m_thickness; }
-    const DashArray& widths() const { return m_widths; }
+    const Vector<FloatSegment>& lineSegments() const { return m_lineSegments; }
     bool isPrinting() const { return m_printing; }
     bool doubleLines() const { return m_doubleLines; }
     StrokeStyle style() const { return m_style; }
@@ -753,7 +753,7 @@ public:
 
 private:
     FloatPoint m_point;
-    DashArray m_widths;
+    Vector<FloatSegment> m_lineSegments;
     float m_thickness;
     bool m_printing;
     bool m_doubleLines;
