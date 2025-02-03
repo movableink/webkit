@@ -278,7 +278,7 @@ using ProjectionIndex = uint32_t;
 using DisplayCount = uint32_t;
 using SupertypeCount = uint32_t;
 
-inline Width Type::width() const
+ALWAYS_INLINE Width Type::width() const
 {
     switch (kind) {
 #define CREATE_CASE(name, id, b3type, inc, wasmName, width, ...) case TypeKind::name: return widthForBytes(width / 8);
@@ -842,7 +842,14 @@ public:
     unsigned hash() const;
 
     Ref<const TypeDefinition> replacePlaceholders(TypeIndex) const;
-    const TypeDefinition& unroll() const;
+    ALWAYS_INLINE const TypeDefinition& unroll() const
+    {
+        if (UNLIKELY(is<Projection>()))
+            return unrollSlow();
+        ASSERT(refCount() > 1); // TypeInformation registry + owner(s).
+        return *this;
+    }
+
     const TypeDefinition& expand() const;
     bool hasRecursiveReference() const;
     bool isFinalType() const;
@@ -860,6 +867,8 @@ public:
 private:
     // Returns the TypeIndex of a potentially unowned (other than TypeInformation::m_typeSet) TypeDefinition.
     TypeIndex unownedIndex() const { return std::bit_cast<TypeIndex>(this); }
+
+    const TypeDefinition& unrollSlow() const;
 
     friend class TypeInformation;
     friend struct FunctionParameterTypes;

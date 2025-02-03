@@ -82,6 +82,7 @@ enum class CallRole : uint8_t {
 };
 
 struct CallInformation {
+    CallInformation() = default;
     CallInformation(ArgumentLocation passedThisArgument, Vector<ArgumentLocation, 8>&& parameters, Vector<ArgumentLocation, 1>&& returnValues, size_t stackOffset)
         : thisArgument(passedThisArgument)
         , params(WTFMove(parameters))
@@ -106,11 +107,11 @@ struct CallInformation {
         return savedRegs;
     }
 
-    ArgumentLocation thisArgument;
-    Vector<ArgumentLocation, 8> params;
-    Vector<ArgumentLocation, 1> results;
+    ArgumentLocation thisArgument { };
+    Vector<ArgumentLocation, 8> params { };
+    Vector<ArgumentLocation, 1> results { };
     // As a callee this includes CallerFrameAndPC as a caller it does not.
-    size_t headerAndArgumentStackSizeInBytes;
+    size_t headerAndArgumentStackSizeInBytes { 0 };
 };
 
 class WasmCallingConvention {
@@ -614,5 +615,16 @@ const CCallingConventionArmThumb2& cCallingConventionArmThumb2();
 #endif
 
 } } // namespace JSC::Wasm
+
+namespace WTF {
+
+template<>
+struct VectorTraits<JSC::Wasm::ArgumentLocation> : VectorTraitsBase<false, JSC::Wasm::ValueLocation> {
+    static constexpr bool canInitializeWithMemset = true;
+    static constexpr bool canMoveWithMemcpy = true;
+    static constexpr bool canCopyWithMemcpy = true;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(WEBASSEMBLY)

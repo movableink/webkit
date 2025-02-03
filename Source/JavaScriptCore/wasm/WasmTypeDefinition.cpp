@@ -510,29 +510,26 @@ Ref<const TypeDefinition> TypeDefinition::replacePlaceholders(TypeIndex projecte
 //  https://github.com/WebAssembly/gc/blob/main/proposals/gc/MVP.md#auxiliary-definitions
 //
 // It unrolls a potentially recursive type to a Subtype or structural type.
-const TypeDefinition& TypeDefinition::unroll() const
+const TypeDefinition& TypeDefinition::unrollSlow() const
 {
-    if (is<Projection>()) {
-        const Projection& projection = *as<Projection>();
-        const TypeDefinition& projectee = TypeInformation::get(projection.recursionGroup());
+    ASSERT(is<Projection>());
+    const Projection& projection = *as<Projection>();
+    const TypeDefinition& projectee = TypeInformation::get(projection.recursionGroup());
 
-        const RecursionGroup& recursionGroup = *projectee.as<RecursionGroup>();
-        const TypeDefinition& underlyingType = TypeInformation::get(recursionGroup.type(projection.index()));
+    const RecursionGroup& recursionGroup = *projectee.as<RecursionGroup>();
+    const TypeDefinition& underlyingType = TypeInformation::get(recursionGroup.type(projection.index()));
 
-        if (underlyingType.hasRecursiveReference()) {
-            if (std::optional<TypeIndex> cachedUnrolling = TypeInformation::tryGetCachedUnrolling(index()))
-                return TypeInformation::get(*cachedUnrolling);
+    if (underlyingType.hasRecursiveReference()) {
+        if (std::optional<TypeIndex> cachedUnrolling = TypeInformation::tryGetCachedUnrolling(index()))
+            return TypeInformation::get(*cachedUnrolling);
 
-            Ref unrolled = underlyingType.replacePlaceholders(projectee.index());
-            TypeInformation::addCachedUnrolling(index(), unrolled);
-            RELEASE_ASSERT(unrolled->refCount() > 2); // TypeInformation registry + Ref + owner (unrolling cache).
-            return unrolled; // TypeInformation unrolling cache now owns, with lifetime tied to 'this'.
-        }
-        RELEASE_ASSERT(underlyingType.refCount() > 1); // TypeInformation registry + owner(s).
-        return underlyingType;
+        Ref unrolled = underlyingType.replacePlaceholders(projectee.index());
+        TypeInformation::addCachedUnrolling(index(), unrolled);
+        RELEASE_ASSERT(unrolled->refCount() > 2); // TypeInformation registry + Ref + owner (unrolling cache).
+        return unrolled; // TypeInformation unrolling cache now owns, with lifetime tied to 'this'.
     }
-    ASSERT(refCount() > 1); // TypeInformation registry + owner(s).
-    return *this;
+    RELEASE_ASSERT(underlyingType.refCount() > 1); // TypeInformation registry + owner(s).
+    return underlyingType;
 }
 
 // This function corresponds to the expand metafunction from the spec:
