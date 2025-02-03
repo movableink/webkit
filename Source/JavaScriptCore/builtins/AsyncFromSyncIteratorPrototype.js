@@ -146,7 +146,19 @@ function throw(exception)
     }
 
     if (@isUndefinedOrNull(throwMethod)) {
-        @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, exception);
+        var returnMethod;
+        try {
+            returnMethod = syncIterator.return;
+        } catch (e) {
+            @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
+            return promise;
+        }
+        var returnResult = returnMethod.@call(syncIterator);
+        if (!@isObject(returnResult)) {
+            @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, @makeTypeError('Iterator result interface is not an object.'));
+            return promise;
+        }
+        @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, @makeTypeError('Iterator does not provide a throw method.'));
         return promise;
     }
     
