@@ -50,6 +50,7 @@
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderTextInlines.h"
+#include "RenderSVGInlineText.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
 #include "SVGElementTypeHelpers.h"
@@ -1836,16 +1837,17 @@ void RenderText::setText(const String& newContent, bool force)
         invalidateLineLayoutPathOnContentChangeIfNeeded(*this, 0, text().length());
 }
 
-void RenderText::setTextWithOffset(const String& newText, unsigned offset, unsigned, bool force)
+void RenderText::setTextWithOffset(const String& newText, unsigned offset)
 {
-    if (!force && text() == newText)
+    if (text() == newText)
         return;
 
     int delta = newText.length() - text().length();
-
-    m_linesDirty = m_legacyLineBoxes.dirtyForTextChange(*this);
-
-    setTextInternal(newText, force || m_linesDirty);
+    if (CheckedPtr svgText = dynamicDowncast<RenderSVGInlineText>(*this)) {
+        m_legacyLineBoxes.dirtyForTextChange(*svgText);
+        setRenderedText(newText);
+    }
+    setTextInternal(newText, false);
     invalidateLineLayoutPathOnContentChangeIfNeeded(*this, offset, delta);
 }
 
@@ -1860,15 +1862,6 @@ String RenderText::textWithoutConvertingBackslashToYenSymbol() const
     return applyTextTransform(style(), originalText(), previousCharacter());
 }
 
-void RenderText::dirtyLegacyLineBoxes(bool fullLayout)
-{
-    if (fullLayout)
-        deleteLegacyLineBoxes();
-    else if (!m_linesDirty)
-        m_legacyLineBoxes.dirtyAll();
-    m_linesDirty = false;
-}
-
 void RenderText::deleteLegacyLineBoxes()
 {
     m_legacyLineBoxes.deleteAll();
@@ -1877,11 +1870,6 @@ void RenderText::deleteLegacyLineBoxes()
 std::unique_ptr<LegacyInlineTextBox> RenderText::createTextBox()
 {
     return makeUnique<LegacyInlineTextBox>(*this);
-}
-
-bool RenderText::usesLegacyLineLayoutPath() const
-{
-    return !LayoutIntegration::LineLayout::containing(*this);
 }
 
 float RenderText::width(unsigned from, unsigned len, float xPos, bool firstLine, SingleThreadWeakHashSet<const Font>* fallbackFonts, GlyphOverflow* glyphOverflow) const

@@ -30,6 +30,7 @@
 #include "LegacyRootInlineBox.h"
 #include "RenderBlock.h"
 #include "RenderStyleInlines.h"
+#include "RenderSVGInlineText.h"
 #include "RenderView.h"
 #include "VisiblePosition.h"
 
@@ -101,15 +102,12 @@ void RenderTextLineBoxes::dirtyAll()
         box->dirtyLineBoxes();
 }
 
-bool RenderTextLineBoxes::dirtyForTextChange(RenderText& renderer)
+void RenderTextLineBoxes::dirtyForTextChange(RenderSVGInlineText& renderer)
 {
     dirtyAll();
 
-    if (!m_first && renderer.parent()) {
+    if (!m_first && renderer.parent())
         renderer.parent()->dirtyLineFromChangedChild();
-        return true;
-    }
-    return m_first;
 }
 
 inline void RenderTextLineBoxes::checkConsistency() const

@@ -82,7 +82,6 @@ public:
     String textWithoutConvertingBackslashToYenSymbol() const;
 
     LegacyInlineTextBox* createInlineTextBox() { return m_legacyLineBoxes.createAndAppendLineBox(*this); }
-    void dirtyLegacyLineBoxes(bool fullLayout);
     void deleteLegacyLineBoxes();
 
     void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
@@ -102,8 +101,6 @@ public:
 
     UChar characterAt(unsigned) const;
     unsigned length() const final { return text().length(); }
-
-    void positionLineBox(LegacyInlineTextBox&);
 
     float width(unsigned from, unsigned length, const FontCascade&, float xPos, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
     float width(unsigned from, unsigned length, float xPos, bool firstLine = false, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
@@ -137,7 +134,7 @@ public:
     WEBCORE_EXPORT IntPoint firstRunLocation() const;
 
     void setText(const String&, bool force = false);
-    void setTextWithOffset(const String&, unsigned offset, unsigned len, bool force = false);
+    void setTextWithOffset(const String&, unsigned offset);
 
     bool canBeSelectionLeaf() const override { return true; }
 
@@ -181,8 +178,6 @@ public:
     float candidateComputedTextSize() const { return m_candidateComputedTextSize; }
     void setCandidateComputedTextSize(float size) { m_candidateComputedTextSize = size; }
 #endif
-
-    bool usesLegacyLineLayoutPath() const;
 
     StringView stringView(unsigned start = 0, std::optional<unsigned> stop = std::nullopt) const;
     
@@ -273,10 +268,6 @@ private:
     unsigned m_hasTab : 1 { false }; // Whether or not we have a variable width tab character (e.g., <pre> with '\t').
     unsigned m_hasBeginWS : 1 { false }; // Whether or not we begin with WS (only true if we aren't pre)
     unsigned m_hasEndWS : 1 { false }; // Whether or not we end with WS (only true if we aren't pre)
-    unsigned m_linesDirty : 1 { false }; // This bit indicates that the text run has already dirtied specific
-                                         // line boxes, and this hint will enable layoutInlineChildren to avoid
-                                         // just dirtying everything when character data is modified (e.g., appended/inserted
-                                         // or removed).
     unsigned m_needsVisualReordering : 1 { false };
     unsigned m_containsOnlyASCII : 1 { false };
     mutable unsigned m_knownToHaveNoOverflowAndNoFallbackFonts : 1 { false };

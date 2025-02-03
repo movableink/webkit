@@ -813,19 +813,9 @@ void RenderInline::updateHitTestResult(HitTestResult& result, const LayoutPoint&
     }
 }
 
-void RenderInline::dirtyLegacyLineBoxes(bool fullLayout)
+void RenderInline::deleteLegacyLineBoxes()
 {
-    if (fullLayout) {
-        m_legacyLineBoxes.deleteLineBoxes();
-        return;
-    }
-
-    m_legacyLineBoxes.dirtyLineBoxes();
-}
-
-void RenderInline::deleteLegacyLines()
-{
-    m_legacyLineBoxes.deleteLineBoxTree();
+    m_legacyLineBoxes.deleteLineBoxes();
 }
 
 std::unique_ptr<LegacyInlineFlowBox> RenderInline::createInlineFlowBox()

@@ -297,10 +297,9 @@ void RenderMenuList::setText(const String& s)
 {
     String textToUse = s.isEmpty() ? "\n"_str : s;
 
-    if (m_buttonText) {
+    if (m_buttonText)
         m_buttonText->setText(textToUse.impl(), true);
-        m_buttonText->dirtyLegacyLineBoxes(false);
-    } else {
+    else {
         auto newButtonText = createRenderer<RenderText>(Type::Text, document(), textToUse);
         m_buttonText = *newButtonText;
         // FIXME: This mutation should go through the normal RenderTreeBuilder path.

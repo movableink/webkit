@@ -33,6 +33,7 @@ namespace WebCore {
 class LegacyInlineTextBox;
 class RenderStyle;
 class RenderText;
+class RenderSVGInlineText;
 class VisiblePosition;
 
 class RenderTextLineBoxes {
@@ -50,7 +51,7 @@ public:
     void deleteAll();
 
     void dirtyAll();
-    bool dirtyForTextChange(RenderText&);
+    void dirtyForTextChange(RenderSVGInlineText&);
 
 #if ASSERT_ENABLED
     ~RenderTextLineBoxes();

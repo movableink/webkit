@@ -453,7 +453,6 @@ void RenderQuote::updateTextRenderer(RenderTreeBuilder& builder)
     m_text = text;
     if (auto* renderText = dynamicDowncast<RenderTextFragment>(lastChild())) {
         renderText->setContentString(m_text);
-        renderText->dirtyLegacyLineBoxes(false);
         return;
     }
     builder.attach(*this, createRenderer<RenderTextFragment>(document(), m_text));
