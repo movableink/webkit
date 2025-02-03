@@ -22,7 +22,11 @@
 
 #if ENABLE(GPU_PROCESS)
 
-[ExceptionForEnabledBy]
+[
+    DispatchedFrom=UI,
+    DispatchedTo=GPU,
+    ExceptionForEnabledBy
+]
 messages -> GPUProcess : AuxiliaryProcess {
     InitializeGPUProcess(struct WebKit::GPUProcessCreationParameters processCreationParameters) -> ()
 
