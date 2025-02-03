@@ -301,8 +301,16 @@ void LayerTreeHost::forceRepaint()
     if (!m_isWaitingForRenderer)
         flushLayers();
 #else
+    if (m_isWaitingForRenderer) {
+        if (m_forceRepaintAsync.callback)
+            m_pendingForceRepaint = true;
+        return;
+    }
+
+    m_pendingForceRepaint = false;
     m_webPage.corePage()->forceRepaintAllFrames();
     m_forceFrameSync = true;
+    cancelPendingLayerFlush();
     flushLayers();
     m_sceneState->waitUntilPaintingComplete();
 #endif
@@ -319,10 +327,13 @@ void LayerTreeHost::forceRepaintAsync(CompletionHandler<void()>&& callback)
     m_forceRepaintAsync.callback = WTFMove(callback);
     m_forceRepaintAsync.needsFreshFlush = m_scheduledWhileWaitingForRenderer;
 #else
-    forceRepaint();
     ASSERT(!m_forceRepaintAsync.callback);
     m_forceRepaintAsync.callback = WTFMove(callback);
-    m_forceRepaintAsync.compositionRequestID = m_compositionRequestID;
+    forceRepaint();
+    if (m_pendingForceRepaint)
+        m_forceRepaintAsync.compositionRequestID = std::nullopt;
+    else
+        m_forceRepaintAsync.compositionRequestID = m_compositionRequestID;
 #endif
 }
 
@@ -339,8 +350,10 @@ void LayerTreeHost::sizeDidChange(const IntSize& size)
     m_pendingResize = true;
     if (m_isWaitingForRenderer)
         scheduleLayerFlush();
-    else
+    else {
+        cancelPendingLayerFlush();
         flushLayers();
+    }
 }
 
 void LayerTreeHost::pauseRendering()
@@ -482,15 +495,26 @@ void LayerTreeHost::didComposite(uint32_t compositionResponseID)
 {
     WTFBeginSignpost(this, DidComposite, "compositionRequestID %i, compositionResponseID %i", m_compositionRequestID, compositionResponseID);
 
-    if (m_forceRepaintAsync.callback && compositionResponseID >= m_forceRepaintAsync.compositionRequestID) {
+    if (m_forceRepaintAsync.callback && m_forceRepaintAsync.compositionRequestID && compositionResponseID >= *m_forceRepaintAsync.compositionRequestID) {
         m_forceRepaintAsync.callback();
-        m_forceRepaintAsync.compositionRequestID = 0;
+        m_forceRepaintAsync.compositionRequestID = std::nullopt;
     }
 
     if (!m_isWaitingForRenderer || m_compositionRequestID == compositionResponseID) {
         m_isWaitingForRenderer = false;
         bool scheduledWhileWaitingForRenderer = std::exchange(m_scheduledWhileWaitingForRenderer, false);
-        if (!m_isSuspended && !m_layerTreeStateIsFrozen && (scheduledWhileWaitingForRenderer || m_layerFlushTimer.isActive())) {
+        if (m_pendingForceRepaint) {
+            if (m_layerTreeStateIsFrozen) {
+                if (m_forceRepaintAsync.callback) {
+                    m_forceRepaintAsync.callback();
+                    m_forceRepaintAsync.compositionRequestID = std::nullopt;
+                }
+            } else {
+                forceRepaint();
+                if (m_forceRepaintAsync.callback)
+                    m_forceRepaintAsync.compositionRequestID = m_compositionRequestID;
+            }
+        } else if (!m_isSuspended && !m_layerTreeStateIsFrozen && (scheduledWhileWaitingForRenderer || m_layerFlushTimer.isActive())) {
             cancelPendingLayerFlush();
             flushLayers();
         }
