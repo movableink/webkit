@@ -92,7 +92,7 @@ RetainPtr<NSImage> dissolveDragImageToFraction(RetainPtr<NSImage> image, float d
     return dissolvedImage;
 }
 
-RetainPtr<NSImage> createDragImageFromImage(Image* image, ImageOrientation orientation)
+RetainPtr<NSImage> createDragImageFromImage(Image* image, ImageOrientation orientation, GraphicsClient*, float)
 {
     if (auto* bitmapImage = dynamicDowncast<BitmapImage>(*image)) {
         if (orientation == ImageOrientation::Orientation::FromImage)
