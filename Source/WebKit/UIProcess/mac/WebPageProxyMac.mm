@@ -69,8 +69,10 @@
 #import <mach-o/dyld.h>
 #import <pal/spi/mac/NSApplicationSPI.h>
 #import <pal/spi/mac/NSMenuSPI.h>
+#import <wtf/FileSystem.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#import <wtf/text/cf/StringConcatenateCF.h>
 
 #define MESSAGE_CHECK(assertion, connection) MESSAGE_CHECK_BASE(assertion, connection)
 #define MESSAGE_CHECK_COMPLETION(assertion, connection, completion) MESSAGE_CHECK_COMPLETION_BASE(assertion, connection, completion)
@@ -518,13 +520,7 @@ static NSString *pathToPDFOnDisk(const String& suggestedFilename)
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     if ([fileManager fileExistsAtPath:path]) {
-        NSString *pathTemplatePrefix = [pdfDirectoryPath stringByAppendingPathComponent:@"XXXXXX-"];
-        NSString *pathTemplate = [pathTemplatePrefix stringByAppendingString:suggestedFilename];
-        CString pathTemplateRepresentation = [pathTemplate fileSystemRepresentation];
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        int fd = mkstemps(pathTemplateRepresentation.mutableSpanIncludingNullTerminator().data(), pathTemplateRepresentation.length() - strlen([pathTemplatePrefix fileSystemRepresentation]) + 1);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        auto [fd, pathTemplateRepresentation] = FileSystem::createTemporaryFileInDirectory(pdfDirectoryPath, makeString('-', suggestedFilename));
         if (fd < 0) {
             WTFLogAlways("Cannot create PDF file in the temporary directory (%s).", suggestedFilename.utf8().data());
             return nil;
