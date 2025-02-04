@@ -157,11 +157,9 @@ void RemoteMediaPlayerProxy::getConfiguration(RemoteMediaPlayerConfiguration& co
 #endif
     configuration.shouldIgnoreIntrinsicSize = player->shouldIgnoreIntrinsicSize();
 
-    m_observingTimeChanges = player->setCurrentTimeDidChangeCallback([this, weakThis = WeakPtr { *this }] (auto currentTime) mutable {
-        if (!weakThis)
-            return;
-
-        currentTimeChanged(currentTime);
+    m_observingTimeChanges = player->setCurrentTimeDidChangeCallback([weakThis = WeakPtr { *this }] (auto currentTime) mutable {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->currentTimeChanged(currentTime);
     });
 }
 
@@ -1157,12 +1155,14 @@ void RemoteMediaPlayerProxy::performTaskAtTime(const MediaTime& taskTime, Perfor
     }
 
     m_performTaskAtTimeCompletionHandler = WTFMove(completionHandler);
-    player->performTaskAtTime([this, weakThis = WeakPtr { *this }]() mutable {
-        if (!weakThis || !m_performTaskAtTimeCompletionHandler)
-            return;
+    player->performTaskAtTime([weakThis = WeakPtr { *this }]() mutable {
+        if (RefPtr protectedThis = weakThis.get()) {
+            if (!protectedThis->m_performTaskAtTimeCompletionHandler)
+                return;
 
-        auto completionHandler = WTFMove(m_performTaskAtTimeCompletionHandler);
-        completionHandler(protectedPlayer()->currentTime());
+            auto completionHandler = std::exchange(protectedThis->m_performTaskAtTimeCompletionHandler, nullptr);
+            completionHandler(protectedThis->protectedPlayer()->currentTime());
+        }
     }, taskTime);
 }
 
@@ -1196,15 +1196,15 @@ void RemoteMediaPlayerProxy::updateCachedVideoMetrics()
     if (m_hasPlaybackMetricsUpdatePending)
         return;
     m_hasPlaybackMetricsUpdatePending = true;
-    protectedPlayer()->asyncVideoPlaybackQualityMetrics()->whenSettled(RunLoop::protectedCurrent(), [weakThis = WeakPtr { *this }, this](auto&& result) {
-        if (!weakThis)
-            return;
-        if (result) {
-            m_cachedState.videoMetrics = *result;
-            protectedConnection()->send(Messages::MediaPlayerPrivateRemote::UpdatePlaybackQualityMetrics(WTFMove(*result)), m_id);
-        } else
-            m_cachedState.videoMetrics.reset();
-        m_hasPlaybackMetricsUpdatePending = false;
+    protectedPlayer()->asyncVideoPlaybackQualityMetrics()->whenSettled(RunLoop::protectedCurrent(), [weakThis = WeakPtr { *this }](auto&& result) {
+        if (RefPtr protectedThis = weakThis.get()) {
+            if (result) {
+                protectedThis->m_cachedState.videoMetrics = *result;
+                protectedThis->protectedConnection()->send(Messages::MediaPlayerPrivateRemote::UpdatePlaybackQualityMetrics(WTFMove(*result)), protectedThis->m_id);
+            } else
+                protectedThis-> m_cachedState.videoMetrics.reset();
+            protectedThis->m_hasPlaybackMetricsUpdatePending = false;
+        }
     });
 }
 

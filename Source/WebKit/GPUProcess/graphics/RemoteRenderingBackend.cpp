@@ -124,15 +124,15 @@ RemoteRenderingBackend::~RemoteRenderingBackend() = default;
 
 void RemoteRenderingBackend::startListeningForIPC()
 {
-    dispatch([this] {
-        workQueueInitialize();
+    dispatch([protectedThis = Ref { *this }] {
+        protectedThis->workQueueInitialize();
     });
 }
 
 void RemoteRenderingBackend::stopListeningForIPC()
 {
-    protectedWorkQueue()->stopAndWaitForCompletion([this] {
-        workQueueUninitialize();
+    protectedWorkQueue()->stopAndWaitForCompletion([protectedThis = Ref { *this }] {
+        protectedThis->workQueueUninitialize();
     });
 }
 

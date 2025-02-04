@@ -257,7 +257,7 @@ FilterEffectVector SVGFilter::effectsOfType(FilterFunction::Type filterType) con
     return effects;
 }
 
-FilterResults& SVGFilter::ensureResults(const FilterResultsCreator& resultsCreator)
+FilterResults& SVGFilter::ensureResults(NOESCAPE const FilterResultsCreator& resultsCreator)
 {
     if (!m_results)
         m_results = resultsCreator();

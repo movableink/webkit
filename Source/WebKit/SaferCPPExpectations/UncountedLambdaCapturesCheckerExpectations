@@ -1,13 +1,6 @@
-GPUProcess/graphics/RemoteDisplayListRecorder.cpp
 GPUProcess/graphics/RemoteGraphicsContextGL.cpp
-GPUProcess/graphics/RemoteRenderingBackend.cpp
-GPUProcess/graphics/WebGPU/RemoteBuffer.cpp
 GPUProcess/graphics/WebGPU/RemoteGPU.cpp
-GPUProcess/media/RemoteMediaPlayerProxy.cpp
-GPUProcess/media/RemoteSourceBufferProxy.cpp
 GPUProcess/webrtc/LibWebRTCCodecsProxy.mm
-GPUProcess/webrtc/RemoteSampleBufferDisplayLayer.cpp
-GPUProcess/webrtc/RemoteSampleBufferDisplayLayerManager.cpp
 NetworkProcess/Classifier/ResourceLoadStatisticsStore.cpp
 NetworkProcess/Downloads/Download.cpp
 NetworkProcess/NetworkDataTask.cpp

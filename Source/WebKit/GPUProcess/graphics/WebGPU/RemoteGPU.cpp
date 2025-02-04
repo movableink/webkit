@@ -91,8 +91,8 @@ void RemoteGPU::stopListeningForIPC()
 {
     assertIsMainRunLoop();
     Ref workQueue = m_workQueue;
-    workQueue->dispatch([this]() {
-        workQueueUninitialize();
+    workQueue->dispatch([protectedThis = Ref { *this }]() {
+        protectedThis->workQueueUninitialize();
     });
     workQueue->stopAndWaitForCompletion();
 }
