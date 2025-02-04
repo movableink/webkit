@@ -1389,10 +1389,19 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
         if (LIKELY(limit == 0xFFFFFFFFu && !globalObject->isHavingABadTime() && result.size() < MIN_SPARSE_ARRAY_INDEX)) {
             auto* newButterfly = JSImmutableButterfly::create(vm, CopyOnWriteArrayWithContiguous, result.size());
             unsigned start = 0;
+            auto view = thisString->view(globalObject);
+            RETURN_IF_EXCEPTION(scope, { });
             for (unsigned i = 0, size = result.size(); i < size; ++i) {
                 unsigned end = result[i];
-                auto* string = jsSubstring(globalObject, thisString, start, end - start);
-                RETURN_IF_EXCEPTION(scope, { });
+                JSString* string = nullptr;
+                if (size < 100) {
+                    auto subView = view->substring(start, end - start);
+                    auto identifier = subView.is8Bit() ? Identifier::fromString(vm, subView.span8()) : Identifier::fromString(vm, subView.span16());
+                    string = jsString(vm, identifier.string());
+                } else {
+                    string = jsSubstring(globalObject, thisString, start, end - start);
+                    RETURN_IF_EXCEPTION(scope, { });
+                }
                 newButterfly->setIndex(vm, i, string);
                 start = end + separatorLength;
             }
