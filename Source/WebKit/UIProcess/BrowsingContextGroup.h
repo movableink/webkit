@@ -49,7 +49,6 @@ public:
     ~BrowsingContextGroup();
 
     Ref<FrameProcess> ensureProcessForSite(const WebCore::Site&, WebProcessProxy&, const WebPreferences&);
-    Ref<FrameProcess> ensureProcessForConnection(IPC::Connection&, WebPageProxy&, const WebPreferences&);
     FrameProcess* processForSite(const WebCore::Site&);
     void addFrameProcess(FrameProcess&);
     void removeFrameProcess(FrameProcess&);

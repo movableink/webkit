@@ -54,19 +54,6 @@ Ref<FrameProcess> BrowsingContextGroup::ensureProcessForSite(const Site& site, W
     return FrameProcess::create(process, *this, site, preferences);
 }
 
-Ref<FrameProcess> BrowsingContextGroup::ensureProcessForConnection(IPC::Connection& connection, WebPageProxy& page, const WebPreferences& preferences)
-{
-    if (preferences.siteIsolationEnabled()) {
-        for (auto& process : m_processMap.values()) {
-            if (!process)
-                continue;
-            if (process->process().hasConnection(connection))
-                return *process;
-        }
-    }
-    return FrameProcess::create(page.protectedLegacyMainFrameProcess(), *this, Site(URL(page.currentURL())), preferences);
-}
-
 FrameProcess* BrowsingContextGroup::processForSite(const Site& site)
 {
     auto process = m_processMap.get(site);
