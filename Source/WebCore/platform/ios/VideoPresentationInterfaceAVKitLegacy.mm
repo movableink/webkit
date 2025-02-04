@@ -809,8 +809,13 @@ void VideoPresentationInterfaceAVKitLegacy::setupFullscreen(const FloatRect& ini
 {
     [playerController() setContentDimensions:videoDimensions];
     VideoPresentationInterfaceIOS::setupFullscreen(initialRect, videoDimensions, parentView, mode, allowsPictureInPicturePlayback, standby, blocksReturnToFullscreenFromPictureInPicture);
-    if (playerLayer().captionsLayer != captionsLayer())
-        playerLayer().captionsLayer = captionsLayer();
+    if (fullscreenPlayerLayer().captionsLayer != captionsLayer())
+        fullscreenPlayerLayer().captionsLayer = captionsLayer();
+}
+
+WebAVPlayerLayer *VideoPresentationInterfaceAVKitLegacy::fullscreenPlayerLayer() const
+{
+    return (WebAVPlayerLayer *)[m_playerViewController playerLayerView].playerLayer;
 }
 
 void VideoPresentationInterfaceAVKitLegacy::updateRouteSharingPolicy()
@@ -954,8 +959,8 @@ void VideoPresentationInterfaceAVKitLegacy::setupCaptionsLayer(CALayer *, const 
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
     [captionsLayer() removeFromSuperlayer];
-    playerLayer().captionsLayer = captionsLayer();
-    [playerLayer() layoutSublayers];
+    fullscreenPlayerLayer().captionsLayer = captionsLayer();
+    [fullscreenPlayerLayer() layoutSublayers];
     [CATransaction commit];
 }
 
