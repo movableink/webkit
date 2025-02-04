@@ -2230,7 +2230,25 @@
 			fileType = pattern.proxy;
 			inputFiles = (
 				"$(BUILT_PRODUCTS_DIR)/JSCLLIntOffsetsExtractor",
-				"$(SRCROOT)/offlineasm",
+				"$(SRCROOT)/offlineasm/arm.rb",
+				"$(SRCROOT)/offlineasm/arm64.rb",
+				"$(SRCROOT)/offlineasm/arm64e.rb",
+				"$(SRCROOT)/offlineasm/asm.rb",
+				"$(SRCROOT)/offlineasm/ast.rb",
+				"$(SRCROOT)/offlineasm/backends.rb",
+				"$(SRCROOT)/offlineasm/cloop.rb",
+				"$(SRCROOT)/offlineasm/config.rb",
+				"$(SRCROOT)/offlineasm/instructions.rb",
+				"$(SRCROOT)/offlineasm/offsets.rb",
+				"$(SRCROOT)/offlineasm/opt.rb",
+				"$(SRCROOT)/offlineasm/parser.rb",
+				"$(SRCROOT)/offlineasm/registers.rb",
+				"$(SRCROOT)/offlineasm/risc.rb",
+				"$(SRCROOT)/offlineasm/riscv64.rb",
+				"$(SRCROOT)/offlineasm/self_hash.rb",
+				"$(SRCROOT)/offlineasm/settings.rb",
+				"$(SRCROOT)/offlineasm/transform.rb",
+				"$(SRCROOT)/offlineasm/x86.rb",
 			);
 			isEditable = 1;
 			outputFiles = (
@@ -2247,7 +2265,25 @@
 			fileType = pattern.proxy;
 			inputFiles = (
 				"$(BUILT_PRODUCTS_DIR)/JSCLLIntSettingsExtractor",
-				"$(SRCROOT)/offlineasm",
+				"$(SRCROOT)/offlineasm/arm.rb",
+				"$(SRCROOT)/offlineasm/arm64.rb",
+				"$(SRCROOT)/offlineasm/arm64e.rb",
+				"$(SRCROOT)/offlineasm/ast.rb",
+				"$(SRCROOT)/offlineasm/backends.rb",
+				"$(SRCROOT)/offlineasm/cloop.rb",
+				"$(SRCROOT)/offlineasm/config.rb",
+				"$(SRCROOT)/offlineasm/generate_offset_extractor.rb",
+				"$(SRCROOT)/offlineasm/instructions.rb",
+				"$(SRCROOT)/offlineasm/offsets.rb",
+				"$(SRCROOT)/offlineasm/opt.rb",
+				"$(SRCROOT)/offlineasm/parser.rb",
+				"$(SRCROOT)/offlineasm/registers.rb",
+				"$(SRCROOT)/offlineasm/risc.rb",
+				"$(SRCROOT)/offlineasm/riscv64.rb",
+				"$(SRCROOT)/offlineasm/self_hash.rb",
+				"$(SRCROOT)/offlineasm/settings.rb",
+				"$(SRCROOT)/offlineasm/transform.rb",
+				"$(SRCROOT)/offlineasm/x86.rb",
 			);
 			isEditable = 1;
 			outputFiles = (
@@ -2263,7 +2299,25 @@
 			filePatterns = "*.asm";
 			fileType = pattern.proxy;
 			inputFiles = (
-				"$(SRCROOT)/offlineasm",
+				"$(SRCROOT)/offlineasm/arm.rb",
+				"$(SRCROOT)/offlineasm/arm64.rb",
+				"$(SRCROOT)/offlineasm/arm64e.rb",
+				"$(SRCROOT)/offlineasm/ast.rb",
+				"$(SRCROOT)/offlineasm/backends.rb",
+				"$(SRCROOT)/offlineasm/cloop.rb",
+				"$(SRCROOT)/offlineasm/config.rb",
+				"$(SRCROOT)/offlineasm/generate_settings_extractor.rb",
+				"$(SRCROOT)/offlineasm/instructions.rb",
+				"$(SRCROOT)/offlineasm/offsets.rb",
+				"$(SRCROOT)/offlineasm/opt.rb",
+				"$(SRCROOT)/offlineasm/parser.rb",
+				"$(SRCROOT)/offlineasm/registers.rb",
+				"$(SRCROOT)/offlineasm/risc.rb",
+				"$(SRCROOT)/offlineasm/riscv64.rb",
+				"$(SRCROOT)/offlineasm/self_hash.rb",
+				"$(SRCROOT)/offlineasm/settings.rb",
+				"$(SRCROOT)/offlineasm/transform.rb",
+				"$(SRCROOT)/offlineasm/x86.rb",
 			);
 			isEditable = 1;
 			outputFiles = (
