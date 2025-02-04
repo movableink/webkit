@@ -59,6 +59,9 @@ public:
     int trackIndex() const override { return m_index; }
     void setTextTrackIndex(int index) { m_index = index; }
 
+    virtual bool isOutOfBandTextTrackPrivateAVF() const { return false; }
+    virtual bool isInbandTextTrackPrivateAVFObjC() const { return false; }
+
     virtual void disconnect();
 
     bool hasBeenReported() const { return m_hasBeenReported; }
