@@ -153,7 +153,7 @@ RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrackInfo(const Tra
     ASSERT(info.isVideo() || info.isAudio());
 
     if (auto* audioInfo = dynamicDowncast<AudioInfo>(info)) {
-        if (!audioInfo->cookieData || !audioInfo->cookieData->size())
+        if (audioInfo->codecName.value != kAudioFormatLinearPCM && (!audioInfo->cookieData || !audioInfo->cookieData->size()))
             return nullptr;
 
         switch (audioInfo->codecName.value) {
@@ -169,6 +169,16 @@ RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrackInfo(const Tra
                 return nullptr;
             return createAudioFormatDescription(*audioInfo);
 #endif
+        case kAudioFormatLinearPCM: {
+            auto absd = CAAudioStreamDescription { static_cast<double>(audioInfo->rate), audioInfo->channels, AudioStreamDescription::Float32, CAAudioStreamDescription::IsInterleaved::Yes }.streamDescription();
+
+            CMFormatDescriptionRef newFormat = nullptr;
+            if (auto error = PAL::CMAudioFormatDescriptionCreate(kCFAllocatorDefault, &absd, 0, nullptr, 0, nullptr, nullptr, &newFormat)) {
+                RELEASE_LOG_ERROR(MediaStream, "createFormatDescriptionFromTrackInfo: CMAudioFormatDescriptionCreate failed with error %d", (int)error);
+                return nullptr;
+            }
+            return adoptCF(newFormat);
+        }
         default:
             return createAudioFormatDescription(*audioInfo);
         }
@@ -339,10 +349,8 @@ UniqueRef<MediaSamplesBlock> samplesBlockFromCMSampleBuffer(CMSampleBufferRef cm
             info = createAudioInfoFromFormatDescription(description.get());
         }
     }
-    auto subSamples = MediaSampleAVFObjC::create(cmSample, info ? info->trackID : 0)->divide();
 
-    MediaSamplesBlock::SamplesVector samples(subSamples.size(), [&](auto index) {
-        Ref sample = subSamples[index];
+    auto mediaSampleItemForSample = [](auto&& sample) {
         MediaTime duration = sample->duration();
         RetainPtr blockBuffer = PAL::CMSampleBufferGetDataBuffer(sample->sampleBuffer());
         auto trimDurationAtStart = MediaTime::zeroTime();
@@ -359,6 +367,18 @@ UniqueRef<MediaSamplesBlock> samplesBlockFromCMSampleBuffer(CMSampleBufferRef cm
             .data = sharedBufferFromCMBlockBuffer(blockBuffer.get()),
             .flags = sample->flags()
         };
+    };
+
+    if (info && info->codecName == kAudioFormatLinearPCM) {
+        MediaSamplesBlock::SamplesVector sample;
+        sample.reserveInitialCapacity(1);
+        sample.append(mediaSampleItemForSample(MediaSampleAVFObjC::create(cmSample, info->trackID)));
+        return makeUniqueRef<MediaSamplesBlock>(info.get(), WTFMove(sample));
+    }
+
+    auto subSamples = MediaSampleAVFObjC::create(cmSample, info ? info->trackID : 0)->divide();
+    MediaSamplesBlock::SamplesVector samples(subSamples.size(), [&](auto index) {
+        return mediaSampleItemForSample(subSamples[index]);
     });
     return makeUniqueRef<MediaSamplesBlock>(info.get(), WTFMove(samples));
 }

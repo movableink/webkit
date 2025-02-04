@@ -8,60 +8,31 @@
     <script src="../common/canvas-tests.js"></script>
 </head>
 <body>
-<div>
-    <video id="player">
-    </video>
-</div>
-<div>
-    <canvas id="canvas" width="200" height="200">
-    </canvas>
-    <canvas id="frame" width="200" height="200">
-    </canvas>
-</div>
+<div id="divplayer"></div>
+<div id="canvasreference"></div>
+<div id="canvascopy"></div>
 <script>
-    var context;
-    var drawStartTime;
-    // Needs to be a globabl variable to avoid being GCed (webkit.org/b/271227)
-    var oscillator;
-
-    function createVideoStream() {
-        const canvas = document.getElementById("canvas");
-        context = canvas.getContext('2d');
-        return canvas.captureStream();
-    }
-
-    function doRedImageDraw() {
-        if (context) {
-            context.fillStyle = "#ff0000";
-            context.fillRect(0, 0, 200, 200);
-            if (Date.now() - drawStartTime < 1000) {
-                window.requestAnimationFrame(doRedImageDraw);
-            } else {
-                drawStartTime = Date.now();
-                doGreenImageDraw();
-            }
-        }
-    }
-
-    function doGreenImageDraw() {
-        if (context) {
-            context.fillStyle = "#00ff00";
-            context.fillRect(0, 0, 200, 200);
-            if (Date.now() - drawStartTime < 2000) {
-                window.requestAnimationFrame(doGreenImageDraw);
-            }
-        }
-    }
-
-    function waitForEvent(object, eventName, testName)
-    {
+    function waitForEvent(object, eventName, testName) {
         return new Promise((resolve, reject) => {
             object.addEventListener(eventName, (e) => resolve(e), { once: true });
             setTimeout(() => reject("waitForEvent " + (testName ? (testName + " ") : "") + "timed out for " + eventName), 2500);
         });
     }
 
-    promise_test(async (test) => {
+    async function runTest(mimeType) {
+        let context;
+        let drawStartTime;
+        // Needs to be a globabl variable to avoid being GCed (webkit.org/b/271227)
+        let oscillator;
+
+        function createVideoStream() {
+            const canvas = document.createElement("canvas");
+            canvas.width = 200;
+            canvas.height = 200;
+            canvasreference.appendChild(canvas);
+            context = canvas.getContext('2d');
+            return canvas.captureStream();
+        }
         const ac = new AudioContext();
         oscillator = ac.createOscillator();
         const dest = ac.createMediaStreamDestination();
@@ -74,12 +45,37 @@
         assert_equals(audio.getAudioTracks().length, 1, "audio mediastream starts with one audio track");
         video.addTrack(audio.getAudioTracks()[0]);
         assert_equals(video.getAudioTracks().length, 1, "video mediastream starts with one audio track");
-        const recorder = new MediaRecorder(video);
+        assert_true(MediaRecorder.isTypeSupported(mimeType));
+        const recorder = new MediaRecorder(video, { mimeType });
+
+        function doRedImageDraw() {
+            if (context) {
+                context.fillStyle = "#ff0000";
+                context.fillRect(0, 0, 200, 200);
+                if (Date.now() - drawStartTime < 300) {
+                    window.requestAnimationFrame(doRedImageDraw);
+                } else {
+                    drawStartTime = Date.now();
+                    doGreenImageDraw();
+                }
+            }
+        }
+
+        function doGreenImageDraw() {
+            if (context) {
+                context.fillStyle = "#00ff00";
+                context.fillRect(0, 0, 200, 200);
+                if (Date.now() - drawStartTime < 300) {
+                    window.requestAnimationFrame(doGreenImageDraw);
+                } else if (recorder.state == 'recording')
+                    recorder.stop();
+            }
+        }
+
         drawStartTime = Date.now();
         doRedImageDraw();
         recorder.start();
         assert_equals(recorder.state, 'recording', 'MediaRecorder has been started successfully');
-        setTimeout(() => { recorder.stop(); }, 2000);
 
         const blobEvent = await waitForEvent(recorder, 'dataavailable');
         assert_true(blobEvent instanceof BlobEvent, 'the type of event should be BlobEvent');
@@ -89,6 +85,8 @@
         assert_true(blobEvent.data.size > 0, 'the blob should contain some buffers');
 
         const MediaSource = self.ManagedMediaSource || self.MediaSource;
+        const player = document.createElement("video");
+        divplayer.appendChild(player);
         player.disableRemotePlayback = true;
         const source = new MediaSource();
         player.src = URL.createObjectURL(source);
@@ -98,14 +96,17 @@
         await waitForEvent(sourceBuffer, 'updateend');
         source.endOfStream();
 
-        const resFrame = document.getElementById("frame");
+        const resFrame = document.createElement("canvas");
+        resFrame.width = 200;
+        resFrame.height = 200;
+        canvascopy.appendChild(resFrame);
         const resContext = resFrame.getContext('2d');
 
-        assert_greater_than(player.duration, 1, 'the duration should be greater than 1s');
+        assert_greater_than(player.duration, 0.3, 'the duration should be greater than .3s');
         await player.play();
 
         player.pause();
-        player.currentTime = Math.min(1.5, player.duration - 0.05);
+        player.currentTime = player.duration - 0.05;
         await waitForEvent(player, 'seeked');
         resContext.drawImage(player, 0, 0);
         _assertPixelApprox(resFrame, 20, 20, 0, 255, 0, 255, "20, 20", "0, 255, 0, 255", 50);
@@ -115,9 +116,20 @@
         await waitForEvent(player, 'seeked');
         resContext.drawImage(player, 0, 0);
         _assertPixelApprox(resFrame, 25, 25, 255, 0, 0, 255, "25, 25", "255, 0, 0, 255", 50);
-        _assertPixelApprox(resFrame, 50, 50, 255, 0, 0, 255, "50, 50", "255, 0, 0, 255", 50);
-    }, 'MediaRecorder can successfully record the video for a audio-video stream');
+        _assertPixelApprox(resFrame, 50, 50, 255, 0, 0, 255, "50, 50", "255, 0, 0, 255", 50);        
+    }
+    
+    promise_test(async (test) => {
+        return runTest('video/mp4');
+    }, 'MediaRecorder can successfully record the video for a audio-video (aac) stream');
 
+    promise_test(async (test) => {
+        return runTest('video/mp4; codecs=avc1.42000a,pcm');
+    }, 'MediaRecorder can successfully record the video for a audio-video (pcm) stream');
+
+    promise_test(async (test) => {
+        return runTest('video/mp4; codecs=avc1.42000a,alac');
+    }, 'MediaRecorder can successfully record the video for a audio-video (alac) stream');
 </script>
 </body>
 </html>

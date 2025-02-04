@@ -118,6 +118,8 @@ static String codecStringForMediaVideoCodecId(FourCharCode codec)
     case kCMVideoCodecType_HEVC: return "hev1.1.6.L93.B0"_s; // HEVC progressive, non-packed stream, Main Profile, Main Tier, Level 3.1
     case kAudioFormatMPEG4AAC: return "mp4a.40.2"_s;
     case kAudioFormatOpus: return "opus"_s;
+    case kAudioFormatLinearPCM: return "pcm"_s;
+    case kAudioFormatAppleLossless: return "alac"_s;
     default:
         ASSERT_NOT_REACHED("Unsupported codec");
         return ""_s;
@@ -161,7 +163,11 @@ bool MediaRecorderPrivateEncoder::initialize(const MediaRecorderPrivateOptions& 
             m_videoCodec = 'vp08';
         else if (codec == "opus"_s)
             m_audioCodec = kAudioFormatOpus;
-        else if (!isWebM && (startsWithLettersIgnoringASCIICase(codec, "avc1"_s)))
+        else if (!isWebM && codec == "pcm"_s)
+            m_audioCodec = kAudioFormatLinearPCM;
+        else if (!isWebM && codec == "alac"_s)
+            m_audioCodec = kAudioFormatAppleLossless;
+        else if (!isWebM && startsWithLettersIgnoringASCIICase(codec, "avc1"_s))
             m_videoCodec = kCMVideoCodecType_H264;
         else if (!isWebM && (codec.startsWith("hev1."_s) || codec.startsWith("hvc1."_s)))
             m_videoCodec = kCMVideoCodecType_HEVC;
@@ -307,11 +313,14 @@ void MediaRecorderPrivateEncoder::audioSamplesDescriptionChanged(const AudioStre
     assertIsCurrent(queueSingleton());
 
     if (!m_originalOutputDescription) {
-        AudioStreamBasicDescription outputDescription = { };
-        outputDescription.mFormatID = m_audioCodec;
-        outputDescription.mChannelsPerFrame = description.mChannelsPerFrame;
-        outputDescription.mSampleRate = description.mSampleRate;
-        m_originalOutputDescription = outputDescription;
+        if (m_audioCodec != kAudioFormatLinearPCM) {
+            AudioStreamBasicDescription outputDescription = { };
+            outputDescription.mFormatID = m_audioCodec;
+            outputDescription.mChannelsPerFrame = description.mChannelsPerFrame;
+            outputDescription.mSampleRate = description.mSampleRate;
+            m_originalOutputDescription = outputDescription;
+        } else
+            m_originalOutputDescription = CAAudioStreamDescription { description.mSampleRate, description.mChannelsPerFrame, AudioStreamDescription::Float32, CAAudioStreamDescription::IsInterleaved::Yes }.streamDescription();
     }
 
     CMFormatDescriptionRef newFormat = nullptr;
@@ -564,6 +573,17 @@ void MediaRecorderPrivateEncoder::enqueueCompressedAudioSampleBuffers()
         return;
     }
 
+    auto processSample = [&](auto&& sample) {
+        assertIsCurrent(queueSingleton());
+        if (m_pendingAudioFramePromise && m_pendingAudioFramePromise->first <= sample->presentationEndTime()) {
+            m_pendingAudioFramePromise->second.resolve();
+            m_pendingAudioFramePromise.reset();
+        }
+        if (!m_hasStartedAudibleAudioFrame && sample->duration())
+            m_hasStartedAudibleAudioFrame = true;
+        m_encodedAudioFrames.append(samplesBlockFromCMSampleBuffer(sample->sampleBuffer(), m_audioCompressedAudioInfo.get()));
+    };
+
     while (RetainPtr sampleBlock = audioConverter()->takeOutputSampleBuffer()) {
         if (m_formatChangedOccurred) {
             // Writing audio samples requiring an edit list is forbidden by the AVAssetWriterInput when used with fMP4, remove the keys.
@@ -571,15 +591,13 @@ void MediaRecorderPrivateEncoder::enqueueCompressedAudioSampleBuffers()
             PAL::CMRemoveAttachment(sampleBlock.get(), PAL::kCMSampleBufferAttachmentKey_TrimDurationAtEnd);
         }
 
-        for (Ref sample : MediaSampleAVFObjC::create(sampleBlock.get(), *m_audioTrackIndex)->divide()) {
-            if (m_pendingAudioFramePromise && m_pendingAudioFramePromise->first <= sample->presentationEndTime()) {
-                m_pendingAudioFramePromise->second.resolve();
-                m_pendingAudioFramePromise.reset();
-            }
-            if (!m_hasStartedAudibleAudioFrame && sample->duration())
-                m_hasStartedAudibleAudioFrame = true;
-            m_encodedAudioFrames.append(samplesBlockFromCMSampleBuffer(sample->sampleBuffer(), m_audioCompressedAudioInfo.get()));
+        if (m_audioCodec == kAudioFormatLinearPCM) {
+            processSample(MediaSampleAVFObjC::create(sampleBlock.get(), *m_audioTrackIndex));
+            continue;
         }
+
+        for (Ref sample : MediaSampleAVFObjC::create(sampleBlock.get(), *m_audioTrackIndex)->divide())
+            processSample(sample);
     }
 }
 

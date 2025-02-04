@@ -66,8 +66,9 @@ bool MediaRecorderPrivateAVFImpl::isTypeSupported(Document& document, ContentTyp
                 && !((codec.startsWith("hev1."_s) || codec.startsWith("hvc1."_s)) && document.settings().webRTCH265CodecEnabled())
 #endif
 #if HAVE(AVASSETWRITER_WITH_OPUS_SUPPORTED)
-                && !codec.startsWith("opus"_s)
+                && codec != "opus"_s
 #endif
+                && codec != "pcm"_s && codec != "alac"_s
                 && !startsWithLettersIgnoringASCIICase(codec, "mp4a"_s))
                 return false;
         }
