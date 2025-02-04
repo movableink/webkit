@@ -2682,6 +2682,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/values/primitives/StylePrimitiveNumericTypes.h
     style/values/primitives/StyleUnevaluatedCalculation.h
 
+    style/values/scroll-snap/StyleScrollMargin.h
+    style/values/scroll-snap/StyleScrollPadding.h
+
     style/values/shapes/StyleBasicShape.h
     style/values/shapes/StyleCircleFunction.h
     style/values/shapes/StyleEllipseFunction.h

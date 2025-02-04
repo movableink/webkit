@@ -2018,22 +2018,18 @@ LayoutRect RenderElement::absoluteAnchorRect(bool* insideFixed) const
 
 MarginRect RenderElement::absoluteAnchorRectWithScrollMargin(bool* insideFixed) const
 {
-    LayoutRect anchorRect = absoluteAnchorRect(insideFixed);
-    const LengthBox& scrollMargin = style().scrollMargin();
-    if (scrollMargin.isZero())
+    auto anchorRect = absoluteAnchorRect(insideFixed);
+
+    const auto& scrollMargin = style().scrollMargin();
+    if (Style::isZero(scrollMargin))
         return { anchorRect, anchorRect };
 
     // The scroll snap specification says that the scroll-margin should be applied in the
     // coordinate system of the scroll container and applied to the rectangular bounding
     // box of the transformed border box of the target element.
     // See https://www.w3.org/TR/css-scroll-snap-1/#scroll-margin.
-    const LayoutBoxExtent margin(
-        valueForLength(scrollMargin.top(), anchorRect.height()),
-        valueForLength(scrollMargin.right(), anchorRect.width()),
-        valueForLength(scrollMargin.bottom(), anchorRect.height()),
-        valueForLength(scrollMargin.left(), anchorRect.width()));
     auto marginRect = anchorRect;
-    marginRect.expand(margin);
+    marginRect.expand(Style::extentForRect(scrollMargin, anchorRect));
     return { marginRect, anchorRect };
 }
 

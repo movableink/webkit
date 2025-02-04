@@ -39,6 +39,7 @@
 #include "RenderSVGModelObject.h"
 #include "ScrollAnchoringController.h"
 #include "StyleBuilderConverter.h"
+#include "StyleScrollPadding.h"
 #include "WebAnimation.h"
 
 namespace WebCore {
@@ -270,13 +271,40 @@ void ViewTimeline::cacheCurrentTime()
             return scrollDirection->isVertical ? style.scrollPaddingBottom() : style.scrollPaddingRight();
         };
 
-        auto hasAutoStartInset = !m_insets.start || m_insets.start->isAuto();
-        auto insetStartLength = hasAutoStartInset ? scrollPadding(PaddingEdge::Start) : *m_insets.start;
-        auto insetEndLength = m_insets.end.value_or(hasAutoStartInset ? scrollPadding(PaddingEdge::End) : insetStartLength);
-        if (insetEndLength.isAuto())
-            insetEndLength = scrollPadding(PaddingEdge::End);
-        auto insetStart = floatValueForOffset(insetStartLength, scrollContainerSize);
-        auto insetEnd = floatValueForOffset(insetEndLength, scrollContainerSize);
+        bool hasInsetsStart = m_insets.start.has_value();
+        bool hasInsetsEnd = m_insets.end.has_value();
+
+        float insetStart = 0;
+        float insetEnd = 0;
+        if (hasInsetsStart && hasInsetsEnd) {
+            if (m_insets.start->isAuto())
+                insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);
+            else
+                insetStart = floatValueForOffset(*m_insets.start, scrollContainerSize);
+
+            if (m_insets.end->isAuto())
+                insetEnd = Style::evaluate(scrollPadding(PaddingEdge::End), scrollContainerSize);
+            else
+                insetEnd = floatValueForOffset(*m_insets.end, scrollContainerSize);
+        } else if (hasInsetsStart) {
+            if (m_insets.start->isAuto()) {
+                insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);
+                insetEnd = Style::evaluate(scrollPadding(PaddingEdge::End), scrollContainerSize);
+            } else {
+                insetStart = floatValueForOffset(*m_insets.start, scrollContainerSize);
+                insetEnd = insetStart; 
+            }
+        } else if (hasInsetsEnd) {
+            insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);\
+
+            if (m_insets.end->isAuto())
+                insetEnd = Style::evaluate(scrollPadding(PaddingEdge::End), scrollContainerSize);
+            else
+                insetEnd = floatValueForOffset(*m_insets.end, scrollContainerSize);
+        } else {
+            insetStart = Style::evaluate(scrollPadding(PaddingEdge::Start), scrollContainerSize);
+            insetEnd = Style::evaluate(scrollPadding(PaddingEdge::End), scrollContainerSize);
+        }
 
         return {
             scrollOffset,

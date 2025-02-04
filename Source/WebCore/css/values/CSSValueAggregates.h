@@ -490,17 +490,17 @@ template<typename T> struct SpaceSeparatedRectEdges {
     {
     }
 
-    const T& top() const { return value.top(); }
-    const T& right() const { return value.right(); }
-    const T& bottom() const { return value.bottom(); }
-    const T& left() const { return value.left(); }
-
-    T& top() { return value.top(); }
-    T& right() { return value.right(); }
-    T& bottom() { return value.bottom(); }
-    T& left() { return value.left(); }
-
     constexpr bool operator==(const SpaceSeparatedRectEdges<T>&) const = default;
+
+    const T& top() const    { return value.top(); }
+    const T& right() const  { return value.right(); }
+    const T& bottom() const { return value.bottom(); }
+    const T& left() const   { return value.left(); }
+
+    T& top()                { return value.top(); }
+    T& right()              { return value.right(); }
+    T& bottom()             { return value.bottom(); }
+    T& left()               { return value.left(); }
 
     RectEdges<T> value;
 };
@@ -534,6 +534,11 @@ template<typename T> inline constexpr auto SerializationSeparator<SpaceSeparated
 template<typename T> struct MinimallySerializingSpaceSeparatedRectEdges {
     using value_type = T;
 
+    constexpr MinimallySerializingSpaceSeparatedRectEdges(T value)
+        : value { value, value, value, value }
+    {
+    }
+
     constexpr MinimallySerializingSpaceSeparatedRectEdges(T top, T right, T bottom, T left)
         : value { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }
     {
@@ -544,17 +549,17 @@ template<typename T> struct MinimallySerializingSpaceSeparatedRectEdges {
     {
     }
 
+    constexpr bool operator==(const MinimallySerializingSpaceSeparatedRectEdges<T>&) const = default;
+
     const T& top() const    { return value.top(); }
     const T& right() const  { return value.right(); }
     const T& bottom() const { return value.bottom(); }
     const T& left() const   { return value.left(); }
 
-    T& top() { return value.top(); }
-    T& right() { return value.right(); }
-    T& bottom() { return value.bottom(); }
-    T& left() { return value.left(); }
-
-    constexpr bool operator==(const MinimallySerializingSpaceSeparatedRectEdges<T>&) const = default;
+    T& top()                { return value.top(); }
+    T& right()              { return value.right(); }
+    T& bottom()             { return value.bottom(); }
+    T& left()               { return value.left(); }
 
     RectEdges<T> value;
 };

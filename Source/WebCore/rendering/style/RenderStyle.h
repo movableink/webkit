@@ -293,6 +293,10 @@ class ViewTransitionName;
 struct Color;
 struct ColorScheme;
 struct ScopedName;
+struct ScrollMargin;
+struct ScrollMarginEdge;
+struct ScrollPadding;
+struct ScrollPaddingEdge;
 
 enum class Change : uint8_t;
 enum class PositionTryOrder : uint8_t;
@@ -1065,17 +1069,17 @@ public:
 
     inline bool effectiveInert() const;
 
-    const LengthBox& scrollMargin() const;
-    const Length& scrollMarginTop() const;
-    const Length& scrollMarginBottom() const;
-    const Length& scrollMarginLeft() const;
-    const Length& scrollMarginRight() const;
+    const Style::ScrollMargin& scrollMargin() const;
+    const Style::ScrollMarginEdge& scrollMarginTop() const;
+    const Style::ScrollMarginEdge& scrollMarginBottom() const;
+    const Style::ScrollMarginEdge& scrollMarginLeft() const;
+    const Style::ScrollMarginEdge& scrollMarginRight() const;
 
-    const LengthBox& scrollPadding() const;
-    const Length& scrollPaddingTop() const;
-    const Length& scrollPaddingBottom() const;
-    const Length& scrollPaddingLeft() const;
-    const Length& scrollPaddingRight() const;
+    const Style::ScrollPadding& scrollPadding() const;
+    const Style::ScrollPaddingEdge& scrollPaddingTop() const;
+    const Style::ScrollPaddingEdge& scrollPaddingBottom() const;
+    const Style::ScrollPaddingEdge& scrollPaddingLeft() const;
+    const Style::ScrollPaddingEdge& scrollPaddingRight() const;
     inline bool scrollPaddingEqual(const RenderStyle&) const;
 
     bool hasSnapPosition() const;
@@ -1625,15 +1629,15 @@ public:
 
     inline void setEffectiveInert(bool);
 
-    void setScrollMarginTop(Length&&);
-    void setScrollMarginBottom(Length&&);
-    void setScrollMarginLeft(Length&&);
-    void setScrollMarginRight(Length&&);
+    void setScrollMarginTop(Style::ScrollMarginEdge&&);
+    void setScrollMarginBottom(Style::ScrollMarginEdge&&);
+    void setScrollMarginLeft(Style::ScrollMarginEdge&&);
+    void setScrollMarginRight(Style::ScrollMarginEdge&&);
 
-    void setScrollPaddingTop(Length&&);
-    void setScrollPaddingBottom(Length&&);
-    void setScrollPaddingLeft(Length&&);
-    void setScrollPaddingRight(Length&&);
+    void setScrollPaddingTop(Style::ScrollPaddingEdge&&);
+    void setScrollPaddingBottom(Style::ScrollPaddingEdge&&);
+    void setScrollPaddingLeft(Style::ScrollPaddingEdge&&);
+    void setScrollPaddingRight(Style::ScrollPaddingEdge&&);
 
     void setScrollSnapType(ScrollSnapType);
     void setScrollSnapAlign(const ScrollSnapAlign&);
@@ -2102,8 +2106,8 @@ public:
 
     static constexpr FieldSizing initialFieldSizing();
 
-    static inline Length initialScrollMargin();
-    static inline Length initialScrollPadding();
+    static inline Style::ScrollMarginEdge initialScrollMargin();
+    static inline Style::ScrollPaddingEdge initialScrollPadding();
 
     static ScrollSnapType initialScrollSnapType();
     static ScrollSnapAlign initialScrollSnapAlign();
