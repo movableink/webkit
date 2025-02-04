@@ -171,6 +171,7 @@ public:
     void acceleratedRenderingStateChanged() final;
     bool performTaskAtTime(Function<void()>&&, const MediaTime&) override;
     void isLoopingChanged() final;
+    void audioOutputDeviceChanged() final;
 
     GstElement* pipeline() const { return m_pipeline.get(); }
 

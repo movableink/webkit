@@ -53,9 +53,7 @@ public:
     }
 private:
     CaptureDeviceManager& audioCaptureDeviceManager() final { return GStreamerAudioCaptureDeviceManager::singleton(); }
-    const Vector<CaptureDevice>& speakerDevices() const { return m_speakerDevices; }
-
-    Vector<CaptureDevice> m_speakerDevices;
+    const Vector<CaptureDevice>& speakerDevices() const final { return GStreamerAudioCaptureDeviceManager::singleton().speakerDevices(); }
 };
 
 static GStreamerAudioCaptureSourceFactory& libWebRTCAudioCaptureSourceFactory()

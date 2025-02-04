@@ -4362,6 +4362,29 @@ void MediaPlayerPrivateGStreamer::checkPlayingConsistency()
     }
 }
 
+static void applyAudioSinkDevice(GstElement* audioSinkBin, const String& deviceId)
+{
+    for (auto* element : GstIteratorAdaptor<GstElement>(GUniquePtr<GstIterator>(gst_bin_iterate_sinks(GST_BIN_CAST(audioSinkBin))))) {
+        // pulsesink and alsasink have a "device" property, whilst pipewiresink has "target-object"
+        if (GST_IS_AUDIO_BASE_SINK(element) && gstObjectHasProperty(element, "device"))
+            g_object_set(element, "device", deviceId.utf8().data(), nullptr);
+        else if (GST_IS_BASE_SINK(element) && gstObjectHasProperty(element, "target-object"))
+            g_object_set(element, "target-object", deviceId.utf8().data(), nullptr);
+        else if (GST_IS_BIN(element))
+            applyAudioSinkDevice(element, deviceId);
+    }
+}
+
+void MediaPlayerPrivateGStreamer::audioOutputDeviceChanged()
+{
+    RefPtr player = m_player.get();
+    if (!player)
+        return;
+
+    auto deviceId = player->audioOutputDeviceId();
+    applyAudioSinkDevice(m_audioSink.get(), deviceId);
+}
+
 String MediaPlayerPrivateGStreamer::codecForStreamId(TrackID streamId)
 {
     Locker locker { m_codecsLock };
