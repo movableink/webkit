@@ -29,6 +29,7 @@
 #import "WKTextAnimationType.h"
 #import "WKWebViewInternal.h"
 #import "WebFullScreenManagerProxy.h"
+#import "WebPageProxy.h"
 #import <WebCore/AlternativeTextUIController.h>
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/WritingToolsTypes.h>
