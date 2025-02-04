@@ -2442,8 +2442,9 @@ void GraphicsContextGLANGLE::blitFramebuffer(GCGLint srcX0, GCGLint srcY0, GCGLi
 {
     if (!makeContextCurrent())
         return;
-
+    prepareForDrawingBufferWriteIfBound();
     GL_BlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
+    checkGPUStatus();
 }
 
 void GraphicsContextGLANGLE::framebufferTextureLayer(GCGLenum target, GCGLenum attachment, PlatformGLObject texture, GCGLint level, GCGLint layer)
@@ -2669,7 +2670,6 @@ void GraphicsContextGLANGLE::drawBuffers(std::span<const GCGLenum> bufs)
 {
     if (!makeContextCurrent())
         return;
-    prepareForDrawingBufferWriteIfBound();
     GL_DrawBuffers(bufs.size(), bufs.data());
 }
 
@@ -2958,7 +2958,7 @@ void GraphicsContextGLANGLE::multiDrawArraysANGLE(GCGLenum mode, GCGLSpanTuple<c
 {
     if (!makeContextCurrent())
         return;
-
+    prepareForDrawingBufferWriteIfBound();
     GL_MultiDrawArraysANGLE(mode, firstsAndCounts.data<0>(), firstsAndCounts.data<1>(), firstsAndCounts.bufSize);
     checkGPUStatus();
 }
