@@ -3864,4 +3864,21 @@ TEST(SiteIsolation, ContentRuleListFrameURL)
     EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded second iframe");
 }
 
+TEST(SiteIsolation, ReuseConfiguration)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { "hi"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    RetainPtr configuration = server.httpsProxyConfiguration();
+
+    auto [webView1, navigationDelegate1] = siteIsolatedViewAndDelegate(configuration);
+    [webView1 loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate1 waitForDidFinishNavigation];
+
+    auto [webView2, navigationDelegate2] = siteIsolatedViewAndDelegate(configuration);
+    [webView2 loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate2 waitForDidFinishNavigation];
+}
+
 }

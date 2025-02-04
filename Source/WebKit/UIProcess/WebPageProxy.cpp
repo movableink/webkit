@@ -1297,7 +1297,10 @@ void WebPageProxy::launchProcess(const Site& site, ProcessLaunchReason reason)
     Ref configuration = m_configuration;
     RefPtr relatedPage = configuration->relatedPage();
 
-    if (relatedPage && !relatedPage->isClosed() && reason == ProcessLaunchReason::InitialProcess && hasSameGPUAndNetworkProcessPreferencesAs(*relatedPage)) {
+    if (RefPtr frameProcess = m_browsingContextGroup->processForSite(site)) {
+        ASSERT(protectedPreferences()->siteIsolationEnabled());
+        m_legacyMainFrameProcess = frameProcess->process();
+    } else if (relatedPage && !relatedPage->isClosed() && reason == ProcessLaunchReason::InitialProcess && hasSameGPUAndNetworkProcessPreferencesAs(*relatedPage)) {
         m_legacyMainFrameProcess = relatedPage->ensureRunningProcess();
         WEBPAGEPROXY_RELEASE_LOG(Loading, "launchProcess: Using process (process=%p, PID=%i) from related page", m_legacyMainFrameProcess.ptr(), m_legacyMainFrameProcess->processID());
     } else
