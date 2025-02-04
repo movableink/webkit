@@ -14,6 +14,7 @@ imported/ [ Skip ]
 ####################
 # Tests that crash #
 ####################
+accessibility/mac/text-marker-for-bounds.html [ Skip ]
 accessibility/iframe-within-cell.html [ Skip ]
 accessibility/inline-block-assertion.html [ Skip ]
 accessibility/loading-iframe-sends-notification.html [ Skip ]
