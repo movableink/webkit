@@ -1017,6 +1017,27 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
     }
 #endif
 #endif
+
+    if (m_document->quirks().needsHotelsAnimationQuirk(*m_element, style)) {
+        // We need to reset animation styles that are mistakenly overridden:
+        //     animation-delay: 0s, 0.06s;
+        //     animation-duration: 0.18s, 0.06s;
+        //     animation-fill-mode: none, forwards;
+        //     animation-name: menu-grow-left, menu-fade-in;
+        auto menuGrowLeftAnimation = Animation::create();
+        menuGrowLeftAnimation->setDuration(.18);
+        menuGrowLeftAnimation->setName({ "menu-grow-left"_s });
+
+        auto menuFadeInAnimation = Animation::create();
+        menuFadeInAnimation->setDelay(.06);
+        menuFadeInAnimation->setDuration(.06);
+        menuFadeInAnimation->setFillMode(AnimationFillMode::Forwards);
+        menuFadeInAnimation->setName({ "menu-fade-in"_s });
+
+        auto& animations = style.ensureAnimations();
+        animations.append(WTFMove(menuGrowLeftAnimation));
+        animations.append(WTFMove(menuFadeInAnimation));
+    }
 }
 
 void Adjuster::propagateToDocumentElementAndInitialContainingBlock(Update& update, const Document& document)
