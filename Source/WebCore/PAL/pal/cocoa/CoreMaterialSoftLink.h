@@ -29,6 +29,7 @@
 
 #import <pal/spi/cocoa/CoreMaterialSPI.h>
 #import <wtf/SoftLinking.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 SOFT_LINK_FRAMEWORK_FOR_HEADER(PAL, CoreMaterial)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, MTMaterialLayer)
@@ -38,5 +39,7 @@ SOFT_LINK_CONSTANT_FOR_HEADER(PAL, CoreMaterial, MTCoreMaterialRecipePlatformChr
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentThickLight, NSString *)
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentUltraThinLight, NSString *)
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, CoreMaterial, MTCoreMaterialRecipePlatformContentThinLight, NSString *)
+
+SPECIALIZE_OBJC_TYPE_TRAITS(MTMaterialLayer, PAL::getMTMaterialLayerClass())
 
 #endif // HAVE(CORE_MATERIAL)

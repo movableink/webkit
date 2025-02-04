@@ -16,7 +16,6 @@ Shared/APIWebArchive.mm
 Shared/Cocoa/WKNSURL.mm
 Shared/Cocoa/WKObject.h
 Shared/RTCNetwork.cpp
-Shared/RemoteLayerTree/RemoteLayerTreePropertyApplier.mm
 Shared/UserData.cpp
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/Cocoa/WKDownload.mm

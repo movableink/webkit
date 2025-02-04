@@ -357,8 +357,8 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
             playerLayer = [(WKVideoView*)layerTreeNode->uiView() playerLayer];
 #endif
         ASSERT([playerLayer respondsToSelector:@selector(setVideoGravity:)]);
-        if ([playerLayer respondsToSelector:@selector(setVideoGravity:)])
-            [(WebAVPlayerLayer*)playerLayer setVideoGravity:convertMediaPlayerToAVLayerVideoGravity(properties.videoGravity)];
+        if (RetainPtr webAVPlayerLayer = dynamic_objc_cast<WebAVPlayerLayer>(playerLayer))
+            [webAVPlayerLayer setVideoGravity:convertMediaPlayerToAVLayerVideoGravity(properties.videoGravity)];
     }
 #endif
 
@@ -376,9 +376,9 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
 
 #if HAVE(CORE_MATERIAL)
     if (properties.changedProperties & LayerChange::AppleVisualEffectChanged) {
-        if ([layer isKindOfClass:PAL::getMTMaterialLayerClass()]) {
+        if (RetainPtr materialLayer = dynamic_objc_cast<MTMaterialLayer>(layer)) {
             if (RetainPtr recipe = materialRecipeForAppleVisualEffect(properties.appleVisualEffect))
-                [(MTMaterialLayer *)layer setRecipe:recipe.get()];
+                [materialLayer setRecipe:recipe.get()];
         }
     }
 #endif
