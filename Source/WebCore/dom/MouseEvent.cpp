@@ -170,18 +170,13 @@ bool MouseEvent::canTriggerActivationBehavior(const Event& event)
     return !mouseEvent || mouseEvent->button() != MouseButton::Right;
 }
 
-MouseButton MouseEvent::buttonFromShort(int16_t buttonValue)
-{
-    static constexpr std::array mouseButtonCases { MouseButton::None, MouseButton::PointerHasNotChanged, MouseButton::Left, MouseButton::Middle, MouseButton::Right };
-    const auto isKnownButton = std::ranges::any_of(mouseButtonCases, [buttonValue](MouseButton button) {
-        return buttonValue == enumToUnderlyingType(button);
-    });
-    return isKnownButton ? static_cast<MouseButton>(buttonValue) : MouseButton::Other;
-}
-
 MouseButton MouseEvent::button() const
 {
-    return buttonFromShort(m_button);
+    static constexpr std::array mouseButtonCases { MouseButton::None, MouseButton::PointerHasNotChanged, MouseButton::Left, MouseButton::Middle, MouseButton::Right };
+    const auto isKnownButton = WTF::anyOf(mouseButtonCases, [buttonValue = this->m_button](MouseButton button) {
+        return buttonValue == enumToUnderlyingType(button);
+    });
+    return isKnownButton ? static_cast<MouseButton>(m_button) : MouseButton::Other;
 }
 
 unsigned MouseEvent::which() const

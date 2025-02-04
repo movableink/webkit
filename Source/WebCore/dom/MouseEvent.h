@@ -76,7 +76,6 @@ public:
         int16_t button, EventTarget* relatedTarget);
 
     MouseButton button() const;
-    WEBCORE_EXPORT static MouseButton buttonFromShort(int16_t buttonValue);
     int16_t buttonAsShort() const { return m_button; }
     unsigned short buttons() const { return m_buttons; }
     SyntheticClickType syntheticClickType() const { return m_syntheticClickType; }

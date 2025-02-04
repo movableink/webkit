@@ -29,9 +29,8 @@
 #import "PlatformWebView.h"
 #import "StringFunctions.h"
 #import "TestController.h"
-#import <WebCore/PlatformMouseEvent.h>
-#import <WebKit/WKString.h>
 #import <wtf/RetainPtr.h>
+#import <WebKit/WKString.h>
 
 namespace WTR {
 
