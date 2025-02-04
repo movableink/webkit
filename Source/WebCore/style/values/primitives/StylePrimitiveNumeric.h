@@ -99,6 +99,16 @@ template<CSS::DimensionPercentageNumeric CSSType> struct PrimitiveNumeric<CSSTyp
     {
     }
 
+    PrimitiveNumeric(WebCore::CSS::ValueLiteral<Dimension::UnitTraits::canonical> literal)
+        : m_value { Dimension { literal } }
+    {
+    }
+
+    PrimitiveNumeric(WebCore::CSS::ValueLiteral<Percentage::UnitTraits::canonical> literal)
+        : m_value { Percentage { literal } }
+    {
+    }
+
     // NOTE: CalculatedValue is intentionally not part of IPCData.
     using IPCData = std::variant<Dimension, Percentage>;
     PrimitiveNumeric(IPCData&& data)

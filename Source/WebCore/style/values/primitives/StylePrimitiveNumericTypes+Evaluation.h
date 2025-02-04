@@ -35,6 +35,8 @@
 namespace WebCore {
 namespace Style {
 
+using namespace CSS::Literals;
+
 // MARK: - Percentage
 
 template<auto R, typename V> struct Evaluation<Percentage<R, V>> {
@@ -136,15 +138,15 @@ template<auto R, typename V> auto reflect(const LengthPercentage<R, V>& value) -
     return WTF::switchOn(value,
         [&](const Dimension& value) -> Result {
             // If `value` is 0, we can avoid the `calc` altogether.
-            if (value.value == 0)
-                return Percentage { 100 };
+            if (value == 0_css_px)
+                return 100_css_percentage;
 
             // Turn this into a calc expression: `calc(100% - value)`.
             return Calc { Calculation::subtract(Calculation::percentage(100), copyCalculation(value)) };
         },
         [&](const Percentage& value) -> Result {
             // If `value` is a percentage, we can avoid the `calc` altogether.
-            return Percentage { 100 - value.value };
+            return 100_css_percentage - value.value;
         },
         [&](const Calc& value) -> Result {
             // Turn this into a calc expression: `calc(100% - value)`.
@@ -167,7 +169,6 @@ template<auto aR, auto bR, typename V> auto reflectSum(const LengthPercentage<aR
     constexpr auto resultR = mergeRanges(aR, bR);
 
     using Result = LengthPercentage<resultR, V>;
-    using PercentageResult = typename Result::Percentage;
     using CalcResult = typename Result::Calc;
     using PercentageA = typename LengthPercentage<aR, V>::Percentage;
     using PercentageB = typename LengthPercentage<bR, V>::Percentage;
@@ -177,14 +178,14 @@ template<auto aR, auto bR, typename V> auto reflectSum(const LengthPercentage<aR
 
     // If both `a` and `b` are 0, turn this into a calc expression: `calc(100% - (0 + 0))` aka `100%`.
     if (aIsZero && bIsZero)
-        return PercentageResult { 100 };
+        return 100_css_percentage;
 
     // If just `a` is 0, we can just consider the case of `calc(100% - b)`.
     if (aIsZero) {
         return WTF::switchOn(b,
             [&](const PercentageB& b) -> Result {
                 // And if `b` is a percent, we can avoid the `calc` altogether.
-                return PercentageResult { 100 - b.value };
+                return 100_css_percentage - b.value;
             },
             [&](const auto& b) -> Result {
                 // Otherwise, turn this into a calc expression: `calc(100% - b)`.
@@ -198,7 +199,7 @@ template<auto aR, auto bR, typename V> auto reflectSum(const LengthPercentage<aR
         return WTF::switchOn(a,
             [&](const PercentageA& a) -> Result {
                 // And if `a` is a percent, we can avoid the `calc` altogether.
-                return PercentageResult { 100 - a.value };
+                return 100_css_percentage - a.value;
             },
             [&](const auto& a) -> Result {
                 // Otherwise, turn this into a calc expression: `calc(100% - a)`.
@@ -209,7 +210,7 @@ template<auto aR, auto bR, typename V> auto reflectSum(const LengthPercentage<aR
 
     // If both and `a` and `b` are percentages, we can avoid the `calc` altogether.
     if (WTF::holdsAlternative<PercentageA>(a) && WTF::holdsAlternative<PercentageB>(b))
-        return PercentageResult { 100 - (get<PercentageA>(a).value + get<PercentageB>(b).value) };
+        return 100_css_percentage - (get<PercentageA>(a).value + get<PercentageB>(b).value);
 
     // Otherwise, turn this into a calc expression: `calc(100% - (a + b))`.
     return CalcResult { Calculation::subtract(Calculation::percentage(100), Calculation::add(copyCalculation(a), copyCalculation(b))) };
