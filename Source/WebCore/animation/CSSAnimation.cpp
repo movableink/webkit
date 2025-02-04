@@ -160,15 +160,12 @@ void CSSAnimation::syncStyleOriginatedTimeline()
             timelinesController->setTimelineForName(name, target, *this);
         }, [&] (const Animation::AnonymousScrollTimeline& anonymousScrollTimeline) {
             auto scrollTimeline = ScrollTimeline::create(anonymousScrollTimeline.scroller, anonymousScrollTimeline.axis);
-            if (auto owningElement = this->owningElement())
-                scrollTimeline->setSource(*owningElement);
-            else
-                scrollTimeline->setSource(nullptr);
+            scrollTimeline->setSource(*owningElement());
             setTimeline(WTFMove(scrollTimeline));
         }, [&] (const Animation::AnonymousViewTimeline& anonymousViewTimeline) {
             auto insets = anonymousViewTimeline.insets;
             auto viewTimeline = ViewTimeline::create(nullAtom(), anonymousViewTimeline.axis, WTFMove(insets));
-            viewTimeline->setSubject(target.ptr());
+            viewTimeline->setSubject(*owningElement());
             setTimeline(WTFMove(viewTimeline));
         }
     );

@@ -81,7 +81,7 @@ public:
     bool animationsAreSuspended() const { return m_isSuspended; }
 
     void registerNamedScrollTimeline(const AtomString&, Element&, ScrollAxis);
-    void registerNamedViewTimeline(const AtomString&, const Element&, ScrollAxis, ViewTimelineInsets&&);
+    void registerNamedViewTimeline(const AtomString&, Element&, ScrollAxis, ViewTimelineInsets&&);
     void unregisterNamedTimeline(const AtomString&, const Element&);
     void setTimelineForName(const AtomString&, const Element&, WebAnimation&);
     void updateNamedTimelineMapForTimelineScope(const TimelineScope&, const Element&);

@@ -74,6 +74,8 @@ public:
 
     virtual std::pair<WebAnimationTime, WebAnimationTime> intervalForAttachmentRange(const TimelineRange&) const;
 
+    void removeTimelineFromDocument(Element*);
+
 protected:
     explicit ScrollTimeline(const AtomString&, ScrollAxis);
 
@@ -100,8 +102,6 @@ private:
     bool isScrollTimeline() const final { return true; }
 
     void animationTimingDidChange(WebAnimation&) override;
-
-    void removeTimelineFromDocument(Element*);
 
     struct CurrentTimeData {
         float scrollOffset { 0 };

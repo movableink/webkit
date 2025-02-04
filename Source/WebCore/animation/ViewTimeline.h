@@ -28,6 +28,7 @@
 #include "CSSNumericValue.h"
 #include "CSSPrimitiveValue.h"
 #include "ScrollTimeline.h"
+#include "Styleable.h"
 #include "ViewTimelineOptions.h"
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
@@ -47,8 +48,9 @@ public:
     static ExceptionOr<Ref<ViewTimeline>> create(Document&, ViewTimelineOptions&& = { });
     static Ref<ViewTimeline> create(const AtomString&, ScrollAxis, ViewTimelineInsets&&);
 
-    const Element* subject() const { return m_subject.get(); }
-    void setSubject(const Element*);
+    const Element* subject() const;
+    void setSubject(Element*);
+    void setSubject(const Styleable&);
 
     const ViewTimelineInsets& insets() const { return m_insets; }
     void setInsets(ViewTimelineInsets&& insets) { m_insets = WTFMove(insets); }
@@ -90,7 +92,7 @@ private:
 
     ExceptionOr<SpecifiedViewTimelineInsets> validateSpecifiedInsets(const ViewTimelineInsetValue, const Document&);
 
-    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_subject;
+    WeakStyleable m_subject;
     std::optional<SpecifiedViewTimelineInsets> m_specifiedInsets;
     ViewTimelineInsets m_insets;
     CurrentTimeData m_cachedCurrentTimeData { };

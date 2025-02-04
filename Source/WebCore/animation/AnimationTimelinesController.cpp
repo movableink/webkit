@@ -487,7 +487,7 @@ void AnimationTimelinesController::attachPendingOperations()
     }
 }
 
-void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& name, const Element& subject, ScrollAxis axis, ViewTimelineInsets&& insets)
+void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& name, Element& subject, ScrollAxis axis, ViewTimelineInsets&& insets)
 {
     LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::registerNamedViewTimeline: " << name << " subject: " << subject);
 
