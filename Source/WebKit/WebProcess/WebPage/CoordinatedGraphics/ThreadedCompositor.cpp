@@ -87,6 +87,9 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
     , m_sceneState(&m_layerTreeHost->sceneState())
     , m_flipY(m_surface->shouldPaintMirrored())
     , m_compositingRunLoop(makeUnique<CompositingRunLoop>([this] { renderLayerTree(); }))
+#if ENABLE(DAMAGE_TRACKING)
+    , m_damageVisualizer(TextureMapperDamageVisualizer::create())
+#endif
 #if HAVE(DISPLAY_LINK)
     , m_didRenderFrameTimer(RunLoop::main(), this, &ThreadedCompositor::didRenderFrameTimerFired)
 #else
@@ -248,8 +251,8 @@ void ThreadedCompositor::paintToCurrentGLContext(const TransformationMatrix& mat
     std::optional<FloatRoundedRect> rectContainingRegionThatActuallyChanged;
 #if ENABLE(DAMAGE_TRACKING)
     currentRootLayer.prepareForPainting(*m_textureMapper);
+    Damage frameDamage;
     if (m_damagePropagation != Damage::Propagation::None) {
-        Damage frameDamage;
         WTFBeginSignpost(this, CollectDamage);
         currentRootLayer.collectDamage(*m_textureMapper, frameDamage);
         WTFEndSignpost(this, CollectDamage);
@@ -261,7 +264,7 @@ void ThreadedCompositor::paintToCurrentGLContext(const TransformationMatrix& mat
         }
 
         const auto& damageSinceLastSurfaceUse = m_surface->addDamage(!frameDamage.isInvalid() && !frameDamage.isEmpty() ? frameDamage : Damage::invalid());
-        if (!damageSinceLastSurfaceUse.isInvalid() && !FloatRect(damageSinceLastSurfaceUse.bounds()).contains(clipRect))
+        if (!m_damageVisualizer && !damageSinceLastSurfaceUse.isInvalid() && !FloatRect(damageSinceLastSurfaceUse.bounds()).contains(clipRect))
             rectContainingRegionThatActuallyChanged = FloatRoundedRect(damageSinceLastSurfaceUse.bounds());
     }
 #endif
@@ -277,6 +280,10 @@ void ThreadedCompositor::paintToCurrentGLContext(const TransformationMatrix& mat
         m_textureMapper->endClip();
 
     m_fpsCounter.updateFPSAndDisplay(*m_textureMapper, clipRect.location(), matrix);
+#if ENABLE(DAMAGE_TRACKING)
+    if (m_damageVisualizer)
+        m_damageVisualizer->paintDamage(*m_textureMapper, frameDamage);
+#endif
 
     m_textureMapper->endClip();
     m_textureMapper->endPainting();

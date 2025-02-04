@@ -31,6 +31,7 @@
 #include <WebCore/DisplayUpdate.h>
 #include <WebCore/GLContext.h>
 #include <WebCore/IntSize.h>
+#include <WebCore/TextureMapperDamageVisualizer.h>
 #include <WebCore/TextureMapperFPSCounter.h>
 #include <atomic>
 #include <wtf/Atomics.h>
@@ -142,6 +143,7 @@ private:
 
 #if ENABLE(DAMAGE_TRACKING)
     WebCore::Damage::Propagation m_damagePropagation { WebCore::Damage::Propagation::None };
+    std::unique_ptr<WebCore::TextureMapperDamageVisualizer> m_damageVisualizer;
 #endif
 
 #if HAVE(DISPLAY_LINK)
