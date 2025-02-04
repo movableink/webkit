@@ -482,19 +482,19 @@ void NetworkDataTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&
         }
     }
 
-    NetworkTaskCocoa::willPerformHTTPRedirection(WTFMove(redirectResponse), WTFMove(request), [completionHandler = WTFMove(completionHandler), this, weakThis = ThreadSafeWeakPtr { *this }, redirectResponse] (WebCore::ResourceRequest&& request) mutable {
+    NetworkTaskCocoa::willPerformHTTPRedirection(WTFMove(redirectResponse), WTFMove(request), [completionHandler = WTFMove(completionHandler), weakThis = ThreadSafeWeakPtr { *this }, redirectResponse] (WebCore::ResourceRequest&& request) mutable {
         auto protectedThis = weakThis.get();
         if (!protectedThis)
             return completionHandler({ });
-        if (!m_client)
+        if (!protectedThis->m_client)
             return completionHandler({ });
-        m_client->willPerformHTTPRedirection(WTFMove(redirectResponse), WTFMove(request), [completionHandler = WTFMove(completionHandler), this, weakThis] (WebCore::ResourceRequest&& request) mutable {
+        protectedThis->m_client->willPerformHTTPRedirection(WTFMove(redirectResponse), WTFMove(request), [completionHandler = WTFMove(completionHandler), weakThis] (WebCore::ResourceRequest&& request) mutable {
             auto protectedThis = weakThis.get();
-            if (!protectedThis || !m_session)
+            if (!protectedThis || !protectedThis->m_session)
                 return completionHandler({ });
             if (!request.isNull())
-                restrictRequestReferrerToOriginIfNeeded(request);
-            m_previousRequest = request;
+                protectedThis->restrictRequestReferrerToOriginIfNeeded(request);
+            protectedThis->m_previousRequest = request;
             completionHandler(WTFMove(request));
         });
     });
@@ -587,14 +587,14 @@ void NetworkDataTaskCocoa::resume()
 
     auto& cocoaSession = static_cast<NetworkSessionCocoa&>(*m_session);
     if (cocoaSession.deviceManagementRestrictionsEnabled() && m_isForMainResourceNavigationForAnyFrame) {
-        auto didDetermineDeviceRestrictionPolicyForURL = makeBlockPtr([this, protectedThis = Ref { *this }](BOOL isBlocked) mutable {
-            callOnMainRunLoop([this, protectedThis = WTFMove(protectedThis), isBlocked] {
+        auto didDetermineDeviceRestrictionPolicyForURL = makeBlockPtr([protectedThis = Ref { *this }](BOOL isBlocked) mutable {
+            callOnMainRunLoop([protectedThis = WTFMove(protectedThis), isBlocked] {
                 if (isBlocked) {
-                    scheduleFailure(FailureType::RestrictedURL);
+                    protectedThis->scheduleFailure(FailureType::RestrictedURL);
                     return;
                 }
 
-                [m_task resume];
+                [protectedThis->m_task resume];
             });
         });
 

@@ -47,6 +47,7 @@
 #include <wtf/text/MakeString.h>
 
 #define LOAD_CHECKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - NetworkLoadChecker::" fmt, this, ##__VA_ARGS__)
+#define LOAD_CHECKER_RELEASE_LOG_WITH_THIS(thisPtr, fmt, ...) RELEASE_LOG(Network, "%p - NetworkLoadChecker::" fmt, thisPtr, ##__VA_ARGS__)
 
 namespace WebKit {
 
@@ -214,7 +215,7 @@ ResourceError NetworkLoadChecker::validateResponse(const ResourceRequest& reques
     if (response.containsInvalidHTTPHeaders())
         return badResponseHeadersError(request.url());
 
-    auto scope = makeScopeExit([&] {
+    auto scope = makeScopeExit([this, protectedThis = Ref { *this }, &response] {
         if (!checkTAO(response)) {
             if (auto metrics = response.takeNetworkLoadMetrics()) {
                 metrics->failsTAOCheck = true;
@@ -490,19 +491,25 @@ void NetworkLoadChecker::checkCORSRequestWithPreflight(ResourceRequest&& request
         m_advancedPrivacyProtections,
         request.hasHTTPHeaderField(HTTPHeaderName::SecFetchSite)
     };
-    m_corsPreflightChecker = NetworkCORSPreflightChecker::create(m_networkProcess.get(), m_networkResourceLoader.get(), WTFMove(parameters), m_shouldCaptureExtraNetworkLoadMetrics, [this, request = WTFMove(request), handler = WTFMove(handler), isRedirected = isRedirected()](auto&& error) mutable {
-        LOAD_CHECKER_RELEASE_LOG("checkCORSRequestWithPreflight - makeCrossOriginAccessRequestWithPreflight preflight complete, success=%d forRedirect=%d", error.isNull(), isRedirected);
+    m_corsPreflightChecker = NetworkCORSPreflightChecker::create(m_networkProcess.get(), m_networkResourceLoader.get(), WTFMove(parameters), m_shouldCaptureExtraNetworkLoadMetrics, [weakThis = WeakPtr { *this }, request = WTFMove(request), handler = WTFMove(handler), isRedirected = isRedirected()](auto&& error) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis) {
+            handler(WTFMove(request));
+            return;
+        }
+
+        LOAD_CHECKER_RELEASE_LOG_WITH_THIS(protectedThis.get(), "checkCORSRequestWithPreflight - makeCrossOriginAccessRequestWithPreflight preflight complete, success=%d forRedirect=%d", error.isNull(), isRedirected);
 
         if (!error.isNull()) {
             handler(WTFMove(error));
             return;
         }
 
-        if (m_shouldCaptureExtraNetworkLoadMetrics)
-            m_loadInformation.transactions.append(m_corsPreflightChecker->takeInformation());
+        if (protectedThis->m_shouldCaptureExtraNetworkLoadMetrics)
+            protectedThis->m_loadInformation.transactions.append(protectedThis->m_corsPreflightChecker->takeInformation());
 
-        auto corsPreflightChecker = std::exchange(m_corsPreflightChecker, nullptr);
-        updateRequestForAccessControl(request, *origin(), m_storedCredentialsPolicy);
+        auto corsPreflightChecker = std::exchange(protectedThis->m_corsPreflightChecker, nullptr);
+        updateRequestForAccessControl(request, *protectedThis->origin(), protectedThis->m_storedCredentialsPolicy);
         handler(WTFMove(request));
     });
     m_corsPreflightChecker->startPreflight();
@@ -541,13 +548,14 @@ void NetworkLoadChecker::processContentRuleListsForLoad(ResourceRequest&& reques
         return;
     }
 
-    m_networkProcess->networkContentRuleListManager().contentExtensionsBackend(*m_userContentControllerIdentifier, [this, weakThis = WeakPtr { *this }, request = WTFMove(request), callback = WTFMove(callback)](auto& backend) mutable {
-        if (!weakThis) {
+    m_networkProcess->networkContentRuleListManager().contentExtensionsBackend(*m_userContentControllerIdentifier, [weakThis = WeakPtr { *this }, request = WTFMove(request), callback = WTFMove(callback)](auto& backend) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis) {
             callback(makeUnexpected(ResourceError { ResourceError::Type::Cancellation }));
             return;
         }
 
-        auto results = backend.processContentRuleListsForPingLoad(request.url(), m_mainDocumentURL, m_frameURL);
+        auto results = backend.processContentRuleListsForPingLoad(request.url(), protectedThis->m_mainDocumentURL, protectedThis->m_frameURL);
         WebCore::ContentExtensions::applyResultsToRequest(ContentRuleListResults { results }, nullptr, request);
         callback(ContentExtensionResult { WTFMove(request), results });
     });

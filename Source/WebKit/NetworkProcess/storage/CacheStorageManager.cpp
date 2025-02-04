@@ -367,16 +367,17 @@ void CacheStorageManager::allCaches(uint64_t updateCounter, WebCore::DOMCacheEng
 
 void CacheStorageManager::initializeCacheSize(CacheStorageCache& cache)
 {
-    cache.getSize([this, weakThis = WeakPtr { *this }, cacheIdentifier = cache.identifier()](auto size) mutable {
-        if (!weakThis)
+    cache.getSize([weakThis = WeakPtr { *this }, cacheIdentifier = cache.identifier()](auto size) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        if (!m_pendingSize.second.remove(cacheIdentifier))
+        if (!protectedThis->m_pendingSize.second.remove(cacheIdentifier))
             return;
 
-        m_pendingSize.first += size;
-        if (m_pendingSize.second.isEmpty())
-            finishInitializingSize();
+        protectedThis->m_pendingSize.first += size;
+        if (protectedThis->m_pendingSize.second.isEmpty())
+            protectedThis->finishInitializingSize();
     });
 }
 

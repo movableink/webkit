@@ -456,14 +456,15 @@ void ResourceLoadStatisticsStore::processStatisticsAndDataRecords()
     if (m_parameters.shouldClassifyResourcesBeforeDataRecordsRemoval)
         classifyPrevalentResources();
     
-    removeDataRecords([this, weakThis = WeakPtr { *this }] () mutable {
+    removeDataRecords([weakThis = WeakPtr { *this }] () mutable {
         ASSERT(!RunLoop::isMain());
-        if (!weakThis)
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        pruneStatisticsIfNeeded();
+        protectedThis->pruneStatisticsIfNeeded();
 
-        logTestingEvent("Storage Synced"_s);
+        protectedThis->logTestingEvent("Storage Synced"_s);
     });
 }
 
@@ -536,17 +537,18 @@ void ResourceLoadStatisticsStore::scheduleStatisticsProcessingRequestIfNecessary
     ASSERT(!RunLoop::isMain());
 
     m_pendingStatisticsProcessingRequestIdentifier = ++m_lastStatisticsProcessingRequestIdentifier;
-    m_workQueue->dispatchAfter(minimumStatisticsProcessingInterval, [this, weakThis = WeakPtr { *this }, statisticsProcessingRequestIdentifier = *m_pendingStatisticsProcessingRequestIdentifier] {
-        if (!weakThis)
+    m_workQueue->dispatchAfter(minimumStatisticsProcessingInterval, [weakThis = WeakPtr { *this }, statisticsProcessingRequestIdentifier = *m_pendingStatisticsProcessingRequestIdentifier] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        if (!m_pendingStatisticsProcessingRequestIdentifier || *m_pendingStatisticsProcessingRequestIdentifier != statisticsProcessingRequestIdentifier) {
+        if (!protectedThis->m_pendingStatisticsProcessingRequestIdentifier || *protectedThis->m_pendingStatisticsProcessingRequestIdentifier != statisticsProcessingRequestIdentifier) {
             // This request has been canceled.
             return;
         }
 
-        updateCookieBlocking([]() { });
-        processStatisticsAndDataRecords();
+        protectedThis->updateCookieBlocking([]() { });
+        protectedThis->processStatisticsAndDataRecords();
     });
 }
 
@@ -716,11 +718,9 @@ void ResourceLoadStatisticsStore::didCreateNetworkProcess()
 void ResourceLoadStatisticsStore::debugBroadcastConsoleMessage(MessageSource source, MessageLevel level, const String& message)
 {
     if (!RunLoop::isMain()) {
-        RunLoop::main().dispatch([&, weakThis = WeakPtr { *this }, source = crossThreadCopy(source), level = crossThreadCopy(level), message = crossThreadCopy(message)]() {
-            if (!weakThis)
-                return;
-
-            debugBroadcastConsoleMessage(source, level, message);
+        RunLoop::main().dispatch([store = Ref { store() }, source = crossThreadCopy(source), level = crossThreadCopy(level), message = crossThreadCopy(message)]() {
+            if (auto *networkSession = store->networkSession())
+                networkSession->networkProcess().broadcastConsoleMessage(networkSession->sessionID(), source, level, message);
         });
         return;
     }
@@ -1775,21 +1775,26 @@ void ResourceLoadStatisticsStore::grantStorageAccess(SubFrameDomain&& subFrameDo
 
     auto transactionScope = beginTransactionIfNecessary();
 
-    auto addGrant = [&, frameID, pageID, promptWasShown, scope] (SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler) mutable {
+    auto addGrant = [weakThis = WeakPtr { *this }, frameID, pageID, promptWasShown, scope] (SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler) mutable {
+        RefPtr protectedThis = weakThis.get();
+
+        if (!protectedThis)
+            return completionHandler(StorageAccessWasGranted::No);
+
         if (promptWasShown == StorageAccessPromptWasShown::Yes) {
-            auto subFrameStatus = ensureResourceStatisticsForRegistrableDomain(subFrameDomain, "grantStorageAccess"_s);
+            auto subFrameStatus = protectedThis->ensureResourceStatisticsForRegistrableDomain(subFrameDomain, "grantStorageAccess"_s);
             if (!subFrameStatus.second)
                 return completionHandler(StorageAccessWasGranted::No);
 
             ASSERT(subFrameStatus.first == AddedRecord::No);
 #if ASSERT_ENABLED
             if (canRequestStorageAccessWithoutUserInteraction == CanRequestStorageAccessWithoutUserInteraction::No)
-                ASSERT(hasHadUserInteraction(subFrameDomain, OperatingDatesWindow::Long));
+                ASSERT(protectedThis->hasHadUserInteraction(subFrameDomain, OperatingDatesWindow::Long));
 #endif
-            insertDomainRelationshipList(storageAccessUnderTopFrameDomainsQuery, HashSet<RegistrableDomain>({ topFrameDomain }), *subFrameStatus.second);
+            protectedThis->insertDomainRelationshipList(storageAccessUnderTopFrameDomainsQuery, HashSet<RegistrableDomain>({ topFrameDomain }), *subFrameStatus.second);
         }
 
-        grantStorageAccessInternal(WTFMove(subFrameDomain), WTFMove(topFrameDomain), frameID, pageID, promptWasShown, scope, canRequestStorageAccessWithoutUserInteraction, WTFMove(completionHandler));
+        protectedThis->grantStorageAccessInternal(WTFMove(subFrameDomain), WTFMove(topFrameDomain), frameID, pageID, promptWasShown, scope, canRequestStorageAccessWithoutUserInteraction, WTFMove(completionHandler));
     };
 
     RunLoop::main().dispatch([weakThis = WeakPtr { *this }, subFrameDomain = WTFMove(subFrameDomain).isolatedCopy(), topFrameDomain = WTFMove(topFrameDomain).isolatedCopy(), workQueue = m_workQueue, store = Ref { store() }, addGrant = WTFMove(addGrant), completionHandler = WTFMove(completionHandler)]() mutable {
@@ -2160,8 +2165,12 @@ void ResourceLoadStatisticsStore::dumpResourceLoadStatistics(CompletionHandler<v
 {
     ASSERT(!RunLoop::isMain());
     if (m_dataRecordsBeingRemoved) {
-        m_dataRecordRemovalCompletionHandlers.append([this, completionHandler = WTFMove(completionHandler)]() mutable {
-            dumpResourceLoadStatistics(WTFMove(completionHandler));
+        m_dataRecordRemovalCompletionHandlers.append([weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
+            RefPtr protectedThis = weakThis.get();
+            if (protectedThis)
+                protectedThis->dumpResourceLoadStatistics(WTFMove(completionHandler));
+            else
+                completionHandler({ });
         });
         return;
     }
