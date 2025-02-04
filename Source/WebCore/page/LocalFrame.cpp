@@ -349,11 +349,8 @@ void LocalFrame::setDocument(RefPtr<Document>&& newDocument)
     }
 #endif
 
-    if (RefPtr page = this->page(); page && isMainFrame()) {
-        if (m_doc && !loader().stateMachine().isDisplayingInitialEmptyDocument())
-            page->mainFrameDidChangeToNonInitialEmptyDocument();
-        page->clearAXObjectCache();
-    }
+    if (page() && m_doc && isMainFrame() && !loader().stateMachine().isDisplayingInitialEmptyDocument())
+        protectedPage()->mainFrameDidChangeToNonInitialEmptyDocument();
 
     InspectorInstrumentation::frameDocumentUpdated(*this);
 

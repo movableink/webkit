@@ -219,7 +219,7 @@ AccessibilityObjectAtspi* AccessibilityRootAtspi::child() const
     if (!cache)
         return nullptr;
 
-    AXCoreObject* rootObject = cache->rootObjectForFrame(frame);
+    AXCoreObject* rootObject = cache->rootObject();
     return rootObject ? rootObject->wrapper() : nullptr;
 }
 

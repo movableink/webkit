@@ -73,9 +73,9 @@ class AXCoreObject;
 - (void)setHasMainFramePlugin:(bool)hasPlugin;
 - (void)setFrameIdentifier:(const WebCore::FrameIdentifier&)frameID;
 
-- (id)accessibilityRootObjectWrapper:(WebCore::LocalFrame*)frame;
+- (id)accessibilityRootObjectWrapper;
 - (id)accessibilityFocusedUIElement;
 - (WebCore::IntPoint)accessibilityRemoteFrameOffset;
-- (WebCore::LocalFrame *)focusedLocalFrame;
+- (WebCore::LocalFrame *)remoteLocalFrame;
 
 @end

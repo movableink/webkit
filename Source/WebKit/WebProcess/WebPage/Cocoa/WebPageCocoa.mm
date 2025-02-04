@@ -480,13 +480,10 @@ void WebPage::bindRemoteAccessibilityFrames(int processIdentifier, WebCore::Fram
 #endif
 }
 
-void WebPage::resolveAccessibilityHitTestForTesting(WebCore::FrameIdentifier frameID, const WebCore::IntPoint& point, CompletionHandler<void(String)>&& completionHandler)
+void WebPage::resolveAccessibilityHitTestForTesting(const WebCore::IntPoint& point, CompletionHandler<void(String)>&& completionHandler)
 {
-    RefPtr webFrame = WebProcess::singleton().webFrame(frameID);
-    if (!webFrame)
-        return completionHandler("NULL"_s);
 #if PLATFORM(MAC)
-    if (id coreObject = [m_mockAccessibilityElement accessibilityRootObjectWrapper:webFrame->coreLocalFrame()]) {
+    if (id coreObject = [m_mockAccessibilityElement accessibilityRootObjectWrapper]) {
         if (id hitTestResult = [coreObject accessibilityHitTest:point]) {
             ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             completionHandler([hitTestResult accessibilityAttributeValue:@"AXInfoStringForTesting"]);
@@ -496,7 +493,7 @@ void WebPage::resolveAccessibilityHitTestForTesting(WebCore::FrameIdentifier fra
     }
 #endif
     UNUSED_PARAM(point);
-    completionHandler("NULL"_s);
+    completionHandler(makeString("NULL"_s));
 }
 
 #if ENABLE(APPLE_PAY)
