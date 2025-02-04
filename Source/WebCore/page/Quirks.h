@@ -215,6 +215,7 @@ public:
     WEBCORE_EXPORT bool shouldUseEphemeralPartitionedStorageForDOMCookies(const URL&) const;
 
     bool needsGetElementsByNameQuirk() const;
+    bool needsRelaxedCorsMixedContentCheckQuirk() const;
     bool needsLaxSameSiteCookieQuirk(const URL&) const;
 
     String scriptToEvaluateBeforeRunningScriptFromURL(const URL&);
