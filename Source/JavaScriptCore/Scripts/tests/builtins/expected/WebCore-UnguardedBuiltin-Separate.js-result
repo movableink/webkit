@@ -187,7 +187,7 @@ constinit const char* const s_unguardedBuiltinIsReadableStreamLockedCode =
 #define DEFINE_BUILTIN_GENERATOR(codeName, functionName, overriddenName, argumentCount) \
 JSC::FunctionExecutable* codeName##Generator(JSC::VM& vm) \
 {\
-    JSVMClientData* clientData = static_cast<JSVMClientData*>(vm.clientData); \
+    JSVMClientData* clientData = downcast<JSVMClientData>(vm.clientData); \
     return clientData->builtinFunctions().unguardedBuiltinBuiltins().codeName##Executable()->link(vm, nullptr, clientData->builtinFunctions().unguardedBuiltinBuiltins().codeName##Source(), std::nullopt, s_##codeName##Intrinsic); \
 }
 WEBCORE_FOREACH_UNGUARDEDBUILTIN_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)

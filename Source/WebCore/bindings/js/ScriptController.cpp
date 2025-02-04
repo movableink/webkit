@@ -299,7 +299,7 @@ Ref<DOMWrapperWorld> ScriptController::createWorld(const String& name, WorldType
 
 void ScriptController::getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
 {
-    static_cast<JSVMClientData*>(commonVM().clientData)->getAllWorlds(worlds);
+    downcast<JSVMClientData>(commonVM().clientData)->getAllWorlds(worlds);
 }
 
 void ScriptController::initScriptForWindowProxy(JSWindowProxy& windowProxy)

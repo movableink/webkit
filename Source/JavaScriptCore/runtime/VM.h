@@ -300,6 +300,8 @@ public:
         JS_EXPORT_PRIVATE virtual ~ClientData() { };
 
         JS_EXPORT_PRIVATE virtual String overrideSourceURL(const StackFrame&, const String& originalSourceURL) const = 0;
+
+        virtual bool isWebCoreJSClientData() const { return false; }
     };
 
     bool usingAPI() { return vmType != VMType::Default; }
