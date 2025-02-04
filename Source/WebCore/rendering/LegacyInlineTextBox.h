@@ -142,7 +142,7 @@ inline void LegacyInlineTextBox::removeFromGlyphDisplayListCache()
     }
 }
 
-LayoutRect snappedSelectionRect(const LayoutRect&, float logicalRight, float selectionTop, float selectionHeight, bool isHorizontal);
+LayoutRect snappedSelectionRect(const LayoutRect&, float logicalRight, WritingMode);
 
 } // namespace WebCore
 

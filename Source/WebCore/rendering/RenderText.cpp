@@ -301,7 +301,7 @@ static LayoutRect selectionRectForTextBox(const InlineIterator::TextBox& textBox
     if (clampedStart || clampedEnd != textRun.length())
         textBox.fontCascade().adjustSelectionRectForText(textBox.renderer().canUseSimplifiedTextMeasuring().value_or(false), textRun, selectionRect, clampedStart, clampedEnd);
 
-    return snappedSelectionRect(selectionRect, textBox.logicalRightIgnoringInlineDirection(), lineSelectionRect.y(), lineSelectionRect.height(), textBox.isHorizontal());
+    return snappedSelectionRect(selectionRect, textBox.logicalRightIgnoringInlineDirection(), textBox.writingMode());
 }
 
 static unsigned offsetForPositionInRun(const InlineIterator::TextBox& textBox, float x)
@@ -656,7 +656,7 @@ static Vector<LayoutRect> characterRects(const InlineIterator::TextBox& run, uns
     auto lineSelectionRect = LineSelection::logicalRect(*run.lineBox());
     auto selectionRect = LayoutRect { run.logicalLeftIgnoringInlineDirection(), lineSelectionRect.y(), run.logicalWidth(), lineSelectionRect.height() };
     return run.fontCascade().characterSelectionRectsForText(run.textRun(), selectionRect, clampedStart, clampedEnd).map([&](auto& characterRect) {
-        return snappedSelectionRect(characterRect, run.logicalRightIgnoringInlineDirection(), lineSelectionRect.y(), lineSelectionRect.height(), run.isHorizontal());
+        return snappedSelectionRect(characterRect, run.logicalRightIgnoringInlineDirection(), run.writingMode());
     });
 }
 
