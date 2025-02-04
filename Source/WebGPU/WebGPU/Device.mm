@@ -866,9 +866,10 @@ id<MTLRenderPipelineState> Device::indirectBufferClampPipeline(NSUInteger raster
             || input.vertexCount + input.vertexStart > minCounts[0]
             || input.vertexStart >= minCounts[0];
         bool instanceCondition = input.baseInstance + input.instanceCount > minCounts[1] || input.baseInstance >= minCounts[1];
-        bool condition = vertexCondition || instanceCondition;
-        output.vertexCount = metal::select(input.vertexCount, 0u, condition);
-        output.instanceCount = input.instanceCount;
+        auto minVertexCountMinusVertexStart = minCounts[0] > input.vertexStart ? (minCounts[0] - input.vertexStart) : 0u;
+        output.vertexCount = metal::select(input.vertexCount, minVertexCountMinusVertexStart, vertexCondition);
+        auto minInstanceCountMinusInstanceStart = minCounts[1] > input.baseInstance ? (minCounts[1] - input.baseInstance) : 0u;
+        output.instanceCount = metal::select(input.instanceCount, minInstanceCountMinusInstanceStart, instanceCondition);
         output.vertexStart = input.vertexStart;
         output.baseInstance = input.baseInstance;
         if (lostCondition)
