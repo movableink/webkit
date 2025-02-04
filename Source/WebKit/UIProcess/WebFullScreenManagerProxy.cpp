@@ -121,7 +121,7 @@ void WebFullScreenManagerProxy::didEnterFullScreen()
     sendToWebProcess(Messages::WebFullScreenManager::DidEnterFullScreen());
 
     if (page->isControlledByAutomation()) {
-        if (RefPtr automationSession = page->protectedConfiguration()->processPool().automationSession())
+        if (RefPtr automationSession = page->configuration().processPool().automationSession())
             automationSession->didEnterFullScreenForPage(*page);
     }
 }
@@ -160,7 +160,7 @@ void WebFullScreenManagerProxy::didExitFullScreen()
         sendToWebProcess(Messages::WebFullScreenManager::DidExitFullScreen());
 
         if (page->isControlledByAutomation()) {
-            if (RefPtr automationSession = page->protectedConfiguration()->processPool().automationSession())
+            if (RefPtr automationSession = page->configuration().processPool().automationSession())
                 automationSession->didExitFullScreenForPage(*page);
         }
     }

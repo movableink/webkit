@@ -627,7 +627,7 @@ void WebInspectorUIProxy::frontendLoaded()
     if (!inspectedPage)
         return;
 
-    if (RefPtr automationSession = inspectedPage->protectedConfiguration()->processPool().automationSession())
+    if (RefPtr automationSession = inspectedPage->configuration().processPool().automationSession())
         automationSession->inspectorFrontendLoaded(*inspectedPage);
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
