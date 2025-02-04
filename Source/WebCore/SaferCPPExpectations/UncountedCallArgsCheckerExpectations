@@ -1253,7 +1253,6 @@ platform/network/BlobResourceHandle.cpp
 platform/network/DataURLDecoder.cpp
 platform/network/FormData.cpp
 platform/network/NetworkLoadMetrics.cpp
-platform/network/ResourceRequestBase.cpp
 platform/network/SynchronousLoaderClient.cpp
 platform/network/mac/AuthenticationMac.mm
 platform/network/mac/ResourceHandleMac.mm
