@@ -354,6 +354,10 @@ struct WebPageCreationParameters {
 #if HAVE(AUDIT_TOKEN)
     std::optional<CoreIPCAuditToken> presentingApplicationAuditToken;
 #endif
+
+#if PLATFORM(COCOA)
+    String presentingApplicationBundleIdentifier;
+#endif
 };
 
 } // namespace WebKit

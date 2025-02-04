@@ -235,6 +235,10 @@ public:
 #if HAVE(AUDIT_TOKEN)
     std::optional<audit_token_t> presentingApplicationAuditToken;
 #endif
+
+#if PLATFORM(COCOA)
+    String presentingApplicationBundleIdentifier;
+#endif
 };
 
 }

@@ -366,8 +366,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 
     m_uiProcessBundleIdentifier = parameters.uiProcessBundleIdentifier;
 
-    setPresentingApplicationBundleIdentifier(parameters.presentingApplicationBundleIdentifier);
-
 #if ENABLE(SANDBOX_EXTENSIONS)
     SandboxExtension::consumePermanently(parameters.uiProcessBundleResourcePathExtensionHandle);
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)

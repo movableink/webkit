@@ -864,6 +864,6 @@ messages -> WebPage WantsAsyncDispatchMessage {
     UpdateOpener(WebCore::FrameIdentifier frameID, WebCore::FrameIdentifier newOpener)
 
 #if HAVE(AUDIT_TOKEN)
-    SetPresentingApplicationAuditToken(struct WebKit::CoreIPCAuditToken auditToken)
+    SetPresentingApplicationAuditTokenAndBundleIdentifier(struct WebKit::CoreIPCAuditToken auditToken, String bundleIdentifier)
 #endif
 }

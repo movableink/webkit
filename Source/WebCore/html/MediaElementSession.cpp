@@ -1310,8 +1310,8 @@ std::optional<NowPlayingInfo> MediaElementSession::computeNowPlayingInfo() const
     // FIXME: Eventually, this should be moved into HTMLMediaElement, so all clients
     // will use the same bundle identifier (the presentingApplication, rather than the
     // sourceApplication).
-    if (!presentingApplicationBundleIdentifier().isNull())
-        sourceApplicationIdentifier = presentingApplicationBundleIdentifier();
+    if (!page->presentingApplicationBundleIdentifier().isNull())
+        sourceApplicationIdentifier = page->presentingApplicationBundleIdentifier();
 #endif
 
     NowPlayingInfo info {

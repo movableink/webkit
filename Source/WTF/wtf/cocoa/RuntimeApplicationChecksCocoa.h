@@ -153,9 +153,6 @@ WTF_EXPORT_PRIVATE void setApplicationBundleIdentifierOverride(const String&);
 WTF_EXPORT_PRIVATE String applicationBundleIdentifier();
 WTF_EXPORT_PRIVATE void clearApplicationBundleIdentifierTestingOverride();
 
-WTF_EXPORT_PRIVATE void setPresentingApplicationBundleIdentifier(const String&);
-WTF_EXPORT_PRIVATE const String& presentingApplicationBundleIdentifier();
-
 namespace CocoaApplication {
 
 WTF_EXPORT_PRIVATE bool isIBooks();
@@ -242,14 +239,12 @@ using WTF::clearApplicationBundleIdentifierTestingOverride;
 using WTF::disableAllSDKAlignedBehaviors;
 using WTF::enableAllSDKAlignedBehaviors;
 using WTF::linkedOnOrAfterSDKWithBehavior;
-using WTF::presentingApplicationBundleIdentifier;
 using WTF::processIsExtension;
 using WTF::SDKAlignedBehavior;
 using WTF::sdkAlignedBehaviors;
 using WTF::SDKAlignedBehaviors;
 using WTF::setApplicationBundleIdentifier;
 using WTF::setApplicationBundleIdentifierOverride;
-using WTF::setPresentingApplicationBundleIdentifier;
 using WTF::setProcessIsExtension;
 using WTF::setSDKAlignedBehaviors;
 

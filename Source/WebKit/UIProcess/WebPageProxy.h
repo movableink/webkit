@@ -3302,6 +3302,10 @@ private:
     void shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&&) const;
 #endif
 
+#if PLATFORM(COCOA)
+    String presentingApplicationBundleIdentifier() const;
+#endif
+
     UniqueRef<Internals> m_internals;
     Identifier m_identifier;
     WebCore::PageIdentifier m_webPageID;

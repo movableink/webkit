@@ -1294,6 +1294,11 @@ public:
     WEBCORE_EXPORT void setPresentingApplicationAuditToken(std::optional<audit_token_t>);
 #endif
 
+#if PLATFORM(COCOA)
+    const String& presentingApplicationBundleIdentifier() const;
+    WEBCORE_EXPORT void setPresentingApplicationBundleIdentifier(String&&);
+#endif
+
 private:
     explicit Page(PageConfiguration&&);
 
@@ -1734,6 +1739,10 @@ private:
 
 #if HAVE(AUDIT_TOKEN)
     std::optional<audit_token_t> m_presentingApplicationAuditToken;
+#endif
+
+#if PLATFORM(COCOA)
+    String m_presentingApplicationBundleIdentifier;
 #endif
 }; // class Page
 

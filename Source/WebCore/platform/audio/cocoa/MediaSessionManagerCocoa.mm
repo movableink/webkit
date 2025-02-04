@@ -607,10 +607,14 @@ static id<MRNowPlayingActivityUIControllable> nowPlayingActivityController()
 
 void MediaSessionManagerCocoa::updateNowPlayingSuppression(const NowPlayingInfo* nowPlayingInfo)
 {
-    if (!nowPlayingInfo || !nowPlayingInfo->isVideo)
+    if (!nowPlayingInfo || !nowPlayingInfo->isVideo) {
+        RELEASE_LOG(Media, "MediaSessionManagerCocoa::updateNowPlayingSuppression: clearing suppressPresentationOverBundleIdentifiers (hasNowPlayingInfo=%d, isVideo=%d)", !!nowPlayingInfo, nowPlayingInfo && nowPlayingInfo->isVideo);
         [nowPlayingActivityController() suppressPresentationOverBundleIdentifiers:nil];
-    else
-        [nowPlayingActivityController() suppressPresentationOverBundleIdentifiers:[NSSet setWithArray:@[nowPlayingInfo->metadata.sourceApplicationIdentifier]]];
+    } else {
+        NSString *sourceApplicationIdentifier = nowPlayingInfo->metadata.sourceApplicationIdentifier;
+        RELEASE_LOG(Media, "MediaSessionManagerCocoa::updateNowPlayingSuppression: setting suppressPresentationOverBundleIdentifiers to %@", sourceApplicationIdentifier);
+        [nowPlayingActivityController() suppressPresentationOverBundleIdentifiers:[NSSet setWithArray:@[sourceApplicationIdentifier]]];
+    }
 }
 
 #endif // USE(NOW_PLAYING_ACTIVITY_SUPPRESSION)

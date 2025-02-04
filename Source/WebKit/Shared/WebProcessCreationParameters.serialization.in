@@ -87,7 +87,6 @@
     String uiProcessBundleIdentifier;
     int latencyQOS;
     int throughputQOS;
-    String presentingApplicationBundleIdentifier;
 #endif
 
     ProcessID presentingApplicationPID;

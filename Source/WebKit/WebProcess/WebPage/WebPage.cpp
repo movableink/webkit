@@ -873,6 +873,10 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
     pageConfiguration.presentingApplicationAuditToken = parameters.presentingApplicationAuditToken ? std::optional(parameters.presentingApplicationAuditToken->auditToken()) : std::nullopt;
 #endif
 
+#if PLATFORM(COCOA)
+    pageConfiguration.presentingApplicationBundleIdentifier = WTFMove(parameters.presentingApplicationBundleIdentifier);
+#endif
+
     m_page = Page::create(WTFMove(pageConfiguration));
 
     updateAfterDrawingAreaCreation(parameters);
@@ -10298,10 +10302,14 @@ void WebPage::callAfterPendingSyntheticClick(CompletionHandler<void(SyntheticCli
 #endif
 
 #if HAVE(AUDIT_TOKEN)
-void WebPage::setPresentingApplicationAuditToken(CoreIPCAuditToken&& presentingApplicationAuditToken)
+void WebPage::setPresentingApplicationAuditTokenAndBundleIdentifier(CoreIPCAuditToken&& auditToken, String&& bundleIdentifier)
 {
-    if (RefPtr page = protectedCorePage())
-        page->setPresentingApplicationAuditToken(presentingApplicationAuditToken.auditToken());
+    RefPtr page = protectedCorePage();
+    if (!page)
+        return;
+
+    page->setPresentingApplicationAuditToken(auditToken.auditToken());
+    page->setPresentingApplicationBundleIdentifier(WTFMove(bundleIdentifier));
 }
 #endif
 

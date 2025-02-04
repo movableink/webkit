@@ -86,6 +86,7 @@
 #import <WebCore/TextAlternativeWithRange.h>
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/ValidationBubble.h>
+#import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/spi/ios/BrowserEngineKitSPI.h>
 #import <pal/spi/mac/QuarantineSPI.h>
@@ -1516,6 +1517,24 @@ void WebPageProxy::decodeImageData(Ref<WebCore::SharedBuffer>&& buffer, std::opt
     ensureProtectedRunningProcess()->sendWithAsyncReply(Messages::WebPage::DecodeImageData(WTFMove(buffer), preferredSize), [preventProcessShutdownScope = protectedLegacyMainFrameProcess()->shutdownPreventingScope(), completionHandler = WTFMove(completionHandler)] (auto result) mutable {
         completionHandler(WTFMove(result));
     }, webPageIDInMainFrameProcess());
+}
+
+String WebPageProxy::presentingApplicationBundleIdentifier() const
+{
+    if (std::optional auditToken = presentingApplicationAuditToken()) {
+        NSError *error = nil;
+        auto bundleProxy = [LSBundleProxy bundleProxyWithAuditToken:*auditToken error:&error];
+        if (error)
+            RELEASE_LOG_ERROR(WebRTC, "Failed to get attribution bundleID from audit token with error: %@.", error.localizedDescription);
+        else
+            return bundleProxy.bundleIdentifier;
+    }
+#if PLATFORM(MAC)
+    else
+        return [NSRunningApplication currentApplication].bundleIdentifier;
+#endif
+
+    return { };
 }
 
 } // namespace WebKit

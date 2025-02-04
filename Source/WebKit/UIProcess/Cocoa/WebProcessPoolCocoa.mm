@@ -391,19 +391,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     parameters.latencyQOS = webProcessLatencyQOS();
     parameters.throughputQOS = webProcessThroughputQOS();
 
-    if (m_configuration->presentingApplicationProcessToken()) {
-        NSError *error = nil;
-        auto bundleProxy = [LSBundleProxy bundleProxyWithAuditToken:*m_configuration->presentingApplicationProcessToken() error:&error];
-        if (error)
-            RELEASE_LOG_ERROR(WebRTC, "Failed to get attribution bundleID from audit token with error: %@.", error.localizedDescription);
-        else
-            parameters.presentingApplicationBundleIdentifier = bundleProxy.bundleIdentifier;
-    }
-#if PLATFORM(MAC)
-    else
-        parameters.presentingApplicationBundleIdentifier = [NSRunningApplication currentApplication].bundleIdentifier;
-#endif
-
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)
     if (WebProcessProxy::shouldEnableRemoteInspector()) {
         auto handles = SandboxExtension::createHandlesForMachLookup({ "com.apple.webinspector"_s }, process.auditToken());

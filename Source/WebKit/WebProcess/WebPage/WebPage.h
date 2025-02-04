@@ -1938,7 +1938,7 @@ public:
     bool isClosed() const { return m_isClosed; }
 
 #if HAVE(AUDIT_TOKEN)
-    void setPresentingApplicationAuditToken(CoreIPCAuditToken&&);
+    void setPresentingApplicationAuditTokenAndBundleIdentifier(CoreIPCAuditToken&&, String&& bundleIdentifier);
 #endif
 
     void didProgrammaticallyClearTextFormControl(const WebCore::HTMLTextFormControlElement&);

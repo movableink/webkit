@@ -360,22 +360,6 @@ void clearApplicationBundleIdentifierTestingOverride()
 #endif
 }
 
-static String& presentingApplicationBundleIdentifierStorage()
-{
-    static MainThreadNeverDestroyed<String> identifier;
-    return identifier;
-}
-
-void setPresentingApplicationBundleIdentifier(const String& identifier)
-{
-    presentingApplicationBundleIdentifierStorage() = identifier;
-}
-
-const String& presentingApplicationBundleIdentifier()
-{
-    return presentingApplicationBundleIdentifierStorage();
-}
-
 static bool applicationBundleIsEqualTo(const String& bundleIdentifierString)
 {
     return applicationBundleIdentifier() == bundleIdentifierString;
