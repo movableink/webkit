@@ -9564,17 +9564,113 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
 
     case StringUse: {
         ASSERT(node->arrayMode().type() == Array::Contiguous);
+
         SpeculateCellOperand searchElement(this, searchElementEdge);
-
         GPRReg searchElementGPR = searchElement.gpr();
-
         speculateString(searchElementEdge, searchElementGPR);
 
-        flushRegisters();
+        zeroExtend32ToWord(lengthGPR, lengthGPR);
+        zeroExtend32ToWord(indexGPR, indexGPR);
 
-        callOperation(operationArrayIndexOfString, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementGPR, indexGPR);
+        GPRTemporary tempLengthForCompare(this);
+        GPRTemporary tempLeft(this);
+        GPRTemporary tempRight(this);
+        GPRTemporary tempLeftChar(this);
+        GPRTemporary tempRightChar(this);
 
-        strictInt32Result(lengthGPR, node);
+        GPRReg compareLengthGPR = tempLengthForCompare.gpr();
+        GPRReg leftStringGPR = tempLeft.gpr();
+        GPRReg rightStringGPR = tempRight.gpr();
+        GPRReg leftCharGPR = tempLeftChar.gpr();
+        GPRReg rightCharGPR = tempRightChar.gpr();
+
+        JumpList slowCase;
+        loadPtr(Address(searchElementGPR, JSString::offsetOfValue()), rightStringGPR);
+        slowCase.append(branchIfRopeStringImpl(rightStringGPR));
+        slowCase.append(branchTest32(
+            Zero,
+            Address(rightStringGPR, StringImpl::flagsOffset()),
+            TrustedImm32(StringImpl::flagIs8Bit())
+        ));
+
+        auto emitLoop = [&](auto emitCompare) {
+#if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
+            clearRegisterAllocationOffsets();
+#endif
+            Label loop = label();
+
+            Jump notFound = branch32(Equal, indexGPR, lengthGPR);
+
+            JumpList found = emitCompare();
+
+            add32(TrustedImm32(1), indexGPR);
+            jump().linkTo(loop, this);
+
+            notFound.link(this);
+            move(TrustedImm32(-1), indexGPR);
+
+            found.link(this);
+        };
+
+        auto emitCompare = [&]() -> JumpList {
+            JumpList trueCase;
+            JumpList falseCase;
+
+            loadPtr(BaseIndex(storageGPR, indexGPR, TimesEight), leftStringGPR);
+            falseCase.append(branchIfNotString(leftStringGPR));
+
+            loadPtr(BaseIndex(storageGPR, indexGPR, TimesEight, PayloadOffset), leftStringGPR);
+
+            loadPtr(Address(leftStringGPR, JSString::offsetOfValue()), leftStringGPR);
+
+            slowCase.append(branchIfRopeStringImpl(leftStringGPR));
+
+            load32(Address(leftStringGPR, StringImpl::lengthMemoryOffset()), compareLengthGPR);
+            loadPtr(Address(searchElementGPR, JSString::offsetOfValue()), rightStringGPR);
+            falseCase.append(branch32(
+                NotEqual,
+                Address(rightStringGPR, StringImpl::lengthMemoryOffset()),
+                compareLengthGPR
+            ));
+
+            trueCase.append(branchTest32(Zero, compareLengthGPR));
+
+            slowCase.append(branchTest32(
+                Zero,
+                Address(leftStringGPR, StringImpl::flagsOffset()),
+                TrustedImm32(StringImpl::flagIs8Bit())
+            ));
+
+            loadPtr(Address(leftStringGPR, StringImpl::dataOffset()), leftStringGPR);
+            loadPtr(Address(rightStringGPR, StringImpl::dataOffset()), rightStringGPR);
+
+            sub32(TrustedImm32(1), compareLengthGPR);
+
+            Label compareLoop = label();
+
+            load8(BaseIndex(leftStringGPR, compareLengthGPR, TimesOne), leftCharGPR);
+            load8(BaseIndex(rightStringGPR, compareLengthGPR, TimesOne), rightCharGPR);
+            falseCase.append(branch32(NotEqual, leftCharGPR, rightCharGPR));
+
+            sub32(TrustedImm32(1), compareLengthGPR);
+            trueCase.append(branch32(LessThan, compareLengthGPR, TrustedImm32(0)));
+            jump(compareLoop);
+
+            falseCase.link(this);
+
+            return trueCase;
+        };
+
+        emitLoop(emitCompare);
+
+        addSlowPathGenerator(slowPathCall(
+            slowCase, this, operationArrayIndexOfString,
+            indexGPR, LinkableConstant::globalObject(*this, node),
+            storageGPR, searchElementGPR, indexGPR
+        ));
+
+        strictInt32Result(indexGPR, node);
+
         return;
     }
 
