@@ -257,12 +257,6 @@ void AuxiliaryProcess::populateMobileGestaltCache(std::optional<SandboxExtension
 
 #if !PLATFORM(COCOA)
 
-#if !OS(UNIX)
-void AuxiliaryProcess::platformInitialize(const AuxiliaryProcessInitializationParameters&)
-{
-}
-#endif
-
 void AuxiliaryProcess::initializeSandbox(const AuxiliaryProcessInitializationParameters&, SandboxInitializationParameters&)
 {
 }

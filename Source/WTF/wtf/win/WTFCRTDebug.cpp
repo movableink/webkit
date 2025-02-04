@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2025 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,35 +24,20 @@
  */
 
 #include "config.h"
-#include "AuxiliaryProcessMain.h"
-
-#include <JavaScriptCore/ExecutableAllocator.h>
-#include <cstring>
-#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/win/WTFCRTDebug.h>
 
-namespace WebKit {
+#include <crtdbg.h>
 
-AuxiliaryProcessMainCommon::AuxiliaryProcessMainCommon() { }
+namespace WTF {
 
-void AuxiliaryProcess::platformInitialize(const AuxiliaryProcessInitializationParameters&)
+void disableCRTDebugAssertDialog()
 {
-    WTF::disableCRTDebugAssertDialog();
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
 }
 
-bool AuxiliaryProcessMainCommon::parseCommandLine(int argc, char** argv)
-{
-    for (int i = 0; i < argc; i++) {
-        if (!strcmp(argv[i], "-clientIdentifier") && i + 1 < argc)
-            m_parameters.connectionIdentifier = IPC::Connection::Identifier { reinterpret_cast<HANDLE>(parseIntegerAllowingTrailingJunk<uint64_t>(StringView::fromLatin1(argv[++i])).value_or(0)) };
-        else if (!strcmp(argv[i], "-processIdentifier") && i + 1 < argc)
-            m_parameters.processIdentifier = ObjectIdentifier<WebCore::ProcessIdentifierType>(parseIntegerAllowingTrailingJunk<uint64_t>(StringView::fromLatin1(argv[++i])).value_or(0));
-        else if (!strcmp(argv[i], "-configure-jsc-for-testing"))
-            JSC::Config::configureForTesting();
-        else if (!strcmp(argv[i], "-disable-jit"))
-            JSC::ExecutableAllocator::disableJIT();
-    }
-    return true;
 }
-
-} // namespace WebKit
