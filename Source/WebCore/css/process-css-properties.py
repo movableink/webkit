@@ -825,6 +825,11 @@ class StyleProperties:
 
         self._perform_fixups()
 
+        self.shorthand_by_longhand = {}
+        for shorthand in self.all_shorthands:
+            for longhand in shorthand.codegen_properties.longhands:
+                self.shorthand_by_longhand[longhand] = shorthand
+
     def __str__(self):
         return "StyleProperties"
 
@@ -886,7 +891,7 @@ class StyleProperties:
     def all_non_shorthands(self):
         return (property for property in self.all if not property.codegen_properties.longhands)
 
-    # Returns a generator for the set of properties that are direction-aware (aka flow-sensative). Sorted first by property group name and then by property name.
+    # Returns a generator for the set of properties that are direction-aware (aka flow-sensitive). Sorted first by property group name and then by property name.
     @property
     def all_direction_aware_properties(self):
         for group_name, property_group in sorted(self.logical_property_groups.items(), key=lambda x: x[0]):
@@ -2869,6 +2874,21 @@ class GenerateCSSPropertyNames:
                 signature="bool CSSProperty::isDirectionAwareProperty(CSSPropertyID id)",
                 iterable=self.properties_and_descriptors.style_properties.all_direction_aware_properties
             )
+
+            for group_name, property_group in sorted(self.generation_context.properties_and_descriptors.style_properties.logical_property_groups.items(), key=lambda x: x[0]):
+                properties = set()
+                for kind in ["logical", "physical"]:
+                    for property in property_group[kind].values():
+                        properties.add(property)
+                        if property in self.generation_context.properties_and_descriptors.style_properties.shorthand_by_longhand:
+                            properties.add(self.generation_context.properties_and_descriptors.style_properties.shorthand_by_longhand[property])
+
+                group_id = PropertyName.convert_name_to_id(group_name)
+                self.generation_context.generate_property_id_switch_function_bool(
+                    to=writer,
+                    signature=f"bool CSSProperty::is{group_id}Property(CSSPropertyID id)",
+                    iterable=sorted(properties, key=lambda x: x.name)
+                )
 
             self.generation_context.generate_property_id_switch_function_bool(
                 to=writer,

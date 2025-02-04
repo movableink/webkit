@@ -86,15 +86,24 @@ public:
     static bool isListValuedProperty(CSSPropertyID propertyID) { return !!listValuedPropertySeparator(propertyID); }
     static bool allowsNumberOrIntegerInput(CSSPropertyID);
 
-    // FIXME: Generate from logical property groups.
+    // Logical Property Group Predicates.
+    // NOTE: These return true if the CSSPropertyID is member of the named logical
+    // property group or is the shorthand of a member of the logical property group.
 
-    // Check if a property is an inset property, as defined in:
-    // https://drafts.csswg.org/css-logical-1/#inset-properties
+    static bool isBorderColorProperty(CSSPropertyID);
+    static bool isBorderRadiusProperty(CSSPropertyID);
+    static bool isBorderStyleProperty(CSSPropertyID);
+    static bool isBorderWidthProperty(CSSPropertyID);
+    static bool isContainIntrinsicSizeProperty(CSSPropertyID);
     static bool isInsetProperty(CSSPropertyID);
-
-    // Check if a property is a margin property, as defined in:
-    // https://drafts.csswg.org/css-box-4/#margin-properties
     static bool isMarginProperty(CSSPropertyID);
+    static bool isMaxSizeProperty(CSSPropertyID);
+    static bool isMinSizeProperty(CSSPropertyID);
+    static bool isOverscrollBehaviorProperty(CSSPropertyID);
+    static bool isPaddingProperty(CSSPropertyID);
+    static bool isScrollMarginProperty(CSSPropertyID);
+    static bool isScrollPaddingProperty(CSSPropertyID);
+    static bool isSizeProperty(CSSPropertyID);
 
     // Check if a property is a sizing property, as defined in:
     // https://drafts.csswg.org/css-sizing-3/#sizing-property
