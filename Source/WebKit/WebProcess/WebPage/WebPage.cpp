@@ -938,6 +938,10 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
                 remoteMainFrameClient->applyWebsitePolicies(WTFMove(*remotePageParameters->websitePoliciesData));
         }
     }
+    if (auto&& provisionalFrameCreationParameters = parameters.provisionalFrameCreationParameters) {
+        ASSERT(m_page->settings().siteIsolationEnabled());
+        createProvisionalFrame(WTFMove(*provisionalFrameCreationParameters));
+    }
 
     drawingArea->updatePreferences(parameters.store);
 
@@ -1367,6 +1371,11 @@ void WebPage::reinitializeWebPage(WebPageCreationParameters&& parameters)
 #endif
 
     setUseColorAppearance(parameters.useDarkAppearance, parameters.useElevatedUserInterfaceLevel);
+
+    if (auto&& provisionalFrameCreationParameters = parameters.provisionalFrameCreationParameters) {
+        ASSERT(m_page->settings().siteIsolationEnabled());
+        createProvisionalFrame(WTFMove(*provisionalFrameCreationParameters));
+    }
 
     platformReinitialize();
 }
@@ -2064,9 +2073,9 @@ void WebPage::platformDidReceiveLoadParameters(const LoadParameters& loadParamet
 }
 #endif
 
-void WebPage::createProvisionalFrame(ProvisionalFrameCreationParameters&& parameters, WebCore::FrameIdentifier frameID)
+void WebPage::createProvisionalFrame(ProvisionalFrameCreationParameters&& parameters)
 {
-    RefPtr frame = WebProcess::singleton().webFrame(frameID);
+    RefPtr frame = WebProcess::singleton().webFrame(parameters.frameID);
     if (!frame)
         return;
     ASSERT(frame->page() == this);

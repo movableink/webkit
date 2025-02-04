@@ -246,6 +246,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
     WebCore::ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension;
 
     std::optional<WebKit::RemotePageParameters> remotePageParameters;
+    std::optional<WebKit::ProvisionalFrameCreationParameters> provisionalFrameCreationParameters;
     WebCore::FrameIdentifier mainFrameIdentifier;
     String openedMainFrameName;
     std::optional<WebCore::FrameIdentifier> mainFrameOpenerIdentifier;

@@ -5052,7 +5052,7 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
     }
 
     Ref browsingContextGroup = newProcess->websiteDataStore() == &websiteDataStore() && !navigation.isRequestFromClientOrUserInput() ? m_browsingContextGroup : BrowsingContextGroup::create();
-    Ref frameProcess = browsingContextGroup->ensureProcessForSite(navigationSite, newProcess, preferences);
+    Ref frameProcess = browsingContextGroup->ensureProcessForSite(navigationSite, newProcess, preferences, InjectBrowsingContextIntoProcess::No);
     // Make sure we destroy any existing ProvisionalPageProxy object *before* we construct a new one.
     // It is important from the previous provisional page to unregister itself before we register a
     // new one to avoid confusion.

@@ -28,6 +28,7 @@
 #include "DrawingAreaInfo.h"
 #include "FrameTreeCreationParameters.h"
 #include "LayerTreeContext.h"
+#include "ProvisionalFrameCreationParameters.h"
 #include "SandboxExtension.h"
 #include "SessionState.h"
 #include "UserContentControllerParameters.h"
@@ -326,6 +327,7 @@ struct WebPageCreationParameters {
     WebCore::ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension { WebCore::ContentSecurityPolicyModeForExtension::None };
 
     std::optional<RemotePageParameters> remotePageParameters { };
+    std::optional<ProvisionalFrameCreationParameters> provisionalFrameCreationParameters { };
     WebCore::FrameIdentifier mainFrameIdentifier;
     String openedMainFrameName;
     std::optional<WebCore::FrameIdentifier> mainFrameOpenerIdentifier { };

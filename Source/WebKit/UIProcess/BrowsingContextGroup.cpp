@@ -42,7 +42,7 @@ BrowsingContextGroup::BrowsingContextGroup() = default;
 
 BrowsingContextGroup::~BrowsingContextGroup() = default;
 
-Ref<FrameProcess> BrowsingContextGroup::ensureProcessForSite(const Site& site, WebProcessProxy& process, const WebPreferences& preferences)
+Ref<FrameProcess> BrowsingContextGroup::ensureProcessForSite(const Site& site, WebProcessProxy& process, const WebPreferences& preferences, InjectBrowsingContextIntoProcess injectBrowsingContextIntoProcess)
 {
     if (!site.isEmpty() && preferences.siteIsolationEnabled()) {
         if (auto* existingProcess = processForSite(site)) {
@@ -51,7 +51,7 @@ Ref<FrameProcess> BrowsingContextGroup::ensureProcessForSite(const Site& site, W
         }
     }
 
-    return FrameProcess::create(process, *this, site, preferences);
+    return FrameProcess::create(process, *this, site, preferences, injectBrowsingContextIntoProcess);
 }
 
 FrameProcess* BrowsingContextGroup::processForSite(const Site& site)
@@ -72,13 +72,24 @@ void BrowsingContextGroup::processDidTerminate(WebPageProxy& page, WebProcessPro
 
 void BrowsingContextGroup::addFrameProcess(FrameProcess& process)
 {
+    addFrameProcessAndInjectPageContextIf(process, [](auto&) {
+        return true;
+    });
+}
+
+void BrowsingContextGroup::addFrameProcessAndInjectPageContextIf(FrameProcess& process, Function<bool(WebPageProxy&)> functor)
+{
     auto& site = process.site();
-    ASSERT(site.isEmpty() || !m_processMap.get(site) || m_processMap.get(site)->process().state() == WebProcessProxy::State::Terminated || m_processMap.get(site) == &process);
+    if (m_processMap.get(site) == &process)
+        return;
+    ASSERT(site.isEmpty() || !m_processMap.get(site) || m_processMap.get(site)->process().state() == WebProcessProxy::State::Terminated);
     m_processMap.set(site, process);
     Ref processProxy = process.process();
     for (Ref page : m_pages) {
         if (site == Site(URL(page->currentURL())))
             return;
+        if (!functor(page))
+            continue;
         auto& set = m_remotePages.ensure(page, [] {
             return HashSet<Ref<RemotePageProxy>> { };
         }).iterator->value;

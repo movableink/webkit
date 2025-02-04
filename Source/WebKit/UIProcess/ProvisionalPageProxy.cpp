@@ -253,29 +253,41 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
     if (websitePolicies)
         m_mainFrameWebsitePoliciesData = makeUnique<WebsitePoliciesData>(websitePolicies->data());
 
-    Ref protectedProcess = this->protectedProcess();
+    Ref process = this->process();
     if (page->preferences().siteIsolationEnabled()) {
-        RegistrableDomain navigationDomain(m_request.url());
-        if (auto existingRemotePageProxy = m_browsingContextGroup->takeRemotePageInProcessForProvisionalPage(page, protectedProcess)) {
+        if (RefPtr existingRemotePageProxy = m_browsingContextGroup->takeRemotePageInProcessForProvisionalPage(page, process)) {
             m_webPageID = existingRemotePageProxy->pageID();
             m_mainFrame = existingRemotePageProxy->page()->mainFrame();
             m_needsMainFrameObserver = false;
             m_messageReceiverRegistration.stopReceivingMessages();
             m_messageReceiverRegistration.transferMessageReceivingFrom(existingRemotePageProxy->messageReceiverRegistration(), *this);
-            send(Messages::WebPage::CreateProvisionalFrame(ProvisionalFrameCreationParameters {
-                std::nullopt,
-                m_mainFrame->effectiveSandboxFlags(),
-                m_mainFrame->scrollingMode(),
-            }, m_mainFrame->frameID()));
+            m_needsDidStartProvisionalLoad = false;
             m_needsCookieAccessAddedInNetworkProcess = true;
             registerWithInspectorController = false; // FIXME: <rdar://121240770> This is a hack. There seems to be a bug in our interaction with WebPageInspectorController.
+        } else {
+            m_browsingContextGroup->addFrameProcessAndInjectPageContextIf(m_frameProcess, [m_page = m_page](WebPageProxy& page) {
+                return m_page != &page;
+            });
         }
-        m_needsDidStartProvisionalLoad = false;
     }
 
-    protectedProcess->send(Messages::WebProcess::CreateWebPage(m_webPageID, page->creationParametersForProvisionalPage(process(), *m_drawingArea, WTFMove(websitePolicies), m_mainFrame->frameID())), 0);
+    auto creationParameters = page->creationParametersForProvisionalPage(process, *m_drawingArea, websitePolicies.copyRef(), m_mainFrame->frameID());
+    if (page->preferences().siteIsolationEnabled()) {
+        creationParameters.remotePageParameters = RemotePageParameters {
+            m_request.url(),
+            m_mainFrame->frameTreeCreationParameters(),
+            websitePolicies ? std::optional(websitePolicies->data()) : std::nullopt
+        };
+        creationParameters.provisionalFrameCreationParameters = ProvisionalFrameCreationParameters {
+            m_mainFrame->frameID(),
+            std::nullopt,
+            m_mainFrame->effectiveSandboxFlags(),
+            m_mainFrame->scrollingMode(),
+        };
+    }
+    process->send(Messages::WebProcess::CreateWebPage(m_webPageID, WTFMove(creationParameters)), 0);
     if (!page->preferences().siteIsolationEnabled())
-        protectedProcess->addVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
+        process->addVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
 
     if (page->isLayerTreeFrozenDueToSwipeAnimation())
         send(Messages::WebPage::SwipeAnimationDidStart());

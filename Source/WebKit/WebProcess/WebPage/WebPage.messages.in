@@ -186,7 +186,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
     LoadURLInFrame(URL url, String referrer, WebCore::FrameIdentifier frameID)
     LoadDataInFrame(std::span<const uint8_t> data, String MIMEType, String encodingName, URL baseURL, WebCore::FrameIdentifier frameID)
     LoadRequest(struct WebKit::LoadParameters loadParameters)
-    CreateProvisionalFrame(struct WebKit::ProvisionalFrameCreationParameters creationParameters, WebCore::FrameIdentifier frameID)
+    CreateProvisionalFrame(struct WebKit::ProvisionalFrameCreationParameters creationParameters)
     DestroyProvisionalFrame(WebCore::FrameIdentifier frameID);
     LoadDidCommitInAnotherProcess(WebCore::FrameIdentifier frameID, std::optional<WebCore::LayerHostingContextIdentifier> layerHostingContextIdentifier)
     LoadRequestWaitingForProcessLaunch(struct WebKit::LoadParameters loadParameters, URL resourceDirectoryURL, WebKit::WebPageProxyIdentifier pageID, bool checkAssumedReadAccessToResourceURL)
