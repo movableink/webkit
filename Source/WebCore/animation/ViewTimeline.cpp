@@ -270,9 +270,11 @@ void ViewTimeline::cacheCurrentTime()
             return scrollDirection->isVertical ? style.scrollPaddingBottom() : style.scrollPaddingRight();
         };
 
-        auto hasAutoStartInset = !m_insets.start;
+        auto hasAutoStartInset = !m_insets.start || m_insets.start->isAuto();
         auto insetStartLength = hasAutoStartInset ? scrollPadding(PaddingEdge::Start) : *m_insets.start;
         auto insetEndLength = m_insets.end.value_or(hasAutoStartInset ? scrollPadding(PaddingEdge::End) : insetStartLength);
+        if (insetEndLength.isAuto())
+            insetEndLength = scrollPadding(PaddingEdge::End);
         auto insetStart = floatValueForOffset(insetStartLength, scrollContainerSize);
         auto insetEnd = floatValueForOffset(insetEndLength, scrollContainerSize);
 
