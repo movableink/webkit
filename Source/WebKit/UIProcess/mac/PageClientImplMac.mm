@@ -660,7 +660,7 @@ bool PageClientImpl::showShareSheet(const ShareDataWithParsedURL& shareData, WTF
 
 void PageClientImpl::wheelEventWasNotHandledByWebCore(const NativeWebWheelEvent& event)
 {
-    if (auto gestureController = m_impl->gestureController())
+    if (RefPtr gestureController = m_impl->gestureController())
         gestureController->wheelEventWasNotHandledByWebCore(event.nativeEvent());
 }
 
@@ -841,7 +841,7 @@ void PageClientImpl::navigationGestureDidBegin()
     m_impl->dismissContentRelativeChildWindowsWithAnimation(true);
 
     if (auto webView = this->webView()) {
-        if (auto* navigationState = NavigationState::fromWebPage(*webView->_page))
+        if (RefPtr navigationState = NavigationState::fromWebPage(Ref { *webView->_page }))
             navigationState->navigationGestureDidBegin();
     }
 }
@@ -849,7 +849,7 @@ void PageClientImpl::navigationGestureDidBegin()
 void PageClientImpl::navigationGestureWillEnd(bool willNavigate, WebBackForwardListItem& item)
 {
     if (auto webView = this->webView()) {
-        if (auto* navigationState = NavigationState::fromWebPage(*webView->_page))
+        if (RefPtr navigationState = NavigationState::fromWebPage(Ref { *webView->_page }))
             navigationState->navigationGestureWillEnd(willNavigate, item);
     }
 }
@@ -857,7 +857,7 @@ void PageClientImpl::navigationGestureWillEnd(bool willNavigate, WebBackForwardL
 void PageClientImpl::navigationGestureDidEnd(bool willNavigate, WebBackForwardListItem& item)
 {
     if (auto webView = this->webView()) {
-        if (auto* navigationState = NavigationState::fromWebPage(*webView->_page))
+        if (RefPtr navigationState = NavigationState::fromWebPage(Ref { *webView->_page }))
             navigationState->navigationGestureDidEnd(willNavigate, item);
     }
 }
@@ -869,7 +869,7 @@ void PageClientImpl::navigationGestureDidEnd()
 void PageClientImpl::willRecordNavigationSnapshot(WebBackForwardListItem& item)
 {
     if (auto webView = this->webView()) {
-        if (auto* navigationState = NavigationState::fromWebPage(*webView->_page))
+        if (RefPtr navigationState = NavigationState::fromWebPage(Ref { *webView->_page }))
             navigationState->willRecordNavigationSnapshot(item);
     }
 }
@@ -877,26 +877,26 @@ void PageClientImpl::willRecordNavigationSnapshot(WebBackForwardListItem& item)
 void PageClientImpl::didRemoveNavigationGestureSnapshot()
 {
     if (auto webView = this->webView()) {
-        if (auto* navigationState = NavigationState::fromWebPage(*webView->_page))
-        navigationState->navigationGestureSnapshotWasRemoved();
+        if (RefPtr navigationState = NavigationState::fromWebPage(Ref { *webView->_page }))
+            navigationState->navigationGestureSnapshotWasRemoved();
     }
 }
 
 void PageClientImpl::didStartProvisionalLoadForMainFrame()
 {
-    if (auto gestureController = m_impl->gestureController())
+    if (RefPtr gestureController = m_impl->gestureController())
         gestureController->didStartProvisionalLoadForMainFrame();
 }
 
 void PageClientImpl::didFirstVisuallyNonEmptyLayoutForMainFrame()
 {
-    if (auto gestureController = m_impl->gestureController())
+    if (RefPtr gestureController = m_impl->gestureController())
         gestureController->didFirstVisuallyNonEmptyLayoutForMainFrame();
 }
 
 void PageClientImpl::didFinishNavigation(API::Navigation* navigation)
 {
-    if (auto gestureController = m_impl->gestureController())
+    if (RefPtr gestureController = m_impl->gestureController())
         gestureController->didFinishNavigation(navigation);
 
     NSAccessibilityPostNotification(NSAccessibilityUnignoredAncestor(m_view), kAXLoadCompleteNotification);
@@ -904,7 +904,7 @@ void PageClientImpl::didFinishNavigation(API::Navigation* navigation)
 
 void PageClientImpl::didFailNavigation(API::Navigation* navigation)
 {
-    if (auto gestureController = m_impl->gestureController())
+    if (RefPtr gestureController = m_impl->gestureController())
         gestureController->didFailNavigation(navigation);
 
     NSAccessibilityPostNotification(NSAccessibilityUnignoredAncestor(m_view), kAXLoadCompleteNotification);
@@ -912,7 +912,7 @@ void PageClientImpl::didFailNavigation(API::Navigation* navigation)
 
 void PageClientImpl::didSameDocumentNavigationForMainFrame(SameDocumentNavigationType type)
 {
-    if (auto gestureController = m_impl->gestureController())
+    if (RefPtr gestureController = m_impl->gestureController())
         gestureController->didSameDocumentNavigationForMainFrame(type);
 }
 

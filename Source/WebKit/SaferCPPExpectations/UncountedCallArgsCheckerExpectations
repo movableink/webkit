@@ -287,7 +287,6 @@ UIProcess/WebsiteData/WebsiteDataStore.cpp
 UIProcess/WebsiteData/WebsiteDataStoreClient.h
 UIProcess/mac/CorrectionPanel.mm
 UIProcess/mac/DisplayCaptureSessionManager.mm
-UIProcess/mac/PageClientImplMac.mm
 UIProcess/mac/ServicesController.mm
 UIProcess/mac/UserMediaPermissionRequestProxyMac.mm
 UIProcess/mac/WKFullScreenWindowController.mm

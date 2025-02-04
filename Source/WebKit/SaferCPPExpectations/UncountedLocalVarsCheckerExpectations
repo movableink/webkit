@@ -61,7 +61,6 @@ UIProcess/WebProcessCache.cpp
 UIProcess/WebsiteData/Cocoa/WebsiteDataStoreCocoa.mm
 UIProcess/WebsiteData/WebsiteDataStore.cpp
 UIProcess/mac/DisplayCaptureSessionManager.mm
-UIProcess/mac/PageClientImplMac.mm
 UIProcess/mac/WKImmediateActionController.mm
 UIProcess/mac/WebContextMenuProxyMac.mm
 UIProcess/mac/WebViewImpl.mm
