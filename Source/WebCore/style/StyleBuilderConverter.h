@@ -260,6 +260,36 @@ public:
     template<class ValueType> static const ValueType* requiredDowncast(BuilderState&, const CSSValue&);
     template<class ValueType> static std::optional<std::pair<const ValueType&, const ValueType&>> requiredPairDowncast(BuilderState&, const CSSValue&);
 
+    template<class ValueType> struct TypedListIterator {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = const ValueType&;
+        using difference_type = ptrdiff_t;
+        using pointer = const ValueType*;
+        using reference = const ValueType&;
+
+        TypedListIterator(CSSValueList::iterator iterator)
+            : iterator(iterator)
+        { }
+        TypedListIterator& operator++() { ++iterator; return *this; }
+        const ValueType& operator*() const { return downcast<ValueType>(*iterator); }
+        bool operator!=(const TypedListIterator& other) const { return iterator != other.iterator; }
+
+        CSSValueList::iterator iterator;
+    };
+    template<class ValueType> struct TypedList {
+        TypedList(const CSSValueContainingVector& list)
+            : list(list)
+        { }
+
+        unsigned size() const { return list->size(); }
+        const ValueType& item(unsigned index) const { return downcast<ValueType>(*list->item(index)); }
+        TypedListIterator<ValueType> begin() const { return list->begin(); }
+        TypedListIterator<ValueType> end() const { return list->end(); }
+
+        Ref<const CSSValueContainingVector> list;
+    };
+    template<class ListType, class ValueType, unsigned minimumLength = 1> static std::optional<TypedList<ValueType>> requiredListDowncast(BuilderState&, const CSSValue&);
+
 private:
     friend class BuilderCustom;
 
@@ -289,7 +319,7 @@ inline const ValueType* BuilderConverter::requiredDowncast(BuilderState& builder
 }
 
 template<class ValueType>
-std::optional<std::pair<const ValueType&, const ValueType&>> BuilderConverter::requiredPairDowncast(BuilderState& builderState, const CSSValue& value)
+inline std::optional<std::pair<const ValueType&, const ValueType&>> BuilderConverter::requiredPairDowncast(BuilderState& builderState, const CSSValue& value)
 {
     auto* pairValue = requiredDowncast<CSSValuePair>(builderState, value);
     if (UNLIKELY(!pairValue))
@@ -301,6 +331,23 @@ std::optional<std::pair<const ValueType&, const ValueType&>> BuilderConverter::r
     if (UNLIKELY(!secondValue))
         return { };
     return { { *firstValue, *secondValue } };
+}
+
+template<class ListType, class ValueType, unsigned minimumSize>
+inline auto BuilderConverter::requiredListDowncast(BuilderState& builderState, const CSSValue& value) -> std::optional<TypedList<ValueType>>
+{
+    auto* listValue = requiredDowncast<ListType>(builderState, value);
+    if (UNLIKELY(!listValue))
+        return { };
+    if (UNLIKELY(listValue->size() < minimumSize)) {
+        builderState.setCurrentPropertyInvalidAtComputedValueTime();
+        return { };
+    }
+    for (auto& value : *listValue) {
+        if (UNLIKELY(!requiredDowncast<ValueType>(builderState, value)))
+            return { };
+    }
+    return TypedList<ValueType> { *listValue };
 }
 
 inline WebCore::Length BuilderConverter::convertLength(BuilderState& builderState, const CSSValue& value)
@@ -718,14 +765,18 @@ inline static OptionSet<TextEmphasisPosition> valueToEmphasisPosition(const CSSP
     return RenderStyle::initialTextEmphasisPosition();
 }
 
-inline OptionSet<TextEmphasisPosition> BuilderConverter::convertTextEmphasisPosition(BuilderState&, const CSSValue& value)
+inline OptionSet<TextEmphasisPosition> BuilderConverter::convertTextEmphasisPosition(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value))
         return valueToEmphasisPosition(*primitiveValue);
 
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
     OptionSet<TextEmphasisPosition> position;
-    for (auto& currentValue : downcast<CSSValueList>(value))
-        position.add(valueToEmphasisPosition(downcast<CSSPrimitiveValue>(currentValue)));
+    for (auto& currentValue : *list)
+        position.add(valueToEmphasisPosition(currentValue));
     return position;
 }
 
@@ -896,7 +947,7 @@ inline int BuilderConverter::convertMarqueeSpeed(BuilderState& builderState, con
     return primitiveValue->resolveAsNumber<int>(conversionData);
 }
 
-inline RefPtr<QuotesData> BuilderConverter::convertQuotes(BuilderState&, const CSSValue& value)
+inline RefPtr<QuotesData> BuilderConverter::convertQuotes(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (primitiveValue->valueID() == CSSValueNone)
@@ -905,17 +956,19 @@ inline RefPtr<QuotesData> BuilderConverter::convertQuotes(BuilderState&, const C
         return nullptr;
     }
 
-    auto& list = downcast<CSSValueList>(value);
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
     Vector<std::pair<String, String>> quotes;
-    quotes.reserveInitialCapacity(list.length() / 2);
-    for (unsigned i = 0; i < list.length(); i += 2) {
-        const CSSValue* first = list.itemWithoutBoundsCheck(i);
-        // item() returns null if out of bounds so this is safe.
-        const CSSValue* second = list.item(i + 1);
-        if (!second)
+    quotes.reserveInitialCapacity(list->size() / 2);
+    for (unsigned i = 0; i < list->size(); i += 2) {
+        auto& first = list->item(i);
+        if (list->size() <= i + 1)
             break;
-        String startQuote = downcast<CSSPrimitiveValue>(*first).stringValue();
-        String endQuote = downcast<CSSPrimitiveValue>(*second).stringValue();
+        auto& second = list->item(i + 1);
+        String startQuote = first.stringValue();
+        String endQuote = second.stringValue();
         quotes.append(std::make_pair(startQuote, endQuote));
     }
     return QuotesData::create(quotes);
@@ -1124,14 +1177,17 @@ inline float BuilderConverter::convertTextStrokeWidth(BuilderState& builderState
     return width;
 }
 
-inline OptionSet<LineBoxContain> BuilderConverter::convertLineBoxContain(BuilderState&, const CSSValue& value)
+inline OptionSet<LineBoxContain> BuilderConverter::convertLineBoxContain(BuilderState& builderState, const CSSValue& value)
 {
     if (is<CSSPrimitiveValue>(value)) {
         ASSERT(value.valueID() == CSSValueNone);
         return { };
     }
 
-    return downcast<CSSLineBoxContainValue>(value).value();
+    auto lineBoxContainValue = requiredDowncast<CSSLineBoxContainValue>(builderState, value);
+    if (!lineBoxContainValue)
+        return { };
+    return lineBoxContainValue->value();
 }
 
 inline RefPtr<ShapeValue> BuilderConverter::convertShapeValue(BuilderState& builderState, const CSSValue& value)
@@ -1169,32 +1225,38 @@ inline RefPtr<ShapeValue> BuilderConverter::convertShapeValue(BuilderState& buil
     return nullptr;
 }
 
-inline ScrollSnapType BuilderConverter::convertScrollSnapType(BuilderState&, const CSSValue& value)
+inline ScrollSnapType BuilderConverter::convertScrollSnapType(BuilderState& builderState, const CSSValue& value)
 {
     ScrollSnapType type;
-    auto& values = downcast<CSSValueList>(value);
-    auto& firstValue = downcast<CSSPrimitiveValue>(*values.item(0));
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
+    auto& firstValue = list->item(0);
     if (firstValue.valueID() == CSSValueNone)
         return type;
 
     type.axis = fromCSSValue<ScrollSnapAxis>(firstValue);
-    if (values.length() == 2)
-        type.strictness = fromCSSValue<ScrollSnapStrictness>(*values.item(1));
+    if (list->size() == 2)
+        type.strictness = fromCSSValue<ScrollSnapStrictness>(list->item(1));
     else
         type.strictness = ScrollSnapStrictness::Proximity;
 
     return type;
 }
 
-inline ScrollSnapAlign BuilderConverter::convertScrollSnapAlign(BuilderState&, const CSSValue& value)
+inline ScrollSnapAlign BuilderConverter::convertScrollSnapAlign(BuilderState& builderState, const CSSValue& value)
 {
-    auto& values = downcast<CSSValueList>(value);
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
     ScrollSnapAlign alignment;
-    alignment.blockAlign = fromCSSValue<ScrollSnapAxisAlignType>(*values.item(0));
-    if (values.length() == 1)
+    alignment.blockAlign = fromCSSValue<ScrollSnapAxisAlignType>(list->item(0));
+    if (list->size() == 1)
         alignment.inlineAlign = alignment.blockAlign;
     else
-        alignment.inlineAlign = fromCSSValue<ScrollSnapAxisAlignType>(*values.item(1));
+        alignment.inlineAlign = fromCSSValue<ScrollSnapAxisAlignType>(list->item(1));
     return alignment;
 }
 
@@ -1271,21 +1333,15 @@ inline GridTrackSize BuilderConverter::createGridTrackSize(BuilderState& builder
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value))
         return GridTrackSize(createGridTrackBreadth(builderState, *primitiveValue));
 
-    auto* function = dynamicDowncast<CSSFunctionValue>(value);
+    auto function = requiredListDowncast<CSSFunctionValue, CSSPrimitiveValue>(builderState, value);
     if (!function)
-        return GridTrackSize(GridLength(0));
+        return { };
 
-    if (function->length() == 1) {
-        auto* primitiveValue = requiredDowncast<CSSPrimitiveValue>(builderState, *function->itemWithoutBoundsCheck(0));
-        if (!primitiveValue)
-            return { };
+    if (function->size() == 1)
+        return GridTrackSize(createGridTrackBreadth(builderState, function->item(0)), FitContentTrackSizing);
 
-        return GridTrackSize(createGridTrackBreadth(builderState, *primitiveValue), FitContentTrackSizing);
-    }
-
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(function->length() == 2);
-    GridLength minTrackBreadth(createGridTrackBreadth(builderState, downcast<CSSPrimitiveValue>(*function->itemWithoutBoundsCheck(0))));
-    GridLength maxTrackBreadth(createGridTrackBreadth(builderState, downcast<CSSPrimitiveValue>(*function->itemWithoutBoundsCheck(1))));
+    GridLength minTrackBreadth(createGridTrackBreadth(builderState, function->item(0)));
+    GridLength maxTrackBreadth(createGridTrackBreadth(builderState, function->item(1)));
     return GridTrackSize(minTrackBreadth, maxTrackBreadth);
 }
 
@@ -1322,7 +1378,10 @@ inline std::optional<GridTrackList> BuilderConverter::createGridTrackList(Builde
     };
 
     auto buildRepeatList = [&](const CSSValue& repeatValue, RepeatTrackList& repeatList) {
-        for (auto& currentValue : downcast<CSSValueContainingVector>(repeatValue)) {
+        auto vectorValue = requiredDowncast<CSSValueContainingVector>(builderState, repeatValue);
+        if (!vectorValue)
+            return;
+        for (auto& currentValue : *vectorValue) {
             if (auto* namesValue = dynamicDowncast<CSSGridLineNamesValue>(currentValue))
                 repeatList.append(Vector<String>(namesValue->names()));
             else {
@@ -1477,19 +1536,21 @@ inline GridPosition BuilderConverter::convertGridPosition(BuilderState& builderS
     return createGridPosition(builderState, value);
 }
 
-inline GridAutoFlow BuilderConverter::convertGridAutoFlow(BuilderState&, const CSSValue& value)
+inline GridAutoFlow BuilderConverter::convertGridAutoFlow(BuilderState& builderState, const CSSValue& value)
 {
     ASSERT(!is<CSSPrimitiveValue>(value) || downcast<CSSPrimitiveValue>(value).isValueID());
 
     auto* list = dynamicDowncast<CSSValueList>(value);
-    if (list && !list->length())
+    if (list && !list->size())
         return RenderStyle::initialGridAutoFlow();
 
-    auto& first = downcast<CSSPrimitiveValue>(list ? *(list->item(0)) : value);
-    auto* second = downcast<CSSPrimitiveValue>(list && list->length() == 2 ? list->item(1) : nullptr);
+    auto* first = requiredDowncast<CSSPrimitiveValue>(builderState, list ? *(list->item(0)) : value);
+    if (!first)
+        return { };
+    auto* second = dynamicDowncast<CSSPrimitiveValue>(list && list->size() == 2 ? list->item(1) : nullptr);
 
     GridAutoFlow autoFlow;
-    switch (first.valueID()) {
+    switch (first->valueID()) {
     case CSSValueRow:
         if (second && second->valueID() == CSSValueDense)
             autoFlow = AutoFlowRowDense;
@@ -1517,46 +1578,48 @@ inline GridAutoFlow BuilderConverter::convertGridAutoFlow(BuilderState&, const C
     return autoFlow;
 }
 
-inline Vector<StyleContentAlignmentData> BuilderConverter::convertContentAlignmentDataList(BuilderState& builder, const CSSValue& value)
+inline Vector<StyleContentAlignmentData> BuilderConverter::convertContentAlignmentDataList(BuilderState& builderState, const CSSValue& value)
 {
-    auto& list = downcast<CSSValueList>(value);
-    return WTF::map(list, [&](auto& value) {
-        return convertContentAlignmentData(builder, downcast<CSSContentDistributionValue>(value));
+    auto list = requiredListDowncast<CSSValueList, CSSContentDistributionValue>(builderState, value);
+    if (!list)
+        return { };
+
+    return WTF::map(*list, [&](auto& value) {
+        return convertContentAlignmentData(builderState, value);
     });
 }
 
-inline MasonryAutoFlow BuilderConverter::convertMasonryAutoFlow(BuilderState&, const CSSValue& value)
+inline MasonryAutoFlow BuilderConverter::convertMasonryAutoFlow(BuilderState& builderState, const CSSValue& value)
 {
-    auto& valueList = downcast<CSSValueList>(value);
-    ASSERT(valueList.size() == 1 || valueList.size() == 2);
-    if (!(valueList.size() == 1 || valueList.size() == 2))
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
+    if (!(list->size() == 1 || list->size() == 2))
         return RenderStyle::initialMasonryAutoFlow();
 
-    auto* firstValue = downcast<CSSPrimitiveValue>(valueList.item(0));
-    auto* secondValue = downcast<CSSPrimitiveValue>(valueList.length() == 2 ? valueList.item(1) : nullptr);
+    auto& firstValue = list->item(0);
+    auto* secondValue = list->size() == 2 ? &list->item(1) : nullptr;
     MasonryAutoFlow masonryAutoFlow;
-    if (valueList.size() == 2 && firstValue && secondValue) {
-        ASSERT(firstValue->valueID() == CSSValueID::CSSValuePack || firstValue->valueID() == CSSValueID::CSSValueNext);
+    if (secondValue) {
+        ASSERT(firstValue.valueID() == CSSValueID::CSSValuePack || firstValue.valueID() == CSSValueID::CSSValueNext);
         ASSERT(secondValue->valueID() == CSSValueID::CSSValueOrdered);
-        if (firstValue->valueID() == CSSValueID::CSSValuePack)
+        if (firstValue.valueID() == CSSValueID::CSSValuePack)
             masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::Ordered };
         else
             masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Next, MasonryAutoFlowPlacementOrder::Ordered };
 
-    } else if (valueList.size() == 1 && firstValue)  {
-        if (firstValue->valueID() == CSSValueID::CSSValuePack)
+    } else  {
+        if (firstValue.valueID() == CSSValueID::CSSValuePack)
             masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::DefiniteFirst };
-        else if (firstValue->valueID() == CSSValueID::CSSValueNext)
+        else if (firstValue.valueID() == CSSValueID::CSSValueNext)
             masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Next, MasonryAutoFlowPlacementOrder::DefiniteFirst };
-        else if (firstValue->valueID() == CSSValueID::CSSValueOrdered)
+        else if (firstValue.valueID() == CSSValueID::CSSValueOrdered)
             masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::Ordered };
         else {
             ASSERT_NOT_REACHED();
             return RenderStyle::initialMasonryAutoFlow();
         }
-    } else {
-        ASSERT_NOT_REACHED();
-        return RenderStyle::initialMasonryAutoFlow();
     }
     return masonryAutoFlow;
 }
@@ -1735,8 +1798,11 @@ inline SVGLengthValue BuilderConverter::convertSVGLengthValue(BuilderState& buil
 
 inline Vector<SVGLengthValue> BuilderConverter::convertSVGLengthVector(BuilderState& builderState, const CSSValue& value, ShouldConvertNumberToPxLength shouldConvertNumberToPxLength)
 {
-    auto& valueList = downcast<CSSValueList>(value);
-    return WTF::map(valueList, [&](auto& item) {
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
+    return WTF::map(*list, [&](auto& item) {
         return convertSVGLengthValue(builderState, item, shouldConvertNumberToPxLength);
     });
 }
@@ -1754,21 +1820,24 @@ inline Vector<SVGLengthValue> BuilderConverter::convertStrokeDashArray(BuilderSt
     return convertSVGLengthVector(builderState, value, ShouldConvertNumberToPxLength::Yes);
 }
 
-inline PaintOrder BuilderConverter::convertPaintOrder(BuilderState&, const CSSValue& value)
+inline PaintOrder BuilderConverter::convertPaintOrder(BuilderState& builderState, const CSSValue& value)
 {
     if (is<CSSPrimitiveValue>(value)) {
         ASSERT(value.valueID() == CSSValueNormal);
         return PaintOrder::Normal;
     }
 
-    auto& list = downcast<CSSValueList>(value);
-    switch (list[0].valueID()) {
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
+    switch (list->item(0).valueID()) {
     case CSSValueFill:
-        return list.length() > 1 ? PaintOrder::FillMarkers : PaintOrder::Fill;
+        return list->size() > 1 ? PaintOrder::FillMarkers : PaintOrder::Fill;
     case CSSValueStroke:
-        return list.length() > 1 ? PaintOrder::StrokeMarkers : PaintOrder::Stroke;
+        return list->size() > 1 ? PaintOrder::StrokeMarkers : PaintOrder::Stroke;
     case CSSValueMarkers:
-        return list.length() > 1 ? PaintOrder::MarkersStroke : PaintOrder::Markers;
+        return list->size() > 1 ? PaintOrder::MarkersStroke : PaintOrder::Markers;
     default:
         ASSERT_NOT_REACHED();
         return PaintOrder::Normal;
@@ -1983,18 +2052,18 @@ inline OffsetRotation BuilderConverter::convertOffsetRotate(BuilderState& builde
     return OffsetRotation(hasAuto, angleInDegrees);
 }
 
-inline Vector<Style::ScopedName> BuilderConverter::convertContainerName(BuilderState& state, const CSSValue& value)
+inline Vector<Style::ScopedName> BuilderConverter::convertContainerName(BuilderState& builderState, const CSSValue& value)
 {
     if (is<CSSPrimitiveValue>(value)) {
         ASSERT(value.valueID() == CSSValueNone);
         return { };
     }
-    auto* list = dynamicDowncast<CSSValueList>(value);
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
     if (!list)
         return { };
 
     return WTF::map(*list, [&](auto& item) {
-        return Style::ScopedName { AtomString { downcast<CSSPrimitiveValue>(item).stringValue() }, state.styleScopeOrdinal() };
+        return Style::ScopedName { AtomString { item.stringValue() }, builderState.styleScopeOrdinal() };
     });
 }
 
@@ -2043,7 +2112,7 @@ inline TextSpacingTrim BuilderConverter::convertTextSpacingTrim(BuilderState&, c
     return { };
 }
 
-inline TextAutospace BuilderConverter::convertTextAutospace(BuilderState&, const CSSValue& value)
+inline TextAutospace BuilderConverter::convertTextAutospace(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (primitiveValue->valueID() == CSSValueNoAutospace)
@@ -2055,8 +2124,12 @@ inline TextAutospace BuilderConverter::convertTextAutospace(BuilderState&, const
     }
 
     TextAutospace::Options options;
-    for (auto& item : downcast<CSSValueList>(value)) {
-        auto& value = downcast<CSSPrimitiveValue>(item);
+
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
+    for (auto& value : *list) {
         switch (value.valueID()) {
         case CSSValueIdeographAlpha:
             options.add(TextAutospace::Type::IdeographAlpha);
@@ -2079,7 +2152,7 @@ inline std::optional<WebCore::Length> BuilderConverter::convertBlockStepSize(Bui
     return convertLength(builderState, value);
 }
 
-inline OptionSet<Containment> BuilderConverter::convertContain(BuilderState&, const CSSValue& value)
+inline OptionSet<Containment> BuilderConverter::convertContain(BuilderState& builderState, const CSSValue& value)
 {
     if (is<CSSPrimitiveValue>(value)) {
         if (value.valueID() == CSSValueNone)
@@ -2090,8 +2163,12 @@ inline OptionSet<Containment> BuilderConverter::convertContain(BuilderState&, co
     }
 
     OptionSet<Containment> containment;
-    for (auto& item : downcast<CSSValueList>(value)) {
-        auto& value = downcast<CSSPrimitiveValue>(item);
+
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
+    for (auto& value : *list) {
         switch (value.valueID()) {
         case CSSValueSize:
             containment.add(Containment::Size);
@@ -2116,19 +2193,20 @@ inline OptionSet<Containment> BuilderConverter::convertContain(BuilderState&, co
     return containment;
 }
 
-inline Vector<Style::ScopedName> BuilderConverter::convertViewTransitionClass(BuilderState& state, const CSSValue& value)
+inline Vector<Style::ScopedName> BuilderConverter::convertViewTransitionClass(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (value.valueID() == CSSValueNone)
             return { };
-        return { Style::ScopedName { AtomString { primitiveValue->stringValue() }, state.styleScopeOrdinal() } };
+        return { Style::ScopedName { AtomString { primitiveValue->stringValue() }, builderState.styleScopeOrdinal() } };
     }
 
-    auto* list = dynamicDowncast<CSSValueList>(value);
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
     if (!list)
         return { };
+
     return WTF::map(*list, [&](auto& item) {
-        return Style::ScopedName { AtomString { downcast<CSSPrimitiveValue>(item).stringValue() }, state.styleScopeOrdinal() };
+        return Style::ScopedName { AtomString { item.stringValue() }, builderState.styleScopeOrdinal() };
     });
 }
 
@@ -2184,7 +2262,7 @@ inline RefPtr<WillChangeData> BuilderConverter::convertWillChange(BuilderState& 
     return willChange;
 }
 
-inline Vector<AtomString> BuilderConverter::convertScrollTimelineName(BuilderState&, const CSSValue& value)
+inline Vector<AtomString> BuilderConverter::convertScrollTimelineName(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (value.valueID() == CSSValueNone)
@@ -2192,43 +2270,47 @@ inline Vector<AtomString> BuilderConverter::convertScrollTimelineName(BuilderSta
         return { AtomString { primitiveValue->stringValue() } };
     }
 
-    auto* list = dynamicDowncast<CSSValueList>(value);
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
     if (!list)
         return { };
 
     return WTF::map(*list, [&](auto& item) {
-        return AtomString { downcast<CSSPrimitiveValue>(item).stringValue() };
+        return AtomString { item.stringValue() };
     });
 }
 
-inline Vector<ScrollAxis> BuilderConverter::convertScrollTimelineAxis(BuilderState&, const CSSValue& value)
+inline Vector<ScrollAxis> BuilderConverter::convertScrollTimelineAxis(BuilderState& builderState, const CSSValue& value)
 {
     if (is<CSSPrimitiveValue>(value))
         return { fromCSSValueID<ScrollAxis>(value.valueID()) };
 
-    return WTF::map(downcast<CSSValueList>(value), [&](auto& item) {
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!list)
+        return { };
+
+    return WTF::map(*list, [&](auto& item) {
         return fromCSSValueID<ScrollAxis>(item.valueID());
     });
 }
 
-inline Vector<ViewTimelineInsets> BuilderConverter::convertViewTimelineInset(BuilderState& state, const CSSValue& value)
+inline Vector<ViewTimelineInsets> BuilderConverter::convertViewTimelineInset(BuilderState& builderState, const CSSValue& value)
 {
     // While parsing, consumeViewTimelineInset() and consumeViewTimelineShorthand() yield a CSSValueList exclusively.
-    auto* list = dynamicDowncast<CSSValueList>(value);
+    auto list = requiredListDowncast<CSSValueList, CSSValue>(builderState, value);
     if (!list)
         return { };
 
     return WTF::map(*list, [&](auto& item) -> ViewTimelineInsets {
         // Each item is either a single value or a CSSValuePair.
         if (auto* pair = dynamicDowncast<CSSValuePair>(item))
-            return { convertLengthOrAuto(state, pair->first()), convertLengthOrAuto(state, pair->second()) };
+            return { convertLengthOrAuto(builderState, pair->first()), convertLengthOrAuto(builderState, pair->second()) };
         if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(item))
-            return { convertLengthOrAuto(state, *primitiveValue), std::nullopt };
+            return { convertLengthOrAuto(builderState, *primitiveValue), std::nullopt };
         return { };
     });
 }
 
-inline Vector<ScopedName> BuilderConverter::convertAnchorName(BuilderState& state, const CSSValue& value)
+inline Vector<ScopedName> BuilderConverter::convertAnchorName(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (value.valueID() == CSSValueNone)
@@ -2236,20 +2318,20 @@ inline Vector<ScopedName> BuilderConverter::convertAnchorName(BuilderState& stat
 
         ScopedName scopedName {
             .name = AtomString { primitiveValue->stringValue() },
-            .scopeOrdinal = state.styleScopeOrdinal()
+            .scopeOrdinal = builderState.styleScopeOrdinal()
         };
 
         return { scopedName };
     }
 
-    auto* list = dynamicDowncast<CSSValueList>(value);
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
     if (!list)
         return { };
 
     return WTF::map(*list, [&](auto& item) {
         return ScopedName {
-            .name = AtomString { downcast<CSSPrimitiveValue>(item).stringValue() },
-            .scopeOrdinal = state.styleScopeOrdinal()
+            .name = AtomString { item.stringValue() },
+            .scopeOrdinal = builderState.styleScopeOrdinal()
         };
     });
 }
@@ -2311,7 +2393,7 @@ inline RefPtr<TimingFunction> BuilderConverter::convertTimingFunction(BuilderSta
     return Style::createTimingFunction(value, builderState.cssToLengthConversionData());
 }
 
-inline TimelineScope BuilderConverter::convertTimelineScope(BuilderState&, const CSSValue& value)
+inline TimelineScope BuilderConverter::convertTimelineScope(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         switch (primitiveValue->valueID()) {
@@ -2324,12 +2406,12 @@ inline TimelineScope BuilderConverter::convertTimelineScope(BuilderState&, const
         }
     }
 
-    auto* list = dynamicDowncast<CSSValueList>(value);
+    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
     if (!list)
         return { };
 
     return { TimelineScope::Type::Ident, WTF::map(*list, [&](auto& item) {
-        return AtomString { downcast<CSSPrimitiveValue>(item).stringValue() };
+        return AtomString { item.stringValue() };
     }) };
 }
 
