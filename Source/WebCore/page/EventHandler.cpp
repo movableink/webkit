@@ -1721,10 +1721,10 @@ std::optional<Cursor> EventHandler::selectCursor(const HitTestResult& result, bo
             && !m_mouseDownMayStartDrag
 #endif
             && frame->selection().isCaretOrRange()
-            && !m_capturingMouseEventsElement)
+            && !m_capturingMouseEventsElement && renderer && renderer->style().usedUserSelect() != UserSelect::None)
                 return iBeam;
 
-        if ((editable || (renderer && renderer->isRenderText() && node->canStartSelection())) && !inResizer && !result.scrollbar())
+        if ((editable || (renderer && renderer->isRenderText() && node->canStartSelection() && renderer->style().usedUserSelect() != UserSelect::None)) && !inResizer && !result.scrollbar())
             return iBeam;
         return pointerCursor();
     }
