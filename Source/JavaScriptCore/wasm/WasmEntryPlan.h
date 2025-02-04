@@ -56,7 +56,7 @@ public:
 
     void prepare();
 
-    void compileFunctions(CompilationEffort);
+    void compileFunctions();
 
     Ref<ModuleInformation>&& takeModuleInformation()
     {

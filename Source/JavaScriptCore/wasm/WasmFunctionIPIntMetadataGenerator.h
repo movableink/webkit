@@ -80,6 +80,7 @@ public:
     }
 
     FunctionCodeIndex functionIndex() const { return m_functionIndex; }
+    bool hasTailCallSuccessors() const { return m_hasTailCallSuccessors; }
     const BitVector& tailCallSuccessors() const { return m_tailCallSuccessors; }
     bool tailCallClobbersInstance() const { return m_tailCallClobbersInstance ; }
     void setTailCall(uint32_t, bool);
@@ -113,6 +114,7 @@ private:
     void addReturnData(const FunctionSignature&, const CallInformation&);
 
     FunctionCodeIndex m_functionIndex;
+    bool m_hasTailCallSuccessors { false };
     bool m_tailCallClobbersInstance { false };
     FixedBitVector m_callees;
     BitVector m_tailCallSuccessors;

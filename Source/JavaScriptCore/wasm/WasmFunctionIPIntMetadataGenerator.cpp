@@ -49,6 +49,7 @@ unsigned FunctionIPIntMetadataGenerator::addSignature(const TypeDefinition& sign
 
 void FunctionIPIntMetadataGenerator::setTailCall(uint32_t functionIndex, bool isImportedFunctionFromFunctionIndexSpace)
 {
+    m_hasTailCallSuccessors = true;
     m_tailCallSuccessors.set(functionIndex);
     if (isImportedFunctionFromFunctionIndexSpace)
         setTailCallClobbersInstance();

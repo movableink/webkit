@@ -84,7 +84,7 @@ bool BBQPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffe
     return false;
 }
 
-void BBQPlan::work(CompilationEffort)
+void BBQPlan::work()
 {
     ASSERT(m_calleeGroup->runnable());
     CompilationContext context;

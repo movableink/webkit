@@ -114,10 +114,11 @@ void IPIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     }
 
     if (Options::useWasmTailCalls()) {
-        Locker locker { m_lock };
-
-        for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
-            addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+        if (parseAndCompileResult->get()->hasTailCallSuccessors()) {
+            Locker locker { m_lock };
+            for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
+                addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+        }
 
         if (parseAndCompileResult->get()->tailCallClobbersInstance())
             m_moduleInformation->addClobberingTailCall(m_moduleInformation->toSpaceIndex(parseAndCompileResult->get()->functionIndex()));
@@ -239,11 +240,11 @@ void IPIntPlan::didFailInStreaming(String&& message)
         fail(WTFMove(message));
 }
 
-void IPIntPlan::work(CompilationEffort effort)
+void IPIntPlan::work()
 {
     switch (m_state) {
     case State::Prepared:
-        compileFunctions(effort);
+        compileFunctions();
         break;
     case State::Compiled:
         break;

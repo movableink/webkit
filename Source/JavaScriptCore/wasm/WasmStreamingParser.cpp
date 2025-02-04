@@ -178,8 +178,10 @@ auto StreamingParser::parseFunctionPayload(Vector<uint8_t>&& data) -> State
     if (!m_client.didReceiveFunctionData(FunctionCodeIndex(m_functionIndex), function))
         return State::FatalError;
     ++m_functionIndex;
+    m_totalFunctionSize += m_functionSize;
 
     if (m_functionIndex == m_functionCount) {
+        m_info->setTotalFunctionSize(m_totalFunctionSize);
         WASM_PARSER_FAIL_IF((m_codeOffset + m_sectionLength) != (m_offset + m_functionSize), "parsing ended before the end of "_s, m_section, " section"_s);
         if (!m_client.didReceiveSectionData(m_section))
             return State::FatalError;

@@ -91,7 +91,7 @@ void OSREntryPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& link
     }
 }
 
-void OSREntryPlan::work(CompilationEffort)
+void OSREntryPlan::work()
 {
     ASSERT(m_calleeGroup->runnable());
     ASSERT(m_calleeGroup.ptr() == m_module->calleeGroupFor(mode()));

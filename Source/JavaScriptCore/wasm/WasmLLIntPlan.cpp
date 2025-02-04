@@ -116,10 +116,11 @@ void LLIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     }
 
     if (Options::useWasmTailCalls()) {
-        Locker locker { m_lock };
-
-        for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
-            addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+        if (parseAndCompileResult->get()->hasTailCallSuccessors()) {
+            Locker locker { m_lock };
+            for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
+                addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+        }
 
         if (parseAndCompileResult->get()->tailCallClobbersInstance()) {
             ASSERT(functionIndexSpace == m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex());
@@ -242,11 +243,11 @@ void LLIntPlan::didFailInStreaming(String&& message)
         fail(WTFMove(message));
 }
 
-void LLIntPlan::work(CompilationEffort effort)
+void LLIntPlan::work()
 {
     switch (m_state) {
     case State::Prepared:
-        compileFunctions(effort);
+        compileFunctions();
         break;
     case State::Compiled:
         break;

@@ -120,7 +120,7 @@ void OMGPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffe
     }
 }
 
-void OMGPlan::work(CompilationEffort)
+void OMGPlan::work()
 {
     ASSERT(m_calleeGroup->runnable());
     ASSERT(m_calleeGroup.ptr() == m_module->calleeGroupFor(mode()));
