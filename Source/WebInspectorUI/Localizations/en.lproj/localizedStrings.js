@@ -205,7 +205,6 @@ localizedStrings["Anonymous Style Sheets"] = "Anonymous Style Sheets";
 /* Header for section with appearance user preferences. */
 localizedStrings["Appearance @ User Preferences Overrides"] = "Appearance";
 localizedStrings["Appearance:"] = "Appearance:";
-localizedStrings["Application Cache"] = "Application Cache";
 /* Approximate count of events */
 localizedStrings["Approximate Number"] = "~%s";
 localizedStrings["Area"] = "Area";
@@ -816,7 +815,6 @@ localizedStrings["Fragment"] = "Fragment";
 localizedStrings["Fragment Shader"] = "Fragment Shader";
 localizedStrings["Frame %d"] = "Frame %d";
 localizedStrings["Frame %d \u2014 %s"] = "Frame %d \u2014 %s";
-localizedStrings["Frame URL"] = "Frame URL";
 localizedStrings["Frames"] = "Frames";
 localizedStrings["Frames %d \u2013 %d"] = "Frames %d \u2013 %d";
 /* Title for list of HTML subframe JavaScript execution contexts */
@@ -1048,7 +1046,6 @@ localizedStrings["MIME Type:"] = "MIME Type:";
 localizedStrings["MSE Logging:"] = "MSE Logging:";
 localizedStrings["Main Thread"] = "Main Thread";
 localizedStrings["Main: %s"] = "Main: %s";
-localizedStrings["Manifest URL"] = "Manifest URL";
 /* Navigation item that changes the local override to fetch its content from a directory on disk. */
 localizedStrings["Map to Directory @ Resource Preview"] = "Map to Directory";
 /* Navigation item that changes the local override to fetch its content from a file on disk. */
@@ -1111,7 +1108,6 @@ localizedStrings["Network:"] = "Network:";
 localizedStrings["Next Sibling"] = "Next Sibling";
 localizedStrings["No"] = "No";
 localizedStrings["No Accessibility Information"] = "No Accessibility Information";
-localizedStrings["No Application Cache information available"] = "No Application Cache information available";
 localizedStrings["No Associated Data"] = "No Associated Data";
 localizedStrings["No Attributes"] = "No Attributes";
 localizedStrings["No Box Model Information"] = "No Box Model Information";
@@ -1206,7 +1202,6 @@ localizedStrings["On @ Switch State"] = "On";
 /* Label for a preference that is turned on. */
 localizedStrings["On @ User Preferences Overrides"] = "On";
 localizedStrings["Once"] = "Once";
-localizedStrings["Online"] = "Online";
 localizedStrings["Only show resources with issues"] = "Only show resources with issues";
 localizedStrings["Only show visual actions"] = "Only show visual actions";
 localizedStrings["Open"] = "Open";

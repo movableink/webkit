@@ -49,18 +49,6 @@ InspectorBackend.registerEvent("Animation.trackingComplete", null, ["timestamp"]
 InspectorBackend.registerAnimationDispatcher = InspectorBackend.registerDispatcher.bind(InspectorBackend, "Animation");
 InspectorBackend.activateDomain("Animation", ["page", "web-page"]);
 
-// ApplicationCache
-InspectorBackend.registerDomain("ApplicationCache", ["page"]);
-InspectorBackend.registerCommand("ApplicationCache.getFramesWithManifests", null, [], ["frameIds"]);
-InspectorBackend.registerCommand("ApplicationCache.enable", null, [], []);
-InspectorBackend.registerCommand("ApplicationCache.disable", null, [], []);
-InspectorBackend.registerCommand("ApplicationCache.getManifestForFrame", null, [{"name": "frameId", "type": "string"}], ["manifestURL"]);
-InspectorBackend.registerCommand("ApplicationCache.getApplicationCacheForFrame", null, [{"name": "frameId", "type": "string"}], ["applicationCache"]);
-InspectorBackend.registerEvent("ApplicationCache.applicationCacheStatusUpdated", null, ["frameId", "manifestURL", "status"]);
-InspectorBackend.registerEvent("ApplicationCache.networkStateUpdated", null, ["isNowOnline"]);
-InspectorBackend.registerApplicationCacheDispatcher = InspectorBackend.registerDispatcher.bind(InspectorBackend, "ApplicationCache");
-InspectorBackend.activateDomain("ApplicationCache", ["page", "web-page"]);
-
 // Audit
 InspectorBackend.registerDomain("Audit", ["itml", "javascript", "page", "service-worker", "worker"]);
 InspectorBackend.registerVersion("Audit", 3);
@@ -151,7 +139,7 @@ InspectorBackend.activateDomain("Canvas", ["page", "web-page"]);
 
 // Console
 InspectorBackend.registerDomain("Console", ["itml", "javascript", "page", "service-worker", "worker"]);
-InspectorBackend.registerEnum("Console.ChannelSource", {XML: "xml", JavaScript: "javascript", Network: "network", ConsoleAPI: "console-api", Storage: "storage", Appcache: "appcache", Rendering: "rendering", CSS: "css", Security: "security", ContentBlocker: "content-blocker", Media: "media", MediaSource: "mediasource", WebRTC: "webrtc", ITPDebug: "itp-debug", AdClickAttribution: "ad-click-attribution", Other: "other"});
+InspectorBackend.registerEnum("Console.ChannelSource", {XML: "xml", JavaScript: "javascript", Network: "network", ConsoleAPI: "console-api", Storage: "storage", Rendering: "rendering", CSS: "css", Security: "security", ContentBlocker: "content-blocker", Media: "media", MediaSource: "mediasource", WebRTC: "webrtc", ITPDebug: "itp-debug", AdClickAttribution: "ad-click-attribution", Other: "other"});
 InspectorBackend.registerEnum("Console.ChannelLevel", {Off: "off", Basic: "basic", Verbose: "verbose"});
 InspectorBackend.registerEnum("Console.ConsoleMessageLevel", {Log: "log", Info: "info", Warning: "warning", Error: "error", Debug: "debug"});
 InspectorBackend.registerEnum("Console.ConsoleMessageType", {Log: "log", Dir: "dir", DirXML: "dirxml", Table: "table", Trace: "trace", Clear: "clear", StartGroup: "startGroup", StartGroupCollapsed: "startGroupCollapsed", EndGroup: "endGroup", Assert: "assert", Timing: "timing", Profile: "profile", ProfileEnd: "profileEnd", Image: "image"});

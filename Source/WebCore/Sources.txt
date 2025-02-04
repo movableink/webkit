@@ -1861,7 +1861,6 @@ inspector/WebInjectedScriptManager.cpp
 inspector/WorkerInspectorController.cpp
 inspector/WorkerDebugger.cpp
 inspector/agents/InspectorAnimationAgent.cpp
-inspector/agents/InspectorApplicationCacheAgent.cpp
 inspector/agents/InspectorCPUProfilerAgent.cpp
 inspector/agents/InspectorCSSAgent.cpp
 inspector/agents/InspectorCanvasAgent.cpp

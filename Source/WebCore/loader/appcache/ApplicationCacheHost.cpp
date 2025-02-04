@@ -35,7 +35,6 @@
 #include "EventNames.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
-#include "InspectorInstrumentation.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
@@ -301,9 +300,6 @@ void ApplicationCacheHost::setDOMApplicationCache(DOMApplicationCache* domApplic
 
 void ApplicationCacheHost::notifyDOMApplicationCache(const AtomString& eventType, int total, int done)
 {
-    if (eventType != eventNames().progressEvent)
-        InspectorInstrumentation::updateApplicationCacheStatus(m_documentLoader->frame());
-
     if (m_defersEvents) {
         // Event dispatching is deferred until document.onload has fired.
         m_deferredEvents.append({ eventType, total, done });
@@ -534,7 +530,6 @@ bool ApplicationCacheHost::swapCache()
     
     ASSERT(group == newestCache->group());
     setApplicationCache(newestCache);
-    InspectorInstrumentation::updateApplicationCacheStatus(m_documentLoader->frame());
     return true;
 }
 

@@ -49,26 +49,6 @@ InspectorBackend.registerEvent("Animation.trackingComplete", null, ["timestamp"]
 InspectorBackend.registerAnimationDispatcher = InspectorBackend.registerDispatcher.bind(InspectorBackend, "Animation");
 InspectorBackend.activateDomain("Animation", ["page", "web-page"]);
 
-// ApplicationCache
-InspectorBackend.registerDomain("ApplicationCache", ["page"]);
-InspectorBackend.registerCommand("ApplicationCache.getFramesWithManifests", null, [], ["frameIds"]);
-InspectorBackend.registerCommand("ApplicationCache.enable", null, [], []);
-InspectorBackend.registerCommand("ApplicationCache.disable", null, [], []);
-InspectorBackend.registerCommand("ApplicationCache.getManifestForFrame", null, [{"name": "frameId", "type": "string"}], ["manifestURL"]);
-InspectorBackend.registerCommand("ApplicationCache.getApplicationCacheForFrame", null, [{"name": "frameId", "type": "string"}], ["applicationCache"]);
-InspectorBackend.registerEvent("ApplicationCache.applicationCacheStatusUpdated", null, ["frameId", "manifestURL", "status"]);
-InspectorBackend.registerEvent("ApplicationCache.networkStateUpdated", null, ["isNowOnline"]);
-InspectorBackend.registerApplicationCacheDispatcher = InspectorBackend.registerDispatcher.bind(InspectorBackend, "ApplicationCache");
-InspectorBackend.activateDomain("ApplicationCache", ["page", "web-page"]);
-
-// Audit
-InspectorBackend.registerDomain("Audit", ["itml", "javascript", "page", "service-worker", "worker"]);
-InspectorBackend.registerVersion("Audit", 4);
-InspectorBackend.registerCommand("Audit.setup", null, [{"name": "contextId", "type": "number", "optional": true}], []);
-InspectorBackend.registerCommand("Audit.run", null, [{"name": "test", "type": "string"}, {"name": "contextId", "type": "number", "optional": true}], ["result", "wasThrown"]);
-InspectorBackend.registerCommand("Audit.teardown", null, [], []);
-InspectorBackend.activateDomain("Audit", ["itml", "javascript", "page", "service-worker", "web-page"]);
-
 // Browser
 InspectorBackend.registerDomain("Browser", ["web-page"]);
 InspectorBackend.registerCommand("Browser.enable", null, [], []);
@@ -160,7 +140,7 @@ InspectorBackend.activateDomain("Canvas", ["page", "web-page"]);
 
 // Console
 InspectorBackend.registerDomain("Console", ["itml", "javascript", "page", "service-worker", "worker"]);
-InspectorBackend.registerEnum("Console.ChannelSource", {XML: "xml", JavaScript: "javascript", Network: "network", ConsoleAPI: "console-api", Storage: "storage", Appcache: "appcache", Rendering: "rendering", CSS: "css", Security: "security", ContentBlocker: "content-blocker", Media: "media", MediaSource: "mediasource", WebRTC: "webrtc", ITPDebug: "itp-debug", PrivateClickMeasurement: "private-click-measurement", PaymentRequest: "payment-request", Other: "other"});
+InspectorBackend.registerEnum("Console.ChannelSource", {XML: "xml", JavaScript: "javascript", Network: "network", ConsoleAPI: "console-api", Storage: "storage", Rendering: "rendering", CSS: "css", Security: "security", ContentBlocker: "content-blocker", Media: "media", MediaSource: "mediasource", WebRTC: "webrtc", ITPDebug: "itp-debug", PrivateClickMeasurement: "private-click-measurement", PaymentRequest: "payment-request", Other: "other"});
 InspectorBackend.registerEnum("Console.ChannelLevel", {Off: "off", Basic: "basic", Verbose: "verbose"});
 InspectorBackend.registerEnum("Console.ClearReason", {ConsoleAPI: "console-api", MainFrameNavigation: "main-frame-navigation"});
 InspectorBackend.registerEnum("Console.ConsoleMessageLevel", {Log: "log", Info: "info", Warning: "warning", Error: "error", Debug: "debug"});

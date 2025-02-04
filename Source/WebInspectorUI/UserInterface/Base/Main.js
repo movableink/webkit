@@ -24,7 +24,6 @@
  */
 
 WI.ContentViewCookieType = {
-    ApplicationCache: "application-cache",
     CookieStorage: "cookie-storage",
     Database: "database",
     DatabaseTable: "database-table",
@@ -63,8 +62,6 @@ WI.loaded = function()
     // Register observers for events from the InspectorBackend.
     if (InspectorBackend.registerAnimationDispatcher)
         InspectorBackend.registerAnimationDispatcher(WI.AnimationObserver);
-    if (InspectorBackend.registerApplicationCacheDispatcher)
-        InspectorBackend.registerApplicationCacheDispatcher(WI.ApplicationCacheObserver);
     if (InspectorBackend.registerBrowserDispatcher)
         InspectorBackend.registerBrowserDispatcher(WI.BrowserObserver);
     if (InspectorBackend.registerCPUProfilerDispatcher)
@@ -128,7 +125,6 @@ WI.loaded = function()
         WI.runtimeManager = new WI.RuntimeManager,
         WI.heapManager = new WI.HeapManager,
         WI.memoryManager = new WI.MemoryManager,
-        WI.applicationCacheManager = new WI.ApplicationCacheManager,
         WI.timelineManager = new WI.TimelineManager,
         WI.auditManager = new WI.AuditManager,
         WI.debuggerManager = new WI.DebuggerManager,
@@ -1413,8 +1409,7 @@ WI.tabContentViewClassForRepresentedObject = function(representedObject)
 
     if (representedObject instanceof WI.DOMStorageObject || representedObject instanceof WI.CookieStorageObject ||
         representedObject instanceof WI.DatabaseTableObject || representedObject instanceof WI.DatabaseObject ||
-        representedObject instanceof WI.ApplicationCacheFrame || representedObject instanceof WI.IndexedDatabaseObjectStore ||
-        representedObject instanceof WI.IndexedDatabase || representedObject instanceof WI.IndexedDatabaseObjectStoreIndex)
+        representedObject instanceof WI.IndexedDatabaseObjectStore || representedObject instanceof WI.IndexedDatabase || representedObject instanceof WI.IndexedDatabaseObjectStoreIndex)
         return WI.StorageTabContentView;
 
     if (representedObject instanceof WI.AuditTestCase || representedObject instanceof WI.AuditTestGroup

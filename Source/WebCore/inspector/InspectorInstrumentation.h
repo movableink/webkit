@@ -321,9 +321,6 @@ public:
     static void didCreateWebAnimation(WebAnimation&);
     static void willDestroyWebAnimation(WebAnimation&);
 
-    static void networkStateChanged(Page&);
-    static void updateApplicationCacheStatus(LocalFrame*);
-
     static void layerTreeDidChange(Page*);
     static void renderLayerDestroyed(Page*, const RenderLayer&);
 
@@ -509,9 +506,6 @@ private:
 #if ENABLE(RESOURCE_USAGE)
     static void didHandleMemoryPressureImpl(InstrumentingAgents&, Critical);
 #endif
-
-    static void networkStateChangedImpl(InstrumentingAgents&);
-    static void updateApplicationCacheStatusImpl(InstrumentingAgents&, LocalFrame&);
 
     static void didChangeCSSCanvasClientNodesImpl(InstrumentingAgents&, CanvasBase&);
     static void didCreateCanvasRenderingContextImpl(InstrumentingAgents&, CanvasRenderingContext&);
@@ -1575,19 +1569,6 @@ inline void InspectorInstrumentation::willDestroyWebAnimation(WebAnimation& anim
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(animation.scriptExecutionContext()))
         willDestroyWebAnimationImpl(*agents, animation);
-}
-
-inline void InspectorInstrumentation::networkStateChanged(Page& page)
-{
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    networkStateChangedImpl(instrumentingAgents(page));
-}
-
-inline void InspectorInstrumentation::updateApplicationCacheStatus(LocalFrame* frame)
-{
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        updateApplicationCacheStatusImpl(*agents, *frame);
 }
 
 inline void InspectorInstrumentation::addMessageToConsole(Page& page, std::unique_ptr<Inspector::ConsoleMessage> message)

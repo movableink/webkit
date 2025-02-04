@@ -489,7 +489,6 @@ inspector/WebInjectedScriptHost.cpp
 inspector/WebInjectedScriptManager.cpp
 inspector/WorkerInspectorController.cpp
 inspector/agents/InspectorAnimationAgent.cpp
-inspector/agents/InspectorApplicationCacheAgent.cpp
 inspector/agents/InspectorCSSAgent.cpp
 inspector/agents/InspectorCanvasAgent.cpp
 inspector/agents/InspectorDOMAgent.cpp

@@ -727,11 +727,6 @@ WI.NativePrototypeFunctionParameters = {
         __proto__: null,
     },
 
-    DOMApplicationCache: {
-        /* EventTarget */
-        __proto__: null,
-    },
-
     DOMImplementation: {
         createCSSStyleSheet: "[title], [media]",
         createDocument: "[namespaceURI], [qualifiedName], [doctype]",

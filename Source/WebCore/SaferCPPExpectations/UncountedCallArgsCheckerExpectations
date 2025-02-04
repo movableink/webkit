@@ -891,7 +891,6 @@ inspector/WorkerDebugger.cpp
 inspector/WorkerInspectorController.cpp
 inspector/WorkerToPageFrontendChannel.h
 inspector/agents/InspectorAnimationAgent.cpp
-inspector/agents/InspectorApplicationCacheAgent.cpp
 inspector/agents/InspectorCPUProfilerAgent.cpp
 inspector/agents/InspectorCSSAgent.cpp
 inspector/agents/InspectorCanvasAgent.cpp

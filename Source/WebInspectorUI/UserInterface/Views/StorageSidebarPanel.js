@@ -38,7 +38,6 @@ WI.StorageSidebarPanel = class StorageSidebarPanel extends WI.NavigationSidebarP
         scopeBarItems.push(new WI.ScopeBarItem(scopeItemPrefix + "type-all", WI.UIString("All Storage"), {exclusive: true}));
 
         var storageTypes = [
-            {identifier: "application-cache", title: WI.UIString("Application Cache"), classes: [WI.ApplicationCacheFrameTreeElement, WI.ApplicationCacheManifestTreeElement]},
             {identifier: "cookies", title: WI.UIString("Cookies"), classes: [WI.CookieStorageTreeElement]},
             {identifier: "database", title: WI.UIString("Databases"), classes: [WI.DatabaseHostTreeElement, WI.DatabaseTableTreeElement, WI.DatabaseTreeElement]},
             {identifier: "indexed-database", title: WI.UIString("Indexed Databases"), classes: [WI.IndexedDatabaseHostTreeElement, WI.IndexedDatabaseObjectStoreTreeElement, WI.IndexedDatabaseTreeElement]},
@@ -70,9 +69,6 @@ WI.StorageSidebarPanel = class StorageSidebarPanel extends WI.NavigationSidebarP
 
         this._cookieStorageRootTreeElement = null;
 
-        this._applicationCacheRootTreeElement = null;
-        this._applicationCacheURLTreeElementMap = new Map;
-
         WI.domStorageManager.addEventListener(WI.DOMStorageManager.Event.CookieStorageObjectWasAdded, this._cookieStorageObjectWasAdded, this);
         WI.domStorageManager.addEventListener(WI.DOMStorageManager.Event.DOMStorageObjectWasAdded, this._domStorageObjectWasAdded, this);
         WI.domStorageManager.addEventListener(WI.DOMStorageManager.Event.DOMStorageObjectWasInspected, this._domStorageObjectWasInspected, this);
@@ -82,9 +78,6 @@ WI.StorageSidebarPanel = class StorageSidebarPanel extends WI.NavigationSidebarP
         WI.databaseManager.addEventListener(WI.DatabaseManager.Event.Cleared, this._databaseCleared, this);
         WI.indexedDBManager.addEventListener(WI.IndexedDBManager.Event.IndexedDatabaseWasAdded, this._indexedDatabaseWasAdded, this);
         WI.indexedDBManager.addEventListener(WI.IndexedDBManager.Event.Cleared, this._indexedDatabaseCleared, this);
-        WI.applicationCacheManager.addEventListener(WI.ApplicationCacheManager.Event.FrameManifestAdded, this._frameManifestAdded, this);
-        WI.applicationCacheManager.addEventListener(WI.ApplicationCacheManager.Event.FrameManifestRemoved, this._frameManifestRemoved, this);
-        WI.applicationCacheManager.addEventListener(WI.ApplicationCacheManager.Event.Cleared, this._applicationCacheCleared, this);
 
         this.contentTreeOutline.addEventListener(WI.TreeOutline.Event.SelectionDidChange, this._treeSelectionDidChange, this);
 
@@ -99,9 +92,6 @@ WI.StorageSidebarPanel = class StorageSidebarPanel extends WI.NavigationSidebarP
 
         for (var indexedDatabase of WI.indexedDBManager.indexedDatabases)
             this._addIndexedDatabase(indexedDatabase);
-
-        for (var applicationCacheObject of WI.applicationCacheManager.applicationCacheObjects)
-            this._addFrameManifest(applicationCacheObject);
     }
 
     // Public
@@ -129,9 +119,6 @@ WI.StorageSidebarPanel = class StorageSidebarPanel extends WI.NavigationSidebarP
         WI.databaseManager.removeEventListener(WI.DatabaseManager.Event.Cleared, this._databaseCleared, this);
         WI.indexedDBManager.removeEventListener(WI.IndexedDBManager.Event.IndexedDatabaseWasAdded, this._indexedDatabaseWasAdded, this);
         WI.indexedDBManager.removeEventListener(WI.IndexedDBManager.Event.Cleared, this._indexedDatabaseCleared, this);
-        WI.applicationCacheManager.removeEventListener(WI.ApplicationCacheManager.Event.FrameManifestAdded, this._frameManifestAdded, this);
-        WI.applicationCacheManager.removeEventListener(WI.ApplicationCacheManager.Event.FrameManifestRemoved, this._frameManifestRemoved, this);
-        WI.applicationCacheManager.removeEventListener(WI.ApplicationCacheManager.Event.Cleared, this._applicationCacheCleared, this);
     }
 
     // Protected
@@ -193,11 +180,11 @@ WI.StorageSidebarPanel = class StorageSidebarPanel extends WI.NavigationSidebarP
             return;
 
         if (treeElement instanceof WI.FolderTreeElement || treeElement instanceof WI.DatabaseHostTreeElement ||
-            treeElement instanceof WI.IndexedDatabaseHostTreeElement || treeElement instanceof WI.ApplicationCacheManifestTreeElement)
+            treeElement instanceof WI.IndexedDatabaseHostTreeElement)
             return;
 
         if (treeElement instanceof WI.StorageTreeElement || treeElement instanceof WI.DatabaseTableTreeElement ||
-            treeElement instanceof WI.DatabaseTreeElement || treeElement instanceof WI.ApplicationCacheFrameTreeElement ||
+            treeElement instanceof WI.DatabaseTreeElement ||
             treeElement instanceof WI.IndexedDatabaseTreeElement || treeElement instanceof WI.IndexedDatabaseObjectStoreTreeElement || treeElement instanceof WI.IndexedDatabaseObjectStoreIndexTreeElement) {
             WI.showRepresentedObject(treeElement.representedObject);
             return;
@@ -288,33 +275,6 @@ WI.StorageSidebarPanel = class StorageSidebarPanel extends WI.NavigationSidebarP
         this._cookieStorageRootTreeElement = this._addStorageChild(cookieElement, this._cookieStorageRootTreeElement, WI.UIString("Cookies"), "cookies");
     }
 
-    _frameManifestAdded(event)
-    {
-        this._addFrameManifest(event.data.frameManifest);
-    }
-
-    _addFrameManifest(frameManifest)
-    {
-        console.assert(frameManifest instanceof WI.ApplicationCacheFrame);
-
-        let manifest = frameManifest.manifest;
-        let manifestURL = manifest.manifestURL;
-        let applicationCacheManifestElement = this._applicationCacheURLTreeElementMap.get(manifestURL);
-        if (!applicationCacheManifestElement) {
-            applicationCacheManifestElement = new WI.ApplicationCacheManifestTreeElement(manifest);
-            this._applicationCacheURLTreeElementMap.set(manifestURL, applicationCacheManifestElement);
-            this._applicationCacheRootTreeElement = this._addStorageChild(applicationCacheManifestElement, this._applicationCacheRootTreeElement, WI.UIString("Application Cache"), "application-cache");
-        }
-
-        let frameCacheElement = new WI.ApplicationCacheFrameTreeElement(frameManifest);
-        applicationCacheManifestElement.appendChild(frameCacheElement);
-    }
-
-    _frameManifestRemoved(event)
-    {
-         // FIXME: Implement this.
-    }
-
     _compareTreeElements(a, b)
     {
         console.assert(a.mainTitle);
@@ -384,17 +344,6 @@ WI.StorageSidebarPanel = class StorageSidebarPanel extends WI.NavigationSidebarP
         this._localStorageRootTreeElement = null;
         this._sessionStorageRootTreeElement = null;
         this._cookieStorageRootTreeElement = null;
-    }
-
-    _applicationCacheCleared(event)
-    {
-        if (this._applicationCacheRootTreeElement && this._applicationCacheRootTreeElement.parent) {
-            this._closeContentViewForTreeElement(this._applicationCacheRootTreeElement);
-            this._applicationCacheRootTreeElement.parent.removeChild(this._applicationCacheRootTreeElement);
-        }
-
-        this._applicationCacheRootTreeElement = null;
-        this._applicationCacheURLTreeElementMap.clear();
     }
 
     _indexedDatabaseCleared(event)

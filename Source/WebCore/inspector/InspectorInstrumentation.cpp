@@ -38,7 +38,6 @@
 #include "DocumentLoader.h"
 #include "Event.h"
 #include "InspectorAnimationAgent.h"
-#include "InspectorApplicationCacheAgent.h"
 #include "InspectorCSSAgent.h"
 #include "InspectorCanvasAgent.h"
 #include "InspectorController.h"
@@ -1241,18 +1240,6 @@ void InspectorInstrumentation::didHandleMemoryPressureImpl(InstrumentingAgents& 
         memoryAgent->didHandleMemoryPressure(critical);
 }
 #endif
-
-void InspectorInstrumentation::networkStateChangedImpl(InstrumentingAgents& instrumentingAgents)
-{
-    if (auto* applicationCacheAgent = instrumentingAgents.enabledApplicationCacheAgent())
-        applicationCacheAgent->networkStateChanged();
-}
-
-void InspectorInstrumentation::updateApplicationCacheStatusImpl(InstrumentingAgents& instrumentingAgents, LocalFrame& frame)
-{
-    if (auto* applicationCacheAgent = instrumentingAgents.enabledApplicationCacheAgent())
-        applicationCacheAgent->updateApplicationCacheStatus(&frame);
-}
 
 bool InspectorInstrumentation::consoleAgentEnabled(ScriptExecutionContext* scriptExecutionContext)
 {

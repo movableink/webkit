@@ -299,7 +299,6 @@ static void networkStateChanged(bool isOnLine)
             if (RefPtr localFrame = dynamicDowncast<LocalFrame>(*frame))
                 frames.append(*localFrame);
         }
-        InspectorInstrumentation::networkStateChanged(Ref { page.get() });
     }
 
     auto& eventName = isOnLine ? eventNames().onlineEvent : eventNames().offlineEvent;

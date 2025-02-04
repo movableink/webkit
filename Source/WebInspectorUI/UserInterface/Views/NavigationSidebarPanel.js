@@ -631,7 +631,6 @@ WI.NavigationSidebarPanel = class NavigationSidebarPanel extends WI.SidebarPanel
         return treeElement instanceof WI.FolderTreeElement
             || treeElement instanceof WI.DatabaseHostTreeElement
             || treeElement instanceof WI.IndexedDatabaseHostTreeElement
-            || treeElement instanceof WI.ApplicationCacheManifestTreeElement
             || treeElement instanceof WI.ThreadTreeElement
             || treeElement instanceof WI.IdleTreeElement
             || treeElement instanceof WI.DOMBreakpointTreeElement
