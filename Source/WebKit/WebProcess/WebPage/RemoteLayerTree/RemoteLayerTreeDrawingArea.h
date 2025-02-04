@@ -173,7 +173,7 @@ private:
     RootLayerInfo* rootLayerInfoWithFrameIdentifier(WebCore::FrameIdentifier);
 
     // GraphicsLayerClient
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(HDR_FOR_IMAGES)
     bool hdrForImagesEnabled() const override;
 #endif
 

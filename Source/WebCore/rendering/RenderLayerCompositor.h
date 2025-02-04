@@ -430,7 +430,7 @@ private:
     bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
     bool isFlushingLayers() const override { return m_flushingLayers; }
     bool isTrackingRepaints() const override { return m_isTrackingRepaints; }
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(HDR_FOR_IMAGES)
     bool hdrForImagesEnabled() const override;
 #endif
 

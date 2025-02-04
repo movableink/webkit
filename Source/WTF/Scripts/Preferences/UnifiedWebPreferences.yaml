@@ -3399,7 +3399,7 @@ HDRForImagesEnabled:
   webcoreOnChange: setNeedsRelayoutAllFrames
   humanReadableName: "HDR for Images Support"
   humanReadableDescription: "HDR for Images Support"
-  condition: HAVE(HDR_SUPPORT)
+  condition: ENABLE(HDR_FOR_IMAGES)
   defaultValue:
     WebKitLegacy:
       default: false

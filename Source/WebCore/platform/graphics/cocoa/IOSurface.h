@@ -72,13 +72,15 @@ public:
         BGRX,
         BGRA,
         YUV422,
-#if HAVE(IOSURFACE_RGB10)
+        RGBA,
+        RGBX,
+#if ENABLE(PIXEL_FORMAT_RGB10)
         RGB10,
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
         RGB10A8,
 #endif
-        RGBA, // NOLINT
-        RGBX, // NOLINT
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
         RGBA16F,
 #endif
     };

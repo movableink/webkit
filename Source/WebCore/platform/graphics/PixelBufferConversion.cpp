@@ -62,11 +62,13 @@ static inline vImage_CGImageFormat makeVImageCGImageFormat(const PixelBufferForm
                 return std::make_tuple(8u, 32u, static_cast<CGBitmapInfo>(kCGBitmapByteOrder32Little) | static_cast<CGBitmapInfo>(kCGImageAlphaFirst));
 
         case PixelFormat::BGRX8:
-#if HAVE(IOSURFACE_RGB10)
+#if ENABLE(PIXEL_FORMAT_RGB10)
         case PixelFormat::RGB10:
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
         case PixelFormat::RGB10A8:
 #endif
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
         case PixelFormat::RGBA16F:
 #endif
             break;

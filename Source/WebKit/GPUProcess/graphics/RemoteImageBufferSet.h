@@ -80,7 +80,7 @@ private:
 
     bool isOpaque() const
     {
-#if HAVE(IOSURFACE_RGB10)
+#if ENABLE(PIXEL_FORMAT_RGB10)
         if (m_pixelFormat == WebCore::ImageBufferPixelFormat::RGB10)
             return true;
 #endif

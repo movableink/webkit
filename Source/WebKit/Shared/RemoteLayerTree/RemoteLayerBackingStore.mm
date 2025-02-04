@@ -267,11 +267,11 @@ ImageBufferPixelFormat RemoteLayerBackingStore::pixelFormat() const
     case ContentsFormat::RGBA8:
         return m_parameters.isOpaque ? ImageBufferPixelFormat::BGRX8 : ImageBufferPixelFormat::BGRA8;
 
-#if HAVE(IOSURFACE_RGB10)
+#if ENABLE(PIXEL_FORMAT_RGB10)
     case ContentsFormat::RGBA10:
         return m_parameters.isOpaque ? ImageBufferPixelFormat::RGB10 : ImageBufferPixelFormat::RGB10A8;
 #endif
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
     case ContentsFormat::RGBA16F:
         return ImageBufferPixelFormat::RGBA16F;
 #endif
@@ -283,11 +283,13 @@ unsigned RemoteLayerBackingStore::bytesPerPixel() const
     switch (pixelFormat()) {
     case ImageBufferPixelFormat::BGRX8: return 4;
     case ImageBufferPixelFormat::BGRA8: return 4;
-#if HAVE(IOSURFACE_RGB10)
+#if ENABLE(PIXEL_FORMAT_RGB10)
     case ImageBufferPixelFormat::RGB10: return 4;
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
     case ImageBufferPixelFormat::RGB10A8: return 5;
 #endif
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
     case ImageBufferPixelFormat::RGBA16F: return 8;
 #endif
     }

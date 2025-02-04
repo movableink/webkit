@@ -116,7 +116,7 @@ public:
     virtual bool isFlushingLayers() const { return false; }
     virtual bool isTrackingRepaints() const { return false; }
 
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(HDR_FOR_IMAGES)
     virtual bool hdrForImagesEnabled() const { return false; }
 #endif
 

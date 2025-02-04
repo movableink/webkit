@@ -75,12 +75,12 @@ bool screenHasInvertedColors()
 
 ContentsFormat screenContentsFormat(Widget* widget, PlatformCALayerClient* client)
 {
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
     if (client && client->hdrForImagesEnabled() && screenSupportsHighDynamicRange(widget))
         return ContentsFormat::RGBA16F;
 #endif
 
-#if HAVE(IOSURFACE_RGB10)
+#if ENABLE(PIXEL_FORMAT_RGB10)
     if (screenSupportsExtendedColor(widget))
         return ContentsFormat::RGBA10;
 #endif
@@ -112,12 +112,13 @@ bool screenSupportsHighDynamicRange(Widget*)
 
 DestinationColorSpace screenColorSpace(Widget* widget)
 {
-#if HAVE(IOSURFACE_RGB10)
-    if (screenContentsFormat(widget) == ContentsFormat::RGBA10)
-        return DestinationColorSpace { extendedSRGBColorSpaceRef() };
-#else
     UNUSED_PARAM(widget);
+
+#if ENABLE(PIXEL_FORMAT_RGB10) && ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
+    if (screenContentsFormat(widget) == ContentsFormat::RGBA10)
+        return DestinationColorSpace::ExtendedSRGB();
 #endif
+
     return DestinationColorSpace::SRGB();
 }
 

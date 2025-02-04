@@ -4053,7 +4053,7 @@ bool RenderLayerBacking::shouldDumpPropertyForLayer(const GraphicsLayer* layer, 
     return true;
 }
 
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(HDR_FOR_IMAGES)
 bool RenderLayerBacking::hdrForImagesEnabled() const
 {
     return renderer().settings().hdrForImagesEnabled();

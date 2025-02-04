@@ -269,7 +269,7 @@ private:
 
     bool isCommittingChanges() const override { return m_isCommittingChanges; }
     bool isUsingDisplayListDrawing(PlatformCALayer*) const override { return m_usesDisplayListDrawing; }
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(HDR_FOR_IMAGES)
     bool hdrForImagesEnabled() const override { return client().hdrForImagesEnabled(); }
 #endif
 

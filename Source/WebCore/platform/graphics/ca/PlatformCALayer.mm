@@ -76,8 +76,8 @@ void PlatformCALayer::drawRepaintIndicator(GraphicsContext& graphicsContext, Pla
     constexpr auto acceleratedContextLabelColor = Color::red;
     constexpr auto unacceleratedContextLabelColor = Color::white;
     constexpr auto displayListBorderColor = Color::black.colorWithAlphaByte(166);
-#if HAVE(HDR_SUPPORT)
-    constexpr auto hdrBackgroundColor = SRGBA<uint8_t> { 116, 214, 255 };
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    constexpr auto rgba16FBackgroundColor = SRGBA<uint8_t> { 116, 214, 255 };
 #endif
 
     TextRun textRun(String::number(repaintCount));
@@ -94,9 +94,9 @@ void PlatformCALayer::drawRepaintIndicator(GraphicsContext& graphicsContext, Pla
 
     auto backgroundColor = customBackgroundColor.isValid() ? customBackgroundColor : defaultBackgroundColor;
 
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
     if (platformCALayer->contentsFormat() == ContentsFormat::RGBA16F)
-        backgroundColor = hdrBackgroundColor;
+        backgroundColor = rgba16FBackgroundColor;
 #endif
 
     GraphicsContextStateSaver stateSaver(graphicsContext);

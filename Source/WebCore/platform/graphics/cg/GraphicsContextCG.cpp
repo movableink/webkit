@@ -374,7 +374,7 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
     auto oldBlendMode = blendMode();
     setCGBlendMode(context, options.compositeOperator(), options.blendMode());
 
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(HDR_FOR_IMAGES)
     auto oldHeadroom = CGContextGetEDRTargetHeadroom(context);
     if (auto headroom = options.headroom(); headroom > 1)
         CGContextSetEDRTargetHeadroom(context, headroom);
@@ -406,7 +406,7 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
         CGContextSetShouldAntialias(context, wasAntialiased);
 #endif
         setCGBlendMode(context, oldCompositeOperator, oldBlendMode);
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(HDR_FOR_IMAGES)
         CGContextSetEDRTargetHeadroom(context, oldHeadroom);
 #endif
     }

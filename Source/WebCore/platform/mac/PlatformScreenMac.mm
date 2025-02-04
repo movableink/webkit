@@ -367,12 +367,12 @@ DestinationColorSpace screenColorSpace(Widget* widget)
 
 ContentsFormat screenContentsFormat(Widget* widget, PlatformCALayerClient* client)
 {
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
     if (client && client->hdrForImagesEnabled() && screenSupportsHighDynamicRange(widget))
         return ContentsFormat::RGBA16F;
 #endif
 
-#if HAVE(IOSURFACE_RGB10)
+#if ENABLE(PIXEL_FORMAT_RGB10)
     if (screenSupportsExtendedColor(widget))
         return ContentsFormat::RGBA10;
 #endif

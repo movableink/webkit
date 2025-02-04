@@ -1176,7 +1176,7 @@ void PlatformCALayerCocoa::updateContentsFormat()
 
         if (NSString *formatString = contentsFormatString(contentsFormat))
             [m_layer setContentsFormat:formatString];
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
         if (contentsFormat == ContentsFormat::RGBA16F) {
             [m_layer setWantsExtendedDynamicRangeContent:true];
             [m_layer setToneMapMode:CAToneMapModeIfSupported];

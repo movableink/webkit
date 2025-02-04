@@ -766,7 +766,7 @@ bool RenderLayerCompositor::shouldDumpPropertyForLayer(const GraphicsLayer* laye
     return true;
 }
 
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(HDR_FOR_IMAGES)
 bool RenderLayerCompositor::hdrForImagesEnabled() const
 {
     return m_renderView.settings().hdrForImagesEnabled();

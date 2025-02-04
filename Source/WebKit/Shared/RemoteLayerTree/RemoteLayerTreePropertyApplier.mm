@@ -366,7 +366,7 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
         auto contentsFormat = properties.contentsFormat;
         if (NSString *formatString = contentsFormatString(contentsFormat))
             [layer setContentsFormat:formatString];
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
         if (contentsFormat == ContentsFormat::RGBA16F) {
             [layer setWantsExtendedDynamicRangeContent:true];
             [layer setToneMapMode:CAToneMapModeIfSupported];

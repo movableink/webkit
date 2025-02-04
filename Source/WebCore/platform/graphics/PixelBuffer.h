@@ -53,7 +53,7 @@ public:
 
     enum class Type {
         ByteArray,
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
         Float16Array,
 #endif
         Other
