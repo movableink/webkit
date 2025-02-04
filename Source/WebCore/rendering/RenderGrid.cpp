@@ -2647,7 +2647,7 @@ bool RenderGrid::canCreateIntrinsicLogicalHeightsForRowSizingFirstPassCache() co
     if (isSubgrid())
         return false;
 
-    if (locateEnclosingFragmentedFlow())
+    if (enclosingFragmentedFlow())
         return false;
 
     for (auto& gridItem : childrenOfType<RenderBox>(*this)) {
