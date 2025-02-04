@@ -280,7 +280,13 @@ public:
     AXTextMarker nextLineEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findLine(AXDirection::Next, AXTextUnitBoundary::End, stopAtID); }
     AXTextMarker nextLineEnd(IncludeTrailingLineBreak includeTrailingLineBreak, std::optional<AXID> stopAtID = std::nullopt) const { return findLine(AXDirection::Next, AXTextUnitBoundary::End, includeTrailingLineBreak, stopAtID); }
     AXTextMarker nextWordStart() const { return findWord(AXDirection::Next, AXTextUnitBoundary::Start); }
+    // The next end word boundary, not including the current position
+    // Exception: unless the current text marker is at the end of a containing block, which
+    // would return the current position.
     AXTextMarker nextWordEnd() const { return findWord(AXDirection::Next, AXTextUnitBoundary::End); }
+    // The previous start word boundary, not including the current position
+    // Exception: unless the current text marker is at the start of a containing block, which
+    // would return the current position.
     AXTextMarker previousWordStart() const { return findWord(AXDirection::Previous, AXTextUnitBoundary::Start); }
     AXTextMarker previousWordEnd() const { return findWord(AXDirection::Previous, AXTextUnitBoundary::End); }
     AXTextMarker previousSentenceStart() const { return findSentence(AXDirection::Previous, AXTextUnitBoundary::Start); }
@@ -290,7 +296,8 @@ public:
 
     // Creates a range for the line this marker points to.
     AXTextMarkerRange lineRange(LineRangeType, IncludeTrailingLineBreak = IncludeTrailingLineBreak::No) const;
-    // Creates a range for the word specified by the line range type.
+    // This returns the full word range *immediately* to the right/left of a text marker. If the
+    // text marker is in a word, this is that word range.
     AXTextMarkerRange wordRange(WordRangeType) const;
     // Creates a range for the sentence specified by the sentence range type;
     AXTextMarkerRange sentenceRange(SentenceRangeType) const;

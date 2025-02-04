@@ -3090,8 +3090,8 @@ enum class TextUnit {
         case TextUnit::Paragraph:
             return inputMarker.paragraphRange().platformData().autorelease();
         default:
-            // TODO: Not implemented!
-            break;
+            ASSERT_NOT_REACHED();
+            return nil;
         }
     }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
@@ -3190,6 +3190,10 @@ enum class TextUnit {
             return inputMarker.nextParagraphEnd().platformData().autorelease();
         case TextUnit::PreviousParagraphStart:
             return inputMarker.previousParagraphStart().platformData().autorelease();
+        case TextUnit::NextWordEnd:
+            return inputMarker.nextWordEnd().platformData().autorelease();
+        case TextUnit::PreviousWordStart:
+            return inputMarker.previousWordStart().platformData().autorelease();
         default:
             // TODO: Not implemented!
             break;

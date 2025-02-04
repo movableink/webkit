@@ -338,6 +338,9 @@ media/deactivate-audio-session.html [ Skip ]
 # To be removed after AccessibilityThreadTextApisEnabled is enabled by default.
 accessibility/ax-thread-text-apis [ Skip ]
 
+# Skip isolated-tree specific tests.
+accessibility/isolated-tree [ Skip ]
+
 # ApplePay is only available on iOS (greater than iOS 10) and macOS (greater than macOS 10.12) and only for WebKit2.
 fast/css/appearance-apple-pay-button.html [ Skip ]
 fast/css/appearance-apple-pay-button-div.html [ Skip ]

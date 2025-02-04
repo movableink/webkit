@@ -902,28 +902,31 @@ AXTextMarker AXTextMarker::findWordOrSentence(AXDirection direction, bool findWo
 
     // Functions to update resultMarker for word and sentence text units.
     auto updateWordResultMarker = [&] () {
-        int start, end;
-        findWordBoundary(flattenedRuns, offset, &start, &end);
-        if (direction == AXDirection::Previous) {
+        if (direction == AXDirection::Previous && boundary == AXTextUnitBoundary::Start) {
             int previousWordStart = findNextWordFromIndex(flattenedRuns, offset, false);
-            findEndWordBoundary(flattenedRuns, previousWordStart, &end);
-
-            // If start (from the forward-search) is the same as the offset, that means we are on a
-            // start word boundary and shouldn't update the text marker.
-            // When looking backward, the end of a word can be at the offset.
-            if (start != Checked<int>(offset) || end == Checked<int>(offset)) {
-                if (boundary == AXTextUnitBoundary::Start && previousWordStart < objectBorder && previousWordStart != -1)
-                    resultMarker = AXTextMarker(*currentObject, previousWordStart, origin);
-                else if (boundary == AXTextUnitBoundary::End && end <= objectBorder && end != -1)
-                    resultMarker = AXTextMarker(*currentObject, end, origin);
+            if (previousWordStart <= objectBorder)
+                resultMarker = AXTextMarker(*currentObject, previousWordStart, origin);
+        } else if (direction == AXDirection::Next && boundary == AXTextUnitBoundary::End) {
+            int nextWordEnd = 0;
+            findEndWordBoundary(flattenedRuns, offset, &nextWordEnd);
+            // If the next word end is at or beyond the object border, that means the word extends into the current object (and we should update the text marker).
+            // Otherwise, the nextWordEnd is in the previous object and the text marker was already set in the previous loop.
+            if (nextWordEnd >= objectBorder) {
+                // We need to subtract the objectBorder from the word end since we need the offset relative to the
+                // **current** object, and the nextWordEnd is relative to the flattenedRuns.
+                resultMarker = AXTextMarker(*currentObject, nextWordEnd - objectBorder, origin);
+                // Sometimes, the end word boundary will just return a whitespace word. For example: "Hello| world", with the text marker after hello, will return a text marker before world ("Hello |world").
+                // If we detect this case, we want to continue searching for the next next-word-end.
+                auto rangeString = AXTextMarkerRange(*this, resultMarker).toString();
+                if (rangeString.containsOnly<isASCIIWhitespace>()) {
+                    findEndWordBoundary(flattenedRuns, offset + rangeString.length(), &nextWordEnd);
+                    if (nextWordEnd >= objectBorder)
+                        resultMarker = AXTextMarker(*currentObject, nextWordEnd - objectBorder, origin);
+                }
             }
-        } else if (Checked<int>(offset) < end) {
-            if (boundary == AXTextUnitBoundary::Start && start <= end && start != -1 && start >= objectBorder)
-                resultMarker = AXTextMarker(*currentObject, start - objectBorder, origin);
-            else if (boundary == AXTextUnitBoundary::End && start <= end && end != -1 && end >= objectBorder)
-                resultMarker = AXTextMarker(*currentObject, end - objectBorder, origin);
         }
     };
+
     auto updateSentenceResultMarker = [&] () {
         if (boundary == AXTextUnitBoundary::Start) {
             int start = previousSentenceStartFromOffset(flattenedRuns, offset);
@@ -952,10 +955,15 @@ AXTextMarker AXTextMarker::findWordOrSentence(AXDirection direction, bool findWo
         bool lastObjectIsEditable = !!currentObject->editableAncestor();
         currentObject = findObjectWithRuns(*currentObject, direction);
         if (currentObject) {
-            // We should return when the containing block is different (indicating a paragraph), or when we hit the border of an editable object.
-            // For sentences, don't stop at line breaks, since the text break iterator needs to find the next sentence boundary, which isn't necessarily at a break.
+            // We should return when the containing block is different (indicating a paragraph).
+            if (currentRuns->containingBlock != currentObject->textRuns()->containingBlock)
+                return resultMarker;
+
+            // We only stop at line breaks when finding words, as for sentences, the text break iterator needs to find the next sentence boundary, which isn't necessarily at a break.
             bool shouldStopAtLineBreaks = findWord && currentObject->roleValue() == AccessibilityRole::LineBreak && !currentObject->editableAncestor();
-            if (shouldStopAtLineBreaks || currentRuns->containingBlock != currentObject->textRuns()->containingBlock || lastObjectIsEditable != !!currentObject->editableAncestor())
+
+            // Also stop when we hit the border of an editable object.
+            if (shouldStopAtLineBreaks || lastObjectIsEditable != !!currentObject->editableAncestor())
                 return resultMarker;
 
             currentRuns = currentObject->textRuns();
@@ -1081,42 +1089,19 @@ AXTextMarkerRange AXTextMarker::wordRange(WordRangeType type) const
 {
     if (!isValid())
         return { };
-
     AXTextMarker startMarker, endMarker;
 
     if (type == WordRangeType::Right) {
-        startMarker = nextWordStart();
-        endMarker = startMarker.nextWordEnd();
-
-        if (startMarker == *this) {
-            auto rangeString = AXTextMarkerRange { startMarker, endMarker }.toString();
-            // A newline should not be returned as the right word (if we are at the end of a paragraph)
-            if (rangeString.length() && rangeString[0] == '\n')
-                return { *this, *this };
-        }
+        endMarker = nextWordEnd();
+        startMarker = endMarker.previousWordStart();
+        // Don't return a right word if the word start is more than a position away from current text marker (e.g., there's a space between the word and current marker).
+        if (is_gt(partialOrder(startMarker, *this)))
+            return { *this, *this };
     } else {
         startMarker = previousWordStart();
-        // If the current marker is already on the start of the word, no left word should be returned.
-        if (startMarker == *this)
-            return { startMarker, startMarker };
         endMarker = startMarker.nextWordEnd();
-
-        // There are two cases that will happen to indicate we are on the left word boundary:
-        // (1) The word break iterator returns the whitespace to the left of the word, and the end marker is the equivalent to the next starting word (handled by `isWhitespceAndEndsOnLeftWordBoundary`.
-        // (2) The word break iterator returns a word end before the current marker, and the next word starts at the visual equivalent to the current marker.
-
-        bool isWhitespaceAndEndsOnLeftWordBoundary = false;
-        if (equivalentTextPosition(endMarker)) {
-            auto rangeString = AXTextMarkerRange { startMarker, endMarker }.toString();
-            isWhitespaceAndEndsOnLeftWordBoundary = rangeString.length() && isASCIIWhitespace(rangeString[rangeString.length() - 1]);
-        }
-
-        // Check forward from the current offset for the next word start.
-        // If we are on the start of a word (next marker is a word, previous is whitespace), left word should be nil.
-        auto nextWordStart = this->nextWordStart();
-        auto nextMarker = findMarker(AXDirection::Next, CoalesceObjectBreaks::No, IgnoreBRs::Yes);
-
-        if ((isWhitespaceAndEndsOnLeftWordBoundary || !equivalentTextPosition(endMarker)) && nextMarker == nextWordStart)
+        // Don't return a left word if the word end is more than a position away from current text marker.
+        if (is_lt(partialOrder(endMarker, *this)))
             return { *this, *this };
     }
 
