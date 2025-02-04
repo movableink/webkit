@@ -16,7 +16,6 @@ NetworkProcess/cocoa/NetworkDataTaskCocoa.mm
 NetworkProcess/cocoa/NetworkSessionCocoa.mm
 NetworkProcess/storage/CacheStorageManager.cpp
 Platform/IPC/HandleMessage.h
-Platform/IPC/StreamConnectionWorkQueue.cpp
 Platform/cocoa/WebPrivacyHelpers.mm
 UIProcess/Automation/SimulatedInputDispatcher.cpp
 UIProcess/Automation/WebAutomationSession.cpp

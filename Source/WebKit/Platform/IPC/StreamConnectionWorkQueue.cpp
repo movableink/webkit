@@ -115,7 +115,7 @@ void StreamConnectionWorkQueue::wakeUp()
 
 void StreamConnectionWorkQueue::startProcessingThread()
 {
-    auto task = [this]() mutable {
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE auto task = [this]() mutable {
         for (;;) {
             processStreams();
             if (m_shouldQuit) {
