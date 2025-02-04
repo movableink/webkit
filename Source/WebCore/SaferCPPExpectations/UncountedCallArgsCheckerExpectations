@@ -1256,7 +1256,6 @@ platform/network/FormData.cpp
 platform/network/NetworkLoadMetrics.cpp
 platform/network/ResourceRequestBase.cpp
 platform/network/SynchronousLoaderClient.cpp
-platform/network/cocoa/WebCoreNSURLSession.mm
 platform/network/mac/AuthenticationMac.mm
 platform/network/mac/ResourceHandleMac.mm
 platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.mm
