@@ -660,6 +660,8 @@
 		7BF99CBD2C5A368800CEEA21 /* PruneInfiniteLoops.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BF99CBC2C5A368800CEEA21 /* PruneInfiniteLoops.cpp */; };
 		7BF99CBE2C5A368800CEEA21 /* PruneInfiniteLoops.h in Headers */ = {isa = PBXBuildFile; fileRef = 7BF99CBB2C5A368800CEEA21 /* PruneInfiniteLoops.h */; };
 		7BF99CC02C5A36BD00CEEA21 /* hash_containers.h in Headers */ = {isa = PBXBuildFile; fileRef = 7BF99CBF2C5A36BD00CEEA21 /* hash_containers.h */; };
+		7BFD81842D50CF7C0010ED68 /* span.h in Headers */ = {isa = PBXBuildFile; fileRef = 7BFD81832D50CF7C0010ED68 /* span.h */; };
+		7BFD81852D50CF7C0010ED68 /* span.h in Headers */ = {isa = PBXBuildFile; fileRef = 7BFD81832D50CF7C0010ED68 /* span.h */; };
 		7BFF6EDF29E9908A009E1A57 /* SourcesPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B037F9429E98CF200D23E74 /* SourcesPlatform.cpp */; };
 		7BFF6EE229E9908A009E1A57 /* SourcesPlatform-mm.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B037F9529E98CF200D23E74 /* SourcesPlatform-mm.mm */; };
 		A3C49BF6255DF6C4005E8DF7 /* compression_utils_portable.h in Headers */ = {isa = PBXBuildFile; fileRef = A3C49BF1255DEDC5005E8DF7 /* compression_utils_portable.h */; };
@@ -1706,6 +1708,7 @@
 		7BF99CBB2C5A368800CEEA21 /* PruneInfiniteLoops.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PruneInfiniteLoops.h; sourceTree = "<group>"; };
 		7BF99CBC2C5A368800CEEA21 /* PruneInfiniteLoops.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PruneInfiniteLoops.cpp; sourceTree = "<group>"; };
 		7BF99CBF2C5A36BD00CEEA21 /* hash_containers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hash_containers.h; sourceTree = "<group>"; };
+		7BFD81832D50CF7C0010ED68 /* span.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = span.h; sourceTree = "<group>"; };
 		A264F89316974DED006FAA5A /* DiagnosticsBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DiagnosticsBase.cpp; sourceTree = "<group>"; };
 		A264F89416974DED006FAA5A /* DiagnosticsBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DiagnosticsBase.h; sourceTree = "<group>"; };
 		A264F89516974DED006FAA5A /* DirectiveHandlerBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DirectiveHandlerBase.cpp; sourceTree = "<group>"; };
@@ -2753,6 +2756,7 @@
 				7B359E052A7CFD610016DC59 /* RingBufferAllocator.h */,
 				7BBC97D42BDB11C800628E74 /* SimpleMutex.cpp */,
 				7BBC97D52BDB11C800628E74 /* SimpleMutex.h */,
+				7BFD81832D50CF7C0010ED68 /* span.h */,
 				5CCD818B1DBFEA10006066B8 /* string_utils.cpp */,
 				5CCD818C1DBFEA10006066B8 /* string_utils.h */,
 				7B359E0D2A7CFD610016DC59 /* SynchronizedValue.h */,
@@ -3602,6 +3606,7 @@
 				31CD005E249184FC00486F27 /* SizedMRUCache.h in Headers */,
 				A3C49C04255DF719005E8DF7 /* SoftLinking.h in Headers */,
 				31CDFF6C2491849200486F27 /* SourceLocation.h in Headers */,
+				7BFD81852D50CF7C0010ED68 /* span.h in Headers */,
 				FF62F64927446DC800AD6EDC /* SpecializationConstant.h in Headers */,
 				31CDFF7B2491849700486F27 /* SplitSequenceOperator.h in Headers */,
 				31CD0082249184FD00486F27 /* State.h in Headers */,
@@ -3686,6 +3691,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7BA890652CB5234E0020C411 /* BuiltIn_autogen.h in Headers */,
+				7BFD81842D50CF7C0010ED68 /* span.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

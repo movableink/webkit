@@ -1141,7 +1141,7 @@ angle::spirv::Blob MakeFragShader(
 }  // namespace unresolve
 
 angle::Result GetUnresolveFrag(
-    vk::Context *context,
+    vk::ErrorContext *context,
     uint32_t colorAttachmentCount,
     gl::DrawBuffersArray<UnresolveColorAttachmentType> &colorAttachmentTypes,
     bool unresolveDepth,
@@ -1343,34 +1343,22 @@ void UtilsVk::destroy(ContextVk *contextVk)
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mConvertIndex)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mConvertIndirectLineLoop)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mConvertIndexIndirectLineLoop)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mConvertVertex)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     mImageClearVSOnly.program.destroy(renderer);
     mImageClearVSOnly.pipelines.destroy(contextVk);
@@ -1395,10 +1383,7 @@ void UtilsVk::destroy(ContextVk *contextVk)
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mCopyImageToBuffer)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (GraphicsShaderProgramAndPipelines &programAndPipelines : mBlitResolve)
     {
@@ -1413,10 +1398,7 @@ void UtilsVk::destroy(ContextVk *contextVk)
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mBlitResolveStencilNoExport)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     mExportStencil.program.destroy(renderer);
     mExportStencil.pipelines.destroy(contextVk);
@@ -1425,18 +1407,12 @@ void UtilsVk::destroy(ContextVk *contextVk)
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mGenerateMipmap)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (ComputeShaderProgramAndPipelines &programAndPipelines : mEtcToBc)
     {
         programAndPipelines.program.destroy(renderer);
-        for (vk::PipelineHelper &pipeline : programAndPipelines.pipelines)
-        {
-            pipeline.destroy(device);
-        }
+        programAndPipelines.pipelines.destroy(contextVk);
     }
     for (auto &programIter : mUnresolve)
     {
@@ -1452,10 +1428,7 @@ void UtilsVk::destroy(ContextVk *contextVk)
     mLinearSampler.destroy(device);
 
     mGenerateFragmentShadingRateAttachment.program.destroy(renderer);
-    for (vk::PipelineHelper &pipeline : mGenerateFragmentShadingRateAttachment.pipelines)
-    {
-        pipeline.destroy(device);
-    }
+    mGenerateFragmentShadingRateAttachment.pipelines.destroy(contextVk);
 }
 
 angle::Result UtilsVk::ensureResourcesInitialized(ContextVk *contextVk,
@@ -5205,8 +5178,8 @@ angle::Result LineLoopHelper::streamArrayIndirect(ContextVk *contextVk,
 
 void LineLoopHelper::release(ContextVk *contextVk)
 {
-    mDynamicIndexBuffer.release(contextVk->getRenderer());
-    mDynamicIndirectBuffer.release(contextVk->getRenderer());
+    mDynamicIndexBuffer.release(contextVk);
+    mDynamicIndirectBuffer.release(contextVk);
 }
 
 void LineLoopHelper::destroy(vk::Renderer *renderer)

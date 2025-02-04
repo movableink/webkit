@@ -1610,6 +1610,14 @@
             "issue": "https://issuetracker.google.com/336844257"
         },
         {
+            "name": "use_vkEvent_for_buffer_barrier",
+            "category": "Features",
+            "description": [
+                "Uses VkEvent instead of VkCmdPipelineBarrier for buffer barriers"
+            ],
+            "issue": "https://issues.angleproject.org/360274928"
+        },
+        {
             "name": "supports_synchronization2",
             "category": "Features",
             "description": [
@@ -1866,6 +1874,20 @@
                 "Enable support for GL_APPLE_clip_distance extension"
             ],
             "issue": "https://anglebug.com/386749841"
+        },
+        {
+            "name": "supports_uniform_buffer_standard_layout",
+            "category": "Features",
+            "description": [
+                "VkDevice supports the VK_KHR_uniform_buffer_standard_layout and has UniformBufferStandardLayout feature"
+            ]
+        },
+        {
+            "name": "uses_native_builtin_cl_kernel",
+            "category": "Features",
+            "description": [
+                "Enable the use of native builtin kernel in place of the libclc version"
+            ]
         }
     ]
 }

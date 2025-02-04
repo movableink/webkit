@@ -96,10 +96,10 @@ index b258660ba4367032e592ab8d6397ee5edca0a661..fe961d3125259b015d3d005a6d45443e
          "renderbuffer": "RenderbufferID"
      },
 diff --git a/scripts/generate_entry_points.py b/scripts/generate_entry_points.py
-index b610d040be113e401805a6d94db0a3d41f7adb86..a5c2b5863ea88d3e277d93d88e024c3c89322fcc 100755
+index ed1c845bcbad7f137d025084a79a09f4ad5f3357..214ac27f14b7879cba758902d55627bf5111edeb 100755
 --- a/scripts/generate_entry_points.py
 +++ b/scripts/generate_entry_points.py
-@@ -1024,6 +1024,7 @@ FORMAT_DICT = {
+@@ -1053,6 +1053,7 @@ FORMAT_DICT = {
      "GLint": "%d",
      "GLintptr": UNSIGNED_LONG_LONG_FORMAT,
      "GLSETBLOBPROCANGLE": POINTER_FORMAT,
@@ -165,7 +165,7 @@ index 44c6dea45fb939b843aa889720413c51c137a030..5ea6342532fcf698fc8d6300515abbe7
 +    </enums>
  </registry>
 diff --git a/scripts/registry_xml.py b/scripts/registry_xml.py
-index 8ea798797ba801480892721546599c73c8edf74f..fa4376ce9c6c9b7fa66322c984cbdfcf4223bc75 100644
+index 3f2deac8b890ed285099d32b70b1db5070b5d18d..2871d8e3f3ec0a46da03281343186738575221e1 100644
 --- a/scripts/registry_xml.py
 +++ b/scripts/registry_xml.py
 @@ -74,12 +74,14 @@ angle_requestable_extensions = [
@@ -183,11 +183,29 @@ index 8ea798797ba801480892721546599c73c8edf74f..fa4376ce9c6c9b7fa66322c984cbdfcf
  ]
  
  gles_requestable_extensions = [
+diff --git a/src/common/debug.cpp b/src/common/debug.cpp
+index 706852242b5579629b6156f27d330209b6701a1a..77f70f55532d461556fc105213424e5e4c3146a7 100644
+--- a/src/common/debug.cpp
++++ b/src/common/debug.cpp
+@@ -36,6 +36,13 @@
+ #include "common/entry_points_enum_autogen.h"
+ #include "common/system_utils.h"
+ 
++#if defined(ANGLE_ENABLE_ASSERTS)
++bool AreAssertionsEnabled() {
++    static bool enabled = [] { return angle::GetEnvironmentVar("ANGLE_DISABLE_ASSERTS") != "1"; }();
++    return enabled;
++}
++#endif  // defined(ANGLE_ENABLE_ASSERTS)
++
+ namespace gl
+ {
+ 
 diff --git a/src/common/entry_points_enum_autogen.cpp b/src/common/entry_points_enum_autogen.cpp
-index 7b91ab8cb724bc5d49ef549f918eb6dee1272949..900ff6573bb53b38ccd97e9d3b8d203cae7ffabe 100644
+index 7d3beb4fe34e3eae82f48b15bfdc9376e7841eda..8479f0719dbd27b4fca7c2f19fcaedb68b82e471 100644
 --- a/src/common/entry_points_enum_autogen.cpp
 +++ b/src/common/entry_points_enum_autogen.cpp
-@@ -520,6 +520,8 @@ const char *GetEntryPointName(EntryPoint ep)
+@@ -524,6 +524,8 @@ const char *GetEntryPointName(EntryPoint ep)
              return "glBindFramebufferOES";
          case EntryPoint::GLBindImageTexture:
              return "glBindImageTexture";
@@ -196,7 +214,7 @@ index 7b91ab8cb724bc5d49ef549f918eb6dee1272949..900ff6573bb53b38ccd97e9d3b8d203c
          case EntryPoint::GLBindProgramPipeline:
              return "glBindProgramPipeline";
          case EntryPoint::GLBindProgramPipelineEXT:
-@@ -950,6 +952,8 @@ const char *GetEntryPointName(EntryPoint ep)
+@@ -954,6 +956,8 @@ const char *GetEntryPointName(EntryPoint ep)
              return "glFramebufferRenderbuffer";
          case EntryPoint::GLFramebufferRenderbufferOES:
              return "glFramebufferRenderbufferOES";
@@ -206,10 +224,10 @@ index 7b91ab8cb724bc5d49ef549f918eb6dee1272949..900ff6573bb53b38ccd97e9d3b8d203c
              return "glFramebufferTexture";
          case EntryPoint::GLFramebufferTexture2D:
 diff --git a/src/common/entry_points_enum_autogen.h b/src/common/entry_points_enum_autogen.h
-index 778bd7b908400289aef63655a04fc7099a130649..3cf0d8704bab33b8b1e55b05277fbd2b37a19c3d 100644
+index e09617166d054a05a00c908f55aac4b214cd25ab..476e2c06b02d9a217ef82499cf8994454832dd7a 100644
 --- a/src/common/entry_points_enum_autogen.h
 +++ b/src/common/entry_points_enum_autogen.h
-@@ -266,6 +266,7 @@ enum class EntryPoint
+@@ -268,6 +268,7 @@ enum class EntryPoint
      GLBindFramebuffer,
      GLBindFramebufferOES,
      GLBindImageTexture,
@@ -217,7 +235,7 @@ index 778bd7b908400289aef63655a04fc7099a130649..3cf0d8704bab33b8b1e55b05277fbd2b
      GLBindProgramPipeline,
      GLBindProgramPipelineEXT,
      GLBindRenderbuffer,
-@@ -481,6 +482,7 @@ enum class EntryPoint
+@@ -483,6 +484,7 @@ enum class EntryPoint
      GLFramebufferPixelLocalStorageRestoreANGLE,
      GLFramebufferRenderbuffer,
      GLFramebufferRenderbufferOES,
@@ -357,6 +375,25 @@ index 416b30b2909f6cf35f2da0885847a1c8de1079b3..ad25872b3e2c9d5bfdfe178975a4f918
      {"GL_VARIANT_ARRAY_EXT", 0x87E8},
      {"GL_VARIANT_ARRAY_POINTER_EXT", 0x87E9},
      {"GL_VARIANT_ARRAY_STRIDE_EXT", 0x87E6},
+diff --git a/src/common/log_utils.h b/src/common/log_utils.h
+index fc1aa2cccb169a6580cff7b2f144fe1768dbf6c5..0229363b01f7ba8f261f3e5cfc6b33e0a34fa695 100644
+--- a/src/common/log_utils.h
++++ b/src/common/log_utils.h
+@@ -262,10 +262,13 @@ std::ostream &FmtHex(std::ostream &os, T value)
+ 
+ // A macro asserting a condition and outputting failures to the debug log
+ #if defined(ANGLE_ENABLE_ASSERTS)
++bool AreAssertionsEnabled();
+ #    define ASSERT(expression)                                                               \
+         (expression ? static_cast<void>(0)                                                   \
++            : (!AreAssertionsEnabled()                                                       \
++                ? static_cast<void>(0)                                                       \
+                 : (FATAL() << "\t! Assert failed in " << __FUNCTION__ << " (" << __FILE__    \
+-                               << ":" << __LINE__ << "): " << #expression))
++                    << ":" << __LINE__ << "): " << #expression)))
+ #else
+ #    define ASSERT(condition) ANGLE_EAT_STREAM_PARAMETERS << !(condition)
+ #endif  // defined(ANGLE_ENABLE_ASSERTS)
 diff --git a/src/common/tls.cpp b/src/common/tls.cpp
 index 9600bae1a49fc9b6c409dfe311439a630b3b29f2..b66a225f407cc74f50e0be4015692a8cd94dffd0 100644
 --- a/src/common/tls.cpp
@@ -446,10 +483,10 @@ index d03039602a42956a7d60903f36bcc194012c4900..1059f9c6ae6090d8a8657b61077f07ed
  
     Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
 diff --git a/src/compiler/translator/Types.h b/src/compiler/translator/Types.h
-index 37d7e7a8f66a09114b52072dbb8873ca39ad5649..be3a8293c537d5c282245f90dd3c49ea4b54da5d 100644
+index c312bcbb09583a15577186b0ec592fdf3282e722..2b889ac55672bb9eb658f83bdbb41860ef666515 100644
 --- a/src/compiler/translator/Types.h
 +++ b/src/compiler/translator/Types.h
-@@ -253,6 +253,7 @@ class TType
+@@ -254,6 +254,7 @@ class TType
      }
      bool isScalarFloat() const { return isScalar() && type == EbtFloat; }
      bool isScalarInt() const { return isScalar() && (type == EbtInt || type == EbtUInt); }
@@ -1123,10 +1160,10 @@ index 5cef5d49eea1b1f1e6c22543446b2e5391ee88f2..5bfff7a4587126abada2d0a2560fb32c
  
  
 diff --git a/src/libANGLE/Context.cpp b/src/libANGLE/Context.cpp
-index b4cf4f195882a9ae2050f4a6794a9d6fd96771f3..a42043d2e8823ac007515e46e90ef580d7575ecd 100644
+index af7115c9d4b2a3015c27a06e95f6abf18a4621b5..b6077c70c6cbe3ffd11cba8f472c15bc56f208b3 100644
 --- a/src/libANGLE/Context.cpp
 +++ b/src/libANGLE/Context.cpp
-@@ -9991,6 +9991,33 @@ void Context::textureFoveationParameters(TextureID texturePacked,
+@@ -10009,6 +10009,33 @@ void Context::textureFoveationParameters(TextureID texturePacked,
      texture->setFocalPoint(layer, focalPoint, focalX, focalY, gainX, gainY, foveaArea);
  }
  
@@ -1160,7 +1197,7 @@ index b4cf4f195882a9ae2050f4a6794a9d6fd96771f3..a42043d2e8823ac007515e46e90ef580
  void Context::endTiling(GLbitfield preserveMask)
  {
      ANGLE_CONTEXT_TRY(mImplementation->endTiling(this, preserveMask));
-@@ -10065,6 +10092,14 @@ void Context::blobCacheCallbacks(GLSETBLOBPROCANGLE set,
+@@ -10083,6 +10110,14 @@ void Context::blobCacheCallbacks(GLSETBLOBPROCANGLE set,
      mState.getBlobCacheCallbacks() = {set, get, userParam};
  }
  
@@ -1832,7 +1869,7 @@ index a6fe076c72d043dba3fc347bf020ebf8ec895f51..add46e99c91d19bbd790d2de0d8768b8
 +
  #endif  // LIBANGLE_FEATURES_H_
 diff --git a/src/libANGLE/formatutils.cpp b/src/libANGLE/formatutils.cpp
-index 4133121cbde51b23286086981f49ba4c1e49fdac..116a3cd49460f38c9b27accbc409f1bd304c96aa 100644
+index c2a180b1d83a8e0a654f015329c1032cd04ffe5d..f5df2e2809da989ab15a8e495d08f909e7dea527 100644
 --- a/src/libANGLE/formatutils.cpp
 +++ b/src/libANGLE/formatutils.cpp
 @@ -587,7 +587,8 @@ static GLenum EquivalentBlitInternalFormat(GLenum internalformat)
@@ -1967,10 +2004,10 @@ index 96e9ee8420810f6a3ca9a0c290d4a654200eb7b9..8725219587ee8afc25e803bfd84f0fb1
      "-weak_framework",
      "Metal",
 diff --git a/src/libANGLE/renderer/metal/BufferMtl.mm b/src/libANGLE/renderer/metal/BufferMtl.mm
-index 398e6d3e3809da8b0d7ed81458a8f5b752433b16..4689f7484593f8654680d2650d8903324771ecb3 100644
+index 4ac920f02e6b380fe5cb26bf5eb05f86efd72d0c..6f001e829ad8beca5cf4ad8af0557c9b9c0de328 100644
 --- a/src/libANGLE/renderer/metal/BufferMtl.mm
 +++ b/src/libANGLE/renderer/metal/BufferMtl.mm
-@@ -390,7 +390,7 @@ ConversionBufferMtl *BufferMtl::getUniformConversionBuffer(ContextMtl *context,
+@@ -391,7 +391,7 @@ ConversionBufferMtl *BufferMtl::getUniformConversionBuffer(ContextMtl *context,
          {
              if (buffer.offset.second <= offset.second &&
                  (offset.second - buffer.offset.second) % buffer.uniformBufferBlockSize == 0)
@@ -1980,7 +2017,7 @@ index 398e6d3e3809da8b0d7ed81458a8f5b752433b16..4689f7484593f8654680d2650d890332
      }
  
 diff --git a/src/libANGLE/renderer/metal/ContextMtl.h b/src/libANGLE/renderer/metal/ContextMtl.h
-index 888f50426407105a728c6cc9e641fd579ac1e9f8..13ed7313ac400f7b92cb2366fe9c6e2f027d9e21 100644
+index 91da728d1a85fbd444c0d89146a32241bf4f8e65..891cdd71d49c8c7f816b69545f6db730b0ae7175 100644
 --- a/src/libANGLE/renderer/metal/ContextMtl.h
 +++ b/src/libANGLE/renderer/metal/ContextMtl.h
 @@ -272,6 +272,10 @@ class ContextMtl : public ContextImpl, public mtl::Context
@@ -1994,7 +2031,7 @@ index 888f50426407105a728c6cc9e641fd579ac1e9f8..13ed7313ac400f7b92cb2366fe9c6e2f
      // override mtl::ErrorHandler
      void handleError(GLenum error,
                       const char *message,
-@@ -553,6 +557,7 @@ class ContextMtl : public ContextImpl, public mtl::Context
+@@ -550,6 +554,7 @@ class ContextMtl : public ContextImpl, public mtl::Context
          DIRTY_BIT_RENDER_PIPELINE,
          DIRTY_BIT_UNIFORM_BUFFERS_BINDING,
          DIRTY_BIT_RASTERIZER_DISCARD,
@@ -2002,7 +2039,7 @@ index 888f50426407105a728c6cc9e641fd579ac1e9f8..13ed7313ac400f7b92cb2366fe9c6e2f
  
          DIRTY_BIT_INVALID,
          DIRTY_BIT_MAX = DIRTY_BIT_INVALID,
-@@ -646,6 +651,9 @@ class ContextMtl : public ContextImpl, public mtl::Context
+@@ -643,6 +648,9 @@ class ContextMtl : public ContextImpl, public mtl::Context
      IncompleteTextureSet mIncompleteTextures;
      ProvokingVertexHelper mProvokingVertexHelper;
  
@@ -2013,7 +2050,7 @@ index 888f50426407105a728c6cc9e641fd579ac1e9f8..13ed7313ac400f7b92cb2366fe9c6e2f
  };
  
 diff --git a/src/libANGLE/renderer/metal/ContextMtl.mm b/src/libANGLE/renderer/metal/ContextMtl.mm
-index d457610b4aed4fe80412723a5157582d0d0b0139..830b905b5a1788c24dc53758f5fbe4b4dc9e3374 100644
+index 95e0c28b41bfa32872e5635bc7d4bd52d1cb591b..056d10f5f1eca1a3b2593ab2d2ab0603b0b65f1a 100644
 --- a/src/libANGLE/renderer/metal/ContextMtl.mm
 +++ b/src/libANGLE/renderer/metal/ContextMtl.mm
 @@ -260,6 +260,8 @@ void ContextMtl::onDestroy(const gl::Context *context)
@@ -2086,8 +2123,8 @@ index d457610b4aed4fe80412723a5157582d0d0b0139..830b905b5a1788c24dc53758f5fbe4b4
  // override mtl::ErrorHandler
  void ContextMtl::handleError(GLenum glErrorCode,
                               const char *message,
-@@ -2508,8 +2550,22 @@ angle::Result ContextMtl::setupDraw(const gl::Context *context,
-             return angle::Result::Continue;
+@@ -2495,8 +2537,22 @@ angle::Result ContextMtl::setupDraw(const gl::Context *context,
+             return checkCommandBufferError();
          }
          // Setup with flushed state should either produce a working encoder or fail with an error
 -        // result.
@@ -2111,7 +2148,7 @@ index d457610b4aed4fe80412723a5157582d0d0b0139..830b905b5a1788c24dc53758f5fbe4b4
      }
      return angle::Result::Continue;
  }
-@@ -2618,10 +2674,10 @@ angle::Result ContextMtl::setupDrawImpl(const gl::Context *context,
+@@ -2605,10 +2661,10 @@ angle::Result ContextMtl::setupDrawImpl(const gl::Context *context,
                      mState.getBlendColor().blue, mState.getBlendColor().alpha);
                  break;
              case DIRTY_BIT_VIEWPORT:
@@ -2124,7 +2161,7 @@ index d457610b4aed4fe80412723a5157582d0d0b0139..830b905b5a1788c24dc53758f5fbe4b4
                  break;
              case DIRTY_BIT_DRAW_FRAMEBUFFER:
                  // Already handled.
-@@ -2646,6 +2702,12 @@ angle::Result ContextMtl::setupDrawImpl(const gl::Context *context,
+@@ -2633,6 +2689,12 @@ angle::Result ContextMtl::setupDrawImpl(const gl::Context *context,
              case DIRTY_BIT_RASTERIZER_DISCARD:
                  // Already handled.
                  break;
@@ -2150,7 +2187,7 @@ index 004dc07b5c05616155a45dd52cbaf5c0522be256..de757d25f1b9305f2e06b6cbd9724d51
      bool isAMDBronzeDriver() const;
      bool isAMDFireProDevice() const;
 diff --git a/src/libANGLE/renderer/metal/DisplayMtl.mm b/src/libANGLE/renderer/metal/DisplayMtl.mm
-index 535aac4f22892f22f73b28f4563b99886499c94a..00968fbeab8e5230d94b2d2a5979a573913f0658 100644
+index 5291311307b2ebbb41cb19560783d5ae5e8a1bd5..27f49188db3cbc0c5bec9a04a0b42714d76a236d 100644
 --- a/src/libANGLE/renderer/metal/DisplayMtl.mm
 +++ b/src/libANGLE/renderer/metal/DisplayMtl.mm
 @@ -176,12 +176,22 @@ void DisplayMtl::terminate()
@@ -2238,7 +2275,7 @@ index 84e5326b7270f29630d2c353a6ebadb5d10b6a21..0afffbbb5ad7f3961d49addf1f74d44b
  
      const mtl::Format *mRenderPassFirstColorAttachmentFormat = nullptr;
 diff --git a/src/libANGLE/renderer/metal/FrameBufferMtl.mm b/src/libANGLE/renderer/metal/FrameBufferMtl.mm
-index 514297a0d070056bb2f762ec945f432718796bb3..47b075eaad469f93ea365eff7da1b574d4129dd2 100644
+index d0c19c6e25c302705a76b6074f6990452d62b5f4..ec9ef3d7958a9b3351db72b1ac8cb61967e24d14 100644
 --- a/src/libANGLE/renderer/metal/FrameBufferMtl.mm
 +++ b/src/libANGLE/renderer/metal/FrameBufferMtl.mm
 @@ -128,6 +128,9 @@ angle::Result Copy2DTextureSlice0Level0ToTempTexture(const gl::Context *context,
@@ -2465,22 +2502,7 @@ index 514297a0d070056bb2f762ec945f432718796bb3..47b075eaad469f93ea365eff7da1b574
          }
      }
  
-@@ -1673,8 +1753,13 @@ angle::Result FramebufferMtl::readPixelsToPBO(const gl::Context *context,
- 
-     ContextMtl *contextMtl = mtl::GetImpl(context);
- 
--    ANGLE_MTL_CHECK(contextMtl, packPixelsParams.offset <= std::numeric_limits<uint32_t>::max(),
-+    if constexpr (sizeof(packPixelsParams.offset) > sizeof(uint32_t))
-+    {
-+        ANGLE_MTL_CHECK(contextMtl,
-+                        static_cast<std::make_unsigned_t<decltype(packPixelsParams.offset)>>(
-+                            packPixelsParams.offset) <= std::numeric_limits<uint32_t>::max(),
-                         GL_INVALID_OPERATION);
-+    }
-     uint32_t offset = static_cast<uint32_t>(packPixelsParams.offset);
- 
-     BufferMtl *packBufferMtl = mtl::GetImpl(packPixelsParams.packBuffer);
-@@ -1823,8 +1908,8 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
+@@ -1824,8 +1904,8 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
              renderPassDesc.colorAttachments[colorIndexGL];
  
          if (colorAttachment.loadAction != MTLLoadActionLoad ||
@@ -2491,7 +2513,7 @@ index 514297a0d070056bb2f762ec945f432718796bb3..47b075eaad469f93ea365eff7da1b574
          {
              continue;
          }
-@@ -1832,9 +1917,9 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
+@@ -1833,9 +1913,9 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
          const angle::Format &angleFormat = colorRenderTarget->getFormat().actualAngleFormat();
  
          // Blit the resolve texture to the MS texture.
@@ -2504,7 +2526,7 @@ index 514297a0d070056bb2f762ec945f432718796bb3..47b075eaad469f93ea365eff7da1b574
  
          colorBlitParams.enabledBuffers.reset();
          colorBlitParams.enabledBuffers.set(colorIndexGL);
-@@ -1849,19 +1934,18 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
+@@ -1850,19 +1930,18 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
      mtl::DepthStencilBlitParams dsBlitParams;
      dsBlitParams.BlitParams::operator=(baseParams);
      const mtl::RenderPassDepthAttachmentDesc &depthAttachment = renderPassDesc.depthAttachment;
@@ -2531,7 +2553,7 @@ index 514297a0d070056bb2f762ec945f432718796bb3..47b075eaad469f93ea365eff7da1b574
      {
          if (mState.hasSeparateDepthAndStencilAttachments())
          {
-@@ -1871,9 +1955,9 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
+@@ -1872,9 +1951,9 @@ angle::Result FramebufferMtl::unresolveIfNeeded(const gl::Context *context,
              dsBlitParams.src = nullptr;
          }
  
@@ -2587,10 +2609,10 @@ index a4a809fabe7572c1d212ff8fb4da35b1f67b6a01..eb2bd204b9edda65ba372b8fcb24f809
      {
          size_t resourceSize = EstimateTextureSizeInBytes(
 diff --git a/src/libANGLE/renderer/metal/ProgramExecutableMtl.mm b/src/libANGLE/renderer/metal/ProgramExecutableMtl.mm
-index 00003ec8f51ca527c3a8d36e41fa32d4cba8b61f..e288007156573c4d68938f82623c809c12061c4a 100644
+index 31cced755a0513aa272d544a19730919a68340ab..8a188c91a94a44c769289856362086ed5e37cfc0 100644
 --- a/src/libANGLE/renderer/metal/ProgramExecutableMtl.mm
 +++ b/src/libANGLE/renderer/metal/ProgramExecutableMtl.mm
-@@ -889,7 +889,7 @@ angle::Result ProgramExecutableMtl::setupDraw(const gl::Context *glContext,
+@@ -878,7 +878,7 @@ angle::Result ProgramExecutableMtl::setupDraw(const gl::Context *glContext,
  {
      ContextMtl *context = mtl::GetImpl(glContext);
  
@@ -2654,7 +2676,7 @@ index 18e62da867b2916085794ba3b68ee4a3812d3929..6cbf2a58812184edb425d11689bdbce5
 +#endif
  }  // namespace rx
 diff --git a/src/libANGLE/renderer/metal/SurfaceMtl.mm b/src/libANGLE/renderer/metal/SurfaceMtl.mm
-index 79a9328a1d250cfd96bc06d34b0caef8865aa72d..f108a3fb68cfcbee8fbbdeda12a5dd3a4c969905 100644
+index 976a678b2cd68f294a5986ed0e9e7dc9cfe99088..a5c82a4ff5f947dd2a1109581bd9a357e83ae223 100644
 --- a/src/libANGLE/renderer/metal/SurfaceMtl.mm
 +++ b/src/libANGLE/renderer/metal/SurfaceMtl.mm
 @@ -694,8 +694,7 @@ angle::Result WindowSurfaceMtl::obtainNextDrawable(const gl::Context *context)
@@ -2668,10 +2690,10 @@ index 79a9328a1d250cfd96bc06d34b0caef8865aa72d..f108a3fb68cfcbee8fbbdeda12a5dd3a
          // Now we have to resize depth stencil buffers if required.
          ANGLE_TRY(ensureCompanionTexturesSizeCorrect(context));
 diff --git a/src/libANGLE/renderer/metal/VertexArrayMtl.mm b/src/libANGLE/renderer/metal/VertexArrayMtl.mm
-index d93f10afc07d12b88cd234e569fa658a1fbf6ad2..24fc07ff9b0e8294d972e7623173b9d47ff49679 100644
+index 051fed3b2f85c55edee7d32c3e961510b4c7a968..a40766e1367d1ff2427e963957dcc2869ade32cf 100644
 --- a/src/libANGLE/renderer/metal/VertexArrayMtl.mm
 +++ b/src/libANGLE/renderer/metal/VertexArrayMtl.mm
-@@ -1084,16 +1084,23 @@ angle::Result VertexArrayMtl::convertVertexBufferGPU(const gl::Context *glContex
+@@ -1085,16 +1085,23 @@ angle::Result VertexArrayMtl::convertVertexBufferGPU(const gl::Context *glContex
      ANGLE_TRY(conversion->data.allocate(contextMtl, numVertices * targetStride, nullptr, &newBuffer,
                                          &newBufferOffset));
  
@@ -2699,19 +2721,19 @@ index d93f10afc07d12b88cd234e569fa658a1fbf6ad2..24fc07ff9b0e8294d972e7623173b9d4
      params.srcDefaultAlphaData  = convertedFormat.defaultAlpha;
  
 diff --git a/src/libANGLE/renderer/metal/mtl_command_buffer.h b/src/libANGLE/renderer/metal/mtl_command_buffer.h
-index 99a284b7cad3c2a2eb7cb7b71790cabc22823fb8..79c182d05d77fa219513ae6ae59fd88e7782022a 100644
+index d137292a4786bcc7b3cdf4042c8cb9d1c688c1c7..c2aa38776e125c22ebf5be6543558c882afbb1e3 100644
 --- a/src/libANGLE/renderer/metal/mtl_command_buffer.h
 +++ b/src/libANGLE/renderer/metal/mtl_command_buffer.h
-@@ -104,6 +104,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
-     bool isTimeElapsedEntryComplete(uint64_t id);
+@@ -118,6 +118,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
      double getTimeElapsedEntryInSeconds(uint64_t id);
+     MTLCommandBufferError popCmdBufferError() { return mCmdBufferError.pop(); }
  
 +    bool isDeviceLost() const { return mIsDeviceLost; }
 +
    private:
      void onCommandBufferCompleted(id<MTLCommandBuffer> buf,
                                    uint64_t serial,
-@@ -146,6 +148,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
+@@ -162,6 +164,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
      void recordCommandBufferTimeElapsed(std::lock_guard<std::mutex> &lg,
                                          uint64_t id,
                                          double seconds);
@@ -2720,7 +2742,7 @@ index 99a284b7cad3c2a2eb7cb7b71790cabc22823fb8..79c182d05d77fa219513ae6ae59fd88e
  };
  
  class CommandBuffer final : public WrappedObject<id<MTLCommandBuffer>>, angle::NonCopyable
-@@ -420,8 +424,10 @@ class RenderCommandEncoder final : public CommandEncoder
+@@ -436,8 +440,10 @@ class RenderCommandEncoder final : public CommandEncoder
      RenderCommandEncoder &setStencilRefVals(uint32_t frontRef, uint32_t backRef);
      RenderCommandEncoder &setStencilRefVal(uint32_t ref);
  
@@ -2733,7 +2755,7 @@ index 99a284b7cad3c2a2eb7cb7b71790cabc22823fb8..79c182d05d77fa219513ae6ae59fd88e
  
      RenderCommandEncoder &setBlendColor(float r, float g, float b, float a);
  
-@@ -570,6 +576,8 @@ class RenderCommandEncoder final : public CommandEncoder
+@@ -586,6 +592,8 @@ class RenderCommandEncoder final : public CommandEncoder
      RenderCommandEncoder &setDepthLoadAction(MTLLoadAction action, double clearValue);
      RenderCommandEncoder &setStencilLoadAction(MTLLoadAction action, uint32_t clearValue);
  
@@ -2742,7 +2764,7 @@ index 99a284b7cad3c2a2eb7cb7b71790cabc22823fb8..79c182d05d77fa219513ae6ae59fd88e
      void setLabel(NSString *label);
  
      void pushDebugGroup(NSString *label) override;
-@@ -577,8 +585,11 @@ class RenderCommandEncoder final : public CommandEncoder
+@@ -593,8 +601,11 @@ class RenderCommandEncoder final : public CommandEncoder
  
      const RenderPassDesc &renderPassDesc() const { return mRenderPassDesc; }
      bool hasDrawCalls() const { return mHasDrawCalls; }
@@ -2755,13 +2777,13 @@ index 99a284b7cad3c2a2eb7cb7b71790cabc22823fb8..79c182d05d77fa219513ae6ae59fd88e
    private:
      // Override CommandEncoder
 diff --git a/src/libANGLE/renderer/metal/mtl_command_buffer.mm b/src/libANGLE/renderer/metal/mtl_command_buffer.mm
-index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e663a6ee9 100644
+index 746ac13ccae10e52b2dae01efac6838711788226..381139e91f243f880fefdf302cf70e1809c5833a 100644
 --- a/src/libANGLE/renderer/metal/mtl_command_buffer.mm
 +++ b/src/libANGLE/renderer/metal/mtl_command_buffer.mm
-@@ -640,6 +640,20 @@ void CommandQueue::onCommandBufferCompleted(id<MTLCommandBuffer> buf,
- 
-     ANGLE_MTL_LOG("Completed MTLCommandBuffer %llu:%p", serial, buf);
- 
+@@ -647,6 +647,19 @@ void CommandQueue::onCommandBufferCompleted(id<MTLCommandBuffer> buf,
+               << error.localizedDescription.UTF8String;
+         mCmdBufferError.store(static_cast<MTLCommandBufferError>(error.code));
+     }
 +    MTLCommandBufferStatus status = buf.status;
 +    if (status != MTLCommandBufferStatusCompleted)
 +    {
@@ -2775,11 +2797,10 @@ index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e
 +            return;
 +        }
 +    }
-+
+ 
      if (timeElapsedEntry != 0)
      {
-         // Record this command buffer's elapsed time.
-@@ -1353,6 +1367,7 @@ void RenderCommandEncoder::reset()
+@@ -1361,6 +1374,7 @@ void RenderCommandEncoder::reset()
      CommandEncoder::reset();
      mRecording        = false;
      mPipelineStateSet = false;
@@ -2787,7 +2808,7 @@ index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e
      mCommands.clear();
  }
  
-@@ -1388,7 +1403,7 @@ bool RenderCommandEncoder::finalizeLoadStoreAction(
+@@ -1396,7 +1410,7 @@ bool RenderCommandEncoder::finalizeLoadStoreAction(
      }
  
      // Check if we need to disable MTLLoadActionLoad & MTLStoreActionStore
@@ -2796,7 +2817,7 @@ index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e
      ASSERT(mainTextureRef->get() == objCRenderPassAttachment.texture);
      if (mainTextureRef->shouldNotLoadStore())
      {
-@@ -1532,13 +1547,13 @@ void RenderCommandEncoder::endEncodingImpl(bool considerDiscardSimulation)
+@@ -1540,13 +1554,13 @@ void RenderCommandEncoder::endEncodingImpl(bool considerDiscardSimulation)
  inline void RenderCommandEncoder::initAttachmentWriteDependencyAndScissorRect(
      const RenderPassAttachmentDesc &attachment)
  {
@@ -2813,7 +2834,7 @@ index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e
          mRenderPassMaxScissorRect.width =
              std::min<NSUInteger>(mRenderPassMaxScissorRect.width, texture->width(mipLevel));
          mRenderPassMaxScissorRect.height =
-@@ -1816,7 +1831,8 @@ RenderCommandEncoder &RenderCommandEncoder::setStencilRefVal(uint32_t ref)
+@@ -1824,7 +1838,8 @@ RenderCommandEncoder &RenderCommandEncoder::setStencilRefVal(uint32_t ref)
      return setStencilRefVals(ref, ref);
  }
  
@@ -2823,7 +2844,7 @@ index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e
  {
      if (mStateCache.viewport.valid() && mStateCache.viewport.value() == viewport)
      {
-@@ -1829,12 +1845,22 @@ RenderCommandEncoder &RenderCommandEncoder::setViewport(const MTLViewport &viewp
+@@ -1837,12 +1852,22 @@ RenderCommandEncoder &RenderCommandEncoder::setViewport(const MTLViewport &viewp
      return *this;
  }
  
@@ -2849,7 +2870,7 @@ index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e
  
      MTLScissorRect clampedRect = {rect.x, rect.y, std::min(rect.width, clampedWidth),
                                    std::min(rect.height, clampedHeight)};
-@@ -1846,6 +1872,23 @@ RenderCommandEncoder &RenderCommandEncoder::setScissorRect(const MTLScissorRect
+@@ -1854,6 +1879,23 @@ RenderCommandEncoder &RenderCommandEncoder::setScissorRect(const MTLScissorRect
  
      mStateCache.scissorRect = clampedRect;
  
@@ -2873,7 +2894,7 @@ index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e
      mCommands.push(CmdType::SetScissorRect).push(clampedRect);
  
      return *this;
-@@ -2251,6 +2294,17 @@ void RenderCommandEncoder::popDebugGroup()
+@@ -2259,6 +2301,17 @@ void RenderCommandEncoder::popDebugGroup()
      mCommands.push(CmdType::PopDebugGroup);
  }
  
@@ -2891,7 +2912,7 @@ index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e
  RenderCommandEncoder &RenderCommandEncoder::setColorStoreAction(MTLStoreAction action,
                                                                  uint32_t colorAttachmentIndex)
  {
-@@ -2346,6 +2400,16 @@ RenderCommandEncoder &RenderCommandEncoder::setStencilLoadAction(MTLLoadAction a
+@@ -2354,6 +2407,16 @@ RenderCommandEncoder &RenderCommandEncoder::setStencilLoadAction(MTLLoadAction a
      return *this;
  }
  
@@ -2909,10 +2930,10 @@ index 7a68f31ac8986ce5b62fd1b397c24173487e5fe7..0e3415fa53e6b98c26b94739a743683e
  {
      mLabel.retainAssign(label);
 diff --git a/src/libANGLE/renderer/metal/mtl_common.h b/src/libANGLE/renderer/metal/mtl_common.h
-index 53df62518f0dcedda46c1a0946f214eabdfa28cf..a76051dd40ca82aa4b2631ce37b7ca3a9131c5ed 100644
+index 9ff6dba01c1ed98d4811e184a558d32b02356d64..ec5fb454b1603b4bcb6a482235d38a7c36c32c19 100644
 --- a/src/libANGLE/renderer/metal/mtl_common.h
 +++ b/src/libANGLE/renderer/metal/mtl_common.h
-@@ -372,6 +372,8 @@ inline AutoObjCObj<U> adoptObjCObj(U *NS_RELEASES_ARGUMENT src)
+@@ -374,6 +374,8 @@ inline AutoObjCObj<U> adoptObjCObj(U *NS_RELEASES_ARGUMENT src)
  #endif
  }
  
@@ -2968,10 +2989,10 @@ index b6fb44c79e2ed92c908b5b8997695d2253bbe2a2..7f5cacbf7104aa15142cb78688a91a03
  {
      switch (metalFormat)
 diff --git a/src/libANGLE/renderer/metal/mtl_render_utils.mm b/src/libANGLE/renderer/metal/mtl_render_utils.mm
-index 112dac4c75c78afe0f088bb29b33779c50bec3aa..a9f429dc573864a26b4dc5c5bf3922bec1c53ccb 100644
+index 57bdaeb2712fa05d0d1060aca3c031a95e7e8c96..cccefd82a5cfa5f97a729022305a7104433e94f2 100644
 --- a/src/libANGLE/renderer/metal/mtl_render_utils.mm
 +++ b/src/libANGLE/renderer/metal/mtl_render_utils.mm
-@@ -607,7 +607,8 @@ void DispatchCompute(ContextMtl *contextMtl,
+@@ -596,7 +596,8 @@ void DispatchCompute(ContextMtl *contextMtl,
                       id<MTLComputePipelineState> pipelineState,
                       size_t numThreads)
  {
@@ -2981,7 +3002,7 @@ index 112dac4c75c78afe0f088bb29b33779c50bec3aa..a9f429dc573864a26b4dc5c5bf3922be
      MTLSize threadsPerThreadgroup = MTLSizeMake(w, 1, 1);
  
      if (contextMtl->getDisplay()->getFeatures().hasNonUniformDispatch.enabled)
-@@ -687,8 +688,9 @@ void SetupCommonBlitWithDrawStates(const gl::Context *context,
+@@ -676,8 +677,9 @@ void SetupCommonBlitWithDrawStates(const gl::Context *context,
          GetViewport(params.dstRect, params.dstTextureSize.height, params.dstFlipY);
      MTLScissorRect scissorRectMtl =
          GetScissorRect(params.dstScissorRect, params.dstTextureSize.height, params.dstFlipY);
@@ -2993,7 +3014,7 @@ index 112dac4c75c78afe0f088bb29b33779c50bec3aa..a9f429dc573864a26b4dc5c5bf3922be
  
      if (params.src)
      {
-@@ -1222,8 +1224,8 @@ angle::Result ClearUtils::setupClearWithDraw(const gl::Context *context,
+@@ -1172,8 +1174,8 @@ angle::Result ClearUtils::setupClearWithDraw(const gl::Context *context,
  
      scissorRect = GetScissorRect(params.clearArea, params.dstTextureSize.height, params.flipY);
  
@@ -3095,7 +3116,7 @@ index 051259c2cf61ea9a0fea84dcf72ea02c83af0017..dd5cb60db6aa78fa31a0ab9b3814d075
      TextureRef createMipsView(const MipmapNativeLevel &baseLevel, uint32_t levels);
      // Create a view of a level.
 diff --git a/src/libANGLE/renderer/metal/mtl_resources.mm b/src/libANGLE/renderer/metal/mtl_resources.mm
-index ea1004515d73a687b55015161fe1789b08d2fc35..9aa1ea795a4212faa5bfec2347482fd75764c8e3 100644
+index 9cfa2a150ccf9d96b0596636a45c2be8453fdbf9..7f1e7bee32d5d3a2e8fc104accd290f9ee6e2dd2 100644
 --- a/src/libANGLE/renderer/metal/mtl_resources.mm
 +++ b/src/libANGLE/renderer/metal/mtl_resources.mm
 @@ -78,12 +78,10 @@ MTLResourceOptions resourceOptionsForStorageMode(MTLStorageMode storageMode)
@@ -3259,7 +3280,7 @@ index 96d63ee854d4051a1cae862e6814aa515b4c8f9c..d5b50b7b3980445dcfb8518f0bc643f8
             blendable == other.blendable;
  }
 diff --git a/src/libANGLE/renderer/metal/mtl_utils.mm b/src/libANGLE/renderer/metal/mtl_utils.mm
-index 45040f7f590d36d2cd79d05815e2c7bb27209c15..314057cb3b38b075ba9d27f869b2432ec0dafa2f 100644
+index 64f5de19b5a1acb1168059a9165b52011510db38..a708108f49d12003fa2f759245872d26094ac840 100644
 --- a/src/libANGLE/renderer/metal/mtl_utils.mm
 +++ b/src/libANGLE/renderer/metal/mtl_utils.mm
 @@ -1477,6 +1477,24 @@ bool SupportsAppleGPUFamily(id<MTLDevice> device, uint8_t appleFamily)
@@ -3369,10 +3390,10 @@ index 0000000000000000000000000000000000000000..23e8295bcc16412d3aef3fc8e85748fa
 +if __name__ == '__main__':
 +    sys.exit(main())
 diff --git a/src/libANGLE/renderer/vulkan/CLProgramVk.cpp b/src/libANGLE/renderer/vulkan/CLProgramVk.cpp
-index 0f09410d7d9c11d1159bb765fe0019af37b16062..0c020929824186109072428eff5be5d0157d2f81 100644
+index 170f8cb57d799d3ef843b9e4f2aa486110e3522e..6bbc8a93f3718c18e13f15e52a7e677143175176 100644
 --- a/src/libANGLE/renderer/vulkan/CLProgramVk.cpp
 +++ b/src/libANGLE/renderer/vulkan/CLProgramVk.cpp
-@@ -848,6 +848,11 @@ bool CLProgramVk::buildInternal(const cl::DevicePtrs &devices,
+@@ -844,6 +844,11 @@ bool CLProgramVk::buildInternal(const cl::DevicePtrs &devices,
          // add clspv compiler options based on device features
          processedOptions += ClspvGetCompilerOptions(&device->getImpl<CLDeviceVk>());
  
@@ -3385,10 +3406,10 @@ index 0f09410d7d9c11d1159bb765fe0019af37b16062..0c020929824186109072428eff5be5d0
          {
              // Invoke clspv
 diff --git a/src/libANGLE/renderer/vulkan/ContextVk.cpp b/src/libANGLE/renderer/vulkan/ContextVk.cpp
-index a41be90e91b762dd50c2591946f2f33c891e56df..1f409e3bb320f6ed6bbea5d12dce17025ff6a6cb 100644
+index 98a6f7458f22b793c1379a8b318dbbcd04dcd472..556198389988c07542241d4a28de5eb1442a83df 100644
 --- a/src/libANGLE/renderer/vulkan/ContextVk.cpp
 +++ b/src/libANGLE/renderer/vulkan/ContextVk.cpp
-@@ -6067,6 +6067,10 @@ angle::Result ContextVk::syncState(const gl::Context *context,
+@@ -6087,6 +6087,10 @@ angle::Result ContextVk::syncState(const gl::Context *context,
                              break;
                          case gl::state::EXTENDED_DIRTY_BIT_BLEND_ADVANCED_COHERENT:
                              break;
@@ -3400,10 +3421,10 @@ index a41be90e91b762dd50c2591946f2f33c891e56df..1f409e3bb320f6ed6bbea5d12dce1702
                              UNREACHABLE();
                      }
 diff --git a/src/libANGLE/validationES2.cpp b/src/libANGLE/validationES2.cpp
-index 8e7099af6d3da32072562911d5207a8c1578d0f5..fd2dbc23e1972329db933b464587cee6fafa4a96 100644
+index 99bd9189a0ec89129c6bed6315f1338d5494ce36..b462f93adae0dbc1c258fba30895500cf0073c36 100644
 --- a/src/libANGLE/validationES2.cpp
 +++ b/src/libANGLE/validationES2.cpp
-@@ -703,6 +703,9 @@ bool ValidCap(const PrivateState &state, ErrorSet *errors, GLenum cap, bool quer
+@@ -697,6 +697,9 @@ bool ValidCapUncommon(const PrivateState &state, ErrorSet *errors, GLenum cap, b
              return state.getClientVersion() >= Version(2, 0) &&
                     state.getExtensions().blendEquationAdvancedCoherentKHR;
  
@@ -3413,7 +3434,7 @@ index 8e7099af6d3da32072562911d5207a8c1578d0f5..fd2dbc23e1972329db933b464587cee6
          default:
              break;
      }
-@@ -6107,6 +6110,18 @@ bool ValidateMaxShaderCompilerThreadsKHR(const Context *context,
+@@ -6114,6 +6117,18 @@ bool ValidateMaxShaderCompilerThreadsKHR(const Context *context,
      return true;
  }
  
@@ -3664,7 +3685,7 @@ index 76ced2d99168cf9e28f2e22425657948047573ee..af0caf74ce1b632d94582ad1df6cf22e
 +
  }  // extern "C"
 diff --git a/src/libGLESv2/libGLESv2_autogen.def b/src/libGLESv2/libGLESv2_autogen.def
-index 04082b618a800fcb4aafa25bb084eb5e9c6ac7ec..ecb0a6f846c27d3de17670bbcead2e30a76aa822 100644
+index f637f2b1818f24341efe75eeb5273646e9e6572f..fc39e179b84bf0b31de43b9d738636d9fe533d28 100644
 --- a/src/libGLESv2/libGLESv2_autogen.def
 +++ b/src/libGLESv2/libGLESv2_autogen.def
 @@ -672,6 +672,9 @@ EXPORTS
@@ -3688,7 +3709,7 @@ index 04082b618a800fcb4aafa25bb084eb5e9c6ac7ec..ecb0a6f846c27d3de17670bbcead2e30
      EGL_ChooseConfig
      EGL_CopyBuffers
 diff --git a/src/libGLESv2/libGLESv2_no_capture_autogen.def b/src/libGLESv2/libGLESv2_no_capture_autogen.def
-index 137f47651eea88f836a7d79b4eaf5c8ce1a08e8c..83a4e16f0b4de5503462879a6bb171028eef5edb 100644
+index 5c850d9638211f7f7f4fa0e175d4e5a2d9a05c71..6e257519c5f7582fef749ef2d1ee3b525180702d 100644
 --- a/src/libGLESv2/libGLESv2_no_capture_autogen.def
 +++ b/src/libGLESv2/libGLESv2_no_capture_autogen.def
 @@ -672,6 +672,9 @@ EXPORTS
@@ -3712,7 +3733,7 @@ index 137f47651eea88f836a7d79b4eaf5c8ce1a08e8c..83a4e16f0b4de5503462879a6bb17102
      EGL_ChooseConfig
      EGL_CopyBuffers
 diff --git a/src/libGLESv2/libGLESv2_vulkan_secondaries_autogen.def b/src/libGLESv2/libGLESv2_vulkan_secondaries_autogen.def
-index 8e12a4f44fee7ca93f7d0dc74b998c5aae9edbca..6a6165b6167628fa36d5a9f9f9a7a1d8fe465c9f 100644
+index 379e81a709496b484d091f428e8d8990244fc52c..fb9c537ad9c466888b10564ac3ddf71ddd15538a 100644
 --- a/src/libGLESv2/libGLESv2_vulkan_secondaries_autogen.def
 +++ b/src/libGLESv2/libGLESv2_vulkan_secondaries_autogen.def
 @@ -672,6 +672,9 @@ EXPORTS
@@ -3736,7 +3757,7 @@ index 8e12a4f44fee7ca93f7d0dc74b998c5aae9edbca..6a6165b6167628fa36d5a9f9f9a7a1d8
      EGL_ChooseConfig
      EGL_CopyBuffers
 diff --git a/src/libGLESv2/libGLESv2_with_capture_autogen.def b/src/libGLESv2/libGLESv2_with_capture_autogen.def
-index 0805cdf5180c2c7f2dc5a4bc316ad02720ef543d..14f5cac83dbb4540f793cd72aa4c802f1ebfbe66 100644
+index 4e329ce76aa2df784eaa6328e116df2f8c3aaacd..714c611c34d7ae22b71403b3563abb3fc7fb4e69 100644
 --- a/src/libGLESv2/libGLESv2_with_capture_autogen.def
 +++ b/src/libGLESv2/libGLESv2_with_capture_autogen.def
 @@ -672,6 +672,9 @@ EXPORTS
@@ -3781,10 +3802,10 @@ index a3d951ba0ee8f6d479f11c265f7f0cb9c93ff0d4..d0d37ddca34b2d85e6635e679781b05f
 +    ; GL_WEBKIT_explicit_resolve_target
 +    glFramebufferResolveRenderbufferWEBKIT
 diff --git a/src/libGLESv2/proc_table_egl_autogen.cpp b/src/libGLESv2/proc_table_egl_autogen.cpp
-index e7836cbb783ec020dd1fa40049d037b8a3a367e4..47cecdcbff27ccb630a9ac508ec901f555f1d463 100644
+index 66236e4e079de6799ffc741412975ecac7ab7d73..24b16cb646072a408510b4a6c929f970d294cd45 100644
 --- a/src/libGLESv2/proc_table_egl_autogen.cpp
 +++ b/src/libGLESv2/proc_table_egl_autogen.cpp
-@@ -167,6 +167,7 @@ const ProcEntry g_procTable[] = {
+@@ -169,6 +169,7 @@ const ProcEntry g_procTable[] = {
      {"glBindFramebuffer", P(GL_BindFramebuffer)},
      {"glBindFramebufferOES", P(GL_BindFramebufferOES)},
      {"glBindImageTexture", P(GL_BindImageTexture)},
@@ -3792,7 +3813,7 @@ index e7836cbb783ec020dd1fa40049d037b8a3a367e4..47cecdcbff27ccb630a9ac508ec901f5
      {"glBindProgramPipeline", P(GL_BindProgramPipeline)},
      {"glBindProgramPipelineEXT", P(GL_BindProgramPipelineEXT)},
      {"glBindRenderbuffer", P(GL_BindRenderbuffer)},
-@@ -382,6 +383,7 @@ const ProcEntry g_procTable[] = {
+@@ -384,6 +385,7 @@ const ProcEntry g_procTable[] = {
      {"glFramebufferPixelLocalStorageRestoreANGLE", P(GL_FramebufferPixelLocalStorageRestoreANGLE)},
      {"glFramebufferRenderbuffer", P(GL_FramebufferRenderbuffer)},
      {"glFramebufferRenderbufferOES", P(GL_FramebufferRenderbufferOES)},
@@ -3829,13 +3850,14 @@ index c7fdefbaa646d44373e5e38b73b2d30b72890dd7..f1069c293262b4ea9cad1e6379611141
  angle_end2end_tests_win_sources = [
    "egl_tests/EGLDeviceTest.cpp",
 diff --git a/src/tests/gl_tests/GLSLTest.cpp b/src/tests/gl_tests/GLSLTest.cpp
-index 332ec3a8c70d30e31c6099e86e26dd5737558833..836831a273cc06d50a5054b883d6953b2b2f9427 100644
+index 11bd710548505bc456b735ebf0ee058fc029f27f..feba5cf86b2349022dfc70a2aa35fd2f44968bdf 100644
 --- a/src/tests/gl_tests/GLSLTest.cpp
 +++ b/src/tests/gl_tests/GLSLTest.cpp
-@@ -20590,6 +20590,815 @@ void main (void)
-     glDeleteShader(shader);
+@@ -20608,6 +20608,816 @@ void main()
+     EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);
+     ASSERT_GL_NO_ERROR();
  }
- 
++
 +// Test highp int scalar + vec
 +TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingAdd1)
 +{
@@ -4851,7 +4873,7 @@ index 0000000000000000000000000000000000000000..0320255d8d6340e9d5a7a4dd0543c005
 +                       WithRobustness(ES2_METAL().enable(Feature::InjectAsmStatementIntoLoopBodies)),
 +                       WithRobustness(ES3_METAL().enable(Feature::InjectAsmStatementIntoLoopBodies)));
 diff --git a/util/autogen/angle_features_autogen.cpp b/util/autogen/angle_features_autogen.cpp
-index 90525b8c0606a49b4aee5eff98a0ef16132d3f0f..d50e18a0db02e1623ef0b8f096428e4cce19b796 100644
+index 4ed0cc0802aa86b47a3cb30b2574745fe04dc7d3..e1e8eb111a5e5aa45dfe95363233079328c1723e 100644
 --- a/util/autogen/angle_features_autogen.cpp
 +++ b/util/autogen/angle_features_autogen.cpp
 @@ -207,6 +207,7 @@ constexpr PackedEnumMap<Feature, const char *> kFeatureNames = {{
@@ -4863,7 +4885,7 @@ index 90525b8c0606a49b4aee5eff98a0ef16132d3f0f..d50e18a0db02e1623ef0b8f096428e4c
      {Feature::InitializeCurrentVertexAttributes, "initializeCurrentVertexAttributes"},
      {Feature::InjectAsmStatementIntoLoopBodies, "injectAsmStatementIntoLoopBodies"},
 diff --git a/util/autogen/angle_features_autogen.h b/util/autogen/angle_features_autogen.h
-index d25af7e94b38a3b48271fd9aa8afcdecf2000cbc..94753735720213e395b8cff3316462ad92616d32 100644
+index d7cb44d2bad4f004054e20e72d9afff86e70f27e..50550ba0e0763dce9b09f0b87d0f69b89b8c258a 100644
 --- a/util/autogen/angle_features_autogen.h
 +++ b/util/autogen/angle_features_autogen.h
 @@ -207,6 +207,7 @@ enum class Feature
@@ -4982,10 +5004,10 @@ index 92835c6a5d5160b144172cecd76eb1661c417174..1e5acc666d7af1f0a29fca7752914ac9
  ANGLE_TRACE_LOADER_EXPORT extern PFNGLDRAWTEXFVOESPROC t_glDrawTexfvOES;
  ANGLE_TRACE_LOADER_EXPORT extern PFNGLDRAWTEXIOESPROC t_glDrawTexiOES;
 diff --git a/util/capture/trace_interpreter_autogen.cpp b/util/capture/trace_interpreter_autogen.cpp
-index a4202d80d730c02b69b40a245f644e6e89b93bc2..b331cf8996a61f9742ab30b0fca7943984296dfc 100644
+index 826307ea7e569d7fd27be893b8b95b6b908cf5dd..8527ce2b5a0de225ae51f06a9a42a62cf6893faf 100644
 --- a/util/capture/trace_interpreter_autogen.cpp
 +++ b/util/capture/trace_interpreter_autogen.cpp
-@@ -903,6 +903,13 @@ CallCapture ParseCallCapture(const Token &nameToken,
+@@ -917,6 +917,13 @@ CallCapture ParseCallCapture(const Token &nameToken,
              paramTokens, strings);
          return CallCapture(EntryPoint::GLBindImageTexture, std::move(params));
      }
@@ -4999,7 +5021,7 @@ index a4202d80d730c02b69b40a245f644e6e89b93bc2..b331cf8996a61f9742ab30b0fca79439
      if (strcmp(nameToken, "glBindProgramPipeline") == 0)
      {
          ParamBuffer params =
-@@ -2310,6 +2317,13 @@ CallCapture ParseCallCapture(const Token &nameToken,
+@@ -2324,6 +2331,13 @@ CallCapture ParseCallCapture(const Token &nameToken,
                  paramTokens, strings);
          return CallCapture(EntryPoint::GLFramebufferRenderbufferOES, std::move(params));
      }

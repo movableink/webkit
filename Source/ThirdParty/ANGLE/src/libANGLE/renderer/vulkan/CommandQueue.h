@@ -45,7 +45,7 @@ class FenceRecycler
   public:
     FenceRecycler() {}
     ~FenceRecycler() {}
-    void destroy(Context *context);
+    void destroy(ErrorContext *context);
 
     void fetch(VkDevice device, Fence *fenceOut);
     void recycle(Fence &&fence);
@@ -87,7 +87,7 @@ class CommandBatch final : angle::NonCopyable
     CommandBatch &operator=(CommandBatch &&other);
 
     void destroy(VkDevice device);
-    angle::Result release(Context *context);
+    angle::Result release(ErrorContext *context);
 
     void setQueueSerial(const QueueSerial &serial);
     void setProtectionType(ProtectionType protectionType);
@@ -204,12 +204,12 @@ class CommandPoolAccess : angle::NonCopyable
   public:
     CommandPoolAccess();
     ~CommandPoolAccess();
-    angle::Result initCommandPool(Context *context,
+    angle::Result initCommandPool(ErrorContext *context,
                                   ProtectionType protectionType,
                                   const uint32_t queueFamilyIndex);
     void destroy(VkDevice device);
     void destroyPrimaryCommandBuffer(VkDevice device, PrimaryCommandBuffer *primaryCommands) const;
-    angle::Result collectPrimaryCommandBuffer(Context *context,
+    angle::Result collectPrimaryCommandBuffer(ErrorContext *context,
                                               const ProtectionType protectionType,
                                               PrimaryCommandBuffer *primaryCommands);
     angle::Result flushOutsideRPCommands(Context *context,
@@ -229,15 +229,16 @@ class CommandPoolAccess : angle::NonCopyable
                              std::vector<VkPipelineStageFlags> &&waitSemaphoreStageMasks);
 
     angle::Result getCommandsAndWaitSemaphores(
-        Context *context,
+        ErrorContext *context,
         ProtectionType protectionType,
         egl::ContextPriority priority,
         CommandBatch *batchOut,
+        std::vector<VkImageMemoryBarrier> &&imagesToTransitionToForeign,
         std::vector<VkSemaphore> *waitSemaphoresOut,
         std::vector<VkPipelineStageFlags> *waitSemaphoreStageMasksOut);
 
   private:
-    angle::Result ensurePrimaryCommandBufferValidLocked(Context *context,
+    angle::Result ensurePrimaryCommandBufferValidLocked(ErrorContext *context,
                                                         const ProtectionType &protectionType,
                                                         const egl::ContextPriority &priority)
     {
@@ -281,12 +282,12 @@ class CommandQueue : angle::NonCopyable
     CommandQueue();
     ~CommandQueue();
 
-    angle::Result init(Context *context,
+    angle::Result init(ErrorContext *context,
                        const QueueFamily &queueFamily,
                        bool enableProtectedContent,
                        uint32_t queueCount);
 
-    void destroy(Context *context);
+    void destroy(ErrorContext *context);
 
     void handleDeviceLost(Renderer *renderer);
 
@@ -303,6 +304,11 @@ class CommandQueue : angle::NonCopyable
     }
 
     VkQueue getQueue(egl::ContextPriority priority) const { return mQueueMap.getQueue(priority); }
+    // The following are used to implement EGL_ANGLE_device_vulkan, and are called by the
+    // application when it wants to access the VkQueue previously retrieved from ANGLE.  Do not call
+    // these for synchronization within ANGLE.
+    void lockVulkanQueueForExternalAccess() { mQueueSubmitMutex.lock(); }
+    void unlockVulkanQueueForExternalAccess() { mQueueSubmitMutex.unlock(); }
 
     Serial getLastSubmittedSerial(SerialIndex index) const { return mLastSubmittedSerials[index]; }
 
@@ -326,25 +332,28 @@ class CommandQueue : angle::NonCopyable
     }
 
     // Wait until the desired serial has been completed.
-    angle::Result finishResourceUse(Context *context, const ResourceUse &use, uint64_t timeout);
-    angle::Result finishQueueSerial(Context *context,
+    angle::Result finishResourceUse(ErrorContext *context,
+                                    const ResourceUse &use,
+                                    uint64_t timeout);
+    angle::Result finishQueueSerial(ErrorContext *context,
                                     const QueueSerial &queueSerial,
                                     uint64_t timeout);
-    angle::Result waitIdle(Context *context, uint64_t timeout);
-    angle::Result waitForResourceUseToFinishWithUserTimeout(Context *context,
+    angle::Result waitIdle(ErrorContext *context, uint64_t timeout);
+    angle::Result waitForResourceUseToFinishWithUserTimeout(ErrorContext *context,
                                                             const ResourceUse &use,
                                                             uint64_t timeout,
                                                             VkResult *result);
     bool isBusy(Renderer *renderer) const;
 
-    angle::Result submitCommands(Context *context,
+    angle::Result submitCommands(ErrorContext *context,
                                  ProtectionType protectionType,
                                  egl::ContextPriority priority,
                                  VkSemaphore signalSemaphore,
                                  SharedExternalFence &&externalFence,
+                                 std::vector<VkImageMemoryBarrier> &&imagesToTransitionToForeign,
                                  const QueueSerial &submitQueueSerial);
 
-    angle::Result queueSubmitOneOff(Context *context,
+    angle::Result queueSubmitOneOff(ErrorContext *context,
                                     ProtectionType protectionType,
                                     egl::ContextPriority contextPriority,
                                     VkCommandBuffer commandBufferHandle,
@@ -356,7 +365,7 @@ class CommandQueue : angle::NonCopyable
     VkResult queuePresent(egl::ContextPriority contextPriority,
                           const VkPresentInfoKHR &presentInfo);
 
-    angle::Result checkCompletedCommands(Context *context)
+    angle::Result checkCompletedCommands(ErrorContext *context)
     {
         std::lock_guard<angle::SimpleMutex> lock(mCmdCompleteMutex);
         return checkCompletedCommandsLocked(context);
@@ -364,7 +373,7 @@ class CommandQueue : angle::NonCopyable
 
     bool hasFinishedCommands() const { return !mFinishedCommandBatches.empty(); }
 
-    angle::Result checkAndCleanupCompletedCommands(Context *context)
+    angle::Result checkAndCleanupCompletedCommands(ErrorContext *context)
     {
         ANGLE_TRY(checkCompletedCommands(context));
 
@@ -412,17 +421,17 @@ class CommandQueue : angle::NonCopyable
 
     // Release finished commands and clean up garbage immediately, or request async clean up if
     // enabled.
-    angle::Result releaseFinishedCommandsAndCleanupGarbage(Context *context);
-    angle::Result releaseFinishedCommands(Context *context)
+    angle::Result releaseFinishedCommandsAndCleanupGarbage(ErrorContext *context);
+    angle::Result releaseFinishedCommands(ErrorContext *context)
     {
         std::lock_guard<angle::SimpleMutex> lock(mCmdReleaseMutex);
         return releaseFinishedCommandsLocked(context);
     }
-    angle::Result postSubmitCheck(Context *context);
+    angle::Result postSubmitCheck(ErrorContext *context);
 
     // Try to cleanup garbage and return if something was cleaned.  Otherwise, wait for the
     // mInFlightCommands and retry.
-    angle::Result cleanupSomeGarbage(Context *context,
+    angle::Result cleanupSomeGarbage(ErrorContext *context,
                                      size_t minInFlightBatchesToKeep,
                                      bool *anyGarbageCleanedOut);
 
@@ -430,17 +439,19 @@ class CommandQueue : angle::NonCopyable
   private:
     // Check the first command buffer in mInFlightCommands and update mLastCompletedSerials if
     // finished
-    angle::Result checkOneCommandBatchLocked(Context *context, bool *finished);
+    angle::Result checkOneCommandBatchLocked(ErrorContext *context, bool *finished);
     // Similar to checkOneCommandBatch, except we will wait for it to finish
-    angle::Result finishOneCommandBatchLocked(Context *context, uint64_t timeout);
+    angle::Result finishOneCommandBatch(ErrorContext *context,
+                                        uint64_t timeout,
+                                        std::unique_lock<angle::SimpleMutex> *lock);
     void onCommandBatchFinishedLocked(CommandBatch &&batch);
     // Walk mFinishedCommands, reset and recycle all command buffers.
-    angle::Result releaseFinishedCommandsLocked(Context *context);
+    angle::Result releaseFinishedCommandsLocked(ErrorContext *context);
     // Walk mInFlightCommands, check and update mLastCompletedSerials for all commands that are
     // finished
-    angle::Result checkCompletedCommandsLocked(Context *context);
+    angle::Result checkCompletedCommandsLocked(ErrorContext *context);
 
-    angle::Result queueSubmitLocked(Context *context,
+    angle::Result queueSubmitLocked(ErrorContext *context,
                                     egl::ContextPriority contextPriority,
                                     const VkSubmitInfo &submitInfo,
                                     DeviceScoped<CommandBatch> &commandBatch,
@@ -488,7 +499,7 @@ class CommandQueue : angle::NonCopyable
 };
 
 // A helper thread used to clean up garbage
-class CleanUpThread : public Context
+class CleanUpThread : public ErrorContext
 {
   public:
     CleanUpThread(Renderer *renderer, CommandQueue *commandQueue);
@@ -502,7 +513,7 @@ class CleanUpThread : public Context
 
     angle::Result init();
 
-    void destroy(Context *context);
+    void destroy(ErrorContext *context);
 
     void requestCleanUp();
 
@@ -514,7 +525,7 @@ class CleanUpThread : public Context
         std::lock_guard<angle::SimpleMutex> queueLock(mErrorMutex);
         return !mErrors.empty();
     }
-    angle::Result checkAndPopPendingError(Context *errorHandlingContext);
+    angle::Result checkAndPopPendingError(ErrorContext *errorHandlingContext);
 
     // Entry point for clean up thread, calls processTasksImpl to do the
     // work. called by Renderer::initializeDevice on main thread
@@ -535,6 +546,43 @@ class CleanUpThread : public Context
     std::mutex mMutex;
     std::condition_variable mWorkAvailableCondition;
     std::atomic<bool> mNeedCleanUp;
+};
+
+// Provides access to the PrimaryCommandBuffer while also locking the corresponding CommandPool
+class [[nodiscard]] ScopedPrimaryCommandBuffer final
+{
+  public:
+    explicit ScopedPrimaryCommandBuffer(VkDevice device) : mCommandBuffer(device) {}
+
+    void assign(std::unique_lock<angle::SimpleMutex> &&poolLock,
+                PrimaryCommandBuffer &&commandBuffer)
+    {
+        ASSERT(poolLock.owns_lock());
+        ASSERT(commandBuffer.valid());
+        ASSERT(mPoolLock.mutex() == nullptr);
+        ASSERT(!mCommandBuffer.get().valid());
+        mPoolLock            = std::move(poolLock);
+        mCommandBuffer.get() = std::move(commandBuffer);
+    }
+
+    PrimaryCommandBuffer &get()
+    {
+        ASSERT(mPoolLock.owns_lock());
+        ASSERT(mCommandBuffer.get().valid());
+        return mCommandBuffer.get();
+    }
+
+    DeviceScoped<PrimaryCommandBuffer> unlockAndRelease()
+    {
+        ASSERT(mCommandBuffer.get().valid() && mPoolLock.owns_lock() ||
+               !mCommandBuffer.get().valid() && mPoolLock.mutex() == nullptr);
+        mPoolLock = {};
+        return std::move(mCommandBuffer);
+    }
+
+  private:
+    std::unique_lock<angle::SimpleMutex> mPoolLock;
+    DeviceScoped<PrimaryCommandBuffer> mCommandBuffer;
 };
 }  // namespace vk
 

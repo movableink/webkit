@@ -2168,8 +2168,9 @@ static ClientExtensions GenerateClientExtensions()
 #endif
 
 #if defined(ANGLE_ENABLE_VULKAN)
-    extensions.platformANGLEVulkan   = true;
-    extensions.platformANGLEDeviceId = true;
+    extensions.platformANGLEVulkan           = true;
+    extensions.platformANGLEVulkanDeviceUUID = true;
+    extensions.platformANGLEDeviceId         = true;
 #endif
 
 #if defined(ANGLE_ENABLE_SWIFTSHADER)
@@ -2643,6 +2644,16 @@ Error Display::waitUntilWorkScheduled()
 {
     ANGLE_TRY(mImplementation->waitUntilWorkScheduled());
     return NoError();
+}
+
+void Display::lockVulkanQueue()
+{
+    return mImplementation->lockVulkanQueue();
+}
+
+void Display::unlockVulkanQueue()
+{
+    return mImplementation->unlockVulkanQueue();
 }
 
 bool Display::supportsDmaBufFormat(EGLint format) const

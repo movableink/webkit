@@ -319,7 +319,7 @@ class CLCommandQueueVk : public CLCommandQueueImpl
     CLPlatformVk *getPlatform() { return mContext->getPlatform(); }
     CLContextVk *getContext() { return mContext; }
 
-    cl_mem getOrCreatePrintfBuffer();
+    cl::MemoryPtr getOrCreatePrintfBuffer();
 
     angle::Result finishQueueSerial(const QueueSerial queueSerial);
 
@@ -340,9 +340,9 @@ class CLCommandQueueVk : public CLCommandQueueImpl
 
     // Create-update-bind the kernel's descriptor set, put push-constants in cmd buffer, capture
     // kernel resources, and handle kernel execution dependencies
-    angle::Result processKernelResources(CLKernelVk &kernelVk,
-                                         const cl::NDRange &ndrange,
-                                         const cl::WorkgroupCount &workgroupCount);
+    angle::Result processKernelResources(CLKernelVk &kernelVk);
+    // Updates global push constants for a given CL kernel
+    angle::Result processGlobalPushConstants(CLKernelVk &kernelVk, const cl::NDRange &ndrange);
 
     angle::Result submitCommands();
     angle::Result finishInternal();
@@ -378,6 +378,8 @@ class CLCommandQueueVk : public CLCommandQueueImpl
 
     angle::Result insertBarrier();
     angle::Result addMemoryDependencies(cl::Memory *clMem);
+
+    angle::Result submitEmptyCommand();
 
     CLContextVk *mContext;
     const CLDeviceVk *mDevice;

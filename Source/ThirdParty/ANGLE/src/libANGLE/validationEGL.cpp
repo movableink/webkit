@@ -691,6 +691,7 @@ bool ValidateGetPlatformDisplayCommon(const ValidationContext *val,
         bool presentPathSpecified    = false;
         bool luidSpecified           = false;
         bool deviceIdSpecified       = false;
+        bool vkDeviceUuidSpecified   = false;
 
         Optional<EGLAttrib> majorVersion;
         Optional<EGLAttrib> minorVersion;
@@ -854,6 +855,13 @@ bool ValidateGetPlatformDisplayCommon(const ValidationContext *val,
                 case EGL_PLATFORM_ANGLE_D3D_LUID_LOW_ANGLE:
                     luidSpecified = true;
                     break;
+
+                case EGL_PLATFORM_ANGLE_VULKAN_DEVICE_UUID_ANGLE:
+                case EGL_PLATFORM_ANGLE_VULKAN_DRIVER_UUID_ANGLE:
+                case EGL_PLATFORM_ANGLE_VULKAN_DRIVER_ID_ANGLE:
+                    vkDeviceUuidSpecified = true;
+                    break;
+
                 case EGL_PLATFORM_ANGLE_DEVICE_CONTEXT_VOLATILE_CGL_ANGLE:
                     // The property does not have an effect if it's not active, so do not check
                     // for non-support.
@@ -960,6 +968,20 @@ bool ValidateGetPlatformDisplayCommon(const ValidationContext *val,
                               "If either EGL_PLATFORM_ANGLE_D3D_LUID_HIGH_ANGLE "
                               "and/or EGL_PLATFORM_ANGLE_D3D_LUID_LOW_ANGLE are "
                               "specified, at least one must non-zero.");
+                return false;
+            }
+        }
+
+        if (vkDeviceUuidSpecified)
+        {
+            if (platformType != EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE)
+            {
+                val->setError(EGL_BAD_ATTRIBUTE,
+                              "EGL_PLATFORM_ANGLE_VULKAN_DEVICE_UUID, "
+                              "EGL_PLATFORM_ANGLE_VULKAN_DRIVER_UUID and "
+                              "EGL_PLATFORM_ANGLE_VULKAN_DRIVER_ID "
+                              "require a platform type of "
+                              "EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE.");
                 return false;
             }
         }
@@ -3671,7 +3693,7 @@ bool ValidateCreateImage(const ValidationContext *val,
                         break;
 
                     default:
-                        val->setError(EGL_BAD_PARAMETER,
+                        val->setError(EGL_BAD_ATTRIBUTE,
                                       "Invalid value for EGL_YUV_COLOR_SPACE_HINT_EXT.");
                         return false;
                 }
@@ -3693,7 +3715,7 @@ bool ValidateCreateImage(const ValidationContext *val,
                         break;
 
                     default:
-                        val->setError(EGL_BAD_PARAMETER,
+                        val->setError(EGL_BAD_ATTRIBUTE,
                                       "Invalid value for EGL_SAMPLE_RANGE_HINT_EXT.");
                         return false;
                 }
@@ -3717,7 +3739,7 @@ bool ValidateCreateImage(const ValidationContext *val,
 
                     default:
                         val->setError(
-                            EGL_BAD_PARAMETER,
+                            EGL_BAD_ATTRIBUTE,
                             "Invalid value for EGL_YUV_CHROMA_HORIZONTAL_SITING_HINT_EXT or "
                             "EGL_YUV_CHROMA_VERTICAL_SITING_HINT_EXT.");
                         return false;
@@ -3829,6 +3851,14 @@ bool ValidateCreateImage(const ValidationContext *val,
                 return false;
             }
 
+            if (texture->isEGLImageSource(gl::ImageIndex::MakeFromTarget(
+                    gl::TextureTarget::_2D, static_cast<GLint>(level), 1)))
+            {
+                val->setError(EGL_BAD_ACCESS,
+                              "The texture has been bound to an existing EGL image.");
+                return false;
+            }
+
             ANGLE_VALIDATION_TRY(ValidateCreateImageMipLevelCommon(val, context, texture, level));
         }
         break;
@@ -3900,6 +3930,16 @@ bool ValidateCreateImage(const ValidationContext *val,
                               "of target.");
                 return false;
             }
+
+            gl::TextureTarget glTexTarget =
+                gl::CubeFaceIndexToTextureTarget(CubeMapTextureTargetToLayerIndex(target));
+            if (texture->isEGLImageSource(
+                    gl::ImageIndex::MakeCubeMapFace(glTexTarget, static_cast<GLint>(level))))
+            {
+                val->setError(EGL_BAD_ACCESS,
+                              "The texture has been bound to an existing EGL image.");
+                return false;
+            }
         }
         break;
 
@@ -3963,6 +4003,13 @@ bool ValidateCreateImage(const ValidationContext *val,
                               "of target.");
                 return false;
             }
+            if (texture->isEGLImageSource(
+                    gl::ImageIndex::Make3D(static_cast<GLint>(level), static_cast<GLint>(zOffset))))
+            {
+                val->setError(EGL_BAD_ACCESS,
+                              "The texture has been bound to an existing EGL image.");
+                return false;
+            }
 
             ANGLE_VALIDATION_TRY(ValidateCreateImageMipLevelCommon(val, context, texture, level));
         }
@@ -4013,6 +4060,13 @@ bool ValidateCreateImage(const ValidationContext *val,
                 val->setError(EGL_BAD_ACCESS,
                               "EGL_PROTECTED_CONTENT_EXT attribute does not match protected state "
                               "of target.");
+                return false;
+            }
+
+            if (renderbuffer->isEGLImageSource())
+            {
+                val->setError(EGL_BAD_ACCESS,
+                              "The renderbuffer has been bound to an existing EGL image.");
                 return false;
             }
         }
@@ -7101,6 +7155,32 @@ bool ValidateQueryDmaBufModifiersEXT(ValidationContext const *val,
                       "format should be one of the formats advertised by QueryDmaBufFormatsEXT");
         return false;
     }
+    return true;
+}
+
+bool ValidateLockVulkanQueueANGLE(const ValidationContext *val, const egl::Display *display)
+{
+    ANGLE_VALIDATION_TRY(ValidateDisplay(val, display));
+
+    if (!display->getDevice()->getExtensions().deviceVulkan)
+    {
+        val->setError(EGL_BAD_ACCESS, "EGL_ANGLE_device_vulkan not supported");
+        return false;
+    }
+
+    return true;
+}
+
+bool ValidateUnlockVulkanQueueANGLE(const ValidationContext *val, const egl::Display *display)
+{
+    ANGLE_VALIDATION_TRY(ValidateDisplay(val, display));
+
+    if (!display->getDevice()->getExtensions().deviceVulkan)
+    {
+        val->setError(EGL_BAD_ACCESS, "EGL_ANGLE_device_vulkan not supported");
+        return false;
+    }
+
     return true;
 }
 

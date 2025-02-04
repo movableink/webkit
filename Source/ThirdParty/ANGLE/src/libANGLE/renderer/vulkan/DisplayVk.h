@@ -17,7 +17,7 @@
 
 namespace rx
 {
-class DisplayVk : public DisplayImpl, public vk::Context, public vk::GlobalOps
+class DisplayVk : public DisplayImpl, public vk::ErrorContext, public vk::GlobalOps
 {
   public:
     DisplayVk(const egl::DisplayState &state);
@@ -109,6 +109,9 @@ class DisplayVk : public DisplayImpl, public vk::Context, public vk::GlobalOps
     bool isSurfaceFormatColorspacePairSupported(VkSurfaceKHR surface,
                                                 VkFormat format,
                                                 VkColorSpaceKHR colorspace) const;
+
+    void lockVulkanQueue() override;
+    void unlockVulkanQueue() override;
 
     egl::Error querySupportedCompressionRates(const egl::Config *configuration,
                                               const egl::AttributeMap &attributes,

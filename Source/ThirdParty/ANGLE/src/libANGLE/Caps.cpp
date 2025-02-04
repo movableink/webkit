@@ -880,7 +880,8 @@ static bool DetermineRenderSharedExponentSupport(const TextureCapsMap &textureCa
     return GetFormatSupport(textureCaps, requiredFormats, false, false, true, true, true);
 }
 
-static bool DetermineRenderSnormSupport(const TextureCapsMap &textureCaps, bool textureNorm16EXT)
+// Check for GL_EXT_render_snorm support
+bool DetermineRenderSnormSupport(const TextureCapsMap &textureCaps, bool textureNorm16EXT)
 {
     constexpr GLenum requiredSnorm8Formats[] = {
         GL_R8_SNORM,
@@ -1452,6 +1453,7 @@ std::vector<std::string> ClientExtensions::getStrings() const
     InsertExtensionString("EGL_ANGLE_platform_angle_null",                    platformANGLENULL,                  &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_angle_webgpu",                  platformANGLEWebgpu,                &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_angle_vulkan",                  platformANGLEVulkan,                &extensionStrings);
+    InsertExtensionString("EGL_ANGLE_platform_angle_vulkan_device_uuid",      platformANGLEVulkanDeviceUUID,      &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_angle_metal",                   platformANGLEMetal,                 &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_device_context_volatile_cgl",   platformANGLEDeviceContextVolatileCgl, &extensionStrings);
     InsertExtensionString("EGL_ANGLE_platform_angle_device_id",               platformANGLEDeviceId,              &extensionStrings);
