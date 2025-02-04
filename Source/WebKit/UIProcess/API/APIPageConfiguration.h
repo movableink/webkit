@@ -171,6 +171,7 @@ public:
     void setWebsiteDataStore(RefPtr<WebKit::WebsiteDataStore>&&);
 
     WebsitePolicies& defaultWebsitePolicies() const;
+    Ref<WebsitePolicies> protectedDefaultWebsitePolicies() const;
     void setDefaultWebsitePolicies(RefPtr<WebsitePolicies>&&);
 
 #if PLATFORM(IOS_FAMILY)

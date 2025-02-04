@@ -105,6 +105,8 @@ private:
         ~NavigationClient();
 
     private:
+        RefPtr<NavigationState> protectedNavigationState() const { return m_navigationState.get(); }
+
         void didStartProvisionalNavigation(WebPageProxy&, const WebCore::ResourceRequest&, API::Navigation*, API::Object*) override;
         void didStartProvisionalLoadForFrame(WebPageProxy&, WebCore::ResourceRequest&&, FrameInfoData&&) override;
         void didReceiveServerRedirectForProvisionalNavigation(WebPageProxy&, API::Navigation*, API::Object*) override;

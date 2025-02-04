@@ -312,6 +312,11 @@ WebsitePolicies& PageConfiguration::defaultWebsitePolicies() const
     return m_data.defaultWebsitePolicies.get();
 }
 
+Ref<WebsitePolicies> PageConfiguration::protectedDefaultWebsitePolicies() const
+{
+    return defaultWebsitePolicies();
+}
+
 void PageConfiguration::setDefaultWebsitePolicies(RefPtr<WebsitePolicies>&& policies)
 {
     m_data.defaultWebsitePolicies = WTFMove(policies);
