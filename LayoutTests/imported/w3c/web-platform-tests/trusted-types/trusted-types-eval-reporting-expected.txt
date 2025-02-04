@@ -1,5 +1,4 @@
 
-
 PASS Trusted Type violation report: evaluating a string.
 PASS Trusted Type violation report: evaluating a Trusted Script.
 

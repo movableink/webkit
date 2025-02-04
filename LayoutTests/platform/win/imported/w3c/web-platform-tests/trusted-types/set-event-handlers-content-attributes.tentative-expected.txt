@@ -447,4 +447,10 @@ PASS BODY.setAttribute(onunload, "unsafe_handler()") calls default policy
 PASS BODY.setAttributeNS(onunload, "unsafe_handler()") calls default policy
 PASS FRAMESET.setAttribute(onunload, "unsafe_handler()") calls default policy
 PASS FRAMESET.setAttributeNS(onunload, "unsafe_handler()") calls default policy
+PASS DIV.setAttribute("onafterprint", "unsafe_handler()") calls default policy
+PASS DIV.setAttribute("onwaitingforkey", "unsafe_handler()") calls default policy
+FAIL DIV.setAttribute("onbegin", "unsafe_handler()") calls default policy assert_equals: expected (string) "Element onbegin" but got (undefined) undefined
+FAIL DIV.setAttribute("onreadystatechange", "unsafe_handler()") does not call default policy assert_equals: expected (undefined) undefined but got (string) "Element onreadystatechange"
+FAIL DIV.setAttribute("onopen", "unsafe_handler()") does not call default policy assert_equals: expected (undefined) undefined but got (string) "Element onopen"
+PASS DIV.setAttribute("ondoesnotexist", "unsafe_handler()") does not call default policy
 
