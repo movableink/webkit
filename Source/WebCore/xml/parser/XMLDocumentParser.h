@@ -137,7 +137,7 @@ public:
     void endElementNs();
     void characters(std::span<const xmlChar>);
     void processingInstruction(const xmlChar* target, const xmlChar* data);
-    void cdataBlock(const xmlChar*, int length);
+    void cdataBlock(std::span<const xmlChar>);
     void comment(const xmlChar*);
     void startDocument(const xmlChar* version, const xmlChar* encoding, int standalone);
     void internalSubset(const xmlChar* name, const xmlChar* externalID, const xmlChar* systemID);
