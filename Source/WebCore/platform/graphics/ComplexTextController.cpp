@@ -757,7 +757,8 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
                 unsigned characterIndexInRun = characterIndex + complexTextRun.stringLocation();
                 bool isFirstCharacter = !(characterIndex + complexTextRun.stringLocation());
-                bool isLastCharacter = characterIndexInRun + 1 == m_run.length() || (U16_IS_LEAD(character) && characterIndexInRun + 2 == m_run.length() && U16_IS_TRAIL(charactersSpan[characterIndex + 1]));
+                bool isLastCharacter = characterIndexInRun + 1 == m_run.length()
+                    || (U16_IS_LEAD(character) && characterIndexInRun + 2 == m_run.length() && characterIndex + 2 == charactersSpan.size() && U16_IS_TRAIL(charactersSpan[characterIndex + 1]));
 
                 bool forceLeftExpansion = false; // On the left, regardless of m_run.ltr()
                 bool forceRightExpansion = false; // On the right, regardless of m_run.ltr()
