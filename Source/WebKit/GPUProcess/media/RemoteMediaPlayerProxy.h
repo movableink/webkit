@@ -160,6 +160,7 @@ public:
 
     void seekToTarget(const WebCore::SeekTarget&);
 
+    void setVolumeLocked(bool);
     void setVolume(double);
     void setMuted(bool);
 

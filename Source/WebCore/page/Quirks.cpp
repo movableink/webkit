@@ -1587,11 +1587,7 @@ bool Quirks::shouldHideCoarsePointerCharacteristics() const
 // hulu.com rdar://126096361
 bool Quirks::implicitMuteWhenVolumeSetToZero() const
 {
-#if HAVE(MEDIA_VOLUME_PER_ELEMENT)
     return needsQuirks() && m_quirksData.implicitMuteWhenVolumeSetToZero;
-#else
-    return false;
-#endif
 }
 
 #if ENABLE(TOUCH_EVENTS)

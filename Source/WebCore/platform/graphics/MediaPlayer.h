@@ -513,6 +513,8 @@ public:
     using DidLoadingProgressCompletionHandler = CompletionHandler<void(bool)>;
     void didLoadingProgress(DidLoadingProgressCompletionHandler&&) const;
 
+    void setVolumeLocked(bool);
+
     double volume() const;
     void setVolume(double);
     bool platformVolumeConfigurationRequired() const { return client().mediaPlayerPlatformVolumeConfigurationRequired(); }

@@ -1019,6 +1019,11 @@ MediaPlayer::ReadyState MediaPlayer::readyState() const
     return m_private->readyState();
 }
 
+void MediaPlayer::setVolumeLocked(bool volumeLocked)
+{
+    m_private->setVolumeLocked(volumeLocked);
+}
+
 double MediaPlayer::volume() const
 {
     return m_volume;

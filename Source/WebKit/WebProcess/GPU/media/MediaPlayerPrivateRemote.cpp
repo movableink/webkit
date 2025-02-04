@@ -320,6 +320,11 @@ void MediaPlayerPrivateRemote::setPitchCorrectionAlgorithm(WebCore::MediaPlayer:
     connection().send(Messages::RemoteMediaPlayerProxy::SetPitchCorrectionAlgorithm(algorithm), m_id);
 }
 
+void MediaPlayerPrivateRemote::setVolumeLocked(bool volumeLocked)
+{
+    connection().send(Messages::RemoteMediaPlayerProxy::SetVolumeLocked(volumeLocked), m_id);
+}
+
 void MediaPlayerPrivateRemote::setVolumeDouble(double volume)
 {
     connection().send(Messages::RemoteMediaPlayerProxy::SetVolume(volume), m_id);

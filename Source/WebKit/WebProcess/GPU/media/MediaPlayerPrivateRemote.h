@@ -269,6 +269,7 @@ private:
     long platformErrorCode() const final { return m_platformErrorCode; }
 
     double rate() const final { return m_rate; }
+    void setVolumeLocked(bool) final;
     void setVolumeDouble(double) final;
     void setMuted(bool) final;
     void setPrivateBrowsingMode(bool) final;

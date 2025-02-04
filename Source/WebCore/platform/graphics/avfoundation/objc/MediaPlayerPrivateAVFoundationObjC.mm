@@ -1620,12 +1620,20 @@ void MediaPlayerPrivateAVFoundationObjC::seekToTargetInternal(const SeekTarget& 
     }];
 }
 
+void MediaPlayerPrivateAVFoundationObjC::setVolumeLocked(bool volumeLocked)
+{
+    if (m_volumeLocked == volumeLocked)
+        return;
+
+    ALWAYS_LOG(LOGIDENTIFIER, volumeLocked);
+
+    m_volumeLocked = volumeLocked;
+}
+
 void MediaPlayerPrivateAVFoundationObjC::setVolume(float volume)
 {
-#if !HAVE(MEDIA_VOLUME_PER_ELEMENT)
-    UNUSED_PARAM(volume);
-    return;
-#else
+    if (m_volumeLocked)
+        return;
 
     if (!m_avPlayer)
         return;
@@ -1633,7 +1641,6 @@ void MediaPlayerPrivateAVFoundationObjC::setVolume(float volume)
     ALWAYS_LOG(LOGIDENTIFIER, volume);
 
     [m_avPlayer setVolume:volume];
-#endif
 }
 
 void MediaPlayerPrivateAVFoundationObjC::setMuted(bool muted)

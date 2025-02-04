@@ -1143,9 +1143,7 @@ private:
     TaskCancellationGroup m_updateShouldAutoplayTaskCancellationGroup;
     RefPtr<TimeRanges> m_playedTimeRanges;
     TaskCancellationGroup m_asyncEventsCancellationGroup;
-#if PLATFORM(IOS_FAMILY)
     TaskCancellationGroup m_volumeRevertTaskCancellationGroup;
-#endif
 
     PlayPromiseVector m_pendingPlayPromises;
 

@@ -262,6 +262,11 @@ void RemoteMediaPlayerProxy::seekToTarget(const WebCore::SeekTarget& target)
     protectedPlayer()->seekToTarget(target);
 }
 
+void RemoteMediaPlayerProxy::setVolumeLocked(bool volumeLocked)
+{
+    protectedPlayer()->setVolumeLocked(volumeLocked);
+}
+
 void RemoteMediaPlayerProxy::setVolume(double volume)
 {
     protectedPlayer()->setVolume(volume);

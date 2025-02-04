@@ -171,6 +171,7 @@ private:
     void platformPlay() final;
     void platformPause() final;
     bool platformPaused() const final;
+    void setVolumeLocked(bool) final;
     void setVolume(float) final;
     void setMuted(bool) final;
     void paint(GraphicsContext&, const FloatRect&) final;
@@ -500,6 +501,7 @@ private:
     mutable std::optional<bool> m_cachedAssetIsPlayable;
     mutable std::optional<bool> m_cachedTracksArePlayable;
     mutable std::optional<bool> m_cachedAssetIsHLS;
+    bool m_volumeLocked { false };
     bool m_muted { false };
     bool m_shouldObserveTimeControlStatus { false };
     mutable std::optional<bool> m_tracksArePlayable;

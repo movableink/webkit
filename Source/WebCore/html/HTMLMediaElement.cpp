@@ -160,6 +160,10 @@
 #include "MediaElementAudioSourceNode.h"
 #endif
 
+#if PLATFORM(IOS)
+#include <pal/system/ios/UserInterfaceIdiom.h>
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 #include "VideoPresentationInterfaceIOS.h"
 #include <wtf/RuntimeApplicationChecks.h>
@@ -463,7 +467,7 @@ static bool mediaSessionMayBeConfusedWithMainContent(const MediaElementSessionIn
 static bool defaultVolumeLocked()
 {
 #if PLATFORM(IOS)
-    return true;
+    return PAL::currentUserInterfaceIdiomIsSmallScreen();
 #else
     return false;
 #endif
@@ -4521,7 +4525,7 @@ ExceptionOr<void> HTMLMediaElement::setVolume(double volume)
     if (!(volume >= 0 && volume <= 1))
         return Exception { ExceptionCode::IndexSizeError };
 
-    auto quirkVolumeZero = document().quirks().implicitMuteWhenVolumeSetToZero();
+    auto quirkVolumeZero = !m_volumeLocked && document().quirks().implicitMuteWhenVolumeSetToZero();
     auto muteImplicitly = quirkVolumeZero && !volume;
 
     if (m_volume == volume && (!m_implicitlyMuted || *m_implicitlyMuted == muteImplicitly))
@@ -4536,21 +4540,23 @@ ExceptionOr<void> HTMLMediaElement::setVolume(double volume)
         }
     }
 
-#if HAVE(MEDIA_VOLUME_PER_ELEMENT)
-    if (volume && processingUserGestureForMedia())
-        removeBehaviorRestrictionsAfterFirstUserGesture(MediaElementSession::AllRestrictions & ~MediaElementSession::RequireUserGestureToControlControlsManager);
+    if (!m_volumeLocked) {
+        if (volume && processingUserGestureForMedia())
+            removeBehaviorRestrictionsAfterFirstUserGesture(MediaElementSession::AllRestrictions & ~MediaElementSession::RequireUserGestureToControlControlsManager);
 
-    m_volume = volume;
-    m_volumeInitialized = true;
-    updateVolume();
-    scheduleEvent(eventNames().volumechangeEvent);
+        m_volume = volume;
+        m_volumeInitialized = true;
+        updateVolume();
+        scheduleEvent(eventNames().volumechangeEvent);
 
-    if (isPlaying() && !mediaSession().playbackStateChangePermitted(MediaPlaybackState::Playing)) {
-        scheduleRejectPendingPlayPromises(DOMException::create(ExceptionCode::NotAllowedError));
-        pauseInternal();
-        setAutoplayEventPlaybackState(AutoplayEventPlaybackState::PreventedAutoplay);
+        if (isPlaying() && !mediaSession().playbackStateChangePermitted(MediaPlaybackState::Playing)) {
+            scheduleRejectPendingPlayPromises(DOMException::create(ExceptionCode::NotAllowedError));
+            pauseInternal();
+            setAutoplayEventPlaybackState(AutoplayEventPlaybackState::PreventedAutoplay);
+        }
+        return { };
     }
-#else
+
     auto oldVolume = m_volume;
     m_volume = volume;
 
@@ -4560,8 +4566,6 @@ ExceptionOr<void> HTMLMediaElement::setVolume(double volume)
     queueCancellableTaskKeepingObjectAlive(*this, TaskSource::MediaElement, m_volumeRevertTaskCancellationGroup, [this, oldVolume] {
         m_volume = oldVolume;
     });
-
-#endif
 
     return { };
 }
@@ -4627,13 +4631,14 @@ void HTMLMediaElement::setMutedInternal(bool muted, ForceMuteChange forceChange)
     schedulePlaybackControlsManagerUpdate();
 }
 
-void HTMLMediaElement::setVolumeLocked(bool locked)
+void HTMLMediaElement::setVolumeLocked(bool volumeLocked)
 {
-    if (m_volumeLocked == locked)
+    if (m_volumeLocked == volumeLocked)
         return;
 
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClass::VolumeLocked, locked);
-    m_volumeLocked = locked;
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClass::VolumeLocked, volumeLocked);
+    m_volumeLocked = volumeLocked;
+    m_player->setVolumeLocked(volumeLocked);
 }
 
 void HTMLMediaElement::updateBufferingState()
@@ -6292,23 +6297,26 @@ void HTMLMediaElement::updateVolume()
 {
     if (!m_player)
         return;
-#if HAVE(MEDIA_VOLUME_PER_ELEMENT)
-    // Avoid recursion when the player reports volume changes.
-    if (!processingMediaPlayerCallback()) {
-        RefPtr player = m_player;
-        player->setMuted(effectiveMuted());
-        player->setVolume(effectiveVolume());
+
+    if (!m_volumeLocked) {
+        // Avoid recursion when the player reports volume changes.
+        if (!processingMediaPlayerCallback()) {
+            RefPtr player = m_player;
+            player->setVolumeLocked(m_volumeLocked);
+            player->setMuted(effectiveMuted());
+            player->setVolume(effectiveVolume());
+        }
+
+        protectedDocument()->updateIsPlayingMedia();
+        return;
     }
 
-    protectedDocument()->updateIsPlayingMedia();
-#else
     // Only the user can change audio volume so update the cached volume and post the changed event.
     float volume = m_player->volume();
     if (m_volume != volume) {
         m_volume = volume;
         scheduleEvent(eventNames().volumechangeEvent);
     }
-#endif
 }
 
 void HTMLMediaElement::scheduleUpdatePlayState()
@@ -6364,6 +6372,7 @@ void HTMLMediaElement::updatePlayState()
             // The media engine should just stash the rate, muted and volume values since it isn't already playing.
             RefPtr player = m_player;
             player->setRate(requestedPlaybackRate());
+            player->setVolumeLocked(m_volumeLocked);
             player->setMuted(effectiveMuted());
             player->setVolume(effectiveVolume());
 
@@ -6506,9 +6515,8 @@ void HTMLMediaElement::cancelPendingTasks()
     m_seekTaskCancellationGroup.cancel();
     m_playbackControlsManagerBehaviorRestrictionsTaskCancellationGroup.cancel();
     m_updateShouldAutoplayTaskCancellationGroup.cancel();
-#if !HAVE(MEDIA_VOLUME_PER_ELEMENT)
-    m_volumeRevertTaskCancellationGroup.cancel();
-#endif
+    if (m_volumeLocked)
+        m_volumeRevertTaskCancellationGroup.cancel();
     cancelSniffer();
 }
 
@@ -6823,11 +6831,12 @@ bool HTMLMediaElement::virtualHasPendingActivity() const
 
 void HTMLMediaElement::mediaVolumeDidChange()
 {
-    // FIXME: We should try to reconcile this so there's no difference for !HAVE(MEDIA_VOLUME_PER_ELEMENT).
-#if HAVE(MEDIA_VOLUME_PER_ELEMENT)
+    // FIXME: We should try to reconcile this so there's no difference for m_volumeLocked.
+    if (m_volumeLocked)
+        return;
+
     INFO_LOG(LOGIDENTIFIER);
     updateVolume();
-#endif
 }
 
 bool HTMLMediaElement::elementIsHidden() const
@@ -7905,6 +7914,7 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     player->setBufferingPolicy(m_bufferingPolicy);
     player->setPreferredDynamicRangeMode(m_overrideDynamicRangeMode.value_or(preferredDynamicRangeMode(document().protectedView().get())));
     player->setShouldDisableHDR(shouldDisableHDR());
+    player->setVolumeLocked(m_volumeLocked);
     player->setMuted(effectiveMuted());
     RefPtr page = document().page();
     player->setPageIsVisible(!m_elementIsHidden);

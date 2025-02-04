@@ -154,6 +154,8 @@ public:
     // This excludes video potentially playing but having stalled.
     virtual bool paused() const = 0;
 
+    virtual void setVolumeLocked(bool) { }
+
     virtual void setVolume(float) { }
     virtual void setVolumeDouble(double volume) { return setVolume(volume); }
 #if PLATFORM(IOS_FAMILY) || USE(GSTREAMER)

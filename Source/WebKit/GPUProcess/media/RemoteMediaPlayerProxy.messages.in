@@ -42,6 +42,7 @@ messages -> RemoteMediaPlayerProxy {
     Play()
     Pause()
 
+    SetVolumeLocked(bool volumeLocked)
     SetVolume(double volume)
     SetMuted(bool muted)
 
