@@ -139,7 +139,6 @@ page/EventSource.cpp
 page/ImageAnalysisQueue.cpp
 page/LocalDOMWindow.cpp
 page/Navigation.cpp
-page/Page.cpp
 page/Quirks.cpp
 page/ScreenOrientation.cpp
 page/ShareDataReader.cpp

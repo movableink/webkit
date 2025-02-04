@@ -556,7 +556,6 @@ page/Location.cpp
 page/Navigation.cpp
 page/Navigator.cpp
 page/OpportunisticTaskScheduler.cpp
-page/Page.cpp
 page/PageColorSampler.cpp
 page/PageConsoleClient.cpp
 page/PageGroup.cpp
