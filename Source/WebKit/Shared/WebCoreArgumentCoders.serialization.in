@@ -8932,3 +8932,8 @@ header: <WebCore/DocumentClasses.h>
 #endif
     PDF
 };
+
+#if ENABLE(MODEL_PROCESS)
+header: <WebCore/StageModeOperations.h>
+enum class WebCore::StageModeOperation : bool;
+#endif

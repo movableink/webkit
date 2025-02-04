@@ -748,6 +748,14 @@ void ModelProcessModelPlayerProxy::setHasPortal(bool hasPortal)
     updateTransform();
 }
 
+void ModelProcessModelPlayerProxy::setStageMode(WebCore::StageModeOperation stagemodeOp)
+{
+    if (m_stageModeOperation == stagemodeOp)
+        return;
+
+    m_stageModeOperation = stagemodeOp;
+}
+
 } // namespace WebKit
 
 #endif // ENABLE(MODEL_PROCESS)

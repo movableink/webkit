@@ -341,6 +341,16 @@ void ModelProcessModelPlayer::setHasPortal(bool hasPortal)
     m_hasPortal = hasPortal;
     send(Messages::ModelProcessModelPlayerProxy::SetHasPortal(m_hasPortal));
 }
+
+void ModelProcessModelPlayer::setStageMode(WebCore::StageModeOperation stagemodeOp)
+{
+    if (m_stageModeOperation == stagemodeOp)
+        return;
+
+    m_stageModeOperation = stagemodeOp;
+    send(Messages::ModelProcessModelPlayerProxy::SetStageMode(m_stageModeOperation));
+}
+
 }
 
 #endif // ENABLE(MODEL_PROCESS)

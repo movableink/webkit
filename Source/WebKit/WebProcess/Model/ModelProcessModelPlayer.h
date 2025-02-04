@@ -33,6 +33,7 @@
 #import <WebCore/ModelPlayer.h>
 #import <WebCore/ModelPlayerClient.h>
 #import <WebCore/ModelPlayerIdentifier.h>
+#import <WebCore/StageModeOperations.h>
 #import <wtf/Compiler.h>
 
 namespace WebKit {
@@ -104,6 +105,7 @@ private:
     void setCurrentTime(Seconds, CompletionHandler<void()>&&) final;
     void setEnvironmentMap(Ref<WebCore::SharedBuffer>&& data) final;
     void setHasPortal(bool) final;
+    void setStageMode(WebCore::StageModeOperation) final;
 
     WebCore::ModelPlayerIdentifier m_id;
     WeakPtr<WebPage> m_page;
@@ -122,6 +124,7 @@ private:
     std::optional<MonotonicTime> m_clockTimestampOfLastCurrentTimeSet;
     std::optional<Seconds> m_lastCachedCurrentTime;
     std::optional<MonotonicTime> m_lastCachedClockTimestamp;
+    WebCore::StageModeOperation m_stageModeOperation { WebCore::StageModeOperation::None };
 };
 
 }

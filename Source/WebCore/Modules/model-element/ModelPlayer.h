@@ -38,6 +38,7 @@
 
 #if ENABLE(MODEL_PROCESS)
 #include "ModelPlayerIdentifier.h"
+#include <WebCore/StageModeOperations.h>
 #endif
 
 namespace WebCore {
@@ -97,6 +98,7 @@ public:
     virtual void setCurrentTime(Seconds, CompletionHandler<void()>&&);
     virtual void setEnvironmentMap(Ref<SharedBuffer>&& data);
     virtual void setHasPortal(bool);
+    virtual void setStageMode(WebCore::StageModeOperation);
 #endif
 };
 

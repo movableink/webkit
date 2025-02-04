@@ -305,6 +305,7 @@ void HTMLModelElement::createModelPlayer()
     m_modelPlayer->setLoop(loop());
     m_modelPlayer->setPlaybackRate(m_playbackRate, [&](double) { });
     m_modelPlayer->setHasPortal(hasPortal());
+    m_modelPlayer->setStageMode(stageMode());
 #endif
 
     // FIXME: We need to tell the player if the size changes as well, so passing this
@@ -534,6 +535,8 @@ void HTMLModelElement::attributeChanged(const QualifiedName& name, const AtomStr
         updateLoop();
     else if (name == environmentmapAttr)
         updateEnvironmentMap();
+    else if (name == stagemodeAttr)
+        updateStageMode();
 #if PLATFORM(VISION)
     else if (document().settings().modelNoPortalAttributeEnabled() && name == noportalAttr)
         updateHasPortal();
@@ -707,6 +710,21 @@ void HTMLModelElement::updateAutoplay()
 {
     if (m_modelPlayer)
         m_modelPlayer->setAutoplay(autoplay());
+}
+
+WebCore::StageModeOperation HTMLModelElement::stageMode() const
+{
+    String attr = attributeWithoutSynchronization(HTMLNames::stagemodeAttr);
+    if (equalLettersIgnoringASCIICase(attr, "orbit"_s))
+        return WebCore::StageModeOperation::Orbit;
+
+    return WebCore::StageModeOperation::None;
+}
+
+void HTMLModelElement::updateStageMode()
+{
+    if (m_modelPlayer)
+        m_modelPlayer->setStageMode(stageMode());
 }
 
 bool HTMLModelElement::loop() const

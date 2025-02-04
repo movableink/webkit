@@ -39,6 +39,7 @@ messages -> ModelProcessModelPlayerProxy {
     SetCurrentTime(Seconds currentTime) -> () Async
     SetEnvironmentMap(Ref<WebCore::SharedBuffer> data)
     SetHasPortal(bool hasPortal)
+    SetStageMode(enum:bool WebCore::StageModeOperation stagemodeOp)
 }
 
 #endif

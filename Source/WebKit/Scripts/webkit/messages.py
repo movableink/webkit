@@ -1070,6 +1070,7 @@ def headers_for_type(type):
         'WebCore::ShouldSample': ['<WebCore/DiagnosticLoggingClient.h>'],
         'WebCore::SourceBufferAppendMode': ['<WebCore/SourceBufferPrivate.h>'],
         'WebCore::SourceBufferEvictionData': ['<WebCore/SourceBufferPrivateClient.h>'],
+        'WebCore::StageModeOperation': ['<WebCore/StageModeOperations.h>'],
         'WebCore::StorageAccessPromptWasShown': ['<WebCore/DocumentStorageAccess.h>'],
         'WebCore::StorageAccessScope': ['<WebCore/DocumentStorageAccess.h>'],
         'WebCore::StorageAccessWasGranted': ['<WebCore/DocumentStorageAccess.h>'],
