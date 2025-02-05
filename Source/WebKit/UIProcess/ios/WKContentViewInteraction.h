@@ -458,6 +458,7 @@ struct ImageAnalysisContextMenuActionData {
     WebKit::InteractionInformationAtPosition _positionInformation;
     std::optional<WebCore::TextIndicatorData> _positionInformationLinkIndicator;
     WebKit::FocusedElementInformation _focusedElementInformation;
+    std::optional<WebKit::FocusedElementInformationIdentifier> _pendingFocusedElementIdentifier;
     RetainPtr<NSObject<WKFormPeripheral>> _inputPeripheral;
 
     Vector<WebKit::KeyEventAndCompletionBlock, 1> _keyWebEventHandlers;

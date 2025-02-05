@@ -8084,21 +8084,29 @@ static RetainPtr<NSObject <WKFormPeripheral>> createInputPeripheralWithView(WebK
 
 - (void)_elementDidFocus:(const WebKit::FocusedElementInformation&)information userIsInteracting:(BOOL)userIsInteracting blurPreviousNode:(BOOL)blurPreviousNode activityStateChanges:(OptionSet<WebCore::ActivityState>)activityStateChanges userObject:(NSObject <NSSecureCoding> *)userObject
 {
-    SetForScope isChangingFocusForScope { _isChangingFocus, self._hasFocusedElement };
-    SetForScope isFocusingElementWithKeyboardForScope { _isFocusingElementWithKeyboard, [self _shouldShowKeyboardForElement:information] };
+    CompletionHandlerCallingScope restoreValues([
+        weakSelf = WeakObjCPtr { self },
+        changingFocusValueToRestore = _isChangingFocus,
+        focusingElementWithKeyboardValueToRestore = _isFocusingElementWithKeyboard
+    ] {
+        RetainPtr strongSelf = weakSelf.get();
+        if (!strongSelf)
+            return;
+        strongSelf->_isChangingFocus = changingFocusValueToRestore;
+        strongSelf->_isFocusingElementWithKeyboard = focusingElementWithKeyboardValueToRestore;
 
-    auto runModalJavaScriptDialogCallbackIfNeeded = makeScopeExit([&] {
-        if (auto callback = std::exchange(_pendingRunModalJavaScriptDialogCallback, { }))
+        if (auto callback = std::exchange(strongSelf->_pendingRunModalJavaScriptDialogCallback, { }))
             callback();
-    });
 
-    auto stopDeferringInputViewUpdatesScope = makeScopeExit([&] {
         constexpr OptionSet sourcesToStopDeferring {
             WebKit::InputViewUpdateDeferralSource::ChangingFocusedElement,
             WebKit::InputViewUpdateDeferralSource::BecomeFirstResponder
         };
-        [self stopDeferringInputViewUpdates:sourcesToStopDeferring];
+        [strongSelf stopDeferringInputViewUpdates:sourcesToStopDeferring];
     });
+
+    _isChangingFocus = self._hasFocusedElement;
+    _isFocusingElementWithKeyboard = [self _shouldShowKeyboardForElement:information];
 
     _autocorrectionContextNeedsUpdate = YES;
     _didAccessoryTabInitiateFocus = _isChangingFocusUsingAccessoryTab;
@@ -8188,8 +8196,54 @@ static RetainPtr<NSObject <WKFormPeripheral>> createInputPeripheralWithView(WebK
 
     _focusRequiresStrongPasswordAssistance = NO;
     _additionalContextForStrongPasswordAssistance = nil;
-    if ([inputDelegate respondsToSelector:@selector(_webView:focusRequiresStrongPasswordAssistance:)])
-        _focusRequiresStrongPasswordAssistance = [inputDelegate _webView:self.webView focusRequiresStrongPasswordAssistance:focusedElementInfo.get()];
+
+    _pendingFocusedElementIdentifier = information.identifier;
+
+    if ([inputDelegate respondsToSelector:@selector(_webView:focusRequiresStrongPasswordAssistance:)]) {
+        [self _continueElementDidFocus:information
+            requiresStrongPasswordAssistance:[inputDelegate _webView:self.webView focusRequiresStrongPasswordAssistance:focusedElementInfo.get()]
+            focusedElementInfo:focusedElementInfo
+            activityStateChanges:activityStateChanges
+            restoreValues:WTFMove(restoreValues)];
+    } else if ([inputDelegate respondsToSelector:@selector(_webView:focusRequiresStrongPasswordAssistance:completionHandler:)]) {
+        auto checker = WebKit::CompletionHandlerCallChecker::create(inputDelegate, @selector(_webView:focusRequiresStrongPasswordAssistance:completionHandler:));
+        [inputDelegate _webView:self.webView focusRequiresStrongPasswordAssistance:focusedElementInfo.get() completionHandler:makeBlockPtr([
+            weakSelf = RetainPtr { self },
+            checker = WTFMove(checker),
+            information,
+            focusedElementInfo,
+            activityStateChanges,
+            restoreValues = WTFMove(restoreValues)
+        ] (BOOL result) mutable {
+            if (checker->completionHandlerHasBeenCalled())
+                return;
+            checker->didCallCompletionHandler();
+            RetainPtr strongSelf = weakSelf.get();
+            if (!strongSelf)
+                return;
+            [strongSelf _continueElementDidFocus:information
+                requiresStrongPasswordAssistance:result
+                focusedElementInfo:focusedElementInfo
+                activityStateChanges:activityStateChanges
+                restoreValues:WTFMove(restoreValues)];
+        }).get()];
+    } else {
+        [self _continueElementDidFocus:information
+            requiresStrongPasswordAssistance:NO
+            focusedElementInfo:focusedElementInfo
+            activityStateChanges:activityStateChanges
+            restoreValues:WTFMove(restoreValues)];
+    }
+}
+
+- (void)_continueElementDidFocus:(const WebKit::FocusedElementInformation&)information requiresStrongPasswordAssistance:(BOOL)requiresStrongPasswordAssistance focusedElementInfo:(RetainPtr<WKFocusedElementInfo>)focusedElementInfo activityStateChanges:(OptionSet<WebCore::ActivityState>)activityStateChanges restoreValues:(CompletionHandlerCallingScope&&)restoreValues
+{
+    if (_pendingFocusedElementIdentifier != information.identifier)
+        return;
+
+    _focusRequiresStrongPasswordAssistance = requiresStrongPasswordAssistance;
+
+    id<_WKInputDelegate> inputDelegate = [_webView _inputDelegate];
 
     if ([inputDelegate respondsToSelector:@selector(_webViewAdditionalContextForStrongPasswordAssistance:)])
         _additionalContextForStrongPasswordAssistance = [inputDelegate _webViewAdditionalContextForStrongPasswordAssistance:self.webView];
@@ -8310,6 +8364,8 @@ static RetainPtr<NSObject <WKFormPeripheral>> createInputPeripheralWithView(WebK
 
     _dataListTextSuggestionsInputView = nil;
     _dataListTextSuggestions = nil;
+
+    _pendingFocusedElementIdentifier = { };
 
     BOOL editableChanged = [self setIsEditable:NO];
     // FIXME: We should completely invalidate _focusedElementInformation here, instead of a subset of individual members.
