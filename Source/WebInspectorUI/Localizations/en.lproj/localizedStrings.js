@@ -525,6 +525,7 @@ localizedStrings["Delete Audit"] = "Delete Audit";
 localizedStrings["Delete Blackbox"] = "Delete Blackbox";
 localizedStrings["Delete Breakpoint"] = "Delete Breakpoint";
 localizedStrings["Delete Breakpoints"] = "Delete Breakpoints";
+localizedStrings["Delete Console Snippet"] = "Delete Console Snippet";
 localizedStrings["Delete Descendant Breakpoints"] = "Delete Descendant Breakpoints";
 localizedStrings["Delete Inspector Bootstrap Script"] = "Delete Inspector Bootstrap Script";
 localizedStrings["Delete JavaScript Breakpoint"] = "Delete JavaScript Breakpoint";
