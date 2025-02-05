@@ -7478,6 +7478,12 @@ Document* Document::parentDocument() const
 
 Document* Document::mainFrameDocument() const
 {
+    if (settings().siteIsolationEnabled()) {
+        if (RefPtr localMainFrame = this->localMainFrame())
+            return localMainFrame->document();
+        return nullptr;
+    }
+
     // FIXME: This special-casing avoids incorrectly determined top documents during the process
     // of AXObjectCache teardown or notification posting for cached or being-destroyed documents.
     if (backForwardCacheState() == NotInBackForwardCache && !m_renderTreeBeingDestroyed) {
@@ -7491,17 +7497,6 @@ Document* Document::mainFrameDocument() const
     while (HTMLFrameOwnerElement* element = document->ownerElement())
         document = &element->document();
     return document;
-}
-
-bool Document::isTopDocument() const
-{
-    if (!settings().siteIsolationEnabled())
-        return isTopDocumentLegacy();
-
-    if (RefPtr localMainFrame = this->localMainFrame())
-        return localMainFrame->document() == this;
-
-    return false;
 }
 
 RefPtr<LocalFrame> Document::localMainFrame() const
