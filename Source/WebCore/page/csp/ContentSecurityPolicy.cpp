@@ -766,6 +766,7 @@ bool ContentSecurityPolicy::allowBaseURI(const URL& url, bool overrideContentSec
     return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForBaseURI, url);
 }
 
+// https://w3c.github.io/trusted-types/dist/spec/#should-block-create-policy
 AllowTrustedTypePolicy ContentSecurityPolicy::allowTrustedTypesPolicy(const String& value, bool isDuplicate) const
 {
     String sourceURL;
@@ -776,7 +777,19 @@ AllowTrustedTypePolicy ContentSecurityPolicy::allowTrustedTypesPolicy(const Stri
             "Refused to create a TrustedTypePolicy named '"_s, value, "' because it violates the following Content Security Policy directive: \""_s, violatedDirective.text(), '"');
         reportViolation(violatedDirective, "trusted-types-policy"_s, consoleMessage, sourceURL, StringView(value), sourcePosition);
     };
-    auto isAllowed = allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForTrustedTypesPolicy, value, isDuplicate, details);
+
+    auto isAllowed = true;
+    for (auto& policy : m_policies) {
+        auto perPolicyDetails = AllowTrustedTypePolicy::Allowed;
+        if (auto* violatedDirective = policy.get()->violatedDirectiveForTrustedTypesPolicy(value, isDuplicate, perPolicyDetails)) {
+            if (!violatedDirective->directiveList().isReportOnly())
+                isAllowed = false;
+            // If we already have a violation, we should use the details from the first policy that violated the directive.
+            if (!isAllowed && details == AllowTrustedTypePolicy::Allowed)
+                details = perPolicyDetails;
+            handleViolatedDirective(*violatedDirective);
+        }
+    }
 
     if (value == "default"_s && isDuplicate)
         return AllowTrustedTypePolicy::DisallowedDuplicateName;

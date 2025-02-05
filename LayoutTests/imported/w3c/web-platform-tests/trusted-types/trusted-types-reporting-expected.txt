@@ -17,7 +17,7 @@ CONSOLE MESSAGE: This requires a TrustedScriptURL value else it violates the fol
 CONSOLE MESSAGE: Refused to connect to http://localhost:8800/common/blank.html because it does not appear in the connect-src directive of the Content Security Policy.
 
 PASS Trusted Type violation report: creating a forbidden policy.
-FAIL Trusted Type violation report: creating a report-only-forbidden policy. assert_true: expected true got false
+PASS Trusted Type violation report: creating a report-only-forbidden policy.
 PASS Trusted Type violation report: creating a forbidden-but-not-reported policy.
 PASS Trusted Type violation report: sample for SVGScriptElement href assignment
 PASS Trusted Type violation report: sample for SVGScriptElement href assignment by setAttribute
