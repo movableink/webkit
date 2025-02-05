@@ -94,6 +94,11 @@ NetworkLoadChecker::NetworkLoadChecker(NetworkProcess& networkProcess, NetworkRe
 
 NetworkLoadChecker::~NetworkLoadChecker() = default;
 
+RefPtr<NetworkCORSPreflightChecker> NetworkLoadChecker::protectedCORSPreflightChecker() const
+{
+    return m_corsPreflightChecker;
+}
+
 bool NetworkLoadChecker::isSameOrigin(const URL& url, const SecurityOrigin* origin) const
 {
     return url.protocolIsData()
@@ -278,7 +283,7 @@ bool NetworkLoadChecker::checkTAO(const ResourceResponse& response)
         const auto& timingAllowOriginString = response.httpHeaderField(HTTPHeaderName::TimingAllowOrigin);
         for (auto originWithSpace : StringView(timingAllowOriginString).split(',')) {
             auto origin = originWithSpace.trim(isASCIIWhitespaceWithoutFF<UChar>);
-            if (origin == "*"_s || origin == m_origin->toString())
+            if (origin == "*"_s || origin == protectedOrigin()->toString())
                 return true;
         }
     }
@@ -393,7 +398,7 @@ bool NetworkLoadChecker::isAllowedByContentSecurityPolicy(const ResourceRequest&
 void NetworkLoadChecker::continueCheckingRequest(ResourceRequest&& request, ValidationHandler&& handler)
 {
     if (m_options.credentials == FetchOptions::Credentials::SameOrigin)
-        m_storedCredentialsPolicy = m_isSameOriginRequest && m_origin->canRequest(request.url(), originAccessPatterns()) ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
+        m_storedCredentialsPolicy = m_isSameOriginRequest && protectedOrigin()->canRequest(request.url(), originAccessPatterns()) ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
 
     m_isSameOriginRequest = m_isSameOriginRequest && isSameOrigin(request.url(), m_origin.get());
 
@@ -403,7 +408,7 @@ void NetworkLoadChecker::continueCheckingRequest(ResourceRequest&& request, Vali
     }
 
     if (m_options.mode == FetchOptions::Mode::SameOrigin) {
-        handler(accessControlErrorForValidationHandler(makeString("Unsafe attempt to load URL "_s, request.url().stringCenterEllipsizedToLength(), " from origin "_s, m_origin->toString(), ". Domains, protocols and ports must match.\n"_s)));
+        handler(accessControlErrorForValidationHandler(makeString("Unsafe attempt to load URL "_s, request.url().stringCenterEllipsizedToLength(), " from origin "_s, protectedOrigin()->toString(), ". Domains, protocols and ports must match.\n"_s)));
         return;
     }
 
@@ -446,7 +451,7 @@ void NetworkLoadChecker::checkCORSRedirectedRequest(ResourceRequest&& request, V
     // Force any subsequent request to use these checks.
     m_isSameOriginRequest = false;
 
-    if (!m_origin->canRequest(m_previousURL, originAccessPatterns()) && !protocolHostAndPortAreEqual(m_previousURL, request.url())) {
+    if (!protectedOrigin()->canRequest(m_previousURL, originAccessPatterns()) && !protocolHostAndPortAreEqual(m_previousURL, request.url())) {
         // Use an opaque origin for subsequent loads if needed.
         // https://fetch.spec.whatwg.org/#concept-http-redirect-fetch (Step 10).
         if (!m_origin || !m_origin->isOpaque())
@@ -491,7 +496,8 @@ void NetworkLoadChecker::checkCORSRequestWithPreflight(ResourceRequest&& request
         m_advancedPrivacyProtections,
         request.hasHTTPHeaderField(HTTPHeaderName::SecFetchSite)
     };
-    m_corsPreflightChecker = NetworkCORSPreflightChecker::create(m_networkProcess.get(), m_networkResourceLoader.get(), WTFMove(parameters), m_shouldCaptureExtraNetworkLoadMetrics, [weakThis = WeakPtr { *this }, request = WTFMove(request), handler = WTFMove(handler), isRedirected = isRedirected()](auto&& error) mutable {
+    RefPtr networkResourceLoader = m_networkResourceLoader.get();
+    m_corsPreflightChecker = NetworkCORSPreflightChecker::create(m_networkProcess.get(), networkResourceLoader.get(), WTFMove(parameters), m_shouldCaptureExtraNetworkLoadMetrics, [weakThis = WeakPtr { *this }, request = WTFMove(request), handler = WTFMove(handler), isRedirected = isRedirected()](auto&& error) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis) {
             handler(WTFMove(request));
@@ -506,13 +512,13 @@ void NetworkLoadChecker::checkCORSRequestWithPreflight(ResourceRequest&& request
         }
 
         if (protectedThis->m_shouldCaptureExtraNetworkLoadMetrics)
-            protectedThis->m_loadInformation.transactions.append(protectedThis->m_corsPreflightChecker->takeInformation());
+            protectedThis->m_loadInformation.transactions.append(protectedThis->protectedCORSPreflightChecker()->takeInformation());
 
         auto corsPreflightChecker = std::exchange(protectedThis->m_corsPreflightChecker, nullptr);
         updateRequestForAccessControl(request, *protectedThis->origin(), protectedThis->m_storedCredentialsPolicy);
         handler(WTFMove(request));
     });
-    m_corsPreflightChecker->startPreflight();
+    protectedCORSPreflightChecker()->startPreflight();
 }
 
 bool NetworkLoadChecker::doesNotNeedCORSCheck(const URL& url) const
@@ -530,7 +536,7 @@ ContentSecurityPolicy* NetworkLoadChecker::contentSecurityPolicy()
 {
     if (!m_contentSecurityPolicy && m_cspResponseHeaders) {
         // FIXME: Pass the URL of the protected resource instead of its origin.
-        m_contentSecurityPolicy = makeUnique<ContentSecurityPolicy>(URL { m_origin->toRawString() }, nullptr, m_networkResourceLoader.get());
+        m_contentSecurityPolicy = makeUnique<ContentSecurityPolicy>(URL { protectedOrigin()->toRawString() }, nullptr, m_networkResourceLoader.get());
         m_contentSecurityPolicy->didReceiveHeaders(*m_cspResponseHeaders, String { m_referrer }, ContentSecurityPolicy::ReportParsingErrors::No);
         if (!m_documentURL.isEmpty())
             m_contentSecurityPolicy->setDocumentURL(m_documentURL);
@@ -548,7 +554,7 @@ void NetworkLoadChecker::processContentRuleListsForLoad(ResourceRequest&& reques
         return;
     }
 
-    m_networkProcess->networkContentRuleListManager().contentExtensionsBackend(*m_userContentControllerIdentifier, [weakThis = WeakPtr { *this }, request = WTFMove(request), callback = WTFMove(callback)](auto& backend) mutable {
+    m_networkProcess->protectedNetworkContentRuleListManager()->contentExtensionsBackend(*m_userContentControllerIdentifier, [weakThis = WeakPtr { *this }, request = WTFMove(request), callback = WTFMove(callback)](auto& backend) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis) {
             callback(makeUnexpected(ResourceError { ResourceError::Type::Cancellation }));

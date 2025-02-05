@@ -12,7 +12,6 @@ NetworkProcess/Downloads/cocoa/WKDownloadProgress.mm
 NetworkProcess/NetworkDataTask.cpp
 NetworkProcess/NetworkDataTaskBlob.cpp
 NetworkProcess/NetworkLoad.cpp
-NetworkProcess/NetworkLoadChecker.cpp
 NetworkProcess/NetworkSession.cpp
 NetworkProcess/PingLoad.cpp
 NetworkProcess/PreconnectTask.cpp
