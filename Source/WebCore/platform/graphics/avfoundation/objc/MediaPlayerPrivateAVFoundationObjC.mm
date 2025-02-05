@@ -3588,7 +3588,7 @@ void MediaPlayerPrivateAVFoundationObjC::loadedTimeRangesDidChange(RetainPtr<NSA
 
 void MediaPlayerPrivateAVFoundationObjC::firstFrameAvailableDidChange(bool isReady)
 {
-    ALWAYS_LOG(LOGIDENTIFIER);
+    ALWAYS_LOG(LOGIDENTIFIER, isReady);
 
     m_cachedIsReadyForDisplay = isReady;
     if (!hasVideo() && isReady)

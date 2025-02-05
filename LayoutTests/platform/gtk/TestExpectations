@@ -972,6 +972,8 @@ webkit.org/b/286466 imported/w3c/web-platform-tests/css/css-text/hyphens/hyphens
 webkit.org/b/286466 imported/w3c/web-platform-tests/css/css-text/hyphens/i18n/hyphens-i18n-auto-002.html [ Crash ]
 webkit.org/b/286466 imported/w3c/web-platform-tests/css/css-text/hyphens/i18n/hyphens-i18n-auto-001.html [ Crash ]
 
+webkit.org/b/286930 media/modern-media-controls/scrubber-support/scrubber-support-seek-back.html [ Crash ]
+
 # Tests crashing due to failing assertions
 
 webkit.org/b/286127 editing/pasteboard/copy-paste-across-shadow-boundaries-with-style-2.html [ Crash ]

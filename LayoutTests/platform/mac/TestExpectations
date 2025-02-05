@@ -2429,6 +2429,9 @@ media/webkit-media-controls-not-visible-after-exiting-fullscreen.html [ Pass ]
 # webkit.org/b/280304 [ Sequoia ] fast/ruby/ruby-expansion-cjk-4.html is a constant image only failure.
 [ Sequoia ] fast/ruby/ruby-expansion-cjk-4.html [ ImageOnlyFailure ]
 
+# rdar://143398895
+media/modern-media-controls/scrubber-support/scrubber-support-seek-back.html [ Skip ]
+
 # webkit.org/b/280792 [macOS] ASSERTION FAILED: Unsafe to ref/deref from different threads (flaky in EWS)
 inspector/worker/debugger-pause-subworker.html [ Skip ]
 inspector/worker/console-basic-subworker.html [ Skip ]

@@ -7653,6 +7653,9 @@ webkit.org/b/284653 http/tests/site-isolation/compositing/iframes/resize-from-ze
 
 webkit.org/b/284761 imported/w3c/web-platform-tests/screen-orientation/orientation-reading.html [ Skip ]
 
+# rdar://143398895
+media/modern-media-controls/scrubber-support/scrubber-support-seek-back.html [ Skip ]
+
 # Following test fails due to lack of `tabbing` to move focus
 imported/w3c/web-platform-tests/html/interaction/focus/focus-01.html [ Skip ]
 imported/w3c/web-platform-tests/html/interaction/focus/focus-02.html [ Skip ]
