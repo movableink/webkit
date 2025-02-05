@@ -92,11 +92,11 @@ public:
 private:
     void setPreload(MediaPlayer::Preload) final;
     void doPreload();
-    void load(const String&) final;
+    void load(const URL&, const LoadOptions&) final;
     bool createResourceClient();
 
 #if ENABLE(MEDIA_SOURCE)
-    void load(const URL&, const ContentType&, MediaSourcePrivateClient&) final;
+    void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) final;
 #endif
 #if ENABLE(MEDIA_STREAM)
     void load(MediaStreamPrivate&) final;

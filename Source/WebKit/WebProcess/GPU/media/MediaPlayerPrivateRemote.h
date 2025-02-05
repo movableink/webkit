@@ -251,11 +251,11 @@ private:
     const uint64_t m_logIdentifier;
 #endif
 
-    void load(const URL&, const WebCore::ContentType&, const String&) final;
+    void load(const URL&, const LoadOptions&) final;
     void prepareForPlayback(bool privateMode, WebCore::MediaPlayer::Preload, bool preservesPitch, bool prepareToPlay, bool prepareToRender) final;
 
 #if ENABLE(MEDIA_SOURCE)
-    void load(const URL&, const WebCore::ContentType&, WebCore::MediaSourcePrivateClient&) final;
+    void load(const URL&, const LoadOptions&, WebCore::MediaSourcePrivateClient&) final;
 #endif
 #if ENABLE(MEDIA_STREAM)
     void load(WebCore::MediaStreamPrivate&) final;

@@ -54,11 +54,12 @@ public:
 
     virtual constexpr MediaPlayerType mediaPlayerType() const = 0;
 
+    using LoadOptions = MediaPlayer::LoadOptions;
     virtual void load(const String&) { }
-    virtual void load(const URL& url, const ContentType&, const String&) { load(url.string()); }
+    virtual void load(const URL& url, const LoadOptions&) { load(url.string()); }
 
 #if ENABLE(MEDIA_SOURCE)
-    virtual void load(const URL&, const ContentType&, MediaSourcePrivateClient&) = 0;
+    virtual void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) = 0;
 #endif
 #if ENABLE(MEDIA_STREAM)
     virtual void load(MediaStreamPrivate&) = 0;

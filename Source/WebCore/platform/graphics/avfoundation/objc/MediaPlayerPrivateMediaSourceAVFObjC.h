@@ -181,10 +181,12 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
         SeekCompleted,
     };
 
+    bool supportsLimitedMatroska() const { return m_loadOptions.supportsLimitedMatroska; }
+
 private:
     // MediaPlayerPrivateInterface
     void load(const String& url) override;
-    void load(const URL&, const ContentType&, MediaSourcePrivateClient&) override;
+    void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) override;
 #if ENABLE(MEDIA_STREAM)
     void load(MediaStreamPrivate&) override;
 #endif
@@ -417,6 +419,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     bool m_needsPlaceholderImage { false };
     bool m_preferDecompressionSession { false };
     bool m_canFallbackToDecompressionSession { false };
+    LoadOptions m_loadOptions;
 #if HAVE(SPATIAL_TRACKING_LABEL)
     String m_defaultSpatialTrackingLabel;
     String m_spatialTrackingLabel;

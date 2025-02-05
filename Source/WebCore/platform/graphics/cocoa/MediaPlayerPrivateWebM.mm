@@ -186,7 +186,7 @@ MediaPlayer::SupportsType MediaPlayerPrivateWebM::supportsType(const MediaEngine
     if (parameters.isMediaSource || parameters.isMediaStream || parameters.requiresRemotePlayback)
         return MediaPlayer::SupportsType::IsNotSupported;
 
-    return SourceBufferParserWebM::isContentTypeSupported(parameters.type);
+    return SourceBufferParserWebM::isContentTypeSupported(parameters.type, parameters.supportsLimitedMatroska);
 }
 
 void MediaPlayerPrivateWebM::setPreload(MediaPlayer::Preload preload)
@@ -230,13 +230,15 @@ void MediaPlayerPrivateWebM::doPreload()
     }
 }
 
-void MediaPlayerPrivateWebM::load(const String& url)
+void MediaPlayerPrivateWebM::load(const URL& url, const LoadOptions& options)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
     setReadyState(MediaPlayer::ReadyState::HaveNothing);
 
-    m_assetURL = URL({ }, url);
+    m_assetURL = url;
+    if (options.supportsLimitedMatroska)
+        m_parser->allowLimitedMatroska();
 
     doPreload();
 }
@@ -262,7 +264,7 @@ bool MediaPlayerPrivateWebM::createResourceClient()
 }
 
 #if ENABLE(MEDIA_SOURCE)
-void MediaPlayerPrivateWebM::load(const URL&, const ContentType&, MediaSourcePrivateClient&)
+void MediaPlayerPrivateWebM::load(const URL&, const LoadOptions&, MediaSourcePrivateClient&)
 {
     ERROR_LOG(LOGIDENTIFIER, "tried to load as mediasource");
 

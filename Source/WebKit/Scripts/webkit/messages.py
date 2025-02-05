@@ -988,6 +988,7 @@ def headers_for_type(type):
         'WebCore::MediaPlayerSupportsType': ['<WebCore/MediaPlayerEnums.h>'],
         'WebCore::MediaPlayerVideoGravity': ['<WebCore/MediaPlayerEnums.h>'],
         'WebCore::MediaEngineSupportParameters': ['<WebCore/MediaPlayer.h>'],
+        'WebCore::MediaPlayerLoadOptions': ['<WebCore/MediaPlayer.h>'],
         'WebCore::MediaPlayerReadyState': ['<WebCore/MediaPlayerEnums.h>'],
         'WebCore::MediaProducerMediaCaptureKind': ['<WebCore/MediaProducer.h>'],
         'WebCore::MediaProducerMediaState': ['<WebCore/MediaProducer.h>'],

@@ -106,7 +106,7 @@ private:
 
     void load(const String&) override;
 #if ENABLE(MEDIA_SOURCE)
-    void load(const URL&, const ContentType&, MediaSourcePrivateClient&) override;
+    void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) override;
 #endif
     void load(MediaStreamPrivate&) override;
     void cancelLoad() override;

@@ -4325,6 +4325,21 @@ LegacyWebRTCOfferOptionsEnabled:
     WebCore:
       default: false
 
+LimitedMatroskaSupportEnabled:
+  type: bool
+  status: developer
+  category: media
+  humanReadableName: "Limited Matroska Support"
+  humanReadableDescription: "Enable H264 and PCM with WebM Player and MediaRecorder"
+  condition: ENABLE(MEDIA_RECORDER_WEBM)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 LinearMediaPlayerEnabled:
   type: bool
   status: internal

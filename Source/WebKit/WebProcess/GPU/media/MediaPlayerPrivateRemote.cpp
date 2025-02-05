@@ -238,7 +238,7 @@ void MediaPlayerPrivateRemote::prepareForPlayback(bool privateMode, MediaPlayer:
     connection().send(Messages::RemoteMediaPlayerProxy::PrepareForPlayback(privateMode, preload, preservesPitch, pitchCorrectionAlgorithm, prepareToPlay, prepareToRender, presentationSize, scale, preferredDynamicRangeMode), m_id);
 }
 
-void MediaPlayerPrivateRemote::load(const URL& url, const ContentType& contentType, const String& keySystem)
+void MediaPlayerPrivateRemote::load(const URL& url, const LoadOptions& options)
 {
     std::optional<SandboxExtension::Handle> sandboxExtensionHandle;
     if (url.protocolIsFile()) {
@@ -273,7 +273,7 @@ void MediaPlayerPrivateRemote::load(const URL& url, const ContentType& contentTy
         sandboxExtensionHandle = WTFMove(handle);
     }
 
-    connection().sendWithAsyncReply(Messages::RemoteMediaPlayerProxy::Load(url, WTFMove(sandboxExtensionHandle), contentType, keySystem, m_player.get()->requiresRemotePlayback()), [weakThis = ThreadSafeWeakPtr { *this }, this](auto&& configuration) {
+    connection().sendWithAsyncReply(Messages::RemoteMediaPlayerProxy::Load(url, WTFMove(sandboxExtensionHandle), options), [weakThis = ThreadSafeWeakPtr { *this }, this](auto&& configuration) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -1014,7 +1014,7 @@ void MediaPlayerPrivateRemote::remoteVideoTrackConfigurationChanged(TrackID trac
 }
 
 #if ENABLE(MEDIA_SOURCE)
-void MediaPlayerPrivateRemote::load(const URL& url, const ContentType& contentType, MediaSourcePrivateClient& client)
+void MediaPlayerPrivateRemote::load(const URL& url, const LoadOptions& options, MediaSourcePrivateClient& client)
 {
     if (m_remoteEngineIdentifier == MediaPlayerEnums::MediaEngineIdentifier::AVFoundationMSE
         || (platformStrategies()->mediaStrategy().mockMediaSourceEnabled() && m_remoteEngineIdentifier == MediaPlayerEnums::MediaEngineIdentifier::MockMSE)) {
@@ -1027,7 +1027,7 @@ void MediaPlayerPrivateRemote::load(const URL& url, const ContentType& contentTy
             }
             return RemoteMediaSourceIdentifier::generate();
         }();
-        connection().sendWithAsyncReply(Messages::RemoteMediaPlayerProxy::LoadMediaSource(url, contentType, identifier), [weakThis = ThreadSafeWeakPtr { *this }, this](RemoteMediaPlayerConfiguration&& configuration) {
+        connection().sendWithAsyncReply(Messages::RemoteMediaPlayerProxy::LoadMediaSource(url, options, identifier), [weakThis = ThreadSafeWeakPtr { *this }, this](RemoteMediaPlayerConfiguration&& configuration) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;

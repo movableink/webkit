@@ -45,6 +45,7 @@
 #import "MediaSourcePrivateAVFObjC.h"
 #import "SharedBuffer.h"
 #import "SourceBufferParserAVFObjC.h"
+#import "SourceBufferParserWebM.h"
 #import "SourceBufferPrivateClient.h"
 #import "TimeRanges.h"
 #import "VideoMediaSampleRenderer.h"
@@ -124,6 +125,10 @@ SourceBufferPrivateAVFObjC::SourceBufferPrivateAVFObjC(MediaSourcePrivateAVFObjC
 #endif
 {
     ALWAYS_LOG(LOGIDENTIFIER);
+
+    RefPtr player = this->player();
+    if (RefPtr webmParser = dynamicDowncast<SourceBufferParserWebM>(m_parser); webmParser && player && player->supportsLimitedMatroska())
+        webmParser->allowLimitedMatroska();
 
 #if !RELEASE_LOG_DISABLED
     m_parser->setLogger(m_logger.get(), m_logIdentifier);

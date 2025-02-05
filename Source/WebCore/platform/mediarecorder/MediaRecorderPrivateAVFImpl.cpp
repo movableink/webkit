@@ -32,10 +32,11 @@
 #include "CAAudioStreamDescription.h"
 #include "CVUtilities.h"
 #include "ContentType.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Logging.h"
 #include "MediaRecorderPrivateEncoder.h"
 #include "MediaStreamPrivate.h"
+#include "Quirks.h"
 #include "RealtimeIncomingVideoSourceCocoa.h"
 #include "SharedBuffer.h"
 #include "VideoFrameCV.h"
@@ -85,8 +86,10 @@ bool MediaRecorderPrivateAVFImpl::isTypeSupported(Document& document, ContentTyp
         bool isVP90 = (codec.startsWith("vp09"_s) || equal(codec, "vp9"_s) || equal(codec, "vp9.0"_s)) && !codec.startsWith("vp09.02"_s);
         bool isVP92 = codec.startsWith("vp09.02"_s);
         bool isVP8 = codec.startsWith("vp08"_s) || equal(codec, "vp8"_s) || equal(codec, "vp8.0"_s);
+        bool isH264 = codec.startsWith("avc1"_s);
         bool isOpus = codec == "opus"_s;
-        if (!(isVP90 && document.settings().webRTCVP9Profile0CodecEnabled()) && !(isVP92 && document.settings().webRTCVP9Profile2CodecEnabled()) && !isVP8 && !isOpus)
+        bool isPCM = codec == "pcm"_s;
+        if (!(isVP90 && document.settings().webRTCVP9Profile0CodecEnabled()) && !(isVP92 && document.settings().webRTCVP9Profile2CodecEnabled()) && !isVP8 && !isOpus && !((isH264 || isPCM) && (document.settings().limitedMatroskaSupportEnabled() || document.quirks().needsLimitedMatroskaSupport())))
             return false;
     }
     return true;

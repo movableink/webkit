@@ -325,7 +325,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::load(const String&)
         player->networkStateChanged();
 }
 
-void MediaPlayerPrivateMediaSourceAVFObjC::load(const URL&, const ContentType&, MediaSourcePrivateClient& client)
+void MediaPlayerPrivateMediaSourceAVFObjC::load(const URL&, const LoadOptions& options, MediaSourcePrivateClient& client)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
@@ -337,6 +337,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::load(const URL&, const ContentType&, 
         m_mediaSourcePrivate = MediaSourcePrivateAVFObjC::create(*this, client);
     m_mediaSourcePrivate->setResourceOwner(m_resourceOwner);
     m_mediaSourcePrivate->setVideoRenderer(layerOrVideoRenderer().get());
+    m_loadOptions = options;
 
     acceleratedRenderingStateChanged();
 }

@@ -50,10 +50,10 @@
 #import <wtf/NeverDestroyed.h>
 #import <wtf/RecursiveLockAdapter.h>
 #import <wtf/RunLoop.h>
-#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/ThreadSpecific.h>
 #import <wtf/Threading.h>
 #import <wtf/WorkQueue.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/spi/cf/CFRunLoopSPI.h>
 #import <wtf/spi/cocoa/objcSPI.h>
 #import <wtf/text/AtomString.h>

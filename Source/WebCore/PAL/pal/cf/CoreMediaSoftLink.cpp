@@ -239,6 +239,8 @@ SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDesc
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionExtension_ProjectionKind, CFStringRef, PAL_EXPORT)
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, kCMFormatDescriptionProjectionKind_Rectilinear, CFStringRef, PAL_EXPORT)
 
+SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMVideoFormatDescriptionCreateFromH264ParameterSets, OSStatus, (CFAllocatorRef allocator, size_t parameterSetCount, const uint8_t* const* parameterSetPointers, const size_t* parameterSetSizes, int NALUnitHeaderLength, CMFormatDescriptionRef* formatDescriptionOut), (allocator, parameterSetCount, parameterSetPointers, parameterSetSizes, NALUnitHeaderLength, formatDescriptionOut), PAL_EXPORT)
+
 #if PLATFORM(MAC)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMAudioDeviceClockCreate, OSStatus, (CFAllocatorRef allocator, CFStringRef deviceUID, CMClockRef* clockOut), (allocator, deviceUID, clockOut), PAL_EXPORT)
 SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(PAL, CoreMedia, CMBaseObjectGetDerivedStorage, void*, (CMBaseObjectRef baseObject), (baseObject), PAL_EXPORT)

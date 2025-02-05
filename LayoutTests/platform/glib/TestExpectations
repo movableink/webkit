@@ -1269,6 +1269,9 @@ webkit.org/b/213699 http/wpt/mediarecorder/MediaRecorder-audio-bitrate.html [ Pa
 webkit.org/b/213699 http/wpt/mediarecorder/MediaRecorder-AV-audio-video-dataavailable.html [ Crash Timeout Failure ]
 webkit.org/b/213699 http/wpt/mediarecorder/MediaRecorder-first-frame.html [ Failure Pass ]
 
+# No support for Matroska container in GStreamer port.
+http/wpt/mediarecorder/MediaRecorder-matroska-AV-audio-video-dataavailable.html
+
 # The mp4 test here is passing but the webm test fails, matroskademux fails to seek in push mode,
 # due to missing index. GLib baselines reflect this, the Pass expectation is kept here for future reference.
 webkit.org/b/282534 http/wpt/mediarecorder/MediaRecorder-audio-samplingrate-change.html [ Pass ]

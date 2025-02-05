@@ -122,7 +122,7 @@ public:
 
     void load(const String&) final { }
 #if ENABLE(MEDIA_SOURCE)
-    void load(const URL&, const ContentType&, MediaSourcePrivateClient&) final { }
+    void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) final { }
 #endif
 #if ENABLE(MEDIA_STREAM)
     void load(MediaStreamPrivate&) final { }
@@ -514,17 +514,15 @@ void MediaPlayer::invalidate()
     m_client = nullMediaPlayerClient();
 }
 
-bool MediaPlayer::load(const URL& url, const ContentType& contentType, const String& keySystem, bool requiresRemotePlayback)
+bool MediaPlayer::load(const URL& url, const LoadOptions& options)
 {
     ASSERT(!m_reloadTimer.isActive());
 
     // Protect against MediaPlayer being destroyed during a MediaPlayerClient callback.
     Ref<MediaPlayer> protectedThis(*this);
 
-    m_contentType = contentType;
     m_url = url;
-    m_keySystem = keySystem.convertToASCIILowercase();
-    m_requiresRemotePlayback = requiresRemotePlayback;
+    m_loadOptions = options;
 
 #if ENABLE(MEDIA_SOURCE)
     m_mediaSource = nullptr;
@@ -538,15 +536,13 @@ bool MediaPlayer::load(const URL& url, const ContentType& contentType, const Str
 }
 
 #if ENABLE(MEDIA_SOURCE)
-bool MediaPlayer::load(const URL& url, const ContentType& contentType, MediaSourcePrivateClient& mediaSource)
+bool MediaPlayer::load(const URL& url, const LoadOptions& options, MediaSourcePrivateClient& mediaSource)
 {
     ASSERT(!m_reloadTimer.isActive());
 
     m_mediaSource = mediaSource;
-    m_contentType = contentType;
     m_url = url;
-    m_keySystem = emptyString();
-    m_requiresRemotePlayback = false;
+    m_loadOptions = options;
     loadWithNextMediaEngine(nullptr);
     return m_currentMediaEngine;
 }
@@ -568,9 +564,7 @@ bool MediaPlayer::load(MediaStreamPrivate& mediaStream)
     ASSERT(!m_reloadTimer.isActive());
 
     m_mediaStream = &mediaStream;
-    m_keySystem = emptyString();
-    m_requiresRemotePlayback = false;
-    m_contentType = { };
+    m_loadOptions = { };
     loadWithNextMediaEngine(nullptr);
     return m_currentMediaEngine;
 }
@@ -579,7 +573,7 @@ bool MediaPlayer::load(MediaStreamPrivate& mediaStream)
 const MediaPlayerFactory* MediaPlayer::nextBestMediaEngine(const MediaPlayerFactory* current)
 {
     MediaEngineSupportParameters parameters;
-    parameters.type = m_contentType;
+    parameters.type = m_loadOptions.contentType;
     parameters.url = m_url;
 #if ENABLE(MEDIA_SOURCE)
     parameters.isMediaSource = !!m_mediaSource.get();
@@ -587,6 +581,7 @@ const MediaPlayerFactory* MediaPlayer::nextBestMediaEngine(const MediaPlayerFact
 #if ENABLE(MEDIA_STREAM)
     parameters.isMediaStream = !!m_mediaStream;
 #endif
+    parameters.supportsLimitedMatroska = m_loadOptions.supportsLimitedMatroska;
     parameters.allowedMediaContainerTypes = allowedMediaContainerTypes();
     parameters.allowedMediaCodecTypes = allowedMediaCodecTypes();
     parameters.allowedMediaVideoCodecIDs = allowedMediaVideoCodecIDs();
@@ -633,7 +628,7 @@ void MediaPlayer::loadWithNextMediaEngine(const MediaPlayerFactory* current)
 
     const MediaPlayerFactory* engine = nullptr;
 
-    if (!m_contentType.isEmpty() || MEDIASTREAM || MEDIASOURCE)
+    if (!contentType().isEmpty() || MEDIASTREAM || MEDIASOURCE)
         engine = nextBestMediaEngine(current);
 
     // Exhaust all remaining engines
@@ -642,7 +637,7 @@ void MediaPlayer::loadWithNextMediaEngine(const MediaPlayerFactory* current)
 
     // Don't delete and recreate the player unless it comes from a different engine.
     if (!engine) {
-        LOG(Media, "MediaPlayer::loadWithNextMediaEngine - no media engine found for type \"%s\"", m_contentType.raw().utf8().data());
+        LOG(Media, "MediaPlayer::loadWithNextMediaEngine - no media engine found for type \"%s\"", contentType().raw().utf8().data());
         m_currentMediaEngine = engine;
         m_private = nullptr;
     } else if (m_currentMediaEngine != engine) {
@@ -679,7 +674,7 @@ void MediaPlayer::loadWithNextMediaEngine(const MediaPlayerFactory* current)
 
 #if ENABLE(MEDIA_SOURCE)
         if (RefPtr mediaSource = m_mediaSource.get())
-            m_private->load(m_url, m_contentType, *mediaSource);
+            m_private->load(m_url, m_loadOptions, *mediaSource);
         else
 #endif
 #if ENABLE(MEDIA_STREAM)
@@ -687,7 +682,7 @@ void MediaPlayer::loadWithNextMediaEngine(const MediaPlayerFactory* current)
             m_private->load(*m_mediaStream);
         else
 #endif
-        m_private->load(m_url, m_contentType, m_keySystem);
+        m_private->load(m_url, m_loadOptions);
     } else {
         m_private = NullMediaPlayerPrivate::create(*this);
         if (!m_activeEngineIdentifier
@@ -1805,17 +1800,17 @@ bool MediaPlayer::shouldDisableSleep() const
 
 String MediaPlayer::contentMIMEType() const
 {
-    return m_contentType.containerType();
+    return contentType().containerType();
 }
 
 String MediaPlayer::contentTypeCodecs() const
 {
-    return m_contentType.parameter(ContentType::codecsParameter());
+    return contentType().parameter(ContentType::codecsParameter());
 }
 
 bool MediaPlayer::contentMIMETypeWasInferredFromExtension() const
 {
-    return m_contentType.typeWasInferredFromExtension();
+    return contentType().typeWasInferredFromExtension();
 }
 
 const Vector<ContentType>& MediaPlayer::mediaContentTypesRequiringHardwareSupport() const

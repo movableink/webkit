@@ -1831,6 +1831,15 @@ bool Quirks::needsHotelsAnimationQuirk(Element& element, const RenderStyle& styl
     return !matches.hasException() && matches.returnValue();
 }
 
+bool Quirks::needsLimitedMatroskaSupport() const
+{
+#if ENABLE(MEDIA_RECORDER) && ENABLE(ALTERNATE_WEBM_PLAYER)
+    return isDomain("zencastr.com"_s);
+#else
+    return false;
+#endif
+}
+
 URL Quirks::topDocumentURL() const
 {
     if (UNLIKELY(!m_topDocumentURLForTesting.isEmpty()))

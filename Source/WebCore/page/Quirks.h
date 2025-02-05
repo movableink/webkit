@@ -245,6 +245,8 @@ public:
 
     bool needsFacebookStoriesCreationFormQuirk(const Element&, const RenderStyle&) const;
 
+    bool needsLimitedMatroskaSupport() const;
+
 private:
     bool needsQuirks() const;
     bool isDomain(const String&) const;

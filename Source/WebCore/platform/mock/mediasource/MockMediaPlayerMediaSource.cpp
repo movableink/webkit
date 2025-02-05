@@ -111,7 +111,7 @@ void MockMediaPlayerMediaSource::load(const String&)
     ASSERT_NOT_REACHED();
 }
 
-void MockMediaPlayerMediaSource::load(const URL&, const ContentType&, MediaSourcePrivateClient& source)
+void MockMediaPlayerMediaSource::load(const URL&, const LoadOptions&, MediaSourcePrivateClient& source)
 {
     if (RefPtr mediaSourcePrivate = downcast<MockMediaSourcePrivate>(source.mediaSourcePrivate())) {
         mediaSourcePrivate->setPlayer(this);

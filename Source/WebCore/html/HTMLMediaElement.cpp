@@ -1379,6 +1379,7 @@ String HTMLMediaElement::canPlayType(const String& mimeType) const
     parameters.allowedMediaVideoCodecIDs = allowedMediaVideoCodecIDs();
     parameters.allowedMediaAudioCodecIDs = allowedMediaAudioCodecIDs();
     parameters.allowedMediaCaptionFormatTypes = allowedMediaCaptionFormatTypes();
+    parameters.supportsLimitedMatroska = limitedMatroskaSupportEnabled();
 
     MediaPlayer::SupportsType support = MediaPlayer::supportsType(parameters);
     String canPlay;
@@ -1880,6 +1881,12 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
             return;
         }
 
+        MediaPlayer::LoadOptions options = {
+            .contentType = *result,
+            .requiresRemotePlayback = !!m_remotePlaybackConfiguration,
+            .supportsLimitedMatroska = limitedMatroskaSupportEnabled()
+        };
+
 #if ENABLE(MEDIA_SOURCE)
         if (!m_mediaSource && url.protocolIs(mediaSourceBlobProtocol) && !m_remotePlaybackConfiguration) {
             if (RefPtr mediaSource = MediaSource::lookup(url.string()))
@@ -1897,7 +1904,7 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
                 // Forget our reference to the MediaSource, so we leave it alone
                 // while processing remainder of load failure.
                 m_mediaSource = nullptr;
-            } else  if (RefPtr mediaSource = m_mediaSource; !mediaSource->client() || !player->load(url, *result, *mediaSource->client())) {
+            } else  if (RefPtr mediaSource = m_mediaSource; !mediaSource->client() || !player->load(url, options, *mediaSource->client())) {
                 // We have to detach the MediaSource before we forget the reference to it.
                 mediaSource->detachFromElement();
                 m_mediaSource = nullptr;
@@ -1919,9 +1926,7 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
             return;
         }
 #endif
-
-        // FIXME: Figure out if the third argument can be removed. Was used for a legacy keySystem implementation.
-        if (!player->load(url, *result, emptyString(), !!m_remotePlaybackConfiguration))
+        if (!player->load(url, options))
             mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
         else
             mediaPlayerRenderingModeChanged();
@@ -2940,7 +2945,13 @@ void HTMLMediaElement::setNetworkState(MediaPlayer::NetworkState state)
                 return;
             }
             player->reset();
-            if (result->isEmpty() || lastContentType == *result || !player->load(url, *result, String { }, !!m_remotePlaybackConfiguration))
+
+            MediaPlayer::LoadOptions options = {
+                .contentType = *result,
+                .requiresRemotePlayback = !!m_remotePlaybackConfiguration,
+                .supportsLimitedMatroska = limitedMatroskaSupportEnabled()
+            };
+            if (result->isEmpty() || lastContentType == *result || !player->load(url, options))
                 mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
             else
                 mediaPlayerRenderingModeChanged();
@@ -5628,6 +5639,7 @@ URL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, InvalidURL
             parameters.requiresRemotePlayback = !!m_remotePlaybackConfiguration;
             if (!document().settings().allowMediaContentTypesRequiringHardwareSupportAsFallback() || Traversal<HTMLSourceElement>::nextSkippingChildren(source))
                 parameters.contentTypesRequiringHardwareSupport = mediaContentTypesRequiringHardwareSupport();
+            parameters.supportsLimitedMatroska = limitedMatroskaSupportEnabled();
 
             if (MediaPlayer::supportsType(parameters) == MediaPlayer::SupportsType::IsNotSupported)
                 goto CheckAgain;
@@ -9930,6 +9942,15 @@ void HTMLMediaElement::invalidateBufferingStopwatch()
     bufferingDictionary.set(DiagnosticLoggingKeys::sourceTypeKey(), static_cast<uint64_t>(*sourceType));
     bufferingDictionary.set(DiagnosticLoggingKeys::secondsKey(), bufferingDuration.seconds());
     page->diagnosticLoggingClient().logDiagnosticMessageWithValueDictionary(DiagnosticLoggingKeys::mediaBufferingWatchTimeKey(), "Media Watchtime Buffering Event By Source Type"_s, bufferingDictionary, ShouldSample::Yes);
+}
+
+bool HTMLMediaElement::limitedMatroskaSupportEnabled() const
+{
+#if ENABLE(MEDIA_RECORDER_WEBM)
+    return document().quirks().needsLimitedMatroskaSupport() || document().settings().limitedMatroskaSupportEnabled();
+#else
+    return false;
+#endif
 }
 
 } // namespace WebCore

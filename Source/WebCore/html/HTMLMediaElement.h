@@ -1124,6 +1124,8 @@ private:
     void setMutedInternal(bool muted, ForceMuteChange);
     bool implicitlyMuted() const { return m_implicitlyMuted.value_or(false); }
 
+    bool limitedMatroskaSupportEnabled() const;
+
     Timer m_progressEventTimer;
     Timer m_playbackProgressTimer;
     Timer m_scanTimer;

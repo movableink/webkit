@@ -114,6 +114,9 @@ String VideoTrackPrivateWebM::codec() const
     if (codecID == "V_VP8"_s)
         return "vp08"_s;
 
+    if (codecID == "V_MPEG4/ISO/AVC"_s)
+        return "h264"_s;
+
     return emptyString();
 }
 

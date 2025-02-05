@@ -163,7 +163,7 @@ void RemoteMediaPlayerProxy::getConfiguration(RemoteMediaPlayerConfiguration& co
     });
 }
 
-void RemoteMediaPlayerProxy::load(URL&& url, std::optional<SandboxExtension::Handle>&& sandboxExtensionHandle, const ContentType& contentType, const String& keySystem, bool requiresRemotePlayback, CompletionHandler<void(RemoteMediaPlayerConfiguration&&)>&& completionHandler)
+void RemoteMediaPlayerProxy::load(URL&& url, std::optional<SandboxExtension::Handle>&& sandboxExtensionHandle, const MediaPlayer::LoadOptions& options, CompletionHandler<void(RemoteMediaPlayerConfiguration&&)>&& completionHandler)
 {
     RemoteMediaPlayerConfiguration configuration;
     if (sandboxExtensionHandle) {
@@ -174,13 +174,13 @@ void RemoteMediaPlayerProxy::load(URL&& url, std::optional<SandboxExtension::Han
             WTFLogAlways("Unable to create sandbox extension for media url.\n");
     }
 
-    protectedPlayer()->load(url, contentType, keySystem, requiresRemotePlayback);
+    protectedPlayer()->load(url, options);
     getConfiguration(configuration);
     completionHandler(WTFMove(configuration));
 }
 
 #if ENABLE(MEDIA_SOURCE)
-void RemoteMediaPlayerProxy::loadMediaSource(URL&& url, const WebCore::ContentType& contentType, RemoteMediaSourceIdentifier mediaSourceIdentifier, CompletionHandler<void(RemoteMediaPlayerConfiguration&&)>&& completionHandler)
+void RemoteMediaPlayerProxy::loadMediaSource(URL&& url, const MediaPlayer::LoadOptions& options, RemoteMediaSourceIdentifier mediaSourceIdentifier, CompletionHandler<void(RemoteMediaPlayerConfiguration&&)>&& completionHandler)
 {
     RefPtr manager = m_manager.get();
     ASSERT(manager && manager->gpuConnectionToWebProcess());
@@ -202,7 +202,7 @@ void RemoteMediaPlayerProxy::loadMediaSource(URL&& url, const WebCore::ContentTy
     if (auto preferences = sharedPreferencesForWebProcess())
         player->setDecompressionSessionPreferences(preferences->mediaSourcePrefersDecompressionSession, preferences->mediaSourceCanFallbackToDecompressionSession);
 #endif
-    player->load(url, contentType, *protectedMediaSourceProxy());
+    player->load(url, options, *protectedMediaSourceProxy());
 
     if (reattached)
         protectedMediaSourceProxy()->setMediaPlayers(*this, player->protectedPlayerPrivate().get());

@@ -411,6 +411,9 @@ SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, CoreMedia, kCMFormatDescriptionExten
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, CoreMedia, kCMFormatDescriptionProjectionKind_Rectilinear, CFStringRef)
 #define kCMFormatDescriptionProjectionKind_Rectilinear get_CoreMedia_kCMFormatDescriptionProjectionKind_Rectilinear()
 
+SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMVideoFormatDescriptionCreateFromH264ParameterSets, OSStatus, (CFAllocatorRef allocator, size_t parameterSetCount, const uint8_t* const* parameterSetPointers, const size_t* parameterSetSizes, int NALUnitHeaderLength, CMFormatDescriptionRef* formatDescriptionOut), (allocator, parameterSetCount, parameterSetPointers, parameterSetSizes, NALUnitHeaderLength, formatDescriptionOut))
+#define CMVideoFormatDescriptionCreateFromH264ParameterSets softLink_CoreMedia_CMVideoFormatDescriptionCreateFromH264ParameterSets
+
 namespace PAL {
 
 inline std::span<uint8_t> CMBlockBufferGetDataSpan(CMBlockBufferRef theBuffer, size_t offset = 0)

@@ -29,6 +29,7 @@
 #import "FormatDescriptionUtilities.h"
 #import "IOSurface.h"
 #import "Logging.h"
+#import "MediaSampleAVFObjC.h"
 #import "PixelBufferConformerCV.h"
 #import "VideoDecoder.h"
 #import "VideoFrame.h"

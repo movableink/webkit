@@ -163,11 +163,11 @@ bool MediaRecorderPrivateEncoder::initialize(const MediaRecorderPrivateOptions& 
             m_videoCodec = 'vp08';
         else if (codec == "opus"_s)
             m_audioCodec = kAudioFormatOpus;
-        else if (!isWebM && codec == "pcm"_s)
+        else if (codec == "pcm"_s)
             m_audioCodec = kAudioFormatLinearPCM;
         else if (!isWebM && codec == "alac"_s)
             m_audioCodec = kAudioFormatAppleLossless;
-        else if (!isWebM && startsWithLettersIgnoringASCIICase(codec, "avc1"_s))
+        else if (startsWithLettersIgnoringASCIICase(codec, "avc1"_s))
             m_videoCodec = kCMVideoCodecType_H264;
         else if (!isWebM && (codec.startsWith("hev1."_s) || codec.startsWith("hvc1."_s)))
             m_videoCodec = kCMVideoCodecType_HEVC;

@@ -4651,6 +4651,7 @@ header: <WebCore/MediaPlayer.h>
     bool isMediaSource;
     bool isMediaStream;
     bool requiresRemotePlayback;
+    bool supportsLimitedMatroska;
     Vector<WebCore::ContentType> contentTypesRequiringHardwareSupport;
     std::optional<Vector<String>> allowedMediaContainerTypes;
     std::optional<Vector<String>> allowedMediaCodecTypes;
@@ -4664,6 +4665,13 @@ header: <WebCore/MediaPlayer.h>
     MediaTime time;
     MediaTime negativeThreshold;
     MediaTime positiveThreshold;
+};
+
+header: <WebCore/MediaPlayer.h>
+[CustomHeader] struct WebCore::MediaPlayerLoadOptions {
+    WebCore::ContentType contentType;
+    bool requiresRemotePlayback;
+    bool supportsLimitedMatroska;
 };
 
 #endif
