@@ -29,6 +29,7 @@
 #import "Logging.h"
 #import "NetworkProcess.h"
 #import "NetworkSession.h"
+#import "WebPrivacyHelpers.h"
 #import <WebCore/DNS.h>
 #import <WebCore/NetworkStorageSession.h>
 #import <WebCore/Quirks.h>
@@ -316,6 +317,11 @@ WebCore::ThirdPartyCookieBlockingDecision NetworkTaskCocoa::requestThirdPartyCoo
         if (!shouldBlockCookies(thirdPartyCookieBlockingDecision))
             thirdPartyCookieBlockingDecision = networkStorageSession->thirdPartyCookieBlockingDecisionForRequest(request, frameID(), pageID(), shouldRelaxThirdPartyCookieBlocking());
     }
+
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS) && HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    if (thirdPartyCookieBlockingDecision == WebCore::ThirdPartyCookieBlockingDecision::AllExceptPartitioned && request.isThirdParty() && isKnownTrackerAddressOrDomain(request.url().host()))
+        return WebCore::ThirdPartyCookieBlockingDecision::All;
+#endif
     return thirdPartyCookieBlockingDecision;
 }
 
