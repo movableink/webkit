@@ -805,14 +805,16 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
     // We found the start run and associated line, now iterate until we find a line boundary.
     while (currentObject) {
         RELEASE_ASSERT(currentRuns->size());
-        unsigned cumulativeOffset = 0;
-        for (size_t i = 0; i < currentRuns->size(); i++) {
+        unsigned cumulativeOffset = runIndex ? currentRuns->runLengthSumTo(runIndex - 1) : 0;
+        for (size_t i = runIndex; i < currentRuns->size(); i++) {
             cumulativeOffset += currentRuns->runLength(i);
             if (currentRuns->lineID(i) != startLineID)
                 return linePosition;
             linePosition = AXTextMarker(*currentObject, computeOffset(cumulativeOffset, currentRuns->runLength(i)), origin);
         }
         currentObject = findObjectWithRuns(*currentObject, direction, stopAtID);
+        // Reset the runIndex to 0, since we should start iterating from the beginning of the next object's runs.
+        runIndex = 0;
         if (currentObject) {
             if (includeTrailingLineBreak == IncludeTrailingLineBreak::No && currentObject->roleValue() == AccessibilityRole::LineBreak)
                 break;
