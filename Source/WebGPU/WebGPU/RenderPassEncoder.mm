@@ -202,22 +202,23 @@ void RenderPassEncoder::beginOcclusionQuery(uint32_t queryIndex)
 {
     RETURN_IF_FINISHED();
 
+    auto initialQueryIndex = queryIndex;
     queryIndex *= sizeof(uint64_t);
     if (m_occlusionQueryActive || m_queryBufferIndicesToClear.contains(queryIndex)) {
         makeInvalid(@"beginOcclusionQuery validation failure");
         return;
     }
+    if (initialQueryIndex >= m_visibilityResultBufferSize / sizeof(uint64_t)) {
+        makeInvalid(@"beginOcclusionQuery validation failure");
+        return;
+    }
+
     m_occlusionQueryActive = true;
     m_visibilityResultBufferOffset = queryIndex;
     m_queryBufferIndicesToClear.add(m_visibilityResultBufferOffset);
 
-
     if (occlusionQueryIsDestroyed())
         return;
-    if (!m_visibilityResultBufferSize || queryIndex >= m_visibilityResultBufferSize) {
-        makeInvalid(@"beginOcclusionQuery validation failure");
-        return;
-    }
 
     if (m_queryBufferUtilizedIndices.contains(queryIndex))
         return;
