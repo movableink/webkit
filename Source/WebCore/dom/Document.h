@@ -32,6 +32,7 @@
 #include "ContainerNode.h"
 #include "ContextDestructionObserverInlines.h"
 #include "DocumentClasses.h"
+#include "DocumentEnums.h"
 #include "DocumentEventTiming.h"
 #include "DocumentSyncData.h"
 #include "FontSelectorClient.h"
@@ -359,43 +360,12 @@ class Update;
 
 enum class PageshowEventPersistence : bool { NotPersisted, Persisted };
 
-enum class NodeListInvalidationType : uint8_t {
-    DoNotInvalidateOnAttributeChanges,
-    InvalidateOnClassAttrChange,
-    InvalidateOnIdNameAttrChange,
-    InvalidateOnNameAttrChange,
-    InvalidateOnForTypeAttrChange,
-    InvalidateForFormControls,
-    InvalidateOnHRefAttrChange,
-    InvalidateOnAnyAttrChange,
-};
-constexpr auto numNodeListInvalidationTypes = enumToUnderlyingType(NodeListInvalidationType::InvalidateOnAnyAttrChange) + 1;
-
 enum class EventHandlerRemoval : bool { One, All };
 using EventTargetSet = WeakHashCountedSet<Node, WeakPtrImplWithEventTargetData>;
-
-enum class DocumentCompatibilityMode : uint8_t {
-    NoQuirksMode = 1,
-    QuirksMode = 1 << 1,
-    LimitedQuirksMode = 1 << 2
-};
 
 enum class DimensionsCheck : uint8_t {
     Width = 1 << 0,
     Height = 1 << 1
-};
-
-enum class LayoutOptions : uint8_t {
-    RunPostLayoutTasksSynchronously = 1 << 0,
-    IgnorePendingStylesheets = 1 << 1,
-    ContentVisibilityForceLayout = 1 << 2,
-    UpdateCompositingLayers = 1 << 3,
-    DoNotLayoutAncestorDocuments = 1 << 4,
-    // Doesn't call RenderLayer::recursiveUpdateLayerPositionsAfterLayout if
-    // possible. The caller should use a LocalFrameView::AutoPreventLayerAccess
-    // for the scope that layout is expected to be flushed to stop any access to
-    // the stale RenderLayers.
-    CanDeferUpdateLayerPositions = 1 << 5
 };
 
 enum class HttpEquivPolicy : uint8_t {
@@ -877,7 +847,7 @@ public:
     void stopGatheringRTCLogs();
 #endif
 
-    bool canNavigate(Frame* targetFrame, const URL& destinationURL = URL());
+    CanNavigateState canNavigate(Frame* targetFrame, const URL& destinationURL = URL());
 
     bool usesStyleBasedEditability() const;
     void setHasElementUsingStyleBasedEditability();

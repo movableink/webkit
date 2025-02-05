@@ -186,7 +186,7 @@ ExceptionOr<void> History::go(Document& document, int distance)
 
     ASSERT(isMainThread());
 
-    if (!document.canNavigate(frame.get()))
+    if (document.canNavigate(frame.get()) != CanNavigateState::Able)
         return { };
 
     frame->protectedNavigationScheduler()->scheduleHistoryNavigation(distance);

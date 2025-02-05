@@ -387,7 +387,7 @@ private:
 
     void closePage() final;
     void eventListenersDidChange() final;
-    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking) final;
+    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking, CanNavigateState) final;
 
     bool allowedToChangeWindowGeometry() const;
 

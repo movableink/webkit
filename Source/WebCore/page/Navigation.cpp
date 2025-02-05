@@ -457,7 +457,7 @@ Navigation::Result Navigation::performTraversal(const String& key, Navigation::O
     if (!entry)
         createErrorResult(WTFMove(committed), WTFMove(finished), ExceptionCode::AbortError, "Navigation aborted"_s);
 
-    if (!frame()->isMainFrame() && !window()->protectedDocument()->canNavigate(&frame()->page()->mainFrame()))
+    if (!frame()->isMainFrame() && window()->protectedDocument()->canNavigate(&frame()->page()->mainFrame()) != CanNavigateState::Able)
         return createErrorResult(WTFMove(committed), WTFMove(finished), ExceptionCode::SecurityError, "Invalid state"_s);
 
     RefPtr current = currentEntry();
