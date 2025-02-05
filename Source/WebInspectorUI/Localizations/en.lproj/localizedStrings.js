@@ -40,6 +40,8 @@ localizedStrings["%d Unsupported (plural)"] = "%d Unsupported";
 localizedStrings["%d Unsupported (singular)"] = "%d Unsupported";
 localizedStrings["%d Warning"] = "%d Warning";
 localizedStrings["%d Warnings"] = "%d Warnings";
+/* Label for JavaScript heap snapshot identifier and user provided name. */
+localizedStrings["%d \u2014 \u201C%s\u201D"] = "%d \u2014 \u201C%s\u201D";
 localizedStrings["%d \xd7 %d pixels"] = "%d \xd7 %d pixels";
 localizedStrings["%d \xd7 %d pixels (Natural: %d \xd7 %d pixels)"] = "%d \xd7 %d pixels (Natural: %d \xd7 %d pixels)";
 localizedStrings["%d domain"] = "%d domain";
@@ -922,7 +924,7 @@ localizedStrings["Import Recording"] = "Import Recording";
 localizedStrings["Import audit or result"] = "Import audit or result";
 localizedStrings["Imported"] = "Imported";
 localizedStrings["Imported - %s"] = "Imported - %s";
-localizedStrings["Imported \u2014 %s"] = "Imported \u2014 %s";
+localizedStrings["Imported Snapshot \u2014 %s"] = "Imported Snapshot \u2014 %s";
 localizedStrings["Include original request data"] = "Include original request data";
 localizedStrings["Include original response data"] = "Include original response data";
 localizedStrings["Incomplete"] = "Incomplete";
@@ -1251,6 +1253,7 @@ localizedStrings["Page Overlay Options @ Layout Panel Grid Section Header"] = "P
 localizedStrings["Page Overlays @ Layout Sidebar Section Header"] = "Grid Overlays";
 /* Heading for list of flex container nodes */
 localizedStrings["Page Overlays for Flex containers @ Layout Sidebar Section Header"] = "Flexbox Overlays";
+localizedStrings["Page Snapshot %s"] = "Page Snapshot %s";
 localizedStrings["Page navigated at %s"] = "Page navigated at %s";
 localizedStrings["Page reloaded at %s"] = "Page reloaded at %s";
 /* Paint (render) phase timeline records */
@@ -1603,8 +1606,6 @@ localizedStrings["Skip Network @ Local Override Popover Options"] = "Skip Networ
 localizedStrings["Slashed Zeros @ Font Details Sidebar Property Value"] = "Slashed Zeros";
 /* Property value for `font-variant-capitals: small-caps`. */
 localizedStrings["Small Capitals @ Font Details Sidebar Property Value"] = "Small Capitals";
-localizedStrings["Snapshot %d"] = "Snapshot %d";
-localizedStrings["Snapshot %d \u2014 %s"] = "Snapshot %d \u2014 %s";
 localizedStrings["Snapshot Comparison (%d and %d)"] = "Snapshot Comparison (%d and %d)";
 localizedStrings["Snapshot List"] = "Snapshot List";
 localizedStrings["Socket"] = "Socket";
@@ -1993,6 +1994,7 @@ localizedStrings["With Object Properties"] = "With Object Properties";
 localizedStrings["Worker"] = "Worker";
 localizedStrings["Worker Thread"] = "Worker Thread";
 localizedStrings["Worker Threads"] = "Worker Threads";
+localizedStrings["Worker \u201C%s\u201D Snapshot %s"] = "Worker \u201C%s\u201D Snapshot %s";
 localizedStrings["Worker: %s"] = "Worker: %s";
 /* Title for list of JavaScript web worker execution contexts */
 localizedStrings["Workers @ Execution Context Picker"] = "Workers";
