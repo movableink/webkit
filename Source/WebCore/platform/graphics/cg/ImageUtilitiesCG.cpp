@@ -43,7 +43,7 @@
 
 namespace WebCore {
 
-WorkQueue& sharedImageTranscodingQueue()
+WorkQueue& sharedImageTranscodingQueueSingleton()
 {
     static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("com.apple.WebKit.ImageTranscoding"_s));
     return queue.get();
