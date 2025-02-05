@@ -433,10 +433,10 @@ void RenderGrid::layoutGrid(bool relayoutChildren)
         if (size() != previousSize)
             relayoutChildren = true;
 
-        m_outOfFlowItemColumn.clear();
-        m_outOfFlowItemRow.clear();
 
         layoutPositionedObjects(relayoutChildren || isDocumentElementRenderer());
+        m_outOfFlowItemColumn.clear();
+        m_outOfFlowItemRow.clear();
         m_trackSizingAlgorithm.reset();
 
         computeOverflow(layoutOverflowLogicalBottom(*this));
@@ -567,10 +567,10 @@ void RenderGrid::layoutMasonry(bool relayoutChildren)
         if (size() != previousSize)
             relayoutChildren = true;
 
-        m_outOfFlowItemColumn.clear();
-        m_outOfFlowItemRow.clear();
 
         layoutPositionedObjects(relayoutChildren || isDocumentElementRenderer());
+        m_outOfFlowItemColumn.clear();
+        m_outOfFlowItemRow.clear();
         m_trackSizingAlgorithm.reset();
 
         computeOverflow(layoutOverflowLogicalBottom(*this));
