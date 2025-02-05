@@ -1118,6 +1118,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/MessagePortIdentifier.h
     dom/MouseEvent.h
     dom/MouseEventInit.h
+    dom/MouseEventTypes.h
     dom/MouseRelatedEvent.h
     dom/MutationEvent.h
     dom/MutationObserver.h

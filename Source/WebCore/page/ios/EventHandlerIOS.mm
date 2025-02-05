@@ -42,6 +42,7 @@
 #import "KeyboardEvent.h"
 #import "LocalFrame.h"
 #import "LocalFrameView.h"
+#import "MouseEventTypes.h"
 #import "MouseEventWithHitTestResults.h"
 #import "Page.h"
 #import "Pasteboard.h"

@@ -61,7 +61,6 @@
 #import <WebCore/LocalFrame.h>
 #import <WebCore/MouseEvent.h>
 #import <WebCore/PlatformEventFactoryMac.h>
-#import <WebCore/PlatformMouseEvent.h>
 #import <WebCore/Range.h>
 #import <WebCore/ReferrerPolicy.h>
 #import <WebCore/SimpleRange.h>

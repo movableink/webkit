@@ -93,6 +93,7 @@
 #import <WebCore/LocalFrame.h>
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/MIMETypeRegistry.h>
+#import <WebCore/MouseEventTypes.h>
 #import <WebCore/MutableStyleProperties.h>
 #import <WebCore/OriginAccessPatterns.h>
 #import <WebCore/Page.h>

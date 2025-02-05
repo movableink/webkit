@@ -43,6 +43,7 @@
 #import "LocalFrame.h"
 #import "LocalFrameView.h"
 #import "Logging.h"
+#import "MouseEventTypes.h"
 #import "Page.h"
 #import "PageOverlayController.h"
 #import "Settings.h"

@@ -59,6 +59,7 @@
 #include "LocalDOMWindow.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "MouseEventTypes.h"
 #include "MutationEvent.h"
 #include "NodeName.h"
 #include "NodeRareDataInlines.h"

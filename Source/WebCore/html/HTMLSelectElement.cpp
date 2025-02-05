@@ -53,7 +53,6 @@
 #include "NodeName.h"
 #include "NodeRareData.h"
 #include "Page.h"
-#include "PlatformMouseEvent.h"
 #include "RenderListBox.h"
 #include "RenderMenuList.h"
 #include "RenderTheme.h"

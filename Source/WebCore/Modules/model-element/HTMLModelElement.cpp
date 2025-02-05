@@ -57,7 +57,6 @@
 #include "ModelPlayerProvider.h"
 #include "MouseEvent.h"
 #include "Page.h"
-#include "PlatformMouseEvent.h"
 #include "RenderBoxInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"

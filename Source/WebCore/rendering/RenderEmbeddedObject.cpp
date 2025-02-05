@@ -46,7 +46,6 @@
 #include "Page.h"
 #include "PaintInfo.h"
 #include "Path.h"
-#include "PlatformMouseEvent.h"
 #include "PluginViewBase.h"
 #include "RenderBoxInlines.h"
 #include "RenderLayoutState.h"

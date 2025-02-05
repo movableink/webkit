@@ -65,7 +65,6 @@
 #include "NodeName.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
-#include "PlatformMouseEvent.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RadioInputType.h"
 #include "RenderStyleSetters.h"

@@ -30,6 +30,7 @@
 #include "WebMouseEvent.h"
 #include "WebTouchEvent.h"
 #include "WebWheelEvent.h"
+#include <WebCore/PlatformMouseEvent.h>
 
 #if ENABLE(MAC_GESTURE_EVENTS)
 #include "WebGestureEvent.h"

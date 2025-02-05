@@ -45,7 +45,6 @@
 #include "MouseEvent.h"
 #include "OriginAccessPatterns.h"
 #include "PingLoader.h"
-#include "PlatformMouseEvent.h"
 #include "PlatformStrategies.h"
 #include "PrivateClickMeasurement.h"
 #include "RegistrableDomain.h"

@@ -84,6 +84,7 @@
 #include <WebCore/JSRange.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/LocalFrameView.h>
+#include <WebCore/MouseEventTypes.h>
 #include <WebCore/OriginAccessPatterns.h>
 #include <WebCore/Page.h>
 #include <WebCore/PluginDocument.h>

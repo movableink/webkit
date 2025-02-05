@@ -32,7 +32,6 @@
 #include "Element.h"
 #include "EventNames.h"
 #include "MouseEvent.h"
-#include "PlatformMouseEvent.h"
 #include "PointerEvent.h"
 #include "PointerID.h"
 #include <wtf/NeverDestroyed.h>
