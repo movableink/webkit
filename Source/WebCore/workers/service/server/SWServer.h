@@ -200,6 +200,7 @@ public:
     WEBCORE_EXPORT void addConnection(Ref<Connection>&&);
     WEBCORE_EXPORT void removeConnection(SWServerConnectionIdentifier);
     Connection* connection(SWServerConnectionIdentifier identifier) const { return m_connections.get(identifier); }
+    RefPtr<Connection> protectedConnection(SWServerConnectionIdentifier identifier) const { return connection(identifier); }
 
     const HashMap<SWServerConnectionIdentifier, Ref<Connection>>& connections() const { return m_connections; }
     WEBCORE_EXPORT bool canHandleScheme(StringView) const;
@@ -275,8 +276,8 @@ public:
     ShouldDelayRemoval removeContextConnectionIfPossible(const RegistrableDomain&);
 
     std::optional<ServiceWorkerRegistrationIdentifier> clientIdentifierToControllingRegistration(ScriptExecutionContextIdentifier) const;
-    WEBCORE_EXPORT void forEachClientForOrigin(const ClientOrigin&, const Function<void(ServiceWorkerClientData&)>&);
-    void forEachClientForOrigin(const ClientOrigin&, const Function<void(const ServiceWorkerClientData&)>&) const;
+    WEBCORE_EXPORT void forEachClientForOrigin(const ClientOrigin&, NOESCAPE const Function<void(ServiceWorkerClientData&)>&);
+    void forEachClientForOrigin(const ClientOrigin&, NOESCAPE const Function<void(const ServiceWorkerClientData&)>&) const;
 
     struct GatheredClientData {
         ClientOrigin clientOrigin;
@@ -291,6 +292,7 @@ public:
     RefPtr<BackgroundFetchRecordLoader> createBackgroundFetchRecordLoader(BackgroundFetchRecordLoaderClient& client, const BackgroundFetchRequest& request, size_t responseDataSize, const WebCore::ClientOrigin& origin) { return m_delegate->createBackgroundFetchRecordLoader(client, request, responseDataSize, origin); }
     Ref<BackgroundFetchStore> createBackgroundFetchStore() { return m_delegate->createBackgroundFetchStore(); }
     WEBCORE_EXPORT BackgroundFetchEngine& backgroundFetchEngine();
+    WEBCORE_EXPORT Ref<BackgroundFetchEngine> protectedBackgroundFetchEngine();
 
     WEBCORE_EXPORT Vector<ServiceWorkerClientPendingMessage> releaseServiceWorkerClientPendingMessage(ScriptExecutionContextIdentifier);
 

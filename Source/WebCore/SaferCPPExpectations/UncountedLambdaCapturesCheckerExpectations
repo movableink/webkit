@@ -274,7 +274,5 @@ workers/service/ServiceWorkerGlobalScope.cpp
 workers/service/background-fetch/BackgroundFetchEngine.cpp
 workers/service/background-fetch/BackgroundFetchManager.cpp
 workers/service/context/ServiceWorkerThreadProxy.cpp
-workers/service/server/SWServer.cpp
-workers/service/server/SWServerWorker.cpp
 workers/shared/SharedWorkerObjectConnection.cpp
 xml/XMLHttpRequest.cpp

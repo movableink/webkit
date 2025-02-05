@@ -1603,10 +1603,6 @@ workers/service/context/ServiceWorkerInspectorProxy.cpp
 workers/service/context/ServiceWorkerThread.cpp
 workers/service/context/ServiceWorkerThreadProxy.cpp
 workers/service/server/SWScriptStorage.cpp
-workers/service/server/SWServer.cpp
-workers/service/server/SWServerJobQueue.cpp
-workers/service/server/SWServerRegistration.cpp
-workers/service/server/SWServerWorker.cpp
 workers/shared/SharedWorker.cpp
 workers/shared/SharedWorkerScriptLoader.cpp
 workers/shared/context/SharedWorkerContextManager.cpp
