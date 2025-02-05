@@ -898,8 +898,8 @@ public:
 
     void convertToPurifyNaN(Node* input)
     {
-        ASSERT(op() == DoubleRep);
-        setOp(PurifyNaN);
+        setOpAndDefaultFlags(PurifyNaN);
+        children.reset();
         children.setChild1(Edge(input, DoubleRepUse));
     }
 

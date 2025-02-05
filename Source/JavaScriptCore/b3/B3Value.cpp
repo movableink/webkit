@@ -464,6 +464,11 @@ Value* Value::sqrtConstant(Procedure&) const
     return nullptr;
 }
 
+Value* Value::purifyNaNConstant(Procedure&) const
+{
+    return nullptr;
+}
+
 Value* Value::vectorAndConstant(Procedure&, const Value*) const
 {
     return nullptr;
@@ -646,6 +651,7 @@ Effects Value::effects() const
     case Sub:
     case Mul:
     case Neg:
+    case PurifyNaN:
     case BitAnd:
     case BitOr:
     case BitXor:
@@ -889,6 +895,7 @@ ValueKey Value::key() const
     case Check:
     case BitwiseCast:
     case Neg:
+    case PurifyNaN:
     case Depend:
         return ValueKey(kind(), type(), child(0));
     case Add:
@@ -1080,6 +1087,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case FMax:
     case FMin:
     case Neg:
+    case PurifyNaN:
     case BitAnd:
     case BitOr:
     case BitXor:

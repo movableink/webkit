@@ -171,6 +171,9 @@ void printInternal(PrintStream& out, Opcode opcode)
     case Neg:
         out.print("Neg");
         return;
+    case PurifyNaN:
+        out.print("PurifyNaN");
+        return;
     case BitAnd:
         out.print("BitAnd");
         return;

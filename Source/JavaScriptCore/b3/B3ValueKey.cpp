@@ -71,6 +71,7 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case Ceil:
     case Sqrt:
     case Neg:
+    case PurifyNaN:
     case Depend:
     case SExt8:
     case SExt16:

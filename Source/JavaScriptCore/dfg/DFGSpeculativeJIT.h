@@ -1619,6 +1619,7 @@ public:
     void compileArithUnary(Node*);
     void compileArithSqrt(Node*);
     void compileArithMinMax(Node*);
+    void compilePurifyNaN(Node*);
     void compileConstantStoragePointer(Node*);
     void compileGetIndexedPropertyStorage(Node*);
     void compileResolveRope(Node*);

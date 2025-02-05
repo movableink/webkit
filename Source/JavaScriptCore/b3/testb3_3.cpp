@@ -2548,6 +2548,23 @@ void testSqrtArgWithEffectfulDoubleConversion(float a)
     CHECK(isIdentical(effect, expected));
 }
 
+void testPurifyNaN()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(proc, PurifyNaN, Origin(), arguments[0]));
+
+    auto code = compileProc(proc);
+
+    for (auto& value : floatingPointOperands<double>())
+        CHECK(isIdentical(invoke<double>(*code, value.value), JSC::purifyNaN(value.value)));
+
+    CHECK(!isImpureNaN(invoke<double>(*code, std::bit_cast<double>(0xffff000000000000ULL))));
+}
+
 void testCompareTwoFloatToDouble(float a, float b)
 {
     Procedure proc;

@@ -190,6 +190,11 @@ LValue Output::neg(LValue value)
     return m_block->appendNew<Value>(m_proc, B3::Neg, origin(), value);
 }
 
+LValue Output::purifyNaN(LValue value)
+{
+    return m_block->appendNew<Value>(m_proc, B3::PurifyNaN, origin(), value);
+}
+
 LValue Output::doubleAdd(LValue left, LValue right)
 {
     return m_block->appendNew<B3::Value>(m_proc, B3::Add, origin(), left, right);

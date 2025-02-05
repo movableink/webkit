@@ -6760,6 +6760,19 @@ void SpeculativeJIT::compileArithPow(Node* node)
     doubleResult(resultFpr, node);
 }
 
+void SpeculativeJIT::compilePurifyNaN(Node* node)
+{
+    SpeculateDoubleOperand value(this, node->child1());
+    FPRTemporary result(this);
+
+    FPRReg valueFPR = value.fpr();
+    FPRReg resultFPR = result.fpr();
+
+    moveDouble(valueFPR, resultFPR);
+    purifyNaN(resultFPR);
+    doubleResult(resultFPR, node);
+}
+
 // Returns true if the compare is fused with a subsequent branch.
 bool SpeculativeJIT::compare(Node* node, RelationalCondition condition, DoubleCondition doubleCondition, S_JITOperation_GJJ operation)
 {

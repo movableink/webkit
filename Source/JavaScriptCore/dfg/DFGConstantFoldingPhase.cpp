@@ -1439,6 +1439,67 @@ private:
                 break;
             }
 
+            case ArithAdd: {
+                JSValue left = m_state.forNode(node->child1()).value();
+                JSValue right = m_state.forNode(node->child2()).value();
+                switch (node->binaryUseKind()) {
+                case DoubleRepUse: {
+                    // Addition is subtle with doubles. Zero is not the neutral value, negative zero is:
+                    //    0 + 0 = 0
+                    //    0 + -0 = 0
+                    //    -0 + 0 = 0
+                    //    -0 + -0 = -0
+                    if (left && left.isNumber()) {
+                        if (isNegativeZero(left.asNumber())) {
+                            node->convertToPurifyNaN(node->child2().node());
+                            changed = true;
+                            break;
+                        }
+                    }
+
+                    if (right && right.isNumber()) {
+                        if (isNegativeZero(right.asNumber())) {
+                            node->convertToPurifyNaN(node->child1().node());
+                            changed = true;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+                break;
+            }
+
+            case ArithMul: {
+                JSValue left = m_state.forNode(node->child1()).value();
+                JSValue right = m_state.forNode(node->child2()).value();
+                switch (node->binaryUseKind()) {
+                case DoubleRepUse: {
+                    if (left && left.isNumber()) {
+                        if (left.asNumber() == 1) {
+                            node->convertToPurifyNaN(node->child2().node());
+                            changed = true;
+                            break;
+                        }
+                    }
+
+                    if (right && right.isNumber()) {
+                        if (right.asNumber() == 1) {
+                            node->convertToPurifyNaN(node->child1().node());
+                            changed = true;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+                break;
+            }
+
             case PhantomNewObject:
             case PhantomNewFunction:
             case PhantomNewGeneratorFunction:

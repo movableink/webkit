@@ -142,6 +142,8 @@ enum Opcode : uint8_t {
     FloatToDouble,
     DoubleToFloat,
 
+    PurifyNaN,
+
     // Polymorphic comparisons, usable with any value type. Returns int32 0 or 1. Note that "Not"
     // is just Equal(x, 0), and "ToBoolean" is just NotEqual(x, 0).
     Equal,

@@ -2504,6 +2504,10 @@ void SpeculativeJIT::compile(Node* node)
         compileArithUnary(node);
         break;
 
+    case PurifyNaN:
+        compilePurifyNaN(node);
+        break;
+
     case ToBoolean: {
         bool invert = false;
         compileToBoolean(node, invert);
@@ -4399,7 +4403,6 @@ void SpeculativeJIT::compile(Node* node)
     case PutByValMegamorphic:
     case InByIdMegamorphic:
     case InByValMegamorphic:
-    case PurifyNaN:
         DFG_CRASH(m_graph, node, "unexpected node in DFG backend");
         break;
     }

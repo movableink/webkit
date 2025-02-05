@@ -122,6 +122,11 @@ Value* ConstDoubleValue::sqrtConstant(Procedure& proc) const
     return proc.add<ConstDoubleValue>(origin(), sqrt(m_value));
 }
 
+Value* ConstDoubleValue::purifyNaNConstant(Procedure& proc) const
+{
+    return proc.add<ConstDoubleValue>(origin(), purifyNaN(m_value));
+}
+
 Value* ConstDoubleValue::divConstant(Procedure& proc, const Value* other) const
 {
     if (!other->hasDouble())

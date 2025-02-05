@@ -941,6 +941,19 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 setConstant(node, jsDoubleNumber(left.asNumber() + right.asNumber()));
                 break;
             }
+
+            // Addition is subtle with doubles. Zero is not the neutral value, negative zero is:
+            //    0 + 0 = 0
+            //    0 + -0 = 0
+            //    -0 + 0 = 0
+            //    -0 + -0 = -0
+            if (left && left.isNumber()) {
+                if (isNegativeZero(left.asNumber()))
+                    m_state.setShouldTryConstantFolding(true);
+            } else if (right && right.isNumber()) {
+                if (isNegativeZero(right.asNumber()))
+                    m_state.setShouldTryConstantFolding(true);
+            }
             setNonCellTypeForNode(node, 
                 typeOfDoubleSum(
                     forNode(node->child1()).m_type, forNode(node->child2()).m_type));
@@ -1269,6 +1282,15 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 setConstant(node, jsDoubleNumber(left.asNumber() * right.asNumber()));
                 break;
             }
+
+            if (left && left.isNumber()) {
+                if (left.asNumber() == 1)
+                    m_state.setShouldTryConstantFolding(true);
+            } else if (right && right.isNumber()) {
+                if (right.asNumber() == 1)
+                    m_state.setShouldTryConstantFolding(true);
+            }
+
             setNonCellTypeForNode(node, 
                 typeOfDoubleProduct(
                     forNode(node->child1()).m_type, forNode(node->child2()).m_type));

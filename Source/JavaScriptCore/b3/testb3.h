@@ -825,6 +825,7 @@ void testSqrtImm(float);
 void testSqrtMem(float);
 void testSqrtArgWithUselessDoubleConversion(float);
 void testSqrtArgWithEffectfulDoubleConversion(float);
+void testPurifyNaN();
 void testCompareTwoFloatToDouble(float, float);
 void testCompareOneFloatToDouble(float, double);
 void testCompareFloatToDoubleThroughPhi(float, float);

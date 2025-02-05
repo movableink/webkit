@@ -241,6 +241,7 @@ public:
     virtual Value* ceilConstant(Procedure&) const;
     virtual Value* floorConstant(Procedure&) const;
     virtual Value* sqrtConstant(Procedure&) const;
+    virtual Value* purifyNaNConstant(Procedure&) const;
 
     virtual Value* vectorAndConstant(Procedure&, const Value* other) const;
     virtual Value* vectorOrConstant(Procedure&, const Value* other) const;
@@ -418,6 +419,7 @@ protected:
         case Identity:
         case Opaque:
         case Neg:
+        case PurifyNaN:
         case Clz:
         case Abs:
         case Ceil:
@@ -668,6 +670,7 @@ private:
         case Identity:
         case Opaque:
         case Neg:
+        case PurifyNaN:
         case Clz:
         case Abs:
         case Ceil:

@@ -781,7 +781,7 @@ private:
         case BooleanToNumber:
             compileBooleanToNumber();
             break;
-        case PurifyNaN:
+        case DFG::PurifyNaN:
             compilePurifyNaN();
             break;
         case ExtractOSREntryLocal:
@@ -2120,11 +2120,6 @@ private:
         setInt32(integerValue);
     }
 
-    LValue purifyNaN(LValue value)
-    {
-        return m_out.select(m_out.doubleEqual(value, value), value, m_out.constDouble(PNaN));
-    }
-
     LValue boxDoubleAsDouble(LValue value)
     {
         ASSERT(isARM64());
@@ -2220,7 +2215,7 @@ private:
             LValue value = lowDouble(m_node->child1());
 
             if (abstractValue(m_node->child1()).couldBeType(SpecDoubleImpureNaN))
-                value = purifyNaN(value);
+                value = m_out.purifyNaN(value);
 
             setJSValue(boxDouble(value));
             return;
@@ -2345,7 +2340,7 @@ private:
     {
         LValue value = lowDouble(m_node->child1());
         if (abstractValue(m_node->child1()).couldBeType(SpecDoubleImpureNaN))
-            value = purifyNaN(value);
+            value = m_out.purifyNaN(value);
         setDouble(value);
     }
 
@@ -6413,7 +6408,7 @@ IGNORE_CLANG_WARNINGS_END
                         };
                         result = speculateOrAdjust(unboxedResult);
                     } else
-                        result = boxDouble(purifyNaN(unboxedResult));
+                        result = boxDouble(m_out.purifyNaN(unboxedResult));
                     ValueFromBlock fastResult = m_out.anchor(result);
                     m_out.jump(continuation);
 
@@ -10654,7 +10649,7 @@ IGNORE_CLANG_WARNINGS_END
         if (m_node->child3().useKind() == DoubleRepUse) {
             LValue value = lowDouble(m_node->child3());
             if (abstractValue(m_node->child3()).couldBeType(SpecDoubleImpureNaN))
-                value = purifyNaN(value);
+                value = m_out.purifyNaN(value);
             storeDoubleProperty(boxDoubleAsDouble(value), storage, data.identifierNumber, data.offset);
             return;
         }
@@ -10670,7 +10665,7 @@ IGNORE_CLANG_WARNINGS_END
         if (m_node->child2().useKind() == DoubleRepUse) {
             value = lowDouble(m_node->child2());
             if (abstractValue(m_node->child2()).couldBeType(SpecDoubleImpureNaN))
-                value = purifyNaN(value);
+                value = m_out.purifyNaN(value);
             value = boxDoubleAsDouble(value);
         } else
             value = lowJSValue(m_node->child2());
@@ -10905,7 +10900,7 @@ IGNORE_CLANG_WARNINGS_END
         if (m_node->child2().useKind() == DoubleRepUse) {
             LValue value = lowDouble(m_node->child2());
             if (abstractValue(m_node->child2()).couldBeType(SpecDoubleImpureNaN))
-                value = purifyNaN(value);
+                value = m_out.purifyNaN(value);
             m_out.storeDouble(boxDoubleAsDouble(value), m_out.absolute(m_node->variablePointer()));
             return;
         }
@@ -11009,7 +11004,7 @@ IGNORE_CLANG_WARNINGS_END
         if (m_node->child2().useKind() == DoubleRepUse) {
             LValue value = lowDouble(m_node->child2());
             if (abstractValue(m_node->child2()).couldBeType(SpecDoubleImpureNaN))
-                value = purifyNaN(value);
+                value = m_out.purifyNaN(value);
             m_out.storeDouble(boxDoubleAsDouble(value), lowCell(m_node->child1()), m_heaps.JSLexicalEnvironment_variables[m_node->scopeOffset().offset()]);
             return;
         }
@@ -12997,11 +12992,11 @@ IGNORE_CLANG_WARNINGS_END
                 break;
             }
             case Wasm::TypeKind::F32: {
-                setJSValue(boxDouble(purifyNaN(m_out.floatToDouble(patchpoint))));
+                setJSValue(boxDouble(m_out.purifyNaN(m_out.floatToDouble(patchpoint))));
                 break;
             }
             case Wasm::TypeKind::F64: {
-                setJSValue(boxDouble(purifyNaN(patchpoint)));
+                setJSValue(boxDouble(m_out.purifyNaN(patchpoint)));
                 break;
             }
             case Wasm::TypeKind::V128:
@@ -16028,7 +16023,7 @@ IGNORE_CLANG_WARNINGS_END
                     genericResult = strictInt52ToJSValue(m_out.zeroExt(genericResult, Int64));
             }
         } else if (genericResult->type() == Double)
-            genericResult = boxDouble(purifyNaN(genericResult));
+            genericResult = boxDouble(m_out.purifyNaN(genericResult));
 
         results.append(m_out.anchor(genericResult));
         m_out.jump(continuation);
