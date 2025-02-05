@@ -2394,7 +2394,7 @@ void LocalDOMWindow::dispatchEvent(Event& event, EventTarget* target)
         protectedFrame = frame();
         hasListenersForEvent = hasEventListeners(event.type());
         if (hasListenersForEvent)
-            InspectorInstrumentation::willDispatchEventOnWindow(protectedFrame.get(), event, *this);
+            InspectorInstrumentation::willDispatchEventOnWindow(protectedFrame.get(), event);
     }
 
     // FIXME: We should use EventDispatcher everywhere.

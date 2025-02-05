@@ -98,20 +98,6 @@ void InspectorInstrumentation::lastFrontendDeleted()
     platformStrategies()->loaderStrategy()->setCaptureExtraNetworkLoadMetricsEnabled(false);
 }
 
-static LocalFrame* frameForScriptExecutionContext(ScriptExecutionContext* context)
-{
-    if (RefPtr document = dynamicDowncast<Document>(*context))
-        return document->frame();
-    return nullptr;
-}
-
-static LocalFrame* frameForScriptExecutionContext(ScriptExecutionContext& context)
-{
-    if (RefPtr document = dynamicDowncast<Document>(context))
-        return document->frame();
-    return nullptr;
-}
-
 void InspectorInstrumentation::didClearWindowObjectInWorldImpl(InstrumentingAgents& instrumentingAgents, LocalFrame& frame, DOMWrapperWorld& world)
 {
     if (auto* pageDebuggerAgent = instrumentingAgents.enabledPageDebuggerAgent())
@@ -357,15 +343,15 @@ void InspectorInstrumentation::didInstallTimerImpl(InstrumentingAgents& instrume
         webDebuggerAgent->didScheduleAsyncCall(context.globalObject(), InspectorDebuggerAgent::AsyncCallType::DOMTimer, timerId, singleShot);
 
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->didInstallTimer(timerId, timeout, singleShot, frameForScriptExecutionContext(context));
+        timelineAgent->didInstallTimer(timerId, timeout, singleShot);
 }
 
-void InspectorInstrumentation::didRemoveTimerImpl(InstrumentingAgents& instrumentingAgents, int timerId, ScriptExecutionContext& context)
+void InspectorInstrumentation::didRemoveTimerImpl(InstrumentingAgents& instrumentingAgents, int timerId)
 {
     if (auto* webDebuggerAgent = instrumentingAgents.enabledWebDebuggerAgent())
         webDebuggerAgent->didCancelAsyncCall(InspectorDebuggerAgent::AsyncCallType::DOMTimer, timerId);
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->didRemoveTimer(timerId, frameForScriptExecutionContext(context));
+        timelineAgent->didRemoveTimer(timerId);
 }
 
 void InspectorInstrumentation::didAddEventListenerImpl(InstrumentingAgents& instrumentingAgents, EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
@@ -426,22 +412,22 @@ void InspectorInstrumentation::didDispatchPostMessageImpl(InstrumentingAgents& i
         webDebuggerAgent->didDispatchPostMessage(postMessageIdentifier);
 }
 
-void InspectorInstrumentation::willCallFunctionImpl(InstrumentingAgents& instrumentingAgents, const String& scriptName, int scriptLine, int scriptColumn, ScriptExecutionContext* context)
+void InspectorInstrumentation::willCallFunctionImpl(InstrumentingAgents& instrumentingAgents, const String& scriptName, int scriptLine, int scriptColumn)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willCallFunction(scriptName, scriptLine, scriptColumn, frameForScriptExecutionContext(context));
+        timelineAgent->willCallFunction(scriptName, scriptLine, scriptColumn);
 }
 
-void InspectorInstrumentation::didCallFunctionImpl(InstrumentingAgents& instrumentingAgents, ScriptExecutionContext* context)
+void InspectorInstrumentation::didCallFunctionImpl(InstrumentingAgents& instrumentingAgents)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->didCallFunction(frameForScriptExecutionContext(context));
+        timelineAgent->didCallFunction();
 }
 
-void InspectorInstrumentation::willDispatchEventImpl(InstrumentingAgents& instrumentingAgents, Document& document, const Event& event)
+void InspectorInstrumentation::willDispatchEventImpl(InstrumentingAgents& instrumentingAgents, const Event& event)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willDispatchEvent(event, document.frame());
+        timelineAgent->willDispatchEvent(event);
 }
 
 void InspectorInstrumentation::willHandleEventImpl(InstrumentingAgents& instrumentingAgents, ScriptExecutionContext& context, Event& event, const RegisteredEventListener& listener)
@@ -468,10 +454,10 @@ void InspectorInstrumentation::didDispatchEventImpl(InstrumentingAgents& instrum
         timelineAgent->didDispatchEvent(event.defaultPrevented());
 }
 
-void InspectorInstrumentation::willDispatchEventOnWindowImpl(InstrumentingAgents& instrumentingAgents, const Event& event, LocalDOMWindow& window)
+void InspectorInstrumentation::willDispatchEventOnWindowImpl(InstrumentingAgents& instrumentingAgents, const Event& event)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willDispatchEvent(event, window.frame());
+        timelineAgent->willDispatchEvent(event);
 }
 
 void InspectorInstrumentation::didDispatchEventOnWindowImpl(InstrumentingAgents& instrumentingAgents, const Event& event)
@@ -486,26 +472,26 @@ void InspectorInstrumentation::eventDidResetAfterDispatchImpl(InstrumentingAgent
         domAgent->eventDidResetAfterDispatch(event);
 }
 
-void InspectorInstrumentation::willEvaluateScriptImpl(InstrumentingAgents& instrumentingAgents, LocalFrame& frame, const String& url, int lineNumber, int columnNumber)
+void InspectorInstrumentation::willEvaluateScriptImpl(InstrumentingAgents& instrumentingAgents, const String& url, int lineNumber, int columnNumber)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willEvaluateScript(url, lineNumber, columnNumber, frame);
+        timelineAgent->willEvaluateScript(url, lineNumber, columnNumber);
 }
 
-void InspectorInstrumentation::didEvaluateScriptImpl(InstrumentingAgents& instrumentingAgents, LocalFrame& frame)
+void InspectorInstrumentation::didEvaluateScriptImpl(InstrumentingAgents& instrumentingAgents)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->didEvaluateScript(frame);
+        timelineAgent->didEvaluateScript();
 }
 
-void InspectorInstrumentation::willFireTimerImpl(InstrumentingAgents& instrumentingAgents, int timerId, bool oneShot, ScriptExecutionContext& context)
+void InspectorInstrumentation::willFireTimerImpl(InstrumentingAgents& instrumentingAgents, int timerId, bool oneShot)
 {
     if (auto* webDebuggerAgent = instrumentingAgents.enabledWebDebuggerAgent())
         webDebuggerAgent->willDispatchAsyncCall(InspectorDebuggerAgent::AsyncCallType::DOMTimer, timerId);
     if (auto* domDebuggerAgent = instrumentingAgents.enabledDOMDebuggerAgent())
         domDebuggerAgent->willFireTimer(oneShot);
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
+        timelineAgent->willFireTimer(timerId);
 }
 
 void InspectorInstrumentation::didFireTimerImpl(InstrumentingAgents& instrumentingAgents, int timerId, bool oneShot)
@@ -518,16 +504,16 @@ void InspectorInstrumentation::didFireTimerImpl(InstrumentingAgents& instrumenti
         timelineAgent->didFireTimer();
 }
 
-void InspectorInstrumentation::didInvalidateLayoutImpl(InstrumentingAgents& instrumentingAgents, LocalFrame& frame)
+void InspectorInstrumentation::didInvalidateLayoutImpl(InstrumentingAgents& instrumentingAgents)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->didInvalidateLayout(frame);
+        timelineAgent->didInvalidateLayout();
 }
 
-void InspectorInstrumentation::willLayoutImpl(InstrumentingAgents& instrumentingAgents, LocalFrame& frame)
+void InspectorInstrumentation::willLayoutImpl(InstrumentingAgents& instrumentingAgents)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willLayout(frame);
+        timelineAgent->willLayout();
 }
 
 void InspectorInstrumentation::didLayoutImpl(InstrumentingAgents& instrumentingAgents, RenderObject& root)
@@ -538,10 +524,10 @@ void InspectorInstrumentation::didLayoutImpl(InstrumentingAgents& instrumentingA
         pageAgent->didLayout();
 }
 
-void InspectorInstrumentation::willCompositeImpl(InstrumentingAgents& instrumentingAgents, LocalFrame& frame)
+void InspectorInstrumentation::willCompositeImpl(InstrumentingAgents& instrumentingAgents)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willComposite(frame);
+        timelineAgent->willComposite();
 }
 
 void InspectorInstrumentation::didCompositeImpl(InstrumentingAgents& instrumentingAgents)
@@ -550,10 +536,10 @@ void InspectorInstrumentation::didCompositeImpl(InstrumentingAgents& instrumenti
         timelineAgent->didComposite();
 }
 
-void InspectorInstrumentation::willPaintImpl(InstrumentingAgents& instrumentingAgents, RenderObject& renderer)
+void InspectorInstrumentation::willPaintImpl(InstrumentingAgents& instrumentingAgents)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willPaint(renderer.frame());
+        timelineAgent->willPaint();
 }
 
 void InspectorInstrumentation::didPaintImpl(InstrumentingAgents& instrumentingAgents, RenderObject& renderer, const LayoutRect& rect)
@@ -565,10 +551,10 @@ void InspectorInstrumentation::didPaintImpl(InstrumentingAgents& instrumentingAg
         pageAgent->didPaint(renderer, rect);
 }
 
-void InspectorInstrumentation::willRecalculateStyleImpl(InstrumentingAgents& instrumentingAgents, Document& document)
+void InspectorInstrumentation::willRecalculateStyleImpl(InstrumentingAgents& instrumentingAgents)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willRecalculateStyle(document.frame());
+        timelineAgent->willRecalculateStyle();
     if (auto* networkAgent = instrumentingAgents.enabledNetworkAgent())
         networkAgent->willRecalculateStyle();
 }
@@ -586,7 +572,7 @@ void InspectorInstrumentation::didRecalculateStyleImpl(InstrumentingAgents& inst
 void InspectorInstrumentation::didScheduleStyleRecalculationImpl(InstrumentingAgents& instrumentingAgents, Document& document)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->didScheduleStyleRecalculation(document.frame());
+        timelineAgent->didScheduleStyleRecalculation();
     if (auto* networkAgent = instrumentingAgents.enabledNetworkAgent())
         networkAgent->didScheduleStyleRecalculation(document);
 }
@@ -962,22 +948,13 @@ void InspectorInstrumentation::takeHeapSnapshotImpl(InstrumentingAgents& instrum
         consoleAgent->takeHeapSnapshot(title);
 }
 
-void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, Frame& frame, JSC::JSGlobalObject* exec, const String& label)
-{
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
-        return;
-
-    if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->time(frame, label);
-    if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())
-        consoleAgent->startTiming(exec, label);
-}
-
 void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& label)
 {
     if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
         return;
 
+    if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
+        timelineAgent->time(label);
     if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())
         consoleAgent->startTiming(exec, label);
 }
@@ -991,17 +968,6 @@ void InspectorInstrumentation::logConsoleTimingImpl(InstrumentingAgents& instrum
         consoleAgent->logTiming(exec, label, WTFMove(arguments));
 }
 
-void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, Frame& frame, JSC::JSGlobalObject* exec, const String& label)
-{
-    if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
-        return;
-
-    if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())
-        consoleAgent->stopTiming(exec, label);
-    if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->timeEnd(frame, label);
-}
-
 void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& label)
 {
     if (LIKELY(!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled()))
@@ -1009,33 +975,35 @@ void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents& instru
 
     if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())
         consoleAgent->stopTiming(exec, label);
+    if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
+        timelineAgent->timeEnd(label);
 }
 
-void InspectorInstrumentation::consoleTimeStampImpl(InstrumentingAgents& instrumentingAgents, Frame& frame, Ref<ScriptArguments>&& arguments)
+void InspectorInstrumentation::consoleTimeStampImpl(InstrumentingAgents& instrumentingAgents, Ref<ScriptArguments>&& arguments)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent()) {
         String message;
         arguments->getFirstArgumentAsString(message);
-        timelineAgent->didTimeStamp(frame, message);
+        timelineAgent->didTimeStamp(message);
      }
 }
 
-void InspectorInstrumentation::startProfilingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& title)
+void InspectorInstrumentation::startProfilingImpl(InstrumentingAgents& instrumentingAgents, const String& title)
 {
     if (auto* timelineAgent = instrumentingAgents.enabledTimelineAgent())
-        timelineAgent->startFromConsole(exec, title);
+        timelineAgent->startFromConsole(title);
 }
 
-void InspectorInstrumentation::stopProfilingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& title)
+void InspectorInstrumentation::stopProfilingImpl(InstrumentingAgents& instrumentingAgents, const String& title)
 {
     if (auto* timelineAgent = instrumentingAgents.enabledTimelineAgent())
-        timelineAgent->stopFromConsole(exec, title);
+        timelineAgent->stopFromConsole(title);
 }
 
-void InspectorInstrumentation::performanceMarkImpl(InstrumentingAgents& instrumentingAgents, const String& label, std::optional<MonotonicTime> timestamp, LocalFrame* frame)
+void InspectorInstrumentation::performanceMarkImpl(InstrumentingAgents& instrumentingAgents, const String& label, std::optional<MonotonicTime> timestamp)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->didPerformanceMark(label, timestamp, frame);
+        timelineAgent->didPerformanceMark(label, timestamp);
 }
 
 void InspectorInstrumentation::consoleStartRecordingCanvasImpl(InstrumentingAgents& instrumentingAgents, CanvasRenderingContext& context, JSC::JSGlobalObject& exec, JSC::JSObject* options)
@@ -1264,25 +1232,25 @@ void InspectorInstrumentation::didRequestAnimationFrameImpl(InstrumentingAgents&
     if (auto* pageDebuggerAgent = instrumentingAgents.enabledPageDebuggerAgent())
         pageDebuggerAgent->didRequestAnimationFrame(callbackId, document);
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->didRequestAnimationFrame(callbackId, document.frame());
+        timelineAgent->didRequestAnimationFrame(callbackId);
 }
 
-void InspectorInstrumentation::didCancelAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId, Document& document)
+void InspectorInstrumentation::didCancelAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId)
 {
     if (auto* pageDebuggerAgent = instrumentingAgents.enabledPageDebuggerAgent())
         pageDebuggerAgent->didCancelAnimationFrame(callbackId);
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->didCancelAnimationFrame(callbackId, document.frame());
+        timelineAgent->didCancelAnimationFrame(callbackId);
 }
 
-void InspectorInstrumentation::willFireAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId, Document& document)
+void InspectorInstrumentation::willFireAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId)
 {
     if (auto* pageDebuggerAgent = instrumentingAgents.enabledPageDebuggerAgent())
         pageDebuggerAgent->willFireAnimationFrame(callbackId);
     if (auto* pageDOMDebuggerAgent = instrumentingAgents.enabledPageDOMDebuggerAgent())
         pageDOMDebuggerAgent->willFireAnimationFrame();
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willFireAnimationFrame(callbackId, document.frame());
+        timelineAgent->willFireAnimationFrame(callbackId);
 }
 
 void InspectorInstrumentation::didFireAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId)
@@ -1295,10 +1263,10 @@ void InspectorInstrumentation::didFireAnimationFrameImpl(InstrumentingAgents& in
         timelineAgent->didFireAnimationFrame();
 }
 
-void InspectorInstrumentation::willFireObserverCallbackImpl(InstrumentingAgents& instrumentingAgents, const String& callbackType, ScriptExecutionContext& context)
+void InspectorInstrumentation::willFireObserverCallbackImpl(InstrumentingAgents& instrumentingAgents, const String& callbackType)
 {
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
-        timelineAgent->willFireObserverCallback(callbackType, frameForScriptExecutionContext(&context));
+        timelineAgent->willFireObserverCallback(callbackType);
 }
 
 void InspectorInstrumentation::didFireObserverCallbackImpl(InstrumentingAgents& instrumentingAgents)

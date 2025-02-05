@@ -241,16 +241,16 @@ void PageConsoleClient::countReset(JSC::JSGlobalObject* lexicalGlobalObject, con
     InspectorInstrumentation::consoleCountReset(protectedPage(), lexicalGlobalObject, label);
 }
 
-void PageConsoleClient::profile(JSC::JSGlobalObject* lexicalGlobalObject, const String& title)
+void PageConsoleClient::profile(JSC::JSGlobalObject*, const String& title)
 {
     // FIXME: <https://webkit.org/b/153499> Web Inspector: console.profile should use the new Sampling Profiler
-    InspectorInstrumentation::startProfiling(protectedPage(), lexicalGlobalObject, title);
+    InspectorInstrumentation::startProfiling(protectedPage(), title);
 }
 
-void PageConsoleClient::profileEnd(JSC::JSGlobalObject* lexicalGlobalObject, const String& title)
+void PageConsoleClient::profileEnd(JSC::JSGlobalObject*, const String& title)
 {
     // FIXME: <https://webkit.org/b/153499> Web Inspector: console.profile should use the new Sampling Profiler
-    InspectorInstrumentation::stopProfiling(protectedPage(), lexicalGlobalObject, title);
+    InspectorInstrumentation::stopProfiling(protectedPage(), title);
 }
 
 void PageConsoleClient::takeHeapSnapshot(JSC::JSGlobalObject*, const String& title)
