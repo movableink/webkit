@@ -1954,8 +1954,6 @@ webkit.org/b/286693 [ Sequoia Debug arm64 ] media/video-canvas-createPattern.htm
 
 webkit.org/b/286843 [ Debug ] imported/w3c/web-platform-tests/screen-orientation/orientation-reading.html [ Pass Failure ]
 
-webkit.org/b/286934 [ Debug ] ipc/create-media-source-with-invalid-constraints-crash.html [ Skip ]
-
 webkit.org/b/287040 [ Sonoma arm64 ] fast/webgpu/ftoi.html [ Skip ]
 
 webkit.org/b/286653 [ Sequoia ] pdf/images/jpeg2000-embed-pdf.html [ Pass Failure ]

@@ -7696,3 +7696,10 @@ imported/w3c/web-platform-tests/css/selectors/featureless-005.html [ ImageOnlyFa
 
 # Cocoa-only test.
 webkit.org/b/286318 http/tests/iframe-monitor [ Skip ]
+
+
+# webkit.org/b/286934 REGRESSION(289634@main): [macOS iOS] ipc/create-media-source-wit h-invalid-constraints-crash .html is a constant crash (failure in EWS)
+ipc/create-media-source-with-invalid-constraints-crash.html [ Skip ]
+ipc/create-image-buffer-crash.html [ Skip ]
+ipc/validate-media-constraint.html [ Skip ]
+ipc/validate-message-check-in-networkconnectiontowebprocess.html [ Skip ]
