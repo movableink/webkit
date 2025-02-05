@@ -85,7 +85,7 @@ public:
     void restoreFromState(BackForwardListState);
 
     void setItemsAsRestoredFromSession();
-    void setItemsAsRestoredFromSessionIf(Function<bool(WebBackForwardListItem&)>&&);
+    void setItemsAsRestoredFromSessionIf(NOESCAPE Function<bool(WebBackForwardListItem&)>&&);
 
     void goToProvisionalItem(WebBackForwardListItem&);
     void clearProvisionalItem(WebBackForwardListFrameItem&);

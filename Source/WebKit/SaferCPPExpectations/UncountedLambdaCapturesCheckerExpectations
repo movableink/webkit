@@ -14,7 +14,6 @@ UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm
 UIProcess/Extensions/WebExtension.cpp
 UIProcess/Notifications/WebNotificationManagerProxy.cpp
 UIProcess/ProcessThrottler.cpp
-UIProcess/ProvisionalPageProxy.cpp
 UIProcess/SpeechRecognitionPermissionManager.cpp
 UIProcess/UserMediaPermissionRequestManagerProxy.cpp
 UIProcess/UserMediaProcessManager.cpp

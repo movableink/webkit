@@ -98,14 +98,16 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
     relaxAdoptionRequirement();
     PROVISIONALPAGEPROXY_RELEASE_LOG(ProcessSwapping, "ProvisionalPageProxy: suspendedPage=%p", suspendedPage.get());
 
-    m_messageReceiverRegistration.startReceivingMessages(process(), m_webPageID, *this);
-    process().addProvisionalPageProxy(*this);
-    ASSERT(!page.preferences().siteIsolationEnabled() || navigation.processID() == process().coreProcessIdentifier());
+    Ref process = this->process();
+    m_messageReceiverRegistration.startReceivingMessages(process, m_webPageID, *this);
+    process->addProvisionalPageProxy(*this);
+    ASSERT(!page.preferences().siteIsolationEnabled() || navigation.processID() == process->coreProcessIdentifier());
 
-    m_websiteDataStore = process().websiteDataStore();
-    ASSERT(m_websiteDataStore);
-    if (m_websiteDataStore && m_websiteDataStore != &page.websiteDataStore())
-        process().processPool().pageBeginUsingWebsiteDataStore(page, *m_websiteDataStore);
+    RefPtr dataStore = process->websiteDataStore();
+    m_websiteDataStore = dataStore.copyRef();
+    ASSERT(dataStore);
+    if (dataStore && dataStore != &page.websiteDataStore())
+        process->protectedProcessPool()->pageBeginUsingWebsiteDataStore(page, *dataStore);
 
     RefPtr previousMainFrame = page.mainFrame();
 
@@ -113,19 +115,20 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
     // we need to initialize m_mainFrame to reflect the fact the the WebProcess' WebPage
     // already exists and already has a main frame.
     if (suspendedPage) {
-        ASSERT(&suspendedPage->process() == &process());
+        ASSERT(&suspendedPage->process() == process.ptr());
         suspendedPage->unsuspend();
         m_mainFrame = &suspendedPage->mainFrame();
         m_needsMainFrameObserver = true;
-    } else if (page.preferences().siteIsolationEnabled() && page.openedByDOM() && !page.hasCommittedAnyProvisionalLoads())
+    } else if (page.protectedPreferences()->siteIsolationEnabled() && page.openedByDOM() && !page.hasCommittedAnyProvisionalLoads())
         m_mainFrame = page.mainFrame();
     else {
-        m_mainFrame = WebFrameProxy::create(page, m_frameProcess, FrameIdentifier::generate(), previousMainFrame->effectiveSandboxFlags(), previousMainFrame->scrollingMode(), nullptr, IsMainFrame::Yes);
+        Ref mainFrame = WebFrameProxy::create(page, m_frameProcess, FrameIdentifier::generate(), previousMainFrame->effectiveSandboxFlags(), previousMainFrame->scrollingMode(), nullptr, IsMainFrame::Yes);
+        m_mainFrame = mainFrame.copyRef();
 
         m_needsMainFrameObserver = true;
         // Restore the main frame's committed URL as some clients may rely on it until the next load is committed.
-        m_mainFrame->frameLoadState().setURL(previousMainFrame->url());
-        previousMainFrame->transferNavigationCallbackToFrame(*m_mainFrame);
+        mainFrame->frameLoadState().setURL(previousMainFrame->url());
+        previousMainFrame->transferNavigationCallbackToFrame(mainFrame);
     }
 
     // Normally, notification of a server redirect comes from the WebContent process.
@@ -134,15 +137,15 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
     if (m_isServerRedirect) {
         // FIXME: When <rdar://116203552> is fixed we should not need this case here
         // because main frame redirect messages won't come from the web content process.
-        if (page.preferences().siteIsolationEnabled() && !m_mainFrame->frameLoadState().provisionalURL().isEmpty())
+        if (page.protectedPreferences()->siteIsolationEnabled() && !m_mainFrame->frameLoadState().provisionalURL().isEmpty())
             m_mainFrame->frameLoadState().didReceiveServerRedirectForProvisionalLoad(m_request.url());
         else
             m_mainFrame->frameLoadState().didStartProvisionalLoad(m_request.url());
-        page.didReceiveServerRedirectForProvisionalLoadForFrameShared(protectedProcess(), m_mainFrame->frameID(), m_navigationID, WTFMove(m_request), { });
+        page.didReceiveServerRedirectForProvisionalLoadForFrameShared(WTFMove(process), m_mainFrame->frameID(), m_navigationID, WTFMove(m_request), { });
     } else if (previousMainFrame && !previousMainFrame->provisionalURL().isEmpty()) {
         // In case of a process swap after response policy, the didStartProvisionalLoad already happened but the new main frame doesn't know about it
         // so we need to tell it so it can update its provisional URL.
-        m_mainFrame->didStartProvisionalLoad(previousMainFrame->provisionalURL());
+        protectedMainFrame()->didStartProvisionalLoad(previousMainFrame->provisionalURL());
     }
 
     initializeWebPage(websitePolicies);
@@ -155,20 +158,21 @@ ProvisionalPageProxy::~ProvisionalPageProxy()
         m_accessibilityBindCompletionHandler({ });
 #endif
 
+    Ref process = this->process();
     if (!m_wasCommitted && m_page) {
         Ref page = *m_page;
         page->inspectorController().willDestroyProvisionalPage(*this);
 
-        auto dataStore = process().websiteDataStore();
+        RefPtr dataStore = process->websiteDataStore();
         if (dataStore && dataStore!= &page->websiteDataStore())
-            process().processPool().pageEndUsingWebsiteDataStore(page, *dataStore);
+            process->protectedProcessPool()->pageEndUsingWebsiteDataStore(page, *dataStore);
 
-        if (process().hasConnection() && m_shouldClosePage)
+        if (process->hasConnection() && m_shouldClosePage)
             send(Messages::WebPage::Close());
-        process().removeVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
+        process->removeVisitedLinkStoreUser(page->protectedVisitedLinkStore(), page->identifier());
     }
 
-    process().removeProvisionalPageProxy(*this);
+    process->removeProvisionalPageProxy(*this);
 }
 
 WebProcessProxy& ProvisionalPageProxy::process()
@@ -220,13 +224,14 @@ void ProvisionalPageProxy::setNavigation(API::Navigation& navigation)
 void ProvisionalPageProxy::cancel()
 {
     // If the provisional load started, then indicate that it failed due to cancellation by calling didFailProvisionalLoadForFrame().
-    if (m_provisionalLoadURL.isEmpty() || !m_mainFrame)
+    RefPtr mainFrame = m_mainFrame;
+    if (m_provisionalLoadURL.isEmpty() || !mainFrame)
         return;
 
     ASSERT(process().state() == WebProcessProxy::State::Running);
 
     PROVISIONALPAGEPROXY_RELEASE_LOG(ProcessSwapping, "cancel: Simulating a didFailProvisionalLoadForFrame");
-    ASSERT(m_mainFrame);
+    ASSERT(mainFrame);
     auto error = WebKit::cancelledError(m_request);
     error.setType(WebCore::ResourceError::Type::Cancellation);
     FrameInfoData frameInfo {
@@ -235,11 +240,11 @@ void ProvisionalPageProxy::cancel()
         m_request,
         SecurityOriginData::fromURLWithoutStrictOpaqueness(m_request.url()),
         { },
-        m_mainFrame->frameID(),
+        mainFrame->frameID(),
         std::nullopt,
         std::nullopt,
-        m_mainFrame->processID(),
-        m_mainFrame->isFocused(),
+        mainFrame->processID(),
+        mainFrame->isFocused(),
     };
     didFailProvisionalLoadForFrame(WTFMove(frameInfo), ResourceRequest { m_request }, m_navigationID, m_provisionalLoadURL.string(), error, WebCore::WillContinueLoading::No, UserData { }, WebCore::WillInternallyHandleFailure::No); // Will delete |this|.
 }
@@ -254,8 +259,9 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
         m_mainFrameWebsitePoliciesData = makeUnique<WebsitePoliciesData>(websitePolicies->data());
 
     Ref process = this->process();
-    if (page->preferences().siteIsolationEnabled()) {
-        if (RefPtr existingRemotePageProxy = m_browsingContextGroup->takeRemotePageInProcessForProvisionalPage(page, process)) {
+    Ref preferences = page->preferences();
+    if (preferences->siteIsolationEnabled()) {
+        if (RefPtr existingRemotePageProxy = protectedBrowsingContextGroup()->takeRemotePageInProcessForProvisionalPage(page, process)) {
             m_webPageID = existingRemotePageProxy->pageID();
             m_mainFrame = existingRemotePageProxy->page()->mainFrame();
             m_needsMainFrameObserver = false;
@@ -265,29 +271,30 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
             m_needsCookieAccessAddedInNetworkProcess = true;
             registerWithInspectorController = false; // FIXME: <rdar://121240770> This is a hack. There seems to be a bug in our interaction with WebPageInspectorController.
         } else {
-            m_browsingContextGroup->addFrameProcessAndInjectPageContextIf(m_frameProcess, [m_page = m_page](WebPageProxy& page) {
+            protectedBrowsingContextGroup()->addFrameProcessAndInjectPageContextIf(m_frameProcess, [m_page = m_page](WebPageProxy& page) {
                 return m_page != &page;
             });
         }
     }
 
-    auto creationParameters = page->creationParametersForProvisionalPage(process, *m_drawingArea, websitePolicies.copyRef(), m_mainFrame->frameID());
-    if (page->preferences().siteIsolationEnabled()) {
+    RefPtr mainFrame = m_mainFrame;
+    auto creationParameters = page->creationParametersForProvisionalPage(process, *m_drawingArea, websitePolicies.copyRef(), mainFrame->frameID());
+    if (preferences->siteIsolationEnabled()) {
         creationParameters.remotePageParameters = RemotePageParameters {
             m_request.url(),
-            m_mainFrame->frameTreeCreationParameters(),
+            mainFrame->frameTreeCreationParameters(),
             websitePolicies ? std::optional(websitePolicies->data()) : std::nullopt
         };
         creationParameters.provisionalFrameCreationParameters = ProvisionalFrameCreationParameters {
             m_mainFrame->frameID(),
             std::nullopt,
-            m_mainFrame->effectiveSandboxFlags(),
-            m_mainFrame->scrollingMode(),
+            mainFrame->effectiveSandboxFlags(),
+            mainFrame->scrollingMode(),
         };
     }
     process->send(Messages::WebProcess::CreateWebPage(m_webPageID, WTFMove(creationParameters)), 0);
-    if (!page->preferences().siteIsolationEnabled())
-        process->addVisitedLinkStoreUser(page->visitedLinkStore(), page->identifier());
+    if (!preferences->siteIsolationEnabled())
+        process->addVisitedLinkStoreUser(page->protectedVisitedLinkStore(), page->identifier());
 
     if (page->isLayerTreeFrozenDueToSwipeAnimation())
         send(Messages::WebPage::SwipeAnimationDidStart());
@@ -343,7 +350,7 @@ void ProvisionalPageProxy::goToBackForwardItem(API::Navigation& navigation, WebB
     SandboxExtension::Handle sandboxExtensionHandle;
     URL itemURL { item.url() };
     Ref frameState = navigation.targetFrameItem() ? navigation.targetFrameItem()->copyFrameStateWithChildren() : item.mainFrameState();
-    page->maybeInitializeSandboxExtensionHandle(process(), itemURL, item.resourceDirectoryURL(), true, [
+    page->maybeInitializeSandboxExtensionHandle(protectedProcess(), itemURL, item.resourceDirectoryURL(), true, [
         weakThis = WeakPtr { *this },
         itemURL,
         frameState = WTFMove(frameState),
@@ -366,7 +373,7 @@ void ProvisionalPageProxy::goToBackForwardItem(API::Navigation& navigation, WebB
         else
             protectedThis->send(Messages::WebPage::GoToBackForwardItemWaitingForProcessLaunch(WTFMove(parameters), weakThis->m_page->identifier()));
 
-        protectedThis->process().startResponsivenessTimer();
+        protectedThis->protectedProcess()->startResponsivenessTimer();
     });
 }
 
@@ -406,7 +413,7 @@ void ProvisionalPageProxy::didStartProvisionalLoadForFrame(FrameIdentifier frame
         return;
 
     // Clients expect the Page's main frame's expectedURL to be the provisional one when a provisional load is started.
-    if (auto* pageMainFrame = page->mainFrame(); pageMainFrame && m_needsDidStartProvisionalLoad)
+    if (RefPtr pageMainFrame = page->mainFrame(); pageMainFrame && m_needsDidStartProvisionalLoad)
         pageMainFrame->didStartProvisionalLoad(url);
 
     page->didStartProvisionalLoadForFrameShared(protectedProcess(), frameID, WTFMove(frameInfo), WTFMove(request), navigationID, WTFMove(url), WTFMove(unreachableURL), userData, timestamp);
@@ -429,10 +436,10 @@ void ProvisionalPageProxy::didFailProvisionalLoadForFrame(FrameInfoData&& frameI
     // Make sure the Page's main frame's expectedURL gets cleared since we updated it in didStartProvisionalLoad.
     // When site isolation is enabled, we use the same WebFrameProxy so we don't need this duplicate call.
     // didFailProvisionalLoadForFrameShared will call didFailProvisionalLoad on the same main frame.
-    if (page->preferences().siteIsolationEnabled()) {
-        m_browsingContextGroup->transitionProvisionalPageToRemotePage(*this, Site(request.url()));
+    if (page->protectedPreferences()->siteIsolationEnabled()) {
+        protectedBrowsingContextGroup()->transitionProvisionalPageToRemotePage(*this, Site(request.url()));
         m_shouldClosePage = false;
-    } else if (auto* pageMainFrame = page->mainFrame())
+    } else if (RefPtr pageMainFrame = page->mainFrame())
         pageMainFrame->didFailProvisionalLoad();
 
     RefPtr frame = WebFrameProxy::webFrame(*frameInfo.frameID);
@@ -447,16 +454,17 @@ void ProvisionalPageProxy::didCommitLoadForFrame(IPC::Connection& connection, Fr
 
     PROVISIONALPAGEPROXY_RELEASE_LOG(ProcessSwapping, "didCommitLoadForFrame: frameID=%" PRIu64, frameID.object().toUInt64());
     RefPtr page = m_page.get();
-    if (page && page->preferences().siteIsolationEnabled()) {
-        RefPtr openerFrame = page->mainFrame()->opener();
-        if (m_frameProcess.ptr() != &page->mainFrame()->frameProcess())
-            page->mainFrame()->setProcess(m_frameProcess);
+    if (page && page->protectedPreferences()->siteIsolationEnabled()) {
+        RefPtr mainFrame = page->mainFrame();
+        RefPtr openerFrame = mainFrame->opener();
+        if (m_frameProcess.ptr() != &mainFrame->frameProcess())
+            mainFrame->setProcess(m_frameProcess);
         if (RefPtr openerPage = openerFrame ? openerFrame->page() : nullptr) {
             Site openerSite(openerFrame->url());
             Site openedSite(request.url());
             if (openerSite != openedSite && m_browsingContextGroup.ptr() == &page->browsingContextGroup()) {
-                page->legacyMainFrameProcess().send(Messages::WebPage::LoadDidCommitInAnotherProcess(page->mainFrame()->frameID(), std::nullopt), page->webPageIDInMainFrameProcess());
-                m_browsingContextGroup->transitionPageToRemotePage(*page, openerSite);
+                page->protectedLegacyMainFrameProcess()->send(Messages::WebPage::LoadDidCommitInAnotherProcess(page->mainFrame()->frameID(), std::nullopt), page->webPageIDInMainFrameProcess());
+                protectedBrowsingContextGroup()->transitionPageToRemotePage(*page, openerSite);
             }
         }
     }
@@ -828,12 +836,12 @@ bool ProvisionalPageProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, Option
 {
     // Send messages via the WebProcessProxy instead of the IPC::Connection since AuxiliaryProcessProxy implements queueing of messages
     // while the process is still launching.
-    return process().sendMessage(WTFMove(encoder), sendOptions);
+    return protectedProcess()->sendMessage(WTFMove(encoder), sendOptions);
 }
 
 bool ProvisionalPageProxy::sendMessageWithAsyncReply(UniqueRef<IPC::Encoder>&& encoder, AsyncReplyHandler handler, OptionSet<IPC::SendOption> sendOptions)
 {
-    return process().sendMessage(WTFMove(encoder), sendOptions, WTFMove(handler));
+    return protectedProcess()->sendMessage(WTFMove(encoder), sendOptions, WTFMove(handler));
 }
 
 } // namespace WebKit
