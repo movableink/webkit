@@ -80,10 +80,8 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     template<typename T> void send(T&& message);
 
-    void updateBackgroundColor();
     void updateTransform();
     void updateOpacity();
-    void updatePortalAndClipping();
     void startAnimating();
     void animationPlaybackStateDidUpdate();
 
@@ -101,7 +99,6 @@ public:
     void sizeDidChange(WebCore::LayoutSize) final;
     PlatformLayer* layer() final;
     std::optional<WebCore::LayerHostingContextIdentifier> layerHostingContextIdentifier() final;
-    void setBackgroundColor(WebCore::Color) final;
     void setEntityTransform(WebCore::TransformationMatrix) final;
     void enterFullscreen() final;
     bool supportsMouseInteraction() final;
@@ -157,7 +154,6 @@ private:
     REPtr<REEntityRef> m_containerEntity;
     RetainPtr<WKModelProcessModelPlayerProxyObjCAdapter> m_objCAdapter;
 
-    WebCore::Color m_backgroundColor;
     simd_float3 m_originalBoundingBoxCenter { simd_make_float3(0, 0, 0) };
     simd_float3 m_originalBoundingBoxExtents { simd_make_float3(0, 0, 0) };
     float m_pitch { 0 };

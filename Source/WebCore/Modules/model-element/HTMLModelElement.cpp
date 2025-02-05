@@ -413,14 +413,6 @@ std::optional<PlatformLayerIdentifier> HTMLModelElement::modelContentsLayerID() 
     return graphicsLayer->contentsLayerIDForModel();
 }
 
-// MARK: - Background Color support.
-
-void HTMLModelElement::applyBackgroundColor(Color color)
-{
-    if (m_modelPlayer)
-        m_modelPlayer->setBackgroundColor(color);
-}
-
 #if ENABLE(MODEL_PROCESS)
 RefPtr<ModelContext> HTMLModelElement::modelContext() const
 {
@@ -432,7 +424,7 @@ RefPtr<ModelContext> HTMLModelElement::modelContext() const
     if (!modelContentsLayerHostingContextIdentifier)
         return nullptr;
 
-    return ModelContext::create(*modelLayerIdentifier, *modelContentsLayerHostingContextIdentifier).ptr();
+    return ModelContext::create(*modelLayerIdentifier, *modelContentsLayerHostingContextIdentifier, contentSize(), hasPortal() ? ModelContextDisablePortal::No : ModelContextDisablePortal::Yes, std::nullopt).ptr();
 }
 
 const DOMMatrixReadOnly& HTMLModelElement::entityTransform() const
@@ -759,6 +751,9 @@ bool HTMLModelElement::hasPortal() const
 
 void HTMLModelElement::updateHasPortal()
 {
+    if (CheckedPtr renderer = this->renderer())
+        renderer->updateFromElement();
+
     if (RefPtr modelPlayer = m_modelPlayer)
         modelPlayer->setHasPortal(hasPortal());
 }

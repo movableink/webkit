@@ -61,7 +61,6 @@ public:
     virtual void sizeDidChange(LayoutSize) = 0;
     virtual PlatformLayer* layer() = 0;
     virtual std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() = 0;
-    virtual void setBackgroundColor(Color);
     virtual void setEntityTransform(TransformationMatrix);
     virtual void enterFullscreen() = 0;
     virtual bool supportsMouseInteraction();

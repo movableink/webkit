@@ -52,7 +52,15 @@ RetainPtr<WKPageHostedModelView> ModelPresentationManagerProxy::setUpModelView(R
         return nil;
 
     auto& modelPresentation = ensureModelPresentation(modelContext, *webPageProxy);
-    return modelPresentation.pageHostedModelView;
+    auto view = modelPresentation.pageHostedModelView;
+    CGRect frame = [view frame];
+    frame.size.width = modelContext->modelLayoutSize().width().toFloat();
+    frame.size.height = modelContext->modelLayoutSize().height().toFloat();
+    [view setFrame:frame];
+    [view setShouldDisablePortal:modelContext->disablePortal() == WebCore::ModelContextDisablePortal::Yes];
+    [view applyBackgroundColor:modelContext->backgroundColor()];
+
+    return view;
 }
 
 void ModelPresentationManagerProxy::invalidateModel(const WebCore::PlatformLayerIdentifier& layerIdentifier)

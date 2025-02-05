@@ -40,10 +40,6 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelPlayer);
 
 ModelPlayer::~ModelPlayer() = default;
 
-void ModelPlayer::setBackgroundColor(Color)
-{
-}
-
 void ModelPlayer::setEntityTransform(TransformationMatrix)
 {
 }

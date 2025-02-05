@@ -1240,8 +1240,8 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
             m_graphicsLayer->setContentsToPlatformLayer(element->platformLayer(), GraphicsLayer::ContentsLayerPurpose::Model);
 #if ENABLE(MODEL_PROCESS)
         else if (auto modelContext = element->modelContext(); modelContext && element->document().settings().modelProcessEnabled()) {
+            modelContext->setBackgroundColor(rendererBackgroundColor());
             m_graphicsLayer->setContentsToModelContext(*modelContext, GraphicsLayer::ContentsLayerPurpose::HostedModel);
-            element->applyBackgroundColor(rendererBackgroundColor());
         }
 #endif
         else if (auto model = element->model())

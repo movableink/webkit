@@ -94,8 +94,6 @@ public:
 
     std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() const;
 
-    void applyBackgroundColor(Color);
-
 #if ENABLE(MODEL_PROCESS)
     RefPtr<ModelContext> modelContext() const;
 

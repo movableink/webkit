@@ -275,8 +275,6 @@ void ModelProcessModelPlayerProxy::createLayer()
     [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.mesh"];
     [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.material"];
     [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.texture"];
-    updatePortalAndClipping();
-    updateBackgroundColor();
 
     [m_layer setPlayer:WeakPtr { this }];
 
@@ -358,17 +356,6 @@ static CGFloat effectivePointsPerMeter(CALayer *caLayer)
     return defaultPointsPerMeter;
 }
 
-void ModelProcessModelPlayerProxy::updateBackgroundColor()
-{
-    if (!m_layer)
-        return;
-
-    if (m_backgroundColor.isValid())
-        [m_layer setValue:(__bridge id)cachedCGColor(m_backgroundColor).get() forKeyPath:@"separatedOptions.material.clearColor"];
-    else
-        [m_layer setValue:(__bridge id)CGColorGetConstantColor(kCGColorWhite) forKeyPath:@"separatedOptions.material.clearColor"];
-}
-
 void ModelProcessModelPlayerProxy::computeTransform()
 {
     if (!m_model || !m_layer)
@@ -397,22 +384,6 @@ void ModelProcessModelPlayerProxy::updateOpacity()
         return;
 
     [m_modelRKEntity setOpacity:[m_layer opacity]];
-}
-
-void ModelProcessModelPlayerProxy::updatePortalAndClipping()
-{
-    if (!m_layer)
-        return;
-
-    if (m_hasPortal) {
-        [m_layer setValue:@YES forKeyPath:@"separatedOptions.isPortal"];
-        [m_layer setValue:@YES forKeyPath:@"separatedOptions.updates.clippingPrimitive"];
-    } else {
-        [m_layer setValue:nil forKeyPath:@"separatedOptions.isPortal"];
-        [m_layer setValue:@NO forKeyPath:@"separatedOptions.updates.clippingPrimitive"];
-    }
-
-    // FIXME: rdar://141457267 (Remove clipping when <model> doesn't have a portal)
 }
 
 void ModelProcessModelPlayerProxy::startAnimating()
@@ -466,7 +437,7 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     RESceneAddEntity(m_scene.get(), m_hostingEntity.get());
 
     CALayer *contextEntityLayer = RECALayerClientComponentGetCALayer(layerComponent.get());
-    [contextEntityLayer setSeparatedState:kCALayerSeparatedStateSeparated];
+    [contextEntityLayer setSeparatedState:kCALayerSeparatedStateTracked];
 
     RECALayerClientComponentSetShouldSyncToRemotes(layerComponent.get(), true);
 
@@ -478,34 +449,17 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
     else
         REEntitySetName(m_model->rootEntity(), "WebKit:ModelRootEntity");
 
-    // FIXME: Clipping workaround for rdar://125188888 (blocked by rdar://123516357 -> rdar://124718417).
-    // containerEntity is required to add a clipping primitive that is independent from model's rootEntity.
-    // Adding the primitive directly to clientComponentEntity has no visual effect.
-    constexpr float clippingBoxHalfSize = 500; // meters
-    m_containerEntity = adoptRE(REEntityCreate());
-    REEntitySetName(m_containerEntity.get(), "WebKit:ContainerEntity");
-
-    REEntitySetParent(m_containerEntity.get(), clientComponentEntity);
     if (canLoadWithRealityKit)
-        [m_model->rootRKEntity() setParentCoreEntity:m_containerEntity.get()];
-    else
-        REEntitySetParent(m_model->rootEntity(), m_containerEntity.get());
-
-    REEntitySubtreeAddNetworkComponentRecursive(m_containerEntity.get());
-
-    auto clipComponent = REEntityGetOrAddComponentByClass(m_containerEntity.get(), REClippingPrimitiveComponentGetComponentType());
-    REClippingPrimitiveComponentSetShouldClipChildren(clipComponent, true);
-    REClippingPrimitiveComponentSetShouldClipSelf(clipComponent, true);
-
-    REAABB clipBounds { simd_make_float3(-clippingBoxHalfSize, -clippingBoxHalfSize, -2 * clippingBoxHalfSize),
-        simd_make_float3(clippingBoxHalfSize, clippingBoxHalfSize, 0) };
-    REClippingPrimitiveComponentClipToBox(clipComponent, clipBounds);
+        [m_model->rootRKEntity() setParentCoreEntity:clientComponentEntity];
+    else {
+        REEntitySetParent(m_model->rootEntity(), clientComponentEntity);
+        REEntitySubtreeAddNetworkComponentRecursive(m_model->rootEntity());
+    }
 
     RENetworkMarkEntityMetadataDirty(clientComponentEntity);
     if (!canLoadWithRealityKit)
         RENetworkMarkEntityMetadataDirty(m_model->rootEntity());
 
-    updateBackgroundColor();
     computeTransform();
     updateTransform();
     updateOpacity();
@@ -560,12 +514,6 @@ PlatformLayer* ModelProcessModelPlayerProxy::layer()
 std::optional<WebCore::LayerHostingContextIdentifier> ModelProcessModelPlayerProxy::layerHostingContextIdentifier()
 {
     return WebCore::LayerHostingContextIdentifier(m_layerHostingContext->contextID());
-}
-
-void ModelProcessModelPlayerProxy::setBackgroundColor(WebCore::Color color)
-{
-    m_backgroundColor = color.opaqueColor();
-    updateBackgroundColor();
 }
 
 void ModelProcessModelPlayerProxy::setEntityTransform(WebCore::TransformationMatrix transform)
@@ -743,7 +691,6 @@ void ModelProcessModelPlayerProxy::setHasPortal(bool hasPortal)
 
     m_hasPortal = hasPortal;
 
-    updatePortalAndClipping();
     computeTransform();
     updateTransform();
 }

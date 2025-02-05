@@ -158,11 +158,6 @@ void ModelProcessModelPlayer::enterFullscreen()
 {
 }
 
-void ModelProcessModelPlayer::setBackgroundColor(WebCore::Color color)
-{
-    send(Messages::ModelProcessModelPlayerProxy::SetBackgroundColor(color));
-}
-
 /// This comes from JS side, so we need to tell Model Process about it. Not to be confused with didUpdateEntityTransform().
 void ModelProcessModelPlayer::setEntityTransform(WebCore::TransformationMatrix transform)
 {
