@@ -825,7 +825,9 @@ bool RenderLayerBacking::updateBackdropRoot()
 
     // If the RenderView is opaque, then that will occlude any pixels behind it and we don't need
     // to isolate it as a backdrop root.
-    if (m_owningLayer.isRenderViewLayer() && !compositor().viewHasTransparentBackground())
+    //
+    // Always allow for the main frame so that clients can intentionally allow backdrop blending outside of the webview by setting it to transparent.
+    if (m_owningLayer.isRenderViewLayer() && (m_isMainFrameRenderViewLayer || !compositor().viewHasTransparentBackground()))
         willBeBackdropRoot = false;
 
     if (m_graphicsLayer->isBackdropRoot() == willBeBackdropRoot)

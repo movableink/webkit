@@ -428,6 +428,7 @@ private:
     void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect&, OptionSet<GraphicsLayerPaintBehavior>) override;
     void customPositionForVisibleRectComputation(const GraphicsLayer*, FloatPoint&) const override;
     bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
+    bool backdropRootIsOpaque(const GraphicsLayer*) const override;
     bool isFlushingLayers() const override { return m_flushingLayers; }
     bool isTrackingRepaints() const override { return m_isTrackingRepaints; }
 #if ENABLE(HDR_FOR_IMAGES)

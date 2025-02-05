@@ -766,6 +766,14 @@ bool RenderLayerCompositor::shouldDumpPropertyForLayer(const GraphicsLayer* laye
     return true;
 }
 
+bool RenderLayerCompositor::backdropRootIsOpaque(const GraphicsLayer* layer) const
+{
+    if (layer != rootGraphicsLayer())
+        return false;
+
+    return !viewHasTransparentBackground();
+}
+
 #if ENABLE(HDR_FOR_IMAGES)
 bool RenderLayerCompositor::hdrForImagesEnabled() const
 {
