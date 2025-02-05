@@ -1,4 +1,16 @@
 ================
+WebKitGTK 2.47.4
+================
+
+What's new in WebKitGTK 2.47.4?
+
+  - Add support for the Cookie Store API.
+  - Add documentation about how to use the remote web inspector.
+  - Enable WebDriver BiDi as an experimental feature.
+  - Fix a crash when enabling Skia CPU rendering.
+  - Fix several crashes and rendering issues.
+
+================
 WebKitGTK 2.47.3
 ================
 
