@@ -31,6 +31,7 @@
 #import "AXIsolatedObject.h"
 #import "AccessibilityObject.h"
 #import "AccessibilityTable.h"
+#import "CocoaAccessibilityConstants.h"
 #import "DeprecatedGlobalSettings.h"
 #import "LocalFrameView.h"
 #import "RenderObject.h"
@@ -47,94 +48,6 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 #import <ApplicationServices/ApplicationServicesPriv.h>
-#endif
-
-#ifndef NSAccessibilityCurrentStateChangedNotification
-#define NSAccessibilityCurrentStateChangedNotification @"AXCurrentStateChanged"
-#endif
-
-#ifndef NSAccessibilityLiveRegionChangedNotification
-#define NSAccessibilityLiveRegionChangedNotification @"AXLiveRegionChanged"
-#endif
-
-#ifndef NSAccessibilityLiveRegionCreatedNotification 
-#define NSAccessibilityLiveRegionCreatedNotification @"AXLiveRegionCreated"
-#endif
-
-#ifndef NSAccessibilityTextStateChangeTypeKey
-#define NSAccessibilityTextStateChangeTypeKey @"AXTextStateChangeType"
-#endif
-
-#ifndef NSAccessibilityTextStateSyncKey
-#define NSAccessibilityTextStateSyncKey @"AXTextStateSync"
-#endif
-
-#ifndef NSAccessibilityTextSelectionDirection
-#define NSAccessibilityTextSelectionDirection @"AXTextSelectionDirection"
-#endif
-
-#ifndef NSAccessibilityTextSelectionGranularity
-#define NSAccessibilityTextSelectionGranularity @"AXTextSelectionGranularity"
-#endif
-
-#ifndef NSAccessibilityTextSelectionChangedFocus
-#define NSAccessibilityTextSelectionChangedFocus @"AXTextSelectionChangedFocus"
-#endif
-
-#ifndef NSAccessibilityTextEditType
-#define NSAccessibilityTextEditType @"AXTextEditType"
-#endif
-
-#ifndef NSAccessibilityTextChangeValues
-#define NSAccessibilityTextChangeValues @"AXTextChangeValues"
-#endif
-
-#ifndef NSAccessibilityTextChangeValue
-#define NSAccessibilityTextChangeValue @"AXTextChangeValue"
-#endif
-
-#ifndef NSAccessibilityTextChangeValueLength
-#define NSAccessibilityTextChangeValueLength @"AXTextChangeValueLength"
-#endif
-
-#ifndef NSAccessibilityTextChangeValueStartMarker
-#define NSAccessibilityTextChangeValueStartMarker @"AXTextChangeValueStartMarker"
-#endif
-
-#ifndef NSAccessibilityTextChangeElement
-#define NSAccessibilityTextChangeElement @"AXTextChangeElement"
-#endif
-
-#ifndef kAXDraggingSourceDragBeganNotification
-#define kAXDraggingSourceDragBeganNotification CFSTR("AXDraggingSourceDragBegan")
-#endif
-
-#ifndef kAXDraggingSourceDragEndedNotification
-#define kAXDraggingSourceDragEndedNotification CFSTR("AXDraggingSourceDragEnded")
-#endif
-
-#ifndef kAXDraggingDestinationDropAllowedNotification
-#define kAXDraggingDestinationDropAllowedNotification CFSTR("AXDraggingDestinationDropAllowed")
-#endif
-
-#ifndef kAXDraggingDestinationDropNotAllowedNotification
-#define kAXDraggingDestinationDropNotAllowedNotification CFSTR("AXDraggingDestinationDropNotAllowed")
-#endif
-
-#ifndef kAXDraggingDestinationDragAcceptedNotification
-#define kAXDraggingDestinationDragAcceptedNotification CFSTR("AXDraggingDestinationDragAccepted")
-#endif
-
-#ifndef kAXDraggingDestinationDragNotAcceptedNotification
-#define kAXDraggingDestinationDragNotAcceptedNotification CFSTR("AXDraggingDestinationDragNotAccepted")
-#endif
-
-#ifndef NSAccessibilityTextInputMarkingSessionBeganNotification
-#define NSAccessibilityTextInputMarkingSessionBeganNotification @"AXTextInputMarkingSessionBegan"
-#endif
-
-#ifndef NSAccessibilityTextInputMarkingSessionEndedNotification
-#define NSAccessibilityTextInputMarkingSessionEndedNotification @"AXTextInputMarkingSessionEnded"
 #endif
 
 // Very large strings can negatively impact the performance of notifications, so this length is chosen to try to fit an average paragraph or line of text, but not allow strings to be large enough to hurt performance.
