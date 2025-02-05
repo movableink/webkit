@@ -3,7 +3,6 @@ NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/cocoa/NetworkSessionCocoa.mm
 NetworkProcess/cocoa/WebSocketTaskCocoa.mm
 NetworkProcess/webrtc/NetworkRTCMonitor.cpp
-NetworkProcess/webrtc/NetworkRTCProvider.cpp
 NetworkProcess/webrtc/NetworkRTCUDPSocketCocoa.mm
 Platform/cocoa/CocoaHelpers.mm
 Platform/cocoa/WebPrivacyHelpers.mm
