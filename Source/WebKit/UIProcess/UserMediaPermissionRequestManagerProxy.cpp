@@ -958,16 +958,18 @@ void UserMediaPermissionRequestManagerProxy::computeFilteredDeviceList(FrameIden
 
             switch (device.type()) {
             case WebCore::CaptureDevice::DeviceType::Camera:
+                cameraCount++;
                 if (shouldRestrictCamera) {
-                    if (device.type() == WebCore::CaptureDevice::DeviceType::Camera && cameraCount++ < defaultMaximumCameraCount)
+                    if (cameraCount <= defaultMaximumCameraCount)
                         filteredDevices.append({ { { }, WebCore::CaptureDevice::DeviceType::Camera, { }, { } }, { } });
                     break;
                 }
                 filteredDevices.append(deviceWithCapabilities);
                 break;
             case WebCore::CaptureDevice::DeviceType::Microphone:
+                microphoneCount++;
                 if (shouldRestrictMicrophone) {
-                    if (device.type() == WebCore::CaptureDevice::DeviceType::Microphone && microphoneCount++ < defaultMaximumMicrophoneCount)
+                    if (microphoneCount <= defaultMaximumMicrophoneCount)
                         filteredDevices.append({ { { }, WebCore::CaptureDevice::DeviceType::Microphone, { }, { } }, { } });
                     break;
                 }
