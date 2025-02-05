@@ -3286,6 +3286,28 @@ void testNegDouble(double a)
     CHECK(isIdentical(compileAndRun<double>(proc, a), -a));
 }
 
+void testImpureNaN()
+{
+    if (isARM64()) {
+        {
+            Procedure proc;
+            BasicBlock* root = proc.addBlock();
+            auto arguments = cCallArgumentValues<double>(proc, root);
+            root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Value>(proc, Neg, Origin(), arguments[0]));
+            double res = compileAndRun<double>(proc, ImpureNaN);
+            CHECK(!isImpureNaN(res));
+        }
+        {
+            Procedure proc;
+            BasicBlock* root = proc.addBlock();
+            auto arguments = cCallArgumentValues<double>(proc, root);
+            root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Value>(proc, Abs, Origin(), arguments[0]));
+            double res = compileAndRun<double>(proc, ImpureNaN);
+            CHECK(!isImpureNaN(res));
+        }
+    }
+}
+
 void testNegFloat(float a)
 {
     Procedure proc;

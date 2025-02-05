@@ -109,6 +109,15 @@ private:
     void handleNode()
     {
         switch (m_node->op()) {
+        case ArithAbs:
+        case ArithNegate: {
+            if (isARM64()) {
+                if (foldPurifyNaNOnUnary(m_node))
+                    m_changed = true;
+            }
+            break;
+        }
+
         case Branch:
         case PurifyNaN:
         case DoubleAsInt32:
@@ -118,8 +127,6 @@ private:
         case ParseInt:
         case ToIntegerOrInfinity:
         case ToLength:
-        case ArithAbs:
-        case ArithNegate:
         case ArithFRound:
         case ArithF16Round:
         case ArithRound:

@@ -161,6 +161,7 @@ void run(const TestConfig* config)
     RUN_UNARY(testNegDouble, floatingPointOperands<double>());
     RUN_UNARY(testNegFloat, floatingPointOperands<float>());
     RUN_UNARY(testNegFloatWithUselessDoubleConversion, floatingPointOperands<float>());
+    RUN(testImpureNaN());
 
     addBitTests(config, tasks);
 

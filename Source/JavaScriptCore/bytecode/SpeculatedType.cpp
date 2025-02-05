@@ -853,10 +853,17 @@ SpeculatedType typeOfDoubleMinMax(SpeculatedType a, SpeculatedType b)
 
 SpeculatedType typeOfDoubleNegation(SpeculatedType value)
 {
-    // Changing bits can make pure NaN impure and vice versa:
-    // 0xefff000000000000 (pure) - 0xffff000000000000 (impure)
-    if (value & SpecDoubleNaN)
-        value |= SpecDoubleNaN;
+    if (isARM64()) {
+        // ARM64 will just use fneg, which makes impure NaN -> pure NaN.
+        // Including negation & abs.
+        if (value & SpecDoubleNaN)
+            value = (value & ~SpecDoubleNaN) | SpecDoublePureNaN;
+    } else {
+        // Changing bits can make pure NaN impure and vice versa:
+        // 0xefff000000000000 (pure) - 0xffff000000000000 (impure)
+        if (value & SpecDoubleNaN)
+            value |= SpecDoubleNaN;
+    }
     // We could get negative zero, which mixes SpecAnyIntAsDouble and SpecNotIntAsDouble.
     // We could also overflow a large negative int into something that is no longer
     // representable as an int.

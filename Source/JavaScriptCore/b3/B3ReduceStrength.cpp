@@ -818,13 +818,17 @@ private:
             case Floor:
             case Ceil:
             case Trunc:
-            case Abs:
-            case Neg:
             case Mul:
             case Add:
             case PurifyNaN:
                 replaceWithIdentity(m_value->child(0));
                 break;
+            case Abs:
+            case Neg: {
+                if (isARM64())
+                    replaceWithIdentity(m_value->child(0));
+                break;
+            }
             default:
                 break;
             }
