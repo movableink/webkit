@@ -1282,8 +1282,9 @@ void WebPageProxy::launchProcess(const Site& site, ProcessLaunchReason reason)
     WEBPAGEPROXY_RELEASE_LOG(Loading, "launchProcess:");
 
     // In case we are currently connected to the dummy process, we need to make sure the inspector proxy
-    // disconnects from the dummy process first.
-    protectedInspector()->reset();
+    // disconnects from the dummy process first. Do not call inspector() / protectedInspector() since they return
+    // null after the page has closed.
+    RefPtr { m_inspector }->reset();
 
     protectedLegacyMainFrameProcess()->removeWebPage(*this, WebProcessProxy::EndsUsingDataStore::Yes);
     removeAllMessageReceivers();
