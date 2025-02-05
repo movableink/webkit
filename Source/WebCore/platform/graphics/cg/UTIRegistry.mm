@@ -120,9 +120,10 @@ static const MemoryCompactLookupOnlyRobinHoodHashSet<String>& lockdownSupportedI
     static NeverDestroyed lockdownSupportedImageTypes = [] {
         // Keep this list in sync with process-entitlements.sh.
         static constexpr std::array lockdownSupportedImageTypes = {
-            "com.compuserve.gif"_s,
+            "org.webmproject.webp"_s,
             "public.jpeg"_s,
             "public.png"_s,
+            "com.compuserve.gif"_s,
         };
 
         return filterSupportedImageTypes(lockdownSupportedImageTypes);

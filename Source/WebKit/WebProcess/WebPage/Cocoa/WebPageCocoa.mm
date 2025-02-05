@@ -147,8 +147,10 @@ void WebPage::platformInitialize(const WebPageCreationParameters& parameters)
     setInsertionPointColor(parameters.insertionPointColor);
     setHardwareKeyboardState(parameters.hardwareKeyboardState);
 #endif
-    WebCore::setAdditionalSupportedImageTypes(parameters.additionalSupportedImageTypes);
-    WebCore::setImageSourceAllowableTypes(WebCore::allowableImageTypes());
+    if (!WebProcess::singleton().isLockdownModeEnabled()) {
+        WebCore::setAdditionalSupportedImageTypes(parameters.additionalSupportedImageTypes);
+        WebCore::setImageSourceAllowableTypes(WebCore::allowableImageTypes());
+    }
 }
 
 #if HAVE(SANDBOX_STATE_FLAGS)
