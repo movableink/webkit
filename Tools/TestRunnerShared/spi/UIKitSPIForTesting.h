@@ -288,7 +288,7 @@ typedef NS_ENUM(NSInteger, _UIDataOwner) {
 @end
 
 @protocol UITextInputSuggestionDelegate <UITextInputDelegate>
-- (void)setSuggestions:(NSArray <UITextSuggestion*> *)suggestions;
+- (void)setSuggestions:(NSArray<UITextSuggestion *> *)suggestions;
 @end
 
 @interface UIScrollView (SPI)
