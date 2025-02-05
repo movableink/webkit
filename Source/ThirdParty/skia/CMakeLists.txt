@@ -34,6 +34,7 @@ add_library(Skia STATIC
     src/base/SkQuads.cpp
     src/base/SkSafeMath.cpp
     src/base/SkSemaphore.cpp
+    src/base/SkSharedMutex.cpp
     src/base/SkSpinlock.cpp
     src/base/SkTDArray.cpp
     src/base/SkTSearch.cpp
@@ -160,6 +161,7 @@ add_library(Skia STATIC
     src/core/SkMaskBlurFilter.cpp
     src/core/SkMaskCache.cpp
     src/core/SkMaskFilter.cpp
+    src/core/SkMaskFilterBase.cpp
     src/core/SkMaskGamma.cpp
     src/core/SkMasks.cpp
     src/core/SkMatrix.cpp
