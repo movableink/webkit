@@ -96,7 +96,7 @@ public:
 #endif
     WTF_EXPORT_PRIVATE static Ref<RunLoop> create(ASCIILiteral threadName, ThreadType = ThreadType::Unknown, Thread::QOS = Thread::QOS::UserInitiated);
 
-    static bool isMain() { return main().isCurrent(); }
+    static bool isMain() { SUPPRESS_UNCOUNTED_ARG return main().isCurrent(); }
     WTF_EXPORT_PRIVATE bool isCurrent() const final;
     WTF_EXPORT_PRIVATE ~RunLoop() final;
 
@@ -185,7 +185,7 @@ public:
         template <typename TimerFiredClass>
         requires (WTF::HasRefPtrMemberFunctions<TimerFiredClass>::value)
         Timer(Ref<RunLoop>&& runLoop, TimerFiredClass* object, void (TimerFiredClass::*function)())
-            : Timer(WTFMove(runLoop), [object, function] {
+            : Timer(WTFMove(runLoop), [object, function] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE { // The Timer's owner is expected to cancel the Timer in its destructor.
                 RefPtr protectedObject { object };
                 (object->*function)();
             })
@@ -195,7 +195,7 @@ public:
         template <typename TimerFiredClass>
         requires (WTF::HasCheckedPtrMemberFunctions<TimerFiredClass>::value && !WTF::HasRefPtrMemberFunctions<TimerFiredClass>::value)
         Timer(Ref<RunLoop>&& runLoop, TimerFiredClass* object, void (TimerFiredClass::*function)())
-            : Timer(WTFMove(runLoop), [object, function] {
+            : Timer(WTFMove(runLoop), [object, function] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE { // The Timer's owner is expected to cancel the Timer in its destructor.
                 CheckedPtr checkedObject { object };
                 (object->*function)();
             })

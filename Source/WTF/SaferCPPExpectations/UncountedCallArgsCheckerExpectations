@@ -7,8 +7,6 @@ wtf/MemoryPressureHandler.cpp
 wtf/NativePromise.h
 wtf/ParallelHelperPool.cpp
 wtf/PrintStream.h
-wtf/RunLoop.cpp
-wtf/RunLoop.h
 wtf/ThreadGroup.cpp
 wtf/Threading.cpp
 wtf/WorkerPool.cpp

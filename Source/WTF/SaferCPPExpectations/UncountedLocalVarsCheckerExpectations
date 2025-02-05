@@ -5,7 +5,6 @@ wtf/ParkingLot.cpp
 wtf/RecursiveLockAdapter.h
 wtf/RedBlackTree.h
 wtf/Ref.h
-wtf/RunLoop.cpp
 wtf/ThreadSafeWeakPtr.h
 wtf/Threading.cpp
 wtf/Threading.h
