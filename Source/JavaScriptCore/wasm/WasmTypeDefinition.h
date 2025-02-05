@@ -347,8 +347,10 @@ constexpr size_t typeKindSizeInBytes(TypeKind kind)
 }
 
 class FunctionSignature {
+    WTF_MAKE_NONCOPYABLE(FunctionSignature);
+    WTF_MAKE_NONMOVABLE(FunctionSignature);
 public:
-    FunctionSignature(Type* payload, FunctionArgCount argumentCount, FunctionArgCount returnCount);
+    FunctionSignature(void* payload, FunctionArgCount argumentCount, FunctionArgCount returnCount);
     ~FunctionSignature();
 
     FunctionArgCount argumentCount() const { return m_argCount; }
@@ -561,8 +563,10 @@ public:
 };
 
 class StructType {
+    WTF_MAKE_NONCOPYABLE(StructType);
+    WTF_MAKE_NONMOVABLE(StructType);
 public:
-    StructType(FieldType*, StructFieldCount, const FieldType*);
+    StructType(void*, StructFieldCount, const FieldType*);
 
     StructFieldCount fieldCount() const { return m_fieldCount; }
     bool hasRecursiveReference() const { return m_hasRecursiveReference; }
@@ -593,9 +597,11 @@ private:
 };
 
 class ArrayType {
+    WTF_MAKE_NONCOPYABLE(ArrayType);
+    WTF_MAKE_NONMOVABLE(ArrayType);
 public:
-    ArrayType(FieldType* payload)
-        : m_payload(payload)
+    ArrayType(void* payload)
+        : m_payload(static_cast<FieldType*>(payload))
         , m_hasRecursiveReference(false)
     {
     }
@@ -617,9 +623,11 @@ private:
 };
 
 class RecursionGroup {
+    WTF_MAKE_NONCOPYABLE(RecursionGroup);
+    WTF_MAKE_NONMOVABLE(RecursionGroup);
 public:
-    RecursionGroup(TypeIndex* payload, RecursionGroupCount typeCount)
-        : m_payload(payload)
+    RecursionGroup(void* payload, RecursionGroupCount typeCount)
+        : m_payload(static_cast<TypeIndex*>(payload))
         , m_typeCount(typeCount)
     {
     }
@@ -654,9 +662,11 @@ private:
 // A projection with an invalid PlaceholderGroup index represents a recursive reference
 // that has not yet been resolved. The expand() function on type definitions resolves it.
 class Projection {
+    WTF_MAKE_NONCOPYABLE(Projection);
+    WTF_MAKE_NONMOVABLE(Projection);
 public:
-    Projection(TypeIndex* payload)
-        : m_payload(payload)
+    Projection(void* payload)
+        : m_payload(static_cast<TypeIndex*>(payload))
     {
     }
 
@@ -688,9 +698,11 @@ static_assert(sizeof(ProjectionIndex) <= sizeof(TypeIndex));
 // support 0 or 1 supertypes. More than 1 supertype is not supported in the initial
 // GC proposal.
 class Subtype {
+    WTF_MAKE_NONCOPYABLE(Subtype);
+    WTF_MAKE_NONMOVABLE(Subtype);
 public:
-    Subtype(TypeIndex* payload, SupertypeCount count, bool isFinal)
-        : m_payload(payload)
+    Subtype(void* payload, SupertypeCount count, bool isFinal)
+        : m_payload(static_cast<TypeIndex*>(payload))
         , m_supertypeCount(count)
         , m_final(isFinal)
     {
@@ -780,38 +792,10 @@ class TypeDefinition : public ThreadSafeRefCounted<TypeDefinition> {
 
     TypeDefinition() = delete;
 
-    TypeDefinition(TypeDefinitionKind kind, FunctionArgCount retCount, FunctionArgCount argCount)
-        // FunctionSignature is not moveable.
-        : m_typeHeader(std::in_place_index<0>, static_cast<Type*>(payload()), argCount, retCount)
+    template<typename InPlaceType, typename ...Args>
+    TypeDefinition(InPlaceType&& tag, Args&&... args)
+        : m_typeHeader(std::forward<InPlaceType>(tag), payload(), std::forward<Args>(args)...)
     {
-        RELEASE_ASSERT(kind == TypeDefinitionKind::FunctionSignature);
-    }
-
-    TypeDefinition(TypeDefinitionKind kind, uint32_t fieldCount, const FieldType* fields)
-        : m_typeHeader { StructType { static_cast<FieldType*>(payload()), static_cast<StructFieldCount>(fieldCount), fields } }
-    {
-        RELEASE_ASSERT(kind == TypeDefinitionKind::StructType);
-    }
-
-    TypeDefinition(TypeDefinitionKind kind, uint32_t fieldCount)
-        : m_typeHeader { RecursionGroup { static_cast<TypeIndex*>(payload()), static_cast<RecursionGroupCount>(fieldCount) } }
-    {
-        RELEASE_ASSERT(kind == TypeDefinitionKind::RecursionGroup);
-    }
-
-    TypeDefinition(TypeDefinitionKind kind, SupertypeCount count, bool isFinal)
-        : m_typeHeader { Subtype { static_cast<TypeIndex*>(payload()), count, isFinal } }
-    {
-        RELEASE_ASSERT(kind == TypeDefinitionKind::Subtype);
-    }
-
-    TypeDefinition(TypeDefinitionKind kind)
-        : m_typeHeader { ArrayType { static_cast<FieldType*>(payload()) } }
-    {
-        if (kind == TypeDefinitionKind::Projection)
-            m_typeHeader = Projection { static_cast<TypeIndex*>(payload()) };
-        else
-            RELEASE_ASSERT(kind == TypeDefinitionKind::ArrayType);
     }
 
     // Payload starts past end of this object.

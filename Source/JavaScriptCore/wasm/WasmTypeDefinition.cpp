@@ -97,8 +97,8 @@ void FunctionSignature::dump(PrintStream& out) const
     }
 }
 
-FunctionSignature::FunctionSignature(Type* payload, FunctionArgCount argumentCount, FunctionArgCount returnCount)
-    : m_payload(payload)
+FunctionSignature::FunctionSignature(void* payload, FunctionArgCount argumentCount, FunctionArgCount returnCount)
+    : m_payload(static_cast<Type*>(payload))
     , m_argCount(argumentCount)
     , m_retCount(returnCount)
 { }
@@ -123,8 +123,8 @@ void StructType::dump(PrintStream& out) const
     out.print(")"_s);
 }
 
-StructType::StructType(FieldType* payload, StructFieldCount fieldCount, const FieldType* fieldTypes)
-    : m_payload(payload)
+StructType::StructType(void* payload, StructFieldCount fieldCount, const FieldType* fieldTypes)
+    : m_payload(static_cast<FieldType*>(payload))
     , m_fieldCount(fieldCount)
     , m_hasRecursiveReference(false)
 {
@@ -355,7 +355,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateFunctionSignature(FunctionArgCou
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(TypeDefinitionKind::FunctionSignature, returnCount, argumentCount);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<FunctionSignature>, argumentCount, returnCount);
     return adoptRef(signature);
 }
 
@@ -366,7 +366,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateStructType(StructFieldCount fiel
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(TypeDefinitionKind::StructType, fieldCount, fields);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<StructType>, fieldCount, fields);
     return adoptRef(signature);
 }
 
@@ -377,7 +377,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateArrayType()
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(TypeDefinitionKind::ArrayType);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<ArrayType>);
     return adoptRef(signature);
 }
 
@@ -388,7 +388,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateRecursionGroup(RecursionGroupCou
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(TypeDefinitionKind::RecursionGroup, typeCount);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<RecursionGroup>, typeCount);
     return adoptRef(signature);
 }
 
@@ -399,7 +399,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateProjection()
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(TypeDefinitionKind::Projection);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<Projection>);
     return adoptRef(signature);
 }
 
@@ -410,7 +410,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateSubtype(SupertypeCount count, bo
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(TypeDefinitionKind::Subtype, count, isFinal);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<Subtype>, count, isFinal);
     return adoptRef(signature);
 }
 
