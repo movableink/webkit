@@ -4113,6 +4113,24 @@ void Page::appearanceDidChange()
     });
 }
 
+void Page::clearAXObjectCache()
+{
+    m_axObjectCache = nullptr;
+}
+
+AXObjectCache* Page::axObjectCache()
+{
+    if (!m_axObjectCache) {
+        RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_mainFrame.get());
+        RefPtr mainFrameDocument = localMainFrame ? localMainFrame->document() : nullptr;
+        if (mainFrameDocument && !mainFrameDocument->hasLivingRenderTree())
+            return nullptr;
+        m_axObjectCache = makeUnique<AXObjectCache>(*this, mainFrameDocument.get());
+        Document::hasEverCreatedAnAXObjectCache = true;
+    }
+    return m_axObjectCache.get();
+}
+
 void Page::setUnobscuredSafeAreaInsets(const FloatBoxExtent& insets)
 {
     if (m_unobscuredSafeAreaInsets == insets)
