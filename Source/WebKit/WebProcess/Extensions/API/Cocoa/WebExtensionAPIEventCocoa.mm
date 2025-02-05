@@ -99,11 +99,12 @@ void WebExtensionAPIEvent::addListener(WebCore::FrameIdentifier frameIdentifier,
     m_frameIdentifier = frameIdentifier;
     m_listeners.append(listener);
 
-    RefPtr webFrame = WebProcess::singleton().webFrame(frameIdentifier);
-    RefPtr webExtensionControllerProxy = webFrame->page()->webExtensionControllerProxy();
-
     if (!hasExtensionContext()) {
-        if (webExtensionControllerProxy->inTestingMode()) {
+        RefPtr webFrame = WebProcess::singleton().webFrame(m_frameIdentifier);
+        RefPtr webPage = webFrame ? webFrame->page() : nullptr;
+        RefPtr webExtensionControllerProxy = webPage ? webPage->webExtensionControllerProxy() : nullptr;
+
+        if (webExtensionControllerProxy && webExtensionControllerProxy->inTestingMode()) {
             for (Ref extensionContext : webExtensionControllerProxy->extensionContexts()) {
                 extensionContext->addFrameWithExtensionContent(*webFrame);
                 WebProcess::singleton().send(Messages::WebExtensionContext::AddListener(*m_frameIdentifier, m_type, contentWorldType()), extensionContext->identifier());
@@ -127,11 +128,12 @@ void WebExtensionAPIEvent::removeListener(WebCore::FrameIdentifier frameIdentifi
 
     ASSERT(frameIdentifier == m_frameIdentifier);
 
-    RefPtr webFrame = WebProcess::singleton().webFrame(frameIdentifier);
-    RefPtr webExtensionControllerProxy = webFrame->page()->webExtensionControllerProxy();
-
     if (!hasExtensionContext()) {
-        if (webExtensionControllerProxy->inTestingMode()) {
+        RefPtr webFrame = WebProcess::singleton().webFrame(m_frameIdentifier);
+        RefPtr webPage = webFrame ? webFrame->page() : nullptr;
+        RefPtr webExtensionControllerProxy = webPage ? webPage->webExtensionControllerProxy() : nullptr;
+
+        if (webExtensionControllerProxy && webExtensionControllerProxy->inTestingMode()) {
             for (Ref extensionContext : webExtensionControllerProxy->extensionContexts())
                 WebProcess::singleton().send(Messages::WebExtensionContext::RemoveListener(*m_frameIdentifier, m_type, contentWorldType(), removedCount), extensionContext->identifier());
         }
@@ -157,11 +159,12 @@ void WebExtensionAPIEvent::removeAllListeners()
     auto removedCount = m_listeners.size();
     m_listeners.clear();
 
-    RefPtr webFrame = WebProcess::singleton().webFrame(m_frameIdentifier);
-    RefPtr webExtensionControllerProxy = webFrame->page()->webExtensionControllerProxy();
-
     if (!hasExtensionContext()) {
-        if (webExtensionControllerProxy->inTestingMode()) {
+        RefPtr webFrame = WebProcess::singleton().webFrame(m_frameIdentifier);
+        RefPtr webPage = webFrame ? webFrame->page() : nullptr;
+        RefPtr webExtensionControllerProxy = webPage ? webPage->webExtensionControllerProxy() : nullptr;
+
+        if (webExtensionControllerProxy && webExtensionControllerProxy->inTestingMode()) {
             for (Ref extensionContext : webExtensionControllerProxy->extensionContexts())
                 WebProcess::singleton().send(Messages::WebExtensionContext::RemoveListener(*m_frameIdentifier, m_type, contentWorldType(), removedCount), extensionContext->identifier());
         }
