@@ -1000,7 +1000,7 @@ static void resetRendererStateOnDetach(RenderElement& parent, RenderObject& chil
         child.setNeedsLayoutAndPrefWidthsRecalc();
 
     // If we have a line box wrapper, delete it.
-    if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(child))
+    if (CheckedPtr textRenderer = dynamicDowncast<RenderSVGInlineText>(child))
         textRenderer->removeAndDestroyLegacyTextBoxes();
 
     if (CheckedPtr listItemRenderer = dynamicDowncast<RenderListItem>(child); listItemRenderer && isInternalMove == RenderTreeBuilder::IsInternalMove::No)

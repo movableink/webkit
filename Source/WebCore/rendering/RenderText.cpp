@@ -91,12 +91,11 @@ struct SameSizeAsRenderText : public RenderObject {
     float candidateTextSize;
 #endif
     float widths[4];
-    void* pointers[2];
     String text;
     std::optional<bool> canUseSimplifiedTextMeasuring;
     std::optional<bool> hasPositionDependentContentWidth;
     std::optional<bool> m_hasStrongDirectionalityContent;
-    uint32_t bitfields : 16;
+    uint32_t bitfields : 14;
 };
 
 static_assert(sizeof(RenderText) == sizeof(SameSizeAsRenderText), "RenderText should stay small");
@@ -460,23 +459,10 @@ void RenderText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
     setHorizontalWritingMode(newStyle.writingMode().isHorizontal());
 }
 
-void RenderText::removeAndDestroyLegacyTextBoxes()
-{
-    if (!renderTreeBeingDestroyed())
-        m_legacyLineBoxes.removeAllFromParent(*this);
-#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
-    else
-        m_legacyLineBoxes.invalidateParentChildLists();
-#endif
-    deleteLegacyLineBoxes();
-}
-
 void RenderText::willBeDestroyed()
 {
     if (m_hasSecureTextTimer)
         secureTextTimers().remove(*this);
-
-    removeAndDestroyLegacyTextBoxes();
 
     if (m_originalTextDiffersFromRendered)
         originalTextMap().remove(this);
@@ -1843,10 +1829,6 @@ void RenderText::setTextWithOffset(const String& newText, unsigned offset)
         return;
 
     int delta = newText.length() - text().length();
-    if (CheckedPtr svgText = dynamicDowncast<RenderSVGInlineText>(*this)) {
-        m_legacyLineBoxes.dirtyForTextChange(*svgText);
-        setRenderedText(newText);
-    }
     setTextInternal(newText, false);
     invalidateLineLayoutPathOnContentChangeIfNeeded(*this, offset, delta);
 }
@@ -1860,16 +1842,6 @@ String RenderText::textWithoutConvertingBackslashToYenSymbol() const
         return originalText();
 
     return applyTextTransform(style(), originalText(), previousCharacter());
-}
-
-void RenderText::deleteLegacyLineBoxes()
-{
-    m_legacyLineBoxes.deleteAll();
-}
-
-std::unique_ptr<LegacyInlineTextBox> RenderText::createTextBox()
-{
-    return makeUnique<LegacyInlineTextBox>(*this);
 }
 
 float RenderText::width(unsigned from, unsigned len, float xPos, bool firstLine, SingleThreadWeakHashSet<const Font>* fallbackFonts, GlyphOverflow* glyphOverflow) const

@@ -37,12 +37,10 @@
 namespace WebCore {
 
 RenderTextLineBoxes::RenderTextLineBoxes()
-    : m_first(nullptr)
-    , m_last(nullptr)
 {
 }
 
-LegacyInlineTextBox* RenderTextLineBoxes::createAndAppendLineBox(RenderText& renderText)
+LegacyInlineTextBox* RenderTextLineBoxes::createAndAppendLineBox(RenderSVGInlineText& renderText)
 {
     auto textBox = renderText.createTextBox();
     if (!m_first) {
@@ -72,7 +70,7 @@ void RenderTextLineBoxes::remove(LegacyInlineTextBox& box)
     checkConsistency();
 }
 
-void RenderTextLineBoxes::removeAllFromParent(RenderText& renderer)
+void RenderTextLineBoxes::removeAllFromParent(RenderSVGInlineText& renderer)
 {
     if (!m_first) {
         if (renderer.parent())
@@ -96,15 +94,10 @@ void RenderTextLineBoxes::deleteAll()
     m_last = nullptr;
 }
 
-void RenderTextLineBoxes::dirtyAll()
+void RenderTextLineBoxes::dirtyForTextChange(RenderSVGInlineText& renderer)
 {
     for (auto* box = m_first; box; box = box->nextTextBox())
         box->dirtyLineBoxes();
-}
-
-void RenderTextLineBoxes::dirtyForTextChange(RenderSVGInlineText& renderer)
-{
-    dirtyAll();
 
     if (!m_first && renderer.parent())
         renderer.parent()->dirtyLineFromChangedChild();

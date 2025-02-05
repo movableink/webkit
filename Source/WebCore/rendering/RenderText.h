@@ -34,7 +34,6 @@
 namespace WebCore {
 
 class Font;
-class LegacyInlineTextBox;
 struct GlyphOverflow;
 struct WordTrailingSpace;
 enum class DocumentMarkerType : uint32_t;
@@ -76,13 +75,9 @@ public:
 
     virtual String originalText() const;
 
-    void removeTextBox(LegacyInlineTextBox& box) { m_legacyLineBoxes.remove(box); }
 
     const String& text() const { return m_text; }
     String textWithoutConvertingBackslashToYenSymbol() const;
-
-    LegacyInlineTextBox* createInlineTextBox() { return m_legacyLineBoxes.createAndAppendLineBox(*this); }
-    void deleteLegacyLineBoxes();
 
     void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     Vector<IntRect> absoluteRectsForRange(unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool* wasFixed = nullptr) const;
@@ -143,8 +138,6 @@ public:
     inline LayoutUnit marginLeft() const;
     inline LayoutUnit marginRight() const;
 
-    LegacyInlineTextBox* firstLegacyTextBox() const { return m_legacyLineBoxes.first(); }
-
     int caretMinOffset() const final;
     int caretMaxOffset() const final;
     unsigned countRenderedCharacterOffsetsUntil(unsigned) const;
@@ -168,11 +161,7 @@ public:
     bool canUseSimpleFontCodePath() const { return fontCodePath() == FontCascade::CodePath::Simple; }
     bool shouldUseSimpleGlyphOverflowCodePath() const { return fontCodePath() == FontCascade::CodePath::SimpleWithGlyphOverflow; }
 
-    void removeAndDestroyLegacyTextBoxes();
-
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
-
-    virtual std::unique_ptr<LegacyInlineTextBox> createTextBox();
 
 #if ENABLE(TEXT_AUTOSIZING)
     float candidateComputedTextSize() const { return m_candidateComputedTextSize; }
@@ -210,8 +199,6 @@ protected:
     virtual Vector<UChar> previousCharacter() const;
 
     virtual void setTextInternal(const String&, bool force);
-
-    RenderTextLineBoxes m_legacyLineBoxes;
 
 private:
     RenderText(Type, Node&, const String&);

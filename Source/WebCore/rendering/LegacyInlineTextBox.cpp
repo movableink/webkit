@@ -48,6 +48,7 @@
 #include "RenderHighlight.h"
 #include "RenderLineBreak.h"
 #include "RenderStyleInlines.h"
+#include "RenderSVGInlineText.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
@@ -60,6 +61,7 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/TextStream.h>
+
 
 namespace WebCore {
 
@@ -75,12 +77,27 @@ static_assert(sizeof(LegacyInlineTextBox) == sizeof(SameSizeAsLegacyInlineTextBo
 typedef UncheckedKeyHashMap<const LegacyInlineTextBox*, LayoutRect> LegacyInlineTextBoxOverflowMap;
 static LegacyInlineTextBoxOverflowMap* gTextBoxesWithOverflow;
 
+LegacyInlineTextBox::LegacyInlineTextBox(RenderSVGInlineText& renderer)
+    : LegacyInlineBox(renderer)
+{
+}
+
 LegacyInlineTextBox::~LegacyInlineTextBox()
 {
     if (!knownToHaveNoOverflow() && gTextBoxesWithOverflow)
         gTextBoxesWithOverflow->remove(this);
     if (isInGlyphDisplayListCache())
         removeBoxFromGlyphDisplayListCache(*this);
+}
+
+RenderSVGInlineText& LegacyInlineTextBox::renderer() const
+{
+    return downcast<RenderSVGInlineText>(LegacyInlineBox::renderer());
+}
+
+const RenderStyle& LegacyInlineTextBox::lineStyle() const
+{
+    return isFirstLine() ? renderer().firstLineStyle() : renderer().style();
 }
 
 bool LegacyInlineTextBox::hasTextContent() const

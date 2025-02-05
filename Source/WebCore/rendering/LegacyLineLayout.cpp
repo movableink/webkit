@@ -160,7 +160,7 @@ LegacyInlineBox* LegacyLineLayout::createInlineBoxForRenderer(RenderObject* rend
     if (renderer == &m_flow)
         return createAndAppendRootInlineBox();
 
-    if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(*renderer))
+    if (CheckedPtr textRenderer = dynamicDowncast<RenderSVGInlineText>(*renderer))
         return textRenderer->createInlineTextBox();
 
     if (CheckedPtr renderInline = dynamicDowncast<RenderInline>(renderer))
@@ -172,7 +172,7 @@ LegacyInlineBox* LegacyLineLayout::createInlineBoxForRenderer(RenderObject* rend
 
 static inline void dirtyLineBoxesForRenderer(RenderObject& renderer)
 {
-    if (CheckedPtr renderText = dynamicDowncast<RenderText>(renderer))
+    if (CheckedPtr renderText = dynamicDowncast<RenderSVGInlineText>(renderer))
         renderText->deleteLegacyLineBoxes();
     else if (CheckedPtr renderInline = dynamicDowncast<RenderInline>(renderer))
         renderInline->deleteLegacyLineBoxes();
@@ -300,7 +300,7 @@ void LegacyLineLayout::removeInlineBox(BidiRun& run, const LegacyRootInlineBox& 
     inlineBox->removeFromParent();
 
     auto& renderer = run.renderer();
-    if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(renderer))
+    if (CheckedPtr textRenderer = dynamicDowncast<RenderSVGInlineText>(renderer))
         textRenderer->removeTextBox(downcast<LegacyInlineTextBox>(*inlineBox));
     delete inlineBox;
     run.setBox(nullptr);
