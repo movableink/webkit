@@ -7,7 +7,6 @@ NetworkProcess/NetworkSession.cpp
 NetworkProcess/PingLoad.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp
 NetworkProcess/PrivateClickMeasurement/cocoa/PrivateClickMeasurementConnectionCocoa.mm
-NetworkProcess/cache/NetworkCache.cpp
 NetworkProcess/cache/NetworkCacheSpeculativeLoad.cpp
 NetworkProcess/cocoa/NetworkSessionCocoa.mm
 UIProcess/API/C/WKPage.cpp

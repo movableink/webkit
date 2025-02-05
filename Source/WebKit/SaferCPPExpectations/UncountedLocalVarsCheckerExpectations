@@ -3,7 +3,6 @@ NetworkProcess/NetworkLoad.cpp
 NetworkProcess/NetworkLoadScheduler.cpp
 NetworkProcess/PingLoad.h
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementDatabase.cpp
-NetworkProcess/cache/NetworkCache.cpp
 NetworkProcess/cache/NetworkCacheSpeculativeLoadManager.cpp
 NetworkProcess/cocoa/NetworkSessionCocoa.mm
 NetworkProcess/storage/OriginStorageManager.cpp

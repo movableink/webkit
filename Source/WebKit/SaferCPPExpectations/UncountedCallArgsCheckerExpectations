@@ -23,7 +23,6 @@ NetworkProcess/PrivateClickMeasurement/cocoa/PrivateClickMeasurementConnectionCo
 NetworkProcess/ServiceWorker/ServiceWorkerNavigationPreloader.cpp
 NetworkProcess/ServiceWorker/ServiceWorkerSoftUpdateLoader.cpp
 NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
-NetworkProcess/cache/NetworkCache.cpp
 NetworkProcess/cache/NetworkCacheEntry.cpp
 NetworkProcess/cache/NetworkCacheSpeculativeLoad.cpp
 NetworkProcess/cache/NetworkCacheSpeculativeLoadManager.cpp
