@@ -29,17 +29,17 @@ WI.ScriptProfilerObserver = class ScriptProfilerObserver extends InspectorBacken
 
     trackingStart(timestamp)
     {
-        WI.timelineManager.scriptProfilerTrackingStarted(timestamp);
+        WI.timelineManager.scriptProfilerTrackingStarted(this._target, timestamp);
     }
 
     trackingUpdate(event)
     {
-        WI.timelineManager.scriptProfilerTrackingUpdated(event);
+        WI.timelineManager.scriptProfilerTrackingUpdated(this._target, event);
     }
 
     trackingComplete(timestamp, samples)
     {
-        WI.timelineManager.scriptProfilerTrackingCompleted(timestamp, samples);
+        WI.timelineManager.scriptProfilerTrackingCompleted(this._target, timestamp, samples);
     }
 
     programmaticCaptureStarted()

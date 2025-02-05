@@ -694,6 +694,8 @@ localizedStrings["Enable Program"] = "Enable Program";
 localizedStrings["Enable Rule"] = "Enable Rule";
 localizedStrings["Enable all breakpoints (%s)"] = "Enable all breakpoints (%s)";
 localizedStrings["Enable paint flashing"] = "Enable paint flashing";
+/* Label for checkbox that controls whether timeline recordings can capture activity in Worker contexts. */
+localizedStrings["Enable recording in Workers"] = "Enable recording in Workers";
 localizedStrings["Enable source maps"] = "Enable source maps";
 localizedStrings["Enabled"] = "Enabled";
 /* Label for column showing the list of enabled timelines. */
@@ -1786,6 +1788,8 @@ localizedStrings["Timeline Recording %d"] = "Timeline Recording %d";
 localizedStrings["Timeline Recording Import Error: %s"] = "Timeline Recording Import Error: %s";
 /* Name of Timelines Tab */
 localizedStrings["Timelines Tab Name"] = "Timelines";
+/* Category label for experimental settings related to the Timelines Tab. */
+localizedStrings["Timelines: @ Experimental Settings"] = "Timelines:";
 /* Text indicating that the local override will block the network activity with an timeout error. */
 localizedStrings["Timeout @ Local Override Type"] = "Timeout";
 localizedStrings["Timer %d Fired"] = "Timer %d Fired";

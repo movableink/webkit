@@ -54,6 +54,7 @@
 #include <JavaScriptCore/InspectorFrontendChannel.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendRouter.h>
+#include <JavaScriptCore/InspectorScriptProfilerAgent.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -215,6 +216,10 @@ void WorkerInspectorController::createLazyAgents()
     m_agents.append(makeUnique<WorkerAuditAgent>(workerContext));
     m_agents.append(makeUnique<WorkerCanvasAgent>(workerContext));
     m_agents.append(makeUnique<WorkerWorkerAgent>(workerContext));
+
+    auto scriptProfilerAgentPtr = makeUnique<InspectorScriptProfilerAgent>(workerContext);
+    m_instrumentingAgents->setPersistentScriptProfilerAgent(scriptProfilerAgentPtr.get());
+    m_agents.append(WTFMove(scriptProfilerAgentPtr));
 
     if (auto& commandLineAPIHost = m_injectedScriptManager->commandLineAPIHost())
         commandLineAPIHost->init(m_instrumentingAgents.copyRef());
