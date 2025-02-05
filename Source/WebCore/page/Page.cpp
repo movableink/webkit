@@ -1704,7 +1704,7 @@ void Page::setDeviceScaleFactor(float scaleFactor)
 void Page::screenPropertiesDidChange()
 {
 #if ENABLE(VIDEO)
-    auto mode = preferredDynamicRangeMode(protectedMainFrame()->virtualView());
+    auto mode = preferredDynamicRangeMode(protectedMainFrame()->protectedVirtualView().get());
     forEachMediaElement([mode] (auto& element) {
         element.setPreferredDynamicRangeMode(mode);
     });
@@ -2154,7 +2154,8 @@ void Page::updateRendering()
         document.evaluateMediaQueriesAndReportChanges();        
     });
 
-    runProcessingStep(RenderingUpdateStep::AdjustVisibility, [&] (auto& document) {
+    // FIXME: This suppression shouldn't be needed.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE runProcessingStep(RenderingUpdateStep::AdjustVisibility, [&] (auto& document) {
         m_elementTargetingController->adjustVisibilityInRepeatedlyTargetedRegions(document);
     });
 
@@ -2179,7 +2180,8 @@ void Page::updateRendering()
 
     layoutIfNeeded();
 
-    runProcessingStep(RenderingUpdateStep::ResizeObservations, [&] (Document& document) {
+    // FIXME: This suppression shouldn't be needed.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE runProcessingStep(RenderingUpdateStep::ResizeObservations, [&] (Document& document) {
         document.updateResizeObservations(*this);
     });
 
@@ -4499,11 +4501,11 @@ enum class DispatchedOnDocumentEventLoop : bool { No, Yes };
 static void dispatchPrintEvent(Frame& mainFrame, const AtomString& eventType, DispatchedOnDocumentEventLoop dispatchedOnDocumentEventLoop)
 {
     Vector<Ref<LocalFrame>> frames;
-    for (Frame* frame = &mainFrame; frame; frame = frame->tree().traverseNext()) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+    for (RefPtr frame = &mainFrame; frame; frame = frame->tree().traverseNext()) {
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
-        frames.append(*localFrame);
+        frames.append(localFrame.releaseNonNull());
     }
 
     for (auto& frame : frames) {

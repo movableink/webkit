@@ -88,7 +88,7 @@ FontSelectionValue fontWeightFromCSSValueDeprecated(const CSSValue& value)
 
 FontSelectionValue fontWeightFromCSSValue(BuilderState& builderState, const CSSValue& value)
 {
-    auto primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
+    RefPtr primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
     if (!primitiveValue)
         return { };
 
@@ -164,7 +164,7 @@ FontSelectionValue fontStretchFromCSSValueDeprecated(const CSSValue& value)
 
 FontSelectionValue fontStretchFromCSSValue(BuilderState& builderState, const CSSValue& value)
 {
-    auto primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
+    RefPtr primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
     if (!primitiveValue)
         return { };
 
@@ -188,7 +188,7 @@ FontSelectionValue fontStyleAngleFromCSSValueDeprecated(const CSSValue& value)
 
 FontSelectionValue fontStyleAngleFromCSSValue(BuilderState& builderState, const CSSValue& value)
 {
-    auto primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
+    RefPtr primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
     if (!primitiveValue)
         return { };
 
@@ -435,8 +435,8 @@ FontFeatureSettings fontFeatureSettingsFromCSSValue(BuilderState& builderState, 
         return { };
 
     FontFeatureSettings settings;
-    for (auto& feature : *list)
-        settings.insert(FontFeature(feature.tag(), feature.value().resolveAsNumber<int>(builderState.cssToLengthConversionData())));
+    for (Ref feature : *list)
+        settings.insert(FontFeature(feature->tag(), feature->value().resolveAsNumber<int>(builderState.cssToLengthConversionData())));
     return settings;
 }
 
@@ -454,8 +454,8 @@ FontVariationSettings fontVariationSettingsFromCSSValue(BuilderState& builderSta
         return { };
 
     FontVariationSettings settings;
-    for (auto& feature : *list)
-        settings.insert({ feature.tag(), feature.value().resolveAsNumber<float>(builderState.cssToLengthConversionData()) });
+    for (Ref feature : *list)
+        settings.insert({ feature->tag(), feature->value().resolveAsNumber<float>(builderState.cssToLengthConversionData()) });
     return settings;
 }
 
