@@ -28,8 +28,6 @@ UIProcess/API/Cocoa/_WKInspectorConfiguration.mm
 UIProcess/RemoteLayerTree/mac/RemoteScrollingTreeMac.mm
 UIProcess/WebAuthentication/Virtual/VirtualService.mm
 UIProcess/mac/WebViewImpl.mm
-WebProcess/GPU/graphics/WebGPU/RemoteCompositorIntegrationProxy.cpp
-WebProcess/GPU/graphics/WebGPU/RemoteXRBindingProxy.cpp
 WebProcess/GPU/graphics/WebGPU/WebGPUDowncastConvertToBackingContext.cpp
 WebProcess/GPU/media/MediaPlayerPrivateRemote.cpp
 WebProcess/InjectedBundle/API/c/WKBundlePageOverlay.cpp

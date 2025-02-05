@@ -102,7 +102,7 @@ void RemoteSampleBufferDisplayLayerManager::createLayer(SampleBufferDisplayLayer
             return;
         }
         layer->initialize(hideRootLayer, size, shouldMaintainAspectRatio, canShowWhileLocked, [this, protectedThis = Ref { *this }, callback = WTFMove(callback), identifier, layer = Ref { *layer }](auto layerId) mutable {
-            protectedQueue()->dispatch([protectedThis = WTFMove(protectedThis), callback = WTFMove(callback), identifier, layer = WTFMove(layer), layerId = WTFMove(layerId)]() mutable {
+            protectedQueue()->dispatch([protectedThis = Ref { *this }, callback = WTFMove(callback), identifier, layer = WTFMove(layer), layerId = WTFMove(layerId)]() mutable {
                 Locker lock(protectedThis->m_layersLock);
                 ASSERT(!protectedThis->m_layers.contains(identifier));
                 protectedThis->m_layers.add(identifier, WTFMove(layer));
@@ -115,7 +115,7 @@ void RemoteSampleBufferDisplayLayerManager::createLayer(SampleBufferDisplayLayer
 void RemoteSampleBufferDisplayLayerManager::releaseLayer(SampleBufferDisplayLayerIdentifier identifier)
 {
     callOnMainRunLoop([this, protectedThis = Ref { *this }, identifier]() mutable {
-        protectedQueue()->dispatch([protectedThis = WTFMove(protectedThis), identifier] {
+        protectedQueue()->dispatch([protectedThis = Ref { *this }, identifier] {
             Locker lock(protectedThis->m_layersLock);
             ASSERT(protectedThis->m_layers.contains(identifier));
             callOnMainRunLoop([layer = protectedThis->m_layers.take(identifier)] { });

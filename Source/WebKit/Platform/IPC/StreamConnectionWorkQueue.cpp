@@ -88,7 +88,7 @@ void StreamConnectionWorkQueue::removeStreamConnection(StreamServerConnection& c
     wakeUp();
 }
 
-void StreamConnectionWorkQueue::stopAndWaitForCompletion(WTF::Function<void()>&& cleanupFunction)
+void StreamConnectionWorkQueue::stopAndWaitForCompletion(NOESCAPE WTF::Function<void()>&& cleanupFunction)
 {
     RefPtr<Thread> processingThread;
     {

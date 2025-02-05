@@ -111,7 +111,7 @@ enum class MainStyle : bool {
 };
 
 template <MainStyle mainStyle>
-static void callOnMainAndWait(Function<void()>&& function)
+static void callOnMainAndWait(NOESCAPE Function<void()>&& function)
 {
 
     if (mainStyle == MainStyle::Thread ? isMainThread() : isMainRunLoop()) {
@@ -135,12 +135,12 @@ static void callOnMainAndWait(Function<void()>&& function)
     semaphore.wait();
 }
 
-void callOnMainRunLoopAndWait(Function<void()>&& function)
+void callOnMainRunLoopAndWait(NOESCAPE Function<void()>&& function)
 {
     callOnMainAndWait<MainStyle::RunLoop>(WTFMove(function));
 }
 
-void callOnMainThreadAndWait(Function<void()>&& function)
+void callOnMainThreadAndWait(NOESCAPE Function<void()>&& function)
 {
     callOnMainAndWait<MainStyle::Thread>(WTFMove(function));
 }

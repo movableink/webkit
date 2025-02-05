@@ -1,6 +1,3 @@
-GPUProcess/graphics/RemoteGraphicsContextGL.cpp
-GPUProcess/graphics/WebGPU/RemoteGPU.cpp
-GPUProcess/webrtc/LibWebRTCCodecsProxy.mm
 NetworkProcess/NetworkDataTaskBlob.cpp
 NetworkProcess/cache/NetworkCacheStorage.cpp
 Platform/IPC/HandleMessage.h
@@ -30,19 +27,13 @@ UIProcess/WebPageProxy.cpp
 UIProcess/WebsiteData/WebDeviceOrientationAndMotionAccessController.cpp
 UIProcess/mac/WebContextMenuProxyMac.mm
 UIProcess/mac/WebViewImpl.mm
-WebProcess/Cache/WebCacheStorageConnection.cpp
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIRuntimeCocoa.mm
-WebProcess/GPU/graphics/RemoteGraphicsContextGLProxy.cpp
-WebProcess/GPU/graphics/RemoteRenderingBackendProxy.cpp
-WebProcess/GPU/graphics/WebGPU/RemoteDeviceProxy.cpp
-WebProcess/GPU/graphics/WebGPU/RemoteGPUProxy.cpp
 WebProcess/GPU/media/MediaPlayerPrivateRemote.cpp
 WebProcess/GPU/media/MediaSourcePrivateRemote.cpp
 WebProcess/GPU/media/RemoteAudioDestinationProxy.cpp
 WebProcess/GPU/media/RemoteImageDecoderAVF.cpp
 WebProcess/GPU/media/RemoteImageDecoderAVFManager.cpp
 WebProcess/GPU/media/RemoteMediaPlayerManager.cpp
-WebProcess/GPU/media/RemoteMediaRecorderPrivateWriter.cpp
 WebProcess/GPU/media/RemoteVideoFrameProxy.cpp
 WebProcess/GPU/media/SourceBufferPrivateRemote.cpp
 WebProcess/GPU/webrtc/LibWebRTCCodecs.cpp
@@ -69,7 +60,6 @@ WebProcess/WebPage/WebPage.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/WebProcess.cpp
 WebProcess/WebStorage/StorageAreaMap.cpp
-WebProcess/cocoa/RemoteRealtimeVideoSource.cpp
 WebProcess/cocoa/VideoPresentationManager.mm
 WebProcess/cocoa/WebProcessCocoa.mm
 webpushd/ApplePushServiceConnection.mm

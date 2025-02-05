@@ -88,15 +88,19 @@ void LibWebRTCCodecsProxy::stopListeningForIPC(Ref<LibWebRTCCodecsProxy>&& refFr
 {
     protectedConnection()->removeWorkQueueMessageReceiver(Messages::LibWebRTCCodecsProxy::messageReceiverName());
 
-    protectedWorkQueue()->dispatch([this, protectedThis = WTFMove(refFromConnection)] {
-        assertIsCurrent(workQueue());
-        auto decoders = WTFMove(m_decoders);
+    protectedWorkQueue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, refFromConnection = WTFMove(refFromConnection)] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+
+        assertIsCurrent(protectedThis->workQueue());
+        auto decoders = WTFMove(protectedThis->m_decoders);
         for (auto& decoder : decoders.values()) {
             while (!decoder.decodingCallbacks.isEmpty())
                 decoder.decodingCallbacks.takeFirst()(false);
         }
         decoders.clear();
-        auto encoders = WTFMove(m_encoders);
+        auto encoders = WTFMove(protectedThis->m_encoders);
         for (auto& encoder : encoders.values()) {
             webrtc::releaseLocalEncoder(encoder.webrtcEncoder);
             while (!encoder.encodingCallbacks.isEmpty())
@@ -275,7 +279,7 @@ void LibWebRTCCodecsProxy::setFrameSize(VideoDecoderIdentifier identifier, uint1
     });
 }
 
-void LibWebRTCCodecsProxy::doDecoderTask(VideoDecoderIdentifier identifier, Function<void(Decoder&)>&& task)
+void LibWebRTCCodecsProxy::doDecoderTask(VideoDecoderIdentifier identifier, NOESCAPE Function<void(Decoder&)>&& task)
 {
     assertIsCurrent(workQueue());
     auto iterator = m_decoders.find(identifier);
@@ -468,13 +472,13 @@ void LibWebRTCCodecsProxy::encodeFrame(VideoEncoderIdentifier identifier, Shared
 
 void LibWebRTCCodecsProxy::notifyEncoderResult(VideoEncoderIdentifier identifier, bool result)
 {
-    protectedWorkQueue()->dispatch([this, weakThis = ThreadSafeWeakPtr { *this }, identifier, result] {
+    protectedWorkQueue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, identifier, result] {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
 
-        assertIsCurrent(workQueue());
-        if (auto* encoder = findEncoder(identifier))
+        assertIsCurrent(protectedThis->workQueue());
+        if (auto* encoder = protectedThis->findEncoder(identifier))
             encoder->encodingCallbacks.takeFirst()(result);
     });
 }
