@@ -812,14 +812,6 @@ private:
             }
 
             switch (m_value->child(0)->opcode()) {
-            case Sub:
-            case Div:
-            case Sqrt:
-            case Floor:
-            case Ceil:
-            case Trunc:
-            case Mul:
-            case Add:
             case PurifyNaN:
                 replaceWithIdentity(m_value->child(0));
                 break;
@@ -1709,6 +1701,22 @@ private:
             }
 
             // Turn this: Ceil(roundedValue)
+            // Into this: roundedValue
+            if (m_value->child(0)->isRounded()) {
+                replaceWithIdentity(m_value->child(0));
+                break;
+            }
+            break;
+
+        case FTrunc:
+            // Turn this: FTrunc(constant)
+            // Into this: trunc<value->type()>(constant)
+            if (Value* constant = m_value->child(0)->fTruncConstant(m_proc)) {
+                replaceWithNewValue(constant);
+                break;
+            }
+
+            // Turn this: FTrunc(roundedValue)
             // Into this: roundedValue
             if (m_value->child(0)->isRounded()) {
                 replaceWithIdentity(m_value->child(0));

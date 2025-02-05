@@ -2639,6 +2639,16 @@ public:
         m_assembler.frintm<32>(dest, src);
     }
 
+    void truncDouble(FPRegisterID src, FPRegisterID dst)
+    {
+        roundTowardZeroDouble(src, dst);
+    }
+
+    void truncFloat(FPRegisterID src, FPRegisterID dst)
+    {
+        roundTowardZeroFloat(src, dst);
+    }
+
     void roundTowardNearestIntDouble(FPRegisterID src, FPRegisterID dest)
     {
         m_assembler.frintn<64>(dest, src);

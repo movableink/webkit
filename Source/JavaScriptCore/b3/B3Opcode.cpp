@@ -210,6 +210,9 @@ void printInternal(PrintStream& out, Opcode opcode)
     case Floor:
         out.print("Floor");
         return;
+    case FTrunc:
+        out.print("FTrunc");
+        return;
     case Sqrt:
         out.print("Sqrt");
         return;

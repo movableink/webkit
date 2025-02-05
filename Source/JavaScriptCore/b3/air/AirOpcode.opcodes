@@ -632,6 +632,14 @@ FloorFloat U:F:32, D:F:32
     Tmp, Tmp
     x86: Addr, Tmp
 
+TruncDouble U:F:64, D:F:64
+    Tmp, Tmp
+    x86: Addr, Tmp
+
+TruncFloat U:F:32, D:F:32
+    Tmp, Tmp
+    x86: Addr, Tmp
+
 SqrtDouble U:F:64, D:F:64
     Tmp, Tmp
     x86: Addr, Tmp

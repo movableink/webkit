@@ -6090,32 +6090,6 @@ auto OMGIRGenerator::addF32Nearest(ExpressionType argVar, ExpressionType& result
     return { };
 }
 
-auto OMGIRGenerator::addF64Trunc(ExpressionType argVar, ExpressionType& result) -> PartialResult
-{
-    Value* arg = get(argVar);
-    PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Double, origin());
-    patchpoint->append(arg, ValueRep::SomeRegister);
-    patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
-        jit.roundTowardZeroDouble(params[1].fpr(), params[0].fpr());
-    });
-    patchpoint->effects = Effects::none();
-    result = push(patchpoint);
-    return { };
-}
-
-auto OMGIRGenerator::addF32Trunc(ExpressionType argVar, ExpressionType& result) -> PartialResult
-{
-    Value* arg = get(argVar);
-    PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Float, origin());
-    patchpoint->append(arg, ValueRep::SomeRegister);
-    patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
-        jit.roundTowardZeroFloat(params[1].fpr(), params[0].fpr());
-    });
-    patchpoint->effects = Effects::none();
-    result = push(patchpoint);
-    return { };
-}
-
 auto OMGIRGenerator::addI32TruncSF64(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);

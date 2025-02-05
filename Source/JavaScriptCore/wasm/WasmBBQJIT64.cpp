@@ -2920,7 +2920,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF32Trunc(Value operand, Value& resul
         "F32Trunc", TypeKind::F32,
         BLOCK(Value::fromF32(Math::truncFloat(operand.asF32()))),
         BLOCK(
-            m_jit.roundTowardZeroFloat(operandLocation.asFPR(), resultLocation.asFPR());
+            m_jit.truncFloat(operandLocation.asFPR(), resultLocation.asFPR());
         )
     )
 }
@@ -2931,7 +2931,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF64Trunc(Value operand, Value& resul
         "F64Trunc", TypeKind::F64,
         BLOCK(Value::fromF64(Math::truncDouble(operand.asF64()))),
         BLOCK(
-            m_jit.roundTowardZeroDouble(operandLocation.asFPR(), resultLocation.asFPR());
+            m_jit.truncDouble(operandLocation.asFPR(), resultLocation.asFPR());
         )
     )
 }

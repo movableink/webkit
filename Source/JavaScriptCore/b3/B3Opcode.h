@@ -111,6 +111,7 @@ enum Opcode : uint8_t {
     Abs,
     Ceil,
     Floor,
+    FTrunc,
     Sqrt,
     FMax,
     FMin,

@@ -331,6 +331,7 @@ private:
                 case Abs:
                 case Ceil:
                 case Floor:
+                case FTrunc:
                 case Neg:
                 case Sqrt: {
                     Value* child = value->child(0);

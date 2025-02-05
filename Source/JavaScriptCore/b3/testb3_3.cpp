@@ -2421,6 +2421,84 @@ void testFloorArgWithEffectfulDoubleConversion(float a)
     CHECK(isIdentical(effect, static_cast<double>(floorf(a))));
 }
 
+void testFTruncArg(double a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(proc, FTrunc, Origin(), arguments[0]));
+
+    CHECK(isIdentical(compileAndRun<double>(proc, a), trunc(a)));
+}
+
+void testFTruncImm(double a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* argument = root->appendNew<ConstDoubleValue>(proc, Origin(), a);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(proc, FTrunc, Origin(), argument));
+
+    CHECK(isIdentical(compileAndRun<double>(proc), trunc(a)));
+}
+
+void testFTruncMem(double a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double*>(proc, root);
+    Value* address = arguments[0];
+    MemoryValue* loadDouble = root->appendNew<MemoryValue>(proc, Load, Double, Origin(), address);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(proc, FTrunc, Origin(), loadDouble));
+
+    CHECK(isIdentical(compileAndRun<double>(proc, &a), trunc(a)));
+}
+
+void testFTruncArg(float a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
+    Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
+    Value* result = root->appendNew<Value>(proc, FTrunc, Origin(), argument);
+    Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
+    root->appendNewControlValue(proc, Return, Origin(), result32);
+
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(truncf(a))));
+}
+
+void testFTruncImm(float a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* argument = root->appendNew<ConstFloatValue>(proc, Origin(), a);
+    Value* result = root->appendNew<Value>(proc, FTrunc, Origin(), argument);
+    Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
+    root->appendNewControlValue(proc, Return, Origin(), result32);
+
+    CHECK(isIdentical(compileAndRun<int32_t>(proc), std::bit_cast<int32_t>(truncf(a))));
+}
+
+void testFTruncMem(float a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<float*>(proc, root);
+    Value* address = arguments[0];
+    MemoryValue* loadFloat = root->appendNew<MemoryValue>(proc, Load, Float, Origin(), address);
+    Value* result = root->appendNew<Value>(proc, FTrunc, Origin(), loadFloat);
+    Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
+    root->appendNewControlValue(proc, Return, Origin(), result32);
+
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), std::bit_cast<int32_t>(truncf(a))));
+}
+
 double correctSqrt(double value)
 {
 #if CPU(X86_64)

@@ -323,6 +323,7 @@ public:
             case Abs:
             case Ceil:
             case Floor:
+            case FTrunc:
             case Sqrt:
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
                 VALIDATE(value->numChildren() == 1, ("At ", *value));

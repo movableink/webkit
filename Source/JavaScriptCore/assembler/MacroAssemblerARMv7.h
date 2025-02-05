@@ -1883,6 +1883,12 @@ public:
         CRASH();
     }
 
+    NO_RETURN_DUE_TO_CRASH void truncFloat(FPRegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsFloatingPointRounding());
+        CRASH();
+    }
+
     NO_RETURN_DUE_TO_CRASH void roundTowardNearestIntFloat(FPRegisterID, FPRegisterID)
     {
         ASSERT(!supportsFloatingPointRounding());
@@ -1902,6 +1908,12 @@ public:
     }
 
     NO_RETURN_DUE_TO_CRASH void floorDouble(FPRegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsFloatingPointRounding());
+        CRASH();
+    }
+
+    NO_RETURN_DUE_TO_CRASH void truncDouble(FPRegisterID, FPRegisterID)
     {
         ASSERT(!supportsFloatingPointRounding());
         CRASH();

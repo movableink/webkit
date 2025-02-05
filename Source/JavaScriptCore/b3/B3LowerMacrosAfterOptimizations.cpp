@@ -134,6 +134,28 @@ private:
                 m_value->replaceWithIdentity(result);
                 break;
             }
+            case FTrunc: {
+                if (MacroAssembler::supportsFloatingPointRounding())
+                    break;
+
+                Value* functionAddress = nullptr;
+                if (m_value->type() == Double)
+                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::truncDouble));
+                else if (m_value->type() == Float)
+                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::truncFloat));
+                else
+                    RELEASE_ASSERT_NOT_REACHED();
+
+                Value* result = m_insertionSet.insert<CCallValue>(m_index,
+                    m_value->type(),
+                    m_origin,
+                    Effects::none(),
+                    functionAddress,
+                    m_value->child(0));
+                m_value->replaceWithIdentity(result);
+                break;
+            }
+
             case Neg: {
                 if (!m_value->type().isFloat())
                     break;

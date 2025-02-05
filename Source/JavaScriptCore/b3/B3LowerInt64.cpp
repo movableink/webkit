@@ -962,6 +962,7 @@ private:
         case Abs:
         case BottomTuple:
         case Ceil:
+        case FTrunc:
         case Const32:
         case ConstDouble:
         case ConstFloat:

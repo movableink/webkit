@@ -1547,7 +1547,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 roundedValue = Math::ceilDouble(*number);
             else {
                 ASSERT(node->op() == ArithTrunc);
-                roundedValue = trunc(*number);
+                roundedValue = Math::truncDouble(*number);
             }
 
             if (node->child1().useKind() == UntypedUse) {

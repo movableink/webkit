@@ -792,7 +792,7 @@ static SpeculatedType typeOfDoubleSumOrDifferenceOrProduct(SpeculatedType a, Spe
 
     // Impure NaN could become pure NaN during addition because addition may clear bits.
     if (result & SpecDoubleImpureNaN)
-        result |= SpecDoublePureNaN;
+        result |= SpecDoubleNaN;
     // Values could overflow, or fractions could become integers.
     if (result & SpecDoubleReal)
         result |= SpecDoubleReal;
@@ -813,7 +813,7 @@ SpeculatedType typeOfDoubleIncOrDec(SpeculatedType t)
 {
     // Impure NaN could become pure NaN during addition because addition may clear bits.
     if (t & SpecDoubleImpureNaN)
-        t |= SpecDoublePureNaN;
+        t |= SpecDoubleNaN;
     // Values could overflow, or fractions could become integers.
     if (t & SpecDoubleReal)
         t |= SpecDoubleReal;
@@ -847,7 +847,7 @@ SpeculatedType typeOfDoubleMinMax(SpeculatedType a, SpeculatedType b)
     SpeculatedType result = a | b;
     // Impure NaN could become pure NaN during addition because addition may clear bits.
     if (result & SpecDoubleImpureNaN)
-        result |= SpecDoublePureNaN;
+        result |= SpecDoubleNaN;
     return result;
 }
 
@@ -879,10 +879,15 @@ SpeculatedType typeOfDoubleAbs(SpeculatedType value)
 
 SpeculatedType typeOfDoubleRounding(SpeculatedType value)
 {
-    // Double Pure NaN can becomes impure when converted back from Float.
-    // and vice versa.
-    if (value & SpecDoubleNaN)
-        value |= SpecDoubleNaN;
+    if (isARM64()) {
+        if (value & SpecDoubleImpureNaN)
+            value |= SpecDoublePureNaN;
+    } else {
+        // Double Pure NaN can becomes impure when converted back from Float.
+        // and vice versa.
+        if (value & SpecDoubleNaN)
+            value |= SpecDoubleNaN;
+    }
     // We might lose bits, which leads to a value becoming integer-representable.
     if (value & SpecNonIntAsDouble)
         value |= SpecAnyIntAsDouble;

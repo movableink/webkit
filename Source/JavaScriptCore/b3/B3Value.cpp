@@ -459,6 +459,11 @@ Value* Value::floorConstant(Procedure&) const
     return nullptr;
 }
 
+Value* Value::fTruncConstant(Procedure&) const
+{
+    return nullptr;
+}
+
 Value* Value::sqrtConstant(Procedure&) const
 {
     return nullptr;
@@ -556,6 +561,7 @@ bool Value::isRounded() const
     switch (opcode()) {
     case Floor:
     case Ceil:
+    case FTrunc:
     case IToD:
     case IToF:
         return true;
@@ -664,6 +670,7 @@ Effects Value::effects() const
     case Abs:
     case Ceil:
     case Floor:
+    case FTrunc:
     case Sqrt:
     case BitwiseCast:
     case SExt8:
@@ -878,6 +885,7 @@ ValueKey Value::key() const
     case Abs:
     case Ceil:
     case Floor:
+    case FTrunc:
     case Sqrt:
     case SExt8:
     case SExt16:
@@ -1100,6 +1108,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case Abs:
     case Ceil:
     case Floor:
+    case FTrunc:
     case Sqrt:
     case CheckAdd:
     case CheckSub:

@@ -279,6 +279,13 @@ void run(const TestConfig* config)
     RUN_UNARY(testFloorArgWithUselessDoubleConversion, floatingPointOperands<float>());
     RUN_UNARY(testFloorArgWithEffectfulDoubleConversion, floatingPointOperands<float>());
 
+    RUN_UNARY(testFTruncArg, floatingPointOperands<double>());
+    RUN_UNARY(testFTruncImm, floatingPointOperands<double>());
+    RUN_UNARY(testFTruncMem, floatingPointOperands<double>());
+    RUN_UNARY(testFTruncArg, floatingPointOperands<float>());
+    RUN_UNARY(testFTruncImm, floatingPointOperands<float>());
+    RUN_UNARY(testFTruncMem, floatingPointOperands<float>());
+
     RUN_UNARY(testSqrtArg, floatingPointOperands<double>());
     RUN_UNARY(testSqrtImm, floatingPointOperands<double>());
     RUN_UNARY(testSqrtMem, floatingPointOperands<double>());

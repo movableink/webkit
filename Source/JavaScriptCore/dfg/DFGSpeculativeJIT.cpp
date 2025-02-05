@@ -6335,7 +6335,7 @@ void SpeculativeJIT::compileArithRounding(Node* node)
             case ArithTrunc: {
                 FPRTemporary rounded(this);
                 FPRReg resultFPR = rounded.fpr();
-                roundTowardZeroDouble(valueFPR, resultFPR);
+                truncDouble(valueFPR, resultFPR);
                 setResult(resultFPR);
                 return;
             }

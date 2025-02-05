@@ -6427,24 +6427,6 @@ auto OMGIRGenerator::addF32Nearest(ExpressionType argVar, ExpressionType& result
     return { };
 }
 
-auto OMGIRGenerator::addF64Trunc(ExpressionType argVar, ExpressionType& result) -> PartialResult
-{
-    Value* arg = get(argVar);
-    Value* callee = append<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(Math::f64_trunc));
-    Value* call = append<CCallValue>(m_proc, B3::Double, origin(), callee, arg);
-    result = push(call);
-    return { };
-}
-
-auto OMGIRGenerator::addF32Trunc(ExpressionType argVar, ExpressionType& result) -> PartialResult
-{
-    Value* arg = get(argVar);
-    Value* callee = append<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(Math::f32_trunc));
-    Value* call = append<CCallValue>(m_proc, B3::Float, origin(), callee, arg);
-    result = push(call);
-    return { };
-}
-
 auto OMGIRGenerator::addI32TruncSF64(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);

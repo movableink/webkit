@@ -72,6 +72,7 @@ namespace JSC { namespace B3 {
     case Abs: \
     case Ceil: \
     case Floor: \
+    case FTrunc: \
     case Sqrt: \
     case SExt8: \
     case SExt16: \

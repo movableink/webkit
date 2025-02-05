@@ -297,19 +297,9 @@ LValue Output::doubleFloor(LValue operand)
     return m_block->appendNew<B3::Value>(m_proc, B3::Floor, origin(), operand);
 }
 
-LValue Output::doubleTrunc(LValue value)
+LValue Output::doubleTrunc(LValue operand)
 {
-    if (MacroAssembler::supportsFloatingPointRounding()) {
-        PatchpointValue* result = patchpoint(Double);
-        result->append(value, ValueRep::SomeRegister);
-        result->setGenerator(
-            [] (CCallHelpers& jit, const StackmapGenerationParams& params) {
-                jit.roundTowardZeroDouble(params[1].fpr(), params[0].fpr());
-            });
-        result->effects = Effects::none();
-        return result;
-    }
-    return callWithoutSideEffects(Double, Math::truncDouble, value);
+    return m_block->appendNew<B3::Value>(m_proc, B3::FTrunc, origin(), operand);
 }
 
 LValue Output::doubleUnary(DFG::Arith::UnaryType type, LValue value)

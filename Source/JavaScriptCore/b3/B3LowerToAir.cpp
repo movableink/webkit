@@ -3895,6 +3895,11 @@ private:
             return;
         }
 
+        case FTrunc: {
+            appendUnOp<Air::Oops, Air::Oops, TruncDouble, TruncFloat>(m_value->child(0));
+            return;
+        }
+
         case Sqrt: {
             appendUnOp<Air::Oops, Air::Oops, SqrtDouble, SqrtFloat>(m_value->child(0));
             return;
