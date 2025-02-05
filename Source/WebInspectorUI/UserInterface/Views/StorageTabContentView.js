@@ -34,7 +34,6 @@ WI.StorageTabContentView = class StorageTabContentView extends WI.ContentBrowser
             ],
         });
 
-        WI.databaseManager.enable();
         WI.domStorageManager.enable();
         WI.indexedDBManager.enable();
     }
@@ -51,7 +50,6 @@ WI.StorageTabContentView = class StorageTabContentView extends WI.ContentBrowser
     static isTabAllowed()
     {
         return InspectorBackend.hasDomain("DOMStorage")
-            || InspectorBackend.hasDomain("Database")
             || InspectorBackend.hasDomain("IndexedDB");
     }
 
@@ -71,8 +69,6 @@ WI.StorageTabContentView = class StorageTabContentView extends WI.ContentBrowser
     {
         return representedObject instanceof WI.CookieStorageObject
             || representedObject instanceof WI.DOMStorageObject
-            || representedObject instanceof WI.DatabaseObject
-            || representedObject instanceof WI.DatabaseTableObject
             || representedObject instanceof WI.IndexedDatabase
             || representedObject instanceof WI.IndexedDatabaseObjectStore
             || representedObject instanceof WI.IndexedDatabaseObjectStoreIndex;
@@ -90,7 +86,6 @@ WI.StorageTabContentView = class StorageTabContentView extends WI.ContentBrowser
 
     closed()
     {
-        WI.databaseManager.disable();
         WI.domStorageManager.disable();
         WI.indexedDBManager.disable();
 

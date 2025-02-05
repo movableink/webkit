@@ -34,7 +34,6 @@
 #include "CSSSelector.h"
 #include "CanvasBase.h"
 #include "CanvasRenderingContext.h"
-#include "Database.h"
 #include "DocumentThreadableLoader.h"
 #include "Element.h"
 #include "Event.h"
@@ -280,8 +279,6 @@ public:
     static void willFireObserverCallback(ScriptExecutionContext&, const String& callbackType);
     static void didFireObserverCallback(ScriptExecutionContext&);
 
-    static void didOpenDatabase(Database&);
-
     static void didDispatchDOMStorageEvent(Page&, const String& key, const String& oldValue, const String& newValue, StorageType, const SecurityOrigin&);
 
     static bool shouldWaitForDebuggerOnStart(ScriptExecutionContext&);
@@ -484,8 +481,6 @@ private:
 
     static void willFireObserverCallbackImpl(InstrumentingAgents&, const String&);
     static void didFireObserverCallbackImpl(InstrumentingAgents&);
-
-    static void didOpenDatabaseImpl(InstrumentingAgents&, Database&);
 
     static void didDispatchDOMStorageEventImpl(InstrumentingAgents&, const String& key, const String& oldValue, const String& newValue, StorageType, const SecurityOrigin&);
 
@@ -1352,13 +1347,6 @@ inline void InspectorInstrumentation::interceptResponse(const LocalFrame& frame,
     ASSERT(InspectorInstrumentation::shouldInterceptResponse(frame, response));
     if (auto* agents = instrumentingAgents(frame))
         interceptResponseImpl(*agents, response, identifier, WTFMove(handler));
-}
-
-inline void InspectorInstrumentation::didOpenDatabase(Database& database)
-{
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(database.document()))
-        didOpenDatabaseImpl(*agents, database);
 }
 
 inline void InspectorInstrumentation::didDispatchDOMStorageEvent(Page& page, const String& key, const String& oldValue, const String& newValue, StorageType storageType, const SecurityOrigin& securityOrigin)

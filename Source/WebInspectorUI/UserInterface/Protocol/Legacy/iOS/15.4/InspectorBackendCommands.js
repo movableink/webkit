@@ -266,16 +266,6 @@ InspectorBackend.registerEvent("DOMStorage.domStorageItemUpdated", null, ["stora
 InspectorBackend.registerDOMStorageDispatcher = InspectorBackend.registerDispatcher.bind(InspectorBackend, "DOMStorage");
 InspectorBackend.activateDomain("DOMStorage", ["itml", "page", "web-page"]);
 
-// Database
-InspectorBackend.registerDomain("Database", ["page"]);
-InspectorBackend.registerCommand("Database.enable", null, [], []);
-InspectorBackend.registerCommand("Database.disable", null, [], []);
-InspectorBackend.registerCommand("Database.getDatabaseTableNames", null, [{"name": "databaseId", "type": "string"}], ["tableNames"]);
-InspectorBackend.registerCommand("Database.executeSQL", null, [{"name": "databaseId", "type": "string"}, {"name": "query", "type": "string"}], ["columnNames", "values", "sqlError"]);
-InspectorBackend.registerEvent("Database.addDatabase", null, ["database"]);
-InspectorBackend.registerDatabaseDispatcher = InspectorBackend.registerDispatcher.bind(InspectorBackend, "Database");
-InspectorBackend.activateDomain("Database", ["page", "web-page"]);
-
 // Debugger
 InspectorBackend.registerDomain("Debugger", ["itml", "javascript", "page", "service-worker", "worker"]);
 InspectorBackend.registerEnum("Debugger.BreakpointActionType", {Log: "log", Evaluate: "evaluate", Sound: "sound", Probe: "probe"});

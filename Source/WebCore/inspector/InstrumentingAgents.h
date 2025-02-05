@@ -51,7 +51,6 @@ class InspectorCanvasAgent;
 class InspectorDOMAgent;
 class InspectorDOMDebuggerAgent;
 class InspectorDOMStorageAgent;
-class InspectorDatabaseAgent;
 class InspectorLayerTreeAgent;
 class InspectorMemoryAgent;
 class InspectorNetworkAgent;
@@ -77,7 +76,6 @@ class WebDebuggerAgent;
 #define DEFINE_INSPECTOR_AGENT_DOMDebugger(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorDOMDebuggerAgent, DOMDebuggerAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_DOMDebugger_Page(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, PageDOMDebuggerAgent, PageDOMDebuggerAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_DOMStorage(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorDOMStorageAgent, DOMStorageAgent, Getter, Setter)
-#define DEFINE_INSPECTOR_AGENT_Database(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorDatabaseAgent, DatabaseAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Debugger_Web(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, WebDebuggerAgent, WebDebuggerAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Debugger_Page(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, PageDebuggerAgent, PageDebuggerAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Heap_Page(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, PageHeapAgent, PageHeapAgent, Getter, Setter)
@@ -121,7 +119,6 @@ class WebDebuggerAgent;
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Canvas) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Canvas_Page) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, CSS) \
-    DEFINE_ENABLED_INSPECTOR_AGENT(macro, Database) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Debugger_Page) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Debugger_Web) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, DOMDebugger) \

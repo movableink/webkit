@@ -494,7 +494,6 @@ inspector/agents/InspectorCanvasAgent.cpp
 inspector/agents/InspectorDOMAgent.cpp
 inspector/agents/InspectorDOMDebuggerAgent.cpp
 inspector/agents/InspectorDOMStorageAgent.cpp
-inspector/agents/InspectorDatabaseAgent.cpp
 inspector/agents/InspectorIndexedDBAgent.cpp
 inspector/agents/InspectorLayerTreeAgent.cpp
 inspector/agents/InspectorNetworkAgent.cpp

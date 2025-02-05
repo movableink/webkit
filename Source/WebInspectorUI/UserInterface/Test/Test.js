@@ -35,7 +35,6 @@ WI.loaded = function()
     InspectorBackend.registerConsoleDispatcher(WI.ConsoleObserver);
     InspectorBackend.registerDOMDispatcher(WI.DOMObserver);
     InspectorBackend.registerDOMStorageDispatcher(WI.DOMStorageObserver);
-    InspectorBackend.registerDatabaseDispatcher(WI.DatabaseObserver);
     InspectorBackend.registerDebuggerDispatcher(WI.DebuggerObserver);
     InspectorBackend.registerHeapDispatcher(WI.HeapObserver);
     InspectorBackend.registerInspectorDispatcher(WI.InspectorObserver);
@@ -55,7 +54,6 @@ WI.loaded = function()
         WI.targetManager = new WI.TargetManager,
         WI.networkManager = new WI.NetworkManager,
         WI.domStorageManager = new WI.DOMStorageManager,
-        WI.databaseManager = new WI.DatabaseManager,
         WI.indexedDBManager = new WI.IndexedDBManager,
         WI.domManager = new WI.DOMManager,
         WI.cssManager = new WI.CSSManager,
@@ -95,7 +93,6 @@ WI.contentLoaded = function()
     // Things that would normally get called by the UI, that we still want to do in tests.
     WI.animationManager.enable();
     WI.canvasManager.enable();
-    WI.databaseManager.enable();
     WI.domStorageManager.enable();
     WI.heapManager.enable();
     WI.indexedDBManager.enable();
@@ -194,7 +191,6 @@ WI.updateFindString = () => {};
     makeAgentGetter("DOM");
     makeAgentGetter("DOMDebugger");
     makeAgentGetter("DOMStorage");
-    makeAgentGetter("Database");
     makeAgentGetter("Debugger");
     makeAgentGetter("Heap");
     makeAgentGetter("IndexedDB");

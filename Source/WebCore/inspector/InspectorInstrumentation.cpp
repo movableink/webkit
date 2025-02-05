@@ -44,7 +44,6 @@
 #include "InspectorDOMAgent.h"
 #include "InspectorDOMDebuggerAgent.h"
 #include "InspectorDOMStorageAgent.h"
-#include "InspectorDatabaseAgent.h"
 #include "InspectorLayerTreeAgent.h"
 #include "InspectorMemoryAgent.h"
 #include "InspectorNetworkAgent.h"
@@ -745,9 +744,6 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents& instrument
         if (auto* cssAgent = instrumentingAgents.enabledCSSAgent())
             cssAgent->reset();
 
-        if (auto* databaseAgent = instrumentingAgents.enabledDatabaseAgent())
-            databaseAgent->didCommitLoad();
-
         if (auto* domAgent = instrumentingAgents.persistentDOMAgent())
             domAgent->setDocument(frame.document());
 
@@ -1016,12 +1012,6 @@ void InspectorInstrumentation::consoleStopRecordingCanvasImpl(InstrumentingAgent
 {
     if (auto* canvasAgent = instrumentingAgents.enabledCanvasAgent())
         canvasAgent->consoleStopRecordingCanvas(context);
-}
-
-void InspectorInstrumentation::didOpenDatabaseImpl(InstrumentingAgents& instrumentingAgents, Database& database)
-{
-    if (auto* databaseAgent = instrumentingAgents.enabledDatabaseAgent())
-        databaseAgent->didOpenDatabase(database);
 }
 
 void InspectorInstrumentation::didDispatchDOMStorageEventImpl(InstrumentingAgents& instrumentingAgents, const String& key, const String& oldValue, const String& newValue, StorageType storageType, const SecurityOrigin& securityOrigin)

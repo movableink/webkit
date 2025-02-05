@@ -305,7 +305,6 @@ INSPECTOR_DOMAINS := \
     $(JavaScriptCore)/inspector/protocol/DOM.json \
     $(JavaScriptCore)/inspector/protocol/DOMDebugger.json \
     $(JavaScriptCore)/inspector/protocol/DOMStorage.json \
-    $(JavaScriptCore)/inspector/protocol/Database.json \
     $(JavaScriptCore)/inspector/protocol/Debugger.json \
     $(JavaScriptCore)/inspector/protocol/GenericTypes.json \
     $(JavaScriptCore)/inspector/protocol/Heap.json \

@@ -1404,7 +1404,6 @@ set(JavaScriptCore_INSPECTOR_DOMAINS
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/DOM.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/DOMDebugger.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/DOMStorage.json
-    ${JAVASCRIPTCORE_DIR}/inspector/protocol/Database.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/Debugger.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/GenericTypes.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/Heap.json

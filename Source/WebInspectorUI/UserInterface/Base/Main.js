@@ -25,8 +25,6 @@
 
 WI.ContentViewCookieType = {
     CookieStorage: "cookie-storage",
-    Database: "database",
-    DatabaseTable: "database-table",
     DOMStorage: "dom-storage",
     Resource: "resource", // includes Frame too.
     Timelines: "timelines"
@@ -76,8 +74,6 @@ WI.loaded = function()
         InspectorBackend.registerDOMDispatcher(WI.DOMObserver);
     if (InspectorBackend.registerDOMStorageDispatcher)
         InspectorBackend.registerDOMStorageDispatcher(WI.DOMStorageObserver);
-    if (InspectorBackend.registerDatabaseDispatcher)
-        InspectorBackend.registerDatabaseDispatcher(WI.DatabaseObserver);
     if (InspectorBackend.registerDebuggerDispatcher)
         InspectorBackend.registerDebuggerDispatcher(WI.DebuggerObserver);
     if (InspectorBackend.registerHeapDispatcher)
@@ -117,7 +113,6 @@ WI.loaded = function()
         WI.targetManager = new WI.TargetManager,
         WI.networkManager = new WI.NetworkManager,
         WI.domStorageManager = new WI.DOMStorageManager,
-        WI.databaseManager = new WI.DatabaseManager,
         WI.indexedDBManager = new WI.IndexedDBManager,
         WI.domManager = new WI.DOMManager,
         WI.cssManager = new WI.CSSManager,
@@ -143,7 +138,6 @@ WI.loaded = function()
     WI.domManager.addEventListener(WI.DOMManager.Event.InspectModeStateChanged, WI._inspectModeStateChanged, WI);
     WI.domManager.addEventListener(WI.DOMManager.Event.DOMNodeWasInspected, WI._domNodeWasInspected, WI);
     WI.domStorageManager.addEventListener(WI.DOMStorageManager.Event.DOMStorageObjectWasInspected, WI._domStorageWasInspected, WI);
-    WI.databaseManager.addEventListener(WI.DatabaseManager.Event.DatabaseWasInspected, WI._databaseWasInspected, WI);
     WI.networkManager.addEventListener(WI.NetworkManager.Event.MainFrameDidChange, WI._mainFrameDidChange, WI);
     WI.networkManager.addEventListener(WI.NetworkManager.Event.FrameWasAdded, WI._frameWasAdded, WI);
     WI.browserManager.enable();
@@ -1408,7 +1402,6 @@ WI.tabContentViewClassForRepresentedObject = function(representedObject)
         return WI.SourcesTabContentView;
 
     if (representedObject instanceof WI.DOMStorageObject || representedObject instanceof WI.CookieStorageObject ||
-        representedObject instanceof WI.DatabaseTableObject || representedObject instanceof WI.DatabaseObject ||
         representedObject instanceof WI.IndexedDatabaseObjectStore || representedObject instanceof WI.IndexedDatabase || representedObject instanceof WI.IndexedDatabaseObjectStoreIndex)
         return WI.StorageTabContentView;
 
@@ -2089,11 +2082,6 @@ WI._domStorageWasInspected = function(event)
     WI.showRepresentedObject(event.data.domStorage, null, {ignoreSearchTab: true});
 };
 
-WI._databaseWasInspected = function(event)
-{
-    WI.showStorageTab({initiatorHint: WI.TabBrowser.TabNavigationInitiator.Inspect});
-    WI.showRepresentedObject(event.data.database, null, {ignoreSearchTab: true});
-};
 
 WI._domNodeWasInspected = function(event)
 {

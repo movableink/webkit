@@ -1838,7 +1838,6 @@ inspector/InspectorAuditResourcesObject.cpp
 inspector/InspectorCanvas.cpp
 inspector/InspectorCanvasCallTracer.cpp
 inspector/InspectorController.cpp
-inspector/InspectorDatabaseResource.cpp
 inspector/InspectorFrontendAPIDispatcher.cpp
 inspector/InspectorFrontendClientLocal.cpp
 inspector/InspectorFrontendHost.cpp
@@ -1867,7 +1866,6 @@ inspector/agents/InspectorCanvasAgent.cpp
 inspector/agents/InspectorDOMAgent.cpp
 inspector/agents/InspectorDOMDebuggerAgent.cpp
 inspector/agents/InspectorDOMStorageAgent.cpp
-inspector/agents/InspectorDatabaseAgent.cpp
 inspector/agents/InspectorIndexedDBAgent.cpp
 inspector/agents/InspectorLayerTreeAgent.cpp
 inspector/agents/InspectorMemoryAgent.cpp

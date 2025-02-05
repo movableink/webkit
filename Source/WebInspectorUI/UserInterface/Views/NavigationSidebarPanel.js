@@ -629,7 +629,6 @@ WI.NavigationSidebarPanel = class NavigationSidebarPanel extends WI.SidebarPanel
     _isTreeElementWithoutRepresentedObject(treeElement)
     {
         return treeElement instanceof WI.FolderTreeElement
-            || treeElement instanceof WI.DatabaseHostTreeElement
             || treeElement instanceof WI.IndexedDatabaseHostTreeElement
             || treeElement instanceof WI.ThreadTreeElement
             || treeElement instanceof WI.IdleTreeElement
