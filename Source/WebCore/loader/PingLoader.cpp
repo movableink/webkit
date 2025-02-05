@@ -140,7 +140,7 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
 
     request.setHTTPMethod("POST"_s);
     request.setHTTPContentType("text/ping"_s);
-    request.setHTTPBody(FormData::create("PING"));
+    request.setHTTPBody(FormData::create("PING"_s));
     request.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
 
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();

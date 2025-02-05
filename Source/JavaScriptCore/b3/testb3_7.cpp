@@ -175,7 +175,7 @@ void testX86LeaAddAdd()
                 return strstr(disassembly, "lea 0x64(%rdi,%rsi,1), %rax")
                     || strstr(disassembly, "lea 0x64(%rsi,%rdi,1), %rax");
             },
-            "Expected to find something like lea 0x64(%rdi,%rsi,1), %rax but didn't!");
+            "Expected to find something like lea 0x64(%rdi,%rsi,1), %rax but didn't!"_s);
     }
 }
 

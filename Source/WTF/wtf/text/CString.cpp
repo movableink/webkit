@@ -49,6 +49,14 @@ Ref<CStringBuffer> CStringBuffer::createUninitialized(size_t length)
     return buffer;
 }
 
+CString::CString(ASCIILiteral string)
+{
+    if (!string)
+        return;
+
+    init(string.span());
+}
+
 CString::CString(const char* string)
 {
     if (!string)

@@ -33,8 +33,6 @@ public:
     AtomString(std::span<const LChar>);
     AtomString(std::span<const UChar>);
 
-    ALWAYS_INLINE static AtomString fromLatin1(const char* characters) { return AtomString(characters); }
-
     AtomString(AtomStringImpl*);
     AtomString(RefPtr<AtomStringImpl>&&);
     AtomString(Ref<AtomStringImpl>&&);
@@ -166,11 +164,6 @@ WTF_EXPORT_PRIVATE AtomString replaceUnpairedSurrogatesWithReplacementCharacter(
 WTF_EXPORT_PRIVATE String replaceUnpairedSurrogatesWithReplacementCharacter(String&&);
 
 inline AtomString::AtomString()
-{
-}
-
-inline AtomString::AtomString(const char* string)
-    : m_string(AtomStringImpl::addCString(string))
 {
 }
 

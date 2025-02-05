@@ -68,7 +68,7 @@ public:
     const String& pattern() const { return m_patternString; }
 
     bool isValid() const { return !Yarr::hasError(m_constructionErrorCode); }
-    const char* errorMessage() const { return Yarr::errorMessage(m_constructionErrorCode); }
+    ASCIILiteral errorMessage() const { return Yarr::errorMessage(m_constructionErrorCode); }
     JSObject* errorToThrow(JSGlobalObject* globalObject) { return Yarr::errorToThrow(globalObject, m_constructionErrorCode); }
     void reset()
     {

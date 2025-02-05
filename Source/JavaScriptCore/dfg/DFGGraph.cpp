@@ -1686,7 +1686,7 @@ static void logDFGAssertionFailure(
 void Graph::logAssertionFailure(
     std::nullptr_t, const char* file, int line, const char* function, const char* assertion)
 {
-    logDFGAssertionFailure(*this, "", file, line, function, assertion);
+    logDFGAssertionFailure(*this, ""_s, file, line, function, assertion);
 }
 
 void Graph::logAssertionFailure(

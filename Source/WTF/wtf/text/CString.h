@@ -66,6 +66,7 @@ class CString final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     CString() { }
+    WTF_EXPORT_PRIVATE CString(ASCIILiteral);
     WTF_EXPORT_PRIVATE CString(const char*);
     WTF_EXPORT_PRIVATE CString(std::span<const char>);
     CString(std::span<const LChar>);

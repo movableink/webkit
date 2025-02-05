@@ -118,8 +118,7 @@ public:
     static Identifier fromString(VM&, AtomStringImpl*);
     static Identifier fromString(VM&, Ref<AtomStringImpl>&&);
     static Identifier fromString(VM&, const AtomString&);
-    static Identifier fromString(VM& vm, SymbolImpl*);
-    static Identifier fromLatin1(VM&, const char*);
+    static Identifier fromString(VM&, SymbolImpl*);
 
     static Identifier fromUid(VM&, UniquedStringImpl* uid);
     static Identifier fromUid(const PrivateName&);
