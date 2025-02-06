@@ -65,6 +65,6 @@ EXCLUDED_SOURCE_FILE_NAMES = $(EXCLUDED_SOURCE_FILE_NAMES_$(WK_ENABLE_SWIFTUI));
 EXCLUDED_SOURCE_FILE_NAMES_NO = *;
 
 // This file can be removed when all configurations build with WebKit's SwiftUI support.
-INCLUDED_SOURCE_FILE_NAMES = _WebKit_SwiftUI/Empty.swift;
+INCLUDED_SOURCE_FILE_NAMES = _WebKit_SwiftUI/Empty.swift WebKit.framework;
 
 INSTALLHDRS_SCRIPT_PHASE = YES;
