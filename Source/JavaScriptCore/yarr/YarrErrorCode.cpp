@@ -68,7 +68,8 @@ ASCIILiteral errorMessage(ErrorCode error)
         REGEXP_ERROR_PREFIX "invalid flags"_s,                                        // InvalidRegularExpressionFlags
         REGEXP_ERROR_PREFIX "invalid operation in class set"_s,                       // InvalidClassSetOperation
         REGEXP_ERROR_PREFIX "negated class set may contain strings"_s,                // NegatedClassSetMayContainStrings
-        REGEXP_ERROR_PREFIX "invalid class set character"_s                           // InvalidClassSetCharacter
+        REGEXP_ERROR_PREFIX "invalid class set character"_s,                          // InvalidClassSetCharacter
+        REGEXP_ERROR_PREFIX "invalid regular expression modifier"_s                   // InvalidRegularExpressionModifier
     };
 
     return errorMessages[static_cast<unsigned>(error)];
@@ -110,6 +111,7 @@ JSObject* errorToThrow(JSGlobalObject* globalObject, ErrorCode error)
     case ErrorCode::InvalidClassSetOperation:
     case ErrorCode::NegatedClassSetMayContainStrings:
     case ErrorCode::InvalidClassSetCharacter:
+    case ErrorCode::InvalidRegularExpressionModifier:
         return createSyntaxError(globalObject, errorMessage(error));
     case ErrorCode::TooManyDisjunctions:
         return createOutOfMemoryError(globalObject, errorMessage(error));
