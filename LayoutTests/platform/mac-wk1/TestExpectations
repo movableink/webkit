@@ -3028,3 +3028,5 @@ webkit.org/b/286387 [ Debug ] inspector/worker/worker-create-and-terminate.html 
 webkit.org/b/286392 imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid-baseline-008.html [ Pass Failure ]
 
 webkit.org/b/286602 media/media-source/media-detachablemse-append.html [ Pass Failure ]
+
+webkit.org/b/255555 [ Ventura+ ] imported/w3c/web-platform-tests/xhr/request-content-length.any.worker.html [ Pass Failure ]
