@@ -1407,7 +1407,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::attemptToDecryptWithInstance(CDMInsta
 bool MediaPlayerPrivateMediaSourceAVFObjC::waitingForKey() const
 {
     RefPtr mediaSourcePrivate = m_mediaSourcePrivate;
-    return mediaSourcePrivate && m_mediaSourcePrivate->waitingForKey();
+    return mediaSourcePrivate && mediaSourcePrivate->waitingForKey();
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::waitingForKeyChanged()

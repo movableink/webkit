@@ -219,7 +219,6 @@ UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm
 UIProcess/Extensions/WebExtensionAlarm.cpp
 UIProcess/Extensions/WebExtensionCommand.cpp
 UIProcess/FrameProcess.cpp
-UIProcess/Gamepad/UIGamepadProvider.cpp
 UIProcess/GeolocationPermissionRequestManagerProxy.cpp
 UIProcess/Inspector/Agents/InspectorBrowserAgent.cpp
 UIProcess/Inspector/Cocoa/InspectorExtensionDelegate.mm
@@ -268,7 +267,6 @@ UIProcess/WebEditCommandProxy.cpp
 UIProcess/WebFrameProxy.cpp
 UIProcess/WebOpenPanelResultListenerProxy.cpp
 UIProcess/WebPageProxy.cpp
-UIProcess/WebPreferences.cpp
 UIProcess/WebPreferences.h
 UIProcess/WebProcessActivityState.cpp
 UIProcess/WebProcessCache.cpp

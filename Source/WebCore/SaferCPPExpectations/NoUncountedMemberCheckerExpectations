@@ -53,7 +53,6 @@ inspector/InspectorStyleSheet.cpp
 inspector/InspectorStyleSheet.h
 inspector/InspectorWebAgentBase.h
 inspector/agents/worker/WorkerAuditAgent.h
-inspector/agents/worker/WorkerDebuggerAgent.h
 layout/formattingContexts/inline/InlineItemsBuilder.h
 loader/appcache/ApplicationCacheStorage.cpp
 page/FrameSnapshotting.cpp

@@ -6,7 +6,6 @@ wtf/RecursiveLockAdapter.h
 wtf/RedBlackTree.h
 wtf/Ref.h
 wtf/ThreadSafeWeakPtr.h
-wtf/posix/ThreadingPOSIX.cpp
 wtf/text/AtomStringImpl.cpp
 wtf/text/CString.cpp
 wtf/text/StringImpl.cpp
