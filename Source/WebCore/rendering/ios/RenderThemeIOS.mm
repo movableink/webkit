@@ -535,7 +535,7 @@ void RenderThemeIOS::paintMenuListButtonDecorations(const RenderBox& box, const 
 
     FloatPoint glyphOrigin;
     glyphOrigin.setY(logicalRect.center().y() - glyphSize.height() / 2.0f);
-    if (style.isLeftToRightDirection())
+    if (!style.writingMode().isInlineFlipped())
         glyphOrigin.setX(logicalRect.maxX() - glyphSize.width() - box.style().borderEndWidth() - valueForLength(box.style().paddingEnd(), logicalRect.width()));
     else
         glyphOrigin.setX(logicalRect.x() + box.style().borderEndWidth() + valueForLength(box.style().paddingEnd(), logicalRect.width()));
@@ -627,7 +627,7 @@ bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& 
     if (isHorizontal) {
         double newWidth = trackClip.width() * valueRatio;
 
-        if (!box.style().isLeftToRightDirection())
+        if (box.writingMode().isInlineFlipped())
             trackClip.move(trackClip.width() - newWidth, 0);
 
         trackClip.setWidth(newWidth);
@@ -635,7 +635,7 @@ bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& 
         float height = trackClip.height();
         trackClip.setHeight(height * valueRatio);
 
-        if (box.writingMode().isHorizontal() || !box.style().isLeftToRightDirection())
+        if (box.writingMode().isHorizontal() || box.writingMode().isInlineFlipped())
             trackClip.setY(trackClip.y() + height - trackClip.height());
     }
 
@@ -758,7 +758,7 @@ bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintI
     if (renderProgress->isDeterminate()) {
         barInlineSize = clampTo<float>(renderProgress->position(), 0.0f, 1.0f) * trackInlineSize;
 
-        if (!renderProgress->style().isLeftToRightDirection())
+        if (renderProgress->writingMode().isInlineFlipped())
             barInlineStart = trackInlineStart + trackInlineSize - barInlineSize;
     } else {
         Seconds elapsed = MonotonicTime::now() - renderProgress->animationStartTime();
@@ -1629,7 +1629,7 @@ bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& p
     if (!isHorizontalWritingMode)
         gaugeRegionPosition = gaugeRegionPosition.transposedSize();
 
-    if (!renderer.style().isLeftToRightDirection())
+    if (renderer.writingMode().isInlineFlipped())
         gaugeRegionPosition = -gaugeRegionPosition;
 
     fillRect.move(gaugeRegionPosition);
