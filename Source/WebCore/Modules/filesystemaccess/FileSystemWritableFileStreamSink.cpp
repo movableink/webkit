@@ -56,39 +56,39 @@ static FileSystemWritableFileStream::WriteParams writeParamsFromChunk(FileSystem
     return result;
 }
 
-static void fetchDataBytesForWrite(const FileSystemWritableFileStream::DataVariant& data, CompletionHandler<void(bool, std::span<const uint8_t>)>&& completionHandler)
+static void fetchDataBytesForWrite(const FileSystemWritableFileStream::DataVariant& data, CompletionHandler<void(ExceptionOr<std::span<const uint8_t>>&&)>&& completionHandler)
 {
     WTF::switchOn(data, [&](const RefPtr<JSC::ArrayBufferView>& bufferView) {
         if (!bufferView || bufferView->isDetached())
-            return completionHandler(false, { });
+            return completionHandler(Exception { ExceptionCode::TypeError });
 
         RefPtr buffer = bufferView->possiblySharedBuffer();
         if (!buffer)
-            return completionHandler(false, { });
+            return completionHandler(Exception { ExceptionCode::TypeError });
 
-        completionHandler(true, buffer->span());
+        completionHandler(buffer->span());
     }, [&](const RefPtr<JSC::ArrayBuffer>& buffer) {
         if (!buffer || buffer->isDetached())
-            return completionHandler(false, { });
+            return completionHandler(Exception { ExceptionCode::TypeError });
 
-        completionHandler(true, buffer->span());
+        completionHandler(buffer->span());
     }, [&](const RefPtr<Blob>& blob) {
         if (!blob)
-            return completionHandler(false, { });
+            return completionHandler(Exception { ExceptionCode::TypeError });
 
         // FIXME: For optimization, we may just send blob URL to backend and let it fetch data instead of fetching data here.
         blob->getArrayBuffer([completionHandler = WTFMove(completionHandler)](auto&& result) mutable {
             if (result.hasException())
-                return completionHandler(false, { });
+                return completionHandler(result.releaseException());
 
             Ref buffer = result.releaseReturnValue();
             if (buffer->isDetached())
-                return completionHandler(false, { });
+                return completionHandler(Exception { ExceptionCode::TypeError });
 
-            completionHandler(true, buffer->span());
+            completionHandler(buffer->span());
         });
     }, [&](const String& string) {
-        completionHandler(true, string.utf8().span());
+        completionHandler(string.utf8().span());
     });
 }
 
@@ -125,14 +125,18 @@ void FileSystemWritableFileStreamSink::write(ScriptExecutionContext& context, JS
     case FileSystemWriteCommandType::Seek:
     case FileSystemWriteCommandType::Truncate:
         return protectedSource()->executeCommandForWritable(writeParams.type, writeParams.position, writeParams.size, { }, false, WTFMove(promise));
-    case FileSystemWriteCommandType::Write: {
+    case FileSystemWriteCommandType::Write:
         if (!writeParams.data)
             return protectedSource()->executeCommandForWritable(writeParams.type, writeParams.position, writeParams.size, { }, true, WTFMove(promise));
 
-        fetchDataBytesForWrite(*writeParams.data, [this, protectedThis = Ref { *this }, promise = WTFMove(promise), type = writeParams.type, size = writeParams.size, position = writeParams.position](bool fetched, auto dataBytes) mutable {
-            protectedSource()->executeCommandForWritable(type, position, size, dataBytes, !fetched, WTFMove(promise));
+        fetchDataBytesForWrite(*writeParams.data, [source = protectedSource(), promise = WTFMove(promise), type = writeParams.type, size = writeParams.size, position = writeParams.position](auto result) mutable {
+            if (result.hasException()) {
+                promise.reject(result.releaseException());
+                source->closeWritable(FileSystemWriteCloseReason::Aborted);
+                return;
+            }
+            source->executeCommandForWritable(type, position, size, result.returnValue(), false, WTFMove(promise));
         });
-    }
     }
 }
 
