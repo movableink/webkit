@@ -57,6 +57,7 @@
 #import "VideoPresentationManagerProxy.h"
 #import "ViewUpdateDispatcherMessages.h"
 #import "WKBrowsingContextControllerInternal.h"
+#import "WebAuthenticatorCoordinatorProxy.h"
 #import "WebAutocorrectionContext.h"
 #import "WebAutocorrectionData.h"
 #import "WebPage.h"
@@ -994,6 +995,9 @@ void WebPageProxy::didReleaseAllTouchPoints()
 
 void WebPageProxy::autofillLoginCredentials(const String& username, const String& password)
 {
+#if HAVE(WEB_AUTHN_AS_MODERN)
+    m_webAuthnCredentialsMessenger->recordAutofill(username, URL { currentURL() });
+#endif
     m_legacyMainFrameProcess->send(Messages::WebPage::AutofillLoginCredentials(username, password), webPageIDInMainFrameProcess());
 }
 

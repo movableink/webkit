@@ -162,7 +162,16 @@ void WebAuthenticatorCoordinatorProxy::handleRequest(WebAuthenticationRequestDat
 
     Ref authenticatorManager = m_webPageProxy->websiteDataStore().authenticatorManager();
     if (shouldRequestConditionalRegistration && !authenticatorManager->isMock() && !authenticatorManager->isVirtual()) {
-        m_webPageProxy->uiClient().requestWebAuthenticationConditonalMediationRegistration(WTFMove(username), WTFMove(afterConsent));
+        m_webPageProxy->uiClient().requestWebAuthenticationConditonalMediationRegistration(username, [weakThis = WeakPtr { *this }, username, afterConsent = WTFMove(afterConsent), origin = origin->securityOrigin()] (std::optional<bool> consented) mutable {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return afterConsent(false);
+#if HAVE(WEB_AUTHN_AS_MODERN)
+            afterConsent(consented ? *consented : protectedThis->removeMatchingAutofillEventForUsername(username, origin));
+#else
+            afterConsent(consented ? *consented : false);
+#endif
+        });
         return;
     }
 
@@ -186,6 +195,37 @@ void WebAuthenticatorCoordinatorProxy::isConditionalMediationAvailable(const Sec
     handler(false);
 }
 #endif // !HAVE(UNIFIED_ASC_AUTH_UI) && !HAVE(WEB_AUTHN_AS_MODERN)
+
+#if HAVE(WEB_AUTHN_AS_MODERN)
+
+void WebAuthenticatorCoordinatorProxy::removeExpiredAutofillEvents()
+{
+    m_recentAutofills.removeAllMatching([] (const AutofillEvent& event) {
+        constexpr Seconds autofillEventTimeout { 5 * 60 };
+        auto now = MonotonicTime::now();
+        return event.time + autofillEventTimeout < now;
+    });
+}
+
+void WebAuthenticatorCoordinatorProxy::recordAutofill(const String& username, const URL& url)
+{
+    removeExpiredAutofillEvents();
+    m_recentAutofills.append({
+        MonotonicTime::now(),
+        username,
+        url,
+    });
+}
+
+bool WebAuthenticatorCoordinatorProxy::removeMatchingAutofillEventForUsername(const String& username, const WebCore::SecurityOriginData& securityOrigin)
+{
+    removeExpiredAutofillEvents();
+    bool value = m_recentAutofills.removeLastMatching([&] (const AutofillEvent& event) {
+        return event.username == username && RegistrableDomain { event.url } == RegistrableDomain { securityOrigin };
+    });
+    return value;
+}
+#endif // HAVE(WEB_AUTHN_AS_MODERN)
 
 } // namespace WebKit
 

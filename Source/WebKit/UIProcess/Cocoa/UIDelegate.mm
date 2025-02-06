@@ -1877,18 +1877,18 @@ void UIDelegate::UIClient::runWebAuthenticationPanel(WebPageProxy& page, API::We
     }).get()];
 }
 
-void UIDelegate::UIClient::requestWebAuthenticationConditonalMediationRegistration(WTF::String&& username, CompletionHandler<void(bool)>&& completionHandler)
+void UIDelegate::UIClient::requestWebAuthenticationConditonalMediationRegistration(const WTF::String& username, CompletionHandler<void(std::optional<bool>)>&& completionHandler)
 {
     RefPtr uiDelegate = m_uiDelegate.get();
     if (!uiDelegate)
-        return completionHandler(false);
+        return completionHandler(std::nullopt);
 
     if (!uiDelegate->m_delegateMethods.webViewRequestWebAuthenticationConditionalMediationRegistrationForUserCompletionHandler)
-        return completionHandler(false);
+        return completionHandler(std::nullopt);
 
     auto delegate = uiDelegate->m_delegate.get();
     if (!delegate)
-        return completionHandler(false);
+        return completionHandler(std::nullopt);
 
     auto checker = CompletionHandlerCallChecker::create(delegate.get(), @selector(_webView:requestWebAuthenticationConditionalMediationRegistrationForUser:completionHandler:));
     [(id<WKUIDelegatePrivate>)delegate _webView:uiDelegate->m_webView.get().get() requestWebAuthenticationConditionalMediationRegistrationForUser:username completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler), checker = WTFMove(checker)] (BOOL result) mutable {
