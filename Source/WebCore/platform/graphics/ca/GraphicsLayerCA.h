@@ -112,7 +112,7 @@ public:
 #endif
 
 #if HAVE(CORE_MATERIAL)
-    WEBCORE_EXPORT void setAppleVisualEffect(AppleVisualEffect) override;
+    WEBCORE_EXPORT void setAppleVisualEffectData(AppleVisualEffectData) override;
 #endif
 
     WEBCORE_EXPORT void setBackgroundColor(const Color&) override;
@@ -530,7 +530,7 @@ private:
     void updateContentsScalingFilters();
 
 #if HAVE(CORE_MATERIAL)
-    void updateAppleVisualEffect();
+    void updateAppleVisualEffectData();
 #endif
 
     enum StructuralLayerPurpose {

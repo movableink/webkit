@@ -1223,6 +1223,13 @@ bool RenderStyle::changeRequiresLayerRepaint(const RenderStyle& other, OptionSet
             return true;
     }
 
+#if HAVE(CORE_MATERIAL)
+    if (m_rareInheritedData.ptr() != other.m_rareInheritedData.ptr()
+        && m_rareInheritedData->usedAppleVisualEffectForSubtree != other.m_rareInheritedData->usedAppleVisualEffectForSubtree) {
+        changedContextSensitiveProperties.add(StyleDifferenceContextSensitiveProperty::Filter);
+    }
+#endif
+
     return false;
 }
 

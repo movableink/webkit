@@ -143,6 +143,9 @@ StyleRareInheritedData::StyleRareInheritedData()
     , isInSubtreeWithBlendMode(false)
     , isInVisibilityAdjustmentSubtree(false)
     , usedContentVisibility(static_cast<unsigned>(ContentVisibility::Visible))
+#if HAVE(CORE_MATERIAL)
+    , usedAppleVisualEffectForSubtree(static_cast<unsigned>(AppleVisualEffect::None))
+#endif
     , usedTouchActions(RenderStyle::initialTouchActions())
     , strokeWidth(RenderStyle::initialStrokeWidth())
     , strokeColor(RenderStyle::initialStrokeColor())
@@ -239,6 +242,9 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , isInSubtreeWithBlendMode(o.isInSubtreeWithBlendMode)
     , isInVisibilityAdjustmentSubtree(o.isInVisibilityAdjustmentSubtree)
     , usedContentVisibility(o.usedContentVisibility)
+#if HAVE(CORE_MATERIAL)
+    , usedAppleVisualEffectForSubtree(o.usedAppleVisualEffectForSubtree)
+#endif
     , usedTouchActions(o.usedTouchActions)
     , eventListenerRegionTypes(o.eventListenerRegionTypes)
     , strokeWidth(o.strokeWidth)
@@ -369,6 +375,9 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && eventListenerRegionTypes == o.eventListenerRegionTypes
         && effectiveInert == o.effectiveInert
         && usedContentVisibility == o.usedContentVisibility
+#if HAVE(CORE_MATERIAL)
+        && usedAppleVisualEffectForSubtree == o.usedAppleVisualEffectForSubtree
+#endif
         && strokeWidth == o.strokeWidth
         && strokeColor == o.strokeColor
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor
@@ -489,6 +498,9 @@ void StyleRareInheritedData::dumpDifferences(TextStream& ts, const StyleRareInhe
 
     LOG_IF_DIFFERENT_WITH_CAST(ContentVisibility, usedContentVisibility);
 
+#if HAVE(CORE_MATERIAL)
+    LOG_IF_DIFFERENT_WITH_CAST(AppleVisualEffect, usedAppleVisualEffectForSubtree);
+#endif
 
     LOG_IF_DIFFERENT(usedTouchActions);
     LOG_IF_DIFFERENT(eventListenerRegionTypes);

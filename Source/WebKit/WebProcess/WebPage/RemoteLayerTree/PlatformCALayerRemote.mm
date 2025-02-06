@@ -1120,17 +1120,17 @@ void PlatformCALayerRemote::setIsDescendentOfSeparatedPortal(bool value)
 
 #if HAVE(CORE_MATERIAL)
 
-WebCore::AppleVisualEffect PlatformCALayerRemote::appleVisualEffect() const
+WebCore::AppleVisualEffectData PlatformCALayerRemote::appleVisualEffectData() const
 {
-    return m_properties.appleVisualEffect;
+    return m_properties.appleVisualEffectData;
 }
 
-void PlatformCALayerRemote::setAppleVisualEffect(WebCore::AppleVisualEffect effect)
+void PlatformCALayerRemote::setAppleVisualEffectData(WebCore::AppleVisualEffectData effectData)
 {
-    if (m_properties.appleVisualEffect == effect)
+    if (m_properties.appleVisualEffectData == effectData)
         return;
 
-    m_properties.appleVisualEffect = effect;
+    m_properties.appleVisualEffectData = effectData;
     m_properties.notePropertiesChanged(LayerChange::AppleVisualEffectChanged);
 }
 

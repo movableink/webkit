@@ -82,6 +82,7 @@ inline void RenderStyle::setAppearance(StyleAppearance appearance) { SET_NESTED_
 inline void RenderStyle::setAppleColorFilter(FilterOperations&& ops) { SET_NESTED(m_rareInheritedData, appleColorFilter, operations, WTFMove(ops)); }
 #if HAVE(CORE_MATERIAL)
 inline void RenderStyle::setAppleVisualEffect(AppleVisualEffect effect) { SET_NESTED(m_nonInheritedData, rareData, appleVisualEffect, static_cast<unsigned>(effect)); }
+inline void RenderStyle::setUsedAppleVisualEffectForSubtree(AppleVisualEffect effect) { SET(m_rareInheritedData, usedAppleVisualEffectForSubtree, static_cast<unsigned>(effect)); }
 #endif
 inline void RenderStyle::setAspectRatio(double width, double height) { SET_NESTED_PAIR(m_nonInheritedData, miscData, aspectRatioWidth, width, aspectRatioHeight, height); }
 inline void RenderStyle::setAspectRatioType(AspectRatioType aspectRatioType) { SET_NESTED(m_nonInheritedData, miscData, aspectRatioType, static_cast<unsigned>(aspectRatioType)); }

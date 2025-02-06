@@ -896,7 +896,10 @@ void RenderLayerBacking::updateContentsScalingFilters(const RenderStyle& style)
 #if HAVE(CORE_MATERIAL)
 void RenderLayerBacking::updateAppleVisualEffect(const RenderStyle& style)
 {
-    m_graphicsLayer->setAppleVisualEffect(style.appleVisualEffect());
+    AppleVisualEffectData visualEffectData;
+    visualEffectData.effect = style.appleVisualEffect();
+    visualEffectData.contextEffect = style.usedAppleVisualEffectForSubtree();
+    m_graphicsLayer->setAppleVisualEffectData(visualEffectData);
 }
 #endif
 

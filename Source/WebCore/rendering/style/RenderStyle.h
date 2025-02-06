@@ -1164,6 +1164,8 @@ public:
     inline AppleVisualEffect appleVisualEffect() const;
     inline bool hasAppleVisualEffect() const;
     inline bool hasAppleVisualEffectRequiringBackdropFilter() const;
+
+    inline AppleVisualEffect usedAppleVisualEffectForSubtree() const;
 #endif
 
     inline MathStyle mathStyle() const;
@@ -1679,6 +1681,7 @@ public:
 
 #if HAVE(CORE_MATERIAL)
     inline void setAppleVisualEffect(AppleVisualEffect);
+    inline void setUsedAppleVisualEffectForSubtree(AppleVisualEffect);
 #endif
 
     void addCustomPaintWatchProperty(const AtomString&);

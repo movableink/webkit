@@ -179,6 +179,10 @@ public:
 
     unsigned usedContentVisibility : 2; // ContentVisibility
 
+#if HAVE(CORE_MATERIAL)
+    unsigned usedAppleVisualEffectForSubtree : 4; // AppleVisualEffect
+#endif
+
     OptionSet<TouchAction> usedTouchActions;
     OptionSet<EventListenerRegionType> eventListenerRegionTypes;
 

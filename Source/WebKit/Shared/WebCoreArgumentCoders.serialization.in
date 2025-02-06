@@ -7988,6 +7988,12 @@ enum class WebCore::AppleVisualEffect : uint8_t {
     VibrancySeparator,
 };
 
+header: <WebCore/AppleVisualEffect.h>
+[CustomHeader] struct WebCore::AppleVisualEffectData {
+    WebCore::AppleVisualEffect effect;
+    WebCore::AppleVisualEffect contextEffect;
+};
+
 #endif
 
 #if ENABLE(MEDIA_SOURCE)

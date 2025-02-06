@@ -310,8 +310,8 @@ public:
 #endif
 
 #if HAVE(CORE_MATERIAL)
-    virtual AppleVisualEffect appleVisualEffect() const = 0;
-    virtual void setAppleVisualEffect(AppleVisualEffect) = 0;
+    virtual AppleVisualEffectData appleVisualEffectData() const = 0;
+    virtual void setAppleVisualEffectData(AppleVisualEffectData) = 0;
 #endif
 
     virtual TiledBacking* tiledBacking() = 0;

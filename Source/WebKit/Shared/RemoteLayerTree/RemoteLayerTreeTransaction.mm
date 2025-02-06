@@ -248,7 +248,7 @@ static void dumpChangedLayers(TextStream& ts, const LayerPropertiesMap& changedL
 
 #if HAVE(CORE_MATERIAL)
         if (layerProperties.changedProperties & LayerChange::AppleVisualEffectChanged)
-            ts.dumpProperty("appleVisualEffect", layerProperties.appleVisualEffect);
+            ts.dumpProperty("appleVisualEffectData", layerProperties.appleVisualEffectData);
 #endif
     }
 }

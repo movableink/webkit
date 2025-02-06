@@ -716,6 +716,13 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (m_parentBoxStyle.justifyItems().positionType() == ItemPositionType::Legacy && style.justifyItems().position() == ItemPosition::Legacy)
         style.setJustifyItems(m_parentBoxStyle.justifyItems());
 
+#if HAVE(CORE_MATERIAL)
+    if (appleVisualEffectNeedsBackdrop(style.appleVisualEffect()))
+        style.setUsedAppleVisualEffectForSubtree(style.appleVisualEffect());
+    else
+        style.setUsedAppleVisualEffectForSubtree(m_parentStyle.usedAppleVisualEffectForSubtree());
+#endif
+
     style.setUsedTouchActions(computeUsedTouchActions(style, m_parentStyle.usedTouchActions()));
 
     // Counterparts in Element::addToTopLayer/removeFromTopLayer & SharingResolver::canShareStyleWithElement need to match!

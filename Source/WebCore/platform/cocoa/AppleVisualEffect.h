@@ -51,8 +51,18 @@ enum class AppleVisualEffect : uint8_t {
 };
 
 WEBCORE_EXPORT bool appleVisualEffectNeedsBackdrop(AppleVisualEffect);
+WEBCORE_EXPORT bool appleVisualEffectAppliesFilter(AppleVisualEffect);
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AppleVisualEffect);
+
+struct AppleVisualEffectData {
+    AppleVisualEffect effect { AppleVisualEffect::None };
+    AppleVisualEffect contextEffect { AppleVisualEffect::None };
+
+    bool operator==(const AppleVisualEffectData&) const = default;
+};
+
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AppleVisualEffectData);
 
 } // namespace WebCore
 

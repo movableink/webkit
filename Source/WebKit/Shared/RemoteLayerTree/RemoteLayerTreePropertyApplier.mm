@@ -160,6 +160,7 @@ static MTCoreMaterialRecipe materialRecipeForAppleVisualEffect(AppleVisualEffect
     case AppleVisualEffect::BlurChromeMaterial:
         return PAL::get_CoreMaterial_MTCoreMaterialRecipePlatformChromeLight();
     case AppleVisualEffect::None:
+        return PAL::get_CoreMaterial_MTCoreMaterialRecipeNone();
     case AppleVisualEffect::VibrancyLabel:
     case AppleVisualEffect::VibrancySecondaryLabel:
     case AppleVisualEffect::VibrancyTertiaryLabel:
@@ -171,6 +172,77 @@ static MTCoreMaterialRecipe materialRecipeForAppleVisualEffect(AppleVisualEffect
         ASSERT_NOT_REACHED();
         return nil;
     }
+}
+
+static MTCoreMaterialVisualStyle materialVisualStyleForAppleVisualEffect(AppleVisualEffect effect)
+{
+    switch (effect) {
+    case AppleVisualEffect::VibrancyLabel:
+    case AppleVisualEffect::VibrancyFill:
+        return PAL::get_CoreMaterial_MTCoreMaterialVisualStylePrimary();
+    case AppleVisualEffect::VibrancySecondaryLabel:
+    case AppleVisualEffect::VibrancySecondaryFill:
+        return PAL::get_CoreMaterial_MTCoreMaterialVisualStyleSecondary();
+    case AppleVisualEffect::VibrancyTertiaryLabel:
+    case AppleVisualEffect::VibrancyTertiaryFill:
+        return PAL::get_CoreMaterial_MTCoreMaterialVisualStyleTertiary();
+    case AppleVisualEffect::VibrancyQuaternaryLabel:
+        return PAL::get_CoreMaterial_MTCoreMaterialVisualStyleQuaternary();
+    case AppleVisualEffect::VibrancySeparator:
+        return PAL::get_CoreMaterial_MTCoreMaterialVisualStyleSeparator();
+    case AppleVisualEffect::None:
+    case AppleVisualEffect::BlurUltraThinMaterial:
+    case AppleVisualEffect::BlurThinMaterial:
+    case AppleVisualEffect::BlurMaterial:
+    case AppleVisualEffect::BlurThickMaterial:
+    case AppleVisualEffect::BlurChromeMaterial:
+        ASSERT_NOT_REACHED();
+        return nil;
+    }
+}
+
+static MTCoreMaterialVisualStyleCategory materialVisualStyleCategoryForAppleVisualEffect(AppleVisualEffect effect)
+{
+    switch (effect) {
+    case AppleVisualEffect::VibrancyLabel:
+    case AppleVisualEffect::VibrancySecondaryLabel:
+    case AppleVisualEffect::VibrancyTertiaryLabel:
+    case AppleVisualEffect::VibrancyQuaternaryLabel:
+        return PAL::get_CoreMaterial_MTCoreMaterialVisualStyleCategoryStroke();
+    case AppleVisualEffect::VibrancyFill:
+    case AppleVisualEffect::VibrancySecondaryFill:
+    case AppleVisualEffect::VibrancyTertiaryFill:
+    case AppleVisualEffect::VibrancySeparator:
+        return PAL::get_CoreMaterial_MTCoreMaterialVisualStyleCategoryFill();
+    case AppleVisualEffect::None:
+    case AppleVisualEffect::BlurUltraThinMaterial:
+    case AppleVisualEffect::BlurThinMaterial:
+    case AppleVisualEffect::BlurMaterial:
+    case AppleVisualEffect::BlurThickMaterial:
+    case AppleVisualEffect::BlurChromeMaterial:
+        ASSERT_NOT_REACHED();
+        return nil;
+    }
+}
+
+static void applyVisualStylingToLayer(CALayer *layer, AppleVisualEffect material, AppleVisualEffect visualStyling)
+{
+    MTCoreMaterialRecipe recipe = materialRecipeForAppleVisualEffect(material);
+
+    // Despite the name, MTVisualStylingCreateDictionaryRepresentation returns an autoreleased object.
+    RetainPtr visualStylingDescription = PAL::softLink_CoreMaterial_MTVisualStylingCreateDictionaryRepresentation(recipe, materialVisualStyleCategoryForAppleVisualEffect(visualStyling), materialVisualStyleForAppleVisualEffect(visualStyling), nil);
+
+    RetainPtr<NSArray<NSDictionary<NSString *, id> *>> filterDescriptionsArray = [visualStylingDescription objectForKey:@"filters"];
+    RetainPtr filterDescription = [filterDescriptionsArray firstObject];
+
+    NSArray *filters = nil;
+    if (filterDescription) {
+        RetainPtr<NSValue> colorMatrix = [filterDescription objectForKey:kCAFilterInputColorMatrix];
+        RetainPtr filter = [CAFilter filterWithType:kCAFilterVibrantColorMatrix];
+        [filter setValue:colorMatrix.get() forKey:kCAFilterInputColorMatrix];
+        filters = @[ filter.get() ];
+    }
+    [layer setFilters:filters];
 }
 
 #endif
@@ -377,9 +449,10 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
 #if HAVE(CORE_MATERIAL)
     if (properties.changedProperties & LayerChange::AppleVisualEffectChanged) {
         if (RetainPtr materialLayer = dynamic_objc_cast<MTMaterialLayer>(layer)) {
-            if (RetainPtr recipe = materialRecipeForAppleVisualEffect(properties.appleVisualEffect))
+            if (RetainPtr recipe = materialRecipeForAppleVisualEffect(properties.appleVisualEffectData.effect))
                 [materialLayer setRecipe:recipe.get()];
-        }
+        } else if (appleVisualEffectAppliesFilter(properties.appleVisualEffectData.effect))
+            applyVisualStylingToLayer(layer, properties.appleVisualEffectData.contextEffect, properties.appleVisualEffectData.effect);
     }
 #endif
 }

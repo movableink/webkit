@@ -811,14 +811,14 @@ void GraphicsLayerCA::setIsDescendentOfSeparatedPortal(bool isDescendentOfSepara
 #endif
 
 #if HAVE(CORE_MATERIAL)
-void GraphicsLayerCA::setAppleVisualEffect(AppleVisualEffect effect)
+void GraphicsLayerCA::setAppleVisualEffectData(AppleVisualEffectData effectData)
 {
-    if (effect == m_appleVisualEffect)
+    if (effectData == m_appleVisualEffectData)
         return;
 
-    bool backdropFiltersChanged = appleVisualEffectNeedsBackdrop(effect) != appleVisualEffectNeedsBackdrop(m_appleVisualEffect);
+    bool backdropFiltersChanged = appleVisualEffectNeedsBackdrop(effectData.effect) != appleVisualEffectNeedsBackdrop(m_appleVisualEffectData.effect);
 
-    GraphicsLayer::setAppleVisualEffect(effect);
+    GraphicsLayer::setAppleVisualEffectData(effectData);
 
     LayerChangeFlags changes = AppleVisualEffectChanged;
     if (backdropFiltersChanged)
@@ -2176,7 +2176,7 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
 
 #if HAVE(CORE_MATERIAL)
     if (m_uncommittedChanges & AppleVisualEffectChanged)
-        updateAppleVisualEffect();
+        updateAppleVisualEffectData();
 #endif
 
     if (m_uncommittedChanges & BackdropRootChanged)
@@ -2621,7 +2621,7 @@ void GraphicsLayerCA::updateBackdropFilters(CommitState& commitState)
 
     auto expectedLayerType = PlatformCALayer::LayerType::LayerTypeBackdropLayer;
 #if HAVE(CORE_MATERIAL)
-    if (appleVisualEffectNeedsBackdrop(m_appleVisualEffect))
+    if (appleVisualEffectNeedsBackdrop(m_appleVisualEffectData.effect))
         expectedLayerType = PlatformCALayer::LayerType::LayerTypeMaterialLayer;
 #endif
 
@@ -2643,8 +2643,8 @@ void GraphicsLayerCA::updateBackdropFilters(CommitState& commitState)
 
     bool shouldSetFilters = true;
 #if HAVE(CORE_MATERIAL)
-    if (m_appleVisualEffect != AppleVisualEffect::None) {
-        m_backdropLayer->setAppleVisualEffect(m_appleVisualEffect);
+    if (m_appleVisualEffectData.effect != AppleVisualEffect::None) {
+        m_backdropLayer->setAppleVisualEffectData(m_appleVisualEffectData);
         shouldSetFilters = false;
     }
 #endif
@@ -2759,10 +2759,15 @@ void GraphicsLayerCA::updateIsDescendentOfSeparatedPortal()
 #endif
 
 #if HAVE(CORE_MATERIAL)
-void GraphicsLayerCA::updateAppleVisualEffect()
+void GraphicsLayerCA::updateAppleVisualEffectData()
 {
-    if (m_backdropLayer && (appleVisualEffectNeedsBackdrop(m_backdropLayer->appleVisualEffect()) || appleVisualEffectNeedsBackdrop(m_appleVisualEffect)))
-        m_backdropLayer->setAppleVisualEffect(m_appleVisualEffect);
+    if (m_backdropLayer && (appleVisualEffectNeedsBackdrop(m_backdropLayer->appleVisualEffectData().effect) || appleVisualEffectNeedsBackdrop(m_appleVisualEffectData.effect)))
+        m_backdropLayer->setAppleVisualEffectData(m_appleVisualEffectData);
+
+    if (appleVisualEffectAppliesFilter(m_appleVisualEffectData.effect))
+        m_layer->setAppleVisualEffectData(m_appleVisualEffectData);
+    else
+        m_layer->setAppleVisualEffectData({ });
 }
 #endif
 
@@ -4406,7 +4411,7 @@ ASCIILiteral GraphicsLayerCA::purposeNameForInnerLayer(PlatformCALayer& layer) c
         return "contents shape mask layer"_s;
     if (&layer == m_backdropLayer.get()) {
 #if HAVE(CORE_MATERIAL)
-        if (m_backdropLayer->appleVisualEffect() != AppleVisualEffect::None)
+        if (m_backdropLayer->appleVisualEffectData().effect != AppleVisualEffect::None)
             return "backdrop layer (material)"_s;
 #endif
         return "backdrop layer"_s;

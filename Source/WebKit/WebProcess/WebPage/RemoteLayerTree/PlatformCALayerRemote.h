@@ -237,8 +237,8 @@ public:
 #endif
 
 #if HAVE(CORE_MATERIAL)
-    WebCore::AppleVisualEffect appleVisualEffect() const override;
-    void setAppleVisualEffect(WebCore::AppleVisualEffect) override;
+    WebCore::AppleVisualEffectData appleVisualEffectData() const override;
+    void setAppleVisualEffectData(WebCore::AppleVisualEffectData) override;
 #endif
 
     WebCore::TiledBacking* tiledBacking() override { return nullptr; }

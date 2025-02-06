@@ -420,7 +420,7 @@ void GraphicsLayer::removeFromParentInternal()
 bool GraphicsLayer::needsBackdrop() const
 {
 #if HAVE(CORE_MATERIAL)
-    if (appleVisualEffectNeedsBackdrop(m_appleVisualEffect))
+    if (appleVisualEffectNeedsBackdrop(m_appleVisualEffectData.effect))
         return true;
 #endif
     return !m_backdropFilters.isEmpty();
@@ -1016,8 +1016,8 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     }
 
 #if HAVE(CORE_MATERIAL)
-    if (m_appleVisualEffect != AppleVisualEffect::None)
-        ts << indent << "(appleVisualEffect "_s << m_appleVisualEffect << ")\n"_s;
+    if (m_appleVisualEffectData.effect != AppleVisualEffect::None)
+        ts << indent << "(appleVisualEffectData "_s << m_appleVisualEffectData << ")\n"_s;
 #endif
 
     if (m_maskLayer) {

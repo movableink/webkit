@@ -1,5 +1,8 @@
 foo
 bar
+two
+three
+four
 (GraphicsLayer
   (anchor 0.00 0.00)
   (bounds 800.00 600.00)
@@ -31,6 +34,32 @@ bar
               (backdrop layer (material)
                 (position 0.00 0.00)
                 (bounds 200.00 200.00)
+              )
+              (children 3
+                (GraphicsLayer
+                  (position 0.00 18.00)
+                  (bounds 200.00 18.00)
+                  (drawsContent 1)
+                  (appleVisualEffectData
+                  (effect vibrancy-secondary-label)
+                  (contextEffect blur-material))
+                )
+                (GraphicsLayer
+                  (position 0.00 36.00)
+                  (bounds 200.00 18.00)
+                  (drawsContent 1)
+                  (appleVisualEffectData
+                  (effect vibrancy-tertiary-label)
+                  (contextEffect blur-material))
+                )
+                (GraphicsLayer
+                  (position 0.00 54.00)
+                  (bounds 200.00 18.00)
+                  (drawsContent 1)
+                  (appleVisualEffectData
+                  (effect vibrancy-quaternary-label)
+                  (contextEffect blur-material))
+                )
               )
             )
           )

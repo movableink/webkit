@@ -1154,16 +1154,15 @@ void PlatformCALayerCocoa::setIsDescendentOfSeparatedPortal(bool)
 
 #if HAVE(CORE_MATERIAL)
 
-AppleVisualEffect PlatformCALayerCocoa::appleVisualEffect() const
+AppleVisualEffectData PlatformCALayerCocoa::appleVisualEffectData() const
 {
     // FIXME: Add an implementation for when UI-side compositing is disabled.
-    return m_appleVisualEffect;
+    return { };
 }
 
-void PlatformCALayerCocoa::setAppleVisualEffect(AppleVisualEffect effect)
+void PlatformCALayerCocoa::setAppleVisualEffectData(AppleVisualEffectData)
 {
     // FIXME: Add an implementation for when UI-side compositing is disabled.
-    m_appleVisualEffect = effect;
 }
 
 #endif
