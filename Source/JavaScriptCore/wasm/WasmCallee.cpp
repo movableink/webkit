@@ -486,29 +486,34 @@ const StackMap& OptimizingJITCallee::stackmap(CallSiteIndex callSiteIndex) const
 Box<PCToCodeOriginMap> OptimizingJITCallee::materializePCToOriginMap(B3::PCToOriginMap&& originMap, LinkBuffer& linkBuffer)
 {
     constexpr bool shouldBuildMapping = true;
-    PCToCodeOriginMapBuilder samplingProfilerBuilder(shouldBuildMapping);
     PCToCodeOriginMapBuilder builder(shouldBuildMapping);
     for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
         B3::Origin b3Origin = originRange.origin;
         auto* origin = std::bit_cast<const OMGOrigin*>(b3Origin.data());
         if (origin) {
             // We stash the location into a BytecodeIndex.
-            samplingProfilerBuilder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_opcodeOrigin.location())));
             builder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_callSiteIndex.bits())));
-        } else {
-            samplingProfilerBuilder.appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
+        } else
             builder.appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
-        }
     }
-
-    Box<PCToCodeOriginMap> samplingProfilerMap = nullptr;
-    if (Options::useSamplingProfiler())
-        samplingProfilerMap = Box<PCToCodeOriginMap>::create(WTFMove(samplingProfilerBuilder), linkBuffer);
     auto map = Box<PCToCodeOriginMap>::create(WTFMove(builder), linkBuffer);
     WTF::storeStoreFence();
     m_callSiteIndexMap = WTFMove(map);
 
-    return samplingProfilerMap;
+    if (Options::useSamplingProfiler()) {
+        PCToCodeOriginMapBuilder samplingProfilerBuilder(shouldBuildMapping);
+        for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
+            B3::Origin b3Origin = originRange.origin;
+            auto* origin = std::bit_cast<const OMGOrigin*>(b3Origin.data());
+            if (origin) {
+                // We stash the location into a BytecodeIndex.
+                samplingProfilerBuilder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_opcodeOrigin.location())));
+            } else
+                samplingProfilerBuilder.appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
+        }
+        return Box<PCToCodeOriginMap>::create(WTFMove(samplingProfilerBuilder), linkBuffer);
+    }
+    return nullptr;
 }
 
 #endif
