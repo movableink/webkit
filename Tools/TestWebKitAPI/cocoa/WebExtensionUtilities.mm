@@ -40,6 +40,9 @@
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
+// Enable this to test all web extension tests with site isolation.
+static constexpr BOOL shouldEnableSiteIsolation = NO;
+
 @interface TestWebExtensionManager () <WKWebExtensionControllerDelegatePrivate>
 @end
 
@@ -60,9 +63,14 @@
     if (!(self = [super init]))
         return nil;
 
+    if (!configuration)
+        configuration = WKWebExtensionControllerConfiguration.nonPersistentConfiguration;
+
+    configuration.webViewConfiguration.preferences._siteIsolationEnabled = shouldEnableSiteIsolation;
+
     _extension = extension;
     _context = [[WKWebExtensionContext alloc] initForExtension:extension];
-    _controller = [[WKWebExtensionController alloc] initWithConfiguration:configuration ?: WKWebExtensionControllerConfiguration.nonPersistentConfiguration];
+    _controller = [[WKWebExtensionController alloc] initWithConfiguration:configuration];
 
     // Grant all requested API permissions.
     for (WKWebExtensionPermission permission in _extension.requestedPermissions)
@@ -391,11 +399,14 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
     if (extensionController) {
         BOOL usingPrivateBrowsing = _window.usingPrivateBrowsing;
 
-        WKWebViewConfiguration *configuration = [[WKWebViewConfiguration alloc] init];
+        auto *configuration = [[WKWebViewConfiguration alloc] init];
         configuration.webExtensionController = extensionController;
         configuration.websiteDataStore = usingPrivateBrowsing ? WKWebsiteDataStore.nonPersistentDataStore : WKWebsiteDataStore.defaultDataStore;
         configuration.userContentController = userContentController(usingPrivateBrowsing);
-        configuration.preferences._developerExtrasEnabled = YES;
+
+        auto *preferences = configuration.preferences;
+        preferences._siteIsolationEnabled = shouldEnableSiteIsolation;
+        preferences._developerExtrasEnabled = YES;
 
         _webView = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration];
         _webView.navigationDelegate = self;
@@ -441,10 +452,14 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
     if ([_webView.URL.scheme isEqualToString:url.scheme])
         return;
 
-    WKWebViewConfiguration *configuration = [url.scheme hasPrefix:@"http"] ? [[WKWebViewConfiguration alloc] init] : context.webViewConfiguration;
+    auto *configuration = [url.scheme hasPrefix:@"http"] ? [[WKWebViewConfiguration alloc] init] : context.webViewConfiguration;
     configuration.webExtensionController = _extensionController;
     configuration.websiteDataStore = usingPrivateBrowsing ? WKWebsiteDataStore.nonPersistentDataStore : WKWebsiteDataStore.defaultDataStore;
     configuration.userContentController = userContentController(usingPrivateBrowsing);
+
+    auto *preferences = configuration.preferences;
+    preferences._siteIsolationEnabled = shouldEnableSiteIsolation;
+    preferences._developerExtrasEnabled = YES;
 
     _webView = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration];
     _webView.navigationDelegate = self;

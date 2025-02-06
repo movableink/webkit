@@ -3465,11 +3465,14 @@ WKWebViewConfiguration *WebExtensionContext::webViewConfiguration(WebViewPurpose
     configuration._corsDisablingPatterns = corsDisablingPatterns();
     configuration._crossOriginAccessControlCheckEnabled = NO;
     configuration._processDisplayName = processDisplayName();
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    configuration._relatedWebView = relatedWebView();
-    ALLOW_DEPRECATED_DECLARATIONS_END
     configuration._requiredWebExtensionBaseURL = baseURL();
     configuration._shouldRelaxThirdPartyCookieBlocking = YES;
+
+    if (!configuration.preferences._siteIsolationEnabled) {
+        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+        configuration._relatedWebView = relatedWebView();
+        ALLOW_DEPRECATED_DECLARATIONS_END
+    }
 
     // By default extension URLs are masked, for extension pages we can relax this.
     configuration._maskedURLSchemes = [NSSet set];
@@ -3501,11 +3504,13 @@ WKWebViewConfiguration *WebExtensionContext::webViewConfiguration(WebViewPurpose
 WebsiteDataStore* WebExtensionContext::websiteDataStore(std::optional<PAL::SessionID> sessionID) const
 {
     RefPtr extensionController = this->extensionController();
-        if (!extensionController)
+    if (!extensionController)
         return nullptr;
+
     RefPtr result = extensionController->websiteDataStore(sessionID);
     if (result && !result->isPersistent() && !hasAccessToPrivateData())
         return nullptr;
+
     return result.get();
 }
 
@@ -4228,32 +4233,36 @@ void WebExtensionContext::loadInspectorBackgroundPage(WebInspectorUIProxy& inspe
         }
 
         auto *inspectorWebView = inspector->protectedInspectorPage()->cocoaView().get();
-        auto *inspectorWebViewConfiguration = inspectorWebView.configuration;
-
         auto *configuration = webViewConfiguration(WebViewPurpose::Inspector);
 
-        // The devtools_page needs to load in the Inspector's process instead of the extension's web process.
-        // Force this by relating the web view to the Inspector's web view and sharing the same process pool and data store.
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        configuration._relatedWebView = inspectorWebView;
-        ALLOW_DEPRECATED_DECLARATIONS_END
-        configuration._processDisplayName = inspectorWebViewConfiguration._processDisplayName;
-        configuration.processPool = inspectorWebViewConfiguration.processPool;
-        configuration.websiteDataStore = inspectorWebViewConfiguration.websiteDataStore;
+        bool siteIsolationEnabled = configuration.preferences._siteIsolationEnabled;
+        if (!siteIsolationEnabled) {
+            // The devtools_page needs to load in the Inspector's process instead of the extension's web process.
+            // Force this by relating the web view to the Inspector's web view and sharing the same process pool and data store.
+            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+            configuration._relatedWebView = inspectorWebView;
+            ALLOW_DEPRECATED_DECLARATIONS_END
+
+            auto *inspectorWebViewConfiguration = inspectorWebView.configuration;
+            configuration.processPool = inspectorWebViewConfiguration.processPool;
+            configuration.websiteDataStore = inspectorWebViewConfiguration.websiteDataStore;
+            configuration._processDisplayName = inspectorWebViewConfiguration._processDisplayName;
+        }
 
         auto *inspectorBackgroundWebView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration];
         inspectorBackgroundWebView.UIDelegate = m_delegate.get();
         inspectorBackgroundWebView.navigationDelegate = m_delegate.get();
         inspectorBackgroundWebView.inspectable = m_inspectable;
 
-        // In order for new web view to use the same process as _relatedWebView we need to force it here. Otherwise a process swap
-        // will happen because the Inspector URL scheme and Web Extension scheme don't match.
-        inspectorBackgroundWebView._page->setAlwaysUseRelatedPageProcess();
+        if (!siteIsolationEnabled) {
+            // In order for new web view to use the same process as _relatedWebView we need to force it here. Otherwise a process swap
+            // will happen because the Inspector URL scheme and Web Extension scheme don't match.
+            inspectorBackgroundWebView._page->setAlwaysUseRelatedPageProcess();
+        }
 
         Ref inspectorExtension = result.value().releaseNonNull();
         inspectorExtension->setClient(makeUniqueRef<InspectorExtensionClient>(inspectorExtension, *this));
 
-        // FIXME: <https://webkit.org/b/283442> Make Web Inspector extensions work in site isolation.
         Ref process = inspectorBackgroundWebView._page->legacyMainFrameProcess();
 
         // Use foreground activity to keep background content responsive to events.
@@ -4273,7 +4282,7 @@ void WebExtensionContext::loadInspectorBackgroundPage(WebInspectorUIProxy& inspe
 
         auto appearance = inspector->protectedInspectorPage()->useDarkAppearance() ? Inspector::ExtensionAppearance::Dark : Inspector::ExtensionAppearance::Light;
 
-        ASSERT(inspectorWebView._page->legacyMainFrameProcess() == process);
+        ASSERT(siteIsolationEnabled || inspectorWebView._page->legacyMainFrameProcess() == process);
         process->send(Messages::WebExtensionContextProxy::AddInspectorPageIdentifier(inspectorWebView._page->webPageIDInMainFrameProcess(), tab->identifier(), windowIdentifier), identifier());
         process->send(Messages::WebExtensionContextProxy::AddInspectorBackgroundPageIdentifier(inspectorBackgroundWebView._page->webPageIDInMainFrameProcess(), tab->identifier(), windowIdentifier), identifier());
         process->send(Messages::WebExtensionContextProxy::DispatchDevToolsPanelsThemeChangedEvent(appearance), identifier());

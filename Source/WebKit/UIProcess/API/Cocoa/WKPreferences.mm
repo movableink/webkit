@@ -1753,6 +1753,16 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return _preferences->requiresPageVisibilityForVideoToBeNowPlaying();
 }
 
+- (BOOL)_siteIsolationEnabled
+{
+    return _preferences->siteIsolationEnabled();
+}
+
+- (void)_setSiteIsolationEnabled:(BOOL)enabled
+{
+    _preferences->setSiteIsolationEnabled(enabled);
+}
+
 @end
 
 @implementation WKPreferences (WKDeprecated)
