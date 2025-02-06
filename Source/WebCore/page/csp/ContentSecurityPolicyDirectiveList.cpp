@@ -108,11 +108,11 @@ static inline bool checkFrameAncestors(ContentSecurityPolicySourceListDirective*
     if (!directive)
         return true;
     bool didReceiveRedirectResponse = false;
-    for (auto* current = frame.tree().parent(); current; current = current->tree().parent()) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(current);
+    for (RefPtr current = frame.tree().parent(); current; current = current->tree().parent()) {
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(*current);
         if (!localFrame)
             continue;
-        URL origin = urlFromOrigin(localFrame->document()->securityOrigin());
+        URL origin = urlFromOrigin(localFrame->protectedDocument()->securityOrigin());
         if (!origin.isValid() || !directive->allows(origin, didReceiveRedirectResponse, ContentSecurityPolicySourceListDirective::ShouldAllowEmptyURLIfSourceListIsNotNone::No))
             return false;
     }

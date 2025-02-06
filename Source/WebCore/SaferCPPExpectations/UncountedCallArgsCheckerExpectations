@@ -1040,7 +1040,6 @@ page/cocoa/ResourceUsageOverlayCocoa.mm
 page/cocoa/ResourceUsageThreadCocoa.mm
 page/cocoa/WebTextIndicatorLayer.mm
 page/csp/ContentSecurityPolicy.cpp
-page/csp/ContentSecurityPolicyDirectiveList.cpp
 page/mac/DragControllerMac.mm
 page/mac/EventHandlerMac.mm
 page/mac/ImageOverlayControllerMac.mm

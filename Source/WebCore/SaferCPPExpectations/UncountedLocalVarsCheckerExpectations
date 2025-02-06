@@ -591,7 +591,6 @@ page/WorkerNavigator.cpp
 page/cocoa/ResourceUsageThreadCocoa.mm
 page/cocoa/WebTextIndicatorLayer.mm
 page/csp/ContentSecurityPolicy.cpp
-page/csp/ContentSecurityPolicyDirectiveList.cpp
 page/mac/EventHandlerMac.mm
 page/mac/ImageOverlayControllerMac.mm
 page/mac/ServicesOverlayController.mm
