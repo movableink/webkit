@@ -5162,6 +5162,7 @@
 		4103FBA22061BDB800C2EAF8 /* NetworkLoadChecker.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkLoadChecker.cpp; sourceTree = "<group>"; };
 		410482CB1DDD2FB500F006D0 /* RTCNetwork.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RTCNetwork.cpp; sourceTree = "<group>"; };
 		410482CC1DDD2FB500F006D0 /* RTCNetwork.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RTCNetwork.h; sourceTree = "<group>"; };
+		4105A0652D537C2B00EA2D19 /* FileSystemStorageManagerLock.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FileSystemStorageManagerLock.h; sourceTree = "<group>"; };
 		410AD2E12823BD9F009C93C8 /* RemoteVideoFrameObjectHeap.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = RemoteVideoFrameObjectHeap.mm; sourceTree = "<group>"; };
 		410BA139257135F2002E2F8A /* NetworkRTCTCPSocketCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NetworkRTCTCPSocketCocoa.mm; sourceTree = "<group>"; };
 		410BA13A257135F2002E2F8A /* NetworkRTCTCPSocketCocoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkRTCTCPSocketCocoa.h; sourceTree = "<group>"; };
@@ -10560,8 +10561,6 @@
 			isa = PBXGroup;
 			children = (
 				7D1A8A0B2D405B34001715DF /* API */,
-				7D1A8A0C2D405B34001715DF /* WebExtensionStorageSQLiteStore.h */,
-				7D1A8A0D2D405B34001715DF /* WebExtensionStorageSQLiteStore.cpp */,
 				1C627476288A1DDE00CED3A2 /* Cocoa */,
 				1CC78CD92C95F159003E3CDD /* WebExtension.cpp */,
 				1C3BEB5E2888710500E66E38 /* WebExtension.h */,
@@ -10587,6 +10586,8 @@
 				1C6B84CB2B0D6CF500E885DD /* WebExtensionMenuItem.h */,
 				1C73167A2AC1E676007FADA4 /* WebExtensionMessagePort.h */,
 				028D30762C616E8A004F4FC6 /* WebExtensionSidebar.h */,
+				7D1A8A0D2D405B34001715DF /* WebExtensionStorageSQLiteStore.cpp */,
+				7D1A8A0C2D405B34001715DF /* WebExtensionStorageSQLiteStore.h */,
 				1C66BDD72A8AD957009D4452 /* WebExtensionTab.h */,
 				1CAB9B8428F7427F00E6C77E /* WebExtensionURLSchemeHandler.h */,
 				1C66BDDD2A8AEADD009D4452 /* WebExtensionWindow.h */,
@@ -13639,6 +13640,7 @@
 				935B579826F51270008B48AC /* FileSystemStorageHandleRegistry.h */,
 				931A075126F06310004474CD /* FileSystemStorageManager.cpp */,
 				931A075026F06310004474CD /* FileSystemStorageManager.h */,
+				4105A0652D537C2B00EA2D19 /* FileSystemStorageManagerLock.h */,
 				93B631E327ABA5F700443A44 /* IDBStorageConnectionToClient.cpp */,
 				93B631E427ABA62700443A44 /* IDBStorageConnectionToClient.h */,
 				93B631E727ABA65C00443A44 /* IDBStorageManager.cpp */,

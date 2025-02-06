@@ -4,6 +4,7 @@ PASS truncate() to grow a file
 FAIL createWritable() fails when parent directory is removed assert_unreached: Should have rejected: undefined Reached unreachable code
 PASS createWritable({keepExistingData: true}): atomic writable file stream initialized with source contents
 PASS createWritable({keepExistingData: false}): atomic writable file stream initialized with empty file
+PASS createWritable() can be called on two handles representing the same file
 PASS cursor position: truncate size > offset
 PASS cursor position: truncate size < offset
 PASS commands are queued, stream is unlocked after each operation

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,29 +25,11 @@
 
 #pragma once
 
-#include "FileSystemWritableFileStreamIdentifier.h"
-#include "WritableStreamSink.h"
+#include <wtf/ObjectIdentifier.h>
 
 namespace WebCore {
-class FileSystemFileHandle;
 
-class FileSystemWritableFileStreamSink final : public WritableStreamSink {
-public:
-    static ExceptionOr<Ref<FileSystemWritableFileStreamSink>> create(FileSystemWritableFileStreamIdentifier, FileSystemFileHandle&);
-    ~FileSystemWritableFileStreamSink();
-
-private:
-    FileSystemWritableFileStreamSink(FileSystemWritableFileStreamIdentifier, FileSystemFileHandle&);
-    Ref<FileSystemFileHandle> protectedSource() const { return m_source; }
-
-    // WritableStreamSink
-    void write(ScriptExecutionContext&, JSC::JSValue, DOMPromiseDeferred<void>&&) final;
-    void close() final;
-    void error(String&&) final;
-
-    FileSystemWritableFileStreamIdentifier m_identifier;
-    const Ref<FileSystemFileHandle> m_source;
-    bool m_isClosed { false };
-};
+enum class FileSystemWritableFileStreamIdentifierType { };
+using FileSystemWritableFileStreamIdentifier = AtomicObjectIdentifier<FileSystemWritableFileStreamIdentifierType>;
 
 } // namespace WebCore

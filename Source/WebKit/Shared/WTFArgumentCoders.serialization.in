@@ -173,6 +173,7 @@ template: enum class WebCore::DOMCacheIdentifierType
 template: enum class WebCore::BroadcastChannelIdentifierType
 template: enum class WebCore::FileSystemHandleIdentifierType
 template: enum class WebCore::FileSystemSyncAccessHandleIdentifierType
+template: enum class WebCore::FileSystemWritableFileStreamIdentifierType
 template: enum class WebCore::IDBDatabaseConnectionIdentifierType
 template: enum class WebCore::IDBIndexIdentifierType
 template: enum class WebCore::IDBObjectStoreIdentifierType

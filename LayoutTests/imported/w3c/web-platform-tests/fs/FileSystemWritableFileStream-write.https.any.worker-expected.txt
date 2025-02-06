@@ -16,7 +16,7 @@ PASS write() with a string with unix line ending preserved
 PASS write() with a string with windows line ending preserved
 PASS write() with an empty array buffer to an empty file
 PASS write() with a valid typed array buffer
-FAIL atomic writes: writable file streams make atomic changes on close promise_test: Unhandled rejection with value: object "InvalidStateError: The object is in an invalid state."
+PASS atomic writes: writable file streams make atomic changes on close
 PASS atomic writes: write() after close() fails
 PASS atomic writes: truncate() after close() fails
 PASS atomic writes: close() after close() fails

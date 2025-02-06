@@ -121,6 +121,7 @@
 #include <WebCore/FetchIdentifier.h>
 #include <WebCore/FileSystemHandleIdentifier.h>
 #include <WebCore/FileSystemSyncAccessHandleIdentifier.h>
+#include <WebCore/FileSystemWritableFileStreamIdentifier.h>
 #include <WebCore/GlobalWindowIdentifier.h>
 #include <WebCore/IDBDatabaseConnectionIdentifier.h>
 #include <WebCore/IDBIndexIdentifier.h>
@@ -554,6 +555,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebCore::FetchIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::FileSystemHandleIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::FileSystemSyncAccessHandleIdentifier));
+    static_assert(sizeof(uint64_t) == sizeof(WebCore::FileSystemWritableFileStreamIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::FrameIdentifierID));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::IDBIndexIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::IDBObjectStoreIdentifier));
@@ -706,6 +708,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebCore::FetchIdentifier"_s,
         "WebCore::FileSystemHandleIdentifier"_s,
         "WebCore::FileSystemSyncAccessHandleIdentifier"_s,
+        "WebCore::FileSystemWritableFileStreamIdentifier"_s,
         "WebCore::FrameIdentifierID"_s,
         "WebCore::IDBIndexIdentifier"_s,
         "WebCore::IDBObjectStoreIdentifier"_s,

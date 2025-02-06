@@ -92,20 +92,21 @@ static void fetchDataBytesForWrite(const FileSystemWritableFileStream::DataVaria
     });
 }
 
-ExceptionOr<Ref<FileSystemWritableFileStreamSink>> FileSystemWritableFileStreamSink::create(FileSystemFileHandle& source)
+ExceptionOr<Ref<FileSystemWritableFileStreamSink>> FileSystemWritableFileStreamSink::create(FileSystemWritableFileStreamIdentifier identifier, FileSystemFileHandle& source)
 {
-    return adoptRef(*new FileSystemWritableFileStreamSink(source));
+    return adoptRef(*new FileSystemWritableFileStreamSink(identifier, source));
 }
 
-FileSystemWritableFileStreamSink::FileSystemWritableFileStreamSink(FileSystemFileHandle& source)
-    : m_source(source)
+FileSystemWritableFileStreamSink::FileSystemWritableFileStreamSink(FileSystemWritableFileStreamIdentifier identifier, FileSystemFileHandle& source)
+    : m_identifier(identifier)
+    , m_source(source)
 {
 }
 
 FileSystemWritableFileStreamSink::~FileSystemWritableFileStreamSink()
 {
     if (!m_isClosed)
-        protectedSource()->closeWritable(FileSystemWriteCloseReason::Completed);
+        protectedSource()->closeWritable(m_identifier, FileSystemWriteCloseReason::Completed);
 }
 
 // https://fs.spec.whatwg.org/#write-a-chunk
@@ -117,25 +118,25 @@ void FileSystemWritableFileStreamSink::write(ScriptExecutionContext& context, JS
     auto chunkResult = convert<IDLUnion<IDLArrayBufferView, IDLArrayBuffer, IDLInterface<Blob>, IDLUSVString, IDLDictionary<FileSystemWritableFileStream::WriteParams>>>(*context.globalObject(), value);
     if (UNLIKELY(chunkResult.hasException(scope))) {
         scope.clearException();
-        return protectedSource()->executeCommandForWritable(FileSystemWriteCommandType::Write, std::nullopt, std::nullopt, { }, true, WTFMove(promise));
+        return protectedSource()->executeCommandForWritable(m_identifier, FileSystemWriteCommandType::Write, std::nullopt, std::nullopt, { }, true, WTFMove(promise));
     }
 
     auto writeParams = writeParamsFromChunk(chunkResult.releaseReturnValue());
     switch (writeParams.type) {
     case FileSystemWriteCommandType::Seek:
     case FileSystemWriteCommandType::Truncate:
-        return protectedSource()->executeCommandForWritable(writeParams.type, writeParams.position, writeParams.size, { }, false, WTFMove(promise));
+        return protectedSource()->executeCommandForWritable(m_identifier, writeParams.type, writeParams.position, writeParams.size, { }, false, WTFMove(promise));
     case FileSystemWriteCommandType::Write:
         if (!writeParams.data)
-            return protectedSource()->executeCommandForWritable(writeParams.type, writeParams.position, writeParams.size, { }, true, WTFMove(promise));
+            return protectedSource()->executeCommandForWritable(m_identifier, writeParams.type, writeParams.position, writeParams.size, { }, true, WTFMove(promise));
 
-        fetchDataBytesForWrite(*writeParams.data, [source = protectedSource(), promise = WTFMove(promise), type = writeParams.type, size = writeParams.size, position = writeParams.position](auto result) mutable {
+        fetchDataBytesForWrite(*writeParams.data, [source = protectedSource(), identifier = m_identifier, promise = WTFMove(promise), type = writeParams.type, size = writeParams.size, position = writeParams.position](auto result) mutable {
             if (result.hasException()) {
                 promise.reject(result.releaseException());
-                source->closeWritable(FileSystemWriteCloseReason::Aborted);
+                source->closeWritable(identifier, FileSystemWriteCloseReason::Aborted);
                 return;
             }
-            source->executeCommandForWritable(type, position, size, result.returnValue(), false, WTFMove(promise));
+            source->executeCommandForWritable(identifier, type, position, size, result.returnValue(), false, WTFMove(promise));
         });
     }
 }
@@ -145,7 +146,7 @@ void FileSystemWritableFileStreamSink::close()
     ASSERT(!m_isClosed);
 
     m_isClosed = true;
-    protectedSource()->closeWritable(FileSystemWriteCloseReason::Completed);
+    protectedSource()->closeWritable(m_identifier, FileSystemWriteCloseReason::Completed);
 }
 
 void FileSystemWritableFileStreamSink::error(String&&)
@@ -153,7 +154,7 @@ void FileSystemWritableFileStreamSink::error(String&&)
     ASSERT(!m_isClosed);
 
     m_isClosed = true;
-    protectedSource()->closeWritable(FileSystemWriteCloseReason::Aborted);
+    protectedSource()->closeWritable(m_identifier, FileSystemWriteCloseReason::Aborted);
 }
 
 } // namespace WebCore
