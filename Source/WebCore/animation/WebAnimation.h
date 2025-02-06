@@ -100,7 +100,7 @@ public:
 
     enum class ReplaceState : uint8_t { Active, Removed, Persisted };
     ReplaceState replaceState() const { return m_replaceState; }
-    void setReplaceState(ReplaceState replaceState) { m_replaceState = replaceState; }
+    void setReplaceState(ReplaceState);
 
     bool pending() const { return hasPendingPauseTask() || hasPendingPlayTask(); }
 

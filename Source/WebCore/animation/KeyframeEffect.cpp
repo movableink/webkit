@@ -1241,31 +1241,12 @@ void KeyframeEffect::animationTimelineDidChange(const AnimationTimeline* timelin
 
     updateIsAssociatedWithProgressBasedTimeline();
 
-    auto target = targetStyleable();
-    if (!target)
-        return;
-
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    StackMembershipMutationScope stackMembershipMutationScope(*this);
-#endif
-
-    if (timeline)
-        target->ensureKeyframeEffectStack().addEffect(*this);
-    else
-        target->ensureKeyframeEffectStack().removeEffect(*this);
-}
-
-void KeyframeEffect::animationTimingDidChange()
-{
     updateEffectStackMembership();
 }
 
 void KeyframeEffect::animationRelevancyDidChange()
 {
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    if (threadedAnimationResolutionEnabled())
-        updateEffectStackMembership();
-#endif
+    updateEffectStackMembership();
 }
 
 void KeyframeEffect::updateEffectStackMembership()
@@ -1696,6 +1677,9 @@ const TimingFunction* KeyframeEffect::timingFunctionForKeyframeAtIndex(size_t in
 
 bool KeyframeEffect::canBeAccelerated() const
 {
+    if (!animation())
+        return false;
+
     if (m_acceleratedPropertiesState == AcceleratedProperties::None)
         return false;
 
@@ -1978,22 +1962,6 @@ void KeyframeEffect::wasAddedToEffectStack()
 void KeyframeEffect::wasRemovedFromEffectStack()
 {
     m_inTargetEffectStack = false;
-
-    if (!canBeAccelerated())
-        return;
-
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    if (threadedAnimationResolutionEnabled())
-        return;
-#endif
-
-    // If the effect was running accelerated, we need to mark it for removal straight away
-    // since it will not be invalidated by a future call to KeyframeEffectStack::applyPendingAcceleratedActions().
-    if (animation() && (isRunningAccelerated() || isAboutToRunAccelerated())) {
-        m_pendingAcceleratedActions.clear();
-        m_pendingAcceleratedActions.append(AcceleratedAction::Stop);
-        applyPendingAcceleratedActions();
-    }
 }
 
 void KeyframeEffect::willChangeRenderer()

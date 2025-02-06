@@ -134,7 +134,6 @@ public:
     OptionSet<AnimationImpact> apply(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
     void invalidate();
 
-    void animationTimingDidChange();
     void animationRelevancyDidChange();
     void transformRelatedPropertyDidChange();
     enum class RecomputationReason : uint8_t { LogicalPropertyChange, Other };

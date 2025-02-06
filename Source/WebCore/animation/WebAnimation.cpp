@@ -236,8 +236,6 @@ void WebAnimation::setEffectInternal(RefPtr<AnimationEffect>&& newEffect, bool d
             newTarget->animationWasAdded(*this);
     }
 
-    updateRelevance();
-
     InspectorInstrumentation::didSetWebAnimationEffect(*this);
 }
 
@@ -994,11 +992,6 @@ void WebAnimation::timingDidChange(DidSeek didSeek, SynchronouslyNotify synchron
     m_shouldSkipUpdatingFinishedStateWhenResolving = false;
     updateFinishedState(didSeek, synchronouslyNotify);
 
-    if (auto keyframeEffect = dynamicDowncast<KeyframeEffect>(m_effect.get())) {
-        updateRelevance();
-        keyframeEffect->animationTimingDidChange();
-    }
-
     if (silently == Silently::No && m_timeline)
         m_timeline->animationTimingDidChange(*this);
 };
@@ -1694,15 +1687,16 @@ bool WebAnimation::isReplaceable() const
 
 void WebAnimation::persist()
 {
-    auto previousReplaceState = std::exchange(m_replaceState, ReplaceState::Persisted);
+    setReplaceState(ReplaceState::Persisted);
+}
 
-    if (previousReplaceState == ReplaceState::Removed && m_timeline) {
-        if (auto keyframeEffect = dynamicDowncast<KeyframeEffect>(m_effect.get())) {
-            auto styleable = keyframeEffect->targetStyleable();
-            styleable->animationWasAdded(*this);
-            styleable->ensureKeyframeEffectStack().addEffect(*keyframeEffect);
-        }
-    }
+void WebAnimation::setReplaceState(ReplaceState replaceState)
+{
+    if (m_replaceState == replaceState)
+        return;
+
+    m_replaceState = replaceState;
+    updateRelevance();
 }
 
 ExceptionOr<void> WebAnimation::commitStyles()

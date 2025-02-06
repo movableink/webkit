@@ -239,8 +239,18 @@ bool Styleable::isRunningAcceleratedTransformAnimation() const
 
 bool Styleable::hasRunningAcceleratedAnimations() const
 {
-    if (auto* effectStack = keyframeEffectStack())
-        return effectStack->hasAcceleratedEffects(element.document().settings());
+    if (auto* effectStack = keyframeEffectStack()) {
+        if (effectStack->hasAcceleratedEffects(element.document().settings()))
+            return true;
+    }
+
+    for (RefPtr animation : WebAnimation::instances()) {
+        if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
+            if (keyframeEffect->isRunningAccelerated() && keyframeEffect->targetStyleable() == *this)
+                return true;
+        }
+    }
+
     return false;
 }
 

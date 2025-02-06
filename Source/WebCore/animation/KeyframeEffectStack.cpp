@@ -55,6 +55,8 @@ bool KeyframeEffectStack::addEffect(KeyframeEffect& effect)
     if (!effect.targetStyleable() || !effect.animation() || !effect.animation()->timeline() || !effect.animation()->isRelevant())
         return false;
 
+    ASSERT(!m_effects.contains(&effect));
+
     m_effects.append(effect);
     m_isSorted = false;
 
