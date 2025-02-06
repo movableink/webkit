@@ -920,7 +920,6 @@ layout/formattingContexts/inline/InlineItemsBuilder.cpp
 layout/integration/inline/LayoutIntegrationInlineContentBuilder.cpp
 layout/integration/inline/LayoutIntegrationLineLayout.cpp
 loader/ApplicationManifestLoader.cpp
-loader/ContentFilter.cpp
 loader/CrossOriginAccessControl.cpp
 loader/CrossOriginOpenerPolicy.cpp
 loader/CrossOriginPreflightChecker.cpp
@@ -1558,8 +1557,6 @@ svg/properties/SVGValuePropertyListAnimatorImpl.h
 testing/InternalSettings.cpp
 testing/Internals.cpp
 testing/LegacyMockCDM.cpp
-testing/MockContentFilter.cpp
-testing/MockContentFilterManager.cpp
 testing/MockMediaSessionCoordinator.cpp
 testing/MockPageOverlay.cpp
 testing/MockPageOverlayClient.cpp
