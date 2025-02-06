@@ -1957,3 +1957,5 @@ webkit.org/b/286843 [ Debug ] imported/w3c/web-platform-tests/screen-orientation
 webkit.org/b/287040 [ Sonoma arm64 ] fast/webgpu/ftoi.html [ Skip ]
 
 webkit.org/b/286653 [ Sequoia ] pdf/images/jpeg2000-embed-pdf.html [ Pass Failure ]
+
+webkit.org/b/287122 [ Ventura+ ] imported/w3c/web-platform-tests/html/capability-delegation/delegate-fullscreen-request-subframe-same-origin.https.tentative.html [ Pass Failure ]
