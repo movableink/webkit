@@ -2930,6 +2930,16 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(FORWARD_ACTION_TO_WKCONTENTVIEW)
     return _page->pageLoadState().wasPrivateRelayed();
 }
 
+- (NSString *)_proxyName
+{
+    return _page->pageLoadState().proxyName();
+}
+
+- (BOOL)_isContentFromNetwork
+{
+    return _page->pageLoadState().source() == WebCore::ResourceResponseBase::Source::Network;
+}
+
 - (void)_frames:(void (^)(_WKFrameTreeNode *))completionHandler
 {
     _page->getAllFrames([completionHandler = makeBlockPtr(completionHandler), page = Ref { *_page.get() }] (WebKit::FrameTreeNodeData&& data) {

@@ -3549,7 +3549,7 @@ enum class WebCore::ResourceLoadPriority : uint8_t {
     Opaqueredirect
 };
 
-[Nested] enum class WebCore::ResourceResponseBaseSource : uint8_t {
+[CustomHeader] enum class WebCore::ResourceResponseSource : uint8_t {
     Unknown,
     Network,
     DiskCache,
@@ -3564,7 +3564,7 @@ enum class WebCore::ResourceLoadPriority : uint8_t {
 
 using WebCore::ResourceResponseBase::Type = WebCore::ResourceResponseBaseType;
 using WebCore::ResourceResponseBase::Tainting = WebCore::ResourceResponseBaseTainting;
-using WebCore::ResourceResponseBase::Source = WebCore::ResourceResponseBaseSource;
+using WebCore::ResourceResponseBase::Source = WebCore::ResourceResponseSource;
 
 class WebCore::ResourceResponseBase {
     std::optional<WebCore::ResourceResponseData> getResponseData()

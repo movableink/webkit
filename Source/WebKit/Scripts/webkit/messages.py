@@ -1032,6 +1032,7 @@ def headers_for_type(type):
         'WebCore::ReasonForDismissingAlternativeText': ['<WebCore/AlternativeTextClient.h>'],
         'WebCore::RecentSearch': ['<WebCore/SearchPopupMenu.h>'],
         'WebCore::RedEyeReduction': ['<WebCore/RedEyeReduction.h>'],
+        'WebCore::ResourceResponseSource': ['<WebCore/ResourceResponseBase.h>'],
         'WebCore::ReloadOption': ['<WebCore/FrameLoaderTypes.h>'],
         'WebCore::RenderAsTextFlag': ['<WebCore/RenderTreeAsText.h>'],
         'WebCore::RenderingPurpose': ['<WebCore/RenderingMode.h>'],

@@ -62,7 +62,7 @@ static_assert(static_cast<unsigned>(WasPrivateRelayed::Yes) <= ((1U << bitWidthO
 
 enum class ResourceResponseBaseType : uint8_t { Basic, Cors, Default, Error, Opaque, Opaqueredirect };
 enum class ResourceResponseBaseTainting : uint8_t { Basic, Cors, Opaque, Opaqueredirect };
-enum class ResourceResponseBaseSource : uint8_t { Unknown, Network, DiskCache, DiskCacheAfterValidation, MemoryCache, MemoryCacheAfterValidation, ServiceWorker, ApplicationCache, DOMCache, InspectorOverride };
+enum class ResourceResponseSource : uint8_t { Unknown, Network, DiskCache, DiskCacheAfterValidation, MemoryCache, MemoryCacheAfterValidation, ServiceWorker, ApplicationCache, DOMCache, InspectorOverride };
 
 // Do not use this class directly, use the class ResourceResponse instead
 class ResourceResponseBase {
@@ -72,7 +72,7 @@ public:
     static constexpr unsigned bitWidthOfType = 3;
     using Tainting = ResourceResponseBaseTainting;
     static constexpr unsigned bitWidthOfTainting = 2;
-    using Source = ResourceResponseBaseSource;
+    using Source = ResourceResponseSource;
     static constexpr unsigned bitWidthOfSource = 4;
 
     static bool isRedirectionStatusCode(int code) { return code == 301 || code == 302 || code == 303 || code == 307 || code == 308; }
@@ -297,7 +297,7 @@ struct ResourceResponseData {
     ResourceResponseData() = default;
     ResourceResponseData(ResourceResponseData&&) = default;
     ResourceResponseData& operator=(ResourceResponseData&&) = default;
-    ResourceResponseData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, ResourceResponseBaseSource source, ResourceResponseBaseType type, ResourceResponseBaseTainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, String&& proxyName, bool isRangeRequested, std::optional<CertificateInfo> certificateInfo)
+    ResourceResponseData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, ResourceResponseSource source, ResourceResponseBaseType type, ResourceResponseBaseTainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, String&& proxyName, bool isRangeRequested, std::optional<CertificateInfo> certificateInfo)
         : url(WTFMove(url))
         , mimeType(WTFMove(mimeType))
         , expectedContentLength(expectedContentLength)

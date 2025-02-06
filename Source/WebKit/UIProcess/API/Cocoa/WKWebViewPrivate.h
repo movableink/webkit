@@ -164,6 +164,8 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 
 @interface WKWebView (WKPrivate)
 
+@property (nonatomic, readonly) NSString *_proxyName WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+@property (nonatomic, readonly) BOOL _isContentFromNetwork WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 // FIXME: This should return a _WKRemoteObjectRegistry *.
 @property (nonatomic, readonly) id _remoteObjectRegistry;
 @property (nonatomic, readonly) WKBrowsingContextHandle *_handle;
