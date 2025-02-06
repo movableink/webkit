@@ -75,11 +75,6 @@ bool defaultShouldPrintBackgrounds()
     return result;
 }
 
-bool defaultAlternateFormControlDesignEnabled()
-{
-    return PAL::currentUserInterfaceIdiomIsVision();
-}
-
 #endif
 
 #if ENABLE(FULLSCREEN_API)

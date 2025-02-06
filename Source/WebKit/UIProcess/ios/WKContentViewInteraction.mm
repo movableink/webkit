@@ -6054,8 +6054,10 @@ static void logTextInteraction(const char* methodName, UIGestureRecognizer *loup
 #if PLATFORM(APPLETV)
     return nil;
 #else
-    if (WebKit::defaultAlternateFormControlDesignEnabled())
+#if HAVE(UI_USER_INTERFACE_IDIOM_VISION)
+    if (self.traitCollection.userInterfaceIdiom == UIUserInterfaceIdiomVision)
         return nil;
+#endif
 
     if (!_formAccessoryView)
         _formAccessoryView = adoptNS([[WKFormAccessoryView alloc] initWithInputAssistantItem:self.inputAssistantItem delegate:self]);

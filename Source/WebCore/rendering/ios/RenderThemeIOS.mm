@@ -89,6 +89,7 @@
 #import <objc/runtime.h>
 #import <pal/spi/cf/CoreTextSPI.h>
 #import <pal/spi/ios/UIKitSPI.h>
+#import <pal/system/ios/UserInterfaceIdiom.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/StdLibExtras.h>
@@ -228,8 +229,7 @@ void RenderThemeIOS::adjustTextFieldStyle(RenderStyle& style, const Element* ele
         style.setBackgroundColor(systemColor(CSSValueWebkitControlBackground, styleColorOptions));
     };
 
-    bool useAlternateDesign = element->document().settings().alternateFormControlDesignEnabled();
-    if (useAlternateDesign) {
+    if (PAL::currentUserInterfaceIdiomIsVision()) {
         if (hasTextfieldAppearance)
             style.setBackgroundColor(Color::transparentBlack);
         else
@@ -281,8 +281,7 @@ void RenderThemeIOS::paintTextFieldDecorations(const RenderBox& box, const Paint
     } else if (is<HTMLTextAreaElement>(*element))
         shouldPaintFillAndInnerShadow = true;
 
-    auto useAlternateDesign = box.settings().alternateFormControlDesignEnabled();
-    if (useAlternateDesign && shouldPaintFillAndInnerShadow) {
+    if (PAL::currentUserInterfaceIdiomIsVision() && shouldPaintFillAndInnerShadow) {
         auto borderShape = BorderShape::shapeForBorderRect(box.style(), LayoutRect(rect));
         auto path = borderShape.pathForOuterShape(box.document().deviceScaleFactor());
         context.setFillColor(Color::black.colorWithAlphaByte(10));
@@ -297,7 +296,7 @@ void RenderThemeIOS::adjustTextAreaStyle(RenderStyle& style, const Element* elem
     if (!element)
         return;
 
-    if (!element->document().settings().alternateFormControlDesignEnabled())
+    if (!PAL::currentUserInterfaceIdiomIsVision())
         return;
 
     style.setBackgroundColor(Color::transparentBlack);
@@ -843,8 +842,7 @@ bool RenderThemeIOS::isSubmitStyleButton(const Element& element) const
 
 void RenderThemeIOS::adjustButtonLikeControlStyle(RenderStyle& style, const Element& element) const
 {
-    // FIXME: Implement button-like control adjustments for the alternate design.
-    if (element.document().settings().alternateFormControlDesignEnabled())
+    if (PAL::currentUserInterfaceIdiomIsVision())
         return;
 
     if (element.isDisabledFormControl())
@@ -1367,14 +1365,13 @@ Color RenderThemeIOS::checkboxRadioBorderColor(OptionSet<ControlStyle::State> st
     return defaultBorderColor;
 }
 
-Color RenderThemeIOS::checkboxRadioBackgroundColor(bool useAlternateDesign, const RenderStyle& style, OptionSet<ControlStyle::State> states, OptionSet<StyleColorOptions> styleColorOptions)
+Color RenderThemeIOS::checkboxRadioBackgroundColor(const RenderStyle& style, OptionSet<ControlStyle::State> states, OptionSet<StyleColorOptions> styleColorOptions)
 {
     bool isEmpty = !states.containsAny({ ControlStyle::State::Checked, ControlStyle::State::Indeterminate });
     bool isEnabled = states.contains(ControlStyle::State::Enabled);
     bool isPressed = states.contains(ControlStyle::State::Pressed);
 
-    if (useAlternateDesign) {
-        // FIXME (rdar://problem/83895064): The disabled state for the alternate appearance is currently unspecified; this is just a guess.
+    if (PAL::currentUserInterfaceIdiomIsVision()) {
         if (!isEnabled)
             return systemColor(isEmpty ? CSSValueWebkitControlBackground : CSSValueAppleSystemOpaqueTertiaryFill, styleColorOptions);
 
@@ -1461,7 +1458,7 @@ void RenderThemeIOS::paintCheckboxRadioInnerShadow(const PaintInfo& paintInfo, c
 
 bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    bool useAlternateDesign = box.settings().alternateFormControlDesignEnabled();
+    bool isVision = PAL::currentUserInterfaceIdiomIsVision();
 
     auto& context = paintInfo.context();
     GraphicsContextStateSaver stateSaver { context };
@@ -1474,7 +1471,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
     auto controlStates = extractControlStyleStatesForRenderer(box);
     auto styleColorOptions = box.styleColorOptions();
 
-    auto backgroundColor = checkboxRadioBackgroundColor(useAlternateDesign, box.style(), controlStates, styleColorOptions);
+    auto backgroundColor = checkboxRadioBackgroundColor(box.style(), controlStates, styleColorOptions);
 
     bool checked = controlStates.contains(ControlStyle::State::Checked);
     bool indeterminate = controlStates.contains(ControlStyle::State::Indeterminate);
@@ -1483,7 +1480,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
     if (empty) {
         Path path;
         path.addRoundedRect(checkboxRect);
-        if (!useAlternateDesign) {
+        if (!isVision) {
             context.setStrokeColor(checkboxRadioBorderColor(controlStates, styleColorOptions));
             context.setStrokeThickness(checkboxRadioBorderWidth * 2);
             context.setStrokeStyle(StrokeStyle::SolidStroke);
@@ -1493,7 +1490,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
         context.clipPath(path);
         context.drawPath(path);
 
-        if (useAlternateDesign)
+        if (isVision)
             paintCheckboxRadioInnerShadow(paintInfo, checkboxRect, controlStates);
 
         return false;
@@ -1501,7 +1498,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
 
     context.fillRoundedRect(checkboxRect, backgroundColor);
 
-    if (useAlternateDesign) {
+    if (isVision) {
         context.clipRoundedRect(checkboxRect);
         paintCheckboxRadioInnerShadow(paintInfo, checkboxRect, controlStates);
     }
@@ -1546,7 +1543,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
 
 bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    bool useAlternateDesign = box.settings().alternateFormControlDesignEnabled();
+    bool isVision = PAL::currentUserInterfaceIdiomIsVision();
 
     auto& context = paintInfo.context();
     GraphicsContextStateSaver stateSaver(context);
@@ -1554,7 +1551,7 @@ bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintI
     auto controlStates = extractControlStyleStatesForRenderer(box);
     auto styleColorOptions = box.styleColorOptions();
 
-    auto backgroundColor = checkboxRadioBackgroundColor(useAlternateDesign, box.style(), controlStates, styleColorOptions);
+    auto backgroundColor = checkboxRadioBackgroundColor(box.style(), controlStates, styleColorOptions);
 
     FloatRoundedRect radioRect { rect, FloatRoundedRect::Radii(rect.width() / 2, rect.height() / 2) };
 
@@ -1562,7 +1559,7 @@ bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintI
         context.setFillColor(backgroundColor);
         context.fillEllipse(rect);
 
-        if (useAlternateDesign) {
+        if (isVision) {
             context.clipRoundedRect(radioRect);
             paintCheckboxRadioInnerShadow(paintInfo, radioRect, controlStates);
         }
@@ -1580,7 +1577,7 @@ bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintI
     } else {
         Path path;
         path.addEllipseInRect(rect);
-        if (!useAlternateDesign) {
+        if (!isVision) {
             context.setStrokeColor(checkboxRadioBorderColor(controlStates, styleColorOptions));
             context.setStrokeThickness(checkboxRadioBorderWidth * 2);
             context.setStrokeStyle(StrokeStyle::SolidStroke);
@@ -1589,7 +1586,7 @@ bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintI
         context.clipPath(path);
         context.drawPath(path);
 
-        if (useAlternateDesign)
+        if (isVision)
             paintCheckboxRadioInnerShadow(paintInfo, radioRect, controlStates);
     }
 

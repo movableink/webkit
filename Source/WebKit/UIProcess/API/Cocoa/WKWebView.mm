@@ -676,10 +676,6 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SiteSpecificQuirksAreEnabledByDefault))
         pageConfiguration->preferences().setNeedsSiteSpecificQuirks(false);
 
-#if PLATFORM(IOS_FAMILY)
-    pageConfiguration->preferences().setAlternateFormControlDesignEnabled(WebKit::defaultAlternateFormControlDesignEnabled());
-#endif
-
     // For SharedPreferencesForWebProcess
     pageConfiguration->preferences().setAllowTestOnlyIPC(!![_configuration _allowTestOnlyIPC]);
     pageConfiguration->preferences().setUsesSingleWebProcess(pool.usesSingleWebProcess());

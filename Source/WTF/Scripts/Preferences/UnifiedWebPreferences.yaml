@@ -445,18 +445,6 @@ AllowsPictureInPictureMediaPlayback:
       default: true
   disableInLockdownMode: true
 
-AlternateFormControlDesignEnabled:
-  type: bool
-  status: embedder
-  condition: PLATFORM(IOS_FAMILY)
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
-
 AlternateFullScreenControlDesignEnabled:
   type: bool
   status: embedder

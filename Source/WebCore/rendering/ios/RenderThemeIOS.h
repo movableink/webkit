@@ -119,7 +119,7 @@ private:
     void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const IntRect&) override;
 
     Color checkboxRadioBorderColor(OptionSet<ControlStyle::State>, OptionSet<StyleColorOptions>);
-    Color checkboxRadioBackgroundColor(bool useAlternateDesign, const RenderStyle&, OptionSet<ControlStyle::State>, OptionSet<StyleColorOptions>);
+    Color checkboxRadioBackgroundColor(const RenderStyle&, OptionSet<ControlStyle::State>, OptionSet<StyleColorOptions>);
     RefPtr<Gradient> checkboxRadioBackgroundGradient(const FloatRect&, OptionSet<ControlStyle::State>);
     Color checkboxRadioIndicatorColor(OptionSet<ControlStyle::State>, OptionSet<StyleColorOptions>);
 

@@ -78,7 +78,6 @@ namespace WebKit {
 bool defaultPassiveTouchListenersAsDefaultOnDocument();
 bool defaultCSSOMViewScrollingAPIEnabled();
 bool defaultShouldPrintBackgrounds();
-bool defaultAlternateFormControlDesignEnabled();
 bool defaultUseAsyncUIKitInteractions();
 bool defaultWriteRichTextDataWhenCopyingOrDragging();
 #if ENABLE(TEXT_AUTOSIZING)
