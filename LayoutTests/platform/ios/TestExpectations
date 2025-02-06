@@ -2490,8 +2490,6 @@ webkit.org/b/153314 http/tests/history/back-to-post.py [ Pass Timeout ]
 
 webkit.org/b/153315 fast/css3-text/css3-text-decoration/text-underline-position/underline-visual-overflow-with-subpixel-position.html [ Failure ]
 
-webkit.org/b/153898 pageoverlay/overlay-small-frame-paints.html [ Pass Failure ]
-
 webkit.org/b/153933 css3/filters/huge-region.html [ Skip ]
 webkit.org/b/153933 css3/filters/huge-region-composited.html [ Skip ]
 webkit.org/b/153933 css3/filters/nested-filter.html [ Skip ]
