@@ -29,6 +29,7 @@
 #include <CoreFoundation/CFURL.h>
 #include <wtf/URLParser.h>
 #include <wtf/cf/CFURLExtras.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #include <wtf/text/CString.h>
 
 namespace WTF {
@@ -42,15 +43,6 @@ URL::URL(CFURLRef url)
         *this = URLParser(bytesAsString(url)).result();
 }
 
-#if !USE(FOUNDATION)
-
-RetainPtr<CFURLRef> URL::emptyCFURL()
-{
-    return nullptr;
-}
-
-#endif
-
 RetainPtr<CFURLRef> URL::createCFURL() const
 {
     if (isNull())
@@ -58,6 +50,9 @@ RetainPtr<CFURLRef> URL::createCFURL() const
 
     if (isEmpty())
         return emptyCFURL();
+
+    if (!isValid() && linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToNull))
+        return nullptr;
 
     RetainPtr<CFURLRef> result;
     if (LIKELY(m_string.is8Bit() && m_string.containsOnlyASCII())) {
@@ -69,13 +64,15 @@ RetainPtr<CFURLRef> URL::createCFURL() const
         result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, utf8Span.data(), utf8Span.size(), kCFStringEncodingUTF8, nullptr, true));
     }
 
-    if (protocolIsInHTTPFamily() && !isSameOrigin(result.get(), *this))
+    // This additional check is only needed for invalid URLs, for which we've already returned null with new SDKs.
+    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToNull)
+        && protocolIsInHTTPFamily()
+        && !isSameOrigin(result.get(), *this))
         return nullptr;
 
     return result;
 }
 
-#if !PLATFORM(WIN)
 String URL::fileSystemPath() const
 {
     auto cfURL = createCFURL();
@@ -84,6 +81,5 @@ String URL::fileSystemPath() const
 
     return adoptCF(CFURLCopyFileSystemPath(cfURL.get(), kCFURLPOSIXPathStyle)).get();
 }
-#endif
 
 }

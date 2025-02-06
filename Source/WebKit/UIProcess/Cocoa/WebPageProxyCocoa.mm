@@ -237,6 +237,8 @@ std::optional<IPC::AsyncReplyID> WebPageProxy::grantAccessToCurrentPasteboardDat
 void WebPageProxy::beginSafeBrowsingCheck(const URL& url, bool forMainFrameNavigation, WebFramePolicyListenerProxy& listener)
 {
 #if HAVE(SAFE_BROWSING)
+    if (!url.isValid())
+        return listener.didReceiveSafeBrowsingResults({ });
     SSBLookupContext *context = [SSBLookupContext sharedLookupContext];
     if (!context)
         return listener.didReceiveSafeBrowsingResults({ });

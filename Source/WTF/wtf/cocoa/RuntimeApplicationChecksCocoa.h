@@ -43,6 +43,7 @@ enum class SDKAlignedBehavior {
     BrowsingContextControllerSPIAccessRemoved,
     ContextMenuTriggersLinkActivationNavigationType,
     ConvertsInvalidURLsToBlank,
+    ConvertsInvalidURLsToNull,
     DataURLFragmentRemoval,
     DecidesPolicyBeforeLoadingQuickLookPreview,
     DefaultsToExcludingBackgroundsWhenPrinting,

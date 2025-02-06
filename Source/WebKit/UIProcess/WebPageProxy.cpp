@@ -2041,6 +2041,19 @@ void WebPageProxy::loadRequestWithNavigationShared(Ref<WebProcessProxy>&& proces
     auto transaction = pageLoadState->transaction();
 
     auto url = request.url();
+#if PLATFORM(COCOA)
+    bool urlIsInvalidButNotNull = !url.isValid() && !url.isNull();
+    if (urlIsInvalidButNotNull && WTF::linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToNull)) {
+        RunLoop::main().dispatch([weakThis = WeakPtr { *this }, request, navigation = Ref { navigation }] {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return;
+            protectedThis->m_navigationClient->didFailProvisionalNavigationWithError(*protectedThis, FrameInfoData { true, FrameType::Local, request }, navigation.ptr(), request.url(), cannotShowURLError(request), nullptr);
+        });
+        return;
+    }
+#endif
+
     if (shouldTreatAsContinuingLoad == ShouldTreatAsContinuingLoad::No)
         pageLoadState->setPendingAPIRequest(transaction, { navigation.navigationID(), url.string() });
 

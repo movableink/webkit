@@ -308,6 +308,8 @@ NSURL *URLByRemovingUserInfo(NSURL *URL)
 
 NSData *originalURLData(NSURL *URL)
 {
+    if (!URL)
+        return nil;
     auto data = bridge_cast(bytesAsCFData(bridge_cast(URL)));
     if (auto baseURL = bridge_cast(CFURLGetBaseURL(bridge_cast(URL))))
         return originalURLData(URLWithData(data.get(), baseURL));
