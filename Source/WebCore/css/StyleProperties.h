@@ -52,7 +52,6 @@ public:
         CSSPropertyID shorthandID() const { return m_metadata.shorthandID(); }
 
         bool isImportant() const { return m_metadata.m_important; }
-        bool isInherited() const { return m_metadata.m_inherited; }
         bool isImplicit() const { return m_metadata.m_implicit; }
 
         String cssName() const;

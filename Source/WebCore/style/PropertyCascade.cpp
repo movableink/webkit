@@ -248,11 +248,12 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
                 return false;
             }
 
-            if (m_includedProperties.contains(PropertyType::Inherited) && current.isInherited())
+            bool currentIsInherited = CSSProperty::isInheritedProperty(current.id());
+            if (m_includedProperties.contains(PropertyType::Inherited) && currentIsInherited)
                 return true;
             if (m_includedProperties.contains(PropertyType::ExplicitlyInherited) && isValueID(*current.value(), CSSValueInherit))
                 return true;
-            if (m_includedProperties.contains(PropertyType::NonInherited) && !current.isInherited())
+            if (m_includedProperties.contains(PropertyType::NonInherited) && !currentIsInherited)
                 return true;
 
             // Apply all logical group properties if we have applied any. They may override the ones we already applied.

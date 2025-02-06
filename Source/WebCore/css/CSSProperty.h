@@ -34,13 +34,12 @@ class CSSValueList;
 enum class IsImportant : bool { No, Yes };
 
 struct StylePropertyMetadata {
-    StylePropertyMetadata(CSSPropertyID propertyID, bool isSetFromShorthand, int indexInShorthandsVector, IsImportant important, bool implicit, bool inherited)
+    StylePropertyMetadata(CSSPropertyID propertyID, bool isSetFromShorthand, int indexInShorthandsVector, IsImportant important, bool implicit)
         : m_propertyID(propertyID)
         , m_isSetFromShorthand(isSetFromShorthand)
         , m_indexInShorthandsVector(indexInShorthandsVector)
         , m_important(important == IsImportant::Yes)
         , m_implicit(implicit)
-        , m_inherited(inherited)
     {
         ASSERT(propertyID != CSSPropertyInvalid);
         ASSERT_WITH_MESSAGE(propertyID < firstShorthandProperty, "unexpected property: %d", propertyID);
@@ -55,13 +54,13 @@ struct StylePropertyMetadata {
     unsigned m_indexInShorthandsVector : 2; // If this property was set as part of an ambiguous shorthand, gives the index in the shorthands vector.
     unsigned m_important : 1;
     unsigned m_implicit : 1; // Whether or not the property was set implicitly as the result of a shorthand.
-    unsigned m_inherited : 1;
+    // 1 bit available
 };
 
 class CSSProperty {
 public:
     CSSProperty(CSSPropertyID propertyID, RefPtr<CSSValue>&& value, IsImportant important = IsImportant::No, bool isSetFromShorthand = false, int indexInShorthandsVector = 0, bool implicit = false)
-        : m_metadata(propertyID, isSetFromShorthand, indexInShorthandsVector, important, implicit, isInheritedProperty(propertyID))
+        : m_metadata(propertyID, isSetFromShorthand, indexInShorthandsVector, important, implicit)
         , m_value(WTFMove(value))
     {
     }
