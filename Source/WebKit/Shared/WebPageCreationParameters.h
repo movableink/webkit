@@ -309,10 +309,6 @@ struct WebPageCreationParameters {
     WebCore::ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking { WebCore::ShouldRelaxThirdPartyCookieBlocking::No };
     
     bool httpsUpgradeEnabled { true };
-
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    bool allowsDeprecatedSynchronousXMLHttpRequestDuringUnload { false };
-#endif
     
 #if ENABLE(APP_HIGHLIGHTS)
     WebCore::HighlightVisibility appHighlightsVisible { WebCore::HighlightVisibility::Hidden };

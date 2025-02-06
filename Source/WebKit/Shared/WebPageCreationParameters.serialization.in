@@ -229,10 +229,6 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 
     bool httpsUpgradeEnabled;
 
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    bool allowsDeprecatedSynchronousXMLHttpRequestDuringUnload;
-#endif
-
 #if ENABLE(APP_HIGHLIGHTS)
     WebCore::HighlightVisibility appHighlightsVisible;
 #endif
