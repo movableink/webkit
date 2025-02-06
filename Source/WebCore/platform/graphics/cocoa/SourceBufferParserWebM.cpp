@@ -808,13 +808,13 @@ Status WebMParser::OnTrackEntry(const ElementMetadata&, const TrackEntry& trackE
 
     if (trackType == TrackType::kVideo) {
         auto track = VideoTrackPrivateWebM::create(TrackEntry(trackEntry));
-        if (m_logger)
-            track->setLogger(*m_logger, LoggerHelper::childLogIdentifier(m_logIdentifier, ++m_nextChildIdentifier));
+        if (RefPtr logger = m_logger)
+            track->setLogger(*logger, LoggerHelper::childLogIdentifier(m_logIdentifier, ++m_nextChildIdentifier));
         m_initializationSegment->videoTracks.append({ MediaDescriptionWebM::create(TrackEntry(trackEntry)), WTFMove(track) });
     } else if (trackType == TrackType::kAudio) {
         auto track = AudioTrackPrivateWebM::create(TrackEntry(trackEntry));
-        if (m_logger)
-            track->setLogger(*m_logger, LoggerHelper::childLogIdentifier(m_logIdentifier, ++m_nextChildIdentifier));
+        if (RefPtr logger = m_logger)
+            track->setLogger(*logger, LoggerHelper::childLogIdentifier(m_logIdentifier, ++m_nextChildIdentifier));
         m_initializationSegment->audioTracks.append({ MediaDescriptionWebM::create(TrackEntry(trackEntry)), WTFMove(track) });
     }
 
@@ -993,13 +993,14 @@ webm::Status WebMParser::OnFrame(const FrameMetadata& metadata, Reader* reader, 
 }
 
 
-#define PARSER_LOG_ERROR_IF_POSSIBLE(...) if (parser().loggerPtr()) parser().loggerPtr()->error(logChannel(), Logger::LogSiteIdentifier(logClassName(), __func__, parser().logIdentifier()), __VA_ARGS__)
+#define PARSER_LOG_ERROR_IF_POSSIBLE(...) if (RefPtr logger = parser().loggerPtr()) logger->error(logChannel(), Logger::LogSiteIdentifier(logClassName(), __func__, parser().logIdentifier()), __VA_ARGS__)
 
 RefPtr<SharedBuffer> WebMParser::TrackData::contiguousCompleteBlockBuffer(size_t offset, size_t length) const
 {
-    if (offset + length > m_completeBlockBuffer->size())
+    RefPtr completeBlockBuffer = m_completeBlockBuffer;
+    if (offset + length > completeBlockBuffer->size())
         return nullptr;
-    return m_completeBlockBuffer->getContiguousData(offset, length);
+    return completeBlockBuffer->getContiguousData(offset, length);
 }
 
 webm::Status WebMParser::TrackData::readFrameData(webm::Reader& reader, const webm::FrameMetadata& metadata, uint64_t* bytesRemaining)
@@ -1015,7 +1016,8 @@ webm::Status WebMParser::TrackData::readFrameData(webm::Reader& reader, const we
 
     while (*bytesRemaining) {
         uint64_t bytesRead;
-        auto status = static_cast<WebMParser::SegmentReader&>(reader).ReadInto(*bytesRemaining, m_currentBlockBuffer, &bytesRead);
+        // webm::Reader is from a library so we cannot easily adopt downcast here.
+        SUPPRESS_MEMORY_UNSAFE_CAST auto status = static_cast<WebMParser::SegmentReader&>(reader).ReadInto(*bytesRemaining, m_currentBlockBuffer, &bytesRead);
         *bytesRemaining -= bytesRead;
         m_partialBytesRead += bytesRead;
 
@@ -1487,24 +1489,25 @@ void SourceBufferParserWebM::parsedInitializationData(InitializationSegment&& in
 
 void SourceBufferParserWebM::parsedMediaData(MediaSamplesBlock&& samplesBlock)
 {
-    if (!samplesBlock.info()) {
+    RefPtr samplesBlockInfo = samplesBlock.info();
+    if (!samplesBlockInfo) {
         ERROR_LOG_IF_POSSIBLE(LOGIDENTIFIER, "No TrackInfo set");
         return;
     }
 
     RetainPtr<CMFormatDescriptionRef> formatDescription;
     if (samplesBlock.isVideo()) {
-        if (m_videoInfo != samplesBlock.info()) {
-            m_videoInfo = samplesBlock.info();
-            m_videoFormatDescription = createFormatDescriptionFromTrackInfo(*samplesBlock.info());
+        if (m_videoInfo != samplesBlockInfo) {
+            m_videoInfo = samplesBlockInfo;
+            m_videoFormatDescription = createFormatDescriptionFromTrackInfo(*samplesBlockInfo);
         }
         formatDescription = m_videoFormatDescription;
     } else {
-        if (m_audioInfo != samplesBlock.info()) {
+        if (m_audioInfo != samplesBlockInfo) {
             flushPendingAudioSamples();
             m_audioDiscontinuity = true;
-            m_audioFormatDescription = createFormatDescriptionFromTrackInfo(*samplesBlock.info());
-            m_audioInfo = samplesBlock.info();
+            m_audioFormatDescription = createFormatDescriptionFromTrackInfo(*samplesBlockInfo);
+            m_audioInfo = samplesBlockInfo;
         }
         formatDescription = m_audioFormatDescription;
     }

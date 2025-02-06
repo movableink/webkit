@@ -1156,7 +1156,6 @@ platform/graphics/cocoa/CMUtilities.mm
 platform/graphics/cocoa/FontCacheCoreText.cpp
 platform/graphics/cocoa/ImageAdapterCocoa.mm
 platform/graphics/cocoa/SourceBufferParser.cpp
-platform/graphics/cocoa/SourceBufferParserWebM.cpp
 platform/graphics/cocoa/VideoMediaSampleRenderer.mm
 platform/graphics/cocoa/WebCoreDecompressionSession.mm
 platform/graphics/cocoa/WebMAudioUtilitiesCocoa.mm

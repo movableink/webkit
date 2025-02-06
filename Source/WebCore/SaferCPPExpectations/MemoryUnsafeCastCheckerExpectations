@@ -120,7 +120,6 @@ platform/graphics/avfoundation/objc/ImageDecoderAVFObjC.mm
 platform/graphics/avfoundation/objc/QueuedVideoOutput.mm
 platform/graphics/ca/GraphicsLayerCA.cpp
 platform/graphics/ca/cocoa/PlatformCAAnimationCocoa.mm
-platform/graphics/cocoa/SourceBufferParserWebM.cpp
 platform/graphics/mac/controls/ControlFactoryMac.mm
 platform/graphics/mac/controls/ControlMac.mm
 platform/mac/PasteboardMac.mm
