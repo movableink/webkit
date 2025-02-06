@@ -287,6 +287,7 @@ namespace WebCore {
     macro(IdleDeadline) \
     macro(InputDeviceInfo) \
     macro(InputEvent) \
+    macro(InstallEvent) \
     macro(IntersectionObserver) \
     macro(IntersectionObserverEntry) \
     macro(KeyframeEffect) \

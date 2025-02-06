@@ -1735,6 +1735,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInspectorAuditResourcesObject.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInspectorAuditResourcesObject.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInspectorFrontendHost.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInspectorFrontendHost.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInstallEvent.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInstallEvent.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInternalSettings.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInternalSettings.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSInternalSettingsGenerated.cpp
@@ -2549,6 +2551,14 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSResizeObserverOptions.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSResizeObserverOptions.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSResizeObserverSize.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSResizeObserverSize.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRouterCondition.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRouterCondition.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRouterRule.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRouterRule.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRouterSourceDict.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRouterSourceDict.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRouterSourceEnum.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRouterSourceEnum.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRsaHashedImportParams.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRsaHashedImportParams.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRsaHashedKeyGenParams.cpp
@@ -2561,6 +2571,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRsaOtherPrimesInfo.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRsaOtherPrimesInfo.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRsaPssParams.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRsaPssParams.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRunningStatus.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRunningStatus.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSQLError.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSQLError.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSQLResultSet.cpp

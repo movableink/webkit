@@ -1760,6 +1760,12 @@ JS_BINDING_IDLS := \
     $(WebCore)/workers/service/ExtendableEventInit.idl \
     $(WebCore)/workers/service/ExtendableMessageEvent.idl \
     $(WebCore)/workers/service/FetchEvent.idl \
+    $(WebCore)/workers/service/InstallEvent.idl \
+    $(WebCore)/workers/service/RouterCondition.idl \
+    $(WebCore)/workers/service/RouterRule.idl \
+    $(WebCore)/workers/service/RouterSourceDict.idl \
+    $(WebCore)/workers/service/RouterSourceEnum.idl \
+    $(WebCore)/workers/service/RunningStatus.idl \
     $(WebCore)/workers/service/NavigationPreloadManager.idl \
     $(WebCore)/workers/service/NavigationPreloadState.idl \
     $(WebCore)/workers/service/ServiceWorker.idl \

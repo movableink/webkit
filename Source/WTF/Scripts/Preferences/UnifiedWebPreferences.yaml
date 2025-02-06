@@ -6678,6 +6678,20 @@ ServiceWorkerEntitlementDisabledForTesting:
     WebKit:
       default: false
 
+ServiceWorkerInstallEventEnabled:
+  type: bool
+  status: testable
+  category: networking
+  humanReadableName: "Service Worker Install Event"
+  humanReadableDescription: "Enable Service Worker Install Event API"
+  defaultValue:
+    WebKit:
+      default: false
+    WebKitLegacy:
+      default: false
+    WebCore:
+      default: false
+
 ServiceWorkerNavigationPreloadEnabled:
   type: bool
   status: stable

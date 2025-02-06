@@ -3346,6 +3346,7 @@ workers/WorkerThread.cpp
 workers/service/ExtendableEvent.cpp
 workers/service/ExtendableMessageEvent.cpp
 workers/service/FetchEvent.cpp
+workers/service/InstallEvent.cpp
 workers/service/NavigationPreloadManager.cpp
 workers/service/SWClientConnection.cpp
 workers/service/ServiceWorker.cpp
@@ -4126,6 +4127,7 @@ JSInspectorAuditAccessibilityObject.cpp
 JSInspectorAuditDOMObject.cpp
 JSInspectorAuditResourcesObject.cpp
 JSInspectorFrontendHost.cpp
+JSInstallEvent.cpp
 JSIntersectionObserver.cpp
 JSIntersectionObserverCallback.cpp
 JSIntersectionObserverEntry.cpp
@@ -4468,12 +4470,17 @@ JSResizeObserverCallback.cpp
 JSResizeObserverEntry.cpp
 JSResizeObserverOptions.cpp
 JSResizeObserverSize.cpp
+JSRouterCondition.cpp
+JSRouterRule.cpp
+JSRouterSourceDict.cpp
+JSRouterSourceEnum.cpp
 JSRsaHashedImportParams.cpp
 JSRsaHashedKeyGenParams.cpp
 JSRsaKeyGenParams.cpp
 JSRsaOaepParams.cpp
 JSRsaOtherPrimesInfo.cpp
 JSRsaPssParams.cpp
+JSRunningStatus.cpp
 JSSQLError.cpp
 JSSQLResultSet.cpp
 JSSQLResultSetRowList.cpp

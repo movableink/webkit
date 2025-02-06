@@ -279,6 +279,18 @@ ExceptionOr<Ref<URLPattern>> URLPattern::create(ScriptExecutionContext& context,
     return create(context, WTFMove(*input), String { }, WTFMove(options));
 }
 
+// https://urlpattern.spec.whatwg.org/#build-a-url-pattern-from-a-web-idl-value
+ExceptionOr<Ref<URLPattern>> URLPattern::create(ScriptExecutionContext& context, Compatible&& value, const String& baseURL)
+{
+    return switchOn(WTFMove(value), [&](RefPtr<URLPattern>&& pattern) -> ExceptionOr<Ref<URLPattern>> {
+        return pattern.releaseNonNull();
+    }, [&](URLPatternInit&& init) -> ExceptionOr<Ref<URLPattern>> {
+        return URLPattern::create(context, WTFMove(init), { }, { });
+    }, [&](String&& string) -> ExceptionOr<Ref<URLPattern>> {
+        return URLPattern::create(context, WTFMove(string), String { baseURL }, { });
+    });
+}
+
 URLPattern::~URLPattern() = default;
 
 // https://urlpattern.spec.whatwg.org/#dom-urlpattern-test
