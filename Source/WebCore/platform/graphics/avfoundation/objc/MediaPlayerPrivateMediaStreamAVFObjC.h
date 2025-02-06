@@ -247,6 +247,8 @@ private:
     void setVideoLayerSizeFenced(const FloatSize&, WTF::MachSendRight&&) final;
     void requestHostingContextID(LayerHostingContextIDCallback&&) final;
 
+    RefPtr<MediaStreamPrivate> protectedMediaStreamPrivate() const;
+
     ThreadSafeWeakPtr<MediaPlayer> m_player;
     RefPtr<MediaStreamPrivate> m_mediaStreamPrivate;
     RefPtr<VideoTrackPrivateMediaStream> m_activeVideoTrack;

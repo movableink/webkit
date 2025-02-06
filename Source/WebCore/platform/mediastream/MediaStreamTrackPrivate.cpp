@@ -511,6 +511,16 @@ const RealtimeMediaSource& MediaStreamTrackPrivate::source() const
     return m_sourceObserver->source();
 }
 
+Ref<RealtimeMediaSource> MediaStreamTrackPrivate::protectedSource()
+{
+    return source();
+}
+
+Ref<const RealtimeMediaSource> MediaStreamTrackPrivate::protectedSource() const
+{
+    return source();
+}
+
 RealtimeMediaSource& MediaStreamTrackPrivate::sourceForProcessor()
 {
     ASSERT(isOnCreationThread());
