@@ -812,13 +812,8 @@ private:
             }
 
             switch (m_value->child(0)->opcode()) {
-            case PurifyNaN:
+            case PurifyNaN: {
                 replaceWithIdentity(m_value->child(0));
-                break;
-            case Abs:
-            case Neg: {
-                if (isARM64())
-                    replaceWithIdentity(m_value->child(0));
                 break;
             }
             default:

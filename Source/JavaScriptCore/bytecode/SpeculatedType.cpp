@@ -853,17 +853,10 @@ SpeculatedType typeOfDoubleMinMax(SpeculatedType a, SpeculatedType b)
 
 SpeculatedType typeOfDoubleNegation(SpeculatedType value)
 {
-    if (isARM64()) {
-        // ARM64 will just use fneg, which makes impure NaN -> pure NaN.
-        // Including negation & abs.
-        if (value & SpecDoubleNaN)
-            value = (value & ~SpecDoubleNaN) | SpecDoublePureNaN;
-    } else {
-        // Changing bits can make pure NaN impure and vice versa:
-        // 0xefff000000000000 (pure) - 0xffff000000000000 (impure)
-        if (value & SpecDoubleNaN)
-            value |= SpecDoubleNaN;
-    }
+    // Changing bits can make pure NaN impure and vice versa:
+    // 0xefff000000000000 (pure) - 0xffff000000000000 (impure)
+    if (value & SpecDoubleNaN)
+        value |= SpecDoubleNaN;
     // We could get negative zero, which mixes SpecAnyIntAsDouble and SpecNotIntAsDouble.
     // We could also overflow a large negative int into something that is no longer
     // representable as an int.
@@ -879,15 +872,10 @@ SpeculatedType typeOfDoubleAbs(SpeculatedType value)
 
 SpeculatedType typeOfDoubleRounding(SpeculatedType value)
 {
-    if (isARM64()) {
-        if (value & SpecDoubleImpureNaN)
-            value |= SpecDoublePureNaN;
-    } else {
-        // Double Pure NaN can becomes impure when converted back from Float.
-        // and vice versa.
-        if (value & SpecDoubleNaN)
-            value |= SpecDoubleNaN;
-    }
+    // Double Pure NaN can becomes impure when converted back from Float.
+    // and vice versa.
+    if (value & SpecDoubleNaN)
+        value |= SpecDoubleNaN;
     // We might lose bits, which leads to a value becoming integer-representable.
     if (value & SpecNonIntAsDouble)
         value |= SpecAnyIntAsDouble;
