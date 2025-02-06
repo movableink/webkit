@@ -13,7 +13,7 @@ sources:
 - kind: patch
   path: patches/fdo-0004-gst-plugins-ugly-Enable-x264-encoder.patch
 - kind: patch
-  path: patches/fdo-0005-GStreamer-Bump-to-1.24.11.patch
+  path: patches/fdo-0005-GStreamer-Bump-to-1.24.12.patch
 - kind: patch
   path: patches/fdo-0006-gst-plugins-bad-Enable-soundtouch.patch
 - kind: patch
@@ -23,7 +23,7 @@ sources:
 - kind: patch
   path: patches/fdo-0013-ffmpeg-Bump-to-version-7.0.2.patch
 - kind: patch
-  path: patches/fdo-0014-GStreamer-Vendor-SDP-patch-scheduled-to-ship-in-1.24.patch
+  path: patches/fdo-0014-GStreamer-Vendor-an-oggdemux-patch-scheduled-for-1.2.patch
 config:
   options:
     target_arch: '%{arch}'
