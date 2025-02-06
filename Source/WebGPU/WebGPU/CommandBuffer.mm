@@ -47,8 +47,16 @@ CommandBuffer::CommandBuffer(Device& device)
 {
 }
 
+void CommandBuffer::retainTimestampsForOneUpdateLoop()
+{
+    // Workaround for rdar://143905417
+    if (RefPtr commandEncoder = m_commandEncoder)
+        m_device->protectedQueue()->retainTimestampsForOneUpdate(commandEncoder->timestampBuffers());
+}
+
 CommandBuffer::~CommandBuffer()
 {
+    retainTimestampsForOneUpdateLoop();
     m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
     m_commandBuffer = nil;
     m_cachedCommandBuffer = nil;
@@ -66,6 +74,7 @@ void CommandBuffer::makeInvalid(NSString* lastError)
 
     m_lastErrorString = lastError;
     m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
+    retainTimestampsForOneUpdateLoop();
     m_commandBuffer = nil;
     m_cachedCommandBuffer = nil;
     m_commandEncoder = nullptr;

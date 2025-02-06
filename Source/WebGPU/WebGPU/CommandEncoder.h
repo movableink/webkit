@@ -64,9 +64,9 @@ class Texture;
 class CommandEncoder : public CommandsMixin, public RefCountedAndCanMakeWeakPtr<CommandEncoder>, public WGPUCommandEncoderImpl {
     WTF_MAKE_TZONE_ALLOCATED(CommandEncoder);
 public:
-    static Ref<CommandEncoder> create(id<MTLCommandBuffer> commandBuffer, Device& device)
+    static Ref<CommandEncoder> create(id<MTLCommandBuffer> commandBuffer, Device& device, uint64_t uniqueId)
     {
-        return adoptRef(*new CommandEncoder(commandBuffer, device));
+        return adoptRef(*new CommandEncoder(commandBuffer, device, uniqueId));
     }
     static Ref<CommandEncoder> createInvalid(Device& device)
     {
@@ -125,9 +125,11 @@ public:
     void generateInvalidEncoderStateError();
     bool validateClearBuffer(const Buffer&, uint64_t offset, uint64_t size);
     static void trackEncoder(CommandEncoder&, WeakHashSet<CommandEncoder>&);
+    uint64_t uniqueId() const { return m_uniqueId; }
+    NSMutableSet<id<MTLCounterSampleBuffer>> *timestampBuffers() const { return m_retainedTimestampBuffers; };
 
 private:
-    CommandEncoder(id<MTLCommandBuffer>, Device&);
+    CommandEncoder(id<MTLCommandBuffer>, Device&, uint64_t uniqueId);
     CommandEncoder(Device&);
 
 private PUBLIC_IN_WEBGPU_SWIFT:
@@ -149,6 +151,7 @@ private:
     void discardCommandBuffer();
 
     RefPtr<CommandBuffer> protectedCachedCommandBuffer() const { return m_cachedCommandBuffer.get(); }
+    void retainTimestampsForOneUpdateLoop();
 
 private PUBLIC_IN_WEBGPU_SWIFT:
     id<MTLCommandBuffer> m_commandBuffer { nil };
@@ -176,6 +179,7 @@ private:
     uint64_t m_sharedEventSignalValue { 0 };
 private PUBLIC_IN_WEBGPU_SWIFT:
     const Ref<Device> m_device;
+    uint64_t m_uniqueId;
 private:
 } SWIFT_SHARED_REFERENCE(refCommandEncoder, derefCommandEncoder);
 

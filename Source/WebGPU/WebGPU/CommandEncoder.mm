@@ -124,14 +124,15 @@ Ref<CommandEncoder> Device::createCommandEncoder(const WGPUCommandEncoderDescrip
 
     commandBuffer.label = fromAPI(descriptor.label);
 
-    return CommandEncoder::create(commandBuffer, *this);
+    return CommandEncoder::create(commandBuffer, *this, m_commandEncoderId++);
 }
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CommandEncoder);
 
-CommandEncoder::CommandEncoder(id<MTLCommandBuffer> commandBuffer, Device& device)
+CommandEncoder::CommandEncoder(id<MTLCommandBuffer> commandBuffer, Device& device, uint64_t uniqueId)
     : m_commandBuffer(commandBuffer)
     , m_device(device)
+    , m_uniqueId(uniqueId)
 {
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     m_managedTextures = [NSMutableSet set];
@@ -148,10 +149,17 @@ CommandEncoder::CommandEncoder(Device& device)
 {
 }
 
+void CommandEncoder::retainTimestampsForOneUpdateLoop()
+{
+    // Workaround for rdar://143905417
+    m_device->protectedQueue()->retainTimestampsForOneUpdate(m_retainedTimestampBuffers);
+}
+
 CommandEncoder::~CommandEncoder()
 {
     finalizeBlitCommandEncoder();
     m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
+    retainTimestampsForOneUpdateLoop();
     m_commandBuffer = nil; // Do not remove, this is needed to workaround rdar://143905417
 }
 
@@ -282,6 +290,7 @@ void CommandEncoder::setExistingEncoder(id<MTLCommandEncoder> encoder)
 void CommandEncoder::discardCommandBuffer()
 {
     if (!m_commandBuffer || m_commandBuffer.status >= MTLCommandBufferStatusCommitted) {
+        retainTimestampsForOneUpdateLoop();
         m_commandBuffer = nil;
         return;
     }
@@ -290,6 +299,7 @@ void CommandEncoder::discardCommandBuffer()
     auto queue = m_device->protectedQueue();
     queue->endEncoding(existingEncoder, m_commandBuffer);
     queue->removeMTLCommandBuffer(m_commandBuffer);
+    retainTimestampsForOneUpdateLoop();
     m_commandBuffer = nil;
 }
 

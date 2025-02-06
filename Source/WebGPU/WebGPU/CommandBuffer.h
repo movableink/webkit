@@ -73,6 +73,7 @@ public:
 private:
     CommandBuffer(id<MTLCommandBuffer>, Device&, id<MTLSharedEvent>, uint64_t sharedEventSignalValue, CommandEncoder&);
     CommandBuffer(Device&);
+    void retainTimestampsForOneUpdateLoop();
 
     id<MTLCommandBuffer> m_commandBuffer { nil };
     id<MTLCommandBuffer> m_cachedCommandBuffer { nil };

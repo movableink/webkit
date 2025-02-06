@@ -94,8 +94,9 @@ public:
 
     // This can be called on a background thread.
     void scheduleWork(Instance::WorkItem&&);
-    uint32_t WARN_UNUSED_RETURN retainEncoder(CommandEncoder&);
-    void releaseEncoder(uint32_t);
+    uint64_t WARN_UNUSED_RETURN retainCounterSampleBuffer(CommandEncoder&);
+    void releaseCounterSampleBuffer(uint64_t);
+    void retainTimestampsForOneUpdate(NSMutableSet<id<MTLCounterSampleBuffer>> *);
 private:
     Queue(id<MTLCommandQueue>, Adapter&, Device&);
     Queue(Adapter&, Device&);
@@ -123,7 +124,7 @@ private:
     HashMap<uint64_t, OnSubmittedWorkScheduledCallbacks, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_onSubmittedWorkScheduledCallbacks;
     using OnSubmittedWorkDoneCallbacks = Vector<WTF::Function<void(WGPUQueueWorkDoneStatus)>>;
     HashMap<uint64_t, OnSubmittedWorkDoneCallbacks, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_onSubmittedWorkDoneCallbacks;
-    HashMap<uint32_t, RefPtr<CommandEncoder>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_retainedEncoders;
+    NSMutableDictionary<NSNumber*, NSMutableSet<id<MTLCounterSampleBuffer>>*>* m_retainedCounterSampleBuffers;
     NSMutableOrderedSet<id<MTLCommandBuffer>> *m_createdNotCommittedBuffers { nil };
     NSMapTable<id<MTLCommandBuffer>, id<MTLCommandEncoder>> *m_openCommandEncoders;
     const ThreadSafeWeakPtr<Instance> m_instance;

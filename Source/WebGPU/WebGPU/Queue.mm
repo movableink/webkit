@@ -55,6 +55,7 @@ Queue::Queue(id<MTLCommandQueue> commandQueue, Adapter& adapter, Device& device)
 {
     m_createdNotCommittedBuffers = [NSMutableOrderedSet orderedSet];
     m_openCommandEncoders = [NSMapTable strongToStrongObjectsMapTable];
+    m_retainedCounterSampleBuffers = [NSMutableDictionary dictionary];
 }
 
 Queue::Queue(Adapter& adapter, Device& device)
@@ -341,17 +342,28 @@ void Queue::submit(Vector<Ref<WebGPU::CommandBuffer>>&& commands)
         [[MTLCaptureManager sharedCaptureManager] stopCapture];
 }
 
-uint32_t Queue::retainEncoder(CommandEncoder& encoder)
+uint64_t Queue::retainCounterSampleBuffer(CommandEncoder& encoder)
 {
-    auto encoderHandle = m_retainedEncoders.size();
-    m_retainedEncoders.add(encoderHandle, RefPtr { &encoder });
+    auto encoderHandle = encoder.uniqueId();
+    [m_retainedCounterSampleBuffers setObject:encoder.timestampBuffers() forKey:[NSNumber numberWithUnsignedLongLong:encoderHandle]];
     return encoderHandle;
 }
 
-void Queue::releaseEncoder(uint32_t encoderHandle)
+void Queue::releaseCounterSampleBuffer(uint64_t encoderHandle)
 {
     scheduleWork([protectedThis = Ref { *this }, encoderHandle]() {
-        protectedThis->m_retainedEncoders.remove(encoderHandle);
+        [protectedThis->m_retainedCounterSampleBuffers removeObjectForKey:[NSNumber numberWithUnsignedLongLong:encoderHandle]];
+    });
+}
+
+void Queue::retainTimestampsForOneUpdate(NSMutableSet<id<MTLCounterSampleBuffer>> *timestamps)
+{
+    // Workaround for rdar://143905417
+    if (!timestamps)
+        return;
+
+    scheduleWork([protectedThis = Ref { *this }, timestamps]() {
+        UNUSED_PARAM(timestamps);
     });
 }
 
