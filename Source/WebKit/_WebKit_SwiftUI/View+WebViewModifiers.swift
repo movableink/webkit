@@ -21,25 +21,31 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
-
 import Foundation
 public import SwiftUI
+@_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
 extension EnvironmentValues {
-    @Entry var webViewAllowsBackForwardNavigationGestures = false
+    @Entry
+    var webViewAllowsBackForwardNavigationGestures = false
 
-    @Entry var webViewAllowsLinkPreview = true
+    @Entry
+    var webViewAllowsLinkPreview = true
 
-    @Entry var webViewAllowsTabFocusingLinks = false
+    @Entry
+    var webViewAllowsTabFocusingLinks = false
 
-    @Entry var webViewAllowsTextInteraction = true
+    @Entry
+    var webViewAllowsTextInteraction = true
 
-    @Entry var webViewAllowsElementFullscreen = false
+    @Entry
+    var webViewAllowsElementFullscreen = false
 
-    @Entry var webViewFindContext: FindContext = .init()
+    @Entry
+    var webViewFindContext: FindContext = .init()
 
-    @Entry var webViewContextMenuContext: ContextMenuContext? = nil
+    @Entry
+    var webViewContextMenuContext: ContextMenuContext? = nil
 }
 
 extension View {
@@ -109,5 +115,3 @@ struct FindContext {
     var canFind = true
     var canReplace = true
 }
-
-#endif

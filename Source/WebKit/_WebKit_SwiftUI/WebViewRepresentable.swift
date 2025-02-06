@@ -21,10 +21,9 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
-
+public import SwiftUI
+@_spi(Private) @_spi(CrossImportOverlay) import WebKit
 internal import WebKit_Internal
-public import SwiftUI // FIXME: (283455) Do not import SwiftUI in WebKit proper.
 
 @MainActor
 struct WebViewRepresentable {
@@ -59,8 +58,8 @@ struct WebViewRepresentable {
 
         context.coordinator.update(platformView, configuration: self, environment: environment)
 
-#if os(macOS)
-        owner.page.backingUIDelegate.menuBuilder = environment.webViewContextMenuContext?.menu
+#if os(macOS) && !targetEnvironment(macCatalyst)
+        owner.page.setMenuBuilder(environment.webViewContextMenuContext?.menu)
 #endif
     }
 
@@ -134,6 +133,4 @@ extension WebViewRepresentable: NSViewRepresentable {
         updatePlatformView(nsView, context: context)
     }
 }
-#endif
-
 #endif

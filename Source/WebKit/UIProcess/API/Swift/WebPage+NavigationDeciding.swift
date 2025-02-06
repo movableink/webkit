@@ -51,7 +51,8 @@ extension WebPage_v0 {
         public var buttonNumber: Int { wrapped.buttonNumber }
 #endif
 
-        var wrapped: WKNavigationAction
+        @_spi(CrossImportOverlay)
+        public var wrapped: WKNavigationAction
     }
 
     @MainActor

@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WKWebView.h"
+#import <WebKit/WKWebView.h>
 
 #ifdef __cplusplus
 

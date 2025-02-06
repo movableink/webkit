@@ -50,6 +50,7 @@
 /* Begin PBXBuildFile section */
 		041A1E34216FFDBC00789E0A /* PublicSuffix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 041A1E33216FFDBC00789E0A /* PublicSuffix.cpp */; };
 		04DB2396235E43EC00328F17 /* BumpPointerAllocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0451A5A6235E438E009DF945 /* BumpPointerAllocator.cpp */; };
+		07275CBC2D01398C002315A5 /* _WebKit_SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 07275CBB2D01398C002315A5 /* _WebKit_SwiftUI.framework */; };
 		07492B3B1DF8B14C00633DE1 /* EnumerateMediaDevices.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07492B3A1DF8AE2D00633DE1 /* EnumerateMediaDevices.cpp */; };
 		074E87E52CF920A20059E469 /* Bundle+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074E87E42CF920A20059E469 /* Bundle+Extras.swift */; };
 		075A9CF526177218006DFA3A /* MediaSessionCoordinatorTest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 075A9CF426177217006DFA3A /* MediaSessionCoordinatorTest.mm */; };
@@ -2146,6 +2147,7 @@
 		0711DF51226A95FB003DD2F7 /* AVFoundationSoftLinkTest.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AVFoundationSoftLinkTest.mm; sourceTree = "<group>"; };
 		07137049265320E500CA2C9A /* AudioBufferSize.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AudioBufferSize.mm; sourceTree = "<group>"; };
 		0721D4582838295400A95853 /* start-offset.ts */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.typescript; path = "start-offset.ts"; sourceTree = "<group>"; };
+		07275CBB2D01398C002315A5 /* _WebKit_SwiftUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = _WebKit_SwiftUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		07338E042B7433A400F949EB /* WritingSuggestions.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WritingSuggestions.mm; sourceTree = "<group>"; };
 		0738012E275EADAB000FA77C /* GetDisplayMediaWindowAndScreen.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GetDisplayMediaWindowAndScreen.mm; sourceTree = "<group>"; };
 		0746645722FF62D000E3451A /* AccessibilityTestSupportProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AccessibilityTestSupportProtocol.h; sourceTree = "<group>"; };
@@ -4036,6 +4038,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				07275CBC2D01398C002315A5 /* _WebKit_SwiftUI.framework in Frameworks */,
 				A17C58482C9C0387009DD0B5 /* gtest.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4991,6 +4994,7 @@
 		7C83E0281D0A5CDF00FEBCF3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				07275CBB2D01398C002315A5 /* _WebKit_SwiftUI.framework */,
 				5CBAA7FA2440EA0200564A8B /* CFNetwork.framework */,
 				7A010BCA1D877C0500EDE72A /* CoreGraphics.framework */,
 				634910DF1E9D3FF300880309 /* CoreLocation.framework */,

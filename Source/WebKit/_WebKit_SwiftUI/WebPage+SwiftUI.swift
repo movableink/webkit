@@ -21,43 +21,19 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
-
 import Foundation
-public import SwiftUI // FIXME: (283455) Do not import SwiftUI in WebKit proper.
+public import SwiftUI
+@_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
-extension WebPage_v0.NavigationAction {
-    public var modifierFlags: EventModifiers { EventModifiers(wrapped.modifierFlags) }
-}
-
-// MARK: Adapters
-
-fileprivate extension EventModifiers {
+extension WebPage_v0 {
+    public var themeColor: Color? {
+        self.backingProperty(\.themeColor, backedBy: \.themeColor) { backingValue in
+            // The themeColor property is a UIColor/NSColor in WKWebView.
 #if canImport(UIKit)
-    init(_ wrapped: UIKeyModifierFlags) {
-        self = switch wrapped {
-        case .alphaShift: .capsLock
-        case .command: .command
-        case .control: .control
-        case .numericPad: .numericPad
-        case .alternate: .option
-        case .shift: .shift
-        default: []
-        }
-    }
+            return backingValue.map(Color.init(uiColor:))
 #else
-    init(_ wrapped: NSEvent.ModifierFlags) {
-        self = switch wrapped {
-        case .capsLock: .capsLock
-        case .command: .command
-        case .control: .control
-        case .numericPad: .numericPad
-        case .option: .option
-        case .shift: .shift
-        default: []
+            return backingValue.map(Color.init(nsColor:))
+#endif
         }
     }
-#endif
 }
-
-#endif

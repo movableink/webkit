@@ -23,8 +23,9 @@
 
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
+public import SwiftUI
+@_spi(Private) @_spi(CrossImportOverlay) import WebKit
 internal import WebKit_Internal
-internal import SwiftUI // FIXME: (283455) Do not import SwiftUI in WebKit proper.
 
 #if canImport(UIKit)
 typealias PlatformView = UIView

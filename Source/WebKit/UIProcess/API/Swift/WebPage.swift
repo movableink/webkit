@@ -28,8 +28,10 @@ import Observation
 internal import WebKit_Private
 
 @MainActor
-final class WebPageWebView: WKWebView {
-    weak var delegate: (any Delegate)? = nil
+@_spi(CrossImportOverlay)
+public final class WebPageWebView: WKWebView {
+    @_spi(CrossImportOverlay)
+    public weak var delegate: (any Delegate)? = nil
 
 #if os(iOS)
     override func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession) {
@@ -54,7 +56,8 @@ final class WebPageWebView: WKWebView {
 
 extension WebPageWebView {
     @MainActor
-    protocol Delegate: AnyObject {
+    @_spi(CrossImportOverlay)
+    public protocol Delegate: AnyObject {
 #if os(iOS)
         func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession)
 
@@ -245,24 +248,33 @@ public class WebPage_v0 {
         set { backingWebView.isInspectable = newValue }
     }
 
-    private let backingNavigationDelegate: WKNavigationDelegateAdapter
     let backingUIDelegate: WKUIDelegateAdapter
+    private let backingNavigationDelegate: WKNavigationDelegateAdapter
     let backingDownloadDelegate: WKDownloadDelegateAdapter
+
+#if os(macOS) && !targetEnvironment(macCatalyst)
+    @_spi(CrossImportOverlay)
+    public func setMenuBuilder(_ menuBuilder: ((WebPage_v0.ElementInfo) -> NSMenu)?) {
+        backingUIDelegate.menuBuilder = menuBuilder
+    }
+#endif
 
     @ObservationIgnored
     private var observations = KeyValueObservations()
 
     @ObservationIgnored
-    var isBoundToWebView = false
+    @_spi(CrossImportOverlay)
+    public var isBoundToWebView = false
 
     @ObservationIgnored
-    lazy var backingWebView: WebPageWebView = {
+    @_spi(CrossImportOverlay)
+    public lazy var backingWebView: WebPageWebView = {
         let webView = WebPageWebView(frame: .zero, configuration: WKWebViewConfiguration(configuration))
+        webView.navigationDelegate = backingNavigationDelegate
+        webView.uiDelegate = backingUIDelegate
 #if os(macOS)
         webView._usePlatformFindUI = false
 #endif
-        webView.navigationDelegate = backingNavigationDelegate
-        webView.uiDelegate = backingUIDelegate
         return webView
     }()
 
@@ -419,7 +431,8 @@ public class WebPage_v0 {
         }
     }
 
-    func backingProperty<Value, BackingValue>(_ keyPath: KeyPath<WebPage_v0, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, BackingValue>, _ transform: (BackingValue) -> Value) -> Value {
+    @_spi(CrossImportOverlay)
+    public func backingProperty<Value, BackingValue>(_ keyPath: KeyPath<WebPage_v0, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, BackingValue>, _ transform: (BackingValue) -> Value) -> Value {
         if observations.contents[keyPath] == nil {
             observations.contents[keyPath] = createObservation(for: keyPath, backedBy: backingKeyPath)
         }
@@ -430,7 +443,8 @@ public class WebPage_v0 {
         return transform(backingValue)
     }
 
-    func backingProperty<Value>(_ keyPath: KeyPath<WebPage_v0, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, Value>) -> Value {
+    @_spi(CrossImportOverlay)
+    public func backingProperty<Value>(_ keyPath: KeyPath<WebPage_v0, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, Value>) -> Value {
         backingProperty(keyPath, backedBy: backingKeyPath) { $0 }
     }
 }

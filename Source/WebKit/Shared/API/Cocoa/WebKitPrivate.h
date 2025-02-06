@@ -24,6 +24,7 @@
  */
 
 #import <WebKit/WKDownloadDelegatePrivate.h>
+#import <WebKit/WKFoundation.h>
 #import <WebKit/WKHistoryDelegatePrivate.h>
 #import <WebKit/WKNavigationPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>

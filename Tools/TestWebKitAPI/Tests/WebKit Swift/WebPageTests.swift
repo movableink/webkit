@@ -23,9 +23,11 @@
 
 #if ENABLE_SWIFTUI && canImport(Testing) && compiler(>=6.0)
 
+import SwiftUI
 import Observation
 import Testing
 @_spi(Private) @_spi(Testing) import WebKit
+@_spi(Private) import _WebKit_SwiftUI
 
 extension WebPage_v0.NavigationEvent.Kind: @retroactive Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {

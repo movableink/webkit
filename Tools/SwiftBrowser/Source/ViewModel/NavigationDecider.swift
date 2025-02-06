@@ -23,6 +23,7 @@
 
 import Foundation
 @_spi(Private) import WebKit
+@_spi(Private) import _WebKit_SwiftUI
 
 @MainActor
 final class NavigationDecider: NavigationDeciding {

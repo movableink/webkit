@@ -23,7 +23,8 @@
 
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
-public import SwiftUI // FIXME: (283455) Do not import SwiftUI in WebKit proper.
+public import SwiftUI
+@_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
 @_spi(Private)
 public struct WebView_v0: View {
