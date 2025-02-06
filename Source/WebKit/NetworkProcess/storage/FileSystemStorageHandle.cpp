@@ -322,7 +322,10 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::executeCommandFor
         if (!truncated)
             return FileSystemStorageError::Unknown;
 
-        FileSystem::seekFile(m_activeWritableFile.handle(), *size, FileSystem::FileSeekOrigin::Beginning);
+        auto currentOffset = FileSystem::seekFile(m_activeWritableFile.handle(), 0, FileSystem::FileSeekOrigin::Current);
+        if (currentOffset == -1 || static_cast<unsigned long long>(currentOffset) > *size)
+            FileSystem::seekFile(m_activeWritableFile.handle(), *size, FileSystem::FileSeekOrigin::Beginning);
+
         return std::nullopt;
     }
     }
