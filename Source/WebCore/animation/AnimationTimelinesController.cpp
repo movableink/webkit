@@ -320,28 +320,28 @@ void AnimationTimelinesController::maybeClearCachedCurrentTime()
         m_cachedCurrentTime = std::nullopt;
 }
 
-static const Element* originatingElement(const Ref<ScrollTimeline>& timeline)
+static const WeakStyleable originatingElement(const Ref<ScrollTimeline>& timeline)
 {
     if (RefPtr viewTimeline = dynamicDowncast<ViewTimeline>(timeline))
-        return viewTimeline->subject();
-    return timeline->source();
+        return viewTimeline->subjectStyleable();
+    return timeline->sourceStyleable();
 }
 
-static const Element* originatingElementIncludingTimelineScope(const Ref<ScrollTimeline>& timeline)
+static const WeakStyleable originatingStyleableIncludingTimelineScope(const Ref<ScrollTimeline>& timeline)
 {
-    if (WeakPtr element = timeline->timelineScopeDeclaredElement())
-        return element.get();
+    if (auto element = timeline->timelineScopeDeclaredElement())
+        return Styleable::fromElement(*element);
     return originatingElement(timeline);
 }
 
-static const Element* originatingElementExcludingTimelineScope(const Ref<ScrollTimeline>& timeline)
+static const WeakStyleable originatingElementExcludingTimelineScope(const Ref<ScrollTimeline>& timeline)
 {
-    return timeline->timelineScopeDeclaredElement() ? nullptr : originatingElement(timeline);
+    return timeline->timelineScopeDeclaredElement() ? WeakStyleable() : originatingElement(timeline);
 }
 
-Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> AnimationTimelinesController::relatedTimelineScopeElements(const AtomString& name)
+Vector<WeakStyleable> AnimationTimelinesController::relatedTimelineScopeElements(const AtomString& name)
 {
-    Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> timelineScopeElements;
+    Vector<WeakStyleable> timelineScopeElements;
     for (auto& scope : m_timelineScopeEntries) {
         if (scope.second && (scope.first.type == TimelineScope::Type::All || (scope.first.type == TimelineScope::Type::Ident && scope.first.scopeNames.contains(name))))
             timelineScopeElements.append(scope.second);
@@ -349,17 +349,24 @@ Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> AnimationTimelinesContr
     return timelineScopeElements;
 }
 
-static ScrollTimeline* determineTreeOrder(const Vector<Ref<ScrollTimeline>>& ancestorTimelines, const Element& matchElement, const Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>& timelineScopeElements)
+static bool containsElement(const Vector<WeakStyleable>& timelineScopeElements, Element* matchElement)
 {
-    RefPtr element = &matchElement;
+    return timelineScopeElements.containsIf([matchElement] (const WeakStyleable& entry ) {
+        return entry.element() == matchElement;
+    });
+}
+
+static ScrollTimeline* determineTreeOrder(const Vector<Ref<ScrollTimeline>>& ancestorTimelines, const Styleable& styleable, const Vector<WeakStyleable>& timelineScopeElements)
+{
+    RefPtr element = &styleable.element;
     while (element) {
         Vector<Ref<ScrollTimeline>> matchedTimelines;
         for (auto& timeline : ancestorTimelines) {
-            if (element == originatingElementIncludingTimelineScope(timeline))
+            if (element == originatingStyleableIncludingTimelineScope(timeline).element().get())
                 matchedTimelines.append(timeline);
         }
         if (!matchedTimelines.isEmpty()) {
-            if (timelineScopeElements.contains(element.get())) {
+            if (containsElement(timelineScopeElements, element.get())) {
                 if (matchedTimelines.size() == 1)
                     return matchedTimelines.first().ptr();
                 // Naming conflict due to timeline-scope
@@ -372,7 +379,7 @@ static ScrollTimeline* determineTreeOrder(const Vector<Ref<ScrollTimeline>>& anc
             return matchedTimelines.last().ptr();
         }
         // Has blocking timeline scope element
-        if (timelineScopeElements.contains(element.get()))
+        if (containsElement(timelineScopeElements, element.get()))
             return nullptr;
         element = element->parentElement();
     }
@@ -381,7 +388,7 @@ static ScrollTimeline* determineTreeOrder(const Vector<Ref<ScrollTimeline>>& anc
     return nullptr;
 }
 
-static ScrollTimeline* determineTimelineForElement(const Vector<Ref<ScrollTimeline>>& timelines, const Element& element, const Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>& timelineScopeElements)
+static ScrollTimeline* determineTimelineForElement(const Vector<Ref<ScrollTimeline>>& timelines, const Styleable& styleable, const Vector<WeakStyleable>& timelineScopeElements)
 {
     // https://drafts.csswg.org/scroll-animations-1/#timeline-scoping
     // A named scroll progress timeline or view progress timeline is referenceable by:
@@ -392,12 +399,15 @@ static ScrollTimeline* determineTimelineForElement(const Vector<Ref<ScrollTimeli
     // precedence, and scroll progress timelines take precedence over view progress timelines.
     Vector<Ref<ScrollTimeline>> matchedTimelines;
     for (auto& timeline : timelines) {
-        if (originatingElementIncludingTimelineScope(timeline) == &element || element.isDescendantOf(originatingElementIncludingTimelineScope(timeline)))
+        auto styleableForTimeline = originatingStyleableIncludingTimelineScope(timeline).styleable();
+        if (!styleableForTimeline)
+            continue;
+        if (&styleableForTimeline->element == &styleable.element || styleable.element.isDescendantOf(styleableForTimeline->element))
             matchedTimelines.append(timeline);
     }
     if (matchedTimelines.isEmpty())
         return nullptr;
-    return determineTreeOrder(matchedTimelines, element, timelineScopeElements);
+    return determineTreeOrder(matchedTimelines, styleable, timelineScopeElements);
 }
 
 Vector<Ref<ScrollTimeline>>& AnimationTimelinesController::timelinesForName(const AtomString& name)
@@ -409,31 +419,38 @@ Vector<Ref<ScrollTimeline>>& AnimationTimelinesController::timelinesForName(cons
 
 void AnimationTimelinesController::updateTimelineForTimelineScope(const Ref<ScrollTimeline>& timeline, const AtomString& name)
 {
-    WeakHashSet<Element, WeakPtrImplWithEventTargetData> matchedTimelineScopeElements;
-    RefPtr timelineElement = originatingElementExcludingTimelineScope(timeline);
+    Vector<Styleable> matchedTimelineScopeElements;
+    auto timelineElement = originatingElementExcludingTimelineScope(timeline).styleable();
+    if (!timelineElement)
+        return;
+
     for (auto& entry : m_timelineScopeEntries) {
-        if (WeakPtr entryElement = entry.second) {
-            if (timelineElement->isDescendantOf(*entryElement) && (entry.first.type == TimelineScope::Type::All ||  entry.first.scopeNames.contains(name)))
-                matchedTimelineScopeElements.add(*entryElement);
+        if (auto entryElement = entry.second.styleable()) {
+            if (timelineElement->element.isDescendantOf(entryElement->element) && (entry.first.type == TimelineScope::Type::All ||  entry.first.scopeNames.contains(name)))
+                matchedTimelineScopeElements.appendIfNotContains(*entryElement);
         }
     }
-    while (timelineElement) {
-        if (matchedTimelineScopeElements.contains(*timelineElement)) {
-            timeline->setTimelineScopeElement(*timelineElement);
+    auto* element = &timelineElement->element;
+    while (element) {
+        auto it = matchedTimelineScopeElements.findIf([element] (const Styleable& entry) {
+            return &entry.element == element;
+        });
+        if (it != notFound) {
+            timeline->setTimelineScopeElement(matchedTimelineScopeElements.at(it).element);
             return;
         }
-        timelineElement = timelineElement->parentElement();
+        element = element->parentElement();
     }
 }
 
-void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString& name, Element& source, ScrollAxis axis)
+void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString& name, const Styleable& source, ScrollAxis axis)
 {
     LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::registerNamedScrollTimeline: " << name << " source: " << source);
 
     auto& timelines = timelinesForName(name);
 
     auto existingTimelineIndex = timelines.findIf([&](auto& timeline) {
-        return !is<ViewTimeline>(timeline) && timeline->source() == &source;
+        return !is<ViewTimeline>(timeline) && timeline->sourceStyleable() == source;
     });
 
     auto hasExistingTimeline = existingTimelineIndex != notFound;
@@ -443,7 +460,7 @@ void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString&
         existingScrollTimeline->setAxis(axis);
     } else {
         auto newScrollTimeline = ScrollTimeline::create(name, axis);
-        newScrollTimeline->setSource(&source);
+        newScrollTimeline->setSource(source);
         updateTimelineForTimelineScope(newScrollTimeline, name);
         timelines.append(WTFMove(newScrollTimeline));
     }
@@ -481,13 +498,13 @@ void AnimationTimelinesController::attachPendingOperations()
     auto queries = std::exchange(m_pendingAttachOperations, { });
     for (auto& operation : queries) {
         if (WeakPtr animation = operation.animation) {
-            if (WeakPtr element = operation.element)
-                setTimelineForName(operation.name, *element, *animation);
+            if (auto styleable = operation.element.styleable())
+                setTimelineForName(operation.name, *styleable, *animation);
         }
     }
 }
 
-void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& name, Element& subject, ScrollAxis axis, ViewTimelineInsets&& insets)
+void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& name, const Styleable& subject, ScrollAxis axis, ViewTimelineInsets&& insets)
 {
     LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::registerNamedViewTimeline: " << name << " subject: " << subject);
 
@@ -495,7 +512,7 @@ void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& n
 
     auto existingTimelineIndex = timelines.findIf([&](auto& timeline) {
         if (RefPtr viewTimeline = dynamicDowncast<ViewTimeline>(timeline))
-            return viewTimeline->subject() == &subject;
+            return viewTimeline->subjectStyleable() == subject;
         return false;
     });
 
@@ -507,7 +524,7 @@ void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& n
         existingViewTimeline->setInsets(WTFMove(insets));
     } else {
         auto newViewTimeline = ViewTimeline::create(name, axis, WTFMove(insets));
-        newViewTimeline->setSubject(&subject);
+        newViewTimeline->setSubject(subject);
         updateTimelineForTimelineScope(newViewTimeline, name);
         timelines.append(WTFMove(newViewTimeline));
     }
@@ -517,9 +534,9 @@ void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& n
         updateCSSAnimationsAssociatedWithNamedTimeline(name);
 }
 
-void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& name, const Element& element)
+void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& name, const Styleable& styleable)
 {
-    LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::unregisterNamedTimeline: " << name << " element: " << element);
+    LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::unregisterNamedTimeline: " << name << " styleable: " << styleable);
 
     auto it = m_nameToTimelineMap.find(name);
     if (it == m_nameToTimelineMap.end())
@@ -528,7 +545,7 @@ void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& nam
     auto& timelines = it->value;
 
     auto i = timelines.findIf([&] (auto& entry) {
-        return originatingElement(entry) == &element;
+        return originatingElement(entry) == styleable;
     });
 
     if (i == notFound)
@@ -537,8 +554,10 @@ void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& nam
     auto& timeline = timelines.at(i);
 
     for (Ref animation : timeline->relevantAnimations()) {
-        if (RefPtr effect = dynamicDowncast<KeyframeEffect>(animation->effect()))
-            m_pendingAttachOperations.append(TimelineMapAttachOperation { effect->target(), name, animation });
+        if (RefPtr effect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
+            if (auto targetStyleable = effect->targetStyleable())
+                m_pendingAttachOperations.append(TimelineMapAttachOperation { *targetStyleable, name, animation });
+        }
     }
     timelines.remove(i);
 
@@ -547,39 +566,41 @@ void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& nam
     attachPendingOperations();
 }
 
-void AnimationTimelinesController::setTimelineForName(const AtomString& name, const Element& element, WebAnimation& animation)
+void AnimationTimelinesController::setTimelineForName(const AtomString& name, const Styleable& styleable, WebAnimation& animation)
 {
-    LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::setTimelineForName: " << name << " element: " << element);
+    LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::setTimelineForName: " << name << " styleable: " << styleable);
 
     auto it = m_nameToTimelineMap.find(name);
     if (it == m_nameToTimelineMap.end()) {
-        m_pendingAttachOperations.append({ element, name, animation });
+        m_pendingAttachOperations.append({ styleable, name, animation });
         return;
     }
 
     auto& timelines = it->value;
-    if (RefPtr timeline = determineTimelineForElement(timelines, element, relatedTimelineScopeElements(name))) {
-        LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::setTimelineForName: " << name << " element: " << element << " attaching to timeline of element: " << *originatingElement(*timeline));
+    if (RefPtr timeline = determineTimelineForElement(timelines, styleable, relatedTimelineScopeElements(name))) {
+        LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::setTimelineForName: " << name << " styleable: " << styleable << " attaching to timeline of element: " << originatingElement(*timeline));
         animation.setTimeline(WTFMove(timeline));
         return;
     }
     animation.setTimeline(nullptr);
 
-    m_pendingAttachOperations.append({ element, name, animation });
+    m_pendingAttachOperations.append({ styleable, name, animation });
 }
 
-static void updateTimelinesForTimelineScope(Vector<Ref<ScrollTimeline>> entries, const Element& element)
+static void updateTimelinesForTimelineScope(Vector<Ref<ScrollTimeline>> entries, const Styleable& styleable)
 {
     for (auto& entry : entries) {
-        if (RefPtr entryElement = originatingElementExcludingTimelineScope(entry)) {
-            if (entryElement->isDescendantOf(element))
-                entry->setTimelineScopeElement(element);
+        if (auto entryElement = originatingElementExcludingTimelineScope(entry).styleable()) {
+            if (entryElement->element.isDescendantOf(styleable.element))
+                entry->setTimelineScopeElement(styleable.element);
         }
     }
 }
 
-void AnimationTimelinesController::updateNamedTimelineMapForTimelineScope(const TimelineScope& scope, const Element& element)
+void AnimationTimelinesController::updateNamedTimelineMapForTimelineScope(const TimelineScope& scope, const Styleable& styleable)
 {
+    LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::updateNamedTimelineMapForTimelineScope: " << scope << " styleable: " << styleable);
+
     // https://drafts.csswg.org/scroll-animations-1/#timeline-scope
     // This property declares the scope of the specified timeline names to extend across this element’s subtree. This allows a named timeline
     // (such as a named scroll progress timeline or named view progress timeline) to be referenced by elements outside the timeline-defining element’s
@@ -588,26 +609,26 @@ void AnimationTimelinesController::updateNamedTimelineMapForTimelineScope(const 
     case TimelineScope::Type::None:
         for (auto& entry : m_nameToTimelineMap) {
             for (auto& timeline : entry.value) {
-                if (timeline->timelineScopeDeclaredElement() == &element)
+                if (timeline->timelineScopeDeclaredElement() == &styleable.element)
                     timeline->clearTimelineScopeDeclaredElement();
             }
         }
-        m_timelineScopeEntries.removeAllMatching([&] (const std::pair<TimelineScope, WeakPtr<Element, WeakPtrImplWithEventTargetData>>& entry) {
-            return entry.second == &element;
+        m_timelineScopeEntries.removeAllMatching([&] (const std::pair<TimelineScope, WeakStyleable> entry) {
+            return entry.second == styleable;
         });
         break;
     case TimelineScope::Type::All:
         for (auto& entry : m_nameToTimelineMap)
-            updateTimelinesForTimelineScope(entry.value, element);
-        m_timelineScopeEntries.append(std::make_pair(scope, WeakPtr { &element }));
+            updateTimelinesForTimelineScope(entry.value, styleable);
+        m_timelineScopeEntries.append(std::make_pair(scope, styleable));
         break;
     case TimelineScope::Type::Ident:
         for (auto& name : scope.scopeNames) {
             auto it = m_nameToTimelineMap.find(name);
             if (it != m_nameToTimelineMap.end())
-                updateTimelinesForTimelineScope(it->value, element);
+                updateTimelinesForTimelineScope(it->value, styleable);
         }
-        m_timelineScopeEntries.append(std::make_pair(scope, WeakPtr { &element }));
+        m_timelineScopeEntries.append(std::make_pair(scope, styleable));
         break;
     }
     attachPendingOperations();
@@ -620,16 +641,16 @@ bool AnimationTimelinesController::isPendingTimelineAttachment(const WebAnimatio
     });
 }
 
-void AnimationTimelinesController::unregisterNamedTimelinesAssociatedWithElement(const Element& element)
+void AnimationTimelinesController::unregisterNamedTimelinesAssociatedWithElement(const Styleable& styleable)
 {
-    LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::unregisterNamedTimelinesAssociatedWithElement element: " << element);
+    LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::unregisterNamedTimelinesAssociatedWithElement element: " << styleable);
 
     UncheckedKeyHashSet<AtomString> namesToClear;
 
     for (auto& entry : m_nameToTimelineMap) {
         auto& timelines = entry.value;
         timelines.removeAllMatching([&] (const auto& timeline) {
-            return originatingElement(timeline) == &element;
+            return originatingElement(timeline) == styleable;
         });
         if (timelines.isEmpty())
             namesToClear.add(entry.key);

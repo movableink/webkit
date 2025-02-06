@@ -52,6 +52,7 @@ public:
     static Ref<ScrollTimeline> create(const AtomString&, ScrollAxis);
     static Ref<ScrollTimeline> create(Scroller, ScrollAxis);
 
+    const WeakStyleable& sourceStyleable() const { return m_source; }
     virtual Element* source() const;
     void setSource(Element*);
     void setSource(const Styleable&);

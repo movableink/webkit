@@ -28,6 +28,7 @@
 #include "FrameRateAligner.h"
 #include "ReducedResolutionSeconds.h"
 #include "ScrollAxis.h"
+#include "Styleable.h"
 #include "TimelineScope.h"
 #include "Timer.h"
 #include <wtf/CancellableTask.h>
@@ -54,7 +55,7 @@ class AcceleratedEffectStackUpdater;
 
 struct ViewTimelineInsets;
 struct TimelineMapAttachOperation {
-    WeakPtr<Element, WeakPtrImplWithEventTargetData> element;
+    WeakStyleable element;
     AtomString name;
     Ref<WebAnimation> animation;
 };
@@ -80,13 +81,13 @@ public:
     WEBCORE_EXPORT void resumeAnimations();
     bool animationsAreSuspended() const { return m_isSuspended; }
 
-    void registerNamedScrollTimeline(const AtomString&, Element&, ScrollAxis);
-    void registerNamedViewTimeline(const AtomString&, Element&, ScrollAxis, ViewTimelineInsets&&);
-    void unregisterNamedTimeline(const AtomString&, const Element&);
-    void setTimelineForName(const AtomString&, const Element&, WebAnimation&);
-    void updateNamedTimelineMapForTimelineScope(const TimelineScope&, const Element&);
+    void registerNamedScrollTimeline(const AtomString&, const Styleable&, ScrollAxis);
+    void registerNamedViewTimeline(const AtomString&, const Styleable&, ScrollAxis, ViewTimelineInsets&&);
+    void unregisterNamedTimeline(const AtomString&, const Styleable&);
+    void setTimelineForName(const AtomString&, const Styleable&, WebAnimation&);
+    void updateNamedTimelineMapForTimelineScope(const TimelineScope&, const Styleable&);
     void updateTimelineForTimelineScope(const Ref<ScrollTimeline>&, const AtomString&);
-    void unregisterNamedTimelinesAssociatedWithElement(const Element&);
+    void unregisterNamedTimelinesAssociatedWithElement(const Styleable&);
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
     AcceleratedEffectStackUpdater* existingAcceleratedEffectStackUpdater() const { return m_acceleratedEffectStackUpdater.get(); }
@@ -100,7 +101,7 @@ private:
     void maybeClearCachedCurrentTime();
 
     Vector<Ref<ScrollTimeline>>& timelinesForName(const AtomString&);
-    Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> relatedTimelineScopeElements(const AtomString&);
+    Vector<WeakStyleable> relatedTimelineScopeElements(const AtomString&);
     void attachPendingOperations();
     bool isPendingTimelineAttachment(const WebAnimation&) const;
     void updateCSSAnimationsAssociatedWithNamedTimeline(const AtomString&);
@@ -108,7 +109,7 @@ private:
     Ref<Document> protectedDocument() const { return m_document.get(); }
 
     Vector<TimelineMapAttachOperation> m_pendingAttachOperations;
-    Vector<std::pair<TimelineScope, WeakPtr<Element, WeakPtrImplWithEventTargetData>>> m_timelineScopeEntries;
+    Vector<std::pair<TimelineScope, WeakStyleable>> m_timelineScopeEntries;
     UncheckedKeyHashMap<AtomString, Vector<Ref<ScrollTimeline>>> m_nameToTimelineMap;
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)

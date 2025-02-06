@@ -229,4 +229,7 @@ private:
     std::optional<Style::PseudoElementIdentifier> m_pseudoElementIdentifier;
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, const Styleable&);
+WTF::TextStream& operator<<(WTF::TextStream&, const WeakStyleable&);
+
 } // namespace WebCore

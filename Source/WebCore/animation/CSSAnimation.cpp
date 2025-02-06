@@ -157,7 +157,7 @@ void CSSAnimation::syncStyleOriginatedTimeline()
             setTimeline(keyword == Animation::TimelineKeyword::None ? nullptr : RefPtr { document->existingTimeline() });
         }, [&] (const AtomString& name) {
             CheckedRef timelinesController = document->ensureTimelinesController();
-            timelinesController->setTimelineForName(name, target, *this);
+            timelinesController->setTimelineForName(name, *owningElement(), *this);
         }, [&] (const Animation::AnonymousScrollTimeline& anonymousScrollTimeline) {
             auto scrollTimeline = ScrollTimeline::create(anonymousScrollTimeline.scroller, anonymousScrollTimeline.axis);
             scrollTimeline->setSource(*owningElement());
