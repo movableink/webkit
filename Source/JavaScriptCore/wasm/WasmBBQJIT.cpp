@@ -558,8 +558,6 @@ LocalOrTempIndex ControlData::enclosedHeight() const
 
 unsigned ControlData::implicitSlots() const
 {
-    if (Options::useWasmIPInt())
-        return (isTry(*this) || isAnyCatch(*this)) ? 1 : 0;
     return isAnyCatch(*this) ? 1 : 0;
 }
 
@@ -3301,6 +3299,12 @@ B3::ValueRep BBQJIT::toB3Rep(Location location)
 StackMap BBQJIT::makeStackMap(const ControlData& data, Stack& enclosingStack)
 {
     unsigned numElements = m_locals.size() + data.enclosedHeight() + data.argumentLocations().size();
+    if (Options::useWasmIPInt()) {
+        for (const ControlEntry& entry : m_parser->controlStack()) {
+            if (BBQJIT::ControlData::isTry(entry.controlData))
+                ++numElements;
+        }
+    }
 
     StackMap stackMap(numElements);
     unsigned stackMapIndex = 0;
@@ -3310,7 +3314,10 @@ StackMap BBQJIT::makeStackMap(const ControlData& data, Stack& enclosingStack)
     if (Options::useWasmIPInt()) {
         // Do rethrow slots first because IPInt has them in a shadow stack.
         for (const ControlEntry& entry : m_parser->controlStack()) {
-            for (unsigned i = 0; i < entry.controlData.implicitSlots(); i ++) {
+            unsigned numSlots = entry.controlData.implicitSlots();
+            if (BBQJIT::ControlData::isTry(entry.controlData))
+                ++numSlots;
+            for (unsigned i = 0; i < numSlots; i ++) {
                 Value exception = this->exception(entry.controlData);
                 stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(locationOf(exception)), B3::Int64); // Exceptions are EncodedJSValues, so they are always Int64
             }
