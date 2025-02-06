@@ -99,6 +99,31 @@ InlineContentConstrainer::InlineContentConstrainer(InlineFormattingContext& inli
     initialize();
 }
 
+void InlineContentConstrainer::updateCachedWidths()
+{
+    // We should only initialize the inline item width cache once.
+    ASSERT(!m_hasValidInlineItemWidthCache);
+    m_inlineItemWidths = Vector<InlineLayoutUnit>(m_numberOfInlineItems);
+    m_firstLineStyleInlineItemWidths = Vector<InlineLayoutUnit>(m_numberOfInlineItems);
+    // Cache inline item widths to speed up later computations.
+    for (size_t i = 0; i < m_numberOfInlineItems; i++) {
+        const auto& item = m_inlineItemList[i];
+        m_inlineItemWidths[i] = m_inlineFormattingContext.formattingUtils().inlineItemWidth(item, 0, false);
+        m_firstLineStyleInlineItemWidths[i] = m_inlineFormattingContext.formattingUtils().inlineItemWidth(item, 0, true);
+    }
+    m_hasValidInlineItemWidthCache = true;
+}
+
+void InlineContentConstrainer::checkCanConstrainInlineItems()
+{
+    for (auto& inlineItem : m_inlineItemList) {
+        if (cannotConstrainInlineItem(inlineItem)) {
+            m_cannotConstrainContent = true;
+            return;
+        }
+    }
+}
+
 void InlineContentConstrainer::initialize()
 {
     auto lineClamp = m_inlineFormattingContext.layoutState().parentBlockLayoutState().lineClamp();
@@ -118,17 +143,9 @@ void InlineContentConstrainer::initialize()
     m_numberOfInlineItems = m_inlineItemList.size();
     m_maximumLineWidth = m_horizontalConstraints.logicalWidth;
 
-    // Compute inline item widths beforehand to speed up later computations
-    m_inlineItemWidths.reserveCapacity(m_numberOfInlineItems);
-    for (size_t i = 0; i < m_numberOfInlineItems; i++) {
-        const auto& item = m_inlineItemList[i];
-        if (cannotConstrainInlineItem(item)) {
-            m_cannotConstrainContent = true;
-            return;
-        }
-        m_inlineItemWidths.append(m_inlineFormattingContext.formattingUtils().inlineItemWidth(item, 0, false));
-        m_firstLineStyleInlineItemWidths.append(m_inlineFormattingContext.formattingUtils().inlineItemWidth(item, 0, true));
-    }
+    checkCanConstrainInlineItems();
+    if (m_cannotConstrainContent)
+        return;
 
     // Perform a line layout with `text-wrap: wrap` to compute useful metrics such as:
     //  - the number of lines used
@@ -163,6 +180,8 @@ void InlineContentConstrainer::initialize()
         lineIndex++;
     }
 
+    // Cache inline item widths after laying out all inline content with LineBuilder.
+    updateCachedWidths();
     m_numberOfLinesInOriginalLayout = lineIndex;
 }
 
@@ -548,7 +567,10 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
 
 InlineLayoutUnit InlineContentConstrainer::inlineItemWidth(size_t inlineItemIndex, bool useFirstLineStyle) const
 {
-    return useFirstLineStyle ? m_firstLineStyleInlineItemWidths[inlineItemIndex] : m_inlineItemWidths[inlineItemIndex];
+    if (m_hasValidInlineItemWidthCache)
+        return useFirstLineStyle ? m_firstLineStyleInlineItemWidths[inlineItemIndex] : m_inlineItemWidths[inlineItemIndex];
+    // If inline items width cache has not yet been initialized, we should explicitly calculate the item's width.
+    return m_inlineFormattingContext.formattingUtils().inlineItemWidth(m_inlineItemList[inlineItemIndex], 0, useFirstLineStyle);
 }
 
 bool InlineContentConstrainer::shouldTrimLeading(size_t inlineItemIndex, bool useFirstLineStyle, bool isFirstLineInChunk) const
@@ -604,8 +626,7 @@ InlineContentConstrainer::SlidingWidth::SlidingWidth(const InlineContentConstrai
     , m_isFirstLineInChunk(isFirstLineInChunk)
 {
     ASSERT(start <= end);
-    while (m_end < end)
-        advanceEnd();
+    advanceEndTo(end);
 }
 
 InlineLayoutUnit InlineContentConstrainer::SlidingWidth::width()
