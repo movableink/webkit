@@ -428,13 +428,12 @@ static String x509Serialize(X509* x509)
     if (!PEM_write_bio_X509(bio.get(), x509))
         return { };
 
-    Vector<char> buffer;
-    buffer.reserveCapacity(4096);
-    int length = BIO_read(bio.get(), buffer.data(), 4096);
-    if (!length)
+    uint8_t* data { nullptr };
+    auto length = BIO_get_mem_data(bio.get(), &data);
+    if (length <= 0)
         return { };
 
-    return buffer.subspan(0, length);
+    return String::fromUTF8(unsafeMakeSpan(data, length));
 }
 
 static String privateKeySerialize(EVP_PKEY* privateKey)
@@ -446,13 +445,12 @@ static String privateKeySerialize(EVP_PKEY* privateKey)
     if (!PEM_write_bio_PrivateKey(bio.get(), privateKey, nullptr, nullptr, 0, nullptr, nullptr))
         return { };
 
-    Vector<char> buffer;
-    buffer.reserveCapacity(4096);
-    int length = BIO_read(bio.get(), buffer.data(), 4096);
-    if (!length)
+    uint8_t* data { nullptr };
+    auto length = BIO_get_mem_data(bio.get(), &data);
+    if (length <= 0)
         return { };
 
-    return buffer.subspan(0, length);
+    return String::fromUTF8(unsafeMakeSpan(data, length));
 }
 
 std::optional<Ref<RTCCertificate>> generateCertificate(Ref<SecurityOrigin>&& origin, const PeerConnectionBackend::CertificateInformation& info)
