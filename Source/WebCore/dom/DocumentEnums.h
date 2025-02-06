@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
+
 namespace WebCore {
 
 enum class NodeListInvalidationType : uint8_t {
