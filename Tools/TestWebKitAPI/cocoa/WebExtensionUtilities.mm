@@ -991,26 +991,6 @@ NSData *makePNGData(CGSize size, SEL colorSelector)
 #endif
 }
 
-void runScriptWithUserGesture(const String& script, WKWebView *webView)
-{
-    ASSERT(webView);
-
-    bool callbackComplete = false;
-    id evalResult;
-
-    [webView callAsyncJavaScript:script arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:[&](id result, NSError *error) {
-        evalResult = result;
-        callbackComplete = true;
-
-        EXPECT_NULL(error);
-
-        if (error)
-            NSLog(@"Encountered error: %@ while evaluating script: %@", error, static_cast<NSString *>(script));
-    }];
-
-    TestWebKitAPI::Util::run(&callbackComplete);
-}
-
 void performWithAppearance(Appearance appearance, void (^block)(void))
 {
 #if USE(APPKIT)

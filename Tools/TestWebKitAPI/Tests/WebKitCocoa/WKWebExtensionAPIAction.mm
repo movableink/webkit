@@ -1527,17 +1527,22 @@ TEST(WKWebExtensionAPIAction, WindowOpenOpensInNewWindow)
         @"browser.test.sendMessage('Open Popup')"
     ]);
 
+    auto *popupScript = Util::constructScript(@[
+        @"browser.test.runWithUserGesture(() => {",
+        @"  window.open('https://example.com/', '_blank', 'popup, width=100, height=50')",
+        @"})"
+    ]);
+
     auto *resources = @{
         @"background.js": backgroundScript,
-        @"popup.html": @"",
+        @"popup.html": @"<script type='module' src='popup.js'></script>",
+        @"popup.js": popupScript
     };
 
     auto manager = Util::loadExtension(actionPopupManifest, resources);
 
     manager.get().internalDelegate.presentPopupForAction = ^(WKWebExtensionAction *action) {
         EXPECT_NOT_NULL(action);
-
-        Util::runScriptWithUserGesture("window.open('https://example.com/', '_blank', 'popup, width=100, height=50')"_s, action.popupWebView);
     };
 
 #if PLATFORM(MAC)

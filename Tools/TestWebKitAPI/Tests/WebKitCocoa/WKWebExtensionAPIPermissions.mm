@@ -143,11 +143,9 @@ TEST(WKWebExtensionAPIPermissions, AcceptPermissionsRequest)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"window.runTest = async () => {",
-        @"  await browser.test.assertTrue(await browser.permissions.request({'permissions': ['declarativeNetRequest'], 'origins': ['*://*.apple.com/*']}))",
-        @"}",
-
-        @"browser.test.sendMessage('Ready')",
+        @"browser.test.runWithUserGesture(async () => {",
+        @"  browser.test.assertTrue(await browser.permissions.request({'permissions': ['declarativeNetRequest'], 'origins': ['*://*.apple.com/*']}))",
+        @"})"
     ]);
 
     auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
@@ -179,10 +177,6 @@ TEST(WKWebExtensionAPIPermissions, AcceptPermissionsRequest)
 
     manager.get().controllerDelegate = requestDelegate.get();
 
-    [manager runUntilTestMessage:@"Ready"];
-
-    Util::runScriptWithUserGesture("runTest()"_s, manager.get().context._backgroundWebView);
-
     TestWebKitAPI::Util::run(&requestComplete);
 }
 
@@ -196,11 +190,9 @@ TEST(WKWebExtensionAPIPermissions, DenyPermissionsRequest)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"window.runTest = async () => {",
-        @"  await browser.test.assertFalse(await browser.permissions.request({'permissions': ['declarativeNetRequest'], 'origins': ['*://*.apple.com/*']}))",
-        @"}",
-
-        @"browser.test.sendMessage('Ready')",
+        @"browser.test.runWithUserGesture(async () => {",
+        @"  browser.test.assertFalse(await browser.permissions.request({'permissions': ['declarativeNetRequest'], 'origins': ['*://*.apple.com/*']}))",
+        @"})"
     ]);
 
     auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
@@ -223,10 +215,6 @@ TEST(WKWebExtensionAPIPermissions, DenyPermissionsRequest)
 
     manager.get().controllerDelegate = requestDelegate.get();
 
-    [manager runUntilTestMessage:@"Ready"];
-
-    Util::runScriptWithUserGesture("runTest()"_s, manager.get().context._backgroundWebView);
-
     TestWebKitAPI::Util::run(&requestComplete);
 }
 
@@ -240,11 +228,9 @@ TEST(WKWebExtensionAPIPermissions, AcceptPermissionsDenyMatchPatternsRequest)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"window.runTest = async () => {",
-        @"  await browser.test.assertFalse(await browser.permissions.request({'permissions': ['declarativeNetRequest'], 'origins': ['*://*.apple.com/*']}))",
-        @"}",
-
-        @"browser.test.sendMessage('Ready')",
+        @"browser.test.runWithUserGesture(async () => {",
+        @"  browser.test.assertFalse(await browser.permissions.request({'permissions': ['declarativeNetRequest'], 'origins': ['*://*.apple.com/*']}))",
+        @"})"
     ]);
 
     auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
@@ -268,10 +254,6 @@ TEST(WKWebExtensionAPIPermissions, AcceptPermissionsDenyMatchPatternsRequest)
 
     manager.get().controllerDelegate = requestDelegate.get();
 
-    [manager runUntilTestMessage:@"Ready"];
-
-    Util::runScriptWithUserGesture("runTest()"_s, manager.get().context._backgroundWebView);
-
     TestWebKitAPI::Util::run(&requestComplete);
 }
 
@@ -285,11 +267,9 @@ TEST(WKWebExtensionAPIPermissions, RequestPermissionsOnly)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"window.runTest = async () => {",
-        @"  await browser.test.assertTrue(await browser.permissions.request({'permissions': ['declarativeNetRequest']}))",
-        @"}",
-
-        @"browser.test.sendMessage('Ready')",
+        @"browser.test.runWithUserGesture(async () => {",
+        @"  browser.test.assertTrue(await browser.permissions.request({'permissions': ['declarativeNetRequest']}))",
+        @"})"
     ]);
 
     auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
@@ -315,10 +295,6 @@ TEST(WKWebExtensionAPIPermissions, RequestPermissionsOnly)
 
     manager.get().controllerDelegate = requestDelegate.get();
 
-    [manager runUntilTestMessage:@"Ready"];
-
-    Util::runScriptWithUserGesture("runTest()"_s, manager.get().context._backgroundWebView);
-
     TestWebKitAPI::Util::run(&requestComplete);
 }
 
@@ -332,11 +308,9 @@ TEST(WKWebExtensionAPIPermissions, RequestMatchPatternsOnly)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"window.runTest = async () => {",
-        @"  await browser.test.assertTrue(await browser.permissions.request({'origins': ['*://*.apple.com/*']}))",
-        @"}",
-
-        @"browser.test.sendMessage('Ready')",
+        @"browser.test.runWithUserGesture(async () => {",
+        @"  browser.test.assertTrue(await browser.permissions.request({'origins': ['*://*.apple.com/*']}))",
+        @"})"
     ]);
 
     auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
@@ -362,10 +336,6 @@ TEST(WKWebExtensionAPIPermissions, RequestMatchPatternsOnly)
 
     manager.get().controllerDelegate = requestDelegate.get();
 
-    [manager runUntilTestMessage:@"Ready"];
-
-    Util::runScriptWithUserGesture("runTest()"_s, manager.get().context._backgroundWebView);
-
     TestWebKitAPI::Util::run(&requestComplete);
 }
 
@@ -384,11 +354,9 @@ TEST(WKWebExtensionAPIPermissions, GrantOnlySomePermissions)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"window.runTest = async () => {",
-        @"  await browser.test.assertFalse(await browser.permissions.request({'permissions': ['alarms', 'declarativeNetRequest']}))",
-        @"}",
-
-        @"browser.test.sendMessage('Ready')",
+        @"browser.test.runWithUserGesture(async () => {",
+        @"  browser.test.assertFalse(await browser.permissions.request({'permissions': ['alarms', 'declarativeNetRequest']}))",
+        @"})"
     ]);
 
     auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
@@ -414,10 +382,6 @@ TEST(WKWebExtensionAPIPermissions, GrantOnlySomePermissions)
 
     manager.get().controllerDelegate = requestDelegate.get();
 
-    [manager runUntilTestMessage:@"Ready"];
-
-    Util::runScriptWithUserGesture("runTest()"_s, manager.get().context._backgroundWebView);
-
     TestWebKitAPI::Util::run(&requestComplete);
 }
 
@@ -431,11 +395,9 @@ TEST(WKWebExtensionAPIPermissions, GrantOnlySomeMatchPatterns)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"window.runTest = async () => {",
-        @"  await browser.test.assertFalse(await browser.permissions.request({'origins': ['*://*.apple.com/*', '*://*.example.com/*']}))",
-        @"}",
-
-        @"browser.test.sendMessage('Ready')",
+        @"browser.test.runWithUserGesture(async () => {",
+        @"  browser.test.assertFalse(await browser.permissions.request({'origins': ['*://*.apple.com/*', '*://*.example.com/*']}))",
+        @"})"
     ]);
 
     auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
@@ -458,10 +420,6 @@ TEST(WKWebExtensionAPIPermissions, GrantOnlySomeMatchPatterns)
     };
 
     manager.get().controllerDelegate = requestDelegate.get();
-
-    [manager runUntilTestMessage:@"Ready"];
-
-    Util::runScriptWithUserGesture("runTest()"_s, manager.get().context._backgroundWebView);
 
     TestWebKitAPI::Util::run(&requestComplete);
 }
@@ -613,25 +571,23 @@ TEST(WKWebExtensionAPIPermissions, ClipboardWriteWithRequest)
     };
 
     auto *backgroundScript = Util::constructScript(@[
-        @"window.runTest = async () => {",
-        @"  try {",
-        @"    await navigator.clipboard.writeText('Initial Attempt Without Permission')",
-        @"  } catch (error) {",
-        @"    browser.test.assertTrue(error instanceof DOMException, 'Expect a DOMException for insufficient permissions')",
-        @"  }",
-
-        @"  const permissionGranted = await browser.permissions.request({ permissions: [ 'clipboardWrite' ] })",
-
-        @"  if (permissionGranted) {",
-        @"    await navigator.clipboard.writeText('Test Clipboard Write After Permission')",
-
-        @"    browser.test.sendMessage('Clipboard Written')",
-        @"  } else {",
-        @"    browser.test.notifyFail('Permission was not granted')",
-        @"  }",
+        @"try {",
+        @"  await navigator.clipboard.writeText('Initial Attempt Without Permission')",
+        @"} catch (error) {",
+        @"  browser.test.assertTrue(error instanceof DOMException, 'Expect a DOMException for insufficient permissions')",
         @"}",
 
-        @"browser.test.sendMessage('Ready')",
+        @"const permissionGranted = await browser.test.runWithUserGesture(() => {",
+        @"  return browser.permissions.request({ permissions: [ 'clipboardWrite' ] })",
+        @"})",
+
+        @"if (permissionGranted) {",
+        @"  await navigator.clipboard.writeText('Test Clipboard Write After Permission')",
+
+        @"  browser.test.sendMessage('Clipboard Written')",
+        @"} else {",
+        @"  browser.test.notifyFail('Permission was not granted')",
+        @"}"
     ]);
 
     auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
@@ -646,10 +602,6 @@ TEST(WKWebExtensionAPIPermissions, ClipboardWriteWithRequest)
     };
 
     manager.get().controllerDelegate = requestDelegate.get();
-
-    [manager runUntilTestMessage:@"Ready"];
-
-    Util::runScriptWithUserGesture("window.runTest()"_s, manager.get().context._backgroundWebView);
 
     [manager runUntilTestMessage:@"Clipboard Written"];
 

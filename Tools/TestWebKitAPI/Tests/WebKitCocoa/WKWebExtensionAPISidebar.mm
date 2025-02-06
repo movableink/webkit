@@ -823,13 +823,11 @@ TEST_F(WKWebExtensionAPISidebar, SidebarActionToggleFailsWithoutUserGesture)
 TEST_F(WKWebExtensionAPISidebar, SidebarActionOpenSucceedsWithUserGesture)
 {
     auto *script = @[
-        @"window.runTest = async () => {",
-        @"    await browser.test.assertSafeResolve(() => browser.sidebarAction.open())",
+        @"await browser.test.runWithUserGesture(() => {",
+        @"  return browser.test.assertSafeResolve(() => browser.sidebarAction.open())",
+        @"})",
 
-        @"    browser.test.notifyPass()",
-        @"}",
-
-        @"browser.test.sendMessage('Apply user gesture')",
+        @"browser.test.notifyPass()",
     ];
 
     auto *resources = @{
@@ -854,12 +852,7 @@ TEST_F(WKWebExtensionAPISidebar, SidebarActionOpenSucceedsWithUserGesture)
         EXPECT_NS_EQUAL(webViewURL.path, @"/sidebar.html");
     };
 
-    [manager load];
-    [manager runUntilTestMessage:@"Apply user gesture"];
-
-    Util::runScriptWithUserGesture("window.runTest()"_s, manager.get().context._backgroundWebView);
-
-    [manager run];
+    [manager loadAndRun];
 
     EXPECT_EQ(presentSidebarCallCount, 1);
 }
@@ -867,13 +860,11 @@ TEST_F(WKWebExtensionAPISidebar, SidebarActionOpenSucceedsWithUserGesture)
 TEST_F(WKWebExtensionAPISidebar, SidebarActionCloseSucceedsWithUserGesture)
 {
     auto *script = @[
-        @"window.runTest = async () => {",
-        @"    await browser.test.assertSafeResolve(() => browser.sidebarAction.close())",
+        @"await browser.test.runWithUserGesture(() => {",
+        @"  return browser.test.assertSafeResolve(() => browser.sidebarAction.close())",
+        @"})",
 
-        @"    browser.test.notifyPass()",
-        @"}",
-
-        @"browser.test.sendMessage('Apply user gesture')",
+        @"browser.test.notifyPass()",
     ];
 
     auto *resources = @{
@@ -900,12 +891,7 @@ TEST_F(WKWebExtensionAPISidebar, SidebarActionCloseSucceedsWithUserGesture)
         EXPECT_NS_EQUAL(webViewURL.path, @"/sidebar.html");
     };
 
-    [manager load];
-    [manager runUntilTestMessage:@"Apply user gesture"];
-
-    Util::runScriptWithUserGesture("window.runTest()"_s, manager.get().context._backgroundWebView);
-
-    [manager run];
+    [manager loadAndRun];
 
     EXPECT_EQ(closeSidebarCallCount, 1);
 }
@@ -913,13 +899,11 @@ TEST_F(WKWebExtensionAPISidebar, SidebarActionCloseSucceedsWithUserGesture)
 TEST_F(WKWebExtensionAPISidebar, SidebarActionToggleSucceedsWithUserGesture)
 {
     auto *script = @[
-        @"window.runTest = async () => {",
-        @"    await browser.test.assertSafeResolve(() => browser.sidebarAction.toggle())",
+        @"await browser.test.runWithUserGesture(() => {",
+        @"  return browser.test.assertSafeResolve(() => browser.sidebarAction.toggle())",
+        @"})",
 
-        @"    browser.test.notifyPass()",
-        @"}",
-
-        @"browser.test.sendMessage('Apply user gesture')",
+        @"browser.test.notifyPass()",
     ];
 
     auto *resources = @{
@@ -935,12 +919,7 @@ TEST_F(WKWebExtensionAPISidebar, SidebarActionToggleSucceedsWithUserGesture)
         (*openSidebarCallCountPtr)++;
     };
 
-    [manager load];
-    [manager runUntilTestMessage:@"Apply user gesture"];
-
-    Util::runScriptWithUserGesture("window.runTest()"_s, manager.get().context._backgroundWebView);
-
-    [manager run];
+    [manager loadAndRun];
 
     EXPECT_EQ(openSidebarCallCount, 1);
 }
@@ -1241,15 +1220,13 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForWindowFailsWithoutUserGesture)
 TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForTabSucceedsWithUserGesture)
 {
     auto *script = @[
-        @"window.runTest = async () => {",
-        @"    await browser.test.assertSafeResolve(() => browser.sidePanel.open({ tabId: tabs[0].id }))",
-
-        @"    browser.test.notifyPass()",
-        @"}",
-
         @"var tabs = await browser.tabs.query({})",
 
-        @"browser.test.sendMessage('Apply user gesture')",
+        @"await browser.test.runWithUserGesture(() => {",
+        @"  return browser.test.assertSafeResolve(() => browser.sidePanel.open({ tabId: tabs[0].id }))",
+        @"})",
+
+        @"browser.test.notifyPass()",
     ];
 
     auto *resources = @{
@@ -1274,12 +1251,7 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForTabSucceedsWithUserGesture)
         EXPECT_NS_EQUAL(webViewURL.path, @"/sidebar.html");
     };
 
-    [manager load];
-    [manager runUntilTestMessage:@"Apply user gesture"];
-
-    Util::runScriptWithUserGesture("window.runTest()"_s, manager.get().context._backgroundWebView);
-
-    [manager run];
+    [manager loadAndRun];
 
     EXPECT_EQ(presentSidebarCallCount, 1);
 }
@@ -1287,15 +1259,13 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForTabSucceedsWithUserGesture)
 TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForWindowSucceedsWithUserGesture)
 {
     auto *script = @[
-        @"window.runTest = async () => {",
-        @"    await browser.test.assertSafeResolve(() => browser.sidePanel.open({ windowId: currentWindow.id }))",
-
-        @"    browser.test.notifyPass()",
-        @"}",
-
         @"var currentWindow = await browser.windows.getCurrent()",
 
-        @"browser.test.sendMessage('Apply user gesture')",
+        @"await browser.test.runWithUserGesture(() => {",
+        @"  return browser.test.assertSafeResolve(() => browser.sidePanel.open({ windowId: currentWindow.id }))",
+        @"})",
+
+        @"browser.test.notifyPass()",
     ];
 
     auto *resources = @{
@@ -1327,12 +1297,7 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForWindowSucceedsWithUserGesture)
         EXPECT_TRUE([defaultWindow.tabs containsObject:sidebar.associatedTab]);
     };
 
-    [manager load];
-    [manager runUntilTestMessage:@"Apply user gesture"];
-
-    Util::runScriptWithUserGesture("window.runTest()"_s, manager.get().context._backgroundWebView);
-
-    [manager run];
+    [manager loadAndRun];
 
     EXPECT_EQ(presentSidebarCallCount, 1);
 }
