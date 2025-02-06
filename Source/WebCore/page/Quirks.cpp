@@ -649,18 +649,18 @@ bool Quirks::shouldSilenceResizeObservers() const
 #endif
 }
 
-bool Quirks::shouldSilenceWindowResizeEvents() const
+bool Quirks::shouldSilenceWindowResizeEventsDuringApplicationSnapshotting() const
 {
 #if PLATFORM(IOS) || PLATFORM(VISION)
     if (!needsQuirks())
         return false;
 
-    if (!m_quirksData.shouldSilenceWindowResizeEvents)
+    if (!m_quirksData.shouldSilenceWindowResizeEventsDuringApplicationSnapshotting)
         return false;
 
-    // We silence window resize events during the 'homing out' snapshot sequence when on nytimes.com
-    // to address <rdar://problem/59763843>, and on x.com (twitter) to address <rdar://problem/58804852> &
-    // <rdar://problem/61731801>.
+    // We silence window resize events during the 'homing out' snapshot sequence when on icloud.com/mail
+    // to address <rdar://131836301>, on nytimes.com to address <rdar://problem/59763843>, and on
+    // x.com (twitter) to address <rdar://problem/58804852> & <rdar://problem/61731801>.
     auto* page = m_document->page();
     if (!page || !page->isTakingSnapshotsForApplicationSuspension())
         return false;
@@ -1855,7 +1855,7 @@ void Quirks::setTopDocumentURLForTesting(URL&& url)
 }
 
 // FIXME(rdar://141554467): The set of static functions below will be generated from a JSON file in a future patch. For now, we just move the logic
-// for deciding if a particular quirk is needed to domain-specific functionss below:
+// for deciding if a particular quirk is needed to domain-specific functions below:
 #if PLATFORM(IOS) || PLATFORM(VISION)
 static void handle365ScoresQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
 {
@@ -1865,7 +1865,7 @@ static void handle365ScoresQuirks(QuirksData& quirksData, const URL& quirksURL, 
     UNUSED_PARAM(quirksURL);
     UNUSED_PARAM(documentURL);
     // 365scores.com rdar://116491386
-    quirksData.shouldSilenceWindowResizeEvents = true;
+    quirksData.shouldSilenceWindowResizeEventsDuringApplicationSnapshotting = true;
 }
 
 static void handleNYTimesQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
@@ -1876,7 +1876,7 @@ static void handleNYTimesQuirks(QuirksData& quirksData, const URL& quirksURL, co
     UNUSED_PARAM(quirksURL);
     UNUSED_PARAM(documentURL);
     // nytimes.com: rdar://problem/5976384
-    quirksData.shouldSilenceWindowResizeEvents = true;
+    quirksData.shouldSilenceWindowResizeEventsDuringApplicationSnapshotting = true;
 }
 #endif
 
@@ -2044,6 +2044,24 @@ static void handleScriptToEvaluateBeforeRunningScriptFromURLQuirk(QuirksData& qu
 }
 #endif
 
+#if PLATFORM(IOS_FAMILY) || PLATFORM(MAC)
+static void handleICloudQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
+{
+    if (quirksDomainString != "icloud.com"_s)
+        return;
+
+    UNUSED_PARAM(documentURL);
+#if PLATFORM(IOS_FAMILY)
+    // icloud.com rdar://131836301
+    quirksData.shouldSilenceWindowResizeEventsDuringApplicationSnapshotting = quirksURL.path().contains("mail"_s) || quirksURL.fragmentIdentifier().contains("mail"_s);
+#endif
+#if PLATFORM(MAC)
+    // icloud.com rdar://26013388
+    quirksData.isNeverRichlyEditableForTouchBarQuirk = quirksURL.path().contains("notes"_s) || quirksURL.fragmentIdentifier().contains("notes"_s);
+#endif
+}
+#endif
+
 #if PLATFORM(MAC)
 static void handleCEACStateGovQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
 {
@@ -2054,16 +2072,6 @@ static void handleCEACStateGovQuirks(QuirksData& quirksData, const URL& quirksUR
         // ceac.state.gov https://bugs.webkit.org/show_bug.cgi?id=193478
         quirksData.needsFormControlToBeMouseFocusableQuirk = true;
     }
-}
-
-static void handleICloudQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
-{
-    if (quirksDomainString != "icloud.com"_s)
-        return;
-
-    UNUSED_PARAM(documentURL);
-    // icloud.com rdar://26013388
-    quirksData.isNeverRichlyEditableForTouchBarQuirk = quirksURL.path().contains("notes"_s) || quirksURL.fragmentIdentifier().contains("notes"_s);
 }
 
 static void handleTrixEditorQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
@@ -2620,7 +2628,7 @@ static void handleTwitterXQuirks(QuirksData& quirksData, const URL& quirksURL, c
     // (Ref: rdar://121473410)
     quirksData.shouldSilenceMediaQueryListChangeEvents = true;
     // twitter.com: rdar://problem/58804852 and rdar://problem/61731801
-    quirksData.shouldSilenceWindowResizeEvents = true;
+    quirksData.shouldSilenceWindowResizeEventsDuringApplicationSnapshotting = true;
 #endif
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     // twitter.com: rdar://73369869
@@ -2778,7 +2786,7 @@ void Quirks::determineRelevantQuirks()
         { "hbomax"_s, &handleHBOMaxQuirks },
         { "hotels"_s, &handleHotelsQuirks },
         { "hulu"_s, &handleHuluQuirks },
-#if PLATFORM(MAC)
+#if PLATFORM(IOS_FAMILY) || PLATFORM(MAC)
         { "icloud"_s, &handleICloudQuirks },
 #endif
         { "imdb"_s, &handleIMDBQuirks },

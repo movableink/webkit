@@ -61,7 +61,7 @@ public:
     ~Quirks();
 
     bool shouldSilenceResizeObservers() const;
-    bool shouldSilenceWindowResizeEvents() const;
+    bool shouldSilenceWindowResizeEventsDuringApplicationSnapshotting() const;
     bool shouldSilenceMediaQueryListChangeEvents() const;
     bool shouldIgnoreInvalidSignal() const;
     bool needsFormControlToBeMouseFocusable() const;
