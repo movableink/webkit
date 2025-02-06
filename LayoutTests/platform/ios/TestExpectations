@@ -6923,9 +6923,6 @@ http/wpt/opener/same-site-child-access-parent-iframe-via-windowproxy.html [ Pass
 # fast/forms/switch/pointer-tracking-there-and-back-again.html [ Timeout ]
 # fast/forms/switch/pointer-tracking.html [ Timeout ]
 # UNCOMMENT ABOVE AND REMOVE FROM platform/ios-17/TestExpectations WHEN BELOW IS RESOLVED.
-# rdar://130619586 (REGRESSION (278311@main): [ iOS ] 2 fast/forms/switch/pointer-tracking-there-and-back-again*.html tests are constantly failing / timing out.)
-fast/forms/switch/pointer-tracking-there-and-back-again-rtl.html [ ImageOnlyFailure ]
-fast/forms/switch/pointer-tracking-there-and-back-again.html [ ImageOnlyFailure ]
 
 webkit.org/b/267796 [ Release ] imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF-dynamic.html [ Pass Failure ]
 
@@ -7688,3 +7685,7 @@ webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
 # webkit.org/b/286934 [ Debug ] ipc/create-media-source-with-invalid-constraints-crash.html [ Skip ]
 
 # webkit.org/b/287098 fast/forms/switch/click-animation-twice-fast.html [ Timeout ]
+
+# webkit.org/b/287181 [ iOS ] 2x fast/forms/switch/pointer-tracking-there-and-back-again*.html are constant timeouts
+fast/forms/switch/pointer-tracking-there-and-back-again-rtl.html [ Timeout ]
+fast/forms/switch/pointer-tracking-there-and-back-again.html [ Timeout ]
