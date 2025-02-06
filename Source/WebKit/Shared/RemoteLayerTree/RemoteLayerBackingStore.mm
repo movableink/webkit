@@ -94,7 +94,8 @@ private:
         : m_fence(WTFMove(fence))
     {
     }
-    Ref<PlatformCALayerDelegatedContentsFence> m_fence;
+
+    const Ref<PlatformCALayerDelegatedContentsFence> m_fence;
 };
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DelegatedContentsFenceFlusher);
@@ -420,20 +421,21 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
         paintBehavior.add(GraphicsLayerPaintBehavior::ForceSynchronousImageDecode);
     
     // FIXME: This should be moved to PlatformCALayerRemote for better layering.
-    switch (m_layer->layerType()) {
+    Ref layer = m_layer.get();
+    switch (layer->layerType()) {
     case PlatformCALayer::LayerType::LayerTypeSimpleLayer:
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     case PlatformCALayer::LayerType::LayerTypeSeparatedImageLayer:
 #endif
     case PlatformCALayer::LayerType::LayerTypeTiledBackingTileLayer:
-        m_layer->owner()->platformCALayerPaintContents(m_layer.ptr(), context, dirtyBounds, paintBehavior);
+        layer->owner()->platformCALayerPaintContents(layer.ptr(), context, dirtyBounds, paintBehavior);
         break;
     case PlatformCALayer::LayerType::LayerTypeWebLayer:
     case PlatformCALayer::LayerType::LayerTypeBackdropLayer:
 #if HAVE(CORE_MATERIAL)
     case PlatformCALayer::LayerType::LayerTypeMaterialLayer:
 #endif
-        PlatformCALayer::drawLayerContents(context, m_layer.ptr(), m_paintingRects, paintBehavior);
+        PlatformCALayer::drawLayerContents(context, layer.ptr(), m_paintingRects, paintBehavior);
         break;
     case PlatformCALayer::LayerType::LayerTypeLayer:
     case PlatformCALayer::LayerType::LayerTypeTransformLayer:
@@ -458,7 +460,7 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
     m_dirtyRegion = { };
     m_paintingRects.clear();
 
-    m_layer->owner()->platformCALayerLayerDidDisplay(m_layer.ptr());
+    layer->owner()->platformCALayerLayerDidDisplay(layer.ptr());
 
     m_previouslyPaintedRect = dirtyBounds;
     if (auto flusher = createFlusher())
