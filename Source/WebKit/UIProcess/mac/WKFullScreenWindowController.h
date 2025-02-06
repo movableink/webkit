@@ -27,9 +27,10 @@
 
 #import <AppKit/AppKit.h>
 #import <wtf/CompletionHandler.h>
-#import <wtf/NakedPtr.h>
 #import <wtf/NakedRef.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/WeakObjCPtr.h>
+#import <wtf/WeakPtr.h>
 
 namespace WebKit { 
 class LayerTreeContext;
@@ -47,8 +48,8 @@ typedef enum FullScreenState : NSInteger FullScreenState;
 
 @interface WKFullScreenWindowController : NSWindowController<NSWindowDelegate> {
 @private
-    NSView *_webView; // Cannot be retained, see <rdar://problem/14884666>.
-    NakedPtr<WebKit::WebPageProxy> _page;
+    WeakObjCPtr<NSView> _webView; // Cannot be retained, see <rdar://problem/14884666>.
+    WeakPtr<WebKit::WebPageProxy> _page;
     RetainPtr<WebCoreFullScreenPlaceholderView> _webViewPlaceholder;
     RetainPtr<NSView> _exitPlaceholder;
     RetainPtr<NSView> _clipView;

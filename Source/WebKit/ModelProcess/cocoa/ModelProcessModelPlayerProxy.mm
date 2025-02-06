@@ -54,6 +54,7 @@
 #import <wtf/NakedRef.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/TZoneMallocInlines.h>
+#import <wtf/WeakPtr.h>
 #import <wtf/text/TextStream.h>
 
 #import "WebKitSwiftSoftLink.h"
@@ -63,7 +64,7 @@
 @end
 
 @implementation WKModelProcessModelPlayerProxyObjCAdapter {
-    NakedPtr<WebKit::ModelProcessModelPlayerProxy> _modelProcessModelPlayerProxy;
+    WeakPtr<WebKit::ModelProcessModelPlayerProxy> _modelProcessModelPlayerProxy;
 }
 
 - (instancetype)initWithModelProcessModelPlayerProxy:(NakedRef<WebKit::ModelProcessModelPlayerProxy>)modelProcessModelPlayerProxy

@@ -341,7 +341,7 @@ void PageClientImplCocoa::updateScreenTimeWebpageControllerURL(WKWebView *webVie
     if (!screenTimeWebpageController)
         return;
 
-    NakedPtr<WebKit::WebPageProxy> pageProxy = [webView _page];
+    RefPtr pageProxy = [webView _page].get();
     if (pageProxy && !pageProxy->preferences().screenTimeEnabled()) {
         [webView _uninstallScreenTimeWebpageController];
         return;

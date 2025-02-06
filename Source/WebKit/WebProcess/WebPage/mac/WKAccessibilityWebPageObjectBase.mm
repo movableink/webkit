@@ -125,7 +125,7 @@ namespace ax = WebCore::Accessibility;
 {
     ASSERT(isMainRunLoop());
 
-    m_page = page;
+    m_page = page.get();
 
     if (page) {
         m_pageID = page->identifier();
