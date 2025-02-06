@@ -8,7 +8,6 @@ wtf/NativePromise.h
 wtf/ParallelHelperPool.cpp
 wtf/PrintStream.h
 wtf/ThreadGroup.cpp
-wtf/Threading.cpp
 wtf/WorkerPool.cpp
 wtf/cocoa/MainThreadCocoa.mm
 wtf/text/AtomStringImpl.cpp

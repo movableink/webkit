@@ -439,7 +439,7 @@ inline Thread& Thread::current()
     if (UNLIKELY(Thread::s_key == InvalidThreadSpecificKey))
         WTF::initialize();
 #endif
-    if (auto* thread = currentMayBeNull(); LIKELY(thread))
+    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); LIKELY(thread))
         return *thread;
     return initializeCurrentTLS();
 }

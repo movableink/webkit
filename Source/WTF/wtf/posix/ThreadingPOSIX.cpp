@@ -570,7 +570,7 @@ void Thread::initializeTLSKey()
 Thread& Thread::initializeTLS(Ref<Thread>&& thread)
 {
     // We leak the ref to keep the Thread alive while it is held in TLS. destructTLS will deref it later at thread destruction time.
-    auto& threadInTLS = thread.leakRef();
+    SUPPRESS_UNCOUNTED_LOCAL auto& threadInTLS = thread.leakRef();
 #if !HAVE(FAST_TLS)
     ASSERT(s_key != InvalidThreadSpecificKey);
     threadSpecificSet(s_key, &threadInTLS);
