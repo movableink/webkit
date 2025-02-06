@@ -388,6 +388,9 @@ public:
     bool incompleteImageBorderEnabled() const { return m_data.incompleteImageBorderEnabled; }
     void setIncompleteImageBorderEnabled(bool enabled) { m_data.incompleteImageBorderEnabled = enabled; }
 
+    bool showsSystemScreenTimeBlockingView() const { return m_data.showsSystemScreenTimeBlockingView; }
+    void setShowsSystemScreenTimeBlockingView(bool shows) { m_data.showsSystemScreenTimeBlockingView = shows; }
+
     bool shouldDeferAsynchronousScriptsUntilAfterDocumentLoad() const { return m_data.shouldDeferAsynchronousScriptsUntilAfterDocumentLoad; }
     void setShouldDeferAsynchronousScriptsUntilAfterDocumentLoad(bool defer) { m_data.shouldDeferAsynchronousScriptsUntilAfterDocumentLoad = defer; }
 
@@ -627,6 +630,7 @@ private:
         bool allowsInlinePredictions { false };
         bool scrollToTextFragmentIndicatorEnabled { true };
         bool scrollToTextFragmentMarkingEnabled { true };
+        bool showsSystemScreenTimeBlockingView { true };
 #if PLATFORM(VISION)
 
 #if ENABLE(GAMEPAD)

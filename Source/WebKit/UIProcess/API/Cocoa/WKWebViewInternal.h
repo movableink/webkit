@@ -271,6 +271,11 @@ struct PerWebProcessState {
 
 #if ENABLE(SCREEN_TIME)
     RetainPtr<STWebpageController> _screenTimeWebpageController;
+#if PLATFORM(MAC)
+    RetainPtr<NSVisualEffectView> _screenTimeBlurredSnapshot;
+#else
+    RetainPtr<UIVisualEffectView> _screenTimeBlurredSnapshot;
+#endif
     BOOL _isBlockedByScreenTime;
 #endif
 

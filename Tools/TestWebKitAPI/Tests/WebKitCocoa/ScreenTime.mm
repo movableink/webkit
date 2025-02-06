@@ -121,6 +121,61 @@ static void testSuppressUsageRecordingWithDataStore(RetainPtr<WKWebsiteDataStore
 }
 @end
 
+static BOOL blurredViewIsPresent(TestWKWebView *webView)
+{
+#if PLATFORM(IOS_FAMILY)
+    for (UIView *subview in [webView subviews]) {
+        if ([subview isKindOfClass:[UIVisualEffectView class]])
+            return true;
+    }
+#else
+    for (NSView *subview in [webView subviews]) {
+        if ([subview isKindOfClass:[NSVisualEffectView class]])
+            return true;
+    }
+#endif
+    return false;
+}
+
+static BOOL systemScreenTimeBlockingViewIsPresent(TestWKWebView *webView)
+{
+    RetainPtr controller = [webView _screenTimeWebpageController];
+#if PLATFORM(IOS_FAMILY)
+    for (UIView *subview in [webView subviews]) {
+        if (subview == [controller view])
+            return true;
+    }
+#else
+    for (NSView *subview in [webView subviews]) {
+        if (subview == [controller view])
+            return true;
+    }
+#endif
+    return false;
+}
+
+static RetainPtr<TestWKWebView> testShowsSystemScreenTimeBlockingView(bool showsSystemScreenTimeBlockingView)
+{
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration _setShowsSystemScreenTimeBlockingView:showsSystemScreenTimeBlockingView];
+
+    RetainPtr webView = webViewForScreenTimeTests(configuration.get());
+    [webView synchronouslyLoadHTMLString:@""];
+
+    RetainPtr controller = [webView _screenTimeWebpageController];
+    [controller setURLIsBlocked:YES];
+
+    EXPECT_EQ(showsSystemScreenTimeBlockingView, [configuration _showsSystemScreenTimeBlockingView]);
+
+    // Check if ScreenTime's blocking view is hidden or not.
+    EXPECT_EQ(showsSystemScreenTimeBlockingView, systemScreenTimeBlockingViewIsPresent(webView.get()));
+
+    // Check if WebKit's blurred blocking view is added and in the view hierarchy or not.
+    EXPECT_EQ(!showsSystemScreenTimeBlockingView, blurredViewIsPresent(webView.get()));
+
+    return webView;
+}
+
 TEST(ScreenTime, IsBlockedByScreenTimeTrue)
 {
     RetainPtr webView = webViewForScreenTimeTests();
@@ -254,6 +309,26 @@ TEST(ScreenTime, PersistentSession)
 TEST(ScreenTime, NonPersistentSession)
 {
     testSuppressUsageRecordingWithDataStore([WKWebsiteDataStore nonPersistentDataStore], true);
+}
+
+TEST(ScreenTime, ShowSystemScreenTimeBlockingTrue)
+{
+    testShowsSystemScreenTimeBlockingView(true);
+}
+
+TEST(ScreenTime, ShowSystemScreenTimeBlockingFalse)
+{
+    testShowsSystemScreenTimeBlockingView(false);
+}
+
+TEST(ScreenTime, ShowSystemScreenTimeBlockingFalseAndRemoved)
+{
+    RetainPtr webView = testShowsSystemScreenTimeBlockingView(false);
+    RetainPtr controller = [webView _screenTimeWebpageController];
+    [controller setURLIsBlocked:NO];
+    EXPECT_FALSE([[webView configuration] _showsSystemScreenTimeBlockingView]);
+    // Check if blurred blocking view is removed when URLIsBlocked is false.
+    EXPECT_FALSE(blurredViewIsPresent(webView.get()));
 }
 
 #endif

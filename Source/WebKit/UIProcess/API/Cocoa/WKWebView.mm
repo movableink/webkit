@@ -236,10 +236,38 @@ static const BOOL defaultFastClickingEnabled = NO;
 #endif
 
 #if ENABLE(SCREEN_TIME)
+static void *screenTimeWebpageControllerBlockedKVOContext = &screenTimeWebpageControllerBlockedKVOContext;
 @interface STWebpageController (Staging_138865295)
 @property (nonatomic, copy) NSString *profileIdentifier;
 @end
-static void *screenTimeWebpageControllerBlockedKVOContext = &screenTimeWebpageControllerBlockedKVOContext;
+#if PLATFORM(MAC)
+@interface WKSTVisualEffectView : NSVisualEffectView
+@end
+
+@implementation WKSTVisualEffectView
+
+- (void)mouseDown:(NSEvent *)event
+{
+}
+
+- (void)rightMouseDown:(NSEvent *)event
+{
+}
+
+- (void)mouseMoved:(NSEvent *)event
+{
+}
+
+- (void)mouseEntered:(NSEvent *)event
+{
+}
+
+- (void)mouseExited:(NSEvent *)event
+{
+}
+
+@end
+#endif
 #endif
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
@@ -373,15 +401,20 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
 
         [_screenTimeWebpageController setSuppressUsageRecording:![_configuration websiteDataStore].isPersistent];
 
+        // Observing changes to URLIsBlocked is set up in STWebpageController's loadView function.
+        // Thus, we have to instantiate its view for URLIsBlocked to update properly.
         RetainPtr screenTimeView = [_screenTimeWebpageController view];
-        [screenTimeView setTranslatesAutoresizingMaskIntoConstraints:NO];
-        [self addSubview:screenTimeView.get()];
-        [NSLayoutConstraint activateConstraints:@[
-            [[screenTimeView widthAnchor] constraintEqualToAnchor:self.widthAnchor],
-            [[screenTimeView heightAnchor] constraintEqualToAnchor:self.heightAnchor],
-            [[screenTimeView leadingAnchor] constraintEqualToAnchor:self.leadingAnchor],
-            [[screenTimeView topAnchor] constraintEqualToAnchor:self.topAnchor]
-        ]];
+
+        if ([_configuration _showsSystemScreenTimeBlockingView]) {
+            [screenTimeView setTranslatesAutoresizingMaskIntoConstraints:NO];
+            [self addSubview:screenTimeView.get()];
+            [NSLayoutConstraint activateConstraints:@[
+                [[screenTimeView widthAnchor] constraintEqualToAnchor:self.widthAnchor],
+                [[screenTimeView heightAnchor] constraintEqualToAnchor:self.heightAnchor],
+                [[screenTimeView leadingAnchor] constraintEqualToAnchor:self.leadingAnchor],
+                [[screenTimeView topAnchor] constraintEqualToAnchor:self.topAnchor]
+            ]];
+        }
     }
 }
 
@@ -405,6 +438,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     if (context == &screenTimeWebpageControllerBlockedKVOContext) {
         BOOL urlWasBlocked = dynamic_objc_cast<NSNumber>(change[NSKeyValueChangeOldKey]).boolValue;
         BOOL urlIsBlocked = dynamic_objc_cast<NSNumber>(change[NSKeyValueChangeNewKey]).boolValue;
+        BOOL wasBlockedByScreenTime = _isBlockedByScreenTime;
 
         if (urlWasBlocked != urlIsBlocked) {
             [self setAllMediaPlaybackSuspended:urlIsBlocked completionHandler:nil];
@@ -412,7 +446,29 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
             _isBlockedByScreenTime = urlIsBlocked;
             [self didChangeValueForKey:@"_isBlockedByScreenTime"];
         }
-
+        if (wasBlockedByScreenTime != _isBlockedByScreenTime) {
+            if (!_screenTimeBlurredSnapshot && ![_configuration _showsSystemScreenTimeBlockingView]) {
+#if PLATFORM(MAC)
+                _screenTimeBlurredSnapshot = adoptNS([[WKSTVisualEffectView alloc] init]);
+                [_screenTimeBlurredSnapshot setMaterial:NSVisualEffectMaterialUnderWindowBackground];
+                [_screenTimeBlurredSnapshot setBlendingMode:NSVisualEffectBlendingModeWithinWindow];
+#else
+                RetainPtr blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterial];
+                _screenTimeBlurredSnapshot = adoptNS([[UIVisualEffectView alloc] initWithEffect:blurEffect.get()]);
+#endif
+                [_screenTimeBlurredSnapshot setTranslatesAutoresizingMaskIntoConstraints:NO];
+                [self addSubview:_screenTimeBlurredSnapshot.get()];
+                [NSLayoutConstraint activateConstraints:@[
+                    [[_screenTimeBlurredSnapshot widthAnchor] constraintEqualToAnchor:self.widthAnchor],
+                    [[_screenTimeBlurredSnapshot heightAnchor] constraintEqualToAnchor:self.heightAnchor],
+                    [[_screenTimeBlurredSnapshot leadingAnchor] constraintEqualToAnchor:self.leadingAnchor],
+                    [[_screenTimeBlurredSnapshot topAnchor] constraintEqualToAnchor:self.topAnchor]
+                ]];
+            } else if (_screenTimeBlurredSnapshot) {
+                [_screenTimeBlurredSnapshot removeFromSuperview];
+                _screenTimeBlurredSnapshot = nil;
+            }
+        }
         return;
     }
 #endif
