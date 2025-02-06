@@ -4996,7 +4996,7 @@ MediaSessionPlaylistEnabled:
 
 MediaSourceCanFallbackToDecompressionSession:
   type: bool
-  status: testable
+  status: stable
   category: media
   humanReadableName: "MediaSource automatically falls back to DecompressionSession"
   humanReadableDescription: "MediaSource automatically falls back to DecompressionSession"
@@ -5005,9 +5005,9 @@ MediaSourceCanFallbackToDecompressionSession:
     WebKitLegacy:
       default: false
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
   sharedPreferenceForWebProcess: true
 
 MediaSourceEnabled:
@@ -5050,7 +5050,7 @@ MediaSourceInWorkerEnabled:
 
 MediaSourcePrefersDecompressionSession:
   type: bool
-  status: testable
+  status: stable
   category: media
   humanReadableName: "MediaSource prefers DecompressionSession"
   humanReadableDescription: "MediaSource prefers DecompressionSession"
@@ -5059,9 +5059,9 @@ MediaSourcePrefersDecompressionSession:
     WebKitLegacy:
       default: false
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
   sharedPreferenceForWebProcess: true
 
 MediaStreamTrackProcessingEnabled:
