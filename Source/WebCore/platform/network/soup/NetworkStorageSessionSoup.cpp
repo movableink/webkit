@@ -749,14 +749,14 @@ bool NetworkStorageSession::getRawCookies(const URL& firstParty, const SameSiteI
 
 Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL& url)
 {
-    auto host = url.host().utf8().data();
+    auto host = url.host().utf8();
 
     CookieList soupCookies(soup_cookie_jar_all_cookies(cookieStorage()));
 
     Vector<Cookie> cookies;
     for (GSList* iter = soupCookies.get(); iter; iter = g_slist_next(iter)) {
         auto* soupCookie = static_cast<SoupCookie*>(iter->data);
-        if (soup_cookie_domain_matches(soupCookie, host)) {
+        if (soup_cookie_domain_matches(soupCookie, host.data())) {
             // soup_cookie_jar_all_cookies() always returns a reversed list.
             cookies.insert(0, Cookie(soupCookie));
         }
