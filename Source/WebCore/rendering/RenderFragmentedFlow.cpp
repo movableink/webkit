@@ -416,7 +416,7 @@ void RenderFragmentedFlow::removeLineFragmentInfo(const RenderBlockFlow& blockFl
     ASSERT_WITH_SECURITY_IMPLICATION(checkLinesConsistency(blockFlow));
 }
 
-void RenderFragmentedFlow::logicalWidthChangedInFragmentsForBlock(const RenderBlock& block, bool& relayoutChildren)
+void RenderFragmentedFlow::logicalWidthChangedInFragmentsForBlock(const RenderBlock& block, RelayoutChildren& relayoutChildren)
 {
     if (!hasValidFragmentInfo())
         return;
@@ -431,13 +431,13 @@ void RenderFragmentedFlow::logicalWidthChangedInFragmentsForBlock(const RenderBl
 
     // If there will be a relayout anyway skip the next steps because they only verify
     // the state of the ranges.
-    if (relayoutChildren)
+    if (relayoutChildren == RelayoutChildren::Yes)
         return;
 
     // Not necessary for the flow thread, since we already computed the correct info for it.
     // If the fragments have changed invalidate the children.
     if (&block == this) {
-        relayoutChildren = m_pageLogicalSizeChanged;
+        relayoutChildren = m_pageLogicalSizeChanged ? RelayoutChildren::Yes : RelayoutChildren::No;
         return;
     }
 
@@ -453,14 +453,14 @@ void RenderFragmentedFlow::logicalWidthChangedInFragmentsForBlock(const RenderBl
         // We have no information computed for this fragment so we need to do it.
         std::unique_ptr<RenderBoxFragmentInfo> oldInfo = fragment.takeRenderBoxFragmentInfo(&block);
         if (!oldInfo) {
-            relayoutChildren = rangeInvalidated;
+            relayoutChildren = rangeInvalidated ? RelayoutChildren::Yes : RelayoutChildren::No;
             return;
         }
 
         LayoutUnit oldLogicalWidth = oldInfo->logicalWidth();
         auto* newInfo = block.renderBoxFragmentInfo(&fragment);
         if (!newInfo || newInfo->logicalWidth() != oldLogicalWidth) {
-            relayoutChildren = true;
+            relayoutChildren = RelayoutChildren::Yes;
             return;
         }
 

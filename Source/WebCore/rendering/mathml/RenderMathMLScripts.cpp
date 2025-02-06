@@ -360,13 +360,13 @@ RenderMathMLScripts::VerticalMetrics RenderMathMLScripts::verticalMetrics(const 
     return metrics;
 }
 
-void RenderMathMLScripts::layoutBlock(bool relayoutChildren, LayoutUnit)
+void RenderMathMLScripts::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
 {
     ASSERT(needsLayout());
 
     insertPositionedChildrenIntoContainingBlock();
 
-    if (!relayoutChildren && simplifiedLayout())
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
 
     auto possibleReference = validateAndGetReferenceChildren();

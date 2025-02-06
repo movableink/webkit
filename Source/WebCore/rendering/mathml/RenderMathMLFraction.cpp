@@ -226,13 +226,13 @@ LayoutUnit RenderMathMLFraction::fractionAscent() const
     return numeratorAscent + stackParameters().numeratorShiftUp;
 }
 
-void RenderMathMLFraction::layoutBlock(bool relayoutChildren, LayoutUnit)
+void RenderMathMLFraction::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
 {
     ASSERT(needsLayout());
 
     insertPositionedChildrenIntoContainingBlock();
 
-    if (!relayoutChildren && simplifiedLayout())
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
 
     if (!isValid()) {

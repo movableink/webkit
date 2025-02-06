@@ -1312,7 +1312,7 @@ void RenderLayerScrollableArea::updateScrollbarsAfterLayout()
                 renderer.setNeedsLayout(MarkOnlyThis);
                 if (CheckedPtr block = dynamicDowncast<RenderBlock>(renderer)) {
                     block->scrollbarsChanged(autoHorizontalScrollBarChanged, autoVerticalScrollBarChanged);
-                    block->layoutBlock(true);
+                    block->layoutBlock(RelayoutChildren::Yes);
                 } else
                     renderer.layout();
             }

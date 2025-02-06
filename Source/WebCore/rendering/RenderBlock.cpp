@@ -549,7 +549,7 @@ void RenderBlock::layout()
 
     // Table cells call layoutBlock directly, so don't add any logic here.  Put code into
     // layoutBlock().
-    layoutBlock(false);
+    layoutBlock(RelayoutChildren::No);
     
     // It's safe to check for control clip here, since controls can never be table cells.
     // If we have a lightweight clip, there can never be any overflow from children.
@@ -580,7 +580,7 @@ RenderBlockRareData& RenderBlock::ensureBlockRareData()
     }).iterator->value;
 }
 
-void RenderBlock::preparePaginationBeforeBlockLayout(bool& relayoutChildren)
+void RenderBlock::preparePaginationBeforeBlockLayout(RelayoutChildren& relayoutChildren)
 {
     // Fragments changing widths can force us to relayout our children.
     if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
@@ -599,7 +599,7 @@ bool RenderBlock::recomputeLogicalWidth()
     return oldWidth != logicalWidth() || hasBorderOrPaddingLogicalWidthChanged;
 }
 
-void RenderBlock::layoutBlock(bool, LayoutUnit)
+void RenderBlock::layoutBlock(RelayoutChildren, LayoutUnit)
 {
     ASSERT_NOT_REACHED();
     clearNeedsLayout();
@@ -764,7 +764,7 @@ void RenderBlock::setLogicalTopForChild(RenderBox& child, LayoutUnit logicalTop,
     }
 }
 
-void RenderBlock::updateBlockChildDirtyBitsBeforeLayout(bool relayoutChildren, RenderBox& child)
+void RenderBlock::updateBlockChildDirtyBitsBeforeLayout(RelayoutChildren relayoutChildren, RenderBox& child)
 {
     if (child.isOutOfFlowPositioned())
         return;
@@ -775,11 +775,11 @@ void RenderBlock::updateBlockChildDirtyBitsBeforeLayout(bool relayoutChildren, R
         auto& style = child.style();
         return style.height().isPercentOrCalculated() || style.minHeight().isPercentOrCalculated() || style.maxHeight().isPercentOrCalculated();
     };
-    if (relayoutChildren || (childHasRelativeHeight() && !isRenderView()))
+    if (relayoutChildren == RelayoutChildren::Yes || (childHasRelativeHeight() && !isRenderView()))
         child.setChildNeedsLayout(MarkOnlyThis);
 
     // If relayoutChildren is set and the child has percentage padding or an embedded content box, we also need to invalidate the childs pref widths.
-    if (relayoutChildren && child.needsPreferredWidthsRecalculation())
+    if (relayoutChildren == RelayoutChildren::Yes && child.needsPreferredWidthsRecalculation())
         child.setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
 }
 
@@ -870,7 +870,7 @@ bool RenderBlock::simplifiedLayout()
     // relative positioned container. So if we can have fixed pos objects in our positioned objects list check if any of them
     // are statically positioned and thus need to move with their absolute ancestors.
     if (posChildNeedsLayout() || canContainFixedPosObjects)
-        layoutPositionedObjects(false, !posChildNeedsLayout() && canContainFixedPosObjects);
+        layoutPositionedObjects(RelayoutChildren::No, !posChildNeedsLayout() && canContainFixedPosObjects);
 
     // Recompute our overflow information.
     // FIXME: We could do better here by computing a temporary overflow object from layoutPositionedObjects and only
@@ -934,7 +934,7 @@ LayoutUnit RenderBlock::marginIntrinsicLogicalWidthForChild(RenderBox& child) co
     return margin;
 }
 
-void RenderBlock::layoutPositionedObject(RenderBox& r, bool relayoutChildren, bool fixedPositionObjectsOnly)
+void RenderBlock::layoutPositionedObject(RenderBox& r, RelayoutChildren relayoutChildren, bool fixedPositionObjectsOnly)
 {
     if (layoutContext().isSkippedContentRootForLayout(*this)) {
         r.clearNeedsLayoutForSkippedContent();
@@ -956,11 +956,11 @@ void RenderBlock::layoutPositionedObject(RenderBox& r, bool relayoutChildren, bo
     // non-positioned block.  Rather than trying to detect all of these movement cases, we just always lay out positioned
     // objects that are positioned implicitly like this.  Such objects are rare, and so in typical DHTML menu usage (where everything is
     // positioned explicitly) this should not incur a performance penalty.
-    if (relayoutChildren || (r.style().hasStaticBlockPosition(isHorizontalWritingMode()) && r.parent() != this))
+    if (relayoutChildren == RelayoutChildren::Yes || (r.style().hasStaticBlockPosition(isHorizontalWritingMode()) && r.parent() != this))
         r.setChildNeedsLayout(MarkOnlyThis);
-        
+
     // If relayoutChildren is set and the child has percentage padding or an embedded content box, we also need to invalidate the childs pref widths.
-    if (relayoutChildren && r.needsPreferredWidthsRecalculation())
+    if (relayoutChildren == RelayoutChildren::Yes && r.needsPreferredWidthsRecalculation())
         r.setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
     
     r.markForPaginationRelayoutIfNeeded();
@@ -1012,7 +1012,7 @@ void RenderBlock::layoutPositionedObject(RenderBox& r, bool relayoutChildren, bo
     }
 }
 
-void RenderBlock::layoutPositionedObjects(bool relayoutChildren, bool fixedPositionObjectsOnly)
+void RenderBlock::layoutPositionedObjects(RelayoutChildren relayoutChildren, bool fixedPositionObjectsOnly)
 {
     auto* positionedDescendants = positionedObjects();
     if (!positionedDescendants)
@@ -3352,7 +3352,7 @@ std::optional<LayoutUnit> RenderBlock::availableLogicalHeightForPercentageComput
     return availableHeight();
 }
     
-void RenderBlock::layoutExcludedChildren(bool relayoutChildren)
+void RenderBlock::layoutExcludedChildren(RelayoutChildren relayoutChildren)
 {
     if (!isFieldset())
         return;
@@ -3371,7 +3371,7 @@ void RenderBlock::layoutExcludedChildren(bool relayoutChildren)
     }
 
     RenderBox& legend = *box;
-    if (relayoutChildren)
+    if (relayoutChildren == RelayoutChildren::Yes)
         legend.setChildNeedsLayout(MarkOnlyThis);
     legend.layoutIfNeeded();
     

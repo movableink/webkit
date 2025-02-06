@@ -618,7 +618,7 @@ void RenderTable::layout()
 
         // table can be containing block of positioned elements.
         bool dimensionChanged = oldLogicalWidth != logicalWidth() || oldLogicalHeight != logicalHeight();
-        layoutPositionedObjects(dimensionChanged);
+        layoutPositionedObjects(dimensionChanged ? RelayoutChildren::Yes : RelayoutChildren::No);
 
         updateLayerTransform();
 

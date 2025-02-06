@@ -103,7 +103,7 @@ LayoutUnit RenderTextControlMultiLine::baselinePosition(FontBaseline baselineTyp
     return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
 }
 
-void RenderTextControlMultiLine::layoutExcludedChildren(bool relayoutChildren)
+void RenderTextControlMultiLine::layoutExcludedChildren(RelayoutChildren relayoutChildren)
 {
     RenderTextControl::layoutExcludedChildren(relayoutChildren);
     HTMLElement* placeholder = textFormControlElement().placeholderElement();

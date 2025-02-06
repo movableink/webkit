@@ -297,13 +297,13 @@ RenderMathMLUnderOver::VerticalParameters RenderMathMLUnderOver::verticalParamet
     return parameters;
 }
 
-void RenderMathMLUnderOver::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight)
+void RenderMathMLUnderOver::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit pageLogicalHeight)
 {
     ASSERT(needsLayout());
 
     insertPositionedChildrenIntoContainingBlock();
 
-    if (!relayoutChildren && simplifiedLayout())
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
 
     if (!isValid()) {

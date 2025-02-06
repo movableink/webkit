@@ -68,7 +68,7 @@ public:
     Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
+    void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
 
     bool canDropAnonymousBlockChild() const override { return false; }
 
@@ -98,8 +98,8 @@ public:
     // the grid is a standard grid or a masonry one. While masonry is an extension of grid,
     // keeping the logic in the same function was leading to a messy amount of if statements being added to handle
     // specific masonry cases.
-    void layoutGrid(bool);
-    void layoutMasonry(bool);
+    void layoutGrid(RelayoutChildren);
+    void layoutMasonry(RelayoutChildren);
 
     // Computes the span relative to this RenderGrid, even if the RenderBox is a grid item
     // of a descendant subgrid.
@@ -200,7 +200,7 @@ private:
     bool canPerformSimplifiedLayout() const final;
     void prepareGridItemForPositionedLayout(RenderBox&);
     bool hasStaticPositionForGridItem(const RenderBox&, GridTrackSizingDirection) const;
-    void layoutPositionedObject(RenderBox&, bool relayoutChildren, bool fixedPositionObjectsOnly) override;
+    void layoutPositionedObject(RenderBox&, RelayoutChildren, bool fixedPositionObjectsOnly) override;
 
     void computeTrackSizesForDefiniteSize(GridTrackSizingDirection, LayoutUnit availableSpace, GridLayoutState&);
     void computeTrackSizesForIndefiniteSize(GridTrackSizingAlgorithm&, GridTrackSizingDirection, GridLayoutState&, LayoutUnit* minIntrinsicSize = nullptr, LayoutUnit* maxIntrinsicSize = nullptr) const;

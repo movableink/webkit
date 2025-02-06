@@ -55,7 +55,7 @@ public:
     ASCIILiteral renderName() const override;
 
     bool canDropAnonymousBlockChild() const final { return false; }
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) final;
+    void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) final;
 
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
     std::optional<LayoutUnit> firstLineBaseline() const override;
@@ -195,8 +195,8 @@ private:
     void computeChildIntrinsicLogicalWidths(RenderBox&, LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     LayoutUnit computeMainSizeFromAspectRatioUsing(const RenderBox& flexItem, Length crossSizeLength) const;
     void setFlowAwareLocationForFlexItem(RenderBox& flexItem, const LayoutPoint&);
-    LayoutUnit computeFlexBaseSizeForFlexItem(RenderBox& flexItem, LayoutUnit mainAxisBorderAndPadding, bool relayoutChildren);
-    void maybeCacheFlexItemMainIntrinsicSize(RenderBox& flexItem, bool relayoutChildren);
+    LayoutUnit computeFlexBaseSizeForFlexItem(RenderBox& flexItem, LayoutUnit mainAxisBorderAndPadding, RelayoutChildren);
+    void maybeCacheFlexItemMainIntrinsicSize(RenderBox& flexItem, RelayoutChildren);
     void adjustAlignmentForFlexItem(RenderBox& flexItem, LayoutUnit);
     ItemPosition alignmentForFlexItem(const RenderBox& flexItem) const;
     inline OverflowAlignment overflowAlignmentForFlexItem(const RenderBox& flexItem) const;
@@ -209,7 +209,7 @@ private:
     Overflow crossAxisOverflowForFlexItem(const RenderBox& flexItem) const;
     void cacheFlexItemMainSize(const RenderBox& flexItem);
 
-    void performFlexLayout(bool relayoutChildren);
+    void performFlexLayout(RelayoutChildren);
     LayoutUnit autoMarginOffsetInMainAxis(const FlexLayoutItems&, LayoutUnit& availableFreeSpace);
     void updateAutoMarginsInMainAxis(RenderBox& flexItem, LayoutUnit autoMarginOffset);
     void initializeMarginTrimState(); 
@@ -236,7 +236,7 @@ private:
     void prepareOrderIteratorAndMargins();
     std::pair<LayoutUnit, LayoutUnit> computeFlexItemMinMaxSizes(RenderBox& flexItem);
     LayoutUnit adjustFlexItemSizeForAspectRatioCrossAxisMinAndMax(const RenderBox& flexItem, LayoutUnit flexItemSize);
-    FlexLayoutItem constructFlexLayoutItem(RenderBox&, bool relayoutChildren);
+    FlexLayoutItem constructFlexLayoutItem(RenderBox&, RelayoutChildren);
     
     void freezeInflexibleItems(FlexSign, FlexLayoutItems&, LayoutUnit& remainingFreeSpace, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink);
     bool resolveFlexibleLengths(FlexSign, FlexLayoutItems&, LayoutUnit initialFreeSpace, LayoutUnit& remainingFreeSpace, double& totalFlexGrow, double& totalFlexShrink, double& totalWeightedFlexShrink);
@@ -245,7 +245,7 @@ private:
     void resetAutoMarginsAndLogicalTopInCrossAxis(RenderBox& flexItem);
     void setOverridingMainSizeForFlexItem(RenderBox&, LayoutUnit);
     void prepareFlexItemForPositionedLayout(RenderBox& flexItem);
-    void layoutAndPlaceFlexItems(LayoutUnit& crossAxisOffset, FlexLayoutItems&, LayoutUnit availableFreeSpace, bool relayoutChildren, FlexLineStates&, LayoutUnit gapBetweenItems);
+    void layoutAndPlaceFlexItems(LayoutUnit& crossAxisOffset, FlexLayoutItems&, LayoutUnit availableFreeSpace, RelayoutChildren, FlexLineStates&, LayoutUnit gapBetweenItems);
     void layoutColumnReverse(const FlexLayoutItems&, LayoutUnit crossAxisOffset, LayoutUnit availableFreeSpace, LayoutUnit gapBetweenItems);
     void alignFlexLines(FlexLineStates&, LayoutUnit gapBetweenLines);
     void alignFlexItems(FlexLineStates&);

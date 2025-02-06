@@ -146,7 +146,7 @@ std::optional<LayoutUnit> RenderMathMLTable::firstLineBaseline() const
     return LayoutUnit { (logicalHeight() / 2 + axisHeight(style())).toInt() };
 }
 
-void RenderMathMLBlock::layoutItems(bool relayoutChildren)
+void RenderMathMLBlock::layoutItems(RelayoutChildren relayoutChildren)
 {
     LayoutUnit verticalOffset = borderAndPaddingBefore();
     LayoutUnit horizontalOffset = borderAndPaddingStart();
@@ -194,13 +194,13 @@ void RenderMathMLBlock::layoutItems(bool relayoutChildren)
     }
 }
 
-void RenderMathMLBlock::layoutBlock(bool relayoutChildren, LayoutUnit)
+void RenderMathMLBlock::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
 {
     ASSERT(needsLayout());
 
     insertPositionedChildrenIntoContainingBlock();
 
-    if (!relayoutChildren && simplifiedLayout())
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
 
     layoutFloatingChildren();
@@ -208,7 +208,7 @@ void RenderMathMLBlock::layoutBlock(bool relayoutChildren, LayoutUnit)
     LayoutRepainter repainter(*this);
 
     if (recomputeLogicalWidth())
-        relayoutChildren = true;
+        relayoutChildren = RelayoutChildren::Yes;
 
     setLogicalHeight(borderAndPaddingLogicalHeight() + scrollbarLogicalHeight());
 

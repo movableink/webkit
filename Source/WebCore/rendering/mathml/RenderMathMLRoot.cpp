@@ -189,13 +189,13 @@ void RenderMathMLRoot::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
-void RenderMathMLRoot::layoutBlock(bool relayoutChildren, LayoutUnit)
+void RenderMathMLRoot::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
 {
     ASSERT(needsLayout());
 
     insertPositionedChildrenIntoContainingBlock();
 
-    if (!relayoutChildren && simplifiedLayout())
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
 
     m_radicalOperatorTop = 0;
