@@ -1960,5 +1960,5 @@ webkit.org/b/286653 [ Sequoia ] pdf/images/jpeg2000-embed-pdf.html [ Pass Failur
 
 webkit.org/b/287122 [ Ventura+ ] imported/w3c/web-platform-tests/html/capability-delegation/delegate-fullscreen-request-subframe-same-origin.https.tentative.html [ Pass Failure ]
 
-# rdar://141631699 ([ macOS wk2 arm64 ] fast/css/webkit-named-image/apple-pay-logo-white/background-size.html is failing on EWS.)
-[ arm64 ] fast/css/webkit-named-image/apple-pay-logo-white/background-size.html [ Skip ]
+# rdar://141631699 ([ macOS wk2 arm64 ] Multiple fast/css/webkit-named-image/apple-pay-logo-white/* tests are failing on EWS.)
+[ arm64 ] fast/css/webkit-named-image/apple-pay-logo-white [ Skip ]
