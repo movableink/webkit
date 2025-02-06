@@ -764,6 +764,7 @@ public:
     LocalFrame& frame() const;
     Ref<LocalFrame> protectedFrame() const { return frame(); }
     Page& page() const;
+    Ref<Page> protectedPage() const;
     Settings& settings() const { return page().settings(); }
 
     // Returns the object containing this one. Can be different from parent for positioned elements.
@@ -1351,6 +1352,11 @@ inline Page& RenderObject::page() const
     // so it's safe to assume Frame::page() is non-null as long as there are live RenderObjects.
     ASSERT(frame().page());
     return *frame().page();
+}
+
+inline Ref<Page> RenderObject::protectedPage() const
+{
+    return page();
 }
 
 inline bool RenderObject::renderTreeBeingDestroyed() const

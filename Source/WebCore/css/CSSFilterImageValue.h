@@ -58,7 +58,7 @@ public:
 private:
     explicit CSSFilterImageValue(Ref<CSSValue>&& imageValueOrNone, CSS::FilterProperty&&);
 
-    Ref<CSSValue> m_imageValueOrNone;
+    const Ref<CSSValue> m_imageValueOrNone;
     CSS::FilterProperty m_filter;
 };
 
