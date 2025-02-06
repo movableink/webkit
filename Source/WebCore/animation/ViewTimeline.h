@@ -66,9 +66,14 @@ public:
     Element* source() const override;
     TimelineRange defaultRange() const final;
 
+    std::pair<WebAnimationTime, WebAnimationTime> intervalForAttachmentRange(const TimelineRange&) const final;
+    std::pair<double, double> offsetIntervalForAttachmentRange(const TimelineRange&) const;
+    std::pair<double, double> offsetIntervalForTimelineRangeName(const SingleTimelineRange::Name) const;
+
 private:
     ScrollTimeline::Data computeTimelineData() const final;
-    std::pair<WebAnimationTime, WebAnimationTime> intervalForAttachmentRange(const TimelineRange&) const final;
+    std::pair<double, double> intervalForTimelineRangeName(const ScrollTimeline::Data&, const SingleTimelineRange::Name) const;
+    template<typename F> double mapOffsetToTimelineRange(const ScrollTimeline::Data&, const SingleTimelineRange::Name, F&&) const;
 
     explicit ViewTimeline(ScrollAxis);
     explicit ViewTimeline(const AtomString&, ScrollAxis, ViewTimelineInsets&&);

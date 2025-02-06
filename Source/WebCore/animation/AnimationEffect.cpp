@@ -416,9 +416,10 @@ void AnimationEffect::animationPlaybackRateDidChange()
     m_timingDidMutate = true;
 }
 
-void AnimationEffect::animationProgressBasedTimelineSourceDidChangeMetrics()
+void AnimationEffect::animationProgressBasedTimelineSourceDidChangeMetrics(const TimelineRange& animationAttachmentRange)
 {
-    m_timingDidMutate = true;
+    if (!animationAttachmentRange.isDefault())
+        m_timingDidMutate = true;
 }
 
 void AnimationEffect::animationRangeDidChange()

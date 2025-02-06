@@ -68,14 +68,16 @@ public:
     static Ref<KeyframeEffect> create(Ref<KeyframeEffect>&&);
     static Ref<KeyframeEffect> create(const Element&, const std::optional<Style::PseudoElementIdentifier>&);
 
+    using KeyframeOffset = std::variant<std::nullptr_t, double, TimelineRangeOffset, String>;
+
     struct BasePropertyIndexedKeyframe {
-        std::variant<std::nullptr_t, Vector<std::optional<double>>, double> offset = Vector<std::optional<double>>();
+        std::variant<std::nullptr_t, Vector<KeyframeOffset>, double, TimelineRangeOffset, String> offset = Vector<KeyframeOffset>();
         std::variant<Vector<String>, String> easing = Vector<String>();
         std::variant<Vector<CompositeOperationOrAuto>, CompositeOperationOrAuto> composite = Vector<CompositeOperationOrAuto>();
     };
 
     struct BaseKeyframe {
-        MarkableDouble offset;
+        KeyframeOffset offset;
         String easing { "linear"_s };
         CompositeOperationOrAuto composite { CompositeOperationOrAuto::Auto };
     };
@@ -281,6 +283,10 @@ private:
     bool ticksContinuouslyWhileActive() const final;
     std::optional<double> progressUntilNextStep(double) const final;
     bool preventsAnimationReadiness() const final;
+    void animationProgressBasedTimelineSourceDidChangeMetrics(const TimelineRange&) final;
+
+    const ViewTimeline* activeViewTimeline();
+    void updateComputedKeyframeOffsetsIfNeeded();
 
     // KeyframeInterpolation
     CompositeOperation compositeOperation() const final { return m_compositeOperation; }
@@ -325,6 +331,7 @@ private:
     bool m_hasReferenceFilter { false };
     bool m_animatesSizeAndSizeDependentTransform { false };
     bool m_isAssociatedWithProgressBasedTimeline { false };
+    bool m_needsComputedKeyframeOffsetsUpdate { false };
 };
 
 } // namespace WebCore

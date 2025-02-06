@@ -63,6 +63,8 @@ ExceptionOr<Ref<ViewTimeline>> ViewTimeline::create(Document& document, ViewTime
 
     viewTimeline->m_specifiedInsets = WTFMove(specifiedInsets);
     viewTimeline->setSubject(options.subject.get());
+    if (auto subject = options.subject)
+        subject->protectedDocument()->updateLayoutIgnorePendingStylesheets();
     viewTimeline->cacheCurrentTime();
 
     return viewTimeline;
@@ -379,15 +381,9 @@ ScrollTimeline::Data ViewTimeline::computeTimelineData() const
     };
 }
 
-std::pair<WebAnimationTime, WebAnimationTime> ViewTimeline::intervalForAttachmentRange(const TimelineRange& attachmentRange) const
+std::pair<double, double> ViewTimeline::intervalForTimelineRangeName(const ScrollTimeline::Data& data, const SingleTimelineRange::Name name) const
 {
-    // https://drafts.csswg.org/scroll-animations-1/#view-timelines-ranges
-    auto data = computeTimelineData();
-    auto timelineRange = data.rangeEnd - data.rangeStart;
-    if (!timelineRange)
-        return { WebAnimationTime::fromPercentage(0), WebAnimationTime::fromPercentage(100) };
-
-    auto subjectRangeStartForName = [&](SingleTimelineRange::Name name) {
+    auto subjectRangeStart = [&]() {
         switch (name) {
         case SingleTimelineRange::Name::Normal:
         case SingleTimelineRange::Name::Omitted:
@@ -405,9 +401,9 @@ std::pair<WebAnimationTime, WebAnimationTime> ViewTimeline::intervalForAttachmen
         }
         ASSERT_NOT_REACHED();
         return 0.f;
-    };
+    }();
 
-    auto subjectRangeEndForName = [&](SingleTimelineRange::Name name) {
+    auto subjectRangeEnd = [&]() {
         switch (name) {
         case SingleTimelineRange::Name::Normal:
         case SingleTimelineRange::Name::Omitted:
@@ -425,21 +421,66 @@ std::pair<WebAnimationTime, WebAnimationTime> ViewTimeline::intervalForAttachmen
         }
         ASSERT_NOT_REACHED();
         return 0.f;
+    }();
+
+    if (subjectRangeEnd < subjectRangeStart)
+        std::swap(subjectRangeStart, subjectRangeEnd);
+
+    return { subjectRangeStart, subjectRangeEnd };
+}
+
+template<typename F> double ViewTimeline::mapOffsetToTimelineRange(const ScrollTimeline::Data& data, const SingleTimelineRange::Name name, F&& valueWithinSubjectRange) const
+{
+    auto timelineRange = data.rangeEnd - data.rangeStart;
+    ASSERT(timelineRange);
+    auto [subjectRangeStart, subjectRangeEnd] = intervalForTimelineRangeName(data, name);
+    auto subjectRange = subjectRangeEnd - subjectRangeStart;
+    auto positionWithinContainer = subjectRangeStart + valueWithinSubjectRange(subjectRange);
+    auto positionWithinTimelineRange = positionWithinContainer - data.rangeStart;
+    return positionWithinTimelineRange / timelineRange;
+}
+
+std::pair<double, double> ViewTimeline::offsetIntervalForTimelineRangeName(const SingleTimelineRange::Name name) const
+{
+    auto data = computeTimelineData();
+    auto computeOffset = [&](double offset) {
+        return mapOffsetToTimelineRange(data, name, [&](const float& subjectRange) {
+            return offset * subjectRange;
+        });
+    };
+    return { computeOffset(0), computeOffset(1) };
+}
+
+std::pair<double, double> ViewTimeline::offsetIntervalForAttachmentRange(const TimelineRange& attachmentRange) const
+{
+    auto data = computeTimelineData();
+    auto timelineRange = data.rangeEnd - data.rangeStart;
+    ASSERT(timelineRange);
+
+    auto offsetForSingleTimelineRange = [&](const SingleTimelineRange& rangeToConvert) {
+        auto [conversionRangeStart, conversionRangeEnd] = intervalForTimelineRangeName(data, rangeToConvert.name);
+        auto conversionRange = conversionRangeEnd - conversionRangeStart;
+        auto convertedValue = floatValueForOffset(rangeToConvert.offset, conversionRange);
+        auto position = conversionRangeStart + convertedValue;
+        return (position - data.rangeStart) / timelineRange;
     };
 
-    auto computeTime = [&](const SingleTimelineRange& rangeToConvert) {
-        auto subjectRangeStart = subjectRangeStartForName(rangeToConvert.name);
-        auto subjectRangeEnd = subjectRangeEndForName(rangeToConvert.name);
-        if (subjectRangeEnd < subjectRangeStart)
-            std::swap(subjectRangeStart, subjectRangeEnd);
-        auto subjectRange = subjectRangeEnd - subjectRangeStart;
+    return { offsetForSingleTimelineRange(attachmentRange.start), offsetForSingleTimelineRange(attachmentRange.end) };
+}
 
-        auto& length = rangeToConvert.offset;
-        auto valueWithinSubjectRange = floatValueForOffset(length, subjectRange);
-        auto positionWithinContainer = subjectRangeStart + valueWithinSubjectRange;
-        auto positionWithinTimelineRange = positionWithinContainer - data.rangeStart;
-        auto offsetWithinTimelineRange = positionWithinTimelineRange / timelineRange;
-        return WebAnimationTime::fromPercentage(offsetWithinTimelineRange * 100);
+std::pair<WebAnimationTime, WebAnimationTime> ViewTimeline::intervalForAttachmentRange(const TimelineRange& attachmentRange) const
+{
+    // https://drafts.csswg.org/scroll-animations-1/#view-timelines-ranges
+    auto data = computeTimelineData();
+    auto timelineRange = data.rangeEnd - data.rangeStart;
+    if (!timelineRange)
+        return { WebAnimationTime::fromPercentage(0), WebAnimationTime::fromPercentage(100) };
+
+    auto computeTime = [&](const SingleTimelineRange& rangeToConvert) {
+        auto mappedOffset = mapOffsetToTimelineRange(data, rangeToConvert.name, [&](const float& subjectRange) {
+            return floatValueForOffset(rangeToConvert.offset, subjectRange);
+        });
+        return WebAnimationTime::fromPercentage(mappedOffset * 100);
     };
 
     auto attachmentRangeOrDefault = attachmentRange.isDefault() ? defaultRange() : attachmentRange;

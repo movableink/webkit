@@ -45,12 +45,14 @@
 #include "CSSParserToken.h"
 #include "CSSPositionTryRule.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+Animations.h"
 #include "CSSPropertyParserConsumer+CounterStyles.h"
 #include "CSSPropertyParserConsumer+Font.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Integer.h"
 #include "CSSPropertyParserConsumer+Length.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserConsumer+Timeline.h"
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
 #include "CSSSelectorParser.h"
@@ -278,9 +280,11 @@ CSSSelectorList CSSParserImpl::parsePageSelector(CSSParserTokenRange range, Styl
     return CSSSelectorList { MutableCSSSelectorList::from(WTFMove(selector)) };
 }
 
-Vector<double> CSSParserImpl::parseKeyframeKeyList(const String& keyList)
+Vector<std::pair<CSSValueID, double>> CSSParserImpl::parseKeyframeKeyList(const String& keyList, const CSSParserContext& context)
 {
-    return consumeKeyframeKeyList(CSSTokenizer(keyList).tokenRange());
+    auto tokenizer = CSSTokenizer(keyList);
+    auto tokenRange = tokenizer.tokenRange();
+    return CSSPropertyParserHelpers::consumeKeyframeKeyList(tokenRange, context);
 }
 
 bool CSSParserImpl::supportsDeclaration(CSSParserTokenRange& range)
@@ -1312,7 +1316,7 @@ RefPtr<StyleRuleProperty> CSSParserImpl::consumePropertyRule(CSSParserTokenRange
 
 RefPtr<StyleRuleKeyframe> CSSParserImpl::consumeKeyframeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    auto keyList = consumeKeyframeKeyList(prelude);
+    auto keyList = CSSPropertyParserHelpers::consumeKeyframeKeyList(prelude, m_context);
     if (keyList.isEmpty())
         return nullptr;
 
@@ -1618,31 +1622,6 @@ void CSSParserImpl::consumeCustomPropertyValue(CSSParserTokenRange range, const 
 void CSSParserImpl::consumeDeclarationValue(CSSParserTokenRange range, CSSPropertyID propertyID, IsImportant important, StyleRuleType ruleType)
 {
     CSSPropertyParser::parseValue(propertyID, important == IsImportant::Yes, range, m_context, topContext().m_parsedProperties, ruleType);
-}
-
-Vector<double> CSSParserImpl::consumeKeyframeKeyList(CSSParserTokenRange range)
-{
-    Vector<double> result;
-    while (true) {
-        range.consumeWhitespace();
-        const CSSParserToken& token = range.consumeIncludingWhitespace();
-        if (token.type() == PercentageToken && token.numericValue() >= 0 && token.numericValue() <= 100)
-            result.append(token.numericValue() / 100);
-        else if (token.type() == IdentToken && equalLettersIgnoringASCIICase(token.value(), "from"_s))
-            result.append(0);
-        else if (token.type() == IdentToken && equalLettersIgnoringASCIICase(token.value(), "to"_s))
-            result.append(1);
-        else
-            return { }; // Parser error, invalid value in keyframe selector
-
-        if (range.atEnd()) {
-            result.shrinkToFit();
-            return result;
-        }
-
-        if (range.consume().type() != CommaToken)
-            return { }; // Parser error
-    }
 }
 
 } // namespace WebCore

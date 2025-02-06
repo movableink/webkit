@@ -1943,9 +1943,8 @@ const TimelineRange& WebAnimation::range()
 void WebAnimation::progressBasedTimelineSourceDidChangeMetrics()
 {
     ASSERT(m_timeline && m_timeline->isProgressBased());
-    RefPtr effect = m_effect;
-    if (effect && !range().isDefault())
-        effect->animationProgressBasedTimelineSourceDidChangeMetrics();
+    if (RefPtr effect = m_effect)
+        effect->animationProgressBasedTimelineSourceDidChangeMetrics(range());
 }
 
 } // namespace WebCore

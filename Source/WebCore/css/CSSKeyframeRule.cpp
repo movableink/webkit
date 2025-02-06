@@ -37,13 +37,30 @@
 
 namespace WebCore {
 
+void StyleRuleKeyframe::Key::writeToString(StringBuilder& str) const
+{
+    if (rangeName == CSSValueContain)
+        str.append("contain "_s);
+    else if (rangeName == CSSValueCover)
+        str.append("cover "_s);
+    else if (rangeName == CSSValueEntry)
+        str.append("entry "_s);
+    else if (rangeName == CSSValueEntryCrossing)
+        str.append("entry-crossing "_s);
+    else if (rangeName == CSSValueExit)
+        str.append("exit "_s);
+    else if (rangeName == CSSValueExitCrossing)
+        str.append("exit-crossing "_s);
+    str.append(offset * 100, '%');
+}
+
 StyleRuleKeyframe::StyleRuleKeyframe(Ref<StyleProperties>&& properties)
     : StyleRuleBase(StyleRuleType::Keyframe)
     , m_properties(WTFMove(properties))
 {
 }
 
-StyleRuleKeyframe::StyleRuleKeyframe(Vector<double>&& keys, Ref<StyleProperties>&& properties)
+StyleRuleKeyframe::StyleRuleKeyframe(Vector<Key>&& keys, Ref<StyleProperties>&& properties)
     : StyleRuleBase(StyleRuleType::Keyframe)
     , m_properties(WTFMove(properties))
     , m_keys(WTFMove(keys))
@@ -55,9 +72,12 @@ Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Ref<StyleProperties>&& properti
     return adoptRef(*new StyleRuleKeyframe(WTFMove(properties)));
 }
 
-Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Vector<double>&& keys, Ref<StyleProperties>&& properties)
+Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Vector<std::pair<CSSValueID, double>>&& keys, Ref<StyleProperties>&& properties)
 {
-    return adoptRef(*new StyleRuleKeyframe(WTFMove(keys), WTFMove(properties)));
+    auto keyStructs = keys.map([](auto& pair) -> Key {
+        return { pair.first, pair.second };
+    });
+    return adoptRef(*new StyleRuleKeyframe(WTFMove(keyStructs), WTFMove(properties)));
 }
 
 StyleRuleKeyframe::~StyleRuleKeyframe() = default;
@@ -78,7 +98,7 @@ String StyleRuleKeyframe::keyText() const
     for (size_t i = 0; i < m_keys.size(); ++i) {
         if (i)
             keyText.append(',');
-        keyText.append(m_keys[i] * 100, '%');
+        m_keys[i].writeToString(keyText);
     }
     return keyText.toString();
 }
@@ -86,10 +106,12 @@ String StyleRuleKeyframe::keyText() const
 bool StyleRuleKeyframe::setKeyText(const String& keyText)
 {
     ASSERT(!keyText.isNull());
-    auto keys = CSSParser::parseKeyframeKeyList(keyText);
+    auto keys = CSSParser::parseKeyframeKeyList(keyText, strictCSSParserContext());
     if (keys.isEmpty())
         return false;
-    m_keys = WTFMove(keys);
+    m_keys = keys.map([](auto& pair) -> Key {
+        return { pair.first, pair.second };
+    });
     return true;
 }
 
