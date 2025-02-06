@@ -321,7 +321,7 @@ void HTMLModelElement::createModelPlayer()
 
 void HTMLModelElement::deleteModelPlayer()
 {
-    if (m_modelPlayer)
+    if (m_modelPlayer && document().page())
         document().page()->modelPlayerProvider().deleteModelPlayer(*m_modelPlayer);
     m_modelPlayer = nullptr;
 }
