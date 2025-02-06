@@ -112,6 +112,7 @@ enum AutofillButtonType {
     // WebKit extension for autofill.
     [EnabledForWorld=allowAutofill] attribute boolean autofillAvailable;
     [EnabledForWorld=allowAutofill] attribute boolean autofilled;
+    [EnabledForWorld=allowAutofill] readonly attribute boolean lastChangeWasUserEdit;
     [EnabledForWorld=allowAutofill] attribute AutofillVisibility autofillVisibility;
     [EnabledForWorld=allowAutofill] attribute AutofillButtonType autofillButtonType;
     [EnabledForWorld=allowAutofill] attribute boolean autofillSpellcheck;
