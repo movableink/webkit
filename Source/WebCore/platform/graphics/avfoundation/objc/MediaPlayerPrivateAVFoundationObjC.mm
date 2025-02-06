@@ -63,8 +63,6 @@
 #import "ScriptDisallowedScope.h"
 #import "SecurityOrigin.h"
 #import "SerializedPlatformDataCueMac.h"
-#import "SharedBuffer.h"
-#import "SourceBufferParserWebM.h"
 #import "TextTrack.h"
 #import "TextTrackRepresentation.h"
 #import "UTIUtilities.h"
@@ -101,7 +99,9 @@
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/text/TextCodecUTF8.h>
 #import <wtf/BlockObjCExceptions.h>
+#import <wtf/CompletionHandler.h>
 #import <wtf/FileSystem.h>
+#import <wtf/Function.h>
 #import <wtf/ListHashSet.h>
 #import <wtf/NativePromise.h>
 #import <wtf/NeverDestroyed.h>

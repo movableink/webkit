@@ -33,6 +33,7 @@
 #import "AVStreamDataParserMIMETypeCache.h"
 #import "CDMSessionAVContentKeySession.h"
 #import "ContentTypeUtilities.h"
+#import "EffectiveRateChangedListener.h"
 #import "GraphicsContext.h"
 #import "IOSurface.h"
 #import "Logging.h"
@@ -80,30 +81,6 @@
 @end
 #endif
 
-@interface WebEffectiveRateChangedListenerObjCAdapter : NSObject
-@property (atomic, readonly, direct) RefPtr<WebCore::EffectiveRateChangedListener> protectedListener;
-- (instancetype)init NS_UNAVAILABLE;
-- (instancetype)initWithEffectiveRateChangedListener:(const WebCore::EffectiveRateChangedListener&)listener;
-@end
-
-NS_DIRECT_MEMBERS
-@implementation WebEffectiveRateChangedListenerObjCAdapter {
-    ThreadSafeWeakPtr<WebCore::EffectiveRateChangedListener> _listener;
-}
-
-- (instancetype)initWithEffectiveRateChangedListener:(const WebCore::EffectiveRateChangedListener&)listener
-{
-    if ((self = [super init]))
-        _listener = listener;
-    return self;
-}
-
-- (RefPtr<WebCore::EffectiveRateChangedListener>)protectedListener
-{
-    return _listener.get();
-}
-@end
-
 namespace WebCore {
 
 String convertEnumerationToString(MediaPlayerPrivateMediaSourceAVFObjC::SeekState enumerationValue)
@@ -123,51 +100,6 @@ String convertEnumerationToString(MediaPlayerPrivateMediaSourceAVFObjC::SeekStat
 #pragma mark -
 #pragma mark MediaPlayerPrivateMediaSourceAVFObjC
 
-class EffectiveRateChangedListener : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<EffectiveRateChangedListener> {
-public:
-    static Ref<EffectiveRateChangedListener> create(MediaPlayerPrivateMediaSourceAVFObjC& client, CMTimebaseRef timebase)
-    {
-        return adoptRef(*new EffectiveRateChangedListener(client, timebase));
-    }
-    ~EffectiveRateChangedListener() = default;
-
-    void effectiveRateChanged()
-    {
-        callOnMainThread([protectedThis = Ref { *this }] {
-            if (RefPtr client = protectedThis->m_client.get())
-                client->effectiveRateChanged();
-        });
-    }
-
-    void stop(CMTimebaseRef);
-
-private:
-    EffectiveRateChangedListener(MediaPlayerPrivateMediaSourceAVFObjC&, CMTimebaseRef);
-
-    WeakPtr<MediaPlayerPrivateMediaSourceAVFObjC> m_client;
-    RetainPtr<WebEffectiveRateChangedListenerObjCAdapter> m_objcAdapter;
-};
-
-static void timebaseEffectiveRateChangedCallback(CFNotificationCenterRef, void* observer, CFNotificationName, const void*, CFDictionaryRef)
-{
-    RetainPtr adapter { dynamic_objc_cast<WebEffectiveRateChangedListenerObjCAdapter>(reinterpret_cast<id>(observer)) };
-    if (auto protectedListener = [adapter protectedListener])
-        protectedListener->effectiveRateChanged();
-}
-
-void EffectiveRateChangedListener::stop(CMTimebaseRef timebase)
-{
-    CFNotificationCenterRemoveObserver(CFNotificationCenterGetLocalCenter(), m_objcAdapter.get(), kCMTimebaseNotification_EffectiveRateChanged, timebase);
-}
-
-EffectiveRateChangedListener::EffectiveRateChangedListener(MediaPlayerPrivateMediaSourceAVFObjC& client, CMTimebaseRef timebase)
-    : m_client(client)
-    , m_objcAdapter(adoptNS([[WebEffectiveRateChangedListenerObjCAdapter alloc] initWithEffectiveRateChangedListener:*this]))
-{
-    // Observer removed MediaPlayerPrivateMediaSourceAVFObjC destructor.
-    CFNotificationCenterAddObserver(CFNotificationCenterGetLocalCenter(), m_objcAdapter.get(), timebaseEffectiveRateChangedCallback, kCMTimebaseNotification_EffectiveRateChanged, timebase, static_cast<CFNotificationSuspensionBehavior>(_CFNotificationObserverIsObjC));
-}
-
 MediaPlayerPrivateMediaSourceAVFObjC::MediaPlayerPrivateMediaSourceAVFObjC(MediaPlayer* player)
     : m_player(player)
     , m_synchronizer(adoptNS([PAL::allocAVSampleBufferRenderSynchronizerInstance() init]))
@@ -177,7 +109,12 @@ MediaPlayerPrivateMediaSourceAVFObjC::MediaPlayerPrivateMediaSourceAVFObjC(Media
     , m_logger(player->mediaPlayerLogger())
     , m_logIdentifier(player->mediaPlayerLogIdentifier())
     , m_videoLayerManager(makeUnique<VideoLayerManagerObjC>(m_logger, m_logIdentifier))
-    , m_effectiveRateChangedListener(EffectiveRateChangedListener::create(*this, [m_synchronizer timebase]))
+    , m_effectiveRateChangedListener(EffectiveRateChangedListener::create([weakThis = WeakPtr { *this }] {
+        callOnMainThread([weakThis] {
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->effectiveRateChanged();
+        });
+    }, [m_synchronizer timebase]))
 {
     auto logSiteIdentifier = LOGIDENTIFIER;
     ALWAYS_LOG(logSiteIdentifier);
@@ -222,7 +159,7 @@ MediaPlayerPrivateMediaSourceAVFObjC::~MediaPlayerPrivateMediaSourceAVFObjC()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    m_effectiveRateChangedListener->stop([m_synchronizer timebase]);
+    m_effectiveRateChangedListener->stop();
 
     if (m_timeJumpedObserver)
         [m_synchronizer removeTimeObserver:m_timeJumpedObserver.get()];

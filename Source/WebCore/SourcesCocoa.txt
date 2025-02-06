@@ -301,6 +301,7 @@ platform/cocoa/CoreLocationGeolocationProvider.mm
 platform/cocoa/CoreVideoSoftLink.cpp
 platform/cocoa/DragDataCocoa.mm
 platform/cocoa/DragImageCocoa.mm
+platform/cocoa/EffectiveRateChangedListener.mm
 platform/cocoa/FileMonitorCocoa.mm
 platform/cocoa/KeyEventCocoa.mm
 platform/cocoa/LocalizedStringsCocoa.mm

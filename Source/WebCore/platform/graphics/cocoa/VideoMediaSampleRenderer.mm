@@ -26,6 +26,7 @@
 #import "config.h"
 #import "VideoMediaSampleRenderer.h"
 
+#import "EffectiveRateChangedListener.h"
 #import "IOSurface.h"
 #import "Logging.h"
 #import "MediaSampleAVFObjC.h"
@@ -232,6 +233,17 @@ void VideoMediaSampleRenderer::setTimebase(RetainPtr<CMTimebaseRef>&& timebase)
     });
     dispatch_activate(timerSource.get());
     PAL::CMTimebaseAddTimerDispatchSource(timebase.get(), timerSource.get());
+    m_effectiveRateChangedListener = EffectiveRateChangedListener::create([weakThis = ThreadSafeWeakPtr { *this }, dispatcher = dispatcher()] {
+        dispatcher->dispatch([weakThis] {
+            if (RefPtr protectedThis = weakThis.get()) {
+                RetainPtr timebase = protectedThis->timebase();
+                if (!timebase)
+                    return;
+                if (PAL::CMTimebaseGetRate(timebase.get()))
+                    protectedThis->purgeDecodedSampleQueueAndDisplay(protectedThis->m_flushId);
+            }
+        });
+    }, timebase.get());
     m_timebaseAndTimerSource = { WTFMove(timebase), WTFMove(timerSource) };
 }
 
@@ -245,6 +257,7 @@ void VideoMediaSampleRenderer::clearTimebase()
 
     PAL::CMTimebaseRemoveTimerDispatchSource(timebase.get(), timerSource.get());
     dispatch_source_cancel(timerSource.get());
+    m_effectiveRateChangedListener = nullptr;
 }
 
 VideoMediaSampleRenderer::TimebaseAndTimerSource VideoMediaSampleRenderer::timebaseAndTimerSource() const

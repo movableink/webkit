@@ -28,10 +28,10 @@
 #if ENABLE(VIDEO) && USE(AVFOUNDATION)
 
 #include "MediaPlayerPrivateAVFoundation.h"
+#include "SharedBuffer.h"
 #include "VideoFrameMetadata.h"
 #include <CoreMedia/CMTime.h>
-#include <wtf/CompletionHandler.h>
-#include <wtf/Function.h>
+#include <wtf/Forward.h>
 #include <wtf/MainThreadDispatcher.h>
 #include <wtf/Observer.h>
 #include <wtf/RobinHoodHashMap.h>
@@ -74,7 +74,6 @@ class MediaPlaybackTarget;
 class MediaSelectionGroupAVFObjC;
 class PixelBufferConformerCV;
 class QueuedVideoOutput;
-class SharedBuffer;
 class VideoLayerManagerObjC;
 class VideoTrackPrivateAVFObjC;
 class WebCoreAVFResourceLoader;
