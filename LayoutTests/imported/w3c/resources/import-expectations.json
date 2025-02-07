@@ -65,6 +65,7 @@
     "web-platform-tests/css/css-cascade": "import",
     "web-platform-tests/css/css-color": "import",
     "web-platform-tests/css/css-color-adjust": "import",
+    "web-platform-tests/css/css-color-hdr": "import",
     "web-platform-tests/css/css-conditional": "import",
     "web-platform-tests/css/css-contain": "import",
     "web-platform-tests/css/css-content": "import",
