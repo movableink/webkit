@@ -228,6 +228,13 @@ static MTCoreMaterialVisualStyleCategory materialVisualStyleCategoryForAppleVisu
 static void applyVisualStylingToLayer(CALayer *layer, AppleVisualEffect material, AppleVisualEffect visualStyling)
 {
     MTCoreMaterialRecipe recipe = materialRecipeForAppleVisualEffect(material);
+    if ([recipe isEqualToString:PAL::get_CoreMaterial_MTCoreMaterialRecipeNone()]) {
+#if PLATFORM(VISION)
+        recipe = PAL::get_CoreMaterial_MTCoreMaterialRecipePlatformContentUltraThinLight();
+#else
+        recipe = PAL::get_CoreMaterial_MTCoreMaterialRecipePlatformContentThickLight();
+#endif
+    }
 
     // Despite the name, MTVisualStylingCreateDictionaryRepresentation returns an autoreleased object.
     RetainPtr visualStylingDescription = PAL::softLink_CoreMaterial_MTVisualStylingCreateDictionaryRepresentation(recipe, materialVisualStyleCategoryForAppleVisualEffect(visualStyling), materialVisualStyleForAppleVisualEffect(visualStyling), nil);
