@@ -82,7 +82,7 @@ public:
     WEBCORE_EXPORT bool willExitFullscreen();
     WEBCORE_EXPORT bool didExitFullscreen();
 
-    void notifyAboutFullscreenChangeOrError();
+    void dispatchPendingEvents();
 
     enum class ExitMode : bool { Resize, NoResize };
     void finishExitFullscreen(Document&, ExitMode);
@@ -101,7 +101,7 @@ protected:
     enum class EventType : bool { Change, Error };
     void dispatchFullscreenChangeOrErrorEvent(Deque<GCReachableRef<Node>>&, EventType, bool shouldNotifyMediaElement);
     void dispatchEventForNode(Node&, EventType);
-    void addDocumentToFullscreenChangeEventQueue(Document&);
+    void queueFullscreenChangeEventForDocument(Document&);
 
 private:
 #if !RELEASE_LOG_DISABLED
@@ -116,21 +116,26 @@ private:
 
     void updatePageFullscreenStatusIfTopDocument();
 
+    RefPtr<Element> fullscreenOrPendingElement() const { return m_fullscreenElement ? m_fullscreenElement : m_pendingFullscreenElement; }
+
+    void addElementToChangeEventQueue(Node& target) { m_fullscreenChangeEventTargetQueue.append(GCReachableRef(target)); }
+    void resolvePendingPromise();
+    void rejectPendingPromise(Exception);
+
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_topDocument;
 
-    RefPtr<Element> fullscreenOrPendingElement() const { return m_fullscreenElement ? m_fullscreenElement : m_pendingFullscreenElement; }
-
     RefPtr<DeferredPromise> m_pendingPromise;
 
-    bool m_pendingExitFullscreen { false };
     RefPtr<Element> m_pendingFullscreenElement;
     RefPtr<Element> m_fullscreenElement;
+
     Deque<GCReachableRef<Node>> m_fullscreenChangeEventTargetQueue;
     Deque<GCReachableRef<Node>> m_fullscreenErrorEventTargetQueue;
 
     bool m_areKeysEnabledInFullscreen { false };
     bool m_isAnimatingFullscreen { false };
+    bool m_pendingExitFullscreen { false };
 
 #if !RELEASE_LOG_DISABLED
     const uint64_t m_logIdentifier;

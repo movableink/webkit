@@ -1199,18 +1199,6 @@ bool Quirks::shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFull
 #endif
 }
 
-// bbc.com: rdar://108304377
-bool Quirks::shouldDelayFullscreenEventWhenExitingPictureInPictureQuirk() const
-{
-#if ENABLE(VIDEO_PRESENTATION_MODE)
-    // This quirk delay the "webkitstartfullscreen" and "fullscreenchange" event when a video exits picture-in-picture
-    // to fullscreen.
-    return needsQuirks() && m_quirksData.shouldDelayFullscreenEventWhenExitingPictureInPictureQuirk;
-#else
-    return false;
-#endif
-}
-
 // teams.live.com rdar://88678598
 // teams.microsoft.com rdar://90434296
 bool Quirks::shouldAllowNavigationToCustomProtocolWithoutUserGesture(StringView protocol, const SecurityOriginData& requesterOrigin)
@@ -2242,13 +2230,6 @@ static void handleBBCQuirks(QuirksData& quirksData, const URL& quirksURL, const 
         // bbc.co.uk rdar://126494734
         quirksData.returnNullPictureInPictureElementDuringFullscreenChangeQuirk = true;
     }
-
-#if ENABLE(VIDEO_PRESENTATION_MODE)
-    if (quirksDomainString == "bbc.com"_s) {
-        // bbc.com rdar://108304377
-        quirksData.shouldDelayFullscreenEventWhenExitingPictureInPictureQuirk = true;
-    }
-#endif
 }
 
 static void handleBankOfAmericaQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)

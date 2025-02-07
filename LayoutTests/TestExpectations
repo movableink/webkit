@@ -6312,17 +6312,7 @@ imported/w3c/web-platform-tests/fetch/sec-metadata/redirect/multiple-redirect-sa
 imported/w3c/web-platform-tests/fetch/sec-metadata/redirect/same-origin-redirect.tentative.https.sub.html [ Skip ]
 imported/w3c/web-platform-tests/fetch/sec-metadata/track.tentative.https.sub.html [ Skip ]
 imported/w3c/web-platform-tests/fetch/sec-metadata/window-open.tentative.https.sub.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/api/element-request-fullscreen-svg-rect.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/model/move-to-inactive-document.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/model/move-to-fullscreen-iframe.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/model/move-to-iframe.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/model/remove-last.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/rendering/fullscreen-root-block-size.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/rendering/fullscreen-root-block-scroll.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/rendering/fullscreen-pseudo-class.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/rendering/ua-style-iframe.html [ Skip ]
 imported/w3c/web-platform-tests/fullscreen/api/element-ready-check-not-allowed-cross-origin.sub.html [ Skip ]
-imported/w3c/web-platform-tests/fullscreen/api/element-request-fullscreen-and-move-to-iframe.html [ Skip ]
 imported/w3c/web-platform-tests/fullscreen/api/element-request-fullscreen-cross-origin.sub.html [ Skip ]
 imported/w3c/web-platform-tests/fullscreen/api/element-request-fullscreen-timing.html [ Skip ]
 imported/w3c/web-platform-tests/geolocation/non-fully-active.https.html [ Skip ]
@@ -6440,6 +6430,10 @@ imported/w3c/web-platform-tests/workers/modules/shared-worker-import-data-url-cr
 imported/w3c/web-platform-tests/workers/modules/shared-worker-import-data-url.window.html [ Skip ]
 imported/w3c/web-platform-tests/workers/modules/shared-worker-options-credentials.html [ Skip ]
 imported/w3c/web-platform-tests/xhr/send-after-setting-document-domain.htm [ Skip ]
+
+# This test needs proper promise handling in fullscreen to avoid the flaky console message:
+imported/w3c/web-platform-tests/html/capability-delegation/delegate-fullscreen-request-subframe-same-origin.https.tentative.html [ Pass Failure ]
+imported/w3c/web-platform-tests/fullscreen/api/element-request-fullscreen-and-move-to-iframe.html [ Pass Failure ]
 
 imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.html?h264_annexb [ DumpJSConsoleLogInStdErr ]
 imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.html?h264_avc [ DumpJSConsoleLogInStdErr ]

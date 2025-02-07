@@ -102,10 +102,7 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
             promise->reject(Exception { ExceptionCode::TypeError, message });
         if (emitErrorEvent == EmitErrorEvent::Yes) {
             m_fullscreenErrorEventTargetQueue.append(WTFMove(element));
-            protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [weakThis = WTFMove(weakThis)]() mutable {
-                if (weakThis)
-                    weakThis->notifyAboutFullscreenChangeOrError();
-            });
+            protectedDocument()->scheduleRenderingUpdate(RenderingUpdateStep::Fullscreen);
         }
         completionHandler(false);
     };
@@ -195,6 +192,12 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
         // The context object is not in a document.
         if (!element->isConnected()) {
             handleError("Cannot request fullscreen on a disconnected element."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
+            return;
+        }
+
+        // Don't allow if element changed document.
+        if (&element->document() != document.ptr()) {
+            handleError("Cannot request fullscreen because the associated document has changed."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
             return;
         }
 
@@ -359,7 +362,7 @@ void FullscreenManager::exitFullscreen(RefPtr<DeferredPromise>&& promise)
     }
 
     if (RefPtr element = exitingDocument->fullscreenManager().fullscreenElement(); element && !element->isConnected()) {
-        addDocumentToFullscreenChangeEventQueue(exitingDocument);
+        queueFullscreenChangeEventForDocument(exitingDocument);
         clearFullscreenFlags(*element);
         element->removeFromTopLayer();
     }
@@ -409,10 +412,8 @@ void FullscreenManager::exitFullscreen(RefPtr<DeferredPromise>&& promise)
             m_pendingFullscreenElement = fullscreenElement();
             if (m_pendingFullscreenElement)
                 page->chrome().client().enterFullScreenForElement(*m_pendingFullscreenElement);
-            else if (m_pendingPromise) {
-                m_pendingPromise->resolve();
-                m_pendingPromise = nullptr;
-            }
+            else
+                resolvePendingPromise();
         }
     });
 }
@@ -446,7 +447,7 @@ void FullscreenManager::finishExitFullscreen(Document& currentDocument, ExitMode
 
     auto exitDocuments = documentsToUnfullscreen(currentDocument);
     for (Ref exitDocument : exitDocuments) {
-        addDocumentToFullscreenChangeEventQueue(exitDocument);
+        queueFullscreenChangeEventForDocument(exitDocument);
         if (mode == ExitMode::Resize)
             unfullscreenDocument(exitDocument);
         else {
@@ -456,8 +457,8 @@ void FullscreenManager::finishExitFullscreen(Document& currentDocument, ExitMode
         }
     }
 
-    for (auto& descendantDocument : descendantDocuments) {
-        addDocumentToFullscreenChangeEventQueue(descendantDocument);
+    for (Ref descendantDocument : descendantDocuments) {
+        queueFullscreenChangeEventForDocument(descendantDocument);
         unfullscreenDocument(descendantDocument);
     }
 }
@@ -479,6 +480,7 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
 
     if (backForwardCacheState() != Document::NotInBackForwardCache) {
         ERROR_LOG(LOGIDENTIFIER, "Document in the BackForwardCache; bailing");
+        rejectPendingPromise(Exception { ExceptionCode::TypeError });
         return false;
     }
 
@@ -486,12 +488,14 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
     RefPtr protectedPage = page();
     if (!protectedPage) {
         ERROR_LOG(LOGIDENTIFIER, "Document no longer in page; bailing");
+        rejectPendingPromise(Exception { ExceptionCode::TypeError });
         return false;
     }
 
     // The element is an open popover.
     if (element.isPopoverShowing()) {
         ERROR_LOG(LOGIDENTIFIER, "Element to fullscreen is an open popover; bailing.");
+        rejectPendingPromise(Exception { ExceptionCode::TypeError, "Cannot request fullscreen on an open popover."_s });
         return false;
     }
 
@@ -500,6 +504,7 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
     if (m_pendingFullscreenElement != &element) {
         INFO_LOG(LOGIDENTIFIER, "Pending element mismatch; issuing exit fullscreen request");
         page()->chrome().client().exitFullScreenForElement(&element);
+        rejectPendingPromise(Exception { ExceptionCode::TypeError, "Element requested for fullscreen has changed."_s });
         return false;
     }
 
@@ -519,15 +524,14 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
     m_fullscreenElement = &element;
     updatePageFullscreenStatusIfTopDocument();
 
-    Deque<RefPtr<Element>> ancestorsInTreeOrder;
+    Deque<RefPtr<Element>> ancestors;
     RefPtr ancestor = &element;
     do {
-        ancestorsInTreeOrder.prepend(ancestor);
+        ancestors.append(ancestor);
     } while ((ancestor = ancestor->document().ownerElement()));
 
-    for (auto ancestor : makeReversedRange(ancestorsInTreeOrder)) {
+    for (auto ancestor : ancestors) {
         auto hideUntil = ancestor->topmostPopoverAncestor(Element::TopLayerElementType::Other);
-
         ancestor->document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
 
         auto containingBlockBeforeStyleResolution = SingleThreadWeakPtr<RenderBlock> { };
@@ -542,26 +546,20 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
             ancestor->removeFromTopLayer();
         ancestor->addToTopLayer();
 
+        queueFullscreenChangeEventForDocument(ancestor->document());
+
         RenderElement::markRendererDirtyAfterTopLayerChange(ancestor->checkedRenderer().get(), containingBlockBeforeStyleResolution.get());
     }
-
-    for (auto ancestor : ancestorsInTreeOrder)
-        addDocumentToFullscreenChangeEventQueue(ancestor->document());
 
     if (auto* iframe = dynamicDowncast<HTMLIFrameElement>(element))
         iframe->setIFrameFullscreenFlag(true);
 
-    if (!document().quirks().shouldDelayFullscreenEventWhenExitingPictureInPictureQuirk())
-        notifyAboutFullscreenChangeOrError();
-
+    resolvePendingPromise();
     return true;
 }
 
 bool FullscreenManager::didEnterFullscreen()
 {
-    if (document().quirks().shouldDelayFullscreenEventWhenExitingPictureInPictureQuirk())
-        notifyAboutFullscreenChangeOrError();
-
     if (!m_fullscreenElement) {
         ERROR_LOG(LOGIDENTIFIER, "No fullscreenElement; bailing");
         return false;
@@ -601,12 +599,14 @@ bool FullscreenManager::didExitFullscreen()
     if (!fullscreenElement) {
         ERROR_LOG(LOGIDENTIFIER, "No fullscreenOrPendingElement(); bailing");
         m_pendingExitFullscreen = false;
+        rejectPendingPromise(Exception { ExceptionCode::TypeError, "No fullscreen element to exit."_s });
         return false;
     }
 
     if (backForwardCacheState() != Document::NotInBackForwardCache) {
         ERROR_LOG(LOGIDENTIFIER, "Document in the BackForwardCache; bailing");
         m_pendingExitFullscreen = false;
+        rejectPendingPromise(Exception { ExceptionCode::TypeError });
         return false;
     }
     INFO_LOG(LOGIDENTIFIER);
@@ -629,11 +629,28 @@ bool FullscreenManager::didExitFullscreen()
 
     document().scheduleFullStyleRebuild();
 
-    notifyAboutFullscreenChangeOrError();
+    resolvePendingPromise();
     return true;
 }
 
-void FullscreenManager::notifyAboutFullscreenChangeOrError()
+void FullscreenManager::resolvePendingPromise()
+{
+    if (!m_pendingPromise)
+        return;
+    m_pendingPromise->resolve();
+    m_pendingPromise = nullptr;
+}
+
+void FullscreenManager::rejectPendingPromise(Exception exception)
+{
+    if (!m_pendingPromise)
+        return;
+    m_pendingPromise->reject(WTFMove(exception));
+    m_pendingPromise = nullptr;
+}
+
+// https://fullscreen.spec.whatwg.org/#run-the-fullscreen-steps
+void FullscreenManager::dispatchPendingEvents()
 {
     // Since we dispatch events in this function, it's possible that the
     // document will be detached and GC'd. We protect it here to make sure we
@@ -643,15 +660,6 @@ void FullscreenManager::notifyAboutFullscreenChangeOrError()
     m_fullscreenChangeEventTargetQueue.swap(changeQueue);
     Deque<GCReachableRef<Node>> errorQueue;
     m_fullscreenErrorEventTargetQueue.swap(errorQueue);
-
-    if (m_pendingPromise) {
-        ASSERT(!errorQueue.isEmpty() || !changeQueue.isEmpty());
-        if (!errorQueue.isEmpty())
-            m_pendingPromise->reject(Exception { ExceptionCode::TypeError });
-        else
-            m_pendingPromise->resolve();
-        m_pendingPromise = nullptr;
-    }
 
     dispatchFullscreenChangeOrErrorEvent(changeQueue, EventType::Change, /* shouldNotifyMediaElement */ true);
     dispatchFullscreenChangeOrErrorEvent(errorQueue, EventType::Error, /* shouldNotifyMediaElement */ false);
@@ -680,13 +688,6 @@ void FullscreenManager::dispatchFullscreenChangeOrErrorEvent(Deque<GCReachableRe
     while (!queue.isEmpty()) {
         auto node = queue.takeFirst();
 
-        // If the element was removed from our tree, also message the documentElement. Since we may
-        // have a document hierarchy, check that node isn't in another document.
-        if (!node->isConnected()) {
-            if (auto* element = documentElement())
-                queue.append(*element);
-        }
-
         // Gaining or losing fullscreen state may change viewport arguments
         node->protectedDocument()->updateViewportArguments();
 
@@ -698,7 +699,12 @@ void FullscreenManager::dispatchFullscreenChangeOrErrorEvent(Deque<GCReachableRe
 #else
         UNUSED_PARAM(shouldNotifyMediaElement);
 #endif
-        dispatchEventForNode(node.get(), eventType);
+        // If the element was removed from our tree, also message the documentElement. Since we may
+        // have a document hierarchy, check that node isn't in another document.
+        if (!node->isConnected() || &node->document() != &document())
+            queue.append(document());
+        else
+            dispatchEventForNode(node.get(), eventType);
     }
 }
 
@@ -760,14 +766,15 @@ void FullscreenManager::emptyEventQueue()
     m_fullscreenErrorEventTargetQueue.clear();
 }
 
-void FullscreenManager::addDocumentToFullscreenChangeEventQueue(Document& document)
+void FullscreenManager::queueFullscreenChangeEventForDocument(Document& document)
 {
-    Node* target = document.fullscreenManager().fullscreenElement();
-    if (!target)
-        target = document.fullscreenManager().currentFullscreenElement();
-    if (!target)
-        target = &document;
-    m_fullscreenChangeEventTargetQueue.append(GCReachableRef(*target));
+    RefPtr target = document.fullscreenManager().fullscreenElement();
+    if (!target) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+    document.fullscreenManager().addElementToChangeEventQueue(*target);
+    document.scheduleRenderingUpdate(RenderingUpdateStep::Fullscreen);
 }
 
 bool FullscreenManager::isSimpleFullscreenDocument() const

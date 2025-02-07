@@ -174,7 +174,6 @@ struct WEBCORE_EXPORT QuirksData {
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     bool requiresUserGestureToLoadInPictureInPictureQuirk { false };
     bool requiresUserGestureToPauseInPictureInPictureQuirk { false };
-    bool shouldDelayFullscreenEventWhenExitingPictureInPictureQuirk { false };
     bool shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk { false };
 #endif
 };
