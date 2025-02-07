@@ -42,10 +42,49 @@ namespace Layout {
 // used decreases. So, we ignore this ideal number of lines requirement beyond this threshold.
 static const size_t maximumLinesToBalanceWithLineRequirement { 12 };
 
-static float computeCost(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth)
+// Targetting a line length slightly shorter than the maximum allows the algorithm to both
+// overshoot and undershoot the target line length, giving more flexibility in the solution search.
+static const float textWrapPrettyMaximumLineWidthAdjustment = 0.95;
+
+struct EntryBalance {
+    float accumulatedCost { std::numeric_limits<float>::infinity() };
+    size_t previousBreakIndex { 0 };
+};
+
+struct EntryPretty {
+    float accumulatedCost { std::numeric_limits<float>::infinity() };
+    size_t previousBreakIndex { 0 };
+    InlineLayoutUnit lastLineWidth { 0 };
+    bool endsWithHyphen { false };
+    auto operator<=>(const EntryPretty&) const = default;
+};
+
+static float computeRaggedness(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth)
 {
     auto difference = idealLineWidth - candidateLineWidth;
     return difference * difference;
+};
+
+
+static float computeCostBalance(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth)
+{
+    return computeRaggedness(candidateLineWidth, idealLineWidth);
+};
+
+static float computeCostPretty(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth, size_t breakIndex, size_t numberOfBreakOpportunities, InlineLayoutUnit lastLineWidth)
+{
+    // Keeping the last line width longer than 20% of the previous is a heuristic to avoid orphan and "orphan-like" paragraph endings
+    // (lines that have more than one word but are still sufficiently short to appear like an orphan)
+    // FIXME: add consecutive hyphenation detection.
+    // FIXME: add support for river minimization.
+    if (breakIndex == numberOfBreakOpportunities - 1) {
+        const auto minimumLastLineWidth = lastLineWidth * 0.2;
+        const auto maximumLastLineWidth = lastLineWidth;
+        if (candidateLineWidth < minimumLastLineWidth || candidateLineWidth > maximumLastLineWidth)
+            return std::numeric_limits<float>::infinity();
+        return 0;
+    }
+    return computeRaggedness(candidateLineWidth, idealLineWidth);
 };
 
 static bool containsTrailingSoftHyphen(const InlineItem& inlineItem)
@@ -225,9 +264,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::computeParagraphLeve
         }
 
         if (wrapStyle == TextWrapStyle::Pretty) {
-            // Targetting a line length slightly shorter than the maximum allows the algorithm to both
-            // overshoot and undershoot the target line length, giving more flexibility in the solution search
-            const InlineLayoutUnit idealLineWidth = m_maximumLineWidth * 0.95;
+            const InlineLayoutUnit idealLineWidth = m_maximumLineWidth * textWrapPrettyMaximumLineWidthAdjustment;
             return prettifyRange(rangeToConstrain, idealLineWidth, isFirstChunk);
         }
 
@@ -268,15 +305,10 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::balanceRangeWithLine
     auto firstLineTextIndent = computeTextIndent(previousLineEndsWithLineBreak);
     auto textIndent = computeTextIndent(false);
 
-    struct Entry {
-        float accumulatedCost { std::numeric_limits<float>::infinity() };
-        size_t previousBreakIndex { 0 };
-    };
-
     // state[i][j] holds the optimal set of line breaks where the jth line break (1-indexed) is
     // right before m_inlineItemList[breakOpportunities[i]]. "Optimal" in this context means the
     // lowest possible accumulated cost.
-    Vector<Vector<Entry>> state(numberOfBreakOpportunities, Vector<Entry>(numberOfLines + 1));
+    Vector<Vector<EntryBalance>> state(numberOfBreakOpportunities, Vector<EntryBalance>(numberOfLines + 1));
     state[0][0].accumulatedCost = 0.f;
 
     // Special case the first line because of ::first-line styling, indentation, etc.
@@ -289,7 +321,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::balanceRangeWithLine
         if (firstLineCandidateWidth > m_maximumLineWidth)
             break;
 
-        auto cost = computeCost(firstLineCandidateWidth, idealLineWidth);
+        auto cost = computeCostBalance(firstLineCandidateWidth, idealLineWidth);
         state[breakIndex][1].accumulatedCost = cost;
     }
 
@@ -315,7 +347,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::balanceRangeWithLine
             ASSERT(start != range.startIndex());
             innerSlidingWidth.advanceStartTo(start);
             auto candidateLineWidth = textIndent + innerSlidingWidth.width();
-            auto candidateLineCost = computeCost(candidateLineWidth, idealLineWidth);
+            auto candidateLineCost = computeCostBalance(candidateLineWidth, idealLineWidth);
             ASSERT(candidateLineWidth <= m_maximumLineWidth);
 
             // Compute the cost of this line based on the line index
@@ -363,15 +395,10 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::balanceRangeWithNoLi
     auto firstLineTextIndent = computeTextIndent(previousLineEndsWithLineBreak);
     auto textIndent = computeTextIndent(false);
 
-    struct Entry {
-        float accumulatedCost { std::numeric_limits<float>::infinity() };
-        size_t previousBreakIndex { 0 };
-    };
-
     // state[i] holds the optimal set of line breaks where the last line break is right
     // before m_inlineItemList[breakOpportunities[i]]. "Optimal" in this context means the
     // lowest possible accumulated cost.
-    Vector<Entry> state(numberOfBreakOpportunities);
+    Vector<EntryBalance> state(numberOfBreakOpportunities);
     state[0].accumulatedCost = 0.f;
 
     // Special case the first line because of ::first-line styling, indentation, etc.
@@ -384,7 +411,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::balanceRangeWithNoLi
         if (firstLineCandidateWidth > m_maximumLineWidth)
             break;
 
-        auto cost = computeCost(firstLineCandidateWidth, idealLineWidth);
+        auto cost = computeCostBalance(firstLineCandidateWidth, idealLineWidth);
         state[breakIndex].accumulatedCost = cost;
     }
 
@@ -410,7 +437,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::balanceRangeWithNoLi
             ASSERT(start != range.startIndex());
             innerSlidingWidth.advanceStartTo(start);
             auto candidateLineWidth = textIndent + innerSlidingWidth.width();
-            auto candidateLineCost = computeCost(candidateLineWidth, idealLineWidth);
+            auto candidateLineCost = computeCostBalance(candidateLineWidth, idealLineWidth);
             ASSERT(candidateLineWidth <= m_maximumLineWidth);
 
             auto accumulatedCost = candidateLineCost + state[startIndex].accumulatedCost;
@@ -455,15 +482,6 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
     auto firstLineTextIndent = m_inlineFormattingContext.formattingUtils().computedTextIndent(InlineFormattingUtils::IsIntrinsicWidthMode::No, previousLineEndsWithLineBreak, m_maximumLineWidth);
     auto textIndent = m_inlineFormattingContext.formattingUtils().computedTextIndent(InlineFormattingUtils::IsIntrinsicWidthMode::No, false, m_maximumLineWidth);
 
-    struct Entry {
-        float accumulatedCost { std::numeric_limits<float>::infinity() };
-        size_t previousBreakIndex { 0 };
-        InlineLayoutUnit lastLineWidth { 0 };
-        bool endsWithHyphen { false };
-
-        auto operator<=>(const Entry&) const = default;
-    };
-
     // state[i] holds the optimal set of line breaks where the last line break is right
     // before m_inlineItemList[breakOpportunities[i]]. "Optimal" in this context means the
     // lowest possible accumulated cost.
@@ -474,14 +492,14 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
     //
     // The `numberOfBestSolutions` constant represents a tradeoff: a higher number gives
     // higher quality breakings at the cost of speed.
-    Vector<PriorityQueue<Entry, isGreaterThan>> state(numberOfBreakOpportunities);
+    Vector<PriorityQueue<EntryPretty, isGreaterThan>> state(numberOfBreakOpportunities);
     constexpr size_t numberOfBestSolutions = 3;
-    auto recordAndMaintainBestSolutions = [&](size_t breakIndex, Entry solution) {
+    auto recordAndMaintainBestSolutions = [&](size_t breakIndex, EntryPretty solution) {
         state[breakIndex].enqueue(solution);
         while (state[breakIndex].size() > numberOfBestSolutions)
             state[breakIndex].dequeue();
     };
-    recordAndMaintainBestSolutions(0, Entry { .accumulatedCost = 0.f });
+    recordAndMaintainBestSolutions(0, EntryPretty { .accumulatedCost = 0.f });
 
     // Special case the first line because of ::first-line styling, indentation, etc.
     SlidingWidth firstLineSlidingWidth { *this, m_inlineItemList, range.startIndex(), range.startIndex(), isFirstChunk, true };
@@ -493,8 +511,8 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
         if (firstLineCandidateWidth > m_maximumLineWidth)
             break;
 
-        auto cost = computeCost(firstLineCandidateWidth, idealLineWidth);
-        recordAndMaintainBestSolutions(breakIndex, Entry { .accumulatedCost = cost, .previousBreakIndex = 0, .lastLineWidth = firstLineCandidateWidth });
+        auto cost = computeRaggedness(firstLineCandidateWidth, idealLineWidth);
+        recordAndMaintainBestSolutions(breakIndex, EntryPretty { .accumulatedCost = cost, .previousBreakIndex = 0, .lastLineWidth = firstLineCandidateWidth });
     }
 
     // breakOpportunities[firstStartIndex] is the first possible starting position for a candidate line that is NOT the first line
@@ -520,19 +538,9 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
             innerSlidingWidth.advanceStartTo(start);
             auto candidateLineWidth = textIndent + innerSlidingWidth.width();
             for (const auto& entry : state[startIndex]) {
-                auto previousLineWidth = entry.lastLineWidth;
-                auto candidateLineCost = computeCost(candidateLineWidth, idealLineWidth);
-                if (breakIndex == numberOfBreakOpportunities - 1) {
-                    // Keeping the last line width longer than 20% of the previous is a heuristic to avoid orphan and "orphan-like" paragraph endings
-                    // (lines that have more than one word but are still sufficiently short to appear like an orphan)
-                    const auto minimumLastLineWidth = previousLineWidth * 0.2;
-                    const auto maximumLastLineWidth = previousLineWidth;
-                    candidateLineCost = 0;
-                    if (candidateLineWidth < minimumLastLineWidth || candidateLineWidth > maximumLastLineWidth)
-                        candidateLineCost = std::numeric_limits<float>::infinity();
-                }
+                auto candidateLineCost = computeCostPretty(candidateLineWidth, idealLineWidth, breakIndex, numberOfBreakOpportunities, entry.lastLineWidth);
                 auto accumulatedCost = candidateLineCost + entry.accumulatedCost;
-                recordAndMaintainBestSolutions(breakIndex, Entry { accumulatedCost, startIndex, candidateLineWidth });
+                recordAndMaintainBestSolutions(breakIndex, EntryPretty { accumulatedCost, startIndex, candidateLineWidth });
                 if (breakIndex + 100 < numberOfBreakOpportunities)
                     break;
             }
@@ -542,7 +550,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
     auto bestSolution = [&](const auto& solutions) {
         if (solutions.isEmpty()) {
             ASSERT_NOT_REACHED();
-            return Entry { };
+            return EntryPretty { };
         }
         auto bestSolution = *solutions.begin();
         for (const auto& solution : solutions)
