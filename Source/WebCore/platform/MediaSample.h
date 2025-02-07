@@ -102,6 +102,8 @@ public:
     virtual PlatformSample platformSample() const = 0;
     virtual PlatformSample::Type platformSampleType() const = 0;
 
+    virtual bool isImageDecoderAVFObjCSample() const { return false; }
+
     struct ByteRange {
         size_t byteOffset { 0 };
         size_t byteLength { 0 };
