@@ -7689,3 +7689,5 @@ webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
 # webkit.org/b/287181 [ iOS ] 2x fast/forms/switch/pointer-tracking-there-and-back-again*.html are constant timeouts
 fast/forms/switch/pointer-tracking-there-and-back-again-rtl.html [ Timeout ]
 fast/forms/switch/pointer-tracking-there-and-back-again.html [ Timeout ]
+
+webkit.org/b/287204 [ Release ] fast/forms/date/date-input-rendering-basic.html [ Pass Failure ]
