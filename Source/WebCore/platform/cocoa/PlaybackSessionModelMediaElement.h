@@ -157,6 +157,7 @@ private:
     double playbackStartedTime() const;
     void updateMediaSelectionOptions();
     void updateMediaSelectionIndices();
+    void maybeUpdateVideoMetadata();
 };
 
 }
