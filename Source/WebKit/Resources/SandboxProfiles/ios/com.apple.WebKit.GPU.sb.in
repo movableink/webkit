@@ -284,9 +284,16 @@
         (global-name "com.apple.CARenderServer"))
 
     ; UIKit-required IOKit nodes.
-    (allow iokit-open-user-client
+    (allow iokit-open-user-client (with telemetry) (with report)
         (iokit-user-client-class "IOSurfaceAcceleratorClient")
-        ;; Requires by UIView -> UITextMagnifierRenderer -> UIWindow
+        (apply-message-filter
+            (allow (with telemetry) (with report) (with message "IOSurfaceAcceleratorClient")
+                iokit-async-external-method
+                iokit-external-trap
+                iokit-external-method)))
+        
+    ;; Requires by UIView -> UITextMagnifierRenderer -> UIWindow
+    (allow iokit-open-user-client
         (iokit-user-client-class "IOSurfaceRootUserClient"))
 
     ;; Silence sandbox violations from apps trying to create the empty plist if it doesn't exist.

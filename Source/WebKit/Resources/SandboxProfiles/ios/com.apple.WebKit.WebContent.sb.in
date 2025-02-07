@@ -283,23 +283,17 @@
     (allow iokit-open-user-client
         (require-all
             (extension "com.apple.webkit.extension.iokit")
-            (iokit-user-client-class "IOSurfaceAcceleratorClient") ;; Media rendering into pixel buffers
-        )
-        (when (defined? 'iokit-external-method)
-            (apply-message-filter
-                (deny (with telemetry)
-                    iokit-async-external-method
-                    iokit-external-trap)
-                (deny (with telemetry) (with message "IOSurfaceAcceleratorClient")
-                    iokit-external-method)
-                (allow iokit-external-method
-                    (iokit-method-number
-                        1
-                    )
-                )
-            )
-        )
-    )
+            (iokit-user-client-class "IOSurfaceAcceleratorClient")) ;; Media rendering into pixel buffers
+
+        (apply-message-filter
+            (deny (with telemetry)
+                iokit-async-external-method
+                iokit-external-trap)
+            (deny (with telemetry) (with message "IOSurfaceAcceleratorClient")
+                iokit-external-method)
+            (allow iokit-external-method
+                (iokit-method-number
+                    1))))
 
     (allow iokit-open-user-client
         (require-all
