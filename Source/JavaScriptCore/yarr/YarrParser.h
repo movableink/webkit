@@ -1468,26 +1468,22 @@ private:
                 return;
             }
 
-            switch (peek()) {
+            switch (consume()) {
             case ':':
-                consume();
                 m_delegate.atomParenthesesSubpatternBegin(false);
                 break;
             
             case '=':
-                consume();
                 m_delegate.atomParentheticalAssertionBegin(false, Forward);
                 type = ParenthesesType::Assertion;
                 break;
 
             case '!':
-                consume();
                 m_delegate.atomParentheticalAssertionBegin(true, Forward);
                 type = ParenthesesType::Assertion;
                 break;
 
             case '<': {
-                consume();
                 auto groupName = tryConsumeGroupName();
                 if (hasError(m_errorCode))
                     break;
@@ -1517,67 +1513,6 @@ private:
                     }
                     m_errorCode = ErrorCode::InvalidGroupName;
                 }
-
-                break;
-            }
-
-#define REGEXP_MOD_CASE(key, name, lowerCaseName) \
-            case key:
-
-            // Valid RegularExpressionFlags for regexp modifiers
-            case '-':
-            JSC_REGEXP_MOD_FLAGS(REGEXP_MOD_CASE)
-
-#undef REGEXP_MOD_CASE
-            {
-                // consume characters until :
-                OptionSet<Flags> set;
-                OptionSet<Flags> unset;
-                bool hasHitNegation = false;
-                char32_t c;
-                while ((c = consume()) != ':') {
-                    switch (c) {
-                    case '-':
-                        if (hasHitNegation)
-                            m_errorCode = ErrorCode::InvalidRegularExpressionModifier;
-                        hasHitNegation = true;
-                        break;
-
-                    // It is a Syntax Error if the source text matched by RegularExpressionModifiers contains the same code point more than once
-#define HANDLE_REGEXP_MOD_FLAG(key, name, lowerCaseName) \
-                    case key: \
-                        if (hasHitNegation) { \
-                            if (unset.contains(Flags::name)) \
-                                m_errorCode = ErrorCode::InvalidRegularExpressionModifier; \
-                            unset.add(Flags::name); \
-                        } else { \
-                            if (set.contains(Flags::name)) \
-                                m_errorCode = ErrorCode::InvalidRegularExpressionModifier; \
-                            set.add(Flags::name); \
-                        } \
-                        break;
-
-                        JSC_REGEXP_MOD_FLAGS(HANDLE_REGEXP_MOD_FLAG)
-#undef HANDLE_REGEXP_MOD_FLAG
-
-                    default:
-                        m_errorCode = ErrorCode::ParenthesesTypeInvalid;
-                        break;
-                    }
-                }
-
-                if (hasError(m_errorCode))
-                    break;
-
-                // we've consumed (?<flags>:
-
-                // It is a Syntax Error if any code point in the source text matched by the first RegularExpressionModifiers is also contained in the source text matched by the second RegularExpressionModifiers.
-                if (set.containsAny(unset))
-                    m_errorCode = ErrorCode::InvalidRegularExpressionModifier;
-                // It is a Syntax Error if the source text matched by the first RegularExpressionModifiers and the source text matched by the second RegularExpressionModifiers are both empty.
-                if (set.isEmpty() && unset.isEmpty())
-                    m_errorCode = ErrorCode::InvalidRegularExpressionModifier;
-                m_delegate.atomParentheticalModifierBegin(set, unset);
 
                 break;
             }
@@ -2198,7 +2133,6 @@ private:
  *    void atomCharacterClassEnd()
  *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
  *    void atomParentheticalAssertionBegin(bool invert, MatchDirection matchDirection);
- *    void atomParentheticalModifierBegin(OptionSet<Flags> set, OptionSet<Flags> unset);
  *    void atomParenthesesEnd();
  *    void atomBackReference(unsigned subpatternId);
  *    void atomNamedBackReference(const String& subpatternName);

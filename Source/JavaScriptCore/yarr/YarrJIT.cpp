@@ -1077,14 +1077,14 @@ class YarrGenerator final : public YarrJITInfo {
             m_jit.load16Unaligned(address, resultReg);
     }
 
-    MacroAssembler::Jump jumpIfCharNotEquals(char32_t ch, Checked<unsigned> negativeCharacterOffset, MacroAssembler::RegisterID character, bool ignoreCase)
+    MacroAssembler::Jump jumpIfCharNotEquals(char32_t ch, Checked<unsigned> negativeCharacterOffset, MacroAssembler::RegisterID character)
     {
         readCharacter(negativeCharacterOffset, character);
 
         // For case-insesitive compares, non-ascii characters that have different
         // upper & lower case representations are converted to a character class.
-        ASSERT(!ignoreCase || isASCIIAlpha(ch) || isCanonicallyUnique(ch, m_canonicalMode));
-        if (ignoreCase && isASCIIAlpha(ch)) {
+        ASSERT(!m_pattern.ignoreCase() || isASCIIAlpha(ch) || isCanonicallyUnique(ch, m_canonicalMode));
+        if (m_pattern.ignoreCase() && isASCIIAlpha(ch)) {
             m_jit.or32(MacroAssembler::TrustedImm32(0x20), character);
             ch |= 0x20;
         }
@@ -1488,7 +1488,7 @@ class YarrGenerator final : public YarrJITInfo {
         YarrOp& op = m_ops[opIndex];
         PatternTerm* term = op.m_term;
 
-        if (term->multiline()) {
+        if (m_pattern.multiline()) {
             const MacroAssembler::RegisterID character = m_regs.regT0;
             const MacroAssembler::RegisterID scratch = m_regs.regT1;
 
@@ -1519,7 +1519,7 @@ class YarrGenerator final : public YarrJITInfo {
         YarrOp& op = m_ops[opIndex];
         PatternTerm* term = op.m_term;
 
-        if (term->multiline()) {
+        if (m_pattern.multiline()) {
             const MacroAssembler::RegisterID character = m_regs.regT0;
             const MacroAssembler::RegisterID scratch = m_regs.regT1;
 
@@ -1561,7 +1561,7 @@ class YarrGenerator final : public YarrJITInfo {
 
         CharacterClass* wordcharCharacterClass;
 
-        if (m_pattern.eitherUnicode() && term->ignoreCase())
+        if (m_unicodeIgnoreCase)
             wordcharCharacterClass = m_pattern.wordUnicodeIgnoreCaseCharCharacterClass();
         else
             wordcharCharacterClass = m_pattern.wordcharCharacterClass();
@@ -1585,7 +1585,7 @@ class YarrGenerator final : public YarrJITInfo {
 
         CharacterClass* wordcharCharacterClass;
 
-        if (m_pattern.eitherUnicode() && term->ignoreCase())
+        if (m_unicodeIgnoreCase)
             wordcharCharacterClass = m_pattern.wordUnicodeIgnoreCaseCharCharacterClass();
         else
             wordcharCharacterClass = m_pattern.wordcharCharacterClass();
@@ -1653,7 +1653,7 @@ class YarrGenerator final : public YarrJITInfo {
 #endif
         readCharacter(op.m_checkedOffset - term->inputPosition, character);
     
-        if (!term->ignoreCase()) {
+        if (!m_pattern.ignoreCase()) {
             characterMatchFails.append(m_jit.branch32(MacroAssembler::Equal, character, MacroAssembler::TrustedImm32(errorCodePoint)));
             characterMatchFails.append(m_jit.branch32(MacroAssembler::NotEqual, character, patternCharacter));
         } else if (m_charSize == CharSize::Char8) {
@@ -1732,7 +1732,7 @@ class YarrGenerator final : public YarrJITInfo {
         PatternTerm* term = op.m_term;
 
 #if !ENABLE(YARR_JIT_BACKREFERENCES_FOR_16BIT_EXPRS)
-        if (term->ignoreCase() && m_charSize != CharSize::Char8) {
+        if (m_pattern.ignoreCase() && m_charSize != CharSize::Char8) {
             m_failureReason = JITFailureReason::BackReference;
             return;
         }
@@ -1994,9 +1994,9 @@ class YarrGenerator final : public YarrJITInfo {
 
         // For case-insesitive compares, non-ascii characters that have different
         // upper & lower case representations are converted to a character class.
-        ASSERT(!op.m_term->ignoreCase() || isASCIIAlpha(ch) || isCanonicallyUnique(ch, m_canonicalMode));
+        ASSERT(!m_pattern.ignoreCase() || isASCIIAlpha(ch) || isCanonicallyUnique(ch, m_canonicalMode));
 
-        if (op.m_term->ignoreCase() && isASCIIAlpha(ch)) {
+        if (m_pattern.ignoreCase() && isASCIIAlpha(ch)) {
 #if CPU(BIG_ENDIAN)
             ignoreCaseMask |= 32 << (m_charSize == CharSize::Char8 ? 24 : 16);
 #else
@@ -2034,11 +2034,11 @@ class YarrGenerator final : public YarrJITInfo {
 
             // For case-insesitive compares, non-ascii characters that have different
             // upper & lower case representations are converted to a character class.
-            ASSERT(!op.m_term->ignoreCase() || isASCIIAlpha(currentCharacter) || isCanonicallyUnique(currentCharacter, m_canonicalMode));
+            ASSERT(!m_pattern.ignoreCase() || isASCIIAlpha(currentCharacter) || isCanonicallyUnique(currentCharacter, m_canonicalMode));
 
             allCharacters |= (static_cast<uint64_t>(currentCharacter) << shiftAmount);
 
-            if (op.m_term->ignoreCase() && isASCIIAlpha(currentCharacter))
+            if (m_pattern.ignoreCase() && isASCIIAlpha(currentCharacter))
                 ignoreCaseMask |= 32ULL << shiftAmount;
         }
 
@@ -2055,7 +2055,7 @@ class YarrGenerator final : public YarrJITInfo {
 
         if (m_charSize == CharSize::Char8) {
             auto check1 = [&] (Checked<unsigned> offset, char32_t characters) {
-                op.m_jumps.append(jumpIfCharNotEquals(characters, offset, character, term->ignoreCase()));
+                op.m_jumps.append(jumpIfCharNotEquals(characters, offset, character));
             };
 
             auto check2 = [&] (Checked<unsigned> offset, uint16_t characters, uint16_t mask) {
@@ -2128,7 +2128,7 @@ class YarrGenerator final : public YarrJITInfo {
             }
         } else {
             auto check1 = [&] (Checked<unsigned> offset, char32_t characters) {
-                op.m_jumps.append(jumpIfCharNotEquals(characters, offset, character, term->ignoreCase()));
+                op.m_jumps.append(jumpIfCharNotEquals(characters, offset, character));
             };
 
             auto check2 = [&] (Checked<unsigned> offset, unsigned characters, unsigned mask) {
@@ -2196,8 +2196,8 @@ class YarrGenerator final : public YarrJITInfo {
         readCharacter(op.m_checkedOffset - term->inputPosition - scaledMaxCount, character, countRegister);
         // For case-insesitive compares, non-ascii characters that have different
         // upper & lower case representations are converted to a character class.
-        ASSERT(!term->ignoreCase() || isASCIIAlpha(ch) || isCanonicallyUnique(ch, m_canonicalMode));
-        if (term->ignoreCase() && isASCIIAlpha(ch)) {
+        ASSERT(!m_pattern.ignoreCase() || isASCIIAlpha(ch) || isCanonicallyUnique(ch, m_canonicalMode));
+        if (m_pattern.ignoreCase() && isASCIIAlpha(ch)) {
             m_jit.or32(MacroAssembler::TrustedImm32(0x20), character);
             ch |= 0x20;
         }
@@ -2232,7 +2232,7 @@ class YarrGenerator final : public YarrJITInfo {
             MacroAssembler::JumpList failures;
             MacroAssembler::Label loop(&m_jit);
             failures.append(atEndOfInput());
-            failures.append(jumpIfCharNotEquals(ch, op.m_checkedOffset - term->inputPosition, character, term->ignoreCase()));
+            failures.append(jumpIfCharNotEquals(ch, op.m_checkedOffset - term->inputPosition, character));
 
             m_jit.add32(MacroAssembler::TrustedImm32(1), m_regs.index);
 #if ENABLE(YARR_JIT_UNICODE_EXPRESSIONS)
@@ -2306,7 +2306,7 @@ class YarrGenerator final : public YarrJITInfo {
             nonGreedyFailures.append(atEndOfInput());
             if (term->quantityMaxCount != quantifyInfinite)
                 nonGreedyFailures.append(m_jit.branch32(MacroAssembler::Equal, countRegister, MacroAssembler::Imm32(term->quantityMaxCount)));
-            nonGreedyFailures.append(jumpIfCharNotEquals(ch, op.m_checkedOffset - term->inputPosition, character, term->ignoreCase()));
+            nonGreedyFailures.append(jumpIfCharNotEquals(ch, op.m_checkedOffset - term->inputPosition, character));
 
             m_jit.add32(MacroAssembler::TrustedImm32(1), m_regs.index);
 #if ENABLE(YARR_JIT_UNICODE_EXPRESSIONS)
@@ -2606,7 +2606,7 @@ class YarrGenerator final : public YarrJITInfo {
         MacroAssembler::JumpList saveStartIndex;
         MacroAssembler::JumpList foundEndingNewLine;
 
-        if (term->dotAll()) {
+        if (m_pattern.dotAll()) {
             m_jit.move(MacroAssembler::TrustedImm32(0), matchPos);
             setMatchStart(matchPos);
             m_jit.move(m_regs.length, m_regs.index);
@@ -2632,7 +2632,7 @@ class YarrGenerator final : public YarrJITInfo {
         m_jit.add32(MacroAssembler::TrustedImm32(1), matchPos); // Advance past newline
         saveStartIndex.link(&m_jit);
 
-        if (!term->multiline() && term->anchors.bolAnchor)
+        if (!m_pattern.multiline() && term->anchors.bolAnchor)
             op.m_jumps.append(m_jit.branchTest32(MacroAssembler::NonZero, matchPos));
 
         ASSERT(!m_pattern.m_body->m_hasFixedSize);
@@ -2652,7 +2652,7 @@ class YarrGenerator final : public YarrJITInfo {
 
         foundEndingNewLine.link(&m_jit);
 
-        if (!term->multiline() && term->anchors.eolAnchor)
+        if (!m_pattern.multiline() && term->anchors.eolAnchor)
             op.m_jumps.append(m_jit.branch32(MacroAssembler::NotEqual, matchPos, m_regs.length));
 
         m_jit.move(matchPos, m_regs.index);
@@ -4572,8 +4572,8 @@ class YarrGenerator final : public YarrJITInfo {
                 return std::nullopt;
             // For case-insesitive compares, non-ascii characters that have different
             // upper & lower case representations are already converted to a character class.
-            ASSERT(!term.ignoreCase() || isASCIIAlpha(term.patternCharacter) || isCanonicallyUnique(term.patternCharacter, m_canonicalMode));
-            if (term.ignoreCase() && isASCIIAlpha(term.patternCharacter)) {
+            ASSERT(!m_pattern.ignoreCase() || isASCIIAlpha(term.patternCharacter) || isCanonicallyUnique(term.patternCharacter, m_canonicalMode));
+            if (m_pattern.ignoreCase() && isASCIIAlpha(term.patternCharacter)) {
                 bmInfo.set(cursor, toASCIIUpper(term.patternCharacter));
                 bmInfo.set(cursor, toASCIILower(term.patternCharacter));
             } else
@@ -4887,7 +4887,7 @@ public:
         }
 
 #if ENABLE(YARR_JIT_UNICODE_EXPRESSIONS) && ENABLE(YARR_JIT_UNICODE_CAN_INCREMENT_INDEX_FOR_NON_BMP)
-        if (m_decodeSurrogatePairs && m_compileMode != JITCompileMode::InlineTest && !m_pattern.multiline() && !m_pattern.m_containsBOL && !m_pattern.m_containsLookbehinds && !m_pattern.m_containsModifiers) {
+        if (m_decodeSurrogatePairs && m_compileMode != JITCompileMode::InlineTest && !m_pattern.multiline() && !m_pattern.m_containsBOL && !m_pattern.m_containsLookbehinds) {
             ASSERT(m_regs.firstCharacterAdditionalReadSize != InvalidGPRReg);
             m_useFirstNonBMPCharacterOptimization = true;
         }
@@ -5230,7 +5230,7 @@ public:
             case PatternTerm::Type::PatternCharacter:
                 out.printf("PatternCharacter checked-offset:(%u) ", op.m_checkedOffset.value());
                 dumpUChar32(out, term->patternCharacter);
-                if (op.m_term->ignoreCase())
+                if (m_pattern.ignoreCase())
                     out.print("ignore case ");
 
                 term->dumpQuantifier(out);
