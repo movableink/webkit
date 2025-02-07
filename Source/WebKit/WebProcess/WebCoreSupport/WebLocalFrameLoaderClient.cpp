@@ -2007,6 +2007,8 @@ void WebLocalFrameLoaderClient::didExceedNetworkUsageThreshold()
             return;
         if (wasGranted)
             frame->showResourceMonitoringError();
+        else
+            frame->reportResourceMonitoringWarning();
     };
 
     if (document->shouldSkipResourceMonitorThrottling())

@@ -1474,6 +1474,12 @@ void LocalFrame::showResourceMonitoringError()
     document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Error, "Frame was unloaded because its network usage exceeded the limit."_s);
 }
 
+void LocalFrame::reportResourceMonitoringWarning()
+{
+    if (RefPtr document = this->document())
+        document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Warning, "Frame's network usage exceeded the limit."_s);
+}
+
 #endif
 
 } // namespace WebCore

@@ -1283,6 +1283,8 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
     resetMockMediaDevices();
     WKPageSetMediaCaptureReportingDelayForTesting(m_mainWebView->page(), 0);
 
+    WKWebsiteDataStoreResetResourceMonitorThrottler(websiteDataStore());
+
     // FIXME: This function should also ensure that there is only one page open.
 
     // Reset the EventSender for each test.

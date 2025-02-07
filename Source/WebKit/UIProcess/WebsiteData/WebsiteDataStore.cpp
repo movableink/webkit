@@ -2751,4 +2751,19 @@ bool WebsiteDataStore::builtInNotificationsEnabled() const
 }
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+WebCore::ResourceMonitorThrottler& WebsiteDataStore::resourceMonitorThrottler()
+{
+    if (!m_resourceMonitorThrottler)
+        m_resourceMonitorThrottler = WebCore::ResourceMonitorThrottler::create();
+
+    return *m_resourceMonitorThrottler;
+}
+
+void WebsiteDataStore::resetResourceMonitorThrottlerForTesting()
+{
+    m_resourceMonitorThrottler = nullptr;
+}
+#endif
+
 } // namespace WebKit

@@ -334,6 +334,7 @@ public:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     WEBCORE_EXPORT void showResourceMonitoringError();
+    WEBCORE_EXPORT void reportResourceMonitoringWarning();
 #endif
 
 protected:

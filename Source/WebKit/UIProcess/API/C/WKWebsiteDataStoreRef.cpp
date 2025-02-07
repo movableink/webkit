@@ -782,3 +782,12 @@ void WKWebsiteDataStoreGetAllStorageAccessEntries(WKWebsiteDataStoreRef dataStor
         callback(context, domainArrayRef);
     });
 }
+
+void WKWebsiteDataStoreResetResourceMonitorThrottler(WKWebsiteDataStoreRef dataStoreRef)
+{
+#if ENABLE(CONTENT_EXTENSIONS)
+    WebKit::toImpl(dataStoreRef)->resetResourceMonitorThrottlerForTesting();
+#else
+    UNUSED_PARAM(dataStoreRef);
+#endif
+}

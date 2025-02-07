@@ -10,7 +10,7 @@ async function setup() {
         internals.setResourceMonitorNetworkUsageThreshold(10 * 1024, 0.001);
 
         // Skip throttling of unloading.
-        internals.shouldSkipResourceMonitorThrottling = true;
+        internals.shouldSkipResourceMonitorThrottling = false;
 
         return true;
     } else {

@@ -495,7 +495,8 @@ public:
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    WebCore::ResourceMonitorThrottler& resourceMonitorThrottler() { return m_resourceMonitorThrottler; }
+    WebCore::ResourceMonitorThrottler& resourceMonitorThrottler();
+    void resetResourceMonitorThrottlerForTesting();
 #endif
 
 private:
@@ -640,7 +641,7 @@ private:
     HashSet<URL> m_persistedSiteURLs;
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    WebCore::ResourceMonitorThrottler m_resourceMonitorThrottler;
+    RefPtr<WebCore::ResourceMonitorThrottler> m_resourceMonitorThrottler;
 #endif
 };
 
