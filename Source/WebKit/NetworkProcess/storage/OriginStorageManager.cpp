@@ -283,7 +283,7 @@ bool OriginStorageManager::StorageBucket::isActive() const
         || (m_localStorageManager && m_localStorageManager->isActive())
         || (m_sessionStorageManager && m_sessionStorageManager->isActive())
         || (m_idbStorageManager && m_idbStorageManager->isActive())
-        || (m_cacheStorageManager &&  m_cacheStorageManager->isActive());
+        || (m_cacheStorageManager && RefPtr { m_cacheStorageManager }->isActive());
 }
 
 bool OriginStorageManager::StorageBucket::hasDataInMemory() const

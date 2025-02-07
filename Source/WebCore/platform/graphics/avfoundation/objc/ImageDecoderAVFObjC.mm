@@ -309,7 +309,7 @@ SPECIALIZE_TYPE_TRAITS_END()
 
 namespace WebCore {
 
-static ImageDecoderAVFObjCSample* toSample(const PresentationOrderSampleMap::value_type& pair)
+static RefPtr<ImageDecoderAVFObjCSample> toProtectedSample(const PresentationOrderSampleMap::value_type& pair)
 {
     return downcast<ImageDecoderAVFObjCSample>(pair.second.ptr());
 }
@@ -703,7 +703,7 @@ void ImageDecoderAVFObjC::clearFrameBufferCache(size_t index)
 {
     size_t i = 0;
     for (auto& samplePair : m_sampleData.presentationOrder()) {
-        toSample(samplePair)->setImage(nullptr);
+        toProtectedSample(samplePair)->setImage(nullptr);
         if (++i > index)
             break;
     }
