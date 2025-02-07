@@ -388,6 +388,7 @@ void FullscreenManager::exitFullscreen(RefPtr<DeferredPromise>&& promise)
         queueFullscreenChangeEventForDocument(exitingDocument);
         clearFullscreenFlags(*element);
         element->removeFromTopLayer();
+        updatePageFullscreenStatusIfTopDocument();
     }
 
     m_pendingExitFullscreen = true;
@@ -484,6 +485,8 @@ void FullscreenManager::finishExitFullscreen(Document& currentDocument, ExitMode
         queueFullscreenChangeEventForDocument(descendantDocument);
         unfullscreenDocument(descendantDocument);
     }
+
+    updatePageFullscreenStatusIfTopDocument();
 }
 
 bool FullscreenManager::isFullscreenEnabled() const
@@ -545,7 +548,6 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
     m_pendingFullscreenElement = nullptr;
 
     m_fullscreenElement = &element;
-    updatePageFullscreenStatusIfTopDocument();
 
     Deque<RefPtr<Element>> ancestors;
     RefPtr ancestor = &element;
@@ -573,6 +575,8 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
 
         RenderElement::markRendererDirtyAfterTopLayerChange(ancestor->checkedRenderer().get(), containingBlockBeforeStyleResolution.get());
     }
+
+    updatePageFullscreenStatusIfTopDocument();
 
     if (auto* iframe = dynamicDowncast<HTMLIFrameElement>(element))
         iframe->setIFrameFullscreenFlag(true);
@@ -648,8 +652,6 @@ bool FullscreenManager::didExitFullscreen()
     m_fullscreenElement = nullptr;
     m_pendingFullscreenElement = nullptr;
     m_pendingExitFullscreen = false;
-
-    updatePageFullscreenStatusIfTopDocument();
 
     resolvePendingPromise();
     return true;
@@ -770,7 +772,7 @@ void FullscreenManager::updatePageFullscreenStatusIfTopDocument()
     if (!protectedPage)
         return;
 
-    protectedPage->setTopDocumentHasFullscreenElement(m_fullscreenElement);
+    protectedPage->setTopDocumentHasFullscreenElement(fullscreenElement());
 }
 
 void FullscreenManager::clear()
@@ -778,8 +780,6 @@ void FullscreenManager::clear()
     m_fullscreenElement = nullptr;
     m_pendingFullscreenElement = nullptr;
     m_pendingPromise = nullptr;
-
-    updatePageFullscreenStatusIfTopDocument();
 }
 
 void FullscreenManager::emptyEventQueue()
