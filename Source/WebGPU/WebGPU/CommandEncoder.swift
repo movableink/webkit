@@ -73,6 +73,385 @@ public func CommandEncoder_beginComputePass_thunk(commandEncoder: WebGPU.Command
 }
 
 extension WebGPU.CommandEncoder {
+    private func timestampWriteIndex(writeIndex: UInt32) -> UInt32
+    {
+        return writeIndex == WGPU_QUERY_SET_INDEX_UNDEFINED ? 0 : writeIndex
+    }
+    private func errorValidatingCopyBufferToBuffer(source: WebGPU.Buffer, sourceOffset: UInt64, destination: WebGPU.Buffer, destinationOffset: UInt64, size: UInt64) -> Swift.String? {
+        func errorString(_ format: Swift.String) -> Swift.String {
+            return "GPUCommandEncoder.copyBufferToBuffer: \(format)"
+        }
+        if !source.isDestroyed() && !isValidToUseWithBufferCommandEncoder(source, self) {
+            return errorString("source buffer is not valid")
+        }
+
+        if !destination.isDestroyed() && !isValidToUseWithBufferCommandEncoder(destination, self) {
+            return errorString("destination buffer is not valid")
+        }
+
+        if source.usage() & WGPUBufferUsage_CopySrc.rawValue == 0 {
+            return errorString("source usage does not have COPY_SRC")
+        }
+
+        if destination.usage() & WGPUBufferUsage_CopyDst.rawValue == 0 {
+            return errorString("destination usage does not have COPY_DST")
+        }
+
+        if destination.state() == WebGPU.Buffer.State.MappingPending || source.state() == WebGPU.Buffer.State.MappingPending {
+            return errorString("destination state is not unmapped or source state is not unmapped")
+        }
+
+        if size % 4 != 0 {
+            return errorString("size is not a multiple of 4")
+        }
+
+        if sourceOffset % 4 != 0 {
+            return errorString("source offset is not a multiple of 4")
+        }
+
+        if destinationOffset % 4 != 0 {
+            return errorString("destination offset is not a multiple of 4")
+        }
+        var sourceEnd = sourceOffset
+        var didOverflow = false
+        (sourceEnd, didOverflow) = sourceEnd.addingReportingOverflow(size)
+        if didOverflow {
+            return errorString("source size + offset overflows")
+        }
+        var destinationEnd = destinationOffset
+        (destinationEnd, didOverflow) = destinationEnd.addingReportingOverflow(size)
+        if didOverflow {
+            return errorString("destination size + offset overflows")
+        }
+
+        if source.initialSize() < sourceEnd {
+            return errorString("source size + offset overflows")
+        }
+
+        if destination.initialSize() < destinationEnd {
+            return errorString("destination size + offset overflows")
+        }
+        // FIXME: rdar://138415945
+        if WebGPU_Internal.areBuffersEqual(source, destination) {
+            return errorString("source equals destination not valid")
+        }
+
+        return nil
+    }
+
+    private func areCopyCompatible(format1: WGPUTextureFormat, format2: WGPUTextureFormat) -> Bool {
+        // https://gpuweb.github.io/gpuweb/#copy-compatible
+        return format1 == format2 ? true : WebGPU.Texture.removeSRGBSuffix(format1) == WebGPU.Texture.removeSRGBSuffix(format2)
+    }
+    private func errorValidatingCopyTextureToTexture(source: WGPUImageCopyTexture, destination: WGPUImageCopyTexture, copySize: WGPUExtent3D) -> Swift.String? {
+        func refersToAllAspects(format: WGPUTextureFormat, aspect: WGPUTextureAspect) -> Bool {
+            switch (aspect) {
+            case WGPUTextureAspect_All:
+                return true
+            case WGPUTextureAspect_StencilOnly:
+                return WebGPU.Texture.containsStencilAspect(format) && !WebGPU.Texture.containsDepthAspect(format)
+            case WGPUTextureAspect_DepthOnly:
+                return WebGPU.Texture.containsDepthAspect(format) && !WebGPU.Texture.containsStencilAspect(format)
+            case WGPUTextureAspect_Force32:
+                assertionFailure("ASSERT_NOT_REACHED")
+                return false
+            default:
+                assertionFailure("ASSERT_NOT_REACHED")
+                return false
+            }
+        }
+        func errorString(_ error: Swift.String) -> Swift.String {
+             "GPUCommandEncoder.copyTextureToTexture: \(error)"
+        }
+        let sourceTexture = WebGPU.fromAPI(source.texture)
+        if !isValidToUseWithTextureCommandEncoder(sourceTexture, self) {
+            return errorString("source texture is not valid to use with this GPUCommandEncoder")
+        }
+
+        let destinationTexture = WebGPU.fromAPI(destination.texture)
+        if !isValidToUseWithTextureCommandEncoder(destinationTexture, self) {
+            return errorString("desintation texture is not valid to use with this GPUCommandEncoder")
+        }
+
+        if let error = WebGPU.Texture.errorValidatingImageCopyTexture(source, copySize) {
+            return errorString(error)
+        }
+
+        if sourceTexture.usage() & WGPUTextureUsage_CopySrc.rawValue == 0 {
+            return errorString("source texture usage does not contain CopySrc")
+        }
+
+        if let error = WebGPU.Texture.errorValidatingImageCopyTexture(destination, copySize) {
+            return errorString(error)
+        }
+
+        if destinationTexture.usage() & WGPUTextureUsage_CopyDst.rawValue == 0 {
+            return errorString("destination texture usage does not contain CopyDst")
+        }
+
+        if sourceTexture.sampleCount() != destinationTexture.sampleCount() {
+            return errorString("destination texture sample count does not equal source texture sample count")
+        }
+
+        if !areCopyCompatible(format1: sourceTexture.format(), format2: destinationTexture.format()) {
+            return errorString("destination texture and source texture are not copy compatible")
+        }
+
+        let srcIsDepthOrStencil = WebGPU.Texture.isDepthOrStencilFormat(sourceTexture.format())
+        let dstIsDepthOrStencil = WebGPU.Texture.isDepthOrStencilFormat(destinationTexture.format())
+
+        if (srcIsDepthOrStencil) {
+            if !refersToAllAspects(format: sourceTexture.format(), aspect: source.aspect) || !refersToAllAspects(format: destinationTexture.format(), aspect: destination.aspect) {
+                return errorString("source or destination do not refer to a single copy aspect")
+            }
+        } else {
+            if source.aspect != WGPUTextureAspect_All {
+                return errorString("source aspect is not All")
+            }
+            if !dstIsDepthOrStencil {
+                if destination.aspect != WGPUTextureAspect_All {
+                    return errorString("destination aspect is not All")
+                }
+            }
+        }
+
+        if let error = WebGPU.Texture.errorValidatingTextureCopyRange(source, copySize) {
+            return errorString(error)
+        }
+
+        if let error = WebGPU.Texture.errorValidatingTextureCopyRange(destination, copySize) {
+            return errorString(error)
+        }
+
+        // https://gpuweb.github.io/gpuweb/#abstract-opdef-set-of-subresources-for-texture-copy
+        if source.texture == destination.texture {
+            // Mip levels are never ranges.
+            if source.mipLevel == destination.mipLevel {
+                switch (WebGPU.fromAPI(source.texture).dimension()) {
+                case WGPUTextureDimension_1D:
+                    return errorString("can't copy 1D texture to itself")
+                case WGPUTextureDimension_2D:
+                    let sourceRange = source.origin.z..<(source.origin.z + copySize.depthOrArrayLayers)
+                    let destinationRange = destination.origin.z..<(destination.origin.z + copySize.depthOrArrayLayers)
+                    if sourceRange.overlaps(destinationRange) {
+                        return errorString("can't copy 2D texture to itself with overlapping array range")
+                    }
+                case WGPUTextureDimension_3D:
+                    return errorString("can't copy 3D texture to itself");
+                case WGPUTextureDimension_Force32:
+                    assertionFailure("ASSERT_NOT_REACHED")
+                    return errorString("unknown texture format")
+                default:
+                    assertionFailure("ASSERT_NOT_REACHED")
+                    return errorString("Default. Should not be reached")
+                }
+            }
+        }
+
+        return nil
+    }
+    private func errorValidatingCopyTextureToBuffer(source: WGPUImageCopyTexture, destination: WGPUImageCopyBuffer, copySize: WGPUExtent3D) -> Swift.String? {
+        func errorString(_ error: Swift.String) -> Swift.String {
+            return "GPUCommandEncoder.copyTextureToBuffer: \(error)"
+        }
+        let sourceTexture = WebGPU.fromAPI(source.texture)
+
+        if !isValidToUseWithTextureCommandEncoder(sourceTexture, self) {
+            return errorString("source texture is not valid to use with this GPUCommandEncoder")
+        }
+
+        if let error = WebGPU.Texture.errorValidatingImageCopyTexture(source, copySize) {
+            return errorString(error)
+        }
+
+        if sourceTexture.usage() & WGPUTextureUsage_CopySrc.rawValue == 0 {
+            return errorString("sourceTexture usage does not contain CopySrc")
+        }
+
+        if sourceTexture.sampleCount() != 1 {
+            return errorString("sourceTexture sample count != 1")
+        }
+
+        var aspectSpecificFormat = sourceTexture.format()
+
+        if WebGPU.Texture.isDepthOrStencilFormat(sourceTexture.format()) {
+            if !WebGPU.Texture.refersToSingleAspect(sourceTexture.format(), source.aspect) {
+                return errorString("copying to depth stencil texture with more than one aspect")
+            }
+
+            if !WebGPU.Texture.isValidDepthStencilCopySource(sourceTexture.format(), source.aspect) {
+                return errorString("copying to depth stencil texture, validDepthStencilCopySource fails")
+            }
+
+            aspectSpecificFormat = WebGPU.Texture.aspectSpecificFormat(sourceTexture.format(), source.aspect)
+        }
+
+        if let error = errorValidatingImageCopyBuffer(imageCopyBuffer: destination) {
+            return errorString(error)
+        }
+
+        if WebGPU.fromAPI(destination.buffer).usage() & WGPUBufferUsage_CopyDst.rawValue == 0 {
+            return errorString("destination buffer usage does not contain CopyDst")
+        }
+
+        if let error = WebGPU.Texture.errorValidatingTextureCopyRange(source, copySize) {
+            return errorString(error)
+        }
+
+        if !WebGPU.Texture.isDepthOrStencilFormat(sourceTexture.format()) {
+            let texelBlockSize = WebGPU.Texture.texelBlockSize(sourceTexture.format())
+            if destination.layout.offset % texelBlockSize.value() != 0 {
+                return errorString("destination.layout.offset is not a multiple of texelBlockSize")
+            }
+        }
+
+        if WebGPU.Texture.isDepthOrStencilFormat(sourceTexture.format()) {
+            if destination.layout.offset % 4 != 0 {
+                return errorString("destination.layout.offset is not a multiple of 4")
+            }
+        }
+
+        if let error = WebGPU.Texture.errorValidatingLinearTextureData(destination.layout, WebGPU.fromAPI(destination.buffer).initialSize(), aspectSpecificFormat, copySize) {
+            return errorString(error)
+        }
+        return nil
+    }
+    private func errorValidatingImageCopyBuffer(imageCopyBuffer: WGPUImageCopyBuffer) -> Swift.String? {
+        // https://gpuweb.github.io/gpuweb/#abstract-opdef-validating-gpuimagecopybuffer
+        let buffer = WebGPU.fromAPI(imageCopyBuffer.buffer)
+        if !WebGPU_Internal.isValidToUseWithBufferCommandEncoder(buffer, self) {
+            return "buffer is not valid";
+        }
+
+        if !buffer.isDestroyed() {
+            if buffer.state() != WebGPU.Buffer.State.Unmapped {
+                return "buffer state != Unmapped";
+            }
+        }
+
+        if imageCopyBuffer.layout.bytesPerRow != WGPU_COPY_STRIDE_UNDEFINED && (imageCopyBuffer.layout.bytesPerRow % 256 != 0) {
+            return "imageCopyBuffer.layout.bytesPerRow is not a multiple of 256"
+        }
+
+        return nil
+    }
+
+    private func errorValidatingCopyBufferToTexture(source: WGPUImageCopyBuffer, destination: WGPUImageCopyTexture, copySize: WGPUExtent3D) -> Swift.String? {
+        func errorString(_ error: Swift.String) -> Swift.String {
+            return "GPUCommandEncoder.copyBufferToTexture: \(error)"
+        }
+        let destinationTexture = WebGPU.fromAPI(destination.texture)
+        let sourceBuffer = WebGPU.fromAPI(source.buffer)
+
+        if let error = errorValidatingImageCopyBuffer(imageCopyBuffer: source) {
+            return errorString(error)
+        }
+
+        if sourceBuffer.usage() & WGPUBufferUsage_CopySrc.rawValue == 0 {
+            return errorString("source usage does not contain CopySrc")
+        }
+
+        if !isValidToUseWithTextureCommandEncoder(destinationTexture, self) {
+            return errorString("destination texture is not valid to use with this GPUCommandEncoder")
+        }
+
+        if let error = WebGPU.Texture.errorValidatingImageCopyTexture(destination, copySize) {
+            return errorString(error)
+        }
+
+        if destinationTexture.usage() & WGPUTextureUsage_CopyDst.rawValue == 0 {
+            return errorString("destination usage does not contain CopyDst")
+        }
+
+        if destinationTexture.sampleCount() != 1 {
+            return errorString("destination sample count is not one")
+        }
+
+        var aspectSpecificFormat = destinationTexture.format()
+
+        if WebGPU.Texture.isDepthOrStencilFormat(destinationTexture.format()) {
+            if !WebGPU.Texture.refersToSingleAspect(destinationTexture.format(), destination.aspect) {
+                return errorString("destination aspect refers to more than one asepct")
+            }
+
+            if !WebGPU.Texture.isValidDepthStencilCopyDestination(destinationTexture.format(), destination.aspect) {
+                return errorString("destination is not valid depthStencilCopyDestination")
+            }
+
+            aspectSpecificFormat = WebGPU.Texture.aspectSpecificFormat(destinationTexture.format(), destination.aspect)
+        }
+
+        if let error = WebGPU.Texture.errorValidatingTextureCopyRange(destination, copySize) {
+            return errorString(error)
+        }
+
+        if !WebGPU.Texture.isDepthOrStencilFormat(destinationTexture.format()) {
+            let texelBlockSize = WebGPU.Texture.texelBlockSize(destinationTexture.format())
+            if source.layout.offset % texelBlockSize.value() != 0 {
+                return errorString("source.layout.offset is not a multiple of texelBlockSize")
+            }
+        }
+
+        if WebGPU.Texture.isDepthOrStencilFormat(destinationTexture.format()) {
+            if (source.layout.offset % 4 != 0) {
+                return errorString("source.layout.offset is not a multiple of four for depth stencil format")
+            }
+        }
+
+        if let error = WebGPU.Texture.errorValidatingLinearTextureData(source.layout, WebGPU.fromAPI(source.buffer).initialSize(), aspectSpecificFormat, copySize) {
+            return errorString(error)
+        }
+        return nil
+    }
+
+
+    private func errorValidatingRenderPassDescriptor(descriptor: WGPURenderPassDescriptor) -> Swift.String? {
+        if let wgpuOcclusionQuery = descriptor.occlusionQuerySet {
+            let occlusionQuery = WebGPU.fromAPI(wgpuOcclusionQuery)
+            if !WebGPU_Internal.isValidToUseWithQuerySetCommandEncoder(occlusionQuery, self) {
+                return "occlusion query does not match the device"
+            }
+            if (occlusionQuery.type() != WGPUQueryType_Occlusion) {
+                return "occlusion query type is not occlusion"
+            }
+        }
+        if descriptor.timestampWrites != nil {
+            return errorValidatingTimestampWrites(timestampWrites: WGPUComputePassTimestampWrites ( querySet: descriptor.timestampWrites.pointee.querySet, beginningOfPassWriteIndex: descriptor.timestampWrites.pointee.beginningOfPassWriteIndex, endOfPassWriteIndex: descriptor.timestampWrites.pointee.endOfPassWriteIndex))
+        }
+        return nil
+    }
+    
+    private func errorValidatingTimestampWrites(timestampWrites: WGPUComputePassTimestampWrites) -> Swift.String? {
+
+            if (!self.protectedDevice().ptr().hasFeature(WGPUFeatureName_TimestampQuery)) {
+                return "device does not have timestamp query feature"
+            }
+
+            let querySet = WebGPU.fromAPI(timestampWrites.querySet)
+            if (querySet.type() != WGPUQueryType_Timestamp) {
+                return "query type is not timestamp but \(querySet.type())"
+            }
+
+            if (!WebGPU_Internal.isValidToUseWithQuerySetCommandEncoder(querySet, self)) {
+                return "device mismatch"
+            }
+
+            let querySetCount = querySet.count()
+            let beginningOfPassWriteIndex = timestampWriteIndex(writeIndex: timestampWrites.beginningOfPassWriteIndex)
+            let endOfPassWriteIndex = timestampWriteIndex(writeIndex: timestampWrites.endOfPassWriteIndex)
+            if (beginningOfPassWriteIndex >= querySetCount || endOfPassWriteIndex >= querySetCount || timestampWrites.beginningOfPassWriteIndex == timestampWrites.endOfPassWriteIndex) {
+                return "writeIndices mismatch: beginningOfPassWriteIndex(\(beginningOfPassWriteIndex) >= querySetCount(\(querySetCount) || endOfPassWriteIndex(\(endOfPassWriteIndex)) >= querySetCount(\(querySetCount)) || timestampWrite.beginningOfPassWriteIndex(\(timestampWrites.beginningOfPassWriteIndex) == timestampWrite.endOfPassWriteIndex(\(timestampWrites.endOfPassWriteIndex))"
+            }
+
+            return nil
+    }
+
+    private func errorValidatingComputePassDescriptor(descriptor: WGPUComputePassDescriptor) -> Swift.String? {
+        if descriptor.timestampWrites != nil {
+            return errorValidatingTimestampWrites(timestampWrites: descriptor.timestampWrites.pointee)
+        }
+        return nil
+    }
     private func isRenderableTextureView(texture: WebGPU.TextureView) -> Bool {
         let textureDimension = texture.dimension()
 
@@ -133,7 +512,7 @@ extension WebGPU.CommandEncoder {
             return WebGPU.RenderPassEncoder.createInvalid(self, m_device.ptr(), "encoder state is not valid")
         }
 
-        if let error = errorValidatingRenderPassDescriptor(descriptor) {
+        if let error = errorValidatingRenderPassDescriptor(descriptor: descriptor) {
             return WebGPU.RenderPassEncoder.createInvalid(self, m_device.ptr(), error)
         }
 
@@ -468,7 +847,7 @@ extension WebGPU.CommandEncoder {
             return
         }
 
-        if let error = self.errorValidatingCopyBufferToBuffer(source, sourceOffset, destination, destinationOffset, size) {
+        if let error = self.errorValidatingCopyBufferToBuffer(source: source, sourceOffset: sourceOffset, destination: destination, destinationOffset: destinationOffset, size: size) {
             self.makeInvalid(error)
             return
         }
@@ -500,7 +879,7 @@ extension WebGPU.CommandEncoder {
         }
 
         let sourceTexture = WebGPU.fromAPI(source.texture);
-        if let error = self.errorValidatingCopyTextureToBuffer(source, destination, copySize) {
+        if let error = self.errorValidatingCopyTextureToBuffer(source: source, destination: destination, copySize: copySize) {
             self.makeInvalid(error)
             return
         }
@@ -781,7 +1160,7 @@ extension WebGPU.CommandEncoder {
         }
         let destinationTexture = WebGPU.fromAPI(destination.texture)
 
-        if let error = self.errorValidatingCopyBufferToTexture(source, destination, copySize) {
+        if let error = self.errorValidatingCopyBufferToTexture(source: source, destination: destination, copySize: copySize) {
             self.makeInvalid(error)
             return
         }
@@ -1174,7 +1553,7 @@ extension WebGPU.CommandEncoder {
             self.generateInvalidEncoderStateError()
             return
         }
-        if let error = self.errorValidatingCopyTextureToTexture(source, destination, copySize) {
+        if let error = self.errorValidatingCopyTextureToTexture(source: source, destination: destination, copySize: copySize) {
             self.makeInvalid(error)
             return
         }
@@ -1355,9 +1734,9 @@ extension WebGPU.CommandEncoder {
             return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), "encoder state is invalid")
         }
 
-        let error = self.errorValidatingComputePassDescriptor(descriptor)
+        let error = self.errorValidatingComputePassDescriptor(descriptor: descriptor)
         guard error == nil else {
-            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), error)
+            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), Swift.String(error!))
         }
 
         guard m_commandBuffer.status.rawValue < MTLCommandBufferStatus.enqueued.rawValue else {

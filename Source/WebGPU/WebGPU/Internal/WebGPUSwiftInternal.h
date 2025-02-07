@@ -78,9 +78,30 @@ inline bool isValidToUseWithTextureViewCommandEncoder(const WebGPU::TextureView&
     return WebGPU::isValidToUseWith(texture, commandEncoder);
 }
 
+inline bool isValidToUseWithQuerySetCommandEncoder(const WebGPU::QuerySet& querySet, const WebGPU::CommandEncoder& commandEncoder)
+{
+    return WebGPU::isValidToUseWith(querySet, commandEncoder);
+}
+
+inline bool isValidToUseWithBufferCommandEncoder(const WebGPU::Buffer& buffer, const WebGPU::CommandEncoder& commandEncoder)
+{
+    return WebGPU::isValidToUseWith(buffer, commandEncoder);
+}
+
+inline bool isValidToUseWithTextureCommandEncoder(const WebGPU::Texture& texture, const WebGPU::CommandEncoder& commandEncoder)
+{
+    return WebGPU::isValidToUseWith(texture, commandEncoder);
+}
+
 inline double clampDouble(const double& v, const double& lo, const double& hi)
 {
     return std::clamp(v, lo, hi);
+}
+
+// FIXME: rdar://138415945
+inline bool areBuffersEqual(const WebGPU::Buffer& a, const WebGPU::Buffer& b)
+{
+    return &a == &b;
 }
 
 #ifndef __swift__
