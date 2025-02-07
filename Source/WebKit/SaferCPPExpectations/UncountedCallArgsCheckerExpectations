@@ -3,7 +3,6 @@ AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
 NetworkProcess/BackgroundFetchLoad.cpp
 NetworkProcess/Classifier/ResourceLoadStatisticsStore.cpp
-NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 NetworkProcess/Downloads/Download.cpp
 NetworkProcess/Downloads/DownloadManager.cpp
 NetworkProcess/Downloads/PendingDownload.cpp
