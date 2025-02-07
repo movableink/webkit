@@ -369,7 +369,8 @@ bool MediaPlayerPrivateMediaStreamAVFObjC::canShowWhileLocked() const
 
 void MediaPlayerPrivateMediaStreamAVFObjC::applicationDidBecomeActive()
 {
-    if (m_sampleBufferDisplayLayer && m_sampleBufferDisplayLayer->didFail()) {
+    RefPtr sampleBufferDisplayLayer = m_sampleBufferDisplayLayer;
+    if (sampleBufferDisplayLayer && sampleBufferDisplayLayer->didFail()) {
         flushRenderers();
         if (m_imagePainter.videoFrame)
             enqueueVideoFrame(Ref { *m_imagePainter.videoFrame });
@@ -970,7 +971,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::checkSelectedVideoTrack()
 
     if (oldVideoTrack != m_activeVideoTrack) {
         if (oldVideoTrack)
-            oldVideoTrack->streamTrack().protectedSource()->removeVideoFrameObserver(*this);
+            oldVideoTrack->protectedStreamTrack()->protectedSource()->removeVideoFrameObserver(*this);
         m_isActiveVideoTrackEnabled = m_activeVideoTrack ? m_activeVideoTrack->streamTrack().enabled() : true;
         if (m_activeVideoTrack) {
             if (m_sampleBufferDisplayLayer && m_activeVideoTrack->protectedStreamTrack()->source().isCaptureSource())
@@ -1033,12 +1034,12 @@ void MediaPlayerPrivateMediaStreamAVFObjC::updateTracks()
 
         switch (state) {
         case TrackState::Remove:
-            track.streamTrack().removeObserver(*protectedThis);
+            track.protectedStreamTrack()->removeObserver(*protectedThis);
             player->removeVideoTrack(track);
             protectedThis->checkSelectedVideoTrack();
             break;
         case TrackState::Add:
-            track.streamTrack().addObserver(*protectedThis);
+            track.protectedStreamTrack()->addObserver(*protectedThis);
             player->addVideoTrack(track);
             break;
         case TrackState::Configure:
