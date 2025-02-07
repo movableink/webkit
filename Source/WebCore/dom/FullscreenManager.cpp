@@ -569,7 +569,8 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
 
 bool FullscreenManager::didEnterFullscreen()
 {
-    if (!m_fullscreenElement) {
+    RefPtr fullscreenElement = this->fullscreenElement();
+    if (!fullscreenElement) {
         ERROR_LOG(LOGIDENTIFIER, "No fullscreenElement; bailing");
         return false;
     }
@@ -580,7 +581,7 @@ bool FullscreenManager::didEnterFullscreen()
     }
     INFO_LOG(LOGIDENTIFIER);
 
-    m_fullscreenElement->didBecomeFullscreenElement();
+    fullscreenElement->didBecomeFullscreenElement();
     return true;
 }
 
@@ -625,8 +626,8 @@ bool FullscreenManager::didExitFullscreen()
     else
         LOG_ONCE(SiteIsolation, "Unable to fully perform FullscreenManager::didExitFullscreen() without access to the main frame document ");
 
-    if (m_fullscreenElement)
-        m_fullscreenElement->didStopBeingFullscreenElement();
+    if (fullscreenElement)
+        fullscreenElement->didStopBeingFullscreenElement();
 
     m_areKeysEnabledInFullscreen = false;
 
@@ -742,8 +743,8 @@ void FullscreenManager::setAnimatingFullscreen(bool flag)
     INFO_LOG(LOGIDENTIFIER, flag);
 
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
-    if (m_fullscreenElement)
-        emplace(styleInvalidation, *m_fullscreenElement, { { CSSSelector::PseudoClass::InternalAnimatingFullscreenTransition, flag } });
+    if (RefPtr fullscreenElement = this->fullscreenElement())
+        emplace(styleInvalidation, *fullscreenElement, { { CSSSelector::PseudoClass::InternalAnimatingFullscreenTransition, flag } });
     m_isAnimatingFullscreen = flag;
 }
 

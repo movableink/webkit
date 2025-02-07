@@ -58,7 +58,7 @@ bool DocumentFullscreen::webkitFullScreenKeyboardInputAllowed(Document& document
 
 Element* DocumentFullscreen::webkitCurrentFullScreenElement(Document& document)
 {
-    return document.ancestorElementInThisScope(document.fullscreenManager().protectedCurrentFullscreenElement().get());
+    return document.ancestorElementInThisScope(document.fullscreenManager().protectedFullscreenElement().get());
 }
 
 void DocumentFullscreen::webkitCancelFullScreen(Document& document)
