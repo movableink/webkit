@@ -133,5 +133,5 @@ private:
     std::unique_ptr<WebCore::IDBServer::IDBServer> m_server;
     RefPtr<WebCore::IDBClient::IDBConnectionToServer> m_connectionToServer;
     RefPtr<WebCore::IDBServer::IDBConnectionToClient> m_connectionToClient;
-    Ref<WTF::WorkQueue> m_queue;
+    const Ref<WTF::WorkQueue> m_queue;
 };

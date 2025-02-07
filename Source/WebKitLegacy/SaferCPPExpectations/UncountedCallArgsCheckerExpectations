@@ -1,4 +1,3 @@
-Storage/InProcessIDBServer.cpp
 Storage/StorageAreaImpl.cpp
 Storage/StorageAreaSync.cpp
 Storage/StorageNamespaceImpl.cpp

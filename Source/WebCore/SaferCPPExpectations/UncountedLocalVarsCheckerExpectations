@@ -25,7 +25,6 @@ Modules/indexeddb/IDBObjectStore.cpp
 Modules/indexeddb/IDBTransaction.cpp
 Modules/indexeddb/WindowOrWorkerGlobalScopeIndexedDatabase.cpp
 Modules/indexeddb/client/IDBConnectionProxy.cpp
-Modules/indexeddb/server/IDBServer.cpp
 Modules/indexeddb/server/MemoryIDBBackingStore.cpp
 Modules/indexeddb/server/UniqueIDBDatabase.cpp
 Modules/mediacapabilities/MediaCapabilities.cpp

@@ -76,13 +76,14 @@ InProcessIDBServer::InProcessIDBServer(PAL::SessionID sessionID, const String& d
     ASSERT(isMainThread());
     m_connectionToServer = IDBClient::IDBConnectionToServer::create(*this, sessionID);
     dispatchTask([this, protectedThis = Ref { *this }, directory = databaseDirectoryPath.isolatedCopy()] () mutable {
-        m_connectionToClient = IDBServer::IDBConnectionToClient::create(*this);
+        Ref connectionToClient = IDBServer::IDBConnectionToClient::create(*this);
+        m_connectionToClient = connectionToClient.copyRef();
 
         Locker locker { m_serverLock };
         m_server = makeUnique<IDBServer::IDBServer>(directory, [](const ClientOrigin&, uint64_t) {
             return true;
         }, m_serverLock);
-        m_server->registerConnection(*m_connectionToClient);
+        m_server->registerConnection(connectionToClient);
     });
 }
 
