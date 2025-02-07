@@ -841,8 +841,6 @@ svg/SVGToOTFFontConversion.cpp
 svg/SVGUseElement.cpp
 svg/graphics/SVGImage.cpp
 svg/graphics/SVGImageCache.cpp
-svg/graphics/filters/SVGFilter.cpp
-svg/graphics/filters/SVGFilterGraph.h
 svg/properties/SVGAnimatedString.cpp
 svg/properties/SVGPropertyOwnerRegistry.h
 testing/InternalSettings.cpp

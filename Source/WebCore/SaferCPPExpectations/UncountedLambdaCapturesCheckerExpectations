@@ -259,8 +259,6 @@ style/Styleable.cpp
 svg/SVGAnimationElement.cpp
 svg/SVGDocumentExtensions.cpp
 svg/SVGViewSpec.cpp
-svg/graphics/filters/SVGFilter.cpp
-svg/graphics/filters/SVGFilterGraph.h
 svg/properties/SVGPropertyOwnerRegistry.h
 testing/MockMediaSessionCoordinator.cpp
 workers/Worker.cpp
