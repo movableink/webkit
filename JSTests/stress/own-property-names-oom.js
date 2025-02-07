@@ -3,7 +3,7 @@
 //@ runDefault
 try {
     this.g ??= createGlobalObject();
-    for (let var_1_ = {}.var_2_; var_1_ < 100000; var_1_++) {}
+    for (let var_1_ = {}.var_2_; var_1_ < testLoopCount; var_1_++) {}
     function func_1_() {
       const var_9_ = ''?.[-4294967295];
       var var_10_ = [var_9_];

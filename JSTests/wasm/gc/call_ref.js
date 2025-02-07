@@ -12,7 +12,7 @@ function testRefSubtyping() {
       (func (export "main") (call_ref 0 (i32.const 3) (global.get 0)))
     )
   `);
-  for (let i = 0; i < 10000; i++)
+  for (let i = 0; i < wasmTestLoopCount; i++)
     m.exports.main();
 }
 

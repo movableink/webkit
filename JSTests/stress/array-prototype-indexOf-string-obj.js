@@ -16,7 +16,7 @@ noInline(test2);
 const obj = {};
 const array = [obj, {}, "b", {}];
 
-for (var i = 0; i < 1e6; ++i) {
+for (var i = 0; i < testLoopCount; ++i) {
     shouldBe(test1(array, "a"), -1);
     shouldBe(test1(array, "b"), 2);
     shouldBe(test2(array, obj), 0);

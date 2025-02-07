@@ -213,7 +213,7 @@ def usage
     puts "                            \"ruby\" to use ruby scripts for systems without a unix shell."
     puts "--remote                    Specify a remote host on which to run tests from command line argument."
     puts "--remote-config-file        Specify a remote host on which to run tests from JSON file."
-    puts "--report-execution-time     Print execution time for each test."
+    puts "--report-execution-time     Print execution time for each test in ms."
     puts "--child-processes    (-c)   Specify the number of child processes."
     puts "--max-timeout               Specify a cap for the effective timeout"
     puts "--filter                    Only run tests whose name matches the given regular expression."

@@ -23,7 +23,7 @@ noInline(test2);
         "まみむめもももも"
     ];
 
-    for (var i = 0; i < 1e6; ++i) {
+    for (var i = 0; i < testLoopCount; ++i) {
         shouldBe(test1(array, "あいうえお"), 0);
         shouldBe(test1(array, "あいうえおお"), -1);
         shouldBe(test1(array, "さしすせ"), 2);
@@ -42,7 +42,7 @@ noInline(test2);
       array.push(char);
     }
 
-    for (let i = 0; i < 1e6; i++) {
+    for (let i = 0; i < testLoopCount; i++) {
         let code = 0x4E00 + (i % 50);
         let searchElement = String.fromCharCode(code);
         shouldBe(test1(array, searchElement), i % 50);

@@ -24,7 +24,7 @@ noInline(test2);
         "",
     ];
 
-    for (var i = 0; i < 1e6; ++i) {
+    for (var i = 0; i < testLoopCount; ++i) {
         shouldBe(test1(array, "aasdfflkjlkj"), 0);
         shouldBe(test1(array, ""), 6);
         shouldBe(test1(array, "aaasdfflkjlki"), -1);
@@ -39,10 +39,10 @@ noInline(test2);
 
 {
     const bigArray = [];
-    for (let i = 0; i < 1e5; i++) {
+    for (let i = 0; i < testLoopCount; i++) {
         bigArray.push(i.toString());
     }
-    for (let i = 0; i < 1e6; i++) {
+    for (let i = 0; i < testLoopCount; i++) {
         let search = (i % 50).toString();
         let result = test1(bigArray, search);
         shouldBe(result.toString(), search);

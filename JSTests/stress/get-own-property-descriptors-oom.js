@@ -4,7 +4,7 @@
 try {
     var var_12_ = new Intl.RelativeTimeFormat();
     var var_13_ = isNaN.toString;
-    for (let var_1_ = {}.var_2_; var_1_ < 100000; var_1_++) {
+    for (let var_1_ = {}.var_2_; var_1_ < testLoopCount; var_1_++) {
       ArrayBuffer.prototype.transfer.__proto__ = Object.prototype.__defineGetter__;
     }
     function func_1_() {

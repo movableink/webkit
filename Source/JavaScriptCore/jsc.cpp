@@ -630,6 +630,22 @@ private:
         Base::finishCreation(vm);
         JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 
+        // Set loop counts based on enabled engine tiers.
+        unsigned testLoopCount = 10000;
+        if (!Options::useDFGJIT())
+            testLoopCount = 1000;
+        if (!Options::useBaselineJIT())
+            testLoopCount = 100;
+
+        unsigned wasmTestLoopCount = 10000;
+        if (!Options::useOMGJIT())
+            wasmTestLoopCount = 1000;
+        if (!Options::useBBQJIT())
+            wasmTestLoopCount = 100;
+
+        putDirect(vm, Identifier::fromString(vm, "testLoopCount"_s), jsNumber(testLoopCount), DontEnum);
+        putDirect(vm, Identifier::fromString(vm, "wasmTestLoopCount"_s), jsNumber(wasmTestLoopCount), DontEnum);
+
         addFunction(vm, "atob"_s, functionAtob, 1);
         addFunction(vm, "btoa"_s, functionBtoa, 1);
         addFunction(vm, "disassembleBase64"_s, functionDisassembleBase64, 1);

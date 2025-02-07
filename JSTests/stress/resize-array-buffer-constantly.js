@@ -5,7 +5,7 @@ function main(x) {
     arr[0] = x;
 }
 
-for (let i = 0; i < 10000; i++) {
+for (let i = 0; i < testLoopCount; i++) {
     if (i % 2 == 0) {
         backing.resize(0x90);
     } else {

@@ -12,5 +12,5 @@ let wasm_module = new WebAssembly.Module(wasm_code);
 let wasm_instance = new WebAssembly.Instance(wasm_module);
 let test = wasm_instance.exports.test;
 
-for (let i = 0; i < 10000; i ++)
+for (let i = 0; i < wasmTestLoopCount; i ++)
     test();

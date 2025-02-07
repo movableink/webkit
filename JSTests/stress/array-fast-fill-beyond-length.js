@@ -1,5 +1,5 @@
 const v0 = [];
-for (let i2 = 0; i2 < 1000000; i2++) {
+for (let i2 = 0; i2 < testLoopCount; i2++) {
     v0[i2] = [];
 }
 const v10 = new Object(Object, v0);

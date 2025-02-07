@@ -4,6 +4,6 @@
   for (let y = 0; y < 2; y++) {
     x.a = x;
   }
-  for (let z = 0; z < 1e5; z++) {}
+  for (let z = 0; z < testLoopCount; z++) {}
 })();
 
