@@ -8294,6 +8294,14 @@
    },
    {
       "emails" : [
+         "y_karimi@apple.com"
+      ],
+      "github" : "karimiy21",
+      "name" : "Yasmin Karimi",
+      "status" : "committer"
+   },
+   {
+      "emails" : [
          "max.hong.shen@gmail.com",
          "yi.shen@sisa.samsung.com",
          "yi.4.shen@nokia.com"
