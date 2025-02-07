@@ -22,7 +22,6 @@ UIProcess/SuspendedPageProxy.cpp
 UIProcess/UserMediaPermissionRequestManagerProxy.cpp
 UIProcess/WebContextMenuProxy.cpp
 UIProcess/WebEditCommandProxy.cpp
-UIProcess/WebFrameProxy.cpp
 UIProcess/WebPageProxy.cpp
 UIProcess/WebProcessCache.cpp
 UIProcess/WebURLSchemeTask.cpp

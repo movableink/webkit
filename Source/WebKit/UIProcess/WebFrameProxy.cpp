@@ -150,8 +150,8 @@ void WebFrameProxy::webProcessWillShutDown()
 
     m_page = nullptr;
 
-    if (m_activeListener) {
-        m_activeListener->ignore();
+    if (RefPtr activeListener = m_activeListener) {
+        activeListener->ignore();
         m_activeListener = nullptr;
     }
 
@@ -208,10 +208,8 @@ void WebFrameProxy::navigateServiceWorkerClient(WebCore::ScriptExecutionContextI
 
 void WebFrameProxy::bindAccessibilityFrameWithData(std::span<const uint8_t> data)
 {
-    if (!m_page)
-        return;
-
-    m_page->sendToProcessContainingFrame(m_frameID, Messages::WebProcess::BindAccessibilityFrameWithData(m_frameID, data));
+    if (RefPtr page = m_page.get())
+        page->sendToProcessContainingFrame(m_frameID, Messages::WebProcess::BindAccessibilityFrameWithData(m_frameID, data));
 }
 
 void WebFrameProxy::loadURL(const URL& url, const String& referrer)
@@ -434,8 +432,8 @@ void WebFrameProxy::prepareForProvisionalLoadInProcess(WebProcessProxy& process,
     RegistrableDomain mainFrameDomain(page->mainFrame()->url());
 
     m_provisionalFrame = nullptr;
-    m_provisionalFrame = makeUnique<ProvisionalFrameProxy>(*this, group.ensureProcessForSite(navigationSite, process, page->preferences()));
-    page->websiteDataStore().protectedNetworkProcess()->addAllowedFirstPartyForCookies(process, mainFrameDomain, LoadedWebArchive::No, [pageID = page->webPageIDInProcess(process), completionHandler = WTFMove(completionHandler)] mutable {
+    m_provisionalFrame = makeUnique<ProvisionalFrameProxy>(*this, group.ensureProcessForSite(navigationSite, process, page->protectedPreferences()));
+    page->protectedWebsiteDataStore()->protectedNetworkProcess()->addAllowedFirstPartyForCookies(process, mainFrameDomain, LoadedWebArchive::No, [pageID = page->webPageIDInProcess(process), completionHandler = WTFMove(completionHandler)] mutable {
         completionHandler(pageID);
     });
 }
@@ -490,7 +488,8 @@ void WebFrameProxy::getFrameInfo(CompletionHandler<void(FrameTreeNodeData&&)>&& 
             aggregator->setCurrentFrameData(WTFMove(*info));
     }, *webPageIDInCurrentProcess());
 
-    bool isSiteIsolationEnabled = page() && page()->preferences().siteIsolationEnabled();
+    RefPtr page = this->page();
+    bool isSiteIsolationEnabled = page && page->preferences().siteIsolationEnabled();
     size_t index = 0;
     for (Ref childFrame : m_childFrames) {
         childFrame->getFrameInfo([aggregator, index = index++, frameID = this->frameID(), isSiteIsolationEnabled] (FrameTreeNodeData&& data) {
@@ -565,8 +564,8 @@ void WebFrameProxy::notifyParentOfLoadCompletion(WebProcessProxy& childFrameProc
 
 std::optional<WebCore::PageIdentifier> WebFrameProxy::webPageIDInCurrentProcess()
 {
-    if (m_page)
-        return m_page->webPageIDInProcess(process());
+    if (RefPtr page = m_page.get())
+        return page->webPageIDInProcess(protectedProcess());
     return std::nullopt;
 }
 
@@ -599,8 +598,9 @@ auto WebFrameProxy::traverseNext(CanWrap canWrap) const -> TraversalResult
         return { WTFMove(frame), DidWrap::No };
 
     if (canWrap == CanWrap::Yes) {
-        if (m_page)
-            return { m_page->protectedMainFrame(), DidWrap::Yes };
+        if (RefPtr page = m_page.get())
+            return { page->protectedMainFrame(), DidWrap::Yes };
+
     }
     return { };
 }
