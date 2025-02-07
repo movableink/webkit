@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,7 +57,7 @@ AVFInbandTrackParent::~AVFInbandTrackParent() = default;
 
 InbandTextTrackPrivateAVF::InbandTextTrackPrivateAVF(AVFInbandTrackParent* owner, TrackID trackID, CueFormat format)
     : InbandTextTrackPrivate(format)
-    , m_owner(owner)
+    , m_owner(*owner)
     , m_pendingCueStatus(None)
     , m_index(0)
     , m_hasBeenReported(false)
@@ -445,7 +445,7 @@ void InbandTextTrackPrivateAVF::beginSeeking()
 
 void InbandTextTrackPrivateAVF::disconnect()
 {
-    m_owner = 0;
+    m_owner = { };
     m_index = 0;
 }
 
@@ -489,7 +489,8 @@ void InbandTextTrackPrivateAVF::resetCueValues()
 
 void InbandTextTrackPrivateAVF::setMode(InbandTextTrackPrivate::Mode newMode)
 {
-    if (!m_owner)
+    RefPtr owner = m_owner.get();
+    if (!owner)
         return;
 
     InbandTextTrackPrivate::Mode oldMode = mode();
@@ -498,7 +499,7 @@ void InbandTextTrackPrivateAVF::setMode(InbandTextTrackPrivate::Mode newMode)
     if (oldMode == newMode)
         return;
 
-    m_owner->trackModeChanged();
+    owner->trackModeChanged();
 }
 
 void InbandTextTrackPrivateAVF::processNativeSamples(CFArrayRef nativeSamples, const MediaTime& presentationTime)
