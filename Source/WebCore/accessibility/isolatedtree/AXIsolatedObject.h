@@ -493,6 +493,7 @@ private:
     bool inheritsPresentationalRole() const final;
     void setAccessibleName(const AtomString&) final;
 
+    String textContentPrefixFromListMarker() const final;
     String titleAttributeValue() const final;
     String title() const final { return stringAttributeValue(AXProperty::Title); }
     String description() const final { return stringAttributeValue(AXProperty::Description); }

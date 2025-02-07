@@ -1172,6 +1172,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::TagName:
         stream << "TagName";
         break;
+    case AXProperty::TextContentPrefixFromListMarker:
+        stream << "TextContentPrefixFromListMarker";
+        break;
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     case AXProperty::TextContent:
         stream << "TextContent";

@@ -1124,6 +1124,7 @@ public:
     virtual String description() const = 0;
 
     virtual std::optional<String> textContent() const = 0;
+    virtual String textContentPrefixFromListMarker() const = 0;
 #if ENABLE(AX_THREAD_TEXT_APIS)
     virtual bool hasTextRuns() = 0;
     virtual TextEmissionBehavior emitTextAfterBehavior() const = 0;

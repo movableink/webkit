@@ -1803,6 +1803,19 @@ StringView AccessibilityObject::listMarkerTextForNodeAndPosition(Node* node, Pos
     return lineStartListMarkerText(listItem, startPosition, markerText);
 }
 
+String AccessibilityObject::textContentPrefixFromListMarker() const
+{
+    // Get the attributed string for range (0, 1) and then delete the last character,
+    // in order to extract the list marker that was added as a prefix to the text content.
+    std::optional<SimpleRange> firstCharacterRange = rangeForCharacterRange({ 0, 1 });
+    if (firstCharacterRange) {
+        String firstCharacterText = stringForRange(*firstCharacterRange);
+        if (firstCharacterText.length() > 1)
+            return firstCharacterText.left(firstCharacterText.length() - 1);
+    }
+    return { };
+}
+
 String AccessibilityObject::stringForRange(const SimpleRange& range) const
 {
     TextIterator it = textIteratorIgnoringFullSizeKana(range);

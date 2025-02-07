@@ -272,6 +272,7 @@ enum class AXProperty : uint16_t {
     SupportsRangeValue,
     SupportsSetSize,
     TagName,
+    TextContentPrefixFromListMarker,
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     // Rather than caching text content as property when ENABLE(AX_THREAD_TEXT_APIS), we should
     // synthesize it on-the-fly using AXProperty::TextRuns.

@@ -217,6 +217,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::BrailleRoleDescription, object.brailleRoleDescription().isolatedCopy());
     setProperty(AXProperty::BrailleLabel, object.brailleLabel().isolatedCopy());
     setProperty(AXProperty::IsNonLayerSVGObject, object.isNonLayerSVGObject());
+    setProperty(AXProperty::TextContentPrefixFromListMarker, object.textContentPrefixFromListMarker());
 
     bool isWebArea = axObject->isWebArea();
     bool isScrollArea = axObject->isScrollView();
@@ -1996,6 +1997,11 @@ bool AXIsolatedObject::inheritsPresentationalRole() const
 void AXIsolatedObject::setAccessibleName(const AtomString&)
 {
     ASSERT_NOT_REACHED();
+}
+
+String AXIsolatedObject::textContentPrefixFromListMarker() const
+{
+    return propertyValue<String>(AXProperty::TextContentPrefixFromListMarker);
 }
 
 String AXIsolatedObject::titleAttributeValue() const

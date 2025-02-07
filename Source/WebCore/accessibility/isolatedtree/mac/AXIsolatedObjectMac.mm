@@ -315,6 +315,10 @@ RetainPtr<NSAttributedString> AXIsolatedObject::attributedStringForTextMarkerRan
     if (!nsRange)
         return nil;
 
+    // If the range spans the beginning of the node, account for the length of the text marker prefix, if any.
+    if (!nsRange->location)
+        nsRange->length += textContentPrefixFromListMarker().length();
+
     if (!attributedStringContainsRange(attributedText.get(), *nsRange))
         return nil;
 

@@ -379,6 +379,7 @@ public:
 #if PLATFORM(COCOA)
     bool hasAttributedText() const;
 #endif
+    String textContentPrefixFromListMarker() const override;
 
     // Methods for determining accessibility text.
     bool isARIAStaticText() const { return ariaRoleAttribute() == AccessibilityRole::StaticText; }
