@@ -386,7 +386,20 @@ bool RenderBundleEncoder::executePreDrawCommands(bool needsValidationLayerWorkar
 
     for (auto& [groupIndex, group] : m_bindGroups) {
         RefPtr protectedGroup = group;
+        if (!group)
+            continue;
+
         auto pipelineOptionalBindGroupLayout = pipelineLayout->optionalBindGroupLayout(groupIndex);
+        const Vector<uint32_t>* dynamicOffsets = nullptr;
+        if (m_bindGroupDynamicOffsets) {
+            if (auto it = m_bindGroupDynamicOffsets->find(groupIndex); it != m_bindGroupDynamicOffsets->end())
+                dynamicOffsets = &it->value;
+        }
+        if (NSString* error = errorValidatingBindGroup(*group.get(), pipeline->minimumBufferSizes(groupIndex), dynamicOffsets)) {
+            makeInvalid(error);
+            return false;
+        }
+
         if (protectedGroup && (protectedGroup->makeSubmitInvalid(ShaderStage::Vertex, pipelineOptionalBindGroupLayout) || protectedGroup->makeSubmitInvalid(ShaderStage::Fragment, pipelineOptionalBindGroupLayout)))
             m_makeSubmitInvalid = true;
     }
