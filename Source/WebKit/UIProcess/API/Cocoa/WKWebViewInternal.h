@@ -237,7 +237,7 @@ struct PerWebProcessState {
 
 @package
     RetainPtr<WKWebViewConfiguration> _configuration;
-    RefPtr<WebKit::WebPageProxy> _page;
+    const RefPtr<WebKit::WebPageProxy> _page;
 
     std::unique_ptr<WebKit::NavigationState> _navigationState;
     std::unique_ptr<WebKit::UIDelegate> _uiDelegate;
