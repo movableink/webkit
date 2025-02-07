@@ -3074,17 +3074,14 @@ header: <WebCore/StylePrimitiveNumericTypes.h>
     double value;
 };
 
-using WebCore::Style::PercentageNonnegativeFloat = WebCore::Style::Percentage<WebCore::CSS::Nonnegative, float>;
 [CustomHeader, Nested] struct WebCore::Style::PercentageNonnegativeFloat {
     float value;
 };
 
-using WebCore::Style::PercentageAllFloat = WebCore::Style::Percentage<WebCore::CSS::All, float>;
 [CustomHeader, Nested] struct WebCore::Style::PercentageAllFloat {
     float value;
 };
 
-using WebCore::Style::LengthNonnegative = WebCore::Style::Length<WebCore::CSS::Nonnegative>;
 [CustomHeader, Nested] struct WebCore::Style::LengthNonnegative {
     float value;
 };
