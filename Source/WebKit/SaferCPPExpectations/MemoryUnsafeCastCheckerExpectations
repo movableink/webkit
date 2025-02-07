@@ -28,7 +28,6 @@ UIProcess/RemoteLayerTree/mac/RemoteScrollingTreeMac.mm
 UIProcess/WebAuthentication/Virtual/VirtualService.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/GPU/graphics/WebGPU/WebGPUDowncastConvertToBackingContext.cpp
-WebProcess/GPU/media/MediaPlayerPrivateRemote.cpp
 WebProcess/InjectedBundle/API/c/WKBundlePageOverlay.cpp
 WebProcess/InjectedBundle/API/mac/WKDOMInternals.mm
 WebProcess/Network/NetworkProcessConnection.cpp

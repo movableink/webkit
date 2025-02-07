@@ -56,7 +56,6 @@ WebProcess/EncryptedMedia/MediaKeySystemPermissionRequestManager.cpp
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIRuntimeCocoa.mm
 WebProcess/Extensions/Cocoa/WebExtensionContextProxyCocoa.mm
 WebProcess/GPU/graphics/RemoteRenderingBackendProxy.cpp
-WebProcess/GPU/media/MediaPlayerPrivateRemote.cpp
 WebProcess/GPU/media/MediaSourcePrivateRemote.cpp
 WebProcess/GPU/media/RemoteAudioDestinationProxy.cpp
 WebProcess/GPU/media/RemoteAudioSession.cpp

@@ -65,7 +65,6 @@ WebProcess/Automation/WebAutomationSessionProxy.cpp
 WebProcess/EncryptedMedia/MediaKeySystemPermissionRequestManager.cpp
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.cpp
 WebProcess/FullScreen/WebFullScreenManager.cpp
-WebProcess/GPU/media/MediaPlayerPrivateRemote.cpp
 WebProcess/GPU/media/RemoteAudioDestinationProxy.cpp
 WebProcess/GPU/webrtc/LibWebRTCCodecs.cpp
 WebProcess/GPU/webrtc/SampleBufferDisplayLayerManager.cpp

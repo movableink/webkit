@@ -483,6 +483,7 @@ private:
     void pushVideoFrameMetadata(WebCore::VideoFrameMetadata&&, RemoteVideoFrameProxy::Properties&&);
 #endif
     RemoteVideoFrameObjectHeapProxy& videoFrameObjectHeapProxy() const { return protectedManager()->protectedGPUProcessConnection()->videoFrameObjectHeapProxy(); }
+    Ref<RemoteVideoFrameObjectHeapProxy> protectedVideoFrameObjectHeapProxy() const { return videoFrameObjectHeapProxy(); }
 
     Ref<RemoteMediaPlayerManager> protectedManager() const;
 
