@@ -374,7 +374,7 @@ protected:
     bool m_areVolumeAndMuteInitialized { false };
 
     // Reflects whether the pipeline was paused due to the HTMLMediaElement being both muted and invisible in the viewport.
-    bool m_isPausedByViewport { false };
+    bool isPausedByViewport() const { return m_stateToRestoreWhenVisible != GST_STATE_VOID_PENDING; };
 
 #if USE(TEXTURE_MAPPER)
     OptionSet<TextureMapperFlags> m_textureMapperFlags;
@@ -630,7 +630,7 @@ private:
     bool m_didTryToRecoverPlayingState { false };
 
     // The state the pipeline should be set back to after the player becomes visible in the viewport again.
-    GstState m_invisiblePlayerState { GST_STATE_VOID_PENDING };
+    GstState m_stateToRestoreWhenVisible { GST_STATE_VOID_PENDING };
 
     // Specific to MediaStream playback.
     MediaTime m_startTime;

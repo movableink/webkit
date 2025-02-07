@@ -1037,9 +1037,9 @@ MediaPlayerPrivateGStreamer::ChangePipelineStateResult MediaPlayerPrivateGStream
 {
     ASSERT(m_pipeline);
 
-    if (m_isPausedByViewport && newState > GST_STATE_PAUSED) {
+    if (isPausedByViewport() && newState > GST_STATE_PAUSED) {
         GST_DEBUG_OBJECT(pipeline(), "Saving state for when player becomes visible: %s", gst_element_state_get_name(newState));
-        m_invisiblePlayerState = newState;
+        m_stateToRestoreWhenVisible = newState;
         return ChangePipelineStateResult::Ok;
     }
 
@@ -3807,26 +3807,26 @@ void MediaPlayerPrivateGStreamer::setVisibleInViewport(bool isVisible)
     if ((player && !player->isVideoPlayer()) || !m_isMuted)
         return;
 
-    if (!isVisible) {
+    if (!isVisible && !isPausedByViewport()) {
         GstState currentState, pendingState;
         gst_element_get_state(m_pipeline.get(), &currentState, &pendingState, 0);
         GstState targetState = (pendingState != GST_STATE_VOID_PENDING ? pendingState : currentState);
-        if (targetState > GST_STATE_NULL)
-            m_invisiblePlayerState = targetState;
-        m_isPausedByViewport = true;
+        if (targetState == GST_STATE_NULL) {
+            GST_DEBUG_OBJECT(pipeline(), "Pipeline is already in NULL state, no point in suspending the player.");
+            return;
+        }
+        m_stateToRestoreWhenVisible = targetState;
         GST_DEBUG_OBJECT(pipeline(), "Media element is muted and not visible in viewport, pausing it to save resources. Will resume afterwards to %s state.",
-            gst_element_state_get_name(m_invisiblePlayerState));
+            gst_element_state_get_name(m_stateToRestoreWhenVisible));
         gst_element_set_state(m_pipeline.get(), GST_STATE_PAUSED);
         gst_element_get_state(m_pipeline.get(), &currentState, &pendingState, 0);
         GST_DEBUG_OBJECT(pipeline(), "Now pipeline is in %s state with %s pending", gst_element_state_get_name(currentState), gst_element_state_get_name(pendingState));
         m_isPipelinePlaying = false;
-    } else {
-        m_isPausedByViewport = false;
-        if (m_invisiblePlayerState != GST_STATE_VOID_PENDING) {
-            GST_DEBUG_OBJECT(pipeline(), "Element in viewport again, resuming playback via state change to %s.",
-                gst_element_state_get_name(m_invisiblePlayerState));
-            changePipelineState(m_invisiblePlayerState);
-        }
+    } else if (isVisible && isPausedByViewport()) {
+        GST_DEBUG_OBJECT(pipeline(), "Element in viewport again, resuming playback via state change to %s.",
+            gst_element_state_get_name(m_stateToRestoreWhenVisible));
+        changePipelineState(m_stateToRestoreWhenVisible);
+        m_stateToRestoreWhenVisible = GST_STATE_VOID_PENDING;
     }
 }
 
@@ -3840,7 +3840,7 @@ void MediaPlayerPrivateGStreamer::paint(GraphicsContext& context, const FloatRec
     if (context.paintingDisabled())
         return;
 
-    if (!m_pageIsVisible || m_isPausedByViewport)
+    if (!m_pageIsVisible || isPausedByViewport())
         return;
 
     // Keep a reference to the sample to avoid keeping the sampleMutex locked, which would be prone
