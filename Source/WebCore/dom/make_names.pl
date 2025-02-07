@@ -800,9 +800,11 @@ sub printTypeHelpersHeaderFile
     print F "#pragma once\n\n";
     print F "#include \"".$parameters{namespace}."Names.h\"\n\n";
 
-    # FIXME: Remove `if` condition below once HTMLElementTypeHeaders.h is made inline.
+    # FIXME: Remove `if` condition below once HTMLElementTypeHelpers.h is made inline.
     if ($parameters{namespace} eq "SVG") {
-        print F "#include \"".$parameters{namespace}."ElementInlines.h\"\n\n";
+        print F "#include \"SVGElementInlines.h\"\n\n";
+    } elsif ($parameters{namespace} eq "MathML") {
+        print F "#include \"MathMLElement.h\"\n\n";
     }
     printTypeHelpers($F, \%allElements);
 

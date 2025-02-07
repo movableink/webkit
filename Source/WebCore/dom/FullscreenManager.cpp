@@ -39,15 +39,19 @@
 #include "HTMLDialogElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLMediaElement.h"
+#include "HTMLNames.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "Logging.h"
+#include "MathMLMathElement.h"
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "QualifiedName.h"
 #include "Quirks.h"
 #include "RenderBlock.h"
+#include "SVGElementTypeHelpers.h"
+#include "SVGSVGElement.h"
 #include "Settings.h"
 #include <wtf/LoggerHelper.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -116,6 +120,11 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
     // If any of the following conditions are true, terminate these steps and queue a task to fire
     // an event named fullscreenerror with its bubbles attribute set to true on the context object's
     // node document:
+    if (!element->isHTMLElement() && !is<SVGSVGElement>(element) && !is<MathMLMathElement>(element)) {
+        handleError("Cannot request fullscreen on a non-HTML element."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
+        return;
+    }
+
     if (is<HTMLDialogElement>(element)) {
         handleError("Cannot request fullscreen on a <dialog> element."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
         return;
