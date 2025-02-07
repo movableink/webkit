@@ -33,6 +33,9 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParser.h"
 #include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+Percentage.h"
+#include "CSSPropertyParserConsumer+Timeline.h"
+#include "Length.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {

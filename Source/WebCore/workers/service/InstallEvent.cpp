@@ -26,6 +26,8 @@
 #include "config.h"
 #include "InstallEvent.h"
 
+#include <wtf/TZoneMallocInlines.h>
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InstallEvent);
