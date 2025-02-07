@@ -313,6 +313,8 @@ void configureVideoRTPDepayloader(GstElement*);
 bool gstObjectHasProperty(GstElement*, const char* name);
 bool gstObjectHasProperty(GstPad*, const char* name);
 
+bool gstElementMatchesFactoryAndHasProperty(GstElement*, ASCIILiteral factoryNamePattern, ASCIILiteral propertyName);
+
 GRefPtr<GstBuffer> wrapSpanData(const std::span<const uint8_t>&);
 
 std::optional<unsigned> gstGetAutoplugSelectResult(ASCIILiteral);

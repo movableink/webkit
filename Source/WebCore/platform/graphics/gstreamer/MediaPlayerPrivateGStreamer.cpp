@@ -3297,12 +3297,11 @@ void MediaPlayerPrivateGStreamer::configureVideoDecoder(GstElement* decoder)
         m_videoDecoderPlatform = GstVideoDecoderPlatform::ImxVPU;
     else if (nameView.startsWith("omx"_s))
         m_videoDecoderPlatform = GstVideoDecoderPlatform::OpenMAX;
-    else if (nameView.startsWith("avdec"_s)) {
+    else if (gstElementMatchesFactoryAndHasProperty(decoder, "avdec*"_s, "max-threads"_s)) {
         // Set the decoder maximum number of threads to a low, fixed value, not depending on the
         // platform. This also helps with processing metrics gathering. When using the default value
         // the decoder introduces artificial processing latency reflecting the maximum number of threads.
-        if (gstObjectHasProperty(decoder, "max-threads"))
-            g_object_set(decoder, "max-threads", 2, nullptr);
+        g_object_set(decoder, "max-threads", 2, nullptr);
     }
 
     if (gstObjectHasProperty(decoder, "max-errors"))
@@ -4366,9 +4365,9 @@ static void applyAudioSinkDevice(GstElement* audioSinkBin, const String& deviceI
 {
     for (auto* element : GstIteratorAdaptor<GstElement>(GUniquePtr<GstIterator>(gst_bin_iterate_sinks(GST_BIN_CAST(audioSinkBin))))) {
         // pulsesink and alsasink have a "device" property, whilst pipewiresink has "target-object"
-        if (GST_IS_AUDIO_BASE_SINK(element) && gstObjectHasProperty(element, "device"))
+        if (gstElementMatchesFactoryAndHasProperty(element, "pulsesink"_s, "device"_s) || gstElementMatchesFactoryAndHasProperty(element, "alsasink"_s, "device"_s))
             g_object_set(element, "device", deviceId.utf8().data(), nullptr);
-        else if (GST_IS_BASE_SINK(element) && gstObjectHasProperty(element, "target-object"))
+        else if (gstElementMatchesFactoryAndHasProperty(element, "pipewiresink"_s, "target-object"_s))
             g_object_set(element, "target-object", deviceId.utf8().data(), nullptr);
         else if (GST_IS_BIN(element))
             applyAudioSinkDevice(element, deviceId);

@@ -36,6 +36,7 @@
 #include "SharedBuffer.h"
 #include "VideoSinkGStreamer.h"
 #include "WebKitAudioSinkGStreamer.h"
+#include <fnmatch.h>
 #include <gst/audio/audio-info.h>
 #include <gst/gst.h>
 #include <mutex>
@@ -1596,7 +1597,7 @@ void configureAudioDecoderForHarnessing(const GRefPtr<GstElement>& element)
         g_object_set(element.get(), "max-errors", 0, nullptr);
 
     // rawaudioparse-specific:
-    if (gstObjectHasProperty(element.get(), "use-sink-caps"))
+    if (gstElementMatchesFactoryAndHasProperty(element.get(), "rawaudioparse"_s, "use-sink-caps"_s))
         g_object_set(element.get(), "use-sink-caps", TRUE, nullptr);
 }
 
@@ -1609,14 +1610,14 @@ void configureVideoDecoderForHarnessing(const GRefPtr<GstElement>& element)
         g_object_set(element.get(), "max-errors", 0, nullptr);
 
     // avdec-specific:
-    if (gstObjectHasProperty(element.get(), "std-compliance"))
+    if (gstElementMatchesFactoryAndHasProperty(element.get(), "avdec*"_s, "std-compliance"_s))
         gst_util_set_object_arg(G_OBJECT(element.get()), "std-compliance", "strict");
 
-    if (gstObjectHasProperty(element.get(), "output-corrupt"))
+    if (gstElementMatchesFactoryAndHasProperty(element.get(), "avdec*"_s, "output-corrupt"_s))
         g_object_set(element.get(), "output-corrupt", FALSE, nullptr);
 
     // dav1ddec-specific:
-    if (gstObjectHasProperty(element.get(), "n-threads"))
+    if (gstElementMatchesFactoryAndHasProperty(element.get(), "dav1ddec"_s, "n-threads"_s))
         g_object_set(element.get(), "n-threads", 1, nullptr);
 }
 
@@ -1657,6 +1658,19 @@ bool gstObjectHasProperty(GstElement* element, const char* name)
 bool gstObjectHasProperty(GstPad* pad, const char* name)
 {
     return gstObjectHasProperty(GST_OBJECT_CAST(pad), name);
+}
+
+bool gstElementMatchesFactoryAndHasProperty(GstElement* element, ASCIILiteral factoryNamePattern, ASCIILiteral propertyName)
+{
+    auto factory = gst_element_get_factory(element);
+    if (!factory)
+        return gstObjectHasProperty(element, propertyName.characters());
+
+    auto nameView = StringView::fromLatin1(GST_OBJECT_NAME(factory));
+    if (fnmatch(factoryNamePattern.characters(), nameView.toStringWithoutCopying().ascii().data(), 0))
+        return false;
+
+    return gstObjectHasProperty(element, propertyName.characters());
 }
 
 GRefPtr<GstBuffer> wrapSpanData(const std::span<const uint8_t>& span)
