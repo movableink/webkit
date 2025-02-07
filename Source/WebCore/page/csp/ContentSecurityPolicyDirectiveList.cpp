@@ -29,6 +29,7 @@
 
 #include "ContentSecurityPolicyDirectiveNames.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "HTTPParsers.h"
 #include "LocalFrame.h"
 #include "SecurityContext.h"
@@ -112,7 +113,7 @@ static inline bool checkFrameAncestors(ContentSecurityPolicySourceListDirective*
         RefPtr localFrame = dynamicDowncast<LocalFrame>(*current);
         if (!localFrame)
             continue;
-        URL origin = urlFromOrigin(localFrame->protectedDocument()->securityOrigin());
+        URL origin = urlFromOrigin(localFrame->protectedDocument()->protectedSecurityOrigin());
         if (!origin.isValid() || !directive->allows(origin, didReceiveRedirectResponse, ContentSecurityPolicySourceListDirective::ShouldAllowEmptyURLIfSourceListIsNotNone::No))
             return false;
     }
