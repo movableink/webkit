@@ -3492,8 +3492,10 @@ IFrameResourceMonitoringEnabled:
     WebKitLegacy:
       default: false
     WebKit:
+      "PLATFORM(COCOA)": true
       default: false
     WebCore:
+      "PLATFORM(COCOA)": true
       default: false
 
 IPAddressAndLocalhostMixedContentUpgradeTestingEnabled:
