@@ -42,11 +42,8 @@ namespace WebCore {
 
 class AnimationTimeline;
 class CSSAnimation;
-class CSSTransition;
 class Document;
-class Element;
 class ScrollTimeline;
-class ViewTimeline;
 class WeakPtrImplWithEventTargetData;
 class WebAnimation;
 
