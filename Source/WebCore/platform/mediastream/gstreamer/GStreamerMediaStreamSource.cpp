@@ -165,14 +165,24 @@ public:
         bool isCaptureTrack = track.isCaptureTrack();
         m_src = makeGStreamerElement("appsrc", elementName.ascii().data());
 
-        g_object_set(m_src.get(), "is-live", TRUE, "format", GST_FORMAT_TIME, "emit-signals", TRUE, "min-percent", 100,
+        g_object_set(m_src.get(), "is-live", TRUE, "format", GST_FORMAT_TIME, "min-percent", 100,
             "do-timestamp", isCaptureTrack, "handle-segment-change", TRUE, nullptr);
-        g_signal_connect(m_src.get(), "enough-data", G_CALLBACK(+[](GstElement*, InternalSource* data) {
-            data->m_enoughData = true;
-        }), this);
-        g_signal_connect(m_src.get(), "need-data", G_CALLBACK(+[](GstElement*, unsigned, InternalSource* data) {
-            data->m_enoughData = false;
-        }), this);
+
+        static GstAppSrcCallbacks callbacks = {
+            // need_data
+            [](GstAppSrc*, unsigned, gpointer userData) {
+                auto self = reinterpret_cast<InternalSource*>(userData);
+                self->m_enoughData = false;
+            },
+            // enough_data
+            [](GstAppSrc*, gpointer userData) {
+                auto self = reinterpret_cast<InternalSource*>(userData);
+                self->m_enoughData = true;
+            },
+            nullptr,
+            { nullptr }
+        };
+        gst_app_src_set_callbacks(GST_APP_SRC(m_src.get()), &callbacks, this, nullptr);
 
         createGstStream();
 
