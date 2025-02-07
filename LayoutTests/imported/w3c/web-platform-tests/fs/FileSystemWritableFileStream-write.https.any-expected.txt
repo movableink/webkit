@@ -22,9 +22,9 @@ PASS atomic writes: truncate() after close() fails
 PASS atomic writes: close() after close() fails
 PASS atomic writes: only one close() operation may succeed
 PASS getWriter() can be used
-FAIL WriteParams: truncate missing size param promise_rejects_dom: truncate without size function "function() { throw e }" threw object "TypeError: Required argument is missing" that is not a DOMException SyntaxError: property "code" is equal to undefined, expected 12
-FAIL WriteParams: write missing data param promise_rejects_dom: write without data function "function() { throw e }" threw object "TypeError: Data type is invalid" that is not a DOMException SyntaxError: property "code" is equal to undefined, expected 12
+PASS WriteParams: truncate missing size param
+FAIL WriteParams: write missing data param promise_rejects_dom: write without data function "function() { throw e }" threw object "TypeError: Data is missing" that is not a DOMException SyntaxError: property "code" is equal to undefined, expected 12
 PASS WriteParams: write null data param
-FAIL WriteParams: seek missing position param promise_rejects_dom: seek without position function "function() { throw e }" threw object "TypeError: Required argument is missing" that is not a DOMException SyntaxError: property "code" is equal to undefined, expected 12
+PASS WriteParams: seek missing position param
 PASS write() with an invalid blob to an empty file should reject
 

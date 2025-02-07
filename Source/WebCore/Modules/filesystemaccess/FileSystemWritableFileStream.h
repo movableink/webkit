@@ -41,8 +41,8 @@ public:
     using DataVariant = std::variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
     struct WriteParams {
         WriteCommandType type;
-        std::optional<uint64_t> size;
-        std::optional<uint64_t> position;
+        std::optional<uint64_t> size { };
+        std::optional<uint64_t> position { };
         std::optional<DataVariant> data;
     };
 

@@ -37,23 +37,32 @@
 
 namespace WebCore {
 
-static FileSystemWritableFileStream::WriteParams writeParamsFromChunk(FileSystemWritableFileStream::ChunkType&& chunk)
+static ExceptionOr<FileSystemWritableFileStream::WriteParams> writeParamsFromChunk(FileSystemWritableFileStream::ChunkType&& chunk)
 {
-    FileSystemWritableFileStream::WriteParams result;
-    result.type = FileSystemWritableFileStream::WriteCommandType::Write;
-    WTF::switchOn(WTFMove(chunk), [&](FileSystemWritableFileStream::WriteParams&& params) {
-        result = WTFMove(params);
-    }, [&](RefPtr<JSC::ArrayBufferView>&& data) {
-        result.data = WTFMove(data);
-    }, [&](RefPtr<JSC::ArrayBuffer>&& data) {
-        result.data = WTFMove(data);
-    }, [&](RefPtr<Blob>&& data) {
-        result.data = WTFMove(data);
-    }, [&](String&& data) {
-        result.data = WTFMove(data);
+    return WTF::switchOn(WTFMove(chunk), [](FileSystemWritableFileStream::WriteParams&& params) -> ExceptionOr<FileSystemWritableFileStream::WriteParams> {
+        switch (params.type) {
+        case FileSystemWriteCommandType::Write:
+            if (!params.data)
+                return Exception { ExceptionCode::TypeError, "Data is missing"_s };
+            return params;
+        case FileSystemWriteCommandType::Seek:
+            // FIXME: Reconsider exception type when https://github.com/whatwg/fs/issues/168 is closed.
+            if (!params.position)
+                return Exception { ExceptionCode::SyntaxError, "Position is missing."_s };
+            return params;
+        case FileSystemWriteCommandType::Truncate:
+            // FIXME: Reconsider exception type when https://github.com/whatwg/fs/issues/168 is closed.
+            if (!params.size)
+                return Exception { ExceptionCode::SyntaxError, "Size is missing."_s };
+            return params;
+        }
+        return params;
+    }, [](auto&& data) -> ExceptionOr<FileSystemWritableFileStream::WriteParams> {
+        return FileSystemWritableFileStream::WriteParams {
+            .type = FileSystemWritableFileStream::WriteCommandType::Write,
+            .data = WTFMove(data)
+        };
     });
-
-    return result;
 }
 
 static void fetchDataBytesForWrite(const FileSystemWritableFileStream::DataVariant& data, CompletionHandler<void(ExceptionOr<std::span<const uint8_t>>&&)>&& completionHandler)
@@ -109,19 +118,36 @@ FileSystemWritableFileStreamSink::~FileSystemWritableFileStreamSink()
         protectedSource()->closeWritable(m_identifier, FileSystemWriteCloseReason::Completed);
 }
 
+static ExceptionOr<FileSystemWritableFileStream::ChunkType> convertFileSystemWritableChunk(ScriptExecutionContext& context, JSC::JSValue value)
+{
+    auto scope = DECLARE_THROW_SCOPE(context.vm());
+    auto chunkResult = convert<IDLUnion<IDLArrayBufferView, IDLArrayBuffer, IDLInterface<Blob>, IDLUSVString, IDLDictionary<FileSystemWritableFileStream::WriteParams>>>(*context.globalObject(), value);
+    if (UNLIKELY(chunkResult.hasException(scope)))
+        return Exception { ExceptionCode::ExistingExceptionError };
+
+    return chunkResult.releaseReturnValue();
+}
+
 // https://fs.spec.whatwg.org/#write-a-chunk
 void FileSystemWritableFileStreamSink::write(ScriptExecutionContext& context, JSC::JSValue value, DOMPromiseDeferred<void>&& promise)
 {
     ASSERT(!m_isClosed);
 
-    auto scope = DECLARE_THROW_SCOPE(context.vm());
-    auto chunkResult = convert<IDLUnion<IDLArrayBufferView, IDLArrayBuffer, IDLInterface<Blob>, IDLUSVString, IDLDictionary<FileSystemWritableFileStream::WriteParams>>>(*context.globalObject(), value);
-    if (UNLIKELY(chunkResult.hasException(scope))) {
-        scope.clearException();
-        return protectedSource()->executeCommandForWritable(m_identifier, FileSystemWriteCommandType::Write, std::nullopt, std::nullopt, { }, true, WTFMove(promise));
+    auto chunkResultOrException = convertFileSystemWritableChunk(context, value);
+    if (chunkResultOrException.hasException()) {
+        promise.reject(chunkResultOrException.releaseException());
+        protectedSource()->closeWritable(m_identifier, FileSystemWriteCloseReason::Aborted);
+        return;
     }
 
-    auto writeParams = writeParamsFromChunk(chunkResult.releaseReturnValue());
+    auto writeParamsOrException = writeParamsFromChunk(chunkResultOrException.releaseReturnValue());
+    if (writeParamsOrException.hasException()) {
+        promise.reject(writeParamsOrException.releaseException());
+        protectedSource()->closeWritable(m_identifier, FileSystemWriteCloseReason::Aborted);
+        return;
+    }
+
+    auto writeParams = writeParamsOrException.releaseReturnValue();
     switch (writeParams.type) {
     case FileSystemWriteCommandType::Seek:
     case FileSystemWriteCommandType::Truncate:
