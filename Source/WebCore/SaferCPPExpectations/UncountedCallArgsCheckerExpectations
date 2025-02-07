@@ -1250,7 +1250,6 @@ rendering/AccessibilityRegionContext.cpp
 rendering/AttachmentLayout.mm
 rendering/BackgroundPainter.cpp
 rendering/BorderPainter.cpp
-rendering/CSSFilter.cpp
 rendering/CaretRectComputation.cpp
 rendering/EllipsisBoxPainter.cpp
 rendering/GlyphDisplayListCache.h
