@@ -524,8 +524,23 @@ auto FunctionParser<Context>::parseBody() -> PartialResult
             WasmOpcodeCounter::singleton().increment(m_currentOpcode);
 #endif
 
-        if (verbose) {
-            dataLogLn("processing op (", m_unreachableBlocks, "): ",  RawHex(m_currentOpcode), ", ", makeString(static_cast<OpType>(m_currentOpcode)), " at offset: ", RawHex(m_currentOpcodeStartingOffset));
+        if constexpr (verbose) {
+            String extOpString;
+            auto computeExtOpString = [&]<typename ExtOpEnum>() {
+                uint32_t extOpBits;
+                if (peekVarUInt32(extOpBits))
+                    extOpString = makeString("::"_s, makeString(static_cast<ExtOpEnum>(extOpBits)));
+                else
+                    extOpString = makeString(" with invalid extension: "_s, extOpBits);
+            };
+
+#define HANDLE_EXT_OP_PREFIX(name, id, b3, hasExtra, ExtOpEnumType) \
+            if (m_currentOpcode == OpType::name) \
+                computeExtOpString.template operator()<ExtOpEnumType>();
+            FOR_EACH_WASM_EXT_PREFIX_OP_WITH_ENUM(HANDLE_EXT_OP_PREFIX)
+#undef HANDLE_EXT_OP_PREFIX
+
+            dataLogLn("processing op (", m_unreachableBlocks, "): ",  RawHex(m_currentOpcode), ", ", makeString(static_cast<OpType>(m_currentOpcode)), extOpString, " at offset: ", RawHex(m_currentOpcodeStartingOffset));
             m_context.dump(m_controlStack, &m_expressionStack);
         }
 

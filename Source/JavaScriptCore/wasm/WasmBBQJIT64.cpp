@@ -1693,6 +1693,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, u
 
     if (arrayref.isConst()) {
         ASSERT(arrayref.asI64() == JSValue::encode(jsNull()));
+        consume(index);
         emitThrowException(ExceptionType::NullArrayGet);
         result = Value::fromRef(resultType.kind, JSValue::encode(jsNull()));
         return { };
