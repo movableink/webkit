@@ -183,7 +183,7 @@ public:
 protected:
     explicit RemoteScrollingCoordinatorProxy(WebPageProxy&);
 
-    RemoteScrollingTree* scrollingTree() const { return m_scrollingTree.get(); }
+    RemoteScrollingTree& scrollingTree() const { return m_scrollingTree.get(); }
 
     virtual void connectStateNodeLayers(WebCore::ScrollingStateTree&, const RemoteLayerTreeHost&) = 0;
     virtual void establishLayerTreeScrollingRelations(const RemoteLayerTreeHost&) = 0;
@@ -194,7 +194,7 @@ protected:
 
 private:
     WeakRef<WebPageProxy> m_webPageProxy;
-    RefPtr<RemoteScrollingTree> m_scrollingTree;
+    const Ref<RemoteScrollingTree> m_scrollingTree;
 
 protected:
     std::optional<WebCore::RequestedScrollData> m_requestedScroll;
