@@ -1938,9 +1938,18 @@ all : \
 
 # CSS property names and value keywords
 
+POSSIBLE_ADDITIONAL_CSS_VALUE_KEYWORDS = \
+    $(foreach \
+        CSS_VALUE_KEYWORDS, \
+        $(ADDITIONAL_CSS_VALUE_KEYWORDS), \
+        $(firstword $(realpath $(foreach \
+            ADDITIONS_PATH, \
+            $(ADDITIONS_PATHS), \
+            $(ADDITIONS_PATH)/$(CSS_VALUE_KEYWORDS)))))
+
 WEBCORE_CSS_PROPERTY_NAMES := $(WebCore)/css/CSSProperties.json
 WEBCORE_CSS_VALUE_KEYWORDS := $(WebCore)/css/CSSValueKeywords.in
-WEBCORE_CSS_VALUE_KEYWORDS := $(WEBCORE_CSS_VALUE_KEYWORDS) $(WebCore)/css/SVGCSSValueKeywords.in
+WEBCORE_CSS_VALUE_KEYWORDS := $(WEBCORE_CSS_VALUE_KEYWORDS) $(WebCore)/css/SVGCSSValueKeywords.in $(POSSIBLE_ADDITIONAL_CSS_VALUE_KEYWORDS)
 
 CSS_PROPERTY_NAME_FILES = \
     CSSPropertyNames.cpp \
