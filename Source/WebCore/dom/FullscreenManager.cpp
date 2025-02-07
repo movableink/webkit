@@ -44,7 +44,6 @@
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "Logging.h"
-#include "MathMLMathElement.h"
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "QualifiedName.h"
@@ -55,6 +54,10 @@
 #include "Settings.h"
 #include <wtf/LoggerHelper.h>
 #include <wtf/TZoneMallocInlines.h>
+
+#if ENABLE(MATHML)
+#include "MathMLMathElement.h"
+#endif
 
 namespace WebCore {
 
@@ -120,7 +123,11 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
     // If any of the following conditions are true, terminate these steps and queue a task to fire
     // an event named fullscreenerror with its bubbles attribute set to true on the context object's
     // node document:
+#if ENABLE(MATHML)
     if (!element->isHTMLElement() && !is<SVGSVGElement>(element) && !is<MathMLMathElement>(element)) {
+#else
+    if (!element->isHTMLElement() && !is<SVGSVGElement>(element)) {
+#endif
         handleError("Cannot request fullscreen on a non-HTML element."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
         return;
     }
