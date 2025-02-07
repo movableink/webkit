@@ -538,16 +538,16 @@ FloatRect LineLayout::constructContent(const Layout::InlineLayoutState& inlineLa
 {
     auto damagedRect = InlineContentBuilder { flow() }.build(WTFMove(layoutResult), ensureInlineContent(), m_lineDamage.get());
 
-    m_inlineContent->clearGapBeforeFirstLine = inlineLayoutState.clearGapBeforeFirstLine();
-    m_inlineContent->clearGapAfterLastLine = inlineLayoutState.clearGapAfterLastLine();
+    m_inlineContent->setClearGapBeforeFirstLine(inlineLayoutState.clearGapBeforeFirstLine());
+    m_inlineContent->setClearGapAfterLastLine(inlineLayoutState.clearGapAfterLastLine());
     m_inlineContent->shrinkToFit();
 
     m_inlineContentCache.inlineItems().shrinkToFit();
     m_blockFormattingState.shrinkToFit();
 
     // FIXME: These needs to be incorporated into the partial damage.
-    auto additionalHeight = m_inlineContent->firstLinePaginationOffset + m_inlineContent->clearGapBeforeFirstLine + m_inlineContent->clearGapAfterLastLine;
-    damagedRect.expand({ 0, additionalHeight });
+    auto offsetAndGaps = m_inlineContent->firstLinePaginationOffset() + m_inlineContent->clearBeforeAfterGaps();
+    damagedRect.expand({ 0, offsetAndGaps });
     return damagedRect;
 }
 
@@ -779,7 +779,7 @@ void LineLayout::preparePlacedFloats()
 
 bool LineLayout::isPaginated() const
 {
-    return m_inlineContent && m_inlineContent->isPaginated;
+    return m_inlineContent && m_inlineContent->isPaginated();
 }
 
 bool LineLayout::hasEllipsisInBlockDirectionOnLastFormattedLine() const
@@ -824,8 +824,8 @@ std::optional<LayoutUnit> LineLayout::clampedContentLogicalHeight() const
     }
 
     auto contentHeight = lines[*firstTruncatedLineIndex - 1].lineBoxLogicalRect().maxY() - lines.first().lineBoxLogicalRect().y();
-    auto additionalHeight = m_inlineContent->firstLinePaginationOffset + m_inlineContent->clearGapBeforeFirstLine + m_inlineContent->clearGapAfterLastLine;
-    return LayoutUnit { contentHeight + additionalHeight };
+    auto offsetAndGaps = m_inlineContent->firstLinePaginationOffset() + m_inlineContent->clearBeforeAfterGaps();
+    return LayoutUnit { contentHeight + offsetAndGaps };
 }
 
 LayoutUnit LineLayout::contentLogicalHeight() const
@@ -840,8 +840,8 @@ LayoutUnit LineLayout::contentLogicalHeight() const
     }
 
     auto contentHeight = lastLineWithInlineContent(lines).lineBoxLogicalRect().maxY() - lines.first().lineBoxLogicalRect().y();
-    auto additionalHeight = m_inlineContent->firstLinePaginationOffset + m_inlineContent->clearGapBeforeFirstLine + m_inlineContent->clearGapAfterLastLine;
-    return LayoutUnit { contentHeight + additionalHeight };
+    auto offsetAndGaps = m_inlineContent->firstLinePaginationOffset() + m_inlineContent->clearBeforeAfterGaps();
+    return LayoutUnit { contentHeight + offsetAndGaps };
 }
 
 size_t LineLayout::lineCount() const
@@ -941,7 +941,10 @@ Vector<LineAdjustment> LineLayout::adjustContentForPagination(const Layout::Bloc
     bool allowLayoutRestart = !isPartialLayout;
     auto [adjustments, layoutRestartLine] = computeAdjustmentsForPagination(*m_inlineContent, m_blockFormattingState.placedFloats(), allowLayoutRestart, blockLayoutState, flow());
 
-    adjustLinePositionsForPagination(*m_inlineContent, adjustments);
+    if (!adjustments.isEmpty()) {
+        adjustLinePositionsForPagination(*m_inlineContent, adjustments);
+        m_inlineContent->setFirstLinePaginationOffset(adjustments[0].offset);
+    }
 
     if (layoutRestartLine) {
         auto invalidation = Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() };
@@ -968,7 +971,7 @@ void LineLayout::collectOverflow()
 InlineContent& LineLayout::ensureInlineContent()
 {
     if (!m_inlineContent)
-        m_inlineContent = makeUnique<InlineContent>(*this);
+        m_inlineContent = makeUnique<InlineContent>(flow());
     return *m_inlineContent;
 }
 

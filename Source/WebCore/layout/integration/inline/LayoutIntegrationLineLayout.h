@@ -57,7 +57,7 @@ class InlineDamage;
 
 namespace LayoutIntegration {
 
-struct InlineContent;
+class InlineContent;
 struct LineAdjustment;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LayoutIntegration_LineLayout);
