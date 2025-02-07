@@ -3,7 +3,6 @@ GPUProcess/graphics/RemoteDisplayListRecorder.cpp
 GPUProcess/graphics/RemoteGraphicsContextGL.cpp
 GPUProcess/media/RemoteMediaPlayerProxy.cpp
 GPUProcess/media/RemoteSourceBufferProxy.cpp
-GPUProcess/webrtc/LibWebRTCCodecsProxy.mm
 NetworkProcess/NetworkDataTaskBlob.cpp
 NetworkProcess/NetworkProcess.cpp
 NetworkProcess/cache/NetworkCache.cpp
