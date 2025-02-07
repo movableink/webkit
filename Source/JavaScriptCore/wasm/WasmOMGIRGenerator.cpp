@@ -5262,12 +5262,20 @@ bool OMGIRGenerator::canInline(FunctionSpaceIndex functionIndexSpace) const
     if (!Options::useOMGInlining())
         return false;
 
-    // Avoid inlining itself.
-    if ((functionIndexSpace - m_numImportFunctions) == m_functionIndex)
+    size_t wasmSize = m_info.functionWasmSizeImportSpace(functionIndexSpace);
+    if (wasmSize >= Options::maximumWasmCalleeSizeForInlining())
         return false;
 
-    if (m_info.functionWasmSizeImportSpace(functionIndexSpace) >= Options::maximumWasmCalleeSizeForInlining())
-        return false;
+    {
+        unsigned selfRecursionCount = 0;
+        for (auto* cursor = this; cursor; cursor = cursor->m_inlineParent) {
+            if (&cursor->m_info == &m_info && cursor->m_info.toSpaceIndex(cursor->m_functionIndex) == functionIndexSpace) {
+                ++selfRecursionCount;
+                if (selfRecursionCount >= Options::maximumWasmSelfRecursionDepthForInlining())
+                    return false;
+            }
+        }
+    }
 
     if (m_inlineDepth >= Options::maximumWasmDepthForInlining())
         return false;
