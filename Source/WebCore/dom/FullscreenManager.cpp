@@ -644,8 +644,6 @@ bool FullscreenManager::didExitFullscreen()
 
     updatePageFullscreenStatusIfTopDocument();
 
-    document().scheduleFullStyleRebuild();
-
     resolvePendingPromise();
     return true;
 }
