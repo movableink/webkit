@@ -232,7 +232,9 @@ void NetworkRTCTCPSocketCocoa::getInterfaceName(NetworkRTCProvider& rtcProvider,
 
     Function<void(String&&)> callback = [completionHandler = WTFMove(completionHandler), rtcProvider = Ref { rtcProvider }] (auto&& name) mutable {
         rtcProvider->callOnRTCNetworkThread([completionHandler = WTFMove(completionHandler), name = WTFMove(name).isolatedCopy()] () mutable {
-            completionHandler(WTFMove(name));
+            ASSERT(completionHandler);
+            if (completionHandler)
+                completionHandler(WTFMove(name));
         });
     };
 
