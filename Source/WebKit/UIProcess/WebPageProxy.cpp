@@ -6550,7 +6550,8 @@ void WebPageProxy::didStartProvisionalLoadForFrameShared(Ref<WebProcessProxy>&& 
     RefPtr protectedPageClient { pageClient() };
 
     RefPtr frame = WebFrameProxy::webFrame(frameID);
-    MESSAGE_CHECK(process, frame);
+    if (!frame)
+        return;
     MESSAGE_CHECK_URL(process, url);
     MESSAGE_CHECK_URL(process, unreachableURL);
 
