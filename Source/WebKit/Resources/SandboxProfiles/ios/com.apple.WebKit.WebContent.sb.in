@@ -1399,63 +1399,62 @@
     io_service_get_matching_service_bin
     io_service_get_matching_services_bin))
 
-(allow mach-kernel-endpoint
-    (apply-message-filter
-        (deny mach-message-send (with telemetry))
-        (allow mach-message-send (with telemetry-backtrace)
-            (kernel-mig-routine-rarely-used-need-backtrace)
-            (kernel-mig-routine-rarely-used-need-backtrace-blocked-in-lockdown-mode))
+(deny syscall-mig (with telemetry))
 
-        (allow mach-message-send (with telemetry)
-            (kernel-mig-routine-rarely-used))
+(allow syscall-mig (with telemetry-backtrace)
+    (kernel-mig-routine-rarely-used-need-backtrace)
+    (kernel-mig-routine-rarely-used-need-backtrace-blocked-in-lockdown-mode))
 
-        (allow mach-message-send
-            (kernel-mig-routine-blocked-in-lockdown-mode)
-            (kernel-mig-routine-only-in-use-during-launch)
-            (kernel-mig-routine-in-use))
+(allow syscall-mig (with telemetry)
+    (kernel-mig-routine-rarely-used))
+
+(allow syscall-mig
+    (kernel-mig-routine-blocked-in-lockdown-mode)
+    (kernel-mig-routine-only-in-use-during-launch)
+    (kernel-mig-routine-in-use))
 
 #if PLATFORM(WATCHOS)
-        (allow mach-message-send
-            (kernel-mig-routine-in-use-watchos))
+(allow syscall-mig
+    (kernel-mig-routine-in-use-watchos))
 #endif
 
 #if HAVE(SANDBOX_STATE_FLAGS)
-        (with-filter (require-not (webcontent-process-launched))
-            (allow mach-message-send
-                (kernel-mig-routine-only-in-use-during-launch)))
-        (with-filter (webcontent-process-launched)
-            (deny mach-message-send
-                (with telemetry)
-                (with message "kernel mig routine used after launch")
-                (kernel-mig-routine-only-in-use-during-launch)))
+(with-filter (require-not (webcontent-process-launched))
+    (allow syscall-mig
+        (kernel-mig-routine-only-in-use-during-launch)))
+(with-filter (webcontent-process-launched)
+    (allow syscall-mig
+        (with telemetry)
+        (with message "kernel mig routine used after launch")
+        (kernel-mig-routine-only-in-use-during-launch)))
 #if ENABLE(WEBCONTENT_GPU_SANDBOX_EXTENSIONS_BLOCKING)
-        (deny mach-message-send (with no-report) (kernel-mig-routines-iokit-service))
+(deny syscall-mig (with no-report) (kernel-mig-routines-iokit-service))
 #else
-        (with-filter (require-not (state-flag "BlockIOKitInWebContentSandbox"))
-            (allow mach-message-send (kernel-mig-routines-iokit-service)))
+(with-filter (require-not (state-flag "BlockIOKitInWebContentSandbox"))
+    (allow syscall-mig (kernel-mig-routines-iokit-service)))
 #endif
 #endif
 
 #if HAVE(HARDENED_MACH_EXCEPTIONS)
-        (with-filter (require-not (lockdown-mode))
-            (allow mach-message-send (kernel-mig-routine thread_adopt_exception_handler))
-            (with-filter (require-not (webcontent-process-launched))
-                (allow mach-message-send (kernel-mig-routine task_register_hardened_exception_handler))))
+(with-filter (require-not (lockdown-mode))
+    (allow syscall-mig (kernel-mig-routine thread_adopt_exception_handler))
+    (with-filter (require-not (webcontent-process-launched))
+        (allow syscall-mig (kernel-mig-routine task_register_hardened_exception_handler))))
 #else
-        (with-filter (require-not (lockdown-mode))
-            (allow mach-message-send (kernel-mig-routine thread_set_exception_ports)))
+(with-filter (require-not (lockdown-mode))
+    (allow syscall-mig (kernel-mig-routine thread_set_exception_ports)))
 #endif ;; HAVE(HARDENED_MACH_EXCEPTIONS)
 
-        (with-filter (lockdown-mode)
-            (deny mach-message-send (with telemetry) (with message "Lockdown mode")
-                (kernel-mig-routine-blocked-in-lockdown-mode))
-            (deny mach-message-send (with telemetry) (with message "Lockdown mode")
-                (kernel-mig-routine-rarely-used-need-backtrace-blocked-in-lockdown-mode))
-            (deny mach-message-send (with telemetry) (with message "Lockdown mode")
-                (kernel-mig-routine-rarely-used)))
+(with-filter (lockdown-mode)
+    (deny syscall-mig (with telemetry) (with message "Lockdown mode")
+        (kernel-mig-routine-blocked-in-lockdown-mode))
+    (deny syscall-mig (with telemetry) (with message "Lockdown mode")
+        (kernel-mig-routine-rarely-used-need-backtrace-blocked-in-lockdown-mode))
+    (deny syscall-mig (with telemetry) (with message "Lockdown mode")
+        (kernel-mig-routine-rarely-used)))
 
-        (when (defined? 'mach_port_is_connection_for_service)
-            (allow mach-message-send (kernel-mig-routine mach_port_is_connection_for_service)))))
+(when (defined? 'mach_port_is_connection_for_service)
+    (allow syscall-mig (kernel-mig-routine mach_port_is_connection_for_service)))
 
 (deny darwin-notification-post (with no-report))
 (allow darwin-notification-post
