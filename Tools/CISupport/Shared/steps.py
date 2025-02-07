@@ -43,7 +43,7 @@ CURRENT_HOSTNAME = socket.gethostname().strip()
 GITHUB_URL = 'https://github.com/'
 SCAN_BUILD_OUTPUT_DIR = 'scan-build-output'
 LLVM_DIR = 'llvm-project'
-LLVM_REVISION = 'c579347c37f8b0ad9e6a52a2efd988de2aab03c9'
+LLVM_REVISION = 'e4591dfc979e8b28526a249d86e330470f47ea94'
 
 
 class ShellMixin(object):
