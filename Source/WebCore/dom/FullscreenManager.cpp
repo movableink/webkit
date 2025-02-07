@@ -120,14 +120,34 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
         return;
     }
 
+    // https://fullscreen.spec.whatwg.org/#fullscreen-element-ready-check
+    auto fullscreenElementReadyCheck = [checkType] (auto element, auto document) -> ASCIILiteral {
+        if (!element->isConnected())
+            return "Cannot request fullscreen on a disconnected element."_s;
+
+        if (element->isPopoverShowing())
+            return "Cannot request fullscreen on an open popover."_s;
+
+        if (checkType == EnforceIFrameAllowFullscreenRequirement && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Fullscreen, document))
+            return "Fullscreen API is disabled by permissions policy."_s;
+
+        return { };
+    };
+
+    auto isElementTypeAllowedForFullscreen = [] (const auto& element) {
+        if (is<HTMLElement>(element) || is<SVGSVGElement>(element))
+            return true;
+#if ENABLE(MATHML)
+        if (is<MathMLMathElement>(element))
+            return true;
+#endif
+        return false;
+    };
+
     // If any of the following conditions are true, terminate these steps and queue a task to fire
     // an event named fullscreenerror with its bubbles attribute set to true on the context object's
     // node document:
-#if ENABLE(MATHML)
-    if (!element->isHTMLElement() && !is<SVGSVGElement>(element) && !is<MathMLMathElement>(element)) {
-#else
-    if (!element->isHTMLElement() && !is<SVGSVGElement>(element)) {
-#endif
+    if (!isElementTypeAllowedForFullscreen(element)) {
         handleError("Cannot request fullscreen on a non-HTML element."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
         return;
     }
@@ -137,8 +157,8 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
         return;
     }
 
-    if (element->isPopoverShowing()) {
-        handleError("Cannot request fullscreen on an open popover."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
+    if (auto error = fullscreenElementReadyCheck(element, protectedDocument())) {
+        handleError(error, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
         return;
     }
 
@@ -177,7 +197,7 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
     // We cache the top document here, so we still have the correct one when we exit fullscreen after navigation.
     m_topDocument = document().mainFrameDocument();
 
-    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, element = WTFMove(element), promise = WTFMove(promise), completionHandler = WTFMove(completionHandler), checkType, hasKeyboardAccess, handleError, identifier, mode] () mutable {
+    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, element = WTFMove(element), promise = WTFMove(promise), completionHandler = WTFMove(completionHandler), hasKeyboardAccess, fullscreenElementReadyCheck, handleError, identifier, mode] () mutable {
         if (!weakThis) {
             if (promise)
                 promise->reject(Exception { ExceptionCode::TypeError });
@@ -205,28 +225,15 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
             return;
         }
 
-        // The context object is not in a document.
-        if (!element->isConnected()) {
-            handleError("Cannot request fullscreen on a disconnected element."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
+        // Fullscreen element ready check.
+        if (auto error = fullscreenElementReadyCheck(element, protectedDocument())) {
+            handleError(error, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
             return;
         }
 
         // Don't allow if element changed document.
         if (&element->document() != document.ptr()) {
             handleError("Cannot request fullscreen because the associated document has changed."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
-            return;
-        }
-
-        // The element is an open popover.
-        if (element->isPopoverShowing()) {
-            handleError("Cannot request fullscreen on an open popover."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
-            return;
-        }
-
-        // The context object's node document, or an ancestor browsing context's document does not have
-        // the fullscreen enabled flag set.
-        if (checkType == EnforceIFrameAllowFullscreenRequirement && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Fullscreen, document)) {
-            handleError("Fullscreen API is disabled by permissions policy."_s, EmitErrorEvent::Yes, WTFMove(element), WTFMove(promise), WTFMove(completionHandler));
             return;
         }
 
