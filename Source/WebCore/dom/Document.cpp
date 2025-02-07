@@ -2748,6 +2748,9 @@ void Document::resolveStyle(ResolveStyleType type)
 #if ENABLE(DARK_MODE_CSS)
     frameView->updateBaseBackgroundColorIfNecessary();
 #endif
+
+    if (CheckedPtr timelinesController = this->timelinesController())
+        timelinesController->documentDidResolveStyle();
 }
 
 void Document::updateTextRenderer(Text& text, unsigned offsetOfReplacedText, unsigned lengthOfReplacedText)

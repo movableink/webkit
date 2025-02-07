@@ -464,7 +464,6 @@ void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString&
         updateTimelineForTimelineScope(newScrollTimeline, name);
         timelines.append(WTFMove(newScrollTimeline));
     }
-    attachPendingOperations();
 
     if (!hasExistingTimeline)
         updateCSSAnimationsAssociatedWithNamedTimeline(name);
@@ -493,10 +492,10 @@ void AnimationTimelinesController::updateCSSAnimationsAssociatedWithNamedTimelin
         cssAnimation->syncStyleOriginatedTimeline();
 }
 
-void AnimationTimelinesController::attachPendingOperations()
+void AnimationTimelinesController::documentDidResolveStyle()
 {
-    auto queries = std::exchange(m_pendingAttachOperations, { });
-    for (auto& operation : queries) {
+    auto operations = std::exchange(m_pendingAttachOperations, { });
+    for (auto& operation : operations) {
         if (WeakPtr animation = operation.animation) {
             if (auto styleable = operation.element.styleable())
                 setTimelineForName(operation.name, *styleable, *animation);
@@ -528,7 +527,6 @@ void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& n
         updateTimelineForTimelineScope(newViewTimeline, name);
         timelines.append(WTFMove(newViewTimeline));
     }
-    attachPendingOperations();
 
     if (!hasExistingTimeline)
         updateCSSAnimationsAssociatedWithNamedTimeline(name);
@@ -563,7 +561,6 @@ void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& nam
 
     if (timelines.isEmpty())
         m_nameToTimelineMap.remove(it);
-    attachPendingOperations();
 }
 
 void AnimationTimelinesController::setTimelineForName(const AtomString& name, const Styleable& styleable, CSSAnimation& animation)
@@ -631,7 +628,6 @@ void AnimationTimelinesController::updateNamedTimelineMapForTimelineScope(const 
         m_timelineScopeEntries.append(std::make_pair(scope, styleable));
         break;
     }
-    attachPendingOperations();
 }
 
 bool AnimationTimelinesController::isPendingTimelineAttachment(const WebAnimation& animation) const
