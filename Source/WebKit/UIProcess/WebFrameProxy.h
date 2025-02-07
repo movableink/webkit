@@ -163,7 +163,7 @@ public:
     void disconnect();
     void didCreateSubframe(WebCore::FrameIdentifier, const String& frameName, WebCore::SandboxFlags, WebCore::ScrollbarMode);
     ProcessID processID() const;
-    void prepareForProvisionalLoadInProcess(WebProcessProxy&, API::Navigation&, BrowsingContextGroup&, CompletionHandler<void()>&&);
+    void prepareForProvisionalLoadInProcess(WebProcessProxy&, API::Navigation&, BrowsingContextGroup&, CompletionHandler<void(WebCore::PageIdentifier)>&&);
 
     void commitProvisionalFrame(IPC::Connection&, WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, std::optional<WebCore::NavigationIdentifier>, const String& mimeType, bool frameHasCustomContentProvider, WebCore::FrameLoadType, const WebCore::CertificateInfo&, bool usedLegacyTLS, bool privateRelayed, const String& proxyName, WebCore::ResourceResponseSource, bool containsPluginDocument, WebCore::HasInsecureContent, WebCore::MouseEventPolicy, const UserData&);
 

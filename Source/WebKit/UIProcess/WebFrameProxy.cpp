@@ -423,10 +423,10 @@ void WebFrameProxy::didCreateSubframe(WebCore::FrameIdentifier frameID, const St
     m_childFrames.add(WTFMove(child));
 }
 
-void WebFrameProxy::prepareForProvisionalLoadInProcess(WebProcessProxy& process, API::Navigation& navigation, BrowsingContextGroup& group, CompletionHandler<void()>&& completionHandler)
+void WebFrameProxy::prepareForProvisionalLoadInProcess(WebProcessProxy& process, API::Navigation& navigation, BrowsingContextGroup& group, CompletionHandler<void(WebCore::PageIdentifier)>&& completionHandler)
 {
     if (isMainFrame())
-        return completionHandler();
+        return completionHandler(*webPageIDInCurrentProcess());
 
     Site navigationSite(navigation.currentRequest().url());
     RefPtr page = m_page.get();
@@ -435,7 +435,9 @@ void WebFrameProxy::prepareForProvisionalLoadInProcess(WebProcessProxy& process,
 
     m_provisionalFrame = nullptr;
     m_provisionalFrame = makeUnique<ProvisionalFrameProxy>(*this, group.ensureProcessForSite(navigationSite, process, page->preferences()));
-    page->websiteDataStore().protectedNetworkProcess()->addAllowedFirstPartyForCookies(process, mainFrameDomain, LoadedWebArchive::No, WTFMove(completionHandler));
+    page->websiteDataStore().protectedNetworkProcess()->addAllowedFirstPartyForCookies(process, mainFrameDomain, LoadedWebArchive::No, [pageID = page->webPageIDInProcess(process), completionHandler = WTFMove(completionHandler)] mutable {
+        completionHandler(pageID);
+    });
 }
 
 void WebFrameProxy::commitProvisionalFrame(IPC::Connection& connection, FrameIdentifier frameID, FrameInfoData&& frameInfo, ResourceRequest&& request, std::optional<WebCore::NavigationIdentifier> navigationID, const String& mimeType, bool frameHasCustomContentProvider, FrameLoadType frameLoadType, const CertificateInfo& certificateInfo, bool usedLegacyTLS, bool privateRelayed, const String& proxyName, WebCore::ResourceResponseSource source, bool containsPluginDocument, HasInsecureContent hasInsecureContent, MouseEventPolicy mouseEventPolicy, const UserData& userData)

@@ -4853,7 +4853,7 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
             loadParameters.navigationID = navigation->navigationID();
             loadParameters.ownerPermissionsPolicy = navigation->ownerPermissionsPolicy();
             loadParameters.isPerformingHTTPFallback = navigationAction->data().isPerformingHTTPFallback;
-            processNavigatingTo->send(Messages::WebPage::LoadRequest(WTFMove(loadParameters)), webPageIDInMainFrameProcess());
+            processNavigatingTo->send(Messages::WebPage::LoadRequest(WTFMove(loadParameters)), webPageIDInProcess(processNavigatingTo));
         }
 
         RefPtr item = navigation->reloadItem() ? navigation->reloadItem() : navigation->targetItem();
@@ -5049,14 +5049,12 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
                 frame.setPendingChildBackForwardItem(currentItem->protectedNavigatedFrameItem()->protectedChildItemForFrameID(parentFrame->frameID()).get());
         }
 
-        auto webPageID = webPageIDInProcess(newProcess);
         frame.prepareForProvisionalLoadInProcess(newProcess, navigation, m_browsingContextGroup, [
             loadParameters = WTFMove(loadParameters),
             newProcess = newProcess.copyRef(),
-            webPageID,
             preventProcessShutdownScope = newProcess->shutdownPreventingScope()
-        ] () mutable {
-            newProcess->send(Messages::WebPage::LoadRequest(WTFMove(loadParameters)), webPageID);
+        ] (PageIdentifier pageID) mutable {
+            newProcess->send(Messages::WebPage::LoadRequest(WTFMove(loadParameters)), pageID);
         });
         return;
     }
@@ -10199,9 +10197,9 @@ void WebPageProxy::didChooseFilesForOpenPanel(const Vector<String>& fileURLs, co
             if (!protectedThis->didChooseFilesForOpenPanelWithImageTranscoding(fileURLs, allowedMIMETypes)) {
 #if ENABLE(SANDBOX_EXTENSIONS)
                 auto sandboxExtensionHandles = SandboxExtension::createReadOnlyHandlesForFiles("WebPageProxy::didChooseFilesForOpenPanel"_s, fileURLs);
-                process->send(Messages::WebPage::ExtendSandboxForFilesFromOpenPanel(WTFMove(sandboxExtensionHandles)), weakThis->webPageIDInMainFrameProcess());
+                process->send(Messages::WebPage::ExtendSandboxForFilesFromOpenPanel(WTFMove(sandboxExtensionHandles)), protectedThis->webPageIDInProcess(*process));
 #endif
-                process->send(Messages::WebPage::DidChooseFilesForOpenPanel(fileURLs, { }), protectedThis->webPageIDInMainFrameProcess());
+                process->send(Messages::WebPage::DidChooseFilesForOpenPanel(fileURLs, { }), protectedThis->webPageIDInProcess(*process));
             }
         }
 
@@ -13902,7 +13900,7 @@ WebURLSchemeHandler* WebPageProxy::urlSchemeHandlerForScheme(const String& schem
 void WebPageProxy::startURLSchemeTask(IPC::Connection& connection, URLSchemeTaskParameters&& parameters)
 {
     RefPtr process = dynamicDowncast<WebProcessProxy>(AuxiliaryProcessProxy::fromConnection(connection));
-    startURLSchemeTaskShared(connection, *process, m_webPageID, WTFMove(parameters));
+    startURLSchemeTaskShared(connection, *process, webPageIDInProcess(*process), WTFMove(parameters));
 }
 
 void WebPageProxy::startURLSchemeTaskShared(IPC::Connection& connection, Ref<WebProcessProxy>&& process, PageIdentifier webPageID, URLSchemeTaskParameters&& parameters)

@@ -75,7 +75,7 @@ enum class ProcessTerminationReason : uint8_t;
 class RemotePageProxy : public IPC::MessageReceiver, public RefCounted<RemotePageProxy> {
     WTF_MAKE_TZONE_ALLOCATED(RemotePageProxy);
 public:
-    static Ref<RemotePageProxy> create(WebPageProxy&, WebProcessProxy&, const WebCore::Site&, WebPageProxyMessageReceiverRegistration* = nullptr);
+    static Ref<RemotePageProxy> create(WebPageProxy&, WebProcessProxy&, const WebCore::Site&, WebPageProxyMessageReceiverRegistration* = nullptr, std::optional<WebCore::PageIdentifier> = std::nullopt);
     ~RemotePageProxy();
 
     void ref() const final { RefCounted::ref(); }
@@ -100,7 +100,7 @@ public:
     WebProcessActivityState& processActivityState();
 
 private:
-    RemotePageProxy(WebPageProxy&, WebProcessProxy&, const WebCore::Site&, WebPageProxyMessageReceiverRegistration*);
+    RemotePageProxy(WebPageProxy&, WebProcessProxy&, const WebCore::Site&, WebPageProxyMessageReceiverRegistration*, std::optional<WebCore::PageIdentifier>);
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) final;
     void decidePolicyForResponse(FrameInfoData&&, std::optional<WebCore::NavigationIdentifier>, const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, bool canShowMIMEType, const String& downloadAttribute, bool isShowingInitialAboutBlank, WebCore::CrossOriginOpenerPolicyValue activeDocumentCOOPValue, CompletionHandler<void(PolicyDecision&&)>&&);

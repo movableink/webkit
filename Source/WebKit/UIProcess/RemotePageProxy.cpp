@@ -45,6 +45,7 @@
 #include "WebProcessActivityState.h"
 #include "WebProcessMessages.h"
 #include "WebProcessProxy.h"
+#include <WebCore/PageIdentifier.h>
 #include <WebCore/RemoteUserInputEventData.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -52,13 +53,13 @@ namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemotePageProxy);
 
-Ref<RemotePageProxy> RemotePageProxy::create(WebPageProxy& page, WebProcessProxy& process, const WebCore::Site& site, WebPageProxyMessageReceiverRegistration* registrationToTransfer)
+Ref<RemotePageProxy> RemotePageProxy::create(WebPageProxy& page, WebProcessProxy& process, const WebCore::Site& site, WebPageProxyMessageReceiverRegistration* registrationToTransfer, std::optional<WebCore::PageIdentifier> pageIDToTransfer)
 {
-    return adoptRef(*new RemotePageProxy(page, process, site, registrationToTransfer));
+    return adoptRef(*new RemotePageProxy(page, process, site, registrationToTransfer, pageIDToTransfer));
 }
 
-RemotePageProxy::RemotePageProxy(WebPageProxy& page, WebProcessProxy& process, const WebCore::Site& site, WebPageProxyMessageReceiverRegistration* registrationToTransfer)
-    : m_webPageID(page.webPageIDInMainFrameProcess()) // FIXME: We should generate a new identifier so that it will be more obvious when we get things wrong.
+RemotePageProxy::RemotePageProxy(WebPageProxy& page, WebProcessProxy& process, const WebCore::Site& site, WebPageProxyMessageReceiverRegistration* registrationToTransfer, std::optional<WebCore::PageIdentifier> pageIDToTransfer)
+    : m_webPageID(pageIDToTransfer.value_or(WebCore::PageIdentifier::generate()))
     , m_process(process)
     , m_page(page)
     , m_site(site)
