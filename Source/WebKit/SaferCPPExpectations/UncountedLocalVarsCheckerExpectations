@@ -5,7 +5,6 @@ NetworkProcess/PingLoad.h
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementDatabase.cpp
 NetworkProcess/cache/NetworkCacheSpeculativeLoadManager.cpp
 NetworkProcess/cocoa/NetworkSessionCocoa.mm
-NetworkProcess/storage/OriginStorageManager.cpp
 Platform/IPC/MessageSenderInlines.h
 Platform/cocoa/WKPaymentAuthorizationDelegate.mm
 Shared/API/APIArray.cpp
