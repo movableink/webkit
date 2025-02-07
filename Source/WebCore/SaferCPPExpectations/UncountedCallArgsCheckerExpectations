@@ -1084,7 +1084,6 @@ platform/audio/cocoa/AudioSampleDataSource.mm
 platform/audio/cocoa/AudioSessionCocoa.mm
 platform/audio/cocoa/MediaSessionManagerCocoa.mm
 platform/cocoa/DragImageCocoa.mm
-platform/cocoa/PlatformSpeechSynthesizerCocoa.mm
 platform/cocoa/PlaybackSessionModelMediaElement.mm
 platform/cocoa/PowerSourceNotifier.mm
 platform/cocoa/SharedBufferCocoa.mm
@@ -1226,7 +1225,6 @@ platform/mock/MockAudioDestinationCocoa.cpp
 platform/mock/MockRealtimeAudioSource.cpp
 platform/mock/MockRealtimeMediaSourceCenter.cpp
 platform/mock/MockRealtimeVideoSource.cpp
-platform/mock/PlatformSpeechSynthesizerMock.cpp
 platform/mock/RTCNotifiersMock.cpp
 platform/mock/TimerEventBasedMock.h
 platform/mock/mediasource/MockMediaPlayerMediaSource.cpp
