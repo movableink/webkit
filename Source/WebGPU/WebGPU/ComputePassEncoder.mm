@@ -140,12 +140,12 @@ static bool addResourceToActiveResources(const TextureView& texture, OptionSet<B
     return addResourceToActiveResources(&texture.apiParentTexture(), texture.parentTexture(), resourceUsage, usagesForResource, bindGroup, texture.baseMipLevel(), texture.baseArrayLayer(), WGPUTextureAspect_DepthOnly) && addResourceToActiveResources(&texture.apiParentTexture(), texture.parentTexture(), resourceUsage, usagesForResource, bindGroup, texture.baseMipLevel(), texture.baseArrayLayer(), WGPUTextureAspect_StencilOnly);
 }
 
-static bool addResourceToActiveResources(const BindGroupEntryUsageData::Resource& resource, id<MTLResource> mtlResource, OptionSet<BindGroupEntryUsage> resourceUsage, BindGroupId bindGroup, EntryMapContainer& usagesForResource)
+static bool addResourceToActiveResources(const BindGroupEntryUsageData::Resource& resource, id<MTLResource> mtlResource, OptionSet<BindGroupEntryUsage> resourceUsage, BindGroupId bindGroup, EntryMapContainer& usagesForResource, CommandEncoder& parentEncoder)
 {
     return WTF::switchOn(resource, [&](const RefPtr<Buffer>& buffer) {
         if (buffer.get()) {
             if (resourceUsage.contains(BindGroupEntryUsage::Storage))
-                buffer->indirectBufferInvalidated();
+                buffer->indirectBufferInvalidated(parentEncoder);
             return addResourceToActiveResources(buffer.get(), buffer->buffer(), resourceUsage, usagesForResource, bindGroup);
         }
         return true;
@@ -221,7 +221,7 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
                 if (!bindingAccess)
                     continue;
 
-                if (!addResourceToActiveResources(usageData.resource, mtlResource, usageData.usage, BindGroupId { bindGroupIndex }, usagesForResource)) {
+                if (!addResourceToActiveResources(usageData.resource, mtlResource, usageData.usage, BindGroupId { bindGroupIndex }, usagesForResource, protectedParentEncoder())) {
                     makeInvalid();
                     return;
                 }
@@ -245,7 +245,10 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
         }
     }
 
-    [computeCommandEncoder() setBytes:&m_computeDynamicOffsets[0] length:m_computeDynamicOffsets.size() * sizeof(m_computeDynamicOffsets[0]) atIndex:m_device->maxBuffersForComputeStage()];
+    if (m_computeDynamicOffsets != m_priorComputeDynamicOffsets) {
+        [computeCommandEncoder() setBytes:&m_computeDynamicOffsets[0] length:m_computeDynamicOffsets.size() * sizeof(m_computeDynamicOffsets[0]) atIndex:m_device->maxBuffersForComputeStage()];
+        m_priorComputeDynamicOffsets = m_computeDynamicOffsets;
+    }
 }
 
 void ComputePassEncoder::dispatch(uint32_t x, uint32_t y, uint32_t z)

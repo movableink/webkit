@@ -855,7 +855,7 @@ extension WebGPU.CommandEncoder {
         // FIXME: rdar://138042799 remove default argument.
         source.setCommandEncoder(self, false)
         destination.setCommandEncoder(self, false)
-        destination.indirectBufferInvalidated()
+        destination.indirectBufferInvalidated(self)
         guard size != 0, !source.isDestroyed() && !destination.isDestroyed() else {
             return
         }
@@ -887,7 +887,7 @@ extension WebGPU.CommandEncoder {
         let apiDestinationBuffer = WebGPU.fromAPI(destination.buffer)
         sourceTexture.setCommandEncoder(self)
         apiDestinationBuffer.setCommandEncoder(self, false)
-        apiDestinationBuffer.indirectBufferInvalidated()
+        apiDestinationBuffer.indirectBufferInvalidated(self)
         guard !sourceTexture.isDestroyed() && !apiDestinationBuffer.isDestroyed() else {
             return
         }
@@ -1470,7 +1470,7 @@ extension WebGPU.CommandEncoder {
         }
         // FIXME: rdar://138042799 need to pass in the default argument.
         buffer.setCommandEncoder(self, false)
-        buffer.indirectBufferInvalidated()
+        buffer.indirectBufferInvalidated(self)
         guard let offsetInt = Int(exactly: offset), let sizeInt = Int(exactly: size) else {
             return
         }
@@ -1497,7 +1497,7 @@ extension WebGPU.CommandEncoder {
         querySet.setCommandEncoder(self)
         // FIXME: rdar://138042799 need to pass in the default argument.
         destination.setCommandEncoder(self, false)
-        destination.indirectBufferInvalidated();
+        destination.indirectBufferInvalidated(self);
         guard !(querySet.isDestroyed() || destination.isDestroyed() || queryCount == 0) else {
             return
         }

@@ -31,6 +31,7 @@
 #import "WebGPU.h"
 #import "WebGPUExt.h"
 #import <wtf/FastMalloc.h>
+#import <wtf/Function.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCountedAndCanMakeWeakPtr.h>
 #import <wtf/RetainReleaseSwift.h>
@@ -127,6 +128,7 @@ public:
     static void trackEncoder(CommandEncoder&, WeakHashSet<CommandEncoder>&);
     uint64_t uniqueId() const { return m_uniqueId; }
     NSMutableSet<id<MTLCounterSampleBuffer>> *timestampBuffers() const { return m_retainedTimestampBuffers; };
+    void addOnCommitHandler(Function<void(CommandBuffer&)>&&);
 
 private:
     CommandEncoder(id<MTLCommandBuffer>, Device&, uint64_t uniqueId);
@@ -173,6 +175,7 @@ private:
     NSMutableSet<id<MTLBuffer>> *m_retainedBuffers { nil };
     HashSet<RefPtr<const Sampler>> m_retainedSamplers;
     NSMutableSet<id<MTLCounterSampleBuffer>> *m_retainedTimestampBuffers { nil };
+    Vector<Function<void(CommandBuffer&)>> m_onCommitHandlers;
     id<MTLSharedEvent> m_sharedEvent { nil };
     uint64_t m_sharedEventSignalValue { 0 };
 private PUBLIC_IN_WEBGPU_SWIFT:
