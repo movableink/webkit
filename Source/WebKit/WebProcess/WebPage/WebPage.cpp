@@ -4661,7 +4661,7 @@ void WebPage::getAccessibilityTreeData(CompletionHandler<void(const std::optiona
         auto writeTreeToStream = [&stream](auto& tree) {
             auto utf8 = tree.utf8();
             auto utf8Span = utf8.span();
-            CFWriteStreamWrite(stream.get(), utf8Span.data(), utf8Span.size());
+            CFWriteStreamWrite(stream.get(), byteCast<UInt8>(utf8Span.data()), utf8Span.size());
         };
         writeTreeToStream(treeData->liveTree);
         writeTreeToStream(treeData->isolatedTree);

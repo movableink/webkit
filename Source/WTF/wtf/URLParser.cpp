@@ -2480,6 +2480,7 @@ std::optional<URLParser::IPv6Address> URLParser::parseIPv6Host(CodePointIterator
     return address;
 }
 
+// FIXME: This function should take span<const char8_t>, since it requires UTF-8.
 template<typename CharacterType>
 URLParser::LCharBuffer URLParser::percentDecode(std::span<const LChar> input, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition)
 {
@@ -2896,7 +2897,7 @@ std::optional<String> URLParser::formURLDecode(StringView input)
     auto utf8 = input.utf8(StrictConversion);
     if (utf8.isNull())
         return std::nullopt;
-    auto percentDecoded = percentDecode(utf8.span());
+    auto percentDecoded = percentDecode(byteCast<LChar>(utf8.span()));
     return String::fromUTF8ReplacingInvalidSequences(percentDecoded.span());
 }
 

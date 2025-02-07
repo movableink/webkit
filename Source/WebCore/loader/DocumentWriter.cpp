@@ -96,7 +96,7 @@ void DocumentWriter::replaceDocumentWithResultOfExecutingJavascriptURL(const Str
         }
 
         if (RefPtr parser = frame->document()->parser())
-            parser->appendBytes(*this, source.utf8().span());
+            parser->appendBytes(*this, byteCast<uint8_t>(source.utf8().span()));
     }
 
     end();

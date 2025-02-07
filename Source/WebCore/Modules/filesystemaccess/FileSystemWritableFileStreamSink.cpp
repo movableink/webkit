@@ -97,7 +97,7 @@ static void fetchDataBytesForWrite(const FileSystemWritableFileStream::DataVaria
             completionHandler(buffer->span());
         });
     }, [&](const String& string) {
-        completionHandler(string.utf8().span());
+        completionHandler(byteCast<uint8_t>(string.utf8().span()));
     });
 }
 

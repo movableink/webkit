@@ -172,7 +172,7 @@ void WebSocketTask::close(int32_t code, const String& reason)
     if (code == WebCore::ThreadableWebSocketChannel::CloseEventCodeNotSpecified)
         code = NSURLSessionWebSocketCloseCodeInvalid;
     auto utf8 = reason.utf8();
-    RetainPtr nsData = toNSData(utf8.span());
+    RetainPtr nsData = toNSData(byteCast<uint8_t>(utf8.span()));
     if ([m_task respondsToSelector:@selector(_sendCloseCode:reason:)]) {
         [m_task _sendCloseCode:(NSURLSessionWebSocketCloseCode)code reason:nsData.get()];
         return;

@@ -5499,8 +5499,7 @@ String Internals::createTemporaryFile(const String& name, const String& contents
     if (!FileSystem::isHandleValid(file))
         return nullString();
 
-    auto contentsUTF8 = contents.utf8();
-    FileSystem::writeToFile(file, contentsUTF8.span());
+    FileSystem::writeToFile(file, byteCast<uint8_t>(contents.utf8().span()));
 
     FileSystem::closeFile(file);
 

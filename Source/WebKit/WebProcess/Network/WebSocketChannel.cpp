@@ -64,8 +64,8 @@ NetworkSendQueue WebSocketChannel::createMessageQueue(Document& document, WebSoc
 {
     return { document, [&channel](auto& utf8String) {
         auto data = utf8String.span();
-        channel.notifySendFrame(WebSocketFrame::OpCode::OpCodeText, data);
-        channel.sendMessageInternal(Messages::NetworkSocketChannel::SendString { data }, utf8String.length());
+        channel.notifySendFrame(WebSocketFrame::OpCode::OpCodeText, byteCast<uint8_t>(data));
+        channel.sendMessageInternal(Messages::NetworkSocketChannel::SendString { byteCast<uint8_t>(data) }, utf8String.length());
     }, [&channel](auto span) {
         channel.notifySendFrame(WebSocketFrame::OpCode::OpCodeBinary, span);
         channel.sendMessageInternal(Messages::NetworkSocketChannel::SendData { span }, span.size());

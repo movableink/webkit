@@ -138,7 +138,7 @@ bool operator==(const CString& a, const CString& b)
         return false;
     if (a.length() != b.length())
         return false;
-    return equal(a.span().data(), b.span());
+    return equal(byteCast<LChar>(a.span()).data(), byteCast<LChar>(b.span()));
 }
 
 unsigned CString::hash() const

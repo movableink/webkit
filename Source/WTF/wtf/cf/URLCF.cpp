@@ -61,7 +61,7 @@ RetainPtr<CFURLRef> URL::createCFURL() const
     } else {
         CString utf8 = m_string.utf8();
         auto utf8Span = utf8.span();
-        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, utf8Span.data(), utf8Span.size(), kCFStringEncodingUTF8, nullptr, true));
+        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, byteCast<UInt8>(utf8Span.data()), utf8Span.size(), kCFStringEncodingUTF8, nullptr, true));
     }
 
     // This additional check is only needed for invalid URLs, for which we've already returned null with new SDKs.

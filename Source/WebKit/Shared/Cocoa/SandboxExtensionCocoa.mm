@@ -78,7 +78,7 @@ bool SandboxExtensionImpl::invalidate()
 std::span<const uint8_t> SandboxExtensionImpl::getSerializedFormat()
 {
     ASSERT(m_token.length());
-    return m_token.span();
+    return byteCast<uint8_t>(m_token.span());
 }
 
 char* SandboxExtensionImpl::sandboxExtensionForType(const char* path, SandboxExtension::Type type, std::optional<audit_token_t> auditToken, OptionSet<SandboxExtension::Flags> flags)

@@ -1155,7 +1155,7 @@ void showGraphicsLayerTree(const WebCore::GraphicsLayer* layer)
     // to a file in case we don't have easy access to stderr.
     auto [tempFilePath, fileHandle] = FileSystem::openTemporaryFile("GraphicsLayerTree"_s);
     if (FileSystem::isHandleValid(fileHandle)) {
-        FileSystem::writeToFile(fileHandle, output.utf8().span());
+        FileSystem::writeToFile(fileHandle, byteCast<uint8_t>(output.utf8().span()));
         FileSystem::closeFile(fileHandle);
         WTFLogAlways("Saved GraphicsLayer Tree to %s", tempFilePath.utf8().data());
     } else

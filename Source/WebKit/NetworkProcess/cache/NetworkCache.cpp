@@ -695,7 +695,7 @@ void Cache::dumpContentsToFile()
                 "\"averageWorth\": "_s, totals.count ? totals.worth / totals.count : 0, "\n"
                 "}\n}\n"_s
             ).utf8();
-            writeToFile(fd, writeData.span());
+            writeToFile(fd, byteCast<uint8_t>(writeData.span()));
             closeFile(fd);
             return;
         }
@@ -709,7 +709,7 @@ void Cache::dumpContentsToFile()
         StringBuilder json;
         entry->asJSON(json, info);
         json.append(",\n"_s);
-        writeToFile(fd, json.toString().utf8().span());
+        writeToFile(fd, byteCast<uint8_t>(json.toString().utf8().span()));
     });
 }
 
