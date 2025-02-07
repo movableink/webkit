@@ -25,6 +25,7 @@
 
 #include "GStreamerCommon.h"
 #include "HTTPHeaderNames.h"
+#include "MediaPlayerPrivateGStreamer.h"
 #include "PlatformMediaResourceLoader.h"
 #include "PolicyChecker.h"
 #include "ResourceError.h"
@@ -56,39 +57,10 @@ using namespace WebCore;
 // reached, the download task resumes.
 #define LOW_QUEUE_FACTOR_THRESHOLD 0.2
 
-class CachedResourceStreamingClient final : public PlatformMediaResourceClient {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(CachedResourceStreamingClient);
-    WTF_MAKE_NONCOPYABLE(CachedResourceStreamingClient);
-public:
-    CachedResourceStreamingClient(WebKitWebSrc*, ResourceRequest&&, unsigned requestNumber);
-    virtual ~CachedResourceStreamingClient();
-
-private:
-    void checkUpdateBlocksize(unsigned bytesRead);
-
-    // PlatformMediaResourceClient virtual methods.
-    void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(ShouldContinuePolicyCheck)>&&) override;
-    void redirectReceived(PlatformMediaResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
-    void dataReceived(PlatformMediaResource&, const SharedBuffer&) override;
-    void accessControlCheckFailed(PlatformMediaResource&, const ResourceError&) override;
-    void loadFailed(PlatformMediaResource&, const ResourceError&) override;
-    void loadFinished(PlatformMediaResource&, const NetworkLoadMetrics&) override;
-
-    static constexpr int s_growBlocksizeLimit { 1 };
-    static constexpr int s_growBlocksizeCount { 2 };
-    static constexpr int s_growBlocksizeFactor { 2 };
-    static constexpr float s_reduceBlocksizeLimit { 0.5 };
-    static constexpr int s_reduceBlocksizeCount { 2 };
-    static constexpr float s_reduceBlocksizeFactor { 0.5 };
-    int m_reduceBlocksizeCount { 0 };
-    int m_increaseBlocksizeCount { 0 };
-    unsigned m_requestNumber;
-
-    GThreadSafeWeakPtr<WebKitWebSrc> m_src;
-    ResourceRequest m_request;
-};
-
 struct WebKitWebSrcPrivate {
+
+    ThreadSafeWeakPtr<WebCore::MediaPlayerPrivateGStreamer> player;
+
     // Constants initialized during construction:
     unsigned minimumBlocksize;
 
@@ -156,6 +128,39 @@ struct WebKitWebSrcPrivate {
         RefPtr<PlatformMediaResource> resource;
     };
     DataMutex<StreamingMembers> dataMutex;
+};
+
+class CachedResourceStreamingClient final : public PlatformMediaResourceClient {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(CachedResourceStreamingClient);
+    WTF_MAKE_NONCOPYABLE(CachedResourceStreamingClient);
+public:
+    CachedResourceStreamingClient(WebKitWebSrc*, ResourceRequest&&, unsigned requestNumber);
+    virtual ~CachedResourceStreamingClient();
+
+private:
+    void checkUpdateBlocksize(unsigned bytesRead);
+    void recalculateLengthAndSeekableIfNeeded(DataMutexLocker<WebKitWebSrcPrivate::StreamingMembers>&);
+
+    // PlatformMediaResourceClient virtual methods.
+    void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(ShouldContinuePolicyCheck)>&&) override;
+    void redirectReceived(PlatformMediaResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
+    void dataReceived(PlatformMediaResource&, const SharedBuffer&) override;
+    void accessControlCheckFailed(PlatformMediaResource&, const ResourceError&) override;
+    void loadFailed(PlatformMediaResource&, const ResourceError&) override;
+    void loadFinished(PlatformMediaResource&, const NetworkLoadMetrics&) override;
+
+    static constexpr int s_growBlocksizeLimit { 1 };
+    static constexpr int s_growBlocksizeCount { 2 };
+    static constexpr int s_growBlocksizeFactor { 2 };
+    static constexpr float s_reduceBlocksizeLimit { 0.5 };
+    static constexpr int s_reduceBlocksizeCount { 2 };
+    static constexpr float s_reduceBlocksizeFactor { 0.5 };
+    int m_reduceBlocksizeCount { 0 };
+    int m_increaseBlocksizeCount { 0 };
+    unsigned m_requestNumber;
+
+    GThreadSafeWeakPtr<WebKitWebSrc> m_src;
+    ResourceRequest m_request;
 };
 
 enum {
@@ -1134,6 +1139,34 @@ void CachedResourceStreamingClient::redirectReceived(PlatformMediaResource&, Res
     completionHandler(WTFMove(request));
 }
 
+void CachedResourceStreamingClient::recalculateLengthAndSeekableIfNeeded(DataMutexLocker<WebKitWebSrcPrivate::StreamingMembers>& members)
+{
+    ASSERT(isMainThread());
+    auto src = m_src.get();
+    if (!src)
+        return;
+
+    if (members->haveSize || members->isSeekable || members->size)
+        return;
+
+    if (!members->doesHaveEOS)
+        return;
+
+    members->haveSize = true;
+    members->size = members->readPosition;
+    members->isSeekable = true;
+
+    GstBaseSrc* baseSrc = GST_BASE_SRC_CAST(src.get());
+    baseSrc->segment.duration = members->size;
+
+    RefPtr player = src->priv->player.get();
+    if (player) {
+        GST_DEBUG_OBJECT(src.get(), "setting as live stream %s", boolForPrinting(!members->isSeekable));
+        player->setLiveStream(!members->isSeekable);
+    } else
+        ASSERT_NOT_REACHED();
+}
+
 void CachedResourceStreamingClient::dataReceived(PlatformMediaResource&, const SharedBuffer& data)
 {
     ASSERT(isMainThread());
@@ -1230,6 +1263,7 @@ void CachedResourceStreamingClient::loadFinished(PlatformMediaResource&, const N
     GST_LOG_OBJECT(src.get(), "R%u: Load finished. Read position: %" G_GUINT64_FORMAT, m_requestNumber, members->readPosition);
 
     members->doesHaveEOS = true;
+    recalculateLengthAndSeekableIfNeeded(members);
     members->responseCondition.notifyOne();
 }
 
@@ -1242,6 +1276,16 @@ bool webKitSrcIsCrossOrigin(WebKitWebSrc* src, const SecurityOrigin& origin)
             return true;
     }
     return false;
+}
+
+bool webKitSrcIsSeekable(WebKitWebSrc* src)
+{
+    return webKitWebSrcIsSeekable(GST_BASE_SRC(src));
+}
+
+void webKitWebSrcSetPlayer(WebKitWebSrc* src, ThreadSafeWeakPtr<WebCore::MediaPlayerPrivateGStreamer>&& player)
+{
+    src->priv->player = player;
 }
 
 #undef GST_CAT_DEFAULT
