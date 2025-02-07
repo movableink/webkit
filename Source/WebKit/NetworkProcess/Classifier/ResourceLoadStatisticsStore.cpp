@@ -423,7 +423,7 @@ void ResourceLoadStatisticsStore::removeDataRecords(CompletionHandler<void()>&& 
 
     setDataRecordsBeingRemoved(true);
 
-    RunLoop::main().dispatch([store = Ref { m_store.get() }, domainsToDeleteOrRestrictWebsiteDataFor = crossThreadCopy(WTFMove(domainsToDeleteOrRestrictWebsiteDataFor)), completionHandler = WTFMove(completionHandler), weakThis = WeakPtr { *this }, workQueue = m_workQueue] () mutable {
+    RunLoop::protectedMain()->dispatch([store = Ref { m_store.get() }, domainsToDeleteOrRestrictWebsiteDataFor = crossThreadCopy(WTFMove(domainsToDeleteOrRestrictWebsiteDataFor)), completionHandler = WTFMove(completionHandler), weakThis = WeakPtr { *this }, workQueue = m_workQueue] () mutable {
         store->deleteAndRestrictWebsiteDataForRegistrableDomains(WebResourceLoadStatisticsStore::monitoredDataTypes(), WTFMove(domainsToDeleteOrRestrictWebsiteDataFor), [completionHandler = WTFMove(completionHandler), weakThis = WTFMove(weakThis), workQueue](HashSet<RegistrableDomain>&& domainsWithDeletedWebsiteData) mutable {
             workQueue->dispatch([domainsWithDeletedWebsiteData = crossThreadCopy(WTFMove(domainsWithDeletedWebsiteData)), completionHandler = WTFMove(completionHandler), weakThis = WTFMove(weakThis)] () mutable {
                 if (!weakThis) {
@@ -472,7 +472,7 @@ void ResourceLoadStatisticsStore::grandfatherExistingWebsiteData(CompletionHandl
 {
     ASSERT(!RunLoop::isMain());
 
-    RunLoop::main().dispatch([weakThis = WeakPtr { *this }, callback = WTFMove(callback), workQueue = m_workQueue, store = Ref { m_store.get() }] () mutable {
+    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, callback = WTFMove(callback), workQueue = m_workQueue, store = Ref { m_store.get() }] () mutable {
         store->registrableDomainsWithWebsiteData(WebResourceLoadStatisticsStore::monitoredDataTypes(), [weakThis = WTFMove(weakThis), callback = WTFMove(callback), workQueue] (HashSet<RegistrableDomain>&& domainsWithWebsiteData) mutable {
             workQueue->dispatch([weakThis = WTFMove(weakThis), domainsWithWebsiteData = crossThreadCopy(WTFMove(domainsWithWebsiteData)), callback = WTFMove(callback)] () mutable {
                 if (!weakThis) {
@@ -596,7 +596,7 @@ void ResourceLoadStatisticsStore::updateCacheMaxAgeCap()
 {
     ASSERT(!RunLoop::isMain());
     
-    RunLoop::main().dispatch([store = Ref { m_store.get() }, seconds = m_parameters.cacheMaxAgeCapTime] () {
+    RunLoop::protectedMain()->dispatch([store = Ref { m_store.get() }, seconds = m_parameters.cacheMaxAgeCapTime] () {
         store->setCacheMaxAgeCap(seconds, [] { });
     });
 }
@@ -612,7 +612,7 @@ void ResourceLoadStatisticsStore::updateClientSideCookiesAgeCap()
     capTime = m_parameters.clientSideCookiesAgeCapTime;
 #endif
 
-    RunLoop::main().dispatch([store = Ref { m_store.get() }, seconds = capTime] () {
+    RunLoop::protectedMain()->dispatch([store = Ref { m_store.get() }, seconds = capTime] () {
         if (auto* networkSession = store->networkSession()) {
             if (auto* storageSession = networkSession->networkStorageSession())
                 storageSession->setAgeCapForClientSideCookies(seconds);
@@ -643,7 +643,7 @@ void ResourceLoadStatisticsStore::updateCookieBlockingForDomains(RegistrableDoma
 {
     ASSERT(!RunLoop::isMain());
     
-    RunLoop::main().dispatch([store = Ref { m_store.get() }, domainsToBlock = crossThreadCopy(WTFMove(domainsToBlock)), completionHandler = WTFMove(completionHandler)] () mutable {
+    RunLoop::protectedMain()->dispatch([store = Ref { m_store.get() }, domainsToBlock = crossThreadCopy(WTFMove(domainsToBlock)), completionHandler = WTFMove(completionHandler)] () mutable {
         store->callUpdatePrevalentDomainsToBlockCookiesForHandler(domainsToBlock, [store, completionHandler = WTFMove(completionHandler)]() mutable {
             store->statisticsQueue().dispatch([completionHandler = WTFMove(completionHandler)]() mutable {
                 completionHandler();
@@ -689,7 +689,7 @@ void ResourceLoadStatisticsStore::logTestingEvent(String&& event)
 {
     ASSERT(!RunLoop::isMain());
 
-    RunLoop::main().dispatch([store = Ref { m_store.get() }, event = WTFMove(event).isolatedCopy()] {
+    RunLoop::protectedMain()->dispatch([store = Ref { m_store.get() }, event = WTFMove(event).isolatedCopy()] {
         store->logTestingEvent(event);
     });
 }
@@ -697,7 +697,7 @@ void ResourceLoadStatisticsStore::logTestingEvent(String&& event)
 void ResourceLoadStatisticsStore::removeAllStorageAccess(CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(!RunLoop::isMain());
-    RunLoop::main().dispatch([store = Ref { m_store.get() }, completionHandler = WTFMove(completionHandler)]() mutable {
+    RunLoop::protectedMain()->dispatch([store = Ref { m_store.get() }, completionHandler = WTFMove(completionHandler)]() mutable {
         store->removeAllStorageAccess([store, completionHandler = WTFMove(completionHandler)]() mutable {
             store->statisticsQueue().dispatch([completionHandler = WTFMove(completionHandler)]() mutable {
                 completionHandler();
@@ -718,15 +718,15 @@ void ResourceLoadStatisticsStore::didCreateNetworkProcess()
 void ResourceLoadStatisticsStore::debugBroadcastConsoleMessage(MessageSource source, MessageLevel level, const String& message)
 {
     if (!RunLoop::isMain()) {
-        RunLoop::main().dispatch([store = Ref { store() }, source = crossThreadCopy(source), level = crossThreadCopy(level), message = crossThreadCopy(message)]() {
-            if (auto *networkSession = store->networkSession())
-                networkSession->networkProcess().broadcastConsoleMessage(networkSession->sessionID(), source, level, message);
+        RunLoop::protectedMain()->dispatch([store = Ref { store() }, source = crossThreadCopy(source), level = crossThreadCopy(level), message = crossThreadCopy(message)]() {
+            if (CheckedPtr networkSession = store->networkSession())
+                networkSession->protectedNetworkProcess()->broadcastConsoleMessage(networkSession->sessionID(), source, level, message);
         });
         return;
     }
 
-    if (auto* networkSession = m_store->networkSession())
-        networkSession->networkProcess().broadcastConsoleMessage(networkSession->sessionID(), source, level, message);
+    if (CheckedPtr networkSession = m_store->networkSession())
+        networkSession->protectedNetworkProcess()->broadcastConsoleMessage(networkSession->sessionID(), source, level, message);
 }
 
 void ResourceLoadStatisticsStore::debugLogDomainsInBatches(ASCIILiteral action, const RegistrableDomainsToBlockCookiesFor& domainsToBlock)
@@ -932,7 +932,7 @@ void ResourceLoadStatisticsStore::migrateDataToPCMDatabaseIfNecessary()
     }
 
     if (!unattributed.isEmpty() || !attributed.isEmpty()) {
-        RunLoop::main().dispatch([store = Ref { store() }, unattributed = crossThreadCopy(WTFMove(unattributed)), attributed = crossThreadCopy(WTFMove(attributed))] () mutable {
+        RunLoop::protectedMain()->dispatch([store = Ref { store() }, unattributed = crossThreadCopy(WTFMove(unattributed)), attributed = crossThreadCopy(WTFMove(attributed))] () mutable {
             auto* networkSession = store->networkSession();
             if (!networkSession)
                 return;
@@ -1037,8 +1037,8 @@ void ResourceLoadStatisticsStore::openAndUpdateSchemaIfNecessary()
 void ResourceLoadStatisticsStore::interruptAllDatabases()
 {
     ASSERT(!RunLoop::isMain());
-    for (auto& store : allStores())
-        store.interrupt();
+    for (Ref store : allStores())
+        store->interrupt();
 }
 
 bool ResourceLoadStatisticsStore::isEmpty() const
@@ -1671,7 +1671,7 @@ void ResourceLoadStatisticsStore::hasStorageAccess(SubFrameDomain&& subFrameDoma
         completionHandler(false);
         return;
     case CookieAccess::BasedOnCookiePolicy:
-        RunLoop::main().dispatch([store = Ref { store() }, subFrameDomain = WTFMove(subFrameDomain).isolatedCopy(), completionHandler = WTFMove(completionHandler)]() mutable {
+        RunLoop::protectedMain()->dispatch([store = Ref { store() }, subFrameDomain = WTFMove(subFrameDomain).isolatedCopy(), completionHandler = WTFMove(completionHandler)]() mutable {
             store->hasCookies(subFrameDomain, [store, completionHandler = WTFMove(completionHandler)](bool result) mutable {
                 store->statisticsQueue().dispatch([completionHandler = WTFMove(completionHandler), result] () mutable {
                     completionHandler(result);
@@ -1684,7 +1684,7 @@ void ResourceLoadStatisticsStore::hasStorageAccess(SubFrameDomain&& subFrameDoma
         break;
     };
 
-    RunLoop::main().dispatch([store = Ref { store() }, subFrameDomain = WTFMove(subFrameDomain).isolatedCopy(), topFrameDomain = WTFMove(topFrameDomain).isolatedCopy(), frameID, pageID, completionHandler = WTFMove(completionHandler)]() mutable {
+    RunLoop::protectedMain()->dispatch([store = Ref { store() }, subFrameDomain = WTFMove(subFrameDomain).isolatedCopy(), topFrameDomain = WTFMove(topFrameDomain).isolatedCopy(), frameID, pageID, completionHandler = WTFMove(completionHandler)]() mutable {
         store->callHasStorageAccessForFrameHandler(subFrameDomain, topFrameDomain, frameID.value(), pageID, [store, completionHandler = WTFMove(completionHandler)](bool result) mutable {
             store->statisticsQueue().dispatch([completionHandler = WTFMove(completionHandler), result] () mutable {
                 completionHandler(result);
@@ -1797,7 +1797,7 @@ void ResourceLoadStatisticsStore::grantStorageAccess(SubFrameDomain&& subFrameDo
         protectedThis->grantStorageAccessInternal(WTFMove(subFrameDomain), WTFMove(topFrameDomain), frameID, pageID, promptWasShown, scope, canRequestStorageAccessWithoutUserInteraction, WTFMove(completionHandler));
     };
 
-    RunLoop::main().dispatch([weakThis = WeakPtr { *this }, subFrameDomain = WTFMove(subFrameDomain).isolatedCopy(), topFrameDomain = WTFMove(topFrameDomain).isolatedCopy(), workQueue = m_workQueue, store = Ref { store() }, addGrant = WTFMove(addGrant), completionHandler = WTFMove(completionHandler)]() mutable {
+    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, subFrameDomain = WTFMove(subFrameDomain).isolatedCopy(), topFrameDomain = WTFMove(topFrameDomain).isolatedCopy(), workQueue = m_workQueue, store = Ref { store() }, addGrant = WTFMove(addGrant), completionHandler = WTFMove(completionHandler)]() mutable {
 
         std::optional<OrganizationStorageAccessPromptQuirk> additionalDomainGrants;
         CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction { CanRequestStorageAccessWithoutUserInteraction::No };
@@ -1853,7 +1853,7 @@ void ResourceLoadStatisticsStore::grantStorageAccessInternal(SubFrameDomain&& su
         setUserInteraction(subFrameDomain, true, nowTime(m_timeAdvanceForTesting));
     }
 
-    RunLoop::main().dispatch([subFrameDomain = WTFMove(subFrameDomain).isolatedCopy(), topFrameDomain = WTFMove(topFrameDomain).isolatedCopy(), frameID, pageID, store = Ref { store() }, scope, completionHandler = WTFMove(completionHandler)]() mutable {
+    RunLoop::protectedMain()->dispatch([subFrameDomain = WTFMove(subFrameDomain).isolatedCopy(), topFrameDomain = WTFMove(topFrameDomain).isolatedCopy(), frameID, pageID, store = Ref { store() }, scope, completionHandler = WTFMove(completionHandler)]() mutable {
         store->callGrantStorageAccessHandler(subFrameDomain, topFrameDomain, frameID, pageID, scope, [completionHandler = WTFMove(completionHandler), store](StorageAccessWasGranted wasGranted) mutable {
             store->statisticsQueue().dispatch([wasGranted, completionHandler = WTFMove(completionHandler)] () mutable {
                 completionHandler(wasGranted);
@@ -2688,7 +2688,7 @@ void ResourceLoadStatisticsStore::updateCookieBlocking(CompletionHandler<void()>
     if (debugLoggingEnabled() && (!domainsToBlockAndDeleteCookiesFor.isEmpty() || !domainsToBlockButKeepCookiesFor.isEmpty()))
         debugLogDomainsInBatches("Applying cross-site tracking restrictions"_s, domainsToBlock);
 
-    RunLoop::main().dispatch([weakThis = WeakPtr { *this }, store = Ref { store() }, domainsToBlock = crossThreadCopy(WTFMove(domainsToBlock)), completionHandler = WTFMove(completionHandler)] () mutable {
+    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, store = Ref { store() }, domainsToBlock = crossThreadCopy(WTFMove(domainsToBlock)), completionHandler = WTFMove(completionHandler)] () mutable {
         store->callUpdatePrevalentDomainsToBlockCookiesForHandler(domainsToBlock, [weakThis = WTFMove(weakThis), store, completionHandler = WTFMove(completionHandler)]() mutable {
             store->statisticsQueue().dispatch([weakThis = WTFMove(weakThis), completionHandler = WTFMove(completionHandler)]() mutable {
                 completionHandler();

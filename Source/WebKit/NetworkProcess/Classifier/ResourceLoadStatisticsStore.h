@@ -351,7 +351,7 @@ private:
     void destroyStatements() final;
 
     CheckedRef<WebResourceLoadStatisticsStore> m_store;
-    Ref<SuspendableWorkQueue> m_workQueue;
+    const Ref<SuspendableWorkQueue> m_workQueue;
 #if HAVE(CORE_PREDICTION)
     ResourceLoadStatisticsClassifierCocoa m_resourceLoadStatisticsClassifier;
 #else
