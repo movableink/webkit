@@ -67,8 +67,8 @@ static AVAssetTrack* assetTrackFor(const AVTrackPrivateAVFObjCImpl& impl)
         return impl.playerItemTrack().assetTrack;
     if (impl.assetTrack())
         return impl.assetTrack();
-    if (impl.mediaSelectionOption() && impl.mediaSelectionOption()->assetTrack())
-        return impl.mediaSelectionOption()->assetTrack();
+    if (RefPtr mediaSelectionOption = impl.mediaSelectionOption(); mediaSelectionOption && mediaSelectionOption->assetTrack())
+        return mediaSelectionOption->assetTrack();
     return nil;
 }
 
@@ -115,8 +115,8 @@ bool AVTrackPrivateAVFObjCImpl::enabled() const
 {
     if (m_playerItemTrack)
         return [m_playerItemTrack isEnabled];
-    if (m_mediaSelectionOption)
-        return m_mediaSelectionOption->selected();
+    if (RefPtr mediaSelectionOption = m_mediaSelectionOption)
+        return mediaSelectionOption->selected();
     ASSERT_NOT_REACHED();
     return false;
 }
@@ -125,8 +125,8 @@ void AVTrackPrivateAVFObjCImpl::setEnabled(bool enabled)
 {
     if (m_playerItemTrack)
         [m_playerItemTrack setEnabled:enabled];
-    else if (m_mediaSelectionOption)
-        m_mediaSelectionOption->setSelected(enabled);
+    else if (RefPtr mediaSelectionOption = m_mediaSelectionOption)
+        mediaSelectionOption->setSelected(enabled);
     else
         ASSERT_NOT_REACHED();
 }
@@ -193,8 +193,8 @@ int AVTrackPrivateAVFObjCImpl::index() const
 {
     if (m_assetTrack)
         return [[[m_assetTrack asset] tracks] indexOfObject:m_assetTrack.get()];
-    if (m_mediaSelectionOption)
-        return [[[m_playerItem asset] tracks] count] + m_mediaSelectionOption->index();
+    if (RefPtr mediaSelectionOption = m_mediaSelectionOption)
+        return [[[m_playerItem asset] tracks] count] + mediaSelectionOption->index();
     ASSERT_NOT_REACHED();
     return 0;
 }

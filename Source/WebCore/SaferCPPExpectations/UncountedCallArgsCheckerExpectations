@@ -1123,7 +1123,6 @@ platform/graphics/SourceBufferPrivate.cpp
 platform/graphics/TrackBuffer.cpp
 platform/graphics/TransparencyLayerContextSwitcher.cpp
 platform/graphics/WidthIterator.cpp
-platform/graphics/avfoundation/AVTrackPrivateAVFObjCImpl.mm
 platform/graphics/avfoundation/AudioSourceProviderAVFObjC.mm
 platform/graphics/avfoundation/InbandMetadataTextTrackPrivateAVF.cpp
 platform/graphics/avfoundation/MediaSelectionGroupAVFObjC.mm
