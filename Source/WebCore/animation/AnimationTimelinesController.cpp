@@ -554,9 +554,9 @@ void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& nam
     auto& timeline = timelines.at(i);
 
     for (Ref animation : timeline->relevantAnimations()) {
-        if (RefPtr effect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
-            if (auto targetStyleable = effect->targetStyleable())
-                m_pendingAttachOperations.append(TimelineMapAttachOperation { *targetStyleable, name, animation });
+        if (RefPtr cssAnimation = dynamicDowncast<CSSAnimation>(animation)) {
+            if (auto styleable = cssAnimation->owningElement())
+                m_pendingAttachOperations.append(TimelineMapAttachOperation { *styleable, name, *cssAnimation });
         }
     }
     timelines.remove(i);
@@ -566,7 +566,7 @@ void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& nam
     attachPendingOperations();
 }
 
-void AnimationTimelinesController::setTimelineForName(const AtomString& name, const Styleable& styleable, WebAnimation& animation)
+void AnimationTimelinesController::setTimelineForName(const AtomString& name, const Styleable& styleable, CSSAnimation& animation)
 {
     LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::setTimelineForName: " << name << " styleable: " << styleable);
 
@@ -636,9 +636,12 @@ void AnimationTimelinesController::updateNamedTimelineMapForTimelineScope(const 
 
 bool AnimationTimelinesController::isPendingTimelineAttachment(const WebAnimation& animation) const
 {
-    return m_pendingAttachOperations.containsIf([&] (auto& entry) {
-        return entry.animation.ptr() == &animation;
-    });
+    if (RefPtr cssAnimation = dynamicDowncast<CSSAnimation>(animation)) {
+        return m_pendingAttachOperations.containsIf([&](auto& operation) {
+            return operation.animation.ptr() == cssAnimation.get();
+        });
+    }
+    return false;
 }
 
 void AnimationTimelinesController::unregisterNamedTimelinesAssociatedWithElement(const Styleable& styleable)

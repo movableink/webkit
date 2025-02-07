@@ -41,6 +41,7 @@
 namespace WebCore {
 
 class AnimationTimeline;
+class CSSAnimation;
 class CSSTransition;
 class Document;
 class Element;
@@ -57,7 +58,7 @@ struct ViewTimelineInsets;
 struct TimelineMapAttachOperation {
     WeakStyleable element;
     AtomString name;
-    Ref<WebAnimation> animation;
+    Ref<CSSAnimation> animation;
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AnimationTimelinesController);
@@ -84,7 +85,7 @@ public:
     void registerNamedScrollTimeline(const AtomString&, const Styleable&, ScrollAxis);
     void registerNamedViewTimeline(const AtomString&, const Styleable&, ScrollAxis, ViewTimelineInsets&&);
     void unregisterNamedTimeline(const AtomString&, const Styleable&);
-    void setTimelineForName(const AtomString&, const Styleable&, WebAnimation&);
+    void setTimelineForName(const AtomString&, const Styleable&, CSSAnimation&);
     void updateNamedTimelineMapForTimelineScope(const TimelineScope&, const Styleable&);
     void updateTimelineForTimelineScope(const Ref<ScrollTimeline>&, const AtomString&);
     void unregisterNamedTimelinesAssociatedWithElement(const Styleable&);
