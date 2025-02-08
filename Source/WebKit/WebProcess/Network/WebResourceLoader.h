@@ -74,6 +74,8 @@ public:
 
     WebCore::ResourceLoader* resourceLoader() const { return m_coreLoader.get(); }
 
+    RefPtr<WebCore::ResourceLoader> protectedCoreLoader() const;
+
     void detachFromCoreLoader();
 
 private:
