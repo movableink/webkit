@@ -101,11 +101,6 @@ std::unique_ptr<TextLayout, TextLayoutDeleter> FontCascade::createLayout(RenderT
     return std::unique_ptr<TextLayout, TextLayoutDeleter>(new TextLayout(text, *this, xPos));
 }
 
-float FontCascade::width(TextLayout& layout, unsigned from, unsigned len, SingleThreadWeakHashSet<const Font>* fallbackFonts)
-{
-    return layout.width(from, len, fallbackFonts);
-}
-
 void ComplexTextController::computeExpansionOpportunity()
 {
     if (!m_expansion)
