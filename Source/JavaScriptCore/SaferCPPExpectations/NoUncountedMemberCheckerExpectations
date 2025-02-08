@@ -16,6 +16,7 @@
 ./wasm/WasmLLIntGenerator.cpp
 ./wasm/WasmNameSectionParser.h
 ./wasm/WasmOMGIRGenerator.cpp
+./wasm/WasmStreamingCompiler.h
 API/JSClassRef.h
 API/JSObjectRef.h
 API/tests/testapi.cpp
@@ -39,4 +40,3 @@ runtime/PropertySlot.h
 runtime/Structure.h
 wasm/WasmBBQJIT.h
 wasm/WasmFormat.h
-wasm/WasmStreamingCompiler.h
