@@ -32,11 +32,6 @@
 // Attributes
 //
 
-#define AXEndTextMarkerAttribute @"AXEndTextMarker"
-#define AXHasDocumentRoleAncestorAttribute @"AXHasDocumentRoleAncestor"
-#define AXHasWebApplicationAncestorAttribute @"AXHasWebApplicationAncestor"
-#define AXSelectedTextMarkerRangeAttribute @"AXSelectedTextMarkerRange"
-#define AXStartTextMarkerAttribute @"AXStartTextMarker"
 #define NSAccessibilityARIAAtomicAttribute @"AXARIAAtomic"
 #define NSAccessibilityARIAColumnCountAttribute @"AXARIAColumnCount"
 #define NSAccessibilityARIAColumnIndexAttribute @"AXARIAColumnIndex"
@@ -61,10 +56,13 @@
 #define NSAccessibilityEditableAncestorAttribute @"AXEditableAncestor"
 #define NSAccessibilityElementBusyAttribute @"AXElementBusy"
 #define NSAccessibilityEmbeddedImageDescriptionAttribute @"AXEmbeddedImageDescription"
+#define NSAccessibilityEndTextMarkerAttribute @"AXEndTextMarker"
 #define NSAccessibilityExpandedTextValueAttribute @"AXExpandedTextValue"
 #define NSAccessibilityFocusableAncestorAttribute @"AXFocusableAncestor"
 #define NSAccessibilityGrabbedAttribute @"AXGrabbed"
+#define NSAccessibilityHasDocumentRoleAncestorAttribute @"AXHasDocumentRoleAncestor"
 #define NSAccessibilityHasPopupAttribute @"AXHasPopup"
+#define NSAccessibilityHasWebApplicationAncestorAttribute @"AXHasWebApplicationAncestor"
 #define NSAccessibilityHighestEditableAncestorAttribute @"AXHighestEditableAncestor"
 #define NSAccessibilityImageOverlayElementsAttribute @"AXImageOverlayElements"
 #define NSAccessibilityInlineTextAttribute @"AXInlineText"
@@ -80,7 +78,8 @@
 #define NSAccessibilityPrimaryScreenHeightAttribute @"_AXPrimaryScreenHeight"
 #define NSAccessibilityRelativeFrameAttribute @"AXRelativeFrame"
 #define NSAccessibilitySelectedCellsAttribute @"AXSelectedCells"
-#define NSAccessibilityTextCompletionAttribute @"AXTextCompletion"
+#define NSAccessibilitySelectedTextMarkerRangeAttribute @"AXSelectedTextMarkerRange"
+#define NSAccessibilityStartTextMarkerAttribute @"AXStartTextMarker"
 #define NSAccessibilityTextInputMarkedRangeAttribute @"AXTextInputMarkedRange"
 #define NSAccessibilityTextInputMarkedTextMarkerRangeAttribute @"AXTextInputMarkedTextMarkerRange"
 #define NSAccessibilityValueAutofillAvailableAttribute @"AXValueAutofillAvailable"
@@ -90,45 +89,44 @@
 // Parameterized Attributes
 //
 
-#define AXAttributedStringForTextMarkerRangeAttribute @"AXAttributedStringForTextMarkerRange"
-#define AXAttributedStringForTextMarkerRangeWithOptionsAttribute @"AXAttributedStringForTextMarkerRangeWithOptions"
-#define AXBoundsForTextMarkerRangeAttribute @"AXBoundsForTextMarkerRange"
-#define AXEndTextMarkerForBoundsAttribute @"AXEndTextMarkerForBounds"
-#define AXIndexForTextMarkerAttribute @"AXIndexForTextMarker"
-#define AXLeftLineTextMarkerRangeForTextMarkerAttribute @"AXLeftLineTextMarkerRangeForTextMarker"
-#define AXLeftWordTextMarkerRangeForTextMarkerAttribute @"AXLeftWordTextMarkerRangeForTextMarker"
-#define AXLengthForTextMarkerRangeAttribute @"AXLengthForTextMarkerRange"
-#define AXLineForTextMarkerAttribute @"AXLineForTextMarker"
-#define AXLineTextMarkerRangeForTextMarkerAttribute @"AXLineTextMarkerRangeForTextMarker"
-#define AXMisspellingTextMarkerRangeAttribute @"AXMisspellingTextMarkerRange"
-#define AXNextLineEndTextMarkerForTextMarkerAttribute @"AXNextLineEndTextMarkerForTextMarker"
-#define AXNextParagraphEndTextMarkerForTextMarkerAttribute @"AXNextParagraphEndTextMarkerForTextMarker"
-#define AXNextSentenceEndTextMarkerForTextMarkerAttribute @"AXNextSentenceEndTextMarkerForTextMarker"
-#define AXNextTextMarkerForTextMarkerAttribute @"AXNextTextMarkerForTextMarker"
-#define AXNextWordEndTextMarkerForTextMarkerAttribute @"AXNextWordEndTextMarkerForTextMarker"
-#define AXParagraphTextMarkerRangeForTextMarkerAttribute @"AXParagraphTextMarkerRangeForTextMarker"
-#define AXPreviousLineStartTextMarkerForTextMarkerAttribute @"AXPreviousLineStartTextMarkerForTextMarker"
-#define AXPreviousParagraphStartTextMarkerForTextMarkerAttribute @"AXPreviousParagraphStartTextMarkerForTextMarker"
-#define AXPreviousSentenceStartTextMarkerForTextMarkerAttribute @"AXPreviousSentenceStartTextMarkerForTextMarker"
-#define AXPreviousTextMarkerForTextMarkerAttribute @"AXPreviousTextMarkerForTextMarker"
-#define AXPreviousWordStartTextMarkerForTextMarkerAttribute @"AXPreviousWordStartTextMarkerForTextMarker"
-#define AXRightLineTextMarkerRangeForTextMarkerAttribute @"AXRightLineTextMarkerRangeForTextMarker"
-#define AXRightWordTextMarkerRangeForTextMarkerAttribute @"AXRightWordTextMarkerRangeForTextMarker"
-#define AXSentenceTextMarkerRangeForTextMarkerAttribute @"AXSentenceTextMarkerRangeForTextMarker"
-#define AXStartTextMarkerForBoundsAttribute @"AXStartTextMarkerForBounds"
-#define AXStringForTextMarkerRangeAttribute @"AXStringForTextMarkerRange"
-#define AXStyleTextMarkerRangeForTextMarkerAttribute @"AXStyleTextMarkerRangeForTextMarker"
-#define AXTextMarkerForIndexAttribute @"AXTextMarkerForIndex"
-#define AXTextMarkerForPositionAttribute @"AXTextMarkerForPosition" // FIXME: should be AXTextMarkerForPoint.
-#define AXTextMarkerIsValidAttribute @"AXTextMarkerIsValid"
-#define AXTextMarkerRangeForLineAttribute @"AXTextMarkerRangeForLine"
-#define AXTextMarkerRangeForTextMarkersAttribute @"AXTextMarkerRangeForTextMarkers"
-#define AXTextMarkerRangeForUIElementAttribute @"AXTextMarkerRangeForUIElement"
-#define AXTextMarkerRangeForUnorderedTextMarkersAttribute @"AXTextMarkerRangeForUnorderedTextMarkers"
-#define AXUIElementForTextMarkerAttribute @"AXUIElementForTextMarker"
+#define NSAccessibilityAttributedStringForTextMarkerRangeAttribute @"AXAttributedStringForTextMarkerRange"
+#define NSAccessibilityAttributedStringForTextMarkerRangeWithOptionsAttribute @"AXAttributedStringForTextMarkerRangeWithOptions"
+#define NSAccessibilityBoundsForTextMarkerRangeAttribute @"AXBoundsForTextMarkerRange"
+#define NSAccessibilityConvertRelativeFrameParameterizedAttribute @"AXConvertRelativeFrame"
+#define NSAccessibilityEndTextMarkerForBoundsAttribute @"AXEndTextMarkerForBounds"
+#define NSAccessibilityIndexForTextMarkerAttribute @"AXIndexForTextMarker"
+#define NSAccessibilityLeftLineTextMarkerRangeForTextMarkerAttribute @"AXLeftLineTextMarkerRangeForTextMarker"
+#define NSAccessibilityLeftWordTextMarkerRangeForTextMarkerAttribute @"AXLeftWordTextMarkerRangeForTextMarker"
+#define NSAccessibilityLengthForTextMarkerRangeAttribute @"AXLengthForTextMarkerRange"
+#define NSAccessibilityLineForTextMarkerAttribute @"AXLineForTextMarker"
+#define NSAccessibilityLineTextMarkerRangeForTextMarkerAttribute @"AXLineTextMarkerRangeForTextMarker"
+#define NSAccessibilityMisspellingTextMarkerRangeAttribute @"AXMisspellingTextMarkerRange"
+#define NSAccessibilityNextLineEndTextMarkerForTextMarkerAttribute @"AXNextLineEndTextMarkerForTextMarker"
+#define NSAccessibilityNextParagraphEndTextMarkerForTextMarkerAttribute @"AXNextParagraphEndTextMarkerForTextMarker"
+#define NSAccessibilityNextSentenceEndTextMarkerForTextMarkerAttribute @"AXNextSentenceEndTextMarkerForTextMarker"
+#define NSAccessibilityNextTextMarkerForTextMarkerAttribute @"AXNextTextMarkerForTextMarker"
+#define NSAccessibilityNextWordEndTextMarkerForTextMarkerAttribute @"AXNextWordEndTextMarkerForTextMarker"
+#define NSAccessibilityParagraphTextMarkerRangeForTextMarkerAttribute @"AXParagraphTextMarkerRangeForTextMarker"
+#define NSAccessibilityPreviousLineStartTextMarkerForTextMarkerAttribute @"AXPreviousLineStartTextMarkerForTextMarker"
+#define NSAccessibilityPreviousParagraphStartTextMarkerForTextMarkerAttribute @"AXPreviousParagraphStartTextMarkerForTextMarker"
+#define NSAccessibilityPreviousSentenceStartTextMarkerForTextMarkerAttribute @"AXPreviousSentenceStartTextMarkerForTextMarker"
+#define NSAccessibilityPreviousTextMarkerForTextMarkerAttribute @"AXPreviousTextMarkerForTextMarker"
+#define NSAccessibilityPreviousWordStartTextMarkerForTextMarkerAttribute @"AXPreviousWordStartTextMarkerForTextMarker"
+#define NSAccessibilityRightLineTextMarkerRangeForTextMarkerAttribute @"AXRightLineTextMarkerRangeForTextMarker"
+#define NSAccessibilityRightWordTextMarkerRangeForTextMarkerAttribute @"AXRightWordTextMarkerRangeForTextMarker"
+#define NSAccessibilitySentenceTextMarkerRangeForTextMarkerAttribute @"AXSentenceTextMarkerRangeForTextMarker"
+#define NSAccessibilityStartTextMarkerForBoundsAttribute @"AXStartTextMarkerForBounds"
+#define NSAccessibilityStringForTextMarkerRangeAttribute @"AXStringForTextMarkerRange"
+#define NSAccessibilityStyleTextMarkerRangeForTextMarkerAttribute @"AXStyleTextMarkerRangeForTextMarker"
+#define NSAccessibilityTextMarkerForIndexAttribute @"AXTextMarkerForIndex"
+#define NSAccessibilityTextMarkerForPositionAttribute @"AXTextMarkerForPosition" // FIXME: should be AXTextMarkerForPoint.
+#define NSAccessibilityTextMarkerIsValidAttribute @"AXTextMarkerIsValid"
+#define NSAccessibilityTextMarkerRangeForLineAttribute @"AXTextMarkerRangeForLine"
+#define NSAccessibilityTextMarkerRangeForTextMarkersAttribute @"AXTextMarkerRangeForTextMarkers"
+#define NSAccessibilityTextMarkerRangeForUIElementAttribute @"AXTextMarkerRangeForUIElement"
+#define NSAccessibilityTextMarkerRangeForUnorderedTextMarkersAttribute @"AXTextMarkerRangeForUnorderedTextMarkers"
+#define NSAccessibilityUIElementForTextMarkerAttribute @"AXUIElementForTextMarker"
 #define NSAccessibilityUIElementsForSearchPredicateParameterizedAttribute @"AXUIElementsForSearchPredicate"
-
-#define kAXConvertRelativeFrameParameterizedAttribute @"AXConvertRelativeFrame"
 
 //
 // Actions
@@ -140,24 +138,24 @@
 // Attributed string attribute names
 //
 
-#define AXDidSpellCheckAttribute @"AXDidSpellCheck"
+#define NSAccessibilityDidSpellCheckAttribute @"AXDidSpellCheck"
+#define NSAccessibilityTextCompletionAttribute @"AXTextCompletion"
 
 //
 // Notifications
 //
 
 #define NSAccessibilityCurrentStateChangedNotification @"AXCurrentStateChanged"
+#define NSAccessibilityDraggingDestinationDragAcceptedNotification CFSTR("AXDraggingDestinationDragAccepted")
+#define NSAccessibilityDraggingDestinationDragNotAcceptedNotification CFSTR("AXDraggingDestinationDragNotAccepted")
+#define NSAccessibilityDraggingDestinationDropAllowedNotification CFSTR("AXDraggingDestinationDropAllowed")
+#define NSAccessibilityDraggingDestinationDropNotAllowedNotification CFSTR("AXDraggingDestinationDropNotAllowed")
+#define NSAccessibilityDraggingSourceDragBeganNotification CFSTR("AXDraggingSourceDragBegan")
+#define NSAccessibilityDraggingSourceDragEndedNotification CFSTR("AXDraggingSourceDragEnded")
 #define NSAccessibilityLiveRegionChangedNotification @"AXLiveRegionChanged"
 #define NSAccessibilityLiveRegionCreatedNotification @"AXLiveRegionCreated"
 #define NSAccessibilityTextInputMarkingSessionBeganNotification @"AXTextInputMarkingSessionBegan"
 #define NSAccessibilityTextInputMarkingSessionEndedNotification @"AXTextInputMarkingSessionEnded"
-
-#define kAXDraggingDestinationDragAcceptedNotification CFSTR("AXDraggingDestinationDragAccepted")
-#define kAXDraggingDestinationDragNotAcceptedNotification CFSTR("AXDraggingDestinationDragNotAccepted")
-#define kAXDraggingDestinationDropAllowedNotification CFSTR("AXDraggingDestinationDropAllowed")
-#define kAXDraggingDestinationDropNotAllowedNotification CFSTR("AXDraggingDestinationDropNotAllowed")
-#define kAXDraggingSourceDragBeganNotification CFSTR("AXDraggingSourceDragBegan")
-#define kAXDraggingSourceDragEndedNotification CFSTR("AXDraggingSourceDragEnded")
 
 //
 // Additional attributes in text change notifications
@@ -181,8 +179,11 @@
 
 #define NSAccessibilityIntersectionWithSelectionRangeAttribute @"AXIntersectionWithSelectionRange"
 #define NSAccessibilitySelectTextActivity @"AXSelectTextActivity"
+#define NSAccessibilitySelectTextActivityFindAndCapitalize @"AXSelectTextActivityFindAndCapitalize"
+#define NSAccessibilitySelectTextActivityFindAndLowercase @"AXSelectTextActivityFindAndLowercase"
 #define NSAccessibilitySelectTextActivityFindAndReplace @"AXSelectTextActivityFindAndReplace"
 #define NSAccessibilitySelectTextActivityFindAndSelect @"AXSelectTextActivityFindAndSelect"
+#define NSAccessibilitySelectTextActivityFindAndUppercase @"AXSelectTextActivityFindAndUppercase"
 #define NSAccessibilitySelectTextAmbiguityResolution @"AXSelectTextAmbiguityResolution"
 #define NSAccessibilitySelectTextAmbiguityResolutionClosestAfterSelection @"AXSelectTextAmbiguityResolutionClosestAfterSelection"
 #define NSAccessibilitySelectTextAmbiguityResolutionClosestBeforeSelection @"AXSelectTextAmbiguityResolutionClosestBeforeSelection"
@@ -190,10 +191,6 @@
 #define NSAccessibilitySelectTextReplacementString @"AXSelectTextReplacementString"
 #define NSAccessibilitySelectTextSearchStrings @"AXSelectTextSearchStrings"
 #define NSAccessibilitySelectTextWithCriteriaParameterizedAttribute @"AXSelectTextWithCriteria"
-
-#define kAXSelectTextActivityFindAndCapitalize @"AXSelectTextActivityFindAndCapitalize"
-#define kAXSelectTextActivityFindAndLowercase @"AXSelectTextActivityFindAndLowercase"
-#define kAXSelectTextActivityFindAndUppercase @"AXSelectTextActivityFindAndUppercase"
 
 //
 // Text search

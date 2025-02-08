@@ -329,14 +329,14 @@ RetainPtr<NSAttributedString> AXIsolatedObject::attributedStringForTextMarkerRan
     auto resultRange = NSMakeRange(0, result.length);
     // The AttributedString is cached with spelling info. If the caller does not request spelling info, we have to remove it before returning.
     if (spellCheck == SpellCheck::No) {
-        [result removeAttribute:AXDidSpellCheckAttribute range:resultRange];
+        [result removeAttribute:NSAccessibilityDidSpellCheckAttribute range:resultRange];
         [result removeAttribute:NSAccessibilityMisspelledTextAttribute range:resultRange];
         [result removeAttribute:NSAccessibilityMarkedMisspelledTextAttribute range:resultRange];
     } else if (AXObjectCache::shouldSpellCheck()) {
         // For ITM, we should only ever eagerly spellcheck for testing purposes.
         ASSERT(_AXGetClientForCurrentRequestUntrusted() == kAXClientTypeWebKitTesting);
         // We're going to spellcheck, so remove AXDidSpellCheck: NO.
-        [result removeAttribute:AXDidSpellCheckAttribute range:resultRange];
+        [result removeAttribute:NSAccessibilityDidSpellCheckAttribute range:resultRange];
         performFunctionOnMainThreadAndWait([result = retainPtr(result), &resultRange] (AccessibilityObject* axObject) {
             if (auto* node = axObject->node())
                 attributedStringSetSpelling(result.get(), *node, String { [result string] }, resultRange);
