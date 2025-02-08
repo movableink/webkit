@@ -184,7 +184,7 @@ WavyStrokeParameters wavyStrokeParameters(float fontSize)
     return result;
 }
 
-static GlyphOverflow computedVisualOverflowForDecorations(const RenderStyle& lineStyle, std::optional<float> underlineOffset)
+static GlyphOverflow computedInkOverflowForDecorations(const RenderStyle& lineStyle, std::optional<float> underlineOffset)
 {
     // Compensate for the integral ceiling in GraphicsContext::computeLineBoundsAndAntialiasingModeForText()
     if (underlineOffset)
@@ -268,7 +268,7 @@ bool isAlignedForUnder(const RenderStyle& decoratingBoxStyle)
     return underlinePosition.isEmpty() && decoratingBoxStyle.textUnderlineOffset().isAuto();
 }
 
-GlyphOverflow visualOverflowForDecorations(const InlineIterator::LineBoxIterator& lineBox, const RenderText& renderer, float textBoxLogicalTop, float textBoxLogicalBottom)
+GlyphOverflow inkOverflowForDecorations(const InlineIterator::LineBoxIterator& lineBox, const RenderText& renderer, float textBoxLogicalTop, float textBoxLogicalBottom)
 {
     auto& style = lineBox->isFirst() ? renderer.firstLineStyle() : renderer.style();
     auto textUnderlinePositionUnder = std::optional<TextUnderlinePositionUnder> { };
@@ -281,23 +281,23 @@ GlyphOverflow visualOverflowForDecorations(const InlineIterator::LineBoxIterator
     auto underlineOffset = style.textDecorationsInEffect().contains(TextDecorationLine::Underline)
         ? std::make_optional(computedUnderlineOffset({ style, textUnderlinePositionUnder }))
         : std::nullopt;
-    return computedVisualOverflowForDecorations(style, underlineOffset);
+    return computedInkOverflowForDecorations(style, underlineOffset);
 }
 
-GlyphOverflow visualOverflowForDecorations(const RenderStyle& style, TextUnderlinePositionUnder textUnderlinePositionUnder)
+GlyphOverflow inkOverflowForDecorations(const RenderStyle& style, TextUnderlinePositionUnder textUnderlinePositionUnder)
 {
     auto underlineOffset = style.textDecorationsInEffect().contains(TextDecorationLine::Underline)
         ? std::make_optional(computedUnderlineOffset({ style, textUnderlinePositionUnder }))
         : std::nullopt;
-    return computedVisualOverflowForDecorations(style, underlineOffset);
+    return computedInkOverflowForDecorations(style, underlineOffset);
 }
 
-GlyphOverflow visualOverflowForDecorations(const RenderStyle& style)
+GlyphOverflow inkOverflowForDecorations(const RenderStyle& style)
 {
     auto underlineOffset = style.textDecorationsInEffect().contains(TextDecorationLine::Underline)
         ? std::make_optional(computedUnderlineOffset({ style, { } }))
         : std::nullopt;
-    return computedVisualOverflowForDecorations(style, underlineOffset);
+    return computedInkOverflowForDecorations(style, underlineOffset);
 }
 
 static inline float inlineBoxContentBoxHeight(const InlineIterator::InlineBox& inlineBox)

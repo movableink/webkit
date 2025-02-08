@@ -99,7 +99,7 @@ public:
     void shiftLinesBy(LayoutUnit blockShift);
 
     void collectOverflow();
-    LayoutRect visualOverflowBoundingBoxRectFor(const RenderInline&) const;
+    LayoutRect inkOverflowBoundingBoxRectFor(const RenderInline&) const;
     Vector<FloatRect> collectInlineBoxRects(const RenderInline&) const;
 
     LayoutUnit contentLogicalHeight() const;
@@ -109,7 +109,7 @@ public:
 
     bool isPaginated() const;
     size_t lineCount() const;
-    bool hasVisualOverflow() const;
+    bool hasInkOverflow() const;
     LayoutUnit firstLinePhysicalBaseline() const;
     LayoutUnit lastLinePhysicalBaseline() const;
     LayoutUnit lastLineLogicalBaseline() const;

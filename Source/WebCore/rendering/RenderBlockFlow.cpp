@@ -3856,7 +3856,7 @@ std::pair<float, float> RenderBlockFlow::inlineContentTopAndBottomIncludingInkOv
     auto logicalTop = std::min(firstLineBox->logicalTop(), firstLineBox->contentLogicalTop());
     auto logicalBottom = std::max(lastLineBox->logicalBottom(), lastLineBox->contentLogicalBottom());
 
-    if (!inlineLayout()->hasVisualOverflow())
+    if (!inlineLayout()->hasInkOverflow())
         return { logicalTop, logicalBottom };
 
     for (auto lineBox = firstLineBox; lineBox; lineBox.traverseNext()) {

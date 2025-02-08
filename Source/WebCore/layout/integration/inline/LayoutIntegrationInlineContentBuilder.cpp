@@ -212,8 +212,8 @@ void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent, size
             if (inkOverflowRect.y() <= lastInkOverflow.y() || lastInkOverflow.maxY() >= inkOverflowRect.maxY())
                 inlineContent.setHasMultilinePaintOverlap();
         }
-        if (!inlineContent.hasVisualOverflow() && inkOverflowRect != scrollableOverflowRect)
-            inlineContent.setHasVisualOverflow();
+        if (!inlineContent.hasInkOverflow() && inkOverflowRect != scrollableOverflowRect)
+            inlineContent.setHasInkOverflow();
     }
 }
 

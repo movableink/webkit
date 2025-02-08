@@ -550,7 +550,7 @@ LayoutRect RenderInline::linesVisualOverflowBoundingBox() const
             ASSERT(needsLayout());
             return { };
         }
-        return layout->visualOverflowBoundingBoxRectFor(*this);
+        return layout->inkOverflowBoundingBoxRectFor(*this);
     }
 
     if (!firstLegacyInlineBox() || !lastLegacyInlineBox())

@@ -858,9 +858,9 @@ size_t LineLayout::lineCount() const
     return lines.last().boxCount() > 1 ? lines.size() : lines.size() - 1;
 }
 
-bool LineLayout::hasVisualOverflow() const
+bool LineLayout::hasInkOverflow() const
 {
-    return m_inlineContent && m_inlineContent->hasVisualOverflow();
+    return m_inlineContent && m_inlineContent->hasInkOverflow();
 }
 
 LayoutUnit LineLayout::firstLinePhysicalBaseline() const
@@ -1078,7 +1078,7 @@ LayoutRect LineLayout::enclosingBorderBoxRectFor(const RenderInline& renderInlin
     return flow().writingMode().isHorizontal() ? borderBoxLogicalRect : borderBoxLogicalRect.transposedRect();
 }
 
-LayoutRect LineLayout::visualOverflowBoundingBoxRectFor(const RenderInline& renderInline) const
+LayoutRect LineLayout::inkOverflowBoundingBoxRectFor(const RenderInline& renderInline) const
 {
     if (!m_inlineContent)
         return { };

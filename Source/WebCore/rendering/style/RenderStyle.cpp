@@ -759,7 +759,7 @@ inline bool RenderStyle::changeAffectsVisualOverflow(const RenderStyle& other) c
         if (isAlignedForUnder(*this) || isAlignedForUnder(other))
             return true;
 
-        if (visualOverflowForDecorations(*this) != visualOverflowForDecorations(other))
+        if (inkOverflowForDecorations(*this) != inkOverflowForDecorations(other))
             return true;
     }
 

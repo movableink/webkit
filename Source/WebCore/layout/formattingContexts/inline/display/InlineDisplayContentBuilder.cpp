@@ -113,13 +113,13 @@ InlineDisplay::Boxes InlineDisplayContentBuilder::build(const LineLayoutResult& 
 
 static inline bool computeInkOverflowForInlineLevelBox(const RenderStyle& style, FloatRect& inkOverflow)
 {
-    auto hasVisualOverflow = false;
+    auto hasInkOverflow = false;
 
     auto inflateWithOutline = [&] {
         if (!style.hasOutlineInVisualOverflow())
             return;
         inkOverflow.inflate(style.outlineSize());
-        hasVisualOverflow = true;
+        hasInkOverflow = true;
     };
     inflateWithOutline();
 
@@ -134,27 +134,27 @@ static inline bool computeInkOverflowForInlineLevelBox(const RenderStyle& style,
         if (!topBoxShadow && !bottomBoxShadow && !leftBoxShadow && !rightBoxShadow)
             return;
         inkOverflow.inflate(-leftBoxShadow.toFloat(), -topBoxShadow.toFloat(), rightBoxShadow.toFloat(), bottomBoxShadow.toFloat());
-        hasVisualOverflow = true;
+        hasInkOverflow = true;
     };
     inflateWithBoxShadow();
 
-    return hasVisualOverflow;
+    return hasInkOverflow;
 }
 
 static inline bool computeInkOverflowForInlineBox(const InlineLevelBox& inlineBox, const RenderStyle& style, FloatRect& inkOverflow)
 {
     ASSERT(inlineBox.isInlineBox());
-    auto hasVisualOverflow = computeInkOverflowForInlineLevelBox(style, inkOverflow);
+    auto hasInkOverflow = computeInkOverflowForInlineLevelBox(style, inkOverflow);
 
     auto inflateWithAnnotation = [&] {
         if (!inlineBox.hasTextEmphasis())
             return;
         inkOverflow.inflate(0.f, inlineBox.textEmphasisAbove().value_or(0.f), 0.f, inlineBox.textEmphasisBelow().value_or(0.f));
-        hasVisualOverflow = true;
+        hasInkOverflow = true;
     };
     inflateWithAnnotation();
 
-    return hasVisualOverflow;
+    return hasInkOverflow;
 }
 
 void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun, const InlineRect& textRunRect, InlineDisplay::Boxes& boxes)
@@ -1044,17 +1044,17 @@ void InlineDisplayContentBuilder::collectInkOverflowForTextDecorations(InlineDis
 
         auto decorationOverflow = [&] {
             if (!textDecorations.contains(TextDecorationLine::Underline))
-                return visualOverflowForDecorations(parentStyle);
+                return inkOverflowForDecorations(parentStyle);
 
             if (!logicalBottomForTextDecoration)
                 logicalBottomForTextDecoration = logicalBottomForTextDecorationContent(boxes, isHorizontalWritingMode);
             auto textRunLogicalOffsetFromLineBottom = *logicalBottomForTextDecoration - (isHorizontalWritingMode ? displayBox.bottom() : displayBox.right());
-            return visualOverflowForDecorations(parentStyle, { displayBox.height(), textRunLogicalOffsetFromLineBottom });
+            return inkOverflowForDecorations(parentStyle, { displayBox.height(), textRunLogicalOffsetFromLineBottom });
         }();
 
         if (!decorationOverflow.isEmpty()) {
             m_contentHasInkOverflow = true;
-            auto inflatedVisualOverflowRect = [&] {
+            auto inflatedInkOverflowRect = [&] {
                 auto inkOverflowRect = displayBox.inkOverflow();
                 switch (writingMode.blockDirection()) {
                 case FlowDirection::TopToBottom:
@@ -1073,7 +1073,7 @@ void InlineDisplayContentBuilder::collectInkOverflowForTextDecorations(InlineDis
                 }
                 return inkOverflowRect;
             };
-            displayBox.adjustInkOverflow(inflatedVisualOverflowRect());
+            displayBox.adjustInkOverflow(inflatedInkOverflowRect());
         }
     }
 }
