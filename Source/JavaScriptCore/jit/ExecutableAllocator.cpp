@@ -297,7 +297,9 @@ static ALWAYS_INLINE MacroAssemblerCodeRef<JITThunkPtrTag> jitWriteThunkGenerato
 #else // not USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION)
 static void genericWriteToJITRegion(off_t offset, const void* data, size_t dataSize)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memcpy((void*)(g_jscConfig.startOfFixedWritableMemoryPool + offset), data, dataSize);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 static MacroAssemblerCodeRef<JITThunkPtrTag> ALWAYS_INLINE jitWriteThunkGenerator(void* address, void*, size_t)
