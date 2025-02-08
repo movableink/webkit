@@ -131,7 +131,7 @@ void WebResourceLoader::willSendRequest(ResourceRequest&& proposedRequest, IPC::
         }
     }
 
-    coreLoader->willSendRequest(WTFMove(proposedRequest), redirectResponse, [this, protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)] (ResourceRequest&& request) mutable {
+    coreLoader->willSendRequest(WTFMove(proposedRequest), redirectResponse, [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (ResourceRequest&& request) mutable {
         RefPtr coreLoader = m_coreLoader;
         if (!m_coreLoader || !coreLoader->identifier()) {
             WEBRESOURCELOADER_RELEASE_LOG(WEBRESOURCELOADER_WILLSENDREQUEST_NO_CORELOADER);
@@ -169,7 +169,7 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
 #if ASSERT_ENABLED
         m_isProcessingNetworkResponse = true;
 #endif
-        policyDecisionCompletionHandler = [this, protectedThis = WTFMove(protectedThis)] {
+        policyDecisionCompletionHandler = [this, protectedThis = Ref { *this }] {
             RefPtr coreLoader = m_coreLoader;
 #if ASSERT_ENABLED
             m_isProcessingNetworkResponse = false;
@@ -182,10 +182,11 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
         };
     }
 
-    if (InspectorInstrumentationWebKit::shouldInterceptResponse(coreLoader->frame(), response)) {
+    RefPtr frame = coreLoader->frame();
+    if (InspectorInstrumentationWebKit::shouldInterceptResponse(frame.get(), response)) {
         auto interceptedRequestIdentifier = *coreLoader->identifier();
         m_interceptController.beginInterceptingResponse(interceptedRequestIdentifier);
-        InspectorInstrumentationWebKit::interceptResponse(coreLoader->frame(), response, interceptedRequestIdentifier, [this, protectedThis = Ref { *this }, interceptedRequestIdentifier, policyDecisionCompletionHandler = WTFMove(policyDecisionCompletionHandler)](const ResourceResponse& inspectorResponse, RefPtr<FragmentedSharedBuffer> overrideData) mutable {
+        InspectorInstrumentationWebKit::interceptResponse(frame.get(), response, interceptedRequestIdentifier, [this, protectedThis = Ref { *this }, interceptedRequestIdentifier, policyDecisionCompletionHandler = WTFMove(policyDecisionCompletionHandler)](const ResourceResponse& inspectorResponse, RefPtr<FragmentedSharedBuffer> overrideData) mutable {
             RefPtr coreLoader = m_coreLoader;
             if (!m_coreLoader || !coreLoader->identifier()) {
                 WEBRESOURCELOADER_RELEASE_LOG(WEBRESOURCELOADER_DIDRECEIVERESPONSE_NOT_CONTINUING_INTERCEPT_LOAD);
@@ -193,7 +194,7 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
                 return;
             }
 
-            coreLoader->didReceiveResponse(inspectorResponse, [this, protectedThis = WTFMove(protectedThis), interceptedRequestIdentifier, policyDecisionCompletionHandler = WTFMove(policyDecisionCompletionHandler), overrideData = WTFMove(overrideData)]() mutable {
+            coreLoader->didReceiveResponse(inspectorResponse, [this, protectedThis = Ref { *this }, interceptedRequestIdentifier, policyDecisionCompletionHandler = WTFMove(policyDecisionCompletionHandler), overrideData = WTFMove(overrideData)]() mutable {
                 RefPtr coreLoader = m_coreLoader;
                 if (policyDecisionCompletionHandler)
                     policyDecisionCompletionHandler();
