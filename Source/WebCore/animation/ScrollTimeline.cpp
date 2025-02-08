@@ -74,6 +74,13 @@ Ref<ScrollTimeline> ScrollTimeline::create(Scroller scroller, ScrollAxis axis)
     return adoptRef(*new ScrollTimeline(scroller, axis));
 }
 
+Ref<ScrollTimeline> ScrollTimeline::createInactiveStyleOriginatedTimeline(const AtomString& name)
+{
+    auto timeline = adoptRef(*new ScrollTimeline(name, ScrollAxis::Block));
+    timeline->m_isInactiveStyleOriginatedTimeline = true;
+    return timeline;
+}
+
 // https://drafts.csswg.org/web-animations-2/#timelines
 // For a monotonic timeline, there is no upper bound on current time, and
 // timeline duration is unresolved. For a non-monotonic (e.g. scroll) timeline,

@@ -51,6 +51,7 @@ public:
     static Ref<ScrollTimeline> create(Document&, ScrollTimelineOptions&& = { });
     static Ref<ScrollTimeline> create(const AtomString&, ScrollAxis);
     static Ref<ScrollTimeline> create(Scroller, ScrollAxis);
+    static Ref<ScrollTimeline> createInactiveStyleOriginatedTimeline(const AtomString& name);
 
     const WeakStyleable& sourceStyleable() const { return m_source; }
     virtual Element* source() const;
@@ -62,6 +63,8 @@ public:
 
     const AtomString& name() const { return m_name; }
     void setName(const AtomString& name) { m_name = name; }
+
+    bool isInactiveStyleOriginatedTimeline() const { return m_isInactiveStyleOriginatedTimeline; }
 
     AnimationTimeline::ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents() override;
 
@@ -117,6 +120,7 @@ private:
     Scroller m_scroller { Scroller::Self };
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_timelineScopeElement;
     CurrentTimeData m_cachedCurrentTimeData { };
+    bool m_isInactiveStyleOriginatedTimeline { false };
 };
 
 } // namespace WebCore

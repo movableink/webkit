@@ -349,6 +349,13 @@ Vector<WeakStyleable> AnimationTimelinesController::relatedTimelineScopeElements
     return timelineScopeElements;
 }
 
+ScrollTimeline& AnimationTimelinesController::inactiveNamedTimeline(const AtomString& name)
+{
+    auto inactiveTimeline = ScrollTimeline::createInactiveStyleOriginatedTimeline(name);
+    timelinesForName(name).append(inactiveTimeline);
+    return inactiveTimeline.get();
+}
+
 static bool containsElement(const Vector<WeakStyleable>& timelineScopeElements, Element* matchElement)
 {
     return timelineScopeElements.containsIf([matchElement] (const WeakStyleable& entry ) {
@@ -356,7 +363,7 @@ static bool containsElement(const Vector<WeakStyleable>& timelineScopeElements, 
     });
 }
 
-static ScrollTimeline* determineTreeOrder(const Vector<Ref<ScrollTimeline>>& ancestorTimelines, const Styleable& styleable, const Vector<WeakStyleable>& timelineScopeElements)
+ScrollTimeline* AnimationTimelinesController::determineTreeOrder(const Vector<Ref<ScrollTimeline>>& ancestorTimelines, const Styleable& styleable, const Vector<WeakStyleable>& timelineScopeElements)
 {
     RefPtr element = &styleable.element;
     while (element) {
@@ -370,7 +377,7 @@ static ScrollTimeline* determineTreeOrder(const Vector<Ref<ScrollTimeline>>& anc
                 if (matchedTimelines.size() == 1)
                     return matchedTimelines.first().ptr();
                 // Naming conflict due to timeline-scope
-                return nullptr;
+                return &inactiveNamedTimeline(matchedTimelines.first()->name());
             }
             ASSERT(matchedTimelines.size() <= 2);
             // Favor scroll timelines in case of conflict
@@ -388,7 +395,7 @@ static ScrollTimeline* determineTreeOrder(const Vector<Ref<ScrollTimeline>>& anc
     return nullptr;
 }
 
-static ScrollTimeline* determineTimelineForElement(const Vector<Ref<ScrollTimeline>>& timelines, const Styleable& styleable, const Vector<WeakStyleable>& timelineScopeElements)
+ScrollTimeline* AnimationTimelinesController::determineTimelineForElement(const Vector<Ref<ScrollTimeline>>& timelines, const Styleable& styleable, const Vector<WeakStyleable>& timelineScopeElements)
 {
     // https://drafts.csswg.org/scroll-animations-1/#timeline-scoping
     // A named scroll progress timeline or view progress timeline is referenceable by:
@@ -501,6 +508,16 @@ void AnimationTimelinesController::documentDidResolveStyle()
                 setTimelineForName(operation.name, *styleable, *animation);
         }
     }
+
+    // Purge any inactive named timeline no longer attached to an animation.
+    Vector<AtomString> namesToRemove;
+    for (auto& [name, timelines] : m_nameToTimelineMap) {
+        timelines.removeAllMatching([](auto& timeline) {
+            return timeline->isInactiveStyleOriginatedTimeline() && timeline->relevantAnimations().isEmpty();
+        });
+        if (timelines.isEmpty())
+            m_nameToTimelineMap.remove(name);
+    }
 }
 
 void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& name, const Styleable& subject, ScrollAxis axis, ViewTimelineInsets&& insets)
@@ -568,7 +585,11 @@ void AnimationTimelinesController::setTimelineForName(const AtomString& name, co
     LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::setTimelineForName: " << name << " styleable: " << styleable);
 
     auto it = m_nameToTimelineMap.find(name);
-    if (it == m_nameToTimelineMap.end()) {
+    auto hasNamedTimeline = it != m_nameToTimelineMap.end() && it->value.containsIf([](auto& timeline) {
+        return !timeline->isInactiveStyleOriginatedTimeline();
+    });
+
+    if (!hasNamedTimeline) {
         m_pendingAttachOperations.append({ styleable, name, animation });
         return;
     }

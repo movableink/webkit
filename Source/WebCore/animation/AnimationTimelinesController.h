@@ -104,6 +104,10 @@ private:
     bool isPendingTimelineAttachment(const WebAnimation&) const;
     void updateCSSAnimationsAssociatedWithNamedTimeline(const AtomString&);
 
+    ScrollTimeline* determineTimelineForElement(const Vector<Ref<ScrollTimeline>>&, const Styleable&, const Vector<WeakStyleable>&);
+    ScrollTimeline* determineTreeOrder(const Vector<Ref<ScrollTimeline>>&, const Styleable&, const Vector<WeakStyleable>&);
+    ScrollTimeline& inactiveNamedTimeline(const AtomString&);
+
     Ref<Document> protectedDocument() const { return m_document.get(); }
 
     Vector<TimelineMapAttachOperation> m_pendingAttachOperations;
