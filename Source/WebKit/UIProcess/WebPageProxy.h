@@ -27,6 +27,7 @@
 
 #include "APIObject.h"
 #include "MessageReceiver.h"
+#include <WebCore/BoxExtents.h>
 #include <WebCore/CryptoKeyData.h>
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/LayerTreeAsTextOptions.h>
@@ -346,7 +347,6 @@ template<typename> class RectEdges;
 using BackForwardItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardItemIdentifierType>>;
 using BackForwardFrameItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardFrameItemIdentifierType>>;
 using DictationContext = ObjectIdentifier<DictationContextType>;
-using FloatBoxExtent = RectEdges<float>;
 using FramesPerSecond = unsigned;
 using IntDegrees = int32_t;
 using HTMLMediaElementIdentifier = ObjectIdentifier<MediaPlayerClientIdentifierType>;
@@ -905,15 +905,15 @@ public:
 
     String currentURL() const;
 
-    float topContentInset() const { return m_topContentInset; }
-    void setTopContentInset(float);
+    const WebCore::FloatBoxExtent& obscuredContentInsets() const { return m_obscuredContentInsets; }
+    void setObscuredContentInsets(const WebCore::FloatBoxExtent&);
 
 #if PLATFORM(MAC)
-    void setTopContentInsetAsync(float);
-    float pendingOrActualTopContentInset() const;
+    void setObscuredContentInsetsAsync(const WebCore::FloatBoxExtent&);
+    WebCore::FloatBoxExtent pendingOrActualObscuredContentInsets() const;
 
-    void scheduleSetTopContentInsetDispatch();
-    void dispatchSetTopContentInset();
+    void scheduleSetObscuredContentInsetsDispatch();
+    void dispatchSetObscuredContentInsets();
 
     void setAutomaticallyAdjustsContentInsets(bool);
     bool automaticallyAdjustsContentInsets() const { return m_automaticallyAdjustsContentInsets; }
@@ -3488,10 +3488,10 @@ private:
     float m_intrinsicDeviceScaleFactor { 1 };
     std::optional<float> m_customDeviceScaleFactor;
 
-    float m_topContentInset { 0 };
+    WebCore::FloatBoxExtent m_obscuredContentInsets;
 #if PLATFORM(MAC)
-    std::optional<CGFloat> m_pendingTopContentInset;
-    bool m_didScheduleSetTopContentInsetDispatch { false };
+    std::optional<WebCore::FloatBoxExtent> m_pendingObscuredContentInsets;
+    bool m_didScheduleSetObscuredContentInsetsDispatch { false };
     bool m_automaticallyAdjustsContentInsets { false };
 #endif
     bool m_hasPendingUnderPageBackgroundColorOverrideToDispatch { false };

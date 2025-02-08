@@ -154,7 +154,7 @@ struct WebPageCreationParameters {
     double textZoomFactor { 1 };
     double pageZoomFactor { 1 };
 
-    float topContentInset { 0 };
+    WebCore::FloatBoxExtent obscuredContentInsets { };
     
     float mediaVolume { 0 };
     WebCore::MediaProducerMutedStateFlags muted { };

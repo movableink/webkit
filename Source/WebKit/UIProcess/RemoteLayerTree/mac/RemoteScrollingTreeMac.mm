@@ -484,7 +484,7 @@ RefPtr<ScrollingTreeNode> RemoteScrollingTreeMac::scrollingNodeForPoint(FloatPoi
 
     RetainPtr scrolledContentsLayer { static_cast<CALayer*>(rootScrollingNode->scrolledContentsLayer()) };
 
-    auto rootContentsLayerPosition = LocalFrameView::positionForRootContentLayer(rootScrollingNode->currentScrollPosition(), FloatPoint { 0, 0 }, rootScrollingNode->topContentInset(), rootScrollingNode->headerHeight());
+    auto rootContentsLayerPosition = LocalFrameView::positionForRootContentLayer(rootScrollingNode->currentScrollPosition(), FloatPoint { 0, 0 }, rootScrollingNode->obscuredContentInsets().top(), rootScrollingNode->headerHeight());
     auto pointInContentsLayer = point;
     pointInContentsLayer.moveBy(rootContentsLayerPosition);
 

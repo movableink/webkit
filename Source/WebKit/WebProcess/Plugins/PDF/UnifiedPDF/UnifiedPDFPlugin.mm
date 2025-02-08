@@ -1182,11 +1182,12 @@ void UnifiedPDFPlugin::setPageScaleFactor(double scale, std::optional<WebCore::I
         return;
 
     if (origin) {
-        // Compensate for the subtraction of topContentInset that happens in ViewGestureController::handleMagnificationGestureEvent();
+        // Compensate for the subtraction of content insets that happens in ViewGestureController::handleMagnificationGestureEvent();
         // origin is not in root view coordinates.
-        RefPtr frameView = m_frame->coreLocalFrame()->view();
-        if (frameView)
-            origin->move(0, std::round(frameView->topContentInset()));
+        if (RefPtr frameView = m_frame->coreLocalFrame()->view()) {
+            auto obscuredContentInsets = frameView->obscuredContentInsets();
+            origin->move(std::round(obscuredContentInsets.left()), std::round(obscuredContentInsets.top()));
+        }
     }
 
     if (scale != 1.0)

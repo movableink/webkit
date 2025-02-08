@@ -288,7 +288,7 @@ private:
     void didRestoreScrollPosition() override;
     bool windowIsFrontWindowUnderMouse(const NativeWebMouseEvent&) override;
 
-    std::optional<float> computeAutomaticTopContentInset() override;
+    std::optional<float> computeAutomaticTopObscuredInset() override;
 
     void takeFocus(WebCore::FocusDirection) override;
 

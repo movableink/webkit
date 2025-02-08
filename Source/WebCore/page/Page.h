@@ -23,6 +23,7 @@
 #include "ActivityState.h"
 #include "AnimationFrameRate.h"
 #include "BackForwardItemIdentifier.h"
+#include "BoxExtents.h"
 #include "Color.h"
 #include "FindOptions.h"
 #include "FrameLoaderTypes.h"
@@ -623,12 +624,6 @@ public:
     WEBCORE_EXPORT std::optional<FramesPerSecond> preferredRenderingUpdateFramesPerSecond(OptionSet<PreferredRenderingUpdateOption> = allPreferredRenderingUpdateOptions) const;
     WEBCORE_EXPORT Seconds preferredRenderingUpdateInterval() const;
 
-    float topContentInset() const { return m_topContentInset; }
-    WEBCORE_EXPORT void setTopContentInset(float);
-
-    const FloatBoxExtent& obscuredInsets() const { return m_obscuredInsets; }
-    void setObscuredInsets(const FloatBoxExtent& obscuredInsets) { m_obscuredInsets = obscuredInsets; }
-
     const FloatBoxExtent& contentInsets() const { return m_contentInsets; }
     void setContentInsets(const FloatBoxExtent& insets) { m_contentInsets = insets; }
 
@@ -638,7 +633,13 @@ public:
 #if PLATFORM(IOS_FAMILY)
     bool enclosedInScrollableAncestorView() const { return m_enclosedInScrollableAncestorView; }
     void setEnclosedInScrollableAncestorView(bool f) { m_enclosedInScrollableAncestorView = f; }
+
+    const FloatBoxExtent& obscuredInsets() const { return m_obscuredInsets; }
+    void setObscuredInsets(const FloatBoxExtent& insets) { m_obscuredInsets = insets; }
 #endif
+
+    const FloatBoxExtent& obscuredContentInsets() const { return m_obscuredContentInsets; }
+    WEBCORE_EXPORT void setObscuredContentInsets(const FloatBoxExtent&);
 
     WEBCORE_EXPORT void useSystemAppearanceChanged();
 
@@ -1449,14 +1450,14 @@ private:
     float m_deviceScaleFactor { 1 };
     float m_viewScaleFactor { 1 };
 
-    float m_topContentInset { 0 };
-    FloatBoxExtent m_obscuredInsets;
+    FloatBoxExtent m_obscuredContentInsets;
     FloatBoxExtent m_contentInsets;
     FloatBoxExtent m_unobscuredSafeAreaInsets;
     FloatBoxExtent m_fullscreenInsets;
     Seconds m_fullscreenAutoHideDuration { 0_s };
 
 #if PLATFORM(IOS_FAMILY)
+    FloatBoxExtent m_obscuredInsets;
     bool m_enclosedInScrollableAncestorView { false };
     bool m_canShowWhileLocked { false };
 #endif

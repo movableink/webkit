@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,16 +23,15 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "_WKThumbnailView.h"
+#pragma once
 
-#if PLATFORM(MAC)
+#include "LayoutUnit.h"
+#include "RectEdges.h"
 
-@interface _WKThumbnailView ()
+namespace WebCore {
 
-@property (nonatomic, assign, setter=_setThumbnailLayer:) CALayer *_thumbnailLayer;
-@property (nonatomic, assign, setter=_setWaitingForSnapshot:) BOOL _waitingForSnapshot;
-@property (nonatomic, assign, setter=_setSublayerTranslation:) CGPoint _sublayerTranslation;
+using FloatBoxExtent = RectEdges<float>;
+using IntBoxExtent = RectEdges<int>;
+using LayoutBoxExtent = RectEdges<LayoutUnit>;
 
-@end
-
-#endif // PLATFORM(MAC)
+} // namespace WebCore

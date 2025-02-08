@@ -270,9 +270,9 @@ public:
     void setAutomaticallyAdjustsContentInsets(bool);
     bool automaticallyAdjustsContentInsets() const;
     void updateContentInsetsIfAutomatic();
-    void setTopContentInset(CGFloat);
-    CGFloat topContentInset() const;
-    void flushPendingTopContentInset();
+    void setObscuredContentInsets(const WebCore::FloatBoxExtent&);
+    WebCore::FloatBoxExtent obscuredContentInsets() const;
+    void flushPendingObscuredContentInsetChanges();
 
     void prepareContentInRect(CGRect);
     void updateViewExposedRect();

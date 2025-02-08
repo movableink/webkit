@@ -251,8 +251,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _page->startDeferringResizeEvents();
     _page->startDeferringScrollEvents();
     [self _manager]->saveScrollPosition();
-    _savedTopContentInset = _page->topContentInset();
-    _page->setTopContentInset(0);
+    _savedObscuredContentInsets = _page->obscuredContentInsets();
+    _page->setObscuredContentInsets({ });
     [[self window] setFrame:screenFrame display:NO];
 
     // Painting is normally suspended when the WKView is removed from the window, but this is
@@ -272,7 +272,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // Then insert the WebView into the full screen window
     NSView *contentView = [[self window] contentView];
     [_clipView addSubview:_webView.get().get() positioned:NSWindowBelow relativeTo:nil];
-    [_webView setFrame:NSInsetRect(contentView.bounds, 0, -_page->topContentInset())];
+    auto obscuredContentInsets = _page->obscuredContentInsets();
+    [_webView setFrame:NSInsetRect(contentView.bounds, -obscuredContentInsets.left(), -obscuredContentInsets.top())];
 
     _savedScale = _page->pageScaleFactor();
     _page->scalePageRelativeToScrollPosition(1, { });
@@ -368,7 +369,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
         _page->scalePageRelativeToScrollPosition(_savedScale, { });
         [self _manager]->restoreScrollPosition();
-        _page->setTopContentInset(_savedTopContentInset);
+        _page->setObscuredContentInsets(_savedObscuredContentInsets);
         [self _manager]->setAnimatingFullScreen(false);
         [self _manager]->didExitFullScreen();
 
@@ -544,7 +545,7 @@ static RetainPtr<CGImageRef> takeWindowSnapshot(CGSWindowID windowID, bool captu
     [self _manager]->didExitFullScreen();
     _page->scalePageRelativeToScrollPosition(_savedScale, { });
     [self _manager]->restoreScrollPosition();
-    _page->setTopContentInset(_savedTopContentInset);
+    _page->setObscuredContentInsets(_savedObscuredContentInsets);
     _page->flushDeferredResizeEvents();
     _page->flushDeferredScrollEvents();
 

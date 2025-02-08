@@ -323,7 +323,7 @@ void PluginView::manualLoadDidFail()
     protectedPlugin()->streamDidFail();
 }
 
-void PluginView::topContentInsetDidChange()
+void PluginView::obscuredContentInsetsDidChange()
 {
     viewGeometryDidChange();
 }

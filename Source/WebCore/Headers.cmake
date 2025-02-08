@@ -1800,6 +1800,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/AbortableTaskQueue.h
     platform/AudioSampleFormat.h
+    platform/BoxExtents.h
     platform/BoxSides.h
     platform/CaretAnimator.h
     platform/CPUMonitor.h

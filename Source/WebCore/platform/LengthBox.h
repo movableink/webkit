@@ -21,8 +21,8 @@
 
 #pragma once
 
+#include "BoxExtents.h"
 #include "Length.h"
-#include "RectEdges.h"
 #include "WritingMode.h"
 
 namespace WebCore {
@@ -62,10 +62,6 @@ public:
         return top().isZero() && right().isZero() && bottom().isZero() && left().isZero();
     }
 };
-
-using LayoutBoxExtent = RectEdges<LayoutUnit>;
-using FloatBoxExtent = RectEdges<float>;
-using IntBoxExtent = RectEdges<int>;
 
 using IntOutsets = IntBoxExtent;
 using LayoutOptionalOutsets = RectEdges<std::optional<LayoutUnit>>;

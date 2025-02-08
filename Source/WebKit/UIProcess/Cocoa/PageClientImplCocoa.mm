@@ -54,7 +54,7 @@ PageClientImplCocoa::PageClientImplCocoa(WKWebView *webView)
 
 PageClientImplCocoa::~PageClientImplCocoa() = default;
 
-void PageClientImplCocoa::topContentInsetDidChange()
+void PageClientImplCocoa::obscuredContentInsetsDidChange()
 {
     [m_webView _recalculateViewportSizesWithMinimumViewportInset:[m_webView minimumViewportInset] maximumViewportInset:[m_webView maximumViewportInset] throwOnInvalidInput:NO];
 }

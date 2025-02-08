@@ -2389,7 +2389,7 @@ bool RenderLayerCompositor::updateBacking(RenderLayer& layer, RequiresCompositin
                 updateRootContentLayerClipping();
 
                 if (auto* tiledBacking = layer.backing()->tiledBacking())
-                    tiledBacking->setTopContentInset(frameView.topContentInset());
+                    tiledBacking->setObscuredContentInsets(frameView.obscuredContentInsets());
             }
 
             layer.setNeedsCompositingGeometryUpdate();
@@ -2840,7 +2840,7 @@ FloatPoint RenderLayerCompositor::positionForClipLayer() const
     auto& frameView = m_renderView.frameView();
 
     return FloatPoint(frameView.insetForLeftScrollbarSpace(),
-        LocalFrameView::yPositionForInsetClipLayer(frameView.scrollPosition(), frameView.topContentInset()));
+        LocalFrameView::yPositionForInsetClipLayer(frameView.scrollPosition(), frameView.obscuredContentInsets().top()));
 }
 
 void RenderLayerCompositor::frameViewDidScroll()
@@ -4637,7 +4637,7 @@ GraphicsLayer* RenderLayerCompositor::updateLayerForBottomOverhangArea(bool want
     }
 
     m_layerForBottomOverhangArea->setPosition(FloatPoint(0, m_rootContentsLayer->size().height() + m_renderView.frameView().headerHeight()
-        + m_renderView.frameView().footerHeight() + m_renderView.frameView().topContentInset()));
+        + m_renderView.frameView().footerHeight() + m_renderView.frameView().obscuredContentInsets().top()));
     return m_layerForBottomOverhangArea.get();
 }
 
@@ -4665,7 +4665,7 @@ GraphicsLayer* RenderLayerCompositor::updateLayerForHeader(bool wantsLayer)
     }
 
     m_layerForHeader->setPosition(FloatPoint(0,
-        LocalFrameView::yPositionForHeaderLayer(m_renderView.frameView().scrollPosition(), m_renderView.frameView().topContentInset())));
+        LocalFrameView::yPositionForHeaderLayer(m_renderView.frameView().scrollPosition(), m_renderView.frameView().obscuredContentInsets().top())));
     m_layerForHeader->setAnchorPoint(FloatPoint3D());
     m_layerForHeader->setSize(FloatSize(m_renderView.frameView().visibleWidth(), m_renderView.frameView().headerHeight()));
 
@@ -4702,7 +4702,7 @@ GraphicsLayer* RenderLayerCompositor::updateLayerForFooter(bool wantsLayer)
 
     float totalContentHeight = m_rootContentsLayer->size().height() + m_renderView.frameView().headerHeight() + m_renderView.frameView().footerHeight();
     m_layerForFooter->setPosition(FloatPoint(0, LocalFrameView::yPositionForFooterLayer(m_renderView.frameView().scrollPosition(),
-        m_renderView.frameView().topContentInset(), totalContentHeight, m_renderView.frameView().footerHeight())));
+        m_renderView.frameView().obscuredContentInsets().top(), totalContentHeight, m_renderView.frameView().footerHeight())));
     m_layerForFooter->setAnchorPoint(FloatPoint3D());
     m_layerForFooter->setSize(FloatSize(m_renderView.frameView().visibleWidth(), m_renderView.frameView().footerHeight()));
 
@@ -4845,12 +4845,12 @@ void RenderLayerCompositor::updateSizeAndPositionForOverhangAreaLayer()
     if (!m_layerForOverhangAreas)
         return;
 
-    float topContentInset = m_renderView.frameView().topContentInset();
+    auto obscuredContentInsets = m_renderView.frameView().obscuredContentInsets();
     IntSize overhangAreaSize = m_renderView.frameView().frameRect().size();
-    overhangAreaSize.contract(0, topContentInset);
+    overhangAreaSize.contract(obscuredContentInsets.left(), obscuredContentInsets.top());
     overhangAreaSize.clampNegativeToZero();
     m_layerForOverhangAreas->setSize(overhangAreaSize);
-    m_layerForOverhangAreas->setPosition({ 0, topContentInset });
+    m_layerForOverhangAreas->setPosition({ obscuredContentInsets.left(), obscuredContentInsets.top() });
 }
 #endif
 

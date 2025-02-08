@@ -1026,7 +1026,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
     else
         m_scrollbarOverlayStyle = std::optional<ScrollbarOverlayStyle>();
 
-    setTopContentInset(parameters.topContentInset);
+    setObscuredContentInsets(parameters.obscuredContentInsets);
 
     m_userAgent = parameters.userAgent;
 
@@ -4051,23 +4051,28 @@ void WebPage::setBackgroundColor(const std::optional<WebCore::Color>& background
 }
 
 #if PLATFORM(COCOA)
-void WebPage::setTopContentInsetFenced(float contentInset, const WTF::MachSendRight& machSendRight)
+void WebPage::setObscuredContentInsetsFenced(const FloatBoxExtent& obscuredContentInsets, const WTF::MachSendRight& machSendRight)
 {
     protectedDrawingArea()->addFence(machSendRight);
-    setTopContentInset(contentInset);
+    setObscuredContentInsets(obscuredContentInsets);
 }
 #endif
 
-void WebPage::setTopContentInset(float contentInset)
+FloatBoxExtent WebPage::obscuredContentInsets() const
 {
-    if (contentInset == m_page->topContentInset())
+    return m_page->obscuredContentInsets();
+}
+
+void WebPage::setObscuredContentInsets(const FloatBoxExtent& obscuredContentInsets)
+{
+    if (obscuredContentInsets == m_page->obscuredContentInsets())
         return;
 
-    m_page->setTopContentInset(contentInset);
+    m_page->setObscuredContentInsets(obscuredContentInsets);
 
 #if ENABLE(PDF_PLUGIN)
     for (auto& pluginView : m_pluginViews)
-        pluginView.topContentInsetDidChange();
+        pluginView.obscuredContentInsetsDidChange();
 #endif
 }
 

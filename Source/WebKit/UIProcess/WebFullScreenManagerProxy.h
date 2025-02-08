@@ -29,6 +29,7 @@
 
 #include "FullScreenMediaDetails.h"
 #include "MessageReceiver.h"
+#include <WebCore/BoxExtents.h>
 #include <WebCore/HTMLMediaElement.h>
 #include <WebCore/HTMLMediaElementEnums.h>
 #include <WebCore/ProcessIdentifier.h>
@@ -45,9 +46,6 @@ class FloatSize;
 class IntRect;
 
 enum class ScreenOrientationType : uint8_t;
-
-template <typename> class RectEdges;
-using FloatBoxExtent = RectEdges<float>;
 }
 
 namespace WebKit {

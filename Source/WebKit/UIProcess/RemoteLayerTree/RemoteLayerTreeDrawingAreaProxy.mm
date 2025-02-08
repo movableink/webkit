@@ -171,7 +171,7 @@ void RemoteLayerTreeDrawingAreaProxy::sendUpdateGeometry()
     m_lastSentSizeToContentAutoSizeMaximumSize = webPageProxy->sizeToContentAutoSizeMaximumSize();
     m_lastSentSize = m_size;
 
-    dispatchSetTopContentInset();
+    dispatchSetObscuredContentInsets();
 
     m_isWaitingForDidUpdateGeometry = true;
     sendWithAsyncReply(Messages::DrawingArea::UpdateGeometry(m_size, false /* flushSynchronously */, MachSendRight()), [weakThis = WeakPtr { this }] {

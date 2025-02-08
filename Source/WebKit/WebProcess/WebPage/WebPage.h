@@ -29,6 +29,7 @@
 #include "MessageReceiver.h"
 #include "MessageSender.h"
 #include <JavaScriptCore/InspectorFrontendChannel.h>
+#include <WebCore/BoxExtents.h>
 #include <WebCore/DictionaryPopupInfo.h>
 #include <WebCore/DisabledAdaptations.h>
 #include <WebCore/DragActions.h>
@@ -1923,7 +1924,8 @@ public:
 #endif
     void loadRequest(LoadParameters&&);
 
-    void setTopContentInset(float);
+    WebCore::FloatBoxExtent obscuredContentInsets() const;
+    void setObscuredContentInsets(const WebCore::FloatBoxExtent&);
 
     void updateOpener(WebCore::FrameIdentifier, WebCore::FrameIdentifier);
 
@@ -2137,7 +2139,7 @@ private:
     void setBackgroundColor(const std::optional<WebCore::Color>&);
 
 #if PLATFORM(COCOA)
-    void setTopContentInsetFenced(float, const WTF::MachSendRight&);
+    void setObscuredContentInsetsFenced(const WebCore::FloatBoxExtent&, const WTF::MachSendRight&);
 #endif
 
     void viewWillStartLiveResize();

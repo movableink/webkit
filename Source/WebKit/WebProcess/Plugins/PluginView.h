@@ -113,7 +113,7 @@ public:
 
     bool populateEditorStateIfNeeded(EditorState&) const;
 
-    void topContentInsetDidChange();
+    void obscuredContentInsetsDidChange();
 
     void webPageDestroyed();
 

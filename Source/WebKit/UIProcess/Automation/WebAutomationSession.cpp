@@ -2069,9 +2069,10 @@ void WebAutomationSession::performMouseInteraction(const Inspector::Protocol::Au
             if (error)
                 callback->sendFailure(error.value().toProtocolString());
             else {
+                auto obscuredContentInsets = page->obscuredContentInsets();
                 callback->sendSuccess(Inspector::Protocol::Automation::Point::create()
-                    .setX(floatX)
-                    .setY(floatY - page->topContentInset())
+                    .setX(floatX - obscuredContentInsets.left())
+                    .setY(floatY - obscuredContentInsets.top())
                     .release());
             }
         };

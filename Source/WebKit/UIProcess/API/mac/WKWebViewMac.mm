@@ -1471,21 +1471,25 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _impl->setDrawsBackground(drawsBackground);
 }
 
-- (void)_setTopContentInset:(CGFloat)contentInset
+- (void)_setTopContentInset:(CGFloat)inset
 {
-    _impl->setTopContentInset(contentInset);
+    auto insets = _impl->obscuredContentInsets();
+    insets.setTop(static_cast<float>(inset));
+    _impl->setObscuredContentInsets(insets);
 }
 
 - (CGFloat)_topContentInset
 {
-    return _impl->topContentInset();
+    return _impl->obscuredContentInsets().top();
 }
 
-- (void)_setTopContentInset:(CGFloat)contentInset immediate:(BOOL)immediate
+- (void)_setTopContentInset:(CGFloat)inset immediate:(BOOL)immediate
 {
-    _impl->setTopContentInset(contentInset);
+    auto insets = _impl->obscuredContentInsets();
+    insets.setTop(static_cast<float>(inset));
+    _impl->setObscuredContentInsets(insets);
     if (immediate)
-        _impl->flushPendingTopContentInset();
+        _impl->flushPendingObscuredContentInsetChanges();
 }
 
 - (void)_setAutomaticallyAdjustsContentInsets:(BOOL)automaticallyAdjustsContentInsets

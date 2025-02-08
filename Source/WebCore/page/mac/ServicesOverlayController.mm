@@ -384,7 +384,7 @@ void ServicesOverlayController::buildPhoneNumberHighlights()
         // Convert to the main document's coordinate space.
         // FIXME: It's a little crazy to call contentsToWindow and then windowToContents in order to get the right coordinate space.
         // We should consider adding conversion functions to ScrollView for contentsToDocument(). Right now, contentsToRootView() is
-        // not equivalent to what we need when you have a topContentInset or a header banner.
+        // not equivalent to what we need when you have a content inset or a header banner.
         auto* viewForRange = range.start.document().view();
         if (!viewForRange)
             continue;

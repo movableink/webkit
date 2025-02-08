@@ -134,7 +134,6 @@ struct TextIndicatorData;
 struct ShareDataWithParsedURL;
 
 template <typename> class RectEdges;
-using FloatBoxExtent = RectEdges<float>;
 
 #if ENABLE(DRAG_SUPPORT)
 struct DragItem;
@@ -313,7 +312,7 @@ public:
 
     virtual void didChangeContentSize(const WebCore::IntSize&) = 0;
 
-    virtual void topContentInsetDidChange() { }
+    virtual void obscuredContentInsetsDidChange() { }
 
     virtual void showBrowsingWarning(const BrowsingWarning&, CompletionHandler<void(std::variant<ContinueUnsafeLoad, URL>&&)>&& completionHandler) { completionHandler(ContinueUnsafeLoad::Yes); }
     virtual void clearBrowsingWarning() { }
@@ -684,7 +683,7 @@ public:
 
     virtual bool windowIsFrontWindowUnderMouse(const NativeWebMouseEvent&) { return false; }
 
-    virtual std::optional<float> computeAutomaticTopContentInset() { return std::nullopt; }
+    virtual std::optional<float> computeAutomaticTopObscuredInset() { return std::nullopt; }
 
     virtual WebCore::UserInterfaceLayoutDirection userInterfaceLayoutDirection() = 0;
 

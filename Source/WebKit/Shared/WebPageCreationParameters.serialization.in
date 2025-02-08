@@ -76,7 +76,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
     double textZoomFactor;
     double pageZoomFactor;
 
-    float topContentInset;
+    WebCore::FloatBoxExtent obscuredContentInsets;
 
     float mediaVolume;
     WebCore::MediaProducerMutedStateFlags muted;

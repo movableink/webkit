@@ -347,8 +347,10 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (CheckedPtr frameView = focusedLocalFrame->view())
                 convertedPoint.moveBy(frameView->scrollPosition());
         }
-        if (auto* page = protectedSelf->m_page->corePage())
-            convertedPoint.move(0, -page->topContentInset());
+        if (RefPtr page = protectedSelf->m_page->corePage()) {
+            auto obscuredContentInsets = page->obscuredContentInsets();
+            convertedPoint.move(-obscuredContentInsets.left(), -obscuredContentInsets.top());
+        }
         return convertedPoint;
     });
     

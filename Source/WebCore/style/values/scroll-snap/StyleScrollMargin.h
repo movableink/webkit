@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "BoxExtents.h"
 #include "CSSPrimitiveNumericUnits.h"
 #include "Length.h"
 #include "StyleValueTypes.h"
@@ -34,7 +35,6 @@ class CSSValue;
 class LayoutRect;
 class LayoutUnit;
 class RenderStyle;
-using LayoutBoxExtent = RectEdges<LayoutUnit>;
 
 namespace Style {
 

@@ -2720,22 +2720,23 @@ void WebPageProxy::setBackgroundColor(const std::optional<Color>& color)
         send(Messages::WebPage::SetBackgroundColor(color));
 }
 
-void WebPageProxy::setTopContentInset(float contentInset)
+void WebPageProxy::setObscuredContentInsets(const WebCore::FloatBoxExtent& obscuredContentInsets)
 {
-    if (m_topContentInset == contentInset)
+    if (m_obscuredContentInsets == obscuredContentInsets)
         return;
 
-    m_topContentInset = contentInset;
+    m_obscuredContentInsets = obscuredContentInsets;
 
     if (RefPtr pageClient = this->pageClient())
-        pageClient->topContentInsetDidChange();
+        pageClient->obscuredContentInsetsDidChange();
 
     if (!hasRunningProcess())
         return;
+
 #if PLATFORM(COCOA)
-    send(Messages::WebPage::SetTopContentInsetFenced(contentInset, m_drawingArea->createFence()));
+    send(Messages::WebPage::SetObscuredContentInsetsFenced(m_obscuredContentInsets, m_drawingArea->createFence()));
 #else
-    send(Messages::WebPage::SetTopContentInset(contentInset));
+    send(Messages::WebPage::SetObscuredContentInsets(m_obscuredContentInsets));
 #endif
 }
 
@@ -11381,7 +11382,7 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
     parameters.viewScaleFactor = m_viewScaleFactor;
     parameters.textZoomFactor = m_textZoomFactor;
     parameters.pageZoomFactor = m_pageZoomFactor;
-    parameters.topContentInset = m_topContentInset;
+    parameters.obscuredContentInsets = m_obscuredContentInsets;
     parameters.mediaVolume = m_mediaVolume;
     parameters.muted = internals().mutedState;
     parameters.openedByDOM = m_openedByDOM;

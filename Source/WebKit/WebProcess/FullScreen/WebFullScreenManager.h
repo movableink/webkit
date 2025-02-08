@@ -100,7 +100,6 @@ protected:
     WebCore::IntRect m_initialFrame;
     WebCore::IntRect m_finalFrame;
     WebCore::IntPoint m_scrollPosition;
-    float m_topContentInset { 0 };
     Ref<WebPage> m_page;
     RefPtr<WebCore::Element> m_element;
     WeakPtr<WebCore::Element, WebCore::WeakPtrImplWithEventTargetData> m_elementToRestore;

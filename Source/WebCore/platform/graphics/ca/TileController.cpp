@@ -314,10 +314,10 @@ void TileController::setScrollability(OptionSet<Scrollability> scrollability)
     notePendingTileSizeChange();
 }
 
-void TileController::setTopContentInset(float topContentInset)
+void TileController::setObscuredContentInsets(const FloatBoxExtent& obscuredContentInsets)
 {
-    m_topContentInset = topContentInset;
-    setTiledScrollingIndicatorPosition(FloatPoint(0, m_topContentInset));
+    m_obscuredContentInsets = obscuredContentInsets;
+    setTiledScrollingIndicatorPosition({ obscuredContentInsets.left(), obscuredContentInsets.top() });
 }
 
 void TileController::setTiledScrollingIndicatorPosition(const FloatPoint& position)

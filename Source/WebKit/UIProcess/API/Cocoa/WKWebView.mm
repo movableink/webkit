@@ -1868,12 +1868,12 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
     auto frame = WebCore::FloatSize(self.frame.size);
 
 #if PLATFORM(MAC)
-    CGFloat additionalTopInset = self._topContentInset;
+    auto additionalInsets = _impl->obscuredContentInsets();
 #else
-    CGFloat additionalTopInset = 0;
+    WebCore::FloatBoxExtent additionalInsets;
 #endif
 
-    auto maximumViewportInsetSize = WebCore::FloatSize(maximumViewportInset.left + maximumViewportInset.right, maximumViewportInset.top + additionalTopInset + maximumViewportInset.bottom);
+    auto maximumViewportInsetSize = WebCore::FloatSize(maximumViewportInset.left + additionalInsets.left() + maximumViewportInset.right, maximumViewportInset.top + additionalInsets.top() + maximumViewportInset.bottom);
     auto minimumUnobscuredSize = frame - maximumViewportInsetSize;
     if (minimumUnobscuredSize.isEmpty()) {
         if (!maximumViewportInsetSize.isEmpty()) {
@@ -1888,7 +1888,7 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
         minimumUnobscuredSize = frame;
     }
 
-    auto minimumViewportInsetSize = WebCore::FloatSize(minimumViewportInset.left + minimumViewportInset.right, minimumViewportInset.top + additionalTopInset + minimumViewportInset.bottom);
+    auto minimumViewportInsetSize = WebCore::FloatSize(minimumViewportInset.left + additionalInsets.left() + minimumViewportInset.right, minimumViewportInset.top + additionalInsets.top() + minimumViewportInset.bottom);
     auto maximumUnobscuredSize = frame - minimumViewportInsetSize;
     if (maximumUnobscuredSize.isEmpty()) {
         if (!minimumViewportInsetSize.isEmpty()) {

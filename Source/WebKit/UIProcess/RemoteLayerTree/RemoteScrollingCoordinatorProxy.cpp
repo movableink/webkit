@@ -287,9 +287,9 @@ WebCore::FloatRect RemoteScrollingCoordinatorProxy::computeVisibleContentRect()
     return visibleContentRect;
 }
 
-float RemoteScrollingCoordinatorProxy::topContentInset() const
+WebCore::FloatBoxExtent RemoteScrollingCoordinatorProxy::obscuredContentInsets() const
 {
-    return m_scrollingTree->mainFrameTopContentInset();
+    return m_scrollingTree->mainFrameObscuredContentInsets();
 }
 
 WebCore::FloatPoint RemoteScrollingCoordinatorProxy::currentMainFrameScrollPosition() const

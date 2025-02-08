@@ -158,7 +158,7 @@ public:
     virtual void windowScreenWillChange() { }
     virtual void windowScreenDidChange(WebCore::PlatformDisplayID, std::optional<WebCore::FramesPerSecond>) { }
 
-    float topContentInset() const;
+    WebCore::FloatBoxExtent obscuredContentInsets() const;
     WebCore::FloatPoint currentMainFrameScrollPosition() const;
     WebCore::FloatRect computeVisibleContentRect();
     WebCore::IntPoint scrollOrigin() const;

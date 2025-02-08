@@ -404,55 +404,59 @@ void WebPageProxy::updateContentInsetsIfAutomatic()
     if (!m_automaticallyAdjustsContentInsets)
         return;
 
-    m_pendingTopContentInset = std::nullopt;
+    m_pendingObscuredContentInsets = std::nullopt;
 
-    scheduleSetTopContentInsetDispatch();
+    scheduleSetObscuredContentInsetsDispatch();
 }
 
-void WebPageProxy::setTopContentInsetAsync(float contentInset)
+void WebPageProxy::setObscuredContentInsetsAsync(const FloatBoxExtent& obscuredContentInsets)
 {
-    m_pendingTopContentInset = contentInset;
-    scheduleSetTopContentInsetDispatch();
+    m_pendingObscuredContentInsets = obscuredContentInsets;
+    scheduleSetObscuredContentInsetsDispatch();
 }
 
-float WebPageProxy::pendingOrActualTopContentInset() const
+FloatBoxExtent WebPageProxy::pendingOrActualObscuredContentInsets() const
 {
-    return m_pendingTopContentInset.value_or(m_topContentInset);
+    return m_pendingObscuredContentInsets.value_or(m_obscuredContentInsets);
 }
 
-void WebPageProxy::scheduleSetTopContentInsetDispatch()
+void WebPageProxy::scheduleSetObscuredContentInsetsDispatch()
 {
-    if (m_didScheduleSetTopContentInsetDispatch)
+    if (m_didScheduleSetObscuredContentInsetsDispatch)
         return;
 
-    m_didScheduleSetTopContentInsetDispatch = true;
+    m_didScheduleSetObscuredContentInsetsDispatch = true;
 
     callOnMainRunLoop([weakThis = WeakPtr { *this }] {
         if (!weakThis)
             return;
-        weakThis->dispatchSetTopContentInset();
+        weakThis->dispatchSetObscuredContentInsets();
     });
 }
 
-void WebPageProxy::dispatchSetTopContentInset()
+void WebPageProxy::dispatchSetObscuredContentInsets()
 {
-    bool wasScheduled = std::exchange(m_didScheduleSetTopContentInsetDispatch, false);
+    bool wasScheduled = std::exchange(m_didScheduleSetObscuredContentInsetsDispatch, false);
     if (!wasScheduled)
         return;
 
-    if (!m_pendingTopContentInset) {
+    if (!m_pendingObscuredContentInsets) {
         if (!m_automaticallyAdjustsContentInsets)
             return;
 
-        if (RefPtr pageClient = this->pageClient())
-            m_pendingTopContentInset = pageClient->computeAutomaticTopContentInset();
+        if (RefPtr pageClient = this->pageClient()) {
+            if (auto automaticTopInset = pageClient->computeAutomaticTopObscuredInset()) {
+                m_pendingObscuredContentInsets = m_obscuredContentInsets;
+                m_pendingObscuredContentInsets->setTop(*automaticTopInset);
+            }
+        }
 
-        if (!m_pendingTopContentInset)
-            m_pendingTopContentInset = 0;
+        if (!m_pendingObscuredContentInsets)
+            m_pendingObscuredContentInsets = FloatBoxExtent { };
     }
 
-    setTopContentInset(*m_pendingTopContentInset);
-    m_pendingTopContentInset = std::nullopt;
+    setObscuredContentInsets(*m_pendingObscuredContentInsets);
+    m_pendingObscuredContentInsets = std::nullopt;
 }
 
 void WebPageProxy::setRemoteLayerTreeRootNode(RemoteLayerTreeNode* rootNode)

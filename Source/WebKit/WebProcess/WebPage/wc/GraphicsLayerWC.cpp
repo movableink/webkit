@@ -106,7 +106,7 @@ public:
     FloatRect coverageRect() const final { return { }; };
     bool tilesWouldChangeForCoverageRect(const FloatRect&) const final { return false; }
     void setTiledScrollingIndicatorPosition(const FloatPoint&) final { }
-    void setTopContentInset(float) final { }
+    void setObscuredContentInsets(const FloatBoxExtent&) final { }
     void setVelocity(const VelocityData&) final { }
     void setTileSizeUpdateDelayDisabledForTesting(bool) final { };
     void setScrollability(OptionSet<Scrollability>) final { }

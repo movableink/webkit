@@ -40,10 +40,10 @@ messages -> WebPage WantsAsyncDispatchMessage {
     TestProcessIncomingSyncMessagesWhenWaitingForSyncReply() -> (bool handled) Synchronous AllowedWhenWaitingForSyncReplyDuringUnboundedIPC
 
 #if PLATFORM(COCOA)
-    SetTopContentInsetFenced(float contentInset, MachSendRight machSendRight)
+    SetObscuredContentInsetsFenced(WebCore::FloatBoxExtent obscuredContentInsets, MachSendRight machSendRight)
 #endif
 #if !PLATFORM(COCOA)
-    SetTopContentInset(float contentInset)
+    SetObscuredContentInsets(WebCore::FloatBoxExtent obscuredContentInsets)
 #endif
 
     SetUnderlayColor(WebCore::Color color)

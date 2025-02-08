@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BoxExtents.h"
 #include "PseudoElementIdentifier.h"
 #include "WritingMode.h"
 #include <unicode/utypes.h>
@@ -282,10 +283,8 @@ struct TransformOperationData;
 template<typename> class FontTaggedSettings;
 template<typename> class RectEdges;
 
-using FloatBoxExtent = RectEdges<float>;
 using FontVariationSettings = FontTaggedSettings<float>;
 using IntOutsets = RectEdges<int>;
-using LayoutBoxExtent = RectEdges<LayoutUnit>;
 
 namespace Style {
 class CustomPropertyRegistry;

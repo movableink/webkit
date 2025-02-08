@@ -63,7 +63,7 @@ typedef enum FullScreenState : NSInteger FullScreenState;
     FullScreenState _fullScreenState;
 
     double _savedScale;
-    float _savedTopContentInset;
+    WebCore::FloatBoxExtent _savedObscuredContentInsets;
 }
 
 @property (readonly) NSRect initialFrame;

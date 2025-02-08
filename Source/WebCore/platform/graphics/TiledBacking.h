@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BoxExtents.h"
 #include "IntPoint.h"
 #include "PlatformLayerIdentifier.h"
 #include "TileGridIdentifier.h"
@@ -122,7 +123,7 @@ public:
     virtual bool tilesWouldChangeForCoverageRect(const FloatRect&) const = 0;
 
     virtual void setTiledScrollingIndicatorPosition(const FloatPoint&) = 0;
-    virtual void setTopContentInset(float) = 0;
+    virtual void setObscuredContentInsets(const FloatBoxExtent&) = 0;
 
     virtual void setVelocity(const VelocityData&) = 0;
 

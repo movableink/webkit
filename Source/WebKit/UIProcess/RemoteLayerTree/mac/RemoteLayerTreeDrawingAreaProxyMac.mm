@@ -173,20 +173,20 @@ void RemoteLayerTreeDrawingAreaProxyMac::layoutBannerLayers(const RemoteLayerTre
         [CATransaction commit];
     };
 
-    float topContentInset = webPageProxy->scrollingCoordinatorProxy()->topContentInset();
+    float topInset = webPageProxy->scrollingCoordinatorProxy()->obscuredContentInsets().top();
     auto scrollPosition = webPageProxy->scrollingCoordinatorProxy()->currentMainFrameScrollPosition();
     
     if (headerBannerLayer) {
         auto headerHeight = headerBannerLayer.frame.size.height;
         totalContentsHeight += headerHeight;
-        auto y = LocalFrameView::yPositionForHeaderLayer(scrollPosition, topContentInset);
+        auto y = LocalFrameView::yPositionForHeaderLayer(scrollPosition, topInset);
         layoutBannerLayer(headerBannerLayer, y, size().width());
     }
 
     if (footerBannerLayer) {
         auto footerHeight = footerBannerLayer.frame.size.height;
         totalContentsHeight += footerBannerLayer.frame.size.height;
-        auto y = LocalFrameView::yPositionForFooterLayer(scrollPosition, topContentInset, totalContentsHeight, footerHeight);
+        auto y = LocalFrameView::yPositionForFooterLayer(scrollPosition, topInset, totalContentsHeight, footerHeight);
         layoutBannerLayer(footerBannerLayer, y, size().width());
     }
 }
@@ -534,10 +534,10 @@ void RemoteLayerTreeDrawingAreaProxyMac::didChangeViewExposedRect()
     updateDebugIndicatorPosition();
 }
 
-void RemoteLayerTreeDrawingAreaProxyMac::dispatchSetTopContentInset()
+void RemoteLayerTreeDrawingAreaProxyMac::dispatchSetObscuredContentInsets()
 {
     if (RefPtr page = m_webPageProxy.get())
-        page->dispatchSetTopContentInset();
+        page->dispatchSetObscuredContentInsets();
 }
 
 void RemoteLayerTreeDrawingAreaProxyMac::colorSpaceDidChange()

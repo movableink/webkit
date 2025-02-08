@@ -1838,19 +1838,19 @@ void WebViewImpl::updateContentInsetsIfAutomatic()
     m_page->updateContentInsetsIfAutomatic();
 }
 
-CGFloat WebViewImpl::topContentInset() const
+FloatBoxExtent WebViewImpl::obscuredContentInsets() const
 {
-    return m_page->pendingOrActualTopContentInset();
+    return m_page->obscuredContentInsets();
 }
 
-void WebViewImpl::setTopContentInset(CGFloat contentInset)
+void WebViewImpl::setObscuredContentInsets(const FloatBoxExtent& insets)
 {
-    m_page->setTopContentInsetAsync(contentInset);
+    m_page->setObscuredContentInsetsAsync(insets);
 }
 
-void WebViewImpl::flushPendingTopContentInset()
+void WebViewImpl::flushPendingObscuredContentInsetChanges()
 {
-    m_page->dispatchSetTopContentInset();
+    m_page->dispatchSetObscuredContentInsets();
 }
 
 void WebViewImpl::prepareContentInRect(CGRect rect)
@@ -2440,7 +2440,7 @@ void WebViewImpl::endDeferringViewInWindowChanges()
     m_shouldDeferViewInWindowChanges = false;
 
     if (m_viewInWindowChangeWasDeferred) {
-        flushPendingTopContentInset();
+        flushPendingObscuredContentInsetChanges();
         m_page->activityStateDidChange(WebCore::ActivityState::IsInWindow);
         m_viewInWindowChangeWasDeferred = false;
     }
@@ -2456,7 +2456,7 @@ void WebViewImpl::endDeferringViewInWindowChangesSync()
     m_shouldDeferViewInWindowChanges = false;
 
     if (m_viewInWindowChangeWasDeferred) {
-        flushPendingTopContentInset();
+        flushPendingObscuredContentInsetChanges();
         m_page->activityStateDidChange(WebCore::ActivityState::IsInWindow);
         m_viewInWindowChangeWasDeferred = false;
     }
@@ -2475,7 +2475,7 @@ void WebViewImpl::prepareForMoveToWindow(NSWindow *targetWindow, WTF::Function<v
     WeakPtr weakThis { *this };
     m_page->installActivityStateChangeCompletionHandler(WTFMove(completionHandler));
 
-    flushPendingTopContentInset();
+    flushPendingObscuredContentInsetChanges();
     m_page->activityStateDidChange(WebCore::ActivityState::IsInWindow, WebPageProxy::ActivityStateChangeDispatchMode::Immediate);
     m_viewInWindowChangeWasDeferred = false;
 }
@@ -4565,10 +4565,8 @@ RefPtr<ViewSnapshot> WebViewImpl::takeViewSnapshot(ForceSoftwareCapturingViewpor
     if (!boundsForCustomSwipeViews.isEmpty())
         windowCaptureRect = boundsForCustomSwipeViews;
     else {
-        NSRect unobscuredBounds = [m_view bounds];
-        float topContentInset = m_page->topContentInset();
-        unobscuredBounds.origin.y += topContentInset;
-        unobscuredBounds.size.height -= topContentInset;
+        FloatRect unobscuredBounds = [m_view bounds];
+        unobscuredBounds.contract(m_page->obscuredContentInsets());
         windowCaptureRect = [m_view convertRect:unobscuredBounds toView:nil];
     }
 

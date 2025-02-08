@@ -132,7 +132,7 @@ private:
     virtual void scheduleDisplayRefreshCallbacks() { }
     virtual void pauseDisplayRefreshCallbacks() { }
 
-    virtual void dispatchSetTopContentInset() { }
+    virtual void dispatchSetObscuredContentInsets() { }
 
     float indicatorScale(WebCore::IntSize contentsSize) const;
     void updateDebugIndicator() final;

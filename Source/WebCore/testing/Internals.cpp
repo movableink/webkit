@@ -580,7 +580,7 @@ void Internals::resetToConsistentState(Page& page)
     if (mainFrameView) {
         page.setHeaderHeight(0);
         page.setFooterHeight(0);
-        page.setTopContentInset(0);
+        page.setObscuredContentInsets({ });
         mainFrameView->setUseFixedLayout(false);
         mainFrameView->setFixedLayoutSize(IntSize());
         mainFrameView->enableFixedWidthAutoSizeMode(false, { });

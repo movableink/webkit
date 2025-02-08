@@ -594,7 +594,7 @@ bool ViewGestureController::isPhysicallySwipingLeft(SwipeDirection direction) co
     return isLTR != isSwipingForward;
 }
 
-bool ViewGestureController::shouldUseSnapshotForSize(ViewSnapshot& snapshot, FloatSize swipeLayerSize, float topContentInset)
+bool ViewGestureController::shouldUseSnapshotForSize(ViewSnapshot& snapshot, FloatSize swipeLayerSize, FloatBoxExtent obscuredContentInsets)
 {
     RefPtr page = m_webPageProxy.get();
     if (!page)
@@ -604,7 +604,7 @@ bool ViewGestureController::shouldUseSnapshotForSize(ViewSnapshot& snapshot, Flo
     if (snapshot.deviceScaleFactor() != deviceScaleFactor)
         return false;
 
-    FloatSize unobscuredSwipeLayerSizeInDeviceCoordinates = swipeLayerSize - FloatSize(0, topContentInset);
+    FloatSize unobscuredSwipeLayerSizeInDeviceCoordinates = swipeLayerSize - FloatSize(obscuredContentInsets.left(), obscuredContentInsets.top());
     unobscuredSwipeLayerSizeInDeviceCoordinates.scale(deviceScaleFactor);
     if (snapshot.size() != unobscuredSwipeLayerSizeInDeviceCoordinates)
         return false;

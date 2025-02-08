@@ -127,7 +127,7 @@ void ScrollingTreeFrameScrollingNodeCoordinated::repositionRelatedLayers()
     if (m_counterScrollingLayer)
         m_counterScrollingLayer->setPositionForScrolling(layoutViewport.location());
 
-    float topContentInset = this->topContentInset();
+    float topContentInset = obscuredContentInsets().top();
     if (m_insetClipLayer && m_rootContentsLayer) {
         FloatPoint insetClipPosition;
         {

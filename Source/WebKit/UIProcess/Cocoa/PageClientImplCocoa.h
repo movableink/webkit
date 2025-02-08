@@ -56,7 +56,7 @@ public:
 
     void pageClosed() override;
 
-    void topContentInsetDidChange() final;
+    void obscuredContentInsetsDidChange() final;
 
 #if ENABLE(GPU_PROCESS)
     void gpuProcessDidFinishLaunching() override;

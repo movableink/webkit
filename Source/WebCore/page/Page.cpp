@@ -1871,15 +1871,15 @@ void Page::setOutsideViewportThrottlingEnabledForTesting(bool isEnabled)
     m_throttlingReasons.remove(ThrottlingReason::OutsideViewport);
 }
 
-void Page::setTopContentInset(float contentInset)
+void Page::setObscuredContentInsets(const FloatBoxExtent& obscuredContentInsets)
 {
-    if (m_topContentInset == contentInset)
+    if (m_obscuredContentInsets == obscuredContentInsets)
         return;
-    
-    m_topContentInset = contentInset;
+
+    m_obscuredContentInsets = obscuredContentInsets;
     RefPtr localMainFrame = this->localMainFrame();
     if (RefPtr view = localMainFrame ? localMainFrame->view() : nullptr)
-        view->topContentInsetDidChange(m_topContentInset);
+        view->obscuredContentInsetsDidChange(obscuredContentInsets);
 }
 
 void Page::setShouldSuppressScrollbarAnimations(bool suppressAnimations)

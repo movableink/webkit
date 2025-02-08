@@ -241,8 +241,8 @@ enum class ScrollingStateNodeProperty : uint64_t {
     HeaderLayer                                 = 1LLU << 50, // Not serialized
     FooterLayer                                 = 1LLU << 43, // Not serialized
     BehaviorForFixedElements                    = FooterHeight << 1,
-    TopContentInset                             = BehaviorForFixedElements << 1,
-    VisualViewportIsSmallerThanLayoutViewport   = TopContentInset << 1,
+    ObscuredContentInsets                               = BehaviorForFixedElements << 1,
+    VisualViewportIsSmallerThanLayoutViewport   = ObscuredContentInsets << 1,
     AsyncFrameOrOverflowScrollingEnabled        = VisualViewportIsSmallerThanLayoutViewport << 1,
     WheelEventGesturesBecomeNonBlocking         = AsyncFrameOrOverflowScrollingEnabled << 1,
     ScrollingPerformanceTestingEnabled          = WheelEventGesturesBecomeNonBlocking << 1,

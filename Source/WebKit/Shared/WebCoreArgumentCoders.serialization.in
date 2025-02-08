@@ -4402,7 +4402,7 @@ header: <WebCore/ScrollingStateNode.h>
     HeaderLayer
     FooterLayer
     BehaviorForFixedElements
-    TopContentInset
+    ObscuredContentInsets
     VisualViewportIsSmallerThanLayoutViewport
     AsyncFrameOrOverflowScrollingEnabled
     WheelEventGesturesBecomeNonBlocking

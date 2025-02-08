@@ -1040,14 +1040,14 @@ LayoutPoint LocalFrameView::scrollPositionRespectingCustomFixedPosition() const
     return scrollPositionForFixedPosition();
 }
 
-void LocalFrameView::topContentInsetDidChange(float newTopContentInset)
+void LocalFrameView::obscuredContentInsetsDidChange(const FloatBoxExtent& newObscuredContentInsets)
 {
     RenderView* renderView = this->renderView();
     if (!renderView)
         return;
 
     if (platformWidget())
-        platformSetTopContentInset(newTopContentInset);
+        platformSetContentInsets(newObscuredContentInsets);
     
     renderView->setNeedsLayout();
     layoutContext().layout();
@@ -1060,7 +1060,7 @@ void LocalFrameView::topContentInsetDidChange(float newTopContentInset)
         renderView->compositor().frameViewDidChangeSize();
 
     if (TiledBacking* tiledBacking = this->tiledBacking())
-        tiledBacking->setTopContentInset(newTopContentInset);
+        tiledBacking->setObscuredContentInsets(newObscuredContentInsets);
 
     setCurrentScrollType(oldScrollType);
 }
@@ -1868,46 +1868,47 @@ LayoutPoint LocalFrameView::scrollPositionForFixedPosition(const LayoutRect& vis
     return LayoutPoint(position.x() * dragFactorX / frameScaleFactor, position.y() * dragFactorY / frameScaleFactor);
 }
 
-float LocalFrameView::yPositionForInsetClipLayer(const FloatPoint& scrollPosition, float topContentInset)
+// FIXME: This may need to account for a non-zero left content inset.
+float LocalFrameView::yPositionForInsetClipLayer(const FloatPoint& scrollPosition, float topInset)
 {
-    if (!topContentInset)
+    if (!topInset)
         return 0;
 
     // The insetClipLayer should not move for negative scroll values.
     float scrollY = std::max<float>(0, scrollPosition.y());
 
-    if (scrollY >= topContentInset)
+    if (scrollY >= topInset)
         return 0;
 
-    return topContentInset - scrollY;
+    return topInset - scrollY;
 }
 
-float LocalFrameView::yPositionForHeaderLayer(const FloatPoint& scrollPosition, float topContentInset)
+float LocalFrameView::yPositionForHeaderLayer(const FloatPoint& scrollPosition, float topInset)
 {
-    if (!topContentInset)
+    if (!topInset)
         return 0;
 
     float scrollY = std::max<float>(0, scrollPosition.y());
 
-    if (scrollY >= topContentInset)
-        return topContentInset;
+    if (scrollY >= topInset)
+        return topInset;
 
     return scrollY;
 }
 
-float LocalFrameView::yPositionForFooterLayer(const FloatPoint& scrollPosition, float topContentInset, float totalContentsHeight, float footerHeight)
+float LocalFrameView::yPositionForFooterLayer(const FloatPoint& scrollPosition, float topInset, float totalContentsHeight, float footerHeight)
 {
-    return yPositionForHeaderLayer(scrollPosition, topContentInset) + totalContentsHeight - footerHeight;
+    return yPositionForHeaderLayer(scrollPosition, topInset) + totalContentsHeight - footerHeight;
 }
 
-FloatPoint LocalFrameView::positionForRootContentLayer(const FloatPoint& scrollPosition, const FloatPoint& scrollOrigin, float topContentInset, float headerHeight)
+FloatPoint LocalFrameView::positionForRootContentLayer(const FloatPoint& scrollPosition, const FloatPoint& scrollOrigin, float topInset, float headerHeight)
 {
-    return FloatPoint(0, yPositionForHeaderLayer(scrollPosition, topContentInset) + headerHeight) - toFloatSize(scrollOrigin);
+    return FloatPoint(0, yPositionForHeaderLayer(scrollPosition, topInset) + headerHeight) - toFloatSize(scrollOrigin);
 }
 
 FloatPoint LocalFrameView::positionForRootContentLayer() const
 {
-    return positionForRootContentLayer(scrollPosition(), scrollOrigin(), topContentInset(), headerHeight());
+    return positionForRootContentLayer(scrollPosition(), scrollOrigin(), obscuredContentInsets().top(), headerHeight());
 }
 
 #if PLATFORM(IOS_FAMILY)

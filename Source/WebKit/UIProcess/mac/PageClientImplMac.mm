@@ -1017,7 +1017,7 @@ bool PageClientImpl::windowIsFrontWindowUnderMouse(const NativeWebMouseEvent& ev
     return m_impl->windowIsFrontWindowUnderMouse(event.nativeEvent());
 }
 
-std::optional<float> PageClientImpl::computeAutomaticTopContentInset()
+std::optional<float> PageClientImpl::computeAutomaticTopObscuredInset()
 {
     RetainPtr window = [m_view window];
     if (([window styleMask] & NSWindowStyleMaskFullSizeContentView) && ![window titlebarAppearsTransparent] && ![m_view enclosingScrollView]) {

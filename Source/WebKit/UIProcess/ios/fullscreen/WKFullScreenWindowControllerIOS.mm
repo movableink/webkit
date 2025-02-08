@@ -153,7 +153,7 @@ static constexpr auto baseMinimumEffectiveDeviceWidth = 0;
 #endif
 
 struct WKWebViewState {
-    float _savedTopContentInset = 0.0;
+    WebCore::FloatBoxExtent _savedWebPageObscuredContentInsets;
     CGFloat _savedPageScale = baseScale;
     CGFloat _savedViewScale = 1.0;
     CGFloat _savedZoomScale = baseScale;
@@ -215,7 +215,7 @@ struct WKWebViewState {
             [webView _clearOverrideLayoutParameters];
 
         if (auto page = webView._page) {
-            page->setTopContentInset(_savedTopContentInset);
+            page->setObscuredContentInsets(_savedWebPageObscuredContentInsets);
             page->setForceAlwaysUserScalable(_savedForceAlwaysUserScalable);
         }
         [webView _setViewScale:_savedViewScale];
@@ -241,7 +241,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         _savedContentInsetAdjustmentBehaviorWasExternallyOverridden = scrollView._contentInsetAdjustmentBehaviorWasExternallyOverridden;
 #endif
         if (auto page = webView._page) {
-            _savedTopContentInset = page->topContentInset();
+            _savedWebPageObscuredContentInsets = page->obscuredContentInsets();
             _savedForceAlwaysUserScalable = page->forceAlwaysUserScalable();
         }
         _savedViewScale = webView._viewScale;
