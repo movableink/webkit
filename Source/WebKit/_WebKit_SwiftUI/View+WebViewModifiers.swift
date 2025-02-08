@@ -90,9 +90,9 @@ extension View {
     }
 
     @_spi(Private)
-    public func webViewContextMenu<M>(@ViewBuilder menuItems: @escaping (WebPage_v0.ElementInfo) -> M) -> some View where M: View {
+    public func webViewContextMenu<M>(@ViewBuilder menuItems: @escaping (WebPage.ElementInfo) -> M) -> some View where M: View {
 #if os(macOS)
-        let converted = { (info: WebPage_v0.ElementInfo) in
+        let converted = { (info: WebPage.ElementInfo) in
             let menuView = menuItems(info)
             return NSHostingMenu(rootView: menuView)
         }
@@ -106,7 +106,7 @@ extension View {
 
 struct ContextMenuContext {
 #if os(macOS)
-    let menu: (WebPage_v0.ElementInfo) -> NSMenu
+    let menu: (WebPage.ElementInfo) -> NSMenu
 #endif
 }
 

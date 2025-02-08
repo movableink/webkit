@@ -40,10 +40,10 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegate {
         self.dialogPresenter = dialogPresenter ?? DefaultDialogPresenting()
     }
 
-    weak var owner: WebPage_v0? = nil
+    weak var owner: WebPage? = nil
 
 #if os(macOS) && !targetEnvironment(macCatalyst)
-    var menuBuilder: ((WebPage_v0.ElementInfo) -> NSMenu)? = nil
+    var menuBuilder: ((WebPage.ElementInfo) -> NSMenu)? = nil
 #endif
 
     private let dialogPresenter: any DialogPresenting
@@ -101,14 +101,14 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegate {
 
     // MARK: Context menu support
 
-#if os(macOS) && !targetEnvironment(macCatalyst)
+#if os(macOS)
     @objc(_webView:getContextMenuFromProposedMenu:forElement:userInfo:completionHandler:)
     func _webView(_ webView: WKWebView!, getContextMenuFromProposedMenu menu: NSMenu!, forElement element: _WKContextMenuElementInfo!, userInfo: (any NSSecureCoding)!) async -> NSMenu? {
         guard let menuBuilder else {
             return menu
         }
 
-        let info = WebPage_v0.ElementInfo(linkURL: element.hitTestResult.absoluteLinkURL)
+        let info = WebPage.ElementInfo(linkURL: element.hitTestResult.absoluteLinkURL)
         return menuBuilder(info)
     }
 #endif

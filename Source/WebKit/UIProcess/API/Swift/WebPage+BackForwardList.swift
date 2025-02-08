@@ -25,9 +25,8 @@
 
 import Foundation
 
-extension WebPage_v0 {
+extension WebPage {
     @MainActor
-    @_spi(Private)
     public struct BackForwardList: Equatable, Sendable {
         @MainActor
         public struct Item: Equatable, Identifiable, Sendable {

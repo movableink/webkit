@@ -24,15 +24,15 @@
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
 public import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) import WebKit
+public import WebKit
 
 @_spi(Private)
 public struct WebView_v0: View {
-    public init(_ page: WebPage_v0) {
+    public init(_ page: WebPage) {
         self.page = page
     }
 
-    let page: WebPage_v0
+    let page: WebPage
 
     public var body: some View {
         WebViewRepresentable(owner: self)

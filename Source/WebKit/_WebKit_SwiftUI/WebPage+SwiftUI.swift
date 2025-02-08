@@ -25,7 +25,8 @@ import Foundation
 public import SwiftUI
 @_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
-extension WebPage_v0 {
+extension WebPage {
+    /// The theme color that the system gets from the first valid meta tag in the webpage.
     public var themeColor: Color? {
         self.backingProperty(\.themeColor, backedBy: \.themeColor) { backingValue in
             // The themeColor property is a UIColor/NSColor in WKWebView.
@@ -35,5 +36,19 @@ extension WebPage_v0 {
             return backingValue.map(Color.init(nsColor:))
 #endif
         }
+    }
+
+    /// Generates an image from the web view’s contents.
+    ///
+    /// - Parameter configuration: The object that specifies the portion of the web page to capture, and other capture-related behaviors.
+    /// - Returns: An image that contains the specified portion of the web page.
+    public func snapshot(_ configuration: WKSnapshotConfiguration = .init()) async throws -> Image? {
+        let cocoaImage = try await backingWebView.takeSnapshot(configuration: configuration)
+
+#if canImport(UIKit)
+        return Image(uiImage: cocoaImage)
+#else
+        return Image(nsImage: cocoaImage)
+#endif
     }
 }

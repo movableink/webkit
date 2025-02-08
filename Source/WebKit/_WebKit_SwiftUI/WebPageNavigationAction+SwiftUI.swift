@@ -25,7 +25,7 @@ import Foundation
 public import SwiftUI
 @_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
-extension WebPage_v0.NavigationAction {
+extension WebPage.NavigationAction {
     public var modifierFlags: EventModifiers { EventModifiers(wrapped.modifierFlags) }
 }
 

@@ -88,10 +88,10 @@ struct URLSchemeHandlerTests {
         """.data(using: .utf8)!
 
         let handler = TestURLSchemeHandler(data: html, mimeType: "text/html")
-        var configuration = WebPage_v0.Configuration()
+        var configuration = WebPage.Configuration()
         configuration.urlSchemeHandlers[URLScheme_v0("testing")!] = handler
 
-        let page = WebPage_v0(configuration: configuration)
+        let page = WebPage(configuration: configuration)
 
         let url = URL(string: "testing:main")!
         let request = URLRequest(url: url)

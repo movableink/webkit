@@ -26,7 +26,7 @@
 import Foundation
 internal import WebKit_Internal
 
-extension WebPage_v0 {
+extension WebPage {
     @MainActor
     @_spi(Private)
     public struct Configuration: Sendable {
@@ -39,11 +39,11 @@ extension WebPage_v0 {
 
         public var webExtensionController: WKWebExtensionController? = nil
 
-        public var defaultNavigationPreferences: WebPage_v0.NavigationPreferences = WebPage_v0.NavigationPreferences()
+        public var defaultNavigationPreferences: WebPage.NavigationPreferences = WebPage.NavigationPreferences()
 
         public var urlSchemeHandlers: [URLScheme_v0 : any URLSchemeHandler_v0] = [:]
 
-        public var deviceSensorAuthorization: WebPage_v0.DeviceSensorAuthorization = WebPage_v0.DeviceSensorAuthorization(decision: .prompt)
+        public var deviceSensorAuthorization: WebPage.DeviceSensorAuthorization = WebPage.DeviceSensorAuthorization(decision: .prompt)
 
         public var applicationNameForUserAgent: String? = nil
 
@@ -65,7 +65,7 @@ extension WebPage_v0 {
     }
 }
 
-extension WebPage_v0 {
+extension WebPage {
     @_spi(Private)
     public struct DeviceSensorAuthorization {
         public enum Permission: Hashable, Sendable {
@@ -73,9 +73,9 @@ extension WebPage_v0 {
             case mediaCapture(WKMediaCaptureType)
         }
 
-        let decisionHandler: (Permission, WebPage_v0.FrameInfo, WKSecurityOrigin) async -> WKPermissionDecision
+        let decisionHandler: (Permission, WebPage.FrameInfo, WKSecurityOrigin) async -> WKPermissionDecision
 
-        public init(decisionHandler: @escaping (Permission, WebPage_v0.FrameInfo, WKSecurityOrigin) async -> WKPermissionDecision) {
+        public init(decisionHandler: @escaping (Permission, WebPage.FrameInfo, WKSecurityOrigin) async -> WKPermissionDecision) {
             self.decisionHandler = decisionHandler
         }
 
@@ -88,7 +88,7 @@ extension WebPage_v0 {
 // MARK: Adapters
 
 extension WKWebViewConfiguration {
-    convenience init(_ wrapped: WebPage_v0.Configuration) {
+    convenience init(_ wrapped: WebPage.Configuration) {
         self.init()
 
         self.websiteDataStore = wrapped.websiteDataStore

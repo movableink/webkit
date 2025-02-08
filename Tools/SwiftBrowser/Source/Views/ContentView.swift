@@ -33,9 +33,9 @@ private struct ToolbarBackForwardMenuView: View {
         let key: KeyEquivalent
     }
 
-    let list: [WebPage_v0.BackForwardList.Item]
+    let list: [WebPage.BackForwardList.Item]
     let label: LabelConfiguration
-    let navigateToItem: (WebPage_v0.BackForwardList.Item) -> Void
+    let navigateToItem: (WebPage.BackForwardList.Item) -> Void
 
     var body: some View {
         Menu {
@@ -232,9 +232,7 @@ struct ContentView: View {
                 .webViewAllowsElementFullscreen()
                 .webViewFindNavigator(isPresented: $findNavigatorIsPresented)
                 .task {
-                    for await event in viewModel.page.navigations {
-                        viewModel.didReceiveNavigationEvent(event)
-                    }
+                    // FIXME: Observe navigation changes.
                 }
                 .task {
                     for await event in viewModel.page.downloads {
@@ -289,13 +287,13 @@ struct ContentView: View {
                     } else {
                         if let previousItem = viewModel.page.backForwardList.backList.last {
                             Button("Back") {
-                                viewModel.page.load(backForwardItem: previousItem)
+                                viewModel.page.load(previousItem)
                             }
                         }
 
                         if let nextItem = viewModel.page.backForwardList.forwardList.first {
                             Button("Forward") {
-                                viewModel.page.load(backForwardItem: nextItem)
+                                viewModel.page.load(nextItem)
                             }
                         }
 
@@ -310,7 +308,7 @@ struct ContentView: View {
                             list: viewModel.page.backForwardList.backList.reversed(),
                             label: .init(text: "Backward", systemImage: "chevron.backward", key: "[")
                         ) {
-                            viewModel.page.load(backForwardItem: $0)
+                            viewModel.page.load($0)
                         }
 
                         #if os(iOS)
@@ -321,7 +319,7 @@ struct ContentView: View {
                             list: viewModel.page.backForwardList.forwardList,
                             label: .init(text: "Forward", systemImage: "chevron.forward", key: "]")
                         ) {
-                            viewModel.page.load(backForwardItem: $0)
+                            viewModel.page.load($0)
                         }
 
                         #if os(iOS)
