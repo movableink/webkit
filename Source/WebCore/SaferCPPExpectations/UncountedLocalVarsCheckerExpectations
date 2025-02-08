@@ -640,7 +640,6 @@ platform/graphics/ca/GraphicsLayerCA.cpp
 platform/graphics/ca/TileGrid.cpp
 platform/graphics/ca/cocoa/PlatformCAFiltersCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
-platform/graphics/cg/GraphicsContextCG.cpp
 platform/graphics/cocoa/controls/ApplePayButtonCocoa.mm
 platform/graphics/coreimage/FEColorMatrixCoreImageApplier.mm
 platform/graphics/coreimage/FEComponentTransferCoreImageApplier.mm

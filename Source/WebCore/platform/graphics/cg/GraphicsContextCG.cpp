@@ -597,13 +597,14 @@ void GraphicsContextCG::drawEllipse(const FloatRect& rect)
 
 void GraphicsContextCG::applyStrokePattern()
 {
-    if (!strokePattern())
+    RefPtr strokePattern = this->strokePattern();
+    if (!strokePattern)
         return;
 
     CGContextRef cgContext = platformContext();
     AffineTransform userToBaseCTM = AffineTransform(getUserToBaseCTM(cgContext));
 
-    auto platformPattern = strokePattern()->createPlatformPattern(userToBaseCTM);
+    auto platformPattern = strokePattern->createPlatformPattern(userToBaseCTM);
     if (!platformPattern)
         return;
 
@@ -616,13 +617,14 @@ void GraphicsContextCG::applyStrokePattern()
 
 void GraphicsContextCG::applyFillPattern()
 {
-    if (!fillPattern())
+    RefPtr fillPattern = this->fillPattern();
+    if (!fillPattern)
         return;
 
     CGContextRef cgContext = platformContext();
     AffineTransform userToBaseCTM = AffineTransform(getUserToBaseCTM(cgContext));
 
-    auto platformPattern = fillPattern()->createPlatformPattern(userToBaseCTM);
+    auto platformPattern = fillPattern->createPlatformPattern(userToBaseCTM);
     if (!platformPattern)
         return;
 
@@ -692,7 +694,7 @@ void GraphicsContextCG::fillPath(const Path& path)
 
     CGContextRef context = platformContext();
 
-    if (auto fillGradient = this->fillGradient()) {
+    if (RefPtr fillGradient = this->fillGradient()) {
         if (hasDropShadow()) {
             FloatRect rect = path.fastBoundingRect();
             FloatSize layerSize = getCTM().mapSize(rect.size());
@@ -741,7 +743,7 @@ void GraphicsContextCG::strokePath(const Path& path)
 
     CGContextRef context = platformContext();
 
-    if (auto strokeGradient = this->strokeGradient()) {
+    if (RefPtr strokeGradient = this->strokeGradient()) {
         if (hasDropShadow()) {
             FloatRect rect = path.fastBoundingRect();
             float lineWidth = strokeThickness();
@@ -801,7 +803,7 @@ void GraphicsContextCG::fillRect(const FloatRect& rect, RequiresClipToRect requi
 {
     CGContextRef context = platformContext();
 
-    if (auto* fillGradient = this->fillGradient()) {
+    if (RefPtr fillGradient = this->fillGradient()) {
         fillRect(rect, *fillGradient, fillGradientSpaceTransform(), requiresClipToRect);
         return;
     }
@@ -1228,7 +1230,7 @@ void GraphicsContextCG::strokeRect(const FloatRect& rect, float lineWidth)
 {
     CGContextRef context = platformContext();
 
-    if (auto strokeGradient = this->strokeGradient()) {
+    if (RefPtr strokeGradient = this->strokeGradient()) {
         if (hasDropShadow()) {
             const float doubleLineWidth = lineWidth * 2;
             float adjustedWidth = ceilf(rect.width() + doubleLineWidth);

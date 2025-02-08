@@ -1141,7 +1141,6 @@ platform/graphics/ca/cocoa/GraphicsLayerAsyncContentsDisplayDelegateCocoa.mm
 platform/graphics/ca/cocoa/PlatformCAAnimationCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerContentsDelayedReleaser.mm
-platform/graphics/cg/GraphicsContextCG.cpp
 platform/graphics/cg/GraphicsContextGLCG.cpp
 platform/graphics/cg/PDFDocumentImage.cpp
 platform/graphics/cocoa/CMUtilities.mm
