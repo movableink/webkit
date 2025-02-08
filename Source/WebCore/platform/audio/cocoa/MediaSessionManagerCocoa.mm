@@ -67,7 +67,7 @@ std::unique_ptr<PlatformMediaSessionManager> PlatformMediaSessionManager::create
 
 MediaSessionManagerCocoa::MediaSessionManagerCocoa()
     : m_nowPlayingManager(hasPlatformStrategies() ? platformStrategies()->mediaStrategy().createNowPlayingManager() : nullptr)
-    , m_defaultBufferSize(AudioSession::sharedSession().preferredBufferSize())
+    , m_defaultBufferSize(AudioSession::protectedSharedSession()->preferredBufferSize())
     , m_delayCategoryChangeTimer(RunLoop::main(), this, &MediaSessionManagerCocoa::possiblyChangeAudioCategory)
 {
     ensureCodecsRegistered();
@@ -149,26 +149,27 @@ void MediaSessionManagerCocoa::updateSessionState()
 
     MEDIASESSIONMANAGER_RELEASE_LOG(MEDIASESSIONMANAGERCOCOA_UPDATESESSIONSTATE, captureCount, audioMediaStreamTrackCount, videoCount, audioCount, videoAudioCount, webAudioCount);
 
+    Ref sharedSession = AudioSession::sharedSession();
     size_t bufferSize = m_defaultBufferSize;
     if (webAudioCount)
         bufferSize = AudioUtilities::renderQuantumSize;
     else if (captureCount || audioMediaStreamTrackCount) {
         // In case of audio capture or audio MediaStreamTrack playing, we want to grab 20 ms chunks to limit the latency so that it is not noticeable by users
         // while having a large enough buffer so that the audio rendering remains stable, hence a computation based on sample rate.
-        bufferSize = WTF::roundUpToPowerOfTwo(AudioSession::sharedSession().sampleRate() / 50);
+        bufferSize = WTF::roundUpToPowerOfTwo(sharedSession->sampleRate() / 50);
     } else if (m_supportedAudioHardwareBufferSizes && DeprecatedGlobalSettings::lowPowerVideoAudioBufferSizeEnabled())
         bufferSize = m_supportedAudioHardwareBufferSizes.nearest(kLowPowerVideoBufferSize);
 
-    AudioSession::sharedSession().setPreferredBufferSize(bufferSize);
+    sharedSession->setPreferredBufferSize(bufferSize);
 
     if (!DeprecatedGlobalSettings::shouldManageAudioSessionCategory())
         return;
 
     auto category = AudioSession::CategoryType::None;
     auto mode = AudioSession::Mode::Default;
-    if (AudioSession::sharedSession().categoryOverride() != AudioSession::CategoryType::None)
-        category = AudioSession::sharedSession().categoryOverride();
-    else if (captureCount || (isPlayingAudio && AudioSession::sharedSession().category() == AudioSession::CategoryType::PlayAndRecord)) {
+    if (sharedSession->categoryOverride() != AudioSession::CategoryType::None)
+        category = sharedSession->categoryOverride();
+    else if (captureCount || (isPlayingAudio && sharedSession->category() == AudioSession::CategoryType::PlayAndRecord)) {
         category = AudioSession::CategoryType::PlayAndRecord;
         mode = AudioSession::Mode::VideoChat;
     } else if (hasAudibleVideoMediaType) {
@@ -200,7 +201,7 @@ void MediaSessionManagerCocoa::updateSessionState()
     ALWAYS_LOG(LOGIDENTIFIER, "setting category = ", category, ", mode = ", mode, ", policy = ", policy, ", previous category = ", m_previousCategory);
 
     m_previousCategory = category;
-    AudioSession::sharedSession().setCategory(category, mode, policy);
+    sharedSession->setCategory(category, mode, policy);
 }
 
 void MediaSessionManagerCocoa::possiblyChangeAudioCategory()
@@ -250,7 +251,7 @@ String MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorre
 
 void MediaSessionManagerCocoa::scheduleSessionStatusUpdate()
 {
-    enqueueTaskOnMainThread([this] () mutable {
+    enqueueTaskOnMainThread([this, protectedThis = Ref { *this }] () mutable {
         m_nowPlayingManager->setSupportsSeeking(computeSupportsSeeking());
         updateNowPlayingInfo();
 
@@ -317,7 +318,7 @@ void MediaSessionManagerCocoa::sessionWillEndPlayback(PlatformMediaSession& sess
     if (delayCallingUpdateNowPlaying == DelayCallingUpdateNowPlaying::No)
         updateNowPlayingInfo();
     else {
-        enqueueTaskOnMainThread([this] {
+        enqueueTaskOnMainThread([this, protectedThis = Ref { *this }] {
             updateNowPlayingInfo();
         });
     }
@@ -430,12 +431,12 @@ void MediaSessionManagerCocoa::setNowPlayingInfo(bool setAsNowPlayingApplication
         auto cfCurrentTime = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType, &nowPlayingInfo.currentTime));
         CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoElapsedTime, cfCurrentTime.get());
     }
-    RetainPtr tiffImage = nowPlayingInfo.metadata.artwork && nowPlayingInfo.metadata.artwork->image ? nowPlayingInfo.metadata.artwork->image->adapter().tiffRepresentation() : nullptr;
+    RetainPtr tiffImage = nowPlayingInfo.metadata.artwork && nowPlayingInfo.metadata.artwork->image ? Ref { *nowPlayingInfo.metadata.artwork->image }->adapter().tiffRepresentation() : nullptr;
     if (tiffImage) {
         CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoArtworkData, tiffImage.get());
         CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoArtworkMIMEType, @"image/tiff");
-        CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoArtworkDataWidth, [NSNumber numberWithFloat:nowPlayingInfo.metadata.artwork->image->width()]);
-        CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoArtworkDataHeight, [NSNumber numberWithFloat:nowPlayingInfo.metadata.artwork->image->height()]);
+        CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoArtworkDataWidth, [NSNumber numberWithFloat:Ref { *nowPlayingInfo.metadata.artwork->image }->width()]);
+        CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoArtworkDataHeight, [NSNumber numberWithFloat:Ref { *nowPlayingInfo.metadata.artwork->image }->height()]);
         CFDictionarySetValue(info.get(), kMRMediaRemoteNowPlayingInfoArtworkIdentifier, String::number(nowPlayingInfo.metadata.artwork->src.hash()).createCFString().get());
     }
 
@@ -548,8 +549,8 @@ void MediaSessionManagerCocoa::audioOutputDeviceChanged()
 {
     ASSERT(m_audioHardwareListener);
     m_supportedAudioHardwareBufferSizes = m_audioHardwareListener->supportedBufferSizes();
-    m_defaultBufferSize = AudioSession::sharedSession().preferredBufferSize();
-    AudioSession::sharedSession().audioOutputDeviceChanged();
+    m_defaultBufferSize = AudioSession::protectedSharedSession()->preferredBufferSize();
+    AudioSession::protectedSharedSession()->audioOutputDeviceChanged();
     updateSessionState();
 }
 
