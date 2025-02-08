@@ -283,7 +283,6 @@
     (allow mach-lookup
         (global-name "com.apple.CARenderServer"))
 
-    ; UIKit-required IOKit nodes.
     (allow iokit-open-user-client (with telemetry) (with report)
         (iokit-user-client-class "IOSurfaceAcceleratorClient")
         (apply-message-filter
@@ -292,9 +291,19 @@
                 iokit-external-trap
                 iokit-external-method)))
         
-    ;; Requires by UIView -> UITextMagnifierRenderer -> UIWindow
     (allow iokit-open-user-client
-        (iokit-user-client-class "IOSurfaceRootUserClient"))
+        (iokit-user-client-class "IOSurfaceRootUserClient")
+        (apply-message-filter
+            (allow (with telemetry) (with report) (with message "IOSurfaceRootUserClient")
+                iokit-async-external-method
+                iokit-external-trap
+                iokit-external-method)
+            (allow iokit-async-external-method
+                (iokit-method-number 40))
+            (allow iokit-external-trap
+                (iokit-trap-number 0 1 2 3 4 5))
+            (allow iokit-external-method
+                (iokit-method-number 0 9 10 13 20 32 34 35 36 38 41 44 54))))
 
     ;; Silence sandbox violations from apps trying to create the empty plist if it doesn't exist.
     ;; <rdar://problem/13796537>
