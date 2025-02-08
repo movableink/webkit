@@ -427,6 +427,7 @@ bool Queue::validateWriteBuffer(const Buffer& buffer, uint64_t bufferOffset, siz
 
 void Queue::synchronizeResourceAndWait(id<MTLBuffer> buffer)
 {
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     if (buffer.storageMode != MTLStorageModeManaged)
         return;
 
@@ -435,6 +436,9 @@ void Queue::synchronizeResourceAndWait(id<MTLBuffer> buffer)
     id<MTLCommandBuffer> commandBuffer = m_commandBuffer;
     finalizeBlitCommandEncoder();
     [commandBuffer waitUntilCompleted];
+#else
+    UNUSED_PARAM(buffer);
+#endif
 }
 
 void Queue::writeBuffer(Buffer& buffer, uint64_t bufferOffset, std::span<uint8_t> data)
