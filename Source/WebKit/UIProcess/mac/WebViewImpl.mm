@@ -70,7 +70,6 @@
 #import "WKQuickLookPreviewController.h"
 #import "WKRevealItemPresenter.h"
 #import "WKTextAnimationManager.h"
-#import "WKTextInputWindowController.h"
 #import "WKTextPlaceholder.h"
 #import "WKViewLayoutStrategy.h"
 #import "WKWebViewInternal.h"

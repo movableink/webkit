@@ -227,7 +227,6 @@
 		0FCB4E5418BBE044000FCFC9 /* WKScrollView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FCB4E4418BBE044000FCFC9 /* WKScrollView.h */; };
 		0FCB4E6218BBE3D9000FCFC9 /* PageClientImplMac.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FCB4E5818BBE3D9000FCFC9 /* PageClientImplMac.h */; };
 		0FCB4E6618BBE3D9000FCFC9 /* WKPrintingView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FCB4E5C18BBE3D9000FCFC9 /* WKPrintingView.h */; };
-		0FCB4E6818BBE3D9000FCFC9 /* WKTextInputWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FCB4E5E18BBE3D9000FCFC9 /* WKTextInputWindowController.h */; };
 		0FCB4E6C18BBF26A000FCFC9 /* WKContentViewInteraction.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FCB4E6A18BBF26A000FCFC9 /* WKContentViewInteraction.h */; };
 		0FD07E5028A3414700B38C81 /* WebViewImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FD07E4E28A3413700B38C81 /* WebViewImpl.h */; };
 		0FDCD7F71D47E92A009F08BC /* LogInitialization.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FDCD7F61D47E92A009F08BC /* LogInitialization.h */; };
@@ -3364,8 +3363,6 @@
 		0FCB4E5918BBE3D9000FCFC9 /* PageClientImplMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PageClientImplMac.mm; sourceTree = "<group>"; };
 		0FCB4E5C18BBE3D9000FCFC9 /* WKPrintingView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKPrintingView.h; sourceTree = "<group>"; };
 		0FCB4E5D18BBE3D9000FCFC9 /* WKPrintingView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WKPrintingView.mm; sourceTree = "<group>"; };
-		0FCB4E5E18BBE3D9000FCFC9 /* WKTextInputWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKTextInputWindowController.h; sourceTree = "<group>"; };
-		0FCB4E5F18BBE3D9000FCFC9 /* WKTextInputWindowController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WKTextInputWindowController.mm; sourceTree = "<group>"; };
 		0FCB4E6A18BBF26A000FCFC9 /* WKContentViewInteraction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WKContentViewInteraction.h; path = ios/WKContentViewInteraction.h; sourceTree = "<group>"; };
 		0FCB4E6B18BBF26A000FCFC9 /* WKContentViewInteraction.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = WKContentViewInteraction.mm; path = ios/WKContentViewInteraction.mm; sourceTree = "<group>"; };
 		0FCD094E24C79F5B000C6D39 /* RemoteScrollingUIState.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteScrollingUIState.cpp; sourceTree = "<group>"; };
@@ -15237,8 +15234,6 @@
 				440C0BE22BBCA9E00086046E /* WKTextAnimationManager.mm */,
 				2DD67A331BD861060053B251 /* WKTextFinderClient.h */,
 				2DD67A341BD861060053B251 /* WKTextFinderClient.mm */,
-				0FCB4E5E18BBE3D9000FCFC9 /* WKTextInputWindowController.h */,
-				0FCB4E5F18BBE3D9000FCFC9 /* WKTextInputWindowController.mm */,
 				2D28A4951AF965A100F190C9 /* WKViewLayoutStrategy.h */,
 				2D28A4961AF965A100F190C9 /* WKViewLayoutStrategy.mm */,
 			);
@@ -17912,7 +17907,6 @@
 				F48EC3582B75895800D1B886 /* WKTextExtractionUtilities.h in Headers */,
 				2DD67A351BD861060053B251 /* WKTextFinderClient.h in Headers */,
 				F4D5F51D206087A10038BBA8 /* WKTextInputListViewController.h in Headers */,
-				0FCB4E6818BBE3D9000FCFC9 /* WKTextInputWindowController.h in Headers */,
 				F4C359532AF19BC40083B0EA /* WKTextInteractionWrapper.h in Headers */,
 				CE21215F240EE571006ED443 /* WKTextPlaceholder.h in Headers */,
 				CE45945C240F88550078019F /* WKTextSelectionRect.h in Headers */,
