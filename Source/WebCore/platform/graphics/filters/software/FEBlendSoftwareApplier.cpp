@@ -57,7 +57,7 @@ bool FEBlendSoftwareApplier::apply(const Filter&, const FilterImageVector& input
     auto inputImageRect2 = input2.absoluteImageRectRelativeTo(result);
 
     filterContext.drawImageBuffer(*inputImage2, inputImageRect2);
-    filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, { CompositeOperator::SourceOver, m_effect.blendMode() });
+    filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, { CompositeOperator::SourceOver, m_effect->blendMode() });
     return true;
 }
 

@@ -35,7 +35,9 @@ enum class ColorMatrixType : uint8_t {
     FECOLORMATRIX_TYPE_LUMINANCETOALPHA = 4
 };
 
-class FEColorMatrix : public FilterEffect {
+class FEColorMatrix final : public FilterEffect {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEColorMatrix);
 public:
     WEBCORE_EXPORT static Ref<FEColorMatrix> create(ColorMatrixType, Vector<float>&&, DestinationColorSpace = DestinationColorSpace::SRGB());
 

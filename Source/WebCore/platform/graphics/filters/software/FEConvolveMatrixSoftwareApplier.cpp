@@ -96,7 +96,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(FEConvolveMatrixSoftwareApplier);
 FEConvolveMatrixSoftwareApplier::FEConvolveMatrixSoftwareApplier(const FEConvolveMatrix& effect)
     : Base(effect)
 {
-    ASSERT(IntRect(IntPoint::zero(), m_effect.kernelSize()).contains(m_effect.targetOffset()));
+    ASSERT(IntRect(IntPoint::zero(), m_effect->kernelSize()).contains(m_effect->targetOffset()));
 }
 
 inline uint8_t FEConvolveMatrixSoftwareApplier::clampRGBAValue(float channel, uint8_t max)
@@ -306,13 +306,13 @@ bool FEConvolveMatrixSoftwareApplier::apply(const Filter&, const FilterImageVect
 {
     auto& input = inputs[0].get();
 
-    auto alphaFormat = m_effect.preserveAlpha() ? AlphaPremultiplication::Unpremultiplied : AlphaPremultiplication::Premultiplied;
+    auto alphaFormat = m_effect->preserveAlpha() ? AlphaPremultiplication::Unpremultiplied : AlphaPremultiplication::Premultiplied;
     auto destinationPixelBuffer = result.pixelBuffer(alphaFormat);
     if (!destinationPixelBuffer)
         return false;
 
     auto effectDrawingRect = result.absoluteImageRectRelativeTo(input);
-    auto sourcePixelBuffer = input.getPixelBuffer(alphaFormat, effectDrawingRect, m_effect.operatingColorSpace());
+    auto sourcePixelBuffer = input.getPixelBuffer(alphaFormat, effectDrawingRect, m_effect->operatingColorSpace());
     if (!sourcePixelBuffer)
         return false;
 
@@ -323,13 +323,13 @@ bool FEConvolveMatrixSoftwareApplier::apply(const Filter&, const FilterImageVect
         *destinationPixelBuffer,
         paintSize.width(),
         paintSize.height(),
-        m_effect.kernelSize(),
-        m_effect.divisor(),
-        m_effect.bias() * 255,
-        m_effect.targetOffset(),
-        m_effect.edgeMode(),
-        m_effect.preserveAlpha(),
-        FEColorMatrix::normalizedFloats(m_effect.kernel())
+        m_effect->kernelSize(),
+        m_effect->divisor(),
+        m_effect->bias() * 255,
+        m_effect->targetOffset(),
+        m_effect->edgeMode(),
+        m_effect->preserveAlpha(),
+        FEColorMatrix::normalizedFloats(m_effect->kernel())
     };
 
     applyPlatform(paintingData);

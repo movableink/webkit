@@ -57,12 +57,12 @@ bool FEColorMatrixSkiaApplier::apply(const Filter&, const FilterImageVector& inp
     if (!nativeImage || !nativeImage->platformImage())
         return false;
 
-    auto values = FEColorMatrix::normalizedFloats(m_effect.values());
+    auto values = FEColorMatrix::normalizedFloats(m_effect->values());
     Vector<float> matrix;
 
     std::array<float, 9> components;
 
-    switch (m_effect.type()) {
+    switch (m_effect->type()) {
     case ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX:
         matrix = values;
         break;

@@ -197,14 +197,14 @@ bool FELightingSoftwareApplier::apply(const Filter& filter, const FilterImageVec
     LightingData data;
     data.filter = &filter;
     data.result = &result;
-    data.filterType = m_effect.filterType();
-    data.lightingColor = m_effect.lightingColor();
-    data.surfaceScale = m_effect.surfaceScale() / 255.0f;
-    data.diffuseConstant = m_effect.diffuseConstant();
-    data.specularConstant = m_effect.specularConstant();
-    data.specularExponent = m_effect.specularExponent();
-    data.lightSource = m_effect.lightSource().ptr();
-    data.operatingColorSpace = &m_effect.operatingColorSpace();
+    data.filterType = m_effect->filterType();
+    data.lightingColor = m_effect->lightingColor();
+    data.surfaceScale = m_effect->surfaceScale() / 255.0f;
+    data.diffuseConstant = m_effect->diffuseConstant();
+    data.specularConstant = m_effect->specularConstant();
+    data.specularExponent = m_effect->specularExponent();
+    data.lightSource = m_effect->lightSource().ptr();
+    data.operatingColorSpace = &m_effect->operatingColorSpace();
 
     data.pixels = destinationPixelBuffer;
     data.widthMultipliedByPixelSize = size.width() * cPixelSize;

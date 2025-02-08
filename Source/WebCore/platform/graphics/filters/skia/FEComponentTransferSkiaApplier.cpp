@@ -57,10 +57,10 @@ bool FEComponentTransferSkiaApplier::apply(const Filter&, const FilterImageVecto
     if (!nativeImage || !nativeImage->platformImage())
         return false;
 
-    auto alphaTable = m_effect.computeLookupTable(m_effect.alphaFunction());
-    auto redTable = m_effect.computeLookupTable(m_effect.redFunction());
-    auto greenTable = m_effect.computeLookupTable(m_effect.greenFunction());
-    auto blueTable = m_effect.computeLookupTable(m_effect.blueFunction());
+    auto alphaTable = m_effect->computeLookupTable(m_effect->alphaFunction());
+    auto redTable = m_effect->computeLookupTable(m_effect->redFunction());
+    auto greenTable = m_effect->computeLookupTable(m_effect->greenFunction());
+    auto blueTable = m_effect->computeLookupTable(m_effect->blueFunction());
 
     SkPaint paint;
     paint.setColorFilter(SkColorFilters::TableARGB(alphaTable.data(), redTable.data(), greenTable.data(), blueTable.data()));

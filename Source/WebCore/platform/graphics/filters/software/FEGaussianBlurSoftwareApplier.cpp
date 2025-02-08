@@ -440,17 +440,17 @@ bool FEGaussianBlurSoftwareApplier::apply(const Filter& filter, const FilterImag
 
     auto effectDrawingRect = result.absoluteImageRectRelativeTo(input);
     input.copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
-    if (!m_effect.stdDeviationX() && !m_effect.stdDeviationY())
+    if (!m_effect->stdDeviationX() && !m_effect->stdDeviationY())
         return true;
 
-    auto kernelSize = m_effect.calculateKernelSize(filter, { m_effect.stdDeviationX(), m_effect.stdDeviationY() });
+    auto kernelSize = m_effect->calculateKernelSize(filter, { m_effect->stdDeviationX(), m_effect->stdDeviationY() });
 
     IntSize paintSize = result.absoluteImageRect().size();
     auto tempBuffer = destinationPixelBuffer->createScratchPixelBuffer(paintSize);
     if (!tempBuffer)
         return false;
 
-    applyPlatform(*destinationPixelBuffer, *tempBuffer, kernelSize.width(), kernelSize.height(), paintSize, result.isAlphaImage(), m_effect.edgeMode());
+    applyPlatform(*destinationPixelBuffer, *tempBuffer, kernelSize.width(), kernelSize.height(), paintSize, result.isAlphaImage(), m_effect->edgeMode());
     return true;
 }
 

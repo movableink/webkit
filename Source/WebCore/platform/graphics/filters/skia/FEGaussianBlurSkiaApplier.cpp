@@ -57,7 +57,7 @@ bool FEGaussianBlurSkiaApplier::apply(const Filter& filter, const FilterImageVec
     if (!nativeImage || !nativeImage->platformImage())
         return false;
 
-    FloatSize sigma = FloatSize(m_effect.stdDeviationX(), m_effect.stdDeviationY()) * filter.filterScale();
+    FloatSize sigma = FloatSize(m_effect->stdDeviationX(), m_effect->stdDeviationY()) * filter.filterScale();
 
     SkPaint paint;
     paint.setImageFilter(SkImageFilters::Blur(sigma.width(), sigma.height(), nullptr));

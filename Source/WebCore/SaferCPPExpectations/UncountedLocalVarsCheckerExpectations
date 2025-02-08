@@ -650,7 +650,6 @@ platform/graphics/displaylists/DisplayListItems.cpp
 platform/graphics/displaylists/DisplayListRecorder.cpp
 platform/graphics/displaylists/DisplayListRecorderImpl.cpp
 platform/graphics/displaylists/DisplayListResourceHeap.h
-platform/graphics/filters/FilterEffect.cpp
 platform/graphics/filters/FilterOperations.cpp
 platform/graphics/filters/software/FEBlendSoftwareApplier.cpp
 platform/graphics/filters/software/FEColorMatrixSoftwareApplier.cpp

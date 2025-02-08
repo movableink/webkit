@@ -41,10 +41,10 @@ bool FEDropShadowSoftwareApplier::apply(const Filter& filter, const FilterImageV
     if (!resultImage)
         return false;
 
-    auto stdDeviation = filter.resolvedSize({ m_effect.stdDeviationX(), m_effect.stdDeviationY() });
+    auto stdDeviation = filter.resolvedSize({ m_effect->stdDeviationX(), m_effect->stdDeviationY() });
     auto blurRadius = 2 * filter.scaledByFilterScale(stdDeviation);
     
-    auto offset = filter.resolvedSize({ m_effect.dx(), m_effect.dy() });
+    auto offset = filter.resolvedSize({ m_effect->dx(), m_effect->dy() });
     auto absoluteOffset = filter.scaledByFilterScale(offset);
 
     FloatRect inputImageRect = input.absoluteImageRectRelativeTo(result);
@@ -56,11 +56,11 @@ bool FEDropShadowSoftwareApplier::apply(const Filter& filter, const FilterImageV
         return false;
 
     auto& resultContext = resultImage->context();
-    resultContext.setAlpha(m_effect.shadowOpacity());
+    resultContext.setAlpha(m_effect->shadowOpacity());
     resultContext.drawImageBuffer(*inputImage, inputImageRectWithOffset);
     resultContext.setAlpha(1);
 
-    ShadowBlur contextShadow(blurRadius, absoluteOffset, m_effect.shadowColor());
+    ShadowBlur contextShadow(blurRadius, absoluteOffset, m_effect->shadowColor());
 
     PixelBufferFormat format { AlphaPremultiplication::Premultiplied, PixelFormat::RGBA8, result.colorSpace() };
     IntRect shadowArea(IntPoint(), resultImage->truncatedLogicalSize());
@@ -73,7 +73,7 @@ bool FEDropShadowSoftwareApplier::apply(const Filter& filter, const FilterImageV
     resultImage->putPixelBuffer(*pixelBuffer, shadowArea);
 
     resultContext.setCompositeOperation(CompositeOperator::SourceIn);
-    resultContext.fillRect(FloatRect(FloatPoint(), result.absoluteImageRect().size()), m_effect.shadowColor());
+    resultContext.fillRect(FloatRect(FloatPoint(), result.absoluteImageRect().size()), m_effect->shadowColor());
     resultContext.setCompositeOperation(CompositeOperator::DestinationOver);
 
     resultImage->context().drawImageBuffer(*inputImage, inputImageRect);

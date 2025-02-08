@@ -28,6 +28,7 @@
 #pragma once
 
 #include "Color.h"
+#include "FELighting.h"
 #include "FilterEffect.h"
 #include "FilterEffectApplier.h"
 #include "FilterImageVector.h"
@@ -35,8 +36,6 @@
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
-
-class FELighting;
 
 class FELightingSoftwareApplier : public FilterEffectConcreteApplier<FELighting> {
     WTF_MAKE_TZONE_ALLOCATED(FELightingSoftwareApplier);

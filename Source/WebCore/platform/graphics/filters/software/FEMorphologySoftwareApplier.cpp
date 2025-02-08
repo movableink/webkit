@@ -159,7 +159,7 @@ bool FEMorphologySoftwareApplier::apply(const Filter& filter, const FilterImageV
 
     auto effectDrawingRect = result.absoluteImageRectRelativeTo(input);
 
-    auto radius = filter.resolvedSize({ m_effect.radiusX(), m_effect.radiusY() });
+    auto radius = filter.resolvedSize({ m_effect->radiusX(), m_effect->radiusY() });
     auto absoluteRadius = flooredIntSize(filter.scaledByFilterScale(radius));
 
     if (isDegenerate(absoluteRadius)) {
@@ -175,12 +175,12 @@ bool FEMorphologySoftwareApplier::apply(const Filter& filter, const FilterImageV
         return true;
     }
 
-    auto sourcePixelBuffer = input.getPixelBuffer(AlphaPremultiplication::Premultiplied, effectDrawingRect, m_effect.operatingColorSpace());
+    auto sourcePixelBuffer = input.getPixelBuffer(AlphaPremultiplication::Premultiplied, effectDrawingRect, m_effect->operatingColorSpace());
     if (!sourcePixelBuffer)
         return false;
 
     PaintingData paintingData;
-    paintingData.type = m_effect.morphologyOperator();
+    paintingData.type = m_effect->morphologyOperator();
     paintingData.srcPixelBuffer = &*sourcePixelBuffer;
     paintingData.dstPixelBuffer = destinationPixelBuffer;
     paintingData.width = effectDrawingRect.width();

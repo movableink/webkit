@@ -39,18 +39,18 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(FEDisplacementMapSoftwareApplier);
 FEDisplacementMapSoftwareApplier::FEDisplacementMapSoftwareApplier(const FEDisplacementMap& effect)
     : Base(effect)
 {
-    ASSERT(m_effect.xChannelSelector() != ChannelSelectorType::CHANNEL_UNKNOWN);
-    ASSERT(m_effect.yChannelSelector() != ChannelSelectorType::CHANNEL_UNKNOWN);
+    ASSERT(m_effect->xChannelSelector() != ChannelSelectorType::CHANNEL_UNKNOWN);
+    ASSERT(m_effect->yChannelSelector() != ChannelSelectorType::CHANNEL_UNKNOWN);
 }
 
 int FEDisplacementMapSoftwareApplier::xChannelIndex() const
 {
-    return static_cast<int>(m_effect.xChannelSelector()) - 1;
+    return static_cast<int>(m_effect->xChannelSelector()) - 1;
 }
 
 int FEDisplacementMapSoftwareApplier::yChannelIndex() const
 {
-    return static_cast<int>(m_effect.yChannelSelector()) - 1;
+    return static_cast<int>(m_effect->yChannelSelector()) - 1;
 }
 
 bool FEDisplacementMapSoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
@@ -75,7 +75,7 @@ bool FEDisplacementMapSoftwareApplier::apply(const Filter& filter, const FilterI
     ASSERT(inputPixelBuffer->bytes().size() == displacementPixelBuffer->bytes().size());
 
     auto paintSize = result.absoluteImageRect().size();
-    auto scale = filter.resolvedSize({ m_effect.scale(), m_effect.scale() });
+    auto scale = filter.resolvedSize({ m_effect->scale(), m_effect->scale() });
     auto absoluteScale = filter.scaledByFilterScale(scale);
 
     float scaleForColorX = absoluteScale.width() / 255.0;

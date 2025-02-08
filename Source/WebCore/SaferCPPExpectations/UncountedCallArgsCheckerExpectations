@@ -1166,13 +1166,11 @@ platform/graphics/controls/SwitchTrackPart.h
 platform/graphics/controls/TextAreaPart.h
 platform/graphics/controls/TextFieldPart.h
 platform/graphics/controls/ToggleButtonPart.h
-platform/graphics/coreimage/FEComponentTransferCoreImageApplier.mm
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
 platform/graphics/coretext/FontCascadeCoreText.cpp
 platform/graphics/cv/GraphicsContextGLCVCocoa.mm
 platform/graphics/displaylists/DisplayListItem.cpp
 platform/graphics/filters/FEDisplacementMap.cpp
-platform/graphics/filters/software/FEComponentTransferSoftwareApplier.cpp
 platform/graphics/filters/software/FEConvolveMatrixSoftwareApplier.cpp
 platform/graphics/filters/software/FELightingSoftwareApplier.cpp
 platform/graphics/filters/software/FELightingSoftwareApplierInlines.h

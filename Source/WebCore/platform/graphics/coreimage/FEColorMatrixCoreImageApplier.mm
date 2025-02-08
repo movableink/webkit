@@ -62,10 +62,10 @@ bool FEColorMatrixCoreImageApplier::apply(const Filter&, const FilterImageVector
     if (!inputImage)
         return false;
 
-    auto values = FEColorMatrix::normalizedFloats(m_effect.values());
+    auto values = FEColorMatrix::normalizedFloats(m_effect->values());
     std::array<float, 9> components;
 
-    switch (m_effect.type()) {
+    switch (m_effect->type()) {
     case ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE:
         FEColorMatrix::calculateSaturateComponents(components, values[0]);
         break;
@@ -85,7 +85,7 @@ bool FEColorMatrixCoreImageApplier::apply(const Filter&, const FilterImageVector
     auto *colorMatrixFilter = [CIFilter filterWithName:@"CIColorMatrix"];
     [colorMatrixFilter setValue:inputImage.get() forKey:kCIInputImageKey];
 
-    switch (m_effect.type()) {
+    switch (m_effect->type()) {
     case ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE:
     case ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE:
         [colorMatrixFilter setValue:[CIVector vectorWithX:components[0] Y:components[1] Z:components[2] W:0] forKey:@"inputRVector"];

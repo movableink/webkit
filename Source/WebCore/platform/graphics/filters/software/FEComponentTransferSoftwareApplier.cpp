@@ -42,10 +42,10 @@ void FEComponentTransferSoftwareApplier::applyPlatform(PixelBuffer& pixelBuffer)
     auto data = pixelBuffer.bytes();
     auto pixelByteLength = pixelBuffer.bytes().size();
 
-    auto redTable   = FEComponentTransfer::computeLookupTable(m_effect.redFunction());
-    auto greenTable = FEComponentTransfer::computeLookupTable(m_effect.greenFunction());
-    auto blueTable  = FEComponentTransfer::computeLookupTable(m_effect.blueFunction());
-    auto alphaTable = FEComponentTransfer::computeLookupTable(m_effect.alphaFunction());
+    auto redTable   = FEComponentTransfer::computeLookupTable(m_effect->redFunction());
+    auto greenTable = FEComponentTransfer::computeLookupTable(m_effect->greenFunction());
+    auto blueTable  = FEComponentTransfer::computeLookupTable(m_effect->blueFunction());
+    auto alphaTable = FEComponentTransfer::computeLookupTable(m_effect->alphaFunction());
 
     for (unsigned pixelOffset = 0; pixelOffset < pixelByteLength; pixelOffset += 4) {
         data[pixelOffset]     = redTable[data[pixelOffset]];

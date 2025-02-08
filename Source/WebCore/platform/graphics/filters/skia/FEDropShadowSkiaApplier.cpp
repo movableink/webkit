@@ -58,12 +58,12 @@ bool FEDropShadowSkiaApplier::apply(const Filter& filter, const FilterImageVecto
     if (!nativeImage || !nativeImage->platformImage())
         return false;
 
-    auto offset = filter.scaledByFilterScale(filter.resolvedSize({ m_effect.dx(), m_effect.dy() }));
-    auto sigma = filter.scaledByFilterScale(filter.resolvedSize({ m_effect.stdDeviationX(), m_effect.stdDeviationY() }));
+    auto offset = filter.scaledByFilterScale(filter.resolvedSize({ m_effect->dx(), m_effect->dy() }));
+    auto sigma = filter.scaledByFilterScale(filter.resolvedSize({ m_effect->stdDeviationX(), m_effect->stdDeviationY() }));
 
     SkPaint paint;
 
-    auto shadowColorWithAlpha = m_effect.shadowColor().colorWithAlphaMultipliedBy(m_effect.shadowOpacity());
+    auto shadowColorWithAlpha = m_effect->shadowColor().colorWithAlphaMultipliedBy(m_effect->shadowOpacity());
     paint.setImageFilter(SkImageFilters::DropShadow(offset.width(), offset.height(), sigma.width(), sigma.height(), shadowColorWithAlpha, nullptr));
 
     auto inputOffsetWithinResult = input.absoluteImageRectRelativeTo(result).location();

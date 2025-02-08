@@ -75,10 +75,10 @@ bool FEComponentTransferCoreImageApplier::apply(const Filter&, const FilterImage
             [componentTransferFilter setValue:[CIVector vectorWithX:function.intercept Y:function.slope Z:0 W:0] forKey:key];
     };
 
-    setCoefficients(@"inputRedCoefficients", m_effect.redFunction());
-    setCoefficients(@"inputGreenCoefficients", m_effect.greenFunction());
-    setCoefficients(@"inputBlueCoefficients", m_effect.blueFunction());
-    setCoefficients(@"inputAlphaCoefficients", m_effect.alphaFunction());
+    setCoefficients(@"inputRedCoefficients", m_effect->redFunction());
+    setCoefficients(@"inputGreenCoefficients", m_effect->greenFunction());
+    setCoefficients(@"inputBlueCoefficients", m_effect->blueFunction());
+    setCoefficients(@"inputAlphaCoefficients", m_effect->alphaFunction());
 
     result.setCIImage(componentTransferFilter.outputImage);
     return true;

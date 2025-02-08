@@ -359,11 +359,11 @@ bool FETurbulenceSoftwareApplier::apply(const Filter& filter, const FilterImageV
 
     auto tileSize = roundedIntSize(result.primitiveSubregion().size());
 
-    float baseFrequencyX = m_effect.baseFrequencyX();
-    float baseFrequencyY = m_effect.baseFrequencyY();
-    auto stitchData = computeStitching(tileSize, baseFrequencyX, baseFrequencyY, m_effect.stitchTiles());
+    float baseFrequencyX = m_effect->baseFrequencyX();
+    float baseFrequencyY = m_effect->baseFrequencyY();
+    auto stitchData = computeStitching(tileSize, baseFrequencyX, baseFrequencyY, m_effect->stitchTiles());
 
-    auto paintingData = initPaintingData(m_effect.type(), baseFrequencyX, baseFrequencyY, m_effect.numOctaves(), m_effect.seed(), m_effect.stitchTiles(), tileSize);
+    auto paintingData = initPaintingData(m_effect->type(), baseFrequencyX, baseFrequencyY, m_effect->numOctaves(), m_effect->seed(), m_effect->stitchTiles(), tileSize);
 
     applyPlatform(result.absoluteImageRect(), filter.filterScale(), *destinationPixelBuffer, paintingData, stitchData);
     return true;
