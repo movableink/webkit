@@ -323,6 +323,7 @@ class JSRopeString final : public JSString {
     friend class RegExpObject;
     friend class RegExpSubstringGlobalAtomCache;
 public:
+    static constexpr DestructionMode needsDestruction = MayNeedDestruction;
     static constexpr uint8_t numberOfLowerTierPreciseCells = 0;
     static void destroy(JSCell*);
 
