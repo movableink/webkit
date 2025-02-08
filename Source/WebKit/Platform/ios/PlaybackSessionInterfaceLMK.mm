@@ -374,6 +374,11 @@ void PlaybackSessionInterfaceLMK::spatialVideoMetadataChanged(const std::optiona
     [m_player setSpatialVideoMetadata:spatialVideoMetadata.get()];
 }
 
+void PlaybackSessionInterfaceLMK::isImmersiveVideoChanged(bool value)
+{
+    [m_player setIsImmersiveVideo:value];
+}
+
 void PlaybackSessionInterfaceLMK::startObservingNowPlayingMetadata()
 {
     if (m_playbackSessionModel)

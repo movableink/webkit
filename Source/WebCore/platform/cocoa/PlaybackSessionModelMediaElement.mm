@@ -522,6 +522,13 @@ void PlaybackSessionModelMediaElement::maybeUpdateVideoMetadata()
             client->spatialVideoMetadataChanged(spatialVideoMetadata);
         m_spatialVideoMetadata = WTFMove(spatialVideoMetadata);
     }
+
+    bool isImmersiveVideo = selectedItem && selectedItem->configuration().isImmersiveVideo();
+    if (isImmersiveVideo != m_isImmersiveVideo) {
+        for (auto& client : m_clients)
+            client->isImmersiveVideoChanged(isImmersiveVideo);
+        m_isImmersiveVideo = isImmersiveVideo;
+    }
 #endif
 }
 

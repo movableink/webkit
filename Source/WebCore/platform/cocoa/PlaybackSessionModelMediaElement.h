@@ -152,6 +152,7 @@ private:
     AudioSessionSoundStageSize m_soundStageSize;
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     std::optional<SpatialVideoMetadata> m_spatialVideoMetadata;
+    bool m_isImmersiveVideo { false };
 #endif
 
     double playbackStartedTime() const;

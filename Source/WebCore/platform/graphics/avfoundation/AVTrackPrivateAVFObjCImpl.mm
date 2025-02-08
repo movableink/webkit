@@ -285,6 +285,7 @@ PlatformVideoTrackConfiguration AVTrackPrivateAVFObjCImpl::videoTrackConfigurati
         framerate(),
         bitrate(),
         spatialVideoMetadata(),
+        isImmersiveVideo(),
     };
 }
 
@@ -385,7 +386,18 @@ uint64_t AVTrackPrivateAVFObjCImpl::bitrate() const
 
 std::optional<SpatialVideoMetadata> AVTrackPrivateAVFObjCImpl::spatialVideoMetadata() const
 {
-    return videoMetadataFromFormatDescription(formatDescriptionFor(*this).get());
+    auto metadata = videoMetadataFromFormatDescription(formatDescriptionFor(*this).get());
+    if (metadata && std::holds_alternative<SpatialVideoMetadata>(*metadata))
+        return std::get<SpatialVideoMetadata>(*metadata);
+    return { };
+}
+
+bool AVTrackPrivateAVFObjCImpl::isImmersiveVideo() const
+{
+    auto metadata = videoMetadataFromFormatDescription(formatDescriptionFor(*this).get());
+    if (metadata && std::holds_alternative<bool>(*metadata))
+        return std::get<bool>(*metadata);
+    return false;
 }
 
 }

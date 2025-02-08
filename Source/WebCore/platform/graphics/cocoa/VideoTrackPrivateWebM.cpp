@@ -189,7 +189,8 @@ IGNORE_WARNINGS_BEGIN("c99-designator")
         .height = height(),
         .colorSpace = colorSpace(),
         .framerate = framerate(),
-        .spatialVideoMetadata = { }
+        .spatialVideoMetadata = { },
+        .isImmersiveVideo = false
     };
 IGNORE_WARNINGS_END
     setConfiguration(WTFMove(configuration));
