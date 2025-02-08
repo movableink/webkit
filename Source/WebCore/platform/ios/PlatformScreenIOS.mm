@@ -36,7 +36,6 @@
 #import "HostWindow.h"
 #import "IntRect.h"
 #import "LocalFrameView.h"
-#import "PlatformCALayerClient.h"
 #import "ScreenProperties.h"
 #import "WAKWindow.h"
 #import "Widget.h"
@@ -73,21 +72,22 @@ bool screenHasInvertedColors()
     return PAL::softLinkUIKitUIAccessibilityIsInvertColorsEnabled();
 }
 
-ContentsFormat screenContentsFormat(Widget* widget, PlatformCALayerClient* client)
+OptionSet<ContentsFormat> screenContentsFormats(Widget* widget)
 {
+    OptionSet<ContentsFormat> contentsFormats = { ContentsFormat::RGBA8 };
+
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    if (client && client->hdrForImagesEnabled() && screenSupportsHighDynamicRange(widget))
-        return ContentsFormat::RGBA16F;
+    if (screenSupportsHighDynamicRange(widget))
+        contentsFormats.add(ContentsFormat::RGBA16F);
 #endif
 
 #if ENABLE(PIXEL_FORMAT_RGB10)
     if (screenSupportsExtendedColor(widget))
-        return ContentsFormat::RGBA10;
+        contentsFormats.add(ContentsFormat::RGBA10);
 #endif
 
     UNUSED_PARAM(widget);
-    UNUSED_PARAM(client);
-    return ContentsFormat::RGBA8;
+    return contentsFormats;
 }
 
 bool screenSupportsExtendedColor(Widget*)
@@ -115,7 +115,7 @@ DestinationColorSpace screenColorSpace(Widget* widget)
     UNUSED_PARAM(widget);
 
 #if ENABLE(PIXEL_FORMAT_RGB10) && ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
-    if (screenContentsFormat(widget) == ContentsFormat::RGBA10)
+    if (screenContentsFormats(widget).contains(ContentsFormat::RGBA10))
         return DestinationColorSpace::ExtendedSRGB();
 #endif
 

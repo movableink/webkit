@@ -36,12 +36,12 @@ namespace WebCore {
 class DestinationColorSpace;
 
 enum class ContentsFormat : uint8_t {
-    RGBA8,
+    RGBA8 = 1 << 0,
 #if ENABLE(PIXEL_FORMAT_RGB10)
-    RGBA10,
+    RGBA10 = 1 << 1,
 #endif
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    RGBA16F,
+    RGBA16F = 1 << 2,
 #endif
 };
 

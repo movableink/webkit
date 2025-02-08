@@ -178,6 +178,23 @@ Ref<PlatformCALayer> PlatformCALayer::createCompatibleLayerOrTakeFromPool(Platfo
     return layer;
 }
 
+ContentsFormat PlatformCALayer::contentsFormatForLayer(Widget* widget, PlatformCALayerClient* client)
+{
+    auto contentsFormats = screenContentsFormats(widget);
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    if (client && client->hdrForImagesEnabled() && contentsFormats.contains(ContentsFormat::RGBA16F))
+        return ContentsFormat::RGBA16F;
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10)
+    if (contentsFormats.contains(ContentsFormat::RGBA10))
+        return ContentsFormat::RGBA10;
+#endif
+    UNUSED_PARAM(client);
+    UNUSED_PARAM(contentsFormats);
+    ASSERT(contentsFormats.contains(ContentsFormat::RGBA8));
+    return ContentsFormat::RGBA8;
+}
+
 void PlatformCALayer::moveToLayerPool()
 {
     ASSERT(!superlayer());

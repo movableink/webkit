@@ -337,8 +337,10 @@ Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(PlatformCALayer::Lay
 {
     auto result = PlatformCALayerCocoa::create(layerType, owner);
 
-    if (result->canHaveBackingStore())
-        result->setContentsFormat(screenContentsFormat(nullptr, owner));
+    if (result->canHaveBackingStore()) {
+        auto contentsFormat = PlatformCALayer::contentsFormatForLayer(nullptr, owner);
+        result->setContentsFormat(contentsFormat);
+    }
 
     return result;
 }
