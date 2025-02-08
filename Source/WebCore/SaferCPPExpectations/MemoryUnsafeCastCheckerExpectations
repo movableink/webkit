@@ -79,7 +79,6 @@ dom/DocumentStorageAccess.cpp
 dom/ElementRareData.h
 dom/Node.cpp
 dom/NodeRareData.h
-dom/SpaceSplitString.h
 dom/UIEventWithKeyState.cpp
 dom/WindowOrWorkerGlobalScopeTrustedTypes.cpp
 domjit/DOMJITHelpers.h
