@@ -771,12 +771,14 @@ RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffor
     jitAssertCodeBlockMatchesCurrentCalleeCodeBlockOnCallFrame(regT1, regT2, *m_unlinkedCodeBlock);
 
     int frameTopOffset = stackPointerOffsetFor(m_unlinkedCodeBlock) * sizeof(Register);
-    unsigned maxFrameSize = -frameTopOffset;
     addPtr(TrustedImm32(frameTopOffset), callFrameRegister, regT1);
     JumpList stackOverflow;
+#if !CPU(ADDRESS64)
+    unsigned maxFrameSize = -frameTopOffset;
     if (UNLIKELY(maxFrameSize > Options::reservedZoneSize()))
         stackOverflow.append(branchPtr(Above, regT1, callFrameRegister));
-    stackOverflow.append(branchPtr(Above, AbsoluteAddress(m_vm->addressOfSoftStackLimit()), regT1));
+#endif
+    stackOverflow.append(branchPtr(GreaterThan, AbsoluteAddress(m_vm->addressOfSoftStackLimit()), regT1));
 
     move(regT1, stackPointerRegister);
     checkStackPointerAlignment();

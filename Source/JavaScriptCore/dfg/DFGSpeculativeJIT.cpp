@@ -125,12 +125,14 @@ SpeculativeJIT::~SpeculativeJIT() = default;
 static void emitStackOverflowCheck(JITCompiler& jit, MacroAssembler::JumpList& stackOverflow)
 {
     int frameTopOffset = virtualRegisterForLocal(jit.graph().requiredRegisterCountForExecutionAndExit() - 1).offset() * sizeof(Register);
-    unsigned maxFrameSize = -frameTopOffset;
 
     jit.addPtr(MacroAssembler::TrustedImm32(frameTopOffset), GPRInfo::callFrameRegister, GPRInfo::regT1);
+#if !CPU(ADDRESS64)
+    unsigned maxFrameSize = -frameTopOffset;
     if (UNLIKELY(maxFrameSize > Options::reservedZoneSize()))
         stackOverflow.append(jit.branchPtr(MacroAssembler::Above, GPRInfo::regT1, GPRInfo::callFrameRegister));
-    stackOverflow.append(jit.branchPtr(MacroAssembler::Above, MacroAssembler::AbsoluteAddress(jit.vm().addressOfSoftStackLimit()), GPRInfo::regT1));
+#endif
+    stackOverflow.append(jit.branchPtr(MacroAssembler::GreaterThan, MacroAssembler::AbsoluteAddress(jit.vm().addressOfSoftStackLimit()), GPRInfo::regT1));
 }
 
 void SpeculativeJIT::compile()

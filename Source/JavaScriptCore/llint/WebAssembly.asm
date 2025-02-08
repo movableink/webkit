@@ -387,8 +387,10 @@ if TRACING
      )
 end
 
+if not ADDRESS64
     bpa ws1, cfr, .stackOverflow
-    bpbeq JSWebAssemblyInstance::m_softStackLimit[wasmInstance], ws1, .stackHeightOK
+end
+    bplteq JSWebAssemblyInstance::m_softStackLimit[wasmInstance], ws1, .stackHeightOK
 
 .stackOverflow:
     throwException(StackOverflow)
@@ -484,8 +486,10 @@ if not JSVALUE64
     subp 8, ws1 # align stack pointer
 end
 
+if not ADDRESS64
     bpa ws1, cfr, .stackOverflow
-    bpbeq JSWebAssemblyInstance::m_softStackLimit[wasmInstance], ws1, .stackHeightOK
+end
+    bplteq JSWebAssemblyInstance::m_softStackLimit[wasmInstance], ws1, .stackHeightOK
 
 .stackOverflow:
     throwException(StackOverflow)
@@ -720,8 +724,10 @@ end
     loadi Wasm::JSEntrypointCallee::m_frameSize[ws1], wa0
     subp sp, wa0, wa0
 
+if not ADDRESS64
     bpa wa0, cfr, .stackOverflow
-    bpbeq JSWebAssemblyInstance::m_softStackLimit[wasmInstance], wa0, .stackHeightOK
+end
+    bplteq JSWebAssemblyInstance::m_softStackLimit[wasmInstance], wa0, .stackHeightOK
 
 .stackHeightOK:
     move wa0, sp

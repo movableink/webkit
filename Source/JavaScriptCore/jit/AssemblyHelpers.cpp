@@ -1783,7 +1783,7 @@ void AssemblyHelpers::getArityPadding(VM& vm, unsigned numberOfParameters, GPRRe
     and32(TrustedImm32(~1U), scratchGPR0);
     lshiftPtr(TrustedImm32(3), scratchGPR0);
     subPtr(stackPointerRegister, scratchGPR0, scratchGPR1);
-    stackOverflow.append(branchPtr(Above, AbsoluteAddress(vm.addressOfSoftStackLimit()), scratchGPR1));
+    stackOverflow.append(branchPtr(GreaterThan, AbsoluteAddress(vm.addressOfSoftStackLimit()), scratchGPR1));
 }
 
 #if USE(JSVALUE64)
@@ -2021,21 +2021,21 @@ AssemblyHelpers::JumpList AssemblyHelpers::checkWasmStackOverflow(GPRReg instanc
     JumpList overflow;
     // Because address is within 48bit, this addition never causes overflow.
     addPtr(checkSize, memoryTempRegister); // TrustedImm32 would use dataTempRegister. Thus let's have limit in memoryTempRegister.
-    overflow.append(branchPtr(Below, framePointerGPR, memoryTempRegister));
+    overflow.append(branchPtr(LessThan, framePointerGPR, memoryTempRegister));
     return overflow;
 #elif CPU(X86_64) || CPU(ARM)
     loadPtr(Address(instanceGPR, JSWebAssemblyInstance::offsetOfSoftStackLimit()), scratchRegister());
     JumpList overflow;
     // Because address is within 48bit, this addition never causes overflow.
     addPtr(checkSize, scratchRegister());
-    overflow.append(branchPtr(Below, framePointerGPR, scratchRegister()));
+    overflow.append(branchPtr(LessThan, framePointerGPR, scratchRegister()));
     return overflow;
 #elif CPU(RISCV64)
     loadPtr(Address(instanceGPR, JSWebAssemblyInstance::offsetOfSoftStackLimit()), memoryTempRegister);
     JumpList overflow;
     // Because address is within 48bit, this addition never causes overflow.
     addPtr(checkSize, memoryTempRegister); // TrustedImm32 would use dataTempRegister. Thus let's have limit in memoryTempRegister.
-    overflow.append(branchPtr(Below, framePointerGPR, memoryTempRegister));
+    overflow.append(branchPtr(LessThan, framePointerGPR, memoryTempRegister));
     return overflow;
 #endif
 }

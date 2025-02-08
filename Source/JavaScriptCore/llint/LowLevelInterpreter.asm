@@ -1539,12 +1539,14 @@ macro prologue(osrSlowPath, traceSlowPath)
     # Get new sp in t0 and check stack height.
     getFrameRegisterSizeForCodeBlock(t1, t0)
     subp cfr, t0, t0
+if not ADDRESS64
     bpa t0, cfr, .needStackCheck
+end
     loadp CodeBlock::m_vm[t1], t2
     if C_LOOP
-        bpbeq VM::m_cloopStackLimit[t2], t0, .stackHeightOK
+        bplteq VM::m_cloopStackLimit[t2], t0, .stackHeightOK
     else
-        bpbeq VM::m_softStackLimit[t2], t0, .stackHeightOK
+        bplteq VM::m_softStackLimit[t2], t0, .stackHeightOK
     end
 
 .needStackCheck:
