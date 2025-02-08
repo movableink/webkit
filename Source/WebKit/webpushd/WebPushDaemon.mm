@@ -751,7 +751,11 @@ void WebPushDaemon::getPendingPushMessage(PushClientConnection& connection, Comp
         return replySender(std::nullopt);
     }
 
-    m_potentialSilentPushes.push_back(PotentialSilentPush { pendingPushMessage.identifier, pendingPushMessage.message.registrationURL.string(), MonotonicTime::now() + silentPushTimeout() });
+    // Declarative push messages can never result in a silent push timeout,
+    // so don't push them onto the m_potentialSilentPushes queue.
+    if (!connection.declarativeWebPushEnabled() || !pendingPushMessage.message.notificationPayload)
+        m_potentialSilentPushes.push_back(PotentialSilentPush { pendingPushMessage.identifier, pendingPushMessage.message.registrationURL.string(), MonotonicTime::now() + silentPushTimeout() });
+
     if (m_potentialSilentPushes.size() == 1)
         rescheduleSilentPushTimer();
 

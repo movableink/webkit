@@ -2790,11 +2790,11 @@ public:
         webViews().first()->clearMostRecents();
         webViews().first()->injectDeclarativePushMessage(jsonMessage);
 
-        auto messages = webViews().first()->fetchPushMessages();
-        ASSERT_EQ([messages count], 1u);
+        auto message = webViews().first()->fetchPushMessage();
+        EXPECT_TRUE(message);
 
         webViews().first()->captureAllMessages();
-        webViews().first()->processPushMessage([messages firstObject]);
+        webViews().first()->processPushMessage(message.get());
     }
 
     void waitForMessageAndVerify(NSString *message)
@@ -2843,25 +2843,37 @@ TEST_F(WebPushDPushNotificationEventTest, Basic)
     checkLastNotificationTitle(@"Hello world!");
     checkLastAppBadge(12);
 
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
+
     runTest(json40);
     checkLastNotificationTitle(@"Gotcha!");
     checkLastAppBadge(12);
+
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
 
     runTest(json41);
     checkLastNotificationTitle(@"Hello world!");
     checkLastAppBadge(1024);
 
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
+
     runTest(json42);
     checkLastNotificationTitle(@"ThisRules");
     checkLastAppBadge(4096);
+
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
 
     runTest(json43);
     checkLastNotificationTitle(@"Raw string");
     checkLastAppBadge(12);
 
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
+
     runTest(json44);
     checkLastNotificationTitle(@"[object Object]");
     checkLastAppBadge(12);
+
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
 
     runTest(json45);
     checkLastNotificationTitle(@"Test a default action URL override");
@@ -2872,6 +2884,11 @@ TEST_F(WebPushDPushNotificationEventTest, Basic)
     checkLastNotificationTitle(@"Test a missing default action URL override");
     checkLastNotificationDefaultActionURL(@"https://example.com/");
     waitForMessageAndVerify(@"showNotification failed: TypeError: Call to showNotification() while handling a `pushnotification` event did not include NotificationOptions that specify a valid defaultAction url");
+
+    // After the slew of above messages that were handled by service workers, silent push tracking should *not* have
+    // kicked in, and therefore there should still be a push subscription.
+    [NSThread sleepForTimeInterval:(WebKit::WebPushD::silentPushTimeoutForTesting.seconds() + 0.5)];
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
 }
 
 #endif // ENABLE(DECLARATIVE_WEB_PUSH)
