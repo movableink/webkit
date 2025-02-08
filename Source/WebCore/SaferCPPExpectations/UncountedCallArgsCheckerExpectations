@@ -301,7 +301,6 @@ animation/CSSTransition.cpp
 animation/CustomEffect.cpp
 animation/DocumentTimeline.cpp
 animation/KeyframeEffect.cpp
-animation/KeyframeEffectStack.cpp
 animation/ScrollTimeline.cpp
 animation/StyleOriginatedAnimation.cpp
 animation/StyleOriginatedAnimationEvent.cpp
