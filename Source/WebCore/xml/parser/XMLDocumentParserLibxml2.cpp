@@ -851,7 +851,8 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
         customElementReactionStack.emplace(m_currentNode->document().globalObject());
     }
 
-    auto newElement = m_currentNode->treeScope().createElement(qName, true);
+    auto newElement = m_currentNode->document().createElement(qName, true,
+        CustomElementRegistry::registryForNodeOrTreeScope(*m_currentNode, m_currentNode->treeScope()));
 
     Vector<Attribute> prefixedAttributes;
     if (!handleNamespaceAttributes(prefixedAttributes, libxmlNamespaces, numNamespaces)) {

@@ -142,33 +142,7 @@ void TreeScope::setParentTreeScope(TreeScope& newParentScope)
 
 void TreeScope::setCustomElementRegistry(Ref<CustomElementRegistry>&& registry)
 {
-    if (!m_customElementRegistry)
-        m_customElementRegistry = WTFMove(registry);
-}
-
-ExceptionOr<Ref<Node>> TreeScope::importNode(Node& nodeToImport, bool deep)
-{
-    switch (nodeToImport.nodeType()) {
-    case Node::DOCUMENT_FRAGMENT_NODE:
-        if (nodeToImport.isShadowRoot())
-            break;
-        FALLTHROUGH;
-    case Node::ELEMENT_NODE:
-    case Node::TEXT_NODE:
-    case Node::CDATA_SECTION_NODE:
-    case Node::PROCESSING_INSTRUCTION_NODE:
-    case Node::COMMENT_NODE:
-        return nodeToImport.cloneNodeInternal(*this, deep ? Node::CloningOperation::Everything : Node::CloningOperation::OnlySelf);
-
-    case Node::ATTRIBUTE_NODE: {
-        auto& attribute = uncheckedDowncast<Attr>(nodeToImport);
-        return Ref<Node> { Attr::create(documentScope(), attribute.qualifiedName(), attribute.value()) };
-    }
-    case Node::DOCUMENT_NODE: // Can't import a document into another document.
-    case Node::DOCUMENT_TYPE_NODE: // FIXME: Support cloning a DocumentType node per DOM4.
-        break;
-    }
-    return Exception { ExceptionCode::NotSupportedError };
+    m_customElementRegistry = WTFMove(registry);
 }
 
 RefPtr<Element> TreeScope::getElementById(const AtomString& elementId) const

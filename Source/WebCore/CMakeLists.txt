@@ -1135,6 +1135,7 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/Element+PointerLock.idl
     dom/Element.idl
     dom/ElementContentEditable.idl
+    dom/ElementCreationOptions.idl
     dom/ElementInternals.idl
     dom/ErrorEvent.idl
     dom/Event.idl
@@ -1154,6 +1155,7 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/IdleDeadline.idl
     dom/IdleRequestCallback.idl
     dom/IdleRequestOptions.idl
+    dom/ImportNodeOptions.idl
     dom/InnerHTML.idl
     dom/InputEvent.idl
     dom/KeyboardEvent.idl

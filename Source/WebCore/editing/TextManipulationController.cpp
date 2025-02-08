@@ -781,7 +781,7 @@ void TextManipulationController::updateInsertions(Vector<NodeEntry>& lastTopDown
         for (;i < currentTopDownPath.size(); ++i) {
             Ref<Node> node = currentTopDownPath[i];
             if (!insertedNodes.add(node.copyRef()).isNewEntry) {
-                auto clonedNode = node->cloneNodeInternal(node->protectedDocument(), Node::CloningOperation::OnlySelf);
+                auto clonedNode = node->cloneNode(false);
                 if (auto* data = node->eventTargetData())
                     data->eventListenerMap.copyEventListenersNotCreatedFromMarkupToTarget(clonedNode.ptr());
                 node = WTFMove(clonedNode);

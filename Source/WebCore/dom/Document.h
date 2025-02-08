@@ -283,7 +283,9 @@ struct BoundaryPoint;
 struct CSSParserContext;
 struct CaretPositionFromPointOptions;
 struct ClientOrigin;
+struct ElementCreationOptions;
 struct FocusOptions;
+struct ImportNodeOptions;
 struct IntersectionObserverData;
 struct OwnerPermissionsPolicyData;
 struct QuerySelectorAllResults;
@@ -503,6 +505,8 @@ public:
     WEBCORE_EXPORT bool hasFocus() const;
     void whenVisible(Function<void()>&&);
 
+    WEBCORE_EXPORT ExceptionOr<Ref<Element>> createElementForBindings(const AtomString& tagName);
+    ExceptionOr<Ref<Element>> createElementForBindings(const AtomString& tagName, const ElementCreationOptions&);
     WEBCORE_EXPORT Ref<DocumentFragment> createDocumentFragment();
     WEBCORE_EXPORT Ref<Text> createTextNode(String&& data);
     WEBCORE_EXPORT Ref<Comment> createComment(String&& data);
@@ -510,6 +514,10 @@ public:
     WEBCORE_EXPORT ExceptionOr<Ref<ProcessingInstruction>> createProcessingInstruction(String&& target, String&& data);
     WEBCORE_EXPORT ExceptionOr<Ref<Attr>> createAttribute(const AtomString& name);
     WEBCORE_EXPORT ExceptionOr<Ref<Attr>> createAttributeNS(const AtomString& namespaceURI, const AtomString& qualifiedName, bool shouldIgnoreNamespaceChecks = false);
+    WEBCORE_EXPORT ExceptionOr<Ref<Node>> importNode(Node& nodeToImport, std::optional<std::variant<bool, ImportNodeOptions>>&&);
+    WEBCORE_EXPORT ExceptionOr<Ref<Element>> createElementNS(const AtomString& namespaceURI, const AtomString& qualifiedName);
+
+    WEBCORE_EXPORT Ref<Element> createElement(const QualifiedName&, bool createdByParser, CustomElementRegistry* = nullptr);
 
     static CustomElementNameValidationStatus validateCustomElementName(const AtomString&);
     void setActiveCustomElementRegistry(CustomElementRegistry*);
@@ -622,7 +630,6 @@ public:
 
     bool isSrcdocDocument() const { return m_isSrcdocDocument; }
 
-    void setSawElementsInKnownNamespaces() { m_sawElementsInKnownNamespaces = true; }
     bool sawElementsInKnownNamespaces() const { return m_sawElementsInKnownNamespaces; }
     bool wasRemovedLastRefCalled() const { return m_wasRemovedLastRefCalled; }
 
@@ -2034,7 +2041,7 @@ private:
 
     String nodeName() const final;
     bool childTypeAllowed(NodeType) const final;
-    Ref<Node> cloneNodeInternal(TreeScope&, CloningOperation) final;
+    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) final;
     void cloneDataFromDocument(const Document&);
 
     Seconds minimumDOMTimerInterval() const final;

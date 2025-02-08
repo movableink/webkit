@@ -185,7 +185,7 @@ public:
         SelfWithTemplateContent,
         Everything,
     };
-    virtual Ref<Node> cloneNodeInternal(TreeScope&, CloningOperation) = 0;
+    virtual Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) = 0;
     Ref<Node> cloneNode(bool deep);
     WEBCORE_EXPORT ExceptionOr<Ref<Node>> cloneNodeForBindings(bool deep);
 
@@ -290,6 +290,10 @@ public:
     bool isInCustomElementReactionQueue() const { return hasElementStateFlag(ElementStateFlag::IsInCustomElementReactionQueue); }
     void setIsInCustomElementReactionQueue() { setElementStateFlag(ElementStateFlag::IsInCustomElementReactionQueue); }
     void clearIsInCustomElementReactionQueue() { clearElementStateFlag(ElementStateFlag::IsInCustomElementReactionQueue); }
+
+    bool usesNullCustomElementRegistry() const { return hasElementStateFlag(ElementStateFlag::UsesNullCustomElementRegistry); }
+    void setUsesNullCustomElementRegistry() const { setElementStateFlag(ElementStateFlag::UsesNullCustomElementRegistry); }
+    void clearUsesNullCustomElementRegistry() const { clearElementStateFlag(ElementStateFlag::UsesNullCustomElementRegistry); }
 
     bool usesScopedCustomElementRegistryMap() const { return hasElementStateFlag(ElementStateFlag::UsesScopedCustomElementRegistryMap); }
     void setUsesScopedCustomElementRegistryMap() { setElementStateFlag(ElementStateFlag::UsesScopedCustomElementRegistryMap); }
@@ -651,8 +655,9 @@ protected:
 #if ENABLE(FULLSCREEN_API)
         IsFullscreen = 1 << 6,
 #endif
-        UsesScopedCustomElementRegistryMap = 1 << 7,
-        // 8-bits free.
+        UsesNullCustomElementRegistry = 1 << 7,
+        UsesScopedCustomElementRegistryMap = 1 << 8,
+        // 7-bits free.
     };
 
     enum class TabIndexState : uint8_t {

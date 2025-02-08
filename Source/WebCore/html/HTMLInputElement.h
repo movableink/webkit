@@ -361,7 +361,7 @@ private:
 
     void defaultEventHandler(Event&) final;
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(TreeScope&) override;
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) override;
 
     enum AutoCompleteSetting : uint8_t { Uninitialized, On, Off };
     static constexpr int defaultSize = 20;

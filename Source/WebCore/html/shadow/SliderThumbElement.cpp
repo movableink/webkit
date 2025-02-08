@@ -581,9 +581,9 @@ std::optional<Style::ResolvedStyle> SliderThumbElement::resolveCustomStyle(const
     return elementStyle;
 }
 
-Ref<Element> SliderThumbElement::cloneElementWithoutAttributesAndChildren(TreeScope& treeScope)
+Ref<Element> SliderThumbElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*)
 {
-    return create(treeScope.documentScope());
+    return create(document);
 }
 
 // --------------------------------

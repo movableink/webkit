@@ -1110,6 +1110,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/GCReachableRef.h
     dom/GetHTMLOptions.h
     dom/ImageOverlay.h
+    dom/ImportNodeOptions.h
     dom/InlineStyleSheetOwner.h
     dom/KeyboardEvent.h
     dom/LiveNodeList.h

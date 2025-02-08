@@ -68,7 +68,7 @@ void SplitElementCommand::executeApply()
     
 void SplitElementCommand::doApply()
 {
-    m_element1 = protectedElement2()->cloneElementWithoutChildren(protectedDocument());
+    m_element1 = protectedElement2()->cloneElementWithoutChildren(protectedDocument(), nullptr);
     
     executeApply();
 }

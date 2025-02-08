@@ -226,9 +226,8 @@ void HTMLSourceElement::addCandidateSubresourceURLs(ListHashSet<URL>& urls) cons
     getURLsFromSrcsetAttribute(*this, attributeWithoutSynchronization(srcsetAttr), urls);
 }
 
-Ref<Element> HTMLSourceElement::cloneElementWithoutAttributesAndChildren(TreeScope& treeScope)
+Ref<Element> HTMLSourceElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*)
 {
-    Ref document = treeScope.documentScope();
     Ref clone = create(document);
 #if ENABLE(ATTACHMENT_ELEMENT)
     cloneAttachmentAssociatedElementWithoutAttributesAndChildren(clone, document);

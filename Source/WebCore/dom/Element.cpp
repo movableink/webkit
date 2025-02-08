@@ -610,60 +610,68 @@ bool Element::dispatchSimulatedClick(Event* underlyingEvent, SimulatedClickMouse
     return simulateClick(*this, underlyingEvent, eventOptions, visualOptions, SimulatedClickSource::UserAgent);
 }
 
-Ref<Node> Element::cloneNodeInternal(TreeScope& treeScope, CloningOperation type)
+Ref<Node> Element::cloneNodeInternal(Document& document, CloningOperation type, CustomElementRegistry* registry)
 {
     switch (type) {
     case CloningOperation::OnlySelf:
     case CloningOperation::SelfWithTemplateContent: {
-        Ref clone = cloneElementWithoutChildren(treeScope);
+        Ref clone = cloneElementWithoutChildren(document, registry);
         ScriptDisallowedScope::EventAllowedScope eventAllowedScope { clone };
-        cloneShadowTreeIfPossible(clone);
+        cloneShadowTreeIfPossible(clone, registry);
         return clone;
     }
     case CloningOperation::Everything:
         break;
     }
-    return cloneElementWithChildren(treeScope);
+    return cloneElementWithChildren(document, registry);
 }
 
-void Element::cloneShadowTreeIfPossible(Element& newHost)
+void Element::cloneShadowTreeIfPossible(Element& newHost, CustomElementRegistry* registry)
 {
     RefPtr oldShadowRoot = this->shadowRoot();
     if (!oldShadowRoot || !oldShadowRoot->isClonable())
         return;
 
     Ref clonedShadowRoot = [&] {
-        Ref clone = oldShadowRoot->cloneNodeInternal(newHost.treeScope(), Node::CloningOperation::SelfWithTemplateContent);
+        Ref clone = oldShadowRoot->cloneNodeInternal(newHost.document(), Node::CloningOperation::SelfWithTemplateContent, registry);
         return downcast<ShadowRoot>(WTFMove(clone));
     }();
+    if (oldShadowRoot->usesNullCustomElementRegistry())
+        clonedShadowRoot->setUsesNullCustomElementRegistry(); // Set this flag for Element::insertedIntoAncestor.
+    else if (RefPtr registry = oldShadowRoot->customElementRegistry())
+        clonedShadowRoot->setCustomElementRegistry(registry.releaseNonNull());
     newHost.addShadowRoot(clonedShadowRoot.copyRef());
-    oldShadowRoot->cloneChildNodes(clonedShadowRoot, clonedShadowRoot);
+    oldShadowRoot->cloneChildNodes(newHost.document(), clonedShadowRoot->usesNullCustomElementRegistry() ? nullptr : registry, clonedShadowRoot);
 }
 
-Ref<Element> Element::cloneElementWithChildren(TreeScope& treeScope)
+Ref<Element> Element::cloneElementWithChildren(Document& document, CustomElementRegistry* registry)
 {
-    Ref clone = cloneElementWithoutChildren(treeScope);
+    Ref clone = cloneElementWithoutChildren(document, registry);
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { clone };
-    cloneShadowTreeIfPossible(clone);
-    cloneChildNodes(treeScope, clone);
+    cloneShadowTreeIfPossible(clone, registry);
+    cloneChildNodes(document, registry, clone);
     return clone;
 }
 
-Ref<Element> Element::cloneElementWithoutChildren(TreeScope& treeScope)
+Ref<Element> Element::cloneElementWithoutChildren(Document& document, CustomElementRegistry* registry)
 {
-    Ref clone = cloneElementWithoutAttributesAndChildren(treeScope);
+    Ref clone = cloneElementWithoutAttributesAndChildren(document, registry);
 
     // This will catch HTML elements in the wrong namespace that are not correctly copied.
     // This is a sanity check as HTML overloads some of the DOM methods.
     ASSERT(isHTMLElement() == clone->isHTMLElement());
 
     clone->cloneDataFromElement(*this);
+
+    if (usesNullCustomElementRegistry() && !registry)
+        clone->setUsesNullCustomElementRegistry();
+
     return clone;
 }
 
-Ref<Element> Element::cloneElementWithoutAttributesAndChildren(TreeScope& treeScope)
+Ref<Element> Element::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry* registry)
 {
-    return treeScope.createElement(tagQName(), false);
+    return document.createElement(tagQName(), false, registry);
 }
 
 Ref<Attr> Element::detachAttribute(unsigned index)
@@ -2918,8 +2926,20 @@ Node::InsertedIntoAncestorResult Element::insertedIntoAncestor(InsertionType ins
             if (newHTMLDocument)
                 updateNameForDocument(*newHTMLDocument, nullAtom(), nameValue);
         }
-        if (parentOfInsertedTree.isInTreeScope() && usesScopedCustomElementRegistryMap())
-            CustomElementRegistry::removeFromScopedCustomElementRegistryMap(*this);
+
+        if (parentOfInsertedTree.isInTreeScope() && usesScopedCustomElementRegistryMap()) {
+            if (CustomElementRegistry::registryForElement(*this) == treeScope().customElementRegistry())
+                CustomElementRegistry::removeFromScopedCustomElementRegistryMap(*this);
+        }
+    }
+
+    if (usesNullCustomElementRegistry() && !parentOfInsertedTree.usesNullCustomElementRegistry()) {
+        clearUsesNullCustomElementRegistry();
+        if (UNLIKELY(parentOfInsertedTree.usesScopedCustomElementRegistryMap())) {
+            RefPtr registry = CustomElementRegistry::registryForElement(downcast<Element>(parentOfInsertedTree));
+            ASSERT(registry);
+            CustomElementRegistry::addToScopedCustomElementRegistryMap(*this, *registry);
+        }
     }
 
     if (insertionType.connectedToDocument) {
@@ -3010,7 +3030,7 @@ void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldPar
         }
         if (oldParentOfRemovedTree.isInShadowTree()) {
             if (RefPtr registry = oldTreeScope.customElementRegistry()) {
-                if (UNLIKELY(registry->isScoped()))
+                if (UNLIKELY(registry->isScoped() && !usesScopedCustomElementRegistryMap()))
                     CustomElementRegistry::addToScopedCustomElementRegistryMap(*this, *registry);
             }
         }
@@ -3176,7 +3196,7 @@ static bool canAttachAuthorShadowRoot(const Element& element)
     return false;
 }
 
-ExceptionOr<ShadowRoot&> Element::attachShadow(const ShadowRootInit& init)
+ExceptionOr<ShadowRoot&> Element::attachShadow(const ShadowRootInit& init, CustomElementRegistryKind registryKind)
 {
     if (init.mode == ShadowRootMode::UserAgent)
         return Exception { ExceptionCode::TypeError };
@@ -3193,22 +3213,29 @@ ExceptionOr<ShadowRoot&> Element::attachShadow(const ShadowRootInit& init)
         }
         return Exception { ExceptionCode::NotSupportedError };
     }
-    RefPtr registry = init.registry;
-    if (!registry) {
-        if (RefPtr window = document().domWindow())
-            registry = window->customElementRegistry();
-    }
+    RefPtr registry = init.customElements;
+    auto scopedRegistry = ShadowRoot::ScopedCustomElementRegistry::No;
+    if (registryKind == CustomElementRegistryKind::Null) {
+        ASSERT(!registry);
+        scopedRegistry = ShadowRoot::ScopedCustomElementRegistry::Yes;
+    } else if (registry) {
+        ASSERT(registryKind == CustomElementRegistryKind::Window);
+        scopedRegistry = ShadowRoot::ScopedCustomElementRegistry::Yes;
+    } else
+        registry = document().customElementRegistry();
     Ref shadow = ShadowRoot::create(document(), init.mode, init.slotAssignment,
         init.delegatesFocus ? ShadowRoot::DelegatesFocus::Yes : ShadowRoot::DelegatesFocus::No,
         init.clonable ? ShadowRoot::Clonable::Yes : ShadowRoot::Clonable::No,
         init.serializable ? ShadowRoot::Serializable::Yes : ShadowRoot::Serializable::No,
         isPrecustomizedOrDefinedCustomElement() ? ShadowRoot::AvailableToElementInternals::Yes : ShadowRoot::AvailableToElementInternals::No,
-        WTFMove(registry), init.registry ? ShadowRoot::ScopedCustomElementRegistry::Yes : ShadowRoot::ScopedCustomElementRegistry::No);
+        WTFMove(registry), scopedRegistry);
+    if (registryKind == CustomElementRegistryKind::Null)
+        shadow->setUsesNullCustomElementRegistry(); // Set this flag for Element::insertedIntoAncestor.
     addShadowRoot(shadow.copyRef());
     return shadow.get();
 }
 
-ExceptionOr<ShadowRoot&> Element::attachDeclarativeShadow(ShadowRootMode mode, ShadowRootDelegatesFocus delegatesFocus, ShadowRootClonable clonable, ShadowRootSerializable serializable)
+ExceptionOr<ShadowRoot&> Element::attachDeclarativeShadow(ShadowRootMode mode, ShadowRootDelegatesFocus delegatesFocus, ShadowRootClonable clonable, ShadowRootSerializable serializable, CustomElementRegistryKind registryKind)
 {
     if (this->shadowRoot())
         return Exception { ExceptionCode::NotSupportedError };
@@ -3219,7 +3246,7 @@ ExceptionOr<ShadowRoot&> Element::attachDeclarativeShadow(ShadowRootMode mode, S
         serializable == ShadowRootSerializable::Yes,
         SlotAssignmentMode::Named,
         nullptr,
-    });
+    }, registryKind);
     if (exceptionOrShadowRoot.hasException())
         return exceptionOrShadowRoot.releaseException();
     Ref shadowRoot = exceptionOrShadowRoot.releaseReturnValue();
@@ -3340,6 +3367,13 @@ CustomElementReactionQueue* Element::reactionQueue() const
     if (!hasRareData())
         return nullptr;
     return elementRareData()->customElementReactionQueue();
+}
+
+CustomElementRegistry* Element::customElementRegistry() const
+{
+    if (RefPtr window = document().domWindow())
+        window->ensureCustomElementRegistry(); // Create the global registry before querying since registryForElement doesn't ensure it.
+    return CustomElementRegistry::registryForElement(*this);
 }
 
 CustomElementDefaultARIA& Element::customElementDefaultARIA()

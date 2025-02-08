@@ -33,6 +33,7 @@
 #include "ComposedTreeAncestorIterator.h"
 #include "ContainerNodeAlgorithms.h"
 #include "ContextMenuController.h"
+#include "CustomElementRegistry.h"
 #include "DataTransfer.h"
 #include "DocumentInlines.h"
 #include "DocumentType.h"
@@ -814,7 +815,8 @@ ExceptionOr<void> Node::normalize()
 Ref<Node> Node::cloneNode(bool deep)
 {
     ASSERT(!isShadowRoot());
-    return cloneNodeInternal(document(), deep ? CloningOperation::Everything : CloningOperation::OnlySelf);
+    RefPtr registry = CustomElementRegistry::registryForNodeOrTreeScope(*this, treeScope());
+    return cloneNodeInternal(document(), deep ? CloningOperation::Everything : CloningOperation::OnlySelf, registry.get());
 }
 
 ExceptionOr<Ref<Node>> Node::cloneNodeForBindings(bool deep)

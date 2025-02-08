@@ -1142,6 +1142,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/dom/Element+PointerLock.idl \
     $(WebCore)/dom/Element.idl \
     $(WebCore)/dom/ElementContentEditable.idl \
+    $(WebCore)/dom/ElementCreationOptions.idl \
     $(WebCore)/dom/ElementInternals.idl \
     $(WebCore)/dom/ErrorEvent.idl \
     $(WebCore)/dom/Event.idl \
@@ -1162,6 +1163,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/dom/IdleDeadline.idl \
     $(WebCore)/dom/IdleRequestCallback.idl \
     $(WebCore)/dom/IdleRequestOptions.idl \
+    $(WebCore)/dom/ImportNodeOptions.idl \
     $(WebCore)/dom/InnerHTML.idl \
     $(WebCore)/dom/InputEvent.idl \
     $(WebCore)/dom/KeyboardEvent.idl \

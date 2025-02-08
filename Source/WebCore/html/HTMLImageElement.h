@@ -202,7 +202,7 @@ private:
     void invalidateAttributeMapping();
     void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(TreeScope&) final;
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) final;
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;

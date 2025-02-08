@@ -620,7 +620,7 @@ CustomElementRegistry& LocalDOMWindow::ensureCustomElementRegistry()
     if (!m_customElementRegistry) {
         m_customElementRegistry = CustomElementRegistry::create(*scriptExecutionContext(), *this);
         for (Ref shadowRoot : document()->inDocumentShadowRoots()) {
-            if (shadowRoot->mode() == ShadowRootMode::UserAgent)
+            if (shadowRoot->mode() == ShadowRootMode::UserAgent || shadowRoot->hasScopedCustomElementRegistry())
                 continue;
             const_cast<ShadowRoot&>(shadowRoot.get()).setCustomElementRegistry(*m_customElementRegistry);
         }

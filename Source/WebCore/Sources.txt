@@ -3792,6 +3792,7 @@ JSEcdsaParams.cpp
 JSEffectTiming.cpp
 JSElement.cpp
 JSElementCSSInlineStyle.cpp
+JSElementCreationOptions.cpp
 JSElementInternals.cpp
 JSEndingType.cpp
 JSErrorCallback.cpp
@@ -4122,6 +4123,7 @@ JSImageData.cpp
 JSImageDataSettings.cpp
 JSImageDataStorageFormat.cpp
 JSImageSmoothingQuality.cpp
+JSImportNodeOptions.cpp
 JSInputDeviceInfo.cpp
 JSInputEvent.cpp
 JSInspectorAuditAccessibilityObject.cpp

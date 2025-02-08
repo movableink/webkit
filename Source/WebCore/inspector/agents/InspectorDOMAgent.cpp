@@ -55,6 +55,7 @@
 #include "ContainerNode.h"
 #include "Cookie.h"
 #include "CookieJar.h"
+#include "CustomElementRegistry.h"
 #include "DOMEditor.h"
 #include "DOMException.h"
 #include "DOMPatchSupport.h"

@@ -147,7 +147,7 @@ void CustomElementReactionQueue::tryToUpgradeElement(Element& element)
 {
     ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.isCustomElementUpgradeCandidate());
-    RefPtr registry = element.treeScope().customElementRegistry();
+    RefPtr registry = CustomElementRegistry::registryForElement(element);
     if (!registry)
         return;
 

@@ -391,6 +391,7 @@ scrolling
 select
 selected
 shadowrootclonable
+shadowrootcustomelements
 shadowrootdelegatesfocus
 shadowrootmode
 shadowrootserializable

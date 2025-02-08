@@ -77,7 +77,7 @@ public:
 
     void takeAllChildrenFrom(ContainerNode*);
 
-    void cloneChildNodes(TreeScope&, ContainerNode& clone);
+    void cloneChildNodes(Document&, CustomElementRegistry*, ContainerNode& clone);
 
     enum class CanDelayNodeDeletion : uint8_t { No, Yes, Unknown };
     struct ChildChange {

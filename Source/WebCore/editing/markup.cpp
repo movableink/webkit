@@ -1391,7 +1391,7 @@ Ref<DocumentFragment> createFragmentFromText(const SimpleRange& context, const S
             fillContainerFromString(fragment, s);
         } else {
             if (useClonesOfEnclosingBlock)
-                element = block->cloneElementWithoutChildren(document);
+                element = block->cloneElementWithoutChildren(document, nullptr);
             else
                 element = createDefaultParagraphElement(document);
             fillContainerFromString(*element, s);

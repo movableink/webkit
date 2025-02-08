@@ -1443,6 +1443,7 @@ $(PROJECT_DIR)/dom/Element+PointerEvents.idl
 $(PROJECT_DIR)/dom/Element+PointerLock.idl
 $(PROJECT_DIR)/dom/Element.idl
 $(PROJECT_DIR)/dom/ElementContentEditable.idl
+$(PROJECT_DIR)/dom/ElementCreationOptions.idl
 $(PROJECT_DIR)/dom/ElementInternals.idl
 $(PROJECT_DIR)/dom/ErrorEvent.idl
 $(PROJECT_DIR)/dom/Event.idl
@@ -1466,6 +1467,7 @@ $(PROJECT_DIR)/dom/HashChangeEvent.idl
 $(PROJECT_DIR)/dom/IdleDeadline.idl
 $(PROJECT_DIR)/dom/IdleRequestCallback.idl
 $(PROJECT_DIR)/dom/IdleRequestOptions.idl
+$(PROJECT_DIR)/dom/ImportNodeOptions.idl
 $(PROJECT_DIR)/dom/InnerHTML.idl
 $(PROJECT_DIR)/dom/InputEvent.idl
 $(PROJECT_DIR)/dom/KeyboardEvent.idl
@@ -1680,7 +1682,6 @@ $(PROJECT_DIR)/html/VideoFrameMetadata.idl
 $(PROJECT_DIR)/html/VideoFrameRequestCallback.idl
 $(PROJECT_DIR)/html/VoidCallback.idl
 $(PROJECT_DIR)/html/WebKitMediaKeyError.idl
-$(PROJECT_DIR)/html/closewatcher/CloseWatcher.idl
 $(PROJECT_DIR)/html/canvas/ANGLEInstancedArrays.idl
 $(PROJECT_DIR)/html/canvas/CanvasCompositing.idl
 $(PROJECT_DIR)/html/canvas/CanvasDirection.idl
@@ -1791,6 +1792,7 @@ $(PROJECT_DIR)/html/canvas/WebGLTransformFeedback.idl
 $(PROJECT_DIR)/html/canvas/WebGLUniformLocation.idl
 $(PROJECT_DIR)/html/canvas/WebGLVertexArrayObject.idl
 $(PROJECT_DIR)/html/canvas/WebGLVertexArrayObjectOES.idl
+$(PROJECT_DIR)/html/closewatcher/CloseWatcher.idl
 $(PROJECT_DIR)/html/parser/HTMLEntityNames.in
 $(PROJECT_DIR)/html/parser/create-html-entity-table
 $(PROJECT_DIR)/html/shadow/attachmentElementShadow.css

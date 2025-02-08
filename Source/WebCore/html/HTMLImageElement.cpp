@@ -1063,9 +1063,8 @@ void HTMLImageElement::invalidateAttributeMapping()
     invalidateStyle();
 }
 
-Ref<Element> HTMLImageElement::cloneElementWithoutAttributesAndChildren(TreeScope& treeScope)
+Ref<Element> HTMLImageElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*)
 {
-    Ref document = treeScope.documentScope();
     auto clone = create(document);
 #if ENABLE(ATTACHMENT_ELEMENT)
     cloneAttachmentAssociatedElementWithoutAttributesAndChildren(clone, document);

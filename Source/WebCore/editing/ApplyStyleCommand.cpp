@@ -1073,7 +1073,7 @@ void ApplyStyleCommand::pushDownInlineStyleAroundNode(EditingStyle& style, Node*
                 continue;
             if (!child->contains(targetNode) && elementsToPushDown.size()) {
                 for (auto& element : elementsToPushDown) {
-                    auto wrapper = element->cloneElementWithoutChildren(protectedDocument());
+                    auto wrapper = element->cloneElementWithoutChildren(protectedDocument(), nullptr);
                     wrapper->removeAttribute(styleAttr);
                     surroundNodeRangeWithElement(child, child, WTFMove(wrapper));
                 }
@@ -1506,7 +1506,7 @@ void ApplyStyleCommand::applyInlineStyleChange(Node& passedStart, Node& passedEn
         surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document, supTag));
 
     if (m_styledInlineElement && addStyledElement == AddStyledElement::Yes)
-        surroundNodeRangeWithElement(*startNode, *endNode, m_styledInlineElement->cloneElementWithoutChildren(document));
+        surroundNodeRangeWithElement(*startNode, *endNode, m_styledInlineElement->cloneElementWithoutChildren(document, nullptr));
 }
 
 float ApplyStyleCommand::computedFontSize(Node* node)
