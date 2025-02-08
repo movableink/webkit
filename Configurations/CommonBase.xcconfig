@@ -68,7 +68,7 @@ GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 WK_COMMON_WARNING_CFLAGS = -Wall -Wc99-designator -Wconditional-uninitialized -Wextra -Wdeprecated-enum-enum-conversion -Wdeprecated-enum-float-conversion -Wenum-float-conversion -Wfinal-dtor-non-final-class -Wformat=2 -Wmisleading-indentation -Wreorder-init-list -Wundef -Wvla;
 WARNING_CFLAGS = $(inherited) $(WK_COMMON_WARNING_CFLAGS) $(WK_SANITIZER_WARNING_CFLAGS);
 
-WK_NO_UNSAFE_BUFFER_USAGE_IN_LIBC_CALL = -Wno-unknown-warning-option -Wno-unsafe-buffer-usage-in-libc-call;
+WK_NO_UNSAFE_BUFFER_USAGE_IN_LIBC_CALL = ;
 WK_NO_UNSAFE_BUFFER_USAGE_IN_LIBC_CALL[sdk=macosx13*] = ;
 WK_NO_UNSAFE_BUFFER_USAGE_IN_LIBC_CALL[sdk=macosx14*] = ;
 WK_NO_UNSAFE_BUFFER_USAGE_IN_LIBC_CALL[sdk=macosx15.0*] = ;
