@@ -56,7 +56,7 @@ public:
     ~AudioContext();
 
     void ref() const final { ThreadSafeRefCounted::ref(); }
-    void deref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
     WEBCORE_EXPORT static void setDefaultSampleRateForTesting(std::optional<float>);
 
