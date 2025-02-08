@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2004 Zack Rusin <zack@kde.org>
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007 Nicholas Shanks <webkit@nickshanks.com>
  * Copyright (C) 2011 Sencha, Inc. All rights reserved.
@@ -3744,7 +3744,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyOrder:
         return CSSPrimitiveValue::createInteger(style.order());
     case CSSPropertyFloat:
-        if (style.display() != DisplayType::None && style.hasOutOfFlowPosition())
+        if (style.hasOutOfFlowPosition())
             return CSSPrimitiveValue::create(CSSValueNone);
         return createConvertingToCSSValueID(style.floating());
     case CSSPropertyFieldSizing:
