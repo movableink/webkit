@@ -58,6 +58,9 @@ public:
     virtual void viewWillStartLiveResize() { }
     virtual void viewWillEndLiveResize() { }
     virtual void viewSizeDidChange() { }
+
+    virtual bool isScrollingTreeFrameScrollingNodeMac() const { return false; };
+
 protected:
     ScrollingTreeFrameScrollingNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 

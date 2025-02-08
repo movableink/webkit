@@ -595,13 +595,10 @@ page/mac/ServicesOverlayController.mm
 page/scrolling/AsyncScrollingCoordinator.cpp
 page/scrolling/ScrollAnchoringController.cpp
 page/scrolling/ScrollingCoordinator.cpp
-page/scrolling/ScrollingTree.cpp
 page/scrolling/ScrollingTreeFixedNode.cpp
 page/scrolling/ScrollingTreeOverflowScrollProxyNode.cpp
 page/scrolling/ScrollingTreePositionedNode.cpp
 page/scrolling/ScrollingTreeStickyNode.cpp
-page/scrolling/ThreadedScrollingTree.cpp
-page/scrolling/mac/ScrollingTreeMac.mm
 page/text-extraction/TextExtraction.cpp
 platform/CaretAnimator.cpp
 platform/DictationCaretAnimator.cpp

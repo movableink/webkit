@@ -107,7 +107,6 @@ page/NavigatorLoginStatus.cpp
 page/mac/EventHandlerMac.mm
 page/scrolling/AsyncScrollingCoordinator.cpp
 page/scrolling/mac/ScrollingStateScrollingNodeMac.mm
-page/scrolling/mac/ScrollingTreeMac.mm
 platform/SharedBuffer.cpp
 platform/ThreadGlobalData.cpp
 platform/ThreadGlobalData.h

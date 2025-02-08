@@ -1049,11 +1049,9 @@ page/scrolling/ScrollingCoordinator.cpp
 page/scrolling/ScrollingStateNode.h
 page/scrolling/ScrollingStateTree.cpp
 page/scrolling/ScrollingThread.cpp
-page/scrolling/ScrollingTree.cpp
 page/scrolling/ScrollingTreeGestureState.cpp
 page/scrolling/ScrollingTreeScrollingNodeDelegate.h
 page/scrolling/ThreadedScrollingCoordinator.cpp
-page/scrolling/ThreadedScrollingTree.cpp
 page/scrolling/mac/ScrollerMac.mm
 page/scrolling/mac/ScrollingCoordinatorMac.mm
 page/scrolling/mac/ScrollingTreeScrollingNodeDelegateMac.mm
