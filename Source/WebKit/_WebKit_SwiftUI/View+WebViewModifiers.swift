@@ -27,16 +27,13 @@ public import SwiftUI
 
 extension EnvironmentValues {
     @Entry
-    var webViewAllowsBackForwardNavigationGestures = false
+    var webViewAllowsBackForwardNavigationGestures = WebView.BackForwardNavigationGesturesBehavior.automatic
 
     @Entry
-    var webViewAllowsLinkPreview = true
+    var webViewAllowsLinkPreview = WebView.LinkPreviewBehavior.automatic
 
     @Entry
-    var webViewAllowsTabFocusingLinks = false
-
-    @Entry
-    var webViewAllowsTextInteraction = true
+    var webViewTextSelection = true
 
     @Entry
     var webViewAllowsElementFullscreen = false
@@ -49,24 +46,25 @@ extension EnvironmentValues {
 }
 
 extension View {
-    @_spi(Private)
-    public func webViewAllowsBackForwardNavigationGestures(_ value: Bool = true) -> some View {
+    /// Determines whether horizontal swipe gestures trigger backward and forward page navigation.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public func webViewBackForwardNavigationGestures(_ value: WebView.BackForwardNavigationGesturesBehavior = .automatic) -> some View {
         environment(\.webViewAllowsBackForwardNavigationGestures, value)
     }
 
-    @_spi(Private)
-    public func webViewAllowsLinkPreview(_ value: Bool = true) -> some View {
+    /// Determines whether pressing a link displays a preview of the destination for the link.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public func webViewLinkPreviews(_ value: WebView.LinkPreviewBehavior = .automatic) -> some View {
         environment(\.webViewAllowsLinkPreview, value)
     }
 
     @_spi(Private)
-    public func webViewAllowsTabFocusingLinks(_ value: Bool = true) -> some View {
-        environment(\.webViewAllowsTabFocusingLinks, value)
-    }
-
-    @_spi(Private)
-    public func webViewAllowsTextInteraction(_ value: Bool = true) -> some View {
-        environment(\.webViewAllowsTextInteraction, value)
+    public func webViewTextSelection<S>(_ selectability: S) -> some View where S : TextSelectability {
+        environment(\.webViewTextSelection, S.allowsSelection)
     }
 
     @_spi(Private)

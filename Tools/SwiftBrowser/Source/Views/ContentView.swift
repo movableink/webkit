@@ -226,9 +226,10 @@ struct ContentView: View {
         NavigationStack {
             @Bindable var viewModel = viewModel
 
-            WebView_v0(viewModel.page)
-                .webViewAllowsBackForwardNavigationGestures()
-                .webViewAllowsTabFocusingLinks()
+            WebView(viewModel.page)
+                .webViewBackForwardNavigationGestures(.enabled)
+                .webViewLinkPreviews(.enabled)
+                .webViewTextSelection(.enabled)
                 .webViewAllowsElementFullscreen()
                 .webViewFindNavigator(isPresented: $findNavigatorIsPresented)
                 .task {

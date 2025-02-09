@@ -27,7 +27,7 @@ internal import WebKit_Internal
 
 @MainActor
 struct WebViewRepresentable {
-    let owner: WebView_v0
+    let owner: WebView
 
     func makePlatformView(context: Context) -> CocoaWebViewAdapter {
         // FIXME: Make this more robust by figuring out what happens when a WebPage moves between representables.
@@ -49,11 +49,10 @@ struct WebViewRepresentable {
 
         platformView.webView = webView
 
-        webView.allowsBackForwardNavigationGestures = environment.webViewAllowsBackForwardNavigationGestures
-        webView.allowsLinkPreview = environment.webViewAllowsLinkPreview
+        webView.allowsBackForwardNavigationGestures = environment.webViewAllowsBackForwardNavigationGestures.value != .disabled
+        webView.allowsLinkPreview = environment.webViewAllowsLinkPreview.value != .disabled
 
-        webView.configuration.preferences.isTextInteractionEnabled = environment.webViewAllowsTextInteraction
-        webView.configuration.preferences.tabFocusesLinks = environment.webViewAllowsTabFocusingLinks
+        webView.configuration.preferences.isTextInteractionEnabled = environment.webViewTextSelection
         webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewAllowsElementFullscreen
 
         context.coordinator.update(platformView, configuration: self, environment: environment)

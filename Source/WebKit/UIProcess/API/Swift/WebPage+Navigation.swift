@@ -27,6 +27,9 @@ import Foundation
 
 extension WebPage {
     /// An opaque identifier which can be used to uniquely identify a load request for a web page.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
     public struct NavigationID: Sendable, Hashable, Equatable {
         let rawValue: ObjectIdentifier
 
@@ -36,6 +39,9 @@ extension WebPage {
     }
 
     /// A particular state that occurs during the progression of a navigation.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
     public struct NavigationEvent: Sendable {
         /// A set of values representing the possible types a NavigationEvent can represent.
         public enum Kind: Sendable {
