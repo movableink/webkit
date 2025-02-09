@@ -335,7 +335,9 @@ void ProvisionalPageProxy::goToBackForwardItem(API::Navigation& navigation, WebB
     if (!page)
         return;
 
-    page->protectedBackForwardList()->setItemsAsRestoredFromSessionIf([this, targetItem = Ref { item }](auto& item) {
+    // FIXME: This is a static analysis false positive. The lamda passed to `setItemsAsRestoredFromSessionIf()` is marked as NOESCAPE so capturing
+    // `this` is actually safe.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE page->protectedBackForwardList()->setItemsAsRestoredFromSessionIf([this, targetItem = Ref { item }](auto& item) {
         if (auto* backForwardCacheEntry = item.backForwardCacheEntry()) {
             if (backForwardCacheEntry->processIdentifier() == process().coreProcessIdentifier())
                 return false;
