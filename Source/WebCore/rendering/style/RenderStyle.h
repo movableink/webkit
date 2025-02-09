@@ -74,6 +74,7 @@ class LineClampValue;
 class NinePieceImage;
 class OffsetRotation;
 class PathOperation;
+class PositionArea;
 class PseudoIdSet;
 class QuotesData;
 class RenderObject;
@@ -2315,6 +2316,10 @@ public:
     static inline std::optional<Style::ScopedName> initialPositionAnchor();
     inline const std::optional<Style::ScopedName>& positionAnchor() const;
     inline void setPositionAnchor(const std::optional<Style::ScopedName>&);
+
+    static inline std::optional<PositionArea> initialPositionArea();
+    inline std::optional<PositionArea> positionArea() const;
+    inline void setPositionArea(std::optional<PositionArea>);
 
     static constexpr Style::PositionTryOrder initialPositionTryOrder();
     inline Style::PositionTryOrder positionTryOrder() const;

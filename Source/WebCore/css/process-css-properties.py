@@ -3959,6 +3959,7 @@ class GenerateCSSPropertyParsing:
                     "CSSParserIdioms.h",
                     "CSSPropertyParser.h",
                     "CSSPropertyParserConsumer+Align.h",
+                    "CSSPropertyParserConsumer+Anchor.h",
                     "CSSPropertyParserConsumer+Angle.h",
                     "CSSPropertyParserConsumer+Animations.h",
                     "CSSPropertyParserConsumer+AppleVisualEffect.h",

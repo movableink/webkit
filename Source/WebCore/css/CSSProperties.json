@@ -9559,6 +9559,19 @@
                 "url": "https://drafts.csswg.org/css-anchor-position-1/#position-anchor"
             }
         },
+        "position-area": {
+            "codegen-properties": {
+                "converter": "PositionArea",
+                "parser-function": "consumePositionArea",
+                "parser-grammar-unused": "none | <position-area>",
+                "parser-grammar-unused-reason": "Needs support for '||' groups.",
+                "settings-flag": "cssAnchorPositioningEnabled"
+            },
+            "specification": {
+                "category": "css-anchor-position",
+                "url": "https://drafts.csswg.org/css-anchor-position-1/#position-area"
+            }
+        },
         "position-try-order": {
             "values": [
                 "normal",

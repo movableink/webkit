@@ -48,6 +48,7 @@
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSProperty.h"
 #include "CSSPropertyAnimation.h"
+#include "CSSPropertyParserConsumer+Anchor.h"
 #include "CSSQuadValue.h"
 #include "CSSRayValue.h"
 #include "CSSRectValue.h"
@@ -3150,6 +3151,145 @@ static Ref<CSSValue> valueForAnchorName(const Vector<Style::ScopedName>& scopedN
     return CSSValueList::createCommaSeparated(WTFMove(list));
 }
 
+static CSSValueID keywordForPositionAreaSpan(const PositionAreaSpan span)
+{
+    auto axis = span.axis();
+    auto track = span.track();
+    auto self = span.self();
+
+    switch (axis) {
+    case PositionAreaAxis::Horizontal:
+        ASSERT(self == PositionAreaSelf::No);
+        switch (track) {
+        case PositionAreaTrack::Start:
+            return CSSValueLeft;
+        case PositionAreaTrack::SpanStart:
+            return CSSValueSpanLeft;
+        case PositionAreaTrack::End:
+            return CSSValueRight;
+        case PositionAreaTrack::SpanEnd:
+            return CSSValueSpanRight;
+        case PositionAreaTrack::Center:
+            return CSSValueCenter;
+        case PositionAreaTrack::SpanAll:
+            return CSSValueSpanAll;
+        default:
+            ASSERT_NOT_REACHED();
+            return CSSValueLeft;
+        }
+
+    case PositionAreaAxis::Vertical:
+        ASSERT(self == PositionAreaSelf::No);
+        switch (track) {
+        case PositionAreaTrack::Start:
+            return CSSValueTop;
+        case PositionAreaTrack::SpanStart:
+            return CSSValueSpanTop;
+        case PositionAreaTrack::End:
+            return CSSValueBottom;
+        case PositionAreaTrack::SpanEnd:
+            return CSSValueSpanBottom;
+        case PositionAreaTrack::Center:
+            return CSSValueCenter;
+        case PositionAreaTrack::SpanAll:
+            return CSSValueSpanAll;
+        default:
+            ASSERT_NOT_REACHED();
+            return CSSValueTop;
+        }
+
+    case PositionAreaAxis::X:
+        switch (track) {
+        case PositionAreaTrack::Start:
+            return self == PositionAreaSelf::No ? CSSValueXStart : CSSValueXSelfStart;
+        case PositionAreaTrack::SpanStart:
+            return self == PositionAreaSelf::No ? CSSValueSpanXStart : CSSValueSpanXSelfStart;
+        case PositionAreaTrack::End:
+            return self == PositionAreaSelf::No ? CSSValueXEnd : CSSValueXSelfEnd;
+        case PositionAreaTrack::SpanEnd:
+            return self == PositionAreaSelf::No ? CSSValueSpanXEnd : CSSValueSpanXSelfEnd;
+        case PositionAreaTrack::Center:
+            return CSSValueCenter;
+        case PositionAreaTrack::SpanAll:
+            return CSSValueSpanAll;
+        default:
+            ASSERT_NOT_REACHED();
+            return CSSValueXStart;
+        }
+
+    case PositionAreaAxis::Y:
+        switch (track) {
+        case PositionAreaTrack::Start:
+            return self == PositionAreaSelf::No ? CSSValueYStart : CSSValueYSelfStart;
+        case PositionAreaTrack::SpanStart:
+            return self == PositionAreaSelf::No ? CSSValueSpanYStart : CSSValueSpanYSelfStart;
+        case PositionAreaTrack::End:
+            return self == PositionAreaSelf::No ? CSSValueYEnd : CSSValueYSelfEnd;
+        case PositionAreaTrack::SpanEnd:
+            return self == PositionAreaSelf::No ? CSSValueSpanYEnd : CSSValueSpanYSelfEnd;
+        case PositionAreaTrack::Center:
+            return CSSValueCenter;
+        case PositionAreaTrack::SpanAll:
+            return CSSValueSpanAll;
+        default:
+            ASSERT_NOT_REACHED();
+            return CSSValueYStart;
+        }
+
+    case PositionAreaAxis::Block:
+        switch (track) {
+        case PositionAreaTrack::Start:
+            return self == PositionAreaSelf::No ? CSSValueBlockStart : CSSValueSelfBlockStart;
+        case PositionAreaTrack::SpanStart:
+            return self == PositionAreaSelf::No ? CSSValueSpanBlockStart : CSSValueSpanSelfBlockStart;
+        case PositionAreaTrack::End:
+            return self == PositionAreaSelf::No ? CSSValueBlockEnd : CSSValueSelfBlockEnd;
+        case PositionAreaTrack::SpanEnd:
+            return self == PositionAreaSelf::No ? CSSValueSpanBlockEnd : CSSValueSpanSelfBlockEnd;
+        case PositionAreaTrack::Center:
+            return CSSValueCenter;
+        case PositionAreaTrack::SpanAll:
+            return CSSValueSpanAll;
+        default:
+            ASSERT_NOT_REACHED();
+            return CSSValueBlockStart;
+        }
+
+    case PositionAreaAxis::Inline:
+        switch (track) {
+        case PositionAreaTrack::Start:
+            return self == PositionAreaSelf::No ? CSSValueInlineStart : CSSValueSelfInlineStart;
+        case PositionAreaTrack::SpanStart:
+            return self == PositionAreaSelf::No ? CSSValueSpanInlineStart : CSSValueSpanSelfInlineStart;
+        case PositionAreaTrack::End:
+            return self == PositionAreaSelf::No ? CSSValueInlineEnd : CSSValueSelfInlineEnd;
+        case PositionAreaTrack::SpanEnd:
+            return self == PositionAreaSelf::No ? CSSValueSpanInlineEnd : CSSValueSpanSelfInlineEnd;
+        case PositionAreaTrack::Center:
+            return CSSValueCenter;
+        case PositionAreaTrack::SpanAll:
+            return CSSValueSpanAll;
+        default:
+            ASSERT_NOT_REACHED();
+            return CSSValueInlineStart;
+        }
+    }
+
+    ASSERT_NOT_REACHED();
+    return CSSValueLeft;
+}
+
+static Ref<CSSValue> valueForPositionArea(const std::optional<PositionArea>& positionArea)
+{
+    if (!positionArea)
+        return CSSPrimitiveValue::create(CSSValueNone);
+
+    auto blockOrXAxisKeyword = keywordForPositionAreaSpan(positionArea->blockOrXAxis());
+    auto inlineOrYAxisKeyword = keywordForPositionAreaSpan(positionArea->inlineOrYAxis());
+
+    return CSSPropertyParserHelpers::valueForPositionArea(blockOrXAxisKeyword, inlineOrYAxisKeyword).releaseNonNull();
+}
+
 static Ref<CSSValue> valueForTimelineScopeNames(const Vector<AtomString>& names)
 {
     if (names.isEmpty())
@@ -4833,6 +4973,8 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         if (!style.positionAnchor())
             return CSSPrimitiveValue::create(CSSValueAuto);
         return valueForScopedName(*style.positionAnchor());
+    case CSSPropertyPositionArea:
+        return valueForPositionArea(style.positionArea());
     case CSSPropertyPositionTryFallbacks:
         return valueForPositionTryFallbacks(style.positionTryFallbacks());
     case CSSPropertyPositionTryOrder: {

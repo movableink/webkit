@@ -242,6 +242,7 @@ public:
 
     static Vector<ScopedName> convertAnchorName(BuilderState&, const CSSValue&);
     static std::optional<ScopedName> convertPositionAnchor(BuilderState&, const CSSValue&);
+    static std::optional<PositionArea> convertPositionArea(BuilderState&, const CSSValue&);
 
     static BlockEllipsis convertBlockEllipsis(BuilderState&, const CSSValue&);
     static size_t convertMaxLines(BuilderState&, const CSSValue&);
@@ -2353,6 +2354,300 @@ inline std::optional<ScopedName> BuilderConverter::convertPositionAnchor(Builder
     return ScopedName {
         .name = AtomString { primitiveValue->stringValue() },
         .scopeOrdinal = builderState.styleScopeOrdinal()
+    };
+}
+
+static std::optional<PositionAreaAxis> positionAreaKeywordToAxis(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueLeft:
+    case CSSValueSpanLeft:
+    case CSSValueRight:
+    case CSSValueSpanRight:
+        return PositionAreaAxis::Horizontal;
+
+    case CSSValueTop:
+    case CSSValueSpanTop:
+    case CSSValueBottom:
+    case CSSValueSpanBottom:
+        return PositionAreaAxis::Vertical;
+
+    case CSSValueXStart:
+    case CSSValueSpanXStart:
+    case CSSValueXSelfStart:
+    case CSSValueSpanXSelfStart:
+    case CSSValueXEnd:
+    case CSSValueSpanXEnd:
+    case CSSValueXSelfEnd:
+    case CSSValueSpanXSelfEnd:
+        return PositionAreaAxis::X;
+
+    case CSSValueYStart:
+    case CSSValueSpanYStart:
+    case CSSValueYSelfStart:
+    case CSSValueSpanYSelfStart:
+    case CSSValueYEnd:
+    case CSSValueSpanYEnd:
+    case CSSValueYSelfEnd:
+    case CSSValueSpanYSelfEnd:
+        return PositionAreaAxis::Y;
+
+    case CSSValueBlockStart:
+    case CSSValueSpanBlockStart:
+    case CSSValueSelfBlockStart:
+    case CSSValueSpanSelfBlockStart:
+    case CSSValueBlockEnd:
+    case CSSValueSpanBlockEnd:
+    case CSSValueSelfBlockEnd:
+    case CSSValueSpanSelfBlockEnd:
+        return PositionAreaAxis::Block;
+
+    case CSSValueInlineStart:
+    case CSSValueSpanInlineStart:
+    case CSSValueSelfInlineStart:
+    case CSSValueSpanSelfInlineStart:
+    case CSSValueInlineEnd:
+    case CSSValueSpanInlineEnd:
+    case CSSValueSelfInlineEnd:
+    case CSSValueSpanSelfInlineEnd:
+        return PositionAreaAxis::Inline;
+
+    case CSSValueStart:
+    case CSSValueSpanStart:
+    case CSSValueSelfStart:
+    case CSSValueSpanSelfStart:
+    case CSSValueEnd:
+    case CSSValueSpanEnd:
+    case CSSValueSelfEnd:
+    case CSSValueSpanSelfEnd:
+    case CSSValueCenter:
+    case CSSValueSpanAll:
+        return { };
+
+    default:
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+}
+
+static PositionAreaTrack positionAreaKeywordToTrack(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueLeft:
+    case CSSValueTop:
+    case CSSValueXStart:
+    case CSSValueXSelfStart:
+    case CSSValueYStart:
+    case CSSValueYSelfStart:
+    case CSSValueBlockStart:
+    case CSSValueSelfBlockStart:
+    case CSSValueInlineStart:
+    case CSSValueSelfInlineStart:
+    case CSSValueStart:
+    case CSSValueSelfStart:
+        return PositionAreaTrack::Start;
+
+    case CSSValueSpanLeft:
+    case CSSValueSpanTop:
+    case CSSValueSpanXStart:
+    case CSSValueSpanXSelfStart:
+    case CSSValueSpanYStart:
+    case CSSValueSpanYSelfStart:
+    case CSSValueSpanBlockStart:
+    case CSSValueSpanSelfBlockStart:
+    case CSSValueSpanInlineStart:
+    case CSSValueSpanSelfInlineStart:
+    case CSSValueSpanStart:
+    case CSSValueSpanSelfStart:
+        return PositionAreaTrack::SpanStart;
+
+    case CSSValueRight:
+    case CSSValueBottom:
+    case CSSValueXEnd:
+    case CSSValueXSelfEnd:
+    case CSSValueYEnd:
+    case CSSValueYSelfEnd:
+    case CSSValueBlockEnd:
+    case CSSValueSelfBlockEnd:
+    case CSSValueInlineEnd:
+    case CSSValueSelfInlineEnd:
+    case CSSValueEnd:
+    case CSSValueSelfEnd:
+        return PositionAreaTrack::End;
+
+    case CSSValueSpanRight:
+    case CSSValueSpanBottom:
+    case CSSValueSpanXEnd:
+    case CSSValueSpanXSelfEnd:
+    case CSSValueSpanYEnd:
+    case CSSValueSpanYSelfEnd:
+    case CSSValueSpanBlockEnd:
+    case CSSValueSpanSelfBlockEnd:
+    case CSSValueSpanInlineEnd:
+    case CSSValueSpanSelfInlineEnd:
+    case CSSValueSpanEnd:
+    case CSSValueSpanSelfEnd:
+        return PositionAreaTrack::SpanEnd;
+
+    case CSSValueCenter:
+        return PositionAreaTrack::Center;
+    case CSSValueSpanAll:
+        return PositionAreaTrack::SpanAll;
+
+    default:
+        ASSERT_NOT_REACHED();
+        return PositionAreaTrack::Start;
+    }
+}
+
+static PositionAreaSelf positionAreaKeywordToSelf(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueLeft:
+    case CSSValueSpanLeft:
+    case CSSValueRight:
+    case CSSValueSpanRight:
+    case CSSValueTop:
+    case CSSValueSpanTop:
+    case CSSValueBottom:
+    case CSSValueSpanBottom:
+    case CSSValueXStart:
+    case CSSValueSpanXStart:
+    case CSSValueXEnd:
+    case CSSValueSpanXEnd:
+    case CSSValueYStart:
+    case CSSValueSpanYStart:
+    case CSSValueYEnd:
+    case CSSValueSpanYEnd:
+    case CSSValueBlockStart:
+    case CSSValueSpanBlockStart:
+    case CSSValueBlockEnd:
+    case CSSValueSpanBlockEnd:
+    case CSSValueInlineStart:
+    case CSSValueSpanInlineStart:
+    case CSSValueInlineEnd:
+    case CSSValueSpanInlineEnd:
+    case CSSValueStart:
+    case CSSValueSpanStart:
+    case CSSValueEnd:
+    case CSSValueSpanEnd:
+    case CSSValueCenter:
+    case CSSValueSpanAll:
+        return PositionAreaSelf::No;
+
+    case CSSValueXSelfStart:
+    case CSSValueSpanXSelfStart:
+    case CSSValueXSelfEnd:
+    case CSSValueSpanXSelfEnd:
+    case CSSValueYSelfStart:
+    case CSSValueSpanYSelfStart:
+    case CSSValueYSelfEnd:
+    case CSSValueSpanYSelfEnd:
+    case CSSValueSelfBlockStart:
+    case CSSValueSpanSelfBlockStart:
+    case CSSValueSelfBlockEnd:
+    case CSSValueSpanSelfBlockEnd:
+    case CSSValueSelfInlineStart:
+    case CSSValueSpanSelfInlineStart:
+    case CSSValueSelfInlineEnd:
+    case CSSValueSpanSelfInlineEnd:
+    case CSSValueSelfStart:
+    case CSSValueSpanSelfStart:
+    case CSSValueSelfEnd:
+    case CSSValueSpanSelfEnd:
+        return PositionAreaSelf::Yes;
+
+    default:
+        ASSERT_NOT_REACHED();
+        return PositionAreaSelf::No;
+    }
+}
+
+// Expand a one keyword position-area to the equivalent keyword pair value.
+static std::pair<CSSValueID, CSSValueID> positionAreaExpandKeyword(CSSValueID dim)
+{
+    auto maybeAxis = positionAreaKeywordToAxis(dim);
+    if (maybeAxis) {
+        // Keyword is axis unambiguous, second keyword is span-all.
+
+        // Y/inline axis keyword goes after in the pair.
+        auto axis = *maybeAxis;
+        if (axis == PositionAreaAxis::Vertical || axis == PositionAreaAxis::Y || axis == PositionAreaAxis::Inline)
+            return { CSSValueSpanAll, dim };
+
+        return { dim, CSSValueSpanAll };
+    }
+
+    // Keyword is axis ambiguous, it's repeated.
+    return { dim, dim };
+}
+
+// Get the opposite axis of a given axis. Used to resolve the axis of an axis ambiguous
+// keyword, as its axis is the opposite of the other keyword in the pair.
+static PositionAreaAxis positionAreaOppositeAxis(PositionAreaAxis axis)
+{
+    switch (axis) {
+    case PositionAreaAxis::Horizontal:
+        return PositionAreaAxis::Vertical;
+    case PositionAreaAxis::Vertical:
+        return PositionAreaAxis::Horizontal;
+
+    case PositionAreaAxis::X:
+        return PositionAreaAxis::Y;
+    case PositionAreaAxis::Y:
+        return PositionAreaAxis::X;
+
+    case PositionAreaAxis::Block:
+        return PositionAreaAxis::Inline;
+    case PositionAreaAxis::Inline:
+        return PositionAreaAxis::Block;
+    }
+
+    ASSERT_NOT_REACHED();
+    return PositionAreaAxis::Horizontal;
+}
+
+inline std::optional<PositionArea> BuilderConverter::convertPositionArea(BuilderState&, const CSSValue& value)
+{
+    std::pair<CSSValueID, CSSValueID> dimPair;
+
+    if (value.isValueID()) {
+        if (value.valueID() == CSSValueNone)
+            return { };
+
+        dimPair = positionAreaExpandKeyword(value.valueID());
+    } else if (const auto* pair = dynamicDowncast<CSSValuePair>(value)) {
+        const auto& first = pair->first();
+        const auto& second = pair->second();
+        ASSERT(first.isValueID() && second.isValueID());
+
+        // The parsing logic guarantees the keyword pair is in the correct order
+        // (horizontal/x/block axis before vertical/Y/inline axis)
+
+        dimPair = { first.valueID(), second.valueID() };
+    } else {
+        // value MUST be a single ValueID or a pair of ValueIDs, as returned by the parsing logic.
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+
+    auto dim1Axis = positionAreaKeywordToAxis(dimPair.first);
+    auto dim2Axis = positionAreaKeywordToAxis(dimPair.second);
+
+    // If both keyword axes are ambiguous, the first one is block axis and second one
+    // is inline axis. If only one keyword axis is ambiguous, its axis is the opposite
+    // of the other keyword's axis.
+    if (!dim1Axis && !dim2Axis) {
+        dim1Axis = PositionAreaAxis::Block;
+        dim2Axis = PositionAreaAxis::Inline;
+    } else if (!dim1Axis)
+        dim1Axis = positionAreaOppositeAxis(*dim2Axis);
+    else if (!dim2Axis)
+        dim2Axis = positionAreaOppositeAxis(*dim1Axis);
+
+    return PositionArea {
+        { *dim1Axis, positionAreaKeywordToTrack(dimPair.first), positionAreaKeywordToSelf(dimPair.first) },
+        { *dim2Axis, positionAreaKeywordToTrack(dimPair.second), positionAreaKeywordToSelf(dimPair.second) }
     };
 }
 

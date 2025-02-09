@@ -603,8 +603,8 @@ static bool propertyAllowedInPositionTryRule(CSSPropertyID property)
         || property == CSSPropertyAlignSelf
         || property == CSSPropertyJustifySelf
         || property == CSSPropertyPlaceSelf
-        || property == CSSPropertyPositionAnchor;
-    // FIXME (webkit.org/b/281289): allow position-area when it's implemented
+        || property == CSSPropertyPositionAnchor
+        || property == CSSPropertyPositionArea;
 }
 
 bool CSSPropertyParser::parsePositionTryDescriptor(CSSPropertyID property, bool important)

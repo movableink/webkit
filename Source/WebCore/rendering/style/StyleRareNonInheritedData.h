@@ -33,6 +33,7 @@
 #include "NinePieceImage.h"
 #include "OffsetRotation.h"
 #include "PathOperation.h"
+#include "PositionArea.h"
 #include "PositionTryFallback.h"
 #include "RotateTransformOperation.h"
 #include "ScaleTransformOperation.h"
@@ -219,6 +220,7 @@ public:
 
     Vector<Style::ScopedName> anchorNames;
     std::optional<Style::ScopedName> positionAnchor;
+    std::optional<PositionArea> positionArea;
     Vector<PositionTryFallback> positionTryFallbacks;
 
     std::optional<Length> blockStepSize;

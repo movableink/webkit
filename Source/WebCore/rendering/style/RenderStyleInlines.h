@@ -33,6 +33,7 @@
 #include "GridPositionsResolver.h"
 #include "HitTestRequest.h"
 #include "ImageOrientation.h"
+#include "PositionArea.h"
 #include "RenderStyle.h"
 #include "ScrollTypes.h"
 #include "ScrollbarColor.h"
@@ -473,6 +474,7 @@ inline Length RenderStyle::initialPerspectiveOriginY() { return { 50.0f, LengthT
 constexpr PointerEvents RenderStyle::initialPointerEvents() { return PointerEvents::Auto; }
 constexpr PositionType RenderStyle::initialPosition() { return PositionType::Static; }
 inline std::optional<Style::ScopedName> RenderStyle::initialPositionAnchor() { return { }; }
+inline std::optional<PositionArea> RenderStyle::initialPositionArea() { return { }; }
 inline Vector<PositionTryFallback> RenderStyle::initialPositionTryFallbacks() { return { }; }
 constexpr Style::PositionTryOrder RenderStyle::initialPositionTryOrder() { return Style::PositionTryOrder::Normal; }
 constexpr PrintColorAdjust RenderStyle::initialPrintColorAdjust() { return PrintColorAdjust::Economy; }
@@ -698,6 +700,7 @@ inline LengthPoint RenderStyle::perspectiveOrigin() const { return m_nonInherite
 inline const Length& RenderStyle::perspectiveOriginX() const { return m_nonInheritedData->rareData->perspectiveOriginX; }
 inline const Length& RenderStyle::perspectiveOriginY() const { return m_nonInheritedData->rareData->perspectiveOriginY; }
 inline const std::optional<Style::ScopedName>& RenderStyle::positionAnchor() const { return m_nonInheritedData->rareData->positionAnchor; }
+inline std::optional<PositionArea> RenderStyle::positionArea() const { return m_nonInheritedData->rareData->positionArea; }
 inline Style::PositionTryOrder RenderStyle::positionTryOrder() const { return static_cast<Style::PositionTryOrder>(m_nonInheritedData->rareData->positionTryOrder); }
 inline bool RenderStyle::preserveNewline() const { return preserveNewline(whiteSpaceCollapse()); }
 inline bool RenderStyle::preserves3D() const { return usedTransformStyle3D() == TransformStyle3D::Preserve3D; }

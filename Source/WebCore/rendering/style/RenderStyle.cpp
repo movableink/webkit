@@ -921,6 +921,9 @@ static bool rareDataChangeRequiresLayout(const StyleRareNonInheritedData& first,
     if (first.overflowContinue != second.overflowContinue)
         return true;
 
+    if (first.positionArea != second.positionArea)
+        return true;
+
     return false;
 }
 
@@ -1986,6 +1989,8 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyAnchorName);
         if (first.positionAnchor != second.positionAnchor)
             changingProperties.m_properties.set(CSSPropertyPositionAnchor);
+        if (first.positionArea != second.positionArea)
+            changingProperties.m_properties.set(CSSPropertyPositionArea);
         if (first.positionTryFallbacks != second.positionTryFallbacks)
             changingProperties.m_properties.set(CSSPropertyPositionTryFallbacks);
         if (first.positionTryOrder != second.positionTryOrder)
