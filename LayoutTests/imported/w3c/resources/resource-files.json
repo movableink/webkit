@@ -4836,6 +4836,8 @@
         "web-platform-tests/css/css-scoping/reference/green-text.html",
         "web-platform-tests/css/css-scoping/scoped-reference-animation-ref.html",
         "web-platform-tests/css/css-scoping/shadow-reassign-dynamic-006-ref.html",
+        "web-platform-tests/css/css-scoping/slotted-details-content-ref.html",
+        "web-platform-tests/css/css-scoping/slotted-file-selector-button-ref.html",
         "web-platform-tests/css/css-scoping/slotted-placeholder-ref.html",
         "web-platform-tests/css/css-scoping/slotted-with-pseudo-element-ref.html",
         "web-platform-tests/css/css-scroll-snap/no-red-ref.html",
