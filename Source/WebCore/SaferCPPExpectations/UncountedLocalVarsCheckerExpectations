@@ -508,7 +508,6 @@ layout/layouttree/LayoutTreeBuilder.cpp
 loader/ApplicationManifestLoader.cpp
 loader/DocumentLoader.cpp
 loader/FrameLoader.cpp
-loader/HistoryController.cpp
 loader/NavigationAction.cpp
 loader/NavigationDisabler.h
 loader/NavigationScheduler.cpp

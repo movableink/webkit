@@ -926,7 +926,6 @@ loader/DocumentWriter.cpp
 loader/FormSubmission.cpp
 loader/FrameLoadRequest.cpp
 loader/FrameLoader.cpp
-loader/HistoryController.cpp
 loader/ImageLoader.cpp
 loader/LinkLoader.cpp
 loader/MediaResourceLoader.cpp
