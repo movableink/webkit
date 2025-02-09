@@ -2470,9 +2470,7 @@ class GenerateCSSPropertyNames:
         )
 
         to.write_block("""\
-            // Using std::numeric_limits<uint16_t>::max() here would be cleaner,
-            // but is not possible due to missing constexpr support in MSVC 2013.
-            static_assert(numCSSProperties + 1 <= 65535, "CSSPropertyID should fit into uint16_t.");
+            static_assert(numCSSProperties + 1 <= std::numeric_limits<uint16_t>::max(), "CSSPropertyID should fit into uint16_t.");
             """)
 
         all_computed_property_ids = (f"{property.id}," for property in self.properties_and_descriptors.style_properties.all_computed)
