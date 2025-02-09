@@ -69,12 +69,7 @@ public:
     LayoutUnit baselinePosition(FontBaseline) const final;
     LayoutUnit lineHeight() const final;
 
-    LayoutRect logicalOverflowRect() const;
     void setLogicalOverflowRect(const LayoutRect&);
-    LayoutUnit logicalTopVisualOverflow() const { return logicalOverflowRect().y(); }
-    LayoutUnit logicalBottomVisualOverflow() const { return logicalOverflowRect().maxY(); }
-    LayoutUnit logicalLeftVisualOverflow() const { return logicalOverflowRect().x(); }
-    LayoutUnit logicalRightVisualOverflow() const { return logicalOverflowRect().maxX(); }
 
     virtual void dirtyOwnLineBoxes() { dirtyLineBoxes(); }
 

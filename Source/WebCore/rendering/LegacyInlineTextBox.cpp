@@ -114,13 +114,6 @@ void LegacyInlineTextBox::markDirty(bool dirty)
     LegacyInlineBox::markDirty(dirty);
 }
 
-LayoutRect LegacyInlineTextBox::logicalOverflowRect() const
-{
-    if (knownToHaveNoOverflow() || !gTextBoxesWithOverflow)
-        return enclosingIntRect(logicalFrameRect());
-    return gTextBoxesWithOverflow->get(this);
-}
-
 void LegacyInlineTextBox::setLogicalOverflowRect(const LayoutRect& rect)
 {
     ASSERT(!knownToHaveNoOverflow());
