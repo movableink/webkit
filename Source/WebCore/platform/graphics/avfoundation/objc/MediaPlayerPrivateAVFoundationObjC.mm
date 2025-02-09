@@ -2726,6 +2726,10 @@ bool MediaPlayerPrivateAVFoundationObjC::updateLastPixelBuffer()
             .height = static_cast<unsigned>(CVPixelBufferGetHeight(m_lastPixelBuffer.get())),
             .mediaTime = entry.displayTime.toDouble(),
             .presentedFrames = static_cast<unsigned>(++m_sampleCount),
+            .processingDuration = std::nullopt,
+            .captureTime = std::nullopt,
+            .receiveTime = std::nullopt,
+            .rtpTimestamp = std::nullopt,
         };
     }
 
