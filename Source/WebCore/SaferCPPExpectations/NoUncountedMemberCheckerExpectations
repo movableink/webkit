@@ -100,7 +100,6 @@ style/AttributeChangeInvalidation.h
 style/ChildChangeInvalidation.h
 style/ClassChangeInvalidation.cpp
 style/ElementRuleCollector.cpp
-style/IdChangeInvalidation.h
 style/PseudoClassChangeInvalidation.h
 style/RuleSetBuilder.h
 style/StyleRelations.h
