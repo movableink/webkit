@@ -133,7 +133,7 @@ unsigned FormData::imageOrMediaFilesCount() const
     return imageOrMediaFilesCount;
 }
 
-uint64_t FormDataElement::lengthInBytes(const Function<uint64_t(const URL&)>& blobSize) const
+uint64_t FormDataElement::lengthInBytes(NOESCAPE const Function<uint64_t(const URL&)>& blobSize) const
 {
     return WTF::switchOn(data,
         [] (const Vector<uint8_t>& bytes) {

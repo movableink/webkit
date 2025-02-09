@@ -339,7 +339,7 @@ bool StyleProperties::hasCSSOMWrapper() const
     return mutableProperties && mutableProperties->m_cssomWrapper;
 }
 
-bool StyleProperties::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool StyleProperties::traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     for (auto property : *this) {
         if (property.value()->traverseSubresources(handler))

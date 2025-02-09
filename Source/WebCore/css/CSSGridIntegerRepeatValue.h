@@ -52,7 +52,7 @@ public:
     String customCSSText() const;
     bool equals(const CSSGridIntegerRepeatValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (CSSValueContainingVector::customVisitChildren(func) == IterationStatus::Done)
             return IterationStatus::Done;

@@ -60,7 +60,7 @@ bool CSSFontValue::equals(const CSSFontValue& other) const
         && compareCSSValuePtr(family, other.family);
 }
 
-IterationStatus CSSFontValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSFontValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     if (style) {
         if (func(*style) == IterationStatus::Done)

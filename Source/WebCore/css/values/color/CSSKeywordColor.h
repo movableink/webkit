@@ -66,7 +66,7 @@ bool containsColorSchemeDependentColor(const KeywordColor&);
 
 template<> struct Serialize<KeywordColor> { void operator()(StringBuilder&, const KeywordColor&); };
 template<> struct ComputedStyleDependenciesCollector<KeywordColor> { constexpr void operator()(ComputedStyleDependencies&, const KeywordColor&) { } };
-template<> struct CSSValueChildrenVisitor<KeywordColor> { constexpr IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const KeywordColor&) { return IterationStatus::Continue; } };
+template<> struct CSSValueChildrenVisitor<KeywordColor> { constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const KeywordColor&) { return IterationStatus::Continue; } };
 
 } // namespace CSS
 } // namespace WebCore

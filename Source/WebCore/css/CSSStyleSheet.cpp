@@ -262,7 +262,7 @@ void CSSStyleSheet::didMutate()
     });
 }
 
-void CSSStyleSheet::forEachStyleScope(const Function<void(Style::Scope&)>& apply)
+void CSSStyleSheet::forEachStyleScope(NOESCAPE const Function<void(Style::Scope&)>& apply)
 {
     if (auto* scope = styleScope()) {
         apply(*scope);

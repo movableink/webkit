@@ -189,7 +189,7 @@ CString WebSocketHandshake::clientHandshakeMessage() const
         "\r\n"_s).utf8();
 }
 
-ResourceRequest WebSocketHandshake::clientHandshakeRequest(const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const
+ResourceRequest WebSocketHandshake::clientHandshakeRequest(NOESCAPE const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const
 {
     // Keep the following consistent with clientHandshakeMessage just above.
 

@@ -264,7 +264,7 @@ unsigned Page::nonUtilityPageCount()
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, pageCounter, ("Page"));
 
-void Page::forEachPage(const Function<void(Page&)>& function)
+void Page::forEachPage(NOESCAPE const Function<void(Page&)>& function)
 {
     for (auto& page : allPages())
         function(Ref { page.get() });
@@ -2258,7 +2258,7 @@ void Page::doAfterUpdateRendering()
     // Code here should do once-per-frame work that needs to be done before painting, and requires
     // layout to be up-to-date. It should not run script, trigger layout, or dirty layout.
 
-    auto runProcessingStep = [&](RenderingUpdateStep step, const Function<void(Document&)>& perDocumentFunction) {
+    auto runProcessingStep = [&](RenderingUpdateStep step, NOESCAPE const Function<void(Document&)>& perDocumentFunction) {
         m_renderingUpdateRemainingSteps.last().remove(step);
         forEachRenderableDocument(perDocumentFunction);
     };
@@ -4370,7 +4370,7 @@ void Page::forEachDocument(NOESCAPE const Function<void(Document&)>& functor) co
     forEachDocumentFromMainFrame(protectedMainFrame(), functor);
 }
 
-bool Page::findMatchingLocalDocument(const Function<bool(Document&)>& functor) const
+bool Page::findMatchingLocalDocument(NOESCAPE const Function<bool(Document&)>& functor) const
 {
     for (RefPtr frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(*frame);
@@ -4385,7 +4385,7 @@ bool Page::findMatchingLocalDocument(const Function<bool(Document&)>& functor) c
     return false;
 }
 
-void Page::forEachRenderableDocument(const Function<void(Document&)>& functor) const
+void Page::forEachRenderableDocument(NOESCAPE const Function<void(Document&)>& functor) const
 {
     Vector<Ref<Document>> documents;
     for (RefPtr frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
@@ -4416,7 +4416,7 @@ void Page::forEachMediaElement(NOESCAPE const Function<void(HTMLMediaElement&)>&
 #endif
 }
 
-void Page::forEachLocalFrame(const Function<void(LocalFrame&)>& functor)
+void Page::forEachLocalFrame(NOESCAPE const Function<void(LocalFrame&)>& functor)
 {
     Vector<Ref<LocalFrame>> frames;
     for (RefPtr frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
@@ -4428,7 +4428,7 @@ void Page::forEachLocalFrame(const Function<void(LocalFrame&)>& functor)
         functor(frame);
 }
 
-void Page::forEachWindowEventLoop(const Function<void(WindowEventLoop&)>& functor)
+void Page::forEachWindowEventLoop(NOESCAPE const Function<void(WindowEventLoop&)>& functor)
 {
     UncheckedKeyHashSet<Ref<WindowEventLoop>> windowEventLoops;
     RefPtr<WindowEventLoop> lastEventLoop;

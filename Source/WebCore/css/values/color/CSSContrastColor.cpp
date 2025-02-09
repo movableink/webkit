@@ -68,7 +68,7 @@ void ComputedStyleDependenciesCollector<ContrastColor>::operator()(ComputedStyle
     collectComputedStyleDependencies(dependencies, value.color);
 }
 
-IterationStatus CSSValueChildrenVisitor<ContrastColor>::operator()(const Function<IterationStatus(CSSValue&)>& func, const ContrastColor& value)
+IterationStatus CSSValueChildrenVisitor<ContrastColor>::operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const ContrastColor& value)
 {
     return visitCSSValueChildren(func, value.color);
 }

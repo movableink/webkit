@@ -591,7 +591,7 @@ AccessibilityObject* AccessibilityObject::firstAccessibleObjectFromNode(const No
     });
 }
 
-AccessibilityObject* firstAccessibleObjectFromNode(const Node* node, const Function<bool(const AccessibilityObject&)>& isAccessible)
+AccessibilityObject* firstAccessibleObjectFromNode(const Node* node, NOESCAPE const Function<bool(const AccessibilityObject&)>& isAccessible)
 {
     if (!node)
         return nullptr;
@@ -2774,7 +2774,7 @@ AccessibilityRole AccessibilityObject::ariaRoleToWebCoreRole(const String& value
     });
 }
 
-AccessibilityRole AccessibilityObject::ariaRoleToWebCoreRole(const String& value, const Function<bool(const AccessibilityRole&)>& skipRole)
+AccessibilityRole AccessibilityObject::ariaRoleToWebCoreRole(const String& value, NOESCAPE const Function<bool(const AccessibilityRole&)>& skipRole)
 {
     if (value.isNull() || value.isEmpty())
         return AccessibilityRole::Unknown;

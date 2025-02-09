@@ -266,7 +266,7 @@ bool CSSValueContainingVector::addDerivedHash(Hasher& hasher) const
     return true;
 }
 
-bool CSSValueContainingVector::customTraverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool CSSValueContainingVector::customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     for (auto& value : *this) {
         if (value.traverseSubresources(handler))
@@ -287,7 +287,7 @@ void CSSValueContainingVector::customClearReplacementURLForSubresources()
         const_cast<CSSValue&>(value).clearReplacementURLForSubresources();
 }
 
-IterationStatus CSSValueContainingVector::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSValueContainingVector::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     for (auto& value : *this) {
         if (func(const_cast<CSSValue&>(value)) == IterationStatus::Done)

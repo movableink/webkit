@@ -394,7 +394,7 @@ void ComputedStyleDependenciesCollector<Color>::operator()(ComputedStyleDependen
     WTF::switchOn(value, [&](const auto& color) { collectComputedStyleDependencies(dependencies, color); });
 }
 
-IterationStatus CSSValueChildrenVisitor<Color>::operator()(const Function<IterationStatus(CSSValue&)>& func, const Color& value)
+IterationStatus CSSValueChildrenVisitor<Color>::operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const Color& value)
 {
     return WTF::switchOn(value, [&](const auto& color) { return visitCSSValueChildren(func, color); });
 }

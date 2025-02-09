@@ -374,7 +374,7 @@ RefPtr<WebCore::Icon> WebExtension::iconForPath(const String& imagePath, RefPtr<
 #endif // not USE(APPKIT)
 }
 
-RefPtr<WebCore::Icon> WebExtension::bestIcon(RefPtr<JSON::Object> icons, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>& reportError)
+RefPtr<WebCore::Icon> WebExtension::bestIcon(RefPtr<JSON::Object> icons, WebCore::FloatSize idealSize, NOESCAPE const Function<void(Ref<API::Error>)>& reportError)
 {
     if (!icons)
         return nullptr;
@@ -461,7 +461,7 @@ RefPtr<WebCore::Icon> WebExtension::bestIcon(RefPtr<JSON::Object> icons, WebCore
 }
 
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-RefPtr<WebCore::Icon> WebExtension::bestIconVariant(RefPtr<JSON::Array> variants, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>& reportError)
+RefPtr<WebCore::Icon> WebExtension::bestIconVariant(RefPtr<JSON::Array> variants, WebCore::FloatSize idealSize, NOESCAPE const Function<void(Ref<API::Error>)>& reportError)
 {
     auto idealPointSize = idealSize.width() > idealSize.height() ? idealSize.width() : idealSize.height();
     RefPtr lightIconsObject = bestIconVariantJSONObject(variants, idealPointSize, ColorScheme::Light);

@@ -37,7 +37,7 @@ public:
 
     String customCSSText() const;
     bool equals(const CSSColorSchemeValue&) const;
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
     const CSS::ColorScheme& colorScheme() const { return m_colorScheme; }
 

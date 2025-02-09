@@ -387,7 +387,7 @@ bool MediaStreamTrackPrivate::isOnCreationThread()
 }
 #endif
 
-void MediaStreamTrackPrivate::forEachObserver(const Function<void(MediaStreamTrackPrivateObserver&)>& apply)
+void MediaStreamTrackPrivate::forEachObserver(NOESCAPE const Function<void(MediaStreamTrackPrivateObserver&)>& apply)
 {
     ASSERT(isOnCreationThread());
     ASSERT(!m_observers.hasNullReferences());

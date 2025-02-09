@@ -155,7 +155,7 @@ public:
     bool usesAnchorFunctions() const { return m_usesAnchorFunctions; }
     bool hasKeyframeNotUsingRangeOffset() const { return m_hasKeyframeNotUsingRangeOffset; }
 
-    void updatedComputedOffsets(const Function<double(const BlendingKeyframe::Offset&)>&);
+    void updatedComputedOffsets(NOESCAPE const Function<double(const BlendingKeyframe::Offset&)>&);
 
 private:
     void analyzeKeyframe(const BlendingKeyframe&);

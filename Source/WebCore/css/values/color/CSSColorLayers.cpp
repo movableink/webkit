@@ -73,7 +73,7 @@ void ComputedStyleDependenciesCollector<ColorLayers>::operator()(ComputedStyleDe
     collectComputedStyleDependenciesOnRangeLike(dependencies, value.colors);
 }
 
-IterationStatus CSSValueChildrenVisitor<ColorLayers>::operator()(const Function<IterationStatus(CSSValue&)>& func, const ColorLayers& value)
+IterationStatus CSSValueChildrenVisitor<ColorLayers>::operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const ColorLayers& value)
 {
     return visitCSSValueChildrenOnRangeLike(func, value.colors);
 }

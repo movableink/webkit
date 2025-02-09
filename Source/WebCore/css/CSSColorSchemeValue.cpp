@@ -50,7 +50,7 @@ bool CSSColorSchemeValue::equals(const CSSColorSchemeValue& other) const
     return m_colorScheme == other.m_colorScheme;
 }
 
-IterationStatus CSSColorSchemeValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSColorSchemeValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return CSS::visitCSSValueChildren(func, m_colorScheme);
 }

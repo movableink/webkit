@@ -76,7 +76,7 @@ bool CSSColorValue::equals(const CSSColorValue& other) const
     return m_color == other.m_color;
 }
 
-IterationStatus CSSColorValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSColorValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return CSS::visitCSSValueChildren(func, m_color);
 }

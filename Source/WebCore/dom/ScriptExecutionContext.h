@@ -425,7 +425,7 @@ private:
     void dispatchMessagePortEvents();
 
     enum class ShouldContinue : bool { No, Yes };
-    void forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>&) const;
+    void forEachActiveDOMObject(NOESCAPE const Function<ShouldContinue(ActiveDOMObject&)>&) const;
 
     RejectedPromiseTracker* ensureRejectedPromiseTrackerSlow();
 

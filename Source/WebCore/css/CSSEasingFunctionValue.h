@@ -38,7 +38,7 @@ public:
 
     String customCSSText() const;
     bool equals(const CSSEasingFunctionValue&) const;
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
 private:
     CSSEasingFunctionValue(CSS::EasingFunction);

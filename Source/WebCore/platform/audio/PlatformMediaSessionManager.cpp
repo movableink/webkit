@@ -649,7 +649,7 @@ void PlatformMediaSessionManager::resumeAllMediaBufferingForGroup(std::optional<
     });
 }
 
-Vector<WeakPtr<PlatformMediaSession>> PlatformMediaSessionManager::sessionsMatching(const Function<bool(const PlatformMediaSession&)>& filter) const
+Vector<WeakPtr<PlatformMediaSession>> PlatformMediaSessionManager::sessionsMatching(NOESCAPE const Function<bool(const PlatformMediaSession&)>& filter) const
 {
     Vector<WeakPtr<PlatformMediaSession>> matchingSessions;
     for (auto& session : m_sessions) {
@@ -659,7 +659,7 @@ Vector<WeakPtr<PlatformMediaSession>> PlatformMediaSessionManager::sessionsMatch
     return matchingSessions;
 }
 
-WeakPtr<PlatformMediaSession> PlatformMediaSessionManager::firstSessionMatching(const Function<bool(const PlatformMediaSession&)>& predicate) const
+WeakPtr<PlatformMediaSession> PlatformMediaSessionManager::firstSessionMatching(NOESCAPE const Function<bool(const PlatformMediaSession&)>& predicate) const
 {
     for (auto& session : m_sessions) {
         if (session && predicate(*session))
@@ -668,7 +668,7 @@ WeakPtr<PlatformMediaSession> PlatformMediaSessionManager::firstSessionMatching(
     return nullptr;
 }
 
-void PlatformMediaSessionManager::forEachMatchingSession(const Function<bool(const PlatformMediaSession&)>& predicate, const Function<void(PlatformMediaSession&)>& callback)
+void PlatformMediaSessionManager::forEachMatchingSession(NOESCAPE const Function<bool(const PlatformMediaSession&)>& predicate, NOESCAPE const Function<void(PlatformMediaSession&)>& callback)
 {
     for (auto& session : sessionsMatching(predicate)) {
         ASSERT(session);
@@ -677,7 +677,7 @@ void PlatformMediaSessionManager::forEachMatchingSession(const Function<bool(con
     }
 }
 
-void PlatformMediaSessionManager::forEachSessionInGroup(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier, const Function<void(PlatformMediaSession&)>& callback)
+void PlatformMediaSessionManager::forEachSessionInGroup(std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier, NOESCAPE const Function<void(PlatformMediaSession&)>& callback)
 {
     if (!mediaSessionGroupIdentifier)
         return;
@@ -689,7 +689,7 @@ void PlatformMediaSessionManager::forEachSessionInGroup(std::optional<MediaSessi
     });
 }
 
-void PlatformMediaSessionManager::forEachSession(const Function<void(PlatformMediaSession&)>& callback)
+void PlatformMediaSessionManager::forEachSession(NOESCAPE const Function<void(PlatformMediaSession&)>& callback)
 {
     auto sessions = m_sessions;
     for (auto& session : sessions) {
@@ -699,7 +699,7 @@ void PlatformMediaSessionManager::forEachSession(const Function<void(PlatformMed
     }
 }
 
-bool PlatformMediaSessionManager::anyOfSessions(const Function<bool(const PlatformMediaSession&)>& predicate) const
+bool PlatformMediaSessionManager::anyOfSessions(NOESCAPE const Function<bool(const PlatformMediaSession&)>& predicate) const
 {
     return WTF::anyOf(m_sessions, [&predicate](const auto& session) {
         return predicate(*session);
@@ -848,7 +848,7 @@ void PlatformMediaSessionManager::setMediaCapabilityGrantsEnabled(bool mediaCapa
 }
 #endif
 
-WeakPtr<PlatformMediaSession> PlatformMediaSessionManager::bestEligibleSessionForRemoteControls(const Function<bool(const PlatformMediaSession&)>& filterFunction, PlatformMediaSession::PlaybackControlsPurpose purpose)
+WeakPtr<PlatformMediaSession> PlatformMediaSessionManager::bestEligibleSessionForRemoteControls(NOESCAPE const Function<bool(const PlatformMediaSession&)>& filterFunction, PlatformMediaSession::PlaybackControlsPurpose purpose)
 {
     Vector<WeakPtr<PlatformMediaSession>> eligibleAudioVideoSessions;
     Vector<WeakPtr<PlatformMediaSession>> eligibleWebAudioSessions;

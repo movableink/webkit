@@ -170,7 +170,7 @@ private:
     CSSStyleSheet(Ref<StyleSheetContents>&&, Node& ownerNode, const TextPosition& startPosition, bool isInlineStylesheet, const std::optional<bool>&);
     CSSStyleSheet(Ref<StyleSheetContents>&&, Document&, Init&&);
 
-    void forEachStyleScope(const Function<void(Style::Scope&)>&);
+    void forEachStyleScope(NOESCAPE const Function<void(Style::Scope&)>&);
 
     bool isCSSStyleSheet() const final { return true; }
     String type() const final { return cssContentTypeAtom(); }

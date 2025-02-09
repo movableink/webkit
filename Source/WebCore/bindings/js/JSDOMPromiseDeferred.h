@@ -125,7 +125,7 @@ public:
     }
 
     template<class IDLType>
-    void resolveCallbackValueWithNewlyCreated(const Function<typename IDLType::InnerParameterType(ScriptExecutionContext&)>& createValue)
+    void resolveCallbackValueWithNewlyCreated(NOESCAPE const Function<typename IDLType::InnerParameterType(ScriptExecutionContext&)>& createValue)
     {
         if (shouldIgnoreRequestToFulfill())
             return;

@@ -103,7 +103,7 @@ void ComputedStyleDependenciesCollector<ColorMix>::operator()(ComputedStyleDepen
     collectComputedStyleDependencies(dependencies, value.mixComponents2.percentage);
 }
 
-IterationStatus CSSValueChildrenVisitor<ColorMix>::operator()(const Function<IterationStatus(CSSValue&)>& func, const ColorMix& value)
+IterationStatus CSSValueChildrenVisitor<ColorMix>::operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const ColorMix& value)
 {
     if (visitCSSValueChildren(func, value.mixComponents1.color) == IterationStatus::Done)
         return IterationStatus::Done;

@@ -109,9 +109,9 @@ public:
     WEBCORE_EXPORT bool containsMappedFileData() const;
 
 private:
-    void iterate(const Function<void(std::span<const uint8_t>)>& apply) const;
+    void iterate(NOESCAPE const Function<void(std::span<const uint8_t>)>& apply) const;
 #if USE(FOUNDATION)
-    void iterate(CFDataRef, const Function<void(std::span<const uint8_t>)>& apply) const;
+    void iterate(CFDataRef, NOESCAPE const Function<void(std::span<const uint8_t>)>& apply) const;
 #endif
 
     explicit DataSegment(Vector<uint8_t>&& data)

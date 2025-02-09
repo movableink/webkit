@@ -47,7 +47,7 @@ public:
     String customCSSText() const;
     bool equals(const CSSBasicShapeValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
 private:
     CSSBasicShapeValue(CSS::BasicShape&& shape)

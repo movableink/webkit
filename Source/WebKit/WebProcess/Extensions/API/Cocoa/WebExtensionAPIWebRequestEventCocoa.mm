@@ -43,7 +43,7 @@
 
 namespace WebKit {
 
-void WebExtensionAPIWebRequestEvent::enumerateListeners(WebExtensionTabIdentifier tabIdentifier, WebExtensionWindowIdentifier windowIdentifier, const ResourceLoadInfo& resourceLoadInfo, const Function<void(WebExtensionCallbackHandler&, const Vector<String>&)>& function)
+void WebExtensionAPIWebRequestEvent::enumerateListeners(WebExtensionTabIdentifier tabIdentifier, WebExtensionWindowIdentifier windowIdentifier, const ResourceLoadInfo& resourceLoadInfo, NOESCAPE const Function<void(WebExtensionCallbackHandler&, const Vector<String>&)>& function)
 {
     if (m_listeners.isEmpty())
         return;

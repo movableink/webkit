@@ -41,7 +41,7 @@ public:
 
     String customCSSText() const;
     bool equals(const CSSFontStyleWithAngleValue&) const;
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
 private:
     CSSFontStyleWithAngleValue(ObliqueAngle&&);

@@ -182,7 +182,7 @@ static const JIS0208EncodeIndex& jis0208EncodeIndex()
     return *table;
 }
 
-String TextCodecCJK::decodeCommon(std::span<const uint8_t> bytes, bool flush, bool stopOnError, bool& sawError, const Function<SawError(uint8_t, StringBuilder&)>& byteParser)
+String TextCodecCJK::decodeCommon(std::span<const uint8_t> bytes, bool flush, bool stopOnError, bool& sawError, NOESCAPE const Function<SawError(uint8_t, StringBuilder&)>& byteParser)
 {
     StringBuilder result;
     result.reserveCapacity(bytes.size());

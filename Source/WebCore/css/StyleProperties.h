@@ -129,7 +129,7 @@ public:
     bool hasCSSOMWrapper() const;
     bool isMutable() const { return m_isMutable; }
 
-    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
+    bool traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const;
     void setReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&);
     void clearReplacementURLForSubresources();
     bool mayDependOnBaseURL() const;

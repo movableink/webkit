@@ -49,7 +49,7 @@ public:
 
     String customCSSText() const;
     bool equals(const CSSRayValue&) const;
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
 private:
     CSSRayValue(CSS::RayFunction ray, CSSBoxType coordinateBox)

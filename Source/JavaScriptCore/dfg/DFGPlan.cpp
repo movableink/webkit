@@ -644,7 +644,7 @@ CompilationResult Plan::finalize()
     return result;
 }
 
-bool Plan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, const Function<void(CodeBlock*)>& func)
+bool Plan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, NOESCAPE const Function<void(CodeBlock*)>& func)
 {
     if (!Base::iterateCodeBlocksForGC(visitor, func))
         return false;

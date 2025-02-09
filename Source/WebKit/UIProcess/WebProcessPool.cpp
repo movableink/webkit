@@ -2404,7 +2404,7 @@ bool WebProcessPool::anyProcessPoolNeedsUIBackgroundAssertion()
     });
 }
 
-void WebProcessPool::forEachProcessForSession(PAL::SessionID sessionID, const Function<void(WebProcessProxy&)>& apply)
+void WebProcessPool::forEachProcessForSession(PAL::SessionID sessionID, NOESCAPE const Function<void(WebProcessProxy&)>& apply)
 {
     for (Ref process : m_processes) {
         if (process->isPrewarmed() || process->sessionID() != sessionID)

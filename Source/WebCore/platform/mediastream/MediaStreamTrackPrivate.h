@@ -181,7 +181,7 @@ private:
 
     void updateReadyState();
 
-    void forEachObserver(const Function<void(MediaStreamTrackPrivateObserver&)>&);
+    void forEachObserver(NOESCAPE const Function<void(MediaStreamTrackPrivateObserver&)>&);
 
 #if !RELEASE_LOG_DISABLED
     ASCIILiteral logClassName() const final { return "MediaStreamTrackPrivate"_s; }

@@ -717,7 +717,7 @@ public:
     const std::optional<FloatRect>& animationExtent() const { return m_animationExtent; }
     void setAnimationExtent(std::optional<FloatRect> animationExtent) { m_animationExtent = animationExtent; }
 
-    static void traverse(GraphicsLayer&, const Function<void(GraphicsLayer&)>&);
+    static void traverse(GraphicsLayer&, NOESCAPE const Function<void(GraphicsLayer&)>&);
 
     virtual void markFrontBufferVolatileForTesting() { }
 

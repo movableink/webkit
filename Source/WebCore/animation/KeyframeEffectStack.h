@@ -91,7 +91,7 @@ public:
 
 private:
     void ensureEffectsAreSorted();
-    bool hasMatchingEffect(const Function<bool(const KeyframeEffect&)>&) const;
+    bool hasMatchingEffect(NOESCAPE const Function<bool(const KeyframeEffect&)>&) const;
     void startAcceleratedAnimationsIfPossible();
     void stopAcceleratedAnimations();
 

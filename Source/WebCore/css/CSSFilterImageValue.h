@@ -51,7 +51,7 @@ public:
     bool equalInputImages(const CSSFilterImageValue&) const;
 
     String customCSSText() const;
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
     RefPtr<StyleImage> createStyleImage(const Style::BuilderState&) const;
 

@@ -49,7 +49,7 @@ public:
     String type() const { return m_mimeType; }
     void setType(String);
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(m_image.get()) == IterationStatus::Done)
             return IterationStatus::Done;
@@ -57,7 +57,7 @@ public:
             return IterationStatus::Done;
         return IterationStatus::Continue;
     }
-    bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
+    bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
     void customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&);
     void customClearReplacementURLForSubresources();
 

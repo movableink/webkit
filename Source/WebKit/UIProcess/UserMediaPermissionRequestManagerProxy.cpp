@@ -76,7 +76,7 @@ static WeakHashSet<UserMediaPermissionRequestManagerProxy>& proxies()
     return set;
 }
 
-void UserMediaPermissionRequestManagerProxy::forEach(const WTF::Function<void(UserMediaPermissionRequestManagerProxy&)>& function)
+void UserMediaPermissionRequestManagerProxy::forEach(NOESCAPE const WTF::Function<void(UserMediaPermissionRequestManagerProxy&)>& function)
 {
     for (auto& proxy : proxies())
         function(proxy);

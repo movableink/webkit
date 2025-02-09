@@ -114,7 +114,7 @@ bool CSSGradientValue::equals(const CSSGradientValue& other) const
     return m_gradient == other.m_gradient;
 }
 
-IterationStatus CSSGradientValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSGradientValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return CSS::visitCSSValueChildren(func, m_gradient);
 }

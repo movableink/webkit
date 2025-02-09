@@ -92,7 +92,7 @@ public:
         return m_data[index];
     }
 
-    void forEach(const WTF::Function<void(T)>& apply) const
+    void forEach(NOESCAPE const WTF::Function<void(T)>& apply) const
     {
         unsigned i = m_current;
         for (unsigned visited = 0; visited < size; ++visited) {

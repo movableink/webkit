@@ -269,7 +269,7 @@ public:
 
     ScriptExecutionContextIdentifier clientIdFromVisibleClientId(const String& visibleIdentifier) const { return m_visibleClientIdToInternalClientIdMap.get(visibleIdentifier); }
 
-    void forEachServiceWorker(const Function<bool(const SWServerWorker&)>&) const;
+    void forEachServiceWorker(NOESCAPE const Function<bool(const SWServerWorker&)>&) const;
     bool hasClientsWithOrigin(const ClientOrigin& origin) { return m_clientIdentifiersPerOrigin.contains(origin); }
 
     enum class ShouldDelayRemoval : bool { No, Yes };
@@ -296,7 +296,7 @@ public:
 
     WEBCORE_EXPORT Vector<ServiceWorkerClientPendingMessage> releaseServiceWorkerClientPendingMessage(ScriptExecutionContextIdentifier);
 
-    WEBCORE_EXPORT void postMessageToServiceWorkerClient(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, ServiceWorkerIdentifier, const String&, const Function<void(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, const ServiceWorkerData&, const String&)>&);
+    WEBCORE_EXPORT void postMessageToServiceWorkerClient(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, ServiceWorkerIdentifier, const String&, NOESCAPE const Function<void(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, const ServiceWorkerData&, const String&)>&);
 
     WEBCORE_EXPORT OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtectionsFromClient(const ClientOrigin&) const;
 

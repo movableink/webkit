@@ -117,7 +117,7 @@ template<typename D> struct ComputedStyleDependenciesCollector<RelativeColor<D>>
 };
 
 template<typename D> struct CSSValueChildrenVisitor<RelativeColor<D>> {
-    IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const RelativeColor<D>& value)
+    IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const RelativeColor<D>& value)
     {
         if (visitCSSValueChildren(func, value.origin) == IterationStatus::Done)
             return IterationStatus::Done;

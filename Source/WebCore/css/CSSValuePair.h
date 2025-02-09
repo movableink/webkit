@@ -45,7 +45,7 @@ public:
     bool equals(const CSSValuePair&) const;
     bool canBeCoalesced() const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(m_first.get()) == IterationStatus::Done)
             return IterationStatus::Done;

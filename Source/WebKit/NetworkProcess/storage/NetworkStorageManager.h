@@ -163,10 +163,10 @@ private:
     CheckedRef<OriginStorageManager> checkedOriginStorageManager(const WebCore::ClientOrigin& origin, ShouldWriteOriginFile shouldWriteOriginFile = ShouldWriteOriginFile::Yes) { return originStorageManager(origin, shouldWriteOriginFile); }
     bool removeOriginStorageManagerIfPossible(const WebCore::ClientOrigin&);
 
-    void forEachOriginDirectory(const Function<void(const String&)>&);
+    void forEachOriginDirectory(NOESCAPE const Function<void(const String&)>&);
     HashSet<WebCore::ClientOrigin> getAllOrigins();
     Vector<WebsiteData::Entry> fetchDataFromDisk(OptionSet<WebsiteDataType>, ShouldComputeSize);
-    HashSet<WebCore::ClientOrigin> deleteDataOnDisk(OptionSet<WebsiteDataType>, WallTime, const Function<bool(const WebCore::ClientOrigin&)>&);
+    HashSet<WebCore::ClientOrigin> deleteDataOnDisk(OptionSet<WebsiteDataType>, WallTime, NOESCAPE const Function<bool(const WebCore::ClientOrigin&)>&);
 #if PLATFORM(IOS_FAMILY)
     void includeOriginInBackupIfNecessary(OriginStorageManager&);
 #endif

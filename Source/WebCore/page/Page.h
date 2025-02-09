@@ -432,7 +432,7 @@ public:
     WEBCORE_EXPORT Ref<BroadcastChannelRegistry> protectedBroadcastChannelRegistry() const;
     WEBCORE_EXPORT void setBroadcastChannelRegistry(Ref<BroadcastChannelRegistry>&&); // Only used by WebKitLegacy.
 
-    WEBCORE_EXPORT static void forEachPage(const Function<void(Page&)>&);
+    WEBCORE_EXPORT static void forEachPage(NOESCAPE const Function<void(Page&)>&);
     WEBCORE_EXPORT static unsigned nonUtilityPageCount();
 
     unsigned subframeCount() const;
@@ -1119,12 +1119,12 @@ public:
 #endif
 
     WEBCORE_EXPORT void forEachDocument(NOESCAPE const Function<void(Document&)>&) const;
-    bool findMatchingLocalDocument(const Function<bool(Document&)>&) const;
-    void forEachRenderableDocument(const Function<void(Document&)>&) const;
+    bool findMatchingLocalDocument(NOESCAPE const Function<bool(Document&)>&) const;
+    void forEachRenderableDocument(NOESCAPE const Function<void(Document&)>&) const;
     void forEachMediaElement(NOESCAPE const Function<void(HTMLMediaElement&)>&);
     static void forEachDocumentFromMainFrame(const Frame&, NOESCAPE const Function<void(Document&)>&);
-    void forEachLocalFrame(const Function<void(LocalFrame&)>&);
-    void forEachWindowEventLoop(const Function<void(WindowEventLoop&)>&);
+    void forEachLocalFrame(NOESCAPE const Function<void(LocalFrame&)>&);
+    void forEachWindowEventLoop(NOESCAPE const Function<void(WindowEventLoop&)>&);
 
     bool shouldDisableCorsForRequestTo(const URL&) const;
     bool shouldAssumeSameSiteForRequestTo(const URL& url) const { return shouldDisableCorsForRequestTo(url); }

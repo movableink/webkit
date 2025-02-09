@@ -81,7 +81,7 @@ public:
 
     static const String& displayNoneCSSRule();
 
-    void forEach(const Function<void(const String&, ContentExtension&)>&);
+    void forEach(NOESCAPE const Function<void(const String&, ContentExtension&)>&);
 
     WEBCORE_EXPORT static bool shouldBeMadeSecure(const URL&);
 

@@ -54,7 +54,7 @@ bool CSSRayValue::equals(const CSSRayValue& other) const
         && m_coordinateBox == other.m_coordinateBox;
 }
 
-IterationStatus CSSRayValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSRayValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return CSS::visitCSSValueChildren(func, m_ray);
 }

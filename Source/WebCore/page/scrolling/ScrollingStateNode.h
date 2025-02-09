@@ -320,7 +320,7 @@ public:
     const Vector<Ref<ScrollingStateNode>>& children() const { return m_children; }
     Vector<Ref<ScrollingStateNode>> takeChildren() { return std::exchange(m_children, { }); }
     WEBCORE_EXPORT void setChildren(Vector<Ref<ScrollingStateNode>>&&);
-    void traverse(const Function<void(ScrollingStateNode&)>&);
+    void traverse(NOESCAPE const Function<void(ScrollingStateNode&)>&);
 
     void appendChild(Ref<ScrollingStateNode>&&);
     void insertChild(Ref<ScrollingStateNode>&&, size_t index);

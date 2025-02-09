@@ -53,7 +53,7 @@ void ComputedStyleDependenciesCollector<Path::Data>::operator()(ComputedStyleDep
 {
 }
 
-IterationStatus CSSValueChildrenVisitor<Path::Data>::operator()(const Function<IterationStatus(CSSValue&)>&, const Path::Data&)
+IterationStatus CSSValueChildrenVisitor<Path::Data>::operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const Path::Data&)
 {
     return IterationStatus::Continue;
 }

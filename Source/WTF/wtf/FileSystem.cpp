@@ -473,7 +473,7 @@ void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)
 #endif
 }
 
-MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(std::span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
+MappedFileData mapToFile(const String& path, size_t bytesSize, NOESCAPE const Function<void(const Function<bool(std::span<const uint8_t>)>&)>& apply, PlatformFileHandle* outputHandle)
 {
     auto mappedFile = createMappedFileData(path, bytesSize, outputHandle);
     if (!mappedFile)

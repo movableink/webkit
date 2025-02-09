@@ -242,12 +242,12 @@ template<typename Visitor> constexpr decltype(auto) CSSValue::visitDerived(Visit
     });
 }
 
-inline bool CSSValue::customTraverseSubresources(const Function<bool(const CachedResource&)>&)
+inline bool CSSValue::customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&)
 {
     return false;
 }
 
-bool CSSValue::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool CSSValue::traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     return visitDerived([&](auto& value) {
         return value.customTraverseSubresources(handler);
@@ -268,7 +268,7 @@ void CSSValue::clearReplacementURLForSubresources()
     });
 }
 
-IterationStatus CSSValue::visitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSValue::visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return visitDerived([&](auto& value) {
         return value.customVisitChildren(func);

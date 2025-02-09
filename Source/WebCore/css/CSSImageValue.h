@@ -60,7 +60,7 @@ public:
 
     Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
-    bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
+    bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
     void customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&);
     void customClearReplacementURLForSubresources();
     bool customMayDependOnBaseURL() const;
@@ -73,7 +73,7 @@ public:
 
     bool isLoadedFromOpaqueSource() const { return m_loadedFromOpaqueSource == LoadedFromOpaqueSource::Yes; }
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (m_unresolvedValue) {
             if (func(*m_unresolvedValue) == IterationStatus::Done)

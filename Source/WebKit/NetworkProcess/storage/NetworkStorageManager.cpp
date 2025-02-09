@@ -1082,7 +1082,7 @@ void NetworkStorageManager::getHandle(IPC::Connection& connection, WebCore::File
         completionHandler(makeUnexpected(result.error()));
 }
 
-void NetworkStorageManager::forEachOriginDirectory(const Function<void(const String&)>& apply)
+void NetworkStorageManager::forEachOriginDirectory(NOESCAPE const Function<void(const String&)>& apply)
 {
     for (auto& topOrigin : FileSystem::listDirectory(m_path)) {
         auto topOriginDirectory = FileSystem::pathByAppendingComponent(m_path, topOrigin);
@@ -1172,7 +1172,7 @@ void NetworkStorageManager::fetchData(OptionSet<WebsiteDataType> types, ShouldCo
     });
 }
 
-HashSet<WebCore::ClientOrigin> NetworkStorageManager::deleteDataOnDisk(OptionSet<WebsiteDataType> types, WallTime modifiedSinceTime, const Function<bool(const WebCore::ClientOrigin&)>& filter)
+HashSet<WebCore::ClientOrigin> NetworkStorageManager::deleteDataOnDisk(OptionSet<WebsiteDataType> types, WallTime modifiedSinceTime, NOESCAPE const Function<bool(const WebCore::ClientOrigin&)>& filter)
 {
     ASSERT(!RunLoop::isMain());
 

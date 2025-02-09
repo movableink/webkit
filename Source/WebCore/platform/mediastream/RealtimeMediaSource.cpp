@@ -222,14 +222,14 @@ void RealtimeMediaSource::setInterruptedForTesting(bool interrupted)
     notifyMutedChange(interrupted);
 }
 
-void RealtimeMediaSource::forEachObserver(const Function<void(RealtimeMediaSourceObserver&)>& apply)
+void RealtimeMediaSource::forEachObserver(NOESCAPE const Function<void(RealtimeMediaSourceObserver&)>& apply)
 {
     ASSERT(isMainThread());
     Ref protectedThis { *this };
     m_observers.forEach(apply);
 }
 
-void RealtimeMediaSource::forEachVideoFrameObserver(const Function<void(VideoFrameObserver&)>& apply)
+void RealtimeMediaSource::forEachVideoFrameObserver(NOESCAPE const Function<void(VideoFrameObserver&)>& apply)
 {
     Locker locker { m_videoFrameObserversLock };
     for (auto* observer : m_videoFrameObservers.keys())

@@ -229,7 +229,7 @@ public:
     // null checks in WebPageProxy.
     WebProcessProxy* dummyProcessProxy(PAL::SessionID sessionID) const { return m_dummyProcessProxies.get(sessionID).get(); }
 
-    void forEachProcessForSession(PAL::SessionID, const Function<void(WebProcessProxy&)>&);
+    void forEachProcessForSession(PAL::SessionID, NOESCAPE const Function<void(WebProcessProxy&)>&);
     template<typename T> void sendToAllProcesses(const T& message);
     template<typename T> void sendToAllProcessesForSession(const T& message, PAL::SessionID);
 

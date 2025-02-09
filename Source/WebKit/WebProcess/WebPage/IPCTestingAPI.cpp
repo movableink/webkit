@@ -439,7 +439,7 @@ private:
     static JSValueRef sessionID(JSContextRef, JSObjectRef, JSStringRef, JSValueRef* exception);
     static JSValueRef pageID(JSContextRef, JSObjectRef, JSStringRef, JSValueRef* exception);
     static JSValueRef frameID(JSContextRef, JSObjectRef, JSStringRef, JSValueRef* exception);
-    static JSValueRef retrieveID(JSContextRef, JSObjectRef thisObject, JSValueRef* exception, const WTF::Function<uint64_t(JSIPC&)>&);
+    static JSValueRef retrieveID(JSContextRef, JSObjectRef thisObject, JSValueRef* exception, NOESCAPE const WTF::Function<uint64_t(JSIPC&)>&);
 
     static JSValueRef messages(JSContextRef, JSObjectRef, JSStringRef, JSValueRef* exception);
     static JSValueRef serializedTypeInfo(JSContextRef, JSObjectRef, JSStringRef, JSValueRef* exception);
@@ -2903,7 +2903,7 @@ JSValueRef JSIPC::webPageProxyID(JSContextRef context, JSObjectRef thisObject, J
     });
 }
 
-JSValueRef JSIPC::retrieveID(JSContextRef context, JSObjectRef thisObject, JSValueRef* exception, const WTF::Function<uint64_t(JSIPC&)>& callback)
+JSValueRef JSIPC::retrieveID(JSContextRef context, JSObjectRef thisObject, JSValueRef* exception, NOESCAPE const WTF::Function<uint64_t(JSIPC&)>& callback)
 {
     auto* globalObject = toJS(context);
     auto& vm = globalObject->vm();

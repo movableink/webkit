@@ -119,7 +119,7 @@ std::unique_ptr<FontLoadRequest> CSSFontFaceSrcResourceValue::fontLoadRequest(Sc
     return request;
 }
 
-bool CSSFontFaceSrcResourceValue::customTraverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool CSSFontFaceSrcResourceValue::customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     return m_cachedFont && handler(*m_cachedFont);
 }

@@ -239,7 +239,7 @@ void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveReso
     pruneLiveResourcesToSize(targetSize, shouldDestroyDecodedDataForAllLiveResources);
 }
 
-void MemoryCache::forEachResource(const Function<void(CachedResource&)>& function)
+void MemoryCache::forEachResource(NOESCAPE const Function<void(CachedResource&)>& function)
 {
     RELEASE_ASSERT(isMainThread());
     Vector<WeakPtr<CachedResource>> allResources;
@@ -253,7 +253,7 @@ void MemoryCache::forEachResource(const Function<void(CachedResource&)>& functio
     }
 }
 
-void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const Function<void(CachedResource&)>& function)
+void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, NOESCAPE const Function<void(CachedResource&)>& function)
 {
     RELEASE_ASSERT(isMainThread());
     RELEASE_ASSERT(m_sessionResources.isValidKey(sessionID));

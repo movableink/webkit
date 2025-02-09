@@ -136,11 +136,11 @@ public:
 
     // FIXME: These three traversing functions are buggy. It should be rewritten with visitChildren.
     // https://bugs.webkit.org/show_bug.cgi?id=270600
-    bool traverseSubresources(const Function<bool(const CachedResource&)>&) const;
+    bool traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
     void setReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&);
     void clearReplacementURLForSubresources();
 
-    IterationStatus visitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
     bool mayDependOnBaseURL() const;
 
@@ -187,7 +187,7 @@ public:
     void customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&) { }
     void customClearReplacementURLForSubresources() { }
     bool customMayDependOnBaseURL() const { return false; }
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const { return IterationStatus::Continue; }
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const { return IterationStatus::Continue; }
 
 protected:
     static const size_t ClassTypeBits = 7;
@@ -289,7 +289,7 @@ private:
     template<typename Visitor> constexpr decltype(auto) visitDerived(Visitor&&);
     template<typename Visitor> constexpr decltype(auto) visitDerived(Visitor&&) const;
 
-    static inline bool customTraverseSubresources(const Function<bool(const CachedResource&)>&);
+    static inline bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&);
     bool addDerivedHash(Hasher&) const;
 
     mutable unsigned m_refCount { refCountIncrement };

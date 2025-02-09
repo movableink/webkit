@@ -232,7 +232,7 @@ RefPtr<VideoFrame> VideoFrame::createI420A(std::span<const uint8_t> buffer, size
 #endif
 }
 
-static void copyPlane(uint8_t* destination, const uint8_t* source, uint64_t sourceStride, const ComputedPlaneLayout& spanPlaneLayout, const Function<void(uint8_t*, const uint8_t*, size_t)>& copyRow)
+static void copyPlane(uint8_t* destination, const uint8_t* source, uint64_t sourceStride, const ComputedPlaneLayout& spanPlaneLayout, NOESCAPE const Function<void(uint8_t*, const uint8_t*, size_t)>& copyRow)
 {
     uint64_t sourceOffset = spanPlaneLayout.sourceTop * sourceStride;
     sourceOffset += spanPlaneLayout.sourceLeftBytes;
@@ -245,7 +245,7 @@ static void copyPlane(uint8_t* destination, const uint8_t* source, uint64_t sour
     }
 }
 
-static Vector<PlaneLayout> copyRGBData(std::span<uint8_t> span, const ComputedPlaneLayout& spanPlaneLayout, CVPixelBufferRef pixelBuffer, const Function<void(uint8_t*, const uint8_t*, size_t)>& copyRow)
+static Vector<PlaneLayout> copyRGBData(std::span<uint8_t> span, const ComputedPlaneLayout& spanPlaneLayout, CVPixelBufferRef pixelBuffer, NOESCAPE const Function<void(uint8_t*, const uint8_t*, size_t)>& copyRow)
 {
     auto result = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
     if (result != kCVReturnSuccess) {

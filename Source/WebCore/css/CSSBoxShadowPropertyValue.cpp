@@ -56,7 +56,7 @@ bool CSSBoxShadowPropertyValue::equals(const CSSBoxShadowPropertyValue& other) c
     return m_shadow == other.m_shadow;
 }
 
-IterationStatus CSSBoxShadowPropertyValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSBoxShadowPropertyValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return CSS::visitCSSValueChildren(func, m_shadow);
 }

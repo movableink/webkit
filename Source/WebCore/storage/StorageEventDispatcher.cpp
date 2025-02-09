@@ -41,7 +41,7 @@
 namespace WebCore {
 
 template<StorageType storageType>
-static void dispatchStorageEvents(const String& key, const String& oldValue, const String& newValue, const SecurityOrigin& securityOrigin, const String& url, const Function<bool(Storage&)>& isSourceStorage, const Function<bool(Page&)>& isRelevantPage)
+static void dispatchStorageEvents(const String& key, const String& oldValue, const String& newValue, const SecurityOrigin& securityOrigin, const String& url, NOESCAPE const Function<bool(Storage&)>& isSourceStorage, NOESCAPE const Function<bool(Page&)>& isRelevantPage)
 {
     Vector<Ref<LocalDOMWindow>> windows;
     LocalDOMWindow::forEachWindowInterestedInStorageEvents([&](auto& window) {
@@ -66,7 +66,7 @@ static void dispatchStorageEvents(const String& key, const String& oldValue, con
     }
 }
 
-void StorageEventDispatcher::dispatchSessionStorageEvents(const String& key, const String& oldValue, const String& newValue, Page& page, const SecurityOrigin& securityOrigin, const String& url, const Function<bool(Storage&)>& isSourceStorage)
+void StorageEventDispatcher::dispatchSessionStorageEvents(const String& key, const String& oldValue, const String& newValue, Page& page, const SecurityOrigin& securityOrigin, const String& url, NOESCAPE const Function<bool(Storage&)>& isSourceStorage)
 {
     InspectorInstrumentation::didDispatchDOMStorageEvent(page, key, oldValue, newValue, StorageType::Session, securityOrigin);
     dispatchStorageEvents<StorageType::Session>(key, oldValue, newValue, securityOrigin, url, isSourceStorage, [&](auto& windowPage) {
@@ -74,7 +74,7 @@ void StorageEventDispatcher::dispatchSessionStorageEvents(const String& key, con
     });
 }
 
-void StorageEventDispatcher::dispatchLocalStorageEvents(const String& key, const String& oldValue, const String& newValue, PageGroup* pageGroup, const SecurityOrigin& securityOrigin, const String& url, const Function<bool(Storage&)>& isSourceStorage)
+void StorageEventDispatcher::dispatchLocalStorageEvents(const String& key, const String& oldValue, const String& newValue, PageGroup* pageGroup, const SecurityOrigin& securityOrigin, const String& url, NOESCAPE const Function<bool(Storage&)>& isSourceStorage)
 {
     if (!pageGroup) {
         Page::forEachPage([&](Page& page) {

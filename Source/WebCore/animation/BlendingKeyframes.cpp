@@ -396,7 +396,7 @@ void BlendingKeyframes::analyzeKeyframe(const BlendingKeyframe& keyframe)
     analyzeKeyframeRangeOffset();
 }
 
-void BlendingKeyframes::updatedComputedOffsets(const Function<double(const BlendingKeyframe::Offset&)>& callback)
+void BlendingKeyframes::updatedComputedOffsets(NOESCAPE const Function<double(const BlendingKeyframe::Offset&)>& callback)
 {
     for (auto& keyframe : m_keyframes)
         keyframe.setComputedOffset(callback(keyframe.specifiedOffset()));

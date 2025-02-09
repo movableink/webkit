@@ -46,7 +46,7 @@ public:
 
     bool equals(const CSSOffsetRotateValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (m_modifier) {
             if (func(*m_modifier) == IterationStatus::Done)

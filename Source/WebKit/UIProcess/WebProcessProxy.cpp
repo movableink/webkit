@@ -242,7 +242,7 @@ Vector<WeakPtr<RemotePageProxy>> WebProcessProxy::remotePages() const
     return WTF::copyToVector(m_remotePages);
 }
 
-void WebProcessProxy::forWebPagesWithOrigin(PAL::SessionID sessionID, const SecurityOriginData& origin, const Function<void(WebPageProxy&)>& callback)
+void WebProcessProxy::forWebPagesWithOrigin(PAL::SessionID sessionID, const SecurityOriginData& origin, NOESCAPE const Function<void(WebPageProxy&)>& callback)
 {
     for (Ref page : globalPages()) {
         if (page->sessionID() != sessionID || SecurityOriginData::fromURLWithoutStrictOpaqueness(URL { page->currentURL() }) != origin)

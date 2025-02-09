@@ -183,7 +183,7 @@ bool containsColorSchemeDependentColor(const Color&);
 
 template<> struct Serialize<Color> { void operator()(StringBuilder&, const Color&); };
 template<> struct ComputedStyleDependenciesCollector<Color> { void operator()(ComputedStyleDependencies&, const Color&); };
-template<> struct CSSValueChildrenVisitor<Color> { IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const Color&); };
+template<> struct CSSValueChildrenVisitor<Color> { IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const Color&); };
 
 template<typename... F> decltype(auto) Color::switchOn(F&&... f) const
 {

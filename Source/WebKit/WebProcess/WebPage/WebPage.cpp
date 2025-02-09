@@ -7704,7 +7704,7 @@ bool WebPage::canShowMIMEType(const String& mimeType) const
     });
 }
 
-bool WebPage::canShowMIMEType(const String& mimeType, const Function<bool(const String&, PluginData::AllowedPluginTypes)>& pluginsSupport) const
+bool WebPage::canShowMIMEType(const String& mimeType, NOESCAPE const Function<bool(const String&, PluginData::AllowedPluginTypes)>& pluginsSupport) const
 {
     if (MIMETypeRegistry::canShowMIMEType(mimeType))
         return true;

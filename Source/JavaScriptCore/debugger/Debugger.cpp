@@ -246,7 +246,7 @@ void Debugger::registerCodeBlock(CodeBlock* codeBlock)
         codeBlock->setSteppingMode(CodeBlock::SteppingModeEnabled);
 }
 
-void Debugger::forEachRegisteredCodeBlock(const Function<void(CodeBlock*)>& callback)
+void Debugger::forEachRegisteredCodeBlock(NOESCAPE const Function<void(CodeBlock*)>& callback)
 {
     m_vm.heap.forEachCodeBlock([&] (CodeBlock* codeBlock) {
         if (codeBlock->globalObject()->debugger() == this)

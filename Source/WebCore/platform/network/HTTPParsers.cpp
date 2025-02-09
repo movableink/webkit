@@ -55,7 +55,7 @@ namespace WebCore {
 // True if characters which satisfy the predicate are present, incrementing
 // "pos" to the next character which does not satisfy the predicate.
 // Note: might return pos == str.length().
-static inline bool skipWhile(const String& str, unsigned& pos, const Function<bool(const UChar)>& predicate)
+static inline bool skipWhile(const String& str, unsigned& pos, NOESCAPE const Function<bool(const UChar)>& predicate)
 {
     const unsigned start = pos;
     const unsigned len = str.length();

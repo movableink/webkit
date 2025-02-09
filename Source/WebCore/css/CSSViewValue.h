@@ -55,7 +55,7 @@ public:
 
     bool equals(const CSSViewValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (m_axis) {
             if (func(*m_axis) == IterationStatus::Done)

@@ -337,7 +337,7 @@ void FragmentedSharedBuffer::forEachSegment(NOESCAPE const Function<void(std::sp
         segment.segment->iterate(apply);
 }
 
-void DataSegment::iterate(const Function<void(std::span<const uint8_t>)>& apply) const
+void DataSegment::iterate(NOESCAPE const Function<void(std::span<const uint8_t>)>& apply) const
 {
 #if USE(FOUNDATION)
     if (auto* data = std::get_if<RetainPtr<CFDataRef>>(&m_immutableData))

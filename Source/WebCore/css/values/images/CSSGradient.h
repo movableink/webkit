@@ -61,7 +61,7 @@ struct GradientColorInterpolationMethod {
 };
 
 template<> struct ComputedStyleDependenciesCollector<GradientColorInterpolationMethod> { constexpr void operator()(ComputedStyleDependencies&, const GradientColorInterpolationMethod&) { } };
-template<> struct CSSValueChildrenVisitor<GradientColorInterpolationMethod> { constexpr IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const GradientColorInterpolationMethod&) { return IterationStatus::Continue; } };
+template<> struct CSSValueChildrenVisitor<GradientColorInterpolationMethod> { constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const GradientColorInterpolationMethod&) { return IterationStatus::Continue; } };
 
 // MARK: - Gradient Color Stop Definitions.
 

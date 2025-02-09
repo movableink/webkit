@@ -93,7 +93,7 @@ void UnevaluatedCalcBase::collectComputedStyleDependencies(ComputedStyleDependen
     protectedCalc()->collectComputedStyleDependencies(dependencies);
 }
 
-IterationStatus UnevaluatedCalcBase::visitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus UnevaluatedCalcBase::visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return func(calc);
 }

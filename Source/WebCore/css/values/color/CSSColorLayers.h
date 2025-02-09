@@ -53,7 +53,7 @@ bool containsColorSchemeDependentColor(const ColorLayers&);
 
 template<> struct Serialize<ColorLayers> { void operator()(StringBuilder&, const ColorLayers&); };
 template<> struct ComputedStyleDependenciesCollector<ColorLayers> { void operator()(ComputedStyleDependencies&, const ColorLayers&); };
-template<> struct CSSValueChildrenVisitor<ColorLayers> { IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const ColorLayers&); };
+template<> struct CSSValueChildrenVisitor<ColorLayers> { IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const ColorLayers&); };
 
 } // namespace CSS
 } // namespace WebCore

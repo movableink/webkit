@@ -53,7 +53,7 @@ public:
 
     bool equals(const CSSFontPaletteValuesOverrideColorsValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(m_key.get()) == IterationStatus::Done)
             return IterationStatus::Done;

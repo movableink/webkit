@@ -109,7 +109,7 @@ public:
 
     bool customMayDependOnBaseURL() const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (auto* value = std::get_if<Ref<CSSVariableReferenceValue>>(&m_value)) {
             if (func(*value) == IterationStatus::Done)

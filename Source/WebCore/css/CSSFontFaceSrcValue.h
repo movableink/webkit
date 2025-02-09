@@ -115,7 +115,7 @@ public:
     std::unique_ptr<FontLoadRequest> fontLoadRequest(ScriptExecutionContext&, bool isInitiatingElementInUserAgentShadowTree);
 
     String customCSSText() const;
-    bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
+    bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
     void customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&);
     void customClearReplacementURLForSubresources();
     bool customMayDependOnBaseURL() const;

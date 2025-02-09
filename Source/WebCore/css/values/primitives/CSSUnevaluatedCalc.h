@@ -77,7 +77,7 @@ struct UnevaluatedCalcBase {
 
     void serializationForCSS(StringBuilder&) const;
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const;
-    IterationStatus visitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
     UnevaluatedCalcBase simplifyBase(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
 
@@ -199,7 +199,7 @@ template<Calc T> struct ComputedStyleDependenciesCollector<T> {
 // MARK: - CSSValue Visitation
 
 template<Calc T> struct CSSValueChildrenVisitor<T> {
-    inline IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const T& value)
+    inline IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const T& value)
     {
         return value.visitChildren(func);
     }

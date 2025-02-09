@@ -185,7 +185,7 @@ bool RealtimeVideoCaptureSource::presetSupportsZoom(const VideoPreset& preset, d
     return preset.minZoom() <= zoom && zoom <= preset.maxZoom();
 }
 
-bool RealtimeVideoCaptureSource::supportsCaptureSize(std::optional<int> width, std::optional<int> height, const Function<bool(const IntSize&)>&& function)
+bool RealtimeVideoCaptureSource::supportsCaptureSize(std::optional<int> width, std::optional<int> height, NOESCAPE const Function<bool(const IntSize&)>& function)
 {
     if (width && height)
         return function({ width.value(), height.value() });

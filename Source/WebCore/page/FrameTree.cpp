@@ -126,7 +126,7 @@ Frame* FrameTree::scopedChild(unsigned index, TreeScope* scope) const
     return nullptr;
 }
 
-inline Frame* FrameTree::scopedChild(const Function<bool(const FrameTree&)>& isMatch, TreeScope* scope) const
+inline Frame* FrameTree::scopedChild(NOESCAPE const Function<bool(const FrameTree&)>& isMatch, TreeScope* scope) const
 {
     if (!scope)
         return nullptr;

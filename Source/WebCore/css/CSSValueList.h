@@ -66,7 +66,7 @@ public:
     using CSSValue::separator;
     using CSSValue::separatorCSSText;
 
-    bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
+    bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
     void customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&);
     void customClearReplacementURLForSubresources();
 
@@ -78,7 +78,7 @@ public:
     RefPtr<const CSSValue> protectedItem(unsigned index) const { return item(index); }
     const CSSValue* itemWithoutBoundsCheck(unsigned index) const { return &(*this)[index]; }
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
 protected:
     friend bool CSSValue::addHash(Hasher&) const;

@@ -44,7 +44,7 @@ public:
 
     bool equals(const CSSFontVariationValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(m_value.get()) == IterationStatus::Done)
             return IterationStatus::Done;

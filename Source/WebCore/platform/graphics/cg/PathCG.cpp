@@ -458,7 +458,7 @@ static inline CGContextRef scratchContext()
     return context.get().get();
 }
 
-bool PathCG::strokeContains(const FloatPoint& point, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+bool PathCG::strokeContains(const FloatPoint& point, NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     ASSERT(strokeStyleApplier);
 
@@ -498,7 +498,7 @@ FloatRect PathCG::boundingRect() const
     return zeroRectIfNull(CGPathGetPathBoundingBox(platformPath()));
 }
 
-FloatRect PathCG::strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+FloatRect PathCG::strokeBoundingRect(NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     if (isEmpty())
         return { };

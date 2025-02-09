@@ -123,8 +123,8 @@ public:
     void unregisterGroup(EventLoopTaskGroup&);
     void stopAssociatedGroupsIfNecessary();
 
-    void forEachAssociatedContext(const Function<void(ScriptExecutionContext&)>&);
-    bool findMatchingAssociatedContext(const Function<bool(ScriptExecutionContext&)>&);
+    void forEachAssociatedContext(NOESCAPE const Function<void(ScriptExecutionContext&)>&);
+    bool findMatchingAssociatedContext(NOESCAPE const Function<bool(ScriptExecutionContext&)>&);
     void addAssociatedContext(ScriptExecutionContext&);
     void removeAssociatedContext(ScriptExecutionContext&);
 

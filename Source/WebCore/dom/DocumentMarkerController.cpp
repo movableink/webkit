@@ -130,7 +130,7 @@ void DocumentMarkerController::removeMarkers(const SimpleRange& range, OptionSet
     filterMarkers(range, nullptr, types, overlapRule);
 }
 
-void DocumentMarkerController::filterMarkers(const SimpleRange& range, const Function<FilterMarkerResult(const DocumentMarker&)>& filter, OptionSet<DocumentMarkerType> types, RemovePartiallyOverlappingMarker overlapRule)
+void DocumentMarkerController::filterMarkers(const SimpleRange& range, NOESCAPE const Function<FilterMarkerResult(const DocumentMarker&)>& filter, OptionSet<DocumentMarkerType> types, RemovePartiallyOverlappingMarker overlapRule)
 {
     for (auto& textPiece : collectTextRanges(range)) {
         if (!possiblyHasMarkers(types))
@@ -429,7 +429,7 @@ void DocumentMarkerController::copyMarkers(Node& source, OffsetRange range, Node
     }
 }
 
-void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, OptionSet<DocumentMarkerType> types, const Function<FilterMarkerResult(const DocumentMarker&)>& filter, RemovePartiallyOverlappingMarker overlapRule)
+void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, OptionSet<DocumentMarkerType> types, NOESCAPE const Function<FilterMarkerResult(const DocumentMarker&)>& filter, RemovePartiallyOverlappingMarker overlapRule)
 {
     if (range.start >= range.end)
         return;
@@ -664,7 +664,7 @@ void DocumentMarkerController::removeMarkers(OptionSet<DocumentMarkerType> types
     removeMarkers(types, nullptr);
 }
 
-void DocumentMarkerController::removeMarkers(OptionSet<DocumentMarkerType> types, const Function<FilterMarkerResult(const RenderedDocumentMarker&)>& filter)
+void DocumentMarkerController::removeMarkers(OptionSet<DocumentMarkerType> types, NOESCAPE const Function<FilterMarkerResult(const RenderedDocumentMarker&)>& filter)
 {
     if (!possiblyHasMarkers(types))
         return;
@@ -682,7 +682,7 @@ void DocumentMarkerController::removeMarkers(OptionSet<DocumentMarkerType> types
     m_possiblyExistingMarkerTypes.remove(removedMarkerTypes);
 }
 
-OptionSet<DocumentMarkerType> DocumentMarkerController::removeMarkersFromList(MarkerMap::iterator iterator, OptionSet<DocumentMarkerType> types, const Function<FilterMarkerResult(const RenderedDocumentMarker&)>& filter)
+OptionSet<DocumentMarkerType> DocumentMarkerController::removeMarkersFromList(MarkerMap::iterator iterator, OptionSet<DocumentMarkerType> types, NOESCAPE const Function<FilterMarkerResult(const RenderedDocumentMarker&)>& filter)
 {
     bool needsRepainting = false;
     bool listCanBeRemoved;

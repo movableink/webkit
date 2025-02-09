@@ -301,17 +301,17 @@ template<> struct ComputedStyleDependenciesCollector<CustomIdentifier> {
 template<typename CSSType> struct CSSValueChildrenVisitor;
 
 // CSSValueVisitor Invoker
-template<typename CSSType> IterationStatus visitCSSValueChildren(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
+template<typename CSSType> IterationStatus visitCSSValueChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
 {
     return CSSValueChildrenVisitor<CSSType>{}(func, value);
 }
 
-template<typename CSSType> IterationStatus visitCSSValueChildrenOnOptionalLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
+template<typename CSSType> IterationStatus visitCSSValueChildrenOnOptionalLike(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
 {
     return value ? visitCSSValueChildren(func, *value) : IterationStatus::Continue;
 }
 
-template<typename CSSType> IterationStatus visitCSSValueChildrenOnTupleLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
+template<typename CSSType> IterationStatus visitCSSValueChildrenOnTupleLike(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
 {
     // Process a single element of the tuple-like, updating result, and return true if result == IterationStatus::Done to
     // short circuit the fold in the apply lambda.
@@ -327,7 +327,7 @@ template<typename CSSType> IterationStatus visitCSSValueChildrenOnTupleLike(cons
     }, value);
 }
 
-template<typename CSSType> IterationStatus visitCSSValueChildrenOnRangeLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
+template<typename CSSType> IterationStatus visitCSSValueChildrenOnRangeLike(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
 {
     for (const auto& element : value) {
         if (visitCSSValueChildren(func, element) == IterationStatus::Done)
@@ -336,14 +336,14 @@ template<typename CSSType> IterationStatus visitCSSValueChildrenOnRangeLike(cons
     return IterationStatus::Continue;
 }
 
-template<typename CSSType> IterationStatus visitCSSValueChildrenOnVariantLike(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
+template<typename CSSType> IterationStatus visitCSSValueChildrenOnVariantLike(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
 {
     return WTF::switchOn(value, [&](const auto& alternative) { return visitCSSValueChildren(func, alternative); });
 }
 
 // Constrained for `TreatAsEmptyLike`.
 template<EmptyLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
-    IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const CSSType&)
+    IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const CSSType&)
     {
         return IterationStatus::Continue;
     }
@@ -351,7 +351,7 @@ template<EmptyLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
 
 // Constrained for `TreatAsOptionalLike`.
 template<OptionalLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
-    IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
+    IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
     {
         return visitCSSValueChildrenOnOptionalLike(func, value);
     }
@@ -359,7 +359,7 @@ template<OptionalLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
 
 // Constrained for `TreatAsTupleLike`.
 template<TupleLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
-    IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
+    IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
     {
         return visitCSSValueChildrenOnTupleLike(func, value);
     }
@@ -367,7 +367,7 @@ template<TupleLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
 
 // Constrained for `TreatAsRangeLike`.
 template<RangeLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
-    IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
+    IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
     {
         return visitCSSValueChildrenOnRangeLike(func, value);
     }
@@ -375,7 +375,7 @@ template<RangeLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
 
 // Constrained for `TreatAsVariantLike`.
 template<VariantLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
-    IterationStatus operator()(const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
+    IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const CSSType& value)
     {
         return visitCSSValueChildrenOnVariantLike(func, value);
     }
@@ -383,7 +383,7 @@ template<VariantLike CSSType> struct CSSValueChildrenVisitor<CSSType> {
 
 // Specialization for `Constant`.
 template<CSSValueID C> struct CSSValueChildrenVisitor<Constant<C>> {
-    constexpr IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const Constant<C>&)
+    constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const Constant<C>&)
     {
         return IterationStatus::Continue;
     }
@@ -391,7 +391,7 @@ template<CSSValueID C> struct CSSValueChildrenVisitor<Constant<C>> {
 
 // Specialization for `CustomIdentifier`.
 template<> struct CSSValueChildrenVisitor<CustomIdentifier> {
-    constexpr IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const CustomIdentifier&)
+    constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const CustomIdentifier&)
     {
         return IterationStatus::Continue;
     }

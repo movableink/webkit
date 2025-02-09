@@ -61,8 +61,8 @@ template<> struct Serialize<Symbol> { void operator()(StringBuilder&, const Symb
 template<> struct ComputedStyleDependenciesCollector<SymbolRaw> { constexpr void operator()(ComputedStyleDependencies&, const SymbolRaw&) { } };
 template<> struct ComputedStyleDependenciesCollector<Symbol> { constexpr void operator()(ComputedStyleDependencies&, const Symbol&) { } };
 
-template<> struct CSSValueChildrenVisitor<SymbolRaw> { constexpr IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const SymbolRaw&) { return IterationStatus::Continue; } };
-template<> struct CSSValueChildrenVisitor<Symbol> { constexpr IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const Symbol&) { return IterationStatus::Continue; } };
+template<> struct CSSValueChildrenVisitor<SymbolRaw> { constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const SymbolRaw&) { return IterationStatus::Continue; } };
+template<> struct CSSValueChildrenVisitor<Symbol> { constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const Symbol&) { return IterationStatus::Continue; } };
 
 } // namespace CSS
 } // namespace WebCore

@@ -153,7 +153,7 @@ public:
     JS_EXPORT_PRIVATE void didRunMicrotask(JSGlobalObject*, MicrotaskIdentifier);
 
     void registerCodeBlock(CodeBlock*);
-    void forEachRegisteredCodeBlock(const Function<void(CodeBlock*)>&);
+    void forEachRegisteredCodeBlock(NOESCAPE const Function<void(CodeBlock*)>&);
 
     void didCreateNativeExecutable(NativeExecutable&);
     void willCallNativeExecutable(CallFrame*);

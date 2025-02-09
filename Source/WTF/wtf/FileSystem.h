@@ -352,7 +352,7 @@ inline MappedFileData& MappedFileData::operator=(MappedFileData&& other)
 
 // This creates the destination file, maps it, write the provided data to it and returns the mapped file.
 // This function fails if there is already a file at the destination path.
-WTF_EXPORT_PRIVATE MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(std::span<const uint8_t>)>&)>&& apply, PlatformFileHandle* = nullptr);
+WTF_EXPORT_PRIVATE MappedFileData mapToFile(const String& path, size_t bytesSize, NOESCAPE const Function<void(const Function<bool(std::span<const uint8_t>)>&)>& apply, PlatformFileHandle* = nullptr);
 
 WTF_EXPORT_PRIVATE MappedFileData createMappedFileData(const String&, size_t, PlatformFileHandle* = nullptr);
 WTF_EXPORT_PRIVATE void finalizeMappedFileData(MappedFileData&, size_t);

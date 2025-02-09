@@ -55,7 +55,7 @@ bool CSSFontStyleWithAngleValue::equals(const CSSFontStyleWithAngleValue& other)
     return m_obliqueAngle == other.m_obliqueAngle;
 }
 
-IterationStatus CSSFontStyleWithAngleValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSFontStyleWithAngleValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return CSS::visitCSSValueChildren(func, m_obliqueAngle);
 }

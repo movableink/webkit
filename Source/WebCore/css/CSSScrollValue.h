@@ -54,7 +54,7 @@ public:
 
     bool equals(const CSSScrollValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (m_scroller) {
             if (func(*m_scroller) == IterationStatus::Done)

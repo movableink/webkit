@@ -185,7 +185,7 @@ void WebExtensionContextProxy::setStorageAccessLevel(bool allowedInContentScript
     m_isSessionStorageAllowedInContentScripts = allowedInContentScripts;
 }
 
-void WebExtensionContextProxy::enumerateFramesAndNamespaceObjects(const Function<void(WebFrame&, WebExtensionAPINamespace&)>& function, Ref<DOMWrapperWorld>&& world)
+void WebExtensionContextProxy::enumerateFramesAndNamespaceObjects(NOESCAPE const Function<void(WebFrame&, WebExtensionAPINamespace&)>& function, Ref<DOMWrapperWorld>&& world)
 {
     m_extensionContentFrames.forEach([&](auto& frame) {
         RefPtr page = frame.page() ? frame.page()->corePage() : nullptr;
@@ -213,7 +213,7 @@ void WebExtensionContextProxy::enumerateFramesAndNamespaceObjects(const Function
     });
 }
 
-void WebExtensionContextProxy::enumerateFramesAndWebPageNamespaceObjects(const Function<void(WebFrame&, WebExtensionAPIWebPageNamespace&)>& function)
+void WebExtensionContextProxy::enumerateFramesAndWebPageNamespaceObjects(NOESCAPE const Function<void(WebFrame&, WebExtensionAPIWebPageNamespace&)>& function)
 {
     m_extensionContentFrames.forEach([&](auto& frame) {
         auto context = frame.jsContextForWorld(mainWorldSingleton());

@@ -1789,7 +1789,7 @@ public:
     WEBCORE_EXPORT DocumentTimeline& timeline();
     DocumentTimeline* existingTimeline() const { return m_timeline.get(); }
     Vector<RefPtr<WebAnimation>> getAnimations();
-    Vector<RefPtr<WebAnimation>> matchingAnimations(const Function<bool(Element&)>&);
+    Vector<RefPtr<WebAnimation>> matchingAnimations(NOESCAPE const Function<bool(Element&)>&);
     AnimationTimelinesController* timelinesController() const { return m_timelinesController.get(); }
     WEBCORE_EXPORT AnimationTimelinesController& ensureTimelinesController();
     void keyframesRuleDidChange(const String& name);
@@ -1829,7 +1829,7 @@ public:
     void processInternalResourceLinks(Element* = nullptr);
 
 #if ENABLE(VIDEO)
-    WEBCORE_EXPORT void forEachMediaElement(const Function<void(HTMLMediaElement&)>&);
+    WEBCORE_EXPORT void forEachMediaElement(NOESCAPE const Function<void(HTMLMediaElement&)>&);
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)

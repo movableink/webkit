@@ -165,7 +165,7 @@ static Vector<EncodedResourceCryptographicDigest> strongestMetadataFromSet(Vecto
     return result;
 }
 
-static Ref<FormData> createReportFormData(const String& type, const URL& url, const String& userAgent, const Function<void(JSON::Object&)>& populateBody)
+static Ref<FormData> createReportFormData(const String& type, const URL& url, const String& userAgent, NOESCAPE const Function<void(JSON::Object&)>& populateBody)
 {
     auto body = JSON::Object::create();
     populateBody(body);

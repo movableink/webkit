@@ -82,7 +82,7 @@ void KeyframeEffectStack::removeEffect(KeyframeEffect& effect)
         startAcceleratedAnimationsIfPossible();
 }
 
-bool KeyframeEffectStack::hasMatchingEffect(const Function<bool(const KeyframeEffect&)>& function) const
+bool KeyframeEffectStack::hasMatchingEffect(NOESCAPE const Function<bool(const KeyframeEffect&)>& function) const
 {
     for (auto& effect : m_effects) {
         if (function(*effect))

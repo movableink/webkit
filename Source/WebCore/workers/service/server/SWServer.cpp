@@ -772,7 +772,7 @@ void SWServer::matchAll(SWServerWorker& worker, const ServiceWorkerClientQueryOp
 }
 
 template<typename ClientDataType, typename ClientsByIDType>
-void forEachClientForOriginImpl(const Vector<ScriptExecutionContextIdentifier>& identifiers, ClientsByIDType& clientsById, const Function<void(ClientDataType&)>& apply)
+void forEachClientForOriginImpl(const Vector<ScriptExecutionContextIdentifier>& identifiers, ClientsByIDType& clientsById, NOESCAPE const Function<void(ClientDataType&)>& apply)
 {
     for (auto& clientIdentifier : identifiers) {
         auto clientIterator = clientsById.find(clientIdentifier);
@@ -915,7 +915,7 @@ void SWServer::contextConnectionCreated(SWServerToContextConnection& contextConn
     }
 }
 
-void SWServer::forEachServiceWorker(const Function<bool(const SWServerWorker&)>& apply) const
+void SWServer::forEachServiceWorker(NOESCAPE const Function<bool(const SWServerWorker&)>& apply) const
 {
     for (Ref worker : m_runningOrTerminatingWorkers.values()) {
         if (!apply(worker))
@@ -1776,7 +1776,7 @@ void SWServer::fireFunctionalEvent(SWServerRegistration& registration, Completio
     });
 }
 
-void SWServer::postMessageToServiceWorkerClient(ScriptExecutionContextIdentifier destinationContextIdentifier, const MessageWithMessagePorts& message, ServiceWorkerIdentifier sourceIdentifier, const String& sourceOrigin, const Function<void(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, const ServiceWorkerData&, const String&)>& callbackIfClientIsReady)
+void SWServer::postMessageToServiceWorkerClient(ScriptExecutionContextIdentifier destinationContextIdentifier, const MessageWithMessagePorts& message, ServiceWorkerIdentifier sourceIdentifier, const String& sourceOrigin, NOESCAPE const Function<void(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, const ServiceWorkerData&, const String&)>& callbackIfClientIsReady)
 {
     RefPtr sourceServiceWorker = workerByID(sourceIdentifier);
     if (!sourceServiceWorker)

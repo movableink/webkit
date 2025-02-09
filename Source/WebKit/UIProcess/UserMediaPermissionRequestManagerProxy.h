@@ -83,7 +83,7 @@ public:
     void disconnectFromPage();
 
 #if ENABLE(MEDIA_STREAM)
-    static void forEach(const WTF::Function<void(UserMediaPermissionRequestManagerProxy&)>&);
+    static void forEach(NOESCAPE const WTF::Function<void(UserMediaPermissionRequestManagerProxy&)>&);
 #if HAVE(AVCAPTUREDEVICEROTATIONCOORDINATOR)
     bool isMonitoringCaptureDeviceRotation(const String&);
     void startMonitoringCaptureDeviceRotation(const String&);

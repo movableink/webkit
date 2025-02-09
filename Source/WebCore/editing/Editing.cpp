@@ -1303,7 +1303,7 @@ static InlineIterator::LeafBoxIterator advanceInDirection(InlineIterator::LeafBo
     return iterateInSameDirection == (direction == TextDirection::LTR) ? box->nextLineRightwardOnLine() : box->nextLineLeftwardOnLine();
 }
 
-static void forEachRenderedBoxBetween(const RenderedPosition& first, const RenderedPosition& second, const Function<IterationStatus(InlineIterator::LeafBoxIterator)>& callback)
+static void forEachRenderedBoxBetween(const RenderedPosition& first, const RenderedPosition& second, NOESCAPE const Function<IterationStatus(InlineIterator::LeafBoxIterator)>& callback)
 {
     if (first.isNull()) {
         ASSERT_NOT_REACHED();

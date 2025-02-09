@@ -108,8 +108,8 @@ public:
     void revalidationSucceeded(CachedResource& revalidatingResource, const ResourceResponse&);
     void revalidationFailed(CachedResource& revalidatingResource);
 
-    void forEachResource(const Function<void(CachedResource&)>&);
-    void forEachSessionResource(PAL::SessionID, const Function<void(CachedResource&)>&);
+    void forEachResource(NOESCAPE const Function<void(CachedResource&)>&);
+    void forEachSessionResource(PAL::SessionID, NOESCAPE const Function<void(CachedResource&)>&);
     WEBCORE_EXPORT void destroyDecodedDataForAllImages();
 
     // Sets the cache's memory capacities, in bytes. These will hold only approximately,

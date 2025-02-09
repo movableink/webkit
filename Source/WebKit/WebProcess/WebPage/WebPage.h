@@ -2397,7 +2397,7 @@ private:
     RefPtr<WebCore::HTMLAttachmentElement> attachmentElementWithIdentifier(const String& identifier) const;
 #endif
 
-    bool canShowMIMEType(const String&, const Function<bool(const String&, WebCore::PluginData::AllowedPluginTypes)>& supportsPlugin) const;
+    bool canShowMIMEType(const String&, NOESCAPE const Function<bool(const String&, WebCore::PluginData::AllowedPluginTypes)>& supportsPlugin) const;
 
     void cancelCurrentInteractionInformationRequest();
 

@@ -51,7 +51,7 @@ public:
 
     RefPtr<StyleImage> createStyleImage(const Style::BuilderState&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(m_fromValueOrNone.get()) == IterationStatus::Done)
             return IterationStatus::Done;

@@ -341,8 +341,8 @@ protected:
     void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata);
     void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t);
 
-    void forEachObserver(const Function<void(RealtimeMediaSourceObserver&)>&);
-    void forEachVideoFrameObserver(const Function<void(VideoFrameObserver&)>&);
+    void forEachObserver(NOESCAPE const Function<void(RealtimeMediaSourceObserver&)>&);
+    void forEachVideoFrameObserver(NOESCAPE const Function<void(VideoFrameObserver&)>&);
 
     void end(RealtimeMediaSourceObserver* = nullptr);
 

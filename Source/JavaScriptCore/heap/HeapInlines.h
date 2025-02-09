@@ -130,12 +130,12 @@ inline void Heap::mutatorFence()
         WTF::storeStoreFence();
 }
 
-template<typename Functor> inline void Heap::forEachCodeBlock(const Functor& func)
+template<typename Functor> inline void Heap::forEachCodeBlock(NOESCAPE const Functor& func)
 {
     forEachCodeBlockImpl(scopedLambdaRef<void(CodeBlock*)>(func));
 }
 
-template<typename Functor> inline void Heap::forEachCodeBlockIgnoringJITPlans(const AbstractLocker& codeBlockSetLocker, const Functor& func)
+template<typename Functor> inline void Heap::forEachCodeBlockIgnoringJITPlans(const AbstractLocker& codeBlockSetLocker, NOESCAPE const Functor& func)
 {
     forEachCodeBlockIgnoringJITPlansImpl(codeBlockSetLocker, scopedLambdaRef<void(CodeBlock*)>(func));
 }

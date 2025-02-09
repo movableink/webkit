@@ -142,12 +142,12 @@ static WebKit::NetworkCache::Data encodeContentRuleListMetaData(const ContentRul
     return WebKit::NetworkCache::Data(encoder.span());
 }
 
-template<typename T> void getData(const T&, const Function<bool(std::span<const uint8_t>)>&);
-template<> void getData(const WebKit::NetworkCache::Data& data, const Function<bool(std::span<const uint8_t>)>& function)
+template<typename T> void getData(const T&, NOESCAPE const Function<bool(std::span<const uint8_t>)>&);
+template<> void getData(const WebKit::NetworkCache::Data& data, NOESCAPE const Function<bool(std::span<const uint8_t>)>& function)
 {
     data.apply(function);
 }
-template<> void getData(const WebCore::SharedBuffer& data, const Function<bool(std::span<const uint8_t>)>& function)
+template<> void getData(const WebCore::SharedBuffer& data, NOESCAPE const Function<bool(std::span<const uint8_t>)>& function)
 {
     function(data.span());
 }

@@ -281,12 +281,12 @@ public:
     size_t bestIconSize(const JSON::Object&, size_t idealPixelSize);
     String pathForBestImage(const JSON::Object&, size_t idealPixelSize);
 
-    RefPtr<WebCore::Icon> bestIcon(RefPtr<JSON::Object>, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>&);
+    RefPtr<WebCore::Icon> bestIcon(RefPtr<JSON::Object>, WebCore::FloatSize idealSize, NOESCAPE const Function<void(Ref<API::Error>)>&);
     RefPtr<WebCore::Icon> bestIconForManifestKey(const JSON::Object&, const String& manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error, const String& customLocalizedDescription);
 
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
     RefPtr<JSON::Object> bestIconVariantJSONObject(RefPtr<JSON::Array>, size_t idealPixelSize, ColorScheme);
-    RefPtr<WebCore::Icon> bestIconVariant(RefPtr<JSON::Array>, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>&);
+    RefPtr<WebCore::Icon> bestIconVariant(RefPtr<JSON::Array>, WebCore::FloatSize idealSize, NOESCAPE const Function<void(Ref<API::Error>)>&);
     RefPtr<WebCore::Icon> bestIconVariantForManifestKey(const JSON::Object&, const String& manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error, const String& customLocalizedDescription);
 #endif
 

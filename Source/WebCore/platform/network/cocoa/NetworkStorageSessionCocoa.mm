@@ -100,7 +100,7 @@ void NetworkStorageSession::deleteCookie(const Cookie& cookie, CompletionHandler
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), makeBlockPtr(WTFMove(work)).get());
 }
 
-static Vector<Cookie> nsCookiesToCookieVector(NSArray<NSHTTPCookie *> *nsCookies, const Function<bool(NSHTTPCookie *)>& filter = { })
+static Vector<Cookie> nsCookiesToCookieVector(NSArray<NSHTTPCookie *> *nsCookies, NOESCAPE const Function<bool(NSHTTPCookie *)>& filter = { })
 {
     Vector<Cookie> cookies;
     cookies.reserveInitialCapacity(nsCookies.count);
@@ -640,7 +640,7 @@ void NetworkStorageSession::deleteAllCookies(CompletionHandler<void()>&& complet
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), makeBlockPtr(WTFMove(work)).get());
 }
 
-void NetworkStorageSession::deleteCookiesMatching(const Function<bool(NSHTTPCookie *)>& matches, CompletionHandler<void()>&& completionHandler)
+void NetworkStorageSession::deleteCookiesMatching(NOESCAPE const Function<bool(NSHTTPCookie *)>& matches, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies) || m_isInMemoryCookieStore);
 

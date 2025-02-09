@@ -56,7 +56,7 @@ constexpr bool containsColorSchemeDependentColor(const LightDarkColor&)
 
 template<> struct Serialize<LightDarkColor> { void operator()(StringBuilder&, const LightDarkColor&); };
 template<> struct ComputedStyleDependenciesCollector<LightDarkColor> { void operator()(ComputedStyleDependencies&, const LightDarkColor&); };
-template<> struct CSSValueChildrenVisitor<LightDarkColor> { IterationStatus operator()(const Function<IterationStatus(CSSValue&)>&, const LightDarkColor&); };
+template<> struct CSSValueChildrenVisitor<LightDarkColor> { IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const LightDarkColor&); };
 
 } // namespace CSS
 } // namespace WebCore

@@ -112,7 +112,7 @@ void GStreamerCapturer::removeObserver(GStreamerCapturerObserver& observer)
     m_observers.remove(observer);
 }
 
-void GStreamerCapturer::forEachObserver(const Function<void(GStreamerCapturerObserver&)>& apply)
+void GStreamerCapturer::forEachObserver(NOESCAPE const Function<void(GStreamerCapturerObserver&)>& apply)
 {
     ASSERT(isMainThread());
     Ref protectedThis { *this };

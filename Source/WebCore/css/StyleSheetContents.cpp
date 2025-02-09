@@ -502,7 +502,7 @@ Document* StyleSheetContents::singleOwnerDocument() const
     return ownerNode ? &ownerNode->document() : nullptr;
 }
 
-static bool traverseRulesInVector(const Vector<Ref<StyleRuleBase>>& rules, const Function<bool(const StyleRuleBase&)>& handler)
+static bool traverseRulesInVector(const Vector<Ref<StyleRuleBase>>& rules, NOESCAPE const Function<bool(const StyleRuleBase&)>& handler)
 {
     for (auto& rule : rules) {
         if (handler(rule))
@@ -520,7 +520,7 @@ static bool traverseRulesInVector(const Vector<Ref<StyleRuleBase>>& rules, const
     return false;
 }
 
-bool StyleSheetContents::traverseRules(const Function<bool(const StyleRuleBase&)>& handler) const
+bool StyleSheetContents::traverseRules(NOESCAPE const Function<bool(const StyleRuleBase&)>& handler) const
 {
     for (auto& importRule : m_importRules) {
         if (handler(importRule))
@@ -546,7 +546,7 @@ bool StyleSheetContents::hasNestingRules() const
     return *m_hasNestingRulesCache;
 }
 
-bool StyleSheetContents::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool StyleSheetContents::traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     return traverseRules([&] (const StyleRuleBase& rule) {
         switch (rule.type()) {

@@ -177,7 +177,7 @@ static WeakHashSet<LocalDOMWindow, WeakPtrImplWithEventTargetData>& windowsInter
     return set;
 }
 
-void LocalDOMWindow::forEachWindowInterestedInStorageEvents(const Function<void(LocalDOMWindow&)>& apply)
+void LocalDOMWindow::forEachWindowInterestedInStorageEvents(NOESCAPE const Function<void(LocalDOMWindow&)>& apply)
 {
     for (auto& window : copyToVectorOf<Ref<LocalDOMWindow>>(windowsInterestedInStorageEvents()))
         apply(window);
@@ -2583,7 +2583,7 @@ bool LocalDOMWindow::isInsecureScriptAccess(LocalDOMWindow& activeWindow, const 
     return true;
 }
 
-ExceptionOr<RefPtr<Frame>> LocalDOMWindow::createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures& initialWindowFeatures, LocalDOMWindow& activeWindow, LocalFrame& firstFrame, LocalFrame& openerFrame, const Function<void(LocalDOMWindow&)>& prepareDialogFunction)
+ExceptionOr<RefPtr<Frame>> LocalDOMWindow::createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures& initialWindowFeatures, LocalDOMWindow& activeWindow, LocalFrame& firstFrame, LocalFrame& openerFrame, NOESCAPE const Function<void(LocalDOMWindow&)>& prepareDialogFunction)
 {
     RefPtr activeFrame = activeWindow.frame();
     if (!activeFrame)
@@ -2747,7 +2747,7 @@ ExceptionOr<RefPtr<WindowProxy>> LocalDOMWindow::open(LocalDOMWindow& activeWind
     return newFrame ? &newFrame->windowProxy() : RefPtr<WindowProxy> { nullptr };
 }
 
-void LocalDOMWindow::showModalDialog(const String& urlString, const String& dialogFeaturesString, LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, const Function<void(LocalDOMWindow&)>& prepareDialogFunction)
+void LocalDOMWindow::showModalDialog(const String& urlString, const String& dialogFeaturesString, LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, NOESCAPE const Function<void(LocalDOMWindow&)>& prepareDialogFunction)
 {
     if (RefPtr document = this->document())
         document->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "showModalDialog() is deprecated and will be removed. Please use the <dialog> element instead."_s);

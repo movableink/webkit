@@ -60,7 +60,7 @@ String CSSFilterImageValue::customCSSText() const
     return makeString("filter("_s, m_imageValueOrNone->cssText(), ", "_s, CSS::serializationForCSS(m_filter), ')');
 }
 
-IterationStatus CSSFilterImageValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSFilterImageValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     if (func(m_imageValueOrNone.get()) == IterationStatus::Done)
         return IterationStatus::Done;

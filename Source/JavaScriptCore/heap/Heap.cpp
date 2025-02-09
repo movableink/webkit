@@ -807,7 +807,7 @@ void Heap::completeAllJITPlans()
 }
 
 template<typename Visitor>
-void Heap::iterateExecutingAndCompilingCodeBlocks(Visitor& visitor, const Function<void(CodeBlock*)>& func)
+void Heap::iterateExecutingAndCompilingCodeBlocks(Visitor& visitor, NOESCAPE const Function<void(CodeBlock*)>& func)
 {
     m_codeBlocks->iterateCurrentlyExecuting(func);
 #if ENABLE(JIT)

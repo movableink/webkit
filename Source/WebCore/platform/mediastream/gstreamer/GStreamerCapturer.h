@@ -59,7 +59,7 @@ public:
 
     void addObserver(GStreamerCapturerObserver&);
     void removeObserver(GStreamerCapturerObserver&);
-    void forEachObserver(const Function<void(GStreamerCapturerObserver&)>&);
+    void forEachObserver(NOESCAPE const Function<void(GStreamerCapturerObserver&)>&);
 
     void setupPipeline();
     void start();

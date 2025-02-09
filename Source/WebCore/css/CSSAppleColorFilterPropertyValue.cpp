@@ -55,7 +55,7 @@ bool CSSAppleColorFilterPropertyValue::equals(const CSSAppleColorFilterPropertyV
     return m_filter == other.m_filter;
 }
 
-IterationStatus CSSAppleColorFilterPropertyValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSAppleColorFilterPropertyValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return CSS::visitCSSValueChildren(func, m_filter);
 }

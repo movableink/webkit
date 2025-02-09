@@ -363,12 +363,12 @@ bool EventLoop::hasTasksForFullyActiveDocument() const
     });
 }
 
-void EventLoop::forEachAssociatedContext(const Function<void(ScriptExecutionContext&)>& apply)
+void EventLoop::forEachAssociatedContext(NOESCAPE const Function<void(ScriptExecutionContext&)>& apply)
 {
     m_associatedContexts.forEach(apply);
 }
 
-bool EventLoop::findMatchingAssociatedContext(const Function<bool(ScriptExecutionContext&)>& predicate)
+bool EventLoop::findMatchingAssociatedContext(NOESCAPE const Function<bool(ScriptExecutionContext&)>& predicate)
 {
     for (Ref context : m_associatedContexts) {
         if (predicate(context.get()))

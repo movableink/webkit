@@ -78,7 +78,7 @@ void ComputedStyleDependenciesCollector<LightDarkColor>::operator()(ComputedStyl
     collectComputedStyleDependencies(dependencies, value.darkColor);
 }
 
-IterationStatus CSSValueChildrenVisitor<LightDarkColor>::operator()(const Function<IterationStatus(CSSValue&)>& func, const LightDarkColor& value)
+IterationStatus CSSValueChildrenVisitor<LightDarkColor>::operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const LightDarkColor& value)
 {
     if (visitCSSValueChildren(func, value.lightColor) == IterationStatus::Done)
         return IterationStatus::Done;

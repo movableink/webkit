@@ -51,7 +51,7 @@ bool CSSEasingFunctionValue::equals(const CSSEasingFunctionValue& other) const
     return m_easingFunction == other.m_easingFunction;
 }
 
-IterationStatus CSSEasingFunctionValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSEasingFunctionValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return CSS::visitCSSValueChildren(func, m_easingFunction);
 }

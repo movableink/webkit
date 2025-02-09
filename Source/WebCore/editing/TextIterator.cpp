@@ -2589,7 +2589,7 @@ String plainTextReplacingNoBreakSpace(const SimpleRange& range, TextIteratorBeha
     return makeStringByReplacingAll(plainText(range, defaultBehaviors, isDisplayString), noBreakSpace, ' ');
 }
 
-static void forEachMatch(const SimpleRange& range, const String& target, FindOptions options, const Function<bool(CharacterRange)>& match)
+static void forEachMatch(const SimpleRange& range, const String& target, FindOptions options, NOESCAPE const Function<bool(CharacterRange)>& match)
 {
     SearchBuffer buffer(target, options);
     if (buffer.needsMoreContext()) {

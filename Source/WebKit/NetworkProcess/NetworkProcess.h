@@ -197,7 +197,7 @@ public:
 
     void forEachNetworkSession(NOESCAPE const Function<void(NetworkSession&)>&);
 
-    void forEachNetworkStorageSession(const Function<void(WebCore::NetworkStorageSession&)>&);
+    void forEachNetworkStorageSession(NOESCAPE const Function<void(WebCore::NetworkStorageSession&)>&);
     WebCore::NetworkStorageSession* storageSession(PAL::SessionID) const;
     std::unique_ptr<WebCore::NetworkStorageSession> newTestingSession(PAL::SessionID);
     void addStorageSession(PAL::SessionID, const WebsiteDataStoreParameters&);

@@ -1362,7 +1362,7 @@ bool CSSPrimitiveValue::convertingToLengthHasRequiredConversionData(int lengthCo
     return canResolveDependenciesWithConversionData(conversionData);
 }
 
-IterationStatus CSSPrimitiveValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSPrimitiveValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     if (auto* calc = cssCalcValue()) {
         if (func(const_cast<CSSCalcValue&>(*calc)) == IterationStatus::Done)

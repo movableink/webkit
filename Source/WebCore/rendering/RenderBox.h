@@ -711,7 +711,7 @@ private:
 
     bool fixedElementLaysOutRelativeToFrame(const LocalFrameView&) const;
 
-    template<typename Function> LayoutUnit computeOrTrimInlineMargin(const RenderBlock& containingBlock, MarginTrimType marginSide, const Function& computeInlineMargin) const;
+    template<typename Function> LayoutUnit computeOrTrimInlineMargin(const RenderBlock& containingBlock, MarginTrimType marginSide, NOESCAPE const Function& computeInlineMargin) const;
 
     bool isScrollableOrRubberbandableBox() const override;
 

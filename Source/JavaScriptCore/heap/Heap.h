@@ -440,8 +440,8 @@ public:
     void addMarkedJSValueRefArray(MarkedJSValueRefArray*);
     
     template<typename Functor> void forEachProtectedCell(const Functor&);
-    template<typename Functor> void forEachCodeBlock(const Functor&);
-    template<typename Functor> void forEachCodeBlockIgnoringJITPlans(const AbstractLocker& codeBlockSetLocker, const Functor&);
+    template<typename Functor> void forEachCodeBlock(NOESCAPE const Functor&);
+    template<typename Functor> void forEachCodeBlockIgnoringJITPlans(const AbstractLocker& codeBlockSetLocker, NOESCAPE const Functor&);
 
     HandleSet* handleSet() { return &m_handleSet; }
 
@@ -777,7 +777,7 @@ private:
     bool overCriticalMemoryThreshold(MemoryThresholdCallType memoryThresholdCallType = MemoryThresholdCallType::Cached);
     
     template<typename Visitor>
-    void iterateExecutingAndCompilingCodeBlocks(Visitor&, const Function<void(CodeBlock*)>&);
+    void iterateExecutingAndCompilingCodeBlocks(Visitor&, NOESCAPE const Function<void(CodeBlock*)>&);
     
     template<typename Func, typename Visitor>
     void iterateExecutingAndCompilingCodeBlocksWithoutHoldingLocks(Visitor&, const Func&);

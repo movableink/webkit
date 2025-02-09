@@ -129,10 +129,10 @@ public:
     Vector<Ref<WebPage>> tabPages(std::optional<WebExtensionTabIdentifier> = std::nullopt, std::optional<WebExtensionWindowIdentifier> = std::nullopt) const;
     void addTabPage(WebPage&, std::optional<WebExtensionTabIdentifier>, std::optional<WebExtensionWindowIdentifier>);
 
-    void enumerateFramesAndNamespaceObjects(const Function<void(WebFrame&, WebExtensionAPINamespace&)>&, Ref<WebCore::DOMWrapperWorld>&& = mainWorldSingleton());
-    void enumerateFramesAndWebPageNamespaceObjects(const Function<void(WebFrame&, WebExtensionAPIWebPageNamespace&)>&);
+    void enumerateFramesAndNamespaceObjects(NOESCAPE const Function<void(WebFrame&, WebExtensionAPINamespace&)>&, Ref<WebCore::DOMWrapperWorld>&& = mainWorldSingleton());
+    void enumerateFramesAndWebPageNamespaceObjects(NOESCAPE const Function<void(WebFrame&, WebExtensionAPIWebPageNamespace&)>&);
 
-    void enumerateNamespaceObjects(const Function<void(WebExtensionAPINamespace&)>& function)
+    void enumerateNamespaceObjects(NOESCAPE const Function<void(WebExtensionAPINamespace&)>& function)
     {
         enumerateFramesAndNamespaceObjects([&](auto&, auto& namespaceObject) {
             function(namespaceObject);

@@ -98,7 +98,7 @@ void CSSImageSetOptionValue::setType(String type)
     m_mimeType = WTFMove(type);
 }
 
-bool CSSImageSetOptionValue::customTraverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool CSSImageSetOptionValue::customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     return m_resolution->traverseSubresources(handler) || m_image->traverseSubresources(handler);
 }

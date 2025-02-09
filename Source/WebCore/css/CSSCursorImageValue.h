@@ -45,7 +45,7 @@ public:
     String customCSSText() const;
     bool equals(const CSSCursorImageValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         return func(m_imageValue.get());
     }

@@ -877,7 +877,7 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
     repaintRectMap().add(this, Vector<FloatRect>()).iterator->value.append(WTFMove(largestRepaintRect));
 }
 
-void GraphicsLayer::traverse(GraphicsLayer& layer, const Function<void(GraphicsLayer&)>& traversalFunc)
+void GraphicsLayer::traverse(GraphicsLayer& layer, NOESCAPE const Function<void(GraphicsLayer&)>& traversalFunc)
 {
     traversalFunc(layer);
 
