@@ -145,11 +145,6 @@ private:
     Ref<UniqueElementData> makeUniqueCopy() const;
 };
 
-#if COMPILER(MSVC)
-#pragma warning(push)
-#pragma warning(disable: 4200) // Disable "zero-sized array in struct/union" warning
-#endif
-
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ShareableElementData);
 class ShareableElementData : public ElementData {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ShareableElementData);
@@ -167,10 +162,6 @@ public:
 
     Attribute m_attributeArray[0];
 };
-
-#if COMPILER(MSVC)
-#pragma warning(pop)
-#endif
 
 class UniqueElementData : public ElementData {
 public:
