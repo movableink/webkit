@@ -350,7 +350,7 @@ Ref<WebProcessProxy> WebProcessCache::CachedProcess::takeProcess()
     //
     // To avoid this, let the background activity live until the next runloop turn.
     if (m_backgroundActivity)
-        RunLoop::current().dispatch([backgroundActivity = WTFMove(m_backgroundActivity)]() { });
+        RunLoop::protectedCurrent()->dispatch([backgroundActivity = WTFMove(m_backgroundActivity)]() { });
 #endif
     m_process->setIsInProcessCache(false);
     return m_process.releaseNonNull();

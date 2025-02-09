@@ -79,7 +79,7 @@ void handleXPCEndpointMessage(xpc_object_t message, const String& messageName)
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     if (messageName == VideoReceiverEndpointMessage::messageName()) {
-        RunLoop::main().dispatch([message = OSObjectPtr(message)] {
+        RunLoop::protectedMain()->dispatch([message = OSObjectPtr(message)] {
             handleVideoReceiverEndpointMessage(message.get());
         });
         return;

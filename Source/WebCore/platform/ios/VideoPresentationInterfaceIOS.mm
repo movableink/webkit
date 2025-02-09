@@ -545,7 +545,7 @@ void VideoPresentationInterfaceIOS::doExitFullscreen()
 
     m_standby = false;
 
-    RunLoop::main().dispatch([protectedThis = Ref { *this }, this] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, this] {
         if (auto model = videoPresentationModel())
             model->didExitFullscreen();
         m_changingStandbyOnly = false;
@@ -897,7 +897,7 @@ void VideoPresentationInterfaceIOS::preparedToReturnToStandby()
 
 void VideoPresentationInterfaceIOS::finalizeSetup()
 {
-    RunLoop::main().dispatch([protectedThis = Ref { *this }, this] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, this] {
         if (auto model = videoPresentationModel()) {
             if (!m_hasVideoContentLayer && m_targetMode.hasVideo()) {
                 m_finalizeSetupNeedsVideoContentLayer = true;

@@ -149,7 +149,7 @@ void determineTrackingPreventionState()
     itpQueue() = WorkQueue::create("com.apple.WebKit.itpCheckQueue"_s);
     itpQueue()->dispatch([appWasLinkedOnOrAfter, bundleIdentifier = applicationBundleIdentifier().isolatedCopy()] {
         currentTrackingPreventionState = determineTrackingPreventionStateInternal(appWasLinkedOnOrAfter, bundleIdentifier) ? TrackingPreventionState::Enabled : TrackingPreventionState::Disabled;
-        RunLoop::main().dispatch([] {
+        RunLoop::protectedMain()->dispatch([] {
             itpQueue() = nullptr;
         });
     });

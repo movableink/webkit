@@ -1600,7 +1600,7 @@ void TestInvocation::done()
     m_gotFinalMessage = true;
     invalidateWaitToDumpWatchdogTimer();
     invalidateWaitForPostDumpWatchdogTimer();
-    RunLoop::main().dispatch([] {
+    RunLoop::protectedMain()->dispatch([] {
         TestController::singleton().notifyDone();
     });
 }

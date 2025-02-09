@@ -559,7 +559,7 @@ void VideoPresentationManager::requestVideoContentLayer(PlaybackSessionContextId
     auto videoLayer = interface->rootLayer();
 
     model->setVideoFullscreenLayer(videoLayer.get(), [protectedThis = Ref { *this }, contextId] () mutable {
-        RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId] {
+        RunLoop::protectedMain()->dispatch([protectedThis = WTFMove(protectedThis), contextId] {
             if (RefPtr page = protectedThis->m_page.get())
                 page->send(Messages::VideoPresentationManagerProxy::SetHasVideoContentLayer(contextId, true));
         });
@@ -573,9 +573,9 @@ void VideoPresentationManager::returnVideoContentLayer(PlaybackSessionContextIde
 
     // FIXME: Capturing structured bindings is a C++20 feature, only supported from clangd >= 16
     model->waitForPreparedForInlineThen([protectedThis = Ref { *this }, contextId, model = model] () mutable { // need this for return video layer
-        RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId, model = WTFMove(model)] () mutable {
+        RunLoop::protectedMain()->dispatch([protectedThis = WTFMove(protectedThis), contextId, model = WTFMove(model)] () mutable {
             model->setVideoFullscreenLayer(nil, [protectedThis = WTFMove(protectedThis), contextId] () mutable {
-                RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId] {
+                RunLoop::protectedMain()->dispatch([protectedThis = WTFMove(protectedThis), contextId] {
                     if (RefPtr page = protectedThis->m_page.get())
                         page->send(Messages::VideoPresentationManagerProxy::SetHasVideoContentLayer(contextId, false));
                 });
@@ -593,7 +593,7 @@ void VideoPresentationManager::didSetupFullscreen(PlaybackSessionContextIdentifi
     CALayer* videoLayer = interface->rootLayer().get();
 
     model->setVideoFullscreenLayer(videoLayer, [protectedThis = Ref { *this }, contextId] () mutable {
-        RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId] {
+        RunLoop::protectedMain()->dispatch([protectedThis = WTFMove(protectedThis), contextId] {
             if (RefPtr page = protectedThis->m_page.get())
                 page->send(Messages::VideoPresentationManagerProxy::EnterFullscreen(contextId));
         });
@@ -610,7 +610,7 @@ void VideoPresentationManager::willExitFullscreen(PlaybackSessionContextIdentifi
     if (!videoElement)
         return;
 
-    RunLoop::main().dispatch([protectedThis = Ref { *this }, videoElement = WTFMove(videoElement), contextId] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, videoElement = WTFMove(videoElement), contextId] {
         videoElement->willExitFullscreen();
         if (RefPtr page = protectedThis->m_page.get())
             page->send(Messages::VideoPresentationManagerProxy::PreparedToExitFullscreen(contextId));
@@ -638,7 +638,7 @@ void VideoPresentationManager::didEnterFullscreen(PlaybackSessionContextIdentifi
         return;
 
     // exit fullscreen now if it was previously requested during an animation.
-    RunLoop::main().dispatch([protectedThis = Ref { *this }, videoElement] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, videoElement] {
         if (protectedThis->m_page)
             protectedThis->exitVideoFullscreenForVideoElement(*videoElement, [](bool) { });
     });
@@ -650,7 +650,7 @@ void VideoPresentationManager::failedToEnterFullscreen(PlaybackSessionContextIde
     Ref model = ensureModel(contextId);
     INFO_LOG(LOGIDENTIFIER, model->logIdentifier());
 
-    RunLoop::main().dispatch([protectedThis = Ref { *this }, contextId] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, contextId] {
         if (RefPtr page = protectedThis->m_page.get())
             page->send(Messages::VideoPresentationManagerProxy::CleanupFullscreen(contextId));
     });
@@ -664,16 +664,16 @@ void VideoPresentationManager::didExitFullscreen(PlaybackSessionContextIdentifie
     auto [model, interface] = ensureModelAndInterface(contextId);
 
 #if PLATFORM(IOS_FAMILY)
-    RunLoop::main().dispatch([protectedThis = Ref { *this }, contextId] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, contextId] {
         if (RefPtr page = protectedThis->m_page.get())
             page->send(Messages::VideoPresentationManagerProxy::CleanupFullscreen(contextId));
     });
 #else
     // FIXME: Capturing structured bindings is a C++20 feature, only supported from clangd >= 16
     model->waitForPreparedForInlineThen([protectedThis = Ref { *this }, contextId, interface = WTFMove(interface), model = model]() mutable {
-        RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId, interface = WTFMove(interface), model = WTFMove(model)] () mutable {
+        RunLoop::protectedMain()->dispatch([protectedThis = WTFMove(protectedThis), contextId, interface = WTFMove(interface), model = WTFMove(model)] () mutable {
             model->setVideoFullscreenLayer(nil, [protectedThis = WTFMove(protectedThis), contextId, interface = WTFMove(interface)] () mutable {
-                RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId, interface = WTFMove(interface)] {
+                RunLoop::protectedMain()->dispatch([protectedThis = WTFMove(protectedThis), contextId, interface = WTFMove(interface)] {
                     if (interface->rootLayer()) {
                         interface->setRootLayer(nullptr);
                         interface->setLayerHostingContext(nullptr);
@@ -720,7 +720,7 @@ void VideoPresentationManager::didCleanupFullscreen(PlaybackSessionContextIdenti
         return;
     }
 
-    RunLoop::main().dispatch([protectedThis = Ref { *this }, videoElement, mode, standby] mutable {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, videoElement, mode, standby] mutable {
         if (protectedThis->m_page)
             protectedThis->enterVideoFullscreenForVideoElement(*videoElement, WTFMove(mode), standby);
     });

@@ -206,7 +206,7 @@ static inline void SendMessage(RetainPtr<NSInvocation>&& invocation)
     if (!WebThreadIsEnabled() || CFRunLoopGetMain() == CFRunLoopGetCurrent())
         return;
 
-    RunLoop::main().dispatch([invocation = WTFMove(invocation)] { });
+    RunLoop::protectedMain()->dispatch([invocation = WTFMove(invocation)] { });
 }
 
 static void HandleDelegateSource(void*)
@@ -457,7 +457,7 @@ void WebThreadPostNotification(NSString* name, id object, id userInfo)
     if (pthread_main_np())
         [[NSNotificationCenter defaultCenter] postNotificationName:name object:object userInfo:userInfo];
     else {
-        RunLoop::main().dispatch([name = retainPtr(name), object = retainPtr(object), userInfo = retainPtr(userInfo)] {
+        RunLoop::protectedMain()->dispatch([name = retainPtr(name), object = retainPtr(object), userInfo = retainPtr(userInfo)] {
             [[NSNotificationCenter defaultCenter] postNotificationName:name.get() object:object.get() userInfo:userInfo.get()];
         });
     }

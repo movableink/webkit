@@ -209,7 +209,7 @@ void EventDispatcher::wheelEvent(PageIdentifier pageID, const WebWheelEvent& whe
 #if ENABLE(MAC_GESTURE_EVENTS)
 void EventDispatcher::gestureEvent(FrameIdentifier frameID, PageIdentifier pageID, const WebGestureEvent& gestureEvent)
 {
-    RunLoop::main().dispatch([this, frameID, pageID, gestureEvent] mutable {
+    RunLoop::protectedMain()->dispatch([this, frameID, pageID, gestureEvent] mutable {
         dispatchGestureEvent(frameID, pageID, gestureEvent);
     });
 }
@@ -253,7 +253,7 @@ void EventDispatcher::touchEvent(PageIdentifier pageID, FrameIdentifier frameID,
     }
 
     if (updateListWasEmpty) {
-        RunLoop::main().dispatch([this] {
+        RunLoop::protectedMain()->dispatch([this] {
             dispatchTouchEvents();
         });
     }
@@ -279,7 +279,7 @@ void EventDispatcher::dispatchTouchEvents()
 void EventDispatcher::dispatchWheelEventViaMainThread(WebCore::PageIdentifier pageID, const WebWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps, WheelEventOrigin wheelEventOrigin)
 {
     ASSERT(!RunLoop::isMain());
-    RunLoop::main().dispatch([this, pageID, wheelEvent, wheelEventOrigin, steps = processingSteps - WheelEventProcessingSteps::AsyncScrolling] {
+    RunLoop::protectedMain()->dispatch([this, pageID, wheelEvent, wheelEventOrigin, steps = processingSteps - WheelEventProcessingSteps::AsyncScrolling] {
         dispatchWheelEvent(pageID, wheelEvent, steps, wheelEventOrigin);
     });
 }
@@ -345,7 +345,7 @@ void EventDispatcher::displayDidRefresh(PlatformDisplayID displayID, const Displ
     if (!sendToMainThread)
         return;
 
-    RunLoop::main().dispatch([displayID, displayUpdate]() {
+    RunLoop::protectedMain()->dispatch([displayID, displayUpdate]() {
         DisplayRefreshMonitorManager::sharedManager().displayDidRefresh(displayID, displayUpdate);
     });
 }

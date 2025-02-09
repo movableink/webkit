@@ -339,7 +339,7 @@ void ThreadedCompositor::renderLayerTree()
     bool needsGLViewportResize = m_surface->resize(viewportSize);
 
     m_surface->willRenderFrame();
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }] {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }] {
         if (m_layerTreeHost)
             m_layerTreeHost->willRenderFrame();
     });
@@ -367,7 +367,7 @@ void ThreadedCompositor::renderLayerTree()
 
     m_surface->didRenderFrame();
 
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }] {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }] {
         if (m_layerTreeHost)
             m_layerTreeHost->didRenderFrame();
     });

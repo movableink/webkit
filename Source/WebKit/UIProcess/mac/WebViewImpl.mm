@@ -671,7 +671,7 @@ static void* keyValueObservingContext = &keyValueObservingContext;
 
 - (void)menuDidClose:(NSMenu *)menu
 {
-    RunLoop::main().dispatch([impl = _impl] {
+    RunLoop::protectedMain()->dispatch([impl = _impl] {
         if (impl)
             impl->hideDOMPasteMenuWithResult(WebCore::DOMPasteAccessResponse::DeniedForGesture);
     });
@@ -1730,7 +1730,7 @@ void WebViewImpl::updateWindowAndViewFrames()
 
     m_didScheduleWindowAndViewFrameUpdate = true;
 
-    RunLoop::main().dispatch([weakThis = WeakPtr { *this }] {
+    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }] {
         if (!weakThis)
             return;
 
@@ -2812,7 +2812,7 @@ void WebViewImpl::didBecomeEditable()
 {
     [m_windowVisibilityObserver enableObservingFontPanel];
 
-    RunLoop::main().dispatch([] {
+    RunLoop::protectedMain()->dispatch([] {
         [[NSSpellChecker sharedSpellChecker] _preflightChosenSpellServer];
     });
 }
@@ -3257,7 +3257,7 @@ void WebViewImpl::requestCandidatesForSelectionIfNeeded()
 
     WeakPtr weakThis { *this };
     m_lastCandidateRequestSequenceNumber = [[NSSpellChecker sharedSpellChecker] requestCandidatesForSelectedRange:selectedRange inString:postLayoutData->paragraphContextForCandidateRequest types:checkingTypes options:nil inSpellDocumentWithTag:spellCheckerDocumentTag() completionHandler:[weakThis](NSInteger sequenceNumber, NSArray<NSTextCheckingResult *> *candidates) {
-        RunLoop::main().dispatch([weakThis, sequenceNumber, candidates = retainPtr(candidates)] {
+        RunLoop::protectedMain()->dispatch([weakThis, sequenceNumber, candidates = retainPtr(candidates)] {
             if (!weakThis)
                 return;
             weakThis->handleRequestedCandidates(sequenceNumber, candidates.get());
@@ -4105,7 +4105,7 @@ static bool handleLegacyFilesPasteboard(id<NSDraggingInfo> draggingInfo, Box<Web
             if (errorOrNil)
                 return;
 
-            RunLoop::main().dispatch([page = WTFMove(page), path = RetainPtr { fileURL.path }, fileNames, fileCount, dragData, pasteboardName] () mutable {
+            RunLoop::protectedMain()->dispatch([page = WTFMove(page), path = RetainPtr { fileURL.path }, fileNames, fileCount, dragData, pasteboardName] () mutable {
                 fileNames->append(path.get());
                 if (fileNames->size() != fileCount)
                     return;

@@ -247,7 +247,7 @@ void SocketConnection::waitForSocketWritability()
     m_writeMonitor.start(g_socket_connection_get_socket(m_connection.get()), G_IO_OUT, RunLoop::current(), [this, protectedThis = Ref { *this }] (GIOCondition condition) -> gboolean {
         if (condition & G_IO_OUT) {
             // We can't stop the monitor from this lambda, because stop destroys the lambda.
-            RunLoop::current().dispatch([this, protectedThis] {
+            RunLoop::protectedCurrent()->dispatch([this, protectedThis] {
                 m_writeMonitor.stop();
                 write();
             });

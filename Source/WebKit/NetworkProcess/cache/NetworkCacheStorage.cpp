@@ -520,7 +520,7 @@ void Storage::synchronize()
 
         LOG(NetworkCacheStorage, "(NetworkProcess) cache synchronization completed size=%zu recordCount=%u", recordsSize, recordCount);
 
-        RunLoop::main().dispatch([this, protectedThis = WTFMove(protectedThis), recordFilter = WTFMove(recordFilter), blobFilter = WTFMove(blobFilter), recordsSize]() mutable {
+        RunLoop::protectedMain()->dispatch([this, protectedThis = WTFMove(protectedThis), recordFilter = WTFMove(recordFilter), blobFilter = WTFMove(blobFilter), recordsSize]() mutable {
             for (auto& recordFilterKey : m_recordFilterHashesAddedDuringSynchronization)
                 recordFilter->add(recordFilterKey);
             m_recordFilterHashesAddedDuringSynchronization.clear();
@@ -750,7 +750,7 @@ std::optional<BlobStorage::Blob> Storage::storeBodyAsBlob(WriteOperationIdentifi
 
     addWriteOperationActivity(identifier);
 
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }, blob = WTFMove(blob), identifier] {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, blob = WTFMove(blob), identifier] {
         assertIsMainThread();
 
         auto* writeOperation = m_activeWriteOperations.get(identifier);
@@ -840,7 +840,7 @@ void Storage::remove(const Vector<Key>& keys, CompletionHandler<void()>&& comple
         for (auto& key : keysToRemove)
             deleteFiles(key);
 
-        RunLoop::main().dispatch(WTFMove(completionHandler));
+        RunLoop::protectedMain()->dispatch(WTFMove(completionHandler));
     });
 }
 
@@ -901,7 +901,7 @@ void Storage::readRecordFromData(Storage::ReadOperationIdentifier identifier, Mo
         record = readRecord(data);
 
     auto recordIOEndTime = MonotonicTime::now();
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }, identifier, recordIOStartTime, recordIOEndTime, record = crossThreadCopy(WTFMove(record))]() mutable {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, identifier, recordIOStartTime, recordIOEndTime, record = crossThreadCopy(WTFMove(record))]() mutable {
         auto* readOperation = m_activeReadOperations.get(identifier);
         RELEASE_ASSERT(readOperation);
 
@@ -919,7 +919,7 @@ void Storage::readBlobIfNecessary(Storage::ReadOperationIdentifier identifier, c
     auto blobIOStartTime = MonotonicTime::now();
     auto blob = m_blobStorage.get(blobPath);
     auto blobIOEndTime = MonotonicTime::now();
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }, identifier, blob = WTFMove(blob), blobIOStartTime, blobIOEndTime]() mutable {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, identifier, blob = WTFMove(blob), blobIOStartTime, blobIOEndTime]() mutable {
         auto* readOperation = m_activeReadOperations.get(identifier);
         RELEASE_ASSERT(readOperation);
 
@@ -988,7 +988,7 @@ template <class T> bool retrieveFromMemory(const T& operations, const Key& key, 
     for (auto& operation : operations) {
         if (operation->record().key == key) {
             LOG(NetworkCacheStorage, "(NetworkProcess) found write operation in progress");
-            RunLoop::main().dispatch([record = operation->record(), completionHandler = WTFMove(completionHandler)] () mutable {
+            RunLoop::protectedMain()->dispatch([record = operation->record(), completionHandler = WTFMove(completionHandler)] () mutable {
                 completionHandler(WTFMove(record), { });
             });
             return true;
@@ -1176,7 +1176,7 @@ void Storage::traverseWithinRootPath(const String& rootPath, const String& type,
         });
 
         traverseOperation->waitUntilActivitiesFinished();
-        RunLoop::main().dispatch([traverseOperation = WTFMove(traverseOperation)]() mutable {
+        RunLoop::protectedMain()->dispatch([traverseOperation = WTFMove(traverseOperation)]() mutable {
             // Invoke with nullptr to indicate this is the last record.
             traverseOperation->invokeHandler(nullptr, { });
         });
@@ -1243,7 +1243,7 @@ void Storage::clear(String&& type, WallTime modifiedSinceTime, CompletionHandler
         // This cleans unreferenced blobs.
         m_blobStorage.synchronize();
 
-        RunLoop::main().dispatch(WTFMove(completionHandler));
+        RunLoop::protectedMain()->dispatch(WTFMove(completionHandler));
     });
 }
 
@@ -1326,7 +1326,7 @@ void Storage::shrink()
             }
         });
 
-        RunLoop::main().dispatch([this, protectedThis = WTFMove(protectedThis)] {
+        RunLoop::protectedMain()->dispatch([this, protectedThis = WTFMove(protectedThis)] {
             m_shrinkInProgress = false;
             // We could synchronize during the shrink traversal. However this is fast and it is better to have just one code path.
             synchronize();

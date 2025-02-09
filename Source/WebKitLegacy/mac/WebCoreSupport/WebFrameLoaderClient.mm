@@ -2139,7 +2139,7 @@ void WebFrameLoaderClient::finishedLoadingIcon(WebCore::FragmentedSharedBuffer* 
 #if USE(WEB_THREAD)
             WebThreadRun(^{
 #else
-            RunLoop::main().dispatch([self, strongSelf = retainPtr(self), success] {
+            RunLoop::protectedMain()->dispatch([self, strongSelf = retainPtr(self), success] {
 #endif
                 if (success)
                     [self receivedPolicyDecision:WebCore::PolicyAction::Ignore];

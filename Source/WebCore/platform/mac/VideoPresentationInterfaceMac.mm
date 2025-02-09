@@ -482,7 +482,7 @@ void VideoPresentationInterfaceMac::setupFullscreen(const IntRect& initialRect, 
 
     [videoPresentationInterfaceObjC() setUpPIPForVideoView:layerHostView() withFrame:(NSRect)initialRect inWindow:parentWindow];
 
-    RunLoop::main().dispatch([protectedThis = Ref { *this }, this] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, this] {
         if (RefPtr model = videoPresentationModel()) {
             model->didSetupFullscreen();
             model->setRequiresTextTrackRepresentation(true);

@@ -489,7 +489,7 @@ bool FileInputType::receiveDroppedFilesWithImageTranscoding(const Vector<String>
         auto replacementPaths = transcodeImages(transcodingPaths, transcodingUTI, transcodingExtension);
         ASSERT(transcodingPaths.size() == replacementPaths.size());
 
-        RunLoop::main().dispatch([callFilesChosen = WTFMove(callFilesChosen), replacementPaths = crossThreadCopy(WTFMove(replacementPaths))] {
+        RunLoop::protectedMain()->dispatch([callFilesChosen = WTFMove(callFilesChosen), replacementPaths = crossThreadCopy(WTFMove(replacementPaths))] {
             callFilesChosen(replacementPaths);
         });
     });

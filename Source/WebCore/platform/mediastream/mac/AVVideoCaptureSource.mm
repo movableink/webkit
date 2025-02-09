@@ -1267,7 +1267,7 @@ void AVVideoCaptureSource::captureOutputDidFinishProcessingPhoto(RetainPtr<AVCap
 {
     if (error) {
         rejectPendingPhotoRequest("AVCapturePhotoOutput failed"_s);
-        RunLoop::main().dispatch([this, protectedThis = Ref { *this }, logIdentifier = LOGIDENTIFIER, error = WTFMove(error) ] {
+        RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, logIdentifier = LOGIDENTIFIER, error = WTFMove(error)] {
             ASSERT(isMainThread());
             ALWAYS_LOG_IF(loggerPtr(), logIdentifier, "failed: ", [error code], ", ", error.get());
         });

@@ -107,7 +107,7 @@ void LocalConnection::verifyUser(const String& rpId, ClientDataType type, SecAcc
             verification = UserVerification::Presence;
 
         // This block can be executed in another thread.
-        RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler), verification, context = WTFMove(context)] () mutable {
+        RunLoop::protectedMain()->dispatch([completionHandler = WTFMove(completionHandler), verification, context = WTFMove(context)] () mutable {
             completionHandler(verification, context.get());
         });
     });
@@ -151,7 +151,7 @@ void LocalConnection::verifyUser(SecAccessControlRef accessControl, LAContext *c
             verification = UserVerification::Presence;
 
         // This block can be executed in another thread.
-        RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler), verification] () mutable {
+        RunLoop::protectedMain()->dispatch([completionHandler = WTFMove(completionHandler), verification] () mutable {
             completionHandler(verification);
         });
     });

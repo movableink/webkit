@@ -1498,7 +1498,7 @@ void NetworkStorageManager::setBackupExclusionPeriodForTesting(Seconds period, C
 
     m_queue->dispatch([this, protectedThis = Ref { *this }, period, completionHandler = WTFMove(completionHandler)]() mutable {
         m_backupExclusionPeriod = period;
-        RunLoop::main().dispatch(WTFMove(completionHandler));
+        RunLoop::protectedMain()->dispatch(WTFMove(completionHandler));
     });
 }
 

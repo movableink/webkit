@@ -2591,7 +2591,7 @@ static void expectScheduleShowAffordanceForSelectionRectCalled(bool expectation)
         TestWebKitAPI::Util::run(&didCallScheduleShowAffordanceForSelectionRect);
     else {
         bool doneWaiting = false;
-        RunLoop::main().dispatchAfter(300_ms, [&] {
+        RunLoop::protectedMain()->dispatchAfter(300_ms, [&] {
             EXPECT_FALSE(didCallScheduleShowAffordanceForSelectionRect);
             doneWaiting = true;
         });

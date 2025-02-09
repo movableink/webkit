@@ -2044,7 +2044,7 @@ void WebPageProxy::loadRequestWithNavigationShared(Ref<WebProcessProxy>&& proces
 #if PLATFORM(COCOA)
     bool urlIsInvalidButNotNull = !url.isValid() && !url.isNull();
     if (urlIsInvalidButNotNull && WTF::linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToNull)) {
-        RunLoop::main().dispatch([weakThis = WeakPtr { *this }, request, navigation = Ref { navigation }] {
+        RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, request, navigation = Ref { navigation }] {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;

@@ -112,7 +112,7 @@ void VideoPresentationInterfaceLMK::setupFullscreen(const WebCore::FloatRect& in
 
 void VideoPresentationInterfaceLMK::finalizeSetup()
 {
-    RunLoop::main().dispatch([protectedThis = Ref { *this }] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }] {
         if (RefPtr model = protectedThis->videoPresentationModel())
             model->didSetupFullscreen();
     });

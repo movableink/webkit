@@ -1391,7 +1391,7 @@ void WebPage::updateThrottleState()
         m_userActivity.start();
 
     if (m_page && m_page->settings().serviceWorkersEnabled()) {
-        RunLoop::main().dispatch([isThrottleable] {
+        RunLoop::protectedMain()->dispatch([isThrottleable] {
             WebServiceWorkerProvider::singleton().updateThrottleState(isThrottleable);
         });
     }

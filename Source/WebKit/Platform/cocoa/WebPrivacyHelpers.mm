@@ -254,7 +254,7 @@ void StorageAccessPromptQuirkController::updateList(CompletionHandler<void()>&& 
 {
     ASSERT(RunLoop::isMain());
     if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(requestStorageAccessPromptQuirksData:completionHandler:)]) {
-        RunLoop::main().dispatch(WTFMove(completionHandler));
+        RunLoop::protectedMain()->dispatch(WTFMove(completionHandler));
         return;
     }
 
@@ -296,7 +296,7 @@ void StorageAccessUserAgentStringQuirkController::updateList(CompletionHandler<v
 {
     ASSERT(RunLoop::isMain());
     if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(requestStorageAccessUserAgentStringQuirksData:completionHandler:)]) {
-        RunLoop::main().dispatch(WTFMove(completionHandler));
+        RunLoop::protectedMain()->dispatch(WTFMove(completionHandler));
         return;
     }
 
@@ -728,7 +728,7 @@ bool isKnownTrackerAddressOrDomain(StringView) { return false; }
 #else
 void ScriptTelemetryController::updateList(CompletionHandler<void()>&& completion)
 {
-    RunLoop::main().dispatch(WTFMove(completion));
+    RunLoop::protectedMain()->dispatch(WTFMove(completion));
 }
 
 WPResourceType ScriptTelemetryController::resourceType() const

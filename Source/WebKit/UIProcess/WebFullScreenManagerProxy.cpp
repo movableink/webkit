@@ -307,7 +307,7 @@ void WebFullScreenManagerProxy::prepareQuickLookImageURL(CompletionHandler<void(
         ASSERT_UNUSED(byteCount, byteCount == buffer->size());
         FileSystem::closeFile(fileHandle);
 
-        RunLoop::main().dispatch([filePath, completionHandler = WTFMove(completionHandler)]() mutable {
+        RunLoop::protectedMain()->dispatch([filePath, completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler(URL::fileURLWithFileSystemPath(filePath));
         });
     });

@@ -388,7 +388,7 @@ Ref<PlatformCALayer> PlatformCALayerCocoa::clone(PlatformCALayerClient* owner) c
         AVPlayerLayer *sourcePlayerLayer = avPlayerLayer();
         ASSERT(sourcePlayerLayer);
 
-        RunLoop::main().dispatch([destinationPlayerLayer = retainPtr(destinationPlayerLayer), sourcePlayerLayer = retainPtr(sourcePlayerLayer)] {
+        RunLoop::protectedMain()->dispatch([destinationPlayerLayer = retainPtr(destinationPlayerLayer), sourcePlayerLayer = retainPtr(sourcePlayerLayer)] {
             [destinationPlayerLayer setPlayer:[sourcePlayerLayer player]];
         });
     }
@@ -1206,7 +1206,7 @@ bool PlatformCALayer::isWebLayer()
 
 void PlatformCALayer::setBoundsOnMainThread(CGRect bounds)
 {
-    RunLoop::main().dispatch([layer = m_layer, bounds] {
+    RunLoop::protectedMain()->dispatch([layer = m_layer, bounds] {
         BEGIN_BLOCK_OBJC_EXCEPTIONS
         [layer setBounds:bounds];
         END_BLOCK_OBJC_EXCEPTIONS
@@ -1215,7 +1215,7 @@ void PlatformCALayer::setBoundsOnMainThread(CGRect bounds)
 
 void PlatformCALayer::setPositionOnMainThread(CGPoint position)
 {
-    RunLoop::main().dispatch([layer = m_layer, position] {
+    RunLoop::protectedMain()->dispatch([layer = m_layer, position] {
         BEGIN_BLOCK_OBJC_EXCEPTIONS
         [layer setPosition:position];
         END_BLOCK_OBJC_EXCEPTIONS
@@ -1224,7 +1224,7 @@ void PlatformCALayer::setPositionOnMainThread(CGPoint position)
 
 void PlatformCALayer::setAnchorPointOnMainThread(FloatPoint3D value)
 {
-    RunLoop::main().dispatch([layer = m_layer, value] {
+    RunLoop::protectedMain()->dispatch([layer = m_layer, value] {
         BEGIN_BLOCK_OBJC_EXCEPTIONS
         [layer setAnchorPoint:CGPointMake(value.x(), value.y())];
         [layer setAnchorPointZ:value.z()];

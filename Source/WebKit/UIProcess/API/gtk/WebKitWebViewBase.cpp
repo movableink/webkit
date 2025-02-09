@@ -3043,7 +3043,7 @@ static void emojiChooserClosed(WebKitWebViewBase* webkitWebViewBase)
 {
     // The emoji chooser first closes the popover and then emits emoji-picked signal, so complete
     // the request if the emoji isn't picked before the next run loop iteration.
-    RunLoop::main().dispatch([webViewBase = GRefPtr<WebKitWebViewBase>(webkitWebViewBase)] {
+    RunLoop::protectedMain()->dispatch([webViewBase = GRefPtr<WebKitWebViewBase>(webkitWebViewBase)] {
         webkitWebViewBaseCompleteEmojiChooserRequest(webViewBase.get(), emptyString());
     });
     webkitWebViewBase->priv->releaseEmojiChooserTimer.startOneShot(2_min);
