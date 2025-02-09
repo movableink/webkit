@@ -28,6 +28,7 @@
 
 #if HAVE(CORE_MATERIAL)
 
+#include "CSSPrimitiveValueMappings.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSValueKeywords.h"
 
@@ -42,6 +43,9 @@ static bool isKeywordValidForAppleVisualEffect(CSSValueID keyword)
     case CSSValueID::CSSValueAppleSystemBlurMaterialThick:
     case CSSValueID::CSSValueAppleSystemBlurMaterialThin:
     case CSSValueID::CSSValueAppleSystemBlurMaterialUltraThin:
+#if HAVE(MATERIAL_HOSTING)
+    case CSSValueID::CSSValueAppleSystemHostedBlurMaterial:
+#endif
     case CSSValueID::CSSValueAppleSystemVibrancyFill:
     case CSSValueID::CSSValueAppleSystemVibrancyLabel:
     case CSSValueID::CSSValueAppleSystemVibrancyQuaternaryLabel:

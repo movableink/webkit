@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,50 +23,24 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
 
 #if HAVE(CORE_MATERIAL)
 
-namespace WTF {
-class TextStream;
-}
+#import "PlatformUtilities.h"
+#import "Test.h"
+#import "TestWKWebView.h"
+#import <WebKit/WKWebViewPrivate.h>
+#import <wtf/RetainPtr.h>
 
-namespace WebCore {
+namespace TestWebKitAPI {
 
-enum class AppleVisualEffect : uint8_t {
-    None,
-    BlurUltraThinMaterial,
-    BlurThinMaterial,
-    BlurMaterial,
-    BlurThickMaterial,
-    BlurChromeMaterial,
-#if HAVE(MATERIAL_HOSTING)
-    HostedBlurMaterial,
+#if USE(APPLE_INTERNAL_SDK)
+
+#import <WebKitAdditions/AppleVisualEffectTestsAdditions.mm>
+
 #endif
-    VibrancyLabel,
-    VibrancySecondaryLabel,
-    VibrancyTertiaryLabel,
-    VibrancyQuaternaryLabel,
-    VibrancyFill,
-    VibrancySecondaryFill,
-    VibrancyTertiaryFill,
-    VibrancySeparator,
-};
 
-WEBCORE_EXPORT bool appleVisualEffectNeedsBackdrop(AppleVisualEffect);
-WEBCORE_EXPORT bool appleVisualEffectAppliesFilter(AppleVisualEffect);
-
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AppleVisualEffect);
-
-struct AppleVisualEffectData {
-    AppleVisualEffect effect { AppleVisualEffect::None };
-    AppleVisualEffect contextEffect { AppleVisualEffect::None };
-
-    bool operator==(const AppleVisualEffectData&) const = default;
-};
-
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AppleVisualEffectData);
-
-} // namespace WebCore
+} // namespace TestWebKitAPI
 
 #endif // HAVE(CORE_MATERIAL)
