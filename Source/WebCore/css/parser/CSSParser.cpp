@@ -129,7 +129,7 @@ CSSParser::ParseResult CSSParser::parseValue(MutableStyleProperties& declaration
 {
     ASSERT(!string.isEmpty());
     if (RefPtr value = CSSParserFastPaths::maybeParseValue(propertyID, string, context))
-        return declaration.addParsedProperty(CSSProperty(propertyID, WTFMove(value), important)) ? CSSParser::ParseResult::Changed : CSSParser::ParseResult::Unchanged;
+        return declaration.addParsedProperty(CSSProperty(propertyID, value.releaseNonNull(), important)) ? CSSParser::ParseResult::Changed : CSSParser::ParseResult::Unchanged;
     CSSParser parser(context);
     return parser.parseValue(declaration, propertyID, string, important);
 }

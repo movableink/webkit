@@ -1354,7 +1354,7 @@ void EditingStyle::mergeStyle(const StyleProperties* style, CSSPropertyOverrideM
         }
 
         if (mode == OverrideValues || (mode == DoNotOverrideValues && !value))
-            m_mutableStyle->setProperty(property.id(), property.value(), property.isImportant() ? IsImportant::Yes : IsImportant::No);
+            m_mutableStyle->setProperty(property.id(), property.protectedValue(), property.isImportant() ? IsImportant::Yes : IsImportant::No);
     }
 
     int oldFontSizeDelta = m_fontSizeDelta;
@@ -1424,7 +1424,7 @@ void EditingStyle::mergeStyleFromRulesForSerialization(StyledElement& element, S
                 continue;
             if (primitiveValue->isPercentage()) {
                 if (auto computedPropertyValue = computedStyle.propertyValue(property.id()))
-                    fromComputedStyle->addParsedProperty(CSSProperty(property.id(), WTFMove(computedPropertyValue)));
+                    fromComputedStyle->addParsedProperty(CSSProperty(property.id(), computedPropertyValue.releaseNonNull()));
             }
         }
     }

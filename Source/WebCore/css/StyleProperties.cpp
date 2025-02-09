@@ -395,7 +395,7 @@ Ref<MutableStyleProperties> StyleProperties::copyProperties(std::span<const CSSP
 {
     auto vector = WTF::compactMap(properties, [&](auto& property) -> std::optional<CSSProperty> {
         if (auto value = getPropertyCSSValue(property))
-            return CSSProperty(property, WTFMove(value));
+            return CSSProperty(property, value.releaseNonNull());
         return std::nullopt;
     });
     return MutableStyleProperties::create(WTFMove(vector));
