@@ -2166,6 +2166,7 @@ imported/w3c/web-platform-tests/svg/painting/parsing/color-interpolation-valid.s
 webkit.org/b/269522 imported/w3c/web-platform-tests/svg/linking/reftests/url-processing-whitespace-001.svg [ ImageOnlyFailure ]
 webkit.org/b/269522 imported/w3c/web-platform-tests/svg/linking/reftests/url-processing-whitespace-002.svg [ ImageOnlyFailure ]
 webkit.org/b/269522 imported/w3c/web-platform-tests/svg/linking/reftests/url-processing-whitespace-003.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/linking/reftests/url-processing-fetch-properties-001.sub.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/linking/reftests/view-viewbox-override.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/render/reftests/render-sync-with-font-size.html [ Skip ]
 imported/w3c/web-platform-tests/svg/render/order/z-index.svg [ ImageOnlyFailure ]
