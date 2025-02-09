@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2012, Samsung Electronics. All rights reserved.
  *
@@ -30,9 +30,14 @@
 #include "ContactsRequestData.h"
 #include "DataListSuggestionPicker.h"
 #include "DateTimeChooser.h"
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+#include "DigitalCredentialsRequestData.h"
+#include "DigitalCredentialsResponseData.h"
+#endif
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "DocumentType.h"
+#include "ExceptionData.h"
 #include "FaceDetectorInterface.h"
 #include "FileList.h"
 #include "FloatRect.h"
@@ -484,6 +489,18 @@ void Chrome::showContactPicker(const ContactsRequestData& requestData, Completio
 {
     m_client->showContactPicker(requestData, WTFMove(callback));
 }
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+void Chrome::showDigitalCredentialsPicker(const DigitalCredentialsRequestData& requestData, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& callback)
+{
+    m_client->showDigitalCredentialsPicker(requestData, WTFMove(callback));
+}
+
+void Chrome::dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&& callback)
+{
+    m_client->dismissDigitalCredentialsPicker(WTFMove(callback));
+}
+#endif
 
 void Chrome::loadIconForFiles(const Vector<String>& filenames, FileIconLoader& loader)
 {

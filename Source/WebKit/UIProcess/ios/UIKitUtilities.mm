@@ -30,6 +30,8 @@
 
 #import "UIKitSPI.h"
 #import <WebCore/FloatPoint.h>
+#import <wtf/BlockPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if HAVE(UI_SCROLL_VIEW_TRANSFERS_SCROLLING_TO_PARENT)
 

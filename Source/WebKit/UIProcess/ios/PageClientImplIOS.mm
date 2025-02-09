@@ -78,6 +78,10 @@
 #import <wtf/cocoa/Entitlements.h>
 #import <wtf/cocoa/SpanCocoa.h>
 
+#if ENABLE(DIGITAL_CREDENTIALS_UI)
+#import <WebCore/DigitalCredentialsRequestData.h>
+#endif
+
 @interface UIWindow ()
 - (BOOL)_isHostedInAnotherProcess;
 @end
@@ -736,6 +740,18 @@ void PageClientImpl::showContactPicker(const WebCore::ContactsRequestData& reque
 {
     [contentView() _showContactPicker:requestData completionHandler:WTFMove(completionHandler)];
 }
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+void PageClientImpl::showDigitalCredentialsPicker(const WebCore::DigitalCredentialsRequestData& requestData, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& completionHandler)
+{
+    [contentView() _showDigitalCredentialsPicker:requestData completionHandler:WTFMove(completionHandler)];
+}
+
+void PageClientImpl::dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&& completionHandler)
+{
+    [contentView() _dismissDigitalCredentialsPicker:WTFMove(completionHandler)];
+}
+#endif
 
 void PageClientImpl::showInspectorHighlight(const WebCore::InspectorOverlay::Highlight& highlight)
 {

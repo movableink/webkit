@@ -58,6 +58,7 @@
 #import "WKContextMenuElementInfoPrivate.h"
 #import "WKDatePickerViewController.h"
 #import "WKDateTimeInputControl.h"
+#import "WKDigitalCredentialsPicker.h"
 #import "WKError.h"
 #import "WKExtendedTextInputTraits.h"
 #import "WKFocusedFormControlView.h"
@@ -9412,7 +9413,7 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
 - (void)shareSheetDidDismiss:(WKShareSheet *)shareSheet
 {
     ASSERT(_shareSheet == shareSheet);
-    
+
     [_shareSheet setDelegate:nil];
     _shareSheet = nil;
 }
@@ -9427,6 +9428,24 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
 }
 
 #endif // HAVE(SHARE_SHEET_UI)
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+- (void)_showDigitalCredentialsPicker:(const WebCore::DigitalCredentialsRequestData&)requestData completionHandler:(WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&)completionHandler
+{
+    _digitalCredentialsPicker = adoptNS([[WKDigitalCredentialsPicker alloc] initWithView:self.webView]);
+    [_digitalCredentialsPicker presentWithRequestData:requestData completionHandler:WTFMove(completionHandler)];
+}
+
+- (void)_dismissDigitalCredentialsPicker:(WTF::CompletionHandler<void(bool)>&&)completionHandler
+{
+    if (!_digitalCredentialsPicker) {
+        LOG(DigitalCredentials, "Digital credentials picker is not presented.");
+        completionHandler(false);
+        return;
+    }
+    [_digitalCredentialsPicker dismissWithCompletionHandler:WTFMove(completionHandler)];
+}
+#endif // HAVE(DIGITAL_CREDENTIALS_UI)
 
 - (void)_showContactPicker:(const WebCore::ContactsRequestData&)requestData completionHandler:(WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&&)completionHandler
 {

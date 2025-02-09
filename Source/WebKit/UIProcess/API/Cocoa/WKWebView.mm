@@ -195,6 +195,13 @@
 #import "WKWebExtensionControllerInternal.h"
 #endif
 
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+#import <WebCore/DigitalCredentialsRequestData.h>
+#import <WebCore/DigitalCredentialsResponseData.h>
+#import <WebCore/ExceptionData.h>
+#import <WebKit/WKDigitalCredentialsPicker.h>
+#endif
+
 #if ENABLE(SCREEN_TIME)
 #import <pal/cocoa/ScreenTimeSoftLink.h>
 #endif
@@ -315,6 +322,20 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const WebCore::ExceptionDetails& 
 @implementation WKWebView
 
 WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+- (void)_showDigitalCredentialsPicker:(const WebCore::DigitalCredentialsRequestData&)requestData completionHandler:(WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&)completionHandler
+{
+    LOG(DigitalCredentials, "Did not show digital credentials picker because it is not implemented.");
+    completionHandler(makeUnexpected(WebCore::ExceptionData { WebCore::ExceptionCode::NotSupportedError, "Digital credentials picker not implemented."_s }));
+}
+
+- (void)_dismissDigitalCredentialsPicker:(WTF::CompletionHandler<void(bool)>&&)completionHandler
+{
+    LOG(DigitalCredentials, "Did not dismiss digital credentials picker because it is not implemented.");
+    completionHandler(false);
+}
+#endif // HAVE(DIGITAL_CREDENTIALS_UI)
 
 - (instancetype)initWithFrame:(CGRect)frame
 {

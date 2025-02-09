@@ -281,7 +281,6 @@ set(WebKit_MESSAGES_IN_FILES
 
     Shared/Notifications/NotificationManagerMessageHandler
 
-    UIProcess/DigitalCredentials/DigitalCredentialsCoordinatorProxy
     UIProcess/DrawingAreaProxy
 
     UIProcess/Extensions/WebExtensionContext

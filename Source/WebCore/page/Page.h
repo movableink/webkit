@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
@@ -737,7 +737,9 @@ public:
 
 #if ENABLE(WEB_AUTHN)
     AuthenticatorCoordinator& authenticatorCoordinator() { return m_authenticatorCoordinator.get(); }
-    CredentialRequestCoordinator& credentialRequestCoordinator() { return m_credentialRequestCoordinator.get(); }
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    CredentialRequestCoordinator& credentialRequestCoordinator() { return *m_credentialRequestCoordinator; }
+#endif
 #endif
 
 #if ENABLE(APPLICATION_MANIFEST)
@@ -1635,8 +1637,12 @@ private:
 
 #if ENABLE(WEB_AUTHN)
     const UniqueRef<AuthenticatorCoordinator> m_authenticatorCoordinator;
-    const UniqueRef<CredentialRequestCoordinator> m_credentialRequestCoordinator;
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    const RefPtr<CredentialRequestCoordinator> m_credentialRequestCoordinator;
 #endif
+
+#endif // ENABLE(WEB_AUTHN)
 
 #if ENABLE(APPLICATION_MANIFEST)
     std::optional<ApplicationManifest> m_applicationManifest;

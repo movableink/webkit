@@ -2835,6 +2835,16 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:flag forKey:WebKitContactPickerAPIEnabledPreferenceKey];
 }
 
+- (BOOL)digitalCredentialsEnabled
+{
+    return [self _boolValueForKey:WebKitDigitalCredentialsEnabledPreferenceKey];
+}
+
+- (void)setDigitalCredentialsEnabled:(BOOL)flag
+{
+    [self _setBoolValue:flag forKey:WebKitDigitalCredentialsEnabledPreferenceKey];
+}
+
 - (BOOL)visualViewportAPIEnabled
 {
     return [self _boolValueForKey:WebKitVisualViewportAPIEnabledPreferenceKey];

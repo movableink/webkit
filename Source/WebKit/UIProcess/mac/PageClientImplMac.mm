@@ -92,6 +92,12 @@
 #import <WebCore/WebMediaSessionManager.h>
 #endif
 
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+#import <WebCore/DigitalCredentialsRequestData.h>
+#import <WebCore/DigitalCredentialsResponseData.h>
+#import <WebCore/ExceptionData.h>
+#endif
+
 #import <pal/cocoa/WritingToolsUISoftLink.h>
 
 static NSString * const kAXLoadCompleteNotification = @"AXLoadComplete";
@@ -657,6 +663,18 @@ bool PageClientImpl::showShareSheet(const ShareDataWithParsedURL& shareData, WTF
     m_impl->showShareSheet(shareData, WTFMove(completionHandler), webView().get());
     return true;
 }
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+void PageClientImpl::showDigitalCredentialsPicker(const WebCore::DigitalCredentialsRequestData& requestData, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& completionHandler)
+{
+    m_impl->showDigitalCredentialsPicker(requestData, WTFMove(completionHandler), webView().get());
+}
+
+void PageClientImpl::dismissDigitalCredentialsPicker(WTF::CompletionHandler<void(bool)>&& completionHandler)
+{
+    m_impl->dismissDigitalCredentialsPicker(WTFMove(completionHandler), webView().get());
+}
+#endif
 
 void PageClientImpl::wheelEventWasNotHandledByWebCore(const NativeWebWheelEvent& event)
 {

@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2022-2025 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -6404,7 +6404,20 @@ struct WebCore::MockWebAuthenticationConfiguration {
     std::optional<WebCore::MockWebAuthenticationConfiguration::CcidConfiguration> ccid;
 };
 
-struct WebCore::OpenID4VPRequest {
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+
+[Nested] struct WebCore::OpenID4VPRequest {
+};
+
+struct WebCore::DigitalCredentialsRequestData {
+    WebCore::DigitalCredentialRequestOptions options;
+    [Validator='!topOrigin->isNull()'] WebCore::SecurityOriginData topOrigin;
+    [Validator='!documentOrigin->isNull()'] WebCore::SecurityOriginData documentOrigin;
+};
+
+struct WebCore::DigitalCredentialsResponseData {
+    WebCore::IdentityCredentialProtocol protocol;
+    String responseData;
 };
 
 [Nested] struct WebCore::DigitalCredentialRequest {
@@ -6412,13 +6425,15 @@ struct WebCore::OpenID4VPRequest {
     WebCore::OpenID4VPRequest data;
 };
 
-struct WebCore::DigitalCredentialRequestOptions {
+[Nested] struct WebCore::DigitalCredentialRequestOptions {
     Vector<WebCore::DigitalCredentialRequest> requests;
 };
 
-enum class WebCore::IdentityCredentialProtocol : uint8_t {
+[Nested] enum class WebCore::IdentityCredentialProtocol : uint8_t {
     Openid4vp
 };
+
+#endif // HAVE(DIGITAL_CREDENTIALS_UI)
 
 #endif // ENABLE(WEB_AUTHN)
 

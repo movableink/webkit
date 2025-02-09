@@ -153,6 +153,7 @@
 #import <WebCore/DragController.h>
 #import <WebCore/DragData.h>
 #import <WebCore/DragItem.h>
+#import <WebCore/DummyCredentialRequestCoordinatorClient.h>
 #import <WebCore/DummyModelPlayerProvider.h>
 #import <WebCore/DummySpeechRecognitionProvider.h>
 #import <WebCore/DummyStorageProvider.h>
@@ -1541,6 +1542,9 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
 #endif
         makeUniqueRef<WebCryptoClient>(self),
         makeUniqueRef<WebCore::ProcessSyncClient>()
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+        , makeUniqueRef<WebCore::DummyCredentialRequestCoordinatorClient>()
+#endif
     );
 #if !PLATFORM(IOS_FAMILY)
     pageConfiguration.validationMessageClient = makeUnique<WebValidationMessageClient>(self);
@@ -1800,6 +1804,9 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
         makeUniqueRef<WebChromeClientIOS>(self),
         makeUniqueRef<WebCryptoClient>(self),
         makeUniqueRef<WebCore::ProcessSyncClient>()
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+        , makeUniqueRef<WebCore::DummyCredentialRequestCoordinatorClient>()
+#endif
     );
 #if ENABLE(DRAG_SUPPORT)
     pageConfiguration.dragClient = makeUnique<WebDragClient>(self);

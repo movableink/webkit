@@ -99,6 +99,7 @@
 #import <WebCore/DataDetectorElementInfo.h>
 #import <WebCore/DestinationColorSpace.h>
 #import <WebCore/DictionaryLookup.h>
+#import <WebCore/DigitalCredentialsRequestData.h>
 #import <WebCore/DragData.h>
 #import <WebCore/DragItem.h>
 #import <WebCore/Editor.h>
@@ -161,6 +162,10 @@
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/spi/darwin/OSVariantSPI.h>
 #import <wtf/text/MakeString.h>
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+#import <WebKit/WKDigitalCredentialsPicker.h>
+#endif
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
 #include "MediaSessionCoordinatorProxyPrivate.h"
@@ -2807,6 +2812,27 @@ void WebViewImpl::shareSheetDidDismiss(WKShareSheet *shareSheet)
     [_shareSheet setDelegate:nil];
     _shareSheet = nil;
 }
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+void WebViewImpl::showDigitalCredentialsPicker(const WebCore::DigitalCredentialsRequestData& requestData, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& completionHandler, WKWebView* webView)
+{
+    if (!_digitalCredentialsPicker)
+        _digitalCredentialsPicker = adoptNS([[WKDigitalCredentialsPicker alloc] initWithView:webView]);
+
+    [_digitalCredentialsPicker presentWithRequestData:requestData completionHandler:WTFMove(completionHandler)];
+}
+
+void WebViewImpl::dismissDigitalCredentialsPicker(WTF::CompletionHandler<void(bool)>&& completionHandler, WKWebView* webView)
+{
+    if (!_digitalCredentialsPicker) {
+        LOG(DigitalCredentials, "Digital credentials picker is not being presented.");
+        completionHandler(false);
+        return;
+    }
+
+    [_digitalCredentialsPicker dismissWithCompletionHandler:WTFMove(completionHandler)];
+}
+#endif
 
 void WebViewImpl::didBecomeEditable()
 {

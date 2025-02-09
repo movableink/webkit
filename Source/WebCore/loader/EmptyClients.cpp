@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 #include "ContextMenuClient.h"
 #include "CookieConsentDecisionResult.h"
 #include "CookieJar.h"
+#include "CredentialRequestCoordinatorClient.h"
 #include "DOMPasteAccess.h"
 #include "DataListSuggestionPicker.h"
 #include "DatabaseProvider.h"
@@ -93,6 +94,7 @@
 #include <pal/SessionID.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/Unexpected.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
 #include "CompiledContentExtension.h"
@@ -100,6 +102,12 @@
 
 #if USE(QUICK_LOOK)
 #include "LegacyPreviewLoaderClient.h"
+#endif
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+#include "DigitalCredentialsRequestData.h"
+#include "DigitalCredentialsResponseData.h"
+#include "ExceptionData.h"
 #endif
 
 namespace WebCore {
@@ -466,6 +474,29 @@ private:
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyPaymentCoordinatorClient);
 
+#endif
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+class EmptyCredentialRequestCoordinatorClient final : public CredentialRequestCoordinatorClient {
+    WTF_MAKE_TZONE_ALLOCATED(EmptyCredentialRequestCoordinatorClient);
+public:
+    EmptyCredentialRequestCoordinatorClient() = default;
+
+    void showDigitalCredentialsPicker(const DigitalCredentialsRequestData&, CompletionHandler<void(Expected<DigitalCredentialsResponseData, ExceptionData>&&)>&& completionHandler)
+    {
+        callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable {
+            completionHandler(makeUnexpected(ExceptionData { ExceptionCode::NotSupportedError, "Empty client."_s }));
+        });
+    }
+
+    void dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&& completionHandler) final
+    {
+        callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable {
+            completionHandler(false);
+        });
+    }
+};
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyCredentialRequestCoordinatorClient);
 #endif
 
 class EmptyPluginInfoProvider final : public PluginInfoProvider {
@@ -1198,6 +1229,9 @@ PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier
         makeUniqueRef<EmptyChromeClient>(),
         makeUniqueRef<EmptyCryptoClient>(),
         makeUniqueRef<ProcessSyncClient>()
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+        , makeUniqueRef<EmptyCredentialRequestCoordinatorClient>()
+#endif
     };
 
 #if ENABLE(DRAG_SUPPORT)

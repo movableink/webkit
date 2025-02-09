@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -92,6 +92,10 @@ OBJC_CLASS WKTextTouchBarItemController;
 OBJC_CLASS WebPlaybackControlsManager;
 #endif // HAVE(TOUCH_BAR)
 
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+OBJC_CLASS WKDigitalCredentialsPicker;
+#endif
+
 OBJC_CLASS WKPDFHUDView;
 
 OBJC_CLASS VKCImageAnalysis;
@@ -176,6 +180,9 @@ enum class ReplacementBehavior : uint8_t;
 namespace WebCore {
 struct DragItem;
 struct KeypressCommand;
+#if ENABLE(DIGITAL_CREDENTIALS_UI)
+struct DigitalCredentialsRequestData;
+#endif
 }
 
 namespace WebKit {
@@ -512,6 +519,11 @@ public:
     
     void showShareSheet(const WebCore::ShareDataWithParsedURL&, WTF::CompletionHandler<void(bool)>&&, WKWebView *);
     void shareSheetDidDismiss(WKShareSheet *);
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    void showDigitalCredentialsPicker(const WebCore::DigitalCredentialsRequestData&, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&, WKWebView*);
+    void dismissDigitalCredentialsPicker(WTF::CompletionHandler<void(bool)>&&, WKWebView*);
+#endif
 
     _WKRemoteObjectRegistry *remoteObjectRegistry();
 
@@ -898,6 +910,10 @@ private:
     HashMap<WebKit::PDFPluginIdentifier, RetainPtr<WKPDFHUDView>> _pdfHUDViews;
 
     RetainPtr<WKShareSheet> _shareSheet;
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    RetainPtr<WKDigitalCredentialsPicker> _digitalCredentialsPicker;
+#endif
 
     RetainPtr<WKWindowVisibilityObserver> m_windowVisibilityObserver;
     RetainPtr<WKAccessibilitySettingsObserver> m_accessibilitySettingsObserver;

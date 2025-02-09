@@ -453,6 +453,7 @@ UIProcess/Cocoa/WKTextPlaceholder.mm
 UIProcess/Cocoa/WKTextSelectionRect.mm
 UIProcess/Cocoa/WKWebViewContentProviderRegistry.mm
 
+UIProcess/DigitalCredentials/WKDigitalCredentialsPicker.mm
 
 UIProcess/Gamepad/cocoa/UIGamepadProviderCocoa.mm
 UIProcess/Gamepad/ios/UIGamepadProviderIOS.mm
