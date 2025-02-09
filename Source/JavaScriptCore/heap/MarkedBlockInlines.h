@@ -291,7 +291,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
     auto setBits = [&] (bool isEmpty) ALWAYS_INLINE_LAMBDA {
         Locker locker { m_directory->bitvectorLock() };
         m_directory->setIsUnswept(this, false);
-        m_directory->setIsDestructible(this, destructionMode != BlockHasNoDestructors && !isEmpty && m_directory->isDestructible(this));
+        m_directory->setIsDestructible(this, m_attributes.destruction == DestructionMode::MayNeedDestruction && destructionMode != BlockHasNoDestructors && !isEmpty && m_directory->isDestructible(this));
         m_directory->setIsEmpty(this, false);
         if (sweepMode == SweepToFreeList)
             m_isFreeListed = true;
