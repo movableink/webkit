@@ -1105,7 +1105,6 @@ platform/graphics/ImageBackingStore.h
 platform/graphics/ImageBufferContextSwitcher.cpp
 platform/graphics/ImageFrame.cpp
 platform/graphics/ImageFrameWorkQueue.cpp
-platform/graphics/MediaPlayer.cpp
 platform/graphics/Path.cpp
 platform/graphics/ShadowBlur.cpp
 platform/graphics/SourceBufferPrivate.cpp
@@ -1206,7 +1205,6 @@ platform/mock/MockRealtimeMediaSourceCenter.cpp
 platform/mock/MockRealtimeVideoSource.cpp
 platform/mock/RTCNotifiersMock.cpp
 platform/mock/TimerEventBasedMock.h
-platform/mock/mediasource/MockMediaPlayerMediaSource.cpp
 platform/mock/mediasource/MockMediaSourcePrivate.cpp
 platform/network/BlobData.cpp
 platform/network/BlobRegistryImpl.cpp

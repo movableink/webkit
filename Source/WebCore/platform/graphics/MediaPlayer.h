@@ -801,6 +801,8 @@ private:
 
     MediaPlayerClient& client() const { return *m_client; }
 
+    RefPtr<MediaPlayerPrivateInterface> protectedPrivate() const;
+
     const MediaPlayerFactory* nextBestMediaEngine(const MediaPlayerFactory*);
     void loadWithNextMediaEngine(const MediaPlayerFactory*);
     const MediaPlayerFactory* nextMediaEngine(const MediaPlayerFactory*);

@@ -99,6 +99,7 @@ private:
     MediaTime duration() const override;
     std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() override;
     DestinationColorSpace colorSpace() override;
+    RefPtr<MockMediaSourcePrivate> protectedMediaSourcePrivate();
 
     ThreadSafeWeakPtr<MediaPlayer> m_player;
     RefPtr<MockMediaSourcePrivate> m_mediaSourcePrivate;
