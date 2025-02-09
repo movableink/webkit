@@ -5164,6 +5164,7 @@
         "web-platform-tests/css/css-tables/max-height-table-ref.html",
         "web-platform-tests/css/css-tables/min-height-table-ref.html",
         "web-platform-tests/css/css-tables/min-max-size-table-content-box-ref.html",
+        "web-platform-tests/css/css-tables/out-of-order-elements-collapsed-border-ref.html",
         "web-platform-tests/css/css-tables/paint/col-paint-htb-rtl-ref.html",
         "web-platform-tests/css/css-tables/paint/col-paint-vrl-rtl-ref.html",
         "web-platform-tests/css/css-tables/paint/row-background-paint-remove-last-cell-ref.html",

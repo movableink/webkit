@@ -184,6 +184,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/multicol-table-collapsed-border-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/multicol-table-crash.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/no-overflow-with-table-cell-margins.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-tables/out-of-order-elements-collapsed-border-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-tables/out-of-order-elements-collapsed-border-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-tables/out-of-order-elements-collapsed-border.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/percent-height-overflow-auto-in-restricted-block-size-cell.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/percent-height-overflow-auto-in-unrestricted-block-size-cell.tentative-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-tables/percent-height-overflow-auto-in-unrestricted-block-size-cell.tentative.html
