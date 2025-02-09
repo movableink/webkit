@@ -309,6 +309,7 @@ protected:
     Ref<WebCore::BackgroundFetchStore> createBackgroundFetchStore() final;
 
     BackgroundFetchStoreImpl& ensureBackgroundFetchStore();
+    Ref<BackgroundFetchStoreImpl> ensureProtectedBackgroundFetchStore();
 
     PAL::SessionID m_sessionID;
     const Ref<NetworkProcess> m_networkProcess;
@@ -329,7 +330,7 @@ protected:
     HashMap<String, WebCore::IPAddress> m_firstPartyHostIPAddresses;
     std::optional<WebCore::RegistrableDomain> m_thirdPartyCNAMEDomainForTesting;
     bool m_isStaleWhileRevalidateEnabled { false };
-    Ref<PCM::ManagerInterface> m_privateClickMeasurement;
+    const Ref<PCM::ManagerInterface> m_privateClickMeasurement;
     bool m_privateClickMeasurementDebugModeEnabled { false };
     std::optional<WebCore::PrivateClickMeasurement> m_ephemeralMeasurement;
     bool m_isRunningEphemeralMeasurementTest { false };

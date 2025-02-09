@@ -210,6 +210,9 @@ private:
     void initializeNSURLSessionsInSet(SessionSet&, NSURLSessionConfiguration *);
     SessionSet& sessionSetForPage(std::optional<WebPageProxyIdentifier>);
     const SessionSet& sessionSetForPage(std::optional<WebPageProxyIdentifier>) const;
+    Ref<SessionSet> protectedSessionSetForPage(std::optional<WebPageProxyIdentifier> identifier) { return sessionSetForPage(identifier); }
+    Ref<const SessionSet> protectedSessionSetForPage(std::optional<WebPageProxyIdentifier> identifier) const { return sessionSetForPage(identifier); }
+
     void invalidateAndCancelSessionSet(SessionSet&);
     
     String m_boundInterfaceIdentifier;

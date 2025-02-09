@@ -161,19 +161,25 @@ public:
     void incrementCheckedPtrCount() const final { AuxiliaryProcess::incrementCheckedPtrCount(); }
     void decrementCheckedPtrCount() const final { AuxiliaryProcess::decrementCheckedPtrCount(); }
 
-    template <typename T>
+    template<typename T>
     T* supplement()
     {
         return static_cast<T*>(m_supplements.get(T::supplementName()));
     }
 
-    template <typename T>
+    template<typename T>
+    RefPtr<T> protectedSupplement()
+    {
+        return supplement<T>();
+    }
+
+    template<typename T>
     void addSupplement()
     {
         m_supplements.add(T::supplementName(), makeUnique<T>(*this));
     }
 
-    template <typename T>
+    template<typename T>
     void addSupplementWithoutRefCountedCheck()
     {
         m_supplements.add(T::supplementName(), makeUniqueWithoutRefCountedCheck<T>(*this));

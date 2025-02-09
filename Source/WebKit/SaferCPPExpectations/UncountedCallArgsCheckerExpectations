@@ -10,7 +10,6 @@ NetworkProcess/Downloads/cocoa/WKDownloadProgress.mm
 NetworkProcess/NetworkDataTask.cpp
 NetworkProcess/NetworkDataTaskBlob.cpp
 NetworkProcess/NetworkLoad.cpp
-NetworkProcess/NetworkSession.cpp
 NetworkProcess/PingLoad.cpp
 NetworkProcess/PreconnectTask.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp

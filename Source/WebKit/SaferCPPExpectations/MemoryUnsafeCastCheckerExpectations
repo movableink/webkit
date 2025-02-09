@@ -1,6 +1,5 @@
 AutomationProtocolObjects.h
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
-NetworkProcess/cocoa/NetworkSessionCocoa.mm
 NetworkProcess/cocoa/WebSocketTaskCocoa.mm
 NetworkProcess/webrtc/NetworkRTCMonitor.cpp
 NetworkProcess/webrtc/NetworkRTCUDPSocketCocoa.mm

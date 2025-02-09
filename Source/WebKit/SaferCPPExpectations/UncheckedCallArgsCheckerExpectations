@@ -2,7 +2,6 @@ NetworkProcess/Downloads/Download.cpp
 NetworkProcess/Downloads/DownloadManager.cpp
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/NetworkLoad.cpp
-NetworkProcess/NetworkSession.cpp
 NetworkProcess/PingLoad.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp
 NetworkProcess/PrivateClickMeasurement/cocoa/PrivateClickMeasurementConnectionCocoa.mm
