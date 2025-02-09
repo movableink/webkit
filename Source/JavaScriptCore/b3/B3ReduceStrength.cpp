@@ -2146,14 +2146,10 @@ private:
             break;
 
         case DoubleToFloat:
-            // Turn this: DoubleToFloat(FloatToDouble(value))
-            // Into this: value
-            if (!m_value->isSensitiveToNaN()) {
-                if (m_value->child(0)->opcode() == FloatToDouble) {
-                    replaceWithIdentity(m_value->child(0)->child(0));
-                    break;
-                }
-            }
+            // We do not have the following pattern.
+            //     Turn this: DoubleToFloat(FloatToDouble(value))
+            //     Into this: value
+            // because this breaks NaN bit patterns, which is tested via wasm spec tests.
 
             // Turn this: DoubleToFloat(constant)
             // Into this: ConstFloat(constant)
