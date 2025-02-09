@@ -4,6 +4,7 @@
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2009-2023 Google, Inc.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -206,11 +207,8 @@ void LegacyRenderSVGRoot::layout()
     }
 
     clearOverflow();
-    if (!shouldApplyViewportClip()) {
-        FloatRect contentRepaintRect = repaintRectInLocalCoordinates();
-        contentRepaintRect = m_localToBorderBoxTransform.mapRect(contentRepaintRect);
-        addVisualOverflow(enclosingLayoutRect(contentRepaintRect));
-    }
+    if (!shouldApplyViewportClip())
+        addVisualOverflow(computeContentsInkOverflow());
 
     updateLayerTransform();
     m_hasBoxDecorations = isDocumentElementRenderer() ? hasVisibleBoxDecorationStyle() : hasVisibleBoxDecorations();
@@ -219,6 +217,18 @@ void LegacyRenderSVGRoot::layout()
     repainter.repaintAfterLayout();
 
     clearNeedsLayout();
+}
+
+LayoutRect LegacyRenderSVGRoot::computeContentsInkOverflow() const
+{
+    FloatRect contentRepaintRect = repaintRectInLocalCoordinates();
+    contentRepaintRect = m_localToBorderBoxTransform.mapRect(contentRepaintRect);
+    // Condition the visual overflow rect to avoid being clipped/culled
+    // out if it is huge. This may sacrifice overflow, but usually only
+    // overflow that would never be seen anyway.
+    // To condition, we intersect with something that we oftentimes
+    // consider to be "infinity".
+    return intersection(enclosingLayoutRect(contentRepaintRect), LayoutRect::infiniteRect());
 }
 
 bool LegacyRenderSVGRoot::shouldApplyViewportClip() const
