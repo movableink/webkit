@@ -1504,13 +1504,6 @@ bool Quirks::needsGetElementsByNameQuirk() const
 #endif
 }
 
-// tripadvisor.com: rdar://112851939
-// FIXME: Remove this quirk when <rdar://127247321> is complete
-bool Quirks::needsRelaxedCorsMixedContentCheckQuirk() const
-{
-    return needsQuirks() && m_quirksData.needsRelaxedCorsMixedContentCheckQuirk;
-}
-
 // rdar://127398734
 bool Quirks::needsLaxSameSiteCookieQuirk(const URL& requestURL) const
 {
@@ -2513,17 +2506,6 @@ static void handleSpotifyQuirks(QuirksData& quirksData, const URL& quirksURL, co
 #endif
 }
 
-static void handleTripAdvisorQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
-{
-    if (quirksDomainString != "tripadvisor.com"_s)
-        return;
-
-    UNUSED_PARAM(quirksURL);
-    UNUSED_PARAM(documentURL);
-    // tripadvisor.com: rdar://112851939
-    quirksData.needsRelaxedCorsMixedContentCheckQuirk = true;
-}
-
 static void handleVictoriasSecretQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
 {
     if (quirksDomainString != "victoriassecret.com"_s)
@@ -2812,7 +2794,6 @@ void Quirks::determineRelevantQuirks()
 #if PLATFORM(IOS_FAMILY)
         { "thesaurus"_s, &handleScriptToEvaluateBeforeRunningScriptFromURLQuirk },
 #endif
-        { "tripadvisor"_s, &handleTripAdvisorQuirks },
 #if PLATFORM(MAC)
         { "trix-editor"_s, &handleTrixEditorQuirks },
 #endif
