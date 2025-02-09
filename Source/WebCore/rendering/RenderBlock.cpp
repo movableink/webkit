@@ -2008,7 +2008,7 @@ LayoutUnit RenderBlock::adjustLogicalLeftOffsetForLine(LayoutUnit offsetFromFloa
         return left;
 
     // FIXME: Should letter-spacing apply? This is complicated since it doesn't apply at the edge?
-    float maxCharWidth = lineGrid->style().fontCascade().primaryFont().maxCharWidth();
+    float maxCharWidth = lineGrid->style().fontCascade().primaryFont()->maxCharWidth();
     if (!maxCharWidth)
         return left;
 
@@ -2045,7 +2045,7 @@ LayoutUnit RenderBlock::adjustLogicalRightOffsetForLine(LayoutUnit offsetFromFlo
         return right;
 
     // FIXME: Should letter-spacing apply? This is complicated since it doesn't apply at the edge?
-    float maxCharWidth = lineGrid->style().fontCascade().primaryFont().maxCharWidth();
+    float maxCharWidth = lineGrid->style().fontCascade().primaryFont()->maxCharWidth();
     if (!maxCharWidth)
         return right;
 
@@ -3660,8 +3660,8 @@ String RenderBlock::updateSecurityDiscCharacters(const RenderStyle& style, Strin
         return WTFMove(string);
     // This PUA character in the system font is used to render password field dots on Cocoa platforms.
     constexpr UChar textSecurityDiscPUACodePoint = 0xF79A;
-    auto& font = style.fontCascade().primaryFont();
-    if (!(font.platformData().isSystemFont() && font.glyphForCharacter(textSecurityDiscPUACodePoint)))
+    Ref font = style.fontCascade().primaryFont();
+    if (!(font->platformData().isSystemFont() && font->glyphForCharacter(textSecurityDiscPUACodePoint)))
         return WTFMove(string);
 
     // See RenderText::setRenderedText()

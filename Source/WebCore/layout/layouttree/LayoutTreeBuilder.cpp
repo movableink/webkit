@@ -91,7 +91,7 @@ static std::optional<LayoutSize> accumulatedOffsetForInFlowPositionedContinuatio
 template<typename CharacterType>
 static bool canUseSimplifiedTextMeasuringForCharacters(std::span<const CharacterType> characters, const FontCascade& fontCascade, bool whitespaceIsCollapsed)
 {
-    auto& primaryFont = fontCascade.primaryFont();
+    Ref primaryFont = fontCascade.primaryFont();
     for (auto character : characters) {
         if (!fontCascade.canUseSimplifiedTextMeasuring(character, AutoVariant, whitespaceIsCollapsed, primaryFont))
             return false;

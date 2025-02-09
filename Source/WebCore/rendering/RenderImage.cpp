@@ -310,7 +310,7 @@ LayoutUnit RenderImage::baselinePosition(FontBaseline baselineType, bool firstLi
     LayoutUnit offset;
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
     if (isMultiRepresentationHEIC()) {
-        auto metrics = style().fontCascade().primaryFont().metricsForMultiRepresentationHEIC();
+        auto metrics = style().fontCascade().primaryFont()->metricsForMultiRepresentationHEIC();
         offset = LayoutUnit::fromFloatRound(metrics.descent);
     }
 #endif

@@ -121,7 +121,7 @@ private:
     UncheckedKeyHashSet<RefPtr<Font>> m_systemFallbackFontSet;
 
     SingleThreadWeakPtr<const Font> m_cachedPrimaryFont;
-    RefPtr<FontSelector> m_fontSelector;
+    const RefPtr<FontSelector> m_fontSelector;
 
     WidthCache m_widthCache;
 

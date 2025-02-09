@@ -276,11 +276,11 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
                     FontPlatformData runFontPlatformData(runCTFont, CTFontGetSize(runCTFont));
                     runFont = FontCache::forCurrentThread().fontForPlatformData(runFontPlatformData).ptr();
                 }
-                if (m_fallbackFonts && runFont != &m_font.primaryFont())
+                if (m_fallbackFonts && runFont != m_font.primaryFont().ptr())
                     m_fallbackFonts->add(*runFont);
             }
         }
-        if (m_fallbackFonts && runFont != &m_font.primaryFont())
+        if (m_fallbackFonts && runFont != m_font.primaryFont().ptr())
             m_fallbackFonts->add(*font);
 
         LOG_WITH_STREAM(TextShaping, stream << "Run " << r << ":");

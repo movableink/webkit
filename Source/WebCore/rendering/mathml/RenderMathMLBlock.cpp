@@ -71,7 +71,7 @@ bool RenderMathMLBlock::isChildAllowed(const RenderObject& child, const RenderSt
 static LayoutUnit axisHeight(const RenderStyle& style)
 {
     // If we have a MATH table we just return the AxisHeight constant.
-    const Ref primaryFont = style.fontCascade().primaryFont();
+    Ref primaryFont = style.fontCascade().primaryFont();
     if (RefPtr mathData = primaryFont->mathData())
         return LayoutUnit(mathData->getMathConstant(primaryFont, OpenTypeMathData::AxisHeight));
 

@@ -270,7 +270,7 @@ static void attributeStringSetStyle(NSMutableAttributedString *attrString, Rende
     auto& style = renderer->style();
 
     // Set basic font info.
-    attributedStringSetFont(attrString, style.fontCascade().primaryFont().getCTFont(), range);
+    attributedStringSetFont(attrString, style.fontCascade().primaryFont()->getCTFont(), range);
 
     auto decor = style.textDecorationsInEffect();
     if (decor & TextDecorationLine::Underline)

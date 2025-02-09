@@ -454,7 +454,7 @@ static inline std::optional<Layout::BlockLayoutState::LineGrid> lineGrid(const R
             lineGridOffset = lineGridOffset.transposedSize();
         }
 
-        auto columnWidth = lineGrid->style().fontCascade().primaryFont().maxCharWidth();
+        auto columnWidth = lineGrid->style().fontCascade().primaryFont()->maxCharWidth();
         auto rowHeight = LayoutUnit::fromFloatCeil(lineGrid->style().computedLineHeight());
         auto topRowOffset = lineGrid->borderAndPaddingBefore();
 

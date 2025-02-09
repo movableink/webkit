@@ -89,7 +89,7 @@ void FontCascadeCache::pruneUnreferencedEntries()
 void FontCascadeCache::pruneSystemFallbackFonts()
 {
     for (auto& entry : m_entries.values())
-        entry->fonts->pruneSystemFallbacks();
+        Ref { entry->fonts }->pruneSystemFallbacks();
 }
 
 static FontCascadeCacheKey makeFontCascadeCacheKey(const FontCascadeDescription& description, FontSelector* fontSelector)

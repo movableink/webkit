@@ -395,8 +395,8 @@ bool TextManipulationController::shouldExcludeNodeBasedOnStyle(const Node& node)
     if (!style)
         return false;
 
-    auto& font = style->fontCascade().primaryFont();
-    auto familyName = font.platformData().familyName();
+    Ref font = style->fontCascade().primaryFont();
+    auto familyName = font->platformData().familyName();
     if (familyName.isEmpty())
         return false;
 
@@ -407,7 +407,7 @@ bool TextManipulationController::shouldExcludeNodeBasedOnStyle(const Node& node)
     // FIXME: We should reconsider whether a node should be excluded if the primary font
     // used to render the node changes, since this "icon font" heuristic may return a
     // different result.
-    bool result = font.isProbablyOnlyUsedToRenderIcons();
+    bool result = font->isProbablyOnlyUsedToRenderIcons();
     m_cachedFontFamilyExclusionResults.set(familyName, result);
     return result;
 }

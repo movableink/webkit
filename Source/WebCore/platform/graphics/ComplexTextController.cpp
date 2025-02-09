@@ -570,7 +570,7 @@ void ComplexTextController::advance(unsigned offset, GlyphBuffer* glyphBuffer, G
         unsigned glyphCount = complexTextRun.glyphCount();
         unsigned glyphIndexIntoCurrentRun = ltr ? m_glyphInCurrentRun : glyphCount - 1 - m_glyphInCurrentRun;
         unsigned glyphIndexIntoComplexTextController = indexOfLeftmostGlyphInCurrentRun + glyphIndexIntoCurrentRun;
-        if (fallbackFonts && &complexTextRun.font() != &m_font.primaryFont())
+        if (fallbackFonts && &complexTextRun.font() != m_font.primaryFont().ptr())
             fallbackFonts->add(complexTextRun.font());
 
         // We must store the initial advance for the first glyph we are going to draw.

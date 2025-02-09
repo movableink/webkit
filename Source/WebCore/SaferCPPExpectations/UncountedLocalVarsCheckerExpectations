@@ -503,7 +503,6 @@ inspector/agents/page/PageDOMDebuggerAgent.cpp
 inspector/agents/page/PageNetworkAgent.cpp
 layout/formattingContexts/inline/InlineItemsBuilder.cpp
 layout/formattingContexts/inline/InlineLineBoxBuilder.cpp
-layout/formattingContexts/inline/text/TextUtil.cpp
 layout/integration/inline/LayoutIntegrationLineLayout.cpp
 layout/layouttree/LayoutTreeBuilder.cpp
 loader/ApplicationManifestLoader.cpp
@@ -617,8 +616,6 @@ platform/graphics/Color.cpp
 platform/graphics/ComplexTextController.cpp
 platform/graphics/DisplayRefreshMonitorManager.cpp
 platform/graphics/FontCache.cpp
-platform/graphics/FontCascade.h
-platform/graphics/FontCascadeFonts.cpp
 platform/graphics/FontRanges.cpp
 platform/graphics/GlyphBuffer.h
 platform/graphics/GraphicsLayer.cpp
@@ -642,7 +639,6 @@ platform/graphics/coreimage/FEColorMatrixCoreImageApplier.mm
 platform/graphics/coreimage/FEComponentTransferCoreImageApplier.mm
 platform/graphics/coreimage/SourceGraphicCoreImageApplier.mm
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
-platform/graphics/coretext/FontCascadeCoreText.cpp
 platform/graphics/coretext/GlyphPageCoreText.cpp
 platform/graphics/cv/VideoFrameCV.mm
 platform/graphics/displaylists/DisplayListItem.cpp
@@ -723,7 +719,6 @@ rendering/RenderReplaced.cpp
 rendering/RenderSlider.cpp
 rendering/RenderTableCell.cpp
 rendering/RenderTableCol.cpp
-rendering/RenderText.cpp
 rendering/RenderTextControl.cpp
 rendering/RenderTextControlMultiLine.cpp
 rendering/RenderTextControlSingleLine.cpp

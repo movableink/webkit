@@ -127,7 +127,6 @@ html/track/TrackListBase.cpp
 html/track/VTTCue.cpp
 inspector/InspectorOverlay.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
-layout/formattingContexts/inline/text/TextUtil.cpp
 loader/CrossOriginOpenerPolicy.cpp
 loader/DocumentLoader.cpp
 loader/FrameLoader.cpp
@@ -157,7 +156,6 @@ platform/audio/cocoa/PlatformRawAudioDataCocoa.cpp
 platform/audio/mac/AudioSessionMac.mm
 platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/clearkey/CDMClearKey.cpp
-platform/graphics/FontCascadeFonts.cpp
 platform/graphics/SourceBufferPrivate.cpp
 platform/graphics/avfoundation/InbandTextTrackPrivateAVF.cpp
 platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.mm
