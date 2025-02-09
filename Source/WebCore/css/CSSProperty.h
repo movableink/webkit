@@ -98,6 +98,7 @@ public:
     static bool isMarginProperty(CSSPropertyID);
     static bool isMaxSizeProperty(CSSPropertyID);
     static bool isMinSizeProperty(CSSPropertyID);
+    static bool isOverflowProperty(CSSPropertyID);
     static bool isOverscrollBehaviorProperty(CSSPropertyID);
     static bool isPaddingProperty(CSSPropertyID);
     static bool isScrollMarginProperty(CSSPropertyID);

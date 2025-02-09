@@ -5176,7 +5176,11 @@
                 }
             ],
             "codegen-properties": {
-                "parser-grammar": "<<values>>"
+                "parser-grammar": "<<values>>",
+                "logical-property-group": {
+                    "name": "overflow",
+                    "resolver": "horizontal"
+                }
             },
             "specification": {
                 "category": "css-overflow",
@@ -5204,11 +5208,57 @@
                 }
             ],
             "codegen-properties": {
-                "parser-grammar": "<<values>>"
+                "parser-grammar": "<<values>>",
+                "logical-property-group": {
+                    "name": "overflow",
+                    "resolver": "vertical"
+                }
             },
             "specification": {
                 "category": "css-overflow",
                 "url": "https://www.w3.org/TR/css-overflow-3/#propdef-overflow-y"
+            }
+        },
+        "overflow-inline": {
+            "values": [
+                "visible",
+                "hidden",
+                "clip",
+                "scroll",
+                "auto"
+            ],
+            "codegen-properties": {
+                "skip-builder": true,
+                "logical-property-group": {
+                    "name": "overflow",
+                    "resolver": "inline"
+                },
+                "parser-grammar": "<<values>>"
+            },
+            "specification": {
+                "category": "css-overflow",
+                "url": "https://www.w3.org/TR/css-overflow-3/#propdef-overflow-inline"
+            }
+        },
+        "overflow-block": {
+            "values": [
+                "visible",
+                "hidden",
+                "clip",
+                "scroll",
+                "auto"
+            ],
+            "codegen-properties": {
+                "skip-builder": true,
+                "logical-property-group": {
+                    "name": "overflow",
+                    "resolver": "block"
+                },
+                "parser-grammar": "<<values>>"
+            },
+            "specification": {
+                "category": "css-overflow",
+                "url": "https://www.w3.org/TR/css-overflow-3/#propdef-overflow-block"
             }
         },
         "overscroll-behavior": {

@@ -4904,6 +4904,8 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyMaxInlineSize:
     case CSSPropertyMinBlockSize:
     case CSSPropertyMinInlineSize:
+    case CSSPropertyOverflowBlock:
+    case CSSPropertyOverflowInline:
     case CSSPropertyScrollMarginBlockEnd:
     case CSSPropertyScrollMarginBlockStart:
     case CSSPropertyScrollMarginInlineEnd:
