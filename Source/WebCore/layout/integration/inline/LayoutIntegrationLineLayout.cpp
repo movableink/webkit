@@ -961,11 +961,9 @@ void LineLayout::collectOverflow()
     if (!m_inlineContent)
         return;
 
-    for (auto& line : m_inlineContent->displayContent().lines) {
-        flow().addLayoutOverflow(Layout::toLayoutRect(line.scrollableOverflow()));
-        if (!flow().hasNonVisibleOverflow())
-            flow().addVisualOverflow(Layout::toLayoutRect(line.inkOverflow()));
-    }
+    flow().addLayoutOverflow(LayoutRect { m_inlineContent->scrollableOverflow() });
+    if (!flow().hasNonVisibleOverflow())
+        flow().addVisualOverflow(LayoutRect { m_inlineContent->inkOverflow() });
 }
 
 InlineContent& LineLayout::ensureInlineContent()

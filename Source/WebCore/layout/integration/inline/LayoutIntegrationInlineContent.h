@@ -69,9 +69,12 @@ public:
 
     InlineDisplay::Content& displayContent() { return m_displayContent; }
     const InlineDisplay::Content& displayContent() const { return m_displayContent; }
-
     bool hasContent() const;
-    bool hasInkOverflow() const { return m_hasInkOverflow; }
+
+    FloatRect scrollableOverflow() const { return m_scrollableOverflow; }
+    FloatRect inkOverflow() const { return m_inkOverflow; }
+    bool hasInkOverflow() const { return inkOverflow() != scrollableOverflow(); }
+
     bool isPaginated() const { return m_firstLinePaginationOffset.has_value(); }
     float firstLinePaginationOffset() const { return m_firstLinePaginationOffset.value_or(0.f); }
     float clearBeforeAfterGaps() const { return m_clearGapBeforeFirstLine + m_clearGapAfterLastLine; }
@@ -98,7 +101,8 @@ private:
     friend class InlineContentBuilder;
     friend class LineLayout;
 
-    void setHasInkOverflow() { m_hasInkOverflow = true; }
+    void setInkOverflow(const FloatRect& inkOverflow) { m_inkOverflow = inkOverflow; }
+    void setScrollableOverflow(const FloatRect& scrollableOverflow) { m_scrollableOverflow = scrollableOverflow; }
     void setHasMultilinePaintOverlap() { m_hasMultilinePaintOverlap = true; }
     void setClearGapBeforeFirstLine(float clearGapBeforeFirstLine) { m_clearGapBeforeFirstLine = clearGapBeforeFirstLine; }
     void setClearGapAfterLastLine(float clearGapAfterLastLine) { m_clearGapAfterLastLine = clearGapAfterLastLine; }
@@ -113,7 +117,8 @@ private:
 
     using InlineBoxIndexCache = UncheckedKeyHashMap<CheckedRef<const Layout::Box>, Vector<size_t>>;
     mutable std::unique_ptr<InlineBoxIndexCache> m_inlineBoxIndexCache;
-    bool m_hasInkOverflow { false };
+    FloatRect m_scrollableOverflow;
+    FloatRect m_inkOverflow;
     float m_clearGapBeforeFirstLine { 0 };
     float m_clearGapAfterLastLine { 0 };
     std::optional<float> m_firstLinePaginationOffset { };
