@@ -107,10 +107,6 @@ struct WEBCORE_EXPORT QuirksData {
     bool shouldTreatAddingMouseOutEventListenerAsContentChange { false };
 #endif // PLATFORM(IOS_FAMILY)
 
-#if PLATFORM(IOS)
-    bool needsGetElementsByNameQuirk { false };
-#endif
-
 #if PLATFORM(IOS) || PLATFORM(VISION)
     bool allowLayeredFullscreenVideos { false };
     bool shouldSilenceMediaQueryListChangeEvents { false };

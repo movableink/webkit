@@ -231,7 +231,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
 
     if (linkedBefore(dyld_fall_2024_os_versions, DYLD_IOS_VERSION_18_0, DYLD_MACOSX_VERSION_15_0)) {
         disableBehavior(SDKAlignedBehavior::FullySuspendsBackgroundContentImmediately);
-        disableBehavior(SDKAlignedBehavior::NoGetElementsByNameQuirk);
         disableBehavior(SDKAlignedBehavior::ApplicationStateTrackerDoesNotObserveWindow);
         disableBehavior(SDKAlignedBehavior::ThrowOnKVCInstanceVariableAccess);
         disableBehavior(SDKAlignedBehavior::BlockOptionallyBlockableMixedContent);

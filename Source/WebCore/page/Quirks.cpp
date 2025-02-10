@@ -1493,17 +1493,6 @@ bool Quirks::shouldUseEphemeralPartitionedStorageForDOMCookies(const URL& url) c
     return false;
 }
 
-// This quirk has intentionally limited exposure to increase the odds of being able to remove it
-// again within a reasonable timeframe as the impacted apps are being updated. <rdar://122548304>
-bool Quirks::needsGetElementsByNameQuirk() const
-{
-#if PLATFORM(IOS)
-    return needsQuirks() && m_quirksData.needsGetElementsByNameQuirk;
-#else
-    return false;
-#endif
-}
-
 // rdar://127398734
 bool Quirks::needsLaxSameSiteCookieQuirk(const URL& requestURL) const
 {
@@ -2688,13 +2677,6 @@ void Quirks::determineRelevantQuirks()
     m_quirksData.shouldDisableLazyIframeLoadingQuirk = shouldDisableLazyIframeLoadingQuirk;
     // DOFUS Touch app (rdar://112679186)
     m_quirksData.needsResettingTransitionCancelsRunningTransitionQuirk = needsResettingTransitionCancelsRunningTransitionQuirk;
-#endif
-
-#if PLATFORM(IOS)
-    // This quirk has intentionally limited exposure to increase the odds of being able to remove it
-    // again within a reasonable timeframe as the impacted apps are being updated. <rdar://122548304>
-    static const bool needsGetElementsByNameQuirk = !PAL::currentUserInterfaceIdiomIsSmallScreen() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoGetElementsByNameQuirk);
-    m_quirksData.needsGetElementsByNameQuirk = needsGetElementsByNameQuirk;
 #endif
 
 #if PLATFORM(MAC)

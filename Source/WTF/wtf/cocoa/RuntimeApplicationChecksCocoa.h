@@ -74,7 +74,6 @@ enum class SDKAlignedBehavior {
     ModernCompabilityModeByDefault,
     NoClientCertificateLookup,
     NoExpandoIndexedPropertiesOnWindow,
-    NoGetElementsByNameQuirk,
     NoIMDbCSSOMViewScrollingQuirk,
     NoLaBanquePostaleQuirks,
     NoMoviStarPlusCORSPreflightQuirk,
