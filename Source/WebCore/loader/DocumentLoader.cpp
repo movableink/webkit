@@ -1490,6 +1490,9 @@ void DocumentLoader::applyPoliciesToSettings()
         m_frame->settings().setAppBadgeEnabled(enabled);
 #endif
     }
+
+    if (m_inlineMediaPlaybackPolicy != InlineMediaPlaybackPolicy::Default)
+        m_frame->settings().setInlineMediaPlaybackRequiresPlaysInlineAttribute(m_inlineMediaPlaybackPolicy == InlineMediaPlaybackPolicy::RequiresPlaysInlineAttribute);
 }
 
 ColorSchemePreference DocumentLoader::colorSchemePreference() const
