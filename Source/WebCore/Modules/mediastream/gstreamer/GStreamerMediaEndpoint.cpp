@@ -187,8 +187,11 @@ bool GStreamerMediaEndpoint::initializePipeline()
         return false;
     }
 
-    if (gstObjectHasProperty(rtpBin.get(), "add-reference-timestamp-meta"))
-        g_object_set(rtpBin.get(), "add-reference-timestamp-meta", TRUE, nullptr);
+    if (gstObjectHasProperty(rtpBin.get(), "add-reference-timestamp-meta")) {
+        auto disableCaptureTimeTracking = StringView::fromLatin1(g_getenv("WEBKIT_GST_DISABLE_WEBRTC_CAPTURE_TIME_TRACKING"));
+        if (disableCaptureTimeTracking.isEmpty() || disableCaptureTimeTracking == "0"_s)
+            g_object_set(rtpBin.get(), "add-reference-timestamp-meta", TRUE, nullptr);
+    }
 
     g_signal_connect(rtpBin.get(), "new-jitterbuffer", G_CALLBACK(+[](GstElement*, GstElement* element, unsigned, unsigned ssrc, GStreamerMediaEndpoint* endPoint) {
 
