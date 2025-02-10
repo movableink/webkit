@@ -57,6 +57,11 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/text/MakeString.h>
 
+#if ENABLE(CONTENT_EXTENSIONS)
+#include <WebCore/ResourceMonitor.h>
+#endif
+
+
 #define WEBRESOURCELOADER_RELEASE_LOG(fmt, ...) RELEASE_LOG_FORWARDABLE(Network, fmt, m_trackingParameters.pageID ? m_trackingParameters.pageID->toUInt64() : 0, m_trackingParameters.frameID ? m_trackingParameters.frameID->object().toUInt64() : 0, m_trackingParameters.resourceID ? m_trackingParameters.resourceID->toUInt64() : 0, ##__VA_ARGS__)
 
 namespace WebKit {
@@ -221,16 +226,16 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
     coreLoader->didReceiveResponse(response, WTFMove(policyDecisionCompletionHandler));
 }
 
-void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, uint64_t encodedDataLength)
+void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, uint64_t encodedDataLength, uint64_t bytesTransferredOverNetwork)
 {
     RefPtr coreLoader = m_coreLoader;
     LOG(Network, "(WebProcess) WebResourceLoader::didReceiveData of size %lu for '%s'", data.size(), coreLoader->url().string().latin1().data());
     ASSERT_WITH_MESSAGE(!m_isProcessingNetworkResponse, "Network process should not send data until we've validated the response");
 
     if (UNLIKELY(m_interceptController.isIntercepting(*coreLoader->identifier()))) {
-        m_interceptController.defer(*coreLoader->identifier(), [this, protectedThis = Ref { *this }, buffer = WTFMove(data), encodedDataLength]() mutable {
+        m_interceptController.defer(*coreLoader->identifier(), [this, protectedThis = Ref { *this }, buffer = WTFMove(data), encodedDataLength, bytesTransferredOverNetwork]() mutable {
             if (m_coreLoader)
-                didReceiveData(WTFMove(buffer), encodedDataLength);
+                didReceiveData(WTFMove(buffer), encodedDataLength, bytesTransferredOverNetwork);
         });
         return;
     }
@@ -240,6 +245,13 @@ void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, uint64
     m_numBytesReceived += data.size();
 
     coreLoader->didReceiveData(data.isNull() ? SharedBuffer::create() : data.unsafeBuffer().releaseNonNull(), encodedDataLength, DataPayloadBytes);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (bytesTransferredOverNetwork > 0) {
+        if (RefPtr resourceMonitor = coreLoader ? coreLoader->resourceMonitorIfExists() : nullptr)
+            resourceMonitor->addNetworkUsage(bytesTransferredOverNetwork);
+    }
+#endif
 }
 
 void WebResourceLoader::didFinishResourceLoad(NetworkLoadMetrics&& networkLoadMetrics)

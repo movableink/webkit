@@ -284,6 +284,8 @@ private:
 
     bool shouldSendResourceLoadMessages() const;
 
+    uint64_t bytesTransferredOverNetworkDelta() const;
+
     NetworkResourceLoadParameters m_parameters;
 
     Ref<NetworkConnectionToWebProcess> m_connection;

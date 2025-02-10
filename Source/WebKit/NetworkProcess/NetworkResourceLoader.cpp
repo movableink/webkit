@@ -1564,9 +1564,9 @@ void NetworkResourceLoader::bufferingTimerFired()
     auto sharedBuffer = m_bufferedData.takeAsContiguous();
     bool shouldFilter = m_contentFilter && !m_contentFilter->continueAfterDataReceived(sharedBuffer, m_bufferedDataEncodedDataLength);
     if (!shouldFilter)
-        send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(sharedBuffer.get()), m_bufferedDataEncodedDataLength));
+        send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(sharedBuffer.get()), m_bufferedDataEncodedDataLength, bytesTransferredOverNetworkDelta()));
 #else
-    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(*m_bufferedData.get()), m_bufferedDataEncodedDataLength));
+    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(*m_bufferedData.get()), m_bufferedDataEncodedDataLength, bytesTransferredOverNetworkDelta()));
 #endif
     m_bufferedData.empty();
     m_bufferedDataEncodedDataLength = 0;
@@ -1581,7 +1581,7 @@ void NetworkResourceLoader::sendBuffer(const FragmentedSharedBuffer& buffer, siz
         return;
 #endif
 
-    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength));
+    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength, bytesTransferredOverNetworkDelta()));
 }
 
 void NetworkResourceLoader::tryStoreAsCacheEntry()
@@ -2129,7 +2129,7 @@ void NetworkResourceLoader::serviceWorkerDidFinish()
 
 void NetworkResourceLoader::dataReceivedThroughContentFilter(const SharedBuffer& buffer, size_t encodedDataLength)
 {
-    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength));
+    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength, bytesTransferredOverNetworkDelta()));
 }
 
 WebCore::ResourceError NetworkResourceLoader::contentFilterDidBlock(WebCore::ContentFilterUnblockHandler unblockHandler, String&& unblockRequestDeniedScript)
@@ -2179,6 +2179,13 @@ void NetworkResourceLoader::useRedirectionForCurrentNavigation(WebCore::Resource
     ASSERT(response.isRedirection());
 
     m_redirectionForCurrentNavigation = makeUnique<WebCore::ResourceResponse>(WTFMove(response));
+}
+
+uint64_t NetworkResourceLoader::bytesTransferredOverNetworkDelta() const
+{
+    if (RefPtr networkLoad = m_networkLoad)
+        return networkLoad->bytesTransferredOverNetworkDelta();
+    return 0;
 }
 
 } // namespace WebKit

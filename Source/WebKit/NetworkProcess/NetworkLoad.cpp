@@ -357,4 +357,11 @@ RefPtr<NetworkDataTask> NetworkLoad::protectedTask()
     return m_task;
 }
 
+size_t NetworkLoad::bytesTransferredOverNetworkDelta() const
+{
+    if (RefPtr task = m_task)
+        return task->calculateBytesTransferredOverNetworkDelta();
+    return 0;
+}
+
 } // namespace WebKit

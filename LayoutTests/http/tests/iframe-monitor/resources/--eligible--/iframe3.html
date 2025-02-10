@@ -3,7 +3,7 @@ It will post message to the parent when finished.
 
 <script>
     const size = 20 * 1024;
-    fetch(`./generate-byte.py?size=${size}`).then(async (response) => {
+    fetch(`../generate-byte.py?size=${size}`).then(async (response) => {
         const body = await response.blob();
         parent.postMessage(true, "*");
     });

@@ -662,11 +662,6 @@ void ResourceLoader::didReceiveBuffer(const FragmentedSharedBuffer& buffer, long
     RefPtr frameLoader = this->frameLoader();
     if (m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks && frame && frameLoader)
         frameLoader->notifier().didReceiveData(this, buffer.makeContiguous(), static_cast<int>(encodedDataLength));
-
-#if ENABLE(CONTENT_EXTENSIONS)
-    if (RefPtr monitor = resourceMonitorIfExists())
-        monitor->addNetworkUsage(encodedDataLength > 0 ? static_cast<size_t>(encodedDataLength) : buffer.size());
-#endif
 }
 
 void ResourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMetrics)

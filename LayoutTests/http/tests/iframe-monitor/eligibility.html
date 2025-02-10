@@ -26,8 +26,8 @@ onload = async () => {
         <iframe name="frame2" src="${base}/iframe-not-eligible2.html"></iframe>
 
         <!-- these frames are elegible for resource monitoring -->
-        <iframe name="frame3" src="${base}/iframe--eligible--.html"></iframe>
-        <iframe name="frame4" src="${base}/iframe--eligible--2.html"></iframe>
+        <iframe name="frame3" src="${base}/--eligible--/iframe.html"></iframe>
+        <iframe name="frame4" src="${base}/--eligible--/iframe2.html"></iframe>
     `;
 
     await waitUntilUnload('frame3');

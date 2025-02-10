@@ -22,7 +22,7 @@ onload = async () => {
 
     for (let no = 1; no <= 5; no++) {
         stage.innerHTML = `
-            <iframe name="frame${no}" src="http://localhost:8080/iframe-monitor/resources/iframe--eligible--.html"></iframe>
+            <iframe name="frame${no}" src="http://localhost:8080/iframe-monitor/resources/--eligible--/iframe.html"></iframe>
         `;
 
         await waitUntilUnload(`frame${no}`);
@@ -32,7 +32,7 @@ onload = async () => {
     // Then load another one which will send a message after the fetch.
     // Throttler should prevent this iframe unloaded.
     stage.innerHTML = `
-        <iframe name="frame6" src="http://localhost:8080/iframe-monitor/resources/iframe--eligible--3.html"></iframe>
+        <iframe name="frame6" src="http://localhost:8080/iframe-monitor/resources/--eligible--/iframe3.html"></iframe>
     `;
 
     window.addEventListener('message', async (event) => {

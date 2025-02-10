@@ -46,7 +46,7 @@ public:
 
     void setDocumentURL(URL&&);
     void didReceiveResponse(const URL&, OptionSet<ContentExtensions::ResourceType>);
-    void addNetworkUsage(size_t);
+    WEBCORE_EXPORT void addNetworkUsage(size_t);
 
 private:
     explicit ResourceMonitor(LocalFrame&);

@@ -88,7 +88,7 @@ private:
     void willSendRequest(WebCore::ResourceRequest&&, IPC::FormDataReference&& requestBody, WebCore::ResourceResponse&&, CompletionHandler<void(WebCore::ResourceRequest&&, bool)>&&);
     void didSendData(uint64_t bytesSent, uint64_t totalBytesToBeSent);
     void didReceiveResponse(WebCore::ResourceResponse&&, PrivateRelayed, bool needsContinueDidReceiveResponseMessage, std::optional<WebCore::NetworkLoadMetrics>&&);
-    void didReceiveData(IPC::SharedBufferReference&& data, uint64_t encodedDataLength);
+    void didReceiveData(IPC::SharedBufferReference&& data, uint64_t encodedDataLength, uint64_t bytesTransferredOverNetwork);
     void didFinishResourceLoad(WebCore::NetworkLoadMetrics&&);
     void didFailResourceLoad(const WebCore::ResourceError&);
     void didFailServiceWorkerLoad(const WebCore::ResourceError&);

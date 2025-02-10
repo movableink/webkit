@@ -90,6 +90,8 @@ public:
     std::optional<WebCore::PageIdentifier> webPageID() const;
     Ref<NetworkProcess> networkProcess();
 
+    size_t bytesTransferredOverNetworkDelta() const;
+
 private:
     NetworkLoad(NetworkLoadClient&, NetworkLoadParameters&&, NetworkSession&);
 

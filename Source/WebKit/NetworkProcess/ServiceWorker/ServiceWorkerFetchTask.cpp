@@ -300,7 +300,7 @@ void ServiceWorkerFetchTask::didReceiveData(const IPC::SharedBufferReference& da
     if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer, encodedDataLength))
         return;
 #endif
-    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength });
+    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength, 0 });
 }
 
 void ServiceWorkerFetchTask::didReceiveDataFromPreloader(const WebCore::FragmentedSharedBuffer& data, uint64_t encodedDataLength)
@@ -317,7 +317,7 @@ void ServiceWorkerFetchTask::didReceiveDataFromPreloader(const WebCore::Fragment
     if (!protectedLoader()->continueAfterServiceWorkerReceivedData(*buffer, encodedDataLength))
         return;
 #endif
-    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength });
+    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength, 0 });
 }
 
 void ServiceWorkerFetchTask::didReceiveFormData(const IPC::FormDataReference& formData)

@@ -174,6 +174,10 @@ public:
 
     bool isPDFJSResourceLoad() const;
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT ResourceMonitor* resourceMonitorIfExists();
+#endif
+
 protected:
     ResourceLoader(LocalFrame&, ResourceLoaderOptions);
 
@@ -229,10 +233,6 @@ private:
     void receivedCancellation(ResourceHandle*, const AuthenticationChallenge& challenge) override { receivedCancellation(challenge); }
 #if PLATFORM(IOS_FAMILY)
     RetainPtr<CFDictionaryRef> connectionProperties(ResourceHandle*) override;
-#endif
-
-#if ENABLE(CONTENT_EXTENSIONS)
-    ResourceMonitor* resourceMonitorIfExists();
 #endif
 
 #if USE(SOUP)
