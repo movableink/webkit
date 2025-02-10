@@ -1702,7 +1702,6 @@ void WebPageProxy::statusBarWasTapped()
 
 double WebPageProxy::displayedContentScale() const
 {
-    ASSERT(internals().lastVisibleContentRectUpdate);
     if (internals().lastVisibleContentRectUpdate)
         return internals().lastVisibleContentRectUpdate->scale();
     return 1;
@@ -1710,7 +1709,6 @@ double WebPageProxy::displayedContentScale() const
 
 FloatRect WebPageProxy::exposedContentRect() const
 {
-    ASSERT(internals().lastVisibleContentRectUpdate);
     if (internals().lastVisibleContentRectUpdate)
         return internals().lastVisibleContentRectUpdate->exposedContentRect();
     return { };
@@ -1718,7 +1716,6 @@ FloatRect WebPageProxy::exposedContentRect() const
 
 FloatRect WebPageProxy::unobscuredContentRect() const
 {
-    ASSERT(internals().lastVisibleContentRectUpdate);
     if (internals().lastVisibleContentRectUpdate)
         return internals().lastVisibleContentRectUpdate->unobscuredContentRect();
     return { };
@@ -1726,7 +1723,6 @@ FloatRect WebPageProxy::unobscuredContentRect() const
 
 bool WebPageProxy::inStableState() const
 {
-    ASSERT(internals().lastVisibleContentRectUpdate);
     if (internals().lastVisibleContentRectUpdate)
         return internals().lastVisibleContentRectUpdate->inStableState();
     return false;
@@ -1734,7 +1730,6 @@ bool WebPageProxy::inStableState() const
 
 FloatRect WebPageProxy::unobscuredContentRectRespectingInputViewBounds() const
 {
-    ASSERT(internals().lastVisibleContentRectUpdate);
     if (internals().lastVisibleContentRectUpdate)
         return internals().lastVisibleContentRectUpdate->unobscuredContentRectRespectingInputViewBounds();
     return { };
@@ -1742,7 +1737,6 @@ FloatRect WebPageProxy::unobscuredContentRectRespectingInputViewBounds() const
 
 FloatRect WebPageProxy::layoutViewportRect() const
 {
-    ASSERT(internals().lastVisibleContentRectUpdate);
     if (internals().lastVisibleContentRectUpdate)
         return internals().lastVisibleContentRectUpdate->layoutViewportRect();
     return { };
