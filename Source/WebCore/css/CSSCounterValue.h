@@ -39,7 +39,7 @@ public:
     RefPtr<CSSValue> counterStyle() const { return m_counterStyle; }
     String counterStyleCSSText() const;
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSCounterValue&) const;
 
     IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const

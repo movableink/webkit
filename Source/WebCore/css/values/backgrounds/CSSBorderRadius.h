@@ -68,7 +68,7 @@ inline BorderRadius BorderRadius::defaultValue()
     };
 }
 
-template<> struct Serialize<BorderRadius> { void operator()(StringBuilder&, const BorderRadius&); };
+template<> struct Serialize<BorderRadius> { void operator()(StringBuilder&, const SerializationContext&, const BorderRadius&); };
 
 } // namespace CSS
 } // namespace WebCore

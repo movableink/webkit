@@ -28,24 +28,24 @@
 
 namespace WebCore {
 
-String CSSFontValue::customCSSText() const
+String CSSFontValue::customCSSText(const CSS::SerializationContext& context) const
 {
     // font variant weight size / line-height family
     StringBuilder result;
     if (style)
-        result.append(style->cssText());
+        result.append(style->cssText(context));
     if (variant)
-        result.append(result.isEmpty() ? ""_s : " "_s, variant->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, variant->cssText(context));
     if (weight)
-        result.append(result.isEmpty() ? ""_s : " "_s, weight->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, weight->cssText(context));
     if (width)
-        result.append(result.isEmpty() ? ""_s : " "_s, width->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, width->cssText(context));
     if (size)
-        result.append(result.isEmpty() ? ""_s : " "_s, size->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, size->cssText(context));
     if (lineHeight)
-        result.append(size ? " / "_s : result.isEmpty() ? ""_s : " "_s, lineHeight->cssText());
+        result.append(size ? " / "_s : result.isEmpty() ? ""_s : " "_s, lineHeight->cssText(context));
     if (family)
-        result.append(result.isEmpty() ? ""_s : " "_s, family->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, family->cssText(context));
     return result.toString();
 }
 

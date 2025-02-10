@@ -30,6 +30,7 @@
 #include "LegacyWebArchive.h"
 
 #include "CSSImportRule.h"
+#include "CSSSerializationContext.h"
 #include "CachedResource.h"
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
@@ -584,7 +585,7 @@ static void addSubresourcesForAttachmentElementsIfNecessary(LocalFrame& frame, c
 
 #endif
 
-static UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String> addSubresourcesForCSSStyleSheetsIfNecessary(LocalFrame& frame, const String& subresourcesDirectoryName, UncheckedKeyHashSet<String>& uniqueFileNames, UncheckedKeyHashMap<String, String>& uniqueSubresources, Vector<Ref<ArchiveResource>>& subresources)
+static UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> addSubresourcesForCSSStyleSheetsIfNecessary(LocalFrame& frame, const String& subresourcesDirectoryName, UncheckedKeyHashSet<String>& uniqueFileNames, UncheckedKeyHashMap<String, String>& uniqueSubresources, Vector<Ref<ArchiveResource>>& subresources)
 {
     if (subresourcesDirectoryName.isEmpty())
         return { };
@@ -593,15 +594,16 @@ static UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String> addSubresourcesForCSSS
     if (!document)
         return { };
 
-    UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String> uniqueCSSStyleSheets;
-    UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String> relativeUniqueCSSStyleSheets;
+    CSS::SerializationContext serializationContext;
+
+    UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> uniqueCSSStyleSheets;
     Ref documentStyleSheets = document->styleSheets();
     for (unsigned index = 0; index < documentStyleSheets->length(); ++index) {
         RefPtr cssStyleSheet = dynamicDowncast<CSSStyleSheet>(documentStyleSheets->item(index));
         if (!cssStyleSheet)
             continue;
 
-        if (uniqueCSSStyleSheets.contains(cssStyleSheet.get()))
+        if (uniqueCSSStyleSheets.contains(*cssStyleSheet))
             continue;
 
         UncheckedKeyHashSet<RefPtr<CSSStyleSheet>> cssStyleSheets;
@@ -616,7 +618,7 @@ static UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String> addSubresourcesForCSSS
             if (url.isNull() || url.isEmpty())
                 continue;
 
-            auto addResult = uniqueCSSStyleSheets.add(currentCSSStyleSheet, emptyString());
+            auto addResult = uniqueCSSStyleSheets.add(*currentCSSStyleSheet, emptyString());
             if (!addResult.isNewEntry)
                 continue;
 
@@ -635,24 +637,23 @@ static UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String> addSubresourcesForCSSS
             String subresourceFileName = generateValidFileName(url, uniqueFileNames, extension);
             uniqueFileNames.add(subresourceFileName);
             addResult.iterator->value = FileSystem::pathByAppendingComponent(subresourcesDirectoryName, subresourceFileName);
-            relativeUniqueCSSStyleSheets.add(currentCSSStyleSheet, subresourceFileName);
+            serializationContext.replacementURLStringsForCSSStyleSheet.add(*currentCSSStyleSheet, subresourceFileName);
         }
     }
 
     auto frameName = frame.tree().uniqueName();
-    UncheckedKeyHashMap<String, String> relativeUniqueSubresources;
     for (auto& [urlString, path] : uniqueSubresources) {
         // The style sheet files are stored in the same directory as other subresources.
-        relativeUniqueSubresources.add(urlString, FileSystem::lastComponentOfPathIgnoringTrailingSlash(path));
+        serializationContext.replacementURLStrings.add(urlString, FileSystem::lastComponentOfPathIgnoringTrailingSlash(path));
     }
 
     for (auto& [cssStyleSheet, path]  : uniqueCSSStyleSheets) {
-        auto contentString = cssStyleSheet->cssTextWithReplacementURLs(relativeUniqueSubresources, relativeUniqueCSSStyleSheets);
+        auto contentString = cssStyleSheet->cssText(serializationContext);
         if (auto newResource = ArchiveResource::create(utf8Buffer(contentString), URL { cssStyleSheet->href() }, "text/css"_s, "UTF-8"_s, frameName, ResourceResponse(), path))
             subresources.append(newResource.releaseNonNull());
     }
 
-    return frame.isMainFrame() ? uniqueCSSStyleSheets : relativeUniqueCSSStyleSheets;
+    return frame.isMainFrame() ? uniqueCSSStyleSheets : serializationContext.replacementURLStringsForCSSStyleSheet;
 }
 
 RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bool saveScriptsFromMemoryCache, LocalFrame& frame, Vector<Ref<Node>>&& nodes, Function<bool(LocalFrame&)>&& frameFilter, const Vector<MarkupExclusionRule>& markupExclusionRules, const String& mainFrameFilePath)

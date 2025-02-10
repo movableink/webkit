@@ -46,7 +46,7 @@ public:
     bool equals(const CSSCrossfadeValue&) const;
     bool equalInputImages(const CSSCrossfadeValue&) const;
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool isPrefixed() const { return m_isPrefixed; }
 
     RefPtr<StyleImage> createStyleImage(const Style::BuilderState&) const;

@@ -51,7 +51,7 @@ WebCore::Color createColor(const ColorLayers&, PlatformColorResolutionState&);
 bool containsCurrentColor(const ColorLayers&);
 bool containsColorSchemeDependentColor(const ColorLayers&);
 
-template<> struct Serialize<ColorLayers> { void operator()(StringBuilder&, const ColorLayers&); };
+template<> struct Serialize<ColorLayers> { void operator()(StringBuilder&, const SerializationContext&, const ColorLayers&); };
 template<> struct ComputedStyleDependenciesCollector<ColorLayers> { void operator()(ComputedStyleDependencies&, const ColorLayers&); };
 template<> struct CSSValueChildrenVisitor<ColorLayers> { IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const ColorLayers&); };
 

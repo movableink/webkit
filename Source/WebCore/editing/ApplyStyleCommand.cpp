@@ -29,6 +29,7 @@
 
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSParser.h"
+#include "CSSSerializationContext.h"
 #include "CSSValuePool.h"
 #include "Document.h"
 #include "Editing.h"
@@ -415,7 +416,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
         }
         if (currentFontSize != desiredFontSize) {
             inlineStyle->setProperty(CSSPropertyFontSize, CSSPrimitiveValue::create(desiredFontSize, CSSUnitType::CSS_PX));
-            setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom());
+            setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom(CSS::defaultSerializationContext()));
         }
         if (inlineStyle->isEmpty()) {
             removeNodeAttribute(*element, styleAttr);
@@ -538,7 +539,7 @@ void ApplyStyleCommand::removeEmbeddingUpToEnclosingBlock(Node* node, Node* unsp
             auto inlineStyle = copyStyleOrCreateEmpty(element->inlineStyle());
             inlineStyle->setProperty(CSSPropertyUnicodeBidi, CSSValueNormal);
             inlineStyle->removeProperty(CSSPropertyDirection);
-            setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom());
+            setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom(CSS::defaultSerializationContext()));
             if (isSpanWithoutAttributesOrUnstyledStyleSpan(*element))
                 removeNodePreservingChildren(*element);
         }
@@ -792,7 +793,7 @@ void ApplyStyleCommand::applyInlineStyleToNodeRange(EditingStyle& style, Node& s
                 RefPtr inlineStyle = copyStyleOrCreateEmpty(element->inlineStyle());
                 if (RefPtr otherStyle = style.style())
                     inlineStyle->mergeAndOverrideOnConflict(*otherStyle);
-                setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom());
+                setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom(CSS::defaultSerializationContext()));
                 next = NodeTraversal::nextSkippingChildren(*element);
                 continue;
             }
@@ -974,7 +975,7 @@ bool ApplyStyleCommand::removeCSSStyle(EditingStyle& style, HTMLElement& element
     if (newInlineStyle->isEmpty())
         removeNodeAttribute(element, styleAttr);
     else
-        setNodeAttribute(element, styleAttr, newInlineStyle->asTextAtom());
+        setNodeAttribute(element, styleAttr, newInlineStyle->asTextAtom(CSS::defaultSerializationContext()));
 
     if (isSpanWithoutAttributesOrUnstyledStyleSpan(element))
         removeNodePreservingChildren(element);
@@ -1020,7 +1021,7 @@ void ApplyStyleCommand::applyInlineStyleToPushDown(Node& node, EditingStyle* sty
     // FIXME: applyInlineStyleToRange should be used here instead.
     if (node.renderer()->isRenderBlockFlow() || node.hasChildNodes()) {
         if (auto* htmlElement = dynamicDowncast<HTMLElement>(node)) {
-            setNodeAttribute(*htmlElement, styleAttr, newInlineStyle->style()->asTextAtom());
+            setNodeAttribute(*htmlElement, styleAttr, newInlineStyle->style()->asTextAtom(CSS::defaultSerializationContext()));
             return;
         }
     }
@@ -1395,7 +1396,7 @@ void ApplyStyleCommand::addBlockStyle(const StyleChange& styleChange, HTMLElemen
 {
     // Do not check for legacy styles here. Those styles, like <B> and <I>, only apply for inline content.
     ASSERT(styleChange.cssStyle());
-    setNodeAttribute(block, styleAttr, joinWithSpace(styleChange.cssStyle()->asText(), block.getAttribute(styleAttr)));
+    setNodeAttribute(block, styleAttr, joinWithSpace(styleChange.cssStyle()->asText(CSS::defaultSerializationContext()), block.getAttribute(styleAttr)));
 }
 
 void ApplyStyleCommand::addInlineStyleIfNeeded(EditingStyle* style, Node& start, Node& end, AddStyledElement addStyledElement)
@@ -1478,12 +1479,12 @@ void ApplyStyleCommand::applyInlineStyleChange(Node& passedStart, Node& passedEn
             if (RefPtr existingStyle = styleContainer->inlineStyle()) {
                 Ref inlineStyle = EditingStyle::create(existingStyle.get());
                 inlineStyle->overrideWithStyle(*styleToMerge);
-                setNodeAttribute(*styleContainer, styleAttr, inlineStyle->style()->asTextAtom());
+                setNodeAttribute(*styleContainer, styleAttr, inlineStyle->style()->asTextAtom(CSS::defaultSerializationContext()));
             } else
-                setNodeAttribute(*styleContainer, styleAttr, styleToMerge->asTextAtom());
+                setNodeAttribute(*styleContainer, styleAttr, styleToMerge->asTextAtom(CSS::defaultSerializationContext()));
         } else {
             auto styleElement = createStyleSpanElement(document);
-            styleElement->setAttribute(styleAttr, styleToMerge->asTextAtom());
+            styleElement->setAttribute(styleAttr, styleToMerge->asTextAtom(CSS::defaultSerializationContext()));
             surroundNodeRangeWithElement(*startNode, *endNode, WTFMove(styleElement));
         }
     }

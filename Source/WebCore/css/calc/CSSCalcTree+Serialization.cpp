@@ -52,6 +52,7 @@ struct SerializationState {
     GroupingParenthesis groupingParenthesis = GroupingParenthesis::Include;
     Stage stage = Stage::Specified;
     CSS::Range range = CSS::All;
+    const CSS::SerializationContext& serializationContext;
 };
 
 struct ParenthesisSaver {
@@ -528,16 +529,16 @@ void serializeCalculationTree(StringBuilder& builder, const ChildOrNone& root, S
     WTF::switchOn(root, [&builder, &state](const auto& root) { serializeCalculationTree(builder, root, state); });
 }
 
-void serializeCalculationTree(StringBuilder& builder, const CSS::Keyword::None& root, SerializationState&)
+void serializeCalculationTree(StringBuilder& builder, const CSS::Keyword::None& root, SerializationState& state)
 {
-    CSS::serializationForCSS(builder, root);
+    CSS::serializationForCSS(builder, state.serializationContext, root);
 }
 
-template<Numeric Op> void serializeCalculationTree(StringBuilder& builder, const Op& root, SerializationState&)
+template<Numeric Op> void serializeCalculationTree(StringBuilder& builder, const Op& root, SerializationState& state)
 {
     // 2. If root is a numeric value, or a non-math function, serialize root per the normal rules for it and return the result.
 
-    CSS::serializationForCSS(builder, CSS::SerializableNumber { root.value, CSSPrimitiveValue::unitTypeString(toCSSUnit(root)) });
+    CSS::serializationForCSS(builder, state.serializationContext, CSS::SerializableNumber { root.value, CSSPrimitiveValue::unitTypeString(toCSSUnit(root)) });
 }
 
 void serializeCalculationTree(StringBuilder& builder, const Symbol& root, SerializationState&)
@@ -695,7 +696,8 @@ void serializationForCSS(StringBuilder& builder, const Tree& tree, const Seriali
 {
     SerializationState state {
         .stage = tree.stage,
-        .range = options.range
+        .range = options.range,
+        .serializationContext = options.serializationContext,
     };
     serializeMathFunction(builder, tree.root, state);
 }
@@ -710,7 +712,8 @@ String serializationForCSS(const Tree& tree, const SerializationOptions& options
 void serializationForCSS(StringBuilder& builder, const Child& child, const SerializationOptions& options)
 {
     SerializationState state {
-        .range = options.range
+        .range = options.range,
+        .serializationContext = options.serializationContext,
     };
     serializeCalculationTree(builder, child, state);
 }

@@ -41,7 +41,7 @@ public:
     Ref<CSSValue> protectedFirst() const { return m_first; }
     Ref<CSSValue> protectedSecond() const { return m_second; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSValuePair&) const;
     bool canBeCoalesced() const;
 

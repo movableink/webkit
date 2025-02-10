@@ -101,7 +101,7 @@ public:
 
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const;
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSCalcValue&) const;
 
     void dump(TextStream&) const;

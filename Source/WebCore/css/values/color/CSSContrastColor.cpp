@@ -58,9 +58,9 @@ bool containsColorSchemeDependentColor(const ContrastColor& unresolved)
     return containsColorSchemeDependentColor(unresolved.color);
 }
 
-void Serialize<ContrastColor>::operator()(StringBuilder& builder, const ContrastColor& value)
+void Serialize<ContrastColor>::operator()(StringBuilder& builder, const SerializationContext& context, const ContrastColor& value)
 {
-    serializationForCSSContrastColor(builder, value);
+    serializationForCSSContrastColor(builder, context, value);
 }
 
 void ComputedStyleDependenciesCollector<ContrastColor>::operator()(ComputedStyleDependencies& dependencies, const ContrastColor& value)

@@ -45,9 +45,9 @@ CSSFilterPropertyValue::CSSFilterPropertyValue(CSS::FilterProperty filter)
 {
 }
 
-String CSSFilterPropertyValue::customCSSText() const
+String CSSFilterPropertyValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_filter);
+    return CSS::serializationForCSS(context, m_filter);
 }
 
 bool CSSFilterPropertyValue::equals(const CSSFilterPropertyValue& other) const

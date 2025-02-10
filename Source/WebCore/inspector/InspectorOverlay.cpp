@@ -35,6 +35,7 @@
 #include "CSSGridAutoRepeatValue.h"
 #include "CSSGridIntegerRepeatValue.h"
 #include "CSSGridLineNamesValue.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleDeclaration.h"
 #include "DOMCSSNamespace.h"
 #include "DOMTokenList.h"
@@ -1440,7 +1441,7 @@ static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirectio
     
     auto handleValueIgnoringLineNames = [&](const CSSValue& currentValue) {
         if (!is<CSSGridLineNamesValue>(currentValue))
-            trackSizes.append(currentValue.cssText());
+            trackSizes.append(currentValue.cssText(CSS::defaultSerializationContext()));
     };
 
     for (auto& currentValue : *cssValueList) {

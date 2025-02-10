@@ -66,9 +66,9 @@ WebCore::Color CSSColorValue::absoluteColor(const CSSValue& value)
     return { };
 }
 
-String CSSColorValue::customCSSText() const
+String CSSColorValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_color);
+    return CSS::serializationForCSS(context, m_color);
 }
 
 bool CSSColorValue::equals(const CSSColorValue& other) const

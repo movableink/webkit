@@ -47,7 +47,7 @@ public:
     CSSPropertyID shorthandPropertyId() const { return m_shorthandPropertyId; }
 
     bool equals(const CSSPendingSubstitutionValue& other) const { return m_shorthandValue.ptr() == other.m_shorthandValue.ptr(); }
-    static String customCSSText() { return emptyString(); }
+    static String customCSSText(const CSS::SerializationContext&) { return emptyString(); }
 
     RefPtr<CSSValue> resolveValue(Style::BuilderState&, CSSPropertyID) const;
 

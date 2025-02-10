@@ -28,6 +28,7 @@
 
 #include "CSSKeyframesRule.h"
 #include "CSSParser.h"
+#include "CSSSerializationContext.h"
 #include "MutableStyleProperties.h"
 #include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
@@ -117,7 +118,7 @@ bool StyleRuleKeyframe::setKeyText(const String& keyText)
 
 String StyleRuleKeyframe::cssText() const
 {
-    if (auto declarations = m_properties->asText(); !declarations.isEmpty())
+    if (auto declarations = m_properties->asText(CSS::defaultSerializationContext()); !declarations.isEmpty())
         return makeString(keyText(), " { "_s, declarations, " }"_s);
     return makeString(keyText(), " { }"_s);
 }

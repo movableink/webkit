@@ -63,12 +63,12 @@ bool containsCurrentColor(const LightDarkColor& unresolved)
         || containsCurrentColor(unresolved.darkColor);
 }
 
-void Serialize<LightDarkColor>::operator()(StringBuilder& builder, const LightDarkColor& value)
+void Serialize<LightDarkColor>::operator()(StringBuilder& builder, const SerializationContext& context, const LightDarkColor& value)
 {
     builder.append("light-dark("_s);
-    serializationForCSS(builder, value.lightColor);
+    serializationForCSS(builder, context, value.lightColor);
     builder.append(", "_s);
-    serializationForCSS(builder, value.darkColor);
+    serializationForCSS(builder, context, value.darkColor);
     builder.append(')');
 }
 

@@ -35,7 +35,7 @@ public:
 
     const CSS::DynamicRangeLimit& dynamicRangeLimit() const { return m_dynamicRangeLimit; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSDynamicRangeLimitValue&) const;
 
     IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;

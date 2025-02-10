@@ -41,9 +41,9 @@ CSSEasingFunctionValue::CSSEasingFunctionValue(CSS::EasingFunction easingFunctio
 {
 }
 
-String CSSEasingFunctionValue::customCSSText() const
+String CSSEasingFunctionValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_easingFunction);
+    return CSS::serializationForCSS(context, m_easingFunction);
 }
 
 bool CSSEasingFunctionValue::equals(const CSSEasingFunctionValue& other) const

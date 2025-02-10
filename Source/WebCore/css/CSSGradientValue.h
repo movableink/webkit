@@ -41,7 +41,7 @@ public:
         return adoptRef(*new CSSGradientValue(WTFMove(gradient)));
     }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSGradientValue&) const;
     RefPtr<StyleImage> createStyleImage(const Style::BuilderState&) const;
 

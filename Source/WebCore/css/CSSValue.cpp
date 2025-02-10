@@ -81,6 +81,7 @@
 #include "CSSRectValue.h"
 #include "CSSReflectValue.h"
 #include "CSSScrollValue.h"
+#include "CSSSerializationContext.h"
 #include "CSSSubgridValue.h"
 #include "CSSTextShadowPropertyValue.h"
 #include "CSSToLengthConversionData.h"
@@ -257,20 +258,6 @@ bool CSSValue::traverseSubresources(NOESCAPE const Function<bool(const CachedRes
     });
 }
 
-void CSSValue::setReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>& replacementURLStrings)
-{
-    return visitDerived([&](auto& value) {
-        return value.customSetReplacementURLForSubresources(replacementURLStrings);
-    });
-}
-
-void CSSValue::clearReplacementURLForSubresources()
-{
-    return visitDerived([&](auto& value) {
-        return value.customClearReplacementURLForSubresources();
-    });
-}
-
 IterationStatus CSSValue::visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return visitDerived([&](auto& value) {
@@ -349,10 +336,10 @@ bool CSSValue::isCSSLocalURL(StringView relativeURL)
     return relativeURL.isEmpty() || relativeURL.startsWith('#');
 }
 
-String CSSValue::cssText() const
+String CSSValue::cssText(const CSS::SerializationContext& context) const
 {
-    return visitDerived([](auto& value) {
-        return value.customCSSText();
+    return visitDerived([&](auto& value) {
+        return value.customCSSText(context);
     });
 }
 

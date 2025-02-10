@@ -99,9 +99,9 @@ bool containsCurrentColor(const RelativeColor<Descriptor>& unresolved)
 }
 
 template<typename D> struct Serialize<RelativeColor<D>> {
-    void operator()(StringBuilder& builder, const RelativeColor<D>& value)
+    void operator()(StringBuilder& builder, const SerializationContext& context, const RelativeColor<D>& value)
     {
-        serializationForCSSRelativeColor(builder, value);
+        serializationForCSSRelativeColor(builder, context, value);
     }
 };
 

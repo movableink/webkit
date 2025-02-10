@@ -167,8 +167,8 @@ private:
 WebCore::Color resolveColor(const Color&, const WebCore::Color& currentColor);
 bool containsCurrentColor(const Color&);
 
-void serializationForCSS(StringBuilder&, const Color&);
-WEBCORE_EXPORT String serializationForCSS(const Color&);
+void serializationForCSS(StringBuilder&, const CSS::SerializationContext&, const Color&);
+WEBCORE_EXPORT String serializationForCSS(const CSS::SerializationContext&, const Color&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, const Color&);
 

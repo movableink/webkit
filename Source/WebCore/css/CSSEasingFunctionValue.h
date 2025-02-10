@@ -36,7 +36,7 @@ public:
 
     const CSS::EasingFunction& easingFunction() const { return m_easingFunction; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSEasingFunctionValue&) const;
     IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 

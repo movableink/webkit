@@ -56,7 +56,7 @@ public:
 
     URL reresolvedURL(const Document&) const;
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
     Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
@@ -92,8 +92,6 @@ private:
     LoadedFromOpaqueSource m_loadedFromOpaqueSource { LoadedFromOpaqueSource::No };
     RefPtr<CSSImageValue> m_unresolvedValue;
     bool m_isInvalid { false };
-    String m_replacementURLString;
-    bool m_shouldUseResolvedURLInCSSText { false };
 };
 
 } // namespace WebCore

@@ -104,9 +104,9 @@ RefPtr<StyleImage> CSSGradientValue::createStyleImage(const Style::BuilderState&
     return styleImage;
 }
 
-String CSSGradientValue::customCSSText() const
+String CSSGradientValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_gradient);
+    return CSS::serializationForCSS(context, m_gradient);
 }
 
 bool CSSGradientValue::equals(const CSSGradientValue& other) const

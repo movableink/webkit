@@ -42,7 +42,7 @@ public:
     ~CSSCursorImageValue();
 
     const URL& imageURL() const { return m_originalURL; }
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSCursorImageValue&) const;
 
     IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const

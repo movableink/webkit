@@ -57,7 +57,7 @@ template<size_t I> const auto& get(const Ray& value)
         return value.position;
 }
 
-template<> struct Serialize<Ray> { void operator()(StringBuilder&, const Ray&); };
+template<> struct Serialize<Ray> { void operator()(StringBuilder&, const SerializationContext&, const Ray&); };
 
 } // namespace CSS
 } // namespace WebCore

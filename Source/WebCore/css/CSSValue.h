@@ -47,6 +47,10 @@ struct Counter;
 enum CSSPropertyID : uint16_t;
 enum CSSValueID : uint16_t;
 
+namespace CSS {
+struct SerializationContext;
+}
+
 DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
 class CSSValue {
     WTF_MAKE_NONCOPYABLE(CSSValue);
@@ -60,7 +64,7 @@ public:
     unsigned refCount() const { return m_refCount / refCountIncrement; }
     bool hasAtLeastOneRef() const { return m_refCount; }
 
-    WEBCORE_EXPORT String cssText() const;
+    WEBCORE_EXPORT String cssText(const CSS::SerializationContext&) const;
 
     bool isAppleColorFilterPropertyValue() const { return m_classType == ClassType::AppleColorFilterProperty; }
     bool isAttrValue() const { return m_classType == ClassType::Attr; }
@@ -138,8 +142,6 @@ public:
     // FIXME: These three traversing functions are buggy. It should be rewritten with visitChildren.
     // https://bugs.webkit.org/show_bug.cgi?id=270600
     bool traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
-    void setReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&);
-    void clearReplacementURLForSubresources();
 
     IterationStatus visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 

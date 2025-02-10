@@ -55,9 +55,9 @@ bool CSSFilterImageValue::equalInputImages(const CSSFilterImageValue& other) con
     return compareCSSValue(m_imageValueOrNone, other.m_imageValueOrNone);
 }
 
-String CSSFilterImageValue::customCSSText() const
+String CSSFilterImageValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return makeString("filter("_s, m_imageValueOrNone->cssText(), ", "_s, CSS::serializationForCSS(m_filter), ')');
+    return makeString("filter("_s, m_imageValueOrNone->cssText(context), ", "_s, CSS::serializationForCSS(context, m_filter), ')');
 }
 
 IterationStatus CSSFilterImageValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const

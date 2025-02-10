@@ -57,7 +57,7 @@ constexpr bool containsColorSchemeDependentColor(const HexColor&)
     return false;
 }
 
-template<> struct Serialize<HexColor> { void operator()(StringBuilder&, const HexColor&); };
+template<> struct Serialize<HexColor> { void operator()(StringBuilder&, const SerializationContext&, const HexColor&); };
 template<> struct ComputedStyleDependenciesCollector<HexColor> { constexpr void operator()(ComputedStyleDependencies&, const HexColor&) { } };
 template<> struct CSSValueChildrenVisitor<HexColor> { constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const HexColor&) { return IterationStatus::Continue; } };
 

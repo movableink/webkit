@@ -55,8 +55,8 @@ struct Symbol {
 
 template<typename T> struct IsSymbol : public std::integral_constant<bool, std::is_same_v<T, Symbol>> { };
 
-template<> struct Serialize<SymbolRaw> { void operator()(StringBuilder&, const SymbolRaw&); };
-template<> struct Serialize<Symbol> { void operator()(StringBuilder&, const Symbol&); };
+template<> struct Serialize<SymbolRaw> { void operator()(StringBuilder&, const SerializationContext&, const SymbolRaw&); };
+template<> struct Serialize<Symbol> { void operator()(StringBuilder&, const SerializationContext&, const Symbol&); };
 
 template<> struct ComputedStyleDependenciesCollector<SymbolRaw> { constexpr void operator()(ComputedStyleDependencies&, const SymbolRaw&) { } };
 template<> struct ComputedStyleDependenciesCollector<Symbol> { constexpr void operator()(ComputedStyleDependencies&, const Symbol&) { } };

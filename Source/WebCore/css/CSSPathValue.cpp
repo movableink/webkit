@@ -38,9 +38,9 @@
 
 namespace WebCore {
 
-String CSSPathValue::customCSSText() const
+String CSSPathValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_path);
+    return CSS::serializationForCSS(context, m_path);
 }
 
 bool CSSPathValue::equals(const CSSPathValue& other) const

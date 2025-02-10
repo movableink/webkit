@@ -46,9 +46,9 @@ CSSBoxShadowPropertyValue::CSSBoxShadowPropertyValue(CSS::BoxShadowProperty&& sh
 {
 }
 
-String CSSBoxShadowPropertyValue::customCSSText() const
+String CSSBoxShadowPropertyValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_shadow);
+    return CSS::serializationForCSS(context, m_shadow);
 }
 
 bool CSSBoxShadowPropertyValue::equals(const CSSBoxShadowPropertyValue& other) const

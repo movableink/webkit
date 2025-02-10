@@ -35,7 +35,7 @@ public:
 
     const CSS::FilterProperty& filter() const { return m_filter; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSFilterPropertyValue&) const;
     IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 

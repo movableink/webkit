@@ -27,6 +27,7 @@
 
 #include "CSSContrastColorResolver.h"
 #include "CSSContrastColorSerialization.h"
+#include "CSSSerializationContext.h"
 #include "ColorSerialization.h"
 #include "StyleBuilderState.h"
 #include "StyleColorResolutionState.h"
@@ -81,15 +82,15 @@ bool containsCurrentColor(const ContrastColor& contrastColor)
 
 // MARK: - Serialization
 
-void serializationForCSS(StringBuilder& builder, const ContrastColor& contrastColor)
+void serializationForCSS(StringBuilder& builder, const CSS::SerializationContext& context, const ContrastColor& contrastColor)
 {
-    CSS::serializationForCSSContrastColor(builder, contrastColor);
+    CSS::serializationForCSSContrastColor(builder, context, contrastColor);
 }
 
-String serializationForCSS(const ContrastColor& contrastColor)
+String serializationForCSS(const CSS::SerializationContext& context, const ContrastColor& contrastColor)
 {
     StringBuilder builder;
-    serializationForCSS(builder, contrastColor);
+    serializationForCSS(builder, context, contrastColor);
     return builder.toString();
 }
 
@@ -97,7 +98,7 @@ String serializationForCSS(const ContrastColor& contrastColor)
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const ContrastColor& contrastColor)
 {
-    return ts << serializationForCSS(contrastColor);
+    return ts << serializationForCSS(CSS::defaultSerializationContext(), contrastColor);
 }
 
 } // namespace Style

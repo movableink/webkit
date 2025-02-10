@@ -39,32 +39,34 @@ namespace CSS {
 // All leaf types must implement the following conversions:
 //
 //    template<> struct WebCore::CSS::Serialize<CSSType> {
-//        void operator()(StringBuilder&, const CSSType&);
+//        void operator()(StringBuilder&, const SerializationContext&, const SerializationContext&, const CSSType&);
 //    };
+
+struct SerializationContext;
 
 template<typename CSSType> struct Serialize;
 
 // Serialization Invokers
-template<typename CSSType> void serializationForCSS(StringBuilder& builder, const CSSType& value)
+template<typename CSSType> void serializationForCSS(StringBuilder& builder, const SerializationContext& context, const CSSType& value)
 {
-    Serialize<CSSType>{}(builder, value);
+    Serialize<CSSType>{}(builder, context, value);
 }
 
-template<typename CSSType> [[nodiscard]] String serializationForCSS(const CSSType& value)
+template<typename CSSType> [[nodiscard]] String serializationForCSS(const SerializationContext& context, const CSSType& value)
 {
     StringBuilder builder;
-    serializationForCSS(builder, value);
+    serializationForCSS(builder, context, value);
     return builder.toString();
 }
 
-template<typename CSSType> void serializationForCSSOnOptionalLike(StringBuilder& builder, const CSSType& value)
+template<typename CSSType> void serializationForCSSOnOptionalLike(StringBuilder& builder, const SerializationContext& context, const CSSType& value)
 {
     if (!value)
         return;
-    serializationForCSS(builder, *value);
+    serializationForCSS(builder, context, *value);
 }
 
-template<typename CSSType> void serializationForCSSOnTupleLike(StringBuilder& builder, const CSSType& value, ASCIILiteral separator)
+template<typename CSSType> void serializationForCSSOnTupleLike(StringBuilder& builder, const SerializationContext& context, const CSSType& value, ASCIILiteral separator)
 {
     auto swappedSeparator = ""_s;
     auto caller = WTF::makeVisitor(
@@ -72,79 +74,79 @@ template<typename CSSType> void serializationForCSSOnTupleLike(StringBuilder& bu
             if (!element)
                 return;
             builder.append(std::exchange(swappedSeparator, separator));
-            serializationForCSS(builder, *element);
+            serializationForCSS(builder, context, *element);
         },
         [&]<typename T>(const Markable<T>& element) {
             if (!element)
                 return;
             builder.append(std::exchange(swappedSeparator, separator));
-            serializationForCSS(builder, *element);
+            serializationForCSS(builder, context, *element);
         },
         [&](const auto& element) {
             builder.append(std::exchange(swappedSeparator, separator));
-            serializationForCSS(builder, element);
+            serializationForCSS(builder, context, element);
         }
     );
 
     WTF::apply([&](const auto& ...x) { (..., caller(x)); }, value);
 }
 
-template<typename CSSType> void serializationForCSSOnRangeLike(StringBuilder& builder, const CSSType& value, ASCIILiteral separator)
+template<typename CSSType> void serializationForCSSOnRangeLike(StringBuilder& builder, const SerializationContext& context, const CSSType& value, ASCIILiteral separator)
 {
     auto swappedSeparator = ""_s;
     for (const auto& element : value) {
         builder.append(std::exchange(swappedSeparator, separator));
-        serializationForCSS(builder, element);
+        serializationForCSS(builder, context, element);
     }
 }
 
-template<typename CSSType> void serializationForCSSOnVariantLike(StringBuilder& builder, const CSSType& value)
+template<typename CSSType> void serializationForCSSOnVariantLike(StringBuilder& builder, const SerializationContext& context, const CSSType& value)
 {
-    WTF::switchOn(value, [&](const auto& alternative) { serializationForCSS(builder, alternative); });
+    WTF::switchOn(value, [&](const auto& alternative) { serializationForCSS(builder, context, alternative); });
 }
 
 // Constrained for `TreatAsEmptyLike`.
 template<EmptyLike CSSType> struct Serialize<CSSType> {
-    void operator()(StringBuilder&, const CSSType&)
+    void operator()(StringBuilder&, const SerializationContext&, const CSSType&)
     {
     }
 };
 
 // Constrained for `TreatAsOptionalLike`.
 template<OptionalLike CSSType> struct Serialize<CSSType> {
-    void operator()(StringBuilder& builder, const CSSType& value)
+    void operator()(StringBuilder& builder, const SerializationContext& context, const CSSType& value)
     {
-        serializationForCSSOnOptionalLike(builder, value);
+        serializationForCSSOnOptionalLike(builder, context, value);
     }
 };
 
 // Constrained for `TreatAsTupleLike`.
 template<TupleLike CSSType> struct Serialize<CSSType> {
-    void operator()(StringBuilder& builder, const CSSType& value)
+    void operator()(StringBuilder& builder, const SerializationContext& context, const CSSType& value)
     {
-        serializationForCSSOnTupleLike(builder, value, SerializationSeparator<CSSType>);
+        serializationForCSSOnTupleLike(builder, context, value, SerializationSeparator<CSSType>);
     }
 };
 
 // Constrained for `TreatAsRangeLike`.
 template<RangeLike CSSType> struct Serialize<CSSType> {
-    void operator()(StringBuilder& builder, const CSSType& value)
+    void operator()(StringBuilder& builder, const SerializationContext& context, const CSSType& value)
     {
-        serializationForCSSOnRangeLike(builder, value, SerializationSeparator<CSSType>);
+        serializationForCSSOnRangeLike(builder, context, value, SerializationSeparator<CSSType>);
     }
 };
 
 // Constrained for `TreatAsVariantLike`.
 template<VariantLike CSSType> struct Serialize<CSSType> {
-    void operator()(StringBuilder& builder, const CSSType& value)
+    void operator()(StringBuilder& builder, const SerializationContext& context, const CSSType& value)
     {
-        serializationForCSSOnVariantLike(builder, value);
+        serializationForCSSOnVariantLike(builder, context, value);
     }
 };
 
 // Specialization for `Constant`.
 template<CSSValueID C> struct Serialize<Constant<C>> {
-    void operator()(StringBuilder& builder, const Constant<C>& value)
+    void operator()(StringBuilder& builder, const SerializationContext&, const Constant<C>& value)
     {
         builder.append(nameLiteralForSerialization(value.value));
     }
@@ -152,38 +154,38 @@ template<CSSValueID C> struct Serialize<Constant<C>> {
 
 // Specialization for `CustomIdentifier`.
 template<> struct Serialize<CustomIdentifier> {
-    void operator()(StringBuilder&, const CustomIdentifier&);
+    void operator()(StringBuilder&, const SerializationContext&, const CustomIdentifier&);
 };
 
 // Specialization for `FunctionNotation`.
 template<CSSValueID Name, typename CSSType> struct Serialize<FunctionNotation<Name, CSSType>> {
-    void operator()(StringBuilder& builder, const FunctionNotation<Name, CSSType>& value)
+    void operator()(StringBuilder& builder, const SerializationContext& context, const FunctionNotation<Name, CSSType>& value)
     {
         builder.append(nameLiteralForSerialization(value.name), '(');
-        serializationForCSS(builder, value.parameters);
+        serializationForCSS(builder, context, value.parameters);
         builder.append(')');
     }
 };
 
 // Specialization for `MinimallySerializingSpaceSeparatedRectEdges`.
 template<typename CSSType> struct Serialize<MinimallySerializingSpaceSeparatedRectEdges<CSSType>> {
-    void operator()(StringBuilder& builder, const MinimallySerializingSpaceSeparatedRectEdges<CSSType>& value)
+    void operator()(StringBuilder& builder, const SerializationContext& context, const MinimallySerializingSpaceSeparatedRectEdges<CSSType>& value)
     {
         constexpr auto separator = SerializationSeparator<MinimallySerializingSpaceSeparatedRectEdges<CSSType>>;
 
         if (value.left() != value.right()) {
-            serializationForCSSOnTupleLike(builder, std::tuple { value.top(), value.right(), value.bottom(), value.left() }, separator);
+            serializationForCSSOnTupleLike(builder, context, std::tuple { value.top(), value.right(), value.bottom(), value.left() }, separator);
             return;
         }
         if (value.bottom() != value.top()) {
-            serializationForCSSOnTupleLike(builder, std::tuple { value.top(), value.right(), value.bottom() }, separator);
+            serializationForCSSOnTupleLike(builder, context, std::tuple { value.top(), value.right(), value.bottom() }, separator);
             return;
         }
         if (value.right() != value.top()) {
-            serializationForCSSOnTupleLike(builder, std::tuple { value.top(), value.right() }, separator);
+            serializationForCSSOnTupleLike(builder, context, std::tuple { value.top(), value.right() }, separator);
             return;
         }
-        serializationForCSS(builder, value.top());
+        serializationForCSS(builder, context, value.top());
     }
 };
 

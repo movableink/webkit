@@ -159,7 +159,7 @@ public:
     bool canAccessRules() const;
 
     String debugDescription() const final;
-    String cssTextWithReplacementURLs(const UncheckedKeyHashMap<String, String>&, const UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String>&);
+    String cssText(const CSS::SerializationContext&);
     void getChildStyleSheets(UncheckedKeyHashSet<RefPtr<CSSStyleSheet>>&);
 
     bool isDetached() const;

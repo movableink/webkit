@@ -49,7 +49,7 @@ public:
     const CSSPrimitiveValue& key() const { return m_key; }
     const CSSValue& color() const { return m_color; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
     bool equals(const CSSFontPaletteValuesOverrideColorsValue&) const;
 

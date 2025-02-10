@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -16,7 +16,6 @@
  * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
@@ -25,41 +24,26 @@
 
 #pragma once
 
-#include "CSSValueTypes.h"
-#include "Color.h"
-#include <wtf/Forward.h>
+#include <wtf/HashMap.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+class CSSStyleSheet;
+
 namespace CSS {
 
-struct PlatformColorResolutionState;
+struct SerializationContext {
+    SerializationContext();
+    SerializationContext(UncheckedKeyHashMap<String, String>&&, UncheckedKeyHashMap<Ref<CSSStyleSheet>, String>&&, bool);
+    ~SerializationContext();
 
-struct ResolvedColor {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
-
-    WebCore::Color value;
-
-    bool operator==(const ResolvedColor&) const = default;
+    UncheckedKeyHashMap<String, String> replacementURLStrings;
+    UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> replacementURLStringsForCSSStyleSheet;
+    bool shouldUseResolvedURLInCSSText = false;
 };
 
-inline WebCore::Color createColor(const ResolvedColor& unresolved, PlatformColorResolutionState&)
-{
-    return unresolved.value;
-}
-
-constexpr bool containsColorSchemeDependentColor(const ResolvedColor&)
-{
-    return false;
-}
-
-constexpr bool containsCurrentColor(const ResolvedColor&)
-{
-    return false;
-}
-
-template<> struct Serialize<ResolvedColor> { void operator()(StringBuilder&, const SerializationContext&, const ResolvedColor&); };
-template<> struct ComputedStyleDependenciesCollector<ResolvedColor> { constexpr void operator()(ComputedStyleDependencies&, const ResolvedColor&) { } };
-template<> struct CSSValueChildrenVisitor<ResolvedColor> { constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const ResolvedColor&) { return IterationStatus::Continue; } };
+WEBCORE_EXPORT const SerializationContext& defaultSerializationContext();
 
 } // namespace CSS
 } // namespace WebCore

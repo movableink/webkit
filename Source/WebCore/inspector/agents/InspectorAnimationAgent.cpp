@@ -32,6 +32,7 @@
 #include "BlendingKeyframes.h"
 #include "CSSAnimation.h"
 #include "CSSPropertyNames.h"
+#include "CSSSerializationContext.h"
 #include "CSSTransition.h"
 #include "CSSValue.h"
 #include "ComputedStyleExtractor.h"
@@ -161,12 +162,12 @@ static Ref<JSON::ArrayOf<Inspector::Protocol::Animation::Keyframe>> buildObjectF
                     [&] (CSSPropertyID cssPropertyId) {
                         stylePayloadBuilder.append(nameString(cssPropertyId), ": "_s);
                         if (auto value = computedStyleExtractor.valueForPropertyInStyle(style, cssPropertyId, renderer))
-                            stylePayloadBuilder.append(value->cssText());
+                            stylePayloadBuilder.append(value->cssText(CSS::defaultSerializationContext()));
                     },
                     [&] (const AtomString& customProperty) {
                         stylePayloadBuilder.append(customProperty, ": "_s);
                         if (auto value = computedStyleExtractor.customPropertyValue(customProperty))
-                            stylePayloadBuilder.append(value->cssText());
+                            stylePayloadBuilder.append(value->cssText(CSS::defaultSerializationContext()));
                     }
                 );
                 stylePayloadBuilder.append(';');
@@ -190,7 +191,7 @@ static Ref<JSON::ArrayOf<Inspector::Protocol::Animation::Keyframe>> buildObjectF
                 keyframePayload->setEasing(timingFunction->cssText());
 
             if (!parsedKeyframe.style->isEmpty())
-                keyframePayload->setStyle(parsedKeyframe.style->asText());
+                keyframePayload->setStyle(parsedKeyframe.style->asText(CSS::defaultSerializationContext()));
 
             keyframesPayload->addItem(WTFMove(keyframePayload));
         }

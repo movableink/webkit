@@ -40,9 +40,9 @@ CSSColorSchemeValue::CSSColorSchemeValue(CSS::ColorScheme colorScheme)
 {
 }
 
-String CSSColorSchemeValue::customCSSText() const
+String CSSColorSchemeValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_colorScheme);
+    return CSS::serializationForCSS(context, m_colorScheme);
 }
 
 bool CSSColorSchemeValue::equals(const CSSColorSchemeValue& other) const

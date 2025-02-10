@@ -32,6 +32,7 @@
 #include "config.h"
 #include "HTMLSrcsetParser.h"
 
+#include "CSSSerializationContext.h"
 #include "Element.h"
 #include "HTMLParserIdioms.h"
 #include <wtf/ListHashSet.h>
@@ -229,9 +230,9 @@ void getURLsFromSrcsetAttribute(const Element& element, StringView attribute, Li
     }
 }
 
-String replaceURLsInSrcsetAttribute(const Element& element, StringView attribute, const UncheckedKeyHashMap<String, String>& replacementURLStrings)
+String replaceURLsInSrcsetAttribute(const Element& element, StringView attribute, const CSS::SerializationContext& context)
 {
-    if (replacementURLStrings.isEmpty())
+    if (context.replacementURLStrings.isEmpty())
         return attribute.toString();
 
     auto imageCandidates = parseImageCandidatesFromSrcsetAttribute(attribute);
@@ -241,7 +242,7 @@ String replaceURLsInSrcsetAttribute(const Element& element, StringView attribute
             result.append(", "_s);
 
         auto resolvedURLString = element.resolveURLStringIfNeeded(candidate.string.toString());
-        auto replacementURLString = replacementURLStrings.get(resolvedURLString);
+        auto replacementURLString = context.replacementURLStrings.get(resolvedURLString);
         if (!replacementURLString.isEmpty())
             result.append(replacementURLString);
         else

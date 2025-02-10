@@ -43,9 +43,9 @@ CSSDynamicRangeLimitValue::CSSDynamicRangeLimitValue(CSS::DynamicRangeLimit&& dy
 {
 }
 
-String CSSDynamicRangeLimitValue::customCSSText() const
+String CSSDynamicRangeLimitValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_dynamicRangeLimit);
+    return CSS::serializationForCSS(context, m_dynamicRangeLimit);
 }
 
 bool CSSDynamicRangeLimitValue::equals(const CSSDynamicRangeLimitValue& other) const

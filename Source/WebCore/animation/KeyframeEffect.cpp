@@ -37,6 +37,7 @@
 #include "CSSPropertyParserConsumer+Animations.h"
 #include "CSSPropertyParserConsumer+Easing.h"
 #include "CSSSelector.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleDeclaration.h"
 #include "CSSTransition.h"
 #include "CSSUnitValue.h"
@@ -920,7 +921,7 @@ auto KeyframeEffect::getKeyframes() -> Vector<ComputedKeyframe>
                 if (cssPropertyId == CSSPropertyCustom)
                     continue;
                 if (auto cssValue = parsedKeyframe.style->getPropertyCSSValue(cssPropertyId))
-                    stringValue = cssValue->cssText();
+                    stringValue = cssValue->cssText(CSS::defaultSerializationContext());
             }
             computedKeyframe.easing = timingFunctionForKeyframeAtIndex(i)->cssText();
             computedKeyframes.append(WTFMove(computedKeyframe));
@@ -1051,7 +1052,7 @@ auto KeyframeEffect::getKeyframes() -> Vector<ComputedKeyframe>
             }
             if (styleString.isEmpty()) {
                 if (auto cssValue = computedStyleExtractor.valueForPropertyInStyle(style, cssPropertyId, nullptr, ComputedStyleExtractor::PropertyValueType::Computed))
-                    styleString = cssValue->cssText();
+                    styleString = cssValue->cssText(CSS::defaultSerializationContext());
             }
             computedKeyframe.styleStrings.set(cssPropertyId, styleString);
         };
@@ -1072,7 +1073,7 @@ auto KeyframeEffect::getKeyframes() -> Vector<ComputedKeyframe>
             }
             if (styleString.isEmpty()) {
                 if (auto* cssValue = style.customPropertyValue(customProperty))
-                    styleString = cssValue->cssText();
+                    styleString = cssValue->cssText(CSS::defaultSerializationContext());
             }
             computedKeyframe.customStyleStrings.set(customProperty, styleString);
         };

@@ -47,7 +47,7 @@ public:
         return adoptRef(*new CSSScrollValue(WTFMove(scroller), WTFMove(axis)));
     }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
     const RefPtr<CSSValue>& scroller() const { return m_scroller; }
     const RefPtr<CSSValue>& axis() const { return m_axis; }

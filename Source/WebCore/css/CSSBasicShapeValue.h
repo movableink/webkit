@@ -44,7 +44,7 @@ public:
 
     const CSS::BasicShape& shape() const { return m_shape; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSBasicShapeValue&) const;
 
     IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;

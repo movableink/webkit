@@ -90,9 +90,9 @@ bool containsColorSchemeDependentColor(const ColorMix& unresolved)
         || containsColorSchemeDependentColor(unresolved.mixComponents2.color);
 }
 
-void Serialize<ColorMix>::operator()(StringBuilder& builder, const ColorMix& value)
+void Serialize<ColorMix>::operator()(StringBuilder& builder, const SerializationContext& context, const ColorMix& value)
 {
-    serializationForCSSColorMix(builder, value);
+    serializationForCSSColorMix(builder, context, value);
 }
 
 void ComputedStyleDependenciesCollector<ColorMix>::operator()(ComputedStyleDependencies& dependencies, const ColorMix& value)

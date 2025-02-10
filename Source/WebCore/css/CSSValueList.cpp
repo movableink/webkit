@@ -216,21 +216,21 @@ CSSValueListBuilder CSSValueContainingVector::copyValues() const
     });
 }
 
-void CSSValueContainingVector::serializeItems(StringBuilder& builder) const
+void CSSValueContainingVector::serializeItems(StringBuilder& builder, const CSS::SerializationContext& context) const
 {
-    builder.append(interleave(*this, [](auto& value) { return value.cssText(); }, separatorCSSText()));
+    builder.append(interleave(*this, [&](auto& value) { return value.cssText(context); }, separatorCSSText()));
 }
 
-String CSSValueContainingVector::serializeItems() const
+String CSSValueContainingVector::serializeItems(const CSS::SerializationContext& context) const
 {
     StringBuilder result;
-    serializeItems(result);
+    serializeItems(result, context);
     return result.toString();
 }
 
-String CSSValueList::customCSSText() const
+String CSSValueList::customCSSText(const CSS::SerializationContext& context) const
 {
-    return serializeItems();
+    return serializeItems(context);
 }
 
 bool CSSValueContainingVector::itemsEqual(const CSSValueContainingVector& other) const
@@ -273,18 +273,6 @@ bool CSSValueContainingVector::customTraverseSubresources(NOESCAPE const Functio
             return true;
     }
     return false;
-}
-
-void CSSValueContainingVector::customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>& replacementURLStrings)
-{
-    for (auto& value : *this)
-        const_cast<CSSValue&>(value).setReplacementURLForSubresources(replacementURLStrings);
-}
-
-void CSSValueContainingVector::customClearReplacementURLForSubresources()
-{
-    for (auto& value : *this)
-        const_cast<CSSValue&>(value).clearReplacementURLForSubresources();
 }
 
 IterationStatus CSSValueContainingVector::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const

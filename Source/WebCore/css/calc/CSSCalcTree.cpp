@@ -27,6 +27,7 @@
 #include "CSSCalcTree.h"
 
 #include "CSSCalcTree+Serialization.h"
+#include "CSSSerializationContext.h"
 #include "CSSUnits.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -448,7 +449,7 @@ std::optional<Type> toType(const ContainerProgress&)
 
 TextStream& operator<<(TextStream& ts, Tree tree)
 {
-    return ts << "CSSCalc::Tree [ " << serializationForCSS(tree, { .range = CSS::All }) << " ]";
+    return ts << "CSSCalc::Tree [ " << serializationForCSS(tree, { .range = CSS::All, .serializationContext = CSS::defaultSerializationContext() }) << " ]";
 }
 
 } // namespace CSSCalc

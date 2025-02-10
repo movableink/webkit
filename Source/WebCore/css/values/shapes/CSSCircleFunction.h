@@ -54,7 +54,7 @@ template<size_t I> const auto& get(const Circle& value)
         return value.position;
 }
 
-template<> struct Serialize<Circle> { void operator()(StringBuilder&, const Circle&); };
+template<> struct Serialize<Circle> { void operator()(StringBuilder&, const SerializationContext&, const Circle&); };
 
 } // namespace CSS
 } // namespace WebCore

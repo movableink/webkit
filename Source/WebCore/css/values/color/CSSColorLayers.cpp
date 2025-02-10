@@ -63,9 +63,9 @@ bool containsColorSchemeDependentColor(const ColorLayers& value)
     });
 }
 
-void Serialize<ColorLayers>::operator()(StringBuilder& builder, const ColorLayers& value)
+void Serialize<ColorLayers>::operator()(StringBuilder& builder, const SerializationContext& context, const ColorLayers& value)
 {
-    serializationForCSSColorLayers(builder, value);
+    serializationForCSSColorLayers(builder, context, value);
 }
 
 void ComputedStyleDependenciesCollector<ColorLayers>::operator()(ComputedStyleDependencies& dependencies, const ColorLayers& value)

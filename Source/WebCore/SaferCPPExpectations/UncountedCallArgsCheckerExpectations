@@ -489,7 +489,6 @@ css/ComputedStyleExtractor.cpp
 css/DeprecatedCSSOMPrimitiveValue.h
 css/DeprecatedCSSOMRGBColor.h
 css/DeprecatedCSSOMRect.h
-css/DeprecatedCSSOMValue.h
 css/FontFace.cpp
 css/FontFaceSet.cpp
 css/ImmutableStyleProperties.cpp

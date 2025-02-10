@@ -35,7 +35,7 @@ public:
         return adoptRef(*new CSSFontValue);
     }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
     bool equals(const CSSFontValue&) const;
 

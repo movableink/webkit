@@ -75,7 +75,7 @@ struct UnevaluatedCalcBase {
 
     bool requiresConversionData() const;
 
-    void serializationForCSS(StringBuilder&) const;
+    void serializationForCSS(StringBuilder&, const CSS::SerializationContext&) const;
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const;
     IterationStatus visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
@@ -181,9 +181,9 @@ template<typename T> decltype(auto) simplifyUnevaluatedCalc(const std::optional<
 // MARK: - Serialization
 
 template<Calc T> struct Serialize<T> {
-    inline void operator()(StringBuilder& builder, const T& value)
+    inline void operator()(StringBuilder& builder, const SerializationContext& context, const T& value)
     {
-        value.serializationForCSS(builder);
+        value.serializationForCSS(builder, context);
     }
 };
 

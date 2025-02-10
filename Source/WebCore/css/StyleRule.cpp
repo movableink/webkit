@@ -40,6 +40,7 @@
 #include "CSSPositionTryRule.h"
 #include "CSSPropertyRule.h"
 #include "CSSScopeRule.h"
+#include "CSSSerializationContext.h"
 #include "CSSStartingStyleRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
@@ -341,9 +342,7 @@ Vector<Ref<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorCompo
 
 String StyleRule::debugDescription() const
 {
-    StringBuilder builder;
-    builder.append("StyleRule ["_s, m_properties->asText(), ']');
-    return builder.toString();
+    return makeString("StyleRule ["_s, m_properties->asText(CSS::defaultSerializationContext()), ']');
 }
 
 StyleRuleWithNesting::~StyleRuleWithNesting() = default;
@@ -356,7 +355,7 @@ Ref<StyleRuleWithNesting> StyleRuleWithNesting::copy() const
 String StyleRuleWithNesting::debugDescription() const
 {
     StringBuilder builder;
-    builder.append("StyleRuleWithNesting ["_s, properties().asText(), " "_s);
+    builder.append("StyleRuleWithNesting ["_s, properties().asText(CSS::defaultSerializationContext()), " "_s);
     for (const auto& rule : m_nestedRules)
         builder.append(rule->debugDescription());
     builder.append(']');
@@ -404,9 +403,7 @@ StyleRuleNestedDeclarations::StyleRuleNestedDeclarations(Ref<StyleProperties>&& 
 
 String StyleRuleNestedDeclarations::debugDescription() const
 {
-    StringBuilder builder;
-    builder.append("StyleRuleNestedDeclarations ["_s, properties().asText(), ']');
-    return builder.toString();
+    return makeString("StyleRuleNestedDeclarations ["_s, properties().asText(CSS::defaultSerializationContext()), ']');
 }
 
 StyleRuleFontFace::StyleRuleFontFace(Ref<StyleProperties>&& properties)

@@ -63,7 +63,7 @@ WebCore::Color createColor(const ColorMix&, PlatformColorResolutionState&);
 bool containsCurrentColor(const ColorMix&);
 bool containsColorSchemeDependentColor(const ColorMix&);
 
-template<> struct Serialize<ColorMix> { void operator()(StringBuilder&, const ColorMix&); };
+template<> struct Serialize<ColorMix> { void operator()(StringBuilder&, const SerializationContext&, const ColorMix&); };
 template<> struct ComputedStyleDependenciesCollector<ColorMix> { void operator()(ComputedStyleDependencies&, const ColorMix&); };
 template<> struct CSSValueChildrenVisitor<ColorMix> { IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const ColorMix&); };
 

@@ -45,9 +45,9 @@ CSSAppleColorFilterPropertyValue::CSSAppleColorFilterPropertyValue(CSS::AppleCol
 {
 }
 
-String CSSAppleColorFilterPropertyValue::customCSSText() const
+String CSSAppleColorFilterPropertyValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_filter);
+    return CSS::serializationForCSS(context, m_filter);
 }
 
 bool CSSAppleColorFilterPropertyValue::equals(const CSSAppleColorFilterPropertyValue& other) const

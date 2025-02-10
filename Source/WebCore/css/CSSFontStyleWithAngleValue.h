@@ -39,7 +39,7 @@ public:
 
     const ObliqueAngle& obliqueAngle() const { return m_obliqueAngle; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSFontStyleWithAngleValue&) const;
     IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 

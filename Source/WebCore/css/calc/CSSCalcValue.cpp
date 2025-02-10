@@ -196,10 +196,11 @@ void CSSCalcValue::collectComputedStyleDependencies(ComputedStyleDependencies& d
     CSSCalc::collectComputedStyleDependencies(m_tree, dependencies);
 }
 
-String CSSCalcValue::customCSSText() const
+String CSSCalcValue::customCSSText(const CSS::SerializationContext& context) const
 {
     auto options = CSSCalc::SerializationOptions {
         .range = m_range,
+        .serializationContext = context,
     };
     return CSSCalc::serializationForCSS(m_tree, options);
 }
@@ -325,7 +326,7 @@ void CSSCalcValue::dump(TextStream& ts) const
 
     multilineStream.dumpProperty("minimum value", m_range.min);
     multilineStream.dumpProperty("maximum value", m_range.max);
-    multilineStream.dumpProperty("expression", customCSSText());
+    multilineStream.dumpProperty("expression", customCSSText(CSS::defaultSerializationContext()));
 
     ts << multilineStream.release();
     ts << ")\n";

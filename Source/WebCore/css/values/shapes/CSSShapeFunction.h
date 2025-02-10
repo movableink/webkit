@@ -58,7 +58,7 @@ struct ToPosition {
 };
 DEFINE_TYPE_WRAPPER_GET(ToPosition, offset);
 
-template<> struct Serialize<ToPosition> { void operator()(StringBuilder&, const ToPosition&); };
+template<> struct Serialize<ToPosition> { void operator()(StringBuilder&, const SerializationContext&, const ToPosition&); };
 
 // <by-coordinate-pair> = by <coordinate-pair>
 struct ByCoordinatePair {
@@ -70,7 +70,7 @@ struct ByCoordinatePair {
 };
 DEFINE_TYPE_WRAPPER_GET(ByCoordinatePair, offset);
 
-template<> struct Serialize<ByCoordinatePair> { void operator()(StringBuilder&, const ByCoordinatePair&); };
+template<> struct Serialize<ByCoordinatePair> { void operator()(StringBuilder&, const SerializationContext&, const ByCoordinatePair&); };
 
 // <relative-control-point> = [<coordinate-pair> [from [start | end | origin]]?]
 // Specified https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
@@ -89,7 +89,7 @@ template<size_t I> const auto& get(const RelativeControlPoint& value)
     if constexpr (I == 1)
         return value.anchor;
 }
-template<> struct Serialize<RelativeControlPoint> { void operator()(StringBuilder&, const RelativeControlPoint&); };
+template<> struct Serialize<RelativeControlPoint> { void operator()(StringBuilder&, const SerializationContext&, const RelativeControlPoint&); };
 
 // <to-control-point> = [<position> | <relative-control-point>]
 // Specified https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
@@ -108,7 +108,7 @@ template<size_t I> const auto& get(const AbsoluteControlPoint& value)
     if constexpr (I == 1)
         return value.anchor;
 }
-template<> struct Serialize<AbsoluteControlPoint> { void operator()(StringBuilder&, const AbsoluteControlPoint&); };
+template<> struct Serialize<AbsoluteControlPoint> { void operator()(StringBuilder&, const SerializationContext&, const AbsoluteControlPoint&); };
 
 // <move-command> = move [to <position>] | [by <coordinate-pair>]
 // https://drafts.csswg.org/css-shapes-2/#typedef-shape-move-command
@@ -123,7 +123,7 @@ struct MoveCommand {
 };
 DEFINE_TYPE_WRAPPER_GET(MoveCommand, toBy);
 
-template<> struct Serialize<MoveCommand> { void operator()(StringBuilder&, const MoveCommand&); };
+template<> struct Serialize<MoveCommand> { void operator()(StringBuilder&, const SerializationContext&, const MoveCommand&); };
 
 // <line-command> = line [to <position>] | [by <coordinate-pair>]
 // https://drafts.csswg.org/css-shapes-2/#typedef-shape-line-command
@@ -138,7 +138,7 @@ struct LineCommand {
 };
 DEFINE_TYPE_WRAPPER_GET(LineCommand, toBy);
 
-template<> struct Serialize<LineCommand> { void operator()(StringBuilder&, const LineCommand&); };
+template<> struct Serialize<LineCommand> { void operator()(StringBuilder&, const SerializationContext&, const LineCommand&); };
 
 // <horizontal-line-command> = hline [ to [ <length-percentage> | left | center | right | x-start | x-end ] | by <length-percentage> ]
 // https://drafts.csswg.org/css-shapes-2/#typedef-shape-hv-line-command
@@ -168,9 +168,9 @@ DEFINE_TYPE_WRAPPER_GET(HLineCommand::By, offset);
 DEFINE_TYPE_WRAPPER_GET(HLineCommand::To, offset);
 DEFINE_TYPE_WRAPPER_GET(HLineCommand, toBy);
 
-template<> struct Serialize<HLineCommand::To> { void operator()(StringBuilder&, const HLineCommand::To&); };
-template<> struct Serialize<HLineCommand::By> { void operator()(StringBuilder&, const HLineCommand::By&); };
-template<> struct Serialize<HLineCommand> { void operator()(StringBuilder&, const HLineCommand&); };
+template<> struct Serialize<HLineCommand::To> { void operator()(StringBuilder&, const SerializationContext&, const HLineCommand::To&); };
+template<> struct Serialize<HLineCommand::By> { void operator()(StringBuilder&, const SerializationContext&, const HLineCommand::By&); };
+template<> struct Serialize<HLineCommand> { void operator()(StringBuilder&, const SerializationContext&, const HLineCommand&); };
 
 // <vertical-line-command> = vline [ to [ <length-percentage> | top | center | bottom | y-start | y-end ] | by <length-percentage> ]
 // https://drafts.csswg.org/css-shapes-2/#typedef-shape-hv-line-command
@@ -199,9 +199,9 @@ DEFINE_TYPE_WRAPPER_GET(VLineCommand::By, offset);
 DEFINE_TYPE_WRAPPER_GET(VLineCommand::To, offset);
 DEFINE_TYPE_WRAPPER_GET(VLineCommand, toBy);
 
-template<> struct Serialize<VLineCommand::To> { void operator()(StringBuilder&, const VLineCommand::To&); };
-template<> struct Serialize<VLineCommand::By> { void operator()(StringBuilder&, const VLineCommand::By&); };
-template<> struct Serialize<VLineCommand> { void operator()(StringBuilder&, const VLineCommand&); };
+template<> struct Serialize<VLineCommand::To> { void operator()(StringBuilder&, const SerializationContext&, const VLineCommand::To&); };
+template<> struct Serialize<VLineCommand::By> { void operator()(StringBuilder&, const SerializationContext&, const VLineCommand::By&); };
+template<> struct Serialize<VLineCommand> { void operator()(StringBuilder&, const SerializationContext&, const VLineCommand&); };
 
 // <curve-command> = curve [to <position> with <to-control-point> [/ <to-control-point>]?]
 //                       | [by <coordinate-pair> with <relative-control-point> [/ <relative-control-point>]?]
@@ -251,9 +251,9 @@ template<size_t I> const auto& get(const CurveCommand::By& value)
 }
 DEFINE_TYPE_WRAPPER_GET(CurveCommand, toBy);
 
-template<> struct Serialize<CurveCommand::To> { void operator()(StringBuilder&, const CurveCommand::To&); };
-template<> struct Serialize<CurveCommand::By> { void operator()(StringBuilder&, const CurveCommand::By&); };
-template<> struct Serialize<CurveCommand> { void operator()(StringBuilder&, const CurveCommand&); };
+template<> struct Serialize<CurveCommand::To> { void operator()(StringBuilder&, const SerializationContext&, const CurveCommand::To&); };
+template<> struct Serialize<CurveCommand::By> { void operator()(StringBuilder&, const SerializationContext&, const CurveCommand::By&); };
+template<> struct Serialize<CurveCommand> { void operator()(StringBuilder&, const SerializationContext&, const CurveCommand&); };
 
 // <smooth-command> = smooth [to <position> [with <to-control-point>]?]
 //                         | [by <coordinate-pair> [with <relative-control-point>]?]
@@ -297,9 +297,9 @@ template<size_t I> const auto& get(const SmoothCommand::By& value)
 }
 DEFINE_TYPE_WRAPPER_GET(SmoothCommand, toBy);
 
-template<> struct Serialize<SmoothCommand::To> { void operator()(StringBuilder&, const SmoothCommand::To&); };
-template<> struct Serialize<SmoothCommand::By> { void operator()(StringBuilder&, const SmoothCommand::By&); };
-template<> struct Serialize<SmoothCommand> { void operator()(StringBuilder&, const SmoothCommand&); };
+template<> struct Serialize<SmoothCommand::To> { void operator()(StringBuilder&, const SerializationContext&, const SmoothCommand::To&); };
+template<> struct Serialize<SmoothCommand::By> { void operator()(StringBuilder&, const SerializationContext&, const SmoothCommand::By&); };
+template<> struct Serialize<SmoothCommand> { void operator()(StringBuilder&, const SerializationContext&, const SmoothCommand&); };
 
 // <arc-command> = arc [to <position>] | [by <coordinate-pair>] of <length-percentage>{1,2} [<arc-sweep>? || <arc-size>? || [rotate <angle>]?]
 // https://drafts.csswg.org/css-shapes-2/#typedef-shape-arc-command
@@ -332,7 +332,7 @@ template<size_t I> const auto& get(const ArcCommand& value)
     if constexpr (I == 4)
         return value.rotation;
 }
-template<> struct Serialize<ArcCommand> { void operator()(StringBuilder&, const ArcCommand&); };
+template<> struct Serialize<ArcCommand> { void operator()(StringBuilder&, const SerializationContext&, const ArcCommand&); };
 
 // <close> = close
 // https://drafts.csswg.org/css-shapes-2/#valdef-shape-close
@@ -366,7 +366,7 @@ template<size_t I> const auto& get(const Shape& value)
         return value.commands;
 }
 
-template<> struct Serialize<Shape> { void operator()(StringBuilder&, const Shape&); };
+template<> struct Serialize<Shape> { void operator()(StringBuilder&, const SerializationContext&, const Shape&); };
 
 } // namespace CSS
 } // namespace WebCore

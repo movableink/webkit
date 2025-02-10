@@ -103,16 +103,16 @@ String CSSImportRule::cssText() const
     return cssTextInternal(m_importRule->href());
 }
 
-String CSSImportRule::cssTextWithReplacementURLs(const UncheckedKeyHashMap<String, String>& replacementURLStrings, const UncheckedKeyHashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
+String CSSImportRule::cssText(const CSS::SerializationContext& context) const
 {
     if (RefPtr sheet = styleSheet()) {
-        auto urlString = replacementURLStringsForCSSStyleSheet.get(sheet);
+        auto urlString = context.replacementURLStringsForCSSStyleSheet.get(*sheet);
         if (!urlString.isEmpty())
             return cssTextInternal(urlString);
     }
 
     auto urlString = m_importRule->href();
-    auto replacementURLString = replacementURLStrings.get(urlString);
+    auto replacementURLString = context.replacementURLStrings.get(urlString);
     return replacementURLString.isEmpty() ? cssTextInternal(urlString) : cssTextInternal(replacementURLString);
 }
 

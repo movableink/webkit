@@ -80,12 +80,12 @@ template<size_t I, typename T, typename K, auto shouldSerializeKeyword> const au
 }
 
 template<typename T, typename K, auto shouldSerializeKeyword> struct Serialize<StepsEasingParameters::Kind<T, K, shouldSerializeKeyword>> {
-    void operator()(StringBuilder& builder, const StepsEasingParameters::Kind<T, K, shouldSerializeKeyword>& value)
+    void operator()(StringBuilder& builder, const SerializationContext& context, const StepsEasingParameters::Kind<T, K, shouldSerializeKeyword>& value)
     {
-        serializationForCSS(builder, value.steps);
+        serializationForCSS(builder, context, value.steps);
         if constexpr (shouldSerializeKeyword == StepsEasingParameters::ShouldSerializeKeyword::Yes) {
             builder.append(", "_s);
-            serializationForCSS(builder, value.keyword);
+            serializationForCSS(builder, context, value.keyword);
         }
     }
 };

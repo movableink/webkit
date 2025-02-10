@@ -79,9 +79,9 @@ template<typename D> constexpr bool containsCurrentColor(const AbsoluteColor<D>&
 }
 
 template<typename D> struct Serialize<AbsoluteColor<D>> {
-    void operator()(StringBuilder& builder, const AbsoluteColor<D>& value)
+    void operator()(StringBuilder& builder, const SerializationContext& context, const AbsoluteColor<D>& value)
     {
-        serializationForCSSAbsoluteColor(builder, value);
+        serializationForCSSAbsoluteColor(builder, context, value);
     }
 };
 

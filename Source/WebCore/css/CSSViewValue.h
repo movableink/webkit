@@ -47,7 +47,7 @@ public:
         return adoptRef(*new CSSViewValue(WTFMove(axis), WTFMove(startInset), WTFMove(endInset)));
     }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
     const RefPtr<CSSValue>& axis() const { return m_axis; }
     const RefPtr<CSSValue>& startInset() const { return m_startInset; }

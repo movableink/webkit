@@ -24,6 +24,7 @@
 
 #include "CSSParser.h"
 #include "CSSSelector.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleSheet.h"
 #include "CommonAtomStrings.h"
 #include "Document.h"
@@ -79,7 +80,7 @@ String CSSPageRule::cssText() const
 {
     auto selector = selectorText();
     auto optionalSpace = selector.isEmpty() ? ""_s : " "_s;
-    if (auto declarations = m_pageRule->properties().asText(); !declarations.isEmpty())
+    if (auto declarations = m_pageRule->properties().asText(CSS::defaultSerializationContext()); !declarations.isEmpty())
         return makeString("@page"_s, optionalSpace, selector, " { "_s, declarations, " }"_s);
     return makeString("@page"_s, optionalSpace, selector, " { }"_s);
 }
