@@ -1,4 +1,19 @@
 =================
+WPE WebKit 2.47.4
+=================
+
+What's new in WPE WebKit 2.47.4?
+
+  - Add support for the Cookie Store API.
+  - Add initial support for per-element audio output selection.
+  - Add debuging aids to visualize damage rectangles.
+  - Add documentation about how to use the remote web inspector.
+  - Enable WebDriver BiDi as an experimental feature.
+  - Remove support for GLib versions older than 2.70.
+  - Fix a crash when enabling Skia CPU rendering.
+  - Fix several crashes and rendering issues.
+
+=================
 WPE WebKit 2.47.3
 =================
 
