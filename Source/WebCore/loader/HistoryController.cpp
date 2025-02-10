@@ -347,10 +347,11 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
     // <rdar://problem/3951283> can view pages from the back/forward cache that should be disallowed by Parental Controls
     // Ultimately, history item navigations should go through the policy delegate. That's covered in:
     // <rdar://problem/3979539> back/forward cache navigations should consult policy delegate
-    RefPtr page = m_frame->page();
+    Ref frame = m_frame.get();
+    RefPtr page = frame->page();
     if (!page)
         return;
-    if (!m_frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem))
+    if (!frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem))
         return;
 
     Vector<FrameToNavigate> framesToNavigate;
@@ -363,7 +364,7 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
     // - plus, it only makes sense for the top level of the operation through the frame tree,
     // as opposed to happening for some/one of the page commits that might happen soon
     CheckedRef backForward = page->backForward();
-    RefPtr currentItem = backForward->currentItem(m_frame->frameID());
+    RefPtr currentItem = backForward->currentItem(frame->frameID());
     backForward->setProvisionalItem(targetItem);
 
     // First set the provisional item of any frames that are not actually navigating.
