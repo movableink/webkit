@@ -9579,7 +9579,21 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
 
     case StringUse: {
         ASSERT(node->arrayMode().type() == Array::Contiguous);
+#if USE(JSVALUE32_64)
+        SpeculateCellOperand searchElement(this, searchElementEdge);
 
+        GPRReg searchElementGPR = searchElement.gpr();
+
+        speculateString(searchElementEdge, searchElementGPR);
+
+        flushRegisters();
+
+        callOperation(operationArrayIndexOfString, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementGPR, indexGPR);
+
+        strictInt32Result(lengthGPR, node);
+
+        return;
+#else
         SpeculateCellOperand searchElement(this, searchElementEdge);
         GPRReg searchElementGPR = searchElement.gpr();
         speculateString(searchElementEdge, searchElementGPR);
@@ -9632,6 +9646,7 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
             JumpList falseCase;
 
             loadPtr(BaseIndex(storageGPR, indexGPR, TimesEight), leftStringGPR);
+            falseCase.append(branchIfNotCell(leftStringGPR));
             falseCase.append(branchIfNotString(leftStringGPR));
 
             loadPtr(BaseIndex(storageGPR, indexGPR, TimesEight, PayloadOffset), leftStringGPR);
@@ -9687,6 +9702,7 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
         strictInt32Result(indexGPR, node);
 
         return;
+#endif
     }
 
     case ObjectUse:
