@@ -302,7 +302,7 @@ bool RemoteLayerBackingStore::supportsPartialRepaint() const
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     // FIXME: Find a way to support partial repaint for backing store that
     // includes a display list without allowing unbounded memory growth.
-    if (m_parameters.includeDisplayList == IncludeDisplayList::Yes)
+    if (m_parameters.includeDisplayList == WebCore::IncludeDynamicContentScalingDisplayList::Yes)
         return false;
 #endif
 

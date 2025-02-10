@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,34 +25,32 @@
 
 #pragma once
 
-namespace WTF {
-class TextStream;
-}
+#include <WebCore/DestinationColorSpace.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/ImageBufferPixelFormat.h>
+#include <WebCore/RenderingMode.h>
 
-namespace WebCore {
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+#include <WebCore/DynamicContentScalingDisplayList.h>
+#endif
 
-enum class RenderingPurpose : uint8_t {
-    Unspecified,
-    Canvas,
-    DOM,
-    LayerBacking,
-    Snapshot,
-    ShareableSnapshot,
-    ShareableLocalSnapshot,
-    MediaPainting,
+#if ENABLE(GPU_PROCESS)
+
+namespace WebKit {
+
+struct RemoteImageBufferSetConfiguration {
+    WebCore::FloatSize logicalSize;
+    float resolutionScale { 1.0f };
+    WebCore::DestinationColorSpace colorSpace { WebCore::DestinationColorSpace::SRGB() };
+    WebCore::ImageBufferPixelFormat pixelFormat { WebCore::ImageBufferPixelFormat::BGRA8 };
+    WebCore::RenderingMode renderingMode { WebCore::RenderingMode::Unaccelerated };
+    WebCore::RenderingPurpose renderingPurpose { WebCore::RenderingPurpose::Unspecified };
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    WebCore::IncludeDynamicContentScalingDisplayList includeDisplayList { WebCore::IncludeDynamicContentScalingDisplayList::No };
+#endif
 };
 
-enum class RenderingMode : uint8_t {
-    Unaccelerated,
-    Accelerated,
-    PDFDocument,
-    DisplayList,
-};
+} // namespace WebKit
 
-enum class RenderingMethod : bool { Local };
-
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, RenderingPurpose);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, RenderingMode);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, RenderingMethod);
-
-} // namespace WebCore
+#endif // ENABLE(GPU_PROCESS)

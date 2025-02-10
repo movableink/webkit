@@ -3228,6 +3228,12 @@ bool RenderLayerBacking::isBitmapOnly() const
     return m_owningLayer.isBitmapOnly();
 }
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+bool RenderLayerBacking::layerAllowsDynamicContentScaling(const GraphicsLayer*) const
+{
+    return m_owningLayer.allowsDynamicContentScaling();
+}
+#endif
 
 bool RenderLayerBacking::isUnscaledBitmapOnly() const
 {

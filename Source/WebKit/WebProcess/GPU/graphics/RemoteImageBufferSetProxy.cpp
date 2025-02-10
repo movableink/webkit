@@ -206,7 +206,7 @@ void RemoteImageBufferSetProxy::didPrepareForDisplay(ImageBufferSetPrepareBuffer
 
         auto createBufferAndBackendInfo = [&](const std::optional<WebCore::RenderingResourceIdentifier>& bufferIdentifier) {
             if (bufferIdentifier)
-                return std::optional { BufferAndBackendInfo { *bufferIdentifier, m_generation }    };
+                return std::optional { BufferAndBackendInfo { *bufferIdentifier, m_generation } };
             return std::optional<BufferAndBackendInfo>();
         };
 
@@ -239,14 +239,9 @@ void RemoteImageBufferSetProxy::close()
         remoteRenderingBackendProxy->releaseRemoteImageBufferSet(*this);
 }
 
-void RemoteImageBufferSetProxy::setConfiguration(WebCore::FloatSize size, float scale, const WebCore::DestinationColorSpace& colorSpace, WebCore::ImageBufferPixelFormat pixelFormat, WebCore::RenderingMode renderingMode, WebCore::RenderingPurpose renderingPurpose)
+void RemoteImageBufferSetProxy::setConfiguration(RemoteImageBufferSetConfiguration&& configuration)
 {
-    m_size = size;
-    m_scale = scale;
-    m_colorSpace = colorSpace;
-    m_pixelFormat = pixelFormat;
-    m_renderingMode = renderingMode;
-    m_renderingPurpose = renderingPurpose;
+    m_configuration = WTFMove(configuration);
     m_remoteNeedsConfigurationUpdate = true;
 }
 
@@ -273,9 +268,9 @@ void RemoteImageBufferSetProxy::willPrepareForDisplay()
         return;
 
     if (m_remoteNeedsConfigurationUpdate) {
-        send(Messages::RemoteImageBufferSet::UpdateConfiguration(m_size, m_renderingMode, m_renderingPurpose, m_scale, m_colorSpace, m_pixelFormat));
+        send(Messages::RemoteImageBufferSet::UpdateConfiguration(m_configuration));
 
-        m_displayListRecorder = Ref { *m_remoteRenderingBackendProxy }->createDisplayListRecorder(m_displayListIdentifier, m_size, m_renderingMode, m_renderingPurpose, m_scale, m_colorSpace, m_pixelFormat);
+        m_displayListRecorder = Ref { *m_remoteRenderingBackendProxy }->createDisplayListRecorder(m_displayListIdentifier, m_configuration.logicalSize, m_configuration.renderingMode, m_configuration.renderingPurpose, m_configuration.resolutionScale, m_configuration.colorSpace, m_configuration.pixelFormat);
     }
     m_remoteNeedsConfigurationUpdate = false;
 

@@ -139,7 +139,9 @@ public:
 
     virtual TransformationMatrix transformMatrixForProperty(AnimatedProperty) const { return { }; }
 
-    virtual bool layerContainsBitmapOnly(const GraphicsLayer*) const { return false; }
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    virtual bool layerAllowsDynamicContentScaling(const GraphicsLayer*) const { return true; }
+#endif
 
     virtual bool layerNeedsPlatformContext(const GraphicsLayer*) const { return false; }
 

@@ -6169,6 +6169,19 @@ bool RenderLayer::isTransparentRespectingParentFrames() const
     return false;
 }
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+bool RenderLayer::allowsDynamicContentScaling() const
+{
+    if (is<RenderHTMLCanvas>(renderer()))
+        return false;
+
+    if (isBitmapOnly())
+        return false;
+
+    return true;
+}
+#endif
+
 bool RenderLayer::isBitmapOnly() const
 {
     if (hasVisibleBoxDecorationsOrBackground())

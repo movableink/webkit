@@ -233,7 +233,9 @@ public:
     float deviceScaleFactor() const override;
     float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const override;
 
-    bool layerContainsBitmapOnly(const GraphicsLayer*) const override { return isBitmapOnly(); }
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    bool layerAllowsDynamicContentScaling(const GraphicsLayer*) const override;
+#endif
 
     bool paintsOpaquelyAtNonIntegralScales(const GraphicsLayer*) const override;
 
