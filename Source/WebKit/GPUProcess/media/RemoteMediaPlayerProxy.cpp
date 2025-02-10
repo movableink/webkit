@@ -950,7 +950,7 @@ WebCore::PlatformVideoTarget RemoteMediaPlayerProxy::mediaPlayerVideoTarget() co
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     if (m_manager)
-        return m_manager->videoTargetForMediaElementIdentifier(m_clientIdentifier);
+        return m_manager->takeVideoTargetForMediaElementIdentifier(m_clientIdentifier, m_id);
 #endif
     return nullptr;
 }

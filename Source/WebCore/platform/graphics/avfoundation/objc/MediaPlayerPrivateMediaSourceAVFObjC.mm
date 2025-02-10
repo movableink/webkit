@@ -1869,8 +1869,7 @@ RefPtr<VideoMediaSampleRenderer> MediaPlayerPrivateMediaSourceAVFObjC::layerOrVi
 void MediaPlayerPrivateMediaSourceAVFObjC::setVideoTarget(const PlatformVideoTarget& videoTarget)
 {
     ALWAYS_LOG(LOGIDENTIFIER, !!videoTarget);
-    if (!!videoTarget)
-        m_usingLinearMediaPlayer = true;
+    m_usingLinearMediaPlayer = !!videoTarget;
     m_videoTarget = videoTarget;
     updateDisplayLayer();
 }
