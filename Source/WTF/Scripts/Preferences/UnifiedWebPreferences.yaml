@@ -6462,7 +6462,7 @@ ScriptTelemetryEnabled:
   webcoreBinding: none
   defaultValue:
     WebKit:
-      default: false
+      default: true
 
 ScriptTelemetryLoggingEnabled:
   type: bool
