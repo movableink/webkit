@@ -1894,9 +1894,14 @@ static Ref<CSSValue> animationShorthandValue(const RenderStyle& style, const Ani
         return CSSPrimitiveValue::create(CSSValueNone);
 
     CSSValueListBuilder list;
-    for (auto& animation : *animations)
+    for (auto& animation : *animations) {
+        // If any of the reset-only longhands are set, we cannot serialize this value.
+        if (animation->isTimelineSet() || animation->isRangeStartSet() || animation->isRangeEndSet()) {
+            list.clear();
+            break;
+        }
         list.append(singleAnimationValue(style, animation));
-    ASSERT(!list.isEmpty());
+    }
     return CSSValueList::createCommaSeparated(WTFMove(list));
 }
 

@@ -656,6 +656,7 @@ String ShorthandSerializer::serializeLayered() const
             }
         }
 
+        bool hasUnskippedValue = false;
         for (unsigned j = 0; j < length(); j++) {
             auto longhand = longhandProperty(j);
 
@@ -703,8 +704,22 @@ String ShorthandSerializer::serializeLayered() const
                 }
             }
 
+            // If we get to "animation-timeline" and yet haven't encountered an unskipped value,
+            // this means that this "animation" shorthand only has initial values for the non
+            // reset-only longhands and so we cannot serialize it. We only do this when we deal
+            // with multiple layers since the single "none" case would be caught otherwise.
+            if (numLayers > 1 && longhand == CSSPropertyAnimationTimeline && !hasUnskippedValue)
+                return String();
+
             if (layerValues.skip(j))
                 continue;
+
+            hasUnskippedValue = true;
+
+            // If we encounter one of the reset-only "animation" longhands and the value was not skipped,
+            // then it was set to a non-initial value and we cannot serialize it.
+            if (longhand == CSSPropertyAnimationTimeline || longhand == CSSPropertyAnimationRangeStart || longhand == CSSPropertyAnimationRangeEnd)
+                return String();
 
             // The syntax for background-size means that if it is present, background-position must be too.
             // The syntax for mask-size means that if it is present, mask-position must be too.
