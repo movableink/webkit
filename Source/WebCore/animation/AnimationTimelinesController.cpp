@@ -460,9 +460,7 @@ void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString&
         return !is<ViewTimeline>(timeline) && timeline->sourceStyleable() == source;
     });
 
-    auto hasExistingTimeline = existingTimelineIndex != notFound;
-
-    if (hasExistingTimeline) {
+    if (existingTimelineIndex != notFound) {
         Ref existingScrollTimeline = timelines[existingTimelineIndex].get();
         existingScrollTimeline->setAxis(axis);
     } else {
@@ -470,10 +468,8 @@ void AnimationTimelinesController::registerNamedScrollTimeline(const AtomString&
         newScrollTimeline->setSource(source);
         updateTimelineForTimelineScope(newScrollTimeline, name);
         timelines.append(WTFMove(newScrollTimeline));
-    }
-
-    if (!hasExistingTimeline)
         updateCSSAnimationsAssociatedWithNamedTimeline(name);
+    }
 }
 
 void AnimationTimelinesController::updateCSSAnimationsAssociatedWithNamedTimeline(const AtomString& name)
@@ -499,13 +495,20 @@ void AnimationTimelinesController::updateCSSAnimationsAssociatedWithNamedTimelin
         cssAnimation->syncStyleOriginatedTimeline();
 }
 
+void AnimationTimelinesController::removePendingOperationsForCSSAnimation(const CSSAnimation& animation)
+{
+    m_pendingAttachOperations.removeAllMatching([&] (const TimelineMapAttachOperation& operation) {
+        return operation.animation.ptr() == &animation;
+    });
+}
+
 void AnimationTimelinesController::documentDidResolveStyle()
 {
     auto operations = std::exchange(m_pendingAttachOperations, { });
     for (auto& operation : operations) {
         if (WeakPtr animation = operation.animation) {
             if (auto styleable = operation.element.styleable())
-                setTimelineForName(operation.name, *styleable, *animation);
+                setTimelineForName(operation.name, *styleable, *animation, AllowsDeferral::No);
         }
     }
 
@@ -566,21 +569,32 @@ void AnimationTimelinesController::unregisterNamedTimeline(const AtomString& nam
     if (i == notFound)
         return;
 
-    auto& timeline = timelines.at(i);
+    auto timeline = timelines.at(i);
+
+    // Make sure to remove the named timeline from our name-to-timelines map first,
+    // such that re-syncing any CSS Animation previously registered with it resolves
+    // their `animation-timeline` properly.
+    timelines.remove(i);
 
     for (Ref animation : timeline->relevantAnimations()) {
         if (RefPtr cssAnimation = dynamicDowncast<CSSAnimation>(animation)) {
-            if (auto styleable = cssAnimation->owningElement())
-                m_pendingAttachOperations.append(TimelineMapAttachOperation { *styleable, name, *cssAnimation });
+            if (cssAnimation->owningElement())
+                cssAnimation->syncStyleOriginatedTimeline();
         }
     }
-    timelines.remove(i);
 
     if (timelines.isEmpty())
         m_nameToTimelineMap.remove(it);
+    else
+        updateCSSAnimationsAssociatedWithNamedTimeline(name);
 }
 
 void AnimationTimelinesController::setTimelineForName(const AtomString& name, const Styleable& styleable, CSSAnimation& animation)
+{
+    setTimelineForName(name, styleable, animation, AllowsDeferral::Yes);
+}
+
+void AnimationTimelinesController::setTimelineForName(const AtomString& name, const Styleable& styleable, CSSAnimation& animation, AllowsDeferral allowsDeferral)
 {
     LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::setTimelineForName: " << name << " styleable: " << styleable);
 
@@ -589,20 +603,50 @@ void AnimationTimelinesController::setTimelineForName(const AtomString& name, co
         return !timeline->isInactiveStyleOriginatedTimeline();
     });
 
-    if (!hasNamedTimeline) {
+    // If we don't have an active named timeline yet and deferral is allowed,
+    // just register a pending timeline attachment operation so we can try again
+    // when style has resolved.
+    if (!hasNamedTimeline && allowsDeferral == AllowsDeferral::Yes) {
         m_pendingAttachOperations.append({ styleable, name, animation });
         return;
     }
 
-    auto& timelines = it->value;
-    if (RefPtr timeline = determineTimelineForElement(timelines, styleable, relatedTimelineScopeElements(name))) {
-        LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::setTimelineForName: " << name << " styleable: " << styleable << " attaching to timeline of element: " << originatingElement(*timeline));
-        animation.setTimeline(WTFMove(timeline));
-        return;
-    }
-    animation.setTimeline(nullptr);
+    auto timelineScopeElements = relatedTimelineScopeElements(name);
 
-    m_pendingAttachOperations.append({ styleable, name, animation });
+    if (!hasNamedTimeline) {
+        // First, determine whether the name is within scope, ie. whether a parent element
+        // has a `timeline-scope` property that contains this timeline name.
+        auto nameIsWithinScope = [&] {
+            for (auto timelineScopeElement : timelineScopeElements) {
+                ASSERT(timelineScopeElement.element());
+                if (styleable == timelineScopeElement.styleable() || styleable.element.isDescendantOf(*timelineScopeElement.element()))
+                    return true;
+            }
+            return false;
+        }();
+
+        ASSERT(allowsDeferral == AllowsDeferral::No);
+        // We don't have an active named timeline and yet we must set a timeline since
+        // we've already dealt with the defferal case before. There are two cases:
+        //     1. the name is within scope and we should create a placeholder inactive
+        //        scroll timeline, or,
+        //     2. the name is not within scope and the timeline is null.
+        if (nameIsWithinScope)
+            animation.setTimeline(&inactiveNamedTimeline(name));
+        else {
+            animation.setTimeline(nullptr);
+            // Since we have no timelines defined for this name yet, we need
+            // to keep a pending operation such that we may attach the named
+            // timeline should it appear.
+            m_pendingAttachOperations.append({ styleable, name, animation });
+        }
+    } else {
+        auto& timelines = it->value;
+        if (RefPtr timeline = determineTimelineForElement(timelines, styleable, timelineScopeElements)) {
+            LOG_WITH_STREAM(Animations, stream << "AnimationTimelinesController::setTimelineForName: " << name << " styleable: " << styleable << " attaching to timeline of element: " << originatingElement(*timeline));
+            animation.setTimeline(WTFMove(timeline));
+        }
+    }
 }
 
 static void updateTimelinesForTimelineScope(Vector<Ref<ScrollTimeline>> entries, const Styleable& styleable)
