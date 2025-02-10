@@ -983,6 +983,7 @@ private:
         case Load16S:
         case Mod:
         case Oops:
+        case PurifyNaN:
         case SExt8:
         case SExt16:
         case SlotBase:
