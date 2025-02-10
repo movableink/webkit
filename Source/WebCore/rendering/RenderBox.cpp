@@ -5477,9 +5477,8 @@ LayoutRect RenderBox::layoutOverflowRectForPropagation(const WritingMode parentW
 {
     // Only propagate interior layout overflow if we don't completely clip it.
     auto rect = borderBoxRect();
-    if (isGridItem()) {
-        // As per https://github.com/w3c/csswg-drafts/issues/3653, child's margins should contribute to the scrollable overflow area.
-        // FIXME: Expand it to non-grid cases when applicable.
+    if (isGridItem() || isFlexItem()) {
+        // As per https://drafts.csswg.org/css-overflow-3/#scrollable, both flex and grid items margins' should contribute to the scrollable overflow area.
         auto shouldContributeMarginInlineEnd = [&] {
             auto& gridContainerStyle = parent()->style();
             if (gridContainerStyle.overflowX() != Overflow::Visible && gridContainerStyle.overflowX() != Overflow::Clip)
