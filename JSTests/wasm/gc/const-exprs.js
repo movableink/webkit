@@ -219,38 +219,30 @@ async function testInvalidConstExprs() {
 }
 
 async function testConstExprGlobalOrdering() {
-  assert.throws(
-    () => compile(`
-        (module
-          (global i32 (i32.const 0))
-          (global i32 (global.get 0)))
-    `),
-    WebAssembly.CompileError,
-    "WebAssembly.Module doesn't parse at byte 24: get_global import kind index 0 is non-import"
-  );
+  instantiate(`
+    (module
+      (global i32 (i32.const 0))
+      (global i32 (global.get 0)))
+  `);
 
-  assert.throws(
-    () => compile(`
-        (module
-          (global i32 (i32.const 0))
-          (global i32 (i32.const 1))
-          (global i32 (i32.const 2))
-          (global i32 (global.get 1))
-          (global i32 (global.get 3)))
-    `),
-    WebAssembly.CompileError,
-    "WebAssembly.Module doesn't parse at byte 34: get_global import kind index 1 is non-import"
-  );
+  instantiate(`
+    (module
+      (global i32 (i32.const 0))
+      (global i32 (i32.const 1))
+      (global i32 (i32.const 2))
+      (global i32 (global.get 1))
+      (global i32 (global.get 3)))
+  `);
 
-  assert.throws(
-    () => compile(`
-        (module
-          (global i32 (i32.add (i32.const 0) (i32.const 1)))
-          (global (export "g") i32 (i32.add (i32.const 1 (global.get 0)))))
-    `),
-    WebAssembly.CompileError,
-    "WebAssembly.Module doesn't parse at byte 27: get_global import kind index 0 is non-import"
-  );
+  {
+    let m = instantiate(`
+      (module
+        (global i32 (i32.add (i32.const 0) (i32.const 1)))
+        (global (export "g") i32 (i32.add (i32.const 1 (global.get 0)))))
+    `);
+
+    assert.eq(m.exports.g.value, 2);
+  }
 
   instantiate(`
     (module
@@ -258,29 +250,21 @@ async function testConstExprGlobalOrdering() {
       (table 10 externref (global.get 0)))
   `, { m: { g: "foo" } });
 
-  assert.throws(
-    () => compile(`
-      (module
-        (global i32 (i32.const 0))
-        (global i32 (i32.const 1))
-        (global i32 (i32.const 2))
-        (global i32 (global.get 1))
-        (global i32 (global.get 3)))
-    `),
-    WebAssembly.CompileError,
-    "WebAssembly.Module doesn't parse at byte 34: get_global import kind index 1 is non-import"
-  );
+  instantiate(`
+    (module
+      (global i32 (i32.const 0))
+      (global i32 (i32.const 1))
+      (global i32 (i32.const 2))
+      (global i32 (global.get 1))
+      (global i32 (global.get 3)))
+  `);
 
-  assert.throws(
-    () => compile(`
-      (module
-        (table (export "t") 64 funcref)
-        (global i32 (i32.const 5))
-        (elem (table 0) (offset (i32.add (global.get 0) (i32.const 42))) funcref (ref.null func)))
-    `),
-    WebAssembly.CompileError,
-    "WebAssembly.Module doesn't parse at byte 52: get_global import kind index 0 is non-import"
-  );
+  instantiate(`
+    (module
+      (table (export "t") 64 funcref)
+      (global i32 (i32.const 5))
+      (elem (table 0) (offset (i32.add (global.get 0) (i32.const 42))) funcref (ref.null func)))
+  `);
 
   assert.throws(
     () => compile(`
