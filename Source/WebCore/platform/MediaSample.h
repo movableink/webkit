@@ -27,6 +27,7 @@
 
 #include "FloatSize.h"
 #include "FourCC.h"
+#include "HdrMetadataType.h"
 #include "PlatformVideoColorSpace.h"
 #include "SharedBuffer.h"
 #include <functional>
@@ -220,6 +221,8 @@ public:
         MediaTime duration { MediaTime::zeroTime() };
         std::pair<MediaTime, MediaTime> trimInterval { MediaTime::zeroTime(), MediaTime::zeroTime() };
         MediaSampleDataType data;
+        RefPtr<SharedBuffer> hdrMetadata { nullptr };
+        std::optional<HdrMetadataType> hdrMetadataType { std::nullopt };
         uint32_t flags { };
         bool isSync() const { return flags & MediaSample::IsSync; }
     };

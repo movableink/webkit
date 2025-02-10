@@ -164,6 +164,8 @@ public:
             return webm::Status(webm::Status::kInvalidElementId);
         }
 
+        virtual void consumeAdditionalBlockData(const webm::BlockAdditions&) { }
+
         virtual void resetCompletedFramesState()
         {
             m_completeBlockBuffer = nullptr;
@@ -226,6 +228,7 @@ public:
     private:
         ASCIILiteral logClassName() const { return "VideoTrackData"_s; }
         ConsumeFrameDataResult consumeFrameData(webm::Reader&, const webm::FrameMetadata&, uint64_t*, const MediaTime&, std::optional<bool>) final;
+        void consumeAdditionalBlockData(const webm::BlockAdditions&) final;
         void resetCompletedFramesState() final;
         void processPendingMediaSamples(const MediaTime&);
         WTF::Deque<MediaSamplesBlock::MediaSampleItem> m_pendingMediaSamples;

@@ -924,23 +924,42 @@ webm::Status WebMParser::OnBlockGroupBegin(const webm::ElementMetadata&, webm::A
     if (!action)
         return Status(Status::kNotEnoughMemory);
 
+    // Flush any pending samples, so that the only pending samples after BlockGroup ends
+    // are those from this block group.
+    flushPendingVideoSamples();
+
     *action = Action::kRead;
     return Status(Status::kOkCompleted);
 }
 
 webm::Status WebMParser::OnBlockGroupEnd(const webm::ElementMetadata&, const webm::BlockGroup& blockGroup)
 {
-    INFO_LOG_IF_POSSIBLE(LOGIDENTIFIER);
-    if (blockGroup.block.is_present() && blockGroup.discard_padding.is_present()) {
-        auto trackNumber = blockGroup.block.value().track_number;
-        auto* trackData = trackDataForTrackNumber(trackNumber);
-        if (!trackData) {
-            ERROR_LOG_IF_POSSIBLE(LOGIDENTIFIER, "Ignoring unknown track number ", trackNumber);
-            return Status(Status::kOkCompleted);
-        }
-        if (trackData->track().track_uid.is_present() && blockGroup.discard_padding.value() > 0)
-            m_callback.parsedTrimmingData(trackData->track().track_uid.value(), MediaTime(blockGroup.discard_padding.value(), k_us_in_seconds));
+    // All BlockGroups must contain a single block. As a sanity check, ensure
+    // the BlockGroup is well formed, and bail if not.
+    if (!blockGroup.block.is_present())
+        return Status(Status::kOkCompleted);
+
+    if (!blockGroup.discard_padding.is_present()
+        && !blockGroup.additions.is_present())
+        return Status(Status::kOkCompleted);
+
+    auto trackNumber = blockGroup.block.value().track_number;
+    auto* trackData = trackDataForTrackNumber(trackNumber);
+    if (!trackData) {
+        ERROR_LOG_IF_POSSIBLE(LOGIDENTIFIER, "Ignoring unknown track number ", trackNumber);
+        return Status(Status::kOkCompleted);
     }
+
+    INFO_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+
+    if (blockGroup.discard_padding.is_present()
+        && trackData->track().track_uid.is_present()
+        && blockGroup.discard_padding.value() > 0)
+            m_callback.parsedTrimmingData(trackData->track().track_uid.value(), MediaTime(blockGroup.discard_padding.value(), k_us_in_seconds));
+
+    if (blockGroup.additions.is_present())
+        trackData->consumeAdditionalBlockData(blockGroup.additions.value());
+
     return Status(Status::kOkCompleted);
 }
 
@@ -1114,6 +1133,37 @@ WebMParser::ConsumeFrameDataResult WebMParser::VideoTrackData::consumeFrameData(
 
     ASSERT(!*bytesRemaining);
     return webm::Status(webm::Status::kOkCompleted);
+}
+
+void WebMParser::VideoTrackData::consumeAdditionalBlockData(const webm::BlockAdditions& additions)
+{
+    for (auto& blockMore : additions.block_mores) {
+        if (!blockMore.is_present())
+            continue;
+
+        // https://www.webmproject.org/docs/container/#BlockAddID
+        // 0x04 indicates ITU T.35 metadata as defined by ITU-T T.35 terminal codes.
+        if (!blockMore.value().data.is_present() || !blockMore.value().id.is_present() || blockMore.value().id.value() != 0x4)
+            continue;
+
+        // ANSI/CTA-861-H:
+        // S.3 User_data_registered_itu_t_t35 SEI message semantics for ST 2094-40 [55]
+        static constexpr std::array<uint8_t, 5> s_ST2094_40_Message = { 0xB5, 0x00, 0x3C, 0x00, 0x01 };
+
+        auto& blockMoreData = blockMore.value().data.value();
+        if (blockMoreData.size() < s_ST2094_40_Message.size())
+            continue;
+
+        auto blockMoreDataStart = std::span { blockMoreData }.subspan(0, s_ST2094_40_Message.size());
+        if (!std::ranges::equal(s_ST2094_40_Message, blockMoreDataStart))
+            continue;
+
+        RefPtr hdrMetadata = SharedBuffer::create(std::span { blockMoreData });
+        for (auto& sample : m_pendingMediaSamples) {
+            sample.hdrMetadata = hdrMetadata;
+            sample.hdrMetadataType = HdrMetadataType::SmpteSt209440;
+        }
+    }
 }
 
 void WebMParser::VideoTrackData::processPendingMediaSamples(const MediaTime& presentationTime)
