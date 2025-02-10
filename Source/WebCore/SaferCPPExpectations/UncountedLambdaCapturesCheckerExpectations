@@ -141,7 +141,6 @@ platform/audio/HRTFDatabaseLoader.cpp
 platform/audio/PlatformMediaSessionManager.cpp
 platform/audio/cocoa/AudioSampleBufferConverter.mm
 platform/audio/cocoa/AudioSessionCocoa.mm
-platform/audio/cocoa/PlatformRawAudioDataCocoa.cpp
 platform/audio/mac/AudioSessionMac.mm
 platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/clearkey/CDMClearKey.cpp

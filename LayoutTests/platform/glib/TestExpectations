@@ -1407,9 +1407,6 @@ imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.
 # A bit flaky on Debug bot.
 imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.html?mp4_aac [ Pass Failure ]
 
-webkit.org/b/284626 imported/w3c/web-platform-tests/webcodecs/audio-data.any.html [ Failure ]
-webkit.org/b/284626 imported/w3c/web-platform-tests/webcodecs/audio-data.any.worker.html [ Failure ]
-
 # webkit.org/b/286526 
 imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.html?opus [ Failure ] # Do not drain decoder on flush.
 imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.worker.html?opus [ Failure ]

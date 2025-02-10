@@ -269,24 +269,7 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
         // Copy of all channels of the source into the destination buffer and deinterleave.
         // Ideally we would use an AudioToolbox's AudioConverter but it performs incorrect rounding during sample conversion in a way that makes us fail the W3C's AudioData tests.
         ASSERT(!planeIndex);
-        ASSERT(!(copyElementCount % numberOfChannels()));
-
-        auto copyElements = [numberOfChannels = numberOfChannels()]<typename T>(std::span<T> destination, auto& source, size_t frames) {
-            RELEASE_ASSERT(destination.size() >= frames * numberOfChannels);
-            RELEASE_ASSERT(source[0].size() >= frames); // All planes have the exact same size.
-            size_t index = 0;
-            for (size_t frame = 0; frame < frames; frame++) {
-                for (size_t channel = 0; channel < source.size(); channel++)
-                    destination[index++] = convertAudioSample<T>(source[channel][frame]);
-            }
-        };
-
-        switchOn(audioElementSpan(destinationFormat, destination), [&](auto dst) {
-            switchOn(source, [&](auto& src) {
-                size_t numberOfFrames = copyElementCount / numberOfChannels();
-                copyElements(dst, src, numberOfFrames);
-            });
-        });
+        copyToInterleaved(source, destination, destinationFormat, copyElementCount);
         return;
     }
 

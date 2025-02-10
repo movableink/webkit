@@ -42,6 +42,7 @@
 #include <mutex>
 #include <wtf/FileSystem.h>
 #include <wtf/HashMap.h>
+#include <wtf/MallocSpan.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RecursiveLockAdapter.h>
@@ -802,7 +803,7 @@ GstMappedAudioBuffer::GstMappedAudioBuffer(GstBuffer* buffer, GstAudioInfo info,
     m_isValid = gst_audio_buffer_map(&m_buffer, &info, buffer, flags);
 }
 
-GstMappedAudioBuffer::GstMappedAudioBuffer(GRefPtr<GstSample> sample, GstMapFlags flags)
+GstMappedAudioBuffer::GstMappedAudioBuffer(const GRefPtr<GstSample>& sample, GstMapFlags flags)
 {
     GstAudioInfo info;
 
@@ -840,6 +841,44 @@ GstAudioInfo* GstMappedAudioBuffer::info()
 
     return &m_buffer.info;
 }
+
+template<typename T> Vector<std::span<T>> GstMappedAudioBuffer::samples(size_t offset) const
+{
+    RELEASE_ASSERT(m_isValid);
+    if (!m_isValid)
+        return Vector<std::span<T>> { };
+
+    auto planeCount = static_cast<uint32_t>(GST_AUDIO_INFO_CHANNELS(&m_buffer.info));
+    auto planeSizeTotal = m_buffer.n_samples * GST_AUDIO_INFO_BPS(&m_buffer.info);
+
+    if (GST_AUDIO_INFO_LAYOUT(&m_buffer.info) == GST_AUDIO_LAYOUT_INTERLEAVED) {
+        auto planeSizeInBytes = (m_buffer.n_samples - offset) * GST_AUDIO_INFO_BPS(&m_buffer.info);
+        Vector<std::span<T>> result;
+        result.reserveInitialCapacity(planeCount);
+        for (uint32_t i = 0; i < planeCount; i++) {
+            auto plane = MallocSpan<T>::malloc(planeSizeInBytes);
+            result.append(plane.leakSpan());
+        }
+
+        auto inputSpan = unsafeMakeSpan(reinterpret_cast<T*>(m_buffer.planes[0]), planeSizeTotal * planeCount);
+        for (uint32_t s = offset; s < m_buffer.n_samples; s++) {
+            for (uint32_t c = 0; c < planeCount; c++)
+                result[c][s] = inputSpan[s * planeCount + c];
+        }
+        return result;
+    }
+
+    RELEASE_ASSERT(GST_AUDIO_INFO_LAYOUT(&m_buffer.info) == GST_AUDIO_LAYOUT_NON_INTERLEAVED);
+    return Vector<std::span<T>> { planeCount, [&](auto index) {
+        auto totalData = unsafeMakeSpan(reinterpret_cast<T*>(m_buffer.planes[index]), planeSizeTotal);
+        return totalData.subspan(offset);
+    } };
+}
+
+template Vector<std::span<uint8_t>> GstMappedAudioBuffer::samples(size_t) const;
+template Vector<std::span<int16_t>> GstMappedAudioBuffer::samples(size_t) const;
+template Vector<std::span<int32_t>> GstMappedAudioBuffer::samples(size_t) const;
+template Vector<std::span<float>> GstMappedAudioBuffer::samples(size_t) const;
 
 static GQuark customMessageHandlerQuark()
 {

@@ -366,7 +366,7 @@ bool GStreamerInternalAudioEncoder::encode(AudioEncoder::RawFrame&& rawFrame)
     m_duration = rawFrame.duration;
 
     auto gstAudioFrame = downcast<PlatformRawAudioDataGStreamer>(rawFrame.frame.get());
-    return m_harness->pushSample(gstAudioFrame->sample());
+    return m_harness->pushSample(GRefPtr(gstAudioFrame->sample()));
 }
 
 void GStreamerInternalAudioEncoder::flush()
