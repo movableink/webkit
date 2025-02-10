@@ -139,7 +139,7 @@ public:
 
     Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
-    // FIXME: These three traversing functions are buggy. It should be rewritten with visitChildren.
+    // FIXME: This traversing function is buggy. It should be rewritten with visitChildren.
     // https://bugs.webkit.org/show_bug.cgi?id=270600
     bool traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
 
