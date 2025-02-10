@@ -516,10 +516,8 @@ void RenderTableCell::styleDidChange(StyleDifference diff, const RenderStyle* ol
     if (oldStyle && (style().verticalAlign() != oldStyle->verticalAlign() || style().alignContent() != oldStyle->alignContent()))
         clearIntrinsicPadding();
 
-    // If border was changed, notify table.
-    RenderTable* table = this->table();
-    if (table && oldStyle && !oldStyle->borderIsEquivalentForPainting(style())) {
-        table->invalidateCollapsedBorders(this);
+    if (CheckedPtr table = this->table(); table && oldStyle) {
+        table->invalidateCollapsedBordersAfterStyleChangeIfNeeded(*oldStyle, style(), this);
         if (table->collapseBorders() && diff == StyleDifference::Layout) {
             markCellDirtyWhenCollapsedBorderChanges(table->cellBelow(this));
             markCellDirtyWhenCollapsedBorderChanges(table->cellAbove(this));

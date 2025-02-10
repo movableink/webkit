@@ -179,9 +179,8 @@ void RenderTable::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
         }
     }
 
-    // If border was changed, invalidate collapsed borders cache.
-    if (oldStyle && !oldStyle->borderIsEquivalentForPainting(style()))
-        invalidateCollapsedBorders();
+    if (oldStyle)
+        invalidateCollapsedBordersAfterStyleChangeIfNeeded(*oldStyle, style());
 }
 
 static inline void resetSectionPointerIfNotBefore(SingleThreadWeakPtr<RenderTableSection>& section, RenderObject* before)
@@ -662,6 +661,18 @@ void RenderTable::layout()
 
     m_columnLogicalWidthChanged = false;
     clearNeedsLayout();
+}
+
+void RenderTable::invalidateCollapsedBordersAfterStyleChangeIfNeeded(const RenderStyle& oldStyle, const RenderStyle& newStyle, RenderTableCell* cellWithStyleChange)
+{
+    auto shouldInvalidate = [&] {
+        if (oldStyle.writingMode() != newStyle.writingMode())
+            return true;
+        return !oldStyle.borderIsEquivalentForPainting(newStyle);
+    };
+
+    if (shouldInvalidate())
+        invalidateCollapsedBorders(cellWithStyleChange);
 }
 
 void RenderTable::invalidateCollapsedBorders(RenderTableCell* cellWithStyleChange)

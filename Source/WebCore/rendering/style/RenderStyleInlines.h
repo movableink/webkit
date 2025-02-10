@@ -1093,9 +1093,6 @@ inline bool RenderStyle::columnSpanEqual(const RenderStyle& other) const
 
 inline bool RenderStyle::borderIsEquivalentForPainting(const RenderStyle& other) const
 {
-    if (writingMode() != other.writingMode())
-        return false;
-
     bool colorDiffers = color() != other.color();
 
     if (!colorDiffers
