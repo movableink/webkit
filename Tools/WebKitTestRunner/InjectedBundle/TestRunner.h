@@ -66,6 +66,24 @@ public:
 #endif
     }
 
+    bool haveSecureCodingRequest() const
+    {
+#if HAVE(WK_SECURE_CODING_NSURLREQUEST)
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool haveSecureCodingDataDetectors() const
+    {
+#if HAVE(WK_SECURE_CODING_DATA_DETECTORS)
+        return true;
+#else
+        return false;
+#endif
+    }
+
     bool keyboardAppearsOverContent() const
     {
 #if PLATFORM(VISION)
