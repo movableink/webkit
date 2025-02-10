@@ -648,7 +648,7 @@ class ContextMtl : public ContextImpl, public mtl::Context
     IncompleteTextureSet mIncompleteTextures;
     ProvokingVertexHelper mProvokingVertexHelper;
 
-    mtl::RasterizationRateMapRef mRasterizationRateMap;
+    angle::ObjCPtr<id<MTLRasterizationRateMap>> mRasterizationRateMap;
     id<MTLTexture> mRasterizationRateMapTexture;
 
     mtl::ContextDevice mContextDevice;

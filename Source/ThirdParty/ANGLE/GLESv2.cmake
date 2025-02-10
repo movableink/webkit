@@ -127,6 +127,7 @@ endif()
 
 if(is_apple)
     list(APPEND libangle_common_sources
+        "src/common/apple/ObjCPtr.h"
         "src/common/apple/SoftLinking.h"
         "src/common/apple/apple_platform.h"
         "src/common/apple_platform_utils.mm"
@@ -619,6 +620,7 @@ set(libglesv2_sources
     "src/libGLESv2/egl_ext_stubs_autogen.h"
     "src/libGLESv2/egl_stubs.cpp"
     "src/libGLESv2/egl_stubs_autogen.h"
+    "src/libGLESv2/egl_stubs_getprocaddress_autogen.cpp"
     "src/libGLESv2/entry_points_egl_autogen.cpp"
     "src/libGLESv2/entry_points_egl_autogen.h"
     "src/libGLESv2/entry_points_egl_ext_autogen.cpp"
@@ -638,8 +640,6 @@ set(libglesv2_sources
     "src/libGLESv2/global_state.cpp"
     "src/libGLESv2/global_state.h"
     "src/libGLESv2/libGLESv2_autogen.cpp"
-    "src/libGLESv2/proc_table_egl.h"
-    "src/libGLESv2/proc_table_egl_autogen.cpp"
     "src/libGLESv2/resource.h"
 )
 

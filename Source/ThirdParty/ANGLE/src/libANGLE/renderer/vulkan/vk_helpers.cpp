@@ -117,7 +117,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::ColorAttachmentOutput,
-            EventStage::ColorAttachmentOutput,
+            EventStage::Attachment,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -134,7 +134,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::ColorAttachmentOutput,
-            EventStage::ColorAttachmentOutput,
+            EventStage::Attachment,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -151,7 +151,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::FragmentShader,
-            EventStage::ColorAttachmentOutputAndFragmentShader,
+            EventStage::AttachmentAndFragmentShader,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -168,7 +168,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::EarlyFragmentTest,
-            EventStage::AllFragmentTest,
+            EventStage::Attachment,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -185,7 +185,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::EarlyFragmentTest,
-            EventStage::AllFragmentTest,
+            EventStage::Attachment,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -202,7 +202,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::EarlyFragmentTest,
-            EventStage::AllFragmentTest,
+            EventStage::Attachment,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -219,7 +219,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::EarlyFragmentTest,
-            EventStage::AllFragmentTestAndFragmentShader,
+            EventStage::AttachmentAndFragmentShader,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -236,7 +236,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::VertexShader,
-            EventStage::AllFragmentTestAndAllShaders,
+            EventStage::AttachmentAndAllShaders,
             PipelineStageGroup::Other,
         },
     },
@@ -253,7 +253,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::EarlyFragmentTest,
-            EventStage::AllFragmentTest,
+            EventStage::Attachment,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -270,7 +270,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::EarlyFragmentTest,
-            EventStage::AllFragmentTestAndFragmentShader,
+            EventStage::AttachmentAndFragmentShader,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -287,7 +287,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::VertexShader,
-            EventStage::AllFragmentTestAndAllShaders,
+            EventStage::AttachmentAndAllShaders,
             PipelineStageGroup::Other,
         },
     },
@@ -304,7 +304,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             0,
             ResourceAccess::ReadOnly,
             PipelineStage::EarlyFragmentTest,
-            EventStage::AllFragmentTest,
+            EventStage::Attachment,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -322,7 +322,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             0,
             ResourceAccess::ReadOnly,
             PipelineStage::EarlyFragmentTest,
-            EventStage::AllFragmentTestAndFragmentShader,
+            EventStage::AttachmentAndFragmentShader,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -339,7 +339,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             0,
             ResourceAccess::ReadOnly,
             PipelineStage::VertexShader,
-            EventStage::AllFragmentTestAndAllShaders,
+            EventStage::AttachmentAndAllShaders,
             PipelineStageGroup::Other,
         },
     },
@@ -356,7 +356,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::FragmentShader,
-            EventStage::ColorAttachmentOutputAndFragmentShader,
+            EventStage::AttachmentAndFragmentShader,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -374,7 +374,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             ResourceAccess::ReadWrite,
             // In case of multiple destination stages, We barrier the earliest stage
             PipelineStage::VertexShader,
-            EventStage::ColorAttachmentOutputAndAllShaders,
+            EventStage::AttachmentAndAllShaders,
             PipelineStageGroup::Other,
         },
     },
@@ -391,7 +391,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::FragmentShader,
-            EventStage::AllFragmentTestAndFragmentShader,
+            EventStage::AttachmentAndFragmentShader,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -409,7 +409,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             ResourceAccess::ReadWrite,
             // In case of multiple destination stages, We barrier the earliest stage
             PipelineStage::VertexShader,
-            EventStage::AllFragmentTestAndAllShaders,
+            EventStage::AttachmentAndAllShaders,
             PipelineStageGroup::Other,
         },
     },
@@ -427,7 +427,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::ColorAttachmentOutput,
-            EventStage::ColorAttachmentOutput,
+            EventStage::Attachment,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -445,7 +445,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::FragmentShader,
-            EventStage::ColorAttachmentOutputAndFragmentShader,
+            EventStage::AttachmentAndFragmentShader,
             PipelineStageGroup::FragmentOnly,
         },
     },
@@ -491,7 +491,7 @@ constexpr ImageLayoutToMemoryBarrierDataMap kImageMemoryBarrierData = {
             VK_ACCESS_MEMORY_WRITE_BIT,
             ResourceAccess::ReadWrite,
             PipelineStage::BottomOfPipe,
-            EventStage::ColorAttachmentOutputAndFragmentShaderAndTransfer,
+            EventStage::AttachmentAndFragmentShaderAndTransfer,
             PipelineStageGroup::Other,
         },
     },
@@ -1480,10 +1480,7 @@ void InitializeEventStageToVkPipelineStageFlagsMap(
         const EventStage eventStage = imageBarrierData.eventStage;
         if (eventStage != EventStage::InvalidEnum)
         {
-            ASSERT((*map)[eventStage] == 0 ||
-                   (*map)[eventStage] ==
-                       (imageBarrierData.dstStageMask & supportedVulkanPipelineStageMask));
-            (*map)[eventStage] = imageBarrierData.dstStageMask & supportedVulkanPipelineStageMask;
+            (*map)[eventStage] |= imageBarrierData.dstStageMask & supportedVulkanPipelineStageMask;
         }
     }
 }
@@ -1959,10 +1956,13 @@ void CommandBufferHelperCommon::bufferRead(Context *context,
                                            const gl::ShaderBitSet &readShaderStages,
                                            BufferHelper *buffer)
 {
-    VkPipelineStageFlags readPipelineStageFlags =
-        ConvertShaderBitSetToVkPipelineStageFlags(readShaderStages);
-    PipelineStage firstReadStage = GetPipelineStage(readShaderStages.first());
-    bufferReadImpl(context, readAccessType, readPipelineStageFlags, firstReadStage, buffer);
+    for (const gl::ShaderType shaderType : readShaderStages)
+    {
+        PipelineStage readStage = GetPipelineStage(shaderType);
+        VkPipelineStageFlags readPipelineStageFlags =
+            kBufferMemoryBarrierData[readStage].pipelineStageFlags;
+        bufferReadImpl(context, readAccessType, readPipelineStageFlags, readStage, buffer);
+    }
 }
 
 void CommandBufferHelperCommon::bufferWriteImpl(Context *context,
@@ -1983,14 +1983,8 @@ void CommandBufferHelperCommon::bufferWriteImpl(Context *context,
         mIsAnyHostVisibleBufferWritten = true;
     }
 
-    if (context->getFeatures().useVkEventForBufferBarrier.enabled)
-    {
-        buffer->setCurrentWriteEvent(context, writeAccessType, writePipelineStageFlags, writeStage,
-                                     kBufferMemoryBarrierData[writeStage].eventStage,
-                                     &mRefCountedEvents);
-    }
-
-    buffer->setWriteQueueSerial(mQueueSerial);
+    buffer->recordWriteEvent(context, writeAccessType, writePipelineStageFlags, mQueueSerial,
+                             writeStage, &mRefCountedEvents);
 }
 
 void CommandBufferHelperCommon::bufferReadImpl(Context *context,
@@ -2003,26 +1997,9 @@ void CommandBufferHelperCommon::bufferReadImpl(Context *context,
                               &mPipelineBarriers, &mEventBarriers, &mRefCountedEventCollector);
     ASSERT(!usesBufferForWrite(*buffer));
 
-    if (context->getFeatures().useVkEventForBufferBarrier.enabled)
-    {
-        buffer->setCurrentReadEvent(context, readAccessType, readPipelineStageFlags,
-                                    kBufferMemoryBarrierData[readStage].eventStage,
-                                    &mRefCountedEvents);
-    }
-
-    if (buffer->getResourceUse() >= mQueueSerial)
-    {
-        // We should not run into situation that RP is writing to it while we are reading it here
-        ASSERT(!(buffer->getWriteResourceUse() >= mQueueSerial));
-        // A buffer could have read accessed by both renderPassCommands and
-        // outsideRenderPassCommands and there is no need to endRP or flush. In this case, the
-        // renderPassCommands' read will override the outsideRenderPassCommands' read, since its
-        // queueSerial must be greater than outsideRP.
-    }
-    else
-    {
-        buffer->setQueueSerial(mQueueSerial);
-    }
+    buffer->recordReadEvent(context, readAccessType, readPipelineStageFlags, readStage,
+                            mQueueSerial, kBufferMemoryBarrierData[readStage].eventStage,
+                            &mRefCountedEvents);
 }
 
 void CommandBufferHelperCommon::imageReadImpl(Context *context,
@@ -5954,76 +5931,94 @@ void BufferHelper::releaseToExternal(DeviceQueueIndex externalQueueIndex,
 
 void BufferHelper::recordReadBarrier(Context *context,
                                      VkAccessFlags readAccessType,
-                                     VkPipelineStageFlags readStage,
+                                     VkPipelineStageFlags readPipelineStageFlags,
                                      PipelineStage stageIndex,
                                      PipelineBarrierArray *pipelineBarriers,
                                      EventBarrierArray *eventBarriers,
                                      RefCountedEventCollector *eventCollector)
 {
-    Renderer *renderer = context->getRenderer();
-
-    // If there was a prior write and we are making a read that is either a new access type or
-    // from a new stage, we need a barrier
-    if (mCurrentWriteAccess != 0 && (((mCurrentReadAccess & readAccessType) != readAccessType) ||
-                                     ((mCurrentReadStages & readStage) != readStage)))
+    // If the type of read already tracked by mCurrentReadEvents, it means we must already inserted
+    // the barrier when mCurrentReadEvents is set. No new barrier is needed.
+    EventStage eventStage = kBufferMemoryBarrierData[stageIndex].eventStage;
+    if (mCurrentReadEvents.hasEventAndAccess(eventStage, readAccessType))
     {
-        VkPipelineStageFlags writeStages = mCurrentWriteStages;
-        // First wait for write events if any
-        if (mCurrentWriteEvent.valid())
-        {
-            const VkPipelineStageFlags srcStageFlags =
-                renderer->getPipelineStageMask(mCurrentWriteEvent.getEventStage());
-            eventBarriers->addEventMemoryBarrier(renderer, mCurrentWriteEvent, mCurrentWriteAccess,
-                                                 readStage, readAccessType);
-            writeStages &= ~srcStageFlags;
-        }
-
-        // Now wait for extra write that aren't captured by mCurrentWriteEvent
-        if (writeStages != 0)
-        {
-            pipelineBarriers->mergeMemoryBarrier(stageIndex, writeStages, readStage,
-                                                 mCurrentWriteAccess, readAccessType);
-        }
+        ASSERT((context->getRenderer()->getPipelineStageMask(eventStage) &
+                readPipelineStageFlags) == readPipelineStageFlags);
+        ASSERT((mCurrentReadEvents.getAccessFlags(eventStage) & readAccessType) == readAccessType);
+        return;
     }
 
-    // Accumulate new read usage.
-    mCurrentReadAccess |= readAccessType;
-    mCurrentReadStages |= readStage;
+    // If the type of read already tracked by mCurrentReadAccess, it means we must already inserted
+    // the barrier when mCurrentReadAccess is set. No new barrier is needed.
+    if ((mCurrentReadAccess & readAccessType) == readAccessType &&
+        (mCurrentReadStages & readPipelineStageFlags) == readPipelineStageFlags)
+    {
+        return;
+    }
+
+    // Barrier against prior write VkEvent.
+    if (mCurrentWriteEvent.valid())
+    {
+        eventBarriers->addEventMemoryBarrier(context->getRenderer(), mCurrentWriteEvent.getEvent(),
+                                             mCurrentWriteEvent.getAccessFlags(),
+                                             readPipelineStageFlags, readAccessType);
+    }
+
+    // Barrier against prior access that not tracked by VkEvent using pipelineBarrier.
+    if (mCurrentWriteAccess != 0)
+    {
+        pipelineBarriers->mergeMemoryBarrier(stageIndex, mCurrentWriteStages,
+                                             readPipelineStageFlags, mCurrentWriteAccess,
+                                             readAccessType);
+    }
 }
 
-void BufferHelper::setCurrentReadEvent(Context *context,
-                                       VkAccessFlags readAccessType,
-                                       VkPipelineStageFlags readPipelineStageFlags,
-                                       EventStage eventStage,
-                                       RefCountedEventArray *refCountedEventArray)
+void BufferHelper::recordReadEvent(Context *context,
+                                   VkAccessFlags readAccessType,
+                                   VkPipelineStageFlags readPipelineStageFlags,
+                                   PipelineStage readStage,
+                                   const QueueSerial &queueSerial,
+                                   EventStage eventStage,
+                                   RefCountedEventArray *refCountedEventArray)
 {
-    ASSERT(context->getFeatures().useVkEventForBufferBarrier.enabled);
-
-    // VkCmdSetEvent can remove the unnecessary GPU pipeline bubble that comes from false dependency
-    // between fragment and vertex/transfer/compute stages. But it also comes with higher overhead.
-    // In order to strike the balance, right now we only track it with VkEvent if it ever written by
-    // transform feedback.
-    if (mTransformFeedbackWriteHeuristicBits.none())
+    bool useVkEvent = false;
+    if (context->getFeatures().useVkEventForBufferBarrier.enabled &&
+        eventStage != EventStage::InvalidEnum)
     {
-        return;
+        // VkCmdSetEvent can remove the unnecessary GPU pipeline bubble that comes from false
+        // dependency between fragment and vertex/transfer/compute stages. But it also comes with
+        // higher overhead. In order to strike the balance, right now we only track it with VkEvent
+        // if it ever written by transform feedback.
+        useVkEvent = mTransformFeedbackWriteHeuristicBits.any();
     }
 
-    // Limit to pipeline stages that transform feedback buffer likely will be used.
-    if (eventStage == EventStage::InvalidEnum)
+    if (useVkEvent && refCountedEventArray->initEventAtStage(context, eventStage))
     {
-        return;
+        // Replace the mCurrentReadEvents so that it tracks the current read so that we can
+        // waitEvent later.
+        mCurrentReadEvents.replaceEventAtStage(
+            context, eventStage, refCountedEventArray->getEvent(eventStage), readAccessType);
+    }
+    else
+    {
+        // Accumulate new read usage to be used in pipelineBarrier.
+        mCurrentReadAccess |= readAccessType;
+        mCurrentReadStages |= readPipelineStageFlags;
     }
 
-    if (!refCountedEventArray->getEvent(eventStage).valid() &&
-        !refCountedEventArray->initEventAtStage(context, eventStage))
+    if (getResourceUse() >= queueSerial)
     {
-        // If VkEvent creation fail, we fallback to pipelineBarrier
-        return;
+        // We should not run into situation that RP is writing to it while we are reading it here
+        ASSERT(!(getWriteResourceUse() >= queueSerial));
+        // A buffer could have read accessed by both renderPassCommands and
+        // outsideRenderPassCommands and there is no need to endRP or flush. In this case, the
+        // renderPassCommands' read will override the outsideRenderPassCommands' read, since its
+        // queueSerial must be greater than outsideRP.
     }
-
-    // Replace the mCurrentReadEvents so that it tracks the current read.
-    mCurrentReadEvents.replaceEventAtStage(
-        context, eventStage, refCountedEventArray->getEvent(eventStage), readAccessType);
+    else
+    {
+        setQueueSerial(queueSerial);
+    }
 }
 
 void BufferHelper::recordWriteBarrier(Context *context,
@@ -6037,32 +6032,39 @@ void BufferHelper::recordWriteBarrier(Context *context,
 {
     Renderer *renderer = context->getRenderer();
 
-    // We don't need to check mCurrentReadStages here since if it is not zero,
-    // mCurrentReadAccess must not be zero as well. stage is finer grain than accessType.
-    ASSERT((!mCurrentReadStages && !mCurrentReadAccess) ||
-           (mCurrentReadStages && mCurrentReadAccess));
-
-    if (mCurrentReadAccess != 0 || mCurrentWriteAccess != 0)
+    // Barrier against prior read VkEvents.
+    if (!mCurrentReadEvents.empty())
     {
-        // First process event waits.
-        if (!mCurrentReadEvents.empty())
+        // If we already have a event in the same command buffer, fall back to pipeline. Otherwise
+        // you may run into wait an event that has not been set. This may be can be removed once we
+        // fix https://issuetracker.google.com/392968868
+        if (usedByCommandBuffer(queueSerial))
+        {
+            for (EventStage eventStage : mCurrentReadEvents.getBitMask())
+            {
+                mCurrentReadStages |= renderer->getPipelineStageMask(eventStage);
+                mCurrentReadAccess |= mCurrentReadEvents.getAccessFlags(eventStage);
+            }
+        }
+        else
         {
             for (EventStage eventStage : mCurrentReadEvents.getBitMask())
             {
                 const RefCountedEvent &waitEvent = mCurrentReadEvents.getEvent(eventStage);
                 const VkAccessFlags srcAccess    = mCurrentReadEvents.getAccessFlags(eventStage);
-                const VkPipelineStageFlags srcStageFlags =
-                    renderer->getPipelineStageMask(eventStage);
                 eventBarriers->addEventMemoryBarrier(renderer, waitEvent, srcAccess, writeStage,
                                                      writeAccessType);
-                // Note that VkPipelineStageFlags are finer grain than VkAccessFlags. Dont remove
-                // mCurrentReadAccess bits here in case we still need it for pipelineBarriers for
-                // some other stages.
-                mCurrentReadStages &= ~srcStageFlags;
             }
-            // Garbage collect the event, which tracks GPU completion automatically.
-            mCurrentReadEvents.releaseToEventCollector(eventCollector);
         }
+        // Garbage collect the event, which tracks GPU completion automatically.
+        mCurrentReadEvents.releaseToEventCollector(eventCollector);
+    }
+
+    // Barrier against prior write VkEvent.
+    if (mCurrentWriteEvent.valid())
+    {
+        const VkPipelineStageFlags srcStageFlags =
+            renderer->getPipelineStageMask(mCurrentWriteEvent.getEventStage());
 
         // If we already have a write event in the same command buffer, fall back to pipeline
         // barrier. Using VkEvent to track multiple writes either requires tracking multiple write
@@ -6070,23 +6072,29 @@ void BufferHelper::recordWriteBarrier(Context *context,
         // stage bits. Both are a bit complex. Without evidence showing we are hitting performance
         // issue in real world situation, this will just use pipeline barriers to track extra stages
         // that not captured by mCurrentWriteEvent.
-        if (mCurrentWriteEvent.valid() && writtenByCommandBuffer(queueSerial))
+        if (writtenByCommandBuffer(queueSerial))
         {
-            eventCollector->emplace_back(std::move(mCurrentWriteEvent));
+            mCurrentWriteStages |= srcStageFlags;
+            mCurrentWriteAccess |= mCurrentWriteEvent.getAccessFlags();
         }
-
-        if (mCurrentWriteEvent.valid())
+        else
         {
-            const VkPipelineStageFlags srcStageFlags =
-                renderer->getPipelineStageMask(mCurrentWriteEvent.getEventStage());
-            eventBarriers->addEventMemoryBarrier(context->getRenderer(), mCurrentWriteEvent,
-                                                 mCurrentWriteAccess, writeStage, writeAccessType);
-            // Garbage collect the event, which tracks GPU completion automatically.
-            eventCollector->emplace_back(std::move(mCurrentWriteEvent));
-            mCurrentWriteStages &= ~srcStageFlags;
-            mCurrentWriteAccess = 0;
+            eventBarriers->addEventMemoryBarrier(
+                context->getRenderer(), mCurrentWriteEvent.getEvent(),
+                mCurrentWriteEvent.getAccessFlags(), writeStage, writeAccessType);
         }
+        // Garbage collect the event, which tracks GPU completion automatically.
+        mCurrentWriteEvent.releaseToEventCollector(eventCollector);
+    }
 
+    // We don't need to check mCurrentReadStages here since if it is not zero,
+    // mCurrentReadAccess must not be zero as well. stage is finer grain than accessType.
+    ASSERT((!mCurrentReadStages && !mCurrentReadAccess) ||
+           (mCurrentReadStages && mCurrentReadAccess));
+
+    // Barrier against prior access that not tracked by VkEvent using pipelineBarrier.
+    if (mCurrentReadAccess != 0 || mCurrentWriteAccess != 0)
+    {
         // If there are more pipeline stage bits not captured by eventBarrier, use pipelineBarrier.
         VkPipelineStageFlags srcStageMask = mCurrentWriteStages | mCurrentReadStages;
         if (srcStageMask)
@@ -6094,60 +6102,60 @@ void BufferHelper::recordWriteBarrier(Context *context,
             pipelineBarriers->mergeMemoryBarrier(stageIndex, srcStageMask, writeStage,
                                                  mCurrentWriteAccess, writeAccessType);
         }
-        mCurrentReadStages = 0;
-        mCurrentReadAccess = 0;
-    }
 
-    // Reset usages on the new write.
-    mCurrentWriteAccess = writeAccessType;
-    mCurrentWriteStages = writeStage;
+        mCurrentReadStages  = 0;
+        mCurrentReadAccess  = 0;
+        mCurrentWriteStages = 0;
+        mCurrentWriteAccess = 0;
+    }
 }
 
-void BufferHelper::setCurrentWriteEvent(Context *context,
-                                        VkAccessFlags writeAccessType,
-                                        VkPipelineStageFlags writePipelineStageFlags,
-                                        PipelineStage writeStage,
-                                        EventStage eventStage,
-                                        RefCountedEventArray *refCountedEventArray)
+void BufferHelper::recordWriteEvent(Context *context,
+                                    VkAccessFlags writeAccessType,
+                                    VkPipelineStageFlags writePipelineStageFlags,
+                                    const QueueSerial &writeQueueSerial,
+                                    PipelineStage writeStage,
+                                    RefCountedEventArray *refCountedEventArray)
 {
-    ASSERT(context->getFeatures().useVkEventForBufferBarrier.enabled);
-    ASSERT(mCurrentReadEvents.empty());
+    EventStage eventStage = kBufferMemoryBarrierData[writeStage].eventStage;
+    bool useVkEvent       = false;
 
-    updatePipelineStageWriteHistory(writeStage);
-
-    // VkCmdSetEvent can remove the unnecessary GPU pipeline bubble that comes from false dependency
-    // between fragment and vertex/transfer/compute stages. But it also comes with higher overhead.
-    // In order to strike the balance, right now we only track it with VkEvent if it ever written by
-    // transform feedback.
-    if (mTransformFeedbackWriteHeuristicBits.none())
+    if (context->getFeatures().useVkEventForBufferBarrier.enabled &&
+        eventStage != EventStage::InvalidEnum)
     {
-        return;
+        ASSERT(mCurrentReadEvents.empty());
+        updatePipelineStageWriteHistory(writeStage);
+
+        // VkCmdSetEvent can remove the unnecessary GPU pipeline bubble that comes from false
+        // dependency between fragment and vertex/transfer/compute stages. But it also comes with
+        // higher overhead. In order to strike the balance, right now we only track it with VkEvent
+        // if it ever written by transform feedback.
+        useVkEvent = mTransformFeedbackWriteHeuristicBits.any();
+
+        // We only track one write event. In case of multiple writes like write from different
+        // shader stages in the same render pass, only the first write is tracked by event,
+        // additional writes will still be tracked by pipelineBarriers.
+        if (mCurrentWriteEvent.valid())
+        {
+            useVkEvent = false;
+        }
     }
 
-    // Limit to pipeline stages that transform feedback buffer likely will be used.
-    if (eventStage == EventStage::InvalidEnum)
+    if (useVkEvent && refCountedEventArray->initEventAtStage(context, eventStage))
     {
-        return;
+        // Copy the event to mCurrentEvent so that we can wait for it in future. This will add extra
+        // refcount to the underlying VkEvent.
+        mCurrentWriteEvent.setEventAndAccessFlags(refCountedEventArray->getEvent(eventStage),
+                                                  writeAccessType);
+    }
+    else
+    {
+        // Reset usages on the new write to be used by pipelineBarrier later.
+        mCurrentWriteAccess = writeAccessType;
+        mCurrentWriteStages = writePipelineStageFlags;
     }
 
-    // We only track one write event. In case of multiple writes like write from different shader
-    // stages in the same render pass, only the first write is tracked by event, additional writes
-    // will still be tracked by pipelineBarriers.
-    if (mCurrentWriteEvent.valid())
-    {
-        return;
-    }
-
-    if (!refCountedEventArray->getEvent(eventStage).valid() &&
-        !refCountedEventArray->initEventAtStage(context, eventStage))
-    {
-        // If VkEvent creation fail, we fallback to pipelineBarrier
-        return;
-    }
-
-    // Copy the event to mCurrentEvent so that we can wait for it in future. This will add extra
-    // refcount to the underlying VkEvent.
-    mCurrentWriteEvent = refCountedEventArray->getEvent(eventStage);
+    setWriteQueueSerial(writeQueueSerial);
 }
 
 void BufferHelper::fillWithColor(const angle::Color<uint8_t> &color,
@@ -8159,9 +8167,6 @@ void ImageHelper::updateLayoutAndBarrier(Context *context,
         // No layout change, only memory barrier is required
         if (barrierType == BarrierType::Event)
         {
-            // This should come down as WAW without layout change, dstStageMask should be the same
-            // as event's stageMask. Otherwise you should get into addEventImageBarrier.
-            ASSERT(mCurrentEvent.getPipelineStageMask(renderer) == layoutData.dstStageMask);
             eventBarriers->addEventMemoryBarrier(renderer, mCurrentEvent, layoutData.dstAccessMask,
                                                  layoutData.dstStageMask, layoutData.dstAccessMask);
             // Garbage collect the event, which tracks GPU completion automatically.

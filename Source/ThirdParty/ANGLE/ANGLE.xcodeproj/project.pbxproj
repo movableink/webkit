@@ -464,6 +464,9 @@
 		7B77FE1B2D31003B0040D6D6 /* RemoveUnusedFramebufferFetch.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B77FE162D31003B0040D6D6 /* RemoveUnusedFramebufferFetch.h */; };
 		7B81955B28CF63D800C7ABCD /* MemoryShaderCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B81955928CF63D800C7ABCD /* MemoryShaderCache.cpp */; };
 		7B81955C28CF63D800C7ABCD /* MemoryShaderCache.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B81955A28CF63D800C7ABCD /* MemoryShaderCache.h */; };
+		7B9BB4482D563C4A00E39E4C /* ObjCPtr.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B9BB4472D563C4A00E39E4C /* ObjCPtr.h */; };
+		7B9BB4492D563C4A00E39E4C /* ObjCPtr.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B9BB4472D563C4A00E39E4C /* ObjCPtr.h */; };
+		7B9BB44B2D563C9300E39E4C /* egl_stubs_getprocaddress_autogen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B9BB44A2D563C9300E39E4C /* egl_stubs_getprocaddress_autogen.cpp */; };
 		7BA890552CB522400020C411 /* ImmutableString_autogen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BA890542CB522400020C411 /* ImmutableString_autogen.cpp */; };
 		7BA890562CB522400020C411 /* ImmutableString_autogen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BA890542CB522400020C411 /* ImmutableString_autogen.cpp */; };
 		7BA890582CB5227C0020C411 /* SymbolTable_autogen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7BA890572CB5227C0020C411 /* SymbolTable_autogen.cpp */; };
@@ -970,8 +973,6 @@
 		FFD002AE2746E560002BE3BC /* egl_stubs_autogen.h in Headers */ = {isa = PBXBuildFile; fileRef = FFD002A92746E55F002BE3BC /* egl_stubs_autogen.h */; };
 		FFD002AF2746E560002BE3BC /* egl_ext_stubs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FFD002AA2746E55F002BE3BC /* egl_ext_stubs.cpp */; };
 		FFD002B02746E560002BE3BC /* entry_points_gles_3_1_autogen.h in Headers */ = {isa = PBXBuildFile; fileRef = FFD002AB2746E55F002BE3BC /* entry_points_gles_3_1_autogen.h */; };
-		FFD002B32746E5B2002BE3BC /* proc_table_egl_autogen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FFD002B12746E5B2002BE3BC /* proc_table_egl_autogen.cpp */; };
-		FFD002B42746E5B2002BE3BC /* proc_table_egl.h in Headers */ = {isa = PBXBuildFile; fileRef = FFD002B22746E5B2002BE3BC /* proc_table_egl.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -1668,6 +1669,8 @@
 		7B77FE172D31003B0040D6D6 /* RemoveUnusedFramebufferFetch.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoveUnusedFramebufferFetch.cpp; sourceTree = "<group>"; };
 		7B81955928CF63D800C7ABCD /* MemoryShaderCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryShaderCache.cpp; sourceTree = "<group>"; };
 		7B81955A28CF63D800C7ABCD /* MemoryShaderCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MemoryShaderCache.h; sourceTree = "<group>"; };
+		7B9BB4472D563C4A00E39E4C /* ObjCPtr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ObjCPtr.h; sourceTree = "<group>"; };
+		7B9BB44A2D563C9300E39E4C /* egl_stubs_getprocaddress_autogen.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = egl_stubs_getprocaddress_autogen.cpp; sourceTree = "<group>"; };
 		7BA890542CB522400020C411 /* ImmutableString_autogen.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ImmutableString_autogen.cpp; sourceTree = "<group>"; };
 		7BA890572CB5227C0020C411 /* SymbolTable_autogen.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolTable_autogen.cpp; sourceTree = "<group>"; };
 		7BA890612CB522F40020C411 /* context_private_call_autogen.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = context_private_call_autogen.h; sourceTree = "<group>"; };
@@ -1965,8 +1968,6 @@
 		FFD002A92746E55F002BE3BC /* egl_stubs_autogen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = egl_stubs_autogen.h; sourceTree = "<group>"; };
 		FFD002AA2746E55F002BE3BC /* egl_ext_stubs.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = egl_ext_stubs.cpp; sourceTree = "<group>"; };
 		FFD002AB2746E55F002BE3BC /* entry_points_gles_3_1_autogen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = entry_points_gles_3_1_autogen.h; sourceTree = "<group>"; };
-		FFD002B12746E5B2002BE3BC /* proc_table_egl_autogen.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = proc_table_egl_autogen.cpp; sourceTree = "<group>"; };
-		FFD002B22746E5B2002BE3BC /* proc_table_egl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = proc_table_egl.h; sourceTree = "<group>"; };
 		FFDA50D6269F9E5800AE11E2 /* create_mtl_internal_shaders.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = create_mtl_internal_shaders.py; sourceTree = "<group>"; };
 		FFE0D91526A0B4E80071ADAE /* AngleMetalLib.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AngleMetalLib.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -2510,6 +2511,7 @@
 				FFD002A72746E55F002BE3BC /* egl_ext_stubs_autogen.h */,
 				FFD002A82746E55F002BE3BC /* egl_stubs.cpp */,
 				FFD002A92746E55F002BE3BC /* egl_stubs_autogen.h */,
+				7B9BB44A2D563C9300E39E4C /* egl_stubs_getprocaddress_autogen.cpp */,
 				FFD0029F2746E4CF002BE3BC /* entry_points_egl_autogen.cpp */,
 				FFD002A32746E4F3002BE3BC /* entry_points_egl_autogen.h */,
 				FFD002A02746E4CF002BE3BC /* entry_points_egl_ext_autogen.cpp */,
@@ -2528,8 +2530,6 @@
 				A30B581F238DF74F0079FDDC /* entry_points_gles_ext_autogen.h */,
 				5CB300C71DE39E7500D2C405 /* global_state.cpp */,
 				5CB300C81DE39E7500D2C405 /* global_state.h */,
-				FFD002B22746E5B2002BE3BC /* proc_table_egl.h */,
-				FFD002B12746E5B2002BE3BC /* proc_table_egl_autogen.cpp */,
 				5CB300CC1DE39E7500D2C405 /* resource.h */,
 			);
 			path = libGLESv2;
@@ -3012,6 +3012,7 @@
 		A3C3FE1B255DDE7800B73018 /* apple */ = {
 			isa = PBXGroup;
 			children = (
+				7B9BB4472D563C4A00E39E4C /* ObjCPtr.h */,
 				A3C3FE1C255DDE7800B73018 /* SoftLinking.h */,
 			);
 			path = apple;
@@ -3496,6 +3497,7 @@
 				31CDFFB5249184A100486F27 /* NodeSearch.h in Headers */,
 				7B1538862BBC2C7A00B50C74 /* NodeType.h in Headers */,
 				31CDFF732491849200486F27 /* numeric_lex.h in Headers */,
+				7B9BB4492D563C4A00E39E4C /* ObjCPtr.h in Headers */,
 				31CD0052249184FC00486F27 /* Observer.h in Headers */,
 				FF194FC727432C4D006A97A3 /* Operator_autogen.h in Headers */,
 				31CDFF552491848C00486F27 /* Optional.h in Headers */,
@@ -3519,7 +3521,6 @@
 				31CDFFCD249184A700486F27 /* Pragma.h in Headers */,
 				31CDFF712491849200486F27 /* Preprocessor.h in Headers */,
 				7BB2CF222B1A554B00848B36 /* PreTransformTextureCubeGradDerivatives.h in Headers */,
-				FFD002B42746E5B2002BE3BC /* proc_table_egl.h in Headers */,
 				31CD006F249184FC00486F27 /* Program.h in Headers */,
 				31CD0058249184FC00486F27 /* ProgramExecutable.h in Headers */,
 				7BB62F5D2AA2032500C1DDA8 /* ProgramExecutableMtl.h in Headers */,
@@ -3691,6 +3692,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7BA890652CB5234E0020C411 /* BuiltIn_autogen.h in Headers */,
+				7B9BB4482D563C4A00E39E4C /* ObjCPtr.h in Headers */,
 				7BFD81842D50CF7C0010ED68 /* span.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4027,6 +4029,7 @@
 				7B359D552A7CECAE0016DC59 /* DriverUniformMetal.cpp in Sources */,
 				FFD002AF2746E560002BE3BC /* egl_ext_stubs.cpp in Sources */,
 				FFD002AD2746E560002BE3BC /* egl_stubs.cpp in Sources */,
+				7B9BB44B2D563C9300E39E4C /* egl_stubs_getprocaddress_autogen.cpp in Sources */,
 				DF83E3902639FED4000825EF /* EGLReusableSync.cpp in Sources */,
 				DF83E30E2639FE17000825EF /* EGLSync.cpp in Sources */,
 				DF83E3972639FED4000825EF /* EGLSyncImpl.cpp in Sources */,
@@ -4160,7 +4163,6 @@
 				DF83E22C2639FCB0000825EF /* preprocessor_lex_autogen.cpp in Sources */,
 				DF83E2332639FCB0000825EF /* preprocessor_tab_autogen.cpp in Sources */,
 				7BB2CF232B1A554B00848B36 /* PreTransformTextureCubeGradDerivatives.cpp in Sources */,
-				FFD002B32746E5B2002BE3BC /* proc_table_egl_autogen.cpp in Sources */,
 				7BD5BEE929F139F2003F2E53 /* process.cpp in Sources */,
 				DF83E3052639FE17000825EF /* Program.cpp in Sources */,
 				DF83E3062639FE17000825EF /* ProgramExecutable.cpp in Sources */,
