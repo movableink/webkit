@@ -41,7 +41,6 @@
     __weak id _resetTarget;
     SEL _resetAction;
     RetainPtr<NSNumber> _lastActiveTouchIdentifier;
-    std::optional<UITouchType> _lastActiveTouchType;
 }
 
 - (void)setGestureIdentifiedTarget:(id)target action:(SEL)action
@@ -77,7 +76,6 @@
 
     [_resetTarget performSelector:_resetAction withObject:self];
     _lastActiveTouchIdentifier = nil;
-    _lastActiveTouchType = std::nullopt;
 }
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
@@ -91,7 +89,6 @@
         UITouch *touch = [activeTouches objectForKey:touchIdentifier];
         if ([touch.gestureRecognizers containsObject:self]) {
             _lastActiveTouchIdentifier = touchIdentifier;
-            _lastActiveTouchType = touch.type;
             break;
         }
     }
@@ -100,11 +97,6 @@
 - (NSNumber*)lastActiveTouchIdentifier
 {
     return _lastActiveTouchIdentifier.get();
-}
-
-- (std::optional<UITouchType>)lastActiveTouchType
-{
-    return _lastActiveTouchType;
 }
 
 @end

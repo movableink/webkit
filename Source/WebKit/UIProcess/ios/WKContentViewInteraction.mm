@@ -132,7 +132,6 @@
 #import <WebCore/Path.h>
 #import <WebCore/PathUtilities.h>
 #import <WebCore/PlatformTextAlternatives.h>
-#import <WebCore/PointerEventTypeNames.h>
 #import <WebCore/PromisedAttachmentInfo.h>
 #import <WebCore/ScrollTypes.h>
 #import <WebCore/Scrollbar.h>
@@ -3870,21 +3869,12 @@ static void cancelPotentialTapIfNecessary(WKContentView* contentView)
     RELEASE_LOG(ViewGestures, "Single tap recognized - commit potential tap (%p, pageProxyID=%llu)", self, _page->identifier().toUInt64());
 
     WebCore::PointerID pointerId = WebCore::mousePointerID;
-    String pointerType = WebCore::mousePointerEventType();
     if (auto* singleTapTouchIdentifier = [_singleTapGestureRecognizer lastActiveTouchIdentifier]) {
         pointerId = [singleTapTouchIdentifier unsignedIntValue];
         _commitPotentialTapPointerId = pointerId;
-
-        if (auto maybeTouchType = [_singleTapGestureRecognizer lastActiveTouchType]) {
-            auto touchType = *maybeTouchType;
-            if (touchType == UITouchTypePencil)
-                pointerType = WebCore::penPointerEventType();
-            else if (touchType == UITouchTypeDirect)
-                pointerType = WebCore::touchPointerEventType();
-        }
     }
     RELEASE_ASSERT(_layerTreeTransactionIdAtLastInteractionStart);
-    _page->commitPotentialTap(WebKit::webEventModifierFlags(gestureRecognizer.modifierFlags), *_layerTreeTransactionIdAtLastInteractionStart, pointerId, pointerType);
+    _page->commitPotentialTap(WebKit::webEventModifierFlags(gestureRecognizer.modifierFlags), *_layerTreeTransactionIdAtLastInteractionStart, pointerId);
 
     if (!_isExpectingFastSingleTapCommit)
         [self _finishInteraction];

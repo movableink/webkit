@@ -42,7 +42,7 @@ public:
     {
     }
 
-    PlatformMouseEvent(const IntPoint& position, const IntPoint& globalPosition, MouseButton button, PlatformEvent::Type type, int clickCount, OptionSet<PlatformEvent::Modifier> modifiers, WallTime timestamp, double force, SyntheticClickType syntheticClickType, String pointerType = mousePointerEventType(), PointerID pointerId = mousePointerID)
+    PlatformMouseEvent(const IntPoint& position, const IntPoint& globalPosition, MouseButton button, PlatformEvent::Type type, int clickCount, OptionSet<PlatformEvent::Modifier> modifiers, WallTime timestamp, double force, SyntheticClickType syntheticClickType, PointerID pointerId = mousePointerID)
         : PlatformEvent(type, modifiers, timestamp)
         , m_button(button)
         , m_syntheticClickType(syntheticClickType)
@@ -50,7 +50,6 @@ public:
         , m_globalPosition(globalPosition)
         , m_force(force)
         , m_pointerId(pointerId)
-        , m_pointerType(pointerType)
         , m_clickCount(clickCount)
     {
     }

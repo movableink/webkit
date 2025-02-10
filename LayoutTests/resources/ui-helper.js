@@ -1512,13 +1512,6 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static stylusTapOnElement(element, modifiers=[])
-    {
-        const x = element.offsetLeft + element.offsetWidth / 2;
-        const y = element.offsetTop + element.offsetHeight / 2;
-        return UIHelper.stylusTapAt(x, y, modifiers);
-    }
-
     static attachmentInfo(attachmentIdentifier)
     {
         if (!this.isWebKit2())
