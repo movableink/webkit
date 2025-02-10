@@ -117,6 +117,9 @@ struct GPUBindGroupEntry {
     }
     static bool equal(const GPUBindGroupEntry& entry, const GPUBindGroupEntry& otherEntry)
     {
+        if (entry.binding != otherEntry.binding)
+            return false;
+
         return WTF::switchOn(entry.resource, [&](const RefPtr<GPUSampler>& sampler) -> bool {
             return sampler.get() && equal(*sampler, otherEntry.resource);
         }, [&](const RefPtr<GPUTextureView>& textureView) -> bool {
