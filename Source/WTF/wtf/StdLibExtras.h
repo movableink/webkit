@@ -1501,6 +1501,38 @@ ALWAYS_INLINE constexpr void forEachSetBit(std::span<const WordType> bits, size_
     }
 }
 
+template<typename Object, typename Allocator = FastMalloc, typename... Arguments> std::pair<Object*, void*> createWithTrailingBytes(size_t trailingBytesSize, Arguments... arguments)
+{
+    Object* object = static_cast<Object*>(Allocator::malloc(sizeof(Object) + trailingBytesSize));
+    new (NotNull, object) Object(std::forward<Arguments>(arguments)...);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    return { object, object + 1 };
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+}
+
+template<typename Object> std::pair<Object*, void*> fromTrailingBytes(void* trailingBytes)
+{
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    Object* object = static_cast<Object*>(trailingBytes) - 1;
+    return { object, object + 1 };
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+}
+
+template<typename Object, typename Allocator = FastMalloc> std::pair<Object*, void*> reallocWithTrailingBytes(Object* object, size_t newTrailingBytesSize)
+{
+    size_t newAllocationSize = sizeof(Object) + newTrailingBytesSize;
+    object = static_cast<Object*>(Allocator::realloc(object, newAllocationSize));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    return { object, object + 1 };
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+}
+
+template<typename Object, typename Allocator = FastMalloc> void destroyWithTrailingBytes(Object* object)
+{
+    object->~Object();
+    Allocator::free(object);
+}
+
 template<typename T, typename U>
 ALWAYS_INLINE void lazyInitialize(const std::unique_ptr<T>& ptr, std::unique_ptr<U>&& obj)
 {
