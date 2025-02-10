@@ -196,7 +196,6 @@ UIProcess/Cocoa/SOAuthorization/NavigationSOAuthorizationSession.mm
 UIProcess/Cocoa/SOAuthorization/PopUpSOAuthorizationSession.mm
 UIProcess/Cocoa/SOAuthorization/SOAuthorizationSession.mm
 UIProcess/Cocoa/SOAuthorization/WKSOAuthorizationDelegate.mm
-UIProcess/Cocoa/UIDelegate.mm
 UIProcess/Cocoa/UserMediaPermissionRequestManagerProxy.mm
 UIProcess/Cocoa/WKEditCommand.mm
 UIProcess/DeviceIdHashSaltStorage.cpp
