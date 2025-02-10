@@ -133,7 +133,7 @@ Method* ObjcClass::methodNamed(PropertyName propertyName, Instance*) const
             if ([thisClass respondsToSelector:@selector(webScriptNameForSelector:)])
                 mappedName = [thisClass webScriptNameForSelector:objcMethodSelector];
 
-            if ((mappedName && [mappedName isEqual:methodName.get()]) || equalSpans(objcMethodSelectorName, buffer.span())) {
+            if ((mappedName && [mappedName isEqual:methodName.get()]) || equalSpans(objcMethodSelectorName, unsafeSpan(buffer.data()))) {
                 auto method = makeUnique<ObjcMethod>(thisClass, objcMethodSelector);
                 methodPtr = method.get();
                 m_methodCache.add(name.impl(), WTFMove(method));
