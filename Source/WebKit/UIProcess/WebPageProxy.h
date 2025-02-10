@@ -620,7 +620,8 @@ using SpeechRecognitionPermissionRequestCallback = CompletionHandler<void(std::o
 using SpellDocumentTag = int64_t;
 using TapIdentifier = ObjectIdentifier<TapIdentifierType>;
 using TextCheckerRequestID = ObjectIdentifier<TextCheckerRequestType>;
-using TransactionID = MonotonicObjectIdentifier<TransactionIDType>;
+using TransactionIdentifier = MonotonicObjectIdentifier<TransactionIDType>;
+using TransactionID = WebCore::ProcessQualified<TransactionIdentifier>;
 using WebPageProxyIdentifier = ObjectIdentifier<WebPageProxyIdentifierType>;
 using WebURLSchemeHandlerIdentifier = ObjectIdentifier<WebURLSchemeHandler>;
 using WebUndoStepID = uint64_t;
@@ -1050,12 +1051,12 @@ public:
     void setScreenIsBeingCaptured(bool);
 
     double displayedContentScale() const;
-    const WebCore::FloatRect& exposedContentRect() const;
-    const WebCore::FloatRect& unobscuredContentRect() const;
+    WebCore::FloatRect exposedContentRect() const;
+    WebCore::FloatRect unobscuredContentRect() const;
     bool inStableState() const;
-    const WebCore::FloatRect& unobscuredContentRectRespectingInputViewBounds() const;
+    WebCore::FloatRect unobscuredContentRectRespectingInputViewBounds() const;
     // When visual viewports are enabled, this is the layout viewport rect.
-    const WebCore::FloatRect& layoutViewportRect() const;
+    WebCore::FloatRect layoutViewportRect() const;
 
     void resendLastVisibleContentRects();
 

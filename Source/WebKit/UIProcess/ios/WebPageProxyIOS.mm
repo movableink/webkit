@@ -189,7 +189,9 @@ void WebPageProxy::updateVisibleContentRects(const VisibleContentRectUpdateInfo&
 
 void WebPageProxy::resendLastVisibleContentRects()
 {
-    m_legacyMainFrameProcess->send(Messages::ViewUpdateDispatcher::VisibleContentRectUpdate(webPageIDInMainFrameProcess(), internals().lastVisibleContentRectUpdate), 0);
+    ASSERT(internals().lastVisibleContentRectUpdate);
+    if (internals().lastVisibleContentRectUpdate)
+        m_legacyMainFrameProcess->send(Messages::ViewUpdateDispatcher::VisibleContentRectUpdate(webPageIDInMainFrameProcess(), *internals().lastVisibleContentRectUpdate), 0);
 }
 
 void WebPageProxy::updateStringForFind(const String& string)
@@ -1700,32 +1702,50 @@ void WebPageProxy::statusBarWasTapped()
 
 double WebPageProxy::displayedContentScale() const
 {
-    return internals().lastVisibleContentRectUpdate.scale();
+    ASSERT(internals().lastVisibleContentRectUpdate);
+    if (internals().lastVisibleContentRectUpdate)
+        return internals().lastVisibleContentRectUpdate->scale();
+    return 1;
 }
 
-const FloatRect& WebPageProxy::exposedContentRect() const
+FloatRect WebPageProxy::exposedContentRect() const
 {
-    return internals().lastVisibleContentRectUpdate.exposedContentRect();
+    ASSERT(internals().lastVisibleContentRectUpdate);
+    if (internals().lastVisibleContentRectUpdate)
+        return internals().lastVisibleContentRectUpdate->exposedContentRect();
+    return { };
 }
 
-const FloatRect& WebPageProxy::unobscuredContentRect() const
+FloatRect WebPageProxy::unobscuredContentRect() const
 {
-    return internals().lastVisibleContentRectUpdate.unobscuredContentRect();
+    ASSERT(internals().lastVisibleContentRectUpdate);
+    if (internals().lastVisibleContentRectUpdate)
+        return internals().lastVisibleContentRectUpdate->unobscuredContentRect();
+    return { };
 }
 
 bool WebPageProxy::inStableState() const
 {
-    return internals().lastVisibleContentRectUpdate.inStableState();
+    ASSERT(internals().lastVisibleContentRectUpdate);
+    if (internals().lastVisibleContentRectUpdate)
+        return internals().lastVisibleContentRectUpdate->inStableState();
+    return false;
 }
 
-const FloatRect& WebPageProxy::unobscuredContentRectRespectingInputViewBounds() const
+FloatRect WebPageProxy::unobscuredContentRectRespectingInputViewBounds() const
 {
-    return internals().lastVisibleContentRectUpdate.unobscuredContentRectRespectingInputViewBounds();
+    ASSERT(internals().lastVisibleContentRectUpdate);
+    if (internals().lastVisibleContentRectUpdate)
+        return internals().lastVisibleContentRectUpdate->unobscuredContentRectRespectingInputViewBounds();
+    return { };
 }
 
-const FloatRect& WebPageProxy::layoutViewportRect() const
+FloatRect WebPageProxy::layoutViewportRect() const
 {
-    return internals().lastVisibleContentRectUpdate.layoutViewportRect();
+    ASSERT(internals().lastVisibleContentRectUpdate);
+    if (internals().lastVisibleContentRectUpdate)
+        return internals().lastVisibleContentRectUpdate->layoutViewportRect();
+    return { };
 }
 
 FloatSize WebPageProxy::viewLayoutSize() const

@@ -62,7 +62,7 @@ public:
     void acceleratedAnimationDidStart(WebCore::PlatformLayerIdentifier, const String& key, MonotonicTime startTime);
     void acceleratedAnimationDidEnd(WebCore::PlatformLayerIdentifier, const String& key);
 
-    TransactionID nextMainFrameLayerTreeTransactionID() const { return m_webPageProxyProcessState.pendingLayerTreeTransactionID.next(); }
+    TransactionID nextMainFrameLayerTreeTransactionID() const { return m_webPageProxyProcessState.pendingLayerTreeTransactionID.value_or(TransactionID(TransactionIdentifier(),  m_transactionIDForPendingCACommit.processIdentifier())).next(); }
     TransactionID lastCommittedMainFrameLayerTreeTransactionID() const { return m_transactionIDForPendingCACommit; }
 
     virtual void didRefreshDisplay();
@@ -104,8 +104,8 @@ protected:
         ProcessState& operator=(ProcessState&&) = default;
 
         CommitLayerTreeMessageState commitLayerTreeMessageState { Idle };
-        TransactionID lastLayerTreeTransactionID;
-        TransactionID pendingLayerTreeTransactionID;
+        std::optional<TransactionID> lastLayerTreeTransactionID;
+        std::optional<TransactionID> pendingLayerTreeTransactionID;
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
         Seconds acceleratedTimelineTimeOrigin;

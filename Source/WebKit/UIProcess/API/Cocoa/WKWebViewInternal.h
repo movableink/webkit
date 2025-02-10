@@ -183,7 +183,6 @@ struct PerWebProcessState {
     CGFloat viewportMetaTagWidth { WebCore::ViewportArguments::ValueAuto };
     CGFloat initialScaleFactor { 1 };
     BOOL hasCommittedLoadForMainFrame { NO };
-    BOOL needsResetViewStateAfterCommitLoadForMainFrame { NO };
 
     WebKit::DynamicViewportUpdateMode dynamicViewportUpdateMode { WebKit::DynamicViewportUpdateMode::NotResizing };
 
@@ -225,8 +224,8 @@ struct PerWebProcessState {
     std::optional<CGRect> frozenVisibleContentRect;
     std::optional<CGRect> frozenUnobscuredContentRect;
 
-    WebKit::TransactionID firstPaintAfterCommitLoadTransactionID;
-    WebKit::TransactionID lastTransactionID;
+    std::optional<WebKit::TransactionID> resetViewStateAfterTransactionID;
+    std::optional<WebKit::TransactionID> lastTransactionID;
 
     std::optional<WebKit::TransactionID> firstTransactionIDAfterPageRestore;
 

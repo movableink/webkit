@@ -41,7 +41,7 @@ struct WebPage::Internals {
 #if PLATFORM(IOS_FAMILY)
     WebCore::VisibleSelection storedSelectionForAccessibility { WebCore::VisibleSelection() };
     FocusedElementInformationIdentifier lastFocusedElementInformationIdentifier;
-    TransactionID lastTransactionIDWithScaleChange;
+    std::optional<TransactionID> lastTransactionIDWithScaleChange;
     std::optional<std::pair<TransactionID, double>> lastLayerTreeTransactionIdAndPageScaleBeforeScalingPage;
 #endif
 #if ENABLE(APP_HIGHLIGHTS)

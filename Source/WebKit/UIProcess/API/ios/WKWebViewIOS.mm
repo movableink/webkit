@@ -858,10 +858,9 @@ static WebCore::Color scrollViewBackgroundColor(WKWebView *webView, AllowPageBac
 
 - (void)_didCommitLoadForMainFrame
 {
-    _perProcessState.firstPaintAfterCommitLoadTransactionID = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).nextMainFrameLayerTreeTransactionID();
+    _perProcessState.resetViewStateAfterTransactionID = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).nextMainFrameLayerTreeTransactionID();
 
     _perProcessState.hasCommittedLoadForMainFrame = YES;
-    _perProcessState.needsResetViewStateAfterCommitLoadForMainFrame = YES;
 
     if (![self _scrollViewIsRubberBandingForRefreshControl])
         [_scrollView _wk_stopScrollingAndZooming];
@@ -949,14 +948,14 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
 - (void)_trackTransactionCommit:(const WebKit::RemoteLayerTreeTransaction&)layerTreeTransaction
 {
     if (_perProcessState.didDeferUpdateVisibleContentRectsForUnstableScrollView) {
-        WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _didCommitLayerTree:] - received a commit (%llu) while deferring visible content rect updates (dynamicViewportUpdateMode %d, needsResetViewStateAfterCommitLoadForMainFrame %d (wants commit %llu), sizeChangedSinceLastVisibleContentRectUpdate %d, [_scrollView isZoomBouncing] %d, currentlyAdjustingScrollViewInsetsForKeyboard %d)",
-        self, _page->identifier().toUInt64(), layerTreeTransaction.transactionID().toUInt64(), enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode), _perProcessState.needsResetViewStateAfterCommitLoadForMainFrame, _perProcessState.firstPaintAfterCommitLoadTransactionID.toUInt64(), [_contentView sizeChangedSinceLastVisibleContentRectUpdate], [_scrollView isZoomBouncing], _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard);
+        WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _didCommitLayerTree:] - received a commit (%llu) while deferring visible content rect updates (dynamicViewportUpdateMode %d, resetViewStateAfterTransactionID %llu, sizeChangedSinceLastVisibleContentRectUpdate %d, [_scrollView isZoomBouncing] %d, currentlyAdjustingScrollViewInsetsForKeyboard %d)",
+        self, _page->identifier().toUInt64(), layerTreeTransaction.transactionID().object().toUInt64(), enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode), _perProcessState.resetViewStateAfterTransactionID ? _perProcessState.resetViewStateAfterTransactionID->object().toUInt64() : 0, [_contentView sizeChangedSinceLastVisibleContentRectUpdate], [_scrollView isZoomBouncing], _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard);
     }
 
     if (_timeOfFirstVisibleContentRectUpdateWithPendingCommit) {
         auto timeSinceFirstRequestWithPendingCommit = MonotonicTime::now() - *_timeOfFirstVisibleContentRectUpdateWithPendingCommit;
         if (timeSinceFirstRequestWithPendingCommit > delayBeforeNoCommitsLogging)
-            WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _didCommitLayerTree:] - finally received commit %.2fs after visible content rect update request; transactionID %llu", self, _page->identifier().toUInt64(), timeSinceFirstRequestWithPendingCommit.value(), layerTreeTransaction.transactionID().toUInt64());
+            WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _didCommitLayerTree:] - finally received commit %.2fs after visible content rect update request; transactionID %llu", self, _page->identifier().toUInt64(), timeSinceFirstRequestWithPendingCommit.value(), layerTreeTransaction.transactionID().object().toUInt64());
         _timeOfFirstVisibleContentRectUpdateWithPendingCommit = std::nullopt;
     }
 }
@@ -1023,7 +1022,7 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
 
 - (BOOL)_restoreScrollAndZoomStateForTransaction:(const WebKit::RemoteLayerTreeTransaction&)layerTreeTransaction
 {
-    if (!_perProcessState.firstTransactionIDAfterPageRestore || layerTreeTransaction.transactionID() < _perProcessState.firstTransactionIDAfterPageRestore.value())
+    if (!_perProcessState.firstTransactionIDAfterPageRestore || layerTreeTransaction.transactionID().lessThanSameProcess(_perProcessState.firstTransactionIDAfterPageRestore.value()))
         return NO;
 
     _perProcessState.firstTransactionIDAfterPageRestore = std::nullopt;
@@ -1071,71 +1070,73 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
 
 - (void)_didCommitLayerTree:(const WebKit::RemoteLayerTreeTransaction&)layerTreeTransaction
 {
-    [self _trackTransactionCommit:layerTreeTransaction];
+    if (layerTreeTransaction.isMainFrameProcessTransaction()) {
+        [self _trackTransactionCommit:layerTreeTransaction];
 
-    _perProcessState.lastTransactionID = layerTreeTransaction.transactionID();
+        _perProcessState.lastTransactionID = layerTreeTransaction.transactionID();
 
-    if (![self usesStandardContentView])
-        return;
+        if (![self usesStandardContentView])
+            return;
 
-    LOG_WITH_STREAM(VisibleRects, stream << "-[WKWebView " << _page->identifier() << " _didCommitLayerTree:] transactionID " << layerTreeTransaction.transactionID() << " dynamicViewportUpdateMode " << enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode));
+        LOG_WITH_STREAM(VisibleRects, stream << "-[WKWebView " << _page->identifier() << " _didCommitLayerTree:] transactionID " << layerTreeTransaction.transactionID() << " dynamicViewportUpdateMode " << enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode));
 
-    bool needUpdateVisibleContentRects = _page->updateLayoutViewportParameters(layerTreeTransaction);
+        bool needUpdateVisibleContentRects = _page->updateLayoutViewportParameters(layerTreeTransaction);
 
-    if (_perProcessState.dynamicViewportUpdateMode != WebKit::DynamicViewportUpdateMode::NotResizing) {
-        [self _didCommitLayerTreeDuringAnimatedResize:layerTreeTransaction];
-        return;
+        if (_perProcessState.dynamicViewportUpdateMode != WebKit::DynamicViewportUpdateMode::NotResizing) {
+            [self _didCommitLayerTreeDuringAnimatedResize:layerTreeTransaction];
+            return;
+        }
+
+        if (_perProcessState.liveResizeParameters)
+            return;
+
+        if (_resizeAnimationView)
+            WKWEBVIEW_RELEASE_LOG("%p -[WKWebView _didCommitLayerTree:] - dynamicViewportUpdateMode is NotResizing, but still have a live resizeAnimationView (unpaired begin/endAnimatedResize?)", self);
+
+        [self _updateScrollViewForTransaction:layerTreeTransaction];
+
+        _perProcessState.viewportMetaTagWidth = layerTreeTransaction.viewportMetaTagWidth();
+        _perProcessState.viewportMetaTagWidthWasExplicit = layerTreeTransaction.viewportMetaTagWidthWasExplicit();
+        _perProcessState.viewportMetaTagCameFromImageDocument = layerTreeTransaction.viewportMetaTagCameFromImageDocument();
+        _perProcessState.initialScaleFactor = layerTreeTransaction.initialScaleFactor();
+
+        if (_page->inStableState() && layerTreeTransaction.isInStableState() && [_stableStatePresentationUpdateCallbacks count]) {
+            for (dispatch_block_t action in _stableStatePresentationUpdateCallbacks.get())
+                action();
+
+            [_stableStatePresentationUpdateCallbacks removeAllObjects];
+            _stableStatePresentationUpdateCallbacks = nil;
+        }
+
+        if (![_contentView _mayDisableDoubleTapGesturesDuringSingleTap])
+            [_contentView _setDoubleTapGesturesEnabled:self._allowsDoubleTapGestures];
+
+        [self _updateScrollViewBackground];
+        [self _setAvoidsUnsafeArea:layerTreeTransaction.avoidsUnsafeArea()];
+
+        if (_gestureController)
+            _gestureController->setRenderTreeSize(layerTreeTransaction.renderTreeSize());
+
+        if (_perProcessState.resetViewStateAfterTransactionID && layerTreeTransaction.transactionID().greaterThanOrEqualSameProcess(*_perProcessState.resetViewStateAfterTransactionID)) {
+            _perProcessState.resetViewStateAfterTransactionID = std::nullopt;
+            if (![self _scrollViewIsRubberBandingForRefreshControl])
+                [self _resetContentOffset];
+
+            if (_observedRenderingProgressEvents & _WKRenderingProgressEventFirstPaint)
+                _navigationState->didFirstPaint();
+
+            needUpdateVisibleContentRects = true;
+        }
+
+        if ([self _restoreScrollAndZoomStateForTransaction:layerTreeTransaction])
+            needUpdateVisibleContentRects = true;
+
+        if (needUpdateVisibleContentRects)
+            [self _scheduleVisibleContentRectUpdate];
+
+        if (WebKit::RemoteLayerTreeScrollingPerformanceData* scrollPerfData =   _page->scrollingPerformanceData())
+            scrollPerfData->didCommitLayerTree([self visibleRectInViewCoordinates]);
     }
-
-    if (_perProcessState.liveResizeParameters)
-        return;
-
-    if (_resizeAnimationView)
-        WKWEBVIEW_RELEASE_LOG("%p -[WKWebView _didCommitLayerTree:] - dynamicViewportUpdateMode is NotResizing, but still have a live resizeAnimationView (unpaired begin/endAnimatedResize?)", self);
-
-    [self _updateScrollViewForTransaction:layerTreeTransaction];
-
-    _perProcessState.viewportMetaTagWidth = layerTreeTransaction.viewportMetaTagWidth();
-    _perProcessState.viewportMetaTagWidthWasExplicit = layerTreeTransaction.viewportMetaTagWidthWasExplicit();
-    _perProcessState.viewportMetaTagCameFromImageDocument = layerTreeTransaction.viewportMetaTagCameFromImageDocument();
-    _perProcessState.initialScaleFactor = layerTreeTransaction.initialScaleFactor();
-
-    if (_page->inStableState() && layerTreeTransaction.isInStableState() && [_stableStatePresentationUpdateCallbacks count]) {
-        for (dispatch_block_t action in _stableStatePresentationUpdateCallbacks.get())
-            action();
-
-        [_stableStatePresentationUpdateCallbacks removeAllObjects];
-        _stableStatePresentationUpdateCallbacks = nil;
-    }
-
-    if (![_contentView _mayDisableDoubleTapGesturesDuringSingleTap])
-        [_contentView _setDoubleTapGesturesEnabled:self._allowsDoubleTapGestures];
-
-    [self _updateScrollViewBackground];
-    [self _setAvoidsUnsafeArea:layerTreeTransaction.avoidsUnsafeArea()];
-
-    if (_gestureController)
-        _gestureController->setRenderTreeSize(layerTreeTransaction.renderTreeSize());
-
-    if (_perProcessState.needsResetViewStateAfterCommitLoadForMainFrame && layerTreeTransaction.transactionID() >= _perProcessState.firstPaintAfterCommitLoadTransactionID) {
-        _perProcessState.needsResetViewStateAfterCommitLoadForMainFrame = NO;
-        if (![self _scrollViewIsRubberBandingForRefreshControl])
-            [self _resetContentOffset];
-
-        if (_observedRenderingProgressEvents & _WKRenderingProgressEventFirstPaint)
-            _navigationState->didFirstPaint();
-
-        needUpdateVisibleContentRects = true;
-    }
-
-    if ([self _restoreScrollAndZoomStateForTransaction:layerTreeTransaction])
-        needUpdateVisibleContentRects = true;
-
-    if (needUpdateVisibleContentRects)
-        [self _scheduleVisibleContentRectUpdate];
-
-    if (WebKit::RemoteLayerTreeScrollingPerformanceData* scrollPerfData = _page->scrollingPerformanceData())
-        scrollPerfData->didCommitLayerTree([self visibleRectInViewCoordinates]);
 
     if (_perProcessState.pendingFindLayerID) {
         CALayer *layer = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).remoteLayerTreeHost().layerForID(*_perProcessState.pendingFindLayerID);
@@ -2887,7 +2888,7 @@ static bool scrollViewCanScroll(UIScrollView *scrollView)
     if (_timeOfFirstVisibleContentRectUpdateWithPendingCommit) {
         auto timeSinceFirstRequestWithPendingCommit = timeNow - *_timeOfFirstVisibleContentRectUpdateWithPendingCommit;
         if (timeSinceFirstRequestWithPendingCommit > delayBeforeNoCommitsLogging)
-            WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _updateVisibleContentRects:] - have not received a commit %.2fs after visible content rect update; lastTransactionID %llu", self, _page->identifier().toUInt64(), timeSinceFirstRequestWithPendingCommit.value(), _perProcessState.lastTransactionID.toUInt64());
+            WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _updateVisibleContentRects:] - have not received a commit %.2fs after visible content rect update; lastTransactionID %llu", self, _page->identifier().toUInt64(), timeSinceFirstRequestWithPendingCommit.value(), _perProcessState.lastTransactionID ? _perProcessState.lastTransactionID->object().toUInt64() : 0);
     }
 
     if (_perProcessState.invokingUIScrollViewDelegateCallback) {
@@ -2901,13 +2902,12 @@ static bool scrollViewCanScroll(UIScrollView *scrollView)
         [self _cancelAnimatedResize];
 
     if (self._shouldDeferGeometryUpdates
-        || (_perProcessState.needsResetViewStateAfterCommitLoadForMainFrame && ![_contentView sizeChangedSinceLastVisibleContentRectUpdate])
+        || (_perProcessState.resetViewStateAfterTransactionID && ![_contentView sizeChangedSinceLastVisibleContentRectUpdate])
         || [_scrollView isZoomBouncing]
         || _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard) {
         _perProcessState.didDeferUpdateVisibleContentRectsForAnyReason = YES;
         _perProcessState.didDeferUpdateVisibleContentRectsForUnstableScrollView = YES;
-        WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _updateVisibleContentRects:] - scroll view state is non-stable, bailing (shouldDeferGeometryUpdates %d, dynamicViewportUpdateMode %d, needsResetViewStateAfterCommitLoadForMainFrame %d, sizeChangedSinceLastVisibleContentRectUpdate %d, [_scrollView isZoomBouncing] %d, currentlyAdjustingScrollViewInsetsForKeyboard %d)",
-            self, _page->identifier().toUInt64(), self._shouldDeferGeometryUpdates, enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode), _perProcessState.needsResetViewStateAfterCommitLoadForMainFrame, [_contentView sizeChangedSinceLastVisibleContentRectUpdate], [_scrollView isZoomBouncing], _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard);
+        WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _updateVisibleContentRects:] - scroll view state is non-stable, bailing (shouldDeferGeometryUpdates %d, dynamicViewportUpdateMode %d, resetViewStateAfterTransactionID %llu, sizeChangedSinceLastVisibleContentRectUpdate %d, [_scrollView isZoomBouncing] %d, currentlyAdjustingScrollViewInsetsForKeyboard %d)", self, _page->identifier().toUInt64(), self._shouldDeferGeometryUpdates, enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode), _perProcessState.resetViewStateAfterTransactionID ? _perProcessState.resetViewStateAfterTransactionID->object().toUInt64() : 0, [_contentView sizeChangedSinceLastVisibleContentRectUpdate], [_scrollView isZoomBouncing], _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard);
         return;
     }
 

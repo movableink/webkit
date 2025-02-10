@@ -472,7 +472,7 @@ struct ImageAnalysisContextMenuActionData {
     Vector<WebKit::KeyEventAndCompletionBlock, 1> _keyWebEventHandlers;
 
     CGPoint _lastInteractionLocation;
-    WebKit::TransactionID _layerTreeTransactionIdAtLastInteractionStart;
+    std::optional<WebKit::TransactionID> _layerTreeTransactionIdAtLastInteractionStart;
 
     WebKit::WKSelectionDrawingInfo _lastSelectionDrawingInfo;
     RetainPtr<WKTextRange> _cachedSelectedTextRange;

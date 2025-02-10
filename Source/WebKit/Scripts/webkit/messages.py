@@ -431,7 +431,6 @@ def serialized_identifiers():
         'WebKit::StorageNamespaceIdentifier',
         'WebKit::TapIdentifier',
         'WebKit::TextCheckerRequestID',
-        'WebKit::TransactionID',
         'WebKit::UserContentControllerIdentifier',
         'WebKit::UserScriptIdentifier',
         'WebKit::UserStyleSheetIdentifier',

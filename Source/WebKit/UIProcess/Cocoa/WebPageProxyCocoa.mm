@@ -167,7 +167,7 @@ void WebPageProxy::didCommitLayerTree(const WebKit::RemoteLayerTreeTransaction& 
     }
 
     if (!m_hasUpdatedRenderingAfterDidCommitLoad
-        && (layerTreeTransaction.transactionID() >= internals().firstLayerTreeTransactionIdAfterDidCommitLoad)) {
+        && (internals().firstLayerTreeTransactionIdAfterDidCommitLoad && layerTreeTransaction.transactionID().greaterThanOrEqualSameProcess(*internals().firstLayerTreeTransactionIdAfterDidCommitLoad))) {
         m_hasUpdatedRenderingAfterDidCommitLoad = true;
 #if ENABLE(SCREEN_TIME)
         if (RefPtr pageClient = this->pageClient())

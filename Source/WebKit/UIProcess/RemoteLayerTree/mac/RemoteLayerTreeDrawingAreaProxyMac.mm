@@ -203,7 +203,7 @@ void RemoteLayerTreeDrawingAreaProxyMac::didCommitLayerTree(IPC::Connection&, co
 
     if (m_transientZoomScale)
         applyTransientZoomToLayer();
-    else if (m_transactionIDAfterEndingTransientZoom && transaction.transactionID() >= m_transactionIDAfterEndingTransientZoom) {
+    else if (m_transactionIDAfterEndingTransientZoom && transaction.transactionID().greaterThanOrEqualSameProcess(*m_transactionIDAfterEndingTransientZoom)) {
         removeTransientZoomFromLayer();
         m_transactionIDAfterEndingTransientZoom = { };
     }

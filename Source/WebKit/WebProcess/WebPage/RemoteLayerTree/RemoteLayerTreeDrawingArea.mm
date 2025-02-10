@@ -373,8 +373,7 @@ void RemoteLayerTreeDrawingArea::updateRendering()
         backingStoreCollection.willBuildTransaction();
         rootLayer.layer->flushCompositingStateForThisLayerOnly();
 
-        RemoteLayerTreeTransaction layerTransaction;
-        layerTransaction.setTransactionID(transactionID);
+        RemoteLayerTreeTransaction layerTransaction(transactionID);
         layerTransaction.setCallbackIDs(WTFMove(m_pendingCallbackIDs));
 
         m_remoteLayerTreeContext->buildTransaction(layerTransaction, *downcast<GraphicsLayerCARemote>(rootLayer.layer.get()).platformCALayer(), rootLayer.frameID);

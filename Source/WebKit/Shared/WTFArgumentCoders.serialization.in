@@ -151,6 +151,7 @@ template: struct WebKit::RemoteAudioDestinationIdentifierType
 template: struct WebKit::RemoteImageBufferSetIdentifierType
 template: struct WebKit::TapIdentifierType
 template: struct WebKit::TextCheckerRequestType
+template: struct WebKit::TransactionIDType
 template: struct WebKit::UserContentControllerIdentifierType
 template: struct WebKit::WebExtensionContextIdentifierType
 template: struct WebKit::WebExtensionFrameIdentifierType

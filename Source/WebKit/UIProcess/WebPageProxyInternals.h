@@ -354,7 +354,7 @@ public:
 
 #if PLATFORM(COCOA)
     WeakObjCPtr<WKWebView> cocoaView;
-    TransactionID firstLayerTreeTransactionIdAfterDidCommitLoad;
+    std::optional<TransactionID> firstLayerTreeTransactionIdAfterDidCommitLoad;
 #endif
 
 #if ENABLE(CONTEXT_MENUS)
@@ -419,7 +419,7 @@ public:
     MonotonicTime didCommitLoadForMainFrameTimestamp;
 
 #if ENABLE(UI_SIDE_COMPOSITING)
-    VisibleContentRectUpdateInfo lastVisibleContentRectUpdate;
+    std::optional<VisibleContentRectUpdateInfo> lastVisibleContentRectUpdate;
 #endif
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)

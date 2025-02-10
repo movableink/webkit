@@ -128,7 +128,7 @@ public:
 #endif
     };
 
-    explicit RemoteLayerTreeTransaction();
+    explicit RemoteLayerTreeTransaction(TransactionID);
     ~RemoteLayerTreeTransaction();
     RemoteLayerTreeTransaction(RemoteLayerTreeTransaction&&);
     RemoteLayerTreeTransaction& operator=(RemoteLayerTreeTransaction&&);
@@ -232,7 +232,6 @@ public:
     void setAvoidsUnsafeArea(bool avoidsUnsafeArea) { m_avoidsUnsafeArea = avoidsUnsafeArea; }
 
     TransactionID transactionID() const { return m_transactionID; }
-    void setTransactionID(TransactionID transactionID) { m_transactionID = transactionID; }
 
     ActivityStateChangeID activityStateChangeID() const { return m_activityStateChangeID; }
     void setActivityStateChangeID(ActivityStateChangeID activityStateChangeID) { m_activityStateChangeID = activityStateChangeID; }
@@ -260,6 +259,9 @@ public:
 
 private:
     friend struct IPC::ArgumentCoder<RemoteLayerTreeTransaction, void>;
+
+    // Do not use, IPC constructor only
+    explicit RemoteLayerTreeTransaction();
 
     Markable<WebCore::PlatformLayerIdentifier> m_rootLayerID;
     ChangedLayers m_changedLayers;

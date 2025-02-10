@@ -3688,7 +3688,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_doubleTapRecognizedForDoubleClick:(UITapGestureRecognizer *)gestureRecognizer
 {
-    _page->handleDoubleTapForDoubleClickAtPoint(WebCore::IntPoint([gestureRecognizer locationInView:self]), WebKit::webEventModifierFlags(gestureRecognizer.modifierFlags), _layerTreeTransactionIdAtLastInteractionStart);
+    RELEASE_ASSERT(_layerTreeTransactionIdAtLastInteractionStart);
+    _page->handleDoubleTapForDoubleClickAtPoint(WebCore::IntPoint([gestureRecognizer locationInView:self]), WebKit::webEventModifierFlags(gestureRecognizer.modifierFlags), *_layerTreeTransactionIdAtLastInteractionStart);
 }
 
 - (void)_twoFingerSingleTapGestureRecognized:(UITapGestureRecognizer *)gestureRecognizer
@@ -3882,7 +3883,8 @@ static void cancelPotentialTapIfNecessary(WKContentView* contentView)
                 pointerType = WebCore::touchPointerEventType();
         }
     }
-    _page->commitPotentialTap(WebKit::webEventModifierFlags(gestureRecognizer.modifierFlags), _layerTreeTransactionIdAtLastInteractionStart, pointerId, pointerType);
+    RELEASE_ASSERT(_layerTreeTransactionIdAtLastInteractionStart);
+    _page->commitPotentialTap(WebKit::webEventModifierFlags(gestureRecognizer.modifierFlags), *_layerTreeTransactionIdAtLastInteractionStart, pointerId, pointerType);
 
     if (!_isExpectingFastSingleTapCommit)
         [self _finishInteraction];
@@ -3930,7 +3932,8 @@ static void cancelPotentialTapIfNecessary(WKContentView* contentView)
         [self becomeFirstResponder];
 
     [_inputPeripheral endEditing];
-    _page->attemptSyntheticClick(location, WebKit::webEventModifierFlags(modifierFlags), _layerTreeTransactionIdAtLastInteractionStart);
+    RELEASE_ASSERT(_layerTreeTransactionIdAtLastInteractionStart);
+    _page->attemptSyntheticClick(location, WebKit::webEventModifierFlags(modifierFlags), *_layerTreeTransactionIdAtLastInteractionStart);
 }
 
 - (void)setUpTextSelectionAssistant

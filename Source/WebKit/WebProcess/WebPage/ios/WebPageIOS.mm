@@ -1034,7 +1034,7 @@ void WebPage::attemptSyntheticClick(const IntPoint& point, OptionSet<WebEventMod
     auto* frameRespondingToClick = nodeRespondingToClick ? nodeRespondingToClick->document().frame() : nullptr;
     IntPoint adjustedIntPoint = roundedIntPoint(adjustedPoint);
 
-    if (!frameRespondingToClick || lastLayerTreeTransactionId < WebFrame::fromCoreFrame(*frameRespondingToClick)->firstLayerTreeTransactionIDAfterDidCommitLoad())
+    if (!frameRespondingToClick || lastLayerTreeTransactionId.lessThanSameProcess(*WebFrame::fromCoreFrame(*frameRespondingToClick)->firstLayerTreeTransactionIDAfterDidCommitLoad()))
         send(Messages::WebPageProxy::DidNotHandleTapAsClick(adjustedIntPoint));
     else if (m_interactionNode == nodeRespondingToClick)
         completeSyntheticClick(*nodeRespondingToClick, adjustedPoint, modifiers, WebCore::SyntheticClickType::OneFingerTap);
@@ -1051,7 +1051,7 @@ void WebPage::handleDoubleTapForDoubleClickAtPoint(const IntPoint& point, Option
         return;
 
     auto* frameRespondingToDoubleClick = nodeRespondingToDoubleClick->document().frame();
-    if (!frameRespondingToDoubleClick || lastLayerTreeTransactionId < WebFrame::fromCoreFrame(*frameRespondingToDoubleClick)->firstLayerTreeTransactionIDAfterDidCommitLoad())
+    if (!frameRespondingToDoubleClick || lastLayerTreeTransactionId.lessThanSameProcess(*WebFrame::fromCoreFrame(*frameRespondingToDoubleClick)->firstLayerTreeTransactionIDAfterDidCommitLoad()))
         return;
 
     SetForScope userIsInteractingChange { m_userIsInteracting, true };
@@ -1365,7 +1365,7 @@ void WebPage::commitPotentialTap(OptionSet<WebEventModifier> modifiers, Transact
     Node* nodeRespondingToClick = localMainFrame ? localMainFrame->nodeRespondingToClickEvents(m_potentialTapLocation, adjustedPoint, m_potentialTapSecurityOrigin.get()) : nullptr;
     auto* frameRespondingToClick = nodeRespondingToClick ? nodeRespondingToClick->document().frame() : nullptr;
 
-    if (!frameRespondingToClick || lastLayerTreeTransactionId < WebFrame::fromCoreFrame(*frameRespondingToClick)->firstLayerTreeTransactionIDAfterDidCommitLoad()) {
+    if (!frameRespondingToClick || lastLayerTreeTransactionId.lessThanSameProcess(*WebFrame::fromCoreFrame(*frameRespondingToClick)->firstLayerTreeTransactionIDAfterDidCommitLoad())) {
         commitPotentialTapFailed();
         return;
     }
@@ -4857,7 +4857,7 @@ static inline void adjustVelocityDataForBoundedScale(VelocityData& velocityData,
 std::optional<float> WebPage::scaleFromUIProcess(const VisibleContentRectUpdateInfo& visibleContentRectUpdateInfo) const
 {
     auto transactionIDForLastScaleFromUIProcess = visibleContentRectUpdateInfo.lastLayerTreeTransactionID();
-    if (m_internals->lastTransactionIDWithScaleChange > transactionIDForLastScaleFromUIProcess)
+    if (m_internals->lastTransactionIDWithScaleChange && m_internals->lastTransactionIDWithScaleChange->greaterThanSameProcess(transactionIDForLastScaleFromUIProcess))
         return std::nullopt;
 
     float scaleFromUIProcess = visibleContentRectUpdateInfo.scale();
@@ -4902,7 +4902,7 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
     LOG_WITH_STREAM(VisibleRects, stream << "\nWebPage " << m_identifier << " updateVisibleContentRects " << visibleContentRectUpdateInfo);
 
     // Skip any VisibleContentRectUpdate that have been queued before DidCommitLoad suppresses the updates in the UIProcess.
-    if (visibleContentRectUpdateInfo.lastLayerTreeTransactionID() < m_mainFrame->firstLayerTreeTransactionIDAfterDidCommitLoad() && !visibleContentRectUpdateInfo.isFirstUpdateForNewViewSize())
+    if (m_mainFrame->firstLayerTreeTransactionIDAfterDidCommitLoad() && visibleContentRectUpdateInfo.lastLayerTreeTransactionID().lessThanSameProcess(*m_mainFrame->firstLayerTreeTransactionIDAfterDidCommitLoad()) && !visibleContentRectUpdateInfo.isFirstUpdateForNewViewSize())
         return;
 
     m_hasReceivedVisibleContentRectsAfterDidCommitLoad = true;
@@ -4953,7 +4953,7 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
         if (!scalesAreEssentiallyEqual(scaleBeforeScalingPage, scaleToUse))
             return false;
 
-        return transactionIdBeforeScalingPage >= visibleContentRectUpdateInfo.lastLayerTreeTransactionID();
+        return transactionIdBeforeScalingPage.greaterThanOrEqualSameProcess( visibleContentRectUpdateInfo.lastLayerTreeTransactionID());
     })();
 
     bool pluginHandlesScaleFactor = [&]() -> bool {

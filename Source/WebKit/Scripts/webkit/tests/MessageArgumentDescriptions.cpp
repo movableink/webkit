@@ -94,7 +94,6 @@
 #include "StorageAreaImplIdentifier.h"
 #include "StorageAreaMapIdentifier.h"
 #include "StorageNamespaceIdentifier.h"
-#include "TransactionID.h"
 #include "UserContentControllerIdentifier.h"
 #include "UserScriptIdentifier.h"
 #include "UserStyleSheetIdentifier.h"
@@ -670,7 +669,6 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebKit::StorageNamespaceIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::TapIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::TextCheckerRequestID));
-    static_assert(sizeof(uint64_t) == sizeof(WebKit::TransactionID));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::UserContentControllerIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::UserScriptIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::UserStyleSheetIdentifier));
@@ -823,7 +821,6 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebKit::StorageNamespaceIdentifier"_s,
         "WebKit::TapIdentifier"_s,
         "WebKit::TextCheckerRequestID"_s,
-        "WebKit::TransactionID"_s,
         "WebKit::UserContentControllerIdentifier"_s,
         "WebKit::UserScriptIdentifier"_s,
         "WebKit::UserStyleSheetIdentifier"_s,
