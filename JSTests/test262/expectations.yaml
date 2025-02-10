@@ -1,30 +1,6 @@
 ---
 test/annexB/language/function-code/block-decl-func-skip-arguments.js:
   default: 'Test262Error: Expected SameValue(«"function arguments() {}"», «"[object Arguments]"») to be true'
-test/built-ins/AsyncFromSyncIteratorPrototype/next/for-await-iterator-next-rejected-promise-close.js:
-  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-test/built-ins/AsyncFromSyncIteratorPrototype/next/for-await-next-rejected-promise-close.js:
-  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-test/built-ins/AsyncFromSyncIteratorPrototype/next/iterator-result-poisoned-wrapper.js:
-  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: iterator closed properly Expected SameValue(«0», «1») to be true'
-  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: iterator closed properly Expected SameValue(«0», «1») to be true'
-test/built-ins/AsyncFromSyncIteratorPrototype/next/next-result-poisoned-wrapper.js:
-  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: iterator closed properly Expected SameValue(«0», «1») to be true'
-  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: iterator closed properly Expected SameValue(«0», «1») to be true'
-test/built-ins/AsyncFromSyncIteratorPrototype/next/yield-iterator-next-rejected-promise-close.js:
-  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-test/built-ins/AsyncFromSyncIteratorPrototype/next/yield-next-rejected-promise-close.js:
-  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-test/built-ins/AsyncFromSyncIteratorPrototype/throw/iterator-result-rejected-promise-close.js:
-  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: Expected SameValue(«0», «1») to be true'
-test/built-ins/AsyncFromSyncIteratorPrototype/throw/throw-result-poisoned-wrapper.js:
-  default: 'Test262:AsyncTestFailure:Test262Error: Test262Error: iterator closed properly Expected SameValue(«0», «1») to be true'
-  strict mode: 'Test262:AsyncTestFailure:Test262Error: Test262Error: iterator closed properly Expected SameValue(«0», «1») to be true'
 test/built-ins/Date/prototype/setHours/date-value-read-before-tonumber-when-date-is-invalid.js:
   default: 'Test262Error: time updated in valueOf Expected SameValue(«NaN», «0») to be true'
   strict mode: 'Test262Error: time updated in valueOf Expected SameValue(«NaN», «0») to be true'
