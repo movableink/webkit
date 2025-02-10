@@ -548,6 +548,7 @@ public:
     void updatePresentation(JSContextRef, JSValueRef callback);
     void waitBeforeFinishingFullscreenExit();
     void finishFullscreenExit();
+    void requestExitFullscreenFromUIProcess();
 
     // Reporting API
     void generateTestReport(JSContextRef, JSStringRef message, JSStringRef group);

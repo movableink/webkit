@@ -1265,6 +1265,15 @@ void WKPageDidExitFullScreen(WKPageRef pageRef)
 #endif
 }
 
+void WKPageRequestExitFullScreen(WKPageRef pageRef)
+{
+    CRASH_IF_SUSPENDED;
+#if ENABLE(FULLSCREEN_API)
+    if (RefPtr manager = toImpl(pageRef)->fullScreenManager())
+        manager->requestExitFullScreen();
+#endif
+}
+
 void WKPageSaveScrollPositionForFullScreen(WKPageRef pageRef)
 {
     CRASH_IF_SUSPENDED;

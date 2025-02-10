@@ -199,6 +199,7 @@ public:
     void dumpFullScreenCallbacks() { m_dumpFullScreenCallbacks = true; }
     void waitBeforeFinishingFullscreenExit() { m_waitBeforeFinishingFullscreenExit = true; }
     void finishFullscreenExit(WKPageRef);
+    void requestExitFullscreenFromUIProcess(WKPageRef);
 
     static bool willEnterFullScreen(WKPageRef, const void*);
     bool willEnterFullScreen(WKPageRef);

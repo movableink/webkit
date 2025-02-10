@@ -712,6 +712,11 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         return;
     }
 
+    if (WKStringIsEqualToUTF8CString(messageName, "RequestExitFullscreenFromUIProcess")) {
+        TestController::singleton().requestExitFullscreenFromUIProcess(TestController::singleton().mainWebView()->page());
+        return;
+    }
+
     ASSERT_NOT_REACHED();
 }
 

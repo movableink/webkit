@@ -1039,6 +1039,9 @@ http/tests/local/blob/navigate-blob.html [ Skip ]
 # Not supported on WK1
 media/no-fullscreen-when-hidden.html [ Skip ]
 
+# Multi-process test
+fullscreen/iframe-fullscreen-system-exit.html [ Skip ]
+
 # The Trusted Types API is not supported in WebKit1.
 imported/w3c/web-platform-tests/trusted-types [ Skip ]
 

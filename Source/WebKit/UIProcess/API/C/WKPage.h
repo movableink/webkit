@@ -235,6 +235,7 @@ WK_EXPORT void WKPageWillExitFullScreen(WKPageRef pageRef);
 WK_EXPORT void WKPageDidExitFullScreen(WKPageRef pageRef);
 WK_EXPORT void WKPageSaveScrollPositionForFullScreen(WKPageRef pageRef);
 WK_EXPORT void WKPageRestoreScrollPositionAfterFullScreen(WKPageRef pageRef);
+WK_EXPORT void WKPageRequestExitFullScreen(WKPageRef pageRef);
 
 // A client can implement either a navigation client or loader and policy clients, but never both.
 WK_EXPORT void WKPageSetPageLoaderClient(WKPageRef page, const WKPageLoaderClientBase* client) WK_C_API_DEPRECATED_WITH_REPLACEMENT(WKPageSetPageNavigationClient, macos(10.14.4));

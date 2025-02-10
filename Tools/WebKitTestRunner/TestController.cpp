@@ -533,6 +533,11 @@ void TestController::finishFullscreenExit(WKPageRef page)
     WKPageRestoreScrollPositionAfterFullScreen(page);
 }
 
+void TestController::requestExitFullscreenFromUIProcess(WKPageRef page)
+{
+    WKPageRequestExitFullScreen(page);
+}
+
 PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* parentView, WKPageConfigurationRef configuration, WKNavigationActionRef, WKWindowFeaturesRef)
 {
     RefPtr currentInvocation = m_currentInvocation;

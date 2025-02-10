@@ -461,6 +461,7 @@ interface TestRunner {
 
     undefined waitBeforeFinishingFullscreenExit();
     undefined finishFullscreenExit();
+    undefined requestExitFullscreenFromUIProcess();
 
     Promise<undefined> setTopContentInset(double contentInset);
     Promise<undefined> setPageScaleFactor(unrestricted double scaleFactor, long x, long y);

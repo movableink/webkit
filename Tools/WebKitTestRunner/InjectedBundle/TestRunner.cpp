@@ -2105,6 +2105,11 @@ void TestRunner::finishFullscreenExit()
     postPageMessage("FinishFullscreenExit");
 }
 
+void TestRunner::requestExitFullscreenFromUIProcess()
+{
+    postPageMessage("RequestExitFullscreenFromUIProcess");
+}
+
 void TestRunner::setPageScaleFactor(JSContextRef context, double scaleFactor, long x, long y, JSValueRef callback)
 {
     postMessageWithAsyncReply(context, "SetPageScaleFactor", createWKDictionary({

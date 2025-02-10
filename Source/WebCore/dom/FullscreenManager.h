@@ -93,6 +93,8 @@ public:
     void clear();
     void emptyEventQueue();
 
+    void updatePageFullscreenStatusIfTopDocument();
+
 protected:
     friend class Document;
 
@@ -111,8 +113,6 @@ private:
 
     Document* mainFrameDocument();
     RefPtr<Document> protectedMainFrameDocument();
-
-    void updatePageFullscreenStatusIfTopDocument();
 
     RefPtr<Element> fullscreenOrPendingElement() const { return m_fullscreenElement ? m_fullscreenElement : m_pendingFullscreenElement; }
 
