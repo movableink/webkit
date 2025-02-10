@@ -54,6 +54,10 @@
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomStringHash.h>
 
+#if USE(COORDINATED_GRAPHICS)
+#include "CoordinatedPlatformLayerBufferVideo.h"
+#endif
+
 typedef struct _GstMpegtsSection GstMpegtsSection;
 
 // Include the <epoxy/gl.h> header before <gst/gl/gl.h>.
@@ -239,6 +243,9 @@ public:
     }
 
     void setLiveStream(bool isLiveStream) { m_isLiveStream = isLiveStream; }
+
+    bool requiresVideoSinkCapsNotifications() const;
+    void videoSinkCapsChanged(GstPad*);
 
 protected:
     enum MainThreadNotification {
@@ -516,7 +523,6 @@ private:
     void setPlaybinURL(const URL& urlString);
 
     void updateTracks(const GRefPtr<GstObject>& collectionOwner);
-    void videoSinkCapsChanged(GstPad*);
     void updateVideoSizeAndOrientationFromCaps(const GstCaps*);
     bool hasFirstVideoSampleReachedSink() const;
 
@@ -648,6 +654,11 @@ private:
     UncheckedKeyHashMap<const GStreamerQuirk*, std::unique_ptr<GStreamerQuirkBase::GStreamerQuirkState>> m_quirkStates;
 
     MediaTime m_estimatedVideoFrameDuration { MediaTime::zeroTime() };
+
+#if USE(COORDINATED_GRAPHICS)
+    std::optional<DMABufFormat> m_dmabufFormat;
+    GstVideoInfo m_videoInfo;
+#endif
 };
 
 } // namespace WebCore

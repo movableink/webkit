@@ -1242,6 +1242,18 @@ bool MediaPlayerPrivateGStreamer::hasFirstVideoSampleReachedSink() const
     return !!m_sample;
 }
 
+bool MediaPlayerPrivateGStreamer::requiresVideoSinkCapsNotifications() const
+{
+    if (isHolePunchRenderingEnabled())
+        return false;
+
+    RefPtr player = m_player.get();
+    if (!player)
+        return false;
+
+    return player->isVideoPlayer();
+}
+
 void MediaPlayerPrivateGStreamer::videoSinkCapsChanged(GstPad* videoSinkPad)
 {
     GRefPtr<GstCaps> caps = adoptGRef(gst_pad_get_current_caps(videoSinkPad));
@@ -1249,9 +1261,31 @@ void MediaPlayerPrivateGStreamer::videoSinkCapsChanged(GstPad* videoSinkPad)
         // This can happen when downgrading the state of the pipeline, which causes the caps to be unset.
         return;
     }
+
     // We're in videoSinkPad streaming thread.
     ASSERT(!isMainThread());
+
     GST_DEBUG_OBJECT(videoSinkPad, "Received new caps: %" GST_PTR_FORMAT, caps.get());
+
+#if USE(COORDINATED_GRAPHICS)
+#if USE(GBM) && GST_CHECK_VERSION(1, 24, 0)
+    GstVideoInfoDmaDrm drmVideoInfo;
+    gst_video_info_dma_drm_init(&drmVideoInfo);
+    if (gst_video_is_dma_drm_caps(caps.get())) {
+        if (!gst_video_info_dma_drm_from_caps(&drmVideoInfo, caps.get()))
+            return;
+
+        if (!gst_video_info_dma_drm_to_video_info(&drmVideoInfo, &m_videoInfo))
+            return;
+
+        m_dmabufFormat = { drmVideoInfo.drm_fourcc, drmVideoInfo.drm_modifier };
+    }
+#endif // USE(GBM) && GST_CHECK_VERSION(1, 24, 0)
+    if (!m_dmabufFormat) {
+        if (!gst_video_info_from_caps(&m_videoInfo, caps.get()))
+            return;
+    }
+#endif // USE(COORDINATED_GRAPHICS)
 
     if (!hasFirstVideoSampleReachedSink()) {
         // We want to wait for the sink to receive the first buffer before emitting dimensions, since only by then we
@@ -3264,18 +3298,6 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin(const URL& url)
         if (auto* scale = makeGStreamerElement("scaletempo", nullptr))
             g_object_set(m_pipeline.get(), "audio-filter", scale, nullptr);
     }
-
-    if (!player->isVideoPlayer())
-        return;
-
-    if (isHolePunchRenderingEnabled())
-        return;
-
-    GRefPtr<GstPad> videoSinkPad = adoptGRef(gst_element_get_static_pad(m_videoSink.get(), "sink"));
-    if (videoSinkPad)
-        g_signal_connect(videoSinkPad.get(), "notify::caps", G_CALLBACK(+[](GstPad* videoSinkPad, GParamSpec*, MediaPlayerPrivateGStreamer* player) {
-            player->videoSinkCapsChanged(videoSinkPad);
-        }), this);
 }
 
 void MediaPlayerPrivateGStreamer::setupCodecProbe(GstElement* element)
@@ -3465,7 +3487,7 @@ void MediaPlayerPrivateGStreamer::pushTextureToCompositor(bool isDuplicateSample
     if (!isDuplicateSample)
         ++m_sampleCount;
 
-    if (m_contentsBufferProxy->setDisplayBuffer(CoordinatedPlatformLayerBufferVideo::create(m_sample.get(), m_videoDecoderPlatform, !m_isUsingFallbackVideoSink, m_textureMapperFlags))) {
+    if (m_contentsBufferProxy->setDisplayBuffer(CoordinatedPlatformLayerBufferVideo::create(m_sample.get(), &m_videoInfo, m_dmabufFormat, m_videoDecoderPlatform, !m_isUsingFallbackVideoSink, m_textureMapperFlags))) {
         m_hasFirstVideoSampleBeenRendered = true;
         return;
     }
