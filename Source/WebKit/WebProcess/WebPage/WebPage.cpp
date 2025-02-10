@@ -4065,11 +4065,6 @@ void WebPage::setObscuredContentInsetsFenced(const FloatBoxExtent& obscuredConte
 }
 #endif
 
-FloatBoxExtent WebPage::obscuredContentInsets() const
-{
-    return m_page->obscuredContentInsets();
-}
-
 void WebPage::setObscuredContentInsets(const FloatBoxExtent& obscuredContentInsets)
 {
     if (obscuredContentInsets == m_page->obscuredContentInsets())

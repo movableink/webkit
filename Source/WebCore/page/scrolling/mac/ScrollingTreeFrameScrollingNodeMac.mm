@@ -198,8 +198,13 @@ void ScrollingTreeFrameScrollingNodeMac::repositionRelatedLayers()
 
     auto obscuredContentInsets = this->obscuredContentInsets();
     if (m_insetClipLayer && m_rootContentsLayer) {
-        m_insetClipLayer.get().position = FloatPoint(m_insetClipLayer.get().position.x, LocalFrameView::yPositionForInsetClipLayer(scrollPosition, obscuredContentInsets.top()));
-        m_rootContentsLayer.get().position = LocalFrameView::positionForRootContentLayer(scrollPosition, scrollOrigin(), obscuredContentInsets.top(), headerHeight());
+        [m_insetClipLayer setPosition:[&] {
+            auto position = LocalFrameView::positionForInsetClipLayer(scrollPosition, obscuredContentInsets);
+            if (!obscuredContentInsets.left())
+                position.setX([m_insetClipLayer position].x);
+            return position;
+        }()];
+        [m_rootContentsLayer setPosition:LocalFrameView::positionForRootContentLayer(scrollPosition, scrollOrigin(), obscuredContentInsets, headerHeight())];
         if (m_contentShadowLayer)
             m_contentShadowLayer.get().position = m_rootContentsLayer.get().position;
     }

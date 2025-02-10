@@ -614,7 +614,7 @@ BackgroundImageGeometry BackgroundPainter::calculateBackgroundImageGeometry(cons
             if (renderer.fixedBackgroundPaintsInLocalCoordinates()) {
                 if (!useFixedLayout) {
                     // Shifting location by the content insets is needed for layout tests which expect
-                    // layout to be shifted down when calling window.internals.setTopContentInset().
+                    // layout to be shifted when calling window.internals.setObscuredContentInsets().
                     obscuredContentInsets = frameView.obscuredContentInsets(ScrollView::InsetType::WebCoreOrPlatformInset);
                     viewportRect.setLocation({ -obscuredContentInsets.left(), -obscuredContentInsets.top() });
                 }

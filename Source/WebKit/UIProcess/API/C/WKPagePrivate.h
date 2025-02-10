@@ -225,8 +225,8 @@ WK_EXPORT bool WKPageIsEditingCommandEnabledForTesting(WKPageRef page, WKStringR
 WK_EXPORT void WKPageSetPermissionLevelForTesting(WKPageRef page, WKStringRef origin, bool allowed);
 WK_EXPORT void WKPageResetStateBetweenTests(WKPageRef pageRef);
 
-typedef void (*WKPageSetTopContentInsetForTestingFunction)(void* functionContext);
-WK_EXPORT void WKPageSetTopContentInsetForTesting(WKPageRef page, float contentInset, void* context, WKPageSetTopContentInsetForTestingFunction callback);
+typedef void (*WKPageSetObscuredContentInsetsForTestingFunction)(void* functionContext);
+WK_EXPORT void WKPageSetObscuredContentInsetsForTesting(WKPageRef page, float top, float right, float bottom, float left, void* context, WKPageSetObscuredContentInsetsForTestingFunction callback);
 typedef void (*WKPageSetPageScaleFactorForTestingFunction)(void* functionContext);
 WK_EXPORT void WKPageSetPageScaleFactorForTesting(WKPageRef page, float scaleFactor, WKPoint point, void* context, WKPageSetPageScaleFactorForTestingFunction completionHandler);
 typedef void (*WKPageClearBackForwardListForTestingFunction)(void* functionContext);

@@ -1930,7 +1930,6 @@ public:
 #endif
     void loadRequest(LoadParameters&&);
 
-    WebCore::FloatBoxExtent obscuredContentInsets() const;
     void setObscuredContentInsets(const WebCore::FloatBoxExtent&);
 
     void updateOpener(WebCore::FrameIdentifier, WebCore::FrameIdentifier);

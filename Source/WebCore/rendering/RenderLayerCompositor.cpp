@@ -2839,8 +2839,8 @@ FloatPoint RenderLayerCompositor::positionForClipLayer() const
 {
     auto& frameView = m_renderView.frameView();
 
-    return FloatPoint(frameView.insetForLeftScrollbarSpace(),
-        LocalFrameView::yPositionForInsetClipLayer(frameView.scrollPosition(), frameView.obscuredContentInsets().top()));
+    auto clipLayerPosition = LocalFrameView::positionForInsetClipLayer(frameView.scrollPosition(), frameView.obscuredContentInsets());
+    return FloatPoint(frameView.insetForLeftScrollbarSpace() + clipLayerPosition.x(), clipLayerPosition.y());
 }
 
 void RenderLayerCompositor::frameViewDidScroll()
@@ -5000,7 +5000,7 @@ void RenderLayerCompositor::ensureRootLayer()
             }
 #endif
             // FIXME: m_scrollContainerLayer and m_clipLayer have similar roles here, but m_clipLayer has some special positioning to
-            // account for clipping and top content inset (see LocalFrameView::yPositionForInsetClipLayer()).
+            // account for clipping and top content inset (see LocalFrameView::positionForInsetClipLayer()).
             if (!m_scrollContainerLayer) {
                 m_clipLayer = GraphicsLayer::create(graphicsLayerFactory(), *this);
                 m_clipLayer->setName(MAKE_STATIC_STRING_IMPL("frame clipping"));

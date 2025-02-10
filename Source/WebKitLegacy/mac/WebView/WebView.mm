@@ -4174,13 +4174,10 @@ IGNORE_WARNINGS_END
     return nil;
 }
 
-- (void)_setTopContentInsetForTesting:(float)inset
+- (void)_setObscuredTopContentInsetForTesting:(float)top right:(float)right bottom:(float)bottom left:(float)left
 {
-    if (_private && _private->page) {
-        auto obscuredContentInsets = _private->page->obscuredContentInsets();
-        obscuredContentInsets.setTop(inset);
-        _private->page->setObscuredContentInsets(obscuredContentInsets);
-    }
+    if (_private && _private->page)
+        _private->page->setObscuredContentInsets({ top, right, bottom, left });
 }
 
 - (BOOL)_isSoftwareRenderable

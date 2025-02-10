@@ -2301,8 +2301,14 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
     if (WKStringIsEqualToUTF8CString(messageName, "RemoveAllSessionCredentials"))
         return TestController::singleton().removeAllSessionCredentials(WTFMove(completionHandler));
 
-    if (WKStringIsEqualToUTF8CString(messageName, "SetTopContentInset"))
-        return WKPageSetTopContentInsetForTesting(TestController::singleton().mainWebView()->page(), static_cast<float>(doubleValue(messageBody)), completionHandler.leak(), adoptAndCallCompletionHandler);
+    if (WKStringIsEqualToUTF8CString(messageName, "SetObscuredContentInsets")) {
+        auto insetValues = arrayValue(messageBody);
+        auto top = static_cast<float>(doubleValue(WKArrayGetItemAtIndex(insetValues, 0)));
+        auto right = static_cast<float>(doubleValue(WKArrayGetItemAtIndex(insetValues, 1)));
+        auto bottom = static_cast<float>(doubleValue(WKArrayGetItemAtIndex(insetValues, 2)));
+        auto left = static_cast<float>(doubleValue(WKArrayGetItemAtIndex(insetValues, 3)));
+        return WKPageSetObscuredContentInsetsForTesting(TestController::singleton().mainWebView()->page(), top, right, bottom, left, completionHandler.leak(), adoptAndCallCompletionHandler);
+    }
 
     if (WKStringIsEqualToUTF8CString(messageName, "ClearBackForwardList"))
         return WKPageClearBackForwardListForTesting(TestController::singleton().mainWebView()->page(), completionHandler.leak(), adoptAndCallCompletionHandler);

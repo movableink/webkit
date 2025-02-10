@@ -1492,6 +1492,24 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         _impl->flushPendingObscuredContentInsetChanges();
 }
 
+- (void)_setObscuredContentInsets:(NSEdgeInsets)insets immediate:(BOOL)immediate
+{
+    if (insets.top < 0 || insets.left < 0 || insets.bottom < 0 || insets.right < 0) {
+        [NSException raise:NSInvalidArgumentException format:@"Obscured insets cannot be negative: {%f, %f, %f, %f}", insets.top, insets.left, insets.bottom, insets.right];
+        return;
+    }
+
+    _impl->setObscuredContentInsets({
+        static_cast<float>(insets.top),
+        static_cast<float>(insets.right),
+        static_cast<float>(insets.bottom),
+        static_cast<float>(insets.left)
+    });
+
+    if (immediate)
+        _impl->flushPendingObscuredContentInsetChanges();
+}
+
 - (void)_setAutomaticallyAdjustsContentInsets:(BOOL)automaticallyAdjustsContentInsets
 {
     _impl->setAutomaticallyAdjustsContentInsets(automaticallyAdjustsContentInsets);

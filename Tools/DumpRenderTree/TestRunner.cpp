@@ -1783,13 +1783,16 @@ static JSValueRef forceImmediateCompletionCallback(JSContextRef context, JSObjec
     return JSValueMakeUndefined(context);
 }
 
-static JSValueRef setTopContentInsetCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+static JSValueRef setObscuredContentInsetsCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
-    if (argumentCount != 1)
+    if (argumentCount != 4)
         return JSValueMakeUndefined(context);
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    double contentInset = JSValueToNumber(context, arguments[0], exception);
-    controller->setTopContentInset(contentInset);
+    double top = JSValueToNumber(context, arguments[0], exception);
+    double right = JSValueToNumber(context, arguments[1], exception);
+    double bottom = JSValueToNumber(context, arguments[2], exception);
+    double left = JSValueToNumber(context, arguments[3], exception);
+    controller->setObscuredContentInsets(top, right, bottom, left);
     return TestRunner::alwaysResolvePromise(context);
 }
 
@@ -2113,7 +2116,7 @@ const JSStaticFunction* TestRunner::staticFunctions()
         { "setOpenPanelFilesMediaIcon", SetOpenPanelFilesMediaIconCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "stopLoading", stopLoadingCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "forceImmediateCompletion", forceImmediateCompletionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "setTopContentInset", setTopContentInsetCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setObscuredContentInsets", setObscuredContentInsetsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setPageScaleFactor", setPageScaleFactorCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
 #if PLATFORM(IOS_FAMILY)
         { "setPagePaused", setPagePausedCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

@@ -3468,13 +3468,13 @@ void WKPageSetPermissionLevelForTesting(WKPageRef pageRef, WKStringRef origin, b
         pageForTesting->setPermissionLevel(toImpl(origin)->string(), allowed);
 }
 
-void WKPageSetTopContentInsetForTesting(WKPageRef pageRef, float contentInset, void* context, WKPageSetTopContentInsetForTestingFunction callback)
+void WKPageSetObscuredContentInsetsForTesting(WKPageRef pageRef, float top, float right, float bottom, float left, void* context, WKPageSetObscuredContentInsetsForTestingFunction callback)
 {
     RefPtr pageForTesting = toImpl(pageRef)->pageForTesting();
     if (!pageForTesting)
         return callback(context);
 
-    pageForTesting->setTopContentInset(contentInset, [context, callback] {
+    pageForTesting->setObscuredContentInsets(top, right, bottom, left, [context, callback] {
         callback(context);
     });
 }

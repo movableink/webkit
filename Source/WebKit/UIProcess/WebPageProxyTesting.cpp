@@ -196,9 +196,9 @@ void WebPageProxyTesting::setSystemCanPromptForGetDisplayMediaForTesting(bool ca
 }
 #endif
 
-void WebPageProxyTesting::setTopContentInset(float contentInset, CompletionHandler<void()>&& completionHandler)
+void WebPageProxyTesting::setObscuredContentInsets(float top, float right, float bottom, float left, CompletionHandler<void()>&& completionHandler)
 {
-    sendWithAsyncReply(Messages::WebPageTesting::SetTopContentInset(contentInset), WTFMove(completionHandler));
+    sendWithAsyncReply(Messages::WebPageTesting::SetObscuredContentInsets(top, right, bottom, left), WTFMove(completionHandler));
 }
 
 Ref<WebPageProxy> WebPageProxyTesting::protectedPage() const

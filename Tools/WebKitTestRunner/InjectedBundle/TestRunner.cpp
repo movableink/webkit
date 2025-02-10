@@ -2140,9 +2140,14 @@ bool TestRunner::shouldDumpBackForwardListsForAllWindows() const
     return postSynchronousPageMessageReturningBoolean("ShouldDumpBackForwardListsForAllWindows");
 }
 
-void TestRunner::setTopContentInset(JSContextRef context, double contentInset, JSValueRef callback)
+void TestRunner::setObscuredContentInsets(JSContextRef context, double top, double right, double bottom, double left, JSValueRef callback)
 {
-    postMessageWithAsyncReply(context, "SetTopContentInset", adoptWK(WKDoubleCreate(contentInset)), callback);
+    auto insetValues = adoptWK(WKMutableArrayCreate());
+    WKArrayAppendItem(insetValues.get(), adoptWK(WKDoubleCreate(top)).get());
+    WKArrayAppendItem(insetValues.get(), adoptWK(WKDoubleCreate(right)).get());
+    WKArrayAppendItem(insetValues.get(), adoptWK(WKDoubleCreate(bottom)).get());
+    WKArrayAppendItem(insetValues.get(), adoptWK(WKDoubleCreate(left)).get());
+    postMessageWithAsyncReply(context, "SetObscuredContentInsets", insetValues, callback);
 }
 
 void TestRunner::setResourceMonitorList(JSContextRef context, JSStringRef rulesText, JSValueRef callback)

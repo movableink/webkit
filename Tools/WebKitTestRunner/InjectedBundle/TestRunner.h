@@ -555,7 +555,7 @@ public:
 
     void getAndClearReportedWindowProxyAccessDomains(JSContextRef, JSValueRef);
 
-    void setTopContentInset(JSContextRef, double, JSValueRef);
+    void setObscuredContentInsets(JSContextRef, double top, double right, double bottom, double left, JSValueRef);
 
     void setPageScaleFactor(JSContextRef, double scaleFactor, long x, long y, JSValueRef callback);
 

@@ -396,7 +396,7 @@ public:
 
     void generateTestReport(JSStringRef message, JSStringRef group);
 
-    void setTopContentInset(double);
+    void setObscuredContentInsets(double top, double right, double bottom, double left);
 
     void setPageScaleFactor(double scaleFactor, long x, long y);
     static JSValueRef alwaysResolvePromise(JSContextRef);
