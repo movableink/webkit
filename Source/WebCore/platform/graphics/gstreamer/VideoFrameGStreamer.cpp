@@ -63,7 +63,7 @@ static void ensureVideoFrameDebugCategoryInitialized()
 
 RefPtr<VideoFrame> VideoFrame::createFromPixelBuffer(Ref<PixelBuffer>&& pixelBuffer, PlatformVideoColorSpace&& colorSpace)
 {
-    return VideoFrameGStreamer::createFromPixelBuffer(WTFMove(pixelBuffer), VideoFrameGStreamer::CanvasContentType::Canvas2D, VideoFrame::Rotation::None, MediaTime::invalidTime(), { }, 1, false, { }, WTFMove(colorSpace));
+    return VideoFrameGStreamer::createFromPixelBuffer(WTFMove(pixelBuffer), VideoFrame::Rotation::None, MediaTime::invalidTime(), { }, 1, false, { }, WTFMove(colorSpace));
 }
 
 static RefPtr<ImageGStreamer> convertSampleToImage(const GRefPtr<GstSample>& sample)
@@ -324,12 +324,25 @@ Ref<VideoFrameGStreamer> VideoFrameGStreamer::createWrappedSample(const GRefPtr<
     return adoptRef(*new VideoFrameGStreamer(sample, IntSize(*presentationSize), timeStamp, videoRotation, WTFMove(colorSpace)));
 }
 
-RefPtr<VideoFrameGStreamer> VideoFrameGStreamer::createFromPixelBuffer(Ref<PixelBuffer>&& pixelBuffer, CanvasContentType canvasContentType, Rotation videoRotation, const MediaTime& presentationTime, const IntSize& destinationSize, double frameRate, bool videoMirrored, std::optional<VideoFrameTimeMetadata>&& metadata, PlatformVideoColorSpace&& colorSpace)
+RefPtr<VideoFrameGStreamer> VideoFrameGStreamer::createFromPixelBuffer(Ref<PixelBuffer>&& pixelBuffer, Rotation videoRotation, const MediaTime& presentationTime, const IntSize& destinationSize, double frameRate, bool videoMirrored, std::optional<VideoFrameTimeMetadata>&& metadata, PlatformVideoColorSpace&& colorSpace)
 {
     ensureGStreamerInitialized();
 
     ensureVideoFrameDebugCategoryInitialized();
     auto size = pixelBuffer->size();
+
+    GstVideoFormat format;
+    switch (pixelBuffer->format().pixelFormat) {
+    case PixelFormat::RGBA8:
+        format = GST_VIDEO_FORMAT_RGBA;
+        break;
+    case PixelFormat::BGRX8:
+        format = GST_VIDEO_FORMAT_BGRx;
+        break;
+    case PixelFormat::BGRA8:
+        format = GST_VIDEO_FORMAT_BGRA;
+        break;
+    };
 
     auto sizeInBytes = pixelBuffer->bytes().size();
     auto dataBaseAddress = pixelBuffer->bytes().data();
@@ -341,16 +354,7 @@ RefPtr<VideoFrameGStreamer> VideoFrameGStreamer::createFromPixelBuffer(Ref<Pixel
 
     auto width = size.width();
     auto height = size.height();
-    GstVideoFormat format;
 
-    switch (canvasContentType) {
-    case CanvasContentType::WebGL:
-        format = GST_VIDEO_FORMAT_RGBA;
-        break;
-    case CanvasContentType::Canvas2D:
-        format = GST_VIDEO_FORMAT_BGRA;
-        break;
-    }
     auto formatName = unsafeSpan(gst_video_format_to_string(format));
     GST_TRACE("Creating %s VideoFrame from pixel buffer", formatName.data());
 
