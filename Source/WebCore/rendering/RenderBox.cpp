@@ -5480,7 +5480,14 @@ LayoutRect RenderBox::layoutOverflowRectForPropagation(const WritingMode parentW
     if (isGridItem()) {
         // As per https://github.com/w3c/csswg-drafts/issues/3653, child's margins should contribute to the scrollable overflow area.
         // FIXME: Expand it to non-grid cases when applicable.
-        rect.setWidth(rect.width() + std::max(0_lu, marginEnd()));
+        auto shouldContributeMarginInlineEnd = [&] {
+            auto& gridContainerStyle = parent()->style();
+            if (gridContainerStyle.overflowX() != Overflow::Visible && gridContainerStyle.overflowX() != Overflow::Clip)
+                return true;
+            return gridContainerStyle.overflowY() != Overflow::Visible && gridContainerStyle.overflowY() != Overflow::Clip;
+        };
+        if (shouldContributeMarginInlineEnd())
+            rect.setWidth(rect.width() + std::max(0_lu, marginEnd()));
     }
     if (!shouldApplyLayoutContainment()) {
         if (hasNonVisibleOverflow()) {
