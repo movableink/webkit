@@ -214,6 +214,10 @@ static void webKitWebAudioSrcConstructed(GObject* object)
     priv->task = adoptGRef(gst_task_new(reinterpret_cast<GstTaskFunction>(webKitWebAudioSrcRenderIteration), src, nullptr));
     gst_task_set_lock(priv->task.get(), &priv->mutex);
 
+    static Atomic<uint32_t> taskId;
+    auto taskName = makeString("webaudioSrcTask"_s, taskId.exchangeAdd(1));
+    gst_object_set_name(GST_OBJECT_CAST(priv->task.get()), taskName.ascii().data());
+
     priv->source = makeGStreamerElement("appsrc", "webaudioSrc");
 
     // Configure the appsrc for minimal latency.
