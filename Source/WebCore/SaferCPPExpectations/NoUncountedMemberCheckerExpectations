@@ -1,7 +1,6 @@
 Modules/WebGPU/GPUPresentationContextDescriptor.h
 Modules/encryptedmedia/MediaKeyStatusMap.h
 Modules/fetch/FetchBodyOwner.h
-Modules/mediasource/SourceBuffer.h
 Modules/mediastream/RTCPeerConnection.h
 Modules/mediastream/libwebrtc/LibWebRTCObservers.h
 Modules/notifications/NotificationResourcesLoader.h
