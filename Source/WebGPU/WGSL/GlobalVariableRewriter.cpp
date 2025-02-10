@@ -127,7 +127,7 @@ private:
     void insertWorkgroupBarrier(AST::Function&, size_t);
     AST::Identifier& findOrInsertLocalInvocationIndex(AST::Function&);
     AST::Statement::List storeInitialValue(const UsedPrivateGlobals&);
-    void storeInitialValue(AST::Expression&, AST::Statement::List&, unsigned, bool isNested);
+    void storeInitialValue(AST::Expression&, AST::Statement::List&, unsigned);
 
     void packResource(AST::Variable&);
     void packArrayResource(AST::Variable&, const Types::Array*);
@@ -2351,12 +2351,12 @@ AST::Statement::List RewriteGlobalVariables::storeInitialValue(const UsedPrivate
             AST::Identifier::make(variable.name().id())
         );
         target.m_inferredType = type;
-        storeInitialValue(target, statements, 0, false);
+        storeInitialValue(target, statements, 0);
     }
     return statements;
 }
 
-void RewriteGlobalVariables::storeInitialValue(AST::Expression& target, AST::Statement::List& statements, unsigned arrayDepth, bool isNested)
+void RewriteGlobalVariables::storeInitialValue(AST::Expression& target, AST::Statement::List& statements, unsigned arrayDepth)
 {
     const auto& zeroInitialize = [&]() {
         // This piece of code generation relies on 2 implementation details from the metal serializer:
@@ -2403,7 +2403,7 @@ void RewriteGlobalVariables::storeInitialValue(AST::Expression& target, AST::Sta
         arrayAccess.m_inferredType = arrayType->element;
 
         AST::Statement::List forBodyStatements;
-        storeInitialValue(arrayAccess, forBodyStatements, arrayDepth + 1, true);
+        storeInitialValue(arrayAccess, forBodyStatements, arrayDepth + 1);
 
         auto& zero = m_shaderModule.astBuilder().construct<AST::Unsigned32Literal>(
             SourceSpan::empty(),
@@ -2490,7 +2490,7 @@ void RewriteGlobalVariables::storeInitialValue(AST::Expression& target, AST::Sta
                 AST::Identifier::make(member.name())
             );
             fieldAccess.m_inferredType = fieldType;
-            storeInitialValue(fieldAccess, statements, arrayDepth, true);
+            storeInitialValue(fieldAccess, statements, arrayDepth);
         }
         return;
     }
@@ -2523,9 +2523,6 @@ void RewriteGlobalVariables::storeInitialValue(AST::Expression& target, AST::Sta
         statements.append(AST::Statement::Ref(callStatement));
         return;
     }
-
-    if (!isNested)
-        return;
 
     zeroInitialize();
 }
