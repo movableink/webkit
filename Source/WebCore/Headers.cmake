@@ -1056,6 +1056,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/CrossOriginMode.h
     dom/CustomElementDefaultARIA.h
     dom/CustomElementReactionQueue.h
+    dom/CustomElementRegistry.h
     dom/DOMException.h
     dom/DOMHighResTimeStamp.h
     dom/DOMImplementation.h
