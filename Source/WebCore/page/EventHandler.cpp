@@ -57,6 +57,7 @@
 #include "FrameSelection.h"
 #include "FrameTree.h"
 #include "FullscreenManager.h"
+#include "HTMLAreaElement.h"
 #include "HTMLDialogElement.h"
 #include "HTMLDocument.h"
 #include "HTMLFrameElement.h"
@@ -1637,6 +1638,10 @@ std::optional<Cursor> EventHandler::selectCursor(const HitTestResult& result, bo
     auto* style = renderer ? &renderer->style() : nullptr;
     bool horizontalText = !style || style->writingMode().isHorizontal();
     const Cursor& iBeam = horizontalText ? iBeamCursor() : verticalTextCursor();
+
+    // area element has display: none set by default, should use node to get style instead of renderer.
+    if (is<HTMLAreaElement>(node))
+        style = node->computedStyle();
 
 #if ENABLE(CURSOR_VISIBILITY)
     if (style && style->cursorVisibility() == CursorVisibility::AutoHide)
