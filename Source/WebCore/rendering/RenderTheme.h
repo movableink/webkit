@@ -208,6 +208,7 @@ public:
     virtual bool shouldHaveSpinButton(const HTMLInputElement&) const;
     virtual bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const { return false; }
 
+    virtual void createColorWellSwatchSubtree(HTMLElement&) { }
     virtual void setColorWellSwatchBackground(HTMLElement&, Color);
 
     // Functions for <select> elements.

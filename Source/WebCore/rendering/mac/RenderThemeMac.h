@@ -81,6 +81,7 @@ public:
     FloatSize meterSizeForBounds(const RenderMeter&, const FloatRect&) const final;
     bool supportsMeter(StyleAppearance) const final;
 
+    void createColorWellSwatchSubtree(HTMLElement&) final;
     void setColorWellSwatchBackground(HTMLElement&, Color) final;
 
     IntRect progressBarRectForBounds(const RenderProgress&, const IntRect&) const final;

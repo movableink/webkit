@@ -931,22 +931,25 @@ bool RenderThemeMac::supportsMeter(StyleAppearance appearance) const
     return appearance == StyleAppearance::Meter;
 }
 
+void RenderThemeMac::createColorWellSwatchSubtree(HTMLElement& swatch)
+{
+    Ref document = swatch.document();
+    Ref div = HTMLDivElement::create(document);
+    swatch.appendChild(ContainerNode::ChildChange::Source::Parser, div);
+    div->setInlineStyleProperty(CSSPropertyHeight, "100%"_s);
+    div->setInlineStyleProperty(CSSPropertyWidth, "100%"_s);
+    div->setInlineStyleProperty(CSSPropertyClipPath, "polygon(0 0, 100% 0, 0 100%)"_s);
+}
+
 void RenderThemeMac::setColorWellSwatchBackground(HTMLElement& swatch, Color color)
 {
-    if (color.isOpaque()) {
-        swatch.setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForHTML(color));
-        swatch.setInlineStyleProperty(CSSPropertyBackgroundImage, "none"_s);
-        return;
-    }
+    Ref swatchChild = *downcast<HTMLElement>(swatch.protectedFirstChild());
 
-    auto serializedColorOverBlack = makeStringByReplacingAll(serializationForHTML(blendSourceOver(Color::black, color)), '#', "%23"_s);
-    auto serializedColorOverWhite = makeStringByReplacingAll(serializationForHTML(blendSourceOver(Color::white, color)), '#', "%23"_s);
+    auto backgroundColor = color.isOpaque() ? color : blendSourceOver(Color::white, color);
+    auto foregroundColor = color.isOpaque() ? Color::transparentBlack : blendSourceOver(Color::black, color);
 
-    auto image = makeString("url(\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><polygon points='0,0 1,0 0,1' fill='"_s, serializedColorOverBlack, "'/><polygon points='1,0 1,1 0,1' fill='"_s, serializedColorOverWhite, "'/></svg>\")"_s);
-
-    swatch.setInlineStyleProperty(CSSPropertyBackgroundColor, "transparent"_s);
-    swatch.setInlineStyleProperty(CSSPropertyBackgroundImage, image);
-    swatch.setInlineStyleProperty(CSSPropertyBackgroundSize, "100% 100%"_s);
+    swatch.setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForHTML(backgroundColor));
+    swatchChild->setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForHTML(foregroundColor));
 }
 
 IntRect RenderThemeMac::progressBarRectForBounds(const RenderProgress& renderProgress, const IntRect& bounds) const

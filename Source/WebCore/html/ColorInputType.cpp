@@ -222,6 +222,8 @@ void ColorInputType::createShadowSubtree()
     wrapperElement->setUserAgentPart(UserAgentParts::webkitColorSwatchWrapper());
     colorSwatch->setUserAgentPart(UserAgentParts::webkitColorSwatch());
 
+    RenderTheme::singleton().createColorWellSwatchSubtree(colorSwatch.get());
+
     updateColorSwatch();
 }
 
@@ -332,7 +334,7 @@ void ColorInputType::endColorChooser()
 
 void ColorInputType::updateColorSwatch()
 {
-    RefPtr<HTMLElement> colorSwatch = shadowColorSwatch();
+    RefPtr colorSwatch = shadowColorSwatch();
     if (!colorSwatch)
         return;
 

@@ -4,8 +4,7 @@
 <script>
 function log(swatch) {
   evalAndLogResult("getComputedStyle(swatch).backgroundColor");
-  evalAndLogResult("getComputedStyle(swatch).backgroundImage");
-  evalAndLogResult("getComputedStyle(swatch).backgroundSize");
+  evalAndLogResult("swatch.innerHTML");
 }
 
 const control = document.querySelector("input");
