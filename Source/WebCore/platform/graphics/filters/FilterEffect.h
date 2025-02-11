@@ -38,7 +38,7 @@ class Filter;
 class FilterEffectGeometry;
 class FilterResults;
 
-class FilterEffect : public FilterFunction, public CanMakeCheckedPtr<FilterEffect> {
+class FilterEffect : public FilterFunction, public CanMakeThreadSafeCheckedPtr<FilterEffect> {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FilterEffect);
     using FilterFunction::apply;
