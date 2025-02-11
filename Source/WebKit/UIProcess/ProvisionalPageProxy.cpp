@@ -84,6 +84,7 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
     , m_request(request)
     , m_processSwapRequestedByClient(processSwapRequestedByClient)
     , m_isProcessSwappingOnNavigationResponse(isProcessSwappingOnNavigationResponse)
+    , m_isProcessSwappingForNewWindow(page.protectedPreferences()->siteIsolationEnabled() && page.openedByDOM())
     , m_provisionalLoadURL(isProcessSwappingOnNavigationResponse ? request.url() : URL())
 #if USE(RUNNINGBOARD)
     , m_provisionalLoadActivity(m_frameProcess->process().throttler().foregroundActivity("Provisional Load"_s))
@@ -119,7 +120,7 @@ ProvisionalPageProxy::ProvisionalPageProxy(WebPageProxy& page, Ref<FrameProcess>
         suspendedPage->unsuspend();
         m_mainFrame = &suspendedPage->mainFrame();
         m_needsMainFrameObserver = true;
-    } else if (page.protectedPreferences()->siteIsolationEnabled() && page.openedByDOM() && !page.hasCommittedAnyProvisionalLoads())
+    } else if (m_isProcessSwappingForNewWindow)
         m_mainFrame = page.mainFrame();
     else {
         Ref mainFrame = WebFrameProxy::create(page, m_frameProcess, FrameIdentifier::generate(), previousMainFrame->effectiveSandboxFlags(), previousMainFrame->scrollingMode(), nullptr, IsMainFrame::Yes);
@@ -262,19 +263,21 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
     Ref preferences = page->preferences();
     if (preferences->siteIsolationEnabled()) {
         if (RefPtr existingRemotePageProxy = protectedBrowsingContextGroup()->takeRemotePageInProcessForProvisionalPage(page, process)) {
-            m_webPageID = existingRemotePageProxy->pageID();
-            m_mainFrame = existingRemotePageProxy->page()->mainFrame();
-            m_needsMainFrameObserver = false;
-            m_messageReceiverRegistration.stopReceivingMessages();
-            m_messageReceiverRegistration.transferMessageReceivingFrom(existingRemotePageProxy->messageReceiverRegistration(), *this);
-            m_needsDidStartProvisionalLoad = false;
-            m_needsCookieAccessAddedInNetworkProcess = true;
-            registerWithInspectorController = false; // FIXME: <rdar://121240770> This is a hack. There seems to be a bug in our interaction with WebPageInspectorController.
-        } else {
-            protectedBrowsingContextGroup()->addFrameProcessAndInjectPageContextIf(m_frameProcess, [m_page = m_page](WebPageProxy& page) {
-                return m_page != &page;
-            });
+            if (m_isProcessSwappingForNewWindow) {
+                m_webPageID = existingRemotePageProxy->pageID();
+                m_mainFrame = existingRemotePageProxy->page()->mainFrame();
+                m_needsMainFrameObserver = false;
+                m_messageReceiverRegistration.stopReceivingMessages();
+                m_messageReceiverRegistration.transferMessageReceivingFrom(existingRemotePageProxy->messageReceiverRegistration(), *this);
+                m_needsDidStartProvisionalLoad = false;
+                m_needsCookieAccessAddedInNetworkProcess = true;
+                registerWithInspectorController = false; // FIXME: <rdar://121240770> This is a hack. There seems to be a bug in our interaction with WebPageInspectorController.
+            } else
+                m_takenRemotePage = WTFMove(existingRemotePageProxy);
         }
+        protectedBrowsingContextGroup()->addFrameProcessAndInjectPageContextIf(m_frameProcess, [m_page = m_page](WebPageProxy& page) {
+            return m_page != &page;
+        });
     }
 
     RefPtr mainFrame = m_mainFrame;
@@ -439,7 +442,10 @@ void ProvisionalPageProxy::didFailProvisionalLoadForFrame(FrameInfoData&& frameI
     // When site isolation is enabled, we use the same WebFrameProxy so we don't need this duplicate call.
     // didFailProvisionalLoadForFrameShared will call didFailProvisionalLoad on the same main frame.
     if (page->protectedPreferences()->siteIsolationEnabled()) {
-        protectedBrowsingContextGroup()->transitionProvisionalPageToRemotePage(*this, Site(request.url()));
+        if (m_isProcessSwappingForNewWindow)
+            protectedBrowsingContextGroup()->transitionProvisionalPageToRemotePage(*this, Site(request.url()));
+        else if (m_takenRemotePage)
+            protectedBrowsingContextGroup()->addRemotePage(*page, m_takenRemotePage.releaseNonNull());
         m_shouldClosePage = false;
     } else if (RefPtr pageMainFrame = page->mainFrame())
         pageMainFrame->didFailProvisionalLoad();

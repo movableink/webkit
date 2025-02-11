@@ -211,6 +211,7 @@ private:
     WebCore::PageIdentifier m_webPageID;
     Ref<FrameProcess> m_frameProcess;
     Ref<BrowsingContextGroup> m_browsingContextGroup;
+    RefPtr<RemotePageProxy> m_takenRemotePage;
 
     // Keep WebsiteDataStore alive for provisional page load.
     RefPtr<WebsiteDataStore> m_websiteDataStore;
@@ -224,6 +225,7 @@ private:
     ProcessSwapRequestedByClient m_processSwapRequestedByClient;
     bool m_wasCommitted { false };
     bool m_isProcessSwappingOnNavigationResponse { false };
+    const bool m_isProcessSwappingForNewWindow;
     bool m_needsCookieAccessAddedInNetworkProcess { false };
     bool m_needsDidStartProvisionalLoad { true };
     bool m_shouldClosePage { true };

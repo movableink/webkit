@@ -58,6 +58,7 @@ public:
     void processDidTerminate(WebPageProxy&, WebProcessProxy&);
 
     void addPage(WebPageProxy&);
+    void addRemotePage(WebPageProxy&, Ref<RemotePageProxy>&&);
     void removePage(WebPageProxy&);
     void forEachRemotePage(const WebPageProxy&, Function<void(RemotePageProxy&)>&&);
 

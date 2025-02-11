@@ -106,18 +106,6 @@ void RemotePageProxy::injectPageIntoNewProcess()
     );
 }
 
-void RemotePageProxy::removePageFromProcess()
-{
-    if (!m_drawingArea)
-        return;
-    m_drawingArea = nullptr;
-#if ENABLE(FULLSCREEN_API)
-    m_fullscreenManager = nullptr;
-#endif
-    m_visitedLinkStoreRegistration = nullptr;
-    m_process->send(Messages::WebPage::Close(), m_webPageID);
-}
-
 void RemotePageProxy::processDidTerminate(WebProcessProxy& process, ProcessTerminationReason reason)
 {
     if (!m_page)
@@ -131,6 +119,8 @@ void RemotePageProxy::processDidTerminate(WebProcessProxy& process, ProcessTermi
 
 RemotePageProxy::~RemotePageProxy()
 {
+    if (m_drawingArea)
+        m_process->send(Messages::WebPage::Close(), m_webPageID);
     m_process->removeRemotePageProxy(*this);
 }
 
