@@ -1101,7 +1101,6 @@ platform/graphics/ImageBufferContextSwitcher.cpp
 platform/graphics/ImageFrame.cpp
 platform/graphics/ImageFrameWorkQueue.cpp
 platform/graphics/Path.cpp
-platform/graphics/ShadowBlur.cpp
 platform/graphics/SourceBufferPrivate.cpp
 platform/graphics/TrackBuffer.cpp
 platform/graphics/TransparencyLayerContextSwitcher.cpp
