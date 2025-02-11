@@ -1642,6 +1642,10 @@ void HTMLMediaElement::selectMediaResource()
             m_networkState = NETWORK_EMPTY;
 
             ALWAYS_LOG(logSiteIdentifier, "nothing to load");
+
+            if (m_videoFullscreenMode == HTMLMediaElementEnums::VideoFullscreenModePictureInPicture)
+                exitFullscreen();
+
             return;
         }
 
