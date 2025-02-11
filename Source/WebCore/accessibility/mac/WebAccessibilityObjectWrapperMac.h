@@ -26,6 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import "AXTextMarker.h"
 #import "WebAccessibilityObjectWrapperBase.h"
 
 #if PLATFORM(MAC)
@@ -84,7 +85,7 @@ AXTextMarkerRangeRef textMarkerRangeFromVisiblePositions(AXObjectCache*, const V
 VisiblePositionRange visiblePositionRangeForTextMarkerRange(AXObjectCache*, AXTextMarkerRangeRef);
 
 // TextMarker <-> CharacterOffset conversion.
-AXTextMarkerRef textMarkerForCharacterOffset(AXObjectCache*, const CharacterOffset&);
+AXTextMarkerRef textMarkerForCharacterOffset(AXObjectCache*, const CharacterOffset&, TextMarkerOrigin = TextMarkerOrigin::Unknown);
 CharacterOffset characterOffsetForTextMarker(AXObjectCache*, AXTextMarkerRef);
 
 // TextMarkerRange <-> SimpleRange conversion.

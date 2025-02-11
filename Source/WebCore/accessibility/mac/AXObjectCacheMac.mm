@@ -840,14 +840,14 @@ VisiblePositionRange visiblePositionRangeForTextMarkerRange(AXObjectCache* cache
 
 // TextMarker <-> CharacterOffset conversion.
 
-AXTextMarkerRef textMarkerForCharacterOffset(AXObjectCache* cache, const CharacterOffset& characterOffset)
+AXTextMarkerRef textMarkerForCharacterOffset(AXObjectCache* cache, const CharacterOffset& characterOffset, TextMarkerOrigin origin)
 {
     ASSERT(isMainThread());
 
     if (!cache)
         return nil;
 
-    auto textMarkerData = cache->textMarkerDataForCharacterOffset(characterOffset);
+    auto textMarkerData = cache->textMarkerDataForCharacterOffset(characterOffset, origin);
     if (!textMarkerData.objectID || textMarkerData.ignored)
         return nil;
     return adoptCF(AXTextMarkerCreate(kCFAllocatorDefault, (const UInt8*)&textMarkerData, sizeof(textMarkerData))).autorelease();

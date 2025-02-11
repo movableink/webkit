@@ -52,7 +52,7 @@ static std::optional<AXID> nodeID(AXObjectCache& cache, Node* node)
     return std::nullopt;
 }
 
-TextMarkerData::TextMarkerData(AXObjectCache& cache, const VisiblePosition& visiblePosition, int charStart, int charOffset, bool ignoredParam)
+TextMarkerData::TextMarkerData(AXObjectCache& cache, const VisiblePosition& visiblePosition, int charStart, int charOffset, bool ignoredParam, TextMarkerOrigin originParam)
 {
     ASSERT(isMainThread());
 
@@ -67,9 +67,10 @@ TextMarkerData::TextMarkerData(AXObjectCache& cache, const VisiblePosition& visi
     characterStart = std::max(charStart, 0);
     characterOffset = std::max(charOffset, 0);
     ignored = ignoredParam;
+    origin = originParam;
 }
 
-TextMarkerData::TextMarkerData(AXObjectCache& cache, const CharacterOffset& characterOffsetParam, bool ignoredParam)
+TextMarkerData::TextMarkerData(AXObjectCache& cache, const CharacterOffset& characterOffsetParam, bool ignoredParam, TextMarkerOrigin originParam)
 {
     ASSERT(isMainThread());
 
@@ -85,9 +86,10 @@ TextMarkerData::TextMarkerData(AXObjectCache& cache, const CharacterOffset& char
     characterStart = std::max(characterOffsetParam.startIndex, 0);
     characterOffset = std::max(characterOffsetParam.offset, 0);
     ignored = ignoredParam;
+    origin = originParam;
 }
 
-AXTextMarker::AXTextMarker(const VisiblePosition& visiblePosition)
+AXTextMarker::AXTextMarker(const VisiblePosition& visiblePosition, TextMarkerOrigin origin)
 {
     ASSERT(isMainThread());
 
@@ -103,11 +105,11 @@ AXTextMarker::AXTextMarker(const VisiblePosition& visiblePosition)
     if (!cache)
         return;
 
-    if (auto data = cache->textMarkerDataForVisiblePosition(visiblePosition))
+    if (auto data = cache->textMarkerDataForVisiblePosition(visiblePosition, origin))
         m_data = WTFMove(*data);
 }
 
-AXTextMarker::AXTextMarker(const CharacterOffset& characterOffset)
+AXTextMarker::AXTextMarker(const CharacterOffset& characterOffset, TextMarkerOrigin origin)
 {
     ASSERT(isMainThread());
 
@@ -115,7 +117,7 @@ AXTextMarker::AXTextMarker(const CharacterOffset& characterOffset)
         return;
 
     if (auto* cache = characterOffset.node->document().axObjectCache())
-        m_data = cache->textMarkerDataForCharacterOffset(characterOffset);
+        m_data = cache->textMarkerDataForCharacterOffset(characterOffset, origin);
 }
 
 AXTextMarker::operator VisiblePosition() const
@@ -528,8 +530,38 @@ int AXTextMarker::lineNumberForIndex(unsigned index) const
 
 bool AXTextMarker::atLineBoundaryForDirection(AXDirection direction) const
 {
-    auto adjacentMarker = findMarker(direction, CoalesceObjectBreaks::No, IgnoreBRs::Yes);
-    return adjacentMarker.lineID() != lineID();
+    if (!isValid())
+        return false;
+    if (!isInTextRun())
+        return toTextRunMarker().atLineBoundaryForDirection(direction);
+
+    size_t runIndex = runs()->indexForOffset(offset());
+    TEXT_MARKER_ASSERT(runIndex != notFound);
+    RefPtr currentObject = isolatedObject();
+    const auto* currentRuns = currentObject->textRuns();
+    return atLineBoundaryForDirection(direction, currentRuns, runIndex);
+}
+
+bool AXTextMarker::atLineBoundaryForDirection(AXDirection direction, const AXTextRuns* runs, size_t runIndex) const
+{
+    auto* nextObjectWithRuns = findObjectWithRuns(*isolatedObject(), direction);
+    auto* nextRuns = nextObjectWithRuns ? nextObjectWithRuns->textRuns() : nullptr;
+    // If there are more runs in the same containing block with the same line, we are not at a start or end and can exit early.
+    // No need to continue searching when the containing block changes.
+    while (nextRuns && runs->containingBlock == nextRuns->containingBlock) {
+        // If our lineID exists beyond our current object, we can safely say we aren't at a line boundary.
+        if (runs->lineID(runIndex) == nextRuns->lineID(direction == AXDirection::Next ? 0 : nextRuns->size() - 1))
+            return false;
+        nextObjectWithRuns = findObjectWithRuns(*nextObjectWithRuns, direction);
+        nextRuns = nextObjectWithRuns ? nextObjectWithRuns->textRuns() : nullptr;
+    }
+
+    // The current line/containing block ends with the current object and runs. Now, check if we are at
+    // the start/end of the line using the marker's position within its line.
+    unsigned sumToRunIndex = runIndex ? runs->runLengthSumTo(runIndex - 1) : 0;
+    RELEASE_ASSERT(offset() >= sumToRunIndex);
+    unsigned offsetInLine = offset() - sumToRunIndex;
+    return direction == AXDirection::Previous ? !offsetInLine : runs->runLength(runIndex) == offsetInLine;
 }
 
 unsigned AXTextMarker::offsetFromRoot() const
@@ -787,8 +819,8 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
 
     // If, for example, we are asked to find the next line end, and are at the very end of a line already,
     // we need the end position of the next line instead. Determine this by checking the next or previous marker.
-    auto adjacentMarker = findMarker(direction, CoalesceObjectBreaks::No, IgnoreBRs::Yes, stopAtID);
-    if (adjacentMarker.lineID() != lineID()) {
+    if (atLineBoundaryForDirection(direction, currentRuns, runIndex)) {
+        auto adjacentMarker = findMarker(direction, CoalesceObjectBreaks::No, IgnoreBRs::Yes, stopAtID);
         bool findOnNextLine = (direction == AXDirection::Previous && boundary == AXTextUnitBoundary::Start)
             || (direction == AXDirection::Next && boundary == AXTextUnitBoundary::End);
 
@@ -806,19 +838,25 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
     while (currentObject) {
         RELEASE_ASSERT(currentRuns->size());
         unsigned cumulativeOffset = runIndex ? currentRuns->runLengthSumTo(runIndex - 1) : 0;
-        for (size_t i = runIndex; i < currentRuns->size(); i++) {
+        // We should search in the right direction for a change in the line index.
+        for (size_t i = runIndex; direction == AXDirection::Next ? i < currentRuns->size() : i >= 0; direction == AXDirection::Next ? i++ : i--) {
             cumulativeOffset += currentRuns->runLength(i);
             if (currentRuns->lineID(i) != startLineID)
                 return linePosition;
             linePosition = AXTextMarker(*currentObject, computeOffset(cumulativeOffset, currentRuns->runLength(i)), origin);
+
+            if (direction == AXDirection::Previous && !i) {
+                // We want to execute the loop body when i == 0, but break now to avoid underflow.
+                break;
+            }
         }
         currentObject = findObjectWithRuns(*currentObject, direction, stopAtID);
-        // Reset the runIndex to 0, since we should start iterating from the beginning of the next object's runs.
-        runIndex = 0;
         if (currentObject) {
             if (includeTrailingLineBreak == IncludeTrailingLineBreak::No && currentObject->roleValue() == AccessibilityRole::LineBreak)
                 break;
             currentRuns = currentObject->textRuns();
+            // Reset the runIndex to 0 or the maximum, since we should start iterating from the very beginning/end of the next object's runs, depending on the direction.
+            runIndex = direction == AXDirection::Next ? 0 : currentRuns->size() - 1;
         }
     }
     return linePosition;
@@ -1062,8 +1100,7 @@ AXTextMarkerRange AXTextMarker::lineRange(LineRangeType type, IncludeTrailingLin
     if (type == LineRangeType::Current) {
         auto startMarker = atLineStart() ? *this : previousLineStart();
         auto endMarker = atLineEnd() ? *this : nextLineEnd(includeTrailingLineBreak);
-
-        return { WTFMove(startMarker), WTFMove(endMarker) };
+        return AXTextMarkerRange(startMarker, endMarker);
     } else if (type == LineRangeType::Left) {
         // Move backwards off a line start (because this is a "left-line" request).
         auto startMarker = atLineStart() ? findMarker(AXDirection::Previous) : *this;

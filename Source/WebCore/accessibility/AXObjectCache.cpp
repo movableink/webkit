@@ -3288,15 +3288,15 @@ std::optional<SimpleRange> AXObjectCache::rangeForUnorderedCharacterOffsets(cons
     return { { *start, *end } };
 }
 
-TextMarkerData AXObjectCache::textMarkerDataForCharacterOffset(const CharacterOffset& characterOffset)
+TextMarkerData AXObjectCache::textMarkerDataForCharacterOffset(const CharacterOffset& characterOffset, TextMarkerOrigin origin)
 {
     if (characterOffset.isNull())
         return { };
 
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(characterOffset.node.get()); input && input->isSecureField())
-        return { *this, { }, true };
+        return { *this, { }, true, origin };
 
-    return { *this, characterOffset, false };
+    return { *this, characterOffset, false, origin };
 }
 
 CharacterOffset AXObjectCache::startOrEndCharacterOffsetForRange(const SimpleRange& range, bool isStart, bool enterTextControls)
@@ -3571,7 +3571,7 @@ AccessibilityObject* AXObjectCache::objectForTextMarkerData(const TextMarkerData
     return getOrCreate(*node);
 }
 
-std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const VisiblePosition& visiblePosition)
+std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const VisiblePosition& visiblePosition, TextMarkerOrigin origin)
 {
     if (visiblePosition.isNull())
         return std::nullopt;
@@ -3595,7 +3595,7 @@ std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(co
     if (!cache)
         return std::nullopt;
     return { { *cache, visiblePosition,
-        characterOffset.startIndex, characterOffset.offset, false } };
+        characterOffset.startIndex, characterOffset.offset, false, origin } };
 }
 
 CharacterOffset AXObjectCache::nextCharacterOffset(const CharacterOffset& characterOffset, bool ignoreNextNodeStart)
@@ -4890,7 +4890,7 @@ AccessibilityObject* AXObjectCache::rootWebArea()
     return root->webAreaObject();
 }
 
-AXTreeData AXObjectCache::treeData()
+AXTreeData AXObjectCache::treeData(std::optional<OptionSet<AXStreamOptions>> additionalOptions)
 {
     ASSERT(isMainThread());
 
@@ -4900,7 +4900,9 @@ AXTreeData AXObjectCache::treeData()
     stream << "\nAXObjectTree:\n";
     RefPtr document = this->document();
     if (RefPtr root = document ? get(document->view()) : nullptr) {
-        constexpr OptionSet<AXStreamOptions> options = { AXStreamOptions::ObjectID, AXStreamOptions::ParentID, AXStreamOptions::Role, AXStreamOptions::IdentifierAttribute, AXStreamOptions::OuterHTML };
+        OptionSet<AXStreamOptions> options = { AXStreamOptions::ObjectID, AXStreamOptions::ParentID, AXStreamOptions::Role, AXStreamOptions::IdentifierAttribute, AXStreamOptions::OuterHTML };
+        if (additionalOptions)
+            options |= additionalOptions.value();
         streamSubtree(stream, *root, options);
     } else
         stream << "No root!";
@@ -4911,7 +4913,9 @@ AXTreeData AXObjectCache::treeData()
         stream << "\nAXIsolatedTree:\n";
         RefPtr tree = getOrCreateIsolatedTree();
         if (RefPtr root = tree ? tree->rootNode() : nullptr) {
-            constexpr OptionSet<AXStreamOptions> options = { AXStreamOptions::ObjectID, AXStreamOptions::ParentID };
+            OptionSet<AXStreamOptions> options = { AXStreamOptions::ObjectID, AXStreamOptions::ParentID };
+            if (additionalOptions)
+                options |= additionalOptions.value();
             streamSubtree(stream, root.releaseNonNull(), options);
         } else
             stream << "No isolated tree!";

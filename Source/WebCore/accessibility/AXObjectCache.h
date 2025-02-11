@@ -73,6 +73,7 @@ class Scrollbar;
 class ScrollView;
 class VisiblePosition;
 class Widget;
+enum class AXStreamOptions : uint8_t;
 
 struct CharacterOffset {
     RefPtr<Node> node;
@@ -471,8 +472,8 @@ public:
 #endif
 
     // Text marker utilities.
-    std::optional<TextMarkerData> textMarkerDataForVisiblePosition(const VisiblePosition&);
-    TextMarkerData textMarkerDataForCharacterOffset(const CharacterOffset&);
+    std::optional<TextMarkerData> textMarkerDataForVisiblePosition(const VisiblePosition&, TextMarkerOrigin = TextMarkerOrigin::Unknown);
+    TextMarkerData textMarkerDataForCharacterOffset(const CharacterOffset&, TextMarkerOrigin = TextMarkerOrigin::Unknown);
     TextMarkerData textMarkerDataForNextCharacterOffset(const CharacterOffset&);
     AXTextMarker nextTextMarker(const AXTextMarker&);
     TextMarkerData textMarkerDataForPreviousCharacterOffset(const CharacterOffset&);
@@ -590,7 +591,7 @@ public:
 
     static ASCIILiteral notificationPlatformName(AXNotification);
 
-    AXTreeData treeData();
+    AXTreeData treeData(std::optional<OptionSet<AXStreamOptions>> = std::nullopt);
 
     enum class UpdateRelations : bool { No, Yes };
     // Returns the IDs of the objects that relate to the given object with the specified relationship.

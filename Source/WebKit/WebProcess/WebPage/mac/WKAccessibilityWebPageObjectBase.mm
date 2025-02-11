@@ -211,6 +211,10 @@ namespace ax = WebCore::Accessibility;
 
 - (WebCore::LocalFrame *)focusedLocalFrame
 {
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (!isMainRunLoop())
+        return nullptr;
+#endif
     if (!m_page)
         return nullptr;
 

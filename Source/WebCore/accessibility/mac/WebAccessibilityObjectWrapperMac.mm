@@ -2448,6 +2448,25 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         [self accessibilityScrollToVisible];
     else if ([action isEqualToString:@"AXDismissAction"])
         backingObject->performDismissActionIgnoringResult();
+    else if (AXObjectCache::clientIsInTestMode() && [action isEqualToString:@"AXLogTrees"])
+        [self _accessibilityPrintTrees];
+}
+
+// Internal method to print the accessibility trees to standard error.
+- (void)_accessibilityPrintTrees
+{
+    Accessibility::performFunctionOnMainThread([protectedSelf = retainPtr(self)] {
+        auto* backingObject = protectedSelf.get().axBackingObject;
+        if (!backingObject)
+            return;
+
+        auto* cache = backingObject->axObjectCache();
+        if (!cache)
+            return;
+
+        AXTreeData data = cache->treeData(); // Can specify AXStreamOptions here if needed (e.g., TextRuns)
+        SAFE_FPRINTF(stderr, "==AX Trees==\n%s\n%s\n", data.liveTree.utf8(), data.isolatedTree.utf8());
+    });
 }
 
 - (BOOL)accessibilityReplaceRange:(NSRange)range withText:(NSString *)string
@@ -3044,7 +3063,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
             IntRect webCoreRect = screenToContents(*backingObject, enclosingIntRect(rect));
             CharacterOffset characterOffset = cache->characterOffsetForBounds(webCoreRect, false);
 
-            return (id)textMarkerForCharacterOffset(cache.get(), characterOffset);
+            return (id)textMarkerForCharacterOffset(cache.get(), characterOffset, TextMarkerOrigin::EndTextMarkerForBounds);
         });
     }
 
@@ -3061,7 +3080,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
             IntRect webCoreRect = screenToContents(*backingObject, enclosingIntRect(rect));
             CharacterOffset characterOffset = cache->characterOffsetForBounds(webCoreRect, true);
 
-            return (id)textMarkerForCharacterOffset(cache.get(), characterOffset);
+            return (id)textMarkerForCharacterOffset(cache.get(), characterOffset, TextMarkerOrigin::StartTextMarkerForBounds);
         });
     }
 
@@ -3221,7 +3240,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
             if (!backingObject)
                 return nil;
 
-            return AXTextMarker(backingObject->visiblePositionForPoint(webCorePoint)).platformData().bridgingAutorelease();
+            return AXTextMarker(backingObject->visiblePositionForPoint(webCorePoint), TextMarkerOrigin::Position).platformData().bridgingAutorelease();
         });
     }
 
