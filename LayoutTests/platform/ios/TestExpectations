@@ -2830,6 +2830,7 @@ http/tests/storageAccess/has-storage-access-true-if-third-party-has-cookies-ephe
 # Skipped in general expectations since they only work on iOS and Mac, WK2.
 http/tests/security/strip-referrer-to-origin-for-third-party-redirects-in-private-mode.html [ Pass ]
 http/tests/security/strip-referrer-to-origin-for-third-party-requests-in-private-mode.html [ Pass ]
+media/deactivate-audio-session.html [ Pass ]
 
 webkit.org/b/175273 imported/w3c/web-platform-tests/html/browsers/windows/noreferrer-window-name.html [ Failure ]
 
@@ -7692,5 +7693,3 @@ fast/forms/switch/pointer-tracking-there-and-back-again.html [ Timeout ]
 webkit.org/b/287204 [ Release ] fast/forms/date/date-input-rendering-basic.html [ Pass Failure ]
 
 webkit.org/b/287291 http/tests/site-isolation/selection-focus.html [ ImageOnlyFailure ]
-
-webkit.org/b/287308 media/deactivate-audio-session.html [ Timeout ]
