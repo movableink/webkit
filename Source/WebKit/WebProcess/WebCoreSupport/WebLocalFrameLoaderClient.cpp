@@ -1244,13 +1244,34 @@ void WebLocalFrameLoaderClient::updateGlobalHistoryRedirectLinks()
     }
 }
 
-bool WebLocalFrameLoaderClient::shouldGoToHistoryItem(HistoryItem& item) const
+bool WebLocalFrameLoaderClient::shouldGoToHistoryItem(HistoryItem& item, IsSameDocumentNavigation isSameDocumentNavigation) const
 {
+    // In WebKit2, the synchronous version of this policy client should only ever be consulted for same document navigations.
+    RELEASE_ASSERT(isSameDocumentNavigation == IsSameDocumentNavigation::Yes);
+
     RefPtr webPage = m_frame->page();
     if (!webPage)
         return false;
-    webPage->send(Messages::WebPageProxy::WillGoToBackForwardListItem(item.itemID(), item.isInBackForwardCache()));
+
+    auto sendSyncResult = webPage->sendSync(Messages::WebPageProxy::ShouldGoToBackForwardListItemSync(item.itemID()));
+    auto [shouldGo] = sendSyncResult.takeReplyOr(true);
+    return shouldGo;
+}
+
+bool WebLocalFrameLoaderClient::supportsAsyncShouldGoToHistoryItem() const
+{
     return true;
+}
+
+void WebLocalFrameLoaderClient::shouldGoToHistoryItemAsync(HistoryItem& item, CompletionHandler<void(bool)>&& completionHandler) const
+{
+    RefPtr webPage = m_frame->page();
+    if (!webPage) {
+        completionHandler(false);
+        return;
+    }
+
+    webPage->sendWithAsyncReply(Messages::WebPageProxy::ShouldGoToBackForwardListItem(item.itemID(), item.isInBackForwardCache()), WTFMove(completionHandler));
 }
 
 void WebLocalFrameLoaderClient::didDisplayInsecureContent()

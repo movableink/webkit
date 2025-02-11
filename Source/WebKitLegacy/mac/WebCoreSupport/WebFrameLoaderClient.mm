@@ -1093,10 +1093,20 @@ void WebFrameLoaderClient::updateGlobalHistoryRedirectLinks()
     }
 }
 
-bool WebFrameLoaderClient::shouldGoToHistoryItem(WebCore::HistoryItem& item) const
+bool WebFrameLoaderClient::shouldGoToHistoryItem(WebCore::HistoryItem& item, WebCore::IsSameDocumentNavigation) const
 {
     WebView* view = getWebView(m_webFrame.get());
     return [[view _policyDelegateForwarder] webView:view shouldGoToHistoryItem:kit(&item)];
+}
+
+bool WebFrameLoaderClient::supportsAsyncShouldGoToHistoryItem() const
+{
+    return false;
+}
+
+void WebFrameLoaderClient::shouldGoToHistoryItemAsync(WebCore::HistoryItem&, CompletionHandler<void(bool)>&&) const
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void WebFrameLoaderClient::didDisplayInsecureContent()

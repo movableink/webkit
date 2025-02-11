@@ -249,6 +249,7 @@ void NavigationState::setNavigationDelegate(id<WKNavigationDelegate> delegate)
 #endif
     m_navigationDelegateMethods.webViewBackForwardListItemAddedRemoved = [delegate respondsToSelector:@selector(_webView:backForwardListItemAdded:removed:)];
     m_navigationDelegateMethods.webViewWillGoToBackForwardListItemInBackForwardCache = [delegate respondsToSelector:@selector(_webView:willGoToBackForwardListItem:inPageCache:)];
+    m_navigationDelegateMethods.webViewShouldGoToBackForwardListItemInBackForwardCacheCompletionHandler = [delegate respondsToSelector:@selector(_webView:shouldGoToBackForwardListItem:inPageCache:completionHandler:)];
 #if HAVE(APP_SSO)
     m_navigationDelegateMethods.webViewDecidePolicyForSOAuthorizationLoadWithCurrentPolicyForExtensionCompletionHandler = [delegate respondsToSelector:@selector(_webView:decidePolicyForSOAuthorizationLoadWithCurrentPolicy:forExtension:completionHandler:)];
 #endif
@@ -400,21 +401,31 @@ bool NavigationState::NavigationClient::didChangeBackForwardList(WebPageProxy&, 
     return true;
 }
 
-bool NavigationState::NavigationClient::willGoToBackForwardListItem(WebPageProxy&, WebBackForwardListItem& item, bool inBackForwardCache)
+void NavigationState::NavigationClient::shouldGoToBackForwardListItem(WebPageProxy&, WebBackForwardListItem& item, bool inBackForwardCache, CompletionHandler<void(bool)>&& completionHandler)
 {
     RefPtr navigationState = m_navigationState.get();
-    if (!navigationState)
-        return false;
-
-    if (!navigationState->m_navigationDelegateMethods.webViewWillGoToBackForwardListItemInBackForwardCache)
-        return false;
+    if (!navigationState) {
+        completionHandler(true);
+        return;
+    }
 
     auto navigationDelegate = navigationState->navigationDelegate();
-    if (!navigationDelegate)
-        return false;
+    if (!navigationDelegate) {
+        completionHandler(true);
+        return;
+    }
 
-    [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() willGoToBackForwardListItem:wrapper(item) inPageCache:inBackForwardCache];
-    return true;
+    if (navigationState->m_navigationDelegateMethods.webViewShouldGoToBackForwardListItemInBackForwardCacheCompletionHandler) {
+        [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() shouldGoToBackForwardListItem:wrapper(item) inPageCache:inBackForwardCache completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)] (bool result) mutable {
+            completionHandler(result);
+        }).get()];
+        return;
+    }
+
+    if (navigationState->m_navigationDelegateMethods.webViewWillGoToBackForwardListItemInBackForwardCache)
+        [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() willGoToBackForwardListItem:wrapper(item) inPageCache:inBackForwardCache];
+
+    completionHandler(true);
 }
 
 static void trySOAuthorization(Ref<API::NavigationAction>&& navigationAction, WebPageProxy& page, Function<void(bool)>&& completionHandler)

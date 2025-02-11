@@ -165,7 +165,9 @@ private:
     void updateGlobalHistory() final;
     void updateGlobalHistoryRedirectLinks() final;
 
-    bool shouldGoToHistoryItem(WebCore::HistoryItem&) const final;
+    bool shouldGoToHistoryItem(WebCore::HistoryItem&, WebCore::IsSameDocumentNavigation) const final;
+    bool supportsAsyncShouldGoToHistoryItem() const final;
+    void shouldGoToHistoryItemAsync(WebCore::HistoryItem&, CompletionHandler<void(bool)>&&) const final;
 
     void didDisplayInsecureContent() final;
     void didRunInsecureContent(WebCore::SecurityOrigin&) final;

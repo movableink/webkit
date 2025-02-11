@@ -366,7 +366,7 @@ FrameLoader::FrameLoader(LocalFrame& frame, CompletionHandler<UniqueRef<LocalFra
     : m_frame(frame)
     , m_client(clientCreator(frame, *this))
     , m_policyChecker(makeUnique<PolicyChecker>(frame))
-    , m_history(makeUniqueRef<HistoryController>(frame))
+    , m_history(makeUniqueRefWithoutRefCountedCheck<HistoryController>(frame))
     , m_notifier(frame)
     , m_subframeLoader(makeUnique<SubframeLoader>(frame))
     , m_state(FrameState::Provisional)
@@ -2222,6 +2222,8 @@ void FrameLoader::setPolicyDocumentLoader(RefPtr<DocumentLoader>&& loader, LoadW
         return;
 
     FRAMELOADER_RELEASE_LOG_FORWARDABLE(FRAMELOADER_SETPOLICYDOCUMENTLOADER, (uintptr_t)loader.get(), (uintptr_t)m_policyDocumentLoader.get());
+
+    checkedHistory()->clearPolicyItem();
 
     if (loader)
         loader->attachToFrame(protectedFrame());

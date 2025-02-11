@@ -2599,12 +2599,21 @@ void WebPageProxy::didChangeBackForwardList(WebBackForwardListItem* added, Vecto
     pageLoadState->setCanGoForward(transaction, backForwardList->forwardItem());
 }
 
-void WebPageProxy::willGoToBackForwardListItem(BackForwardItemIdentifier itemID, bool inBackForwardCache)
+void WebPageProxy::shouldGoToBackForwardListItem(BackForwardItemIdentifier itemID, bool inBackForwardCache, CompletionHandler<void(bool)>&& completionHandler)
 {
     RefPtr protectedPageClient { pageClient() };
 
-    if (RefPtr item = protectedBackForwardList()->itemForID(itemID))
-        m_navigationClient->willGoToBackForwardListItem(*this, *item, inBackForwardCache);
+    if (RefPtr item = protectedBackForwardList()->itemForID(itemID)) {
+        m_navigationClient->shouldGoToBackForwardListItem(*this, *item, inBackForwardCache, WTFMove(completionHandler));
+        return;
+    }
+
+    completionHandler(false);
+}
+
+void WebPageProxy::shouldGoToBackForwardListItemSync(BackForwardItemIdentifier itemID, CompletionHandler<void(bool)>&& completionHandler)
+{
+    shouldGoToBackForwardListItem(itemID, false, WTFMove(completionHandler));
 }
 
 bool WebPageProxy::shouldKeepCurrentBackForwardListItemInList(WebBackForwardListItem& item)

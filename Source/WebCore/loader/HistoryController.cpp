@@ -70,6 +70,16 @@ HistoryController::HistoryController(LocalFrame& frame)
 
 HistoryController::~HistoryController() = default;
 
+void HistoryController::ref() const
+{
+    m_frame->ref();
+}
+
+void HistoryController::deref() const
+{
+    m_frame->deref();
+}
+
 void HistoryController::saveScrollPositionAndViewStateToItem(HistoryItem* item)
 {
     Ref frame = m_frame.get();
@@ -297,40 +307,53 @@ bool HistoryController::shouldStopLoadingForHistoryItem(HistoryItem& targetItem)
 
 // Main funnel for navigating to a previous location (back/forward, non-search snap-back)
 // This includes recursion to handle loading into framesets properly
-void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType type, ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad)
+void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType frameLoadType, ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad)
 {
-    LOG(History, "HistoryController %p goToItem %p type=%d", this, &targetItem, static_cast<int>(type));
+    LOG(History, "HistoryController %p goToItem %p type=%d", this, &targetItem, static_cast<int>(frameLoadType));
 
-    // shouldGoToHistoryItem is a private delegate method. This is needed to fix:
-    // <rdar://problem/3951283> can view pages from the back/forward cache that should be disallowed by Parental Controls
-    // Ultimately, history item navigations should go through the policy delegate. That's covered in:
-    // <rdar://problem/3979539> back/forward cache navigations should consult policy delegate
     RefPtr page = m_frame->page();
     if (!page)
         return;
-    if (!m_frame->loader().protectedClient()->shouldGoToHistoryItem(targetItem))
-        return;
-    if (m_defersLoading) {
-        m_deferredItem = &targetItem;
-        m_deferredFrameLoadType = type;
-        return;
-    }
 
-    // Set the BF cursor before commit, which lets the user quickly click back/forward again.
-    // - plus, it only makes sense for the top level of the operation through the frame tree,
-    // as opposed to happening for some/one of the page commits that might happen soon.
-    CheckedRef backForward = page->backForward();
-    RefPtr currentItem = backForward->currentItem(m_frame->frameID());
-    backForward->setProvisionalItem(targetItem);
+    auto finishGoToItem = [weakThis = WeakPtr { this }, frameLoadType, shouldTreatAsContinuingLoad, page, isInSwipeAnimation = page->isInSwipeAnimation(), targetItem = Ref { targetItem }] (bool result) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
 
-    // First set the provisional item of any frames that are not actually navigating.
-    // This must be done before trying to navigate the desired frame, because some
-    // navigations can commit immediately (such as about:blank).  We must be sure that
-    // all frames have provisional items set before the commit.
-    recursiveSetProvisionalItem(targetItem, currentItem.get(), ForNavigationAPI::No);
+        if (protectedThis->m_policyItem != targetItem.ptr())
+            return;
 
-    // Now that all other frames have provisional items, do the actual navigation.
-    recursiveGoToItem(targetItem, currentItem.get(), type, shouldTreatAsContinuingLoad);
+        protectedThis->m_policyItem = nullptr;
+
+        if (!result)
+            return;
+
+        if (protectedThis->m_defersLoading) {
+            protectedThis->m_deferredItem = targetItem.ptr();
+            protectedThis->m_deferredFrameLoadType = frameLoadType;
+            return;
+        }
+
+        page->setIsInSwipeAnimation(isInSwipeAnimation);
+
+        // Set the BF cursor before commit, which lets the user quickly click back/forward again.
+        // - plus, it only makes sense for the top level of the operation through the frame tree,
+        // as opposed to happening for some/one of the page commits that might happen soon.
+        CheckedRef backForward = page->backForward();
+        RefPtr currentItem = backForward->currentItem(protectedThis->m_frame->frameID());
+        backForward->setProvisionalItem(targetItem);
+
+        // First set the provisional item of any frames that are not actually navigating.
+        // This must be done before trying to navigate the desired frame, because some
+        // navigations can commit immediately (such as about:blank). We must be sure that
+        // all frames have provisional items set before the commit.
+        protectedThis->recursiveSetProvisionalItem(targetItem, currentItem.get(), ForNavigationAPI::No);
+
+        // Now that all other frames have provisional items, do the actual navigation.
+        protectedThis->recursiveGoToItem(targetItem, currentItem.get(), frameLoadType, shouldTreatAsContinuingLoad);
+    };
+
+    goToItemShared(targetItem, WTFMove(finishGoToItem));
 }
 
 struct HistoryController::FrameToNavigate {
@@ -339,50 +362,87 @@ struct HistoryController::FrameToNavigate {
     const Ref<HistoryItem> toItem;
 };
 
-void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameLoadType type, LocalFrame& triggeringFrame, NavigationAPIMethodTracker* tracker)
+void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameLoadType frameLoadType, LocalFrame& triggeringFrame, NavigationAPIMethodTracker* tracker)
 {
-    LOG(History, "HistoryController %p goToItemForNavigationAPI %p type=%d", this, &targetItem, static_cast<int>(type));
+    LOG(History, "HistoryController %p goToItemForNavigationAPI %p type=%d", this, &targetItem, static_cast<int>(frameLoadType));
 
-    // shouldGoToHistoryItem is a private delegate method. This is needed to fix:
-    // <rdar://problem/3951283> can view pages from the back/forward cache that should be disallowed by Parental Controls
-    // Ultimately, history item navigations should go through the policy delegate. That's covered in:
-    // <rdar://problem/3979539> back/forward cache navigations should consult policy delegate
     Ref frame = m_frame.get();
     RefPtr page = frame->page();
     if (!page)
         return;
-    if (!frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem))
-        return;
 
-    Vector<FrameToNavigate> framesToNavigate;
-    if (RefPtr fromItem = page->backForward().currentItem()) {
-        if (RefPtr localMainFrame = page->localMainFrame())
-            recursiveGatherFramesToNavigate(*localMainFrame, framesToNavigate, targetItem, fromItem.get());
-    }
+    auto finishGoToItem = [weakThis = WeakPtr { this }, frame, frameLoadType, page, isInSwipeAnimation = page->isInSwipeAnimation(), triggeringFrame = Ref { triggeringFrame }, targetItem = Ref { targetItem }, tracker = RefPtr { tracker }] (bool result) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
 
-    // Set the BF cursor before commit, which lets the user quickly click back/forward again.
-    // - plus, it only makes sense for the top level of the operation through the frame tree,
-    // as opposed to happening for some/one of the page commits that might happen soon
-    CheckedRef backForward = page->backForward();
-    RefPtr currentItem = backForward->currentItem(frame->frameID());
-    backForward->setProvisionalItem(targetItem);
+        if (protectedThis->m_policyItem != targetItem.ptr())
+            return;
 
-    // First set the provisional item of any frames that are not actually navigating.
-    // This must be done before trying to navigate the desired frame, because some
-    // navigations can commit immediately (such as about:blank). We must be sure that
-    // all frames have provisional items set before the commit.
-    recursiveSetProvisionalItem(targetItem, currentItem.get(), ForNavigationAPI::Yes);
+        protectedThis->m_policyItem = nullptr;
 
-    for (auto& frameToNavigate : framesToNavigate) {
-        Ref abortHandler = frameToNavigate.frame->protectedWindow()->protectedNavigation()->registerAbortHandler();
-        frameToNavigate.frame->protectedLoader()->loadItem(frameToNavigate.toItem, frameToNavigate.fromItem.get(), type, ShouldTreatAsContinuingLoad::No);
-        // If the navigation was aborted (by the JS called preventDefault() on the navigate event), then
-        // do not do any further navigations.
-        if (abortHandler->wasAborted()) {
-            triggeringFrame.protectedWindow()->protectedNavigation()->rejectFinishedPromise(tracker);
-            break;
+        if (!result)
+            return;
+
+        Vector<FrameToNavigate> framesToNavigate;
+        if (RefPtr fromItem = page->backForward().currentItem()) {
+            if (RefPtr localMainFrame = page->localMainFrame())
+                recursiveGatherFramesToNavigate(*localMainFrame, framesToNavigate, targetItem, fromItem.get());
         }
+
+        page->setIsInSwipeAnimation(isInSwipeAnimation);
+
+        // Set the BF cursor before commit, which lets the user quickly click back/forward again.
+        // - plus, it only makes sense for the top level of the operation through the frame tree,
+        // as opposed to happening for some/one of the page commits that might happen soon
+        CheckedRef backForward = page->backForward();
+        RefPtr currentItem = backForward->currentItem(frame->frameID());
+        backForward->setProvisionalItem(targetItem);
+
+        // First set the provisional item of any frames that are not actually navigating.
+        // This must be done before trying to navigate the desired frame, because some
+        // navigations can commit immediately (such as about:blank). We must be sure that
+        // all frames have provisional items set before the commit.
+        protectedThis->recursiveSetProvisionalItem(targetItem, currentItem.get(), ForNavigationAPI::Yes);
+
+        for (auto& frameToNavigate : framesToNavigate) {
+            Ref abortHandler = frameToNavigate.frame->protectedWindow()->protectedNavigation()->registerAbortHandler();
+            frameToNavigate.frame->protectedLoader()->loadItem(frameToNavigate.toItem, frameToNavigate.fromItem.get(), frameLoadType, ShouldTreatAsContinuingLoad::No);
+            // If the navigation was aborted (by the JS called preventDefault() on the navigate event), then
+            // do not do any further navigations.
+            if (abortHandler->wasAborted()) {
+                triggeringFrame->protectedWindow()->protectedNavigation()->rejectFinishedPromise(tracker.get());
+                break;
+            }
+        }
+    };
+
+    goToItemShared(targetItem, WTFMove(finishGoToItem));
+}
+
+void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandler<void(bool)>&& completionHandler)
+{
+    m_policyItem = &targetItem;
+
+    // Same document navigations must continue synchronously from here,
+    // therefore their policy checks must go down the synchronous path.
+    RefPtr current = currentItem();
+    bool sameDocumentNavigation = current && targetItem.shouldDoSameDocumentNavigationTo(*current);
+
+    Ref frame = m_frame.get();
+    if (sameDocumentNavigation || !frame->protectedLoader()->protectedClient()->supportsAsyncShouldGoToHistoryItem()) {
+        auto isSameDocumentNavigation = sameDocumentNavigation ? IsSameDocumentNavigation::Yes : IsSameDocumentNavigation::No;
+        bool result = frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem, isSameDocumentNavigation);
+        completionHandler(result);
+        return;
     }
+
+    frame->protectedLoader()->protectedClient()->shouldGoToHistoryItemAsync(targetItem, WTFMove(completionHandler));
+}
+
+void HistoryController::clearPolicyItem()
+{
+    m_policyItem = nullptr;
 }
 
 void HistoryController::recursiveGatherFramesToNavigate(LocalFrame& frame, Vector<FrameToNavigate>& framesToNavigate, HistoryItem& targetItem, HistoryItem* fromItem)
@@ -658,6 +718,8 @@ void HistoryController::updateForSameDocumentNavigation()
     RefPtr page = frame->page();
     if (!page)
         return;
+
+    m_policyItem = nullptr;
 
     bool usesEphemeralSession = page->usesEphemeralSession();
     if (!usesEphemeralSession)
