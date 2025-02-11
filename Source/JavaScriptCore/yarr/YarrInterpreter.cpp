@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Peter Varga (pvarga@inf.u-szeged.hu), University of Szeged
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "YarrInterpreter.h"
 
+#include "ConcurrentJSLock.h"
 #include "Options.h"
 #include "SuperSampler.h"
 #include "Yarr.h"
@@ -124,19 +125,30 @@ public:
         int term { 0 };
         unsigned matchBegin;
         unsigned matchEnd;
+#if ASSERT_ENABLED
+        constexpr static uint64_t magicNumber = 0x01aabbccddeeff01;
+        uint64_t m_magicNumber { magicNumber };
+#endif
         uintptr_t frame[1];
     };
 
     DisjunctionContext* allocDisjunctionContext(ByteDisjunction* disjunction)
     {
         size_t size = DisjunctionContext::allocationSize(disjunction->m_frameSize);
-        allocatorPool = allocatorPool->ensureCapacity(size);
-        RELEASE_ASSERT(allocatorPool);
+        auto* newAllocatorPool = allocatorPool->ensureCapacity(size);
+        if (UNLIKELY(!newAllocatorPool))
+            return nullptr;
+        allocatorPool = newAllocatorPool;
         return new (allocatorPool->alloc(size)) DisjunctionContext();
     }
 
     void freeDisjunctionContext(DisjunctionContext* context)
     {
+#if ASSERT_ENABLED
+        ASSERT(context->m_magicNumber == DisjunctionContext::magicNumber);
+        context->m_magicNumber = 0;
+#endif
+        static_assert(std::is_trivially_destructible_v<DisjunctionContext>);
         allocatorPool = allocatorPool->dealloc(context);
     }
 
@@ -215,6 +227,10 @@ public:
         unsigned m_numNestedSubpatterns;
         size_t m_numBackupIds;
         BitVector m_duplicateNamedGroups;
+#if ASSERT_ENABLED
+        constexpr static uint64_t magicNumber = 0x02aabbccddeeff02;
+        uint64_t m_magicNumber { magicNumber };
+#endif
         unsigned subpatternAndGroupIdBackup[1];
     };
 
@@ -237,13 +253,20 @@ public:
         }
 
         size_t size = Checked<size_t>(ParenthesesDisjunctionContext::allocationSize(numNestedSubpatterns, numDuplicateNamedGroups)) + DisjunctionContext::allocationSize(disjunction->m_frameSize);
-        allocatorPool = allocatorPool->ensureCapacity(size);
-        RELEASE_ASSERT(allocatorPool);
+        auto* newAllocatorPool = allocatorPool->ensureCapacity(size);
+        if (UNLIKELY(!newAllocatorPool))
+            return nullptr;
+        allocatorPool = newAllocatorPool;
         return new (allocatorPool->alloc(size)) ParenthesesDisjunctionContext(pattern, output, term, numDuplicateNamedGroups, duplicateNamedCaptureGroups);
     }
 
     void freeParenthesesDisjunctionContext(ParenthesesDisjunctionContext* context)
     {
+#if ASSERT_ENABLED
+        ASSERT(context->m_magicNumber == ParenthesesDisjunctionContext::magicNumber);
+        context->m_magicNumber = 0;
+#endif
+        context->~ParenthesesDisjunctionContext();
         allocatorPool = allocatorPool->dealloc(context);
     }
 
@@ -1396,6 +1419,8 @@ public:
             while (backTrack->matchAmount < minimumMatchCount) {
                 // Try to do a match, and it it succeeds, add it to the list.
                 ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
+                if (UNLIKELY(!context))
+                    return JSRegExpResult::ErrorNoMemory;
                 fixedMatchResult = matchDisjunction(disjunctionBody, context->getDisjunctionContext());
                 if (fixedMatchResult == JSRegExpResult::Match)
                     appendParenthesesDisjunctionContext(backTrack, context);
@@ -1425,6 +1450,8 @@ public:
         case QuantifierType::Greedy: {
             while (backTrack->matchAmount < term.atom.quantityMaxCount) {
                 ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
+                if (UNLIKELY(!context))
+                    return JSRegExpResult::ErrorNoMemory;
                 JSRegExpResult result = matchNonZeroDisjunction(disjunctionBody, context->getDisjunctionContext());
                 if (result == JSRegExpResult::Match)
                     appendParenthesesDisjunctionContext(backTrack, context);
@@ -1485,6 +1512,8 @@ public:
             while (backTrack->matchAmount < term.atom.quantityMaxCount) {
                 // Try to do a match, and it it succeeds, add it to the list.
                 context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
+                if (UNLIKELY(!context))
+                    return JSRegExpResult::ErrorNoMemory;
                 result = matchDisjunction(disjunctionBody, context->getDisjunctionContext());
 
                 if (result == JSRegExpResult::Match)
@@ -1517,6 +1546,8 @@ public:
             if (result == JSRegExpResult::Match) {
                 while (backTrack->matchAmount < term.atom.quantityMaxCount) {
                     ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
+                    if (UNLIKELY(!context))
+                        return JSRegExpResult::ErrorNoMemory;
                     JSRegExpResult parenthesesResult = matchNonZeroDisjunction(disjunctionBody, context->getDisjunctionContext());
                     if (parenthesesResult == JSRegExpResult::Match)
                         appendParenthesesDisjunctionContext(backTrack, context);
@@ -1562,6 +1593,8 @@ public:
             // If we've not reached the limit, try to add one more match.
             if (backTrack->matchAmount < term.atom.quantityMaxCount) {
                 ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
+                if (UNLIKELY(!context))
+                    return JSRegExpResult::ErrorNoMemory;
                 JSRegExpResult result = matchNonZeroDisjunction(disjunctionBody, context->getDisjunctionContext());
                 if (result == JSRegExpResult::Match) {
                     appendParenthesesDisjunctionContext(backTrack, context);
@@ -2168,19 +2201,20 @@ public:
         if (!input.isAvailableInput(0))
             return offsetNoMatch;
 
-        if (pattern->m_lock)
-            pattern->m_lock->lock();
-        
+        ConcurrentJSLocker locker(pattern->m_lock);
+
         for (unsigned i = 0; i < pattern->m_body->m_numSubpatterns + 1; ++i)
             output[i << 1] = offsetNoMatch;
 
         for (unsigned i = pattern->m_offsetVectorBaseForNamedCaptures; i < pattern->m_offsetsSize; ++i)
             output[i] = 0;
 
-        allocatorPool = pattern->m_allocator->startAllocator();
+        allocatorPool = pattern->m_allocator->startAllocator(Options::maxRegExpStackSize());
         RELEASE_ASSERT(allocatorPool);
 
         DisjunctionContext* context = allocDisjunctionContext(pattern->m_body.get());
+        if (UNLIKELY(!context))
+            return offsetNoMatch;
 
         dataLogLnIf(verbose, "  Interpret input: ", input, "\n  Matching");
 
@@ -2196,9 +2230,6 @@ public:
 
         ASSERT((result == JSRegExpResult::Match) == (output[0] != offsetNoMatch));
 
-        if (pattern->m_lock)
-            pattern->m_lock->unlock();
-        
         return output[0];
     }
 
@@ -3176,18 +3207,6 @@ unsigned interpret(BytecodePattern* bytecode, StringView input, unsigned start, 
     if (input.is8Bit())
         return Interpreter<LChar>(bytecode, output, input.span8(), start).interpret();
     return Interpreter<UChar>(bytecode, output, input.span16(), start).interpret();
-}
-
-unsigned interpret(BytecodePattern* bytecode, std::span<const LChar> input, unsigned start, unsigned* output)
-{
-    SuperSamplerScope superSamplerScope(false);
-    return Interpreter<LChar>(bytecode, output, input, start).interpret();
-}
-
-unsigned interpret(BytecodePattern* bytecode, std::span<const UChar> input, unsigned start, unsigned* output)
-{
-    SuperSamplerScope superSamplerScope(false);
-    return Interpreter<UChar>(bytecode, output, input, start).interpret();
 }
 
 // These should be the same for both UChar & LChar.
