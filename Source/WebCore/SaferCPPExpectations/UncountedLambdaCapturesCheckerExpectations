@@ -4,7 +4,6 @@ Modules/WebGPU/Implementation/WebGPUDeviceImpl.cpp
 Modules/WebGPU/Implementation/WebGPUImpl.cpp
 Modules/applepay/ApplePaySetup.cpp
 Modules/applepay/PaymentCoordinator.cpp
-Modules/audiosession/DOMAudioSession.cpp
 Modules/cache/DOMCache.cpp
 Modules/cache/DOMCacheStorage.cpp
 Modules/cookie-store/CookieStore.cpp
@@ -140,8 +139,6 @@ platform/Timer.h
 platform/audio/HRTFDatabaseLoader.cpp
 platform/audio/PlatformMediaSessionManager.cpp
 platform/audio/cocoa/AudioSampleBufferConverter.mm
-platform/audio/cocoa/AudioSessionCocoa.mm
-platform/audio/mac/AudioSessionMac.mm
 platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/clearkey/CDMClearKey.cpp
 platform/graphics/SourceBufferPrivate.cpp

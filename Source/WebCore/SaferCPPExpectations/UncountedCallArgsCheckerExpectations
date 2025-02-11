@@ -38,7 +38,6 @@ Modules/applepay/paymentrequest/ApplePayPaymentHandler.cpp
 Modules/applicationmanifest/ApplicationManifestParser.cpp
 Modules/async-clipboard/Clipboard.cpp
 Modules/async-clipboard/ClipboardItemBindingsDataSource.cpp
-Modules/audiosession/NavigatorAudioSession.cpp
 Modules/cache/DOMCache.cpp
 Modules/cache/DOMCacheStorage.cpp
 Modules/cache/RetrieveRecordsOptions.h
@@ -1074,7 +1073,6 @@ platform/audio/ReverbConvolver.cpp
 platform/audio/cocoa/AudioDestinationCocoa.cpp
 platform/audio/cocoa/AudioFileReaderCocoa.cpp
 platform/audio/cocoa/AudioSampleDataSource.mm
-platform/audio/cocoa/AudioSessionCocoa.mm
 platform/cocoa/DragImageCocoa.mm
 platform/cocoa/PlaybackSessionModelMediaElement.mm
 platform/cocoa/SharedBufferCocoa.mm
