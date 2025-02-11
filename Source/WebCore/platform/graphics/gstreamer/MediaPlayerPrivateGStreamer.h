@@ -656,6 +656,8 @@ private:
     MediaTime m_estimatedVideoFrameDuration { MediaTime::zeroTime() };
 
 #if USE(COORDINATED_GRAPHICS)
+    void updateVideoInfoFromCaps(GstCaps*);
+
     std::optional<DMABufFormat> m_dmabufFormat;
     GstVideoInfo m_videoInfo;
 #endif
