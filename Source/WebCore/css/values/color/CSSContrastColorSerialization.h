@@ -35,10 +35,6 @@ template<typename ContrastColorType> void serializationForCSSContrastColor(Strin
 {
     builder.append("contrast-color("_s);
     serializationForCSS(builder, context, contrastColor.color);
-
-    if (contrastColor.max)
-        builder.append(' ', nameLiteralForSerialization(CSSValueMax));
-
     builder.append(')');
 }
 

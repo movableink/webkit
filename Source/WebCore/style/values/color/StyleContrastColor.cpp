@@ -47,7 +47,6 @@ Color toStyleColor(const CSS::ContrastColor& unresolved, ColorResolutionState& s
         return Color {
             ContrastColor {
                 WTFMove(color),
-                unresolved.max
             }
         };
     }
@@ -55,7 +54,6 @@ Color toStyleColor(const CSS::ContrastColor& unresolved, ColorResolutionState& s
     return resolve(
         CSS::ContrastColorResolver {
             color.resolvedColor(),
-            unresolved.max
         }
     );
 }
@@ -68,7 +66,6 @@ WebCore::Color resolveColor(const ContrastColor& contrastColor, const WebCore::C
     return resolve(
         CSS::ContrastColorResolver {
             contrastColor.color.resolveColor(currentColor),
-            contrastColor.max
         }
     );
 }

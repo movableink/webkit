@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Test CSS Color Module 5 contrast-color() parsing</title>
 <meta charset="utf-8">
-<script src="../../resources/testharness.js"></script>
-<script src="../../resources/testharnessreport.js"></script>
-<script src="../../imported/w3c/web-platform-tests/css/support/parsing-testcommon.js"></script>
+<title>Test CSS Color Module 5 contrast-color() computed value</title>
+<link rel="author" title="Sam Weinig" href="mailto:sam@webkit.org">
+<link rel="help" href="https://drafts.csswg.org/css-color-5/#contrast-color">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/css/support/parsing-testcommon.js"></script>
 <style>
   #container {
     container-type: inline-size;
@@ -25,6 +27,8 @@ test_invalid_value("background-color", "contrast-color(1)");
 test_invalid_value("background-color", "contrast-color(max)");
 test_invalid_value("background-color", "contrast-color(max max)");
 test_invalid_value("background-color", "contrast-color(max white)");
+test_invalid_value("background-color", "contrast-color(white white)");
+test_invalid_value("background-color", "contrast-color(white max)");
 test_invalid_value("background-color", "contrast-color(white min)");
 test_invalid_value("background-color", "contrast-color(white max bar)");
 

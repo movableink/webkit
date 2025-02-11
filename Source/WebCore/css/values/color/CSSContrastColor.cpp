@@ -43,7 +43,6 @@ WebCore::Color createColor(const ContrastColor& unresolved, PlatformColorResolut
     return resolve(
         ContrastColorResolver {
             createColor(unresolved.color, state),
-            unresolved.max
         }
     );
 }

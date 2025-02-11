@@ -40,7 +40,6 @@ struct ContrastColor {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
     Color color;
-    bool max { false };
 
     bool operator==(const ContrastColor&) const = default;
 };

@@ -632,7 +632,7 @@ static std::optional<CSS::Color> consumeColorMixFunction(CSSParserTokenRange& ra
 
 static std::optional<CSS::Color> consumeContrastColorFunction(CSSParserTokenRange& range, ColorParserState& state)
 {
-    // contrast-color() = contrast-color( <color> max? )
+    // contrast-color() = contrast-color( <color> )
     // https://drafts.csswg.org/css-color-5/#funcdef-contrast-color
 
     ASSERT(range.peek().functionId() == CSSValueContrastColor);
@@ -646,15 +646,12 @@ static std::optional<CSS::Color> consumeContrastColorFunction(CSSParserTokenRang
     if (!color)
         return std::nullopt;
 
-    bool max = consumeIdentRaw<CSSValueMax>(args).has_value();
-
     if (!args.atEnd())
         return std::nullopt;
 
     return CSS::Color {
         CSS::ContrastColor {
-            .color = WTFMove(*color),
-            .max = max
+            .color = WTFMove(*color)
         }
     };
 }
