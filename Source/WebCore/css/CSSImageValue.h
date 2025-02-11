@@ -61,8 +61,6 @@ public:
     Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
     bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
-    void customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&);
-    void customClearReplacementURLForSubresources();
     bool customMayDependOnBaseURL() const;
 
     bool equals(const CSSImageValue&) const;

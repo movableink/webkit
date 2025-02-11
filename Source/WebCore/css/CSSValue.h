@@ -187,8 +187,6 @@ public:
     inline bool isValueID() const;
     inline CSSValueID valueID() const;
 
-    void customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&) { }
-    void customClearReplacementURLForSubresources() { }
     bool customMayDependOnBaseURL() const { return false; }
     IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const { return IterationStatus::Continue; }
 
