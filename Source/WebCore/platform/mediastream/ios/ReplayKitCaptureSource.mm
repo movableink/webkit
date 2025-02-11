@@ -132,7 +132,7 @@ bool ReplayKitCaptureSource::start()
 #endif
 
     if (!m_recorderHelper)
-        m_recorderHelper = ([[WebCoreReplayKitScreenRecorderHelper alloc] initWithCallback:this]);
+        m_recorderHelper = adoptNS([[WebCoreReplayKitScreenRecorderHelper alloc] initWithCallback:this]);
 
     auto captureHandler = makeBlockPtr([this, weakThis = WeakPtr { *this }, identifier](CMSampleBufferRef _Nonnull sampleBuffer, RPSampleBufferType bufferType, NSError * _Nullable error) {
 
