@@ -71,8 +71,323 @@ public func CommandEncoder_beginRenderPass_thunk(commandEncoder: WebGPU.CommandE
 public func CommandEncoder_beginComputePass_thunk(commandEncoder: WebGPU.CommandEncoder, descriptor: WGPUComputePassDescriptor) -> WebGPU_Internal.RefComputePassEncoder {
     return commandEncoder.beginComputePass(descriptor: descriptor)
 }
+@_expose(Cxx)
+public func CommandEncoder_runClearEncoder_thunk(commandEncoder: WebGPU.CommandEncoder, attachmentsToClear: NSMutableDictionary, depthStencilAttachmentToClear: inout MTLTexture?, depthAttachmentToClear: Bool, stencilAttachmentToClear: Bool, depthClearValue: Double, stencilClearValue: UInt32, existingEncoder: MTLRenderCommandEncoder?) {
+    let dInput = attachmentsToClear as? [NSNumber: TextureAndClearColor]
+    if dInput == nil {
+        WebGPU_Internal.logString("Dictionary not convertible")
+        precondition(false, "Dictionary not convertible")
+    } else {
+        return commandEncoder.runClearEncoder(attachmentsToClear: dInput!, depthStencilAttachmentToClear: &depthStencilAttachmentToClear, depthAttachmentToClear: depthAttachmentToClear, stencilAttachmentToClear: stencilAttachmentToClear, depthClearValue: depthClearValue, stencilClearValue: stencilClearValue, existingEncoder: existingEncoder)
+    }
+}
+
+@_expose(Cxx)
+public func CommandEncoder_clearTextureIfNeeded_thunk(commandEncoder: WebGPU.CommandEncoder, destination: WGPUImageCopyTexture, slice: UInt) {
+    return commandEncoder.clearTextureIfNeeded(destination: destination, slice: slice)
+}
+
+@_expose(Cxx)
+public func CommandEncoder_finish_thunk(commandEncoder: WebGPU.CommandEncoder, descriptor: WGPUCommandBufferDescriptor) -> WebGPU_Internal.RefCommandBuffer {
+    return commandEncoder.finish(descriptor: descriptor)
+}
 
 extension WebGPU.CommandEncoder {
+    private func validateFinishError() -> Swift.String? {
+        if !isValid() {
+            return "GPUCommandEncoder.finish: encoder is not valid"
+        }
+
+        if getEncoderState() != WebGPU.CommandsMixin.EncoderState.Open {
+            return "GPUCommandEncoder.finish: encoder state is \(Swift.String(describing: encoderStateNameWrapper())), expected 'Open'"
+        }
+
+        if m_debugGroupStackSize != 0 {
+            return "GPUCommandEncoder.finish: encoder stack size '\(m_debugGroupStackSize)'"
+        }
+
+        // FIXME: "Every usage scope contained in this must satisfy the usage scope validation."
+
+        return nil
+    }
+    public func finish(descriptor: WGPUCommandBufferDescriptor) -> WebGPU_Internal.RefCommandBuffer {
+        if descriptor.nextInChain != nil ||  !isValid() || (m_existingCommandEncoder != nil && m_existingCommandEncoder !== m_blitCommandEncoder) {
+            setEncoderState(WebGPU.CommandsMixin.EncoderState.Ended)
+            discardCommandBuffer();
+            protectedDevice().ptr().generateAValidationError(m_lastErrorString != nil ? m_lastErrorString! as Swift.String : Swift.String("Invalid CommandEncoder"))
+            return WebGPU.CommandBuffer.createInvalid(m_device.ptr())
+        }
+
+        // https://gpuweb.github.io/gpuweb/#dom-gpucommandencoder-finish
+
+        let validationFailedError = validateFinishError()
+
+        // FIXME: equivalent of ? UNUSED_PARAM(priorState);
+        let _ = getEncoderState()
+
+        setEncoderState(WebGPU.CommandsMixin.EncoderState.Ended)
+        if validationFailedError != nil {
+            discardCommandBuffer()
+            protectedDevice().ptr().generateAValidationError(m_lastErrorString != nil ? m_lastErrorString! as Swift.String : validationFailedError);
+            return WebGPU.CommandBuffer.createInvalid(m_device.ptr())
+        }
+
+        finalizeBlitCommandEncoder()
+
+        let commandBuffer = m_commandBuffer
+        m_commandBuffer = nil
+        m_existingCommandEncoder = nil
+
+        commandBuffer?.label = WebGPU_Internal.convertWTFStringToNSString(WebGPU.fromAPI(descriptor.label))
+
+    #if os(macOS) || targetEnvironment(macCatalyst)
+        if m_managedBuffers.count != 0 || m_managedTextures.count != 0 {
+            let blitCommandEncoder = commandBuffer?.makeBlitCommandEncoder()
+            for case let buffer as MTLBuffer in m_managedBuffers {
+                blitCommandEncoder?.synchronize(resource: buffer)
+            }
+            for case let texture as MTLTexture in m_managedTextures {
+                blitCommandEncoder?.synchronize(resource: texture)
+            }
+            blitCommandEncoder?.endEncoding()
+        }
+    #endif
+
+        let result = createCommandBuffer(commandBuffer, m_device.ptr(), m_sharedEvent, m_sharedEventSignalValue)
+        m_sharedEvent = nil
+        m_cachedCommandBuffer = WebGPU_Internal.commandBufferThreadSafeWeakPtr(result.ptr())
+        result.ptr().setBufferMapCount(m_bufferMapCount)
+        if m_makeSubmitInvalid {
+            result.ptr().makeInvalid(m_lastErrorString as Swift.String)
+        }
+
+        return result
+    }
+    public func clearTextureIfNeeded(destination: WGPUImageCopyTexture, slice: UInt) {
+        return clearTextureIfNeeded(destination: destination, slice: slice, device: m_device.ptr(), blitCommandEncoder: m_blitCommandEncoder)
+    }
+    private func clearTextureIfNeeded(destination: WGPUImageCopyTexture , slice: UInt, device: WebGPU.Device , blitCommandEncoder: MTLBlitCommandEncoder?)
+    {
+        let texture = WebGPU.fromAPI(destination.texture)
+        let mipLevel: UInt = UInt(destination.mipLevel)
+        clearTextureIfNeeded(texture, mipLevel, slice, device, blitCommandEncoder)
+    }
+
+
+    private func clearTextureIfNeeded(_ texture: WebGPU.Texture, _ mipLevel: UInt, _ slice: UInt, _ device: WebGPU.Device, _ blitCommandEncoder: MTLBlitCommandEncoder?)
+    {
+        if blitCommandEncoder == nil || texture.previouslyCleared(UInt32(mipLevel), UInt32(slice)) {
+            return
+        }
+
+        texture.setPreviouslyCleared(UInt32(mipLevel), UInt32(slice), true)
+        let logicalExtent = texture.logicalMiplevelSpecificTextureExtent(UInt32(mipLevel))
+        if logicalExtent.width == 0 {
+            return
+        }
+        if texture.dimension() != WGPUTextureDimension_1D && logicalExtent.height == 0 {
+            return
+        }
+        if texture.dimension() == WGPUTextureDimension_3D && logicalExtent.depthOrArrayLayers == 0 {
+            return
+        }
+
+        let mtlTexture = texture.texture()
+        if mtlTexture == nil {
+            return
+        }
+        var textureFormat = texture.format()
+        if mtlTexture!.pixelFormat == .depth32Float_stencil8 || mtlTexture!.pixelFormat == .x32_stencil8 {
+            textureFormat = WGPUTextureFormat_Depth32Float
+        }
+        
+        let physicalExtent = WebGPU.Texture.physicalTextureExtent(texture.dimension(), textureFormat, logicalExtent)
+        var sourceBytesPerRow: UInt = WebGPU.Texture.bytesPerRow(textureFormat, physicalExtent.width, texture.sampleCount())
+        let depth: UInt = UInt(texture.dimension() == WGPUTextureDimension_3D ? physicalExtent.depthOrArrayLayers : 1)
+        var didOverflow: Bool = false
+        var checkedBytesPerImage: UInt = sourceBytesPerRow
+        (checkedBytesPerImage, didOverflow) = sourceBytesPerRow.multipliedReportingOverflow(by: UInt(physicalExtent.height))
+        if didOverflow {
+            return
+        }
+        let bytesPerImage = checkedBytesPerImage
+        var bufferLength = bytesPerImage
+        (bufferLength, didOverflow) = bufferLength.multipliedReportingOverflow(by: depth)
+        if didOverflow {
+            return
+        }
+        if bufferLength == 0 {
+            return
+        }
+        
+        let temporaryBuffer = device.safeCreateBuffer(bufferLength)
+
+        if temporaryBuffer == nil {
+            return
+        }
+
+        var sourceSize: MTLSize? = nil
+        var sourceBytesPerImage: UInt = 0
+        var mutableSlice = slice
+        switch (texture.dimension()) {
+        case WGPUTextureDimension_1D:
+            sourceSize = MTLSizeMake(Int(logicalExtent.width), 1, 1)
+        case WGPUTextureDimension_2D:
+            sourceSize = MTLSizeMake(Int(logicalExtent.width), Int(logicalExtent.height), 1)
+        case WGPUTextureDimension_3D:
+            sourceSize = MTLSizeMake(Int(logicalExtent.width), Int(logicalExtent.height), Int(logicalExtent.depthOrArrayLayers))
+            sourceBytesPerImage = bytesPerImage
+            mutableSlice = 0
+        case WGPUTextureDimension_Force32:
+            precondition(false, "RELEASE_ASSERT_NOT_REACHED")
+        default:
+            precondition(false, "RELEASE_ASSERT_NOT_REACHED")
+        }
+
+        var options: MTLBlitOption = MTLBlitOptionNone
+        if mtlTexture!.pixelFormat == .depth32Float_stencil8 {
+            options = .depthFromDepthStencil
+        }
+
+        if mutableSlice >= mtlTexture!.arrayLength {
+            return
+        }
+        blitCommandEncoder?.copy(
+            from: temporaryBuffer!,
+            sourceOffset: 0,
+            sourceBytesPerRow: Int(sourceBytesPerRow),
+            sourceBytesPerImage: Int(sourceBytesPerImage),
+            sourceSize: sourceSize!,
+            to: mtlTexture!,
+            destinationSlice: Int(mutableSlice),
+            destinationLevel: Int(mipLevel),
+            destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+            options: options)
+
+        if options != MTLBlitOptionNone {
+            // FIXME:  maybe it needs to be another value that is not sizeof.
+            sourceBytesPerRow /= UInt(MemoryLayout<Float>.stride)
+            sourceBytesPerImage /= UInt(MemoryLayout<Float>.stride)
+            blitCommandEncoder?.copy(
+                from: temporaryBuffer!,
+                sourceOffset: 0,
+                sourceBytesPerRow: Int(sourceBytesPerRow),
+                sourceBytesPerImage: Int(sourceBytesPerImage),
+                sourceSize: sourceSize!,
+                to: mtlTexture!,
+                destinationSlice: Int(mutableSlice),
+                destinationLevel: Int(mipLevel),
+                destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+                options: options)
+        }
+    }
+    public func runClearEncoder(attachmentsToClear: [NSNumber: TextureAndClearColor], depthStencilAttachmentToClear: inout MTLTexture?, depthAttachmentToClear: Bool, stencilAttachmentToClear: Bool, depthClearValue: Double, stencilClearValue: UInt32, existingEncoder: MTLRenderCommandEncoder?) {
+        func createSimplePso(attachmentsToClear: [NSNumber: TextureAndClearColor], depthStencilAttachmentToClear: MTLTexture?, depthAttachmentToClear: Bool, stencilAttachmentToClear: Bool, device: WebGPU.Device) -> (MTLRenderPipelineState?, MTLDepthStencilState?)
+        {
+            let mtlRenderPipelineDescriptor = MTLRenderPipelineDescriptor()
+
+            var sampleCount: UInt = 0
+            var depthStencilDescriptor: MTLDepthStencilDescriptor? = nil
+            for (key, textureAndClearColor) in attachmentsToClear {
+                let t = textureAndClearColor.texture
+                sampleCount = UInt(t!.sampleCount)
+
+                let mtlColorAttachment = mtlRenderPipelineDescriptor.colorAttachments[key.intValue]
+                mtlColorAttachment?.pixelFormat = t!.pixelFormat
+                mtlColorAttachment?.isBlendingEnabled = false
+            }
+
+            if depthStencilAttachmentToClear != nil {
+                depthStencilDescriptor = MTLDepthStencilDescriptor()
+                sampleCount = UInt(depthStencilAttachmentToClear!.sampleCount)
+                mtlRenderPipelineDescriptor.depthAttachmentPixelFormat = (!depthAttachmentToClear || WebGPU.Device.isStencilOnlyFormat(depthStencilAttachmentToClear!.pixelFormat)) ? .invalid : depthStencilAttachmentToClear!.pixelFormat
+                depthStencilDescriptor?.isDepthWriteEnabled = false
+
+                if stencilAttachmentToClear && (depthStencilAttachmentToClear!.pixelFormat == .depth32Float_stencil8 || depthStencilAttachmentToClear!.pixelFormat == .stencil8 || depthStencilAttachmentToClear!.pixelFormat == .x32_stencil8) {
+                    mtlRenderPipelineDescriptor.stencilAttachmentPixelFormat = depthStencilAttachmentToClear!.pixelFormat
+                }
+            }
+
+            mtlRenderPipelineDescriptor.vertexFunction = device.m_nopVertexFunction
+            mtlRenderPipelineDescriptor.fragmentFunction = nil
+
+            precondition(sampleCount != 0, "sampleCount must be non-zero")
+            mtlRenderPipelineDescriptor.rasterSampleCount = Int(sampleCount)
+            mtlRenderPipelineDescriptor.inputPrimitiveTopology = .point
+            let deviceMetal = device.device()!
+            var pso: MTLRenderPipelineState? = nil
+            var depthStencil: MTLDepthStencilState? = nil
+            do {
+                pso = try deviceMetal.makeRenderPipelineState(descriptor: mtlRenderPipelineDescriptor)
+                depthStencil = depthStencilDescriptor != nil ? deviceMetal.makeDepthStencilState(descriptor: depthStencilDescriptor!) : nil
+            } catch let e {
+                precondition(false, "\(Swift.String(describing: e))")
+            }
+
+            return (pso, depthStencil)
+
+        }
+
+        if attachmentsToClear.isEmpty && !depthAttachmentToClear && !stencilAttachmentToClear {
+            return endEncoding(existingEncoder)
+        }
+        if !stencilAttachmentToClear && !depthAttachmentToClear {
+            depthStencilAttachmentToClear = nil
+        }
+
+        let device = m_device.ptr().device()
+        guard device != nil else {
+            return endEncoding(existingEncoder)
+        }
+        var clearRenderCommandEncoder = existingEncoder
+        if clearRenderCommandEncoder == nil {
+            let clearDescriptor = MTLRenderPassDescriptor()
+            if depthAttachmentToClear {
+                clearDescriptor.depthAttachment.loadAction = MTLLoadAction.clear
+                clearDescriptor.depthAttachment.storeAction = MTLStoreAction.store
+                clearDescriptor.depthAttachment.clearDepth = depthClearValue
+                clearDescriptor.depthAttachment.texture = depthStencilAttachmentToClear
+            }
+
+            if stencilAttachmentToClear {
+                clearDescriptor.stencilAttachment.loadAction = MTLLoadAction.clear
+                clearDescriptor.stencilAttachment.storeAction = MTLStoreAction.store
+                clearDescriptor.stencilAttachment.clearStencil = stencilClearValue
+                clearDescriptor.stencilAttachment.texture = depthStencilAttachmentToClear
+            }
+
+            if attachmentsToClear.count == 0 {
+                precondition(depthStencilAttachmentToClear != nil)
+                clearDescriptor.defaultRasterSampleCount = depthStencilAttachmentToClear!.sampleCount
+                clearDescriptor.renderTargetWidth = depthStencilAttachmentToClear!.width
+                clearDescriptor.renderTargetHeight = depthStencilAttachmentToClear!.height
+            }
+            for (key, textureAndClearColor) in attachmentsToClear {
+                let t = textureAndClearColor.texture
+                let mtlAttachment = clearDescriptor.colorAttachments[key.intValue]
+                mtlAttachment?.loadAction = MTLLoadAction.clear
+                mtlAttachment?.storeAction = MTLStoreAction.store
+                mtlAttachment?.clearColor = textureAndClearColor.clearColor
+                mtlAttachment?.texture = t
+                mtlAttachment?.level = 0
+                mtlAttachment?.slice = 0
+                mtlAttachment?.depthPlane = Int(textureAndClearColor.depthPlane)
+            }
+            clearRenderCommandEncoder = m_commandBuffer.makeRenderCommandEncoder(descriptor: clearDescriptor)
+            setExistingEncoder(clearRenderCommandEncoder)
+        }
+
+        let (pso, depthStencil) = createSimplePso(attachmentsToClear: attachmentsToClear, depthStencilAttachmentToClear: depthStencilAttachmentToClear, depthAttachmentToClear: depthAttachmentToClear,stencilAttachmentToClear: stencilAttachmentToClear, device: m_device.ptr())
+        precondition(pso != nil, "pso should not be nil")
+        clearRenderCommandEncoder?.setRenderPipelineState(pso!)
+        if depthStencil != nil {
+            clearRenderCommandEncoder?.setDepthStencilState(depthStencil!)
+        }
+        clearRenderCommandEncoder?.setCullMode(.none)
+        clearRenderCommandEncoder?.drawPrimitives(type: .point, vertexStart: 0, vertexCount: 1, instanceCount: 1, baseInstance: 0)
+        m_device.ptr().protectedQueue().ptr().endEncoding(clearRenderCommandEncoder, m_commandBuffer)
+        setExistingEncoder(nil)
+    }
     private func timestampWriteIndex(writeIndex: UInt32) -> UInt32
     {
         return writeIndex == WGPU_QUERY_SET_INDEX_UNDEFINED ? 0 : writeIndex
@@ -81,11 +396,11 @@ extension WebGPU.CommandEncoder {
         func errorString(_ format: Swift.String) -> Swift.String {
             return "GPUCommandEncoder.copyBufferToBuffer: \(format)"
         }
-        if !source.isDestroyed() && !isValidToUseWithBufferCommandEncoder(source, self) {
+        if !source.isDestroyed() && !WebGPU_Internal.isValidToUseWithBufferCommandEncoder(source, self) {
             return errorString("source buffer is not valid")
         }
 
-        if !destination.isDestroyed() && !isValidToUseWithBufferCommandEncoder(destination, self) {
+        if !destination.isDestroyed() && !WebGPU_Internal.isValidToUseWithBufferCommandEncoder(destination, self) {
             return errorString("destination buffer is not valid")
         }
 
@@ -164,12 +479,12 @@ extension WebGPU.CommandEncoder {
              "GPUCommandEncoder.copyTextureToTexture: \(error)"
         }
         let sourceTexture = WebGPU.fromAPI(source.texture)
-        if !isValidToUseWithTextureCommandEncoder(sourceTexture, self) {
+        if !WebGPU_Internal.isValidToUseWithTextureCommandEncoder(sourceTexture, self) {
             return errorString("source texture is not valid to use with this GPUCommandEncoder")
         }
 
         let destinationTexture = WebGPU.fromAPI(destination.texture)
-        if !isValidToUseWithTextureCommandEncoder(destinationTexture, self) {
+        if !WebGPU_Internal.isValidToUseWithTextureCommandEncoder(destinationTexture, self) {
             return errorString("desintation texture is not valid to use with this GPUCommandEncoder")
         }
 
@@ -256,7 +571,7 @@ extension WebGPU.CommandEncoder {
         }
         let sourceTexture = WebGPU.fromAPI(source.texture)
 
-        if !isValidToUseWithTextureCommandEncoder(sourceTexture, self) {
+        if !WebGPU_Internal.isValidToUseWithTextureCommandEncoder(sourceTexture, self) {
             return errorString("source texture is not valid to use with this GPUCommandEncoder")
         }
 
@@ -351,7 +666,7 @@ extension WebGPU.CommandEncoder {
             return errorString("source usage does not contain CopySrc")
         }
 
-        if !isValidToUseWithTextureCommandEncoder(destinationTexture, self) {
+        if !WebGPU_Internal.isValidToUseWithTextureCommandEncoder(destinationTexture, self) {
             return errorString("destination texture is not valid to use with this GPUCommandEncoder")
         }
 
@@ -420,7 +735,7 @@ extension WebGPU.CommandEncoder {
         }
         return nil
     }
-    
+
     private func errorValidatingTimestampWrites(timestampWrites: WGPUComputePassTimestampWrites) -> Swift.String? {
 
             if (!self.protectedDevice().ptr().hasFeature(WGPUFeatureName_TimestampQuery)) {
@@ -471,7 +786,7 @@ extension WebGPU.CommandEncoder {
         default:
             assertionFailure("ASSERT_NOT_REACHED")
             return MTLLoadAction.dontCare
-            
+
         }
     }
 
@@ -548,7 +863,7 @@ extension WebGPU.CommandEncoder {
 
         finalizeBlitCommandEncoder()
 
-        let attachmentsToClear = NSMutableDictionary()
+        var attachmentsToClear: [NSNumber:TextureAndClearColor] = [:]
         var zeroColorTargets = true
         var bytesPerSample: UInt32 = 0
         let maxColorAttachmentBytesPerSample = m_device.ptr().limitsCopy().maxColorAttachmentBytesPerSample
@@ -635,7 +950,7 @@ extension WebGPU.CommandEncoder {
             }
             let baseMipLevel = textureIsDestroyed ? 0 : texture.baseMipLevel()
             let depthAndMipLevel: UInt64 = depthSliceOrArrayLayer | (UInt64(baseMipLevel) << 32)
-            if var setValue = depthSlices[bridgedTexture!] {
+            if depthSlices[bridgedTexture!] != nil {
                 if depthSlices[bridgedTexture!]!.contains(depthAndMipLevel) {
                     return WebGPU.RenderPassEncoder.createInvalid(self, m_device.ptr(), "attempting to render to overlapping color attachment")
                 }
@@ -679,7 +994,7 @@ extension WebGPU.CommandEncoder {
             }
             if (textureToClear != nil) {
                 let textureWithResolve = TextureAndClearColor(texture: textureToClear!)
-                attachmentsToClear[i] = textureWithResolve
+                attachmentsToClear[i as NSNumber] = textureWithResolve
                 if (textureToClear != nil) {
                     // FIXME: rdar://138042799 remove default argument.
                     texture.setPreviouslyCleared(0, 0)
@@ -812,7 +1127,7 @@ extension WebGPU.CommandEncoder {
                 WebGPU.fromAPI(attachment.pointee.view).setPreviouslyCleared(0, 0)
             }
             // FIXME: rdar://138042799 remove default argument.
-            runClearEncoder(attachmentsToClear, depthStencilAttachmentToClear, depthAttachmentToClear, stencilAttachmentToClear, 0 ,0 ,nil)
+            runClearEncoder(attachmentsToClear: attachmentsToClear, depthStencilAttachmentToClear: &depthStencilAttachmentToClear, depthAttachmentToClear: depthAttachmentToClear, stencilAttachmentToClear: stencilAttachmentToClear, depthClearValue: 0 ,stencilClearValue: 0 ,existingEncoder: nil)
         }
 
         if !m_device.ptr().isValid() {
@@ -1040,7 +1355,7 @@ extension WebGPU.CommandEncoder {
             }
             let sourceSlice = sourceTexture.dimension().rawValue == WGPUTextureDimension_3D.rawValue ? 0 : originZPlusLayer
             if !sourceTexture.previouslyCleared(source.mipLevel, UInt32(sourceSlice)) {
-                clearTextureIfNeeded(source, sourceSlice)
+                clearTextureIfNeeded(destination: source, slice: sourceSlice)
             }
         }
 
@@ -1254,7 +1569,7 @@ extension WebGPU.CommandEncoder {
                 // FIXME: rdar://138042799 remove default argument.
                 destinationTexture.setPreviouslyCleared(destination.mipLevel, destinationSlice, true)
             } else {
-                self.clearTextureIfNeeded(destination, UInt(destinationSlice))
+                self.clearTextureIfNeeded(destination: destination, slice: UInt(destinationSlice))
             }
         }
         let maxSourceBytesPerRow: UInt = textureDimension.rawValue == WGPUTextureDimension_3D.rawValue ? (2048 * blockSize.value()) : sourceBytesPerRow
@@ -1583,7 +1898,7 @@ extension WebGPU.CommandEncoder {
                 return
             }
             let sourceSlice: UInt = sourceTexture.dimension() == WGPUTextureDimension_3D ? 0 : sourceOriginPlusLayer
-            self.clearTextureIfNeeded(source, sourceSlice)
+            self.clearTextureIfNeeded(destination: source, slice: sourceSlice)
             var destinationOriginPlusLayer = UInt(destination.origin.z)
             (destinationOriginPlusLayer, didOverflow) = destinationOriginPlusLayer.addingReportingOverflow(UInt(layer))
             guard !didOverflow else {
@@ -1597,7 +1912,7 @@ extension WebGPU.CommandEncoder {
                 // FIXME: rdar://138042799 remove default argument.
                 destinationTexture.setPreviouslyCleared(destination.mipLevel, destinationSliceUInt32, true)
             } else {
-                self.clearTextureIfNeeded(destination, destinationSlice)
+                self.clearTextureIfNeeded(destination: destination, slice: destinationSlice)
             }
         }
         guard let mtlDestinationTexture = destinationTexture.texture(), let mtlSourceTexture = WebGPU.fromAPI(source.texture).texture() else {

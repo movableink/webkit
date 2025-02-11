@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +25,28 @@
 
 #pragma once
 
-namespace WebGPU {
+#include "ExportMacros.h"
+#include <wtf/Assertions.h>
+#include <wtf/Forward.h>
 
-class Buffer;
-class Device;
+namespace WebGPU_Internal {
 
-// https://gpuweb.github.io/gpuweb/#gpucommandsmixin
-class CommandsMixin {
-protected PUBLIC_IN_WEBGPU_SWIFT:
-    enum class EncoderState : uint8_t {
-        Open,
-        Locked,
-        Ended
-    };
-    bool prepareTheEncoderState() const;
-protected:
-    NSString* encoderStateName() const;
-    static bool computedSizeOverflows(const Buffer&, uint64_t offset, uint64_t& size);
+#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
 
-    EncoderState m_state { EncoderState::Open };
-};
+#ifndef LOG_CHANNEL_PREFIX
+#define LOG_CHANNEL_PREFIX Log
+#endif
 
-} // namespace WebGPU
+#define WEBGPU_LOG_CHANNELS(M) \
+    M(WebGPUSwift)
+
+#undef DECLARE_LOG_CHANNEL
+#define DECLARE_LOG_CHANNEL(name) \
+    WEBGPU_EXPORT extern WTFLogChannel JOIN_LOG_CHANNEL_WITH_PREFIX(LOG_CHANNEL_PREFIX, name);
+
+WEBGPU_LOG_CHANNELS(DECLARE_LOG_CHANNEL)
+
+#endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
+
+} // namespace WebGPU_Internal
+

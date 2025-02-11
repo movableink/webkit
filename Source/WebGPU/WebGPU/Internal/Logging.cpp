@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,27 +23,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "Logging.h"
 
-namespace WebGPU {
+namespace WebGPU_Internal {
 
-class Buffer;
-class Device;
+#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
 
-// https://gpuweb.github.io/gpuweb/#gpucommandsmixin
-class CommandsMixin {
-protected PUBLIC_IN_WEBGPU_SWIFT:
-    enum class EncoderState : uint8_t {
-        Open,
-        Locked,
-        Ended
-    };
-    bool prepareTheEncoderState() const;
-protected:
-    NSString* encoderStateName() const;
-    static bool computedSizeOverflows(const Buffer&, uint64_t offset, uint64_t& size);
+#define DEFINE_WEBGPU_LOG_CHANNEL(name) DEFINE_LOG_CHANNEL(name, LOG_CHANNEL_WEBKIT_SUBSYSTEM)
+WEBGPU_LOG_CHANNELS(DEFINE_WEBGPU_LOG_CHANNEL)
 
-    EncoderState m_state { EncoderState::Open };
-};
+#endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
 
-} // namespace WebGPU
+}
