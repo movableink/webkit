@@ -176,7 +176,7 @@ void ViewGestureController::setAlternateBackForwardListSourcePage(WebPageProxy* 
     m_alternateBackForwardListSourcePage = page;
 }
 
-bool ViewGestureController::canSwipeInDirection(SwipeDirection direction) const
+bool ViewGestureController::canSwipeInDirection(SwipeDirection direction, DeferToConflictingGestures deferToConflictingGestures) const
 {
     if (!m_swipeGestureEnabled)
         return false;
@@ -190,6 +190,9 @@ bool ViewGestureController::canSwipeInDirection(SwipeDirection direction) const
     if (fullScreenManager && fullScreenManager->isFullScreen())
         return false;
 #endif
+
+    if (deferToConflictingGestures == DeferToConflictingGestures::Yes && !page->canStartNavigationSwipeAtLastInteractionLocation())
+        return false;
 
     RefPtr<WebPageProxy> alternateBackForwardListSourcePage = m_alternateBackForwardListSourcePage.get();
     Ref<WebBackForwardList> backForwardList = alternateBackForwardListSourcePage ? alternateBackForwardListSourcePage->backForwardList() : page->backForwardList();
@@ -482,7 +485,7 @@ bool ViewGestureController::PendingSwipeTracker::scrollEventCanBecomeSwipe(Platf
         return false;
 
     potentialSwipeDirection = tryingToSwipeBack ? SwipeDirection::Back : SwipeDirection::Forward;
-    return protectedViewGestureController()->canSwipeInDirection(potentialSwipeDirection);
+    return protectedViewGestureController()->canSwipeInDirection(potentialSwipeDirection, DeferToConflictingGestures::No);
 }
 
 bool ViewGestureController::PendingSwipeTracker::handleEvent(PlatformScrollEvent event)

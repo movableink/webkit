@@ -326,6 +326,8 @@ public:
     virtual void showBrowsingWarning(const BrowsingWarning&, CompletionHandler<void(std::variant<ContinueUnsafeLoad, URL>&&)>&& completionHandler) { completionHandler(ContinueUnsafeLoad::Yes); }
     virtual void clearBrowsingWarning() { }
     virtual void clearBrowsingWarningIfForMainFrameNavigation() { }
+
+    virtual bool canStartNavigationSwipeAtLastInteractionLocation() const { return true; }
     
 #if ENABLE(DRAG_SUPPORT)
 #if PLATFORM(GTK)

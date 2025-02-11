@@ -128,10 +128,8 @@ public:
         Swipe
     };
 
-    enum class SwipeDirection {
-        Back,
-        Forward
-    };
+    enum class SwipeDirection : bool { Back, Forward };
+    enum class DeferToConflictingGestures : bool { No, Yes };
 
     typedef uint64_t GestureID;
 
@@ -177,7 +175,7 @@ public:
 
     void setAlternateBackForwardListSourcePage(WebPageProxy*);
 
-    bool canSwipeInDirection(SwipeDirection) const;
+    bool canSwipeInDirection(SwipeDirection, DeferToConflictingGestures) const;
 
     WebCore::Color backgroundColorForCurrentSnapshot() const { return m_backgroundColorForCurrentSnapshot; }
 

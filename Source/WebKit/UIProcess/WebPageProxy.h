@@ -2658,6 +2658,8 @@ public:
     RefPtr<ModelPresentationManagerProxy> modelPresentationManagerProxy() const;
 #endif
 
+    bool canStartNavigationSwipeAtLastInteractionLocation() const;
+
 private:
     void getWebCryptoMasterKey(CompletionHandler<void(std::optional<Vector<uint8_t>>&&)>&&);
     WebPageProxy(PageClient&, WebProcessProxy&, Ref<API::PageConfiguration>&&);

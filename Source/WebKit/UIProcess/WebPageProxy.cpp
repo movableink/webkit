@@ -16008,6 +16008,12 @@ void WebPageProxy::shouldOffloadIFrameForHost(const String& host, CompletionHand
 }
 #endif
 
+bool WebPageProxy::canStartNavigationSwipeAtLastInteractionLocation() const
+{
+    RefPtr client = pageClient();
+    return !client || client->canStartNavigationSwipeAtLastInteractionLocation();
+}
+
 } // namespace WebKit
 
 #undef WEBPAGEPROXY_RELEASE_LOG

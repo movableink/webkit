@@ -13842,6 +13842,30 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
     return NO;
 }
 
+- (BOOL)_canStartNavigationSwipeAtLastInteractionLocation
+{
+    RetainPtr lastHitView = [self hitTest:_lastInteractionLocation withEvent:nil];
+    if (!lastHitView)
+        return YES;
+
+    RetainPtr mainScroller = [_webView scrollView];
+    RetainPtr innerScroller = dynamic_objc_cast<UIScrollView>(lastHitView.get()) ?: [lastHitView _wk_parentScrollView];
+    for (RetainPtr scroller = innerScroller; scroller; scroller = [scroller _wk_parentScrollView]) {
+        if ([scroller isDragging])
+            return NO;
+
+        if ([scroller panGestureRecognizer]._wk_hasRecognizedOrEnded)
+            return NO;
+
+        if (scroller == mainScroller)
+            break;
+    }
+
+    auto touchActions = WebKit::touchActionsForPoint(self, WebCore::roundedIntPoint(_lastInteractionLocation));
+    using enum WebCore::TouchAction;
+    return touchActions.containsAny({ Auto, PanX, Manipulation });
+}
+
 @end
 
 @implementation WKContentView (WKTesting)

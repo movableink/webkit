@@ -1277,6 +1277,11 @@ bool PageClientImpl::isPotentialTapInProgress() const
     return [m_contentView isPotentialTapInProgress];
 }
 
+bool PageClientImpl::canStartNavigationSwipeAtLastInteractionLocation() const
+{
+    return [m_contentView _canStartNavigationSwipeAtLastInteractionLocation];
+}
+
 } // namespace WebKit
 
 #endif // PLATFORM(IOS_FAMILY)
