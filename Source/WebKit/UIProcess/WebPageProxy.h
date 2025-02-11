@@ -2515,6 +2515,8 @@ public:
 
     void requestTextExtraction(std::optional<WebCore::FloatRect>&& collectionRectInRootView, CompletionHandler<void(WebCore::TextExtraction::Item&&)>&&);
 
+    void hasVideoInPictureInPictureDidChange(bool);
+
 #if ENABLE(WRITING_TOOLS)
     void setWritingToolsActive(bool);
 

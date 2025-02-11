@@ -32,8 +32,10 @@
 #import <ScreenTime/STWebHistory.h>
 #import <ScreenTime/STWebpageController.h>
 #import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKUIDelegatePrivate.h>
 #import <WebKit/WKWebViewConfiguration.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WKWebsiteDataStore.h>
 #import <WebKit/_WKFeature.h>
 #import <pal/cocoa/ScreenTimeSoftLink.h>
@@ -41,6 +43,9 @@
 
 static void *blockedStateObserverChangeKVOContext = &blockedStateObserverChangeKVOContext;
 static bool stateDidChange = false;
+static bool receivedLoadMessage = false;
+static bool hasVideoInPictureInPictureValue = false;
+static bool hasVideoInPictureInPictureCalled = false;
 
 static RetainPtr<TestWKWebView> webViewForScreenTimeTests(WKWebViewConfiguration *configuration = nil)
 {
@@ -331,4 +336,102 @@ TEST(ScreenTime, ShowSystemScreenTimeBlockingFalseAndRemoved)
     EXPECT_FALSE(blurredViewIsPresent(webView.get()));
 }
 
+TEST(ScreenTime, URLIsPlayingVideo)
+{
+    RetainPtr webView = webViewForScreenTimeTests();
+
+    [webView synchronouslyLoadHTMLString:@"<video src=\"video-with-audio.mp4\" webkit-playsinline></video>"];
+    [webView objectByEvaluatingJavaScript:@"function eventToMessage(event){window.webkit.messageHandlers.testHandler.postMessage(event.type);} var video = document.querySelector('video'); video.addEventListener('playing', eventToMessage); video.addEventListener('pause', eventToMessage);"];
+
+    __block bool didBeginPlaying = false;
+    [webView performAfterReceivingMessage:@"playing" action:^{ didBeginPlaying = true; }];
+    [webView evaluateJavaScript:@"document.querySelector('video').play()" completionHandler:nil];
+    TestWebKitAPI::Util::run(&didBeginPlaying);
+
+    EXPECT_TRUE([[webView _screenTimeWebpageController] URLIsPlayingVideo]);
+
+    __block bool didPause = false;
+    [webView performAfterReceivingMessage:@"pause" action:^{ didPause = true; }];
+    [webView evaluateJavaScript:@"document.querySelector('video').pause()" completionHandler:nil];
+    TestWebKitAPI::Util::run(&didPause);
+
+    EXPECT_FALSE([[webView _screenTimeWebpageController] URLIsPlayingVideo]);
+}
+
+#if PLATFORM(MAC)
+
+@interface STPictureInPictureUIDelegate : NSObject <WKUIDelegate, WKScriptMessageHandler>
+@end
+
+@implementation STPictureInPictureUIDelegate
+
+- (void)_webView:(WKWebView *)webView hasVideoInPictureInPictureDidChange:(BOOL)hasVideoInPictureInPicture
+{
+    hasVideoInPictureInPictureValue = hasVideoInPictureInPicture;
+    hasVideoInPictureInPictureCalled = true;
+}
+
+- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
+{
+    NSString *bodyString = (NSString *)[message body];
+    if ([bodyString isEqualToString:@"load"])
+        receivedLoadMessage = true;
+}
+@end
+
+TEST(ScreenTime, URLIsPictureInPictureMacos)
+{
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration preferences]._allowsPictureInPictureMediaPlayback = YES;
+
+    RetainPtr handler = adoptNS([[STPictureInPictureUIDelegate alloc] init]);
+    [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"pictureInPictureChangeHandler"];
+
+    RetainPtr webView = webViewForScreenTimeTests(configuration.get());
+    [webView setFrame:NSMakeRect(0, 0, 640, 480)];
+
+    [webView setUIDelegate:handler.get()];
+
+    [webView _forceRequestCandidates];
+
+    RetainPtr window = adoptNS([[NSWindow alloc] initWithContentRect:[webView frame] styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO]);
+    [[window contentView] addSubview:webView.get()];
+    [window makeKeyAndOrderFront:nil];
+
+    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"PictureInPictureDelegate" withExtension:@"html"]];
+
+    receivedLoadMessage = false;
+
+    [webView loadRequest:request.get()];
+    TestWebKitAPI::Util::run(&receivedLoadMessage);
+
+    hasVideoInPictureInPictureValue = false;
+    hasVideoInPictureInPictureCalled = false;
+
+    while (![webView _canTogglePictureInPicture])
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+
+    ASSERT_FALSE([webView _isPictureInPictureActive]);
+    [webView _togglePictureInPicture];
+
+    TestWebKitAPI::Util::run(&hasVideoInPictureInPictureCalled);
+    EXPECT_TRUE(hasVideoInPictureInPictureValue);
+    EXPECT_TRUE([[webView _screenTimeWebpageController] URLIsPictureInPicture]);
+
+    // Wait for PIPAgent to launch, or it won't call -pipDidClose: callback.
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:1]];
+
+    ASSERT_TRUE([webView _isPictureInPictureActive]);
+    ASSERT_TRUE([webView _canTogglePictureInPicture]);
+
+    hasVideoInPictureInPictureCalled = false;
+
+    [webView _togglePictureInPicture];
+
+    TestWebKitAPI::Util::run(&hasVideoInPictureInPictureCalled);
+    EXPECT_FALSE(hasVideoInPictureInPictureValue);
+    EXPECT_FALSE([[webView _screenTimeWebpageController] URLIsPictureInPicture]);
+}
+
+#endif
 #endif

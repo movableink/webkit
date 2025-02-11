@@ -774,7 +774,7 @@ void VideoPresentationManagerProxy::hasVideoInPictureInPictureDidChange(bool val
     RefPtr page = m_page.get();
     if (!page)
         return;
-    page->uiClient().hasVideoInPictureInPictureDidChange(page.get(), value);
+    page->hasVideoInPictureInPictureDidChange(value);
     m_pipChangeObservers.forEach([value] (auto& observer) { observer(value); });
 }
 

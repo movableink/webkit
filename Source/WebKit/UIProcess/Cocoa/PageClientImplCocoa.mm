@@ -349,6 +349,25 @@ void PageClientImplCocoa::updateScreenTimeWebpageControllerURL(WKWebView *webVie
 
     [screenTimeWebpageController setURL:[webView _mainFrameURL]];
 }
+
+void PageClientImplCocoa::setURLIsPictureInPictureForScreenTime(bool value)
+{
+    RetainPtr screenTimeWebpageController = [webView() _screenTimeWebpageController];
+    if (!screenTimeWebpageController)
+        return;
+
+    [screenTimeWebpageController setURLIsPictureInPicture:value];
+}
+
+void PageClientImplCocoa::setURLIsPlayingVideoForScreenTime(bool value)
+{
+    RetainPtr screenTimeWebpageController = [webView() _screenTimeWebpageController];
+    if (!screenTimeWebpageController)
+        return;
+
+    [screenTimeWebpageController setURLIsPlayingVideo:value];
+}
+
 #endif
 
 #if ENABLE(GAMEPAD)

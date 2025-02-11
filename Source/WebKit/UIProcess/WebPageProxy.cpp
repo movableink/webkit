@@ -9157,6 +9157,15 @@ WebColorPickerClient& WebPageProxy::colorPickerClient()
     return internals();
 }
 
+void WebPageProxy::hasVideoInPictureInPictureDidChange(bool value)
+{
+    uiClient().hasVideoInPictureInPictureDidChange(this, value);
+#if ENABLE(SCREEN_TIME)
+    m_pageClient->setURLIsPictureInPictureForScreenTime(value);
+#endif
+}
+
+
 void WebPageProxy::Internals::didChooseColor(const WebCore::Color& color)
 {
     Ref protectedPage = page.get();
@@ -13442,6 +13451,11 @@ void WebPageProxy::updatePlayingMediaDidChange(MediaProducerMediaStateFlags newS
 
 #if ENABLE(EXTENSION_CAPABILITIES)
     updateMediaCapability();
+#endif
+
+#if ENABLE(SCREEN_TIME)
+    if (oldState.contains(MediaProducerMediaState::IsPlayingVideo) != newState.contains(MediaProducerMediaState::IsPlayingVideo))
+        m_pageClient->setURLIsPlayingVideoForScreenTime(newState.contains(MediaProducerMediaState::IsPlayingVideo));
 #endif
 }
 
