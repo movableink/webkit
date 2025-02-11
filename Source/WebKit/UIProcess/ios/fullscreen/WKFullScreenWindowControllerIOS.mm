@@ -1246,7 +1246,7 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
 {
     if (_fullScreenState != WebKit::NotInFullScreen) {
         OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER, _fullScreenState, " != NotInFullScreen, dropping");
-        return;
+        return completionHandler(false);
     }
 
     // Switch the active tab if needed
@@ -1261,6 +1261,7 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
 
     OBJC_ERROR_LOG(OBJC_LOGIDENTIFIER, "manager missing, dropping");
     ASSERT_NOT_REACHED();
+    completionHandler(false);
 }
 
 - (void)requestExitFullScreen
@@ -1456,7 +1457,7 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
         if (_enterRequested) {
             _enterRequested = NO;
             OBJC_ALWAYS_LOG(logIdentifier, "repaint completed, enter requested");
-            [self requestRestoreFullScreen:nil];
+            [self requestRestoreFullScreen:[] (bool) { }];
         } else
             OBJC_ALWAYS_LOG(logIdentifier, "repaint completed");
 

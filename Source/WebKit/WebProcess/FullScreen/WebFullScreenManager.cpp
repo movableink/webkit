@@ -519,12 +519,12 @@ void WebFullScreenManager::requestRestoreFullScreen(CompletionHandler<void(bool)
 {
     ASSERT(!m_element);
     if (m_element)
-        return;
+        return completionHandler(false);
 
     auto element = RefPtr { m_elementToRestore.get() };
     if (!element) {
         ALWAYS_LOG(LOGIDENTIFIER, "no element to restore");
-        return;
+        return completionHandler(false);
     }
 
     ALWAYS_LOG(LOGIDENTIFIER, "<", element->tagName(), " id=\"", element->getIdAttribute(), "\">");

@@ -177,11 +177,11 @@ void WebFullScreenManagerProxy::requestRestoreFullScreen(CompletionHandler<void(
     ALWAYS_LOG(LOGIDENTIFIER);
     RefPtr page = m_page.get();
     if (!page)
-        return;
+        return completionHandler(false);
     RefPtr fullScreenProcess = m_fullScreenProcess.get();
     if (!fullScreenProcess)
-        return;
-    fullScreenProcess->sendWithAsyncReply(Messages::WebFullScreenManager::RequestRestoreFullScreen(), WTFMove(completionHandler));
+        return completionHandler(false);
+    fullScreenProcess->sendWithAsyncReply(Messages::WebFullScreenManager::RequestRestoreFullScreen(), WTFMove(completionHandler), page->webPageIDInProcess(*fullScreenProcess));
 }
 
 void WebFullScreenManagerProxy::requestExitFullScreen()

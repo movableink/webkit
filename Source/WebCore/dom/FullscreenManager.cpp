@@ -103,7 +103,7 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, RefP
     enum class EmitErrorEvent : bool { No, Yes };
     auto handleError = [this, identifier, weakThis = WeakPtr { *this }](ASCIILiteral message, EmitErrorEvent emitErrorEvent, Ref<Element>&& element, RefPtr<DeferredPromise>&& promise, CompletionHandler<void(bool)>&& completionHandler) mutable {
         if (!weakThis)
-            return;
+            return completionHandler(false);
         ERROR_LOG(identifier, message);
         if (promise)
             promise->reject(Exception { ExceptionCode::TypeError, message });
