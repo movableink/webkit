@@ -8035,7 +8035,7 @@ class TestAddReviewerToCommitMessage(BuildStepMixinAdditions, unittest.TestCase)
     def test_skipped_patch(self):
         self.setupStep(AddReviewerToCommitMessage())
         self.setProperty('patch_id', '1234')
-        self.expectOutcome(result=SKIPPED, state_string='finished (skipped)')
+        self.expectOutcome(result=SKIPPED, state_string='Skipped because there are no valid reviewers')
         return self.runStep()
 
     def test_success(self):
@@ -8131,7 +8131,7 @@ class TestAddReviewerToCommitMessage(BuildStepMixinAdditions, unittest.TestCase)
         self.setProperty('github.base.ref', 'main')
         self.setProperty('github.head.ref', 'eng/pull-request-branch')
         self.setProperty('valid_reviewers', [])
-        self.expectOutcome(result=SKIPPED, state_string='finished (skipped)')
+        self.expectOutcome(result=SKIPPED, state_string='Skipped because there are no valid reviewers')
         return self.runStep()
 
     def test_skip_cherry_pick(self):
@@ -8142,7 +8142,7 @@ class TestAddReviewerToCommitMessage(BuildStepMixinAdditions, unittest.TestCase)
         self.setProperty('valid_reviewers', ['WebKit Reviewer', 'Other Reviewer'])
         self.setProperty('owners', ['webkit-commit-queue'])
         self.setProperty('classification', ['Cherry-pick'])
-        self.expectOutcome(result=SKIPPED, state_string='finished (skipped)')
+        self.expectOutcome(result=SKIPPED, state_string='Skipped because commit is a cherry-pick')
         return self.runStep()
 
 

@@ -6602,10 +6602,21 @@ class AddReviewerToCommitMessage(shell.ShellCommand, AddReviewerMixin):
     haltOnFailure = True
 
     def __init__(self, **kwargs):
+        self.skip_reason = ''
         super().__init__(logEnviron=False, timeout=60, **kwargs)
 
     @defer.inlineCallbacks
     def run(self, BufferLogObserverClass=logobserver.BufferLogObserver):
+        classification = self.getProperty('classification', [])
+        if not isinstance(classification, list):
+            classification = []
+        if ['Cherry-pick'] == classification:
+            self.skip_reason = 'commit is a cherry-pick'
+            defer.returnValue(SKIPPED)
+        if not self.getProperty('valid_reviewers'):
+            self.skip_reason = 'there are no valid reviewers'
+            defer.returnValue(SKIPPED)
+
         base_ref = self.getProperty('github.base.ref', f'{DEFAULT_REMOTE}/{DEFAULT_BRANCH}')
         head_ref = self.getProperty('github.head.ref', 'HEAD')
 
@@ -6628,18 +6639,11 @@ class AddReviewerToCommitMessage(shell.ShellCommand, AddReviewerMixin):
     def getResultSummary(self):
         if self.results == FAILURE:
             return {'step': 'Failed to apply reviewers'}
+        if self.results == SKIPPED:
+            return {'step': f'Skipped because {self.skip_reason}'}
         if self.results == SUCCESS:
             return {'step': f'Reviewed by {self.reviewers()}'}
         return super().getResultSummary()
-
-    def doStepIf(self, step):
-        classification = self.getProperty('classification', [])
-        if not isinstance(classification, list):
-            classification = []
-        return self.getProperty('valid_reviewers') and ['Cherry-pick'] != classification
-
-    def hideStepIf(self, results, step):
-        return not self.doStepIf(step)
 
 
 class ValidateCommitMessage(steps.ShellSequence, ShellMixin, AddToLogMixin):
