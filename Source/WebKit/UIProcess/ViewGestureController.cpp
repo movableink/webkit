@@ -112,8 +112,9 @@ void ViewGestureController::disconnectFromProcess()
     if (!m_isConnectedToProcess)
         return;
 
-    Ref { *m_mainFrameProcess }->removeMessageReceiver(Messages::ViewGestureController::messageReceiverName(), *m_webPageIDInMainFrameProcess);
-    m_mainFrameProcess = nullptr;
+    if (RefPtr mainFrameProcess = std::exchange(m_mainFrameProcess, nullptr).get())
+        mainFrameProcess->removeMessageReceiver(Messages::ViewGestureController::messageReceiverName(), *m_webPageIDInMainFrameProcess);
+
     m_webPageIDInMainFrameProcess = std::nullopt;
     m_isConnectedToProcess = false;
 }
