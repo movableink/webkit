@@ -856,7 +856,7 @@ class RunTest262Tests(TestWithFailureCount, CustomFlagsMixin):
         return self.failedTestCount
 
 
-class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin):
+class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin, ShellMixin):
     name = "layout-test"
     description = ["layout-tests running"]
     descriptionDone = ["layout-tests"]
@@ -888,6 +888,7 @@ class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin):
 
     def __init__(self, *args, **kwargs):
         kwargs['logEnviron'] = False
+        kwargs['timeout'] = 3 * 60 * 60
         super().__init__(*args, **kwargs)
 
     def run(self):
@@ -909,6 +910,9 @@ class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin):
 
         if additionalArguments:
             self.command += additionalArguments
+
+        filter_command = ' '.join(self.command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs layout'
+        self.command = self.shell_command(filter_command)
         return super().run()
 
     def _strip_python_logging_prefix(self, line):
@@ -939,6 +943,19 @@ class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin):
     def evaluateCommand(self, cmd):
         self.processTestFailures()
         result = SUCCESS
+
+        steps_to_add = [
+            GenerateS3URL(
+                f"{self.getProperty('fullPlatform')}-{self.getProperty('architecture')}-{self.getProperty('configuration')}-{self.name}",
+                extension='txt',
+                content_type='text/plain',
+            ), UploadFileToS3(
+                'logs.txt',
+                links={self.name: 'Full logs'},
+                content_type='text/plain',
+            )
+        ]
+        self.build.addStepsAfterCurrentStep(steps_to_add)
 
         if self.incorrectLayoutLines:
             if len(self.incorrectLayoutLines) == 1:
