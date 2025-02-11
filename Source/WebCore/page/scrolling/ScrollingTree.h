@@ -27,6 +27,7 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
+#include "BoxExtents.h"
 #include "EventTrackingRegions.h"
 #include "FrameIdentifier.h"
 #include "LayerHostingContextIdentifier.h"

@@ -29,6 +29,11 @@
 #include <wtf/Forward.h>
 
 namespace WebCore {
+
+namespace CSS {
+struct SerializationContext;
+}
+
 namespace Style {
 
 struct CurrentColor {

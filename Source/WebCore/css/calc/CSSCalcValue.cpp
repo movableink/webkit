@@ -44,6 +44,7 @@
 #include "CSSParser.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserOptions.h"
+#include "CSSSerializationContext.h"
 #include "CalculationCategory.h"
 #include "CalculationValue.h"
 #include "Logging.h"

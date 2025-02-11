@@ -24,6 +24,7 @@
 
 #include "CSSLayerBlockRule.h"
 #include "CSSMarkup.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleSheet.h"
 #include "MediaList.h"
 #include "MediaQueryParser.h"

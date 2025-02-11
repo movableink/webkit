@@ -26,6 +26,7 @@
 #include "config.h"
 #include "StyleCurrentColor.h"
 
+#include "CSSSerializationContext.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {

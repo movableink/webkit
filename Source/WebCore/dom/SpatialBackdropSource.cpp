@@ -17,8 +17,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
 #include "config.h"
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
 #include "SpatialBackdropSource.h"
 
 namespace WebCore {
