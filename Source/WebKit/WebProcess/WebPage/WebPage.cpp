@@ -6467,7 +6467,7 @@ void WebPage::beginPrinting(FrameIdentifier frameID, const PrintInfo& printInfo)
     if (!coreFrame)
         return;
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     if (pdfDocumentForPrintingFrame(coreFrame.get()))
         return;
 #endif
@@ -6633,12 +6633,7 @@ void WebPage::drawRectToImage(FrameIdentifier frameID, const PrintInfo& printInf
 
 #if USE(CG)
     if (coreFrame) {
-#if PLATFORM(MAC)
         ASSERT(coreFrame->document()->printing() || pdfDocumentForPrintingFrame(coreFrame.get()));
-#else
-        ASSERT(coreFrame->document()->printing());
-#endif
-        
         image = WebImage::create(imageSize, ImageOption::Local, DestinationColorSpace::SRGB(), &m_page->chrome().client());
         if (!image || !image->context()) {
             ASSERT_NOT_REACHED();
@@ -6649,17 +6644,13 @@ void WebPage::drawRectToImage(FrameIdentifier frameID, const PrintInfo& printInf
         float printingScale = static_cast<float>(imageSize.width()) / rect.width();
         graphicsContext.scale(printingScale);
 
-#if PLATFORM(MAC)
         if (RetainPtr<PDFDocument> pdfDocument = pdfDocumentForPrintingFrame(coreFrame.get())) {
             ASSERT(!m_printContext);
             graphicsContext.scale(FloatSize(1, -1));
             graphicsContext.translate(0, -rect.height());
             drawPDFDocument(graphicsContext.platformContext(), pdfDocument.get(), printInfo, rect);
         } else
-#endif
-        {
             m_printContext->spoolRect(graphicsContext, rect);
-        }
     }
 #endif
 
@@ -6687,12 +6678,7 @@ void WebPage::drawPagesToPDFImpl(FrameIdentifier frameID, const PrintInfo& print
 
 #if USE(CG)
     if (coreFrame) {
-#if PLATFORM(MAC)
         ASSERT(coreFrame->document()->printing() || pdfDocumentForPrintingFrame(coreFrame.get()));
-#else
-        ASSERT(coreFrame->document()->printing());
-#endif
-
         // FIXME: Use CGDataConsumerCreate with callbacks to avoid copying the data.
         RetainPtr<CGDataConsumerRef> pdfDataConsumer = adoptCF(CGDataConsumerCreateWithCFData(pdfPageData.get()));
 
@@ -6700,13 +6686,10 @@ void WebPage::drawPagesToPDFImpl(FrameIdentifier frameID, const PrintInfo& print
 
         RetainPtr<CGContextRef> context = adoptCF(CGPDFContextCreate(pdfDataConsumer.get(), &mediaBox, 0));
 
-#if PLATFORM(MAC)
         if (RetainPtr<PDFDocument> pdfDocument = pdfDocumentForPrintingFrame(coreFrame.get())) {
             ASSERT(!m_printContext);
             drawPagesToPDFFromPDFDocument(context.get(), pdfDocument.get(), printInfo, first, count);
-        } else
-#endif
-        {
+        } else {
             if (!m_printContext)
                 return;
 

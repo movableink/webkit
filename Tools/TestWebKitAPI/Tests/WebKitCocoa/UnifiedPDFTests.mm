@@ -36,6 +36,7 @@
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
+#import "TestPDFDocument.h"
 #import "TestWKWebView.h"
 #import "UIKitSPIForTesting.h"
 #import "UISideCompositingScope.h"
@@ -51,6 +52,14 @@
 #import <WebKit/_WKFeature.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+
+#if PLATFORM(IOS_FAMILY)
+@interface UIPrintInteractionController ()
+- (BOOL)_setupPrintPanel:(void (^)(UIPrintInteractionController *printInteractionController, BOOL completed, NSError *error))completion;
+- (void)_generatePrintPreview:(void (^)(NSURL *previewPDF, BOOL shouldRenderOnChosenPaper))completionHandler;
+- (void)_cleanPrintState;
+@end
+#endif
 
 @interface ObserveWebContentCrashNavigationDelegate : NSObject <WKNavigationDelegate>
 @end
@@ -387,6 +396,39 @@ UNIFIED_PDF_TEST(LookUpSelectedText)
     EXPECT_WK_STREQ(@"Test PDF Content\n555-555-1234", lookupContext.get());
     EXPECT_EQ(selectedRangeInLookupContext.location, 5U);
     EXPECT_EQ(selectedRangeInLookupContext.length, 3U);
+}
+
+UNIFIED_PDF_TEST(PrintPDFUsingPrintInteractionController)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+
+    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"multiple-pages" withExtension:@"pdf"]];
+    [webView synchronouslyLoadRequest:request.get()];
+    [webView waitForNextPresentationUpdate];
+
+    RetainPtr printPageRenderer = adoptNS([[UIPrintPageRenderer alloc] init]);
+    [printPageRenderer addPrintFormatter:[webView viewPrintFormatter] startingAtPageAtIndex:0];
+
+    RetainPtr printInteractionController = adoptNS([[UIPrintInteractionController alloc] init]);
+    [printInteractionController setPrintPageRenderer:printPageRenderer.get()];
+
+    __block bool done = false;
+    __block RetainPtr<NSData> pdfData;
+
+    [printInteractionController _setupPrintPanel:nil];
+    [printInteractionController _generatePrintPreview:^(NSURL *pdfURL, BOOL shouldRenderOnChosenPaper) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            pdfData = adoptNS([[NSData alloc] initWithContentsOfURL:pdfURL]);
+            [printInteractionController _cleanPrintState];
+            done = true;
+        });
+    }];
+
+    TestWebKitAPI::Util::run(&done);
+    EXPECT_NE([pdfData length], 0UL);
+
+    Ref pdf = TestWebKitAPI::TestPDFDocument::createFromData(pdfData.get());
+    EXPECT_EQ(pdf->pageCount(), 16UL);
 }
 
 #endif // PLATFORM(IOS_FAMILY)

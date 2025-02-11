@@ -33,6 +33,7 @@
 #import "MessageSenderInlines.h"
 #import "PDFPlugin.h"
 #import "PluginView.h"
+#import "PrintInfo.h"
 #import "TextAnimationController.h"
 #import "UserMediaCaptureManager.h"
 #import "WKAccessibilityWebPageObjectBase.h"
@@ -72,6 +73,7 @@
 #import <WebCore/MutableStyleProperties.h>
 #import <WebCore/NetworkExtensionContentFilter.h>
 #import <WebCore/NodeRenderStyle.h>
+#import <WebCore/NotImplemented.h>
 #import <WebCore/NowPlayingInfo.h>
 #import <WebCore/PaymentCoordinator.h>
 #import <WebCore/PlatformMediaSessionManager.h>
@@ -102,6 +104,8 @@
 #if USE(EXTENSIONKIT)
 #import "WKProcessExtension.h"
 #endif
+
+#import "PDFKitSoftLink.h"
 
 #define WEBPAGE_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [webPageID=%" PRIu64 "] WebPage::" fmt, this, m_identifier.toUInt64(), ##__VA_ARGS__)
 
@@ -1199,6 +1203,130 @@ void WebPage::decodeImageData(Ref<WebCore::SharedBuffer>&& buffer, std::optional
 {
     completionHandler(decodeImageWithSize(buffer->span(), preferredSize));
 }
+
+#if HAVE(PDFKIT)
+
+void WebPage::computePagesForPrintingPDFDocument(WebCore::FrameIdentifier frameID, const PrintInfo& printInfo, Vector<IntRect>& resultPageRects)
+{
+    ASSERT(resultPageRects.isEmpty());
+    RefPtr frame = WebProcess::singleton().webFrame(frameID);
+    RefPtr coreFrame = frame ? frame->coreLocalFrame() : nullptr;
+    RetainPtr<PDFDocument> pdfDocument = coreFrame ? pdfDocumentForPrintingFrame(coreFrame.get()) : 0;
+    if ([pdfDocument allowsPrinting]) {
+        NSUInteger pageCount = [pdfDocument pageCount];
+        IntRect pageRect(0, 0, ceilf(printInfo.availablePaperWidth), ceilf(printInfo.availablePaperHeight));
+        for (NSUInteger i = 1; i <= pageCount; ++i) {
+            resultPageRects.append(pageRect);
+            pageRect.move(0, pageRect.height());
+        }
+    }
+}
+
+static inline CGFloat roundCGFloat(CGFloat f)
+{
+    if (sizeof(CGFloat) == sizeof(float))
+        return roundf(static_cast<float>(f));
+    return static_cast<CGFloat>(round(f));
+}
+
+static void drawPDFPage(PDFDocument *pdfDocument, CFIndex pageIndex, CGContextRef context, CGFloat pageSetupScaleFactor, CGSize paperSize)
+{
+    CGContextSaveGState(context);
+
+    CGContextScaleCTM(context, pageSetupScaleFactor, pageSetupScaleFactor);
+
+    PDFPage *pdfPage = [pdfDocument pageAtIndex:pageIndex];
+    NSRect cropBox = [pdfPage boundsForBox:kPDFDisplayBoxCropBox];
+    if (NSIsEmptyRect(cropBox))
+        cropBox = [pdfPage boundsForBox:kPDFDisplayBoxMediaBox];
+    else
+        cropBox = NSIntersectionRect(cropBox, [pdfPage boundsForBox:kPDFDisplayBoxMediaBox]);
+
+    // Always auto-rotate PDF content regardless of the paper orientation.
+    NSInteger rotation = [pdfPage rotation];
+    if (rotation == 90 || rotation == 270)
+        std::swap(cropBox.size.width, cropBox.size.height);
+
+    bool shouldRotate = (paperSize.width < paperSize.height) != (cropBox.size.width < cropBox.size.height);
+    if (shouldRotate)
+        std::swap(cropBox.size.width, cropBox.size.height);
+
+    // Center.
+    CGFloat widthDifference = paperSize.width / pageSetupScaleFactor - cropBox.size.width;
+    CGFloat heightDifference = paperSize.height / pageSetupScaleFactor - cropBox.size.height;
+    if (widthDifference || heightDifference)
+        CGContextTranslateCTM(context, roundCGFloat(widthDifference / 2), roundCGFloat(heightDifference / 2));
+
+    if (shouldRotate) {
+        CGContextRotateCTM(context, static_cast<CGFloat>(piOverTwoDouble));
+        CGContextTranslateCTM(context, 0, -cropBox.size.width);
+    }
+
+    [pdfPage drawWithBox:kPDFDisplayBoxCropBox toContext:context];
+
+    CGAffineTransform transform = CGContextGetCTM(context);
+
+    for (PDFAnnotation *annotation in [pdfPage annotations]) {
+        if (![[annotation valueForAnnotationKey:get_PDFKit_PDFAnnotationKeySubtype()] isEqualToString:get_PDFKit_PDFAnnotationSubtypeLink()])
+            continue;
+
+        NSURL *url = annotation.URL;
+        if (!url)
+            continue;
+
+        CGRect transformedRect = CGRectApplyAffineTransform(annotation.bounds, transform);
+        CGPDFContextSetURLForRect(context, (CFURLRef)url, transformedRect);
+    }
+
+    CGContextRestoreGState(context);
+}
+
+void WebPage::drawPDFDocument(CGContextRef context, PDFDocument *pdfDocument, const PrintInfo& printInfo, const WebCore::IntRect& rect)
+{
+    NSUInteger pageCount = [pdfDocument pageCount];
+    IntSize paperSize(ceilf(printInfo.availablePaperWidth), ceilf(printInfo.availablePaperHeight));
+    IntRect pageRect(IntPoint(), paperSize);
+    for (NSUInteger i = 0; i < pageCount; ++i) {
+        if (pageRect.intersects(rect)) {
+            CGContextSaveGState(context);
+
+            CGContextTranslateCTM(context, pageRect.x() - rect.x(), pageRect.y() - rect.y());
+            drawPDFPage(pdfDocument, i, context, printInfo.pageSetupScaleFactor, paperSize);
+
+            CGContextRestoreGState(context);
+        }
+        pageRect.move(0, pageRect.height());
+    }
+}
+
+void WebPage::drawPagesToPDFFromPDFDocument(CGContextRef context, PDFDocument *pdfDocument, const PrintInfo& printInfo, uint32_t first, uint32_t count)
+{
+    NSUInteger pageCount = [pdfDocument pageCount];
+    for (uint32_t page = first; page < first + count; ++page) {
+        if (page >= pageCount)
+            break;
+
+        RetainPtr pageInfo = adoptCF(CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+
+        CGPDFContextBeginPage(context, pageInfo.get());
+        drawPDFPage(pdfDocument, page, context, printInfo.pageSetupScaleFactor, CGSizeMake(printInfo.availablePaperWidth, printInfo.availablePaperHeight));
+        CGPDFContextEndPage(context);
+    }
+}
+
+#else
+
+void WebPage::computePagesForPrintingPDFDocument(WebCore::FrameIdentifier, const PrintInfo&, Vector<IntRect>&)
+{
+    notImplemented();
+}
+
+void WebPage::drawPagesToPDFFromPDFDocument(CGContextRef, PDFDocument *, const PrintInfo&, uint32_t, uint32_t)
+{
+    notImplemented();
+}
+
+#endif
 
 } // namespace WebKit
 

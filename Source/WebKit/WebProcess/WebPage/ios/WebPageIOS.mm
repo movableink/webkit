@@ -738,16 +738,6 @@ void WebPage::shouldDelayWindowOrderingEvent(const WebKit::WebMouseEvent&, Compl
     completionHandler(false);
 }
 
-void WebPage::computePagesForPrintingPDFDocument(WebCore::FrameIdentifier, const PrintInfo&, Vector<IntRect>&)
-{
-    notImplemented();
-}
-
-void WebPage::drawPagesToPDFFromPDFDocument(CGContextRef, PDFDocument *, const PrintInfo&, uint32_t, uint32_t)
-{
-    notImplemented();
-}
-
 void WebPage::advanceToNextMisspelling(bool)
 {
     notImplemented();
