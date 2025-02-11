@@ -255,7 +255,7 @@ static String optionalArrayOfDataHelper(std::optional<Vector<CoreIPCData>>& toSe
 
 CoreIPCSecTrust::CoreIPCSecTrust(SecTrustRef trust)
 {
-    CFErrorRef error;
+    CFErrorRef error = nullptr;
 
     if (!trust)
         return;
@@ -762,7 +762,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [dict setObject:exceptions.get() forKey:@"exceptions"];
     }
 
-    CFErrorRef error;
+    CFErrorRef error = nullptr;
     RetainPtr trust = adoptCF(SecTrustCreateFromPropertyListRepresentation(dict.get(), &error));
     if (error) {
         RELEASE_LOG_ERROR(IPC, "CoreIPCSecTrust error creating trust object");
