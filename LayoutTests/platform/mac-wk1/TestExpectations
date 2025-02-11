@@ -2974,6 +2974,7 @@ imported/w3c/web-platform-tests/svg/text/reftests/text-inline-size-007.svg [ Ski
 imported/w3c/web-platform-tests/svg/text/reftests/text-inline-size-101.svg [ Skip ]
 imported/w3c/web-platform-tests/svg/text/reftests/text-multiline-001.svg [ Skip ]
 imported/w3c/web-platform-tests/svg/text/reftests/text-multiline-002.svg [ Skip ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/radialgradient-basic-002.svg [ ImageOnlyFailure ]
 
 imported/w3c/web-platform-tests/scroll-animations/ [ Skip ]
 imported/w3c/web-platform-tests/web-animations/interfaces/Animation/scroll-timeline-overallProgress.tentative.html [ Skip ]

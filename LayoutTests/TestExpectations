@@ -7548,6 +7548,28 @@ imported/w3c/web-platform-tests/svg/painting/reftests/markers-orient-002.svg [ I
 imported/w3c/web-platform-tests/svg/painting/reftests/paint-context-001.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/painting/reftests/paint-context-002.svg [ ImageOnlyFailure ]
 
+# web-platform-tests/svg/pservers failures
+imported/w3c/web-platform-tests/svg/pservers/scripted/pattern-transform-clear.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/fill-fallback-invalid-uri.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/stroke-fallback-invalid-uri.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/fill-fallback-none-1.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/fill-fallback-currentcolor-1.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/fill-fallback-none-3.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/gradient-color-interpolation.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/gradient-transform-01.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/gradient-transform-02.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/gradient-transform-03.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-001.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-002.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-003.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-004.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-005.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-bicubic-001.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-complex-001.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/pattern-transform-03.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/radialgradient-fully-overlapping.svg [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/stop-color-currentcolor-dynamic-001.svg [ ImageOnlyFailure ]
+
 # re-import css/css-align WPT failure
 webkit.org/b/271692 imported/w3c/web-platform-tests/css/css-align/blocks/align-content-block-break-overflow-020.html [ ImageOnlyFailure ]
 
