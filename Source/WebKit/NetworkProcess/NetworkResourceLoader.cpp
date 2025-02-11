@@ -53,6 +53,7 @@
 #include "WebPageMessages.h"
 #include "WebResourceLoaderMessages.h"
 #include "WebSWServerConnection.h"
+#include "WebSharedWorkerServer.h"
 #include "WebsiteDataStore.h"
 #include "WebsiteDataStoreParameters.h"
 #include <WebCore/BlobDataFileReference.h>
@@ -1564,9 +1565,9 @@ void NetworkResourceLoader::bufferingTimerFired()
     auto sharedBuffer = m_bufferedData.takeAsContiguous();
     bool shouldFilter = m_contentFilter && !m_contentFilter->continueAfterDataReceived(sharedBuffer, m_bufferedDataEncodedDataLength);
     if (!shouldFilter)
-        send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(sharedBuffer.get()), m_bufferedDataEncodedDataLength, bytesTransferredOverNetworkDelta()));
+        sendDidReceiveDataMessage(sharedBuffer, m_bufferedDataEncodedDataLength);
 #else
-    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(*m_bufferedData.get()), m_bufferedDataEncodedDataLength, bytesTransferredOverNetworkDelta()));
+    sendDidReceiveDataMessage(m_bufferedData.takeAsContiguous(), m_bufferedDataEncodedDataLength);
 #endif
     m_bufferedData.empty();
     m_bufferedDataEncodedDataLength = 0;
@@ -1581,7 +1582,7 @@ void NetworkResourceLoader::sendBuffer(const FragmentedSharedBuffer& buffer, siz
         return;
 #endif
 
-    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength, bytesTransferredOverNetworkDelta()));
+    sendDidReceiveDataMessage(buffer, encodedDataLength);
 }
 
 void NetworkResourceLoader::tryStoreAsCacheEntry()
@@ -2129,7 +2130,7 @@ void NetworkResourceLoader::serviceWorkerDidFinish()
 
 void NetworkResourceLoader::dataReceivedThroughContentFilter(const SharedBuffer& buffer, size_t encodedDataLength)
 {
-    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength, bytesTransferredOverNetworkDelta()));
+    sendDidReceiveDataMessage(buffer, encodedDataLength);
 }
 
 WebCore::ResourceError NetworkResourceLoader::contentFilterDidBlock(WebCore::ContentFilterUnblockHandler unblockHandler, String&& unblockRequestDeniedScript)
@@ -2179,6 +2180,28 @@ void NetworkResourceLoader::useRedirectionForCurrentNavigation(WebCore::Resource
     ASSERT(response.isRedirection());
 
     m_redirectionForCurrentNavigation = makeUnique<WebCore::ResourceResponse>(WTFMove(response));
+}
+
+void NetworkResourceLoader::sendDidReceiveDataMessage(const FragmentedSharedBuffer& buffer, size_t encodedDataLength)
+{
+    auto delta = bytesTransferredOverNetworkDelta();
+
+    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength, delta));
+
+    if (!delta)
+        return;
+
+    if (auto workerIdentifier = m_parameters.workerIdentifier)
+        reportNetworkUsageToAllSharedWorkers(*workerIdentifier, delta);
+}
+
+void NetworkResourceLoader::reportNetworkUsageToAllSharedWorkers(WebCore::SharedWorkerIdentifier identifier, size_t delta)
+{
+    Ref connection = m_connection;
+    if (CheckedPtr session = connection->protectedNetworkProcess()->networkSession(sessionID())) {
+        if (CheckedPtr server = session->sharedWorkerServer())
+            server->reportNetworkUsageToAllSharedWorkerClients(identifier, delta);
+    }
 }
 
 uint64_t NetworkResourceLoader::bytesTransferredOverNetworkDelta() const

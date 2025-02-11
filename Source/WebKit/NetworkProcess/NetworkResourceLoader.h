@@ -284,6 +284,8 @@ private:
 
     bool shouldSendResourceLoadMessages() const;
 
+    void sendDidReceiveDataMessage(const WebCore::FragmentedSharedBuffer&, size_t encodedDataLength);
+    void reportNetworkUsageToAllSharedWorkers(WebCore::SharedWorkerIdentifier, size_t bytesTransferredOverNetworkDelta);
     uint64_t bytesTransferredOverNetworkDelta() const;
 
     NetworkResourceLoadParameters m_parameters;

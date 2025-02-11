@@ -15,8 +15,24 @@ async function setup() {
         return true;
     } else {
         console.error('ResourceMonitor is not available or cannot modify rules.');
+        finishJSTest();
         return false;
     }
+}
+
+function afterSetup(action) {
+    return async () => {
+        const result = await setup();
+        console.log(`setup() finished: ${result}`);
+        if (result) {
+            try {
+                await action();
+            } catch (e) {
+                console.error(`error on action: ${e}`);
+                finishJSTest();
+            }
+        }
+    };
 }
 
 function rule(filter, action = 'block') {

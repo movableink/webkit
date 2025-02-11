@@ -45,6 +45,10 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
+#if ENABLE(CONTENT_EXTENSIONS)
+#include "ResourceMonitor.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SharedWorker);
@@ -124,6 +128,9 @@ SharedWorker::SharedWorker(Document& document, const SharedWorkerKey& key, Ref<M
     , m_port(WTFMove(port))
     , m_identifierForInspector(makeString("SharedWorker:"_s, Inspector::IdentifiersFactory::createIdentifier()))
     , m_blobURLExtension({ m_key.url.protocolIsBlob() ? m_key.url : URL(), document.topOrigin().data() }) // Keep blob URL alive until the worker has finished loading.
+#if ENABLE(CONTENT_EXTENSIONS)
+    , m_resourceMonitor(document.resourceMonitorIfExists())
+#endif
 {
     SHARED_WORKER_RELEASE_LOG("SharedWorker:");
     allSharedWorkers().add(identifier(), *this);
@@ -183,6 +190,16 @@ void SharedWorker::resume()
         mainThreadConnection()->resumeForBackForwardCache(m_key, identifier());
         m_isSuspendedForBackForwardCache = false;
     }
+}
+
+void SharedWorker::reportNetworkUsage(size_t bytesTransferredOverNetworkDelta)
+{
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (RefPtr resourceMonitor = m_resourceMonitor)
+        resourceMonitor->addNetworkUsage(bytesTransferredOverNetworkDelta);
+#else
+    UNUSED_PARAM(bytesTransferredOverNetworkDelta);
+#endif
 }
 
 #undef SHARED_WORKER_RELEASE_LOG

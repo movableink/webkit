@@ -38,7 +38,9 @@
 #include "HTTPHeaderNames.h"
 #include "RequestPriority.h"
 #include "ServiceWorkerTypes.h"
+#include "SharedWorkerIdentifier.h"
 #include "StoredCredentialsPolicy.h"
+#include <variant>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -255,6 +257,7 @@ struct ResourceLoaderOptions : public FetchOptions {
 
     Markable<FetchIdentifier> navigationPreloadIdentifier;
     String nonce;
+    std::optional<WebCore::SharedWorkerIdentifier> workerIdentifier;
 };
 
 } // namespace WebCore

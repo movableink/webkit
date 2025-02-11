@@ -37,6 +37,7 @@ namespace WebCore {
 
 class MessagePort;
 class ResourceError;
+class ResourceMonitor;
 class TrustedScriptURL;
 
 struct WorkerOptions;
@@ -60,6 +61,8 @@ public:
     // EventTarget.
     ScriptExecutionContext* scriptExecutionContext() const final;
 
+    void reportNetworkUsage(size_t bytesTransferredOverNetworkDelta);
+
 private:
     SharedWorker(Document&, const SharedWorkerKey&, Ref<MessagePort>&&);
 
@@ -78,6 +81,10 @@ private:
     URLKeepingBlobAlive m_blobURLExtension;
     bool m_isActive { true };
     bool m_isSuspendedForBackForwardCache { false };
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    RefPtr<ResourceMonitor> m_resourceMonitor;
+#endif
 };
 
 } // namespace WebCore
