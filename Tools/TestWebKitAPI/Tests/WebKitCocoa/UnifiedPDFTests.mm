@@ -52,6 +52,7 @@
 #import <WebKit/_WKFeature.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/text/MakeString.h>
 
 #if PLATFORM(IOS_FAMILY)
 @interface UIPrintInteractionController ()
@@ -458,6 +459,32 @@ UNIFIED_PDF_TEST(MouseDidMoveOverPDF)
 UNIFIED_PDF_TEST(LoadPDFWithSandboxCSPDirective)
 {
     runLoadPDFWithSandboxCSPDirectiveTest([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+}
+
+// FIXME: <https://webkit.org/b/287473> This test should be correct on iOS family, too.
+#if PLATFORM(MAC)
+UNIFIED_PDF_TEST(RespectsPageFragment)
+#else
+UNIFIED_PDF_TEST(DISABLED_RespectsPageFragment)
+#endif
+{
+    static constexpr auto fileName = "multiple-pages-colored"_s;
+    auto path = makeString('/', fileName, ".pdf"_s);
+    auto pathWithFragment = makeString(path, "#page=2"_s);
+
+    RetainPtr pdfURL = [NSBundle.test_resourcesBundle URLForResource:String { fileName } withExtension:@"pdf"];
+    HTTPResponse response { [NSData dataWithContentsOfURL:pdfURL.get()] };
+    HTTPServer server { { { path, response }, { pathWithFragment, response } } };
+
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:pdfURL.get()]];
+    auto colorsWithoutFragment = [webView sampleColors];
+
+    [webView synchronouslyLoadRequest:server.request(pathWithFragment)];
+    auto colorsWithFragment = [webView sampleColors];
+
+    EXPECT_NE(colorsWithoutFragment, colorsWithFragment);
 }
 
 } // namespace TestWebKitAPI

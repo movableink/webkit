@@ -2209,6 +2209,17 @@ bool UnifiedPDFPlugin::revealPage(PDFDocumentLayout::PageIndex pageIndex)
 
 bool UnifiedPDFPlugin::scrollToPointInContentsSpace(FloatPoint pointInContentsSpace)
 {
+    if (shouldSizeToFitContent()) {
+        RefPtr webPage = m_frame->page();
+        if (!webPage)
+            return false;
+
+        auto pluginPoint = convertUp(CoordinateSpace::ScrolledContents, CoordinateSpace::Plugin, pointInContentsSpace);
+        auto rootViewPoint = convertFromPluginToRootView(pluginPoint);
+        webPage->scrollToRect({ rootViewPoint, FloatSize { } }, { });
+        return true;
+    }
+
     auto oldScrollType = currentScrollType();
     setCurrentScrollType(ScrollType::Programmatic);
     bool success = scrollToPositionWithoutAnimation(roundedIntPoint(pointInContentsSpace));
