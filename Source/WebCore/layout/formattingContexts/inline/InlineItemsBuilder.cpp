@@ -787,8 +787,12 @@ InlineContentCache::InlineItems::ContentAttributes InlineItemsBuilder::computeCo
             auto needsMeasuring = inlineTextItem->length() && !inlineTextItem->isZeroWidthSpaceSeparator() && canCacheMeasuredWidthOnInlineTextItem(inlineTextItem->inlineTextBox(), inlineTextItem->isWhitespace());
             if (needsMeasuring) {
                 auto start = inlineTextItem->start();
-                if (auto inlineBoxBoundaryTextSpacing = inlineBoxBoundaryTextSpacings.find(inlineItemIndex - 1); inlineBoxBoundaryTextSpacing != inlineBoxBoundaryTextSpacings.end())
-                    extraInlineTextSpacing = inlineBoxBoundaryTextSpacing->value;
+                if (inlineItemIndex) {
+                    // Box boudary text spacing is potentially registered for inline box start items which appear logically before an inline text item
+                    auto potentialInlineBoxStartIndex = inlineItemIndex - 1;
+                    if (auto inlineBoxBoundaryTextSpacing = inlineBoxBoundaryTextSpacings.find(potentialInlineBoxStartIndex); inlineBoxBoundaryTextSpacing != inlineBoxBoundaryTextSpacings.end())
+                        extraInlineTextSpacing = inlineBoxBoundaryTextSpacing->value;
+                }
                 inlineTextItem->setWidth(TextUtil::width(*inlineTextItem, inlineTextItem->style().fontCascade(), start, start + inlineTextItem->length(), { }, TextUtil::UseTrailingWhitespaceMeasuringOptimization::Yes, spacingState) + extraInlineTextSpacing);
                 handleTextSpacing(spacingState, trimmableTextSpacings, *inlineTextItem, inlineItemIndex);
             }
