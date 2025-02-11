@@ -2607,6 +2607,18 @@ static LayoutUnit inlineSizeFromAspectRatio(LayoutUnit borderPaddingInlineSum, L
     return LayoutUnit((blockSize - borderPaddingBlockSum) * aspectRatio) + borderPaddingInlineSum;
 }
 
+static bool shouldMarginInlineEndContributeToScrollableOverflow(auto& renderer)
+{
+    auto isSupportedContent = renderer.isGridItem() || renderer.isFlexItemIncludingDeprecated() || (renderer.isInFlow() && renderer.parent()->isBlockContainer());
+    if (!isSupportedContent)
+        return false;
+
+    auto& parentStyle = renderer.parent()->style();
+    if (parentStyle.overflowX() != Overflow::Visible && parentStyle.overflowX() != Overflow::Clip)
+        return true;
+    return parentStyle.overflowY() != Overflow::Visible && parentStyle.overflowY() != Overflow::Clip;
+}
+
 void RenderBox::computeLogicalWidth(LogicalExtentComputedValues& computedValues) const
 {
     computedValues.m_extent = logicalWidth();
@@ -2699,7 +2711,7 @@ void RenderBox::computeLogicalWidth(LogicalExtentComputedValues& computedValues)
     }
     
     auto shouldIgnoreOverconstrainedMargin = [&] {
-        if (containingBlock.isRenderGrid() || containingBlock.isFlexibleBoxIncludingDeprecated())
+        if (isGridItem() || isFlexItemIncludingDeprecated())
             return true;
         // Is this replaced inline?
         if (isFloating() || isInline())
@@ -2710,6 +2722,9 @@ void RenderBox::computeLogicalWidth(LogicalExtentComputedValues& computedValues)
             return true;
 #endif
         if (hasPerpendicularContainingBlock)
+            return true;
+
+        if (shouldMarginInlineEndContributeToScrollableOverflow(*this))
             return true;
 
         return !containerLogicalWidth || containerLogicalWidth == (computedValues.m_extent + computedValues.m_margins.m_start + computedValues.m_margins.m_end);
@@ -5477,17 +5492,10 @@ LayoutRect RenderBox::layoutOverflowRectForPropagation(const WritingMode parentW
 {
     // Only propagate interior layout overflow if we don't completely clip it.
     auto rect = borderBoxRect();
-    if (isGridItem() || isFlexItem()) {
-        // As per https://drafts.csswg.org/css-overflow-3/#scrollable, both flex and grid items margins' should contribute to the scrollable overflow area.
-        auto shouldContributeMarginInlineEnd = [&] {
-            auto& gridContainerStyle = parent()->style();
-            if (gridContainerStyle.overflowX() != Overflow::Visible && gridContainerStyle.overflowX() != Overflow::Clip)
-                return true;
-            return gridContainerStyle.overflowY() != Overflow::Visible && gridContainerStyle.overflowY() != Overflow::Clip;
-        };
-        if (shouldContributeMarginInlineEnd())
-            rect.setWidth(rect.width() + std::max(0_lu, marginEnd()));
-    }
+    // As per https://drafts.csswg.org/css-overflow-3/#scrollable, both flex and grid items margins' should contribute to the scrollable overflow area.
+    if (shouldMarginInlineEndContributeToScrollableOverflow(*this))
+        rect.setWidth(rect.width() + std::max(0_lu, marginEnd()));
+
     if (!shouldApplyLayoutContainment()) {
         if (hasNonVisibleOverflow()) {
             if (style().overflowX() == Overflow::Clip && style().overflowY() == Overflow::Visible) {
