@@ -245,8 +245,13 @@ LegacyInlineFlowBox* LegacyLineLayout::createLineBoxes(RenderObject* obj, const 
 
 LegacyRootInlineBox* LegacyLineLayout::constructLine(BidiRunList<BidiRun>& bidiRuns, const LineInfo& lineInfo)
 {
-    ASSERT(bidiRuns.firstRun());
+    if (legacyRootBox()) {
+        // Refuse to create multiple lines for svg content. There should not need to be more than one.
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    }
 
+    ASSERT(bidiRuns.firstRun());
     LegacyInlineFlowBox* parentBox = 0;
     for (BidiRun* r = bidiRuns.firstRun(); r; r = r->next()) {
         if (lineInfo.isEmpty())
