@@ -119,6 +119,10 @@ private:
     void requestSharedSimulationConnection(WebCore::ProcessIdentifier, CompletionHandler<void(std::optional<IPC::SharedFileHandle>)>&&);
 #endif
 
+#if PLATFORM(COCOA)
+    void updateModelProcessCreationParameters(ModelProcessCreationParameters&);
+#endif
+
     ModelProcessCreationParameters processCreationParameters();
 
     RefPtr<ProcessThrottler::Activity> m_activityFromWebProcesses;

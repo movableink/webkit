@@ -90,6 +90,10 @@ ModelProcessProxy::ModelProcessProxy()
     parameters.auxiliaryProcessParameters = auxiliaryProcessParameters();
     parameters.parentPID = getCurrentProcessID();
 
+#if PLATFORM(COCOA)
+    updateModelProcessCreationParameters(parameters);
+#endif
+
     // Initialize the model process.
     sendWithAsyncReply(Messages::ModelProcess::InitializeModelProcess(WTFMove(parameters)), [initializationActivityAndGrant = initializationActivityAndGrant()] () { }, 0);
 

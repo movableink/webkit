@@ -193,6 +193,8 @@ void ModelProcess::initializeModelProcess(ModelProcessCreationParameters&& param
 {
     CompletionHandlerCallingScope callCompletionHandler(WTFMove(completionHandler));
 
+    WKREEngine::enableRestrictiveRenderingMode(parameters.restrictiveRenderingMode);
+
     applyProcessCreationParameters(parameters.auxiliaryProcessParameters);
     RELEASE_LOG(Process, "%p - ModelProcess::initializeModelProcess:", this);
     WTF::Thread::setCurrentThreadIsUserInitiated();

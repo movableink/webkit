@@ -29,6 +29,7 @@
 #if PLATFORM(VISION) && ENABLE(GPU_PROCESS) && ENABLE(MODEL_PROCESS)
 
 #include "GPUProcessProxy.h"
+#include "ModelProcessCreationParameters.h"
 #include "RunningBoardServicesSPI.h"
 #include "SharedFileHandle.h"
 #include "SharedPreferencesForWebProcess.h"
@@ -37,6 +38,11 @@
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, connection())
 
 namespace WebKit {
+
+void ModelProcessProxy::updateModelProcessCreationParameters(ModelProcessCreationParameters& parameters)
+{
+    parameters.restrictiveRenderingMode = [[NSUserDefaults standardUserDefaults] boolForKey:@"ModelProcessDebugEnableRestrictiveRenderingMode"];
+}
 
 void ModelProcessProxy::requestSharedSimulationConnection(WebCore::ProcessIdentifier webProcessIdentifier, CompletionHandler<void(std::optional<IPC::SharedFileHandle>)>&& completionHandler)
 {
