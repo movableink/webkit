@@ -199,7 +199,7 @@ def get_test_baselines(test_file, test_config):
 class RebaselineHTTPServer(ThreadingHTTPServer):
     def __init__(self, httpd_port, config):
         server_name = ""
-        super.__init__((server_name, httpd_port), RebaselineHTTPRequestHandler)
+        super().__init__((server_name, httpd_port), RebaselineHTTPRequestHandler)
         self.test_config = config['test_config']
         self.results_json = config['results_json']
         self.platforms_json = config['platforms_json']
