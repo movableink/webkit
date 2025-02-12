@@ -223,7 +223,7 @@ static bool isFrameLazyLoadable(const Document& document, const URL& url, const 
 
 bool HTMLIFrameElement::shouldLoadFrameLazily()
 {
-    if (!m_lazyLoadFrameObserver && !document().quirks().shouldDisableLazyIframeLoadingQuirk()) {
+    if (!m_lazyLoadFrameObserver && document().settings().lazyIframeLoadingEnabled() && !document().quirks().shouldDisableLazyIframeLoadingQuirk()) {
         URL completeURL = document().completeURL(frameURL());
         if (isFrameLazyLoadable(document(), completeURL, attributeWithoutSynchronization(HTMLNames::loadingAttr))) {
             auto currentReferrerPolicy = referrerPolicy();

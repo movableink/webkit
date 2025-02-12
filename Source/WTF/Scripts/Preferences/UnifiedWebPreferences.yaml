@@ -4225,6 +4225,20 @@ LayoutViewportHeightExpansionFactor:
     WebCore:
       default: 0
 
+LazyIframeLoadingEnabled:
+  type: bool
+  status: mature
+  category: html
+  humanReadableName: "Lazy iframe loading"
+  humanReadableDescription: "Enable lazy iframe loading support"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: true
+    WebCore:
+      default: false
+
 LazyImageLoadingEnabled:
   type: bool
   status: stable
