@@ -295,7 +295,6 @@ dom/ElementIteratorInlines.h
 dom/ElementTextDirection.cpp
 dom/ElementTraversal.h
 dom/Event.cpp
-dom/EventDispatcher.cpp
 dom/EventLoop.cpp
 dom/EventLoop.h
 dom/EventPath.cpp
@@ -772,7 +771,6 @@ rendering/updating/RenderTreePosition.cpp
 rendering/updating/RenderTreeUpdater.cpp
 rendering/updating/RenderTreeUpdaterGeneratedContent.cpp
 storage/Storage.cpp
-storage/StorageEventDispatcher.cpp
 style/AttributeChangeInvalidation.cpp
 style/ChildChangeInvalidation.cpp
 style/ClassChangeInvalidation.cpp

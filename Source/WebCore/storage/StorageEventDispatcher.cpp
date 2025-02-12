@@ -62,7 +62,7 @@ static void dispatchStorageEvents(const String& key, const String& oldValue, con
         RefPtr document = window->document();
         auto result = isLocalStorage(storageType) ? window->localStorage() : window->sessionStorage();
         if (!result.hasException()) // https://html.spec.whatwg.org/multipage/webstorage.html#the-storage-event:event-storage
-            document->queueTaskToDispatchEventOnWindow(TaskSource::DOMManipulation, StorageEvent::create(eventNames().storageEvent, key, oldValue, newValue, url, result.releaseReturnValue()));
+            document->queueTaskToDispatchEventOnWindow(TaskSource::DOMManipulation, StorageEvent::create(eventNames().storageEvent, key, oldValue, newValue, url, RefPtr { result.releaseReturnValue() }.get()));
     }
 }
 
@@ -85,7 +85,7 @@ void StorageEventDispatcher::dispatchLocalStorageEvents(const String& key, const
     }
 
     auto& pagesInGroup = pageGroup->pages();
-    for (auto& page : pagesInGroup)
+    for (Ref page : pagesInGroup)
         InspectorInstrumentation::didDispatchDOMStorageEvent(page, key, oldValue, newValue, StorageType::Local, securityOrigin);
     dispatchStorageEvents<StorageType::Local>(key, oldValue, newValue, securityOrigin, url, isSourceStorage, [&](auto& page) {
         return pagesInGroup.contains(page);
