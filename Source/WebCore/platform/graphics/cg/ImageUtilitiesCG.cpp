@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,8 @@
 #include "ImageDecoderCG.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
+#include "SVGImage.h"
+#include "SVGImageForContainer.h"
 #include "UTIRegistry.h"
 #include "UTIUtilities.h"
 #include <CoreFoundation/CoreFoundation.h>
@@ -159,7 +161,7 @@ Expected<std::pair<String, Vector<IntSize>>, ImageDecodingError> utiAndAvailable
     return std::make_pair(WTFMove(uti), WTFMove(sizes));
 }
 
-static RefPtr<NativeImage> createNativeImageFromData(std::span<const uint8_t> data, std::optional<FloatSize> preferredSize)
+static RefPtr<NativeImage> tryCreateNativeImageFromBitmapImageData(std::span<const uint8_t> data, std::optional<FloatSize> preferredSize)
 {
     Ref buffer = FragmentedSharedBuffer::create(data);
     Ref imageDecoder = ImageDecoderCG::create(buffer.get(), AlphaOption::Premultiplied, GammaAndColorProfileOption::Applied);
@@ -188,6 +190,15 @@ static RefPtr<NativeImage> createNativeImageFromData(std::span<const uint8_t> da
     return NativeImage::create(WTFMove(image));
 }
 
+static RefPtr<NativeImage> tryCreateNativeImageFromData(std::span<const uint8_t> data, std::optional<FloatSize> preferredSize)
+{
+    if (RefPtr nativeImage = tryCreateNativeImageFromBitmapImageData(data, preferredSize))
+        return nativeImage;
+    if (RefPtr svgImage = SVGImage::tryCreateFromData(data))
+        return svgImage->nativeImage(svgImage->size());
+    return nullptr;
+}
+
 static RefPtr<SharedBuffer> expandNativeImageToData(NativeImage& image, ASCIILiteral uti, std::span<const unsigned> lengths)
 {
     RetainPtr colorSpace = adoptCF(CGColorSpaceCreateWithName(kCGColorSpaceSRGB));
@@ -199,7 +210,7 @@ static RefPtr<SharedBuffer> expandNativeImageToData(NativeImage& image, ASCIILit
         if (!context)
             return nullptr;
 
-        // Quality is imporatnt than rendering speed in current use case.
+        // Quality is more important than rendering speed for the current use case.
         CGContextSetInterpolationQuality(context.get(), kCGInterpolationHigh);
         CGContextDrawImage(context.get(), CGRectMake(0, 0, length, length), image.platformImage().get());
         RetainPtr newImage = adoptCF(CGBitmapContextCreateImage(context.get()));
@@ -215,21 +226,52 @@ static RefPtr<SharedBuffer> expandNativeImageToData(NativeImage& image, ASCIILit
     return SharedBuffer::create(destinationData.get());
 }
 
-RefPtr<SharedBuffer> createIconDataFromImageData(std::span<const uint8_t> data, std::span<const unsigned> lengths)
+static RefPtr<SharedBuffer> expandSVGImageToData(SVGImage& svgImage, ASCIILiteral uti, std::span<const unsigned> lengths)
 {
-    RefPtr nativeImage = createNativeImageFromData(data, std::nullopt);
-    if (!nativeImage)
-        return { };
+    RetainPtr colorSpace = adoptCF(CGColorSpaceCreateWithName(kCGColorSpaceSRGB));
+    RetainPtr destinationData = adoptCF(CFDataCreateMutable(0, 0));
+    RetainPtr cfUTI = uti.createCFString();
+    RetainPtr destination = adoptCF(CGImageDestinationCreateWithData(destinationData.get(), cfUTI.get(), lengths.size(), nullptr));
+    for (auto length : lengths) {
+        auto size = FloatSize { float(length), float(length) };
+        RefPtr buffer = ImageBuffer::create(size, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+        if (!buffer)
+            return nullptr;
 
-    // Supported ICO image sizes by ImageIO.
-    std::array<unsigned, 5> availableLengths { { 16, 32, 48, 128, 256 } };
-    auto targetLengths = lengths.empty() ? std::span { availableLengths } : lengths;
-    return expandNativeImageToData(*nativeImage, "com.microsoft.ico"_s, targetLengths);
+        Ref svgImageContainer = SVGImageForContainer::create(&svgImage, size, 1, { });
+        buffer->context().drawImage(svgImageContainer.get(), FloatPoint::zero());
+
+        RefPtr newImage = ImageBuffer::sinkIntoNativeImage(WTFMove(buffer));
+        if (!newImage)
+            return nullptr;
+
+        CGImageDestinationAddImage(destination.get(), newImage->platformImage().get(), nullptr);
+    }
+
+    if (!CGImageDestinationFinalize(destination.get()))
+        return nullptr;
+
+    return SharedBuffer::create(destinationData.get());
 }
 
+RefPtr<SharedBuffer> createIconDataFromImageData(std::span<const uint8_t> data, std::span<const unsigned> lengths)
+{
+    // Supported ICO image sizes by ImageIO.
+    constexpr std::array<unsigned, 5> availableLengths { { 16, 32, 48, 128, 256 } };
+    constexpr auto icoUTI = "com.microsoft.ico"_s;
+    auto targetLengths = lengths.empty() ? std::span { availableLengths } : lengths;
+
+    if (RefPtr nativeImage = tryCreateNativeImageFromBitmapImageData(data, std::nullopt))
+        return expandNativeImageToData(*nativeImage, icoUTI, targetLengths);
+    if (RefPtr svgImage = SVGImage::tryCreateFromData(data))
+        return expandSVGImageToData(*svgImage, icoUTI, targetLengths);
+    return { };
+}
+
+// FIXME: This does not implement preferredSize for SVG at the moment as there are no callers that pass preferredSize.
 RefPtr<ShareableBitmap> decodeImageWithSize(std::span<const uint8_t> data, std::optional<FloatSize> preferredSize)
 {
-    auto nativeImage = createNativeImageFromData(data, preferredSize);
+    RefPtr nativeImage = tryCreateNativeImageFromData(data, preferredSize);
     if (!nativeImage)
         return nullptr;
 
@@ -248,4 +290,5 @@ RefPtr<ShareableBitmap> decodeImageWithSize(std::span<const uint8_t> data, std::
     return bitmap;
 
 }
+
 } // namespace WebCore

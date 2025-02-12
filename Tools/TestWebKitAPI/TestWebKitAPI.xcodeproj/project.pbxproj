@@ -742,6 +742,7 @@
 		A17C46BF2C98E54B0023F3C7 /* getUserMediaAudioVideoCapture.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = 4A410F4D19AF7BEF002EBAC5 /* getUserMediaAudioVideoCapture.html */; };
 		A17C46C02C98E54B0023F3C7 /* getUserMediaPermission.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = 4198524F27AD7B70005477B7 /* getUserMediaPermission.html */; };
 		A17C46C12C98E54B0023F3C7 /* icon.png in Copy Resources */ = {isa = PBXBuildFile; fileRef = BCBD372E125ABBE600D2C29F /* icon.png */; };
+		A17C46C12C98E54B0023F3C8 /* icon.svg in Copy Resources */ = {isa = PBXBuildFile; fileRef = BCBD372E125ABBE600D2C2AF /* icon.svg */; };
 		A17C46C22C98E54B0023F3C7 /* idempotent-mode-autosizing-only-honors-percentages.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = 1CC80CE92474F1F7004DC489 /* idempotent-mode-autosizing-only-honors-percentages.html */; };
 		A17C46C32C98E54B0023F3C7 /* input-focus-blur.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = CE3524F51B142BBB0028A7C5 /* input-focus-blur.html */; };
 		A17C46C42C98E54B0023F3C7 /* js-autoplay-audio.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = C9B4AD2B1ECA6F7600F5FEA0 /* js-autoplay-audio.html */; };
@@ -1787,6 +1788,7 @@
 				A17C46772C98E4D20023F3C7 /* HTMLCollectionNamedItem.html in Copy Resources */,
 				A17C46782C98E4D20023F3C7 /* HTMLFormCollectionNamedItem.html in Copy Resources */,
 				A17C46C12C98E54B0023F3C7 /* icon.png in Copy Resources */,
+				A17C46C12C98E54B0023F3C8 /* icon.svg in Copy Resources */,
 				A17C477A2C98E5C20023F3C7 /* IDBCheckpointWAL.html in Copy Resources */,
 				A17C477B2C98E5C20023F3C7 /* IDBDeleteRecovery.html in Copy Resources */,
 				A17C477C2C98E5C20023F3C7 /* IDBDeleteRecovery.sqlite3 in Copy Resources */,
@@ -3432,6 +3434,7 @@
 		BCB9E9F011235BDE00A137E0 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		BCBD370F125AA2EB00D2C29F /* FrameMIMETypeHTML.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FrameMIMETypeHTML.cpp; sourceTree = "<group>"; };
 		BCBD372E125ABBE600D2C29F /* icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon.png; sourceTree = "<group>"; };
+		BCBD372E125ABBE600D2C2AF /* icon.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; lineEnding = 0; path = icon.svg; sourceTree = "<group>"; };
 		BCBD3760125ABCFE00D2C29F /* FrameMIMETypePNG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FrameMIMETypePNG.cpp; sourceTree = "<group>"; };
 		BCC8B95A12611F4700DE46A4 /* FailedLoad.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FailedLoad.cpp; sourceTree = "<group>"; };
 		BCE0DFB62D188ADC003F0349 /* CompactVariant.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CompactVariant.cpp; sourceTree = "<group>"; };
@@ -5889,6 +5892,7 @@
 				4A410F4D19AF7BEF002EBAC5 /* getUserMediaAudioVideoCapture.html */,
 				4198524F27AD7B70005477B7 /* getUserMediaPermission.html */,
 				BCBD372E125ABBE600D2C29F /* icon.png */,
+				BCBD372E125ABBE600D2C2AF /* icon.svg */,
 				1CC80CE92474F1F7004DC489 /* idempotent-mode-autosizing-only-honors-percentages.html */,
 				CE3524F51B142BBB0028A7C5 /* input-focus-blur.html */,
 				C9B4AD2B1ECA6F7600F5FEA0 /* js-autoplay-audio.html */,
