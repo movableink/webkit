@@ -2117,7 +2117,11 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     }
 
     // Need to handle Preserves3DChanged first, because it affects which layers subsequent properties are applied to
-    if (m_uncommittedChanges & (Preserves3DChanged | ReplicatedLayerChanged | BackdropFiltersChanged)) {
+    LayerChangeFlags structuralLayerUpdateReasons = Preserves3DChanged | ReplicatedLayerChanged | BackdropFiltersChanged;
+#if HAVE(CORE_MATERIAL)
+    structuralLayerUpdateReasons |= AppleVisualEffectChanged;
+#endif
+    if (m_uncommittedChanges & structuralLayerUpdateReasons) {
         if (updateStructuralLayer())
             layerChanged = true;
     }
@@ -2306,6 +2310,11 @@ void GraphicsLayerCA::updateNames()
     case StructuralLayerForBackdrop:
         m_structuralLayer->setName(makeString("backdrop hosting: "_s, name));
         break;
+#if HAVE(MATERIAL_HOSTING)
+    case StructuralLayerForMaterial:
+        m_structuralLayer->setName(makeString("material hosting: "_s, name));
+        break;
+#endif
     case NoStructuralLayer:
         break;
     }
@@ -2770,6 +2779,11 @@ void GraphicsLayerCA::updateAppleVisualEffectData()
         m_layer->setAppleVisualEffectData(m_appleVisualEffectData);
     else
         m_layer->setAppleVisualEffectData({ });
+
+#if HAVE(MATERIAL_HOSTING)
+    if (m_structuralLayer && appleVisualEffectIsHostedMaterial(m_appleVisualEffectData.effect))
+        m_structuralLayer->setAppleVisualEffectData(m_appleVisualEffectData);
+#endif
 }
 #endif
 
@@ -2824,7 +2838,19 @@ bool GraphicsLayerCA::ensureStructuralLayer(StructuralLayerPurpose purpose)
         return structuralLayerChanged;
     }
 
+#if HAVE(MATERIAL_HOSTING)
+    if (purpose == StructuralLayerForMaterial) {
+        if (m_structuralLayer && m_structuralLayer->layerType() != PlatformCALayer::LayerType::LayerTypeMaterialHostingLayer)
+            m_structuralLayer = nullptr;
+
+        if (!m_structuralLayer) {
+            m_structuralLayer = createPlatformCALayer(PlatformCALayer::LayerType::LayerTypeMaterialHostingLayer, this);
+            structuralLayerChanged = true;
+        }
+    } else if (purpose == StructuralLayerForPreserves3D) {
+#else
     if (purpose == StructuralLayerForPreserves3D) {
+#endif
         if (m_structuralLayer && m_structuralLayer->layerType() != PlatformCALayer::LayerType::LayerTypeTransformLayer)
             m_structuralLayer = nullptr;
         
@@ -2875,6 +2901,11 @@ bool GraphicsLayerCA::ensureStructuralLayer(StructuralLayerPurpose purpose)
 
 GraphicsLayerCA::StructuralLayerPurpose GraphicsLayerCA::structuralLayerPurpose() const
 {
+#if HAVE(MATERIAL_HOSTING)
+    if (appleVisualEffectIsHostedMaterial(m_appleVisualEffectData.effect))
+        return StructuralLayerForMaterial;
+#endif
+
     if (preserves3D() && m_type != Type::Structural)
         return StructuralLayerForPreserves3D;
     

@@ -8007,6 +8007,7 @@ header: <WebCore/AppleVisualEffect.h>
 [CustomHeader] struct WebCore::AppleVisualEffectData {
     WebCore::AppleVisualEffect effect;
     WebCore::AppleVisualEffect contextEffect;
+    std::optional<WebCore::FloatRoundedRect> borderRect;
 };
 
 #endif

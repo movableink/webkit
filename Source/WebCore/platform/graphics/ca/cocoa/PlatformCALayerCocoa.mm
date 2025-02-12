@@ -249,6 +249,11 @@ PlatformCALayerCocoa::PlatformCALayerCocoa(LayerType layerType, PlatformCALayerC
         layerClass = PAL::getMTMaterialLayerClass();
         break;
 #endif
+#if HAVE(MATERIAL_HOSTING)
+    case LayerType::LayerTypeMaterialHostingLayer:
+        layerClass = [CALayer class];
+        break;
+#endif
     case LayerType::LayerTypeTiledBackingLayer:
     case LayerType::LayerTypePageTiledBackingLayer:
         layerClass = [WebTiledBackingLayer class];

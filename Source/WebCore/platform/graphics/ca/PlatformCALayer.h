@@ -80,6 +80,9 @@ enum class PlatformCALayerLayerType : uint8_t {
 #if HAVE(CORE_MATERIAL)
         LayerTypeMaterialLayer,
 #endif
+#if HAVE(MATERIAL_HOSTING)
+        LayerTypeMaterialHostingLayer,
+#endif
         LayerTypeShapeLayer,
         LayerTypeScrollContainerLayer,
 #if ENABLE(MODEL_ELEMENT)

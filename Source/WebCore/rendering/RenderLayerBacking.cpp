@@ -910,8 +910,23 @@ void RenderLayerBacking::updateContentsScalingFilters(const RenderStyle& style)
 void RenderLayerBacking::updateAppleVisualEffect(const RenderStyle& style)
 {
     AppleVisualEffectData visualEffectData;
+
     visualEffectData.effect = style.appleVisualEffect();
     visualEffectData.contextEffect = style.usedAppleVisualEffectForSubtree();
+
+#if HAVE(MATERIAL_HOSTING)
+    if (appleVisualEffectIsHostedMaterial(style.appleVisualEffect())) {
+        if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(renderer())) {
+            if (renderBox->style().hasBorderRadius()) {
+                auto borderShape = BorderShape::shapeForBorderRect(renderBox->style(), renderBox->borderBoxRect());
+                auto roundedBoxRect = borderShape.deprecatedRoundedRect();
+                roundedBoxRect.move(contentOffsetInCompositingLayer());
+                visualEffectData.borderRect = roundedBoxRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor());
+            }
+        }
+    }
+#endif
+
     m_graphicsLayer->setAppleVisualEffectData(visualEffectData);
 }
 #endif

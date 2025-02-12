@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,55 +25,32 @@
 
 #pragma once
 
-#if HAVE(CORE_MATERIAL)
+#import <Foundation/Foundation.h>
 
-#include "FloatRoundedRect.h"
-
-namespace WTF {
-class TextStream;
-}
-
-namespace WebCore {
-
-enum class AppleVisualEffect : uint8_t {
-    None,
-    BlurUltraThinMaterial,
-    BlurThinMaterial,
-    BlurMaterial,
-    BlurThickMaterial,
-    BlurChromeMaterial,
 #if HAVE(MATERIAL_HOSTING)
-    HostedBlurMaterial,
-#endif
-    VibrancyLabel,
-    VibrancySecondaryLabel,
-    VibrancyTertiaryLabel,
-    VibrancyQuaternaryLabel,
-    VibrancyFill,
-    VibrancySecondaryFill,
-    VibrancyTertiaryFill,
-    VibrancySeparator,
-};
 
-WEBCORE_EXPORT bool appleVisualEffectNeedsBackdrop(AppleVisualEffect);
-WEBCORE_EXPORT bool appleVisualEffectAppliesFilter(AppleVisualEffect);
-#if HAVE(MATERIAL_HOSTING)
-WEBCORE_EXPORT bool appleVisualEffectIsHostedMaterial(AppleVisualEffect);
+@class CALayer;
+
+#if PLATFORM(IOS_FAMILY)
+@class UIView;
 #endif
 
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AppleVisualEffect);
+NS_ASSUME_NONNULL_BEGIN
 
-struct AppleVisualEffectData {
-    AppleVisualEffect effect { AppleVisualEffect::None };
-    AppleVisualEffect contextEffect { AppleVisualEffect::None };
+NS_SWIFT_UI_ACTOR
+@interface WKMaterialHostingSupport : NSObject
 
-    std::optional<FloatRoundedRect> borderRect;
++ (CALayer *)createHostingLayer;
++ (void)updateHostingLayer:(CALayer *)hostingLayer cornerRadius:(CGFloat)cornerRadius;
++ (nullable CALayer *)contentLayerForMaterialHostingLayer:(CALayer *)hostingLayer;
 
-    bool operator==(const AppleVisualEffectData&) const = default;
-};
+#if PLATFORM(IOS_FAMILY)
++ (UIView *)createHostingView:(UIView *)contentView;
++ (void)updateHostingView:(UIView *)hostingView contentView:(UIView *)contentView cornerRadius:(CGFloat)cornerRadius;
+#endif
 
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AppleVisualEffectData);
+@end
 
-} // namespace WebCore
+NS_ASSUME_NONNULL_END
 
-#endif // HAVE(CORE_MATERIAL)
+#endif // HAVE(MATERIAL_HOSTING)

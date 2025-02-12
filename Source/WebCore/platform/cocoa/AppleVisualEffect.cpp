@@ -88,6 +88,34 @@ bool appleVisualEffectAppliesFilter(AppleVisualEffect effect)
     return false;
 }
 
+#if HAVE(MATERIAL_HOSTING)
+bool appleVisualEffectIsHostedMaterial(AppleVisualEffect effect)
+{
+    switch (effect) {
+    case AppleVisualEffect::HostedBlurMaterial:
+        return true;
+    case AppleVisualEffect::None:
+    case AppleVisualEffect::BlurUltraThinMaterial:
+    case AppleVisualEffect::BlurThinMaterial:
+    case AppleVisualEffect::BlurMaterial:
+    case AppleVisualEffect::BlurThickMaterial:
+    case AppleVisualEffect::BlurChromeMaterial:
+    case AppleVisualEffect::VibrancyLabel:
+    case AppleVisualEffect::VibrancySecondaryLabel:
+    case AppleVisualEffect::VibrancyTertiaryLabel:
+    case AppleVisualEffect::VibrancyQuaternaryLabel:
+    case AppleVisualEffect::VibrancyFill:
+    case AppleVisualEffect::VibrancySecondaryFill:
+    case AppleVisualEffect::VibrancyTertiaryFill:
+    case AppleVisualEffect::VibrancySeparator:
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+#endif
+
 TextStream& operator<<(TextStream& ts, AppleVisualEffect effect)
 {
     switch (effect) {

@@ -48,6 +48,10 @@
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
+#if HAVE(MATERIAL_HOSTING)
+#import "WKMaterialHostingSupport.h"
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 #import <UIKit/UIView.h>
 #if ENABLE(MODEL_PROCESS)
@@ -468,6 +472,11 @@ RefPtr<RemoteLayerTreeNode> RemoteLayerTreeHost::makeNode(const RemoteLayerTreeT
 #if HAVE(CORE_MATERIAL)
     case PlatformCALayer::LayerType::LayerTypeMaterialLayer:
         return makeWithLayer(adoptNS([PAL::allocMTMaterialLayerInstance() init]));
+#endif
+
+#if HAVE(MATERIAL_HOSTING)
+    case PlatformCALayer::LayerType::LayerTypeMaterialHostingLayer:
+        return makeWithLayer(adoptNS([WKMaterialHostingSupport createHostingLayer]));
 #endif
 
     case PlatformCALayer::LayerType::LayerTypeCustom:

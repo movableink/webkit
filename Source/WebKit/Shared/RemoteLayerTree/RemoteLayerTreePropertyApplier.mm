@@ -61,6 +61,10 @@ static void configureSeparatedLayer(CALayer *) { }
 #import <UIKitSPI.h>
 #endif
 
+#if HAVE(MATERIAL_HOSTING)
+#import "WKMaterialHostingSupport.h"
+#endif
+
 #if HAVE(CORE_MATERIAL)
 #import <pal/cocoa/CoreMaterialSoftLink.h>
 #endif
@@ -259,6 +263,45 @@ static void applyVisualStylingToLayer(CALayer *layer, AppleVisualEffect material
         filters = @[ filter.get() ];
     }
     [layer setFilters:filters];
+}
+
+static void updateAppleVisualEffect(CALayer *layer, RemoteLayerTreeNode* layerTreeNode, AppleVisualEffectData effectData)
+{
+    if (RetainPtr materialLayer = dynamic_objc_cast<MTMaterialLayer>(layer)) {
+        if (RetainPtr recipe = materialRecipeForAppleVisualEffect(effectData.effect)) {
+            [materialLayer setRecipe:recipe.get()];
+            return;
+        }
+    }
+
+    if (appleVisualEffectAppliesFilter(effectData.effect)) {
+        applyVisualStylingToLayer(layer, effectData.contextEffect, effectData.effect);
+        return;
+    }
+
+#if HAVE(MATERIAL_HOSTING)
+    if (appleVisualEffectIsHostedMaterial(effectData.effect)) {
+        CGFloat cornerRadius = 0;
+        if (auto borderRect = effectData.borderRect) {
+            // FIXME: Support more complex shapes and non-uniform corner radius.
+            cornerRadius = std::max({
+                borderRect->radii().topLeft().maxDimension(),
+                borderRect->radii().topRight().maxDimension(),
+                borderRect->radii().bottomLeft().maxDimension(),
+                borderRect->radii().bottomRight().maxDimension()
+            });
+        }
+
+#if PLATFORM(IOS_FAMILY)
+        if (layerTreeNode) {
+            if (RetainPtr materialHostingView = dynamic_objc_cast<WKMaterialHostingView>(layerTreeNode->uiView()))
+                [materialHostingView updateCornerRadius:cornerRadius];
+        }
+#endif
+
+        [WKMaterialHostingSupport updateHostingLayer:layer cornerRadius:cornerRadius];
+    }
+#endif // HAVE(MATERIAL_HOSTING)
 }
 
 #endif
@@ -463,13 +506,8 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
     }
 
 #if HAVE(CORE_MATERIAL)
-    if (properties.changedProperties & LayerChange::AppleVisualEffectChanged) {
-        if (RetainPtr materialLayer = dynamic_objc_cast<MTMaterialLayer>(layer)) {
-            if (RetainPtr recipe = materialRecipeForAppleVisualEffect(properties.appleVisualEffectData.effect))
-                [materialLayer setRecipe:recipe.get()];
-        } else if (appleVisualEffectAppliesFilter(properties.appleVisualEffectData.effect))
-            applyVisualStylingToLayer(layer, properties.appleVisualEffectData.contextEffect, properties.appleVisualEffectData.effect);
-    }
+    if (properties.changedProperties & LayerChange::AppleVisualEffectChanged)
+        updateAppleVisualEffect(layer, layerTreeNode, properties.appleVisualEffectData);
 #endif
 }
 
@@ -537,7 +575,14 @@ void RemoteLayerTreePropertyApplier::applyHierarchyUpdates(RemoteLayerTreeNode& 
 
     if (hasViewChildren()) {
         ASSERT(node.uiView());
-        [node.uiView() _web_setSubviews:createNSArray(properties.children, [&] (auto& child) -> UIView * {
+
+        RetainPtr view = node.uiView();
+#if HAVE(MATERIAL_HOSTING)
+        if (RetainPtr materialHostingView = dynamic_objc_cast<WKMaterialHostingView>(view.get()))
+            view = [materialHostingView contentView];
+#endif
+
+        [view _web_setSubviews:createNSArray(properties.children, [&] (auto& child) -> UIView * {
             auto* childNode = relatedLayers.get(child);
             ASSERT(childNode);
             if (!childNode)
@@ -552,7 +597,13 @@ void RemoteLayerTreePropertyApplier::applyHierarchyUpdates(RemoteLayerTreeNode& 
     }
 #endif
 
-    node.layer().sublayers = createNSArray(properties.children, [&] (auto& child) -> CALayer * {
+    RetainPtr layer = node.layer();
+#if HAVE(MATERIAL_HOSTING)
+    if (RetainPtr contentLayer = [WKMaterialHostingSupport contentLayerForMaterialHostingLayer:layer.get()])
+        layer = contentLayer;
+#endif
+
+    [layer setSublayers:createNSArray(properties.children, [&] (auto& child) -> CALayer * {
         auto* childNode = relatedLayers.get(child);
         ASSERT(childNode);
         if (!childNode)
@@ -561,7 +612,7 @@ void RemoteLayerTreePropertyApplier::applyHierarchyUpdates(RemoteLayerTreeNode& 
         ASSERT(!childNode->uiView());
 #endif
         return childNode->layer();
-    }).get();
+    }).get()];
 
     END_BLOCK_OBJC_EXCEPTIONS
 }
@@ -594,6 +645,13 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToUIView(UIView *view, const
 {
     if (properties.changedProperties.containsAny({ LayerChange::ContentsHiddenChanged, LayerChange::UserInteractionEnabledChanged }))
         view.userInteractionEnabled = !properties.contentsHidden && properties.userInteractionEnabled;
+
+#if HAVE(MATERIAL_HOSTING)
+    if (properties.changedProperties & LayerChange::BoundsChanged) {
+        if (RetainPtr materialHostingView = dynamic_objc_cast<WKMaterialHostingView>(view))
+            [materialHostingView updateHostingSize:properties.bounds.size()];
+    }
+#endif
 }
 #endif
 

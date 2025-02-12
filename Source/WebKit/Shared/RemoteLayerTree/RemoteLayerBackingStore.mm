@@ -451,6 +451,9 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
 #endif
     case PlatformCALayer::LayerType::LayerTypeCustom:
     case PlatformCALayer::LayerType::LayerTypeHost:
+#if HAVE(MATERIAL_HOSTING)
+    case PlatformCALayer::LayerType::LayerTypeMaterialHostingLayer:
+#endif
         ASSERT_NOT_REACHED();
         break;
     };

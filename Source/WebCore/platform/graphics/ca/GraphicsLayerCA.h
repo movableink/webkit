@@ -540,7 +540,10 @@ private:
         NoStructuralLayer = 0,
         StructuralLayerForPreserves3D,
         StructuralLayerForReplicaFlattening,
-        StructuralLayerForBackdrop
+        StructuralLayerForBackdrop,
+#if HAVE(MATERIAL_HOSTING)
+        StructuralLayerForMaterial,
+#endif
     };
     bool ensureStructuralLayer(StructuralLayerPurpose);
     StructuralLayerPurpose structuralLayerPurpose() const;

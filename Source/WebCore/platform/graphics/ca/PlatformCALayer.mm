@@ -288,6 +288,11 @@ TextStream& operator<<(TextStream& ts, PlatformCALayer::LayerType layerType)
         ts << "material-layer";
         break;
 #endif
+#if HAVE(MATERIAL_HOSTING)
+    case PlatformCALayer::LayerType::LayerTypeMaterialHostingLayer:
+        ts << "material-hosting-layer";
+        break;
+#endif
     case PlatformCALayer::LayerType::LayerTypeAVPlayerLayer:
         ts << "av-player-layer";
         break;
