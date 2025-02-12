@@ -2297,6 +2297,16 @@ window.UIHelper = class UIHelper {
             testRunner.runUIScript("uiController.keyboardUpdateForChangedSelectionCount", resolve);
         });
     }
+
+    static async typeCharacters(stringToType, waitForEvent = "input", eventTarget = null) {
+        for (let character of [...stringToType]) {
+            await UIHelper.callFunctionAndWaitForEvent(async () => {
+                if (window.testRunner)
+                    await UIHelper.typeCharacter(character);
+                await UIHelper.ensurePresentationUpdate();
+            }, eventTarget || document.activeElement, waitForEvent);
+        }
+    }
 }
 
 UIHelper.EventStreamBuilder = class {
