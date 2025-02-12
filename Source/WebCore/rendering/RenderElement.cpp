@@ -1641,7 +1641,7 @@ const Element* RenderElement::defaultAnchor() const
     auto defaultAnchorLookupResult = anchoringState.anchorElements.find(anchorName->name);
     if (defaultAnchorLookupResult == anchoringState.anchorElements.end())
         return nullptr;
-    return &defaultAnchorLookupResult->value.get();
+    return defaultAnchorLookupResult->value.get();
 }
 
 const RenderElement* RenderElement::defaultAnchorRenderer() const

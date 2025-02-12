@@ -146,10 +146,11 @@ public:
     static const Scope& forNode(const Node&);
     static Scope* forOrdinal(Element&, ScopeOrdinal);
 
-    struct QueryContainerUpdateContext {
-        UncheckedKeyHashSet<CheckedRef<Element>> invalidatedContainers;
+    struct LayoutDependencyUpdateContext {
+        UncheckedKeyHashSet<CheckedRef<const Element>> invalidatedContainers;
+        UncheckedKeyHashSet<CheckedRef<const Element>> invalidatedAnchorPositioned;
     };
-    bool updateQueryContainerState(QueryContainerUpdateContext&);
+    bool invalidateForLayoutDependencies(LayoutDependencyUpdateContext&);
 
     const CustomPropertyRegistry& customPropertyRegistry() const { return m_customPropertyRegistry.get(); }
     CustomPropertyRegistry& customPropertyRegistry() { return m_customPropertyRegistry.get(); }
@@ -158,7 +159,8 @@ public:
 
     AnchorPositionedStates& anchorPositionedStates() { return m_anchorPositionedStates; }
     const AnchorPositionedStates& anchorPositionedStates() const { return m_anchorPositionedStates; }
-    void clearAnchorPositioningState();
+    void resetAnchorPositioningStateBeforeStyleResolution();
+    void updateAnchorPositioningStateAfterStyleResolution();
 
 private:
     Scope& documentScope();
@@ -212,6 +214,9 @@ private:
     using MediaQueryViewportState = std::tuple<IntSize, float, bool>;
     static MediaQueryViewportState mediaQueryViewportStateForDocument(const Document&);
 
+    bool invalidateForContainerDependencies(LayoutDependencyUpdateContext&);
+    bool invalidateForAnchorDependencies(LayoutDependencyUpdateContext&);
+
     CheckedRef<Document> m_document;
     ShadowRoot* m_shadowRoot { nullptr };
 
@@ -246,7 +251,10 @@ private:
     bool m_isUpdatingStyleResolver { false };
 
     std::optional<MediaQueryViewportState> m_viewportStateOnPreviousMediaQueryEvaluation;
-    WeakHashMap<Element, LayoutSize, WeakPtrImplWithEventTargetData> m_queryContainerStates;
+    WeakHashMap<Element, LayoutSize, WeakPtrImplWithEventTargetData> m_queryContainerDimensionsOnLastUpdate;
+
+    SingleThreadWeakHashMap<const RenderBoxModelObject, LayoutRect> m_anchorRectsOnLastUpdate;
+
     mutable WeakHashMap<const Element, UniqueRef<MatchResult>, WeakPtrImplWithEventTargetData> m_cachedMatchResults;
 
     UniqueRef<CustomPropertyRegistry> m_customPropertyRegistry;

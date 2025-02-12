@@ -53,7 +53,7 @@ enum class AnchorPositionResolutionStage : uint8_t {
     Positioned,
 };
 
-using AnchorElements = HashMap<AtomString, WeakRef<Element, WeakPtrImplWithEventTargetData>>;
+using AnchorElements = HashMap<AtomString, WeakPtr<Element, WeakPtrImplWithEventTargetData>>;
 
 struct AnchorPositionedState {
     WTF_MAKE_TZONE_ALLOCATED(AnchorPositionedState);
@@ -103,6 +103,9 @@ public:
     static void updateSnapshottedScrollOffsets(Document&);
 
     static LayoutRect computeAnchorRectRelativeToContainingBlock(CheckedRef<const RenderBoxModelObject> anchorBox, const RenderBlock& containingBlock);
+
+    using AnchorToAnchorPositionedMap = SingleThreadWeakHashMap<const RenderBoxModelObject, Vector<Ref<Element>>>;
+    static AnchorToAnchorPositionedMap makeAnchorPositionedForAnchorMap(Document&);
 
 private:
     static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);

@@ -75,9 +75,14 @@ TreeResolver::TreeResolver(Document& document, std::unique_ptr<Update> update)
     : m_document(document)
     , m_update(WTFMove(update))
 {
+    // FIXME: Move transient state to TreeResolver similar to QueryContainerState.
+    m_document->styleScope().resetAnchorPositioningStateBeforeStyleResolution();
 }
 
-TreeResolver::~TreeResolver() = default;
+TreeResolver::~TreeResolver()
+{
+    m_document->styleScope().updateAnchorPositioningStateAfterStyleResolution();
+}
 
 TreeResolver::Scope::Scope(Document& document, Update& update)
     : resolver(document.styleScope().resolver())

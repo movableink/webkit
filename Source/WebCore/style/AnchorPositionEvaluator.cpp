@@ -432,7 +432,7 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorAndAttemptResolution(const Bu
 
     // Anchor value may now be resolved using layout information
 
-    RefPtr anchorElement = elementName ? anchorPositionedState.anchorElements.get(elementName->name) : nullptr;
+    RefPtr anchorElement = elementName ? anchorPositionedState.anchorElements.get(elementName->name).get() : nullptr;
     if (!anchorElement) {
         // See: https://drafts.csswg.org/css-anchor-position-1/#valid-anchor-function
         anchorPositionedState.stage = AnchorPositionResolutionStage::Resolved;
@@ -771,8 +771,10 @@ void AnchorPositionEvaluator::updateSnapshottedScrollOffsets(Document& document)
             return true;
         }();
 
-        if (!needsScrollAdjustment)
+        if (!needsScrollAdjustment) {
+            anchorPositionedRenderer->layer()->clearSnapshottedScrollOffsetForAnchorPositioning();
             continue;
+        }
 
         auto anchorElement = *elementAndState.value->anchorElements.values().begin();
         if (!anchorElement->renderer())
@@ -787,6 +789,27 @@ void AnchorPositionEvaluator::updateSnapshottedScrollOffsets(Document& document)
 
         anchorPositionedRenderer->layer()->setSnapshottedScrollOffsetForAnchorPositioning(scrollOffset);
     }
+}
+
+auto AnchorPositionEvaluator::makeAnchorPositionedForAnchorMap(Document& document) -> AnchorToAnchorPositionedMap
+{
+    AnchorToAnchorPositionedMap map;
+
+    auto& states = document.styleScope().anchorPositionedStates();
+    for (auto elementAndState : states) {
+        CheckedRef anchorPositionedElement = elementAndState.key;
+        for (auto& anchorElement : elementAndState.value->anchorElements) {
+            if (!anchorElement.value)
+                continue;
+            CheckedPtr renderer = dynamicDowncast<RenderBoxModelObject>(anchorElement.value->renderer());
+            if (!renderer)
+                continue;
+            map.ensure(*renderer, [&] {
+                return Vector<Ref<Element>> { };
+            }).iterator->value.append(anchorPositionedElement);
+        }
+    }
+    return map;
 }
 
 void AnchorPositionEvaluator::cleanupAnchorPositionedState(Element& element)

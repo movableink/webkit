@@ -2625,6 +2625,11 @@ void Element::invalidateForQueryContainerSizeChange()
     setElementStateFlag(ElementStateFlag::NeedsUpdateQueryContainerDependentStyle);
 }
 
+void Element::invalidateForAnchorRectChange()
+{
+    Node::invalidateStyle(Style::Validity::ElementInvalid);
+}
+
 void Element::invalidateForResumingQueryContainerResolution()
 {
     setChildNeedsStyleRecalc();
