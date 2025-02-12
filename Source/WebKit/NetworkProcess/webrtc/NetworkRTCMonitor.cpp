@@ -266,8 +266,11 @@ static std::optional<RTCNetwork::IPAddress> getSocketLocalAddress(int socket, bo
 {
     sockaddr_storage localAddressStorage;
     zeroBytes(localAddressStorage);
-    socklen_t localAddressStorageLength = sizeof(sockaddr_storage);
-    if (::getsockname(socket, reinterpret_cast<sockaddr*>(&localAddressStorage), &localAddressStorageLength) < 0) {
+
+    auto& localAddress = asSocketAddress(localAddressStorage);
+    socklen_t localAddressStorageLength = sizeof(localAddress);
+
+    if (::getsockname(socket, &localAddress, &localAddressStorageLength) < 0) {
         RELEASE_LOG_ERROR(WebRTC, "getDefaultIPAddress getsockname failed, useIPv4=%d", useIPv4);
         return { };
     }
@@ -278,7 +281,7 @@ static std::optional<RTCNetwork::IPAddress> getSocketLocalAddress(int socket, bo
         return { };
     }
 
-    return RTCNetwork::IPAddress { *reinterpret_cast<const struct sockaddr*>(&localAddressStorage) };
+    return RTCNetwork::IPAddress { localAddress };
 }
 
 static std::optional<RTCNetwork::IPAddress> getDefaultIPAddress(bool useIPv4)
