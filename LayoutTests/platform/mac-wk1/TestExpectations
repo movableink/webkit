@@ -3036,3 +3036,5 @@ webkit.org/b/286392 imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid
 webkit.org/b/286602 media/media-source/media-detachablemse-append.html [ Pass Failure ]
 
 webkit.org/b/255555 [ Ventura+ ] imported/w3c/web-platform-tests/xhr/request-content-length.any.worker.html [ Pass Failure ]
+
+webkit.org/b/287542 editing/undo/redo-reapply-edit-command-crash.html [ Crash ]
