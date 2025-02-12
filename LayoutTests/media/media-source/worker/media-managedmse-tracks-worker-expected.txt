@@ -8,5 +8,9 @@ info message from worker: sourceBuffer 'update' event received for initsegment O
 info message from worker: sourceBuffer 'update' event received OK
 EXPECTED (video.readyState >= '2') OK
 EXPECTED (video.buffered.length == '1') OK
+EXPECTED (video.audioTracks.length == '1') OK
+EXPECTED (video.audioTracks.item(0).language == 'eng') OK
+EXPECTED (video.videoTracks.length == '1') OK
+EXPECTED (video.videoTracks.item(0).language == 'eng') OK
 END OF TEST
 

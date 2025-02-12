@@ -23,6 +23,10 @@
                 await canPlayPromise;
                 testExpected('video.readyState', HTMLMediaElement.HAVE_CURRENT_DATA, '>=');
                 testExpected('video.buffered.length', 1);
+                testExpected('video.audioTracks.length', 1);
+                testExpected('video.audioTracks.item(0).language', "eng");
+                testExpected('video.videoTracks.length', 1);
+                testExpected('video.videoTracks.item(0).language', "eng");
                 endTest();
                 break;
             case 'error':
@@ -36,7 +40,7 @@
         };
         run('video.disableRemotePlayback = true');
         worker.postMessage({topic: 'setup'});
-        worker.postMessage({topic: 'manifest', arg: '../content/test-48khz-manifest.json'});
+        worker.postMessage({topic: 'manifest', arg: '../content/test-fragmented-manifest.json'});
     });
     </script>
 </head>
