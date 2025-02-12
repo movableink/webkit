@@ -66,8 +66,8 @@ public:
     WebBackForwardListItem* forwardItem() const;
     WebBackForwardListItem* itemAtIndex(int) const;
 
-    WebBackForwardListItem* goBackItemSkippingItemsWithoutUserGesture() const;
-    WebBackForwardListItem* goForwardItemSkippingItemsWithoutUserGesture() const;
+    RefPtr<WebBackForwardListItem> goBackItemSkippingItemsWithoutUserGesture() const;
+    RefPtr<WebBackForwardListItem> goForwardItemSkippingItemsWithoutUserGesture() const;
 
     const BackForwardListItemVector& entries() const { return m_entries; }
 

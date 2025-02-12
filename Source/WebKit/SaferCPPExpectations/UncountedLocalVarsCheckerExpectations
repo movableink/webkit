@@ -44,7 +44,6 @@ UIProcess/WebAuthentication/AuthenticatorManager.cpp
 UIProcess/WebAuthentication/Cocoa/NfcService.mm
 UIProcess/WebBackForwardCache.cpp
 UIProcess/WebBackForwardCacheEntry.cpp
-UIProcess/WebBackForwardList.cpp
 UIProcess/WebPreferences.cpp
 UIProcess/WebProcessCache.cpp
 UIProcess/WebsiteData/Cocoa/WebsiteDataStoreCocoa.mm
