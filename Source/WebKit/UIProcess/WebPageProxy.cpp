@@ -9563,7 +9563,7 @@ void WebPageProxy::backForwardListContainsItem(WebCore::BackForwardItemIdentifie
 
 void WebPageProxy::backForwardGoToItemShared(BackForwardItemIdentifier itemID, CompletionHandler<void(const WebBackForwardListCounts&)>&& completionHandler)
 {
-    MESSAGE_CHECK_COMPLETION(protectedLegacyMainFrameProcess(), !WebKit::isInspectorPage(Ref { *this }), completionHandler(protectedBackForwardList()->counts()));
+    MESSAGE_CHECK_COMPLETION(protectedLegacyMainFrameProcess(), !WebKit::isInspectorPage(Ref { *this }), completionHandler(m_backForwardList->counts()));
 
     RefPtr item = m_backForwardList->itemForID(itemID);
     if (!item)
