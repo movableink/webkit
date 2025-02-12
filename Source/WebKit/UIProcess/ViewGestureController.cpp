@@ -581,9 +581,10 @@ void ViewGestureController::startSwipeGesture(PlatformScrollEvent event, SwipeDi
 
     page->recordAutomaticNavigationSnapshot();
 
+    Ref backForwardList = page->backForwardList();
     RefPtr targetItem = (direction == SwipeDirection::Back)
-        ? page->protectedBackForwardList()->goBackItemSkippingItemsWithoutUserGesture()
-        : page->protectedBackForwardList()->goForwardItemSkippingItemsWithoutUserGesture();
+        ? backForwardList->goBackItemSkippingItemsWithoutUserGesture()
+        : backForwardList->goForwardItemSkippingItemsWithoutUserGesture();
     if (!targetItem)
         return;
 
@@ -657,7 +658,7 @@ void ViewGestureController::willEndSwipeGesture(WebBackForwardListItem& targetIt
     m_didStartProvisionalLoad = false;
     m_pendingNavigation = page->goToBackForwardItem(targetItem);
 
-    RefPtr currentItem = page->protectedBackForwardList()->currentItem();
+    RefPtr currentItem = Ref { page->backForwardList() }->currentItem();
     // The main frame will not be navigated so hide the snapshot right away.
     if (currentItem && currentItem->itemIsClone(targetItem)) {
         removeSwipeSnapshot();
