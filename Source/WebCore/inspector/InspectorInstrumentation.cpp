@@ -1217,38 +1217,40 @@ bool InspectorInstrumentation::timelineAgentTracking(ScriptExecutionContext* scr
     return false;
 }
 
-void InspectorInstrumentation::didRequestAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId, Document& document)
+void InspectorInstrumentation::didRequestAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId, ScriptExecutionContext& scriptExecutionContext)
 {
-    if (auto* pageDebuggerAgent = instrumentingAgents.enabledPageDebuggerAgent())
-        pageDebuggerAgent->didRequestAnimationFrame(callbackId, document);
+    if (auto* webDebuggerAgent = instrumentingAgents.enabledWebDebuggerAgent()) {
+        if (auto* globalObject = scriptExecutionContext.globalObject())
+            webDebuggerAgent->didRequestAnimationFrame(callbackId, *globalObject);
+    }
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
         timelineAgent->didRequestAnimationFrame(callbackId);
 }
 
 void InspectorInstrumentation::didCancelAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId)
 {
-    if (auto* pageDebuggerAgent = instrumentingAgents.enabledPageDebuggerAgent())
-        pageDebuggerAgent->didCancelAnimationFrame(callbackId);
+    if (auto* webDebuggerAgent = instrumentingAgents.enabledWebDebuggerAgent())
+        webDebuggerAgent->didCancelAnimationFrame(callbackId);
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
         timelineAgent->didCancelAnimationFrame(callbackId);
 }
 
 void InspectorInstrumentation::willFireAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId)
 {
-    if (auto* pageDebuggerAgent = instrumentingAgents.enabledPageDebuggerAgent())
-        pageDebuggerAgent->willFireAnimationFrame(callbackId);
-    if (auto* pageDOMDebuggerAgent = instrumentingAgents.enabledPageDOMDebuggerAgent())
-        pageDOMDebuggerAgent->willFireAnimationFrame();
+    if (auto* webDebuggerAgent = instrumentingAgents.enabledWebDebuggerAgent())
+        webDebuggerAgent->willFireAnimationFrame(callbackId);
+    if (auto* domDebuggerAgent = instrumentingAgents.enabledDOMDebuggerAgent())
+        domDebuggerAgent->willFireAnimationFrame();
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
         timelineAgent->willFireAnimationFrame(callbackId);
 }
 
 void InspectorInstrumentation::didFireAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId)
 {
-    if (auto* pageDebuggerAgent = instrumentingAgents.enabledPageDebuggerAgent())
-        pageDebuggerAgent->didFireAnimationFrame(callbackId);
-    if (auto* pageDOMDebuggerAgent = instrumentingAgents.enabledPageDOMDebuggerAgent())
-        pageDOMDebuggerAgent->didFireAnimationFrame();
+    if (auto* webDebuggerAgent = instrumentingAgents.enabledWebDebuggerAgent())
+        webDebuggerAgent->didFireAnimationFrame(callbackId);
+    if (auto* domDebuggerAgent = instrumentingAgents.enabledDOMDebuggerAgent())
+        domDebuggerAgent->didFireAnimationFrame();
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
         timelineAgent->didFireAnimationFrame();
 }

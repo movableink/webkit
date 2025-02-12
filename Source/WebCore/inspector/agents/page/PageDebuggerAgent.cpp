@@ -188,31 +188,4 @@ void PageDebuggerAgent::mainFrameNavigated()
     setSuppressAllPauses(false);
 }
 
-void PageDebuggerAgent::didRequestAnimationFrame(int callbackId, Document& document)
-{
-    if (!breakpointsActive())
-        return;
-
-    auto* globalObject = document.globalObject();
-    if (!globalObject)
-        return;
-
-    didScheduleAsyncCall(globalObject, InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId, true);
-}
-
-void PageDebuggerAgent::willFireAnimationFrame(int callbackId)
-{
-    willDispatchAsyncCall(InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId);
-}
-
-void PageDebuggerAgent::didCancelAnimationFrame(int callbackId)
-{
-    didCancelAsyncCall(InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId);
-}
-
-void PageDebuggerAgent::didFireAnimationFrame(int callbackId)
-{
-    didDispatchAsyncCall(InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId);
-}
-
 } // namespace WebCore

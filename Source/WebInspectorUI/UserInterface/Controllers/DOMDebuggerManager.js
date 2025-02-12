@@ -665,12 +665,19 @@ WI.DOMDebuggerManager = class DOMDebuggerManager extends WI.Object
         return commandArguments;
     }
 
+    _supportsAllAnimationFramesBreakpoint(target)
+    {
+        // COMPATIBILITY (iOS 18.X, macOS 15.X): Worker targets did not support `requestAnimationFrame` breakpoints yet.
+        // Since support can't be tested directly, check for the `shouldPartition`` parameter of `Page.setCookie`.
+        // FIXME: Use explicit version checking once https://webkit.org/b/148680 is fixed.
+        return target.type !== WI.TargetType.Worker || InspectorBackend.hasCommand("Page.setCookie", "shouldPartition");
+    }
+
     _setEventBreakpoint(breakpoint, target)
     {
         console.assert(!breakpoint.disabled, breakpoint);
 
-        // Worker targets do not support `requestAnimationFrame` breakpoints.
-        if (breakpoint === this._allAnimationFramesBreakpoint && target.type === WI.TargetType.Worker)
+        if (breakpoint === this._allAnimationFramesBreakpoint && !this._supportsAllAnimationFramesBreakpoint(target))
             return;
 
         let commandArguments = this._commandArgumentsForEventBreakpoint(breakpoint);
@@ -685,8 +692,7 @@ WI.DOMDebuggerManager = class DOMDebuggerManager extends WI.Object
 
     _removeEventBreakpoint(breakpoint, target)
     {
-        // Worker targets do not support `requestAnimationFrame` breakpoints.
-        if (breakpoint === this._allAnimationFramesBreakpoint && target.type === WI.TargetType.Worker)
+        if (breakpoint === this._allAnimationFramesBreakpoint && !this._supportsAllAnimationFramesBreakpoint(target))
             return;
 
         let commandArguments = this._commandArgumentsForEventBreakpoint(breakpoint);
