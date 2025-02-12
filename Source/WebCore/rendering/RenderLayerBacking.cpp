@@ -151,19 +151,27 @@ public:
     {
     }
 
-    RequestState paintsBoxDecorationsDetermination();
+    void determinePaintsBoxDecorations();
     bool paintsBoxDecorations()
     {
-        RequestState state = paintsBoxDecorationsDetermination();
-        return state == RequestState::True || state == RequestState::Undetermined;
+        determinePaintsBoxDecorations();
+        return m_boxDecorations == RequestState::True || m_boxDecorations == RequestState::Undetermined;
     }
 
-    RequestState paintsContentDetermination();
+    void determinePaintsContent();
     bool paintsContent()
     {
-        RequestState state = paintsContentDetermination();
-        return state == RequestState::True || state == RequestState::Undetermined;
+        determinePaintsContent();
+        return m_content == RequestState::True || m_content == RequestState::Undetermined;
     }
+
+#if HAVE(HDR_SUPPORT)
+    bool paintsHDRContent()
+    {
+        determinePaintsContent();
+        return m_hdrContent == RequestState::True || m_hdrContent == RequestState::Undetermined;
+    }
+#endif
 
     ContentsTypeDetermination contentsTypeDetermination();
     bool isSimpleContainer()
@@ -184,28 +192,33 @@ public:
     RenderLayerBacking& m_backing;
     RequestState m_boxDecorations { RequestState::Unknown };
     RequestState m_content { RequestState::Unknown };
+#if HAVE(HDR_SUPPORT)
+    RequestState m_hdrContent { RequestState::Unknown };
+#endif
 
     ContentsTypeDetermination m_contentsType { ContentsTypeDetermination::Unknown };
 };
 
-RequestState PaintedContentsInfo::paintsBoxDecorationsDetermination()
+void PaintedContentsInfo::determinePaintsBoxDecorations()
 {
     if (m_boxDecorations != RequestState::Unknown)
-        return m_boxDecorations;
+        return;
 
     m_boxDecorations = m_backing.paintsBoxDecorations() ? RequestState::True : RequestState::False;
-    return m_boxDecorations;
 }
 
-RequestState PaintedContentsInfo::paintsContentDetermination()
+void PaintedContentsInfo::determinePaintsContent()
 {
     if (m_content != RequestState::Unknown)
-        return m_content;
+        return;
 
-    RenderLayer::PaintedContentRequest contentRequest;
-    m_content = m_backing.paintsContent(contentRequest) ? RequestState::True : RequestState::False;
+    RenderLayer::PaintedContentRequest contentRequest(m_backing.owningLayer());
 
-    return m_content;
+    m_backing.determinePaintsContent(contentRequest);
+    m_content = contentRequest.hasPaintedContent;
+#if HAVE(HDR_SUPPORT)
+    m_hdrContent = contentRequest.hasPaintedHDRContent;
+#endif
 }
 
 PaintedContentsInfo::ContentsTypeDetermination PaintedContentsInfo::contentsTypeDetermination()
@@ -2984,38 +2997,45 @@ bool RenderLayerBacking::paintsBoxDecorations() const
     return !supportsDirectlyCompositedBoxDecorations(renderer());
 }
 
-bool RenderLayerBacking::paintsContent(RenderLayer::PaintedContentRequest& request) const
+void RenderLayerBacking::determinePaintsContent(RenderLayer::PaintedContentRequest& request) const
 {
     m_owningLayer.updateDescendantDependentFlags();
+    bool shouldScanDescendants = m_owningLayer.hasVisibleContent();
 
-    bool paintsContent = false;
+#if HAVE(HDR_SUPPORT)
+    if (!request.isPaintedHDRContentSatisfied())
+        shouldScanDescendants = true;
+#endif
 
-    if (m_owningLayer.hasVisibleContent() && m_owningLayer.hasNonEmptyChildRenderers(request))
-        paintsContent = true;
+    if (shouldScanDescendants) {
+        m_owningLayer.determineNonLayerDescendantsPaintedContent(request);
+
+        if (request.isSatisfied())
+            return;
+    }
+
+    determineNonCompositedLayerDescendantsPaintedContent(request);
 
     if (request.isSatisfied())
-        return paintsContent;
-
-    if (isPaintDestinationForDescendantLayers(request))
-        paintsContent = true;
-
-    if (request.isSatisfied())
-        return paintsContent;
+        return;
 
     if (is<RenderSVGModelObject>(m_owningLayer.renderer())) {
         // FIXME: [LBSE] Eventually cache if we're part of a RenderSVGHiddenContainer subtree to avoid tree walks.
         // FIXME: [LBSE] Eventually refine the logic to end up with a narrower set of conditions (webkit.org/b/243417).
-        paintsContent = m_owningLayer.hasVisibleContent() && !lineageOfType<RenderSVGHiddenContainer>(m_owningLayer.renderer()).first();
-        request.setHasPaintedContent();
-    }
+        if (m_owningLayer.hasVisibleContent() && !lineageOfType<RenderSVGHiddenContainer>(m_owningLayer.renderer()).first())
+            request.setHasPaintedContent();
 
-    if (request.isSatisfied())
-        return paintsContent;
+        if (request.isSatisfied())
+            return;
+    }
 
     if (request.hasPaintedContent == RequestState::Unknown)
         request.hasPaintedContent = RequestState::False;
 
-    return paintsContent;
+#if HAVE(HDR_SUPPORT)
+    if (request.hasPaintedHDRContent == RequestState::Unknown)
+        request.hasPaintedHDRContent = RequestState::False;
+#endif
 }
 
 // A "simple container layer" is a RenderLayer which has no visible content to render.
@@ -3113,7 +3133,7 @@ static std::optional<bool> intersectsWithAncestor(const RenderLayer& child, cons
 }
 
 // Conservative test for having no rendered children.
-bool RenderLayerBacking::isPaintDestinationForDescendantLayers(RenderLayer::PaintedContentRequest& request) const
+void RenderLayerBacking::determineNonCompositedLayerDescendantsPaintedContent(RenderLayer::PaintedContentRequest& request) const
 {
     bool hasPaintingDescendant = false;
     traverseVisibleNonCompositedDescendantLayers(m_owningLayer, [&hasPaintingDescendant, &request, this](const RenderLayer& layer) {
@@ -3127,8 +3147,6 @@ bool RenderLayerBacking::isPaintDestinationForDescendantLayers(RenderLayer::Pain
         }
         return (hasPaintingDescendant && request.isSatisfied()) ? LayerTraversal::Stop : LayerTraversal::Continue;
     });
-
-    return hasPaintingDescendant;
 }
 
 bool RenderLayerBacking::hasVisibleNonCompositedDescendants() const

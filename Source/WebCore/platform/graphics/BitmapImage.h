@@ -72,6 +72,7 @@ public:
     FloatSize size(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const final { return m_source->size(orientation); }
     FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const { return m_source->sourceSize(orientation); }
     DestinationColorSpace colorSpace() final { return m_source->colorSpace(); }
+    Headroom headroom() const final { return m_source->headroom(); }
     ImageOrientation orientation() const final { return m_source->orientation(); }
     unsigned frameCount() const final { return m_source->frameCount(); }
 #if ASSERT_ENABLED

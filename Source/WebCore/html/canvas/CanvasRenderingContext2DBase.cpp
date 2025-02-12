@@ -3023,7 +3023,16 @@ FloatPoint CanvasRenderingContext2DBase::textOffset(float width, TextDirection d
 ImageBufferPixelFormat CanvasRenderingContext2DBase::pixelFormat() const
 {
     // FIXME: Take m_settings.alpha into account here and add PixelFormat::BGRX8.
-    return ImageBufferPixelFormat::BGRA8;
+    switch (m_settings.pixelFormat) {
+    case CanvasRenderingContext2DSettings::PixelFormat::Uint8:
+        return ImageBufferPixelFormat::BGRA8;
+    case CanvasRenderingContext2DSettings::PixelFormat::Float16:
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+        return ImageBufferPixelFormat::RGBA16F;
+#else
+        return ImageBufferPixelFormat::BGRA8;
+#endif
+    }
 }
 
 DestinationColorSpace CanvasRenderingContext2DBase::colorSpace() const

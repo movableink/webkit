@@ -363,6 +363,13 @@ void CachedImage::computeIntrinsicDimensions(Length& intrinsicWidth, Length& int
         image->computeIntrinsicDimensions(intrinsicWidth, intrinsicHeight, intrinsicRatio);
 }
 
+Headroom CachedImage::headroom() const
+{
+    if (RefPtr image = m_image)
+        return image->headroom();
+    return Headroom::None;
+}
+
 void CachedImage::notifyObservers(const IntRect* changeRect)
 {
     CachedResourceClientWalker<CachedImageClient> walker(*this);

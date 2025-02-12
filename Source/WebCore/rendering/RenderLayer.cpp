@@ -402,6 +402,17 @@ RenderLayer::~RenderLayer()
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(renderer().renderTreeBeingDestroyed() || !firstChild());
 }
 
+RenderLayer::PaintedContentRequest::PaintedContentRequest(const RenderLayer& owningLayer)
+{
+#if HAVE(HDR_SUPPORT)
+    auto& settings = owningLayer.renderer().document().settings();
+    if ((settings.hdrForImagesEnabled() || settings.canvasPixelFormatEnabled()) && screenSupportsHighDynamicRange())
+        makePaintedHDRContentUnknown();
+#else
+    UNUSED_PARAM(owningLayer);
+#endif
+}
+
 void RenderLayer::addChild(RenderLayer& child, RenderLayer* beforeChild)
 {
     RenderLayer* prevSibling = beforeChild ? beforeChild->previousSibling() : lastChild();
@@ -5768,10 +5779,42 @@ static const unsigned maxRendererTraversalCount = 200;
 
 static void determineNonLayerDescendantsPaintedContent(const RenderElement& renderer, unsigned& renderersTraversed, RenderLayer::PaintedContentRequest& request)
 {
+#if HAVE(HDR_SUPPORT)
+    auto hasPaintedImageHDRContent = [] (const RenderObject& childElement) {
+#if ENABLE(HDR_FOR_IMAGES)
+        CheckedPtr imageRenderer = dynamicDowncast<RenderImage>(childElement);
+        if (!imageRenderer)
+            return false;
+
+        if (auto* cachedImage = imageRenderer->cachedImage())
+            return cachedImage->drawsHDRContent();
+#else
+        UNUSED_PARAM(childElement);
+#endif
+        return false;
+    };
+
+    auto hasPaintedCanvasHDRContent = [] (const RenderObject& childElement) {
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+        CheckedPtr canavsRenderer = dynamicDowncast<RenderHTMLCanvas>(childElement);
+        if (!canavsRenderer)
+            return false;
+
+        if (auto* renderingContext = canavsRenderer->canvasElement().renderingContext())
+            return renderingContext->drawsHDRContent();
+#else
+        UNUSED_PARAM(childElement);
+#endif
+        return false;
+    };
+#endif
+
     for (const auto& child : childrenOfType<RenderObject>(renderer)) {
         if (++renderersTraversed > maxRendererTraversalCount) {
-            request.makeStatesUndetermined();
-            return;
+            if (!request.isPaintedContentSatisfied())
+                request.makePaintedContentUndetermined();
+            if (request.isSatisfied())
+                return;
         }
 
         if (CheckedPtr renderText = dynamicDowncast<RenderText>(child)) {
@@ -5808,17 +5851,32 @@ static void determineNonLayerDescendantsPaintedContent(const RenderElement& rend
                 return;
         }
 
+#if HAVE(HDR_SUPPORT)
+        if (!request.isPaintedHDRContentSatisfied() && hasPaintedImageHDRContent(*childElement)) {
+            request.setHasPaintedHDRContent();
+
+            if (request.isSatisfied())
+                return;
+        }
+
+        if (!request.isPaintedHDRContentSatisfied() && hasPaintedCanvasHDRContent(*childElement)) {
+            request.setHasPaintedHDRContent();
+
+            if (request.isSatisfied())
+                return;
+        }
+#endif
+
         determineNonLayerDescendantsPaintedContent(*childElement, renderersTraversed, request);
         if (request.isSatisfied())
             return;
     }
 }
 
-bool RenderLayer::hasNonEmptyChildRenderers(PaintedContentRequest& request) const
+void RenderLayer::determineNonLayerDescendantsPaintedContent(PaintedContentRequest& request) const
 {
     unsigned renderersTraversed = 0;
-    determineNonLayerDescendantsPaintedContent(renderer(), renderersTraversed, request);
-    return request.probablyHasPaintedContent();
+    WebCore::determineNonLayerDescendantsPaintedContent(renderer(), renderersTraversed, request);
 }
 
 bool RenderLayer::hasVisibleBoxDecorationsOrBackground() const
@@ -5868,7 +5926,8 @@ bool RenderLayer::isVisuallyNonEmpty(PaintedContentRequest* request) const
     if (!request)
         request = &localRequest;
 
-    return hasNonEmptyChildRenderers(*request);
+    determineNonLayerDescendantsPaintedContent(*request);
+    return request->probablyHasPaintedContent();
 }
 
 void RenderLayer::styleChanged(StyleDifference diff, const RenderStyle* oldStyle)

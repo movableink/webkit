@@ -120,6 +120,7 @@ public:
     const FragmentedSharedBuffer* data() const { return m_encodedImageData.get(); }
 
     virtual DestinationColorSpace colorSpace();
+    virtual Headroom headroom() const { return Headroom::None; }
 
     // Animation begins whenever someone draws the image, so startAnimation() is not normally called.
     // It will automatically pause once all observers no longer want to render the image anywhere.

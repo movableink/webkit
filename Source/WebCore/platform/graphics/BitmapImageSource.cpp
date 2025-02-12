@@ -667,11 +667,6 @@ ImageOrientation BitmapImageSource::frameOrientationAtIndex(unsigned index) cons
     return const_cast<BitmapImageSource&>(*this).frameAtIndexCacheIfNeeded(index).orientation();
 }
 
-Headroom BitmapImageSource::frameHeadroomAtIndex(unsigned index) const
-{
-    return const_cast<BitmapImageSource&>(*this).frameAtIndexCacheIfNeeded(index).headroom();
-}
-
 DecodingStatus BitmapImageSource::frameDecodingStatusAtIndex(unsigned index) const
 {
     return const_cast<BitmapImageSource&>(*this).frameAtIndexCacheIfNeeded(index).decodingStatus();

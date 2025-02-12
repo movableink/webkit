@@ -382,7 +382,7 @@ private:
     bool isMainFrameRenderViewLayer() const;
     
     bool paintsBoxDecorations() const;
-    bool paintsContent(RenderLayer::PaintedContentRequest&) const;
+    void determinePaintsContent(RenderLayer::PaintedContentRequest&) const;
 
     void updateDrawsContent(PaintedContentsInfo&);
 
@@ -403,7 +403,7 @@ private:
     void resetContentsRect();
     void updateContentsRects();
 
-    bool isPaintDestinationForDescendantLayers(RenderLayer::PaintedContentRequest&) const;
+    void determineNonCompositedLayerDescendantsPaintedContent(RenderLayer::PaintedContentRequest&) const;
     bool hasVisibleNonCompositedDescendants() const;
 
     bool shouldClipCompositedBounds() const;
