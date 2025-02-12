@@ -10056,6 +10056,12 @@ void WebPageProxy::contextMenuItemSelected(const WebContextMenuItemData& item)
     case ContextMenuItemTagShowColors:
         showColorPanel();
         return;
+
+    case ContextMenuItemTagInspectElement:
+        // The web process can no longer demand Web Inspector to show, so handle that part here.
+        m_inspector->show();
+        // The actual element-selection is still handled in the web process, so we break instead of return.
+        break;
 #endif // PLATFORM(MAC)
 
     case ContextMenuItemTagShowSpellingPanel:

@@ -2952,6 +2952,13 @@ void WKPageSetAllowsRemoteInspection(WKPageRef pageRef, bool allow)
 #endif
 }
 
+void WKPageShowWebInspectorForTesting(WKPageRef pageRef)
+{
+    RefPtr<WebInspectorUIProxy> inspector = toImpl(pageRef)->inspector();
+    inspector->markAsUnderTest();
+    inspector->show();
+}
+
 void WKPageSetMediaVolume(WKPageRef pageRef, float volume)
 {
     CRASH_IF_SUSPENDED;

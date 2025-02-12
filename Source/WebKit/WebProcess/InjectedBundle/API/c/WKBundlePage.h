@@ -99,7 +99,6 @@ WK_EXPORT double WKBundlePageGetBackingScaleFactor(WKBundlePageRef page);
 
 WK_EXPORT void WKBundlePageListenForLayoutMilestones(WKBundlePageRef page, WKLayoutMilestones milestones);
 
-WK_EXPORT void WKBundlePageShowInspectorForTest(WKBundlePageRef page);
 WK_EXPORT void WKBundlePageCloseInspectorForTest(WKBundlePageRef page);
 WK_EXPORT void WKBundlePageEvaluateScriptInInspectorForTest(WKBundlePageRef page, WKStringRef script);
 
