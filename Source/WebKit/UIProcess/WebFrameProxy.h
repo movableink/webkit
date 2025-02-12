@@ -90,6 +90,8 @@ public:
     }
 
     static WebFrameProxy* webFrame(std::optional<WebCore::FrameIdentifier>);
+    static RefPtr<WebFrameProxy> protectedWebFrame(std::optional<WebCore::FrameIdentifier> identifier) { return webFrame(identifier); }
+
     static bool canCreateFrame(WebCore::FrameIdentifier);
 
     virtual ~WebFrameProxy();

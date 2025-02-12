@@ -20,7 +20,6 @@ UIProcess/WebAuthentication/Cocoa/NfcService.mm
 UIProcess/WebAuthentication/fido/CtapAuthenticator.cpp
 UIProcess/WebAuthentication/fido/CtapCcidDriver.cpp
 UIProcess/WebBackForwardList.cpp
-UIProcess/WebPageProxy.cpp
 UIProcess/WebsiteData/WebDeviceOrientationAndMotionAccessController.cpp
 UIProcess/mac/WebContextMenuProxyMac.mm
 UIProcess/mac/WebViewImpl.mm

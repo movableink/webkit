@@ -3,7 +3,6 @@ UIProcess/API/C/WKContext.cpp
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/Cocoa/WKProcessPool.mm
 UIProcess/API/Cocoa/WKWebViewTesting.mm
-UIProcess/WebPageProxy.cpp
 UIProcess/mac/DisplayCaptureSessionManager.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/InjectedBundle/DOM/InjectedBundleNodeHandle.cpp

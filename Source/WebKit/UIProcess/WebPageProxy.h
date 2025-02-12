@@ -2831,6 +2831,7 @@ private:
 
 #if ENABLE(ENCRYPTED_MEDIA)
     MediaKeySystemPermissionRequestManagerProxy& mediaKeySystemPermissionRequestManager();
+    Ref<MediaKeySystemPermissionRequestManagerProxy> protectedMediaKeySystemPermissionRequestManager();
 #endif
     void requestMediaKeySystemPermissionForFrame(IPC::Connection&, WebCore::MediaKeySystemRequestIdentifier, WebCore::FrameIdentifier, const WebCore::SecurityOriginData& topLevelDocumentOriginIdentifier, const String&);
 
@@ -3313,6 +3314,7 @@ private:
     bool hasValidOpeningAppLinkActivity() const;
 #endif
 
+RefPtr<SpeechRecognitionPermissionManager> protectedSpeechRecognitionPermissionManager();
 
 #if ENABLE(CONTENT_EXTENSIONS)
     void shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&&) const;
@@ -3322,7 +3324,7 @@ private:
     String presentingApplicationBundleIdentifier() const;
 #endif
 
-    UniqueRef<Internals> m_internals;
+    const UniqueRef<Internals> m_internals;
     Identifier m_identifier;
     WebCore::PageIdentifier m_webPageID;
 

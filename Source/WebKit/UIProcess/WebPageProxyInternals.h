@@ -206,6 +206,7 @@ struct PrivateClickMeasurementAndMetadata {
     String purchaser;
 };
 
+#if ENABLE(SPEECH_SYNTHESIS)
 struct SpeechSynthesisData {
     Ref<WebCore::PlatformSpeechSynthesizer> synthesizer;
     RefPtr<WebCore::PlatformSpeechSynthesisUtterance> utterance;
@@ -213,7 +214,10 @@ struct SpeechSynthesisData {
     CompletionHandler<void()> speakingFinishedCompletionHandler;
     CompletionHandler<void()> speakingPausedCompletionHandler;
     CompletionHandler<void()> speakingResumedCompletionHandler;
+
+    Ref<WebCore::PlatformSpeechSynthesizer> protectedSynthesizer() { return synthesizer; }
 };
+#endif
 
 #if ENABLE(TOUCH_EVENTS)
 
@@ -459,7 +463,9 @@ public:
 
     Ref<WebPageProxy> protectedPage() const;
 
+#if ENABLE(SPEECH_SYNTHESIS)
     SpeechSynthesisData& speechSynthesisData();
+#endif
 
     // WebPopupMenuProxy::Client
     void valueChangedForPopupMenu(WebPopupMenuProxy*, int32_t newSelectedIndex) final;
