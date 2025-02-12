@@ -714,6 +714,7 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
 
     if (WKStringIsEqualToUTF8CString(messageName, "RequestExitFullscreenFromUIProcess")) {
         TestController::singleton().requestExitFullscreenFromUIProcess(TestController::singleton().mainWebView()->page());
+        return;
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "ShowWebInspector")) {
