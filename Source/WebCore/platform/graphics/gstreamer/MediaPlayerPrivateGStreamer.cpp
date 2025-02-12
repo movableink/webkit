@@ -3910,13 +3910,7 @@ RefPtr<VideoFrame> MediaPlayerPrivateGStreamer::videoFrameForCurrentTime()
     if (!GST_IS_SAMPLE(m_sample.get()))
         return nullptr;
 
-    auto frame = VideoFrameGStreamer::createWrappedSample(m_sample);
-    auto convertedSample = frame->downloadSample(GST_VIDEO_FORMAT_BGRA);
-    if (!convertedSample)
-        return nullptr;
-
-    auto size = getVideoResolutionFromCaps(gst_sample_get_caps(m_sample.get())).value_or(FloatSize { 0, 0 });
-    return VideoFrameGStreamer::create(WTFMove(convertedSample), IntSize(size));
+    return VideoFrameGStreamer::createWrappedSample(m_sample);
 }
 
 bool MediaPlayerPrivateGStreamer::setVideoSourceOrientation(ImageOrientation orientation)

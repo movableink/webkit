@@ -20,63 +20,93 @@
 #include "config.h"
 #include "GStreamerVideoFrameConverter.h"
 
-#if USE(GSTREAMER)
+#if ENABLE(VIDEO) && USE(GSTREAMER)
 
 #include "GStreamerCommon.h"
+#include <gst/allocators/gstdmabuf.h>
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/gl/gl.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/glib/RunLoopSourcePriority.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GStreamerVideoFrameConverter);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GStreamerVideoFrameConverter::Pipeline);
 
 GST_DEBUG_CATEGORY_STATIC(webkit_gst_video_frame_converter_debug);
 #define GST_CAT_DEFAULT webkit_gst_video_frame_converter_debug
 
-GStreamerVideoFrameConverter& GStreamerVideoFrameConverter::singleton()
-{
-    static NeverDestroyed<GStreamerVideoFrameConverter> sharedInstance;
-    return sharedInstance;
-}
+static const Seconds s_releaseUnusedPipelinesTimerInterval = 30_s;
 
-GStreamerVideoFrameConverter::GStreamerVideoFrameConverter()
+GStreamerVideoFrameConverter::Pipeline::Pipeline(Type type)
+    : m_type(type)
+    , m_src(makeGStreamerElement("appsrc", nullptr))
+    , m_sink(makeGStreamerElement("appsink", nullptr))
 {
-    ensureGStreamerInitialized();
-    GST_DEBUG_CATEGORY_INIT(webkit_gst_video_frame_converter_debug, "webkitvideoframeconverter", 0, "WebKit GStreamer Video Frame Converter");
-    m_pipeline = gst_element_factory_make("pipeline", "video-frame-converter");
-    m_src = makeGStreamerElement("appsrc", nullptr);
-    auto gldownload = makeGStreamerElement("gldownload", nullptr);
-    auto videoconvert = makeGStreamerElement("videoconvert", nullptr);
-    auto videoscale = makeGStreamerElement("videoscale", nullptr);
-    m_sink = makeGStreamerElement("appsink", nullptr);
     g_object_set(m_sink.get(), "enable-last-sample", FALSE, "max-buffers", 1, nullptr);
-
-    gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), m_src.get(), gldownload, videoconvert, videoscale, m_sink.get(), nullptr);
-    gst_element_link_many(m_src.get(), gldownload, videoconvert, videoscale, m_sink.get(), nullptr);
+    switch (m_type) {
+    case Type::SystemMemory: {
+        auto videoconvert = makeGStreamerElement("videoconvert", nullptr);
+        auto videoscale = makeGStreamerElement("videoscale", nullptr);
+        m_pipeline = gst_element_factory_make("pipeline", "video-frame-converter");
+        gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), m_src.get(), videoconvert, videoscale, m_sink.get(), nullptr);
+        gst_element_link_many(m_src.get(), videoconvert, videoscale, m_sink.get(), nullptr);
+        break;
+    }
+    case Type::GLMemory: {
+        auto glcolorconvert = makeGStreamerElement("glcolorconvert", nullptr);
+        auto gldownload = makeGStreamerElement("gldownload", nullptr);
+        auto videoscale = makeGStreamerElement("videoscale", nullptr);
+        m_pipeline = gst_element_factory_make("pipeline", "video-frame-converter-gl");
+        gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), m_src.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);
+        gst_element_link_many(m_src.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);
+        break;
+    }
+    case Type::DMABufMemory: {
+        auto glupload = makeGStreamerElement("glupload", nullptr);
+        m_capsfilter = makeGStreamerElement("capsfilter", nullptr);
+        auto glcolorconvert = makeGStreamerElement("glcolorconvert", nullptr);
+        auto gldownload = makeGStreamerElement("gldownload", nullptr);
+        auto videoscale = makeGStreamerElement("videoscale", nullptr);
+        m_pipeline = gst_element_factory_make("pipeline", "video-frame-converter-gl");
+        gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), m_src.get(), glupload, m_capsfilter.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);
+        gst_element_link_many(m_src.get(), glupload, m_capsfilter.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);
+    }
+    }
 }
 
-GRefPtr<GstSample> GStreamerVideoFrameConverter::convert(const GRefPtr<GstSample>& sample, const GRefPtr<GstCaps>& destinationCaps)
+GStreamerVideoFrameConverter::Pipeline::~Pipeline() = default;
+
+GRefPtr<GstSample> GStreamerVideoFrameConverter::Pipeline::run(const GRefPtr<GstSample>& sample, GstCaps* destinationCaps)
 {
-    auto inputCaps = gst_sample_get_caps(sample.get());
-    if (gst_caps_is_equal(inputCaps, destinationCaps.get()))
-        return GRefPtr(sample);
+    if (m_type == Type::GLMemory || m_type == Type::DMABufMemory) {
+        if (!setGstElementGLContext(m_pipeline.get(), GST_GL_DISPLAY_CONTEXT_TYPE))
+            return nullptr;
+        if (!setGstElementGLContext(m_pipeline.get(), "gst.gl.app_context"))
+            return nullptr;
 
-    if (!setGstElementGLContext(m_sink.get(), GST_GL_DISPLAY_CONTEXT_TYPE))
-        return nullptr;
-    if (!setGstElementGLContext(m_sink.get(), "gst.gl.app_context"))
-        return nullptr;
+        if (m_type == Type::DMABufMemory) {
+            GRefPtr<GstCaps> outputCaps = adoptGRef(gst_caps_copy(destinationCaps));
+            gst_caps_set_features(outputCaps.get(), 0, gst_caps_features_new(GST_CAPS_FEATURE_MEMORY_GL_MEMORY, nullptr));
+            gst_caps_set_simple(outputCaps.get(), "format", G_TYPE_STRING, "RGBA", nullptr);
+            g_object_set(m_capsfilter.get(), "caps", outputCaps.get(), nullptr);
+        }
+    }
 
-    unsigned capsSize = gst_caps_get_size(destinationCaps.get());
+    unsigned capsSize = gst_caps_get_size(destinationCaps);
     auto newCaps = adoptGRef(gst_caps_new_empty());
     for (unsigned i = 0; i < capsSize; i++) {
-        auto structure = gst_caps_get_structure(destinationCaps.get(), i);
+        auto structure = gst_caps_get_structure(destinationCaps, i);
         auto modifiedStructure = gst_structure_copy(structure);
         gst_structure_remove_field(modifiedStructure, "framerate");
         gst_caps_append_structure(newCaps.get(), modifiedStructure);
     }
 
-    GST_TRACE_OBJECT(m_pipeline.get(), "Converting sample with caps %" GST_PTR_FORMAT " to %" GST_PTR_FORMAT, inputCaps, newCaps.get());
+    GST_TRACE_OBJECT(m_pipeline.get(), "Converting sample with caps %" GST_PTR_FORMAT " to %" GST_PTR_FORMAT, gst_sample_get_caps(sample.get()), newCaps.get());
     g_object_set(m_sink.get(), "caps", newCaps.get(), nullptr);
 
     auto scopeExit = WTF::makeScopeExit([&] {
@@ -98,7 +128,63 @@ GRefPtr<GstSample> GStreamerVideoFrameConverter::convert(const GRefPtr<GstSample
         return nullptr;
     }
 
-    auto outputSample = adoptGRef(gst_app_sink_pull_preroll(GST_APP_SINK_CAST(m_sink.get())));
+    return adoptGRef(gst_app_sink_pull_preroll(GST_APP_SINK_CAST(m_sink.get())));
+}
+
+GStreamerVideoFrameConverter& GStreamerVideoFrameConverter::singleton()
+{
+    static NeverDestroyed<GStreamerVideoFrameConverter> sharedInstance;
+    return sharedInstance;
+}
+
+GStreamerVideoFrameConverter::GStreamerVideoFrameConverter()
+{
+    ensureGStreamerInitialized();
+    GST_DEBUG_CATEGORY_INIT(webkit_gst_video_frame_converter_debug, "webkitvideoframeconverter", 0, "WebKit GStreamer Video Frame Converter");
+}
+
+GStreamerVideoFrameConverter::Pipeline& GStreamerVideoFrameConverter::ensurePipeline(GstCaps* caps)
+{
+    auto* features = gst_caps_get_features(caps, 0);
+    if (features && gst_caps_features_contains(features, GST_CAPS_FEATURE_MEMORY_DMABUF)) {
+        if (!m_dmabufMemoryPipeline) {
+            m_dmabufMemoryPipeline = makeUnique<Pipeline>(Pipeline::Type::DMABufMemory);
+            m_releaseUnusedDMABufMemoryPipelineTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &GStreamerVideoFrameConverter::releaseUnusedDMABufMemoryPipelineTimerFired);
+            m_releaseUnusedDMABufMemoryPipelineTimer->setPriority(RunLoopSourcePriority::ReleaseUnusedResourcesTimer);
+        }
+        m_releaseUnusedDMABufMemoryPipelineTimer->startOneShot(s_releaseUnusedPipelinesTimerInterval);
+        return *m_dmabufMemoryPipeline;
+    }
+
+    if (features && gst_caps_features_contains(features, GST_CAPS_FEATURE_MEMORY_GL_MEMORY)) {
+        if (!m_glMemoryPipeline) {
+            m_glMemoryPipeline = makeUnique<Pipeline>(Pipeline::Type::GLMemory);
+            m_releaseUnusedGLMemoryPipelineTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &GStreamerVideoFrameConverter::releaseUnusedGLMemoryPipelineTimerFired);
+            m_releaseUnusedGLMemoryPipelineTimer->setPriority(RunLoopSourcePriority::ReleaseUnusedResourcesTimer);
+        }
+        m_releaseUnusedGLMemoryPipelineTimer->startOneShot(s_releaseUnusedPipelinesTimerInterval);
+        return *m_glMemoryPipeline;
+    }
+
+    if (!m_systemMemoryPipeline) {
+        m_systemMemoryPipeline = makeUnique<Pipeline>(Pipeline::Type::SystemMemory);
+        m_releaseUnusedSystemMemoryPipelineTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &GStreamerVideoFrameConverter::releaseUnusedSystemMemoryPipelineTimerFired);
+        m_releaseUnusedSystemMemoryPipelineTimer->setPriority(RunLoopSourcePriority::ReleaseUnusedResourcesTimer);
+    }
+    m_releaseUnusedSystemMemoryPipelineTimer->startOneShot(s_releaseUnusedPipelinesTimerInterval);
+    return *m_systemMemoryPipeline;
+}
+
+GRefPtr<GstSample> GStreamerVideoFrameConverter::convert(const GRefPtr<GstSample>& sample, const GRefPtr<GstCaps>& destinationCaps)
+{
+    auto inputCaps = gst_sample_get_caps(sample.get());
+    if (gst_caps_is_equal(inputCaps, destinationCaps.get()))
+        return GRefPtr(sample);
+
+    auto outputSample = ensurePipeline(inputCaps).run(sample, destinationCaps.get());
+    if (!outputSample)
+        return nullptr;
+
     auto convertedSample = adoptGRef(gst_sample_make_writable(outputSample.leakRef()));
     gst_sample_set_caps(convertedSample.get(), destinationCaps.get());
 
@@ -124,8 +210,26 @@ GRefPtr<GstSample> GStreamerVideoFrameConverter::convert(const GRefPtr<GstSample
     return convertedSample;
 }
 
+void GStreamerVideoFrameConverter::releaseUnusedSystemMemoryPipelineTimerFired()
+{
+    m_systemMemoryPipeline = nullptr;
+    m_releaseUnusedSystemMemoryPipelineTimer = nullptr;
+}
+
+void GStreamerVideoFrameConverter::releaseUnusedGLMemoryPipelineTimerFired()
+{
+    m_glMemoryPipeline = nullptr;
+    m_releaseUnusedGLMemoryPipelineTimer = nullptr;
+}
+
+void GStreamerVideoFrameConverter::releaseUnusedDMABufMemoryPipelineTimerFired()
+{
+    m_dmabufMemoryPipeline = nullptr;
+    m_releaseUnusedDMABufMemoryPipelineTimer = nullptr;
+}
+
 #undef GST_CAT_DEFAULT
 
 } // namespace WebCore
 
-#endif
+#endif // ENABLE(VIDEO) && USE(GSTREAMER)
