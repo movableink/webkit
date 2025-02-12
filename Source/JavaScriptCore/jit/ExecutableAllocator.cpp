@@ -1344,6 +1344,7 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
     static size_t offset WTF_GUARDED_BY_LOCK(dumpJITMemoryLock) = 0;
     static bool needsToFlush WTF_GUARDED_BY_LOCK(dumpJITMemoryLock) = false;
     static LazyNeverDestroyed<Ref<WorkQueue>> flushQueue;
+    static auto flushQueueSingleton = []() { return flushQueue.get(); };
     struct DumpJIT {
         static void flush() WTF_REQUIRES_LOCK(dumpJITMemoryLock)
         {
@@ -1364,7 +1365,7 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
                 return;
 
             needsToFlush = true;
-            flushQueue.get()->dispatchAfter(Seconds(Options::dumpJITMemoryFlushInterval()), [] {
+            flushQueueSingleton()->dispatchAfter(Seconds(Options::dumpJITMemoryFlushInterval()), [] {
                 Locker locker { dumpJITMemoryLock };
                 if (!needsToFlush)
                     return;
