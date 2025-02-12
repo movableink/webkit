@@ -292,6 +292,53 @@ TEST(WKWebExtension, MultipleIconSizes)
     EXPECT_TRUE(Util::compareColors(Util::pixelColor(actionIcon), [CocoaColor blackColor]));
 }
 
+TEST(WKWebExtension, IconErrorsOnce)
+{
+    auto *testManifestDictionary = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test",
+        @"version": @"1.0",
+        @"description": @"Test",
+
+        @"icons": @{
+            @"16": @"icon-16.png",
+            @"32": @"icon-32.png",
+            @"64": @"missing-icon.png"
+        },
+
+        @"action": @{
+            @"default_icon": @{
+                @"16": @"action-icon-16.png",
+                @"32": @"action-icon-32.png",
+                @"64": @"missing-action-icon.png"
+            }
+        }
+    };
+
+    auto *icon16 = Util::makePNGData(CGSizeMake(16, 16), @selector(blackColor));
+    auto *icon32 = Util::makePNGData(CGSizeMake(32, 32), @selector(whiteColor));
+
+    auto *resources = @{
+        @"icon-16.png": icon16,
+        @"icon-32.png": icon32,
+        @"action-icon-16.png": icon16,
+        @"action-icon-32.png": icon32,
+    };
+
+    auto testExtension = [[WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary resources:resources];
+    EXPECT_EQ(testExtension.errors.count, 0u);
+
+    // Request the icons multiple times to trigger access to the image resources.
+    for (auto i = 0; i < 3; ++i) {
+        EXPECT_NULL([testExtension iconForSize:CGSizeMake(64, 64)]);
+        EXPECT_NULL([testExtension actionIconForSize:CGSizeMake(64, 64)]);
+    }
+
+    // A total of 4 errors are expected: one per missing resource, and one per icon type (normal and action).
+    EXPECT_EQ(testExtension.errors.count, 4u);
+}
+
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
 TEST(WKWebExtension, MultipleIconVariants)
 {

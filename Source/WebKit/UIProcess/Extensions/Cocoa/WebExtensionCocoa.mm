@@ -292,7 +292,7 @@ void WebExtension::recordError(Ref<API::Error> error)
 
     // Only the first occurrence of each error is recorded in the array. This prevents duplicate errors,
     // such as repeated "resource not found" errors, from being included multiple times.
-    if (m_errors.contains(error))
+    if (m_errors.containsIf([&](auto& existingError) { return existingError->localizedDescription() == error->localizedDescription(); }))
         return;
 
     [wrapper() willChangeValueForKey:@"errors"];

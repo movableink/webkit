@@ -1930,7 +1930,7 @@ RefPtr<WebCore::Icon> WebExtension::actionIcon(WebCore::FloatSize size)
 
         if (RefPtr result = bestIconForManifestKey(*actionObject, defaultIconManifestKey, size, m_actionIconsCache, Error::InvalidActionIcon, localizedErrorDescription))
             return result;
-        }
+    }
 
     return icon(size);
 }
