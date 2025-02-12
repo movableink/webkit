@@ -907,6 +907,15 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 #endif
 }
 
+- (BOOL)_hasAccessibilityActivityForTesting
+{
+#if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
+    return _page->hasAccessibilityActivityForTesting();
+#else
+    return NO;
+#endif
+}
+
 @end
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
