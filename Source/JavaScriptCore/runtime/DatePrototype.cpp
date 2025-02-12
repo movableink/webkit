@@ -739,8 +739,6 @@ static EncodedJSValue setNewValueFromDateArgs(JSGlobalObject* globalObject, Call
         return throwVMTypeError(globalObject, scope);
 
     if (!callFrame->argumentCount()) {
-        applyToNumberToOtherwiseIgnoredArguments(globalObject, callFrame, numArgsToUse);
-        RETURN_IF_EXCEPTION(scope, { });
         thisDateObj->setInternalNumber(PNaN);
         return JSValue::encode(jsNaN());
     }
