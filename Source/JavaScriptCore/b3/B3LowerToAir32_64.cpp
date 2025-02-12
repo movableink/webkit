@@ -4803,7 +4803,9 @@ private:
 
         case Const128: {
             // We expect that the moveConstants() phase has run, and any constant vector referenced from stackmaps get fused.
+            WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             RELEASE_ASSERT(!m_value->asV128().u64x2[0] && !m_value->asV128().u64x2[1]);
+            WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             append(MoveZeroToVector, tmp(m_value));
             return;
         }

@@ -5384,6 +5384,8 @@ void lowerToAir(Procedure& procedure)
 IGNORE_RETURN_TYPE_WARNINGS_END
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 #endif // USE(JSVALUE64)
 
 #pragma pop_macro("RotateLeft32")
@@ -5393,7 +5395,5 @@ IGNORE_RETURN_TYPE_WARNINGS_END
 #pragma pop_macro("StoreFence")
 #pragma pop_macro("LoadFence")
 #pragma pop_macro("MemoryFence")
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(B3_JIT)
