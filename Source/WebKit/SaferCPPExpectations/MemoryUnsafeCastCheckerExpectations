@@ -2,9 +2,7 @@ AutomationProtocolObjects.h
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/cocoa/WebSocketTaskCocoa.mm
 NetworkProcess/webrtc/NetworkRTCMonitor.cpp
-NetworkProcess/webrtc/NetworkRTCUDPSocketCocoa.mm
 Platform/cocoa/CocoaHelpers.mm
-Platform/cocoa/WebPrivacyHelpers.mm
 Shared/API/APIArray.h
 Shared/API/APIDictionary.h
 Shared/API/c/WKSharedAPICast.h
@@ -13,7 +11,6 @@ Shared/API/c/cf/WKURLCF.mm
 Shared/APIWebArchive.mm
 Shared/Cocoa/WKNSURL.mm
 Shared/Cocoa/WKObject.h
-Shared/RTCNetwork.cpp
 Shared/UserData.cpp
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/Cocoa/WKDownload.mm

@@ -24,12 +24,13 @@
  */
 
 #include "config.h"
+
+#if USE(LIBWEBRTC)
 #include "RTCNetwork.h"
 
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/StdLibExtras.h>
-
-#if USE(LIBWEBRTC)
+#include <wtf/posix/SocketPOSIX.h>
 
 namespace WebKit {
 
@@ -131,10 +132,10 @@ IPAddress::IPAddress(const struct sockaddr& address)
 {
     switch (address.sa_family) {
     case AF_INET6:
-        value = fromIPv6Address(reinterpret_cast<const sockaddr_in6*>(&address)->sin6_addr);
+        value = fromIPv6Address(asIPV6SocketAddress(address).sin6_addr);
         break;
     case AF_INET:
-        value = reinterpret_cast<const sockaddr_in*>(&address)->sin_addr.s_addr;
+        value = asIPV4SocketAddress(address).sin_addr.s_addr;
         break;
     case AF_UNSPEC:
         value = UnspecifiedFamily { };

@@ -44,6 +44,7 @@
 #import <wtf/Scope.h>
 #import <wtf/WeakRandom.h>
 #import <wtf/cocoa/VectorCocoa.h>
+#import <wtf/posix/SocketPOSIX.h>
 #import <wtf/text/MakeString.h>
 #import <pal/cocoa/WebPrivacySoftLink.h>
 
@@ -432,11 +433,11 @@ void ResourceMonitorURLsController::prepare(CompletionHandler<void(WKContentRule
 
 inline static std::optional<WebCore::IPAddress> ipAddress(const struct sockaddr* address)
 {
-    if (address->sa_family == AF_INET)
-        return WebCore::IPAddress { reinterpret_cast<const sockaddr_in*>(address)->sin_addr };
+    if (auto* addressV4 = dynamicCastToIPV4SocketAddress(*address))
+        return WebCore::IPAddress { addressV4->sin_addr };
 
-    if (address->sa_family == AF_INET6)
-        return WebCore::IPAddress { reinterpret_cast<const sockaddr_in6*>(address)->sin6_addr };
+    if (auto* addressV6 = dynamicCastToIPV6SocketAddress(*address))
+        return WebCore::IPAddress { addressV6->sin6_addr };
 
     return std::nullopt;
 }

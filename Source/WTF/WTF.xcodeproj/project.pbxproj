@@ -94,6 +94,7 @@
 		465F34932CD824AF000963B1 /* ObjCRuntimeExtras.mm in Sources */ = {isa = PBXBuildFile; fileRef = 465F34922CD824AF000963B1 /* ObjCRuntimeExtras.mm */; };
 		466D69112BA4E433005D43F4 /* SpanCocoa.h in Headers */ = {isa = PBXBuildFile; fileRef = 466D69102BA4E433005D43F4 /* SpanCocoa.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		467DCD532CD4689A0040C644 /* UnicodeExtras.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 467DCD522CD4689A0040C644 /* UnicodeExtras.cpp */; };
+		468EAFD42D5B1E37005069CF /* SocketPOSIX.h in Headers */ = {isa = PBXBuildFile; fileRef = 468EAFD32D5B1E37005069CF /* SocketPOSIX.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46B0FB5D2D24BFBA0012184C /* ParsingUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 46B0FB5C2D24BFBA0012184C /* ParsingUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46B4C53C2D4F2D0A00BAA3FE /* NSStringExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = 46B4C53B2D4F2D0A00BAA3FE /* NSStringExtras.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46BEB6EB22FFE24900269867 /* RefCounted.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46BEB6E922FFDDD500269867 /* RefCounted.cpp */; };
@@ -1246,6 +1247,7 @@
 		465F34922CD824AF000963B1 /* ObjCRuntimeExtras.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ObjCRuntimeExtras.mm; sourceTree = "<group>"; };
 		466D69102BA4E433005D43F4 /* SpanCocoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SpanCocoa.h; sourceTree = "<group>"; };
 		467DCD522CD4689A0040C644 /* UnicodeExtras.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnicodeExtras.cpp; sourceTree = "<group>"; };
+		468EAFD32D5B1E37005069CF /* SocketPOSIX.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SocketPOSIX.h; sourceTree = "<group>"; };
 		46B0FB5C2D24BFBA0012184C /* ParsingUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ParsingUtilities.h; sourceTree = "<group>"; };
 		46B4C53B2D4F2D0A00BAA3FE /* NSStringExtras.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSStringExtras.h; sourceTree = "<group>"; };
 		46BA9EAB1F4CD61E009A2BBC /* CompletionHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CompletionHandler.h; sourceTree = "<group>"; };
@@ -2096,6 +2098,7 @@
 				EB2C86D8267B275C0052CB9A /* CPUTimePOSIX.cpp */,
 				A331D96621F24ABD009F02AA /* FileSystemPOSIX.cpp */,
 				A3EE5C3921FFAC5E00FABD61 /* OSAllocatorPOSIX.cpp */,
+				468EAFD32D5B1E37005069CF /* SocketPOSIX.h */,
 				A32D8FA421FFFAB400780662 /* ThreadingPOSIX.cpp */,
 			);
 			path = posix;
@@ -3622,6 +3625,7 @@
 				DD3DC92F27A4BF8E007E5B61 /* SixCharacterHash.h in Headers */,
 				FA0C387B2BEAD56B00583842 /* SmallMap.h in Headers */,
 				DD3DC8DE27A4BF8E007E5B61 /* SmallSet.h in Headers */,
+				468EAFD42D5B1E37005069CF /* SocketPOSIX.h in Headers */,
 				DDF3076727C086CD006A526F /* SoftLinking.h in Headers */,
 				DD3DC8D727A4BF8E007E5B61 /* SoftLinking.h in Headers */,
 				DD3DC91F27A4BF8E007E5B61 /* SortedArrayMap.h in Headers */,

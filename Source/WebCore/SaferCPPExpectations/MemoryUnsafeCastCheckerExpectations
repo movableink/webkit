@@ -126,7 +126,6 @@ platform/mac/SerializedPlatformDataCueMac.mm
 platform/mac/WebCoreFullScreenWindow.mm
 platform/mediarecorder/cocoa/MediaRecorderPrivateWriterWebM.cpp
 platform/network/BlobResourceHandle.cpp
-platform/network/cf/DNSResolveQueueCFNet.cpp
 rendering/BidiRun.cpp
 rendering/BidiRun.h
 rendering/RenderAncestorIterator.h
