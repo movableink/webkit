@@ -46,6 +46,12 @@ static const size_t maximumLinesToBalanceWithLineRequirement { 12 };
 // overshoot and undershoot the target line length, giving more flexibility in the solution search.
 static const float textWrapPrettyMaximumLineWidthAdjustment = 0.95;
 
+// Define the penalty associated with show text wider/narrower than ideal bounds.
+// Separating stretchability and shrinkability allows us to weight under/over
+// filling the ideal bounds differently.
+static const float textWrapPrettyStretchability = 10;
+static const float textWrapPrettyShrinkability = 10;
+
 struct EntryBalance {
     float accumulatedCost { std::numeric_limits<float>::infinity() };
     size_t previousBreakIndex { 0 };
@@ -59,12 +65,15 @@ struct EntryPretty {
     auto operator<=>(const EntryPretty&) const = default;
 };
 
+// Full implementation of the raggedness function defined in:
+// http://www.eprg.org/G53DOC/pdfs/knuth-plass-breaking.pdf
 static float computeRaggedness(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth)
 {
     auto difference = idealLineWidth - candidateLineWidth;
-    return difference * difference;
+    auto intermediate = difference > 0 ? difference / textWrapPrettyShrinkability:
+    difference / textWrapPrettyStretchability;
+    return 100 * abs(pow(intermediate, 3));
 };
-
 
 static float computeCostBalance(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth)
 {
