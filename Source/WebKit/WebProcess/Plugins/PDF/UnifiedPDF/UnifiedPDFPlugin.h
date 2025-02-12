@@ -215,8 +215,6 @@ public:
     double minScaleFactor() const final;
     double maxScaleFactor() const final;
 
-    bool shouldRespectPageScaleAdjustments() const final;
-
     bool shouldSizeToFitContent() const final;
 
 private:

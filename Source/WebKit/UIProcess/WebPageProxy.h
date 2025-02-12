@@ -1388,9 +1388,6 @@ public:
     double viewScaleFactor() const { return m_viewScaleFactor; }
     void scaleView(double scale);
     void setShouldScaleViewToFitDocument(bool);
-#if ENABLE(PDF_PLUGIN)
-    void setPluginScaleFactor(double scaleFactor, WebCore::IntPoint origin);
-#endif
     
     float deviceScaleFactor() const;
 #if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
@@ -1764,13 +1761,9 @@ public:
     void saveDataToFileInDownloadsFolder(String&& suggestedFilename, String&& mimeType, URL&& originatingURL, API::Data&);
     void savePDFToFileInDownloadsFolder(String&& suggestedFilename, URL&& originatingURL, std::span<const uint8_t>);
 
-#if ENABLE(PDF_PLUGIN)
-#if PLATFORM(MAC)
+#if ENABLE(PDF_PLUGIN) && PLATFORM(MAC)
     void savePDFToTemporaryFolderAndOpenWithNativeApplication(const String& suggestedFilename, FrameInfoData&&, std::span<const uint8_t>, const String& pdfUUID);
     void showPDFContextMenu(const PDFContextMenu&, PDFPluginIdentifier, CompletionHandler<void(std::optional<int32_t>&&)>&&);
-#else
-    void pluginDidInstallPDFDocument(double initialScale);
-#endif
 #endif
 
     WebCore::IntRect visibleScrollerThumbRect() const;
@@ -3500,8 +3493,8 @@ RefPtr<SpeechRecognitionPermissionManager> protectedSpeechRecognitionPermissionM
 
     double m_pluginZoomFactor { 1 };
 
-    double m_pluginMinZoomFactor { 1 };
-    double m_pluginMaxZoomFactor { 1 };
+    std::optional<double> m_pluginMinZoomFactor;
+    std::optional<double> m_pluginMaxZoomFactor;
 
     double m_pluginScaleFactor { 1 };
 

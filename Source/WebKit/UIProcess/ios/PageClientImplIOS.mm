@@ -1265,13 +1265,6 @@ void PageClientImpl::scheduleVisibleContentRectUpdate()
     [webView() _scheduleVisibleContentRectUpdate];
 }
 
-#if ENABLE(PDF_PLUGIN)
-void PageClientImpl::pluginDidInstallPDFDocument(double initialScale)
-{
-    [webView() _pluginDidInstallPDFDocument:initialScale];
-}
-#endif
-
 bool PageClientImpl::isPotentialTapInProgress() const
 {
     return [m_contentView isPotentialTapInProgress];

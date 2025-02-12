@@ -559,10 +559,6 @@ messages -> WebPageProxy {
     ShowPDFContextMenu(struct WebKit::PDFContextMenu contextMenu, WebKit::PDFPluginIdentifier identifier) -> (std::optional<int32_t> selectedItem)
 #endif
 
-#if PLATFORM(IOS_FAMILY)
-    PluginDidInstallPDFDocument(double initialScale);
-#endif
-
 #endif
 
 #if ENABLE(PDF_HUD)

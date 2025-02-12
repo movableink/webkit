@@ -806,8 +806,6 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
     , m_cpuLimit(configuration->cpuLimit())
     , m_backForwardList(WebBackForwardList::create(*this))
     , m_waitsForPaintAfterViewDidMoveToWindow(configuration->waitsForPaintAfterViewDidMoveToWindow())
-    , m_pluginMinZoomFactor(ViewGestureController::defaultMinMagnification)
-    , m_pluginMaxZoomFactor(ViewGestureController::defaultMaxMagnification)
     , m_hasRunningProcess(process.state() != WebProcessProxy::State::Terminated)
     , m_controlledByAutomation(configuration->isControlledByAutomation())
 #if PLATFORM(COCOA)
@@ -5418,20 +5416,15 @@ double WebPageProxy::pageZoomFactor() const
     return m_pageZoomFactor;
 }
 
+// // FIXME: <webkit.org/b/287508> Respect the plugin-specific min/max limits.
 double WebPageProxy::minPageZoomFactor() const
 {
-    if (m_mainFramePluginHandlesPageScaleGesture)
-        return m_pluginMinZoomFactor;
-
-    return ViewGestureController::defaultMinMagnification;
+    return m_pluginMinZoomFactor.value_or(ViewGestureController::defaultMinMagnification);
 }
 
 double WebPageProxy::maxPageZoomFactor() const
 {
-    if (m_mainFramePluginHandlesPageScaleGesture)
-        return m_pluginMaxZoomFactor;
-
-    return ViewGestureController::defaultMaxMagnification;
+    return m_pluginMaxZoomFactor.value_or(ViewGestureController::defaultMaxMagnification);
 }
 
 double WebPageProxy::pageScaleFactor() const
@@ -7058,6 +7051,8 @@ void WebPageProxy::didCommitLoadForFrame(IPC::Connection& connection, FrameIdent
         m_pageScaleFactor = 1;
         m_pluginScaleFactor = 1;
         m_mainFramePluginHandlesPageScaleGesture = false;
+        m_pluginMinZoomFactor = { };
+        m_pluginMaxZoomFactor = { };
 #if ENABLE(POINTER_LOCK)
         requestPointerUnlock();
 #endif
@@ -7619,10 +7614,8 @@ void WebPageProxy::didRunInsecureContentForFrame(IPC::Connection& connection, Fr
 void WebPageProxy::mainFramePluginHandlesPageScaleGestureDidChange(bool mainFramePluginHandlesPageScaleGesture, double minScale, double maxScale)
 {
     m_mainFramePluginHandlesPageScaleGesture = mainFramePluginHandlesPageScaleGesture;
-    if (m_mainFramePluginHandlesPageScaleGesture) {
-        m_pluginMinZoomFactor = minScale;
-        m_pluginMaxZoomFactor = maxScale;
-    }
+    m_pluginMinZoomFactor = minScale;
+    m_pluginMaxZoomFactor = maxScale;
 }
 
 #if !PLATFORM(COCOA)
@@ -13851,13 +13844,6 @@ void WebPageProxy::setShouldScaleViewToFitDocument(bool shouldScaleViewToFitDocu
 
     send(Messages::WebPage::SetShouldScaleViewToFitDocument(shouldScaleViewToFitDocument));
 }
-
-#if ENABLE(PDF_PLUGIN)
-void WebPageProxy::setPluginScaleFactor(double scaleFactor, WebCore::IntPoint origin)
-{
-    send(Messages::WebPage::SetPluginScaleFactor(scaleFactor, origin));
-}
-#endif
 
 void WebPageProxy::didRestoreScrollPosition()
 {

@@ -333,8 +333,6 @@ public:
 
     bool populateEditorStateIfNeeded(EditorState&) const;
 
-    virtual bool shouldRespectPageScaleAdjustments() const { return true; }
-
     virtual bool shouldSizeToFitContent() const { return false; }
 
 protected:

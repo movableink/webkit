@@ -1759,13 +1759,6 @@ void WebPageProxy::setPromisedDataForImage(IPC::Connection&, const String&, Shar
 
 #endif
 
-#if ENABLE(PDF_PLUGIN)
-void WebPageProxy::pluginDidInstallPDFDocument(double initialScale)
-{
-    protectedPageClient()->pluginDidInstallPDFDocument(initialScale);
-}
-#endif
-
 #if PLATFORM(IOS_FAMILY)
 
 void WebPageProxy::isPotentialTapInProgress(CompletionHandler<void(bool)>&& completion)

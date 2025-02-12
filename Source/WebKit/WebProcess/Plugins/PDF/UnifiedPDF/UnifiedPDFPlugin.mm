@@ -148,8 +148,6 @@
 
 // FIXME: We should rationalize these with the values in ViewGestureController.
 // For now, we'll leave them differing as they do in PDFPlugin.
-static constexpr double minimumZoomScale = 0.2;
-static constexpr double maximumZoomScale = 6.0;
 static constexpr double zoomIncrement = 1.18920;
 
 namespace WebKit {
@@ -315,12 +313,8 @@ void UnifiedPDFPlugin::installPDFDocument()
     if (isLocked())
         createPasswordEntryForm();
 
-    if (m_view) {
+    if (m_view)
         m_view->layerHostingStrategyDidChange();
-#if PLATFORM(IOS_FAMILY)
-        m_view->pluginDidInstallPDFDocument(pageScaleFactor());
-#endif
-    }
 
     [[NSNotificationCenter defaultCenter] addObserver:m_pdfMutationObserver.get() selector:@selector(formChanged:) name:mutationObserverNotificationString() object:m_pdfDocument.get()];
 
@@ -1113,7 +1107,8 @@ void UnifiedPDFPlugin::didEndMagnificationGesture()
     m_magnificationOriginInContentCoordinates = { };
     m_magnificationOriginInPluginCoordinates = { };
 
-    deviceOrPageScaleFactorChanged();
+    using enum CheckForMagnificationGesture;
+    deviceOrPageScaleFactorChanged(handlesPageScaleFactor() ? Yes : No);
 }
 
 void UnifiedPDFPlugin::setScaleFactor(double scale, std::optional<WebCore::IntPoint> originInRootViewCoordinates)
@@ -4456,16 +4451,6 @@ auto UnifiedPDFPlugin::rootViewToPage(FloatPoint pointInRootView) const -> PageA
     auto pageIndex = m_presentationController->nearestPageIndexForDocumentPoint(pointInDocument);
     auto pointInPage = convertDown(CoordinateSpace::PDFDocumentLayout, CoordinateSpace::PDFPage, pointInDocument, pageIndex);
     return { m_documentLayout.pageAtIndex(pageIndex), pointInPage };
-}
-
-// FIXME: <https://webkit.org/b/285720> Plugin should respect page scale adjustments unconditionally.
-bool UnifiedPDFPlugin::shouldRespectPageScaleAdjustments() const
-{
-#if PLATFORM(IOS_FAMILY)
-    return false;
-#else
-    return true;
-#endif
 }
 
 TextStream& operator<<(TextStream& ts, RepaintRequirement requirement)

@@ -2107,11 +2107,6 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
     if (scrollView.pinchGestureRecognizer.state == UIGestureRecognizerStateBegan) {
         _page->willStartUserTriggeredZooming();
 
-#if ENABLE(PDF_PLUGIN)
-        if (_page->mainFramePluginHandlesPageScaleGesture())
-            return;
-#endif
-
         [_contentView scrollViewWillStartPanOrPinchGesture];
     }
     [_contentView willStartZoomOrScroll];
@@ -2327,14 +2322,6 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
     if (![self usesStandardContentView] && [_customContentView respondsToSelector:@selector(web_scrollViewDidZoom:)])
         [_customContentView web_scrollViewDidZoom:scrollView];
 
-#if ENABLE(PDF_PLUGIN)
-    if (_page->mainFramePluginHandlesPageScaleGesture()) {
-        auto gestureOrigin = WebCore::IntPoint([scrollView.pinchGestureRecognizer locationInView:self]);
-        _page->setPluginScaleFactor(contentZoomScale(self), gestureOrigin);
-        return;
-    }
-#endif
-
     [self _updateScrollViewBackground];
     [self _scheduleVisibleContentRectUpdateAfterScrollInView:scrollView];
 }
@@ -2346,13 +2333,6 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
 
     ASSERT(scrollView == _scrollView);
 
-#if ENABLE(PDF_PLUGIN)
-    if (_page->mainFramePluginHandlesPageScaleGesture()) {
-        _page->didEndUserTriggeredZooming();
-        return;
-    }
-#endif
-
     // FIXME: remove when rdar://problem/36065495 is fixed.
     // When rotating with two fingers down, UIScrollView can set a bogus content view position.
     // "Center" is top left because we set the anchorPoint to 0,0.
@@ -2360,6 +2340,8 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
 
     [self _scheduleVisibleContentRectUpdateAfterScrollInView:scrollView];
     [_contentView didZoomToScale:scale];
+
+    _page->didEndUserTriggeredZooming();
 }
 
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
@@ -3906,13 +3888,6 @@ static bool isLockdownModeWarningNeeded()
 {
     _overriddenZoomScaleParameters = std::nullopt;
 }
-
-#if ENABLE(PDF_PLUGIN)
-- (void)_pluginDidInstallPDFDocument:(double)initialScale
-{
-    [_scrollView setZoomScale:initialScale];
-}
-#endif
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKWebViewIOSInternalAdditionsAfter.mm>)
 #import <WebKitAdditions/WKWebViewIOSInternalAdditionsAfter.mm>

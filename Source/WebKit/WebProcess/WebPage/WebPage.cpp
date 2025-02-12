@@ -2449,7 +2449,7 @@ void WebPage::drawRect(GraphicsContext& graphicsContext, const IntRect& rect)
 double WebPage::textZoomFactor() const
 {
 #if ENABLE(PDF_PLUGIN)
-    if (auto* pluginView = mainFramePlugIn())
+    if (RefPtr pluginView = mainFramePlugIn(); pluginView && pluginView->pluginHandlesPageScaleFactor())
         return pluginView->pageScaleFactor();
 #endif
 
@@ -2462,10 +2462,8 @@ double WebPage::textZoomFactor() const
 void WebPage::didSetTextZoomFactor(double zoomFactor)
 {
 #if ENABLE(PDF_PLUGIN)
-    if (auto* pluginView = mainFramePlugIn()) {
-        pluginView->setPageScaleFactor(zoomFactor, std::nullopt);
-        return;
-    }
+    if (RefPtr pluginView = mainFramePlugIn(); pluginView && pluginView->pluginHandlesPageScaleFactor())
+        return pluginView->setPageScaleFactor(zoomFactor, std::nullopt);
 #endif
 
     if (!m_page)
@@ -2478,7 +2476,7 @@ void WebPage::didSetTextZoomFactor(double zoomFactor)
 double WebPage::pageZoomFactor() const
 {
 #if ENABLE(PDF_PLUGIN)
-    if (auto* pluginView = mainFramePlugIn()) {
+    if (RefPtr pluginView = mainFramePlugIn(); pluginView && pluginView->pluginHandlesPageScaleFactor()) {
         // Note that this maps page *scale* factor to page *zoom* factor.
         return pluginView->pageScaleFactor();
     }
@@ -2493,7 +2491,7 @@ double WebPage::pageZoomFactor() const
 void WebPage::didSetPageZoomFactor(double zoomFactor)
 {
 #if ENABLE(PDF_PLUGIN)
-    if (auto* pluginView = mainFramePlugIn()) {
+    if (RefPtr pluginView = mainFramePlugIn(); pluginView && pluginView->pluginHandlesPageScaleFactor()) {
         // Note that this maps page *zoom* factor to page *scale* factor.
         pluginView->setPageScaleFactor(zoomFactor, std::nullopt);
         return;
@@ -2585,14 +2583,12 @@ void WebPage::didScalePage(double scale, const IntPoint& origin)
 #endif
 
 #if ENABLE(PDF_PLUGIN)
-    if (auto* pluginView = mainFramePlugIn()) {
+    if (RefPtr pluginView = mainFramePlugIn(); pluginView && pluginView->pluginHandlesPageScaleFactor()) {
         // Since the main-frame PDF plug-in handles the page scale factor, make sure to reset WebCore's page scale.
         // Otherwise, we can end up with an immutable but non-1 page scale applied by WebCore on top of whatever the plugin does.
-        if (pluginView->shouldRespectPageScaleAdjustments()) {
-            if (m_page->pageScaleFactor() != 1)
-                m_page->setPageScaleFactor(1, origin);
-            pluginView->setPageScaleFactor(totalScale, { origin });
-        }
+        if (m_page->pageScaleFactor() != 1)
+            m_page->setPageScaleFactor(1, origin);
+        pluginView->setPageScaleFactor(totalScale, { origin });
         return;
     }
 #endif
@@ -2605,7 +2601,7 @@ void WebPage::didScalePage(double scale, const IntPoint& origin)
 
 #if ENABLE(PDF_PLUGIN)
     for (auto& pluginView : m_pluginViews) {
-        if (pluginView.shouldRespectPageScaleAdjustments())
+        if (pluginView.pluginHandlesPageScaleFactor())
             pluginView.setPageScaleFactor(totalScale, { origin });
     }
 #endif
@@ -2654,7 +2650,7 @@ void WebPage::scalePage(double scale, const IntPoint& origin)
 double WebPage::totalScaleFactor() const
 {
 #if ENABLE(PDF_PLUGIN)
-    if (auto* pluginView = mainFramePlugIn())
+    if (RefPtr pluginView = mainFramePlugIn(); pluginView && pluginView->pluginHandlesPageScaleFactor())
         return pluginView->pageScaleFactor();
 #endif
     return m_page->pageScaleFactor();
@@ -2695,21 +2691,6 @@ void WebPage::scaleView(double scale)
     didScaleView(scale);
     send(Messages::WebPageProxy::ViewScaleFactorDidChange(scale));
 }
-
-#if ENABLE(PDF_PLUGIN)
-void WebPage::setPluginScaleFactor(double scaleFactor, WebCore::IntPoint origin)
-{
-    if (RefPtr plugin = mainFramePlugIn())
-        plugin->setPageScaleFactor(scaleFactor, origin);
-}
-
-#if PLATFORM(IOS_FAMILY)
-void WebPage::pluginDidInstallPDFDocument(double initialScale)
-{
-    send(Messages::WebPageProxy::PluginDidInstallPDFDocument(initialScale));
-}
-#endif // PLATFORM(IOS_FAMILY)
-#endif // ENABLE(PDF_PLUGIN)
 
 void WebPage::setDeviceScaleFactor(float scaleFactor)
 {
@@ -9588,7 +9569,8 @@ bool WebPage::handlesPageScaleGesture()
 #if !ENABLE(PDF_PLUGIN)
     return false;
 #else
-    return mainFramePlugIn();
+    RefPtr plugin = mainFramePlugIn();
+    return plugin && plugin->pluginHandlesPageScaleFactor();
 #endif
 }
 

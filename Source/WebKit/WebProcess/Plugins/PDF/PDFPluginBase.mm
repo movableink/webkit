@@ -237,7 +237,11 @@ bool PDFPluginBase::isFullFramePlugin() const
 
 bool PDFPluginBase::handlesPageScaleFactor() const
 {
+#if PLATFORM(IOS_FAMILY)
+    return false;
+#else
     return m_frame && m_frame->isMainFrame() && isFullFramePlugin();
+#endif
 }
 
 bool PDFPluginBase::isLocked() const

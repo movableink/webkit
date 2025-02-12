@@ -380,7 +380,6 @@ void PDFScrollingPresentationController::tiledBackingUsageChanged(const Graphics
 
 void PDFScrollingPresentationController::paintContents(const GraphicsLayer* layer, GraphicsContext& context, const FloatRect& clipRect, OptionSet<GraphicsLayerPaintBehavior>)
 {
-
     if (layer == m_contentsLayer.get()) {
         RefPtr asyncRenderer = asyncRendererIfExists();
         m_plugin->paintPDFContent(layer, context, clipRect, { }, asyncRenderer.get());
