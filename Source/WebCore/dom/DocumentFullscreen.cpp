@@ -73,7 +73,14 @@ void DocumentFullscreen::exitFullscreen(Document& document, RefPtr<DeferredPromi
         promise->reject(Exception { ExceptionCode::TypeError, "Not in fullscreen"_s });
         return;
     }
-    document.checkedFullscreenManager()->exitFullscreen(WTFMove(promise));
+    document.checkedFullscreenManager()->exitFullscreen([promise = WTFMove(promise)] (auto result) {
+        if (!promise)
+            return;
+        if (result.hasException())
+            promise->reject(result.releaseException());
+        else
+            promise->resolve();
+    });
 }
 
 void DocumentFullscreen::webkitExitFullscreen(Document& document)

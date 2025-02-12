@@ -1043,9 +1043,9 @@ bool WebChromeClient::supportsFullScreenForElement(const Element& element, bool 
 #endif
 }
 
-void WebChromeClient::enterFullScreenForElement(Element& element, HTMLMediaElementEnums::VideoFullscreenMode mode)
+// FIXME: Remove this when rdar://144645925 is resolved.
+void WebChromeClient::enterFullScreenForElement(Element& element, HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
 {
-    UNUSED_PARAM(mode);
     SEL selector = @selector(webView:enterFullScreenForElement:listener:);
     if ([[m_webView UIDelegate] respondsToSelector:selector]) {
         auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:&element]);
@@ -1055,6 +1055,7 @@ void WebChromeClient::enterFullScreenForElement(Element& element, HTMLMediaEleme
     else
         [m_webView _enterFullScreenForElement:&element];
 #endif
+    completionHandler({ });
 }
 
 void WebChromeClient::exitFullScreenForElement(Element* element)
