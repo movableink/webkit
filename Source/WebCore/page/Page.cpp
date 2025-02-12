@@ -539,6 +539,9 @@ Page::~Page()
     if (RefPtr scrollingCoordinator = m_scrollingCoordinator)
         scrollingCoordinator->pageDestroyed();
 
+    if (m_resourceUsageOverlay)
+        m_resourceUsageOverlay->detachFromPage();
+
     checkedBackForward()->close();
     if (!isUtilityPage())
         BackForwardCache::singleton().removeAllItemsForPage(*this);
