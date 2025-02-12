@@ -176,7 +176,7 @@ id<MTLCounterSampleBuffer> Device::timestampsBuffer(id<MTLCommandBuffer> command
         return nil;
     }
 
-    [m_sampleCounterBuffers setObject:buffer forKey:commandBuffer];
+    trackTimestampsBuffer(commandBuffer, buffer);
 
     return buffer;
 #else
@@ -188,34 +188,39 @@ id<MTLCounterSampleBuffer> Device::timestampsBuffer(id<MTLCommandBuffer> command
 
 void Device::resolveTimestampsForBuffer(id<MTLCommandBuffer> commandBuffer)
 {
-    id<MTLCounterSampleBuffer> sampleBuffer = [m_sampleCounterBuffers objectForKey:commandBuffer];
-    if (!sampleBuffer)
+    if (!enableEncoderTimestamps())
+        return;
+
+    NSMutableArray<id<MTLCounterSampleBuffer>>* sampleBufferArray = [m_sampleCounterBuffers objectForKey:commandBuffer];
+    if (!sampleBufferArray)
         return;
 
     [m_sampleCounterBuffers removeObjectForKey:commandBuffer];
-    id<MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
-    auto timestampCount = sampleBuffer.sampleCount;
-    id<MTLBuffer> counterDataBuffer = safeCreateBuffer(sizeof(MTLCounterResultTimestamp) * timestampCount);
-    [blitCommandEncoder resolveCounters:sampleBuffer inRange:NSMakeRange(0, timestampCount) destinationBuffer:counterDataBuffer destinationOffset:0];
-    [blitCommandEncoder endEncoding];
-    NSMutableArray<id<MTLBuffer>>* resolvedBuffers = [m_resolvedSampleCounterBuffers objectForKey:commandBuffer];
-    if (!resolvedBuffers) {
-        resolvedBuffers = [NSMutableArray arrayWithObject:counterDataBuffer];
-        [m_resolvedSampleCounterBuffers setObject:resolvedBuffers forKey:commandBuffer];
-    } else
-        [resolvedBuffers addObject:counterDataBuffer];
+    for (id<MTLCounterSampleBuffer> sampleBuffer in sampleBufferArray) {
+        id<MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
+        auto timestampCount = sampleBuffer.sampleCount;
+        id<MTLBuffer> counterDataBuffer = safeCreateBuffer(sizeof(MTLCounterResultTimestamp) * timestampCount);
+        [blitCommandEncoder resolveCounters:sampleBuffer inRange:NSMakeRange(0, timestampCount) destinationBuffer:counterDataBuffer destinationOffset:0];
+        [blitCommandEncoder endEncoding];
+        NSMutableArray<id<MTLBuffer>>* resolvedBuffers = [m_resolvedSampleCounterBuffers objectForKey:commandBuffer];
+        if (!resolvedBuffers) {
+            resolvedBuffers = [NSMutableArray arrayWithObject:counterDataBuffer];
+            [m_resolvedSampleCounterBuffers setObject:resolvedBuffers forKey:commandBuffer];
+        } else
+            [resolvedBuffers addObject:counterDataBuffer];
 
-    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> completedCommandBuffer) {
-        for (id<MTLBuffer> buffer in resolvedBuffers) {
-            auto timestamps = unsafeMakeSpan(static_cast<MTLCounterResultTimestamp*>(buffer.contents), buffer.length);
-            WTFLogAlways("Timestamps for buffer %@", buffer.label);
-            for (size_t i = 0, timestampCount = buffer.length / sizeof(MTLCounterResultTimestamp); (i + 1) < timestampCount; i += 2) {
-                auto timeDifference = timestamps[i + 1].timestamp - timestamps[i].timestamp;
-                WTFLogAlways("\tencoder time %f", timeDifference / 100000.0f);
+        [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> completedCommandBuffer) {
+            for (id<MTLBuffer> buffer in resolvedBuffers) {
+                auto timestamps = unsafeMakeSpan(static_cast<MTLCounterResultTimestamp*>(buffer.contents), buffer.length);
+                WTFLogAlways("Timestamps for buffer %@", buffer.label); // NOLINT
+                for (size_t i = 0, timestampCount = buffer.length / sizeof(MTLCounterResultTimestamp); (i + 1) < timestampCount; i += 2) {
+                    auto timeDifference = timestamps[i + 1].timestamp - timestamps[i].timestamp;
+                    WTFLogAlways("\tencoder time %f", timeDifference / 100000.0f); // NOLINT
+                }
             }
-        }
-        [m_resolvedSampleCounterBuffers removeObjectForKey:completedCommandBuffer];
-    }];
+            [m_resolvedSampleCounterBuffers removeObjectForKey:completedCommandBuffer];
+        }];
+    }
 }
 
 bool Device::shouldStopCaptureAfterSubmit()
@@ -1076,6 +1081,16 @@ id<MTLSharedEvent> Device::resolveTimestampsSharedEvent()
         m_resolveTimestampsSharedEvent = [m_device newSharedEvent];
 
     return m_resolveTimestampsSharedEvent;
+}
+
+void Device::trackTimestampsBuffer(id<MTLCommandBuffer> commandBuffer, id<MTLCounterSampleBuffer> counterSampleBuffer)
+{
+    NSMutableArray<id<MTLCounterSampleBuffer>>* sampleBufferArray = [m_sampleCounterBuffers objectForKey:commandBuffer];
+    if (!sampleBufferArray) {
+        sampleBufferArray = [NSMutableArray array];
+        [m_sampleCounterBuffers setObject:sampleBufferArray forKey:commandBuffer];
+    }
+    [sampleBufferArray addObject:counterSampleBuffer];
 }
 
 } // namespace WebGPU
