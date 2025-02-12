@@ -220,6 +220,7 @@ public:
     static RefPtr<ImageBuffer> sinkIntoImageBufferAfterCrossThreadTransfer(RefPtr<ImageBuffer>);
 #endif
     static std::unique_ptr<SerializedImageBuffer> sinkIntoSerializedImageBuffer(RefPtr<ImageBuffer>&&);
+    WEBCORE_EXPORT static RefPtr<SharedBuffer> sinkIntoPDFDocument(RefPtr<ImageBuffer>);
 
     WEBCORE_EXPORT virtual void convertToLuminanceMask();
     WEBCORE_EXPORT virtual void transformToColorSpace(const DestinationColorSpace& newColorSpace);

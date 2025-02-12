@@ -6475,6 +6475,8 @@
 		72B53158253C1E4D0049295A /* RemoteResourceCacheProxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RemoteResourceCacheProxy.h; sourceTree = "<group>"; };
 		72C11DB52849933700E826DD /* ShareablePixelBuffer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ShareablePixelBuffer.cpp; sourceTree = "<group>"; };
 		72C11DB62849933700E826DD /* ShareablePixelBuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShareablePixelBuffer.h; sourceTree = "<group>"; };
+		72F9A6CB2D30C5070019DE4B /* ImageBufferRemoteDisplayListBackend.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImageBufferRemoteDisplayListBackend.h; sourceTree = "<group>"; };
+		72F9A6CC2D30C5070019DE4B /* ImageBufferRemoteDisplayListBackend.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ImageBufferRemoteDisplayListBackend.cpp; sourceTree = "<group>"; };
 		74C2F54029AC9C44006C5F97 /* DeferredPaymentRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeferredPaymentRequest.h; sourceTree = "<group>"; };
 		74C2F54229AC9CBF006C5F97 /* DeferredPaymentRequestCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = DeferredPaymentRequestCocoa.mm; sourceTree = "<group>"; };
 		75A8D2C4187CCF9F00C39C9E /* WKWebsiteDataStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKWebsiteDataStore.h; sourceTree = "<group>"; };
@@ -12881,6 +12883,8 @@
 				7B64C0B6254C5C250006B4AF /* GraphicsContextGLIdentifier.h */,
 				727A7F39240788F1004D2931 /* ImageBufferBackendHandle.h */,
 				0FA7467E27BB611800B5FF5A /* ImageBufferBackendHandleSharing.h */,
+				72F9A6CC2D30C5070019DE4B /* ImageBufferRemoteDisplayListBackend.cpp */,
+				72F9A6CB2D30C5070019DE4B /* ImageBufferRemoteDisplayListBackend.h */,
 				722074312D07D671009FA90F /* ImageBufferRemotePDFDocumentBackend.cpp */,
 				722074302D07D671009FA90F /* ImageBufferRemotePDFDocumentBackend.h */,
 				727A7F37240788F0004D2931 /* ImageBufferShareableBitmapBackend.cpp */,

@@ -55,6 +55,7 @@
 #include "SwapBuffersDisplayRequirement.h"
 #include "WebPageProxy.h"
 #include <WebCore/HTMLCanvasElement.h>
+#include <WebCore/ImageBufferDisplayListBackend.h>
 #include <WebCore/NullImageBufferBackend.h>
 #include <WebCore/RenderingResourceIdentifier.h>
 #include <wtf/CheckedArithmetic.h>
@@ -269,10 +270,13 @@ void RemoteRenderingBackend::didDrawRemoteToPDF(PageIdentifier pageID, Rendering
     }
 
     ASSERT(imageBufferIdentifier == imageBuffer->renderingResourceIdentifier());
-    auto data = imageBuffer->sinkIntoPDFDocument();
 
-    callOnMainRunLoop([pageID, data = WTFMove(data), snapshotIdentifier]() mutable {
+    callOnMainRunLoop([protectedThis = Ref { *this }, pageID, imageBuffer = WTFMove(imageBuffer), snapshotIdentifier]() mutable {
+        auto data = imageBuffer->sinkIntoPDFDocument();
         GPUProcess::singleton().didDrawRemoteToPDF(pageID, WTFMove(data), snapshotIdentifier);
+
+        // Ensure destruction happens on creation thread.
+        protectedThis->protectedWorkQueue()->dispatch([imageBuffer = WTFMove(imageBuffer)] () mutable { });
     });
 }
 #endif
@@ -304,6 +308,7 @@ static RefPtr<ImageBuffer> allocateImageBufferInternal(const FloatSize& logicalS
         break;
 
     case RenderingMode::DisplayList:
+        imageBuffer = ImageBuffer::create<ImageBufferDisplayListBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
         break;
     }
 

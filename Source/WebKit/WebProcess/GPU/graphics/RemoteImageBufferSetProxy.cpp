@@ -140,12 +140,19 @@ ALWAYS_INLINE auto RemoteImageBufferSetProxy::sendSync(T&& message)
         return IPC::StreamClientConnection::SendSyncResult<T> { IPC::Error::InvalidConnection };
 
     auto result = connection->sendSync(std::forward<T>(message), identifier());
-    if (UNLIKELY(!result.succeeded())) {
-        RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] Proxy::sendSync - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
-            m_remoteRenderingBackendProxy->renderingBackendIdentifier().toUInt64(), IPC::description(T::name()).characters(), IPC::errorAsString(result.error()).characters());
-        didBecomeUnresponsive();
+    if (LIKELY(result.succeeded()))
+        return result;
+
+    RefPtr remoteRenderingBackendProxy = m_remoteRenderingBackendProxy.get();
+    if (UNLIKELY(!remoteRenderingBackendProxy)) {
+        RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend was deleted] Proxy::sendSync - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
+            IPC::description(T::name()).characters(), IPC::errorAsString(result.error()).characters());
+        return nullptr;
     }
-    return result;
+
+    RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] Proxy::sendSync - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
+        remoteRenderingBackendProxy->renderingBackendIdentifier().toUInt64(), IPC::description(T::name()).characters(), IPC::errorAsString(result.error()).characters());
+    didBecomeUnresponsive();
 }
 
 ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteImageBufferSetProxy::connection() const

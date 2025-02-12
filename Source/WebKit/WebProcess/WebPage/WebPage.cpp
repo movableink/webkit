@@ -6596,7 +6596,7 @@ void WebPage::drawRemoteToPDF(FrameIdentifier frameID, const std::optional<Float
     Ref frameView = *localMainFrame->view();
     auto snapshotRect = IntRect { rect.value_or(FloatRect { { }, frameView->contentsSize() }) };
 
-    RefPtr buffer = ImageBuffer::create(snapshotRect.size(), RenderingMode::PDFDocument, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, &m_page->chrome());
+    RefPtr buffer = ImageBuffer::create(snapshotRect.size(), RenderingMode::DisplayList, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, &m_page->chrome());
     if (!buffer)
         return;
 
