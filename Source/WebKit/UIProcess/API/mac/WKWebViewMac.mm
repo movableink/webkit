@@ -1510,6 +1510,17 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         _impl->flushPendingObscuredContentInsetChanges();
 }
 
+- (NSEdgeInsets)_obscuredContentInsets
+{
+    auto insets = _impl->obscuredContentInsets();
+    return NSEdgeInsetsMake(
+        static_cast<CGFloat>(insets.top()),
+        static_cast<CGFloat>(insets.left()),
+        static_cast<CGFloat>(insets.bottom()),
+        static_cast<CGFloat>(insets.right())
+    );
+}
+
 - (void)_setAutomaticallyAdjustsContentInsets:(BOOL)automaticallyAdjustsContentInsets
 {
     _impl->setAutomaticallyAdjustsContentInsets(automaticallyAdjustsContentInsets);
