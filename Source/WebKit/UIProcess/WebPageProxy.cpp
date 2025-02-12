@@ -14057,7 +14057,7 @@ void WebPageProxy::requestAttachmentIcon(IPC::Connection& connection, const Stri
 {
     MESSAGE_CHECK_BASE(protectedPreferences()->attachmentElementEnabled(), connection);
 
-    auto updateAttachmentIcon = [&] {
+    auto updateAttachmentIcon = [&, protectedThis = Ref { *this }] {
         FloatSize size = requestedSize;
         std::optional<ShareableBitmap::Handle> handle;
 
@@ -15573,7 +15573,7 @@ template<typename F>
 decltype(auto) WebPageProxy::sendToWebPage(std::optional<FrameIdentifier> frameID, F&& sendFunction)
 {
     if (RefPtr frame = WebFrameProxy::webFrame(frameID)) {
-        if (auto* remotePage = protectedBrowsingContextGroup()->remotePageInProcess(*this, frame->protectedProcess()))
+        if (RefPtr remotePage = protectedBrowsingContextGroup()->remotePageInProcess(*this, frame->protectedProcess()))
             return sendFunction(*remotePage);
     }
     return sendFunction(*this);
