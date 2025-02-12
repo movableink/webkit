@@ -73,7 +73,6 @@ class VideoMediaSampleRenderer;
 class VideoTrackPrivate;
 class AudioTrackPrivateMediaSourceAVFObjC;
 class VideoTrackPrivateMediaSourceAVFObjC;
-class WebCoreDecompressionSession;
 class SharedBuffer;
 
 struct TrackInfo;

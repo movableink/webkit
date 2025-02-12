@@ -54,6 +54,13 @@
 - (void)resetUpcomingSampleBufferPresentationTimeExpectations;
 @end
 
+// Equivalent to WTF_DECLARE_CF_TYPE_TRAIT(CMSampleBuffer);
+// Needed due to requirement of specifying the PAL namespace.
+template <>
+struct WTF::CFTypeTrait<CMSampleBufferRef> {
+    static inline CFTypeID typeID(void) { return PAL::CMSampleBufferGetTypeID(); }
+};
+
 namespace WebCore {
 
 static constexpr CMItemCount SampleQueueHighWaterMark = 30;
@@ -68,6 +75,63 @@ static bool isRendererThreadSafe(WebSampleBufferVideoRendering *renderering)
 #else
     return false;
 #endif
+}
+
+static CMTime getDecodeTime(CMBufferRef buf, void*)
+{
+    CMSampleBufferRef sample = checked_cf_cast<CMSampleBufferRef>(buf);
+    return PAL::CMSampleBufferGetDecodeTimeStamp(sample);
+}
+
+static CMTime getPresentationTime(CMBufferRef buf, void*)
+{
+    CMSampleBufferRef sample = checked_cf_cast<CMSampleBufferRef>(buf);
+    return PAL::CMSampleBufferGetPresentationTimeStamp(sample);
+}
+
+static CMTime getDuration(CMBufferRef buf, void*)
+{
+    CMSampleBufferRef sample = checked_cf_cast<CMSampleBufferRef>(buf);
+    return PAL::CMSampleBufferGetDuration(sample);
+}
+
+static CFComparisonResult compareBuffers(CMBufferRef buf1, CMBufferRef buf2, void* refcon)
+{
+    return (CFComparisonResult)PAL::CMTimeCompare(getPresentationTime(buf1, refcon), getPresentationTime(buf2, refcon));
+}
+
+static RetainPtr<CMBufferQueueRef> createBufferQueue()
+{
+    // CMBufferCallbacks contains 64-bit pointers that aren't 8-byte aligned. To suppress the linker
+    // warning about this, we prepend 4 bytes of padding when building.
+    const size_t padSize = 4;
+
+#pragma pack(push, 4)
+    struct BufferCallbacks {
+        uint8_t pad[padSize];
+        CMBufferCallbacks callbacks;
+    } callbacks {
+        { }, {
+            0,
+            nullptr,
+            &getDecodeTime,
+            &getPresentationTime,
+            &getDuration,
+            nullptr,
+            &compareBuffers,
+            nullptr,
+            nullptr,
+        }
+    };
+#pragma pack(pop)
+    static_assert(sizeof(callbacks.callbacks.version) == sizeof(uint32_t), "Version field must be 4 bytes");
+    static_assert(alignof(BufferCallbacks) == 4, "CMBufferCallbacks struct must have 4 byte alignment");
+
+    static const CMItemCount kMaximumCapacity = 120;
+
+    CMBufferQueueRef outQueue { nullptr };
+    PAL::CMBufferQueueCreate(kCFAllocatorDefault, kMaximumCapacity, &callbacks.callbacks, &outQueue);
+    return adoptCF(outQueue);
 }
 
 VideoMediaSampleRenderer::VideoMediaSampleRenderer(WebSampleBufferVideoRendering *renderer)
@@ -430,7 +494,7 @@ void VideoMediaSampleRenderer::initializeDecompressionSession()
     if (m_decompressionSession)
         return;
 
-    m_decodedSampleQueue = WebCoreDecompressionSession::createBufferQueue();
+    m_decodedSampleQueue = createBufferQueue();
     m_decompressionSession = WebCoreDecompressionSession::createOpenGL();
 
     m_startupTime = MonotonicTime::now();

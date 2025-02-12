@@ -51,7 +51,6 @@
 #import "VideoMediaSampleRenderer.h"
 #import "VideoTrackPrivateMediaSourceAVFObjC.h"
 #import "WebAVSampleBufferListener.h"
-#import "WebCoreDecompressionSession.h"
 #import "WebSampleBufferVideoRendering.h"
 #import <AVFoundation/AVAssetTrack.h>
 #import <JavaScriptCore/TypedArrayInlines.h>

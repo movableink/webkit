@@ -53,7 +53,6 @@
 #import "VideoLayerManagerObjC.h"
 #import "VideoMediaSampleRenderer.h"
 #import "VideoTrackPrivateWebM.h"
-#import "WebCoreDecompressionSession.h"
 #import "WebMResourceClient.h"
 #import "WebSampleBufferVideoRendering.h"
 #import <AVFoundation/AVFoundation.h>

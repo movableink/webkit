@@ -71,7 +71,6 @@ class VideoFrame;
 class VideoMediaSampleRenderer;
 class VideoLayerManagerObjC;
 class VideoTrackPrivateWebM;
-class WebCoreDecompressionSession;
 
 class MediaPlayerPrivateWebM
     : public MediaPlayerPrivateInterface
