@@ -30,6 +30,7 @@
 @class NSString;
 
 enum {
+    DOM_UNKNOWN_RULE = 0,
     DOM_STYLE_RULE = 1,
     DOM_CHARSET_RULE = 2,
     DOM_IMPORT_RULE = 3,
