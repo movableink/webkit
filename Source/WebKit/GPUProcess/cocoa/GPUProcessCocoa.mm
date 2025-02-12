@@ -135,6 +135,7 @@ void GPUProcess::platformInitializeGPUProcess(GPUProcessCreationParameters& para
         setenv("MTL_SHADER_VALIDATION", "1", 1);
         setenv("MTL_SHADER_VALIDATION_ABORT_ON_FAULT", "1", 1);
         setenv("MTL_SHADER_VALIDATION_REPORT_TO_STDERR", "1", 1);
+        setenv("MTL_SHADER_VALIDATION_GPUOPT_ENABLE_RUNTIME_STACKTRACE", "0", 1);
     }
 
 #if USE(SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS) && USE(EXTENSIONKIT)
