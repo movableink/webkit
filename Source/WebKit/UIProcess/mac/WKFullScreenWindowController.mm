@@ -250,7 +250,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     _page->startDeferringResizeEvents();
     _page->startDeferringScrollEvents();
-    [self _manager]->saveScrollPosition();
     _savedObscuredContentInsets = _page->obscuredContentInsets();
     _page->setObscuredContentInsets({ });
     [[self window] setFrame:screenFrame display:NO];
@@ -368,7 +367,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [[_webView window] makeKeyAndOrderFront:self];
 
         _page->scalePageRelativeToScrollPosition(_savedScale, { });
-        [self _manager]->restoreScrollPosition();
         _page->setObscuredContentInsets(_savedObscuredContentInsets);
         [self _manager]->setAnimatingFullScreen(false);
         [self _manager]->didExitFullScreen();
@@ -544,7 +542,6 @@ static RetainPtr<CGImageRef> takeWindowSnapshot(CGSWindowID windowID, bool captu
     [self _manager]->setAnimatingFullScreen(false);
     [self _manager]->didExitFullScreen();
     _page->scalePageRelativeToScrollPosition(_savedScale, { });
-    [self _manager]->restoreScrollPosition();
     _page->setObscuredContentInsets(_savedObscuredContentInsets);
     _page->flushDeferredResizeEvents();
     _page->flushDeferredScrollEvents();

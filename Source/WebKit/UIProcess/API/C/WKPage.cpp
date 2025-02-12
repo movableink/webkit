@@ -1274,24 +1274,6 @@ void WKPageRequestExitFullScreen(WKPageRef pageRef)
 #endif
 }
 
-void WKPageSaveScrollPositionForFullScreen(WKPageRef pageRef)
-{
-    CRASH_IF_SUSPENDED;
-#if ENABLE(FULLSCREEN_API)
-    if (RefPtr manager = toImpl(pageRef)->fullScreenManager())
-        manager->saveScrollPosition();
-#endif
-}
-
-void WKPageRestoreScrollPositionAfterFullScreen(WKPageRef pageRef)
-{
-    CRASH_IF_SUSPENDED;
-#if ENABLE(FULLSCREEN_API)
-    if (RefPtr manager = toImpl(pageRef)->fullScreenManager())
-        manager->restoreScrollPosition();
-#endif
-}
-
 void WKPageSetPageFormClient(WKPageRef pageRef, const WKPageFormClientBase* wkClient)
 {
     CRASH_IF_SUSPENDED;

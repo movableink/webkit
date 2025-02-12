@@ -301,9 +301,11 @@ void WebFullScreenManager::enterFullScreenForElement(WebCore::Element& element, 
 
     m_page->prepareToEnterElementFullScreen();
     if (mode != WebCore::HTMLMediaElementEnums::VideoFullscreenModeInWindow) {
-        m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::EnterFullScreen(m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), WTFMove(mediaDetails)), [page = m_page] (bool success) {
-            if (success)
-                page->protectedFullscreenManager()->willEnterFullScreen();
+        m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::EnterFullScreen(m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), WTFMove(mediaDetails)), [this, protectedThis = Ref { *this }] (bool success) {
+            if (success) {
+                m_scrollPosition = m_page->corePage()->mainFrame().virtualView()->scrollPosition();
+                m_page->protectedFullscreenManager()->willEnterFullScreen();
+            }
         });
     }
 
@@ -506,6 +508,12 @@ void WebFullScreenManager::didExitFullScreen()
     }
 
     clearElement();
+
+    if (RefPtr localMainFrame = m_page->corePage()->localMainFrame()) {
+        // Make sure overflow: hidden is unapplied from the root element before restoring.
+        localMainFrame->view()->forceLayout();
+        localMainFrame->view()->setScrollPosition(m_scrollPosition);
+    }
 }
 
 void WebFullScreenManager::setAnimatingFullScreen(bool animating)
@@ -566,20 +574,6 @@ void WebFullScreenManager::close()
     m_page->closeFullScreen();
     invalidate();
     m_closing = false;
-}
-
-void WebFullScreenManager::saveScrollPosition()
-{
-    m_scrollPosition = m_page->corePage()->mainFrame().virtualView()->scrollPosition();
-}
-
-void WebFullScreenManager::restoreScrollPosition()
-{
-    if (RefPtr localMainFrame = m_page->corePage()->localMainFrame()) {
-        // Make sure overflow: hidden is unapplied from the root element before restoring.
-        localMainFrame->view()->forceLayout();
-        localMainFrame->view()->setScrollPosition(m_scrollPosition);
-    }
 }
 
 void WebFullScreenManager::setFullscreenInsets(const WebCore::FloatBoxExtent& insets)

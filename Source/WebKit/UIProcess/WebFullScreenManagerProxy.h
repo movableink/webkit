@@ -119,8 +119,6 @@ public:
     void setAnimatingFullScreen(bool);
     void requestRestoreFullScreen(CompletionHandler<void(bool)>&&);
     void requestExitFullScreen();
-    void saveScrollPosition();
-    void restoreScrollPosition();
     void setFullscreenInsets(const WebCore::FloatBoxExtent&);
     void setFullscreenAutoHideDuration(Seconds);
     void closeWithCallback(CompletionHandler<void()>&&);

@@ -233,8 +233,6 @@ WK_EXPORT void WKPageSetFullScreenClientForTesting(WKPageRef page, const WKPageF
 WK_EXPORT void WKPageDidEnterFullScreen(WKPageRef pageRef);
 WK_EXPORT void WKPageWillExitFullScreen(WKPageRef pageRef);
 WK_EXPORT void WKPageDidExitFullScreen(WKPageRef pageRef);
-WK_EXPORT void WKPageSaveScrollPositionForFullScreen(WKPageRef pageRef);
-WK_EXPORT void WKPageRestoreScrollPositionAfterFullScreen(WKPageRef pageRef);
 WK_EXPORT void WKPageRequestExitFullScreen(WKPageRef pageRef);
 
 // A client can implement either a navigation client or loader and policy clients, but never both.

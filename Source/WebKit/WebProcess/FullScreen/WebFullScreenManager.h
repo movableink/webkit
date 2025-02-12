@@ -77,9 +77,6 @@ public:
     void willExitFullScreen();
     void didExitFullScreen();
 
-    void saveScrollPosition();
-    void restoreScrollPosition();
-
     WebCore::Element* element();
 
     void videoControlsManagerDidChange();

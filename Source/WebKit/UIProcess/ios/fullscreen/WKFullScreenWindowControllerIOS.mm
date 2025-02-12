@@ -1039,8 +1039,6 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     [_fullscreenViewController.get().view addGestureRecognizer:_interactivePanDismissGestureRecognizer.get()];
 #endif // ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
 
-    manager->saveScrollPosition();
-
     page->setSuppressVisibilityUpdates(true);
     page->startDeferringResizeEvents();
     page->startDeferringScrollEvents();
@@ -1420,7 +1418,6 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     [self _reinsertWebViewUnderPlaceholder];
 
     if (auto* manager = self._manager) {
-        manager->restoreScrollPosition();
         manager->setAnimatingFullScreen(false);
         manager->didExitFullScreen();
     }
@@ -1646,7 +1643,6 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
         manager->requestExitFullScreen();
         manager->setAnimatingFullScreen(true);
         manager->willExitFullScreen();
-        manager->restoreScrollPosition();
         manager->setAnimatingFullScreen(false);
         manager->didExitFullScreen();
     }

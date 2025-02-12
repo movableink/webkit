@@ -190,16 +190,6 @@ void WebFullScreenManagerProxy::requestExitFullScreen()
     sendToWebProcess(Messages::WebFullScreenManager::RequestExitFullScreen());
 }
 
-void WebFullScreenManagerProxy::saveScrollPosition()
-{
-    sendToWebProcess(Messages::WebFullScreenManager::SaveScrollPosition());
-}
-
-void WebFullScreenManagerProxy::restoreScrollPosition()
-{
-    sendToWebProcess(Messages::WebFullScreenManager::RestoreScrollPosition());
-}
-
 void WebFullScreenManagerProxy::setFullscreenInsets(const WebCore::FloatBoxExtent& insets)
 {
     sendToWebProcess(Messages::WebFullScreenManager::SetFullscreenInsets(insets));

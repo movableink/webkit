@@ -460,8 +460,6 @@ bool TestController::willEnterFullScreen(WKPageRef page)
 {
     if (m_dumpFullScreenCallbacks)
         protectedCurrentInvocation()->outputText("supportsFullScreen() == true\nenterFullScreenForElement()\n"_s);
-
-    WKPageSaveScrollPositionForFullScreen(page);
     return true;
 }
 
@@ -530,7 +528,6 @@ void TestController::beganExitFullScreen(WKPageRef page, WKRect initialFrame, WK
 void TestController::finishFullscreenExit(WKPageRef page)
 {
     WKPageDidExitFullScreen(page);
-    WKPageRestoreScrollPositionAfterFullScreen(page);
 }
 
 void TestController::requestExitFullscreenFromUIProcess(WKPageRef page)

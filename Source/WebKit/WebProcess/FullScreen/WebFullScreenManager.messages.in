@@ -32,8 +32,6 @@ messages -> WebFullScreenManager {
     WillExitFullScreen()
     DidExitFullScreen()
     SetAnimatingFullScreen(bool animating)
-    SaveScrollPosition()
-    RestoreScrollPosition()
     SetFullscreenInsets(WebCore::FloatBoxExtent insets)
     SetFullscreenAutoHideDuration(Seconds duration)
 }
