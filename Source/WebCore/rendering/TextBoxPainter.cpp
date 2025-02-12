@@ -600,7 +600,7 @@ static inline bool isDecoratingBoxForBackground(const InlineIterator::InlineBox&
         || (inlineBox.isRootInlineBox() && styleToUse.textDecorationsInEffect().containsAny({ TextDecorationLine::Underline, TextDecorationLine::Overline }));
 }
 
-void TextBoxPainter::collectDecoratingBoxesForTextBox(DecoratingBoxList& decoratingBoxList, const InlineIterator::TextBoxIterator& textBox, FloatPoint textBoxLocation, const TextDecorationPainter::Styles& overrideDecorationStyle)
+void TextBoxPainter::collectDecoratingBoxesForBackgroundPainting(DecoratingBoxList& decoratingBoxList, const InlineIterator::TextBoxIterator& textBox, FloatPoint textBoxLocation, const TextDecorationPainter::Styles& overrideDecorationStyle)
 {
     auto ancestorInlineBox = textBox->parentInlineBox();
     if (!ancestorInlineBox) {
@@ -662,7 +662,7 @@ void TextBoxPainter::paintBackgroundDecorations(TextDecorationPainter& decoratio
 
     auto textBox = makeIterator();
     auto decoratingBoxList = DecoratingBoxList { };
-    collectDecoratingBoxesForTextBox(decoratingBoxList, textBox, textBoxPaintRect.location(), markedText.style.textDecorationStyles);
+    collectDecoratingBoxesForBackgroundPainting(decoratingBoxList, textBox, textBoxPaintRect.location(), markedText.style.textDecorationStyles);
 
     for (auto& decoratingBox : makeReversedRange(decoratingBoxList)) {
         auto computedTextDecorationType = WebCore::computedTextDecorationType(decoratingBox.style, decoratingBox.textDecorationStyles);
@@ -705,10 +705,20 @@ void TextBoxPainter::paintBackgroundDecorations(TextDecorationPainter& decoratio
         m_paintInfo.context().concatCTM(rotation(m_paintRect, RotationDirection::Counterclockwise));
 }
 
+static const RenderStyle& decoratingBoxStyle(const InlineIterator::TextBoxIterator& textBox)
+{
+    if (auto parentInlineBox = textBox->parentInlineBox())
+        return parentInlineBox->style();
+    ASSERT_NOT_REACHED();
+    return textBox->style();
+}
+
 void TextBoxPainter::paintForegroundDecorations(TextDecorationPainter& decorationPainter, const StyledMarkedText& markedText, const FloatRect& textBoxPaintRect)
 {
+    auto textBox = makeIterator();
+    auto& styleForDecoration = decoratingBoxStyle(textBox);
     auto computedTextDecorationType = [&] {
-        auto textDecorations = m_style.textDecorationsInEffect();
+        auto textDecorations = styleForDecoration.textDecorationsInEffect();
         textDecorations.add(TextDecorationPainter::textDecorationsInEffectForStyle(markedText.style.textDecorationStyles));
         return textDecorations;
     }();
@@ -720,13 +730,13 @@ void TextBoxPainter::paintForegroundDecorations(TextDecorationPainter& decoratio
         m_paintInfo.context().concatCTM(rotation(m_paintRect, RotationDirection::Clockwise));
 
     auto deviceScaleFactor = m_document.deviceScaleFactor();
-    auto textDecorationThickness = computedTextDecorationThickness(m_style, deviceScaleFactor);
-    auto linethroughCenter = computedLinethroughCenter(m_style, textDecorationThickness, computedAutoTextDecorationThickness(m_style, deviceScaleFactor));
+    auto textDecorationThickness = computedTextDecorationThickness(styleForDecoration, deviceScaleFactor);
+    auto linethroughCenter = computedLinethroughCenter(styleForDecoration, textDecorationThickness, computedAutoTextDecorationThickness(styleForDecoration, deviceScaleFactor));
     decorationPainter.paintForegroundDecorations({ textBoxPaintRect.location()
         , textBoxPaintRect.width()
         , textDecorationThickness
         , linethroughCenter
-        , wavyStrokeParameters(m_style.computedFontSize()) }, markedText.style.textDecorationStyles);
+        , wavyStrokeParameters(styleForDecoration.computedFontSize()) }, markedText.style.textDecorationStyles);
 
     if (m_isCombinedText)
         m_paintInfo.context().concatCTM(rotation(m_paintRect, RotationDirection::Counterclockwise));
