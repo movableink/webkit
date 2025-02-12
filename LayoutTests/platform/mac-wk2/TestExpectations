@@ -1962,3 +1962,10 @@ webkit.org/b/287122 [ Ventura+ ] imported/w3c/web-platform-tests/html/capability
 
 # rdar://141631699 ([ macOS wk2 arm64 ] Multiple fast/css/webkit-named-image/apple-pay-logo-white/* tests are failing on EWS.)
 [ arm64 ] fast/css/webkit-named-image/apple-pay-logo-white [ Skip ]
+
+# webkit.org/b/287509 REGRESSION:(289950@main?)[macOS]: http/tests/webarchive tests are a flaky failures with image failures(failure in EWS)
+http/tests/webarchive/cross-origin-stylesheet-crash.html [ Pass ImageOnlyFailure ]
+http/tests/webarchive/test-css-url-encoding-shift-jis.html [ Pass ImageOnlyFailure ]
+http/tests/webarchive/test-css-url-encoding-utf-8.html [ Pass ImageOnlyFailure ]
+http/tests/webarchive/test-css-url-encoding.html [ Pass ImageOnlyFailure ]
+http/tests/webarchive/test-preload-resources.html [ Pass ImageOnlyFailure ]
