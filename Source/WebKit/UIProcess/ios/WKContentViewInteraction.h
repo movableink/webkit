@@ -445,6 +445,14 @@ struct ImageAnalysisContextMenuActionData {
     RetainPtr<WKSTextAnimationManager> _textAnimationManager;
 #endif
 
+    BOOL _isInSelectionInteraction;
+    struct LastSelectionTouch {
+        CGPoint point;
+        BOOL baseIsStart;
+        WKBESelectionFlags flags;
+    };
+    LastSelectionTouch _lastSelectionTouch;
+
     RefPtr<WebKit::SmartMagnificationController> _smartMagnificationController;
 
     WeakObjCPtr<id <UITextInputDelegate>> _inputDelegate;
@@ -712,6 +720,8 @@ struct ImageAnalysisContextMenuActionData {
 
 - (void)cancelPointersForGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer;
 - (std::optional<unsigned>)activeTouchIdentifierForGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer;
+
+- (void)updateSelection;
 
 #define DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW(_action) \
     - (void)_action ## ForWebView:(id)sender;

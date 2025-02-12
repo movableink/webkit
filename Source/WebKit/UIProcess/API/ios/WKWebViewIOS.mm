@@ -2315,6 +2315,8 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
 
     if (WebKit::RemoteLayerTreeScrollingPerformanceData* scrollPerfData = _page->scrollingPerformanceData())
         scrollPerfData->didScroll([self visibleRectInViewCoordinates]);
+
+    [_contentView updateSelection];
 }
 
 - (void)scrollViewDidZoom:(UIScrollView *)scrollView
