@@ -148,6 +148,9 @@ FloatRect AXIsolatedObject::primaryScreenRect() const
 
 FloatRect AXIsolatedObject::convertRectToPlatformSpace(const FloatRect& rect, AccessibilityConversionSpace space) const
 {
+    if (space == AccessibilityConversionSpace::Screen)
+        return convertFrameToSpace(rect, space);
+
     return Accessibility::retrieveValueFromMainThread<FloatRect>([&rect, &space, this] () -> FloatRect {
         if (auto* axObject = associatedAXObject())
             return axObject->convertRectToPlatformSpace(rect, space);

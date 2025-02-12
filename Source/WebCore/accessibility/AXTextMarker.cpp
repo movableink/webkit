@@ -667,6 +667,61 @@ AXTextMarkerRange AXTextMarker::rangeWithSameStyle() const
     return { findMarkerWithDifferentStyle(AXDirection::Previous), findMarkerWithDifferentStyle(AXDirection::Next) };
 }
 
+static FloatRect viewportRelativeFrameFromRuns(Ref<AXIsolatedObject> object, unsigned start, unsigned end)
+{
+    const auto* runs = object->textRuns();
+    auto relativeFrame = object->relativeFrame();
+    if (!start && end == runs->totalLength()) {
+        // If the caller wants the entirety of this object's text, we don't need to to do any estimating,
+        // and can just return the relative frame.
+        return relativeFrame;
+    }
+
+    float estimatedLineHeight = relativeFrame.height() / runs->size();
+    auto runsLocalRect = runs->localRect(start, end, estimatedLineHeight);
+    // The rect we got above is a "local" rect, relative to nothing else. Move it to be
+    // anchored at this object's relative frame.
+    runsLocalRect.move(relativeFrame.x(), relativeFrame.y());
+    return runsLocalRect;
+}
+
+static FloatRect viewportRelativeFrameFromRuns(Ref<AXIsolatedObject> object, unsigned offset)
+{
+    const auto* runs = object->textRuns();
+    // Get the bounds starting from |offset| to the end of the runs.
+    return viewportRelativeFrameFromRuns(object, offset, runs->totalLength());
+}
+
+FloatRect AXTextMarkerRange::viewportRelativeFrame() const
+{
+    RELEASE_ASSERT(!isMainThread());
+
+    auto start = m_start.toTextRunMarker();
+    if (!start.isValid())
+        return { };
+    auto end = m_end.toTextRunMarker();
+    if (!end.isValid())
+        return { };
+
+    if (*start.objectID() == *end.objectID()) {
+        // The range is self-contained.
+        return viewportRelativeFrameFromRuns(*start.isolatedObject(), start.offset(), end.offset());
+    }
+
+    // The range spans multiple objects, so we'll need to traverse objects with text runs
+    // from start to end and accumulate the final bounds.
+    FloatRect result = viewportRelativeFrameFromRuns(*start.isolatedObject(), start.offset());
+
+    RefPtr current = start.isolatedObject();
+    while (current && current->objectID() != *end.objectID()) {
+        result.unite(viewportRelativeFrameFromRuns(*current, /* offset */ 0));
+        current = findObjectWithRuns(*current, AXDirection::Next, /* stopAtID */ *end.objectID());
+    }
+    result.unite(viewportRelativeFrameFromRuns(*end.isolatedObject(), /* start */ 0, /* end */ end.offset()));
+
+    return result;
+}
+
 String AXTextMarkerRange::toString() const
 {
     RELEASE_ASSERT(!isMainThread());

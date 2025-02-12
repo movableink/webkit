@@ -27,6 +27,7 @@
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
 
+#include "FloatRect.h"
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
@@ -83,11 +84,19 @@ struct AXTextRuns {
     void* containingBlock { nullptr };
     Vector<AXTextRun> runs;
     bool containsOnlyASCII { true };
+    // A rough estimate of the size of the characters in these runs. This is per-AXTextRuns because
+    // AXTextRuns are associated with a single RenderText, which has the same style for all its runs.
+    // This is still an estimate, as characters can have vastly different sizes. We use this to serve
+    // APIs like AXBoundsForTextMarkerRangeAttribute quickly off the main-thread, and get more accurate
+    // sizes on-demand for runs that assistive technologies are actually requesting these APIs from.
+    static constexpr uint8_t defaultEstimatedCharacterWidth = 12;
+    uint8_t estimatedCharacterWidth { defaultEstimatedCharacterWidth };
 
     AXTextRuns() = default;
-    AXTextRuns(RenderBlock* containingBlock, Vector<AXTextRun>&& textRuns)
+    AXTextRuns(RenderBlock* containingBlock, Vector<AXTextRun>&& textRuns, uint8_t estimatedCharacterWidth)
         : containingBlock(containingBlock)
         , runs(WTFMove(textRuns))
+        , estimatedCharacterWidth(estimatedCharacterWidth)
     {
         for (const auto& run : runs) {
             if (!run.text.containsOnlyASCII()) {
@@ -138,6 +147,15 @@ struct AXTextRuns {
     }
     String substring(unsigned start, unsigned length = StringImpl::MaxLength) const;
     String toString() const { return substring(0); }
+
+    // Returns a "local" rect representing the range specified by |start| and |end|.
+    // "Local" means the rect is relative only to the top-left of this AXTextRuns instance.
+    // For example, consider these runs where "|" represents |start| and |end|:
+    //   aaaa
+    //   b|bb|b
+    // The local rect would be:
+    //   {x: width_of_single_b, y: |lineHeight| * 1, width: width_of_two_b, height: |lineHeight * 1|}
+    FloatRect localRect(unsigned start, unsigned end, float lineHeight) const;
 };
 
 } // namespace WebCore

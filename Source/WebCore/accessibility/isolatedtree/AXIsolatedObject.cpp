@@ -1400,20 +1400,7 @@ FloatPoint AXIsolatedObject::screenRelativePosition() const
 {
     if (auto point = optionalAttributeValue<FloatPoint>(AXProperty::ScreenRelativePosition))
         return *point;
-
-    if (RefPtr rootNode = tree()->rootNode()) {
-        auto rootPoint = rootNode->propertyValue<FloatPoint>(AXProperty::ScreenRelativePosition);
-        auto rootRelativeFrame = rootNode->relativeFrame();
-        auto relativeFrame = this->relativeFrame();
-        // Relative frames are top-left origin, but screen relative positions are bottom-left origin.
-        return { rootPoint.x() + relativeFrame.x(), rootPoint.y() + (rootRelativeFrame.maxY() - relativeFrame.maxY()) };
-    }
-
-    return Accessibility::retrieveValueFromMainThread<FloatPoint>([&, this] () -> FloatPoint {
-        if (auto* axObject = associatedAXObject())
-            return axObject->screenRelativePosition();
-        return { };
-    });
+    return convertFrameToSpace(relativeFrame(), AccessibilityConversionSpace::Screen).location();
 }
 
 FloatRect AXIsolatedObject::relativeFrame() const
@@ -1502,6 +1489,16 @@ FloatRect AXIsolatedObject::relativeFrameFromChildren() const
 
 FloatRect AXIsolatedObject::convertFrameToSpace(const FloatRect& rect, AccessibilityConversionSpace space) const
 {
+    if (space == AccessibilityConversionSpace::Screen) {
+        if (RefPtr rootNode = tree()->rootNode()) {
+            auto rootPoint = rootNode->propertyValue<FloatPoint>(AXProperty::ScreenRelativePosition);
+            auto rootRelativeFrame = rootNode->relativeFrame();
+            // Relative frames are top-left origin, but screen relative positions are bottom-left origin.
+            FloatPoint position = { rootPoint.x() + rect.x(), rootPoint.y() + (rootRelativeFrame.maxY() - rect.maxY()) };
+            return { WTFMove(position), rect.size() };
+        }
+    }
+
     return Accessibility::retrieveValueFromMainThread<FloatRect>([&rect, &space, this] () -> FloatRect {
         if (auto* axObject = associatedAXObject())
             return axObject->convertFrameToSpace(rect, space);

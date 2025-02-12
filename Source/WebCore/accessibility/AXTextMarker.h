@@ -317,7 +317,7 @@ public:
     AXTextMarkerRange paragraphRange() const;
     // Returns a range pointing to the start and end positions that have the same text styles as `this`.
     AXTextMarkerRange rangeWithSameStyle() const;
-    // Given a character offset relative to this marker, find the next marker the offset points to.
+    // Starting from this marker, return a text marker that is `offset` characters away.
     AXTextMarker nextMarkerFromOffset(unsigned) const;
     // Returns the number of intermediate text markers between this and the root.
     unsigned offsetFromRoot() const;
@@ -407,6 +407,9 @@ public:
 #if ENABLE(AX_THREAD_TEXT_APIS)
     // Traverses from m_start to m_end, collecting all text along the way.
     String toString() const;
+    // Returns the bounds (frame) of the text in this range relative to the viewport.
+    // Analagous to AXCoreObject::relativeFrame().
+    FloatRect viewportRelativeFrame() const;
 #if PLATFORM(COCOA)
     RetainPtr<NSAttributedString> toAttributedString(AXCoreObject::SpellCheck) const;
 #endif // PLATFORM(COCOA)

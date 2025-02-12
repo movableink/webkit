@@ -68,6 +68,7 @@
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
 #include "Image.h"
+#include "InlineIteratorTextBoxInlines.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGShape.h"
 #include "LocalFrame.h"
@@ -1402,18 +1403,18 @@ CharacterRange AccessibilityRenderObject::selectedTextRange() const
 #if ENABLE(AX_THREAD_TEXT_APIS)
 AXTextRuns AccessibilityRenderObject::textRuns()
 {
-    if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer())) {
+    CheckedPtr renderer = this->renderer();
+    if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer.get())) {
         auto box = InlineIterator::boxFor(*renderLineBreak);
-        return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy()) } };
+        return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy()) }, 12 };
     }
 
     if (is<HTMLImageElement>(node()) || is<HTMLMediaElement>(node())) {
-        auto* renderer = this->renderer();
         auto* containingBlock = renderer ? renderer->containingBlock() : nullptr;
-        return containingBlock ? AXTextRuns(containingBlock, { AXTextRun(0, String(span(objectReplacementCharacter))) }) : AXTextRuns();
+        return containingBlock ? AXTextRuns(containingBlock, { AXTextRun(0, String(span(objectReplacementCharacter))) }, 255) : AXTextRuns();
     }
 
-    WeakPtr renderText = dynamicDowncast<RenderText>(renderer());
+    WeakPtr renderText = dynamicDowncast<RenderText>(renderer.get());
     if (!renderText)
         return { };
 
@@ -1421,6 +1422,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     // other text in the line, and AccessibilityRenderObject::computeIsIgnored ignores the
     // first-letter RenderText, meaning we can't recover it later by combining text across AX objects.
 
+    std::optional<uint8_t> estimatedCharacterWidth;
     Vector<AXTextRun> runs;
     StringBuilder lineString;
     // Appends text to the current lineString, collapsing whitespace as necessary (similar to how TextIterator::handleTextRun() does).
@@ -1428,6 +1430,15 @@ AXTextRuns AccessibilityRenderObject::textRuns()
         auto text = textBox->originalText();
         if (text.isEmpty())
             return;
+
+        if (!estimatedCharacterWidth) {
+            auto textRun = textBox->textRun(InlineIterator::TextRunMode::Editing);
+            unsigned end = textRun.length() - 1;
+            float width = renderText->style().fontCascade().widthOfTextRange(textRun, 0, end);
+            float perCharacterWidth = width / end + 1;
+            estimatedCharacterWidth = std::min(static_cast<unsigned>(std::numeric_limits<uint8_t>::max()), static_cast<unsigned>(std::ceil(perCharacterWidth)));
+        }
+
         bool collapseTabs = textBox->style().collapseWhiteSpace();
         bool collapseNewlines = !textBox->style().preserveNewline();
         if (!collapseTabs && !collapseNewlines) {
@@ -1463,7 +1474,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
 
     if (!lineString.isEmpty())
         runs.append({ currentLineIndex, lineString.toString().isolatedCopy() });
-    return { renderText->containingBlock(), WTFMove(runs) };
+    return { renderText->containingBlock(), WTFMove(runs), estimatedCharacterWidth.value_or(AXTextRuns::defaultEstimatedCharacterWidth) };
 }
 
 AXTextRunLineID AccessibilityRenderObject::listMarkerLineID() const

@@ -3245,6 +3245,16 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     }
 
     if ([attribute isEqualToString:NSAccessibilityBoundsForTextMarkerRangeAttribute]) {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+        if (AXObjectCache::useAXThreadTextApis()) {
+            AXTextMarkerRange markerRange { textMarkerRange };
+            if (!markerRange)
+                return [NSValue valueWithRect:CGRectZero];
+
+            return [NSValue valueWithRect:[self convertRectToSpace:markerRange.viewportRelativeFrame() space:AccessibilityConversionSpace::Screen]];
+        }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
         NSRect rect = Accessibility::retrieveValueFromMainThread<NSRect>([textMarkerRange = retainPtr(textMarkerRange), protectedSelf = retainPtr(self)] () -> NSRect {
             auto* backingObject = protectedSelf.get().axBackingObject;
             if (!backingObject)
@@ -3262,6 +3272,18 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     }
 
     if ([attribute isEqualToString:NSAccessibilityBoundsForRangeParameterizedAttribute]) {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+        if (AXObjectCache::useAXThreadTextApis()) {
+            auto markerToLocation = AXTextMarker { *backingObject, 0 }.nextMarkerFromOffset(range.location);
+            auto markerToRangeEnd = markerToLocation.nextMarkerFromOffset(range.location + range.length);
+            if (!markerToRangeEnd.isValid())
+                return [NSValue valueWithRect:CGRectZero];
+
+            auto bounds = AXTextMarkerRange { WTFMove(markerToLocation), WTFMove(markerToRangeEnd) }.viewportRelativeFrame();
+            return [NSValue valueWithRect:[self convertRectToSpace:bounds space:AccessibilityConversionSpace::Screen]];
+        }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
         NSRect rect = Accessibility::retrieveValueFromMainThread<NSRect>([&range, protectedSelf = retainPtr(self)] () -> NSRect {
             auto* backingObject = protectedSelf.get().axBackingObject;
             if (!backingObject)

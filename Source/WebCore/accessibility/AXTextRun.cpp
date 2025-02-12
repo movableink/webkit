@@ -90,5 +90,99 @@ String AXTextRuns::substring(unsigned start, unsigned length) const
     return result.toString();
 }
 
+FloatRect AXTextRuns::localRect(unsigned start, unsigned end, float lineHeight) const
+{
+    unsigned smallerOffset = start;
+    unsigned largerOffset = end;
+    if (smallerOffset > largerOffset)
+        std::swap(smallerOffset, largerOffset);
+
+    unsigned runIndexOfSmallerOffset = indexForOffset(smallerOffset);
+    unsigned runIndexOfLargerOffset = indexForOffset(largerOffset);
+
+    // FIXME: Probably want a special case for hard linebreaks (<br>s). Investigate how the main-thread does this.
+    // FIXME: We'll need to flip the result rect based on writing mode.
+
+    unsigned x = 0;
+    unsigned maxWidth = 0;
+    float measuredHeight = 0.0f;
+    float heightBeforeRuns = 0.0f;
+    for (unsigned i = 0; i <= runIndexOfLargerOffset; i++) {
+        if (i < runIndexOfSmallerOffset) {
+            // Each text run represents a line, so count up the height of lines prior to our range start.
+            heightBeforeRuns += lineHeight;
+        } else {
+            const auto& run = at(i);
+            unsigned measuredWidth = 0;
+            if (i == runIndexOfSmallerOffset) {
+                unsigned offsetOfFirstCharacterInRun = !i ? 0 : runLengthSumTo(i - 1);
+                RELEASE_ASSERT(smallerOffset >= offsetOfFirstCharacterInRun);
+                // Measure the characters in this run (accomplished by smallerOffset - offsetOfFirstCharacterInRun)
+                // prior to the offset.
+                unsigned widthPriorToStart = (smallerOffset - offsetOfFirstCharacterInRun) * estimatedCharacterWidth;
+                unsigned widthAfterEnd = runIndexOfSmallerOffset == runIndexOfLargerOffset
+                    // aa|aaa|aa
+                    // length 7, smallerOffset = 2, largerOffset = 5 — measure the last two "a" characters.
+                    ? (runLengthSumTo(i) - largerOffset) * estimatedCharacterWidth
+                    // The offsets pointed into different runs, so the width of this run extends to the end.
+                    : 0;
+                unsigned fullRunWidth = run.text.length() * estimatedCharacterWidth;
+
+                RELEASE_ASSERT(fullRunWidth >= (widthPriorToStart + widthAfterEnd));
+                measuredWidth = fullRunWidth - widthPriorToStart - widthAfterEnd;
+                if (!measuredWidth) {
+                    bool isCollapsedRange = (runIndexOfSmallerOffset == runIndexOfLargerOffset && smallerOffset == largerOffset);
+
+                    if (isCollapsedRange) {
+                        // If this is a collapsed range (start.offset == end.offset), we want to return the width of a cursor.
+                        // Use 2px for this, matching CaretRectComputation::caretWidth. This overall behavior for collapsed
+                        // ranges matches that of CaretRectComputation::computeLocalCaretRect, which is downstream of
+                        // the main-thread-text-implementation equivalent of this function, AXObjectCache::boundsForRange.
+                        measuredWidth = 2;
+                    } else {
+                        // There was no measured width in this run, so we should count this as a line before the actual rect starts.
+                        heightBeforeRuns += lineHeight;
+                    }
+                }
+
+                if (measuredWidth)
+                    x = widthPriorToStart;
+            } else if (i == runIndexOfLargerOffset) {
+                // We're measuring the end of the range, so measure from the first character in the run up to largerOffset.
+                unsigned offsetOfFirstCharacterInRun = !i ? 0 : runLengthSumTo(i - 1);
+                RELEASE_ASSERT(largerOffset >= offsetOfFirstCharacterInRun);
+                measuredWidth = (largerOffset - offsetOfFirstCharacterInRun) * estimatedCharacterWidth;
+
+                if (measuredWidth) {
+                    // Because our rect now includes the beginning of a run, set |x| to be 0, indicating the rect is not
+                    // offset from its container.
+                    x = 0;
+                }
+            } else {
+                // We're in some run between runIndexOfSmallerOffset and runIndexOfLargerOffset, so measure the whole run.
+                // For example, this could be the "bbb" runs:
+                // a|aa
+                // bbb
+                // cc|c
+                measuredWidth = run.text.length() * estimatedCharacterWidth;
+                if (measuredWidth) {
+                    // Since we are measuring from the beginning of a run, x should be 0.
+                    x = 0;
+                }
+            }
+
+            if (measuredWidth) {
+                // This run is within the range specified by |start| and |end|, so if we measured a width for it,
+                // also add to the height. It's important to only do this if we actually measured a width, as an
+                // offset pointing past the last character in a run will not add any width and thus should not
+                // contribute any height.
+                measuredHeight += lineHeight;
+            }
+            maxWidth = std::max(maxWidth, measuredWidth);
+        }
+    }
+    return { static_cast<float>(x), heightBeforeRuns, static_cast<float>(maxWidth), measuredHeight };
+}
+
 } // namespace WebCore
 #endif // ENABLE(AX_THREAD_TEXT_APIS)

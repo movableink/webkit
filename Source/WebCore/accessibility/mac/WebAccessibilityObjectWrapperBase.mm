@@ -523,7 +523,7 @@ static void convertPathToScreenSpaceFunction(PathConversionInfo& conversion, con
 
 - (CGRect)convertRectToSpace:(const WebCore::FloatRect&)rect space:(AccessibilityConversionSpace)space
 {
-    RefPtr backingObject = dynamicDowncast<AccessibilityObject>(self.baseUpdateBackingStore);
+    RefPtr<AXCoreObject> backingObject = self.baseUpdateBackingStore;
     if (!backingObject)
         return CGRectZero;
 
