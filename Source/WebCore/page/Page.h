@@ -399,8 +399,6 @@ public:
     void setAutofocusProcessed();
     bool autofocusProcessed() const;
     bool topDocumentHasDocumentClass(DocumentClass) const;
-    void setTopDocumentHasFullscreenElement(bool);
-    WEBCORE_EXPORT bool topDocumentHasFullscreenElement();
 
     bool hasInjectedUserScript();
     WEBCORE_EXPORT void setHasInjectedUserScript();

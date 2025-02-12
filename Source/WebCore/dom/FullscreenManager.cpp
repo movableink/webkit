@@ -362,8 +362,6 @@ static void clearFullscreenFlags(Element& element)
     element.setFullscreenFlag(false);
     if (auto* iframe = dynamicDowncast<HTMLIFrameElement>(element))
         iframe->setIFrameFullscreenFlag(false);
-
-    element.document().fullscreenManager().updatePageFullscreenStatusIfTopDocument();
 }
 
 void FullscreenManager::exitFullscreen(RefPtr<DeferredPromise>&& promise)
@@ -570,8 +568,6 @@ bool FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
             ancestor->removeFromTopLayer();
         ancestor->addToTopLayer();
 
-        ancestor->document().fullscreenManager().updatePageFullscreenStatusIfTopDocument();
-
         queueFullscreenChangeEventForDocument(ancestor->document());
 
         RenderElement::markRendererDirtyAfterTopLayerChange(ancestor->checkedRenderer().get(), containingBlockBeforeStyleResolution.get());
@@ -759,19 +755,6 @@ void FullscreenManager::setAnimatingFullscreen(bool flag)
     if (RefPtr fullscreenElement = this->fullscreenElement())
         emplace(styleInvalidation, *fullscreenElement, { { CSSSelector::PseudoClass::InternalAnimatingFullscreenTransition, flag } });
     m_isAnimatingFullscreen = flag;
-}
-
-void FullscreenManager::updatePageFullscreenStatusIfTopDocument()
-{
-    RefPtr frame = m_document->frame();
-    if (!frame || !frame->isMainFrame())
-        return;
-
-    RefPtr protectedPage = frame->protectedPage();
-    if (!protectedPage)
-        return;
-
-    protectedPage->setTopDocumentHasFullscreenElement(fullscreenElement());
 }
 
 void FullscreenManager::clear()

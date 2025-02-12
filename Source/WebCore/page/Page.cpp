@@ -897,21 +897,6 @@ bool Page::topDocumentHasDocumentClass(DocumentClass documentClass) const
     return m_topDocumentSyncData->documentClasses.contains(documentClass);
 }
 
-void Page::setTopDocumentHasFullscreenElement(bool hasFullscreenElement)
-{
-    if (hasFullscreenElement == m_topDocumentSyncData->hasFullscreenElement)
-        return;
-
-    m_topDocumentSyncData->hasFullscreenElement = hasFullscreenElement;
-    if (settings().siteIsolationEnabled())
-        processSyncClient().broadcastHasFullscreenElementToOtherProcesses(hasFullscreenElement);
-}
-
-bool Page::topDocumentHasFullscreenElement()
-{
-    return m_topDocumentSyncData->hasFullscreenElement;
-}
-
 bool Page::hasInjectedUserScript()
 {
     return m_topDocumentSyncData->hasInjectedUserScript;
@@ -933,7 +918,6 @@ void Page::updateProcessSyncData(const ProcessSyncData& data)
     case ProcessSyncDataType::DocumentClasses:
     case ProcessSyncDataType::DocumentSecurityOrigin:
     case ProcessSyncDataType::DocumentURL:
-    case ProcessSyncDataType::HasFullscreenElement:
     case ProcessSyncDataType::HasInjectedUserScript:
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:

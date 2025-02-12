@@ -93,8 +93,6 @@ public:
     void clear();
     void emptyEventQueue();
 
-    void updatePageFullscreenStatusIfTopDocument();
-
 protected:
     friend class Document;
 

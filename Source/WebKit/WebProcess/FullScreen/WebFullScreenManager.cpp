@@ -548,14 +548,9 @@ void WebFullScreenManager::requestExitFullScreen()
         return;
     }
 
-    RefPtr corePage = m_page->protectedCorePage();
-    if (!corePage) {
-        ALWAYS_LOG(LOGIDENTIFIER, "no page, closing");
-        close();
-        return;
-    }
-
-    if (!corePage->topDocumentHasFullscreenElement()) {
+    RefPtr localMainFrame = m_page->localMainFrame();
+    RefPtr topDocument = localMainFrame ? localMainFrame->document() : nullptr;
+    if (!topDocument || !topDocument->fullscreenManager().fullscreenElement()) {
         ALWAYS_LOG(LOGIDENTIFIER, "top document not in fullscreen, closing");
         close();
         return;

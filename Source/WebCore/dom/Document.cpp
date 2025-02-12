@@ -713,7 +713,6 @@ void Document::populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDa
     // or are populated other ways even on newly constructed documents.
     case ProcessSyncDataType::DocumentSecurityOrigin:
     case ProcessSyncDataType::DocumentURL:
-    case ProcessSyncDataType::HasFullscreenElement:
     case ProcessSyncDataType::HasInjectedUserScript:
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:
