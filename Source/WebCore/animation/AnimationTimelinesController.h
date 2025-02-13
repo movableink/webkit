@@ -88,6 +88,7 @@ public:
     void unregisterNamedTimelinesAssociatedWithElement(const Styleable&);
     void removePendingOperationsForCSSAnimation(const CSSAnimation&);
     void documentDidResolveStyle();
+    void styleableWasRemoved(const Styleable&);
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
     AcceleratedEffectStackUpdater* existingAcceleratedEffectStackUpdater() const { return m_acceleratedEffectStackUpdater.get(); }
@@ -116,6 +117,7 @@ private:
     Vector<TimelineMapAttachOperation> m_pendingAttachOperations;
     Vector<std::pair<TimelineScope, WeakStyleable>> m_timelineScopeEntries;
     UncheckedKeyHashMap<AtomString, Vector<Ref<ScrollTimeline>>> m_nameToTimelineMap;
+    HashSet<Ref<ScrollTimeline>> m_removedTimelines;
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
     std::unique_ptr<AcceleratedEffectStackUpdater> m_acceleratedEffectStackUpdater;

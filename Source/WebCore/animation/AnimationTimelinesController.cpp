@@ -521,6 +521,8 @@ void AnimationTimelinesController::documentDidResolveStyle()
         if (timelines.isEmpty())
             m_nameToTimelineMap.remove(name);
     }
+
+    m_removedTimelines.clear();
 }
 
 void AnimationTimelinesController::registerNamedViewTimeline(const AtomString& name, const Styleable& subject, ScrollAxis axis, ViewTimelineInsets&& insets)
@@ -713,15 +715,37 @@ void AnimationTimelinesController::unregisterNamedTimelinesAssociatedWithElement
 
     for (auto& entry : m_nameToTimelineMap) {
         auto& timelines = entry.value;
-        timelines.removeAllMatching([&] (const auto& timeline) {
-            return originatingElement(timeline) == styleable;
-        });
+        for (size_t i = 0; i < timelines.size(); ++i) {
+            auto& timeline = timelines[i];
+            if (originatingElement(timeline) == styleable) {
+                m_removedTimelines.add(timeline.get());
+                timelines.remove(i);
+                i--;
+            }
+        }
         if (timelines.isEmpty())
             namesToClear.add(entry.key);
     }
 
     for (auto& name : namesToClear)
         m_nameToTimelineMap.remove(name);
+}
+
+void AnimationTimelinesController::styleableWasRemoved(const Styleable& styleable)
+{
+    for (auto& timeline : m_removedTimelines) {
+        if (originatingElement(timeline) != styleable)
+            continue;
+        auto& timelineName = timeline->name();
+        for (auto& animation : timeline->relevantAnimations()) {
+            if (RefPtr cssAnimation = dynamicDowncast<CSSAnimation>(animation.get())) {
+                if (auto owningElement = cssAnimation->owningElement()) {
+                    setTimelineForName(timelineName, *owningElement, *cssAnimation, AllowsDeferral::Yes);
+                    owningElement->element.invalidateStyleForAnimation();
+                }
+            }
+        }
+    }
 }
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)

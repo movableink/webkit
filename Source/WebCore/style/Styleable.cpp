@@ -294,6 +294,8 @@ void Styleable::animationWasRemoved(WebAnimation& animation) const
 void Styleable::elementWasRemoved() const
 {
     cancelStyleOriginatedAnimations();
+    if (CheckedPtr timelinesController = element.protectedDocument()->timelinesController())
+        timelinesController->styleableWasRemoved(*this);
 }
 
 void Styleable::willChangeRenderer() const
