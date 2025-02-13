@@ -3350,7 +3350,7 @@ IGNORE_WARNINGS_END
             if (RefPtr element = fullscreenManager->fullscreenElement()) {
                 SEL selector = @selector(webView:closeFullScreenWithListener:);
                 if ([_private->UIDelegate respondsToSelector:selector]) {
-                    auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:element.get()]);
+                    auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:element.get() completionHandler:nullptr]);
                     CallUIDelegate(self, selector, listener.get());
                 } else if (_private->newFullscreenController && [_private->newFullscreenController isFullScreen])
                     [_private->newFullscreenController close];
@@ -8958,14 +8958,14 @@ FORWARD(toggleUnderline)
     return true;
 }
 
-- (void)_enterFullScreenForElement:(NakedPtr<WebCore::Element>)element
+- (void)_enterFullScreenForElement:(NakedPtr<WebCore::Element>)element completionHandler:(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&)completionHandler
 {
     if (!_private->newFullscreenController)
         _private->newFullscreenController = adoptNS([[WebFullScreenController alloc] init]);
 
     [_private->newFullscreenController setElement:element.get()];
     [_private->newFullscreenController setWebView:self];
-    [_private->newFullscreenController enterFullScreen:[[self window] screen]];
+    [_private->newFullscreenController enterFullScreen:[[self window] screen] completionHandler:WTFMove(completionHandler)];
 }
 
 - (void)_exitFullScreenForElement:(NakedPtr<WebCore::Element>)element

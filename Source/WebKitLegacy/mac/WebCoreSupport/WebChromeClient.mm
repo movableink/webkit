@@ -1048,21 +1048,20 @@ void WebChromeClient::enterFullScreenForElement(Element& element, HTMLMediaEleme
 {
     SEL selector = @selector(webView:enterFullScreenForElement:listener:);
     if ([[m_webView UIDelegate] respondsToSelector:selector]) {
-        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:&element]);
+        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:&element completionHandler:WTFMove(completionHandler)]);
         CallUIDelegate(m_webView, selector, kit(&element), listener.get());
     }
 #if !PLATFORM(IOS_FAMILY)
     else
-        [m_webView _enterFullScreenForElement:&element];
+        [m_webView _enterFullScreenForElement:&element completionHandler:WTFMove(completionHandler)];
 #endif
-    completionHandler({ });
 }
 
 void WebChromeClient::exitFullScreenForElement(Element* element)
 {
     SEL selector = @selector(webView:exitFullScreenForElement:listener:);
     if ([[m_webView UIDelegate] respondsToSelector:selector]) {
-        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:element]);
+        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:element completionHandler:nullptr]);
         CallUIDelegate(m_webView, selector, kit(element), listener.get());
     }
 #if !PLATFORM(IOS_FAMILY)
