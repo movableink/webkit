@@ -336,7 +336,9 @@ private:
 
     Ref<Inspector::FrontendRouter> protectedFrontendRouter() const;
     Ref<Inspector::BackendDispatcher> protectedBackendDispatcher() const;
+#if ENABLE(REMOTE_INSPECTOR)
     Ref<Debuggable> protectedDebuggable() const;
+#endif
 
     WeakPtr<WebProcessPool> m_processPool;
 

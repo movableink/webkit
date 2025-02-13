@@ -2573,10 +2573,12 @@ Ref<Inspector::BackendDispatcher> WebAutomationSession::protectedBackendDispatch
     return m_backendDispatcher;
 }
 
+#if ENABLE(REMOTE_INSPECTOR)
 Ref<WebAutomationSession::Debuggable> WebAutomationSession::protectedDebuggable() const
 {
     return m_debuggable;
 }
+#endif
 
 static String logEntryLevelForMessage(const JSC::MessageType& messageType, const MessageLevel& messageLevel)
 {
