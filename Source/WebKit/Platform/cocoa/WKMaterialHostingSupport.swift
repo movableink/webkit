@@ -21,7 +21,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if !os(visionOS) && canImport(SwiftUI, _version: 7.0.27)
+#if !os(visionOS) && !os(tvOS) && !os(watchOS) && canImport(SwiftUI, _version: 7.0.27)
 
 internal import WebKit_Internal
 
