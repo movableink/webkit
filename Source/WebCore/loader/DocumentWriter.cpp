@@ -295,6 +295,11 @@ TextResourceDecoder& DocumentWriter::decoder()
     return *m_decoder;
 }
 
+Ref<TextResourceDecoder> DocumentWriter::protectedDecoder()
+{
+    return decoder();
+}
+
 void DocumentWriter::reportDataReceived()
 {
     ASSERT(m_decoder);
