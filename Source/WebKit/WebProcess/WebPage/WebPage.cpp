@@ -2365,7 +2365,6 @@ void WebPage::goToBackForwardItem(GoToBackForwardItemParameters&& parameters)
     WebCore::PublicSuffixStore::singleton().addPublicSuffix(parameters.publicSuffix);
 #endif
 
-    ASSERT(!m_pendingNavigationID);
     m_pendingNavigationID = parameters.navigationID;
     m_internals->pendingWebsitePolicies = WTFMove(parameters.websitePolicies);
 
