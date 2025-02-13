@@ -1845,7 +1845,7 @@ void WebViewImpl::updateContentInsetsIfAutomatic()
 
 FloatBoxExtent WebViewImpl::obscuredContentInsets() const
 {
-    return m_page->obscuredContentInsets();
+    return m_page->pendingOrActualObscuredContentInsets();
 }
 
 void WebViewImpl::setObscuredContentInsets(const FloatBoxExtent& insets)

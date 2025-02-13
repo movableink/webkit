@@ -197,6 +197,7 @@ Tests/WebKitCocoa/NoResumeSoundPlayedToTheEndAfterThePageBecomesVisible.mm
 Tests/WebKitCocoa/NotificationAPI.mm
 Tests/WebKitCocoa/NowPlaying.mm
 Tests/WebKitCocoa/NowPlayingControlsTests.mm
+Tests/WebKitCocoa/ObscuredContentInsets.mm
 Tests/WebKitCocoa/ObservedRenderingProgressEventsAfterCrash.mm
 Tests/WebKitCocoa/OpenAndCloseWindow.mm
 Tests/WebKitCocoa/OverrideViewportArguments.mm
@@ -274,7 +275,6 @@ Tests/WebKitCocoa/TextManipulation.mm
 Tests/WebKitCocoa/TextSize.mm
 Tests/WebKitCocoa/TextWidth.mm
 Tests/WebKitCocoa/TimeZoneOverride.mm
-Tests/WebKitCocoa/TopContentInset.mm
 Tests/WebKitCocoa/UIDelegate.mm
 Tests/WebKitCocoa/UnifiedPDFTestHelpers.mm
 Tests/WebKitCocoa/UnifiedPDFTests.mm

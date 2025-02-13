@@ -30,6 +30,7 @@
 #import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "TestNavigationDelegate.h"
+#import "TestWKWebView.h"
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
@@ -127,6 +128,22 @@ TEST(TopContentInset, AutomaticAdjustmentDoesNotAffectInsetViews)
 
     ASSERT_EQ(webView.get()._topContentInset, 0);
 }
+
+TEST(ObscuredContentInsets, SetAndGetObscuredContentInsets)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    [webView _setAutomaticallyAdjustsContentInsets:NO];
+
+    auto initialInsets = NSEdgeInsetsMake(100, 150, 0, 10);
+    [webView _setObscuredContentInsets:initialInsets immediate:NO];
+    [webView synchronouslyLoadTestPageNamed:@"simple"];
+    EXPECT_TRUE(NSEdgeInsetsEqual([webView _obscuredContentInsets], initialInsets));
+
+    auto finalInsets = NSEdgeInsetsMake(50, 100, 0, 10);
+    [webView _setObscuredContentInsets:finalInsets immediate:NO];
+    EXPECT_TRUE(NSEdgeInsetsEqual([webView _obscuredContentInsets], finalInsets));
+}
+
 
 } // namespace TestWebKitAPI
 
