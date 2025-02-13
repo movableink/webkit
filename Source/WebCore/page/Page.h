@@ -828,7 +828,6 @@ public:
 
     WEBCORE_EXPORT void userAgentChanged();
 
-    void dnsPrefetchingStateChanged();
     void storageBlockingStateChanged();
 
 #if ENABLE(RESOURCE_USAGE)

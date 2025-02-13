@@ -143,10 +143,6 @@ WK_EXPORT bool WKPreferencesGetTextAreasAreResizable(WKPreferencesRef preference
 WK_EXPORT void WKPreferencesSetTabsToLinks(WKPreferencesRef preferences, bool tabsToLinks);
 WK_EXPORT bool WKPreferencesGetTabsToLinks(WKPreferencesRef preferences);
 
-// Defaults to false.
-WK_EXPORT void WKPreferencesSetDNSPrefetchingEnabled(WKPreferencesRef preferences, bool enabled);
-WK_EXPORT bool WKPreferencesGetDNSPrefetchingEnabled(WKPreferencesRef preferences);
-
 // Defaults to true.
 WK_EXPORT void WKPreferencesSetAuthorAndUserStylesEnabled(WKPreferencesRef preferences, bool enabled);
 WK_EXPORT bool WKPreferencesGetAuthorAndUserStylesEnabled(WKPreferencesRef preferences);
@@ -313,6 +309,8 @@ WK_EXPORT void WKPreferencesSetRequestVideoFrameCallbackEnabled(WKPreferencesRef
 
 // The following are all deprecated and do nothing. They should be removed when possible.
 
+WK_EXPORT void WKPreferencesSetDNSPrefetchingEnabled(WKPreferencesRef, bool);
+WK_EXPORT bool WKPreferencesGetDNSPrefetchingEnabled(WKPreferencesRef);
 WK_EXPORT bool WKPreferencesGetRestrictedHTTPResponseAccess(WKPreferencesRef);
 WK_EXPORT void WKPreferencesSetRestrictedHTTPResponseAccess(WKPreferencesRef, bool);
 WK_EXPORT void WKPreferencesSetOfflineWebApplicationCacheEnabled(WKPreferencesRef, bool) WK_C_API_DEPRECATED;

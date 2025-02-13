@@ -68,7 +68,6 @@
 #include <wtf/Observer.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/TriState.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashCountedSet.h>
 #include <wtf/WeakHashMap.h>
@@ -1273,9 +1272,6 @@ public:
     HTMLCanvasElement* getCSSCanvasElement(const String& name);
     String nameForCSSCanvasElement(const HTMLCanvasElement&) const;
 
-    bool isDNSPrefetchEnabled() const;
-    void parseDNSPrefetchControlHeader(const String&);
-
     WEBCORE_EXPORT void postTask(Task&&) final; // Executes the task on context's thread asynchronously.
 
     WEBCORE_EXPORT EventLoopTaskGroup& eventLoop() final;
@@ -1454,8 +1450,6 @@ public:
 
     EventTarget* errorEventTarget() final;
     void logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, RefPtr<Inspector::ScriptCallStack>&&) final;
-
-    void initDNSPrefetch();
 
     WEBCORE_EXPORT void didAddWheelEventHandler(Node&);
     WEBCORE_EXPORT void didRemoveWheelEventHandler(Node&, EventHandlerRemoval = EventHandlerRemoval::One);
@@ -2603,8 +2597,6 @@ private:
     bool m_isResolvingAnchorPositionedElements { false };
 
     bool m_gotoAnchorNeededAfterStylesheetsLoad { false };
-    TriState m_isDNSPrefetchEnabled { TriState::Indeterminate };
-    bool m_haveExplicitlyDisabledDNSPrefetch { false };
 
     bool m_isSynthesized { false };
     bool m_isNonRenderedPlaceholder { false };

@@ -494,7 +494,6 @@ static bool isSafeCrossOriginResponseHeader(HTTPHeaderName name)
         || name == HTTPHeaderName::Trailer
         || name == HTTPHeaderName::Vary
         || name == HTTPHeaderName::XContentTypeOptions
-        || name == HTTPHeaderName::XDNSPrefetchControl
         || name == HTTPHeaderName::XFrameOptions
         || name == HTTPHeaderName::XXSSProtection;
 }

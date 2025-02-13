@@ -1059,16 +1059,6 @@ public:
 
 @implementation WebPreferences (WebPrivate)
 
-- (BOOL)isDNSPrefetchingEnabled
-{
-    return [self _boolValueForKey:WebKitDNSPrefetchingEnabledPreferenceKey];
-}
-
-- (void)setDNSPrefetchingEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitDNSPrefetchingEnabledPreferenceKey];
-}
-
 - (BOOL)developerExtrasEnabled
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -2988,6 +2978,15 @@ static RetainPtr<NSString>& classIBCreatorID()
 }
 
 - (void)setMediaStreamEnabled:(BOOL)flag
+{
+}
+
+- (BOOL)isDNSPrefetchingEnabled
+{
+    return NO;
+}
+
+- (void)setDNSPrefetchingEnabled:(BOOL)flag
 {
 }
 

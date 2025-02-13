@@ -468,16 +468,6 @@ bool WKPreferencesGetTabsToLinks(WKPreferencesRef preferencesRef)
     return toImpl(preferencesRef)->tabsToLinks();
 }
 
-void WKPreferencesSetDNSPrefetchingEnabled(WKPreferencesRef preferencesRef, bool enabled)
-{
-    toImpl(preferencesRef)->setDNSPrefetchingEnabled(enabled);
-}
-
-bool WKPreferencesGetDNSPrefetchingEnabled(WKPreferencesRef preferencesRef)
-{
-    return toImpl(preferencesRef)->dnsPrefetchingEnabled();
-}
-
 void WKPreferencesSetAuthorAndUserStylesEnabled(WKPreferencesRef preferencesRef, bool enabled)
 {
     toImpl(preferencesRef)->setAuthorAndUserStylesEnabled(enabled);
@@ -1726,7 +1716,16 @@ bool WKPreferencesGetRequestVideoFrameCallbackEnabled(WKPreferencesRef preferenc
 
 // The following are all deprecated and do nothing. They should be removed when possible.
 
-void WKPreferencesSetRestrictedHTTPResponseAccess(WKPreferencesRef preferencesRef, bool)
+void WKPreferencesSetDNSPrefetchingEnabled(WKPreferencesRef, bool)
+{
+}
+
+bool WKPreferencesGetDNSPrefetchingEnabled(WKPreferencesRef)
+{
+    return false;
+}
+
+void WKPreferencesSetRestrictedHTTPResponseAccess(WKPreferencesRef, bool)
 {
 }
 
