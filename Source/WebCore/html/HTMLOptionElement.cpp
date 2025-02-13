@@ -145,6 +145,11 @@ HTMLFormElement* HTMLOptionElement::form() const
     return nullptr;
 }
 
+HTMLFormElement* HTMLOptionElement::formForBindings() const
+{
+    return form();
+}
+
 int HTMLOptionElement::index() const
 {
     // It would be faster to cache the index, but harder to get it right in all cases.

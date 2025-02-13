@@ -87,6 +87,11 @@ RefPtr<HTMLElement> HTMLLabelElement::control() const
     return isConnected() ? firstElementWithIdIfLabelable(treeScope(), controlId) : nullptr;
 }
 
+RefPtr<HTMLElement> HTMLLabelElement::controlForBindings() const
+{
+    return control();
+}
+
 HTMLFormElement* HTMLLabelElement::form() const
 {
     if (auto element = control()) {
@@ -94,6 +99,11 @@ HTMLFormElement* HTMLLabelElement::form() const
             return listedElement->form();
     }
     return nullptr;
+}
+
+HTMLFormElement* HTMLLabelElement::formForBindings() const
+{
+    return form();
 }
 
 void HTMLLabelElement::setActive(bool down, Style::InvalidationScope invalidationScope)
