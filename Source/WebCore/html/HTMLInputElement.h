@@ -288,6 +288,7 @@ public:
     bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
     WEBCORE_EXPORT bool isFocusingWithDataListDropdown() const;
+    bool hasDataList() const;
     RefPtr<HTMLDataListElement> dataList() const;
     void dataListMayHaveChanged();
 

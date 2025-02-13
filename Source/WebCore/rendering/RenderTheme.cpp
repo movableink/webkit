@@ -1224,7 +1224,7 @@ bool RenderTheme::isDefault(const RenderObject& o) const
 bool RenderTheme::hasListButton(const RenderObject& renderer) const
 {
     RefPtr input = dynamicDowncast<HTMLInputElement>(renderer.generatingNode());
-    return input && input->list();
+    return input && input->hasDataList();
 }
 
 bool RenderTheme::hasListButtonPressed(const RenderObject& renderer) const
