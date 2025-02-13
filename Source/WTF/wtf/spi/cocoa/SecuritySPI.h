@@ -58,7 +58,7 @@ enum {
     kSecSignatureHashAlgorithmMD4 = 2,
     kSecSignatureHashAlgorithmMD5 = 3,
     kSecSignatureHashAlgorithmSHA1 = 4,
-    kSecSignatureHashAlgorithmSHA224 = 5,
+    DeprecatedKSecSignatureHashAlgorithmSHA224 = 5,
     kSecSignatureHashAlgorithmSHA256 = 6,
     kSecSignatureHashAlgorithmSHA384 = 7,
     kSecSignatureHashAlgorithmSHA512 = 8

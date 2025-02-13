@@ -668,7 +668,7 @@ enum class CryptoAlgorithmIdentifierTag {
     AES_KW = 11,
     HMAC = 12,
     SHA_1 = 14,
-    SHA_224 = 15,
+    DEPRECATED_SHA_224 = 15,
     SHA_256 = 16,
     SHA_384 = 17,
     SHA_512 = 18,
@@ -2480,8 +2480,8 @@ private:
         case CryptoAlgorithmIdentifier::SHA_1:
             write(CryptoAlgorithmIdentifierTag::SHA_1);
             break;
-        case CryptoAlgorithmIdentifier::SHA_224:
-            write(CryptoAlgorithmIdentifierTag::SHA_224);
+        case CryptoAlgorithmIdentifier::DEPRECATED_SHA_224:
+            RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE(sha224DeprecationMessage);
             break;
         case CryptoAlgorithmIdentifier::SHA_256:
             write(CryptoAlgorithmIdentifierTag::SHA_256);
@@ -3963,8 +3963,8 @@ private:
         case CryptoAlgorithmIdentifierTag::SHA_1:
             result = CryptoAlgorithmIdentifier::SHA_1;
             break;
-        case CryptoAlgorithmIdentifierTag::SHA_224:
-            result = CryptoAlgorithmIdentifier::SHA_224;
+        case CryptoAlgorithmIdentifierTag::DEPRECATED_SHA_224:
+            RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE(sha224DeprecationMessage);
             break;
         case CryptoAlgorithmIdentifierTag::SHA_256:
             result = CryptoAlgorithmIdentifier::SHA_256;
