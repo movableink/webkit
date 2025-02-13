@@ -243,10 +243,10 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNoti
     NSString *macNotification;
     switch (notification) {
     case AXNotification::ActiveDescendantChanged:
-        macNotification = @"AXActiveElementChanged";
+        macNotification = NSAccessibilityActiveElementChangedNotification;
         break;
     case AXNotification::AutocorrectionOccured:
-        macNotification = @"AXAutocorrectionOccurred";
+        macNotification = NSAccessibilityAutocorrectionOccurredNotification;
         break;
     case AXNotification::CurrentStateChanged:
         macNotification = NSAccessibilityCurrentStateChangedNotification;
@@ -255,17 +255,17 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNoti
         macNotification = NSAccessibilityFocusedUIElementChangedNotification;
         break;
     case AXNotification::ImageOverlayChanged:
-        macNotification = @"AXImageOverlayChanged";
+        macNotification = NSAccessibilityImageOverlayChangedNotification;
         break;
     case AXNotification::LayoutComplete:
-        macNotification = @"AXLayoutComplete";
+        macNotification = NSAccessibilityLayoutCompleteNotification;
         break;
     case AXNotification::LabelChanged:
         macNotification = NSAccessibilityTitleChangedNotification;
         break;
     case AXNotification::LoadComplete:
     case AXNotification::FrameLoadComplete:
-        macNotification = @"AXLoadComplete";
+        macNotification = NSAccessibilityLoadCompleteNotification;
         // Frame loading events are handled by the UIProcess on macOS to improve reliability.
         // On macOS, before notifications are allowed by AppKit to be sent to clients, you need to have a client (e.g. VoiceOver)
         // register for that notification. Because these new processes appear before VO has a chance to register, it will often
@@ -273,7 +273,7 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNoti
         skipSystemNotification = true;
         break;
     case AXNotification::InvalidStatusChanged:
-        macNotification = @"AXInvalidStatusChanged";
+        macNotification = NSAccessibilityInvalidStatusChangedNotification;
         break;
     case AXNotification::SelectedChildrenChanged:
         if (object.isTable() && object.isExposable())
@@ -307,13 +307,13 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNoti
         macNotification = NSAccessibilityRowCollapsedNotification;
         break;
     case AXNotification::ElementBusyChanged:
-        macNotification = @"AXElementBusyChanged";
+        macNotification = NSAccessibilityElementBusyChangedNotification;
         break;
     case AXNotification::ExpandedChanged:
-        macNotification = @"AXExpandedChanged";
+        macNotification = NSAccessibilityExpandedChangedNotification;
         break;
     case AXNotification::SortDirectionChanged:
-        macNotification = @"AXSortDirectionChanged";
+        macNotification = NSAccessibilitySortDirectionChangedNotification;
         break;
     case AXNotification::MenuClosed:
         macNotification = (id)kAXMenuClosedNotification;
@@ -323,10 +323,10 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& object, AXNoti
         macNotification = (id)kAXMenuItemSelectedNotification;
         break;
     case AXNotification::PressDidSucceed:
-        macNotification = @"AXPressDidSucceed";
+        macNotification = NSAccessibilityPressDidSucceedNotification;
         break;
     case AXNotification::PressDidFail:
-        macNotification = @"AXPressDidFail";
+        macNotification = NSAccessibilityPressDidFailNotification;
         break;
     case AXNotification::MenuOpened:
         macNotification = (id)kAXMenuOpenedNotification;
@@ -644,7 +644,7 @@ void AXObjectCache::platformHandleFocusedUIElementChanged(Element*, Element*)
     if (!rootWebArea)
         return;
 
-    [rootWebArea->wrapper() accessibilityPostedNotification:@"AXFocusChanged" userInfo:nil];
+    [rootWebArea->wrapper() accessibilityPostedNotification:NSAccessibilityFocusChangedNotification userInfo:nil];
 }
 
 void AXObjectCache::handleScrolledToAnchor(const Node&)

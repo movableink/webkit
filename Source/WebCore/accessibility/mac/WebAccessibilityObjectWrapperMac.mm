@@ -345,7 +345,7 @@ static AccessibilityTextOperation accessibilityTextOperationForParameterizedAttr
 
 static std::pair<AXTextMarkerRange, AccessibilitySearchDirection> misspellingSearchCriteriaForParameterizedAttribute(const NSDictionary *params)
 {
-    id markerRangeRef = [params objectForKey:@"AXStartTextMarkerRange"];
+    id markerRangeRef = [params objectForKey:NSAccessibilityStartTextMarkerRangeParam];
     if (!AXObjectIsTextMarkerRange(markerRangeRef))
         return { };
 
@@ -545,10 +545,10 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         [additional addObject:NSAccessibilityBrailleRoleDescriptionAttribute];
 
     if (backingObject->detailedByObjects().size())
-        [additional addObject:@"AXDetailsElements"];
+        [additional addObject:NSAccessibilityDetailsElementsAttribute];
 
     if (backingObject->errorMessageObjects().size())
-        [additional addObject:@"AXErrorMessageElements"];
+        [additional addObject:NSAccessibilityErrorMessageElementsAttribute];
 
     if (!backingObject->keyShortcuts().isEmpty())
         [additional addObject:NSAccessibilityKeyShortcutsAttribute];
@@ -605,7 +605,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         NSAccessibilitySelectedTextMarkerRangeAttribute,
         NSAccessibilityStartTextMarkerAttribute,
         NSAccessibilityEndTextMarkerAttribute,
-        @"AXVisited",
+        NSAccessibilityVisitedAttribute,
         NSAccessibilityLinkedUIElementsAttribute,
         NSAccessibilitySelectedAttribute,
         NSAccessibilityBlockQuoteLevelAttribute,
@@ -653,9 +653,9 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         [tempArray removeObject:NSAccessibilityFocusableAncestorAttribute];
         [tempArray removeObject:NSAccessibilityEditableAncestorAttribute];
         [tempArray removeObject:NSAccessibilityHighestEditableAncestorAttribute];
-        [tempArray addObject:@"AXLinkUIElements"];
-        [tempArray addObject:@"AXLoaded"];
-        [tempArray addObject:@"AXLayoutCount"];
+        [tempArray addObject:NSAccessibilityLinkUIElementsAttribute];
+        [tempArray addObject:NSAccessibilityLoadedAttribute];
+        [tempArray addObject:NSAccessibilityLayoutCountAttribute];
         [tempArray addObject:NSAccessibilityLoadingProgressAttribute];
         [tempArray addObject:NSAccessibilityURLAttribute];
         [tempArray addObject:NSAccessibilityCaretBrowsingEnabledAttribute];
@@ -783,7 +783,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         [tempArray addObject:NSAccessibilityARIARowCountAttribute];
         [tempArray addObject:NSAccessibilitySelectedCellsAttribute];
         [tempArray addObject:NSAccessibilitySelectedChildrenAttribute];
-        [tempArray addObject:@"AXTableLevel"];
+        [tempArray addObject:NSAccessibilityTableLevelAttribute];
         return tempArray;
     }();
     static NeverDestroyed tableRowAttrs = [] {
@@ -1235,12 +1235,12 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     }
 
     if (backingObject->isWebArea()) {
-        if ([attributeName isEqualToString:@"AXLinkUIElements"])
+        if ([attributeName isEqualToString:NSAccessibilityLinkUIElementsAttribute])
             return makeNSArray(backingObject->documentLinks());
 
-        if ([attributeName isEqualToString:@"AXLoaded"])
+        if ([attributeName isEqualToString:NSAccessibilityLoadedAttribute])
             return [NSNumber numberWithBool:backingObject->isLoaded()];
-        if ([attributeName isEqualToString:@"AXLayoutCount"])
+        if ([attributeName isEqualToString:NSAccessibilityLayoutCountAttribute])
             return @(backingObject->layoutCount());
         if ([attributeName isEqualToString:NSAccessibilityLoadingProgressAttribute])
             return @(backingObject->loadingProgress());
@@ -1301,7 +1301,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return decrementButton ? decrementButton->wrapper() : nil;
     }
 
-    if ([attributeName isEqualToString: @"AXVisited"])
+    if ([attributeName isEqualToString: NSAccessibilityVisitedAttribute])
         return [NSNumber numberWithBool: backingObject->isVisited()];
 
     if ([attributeName isEqualToString: NSAccessibilityTitleAttribute]) {
@@ -1348,7 +1348,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         );
     }
 
-    if ([attributeName isEqualToString:@"AXDateTimeComponents"])
+    if ([attributeName isEqualToString:NSAccessibilityDateTimeComponentsAttribute])
         return @(convertToAXFDateTimeComponents(backingObject->dateTimeComponentsType()));
 
     if ([attributeName isEqualToString:(NSString *)kAXMenuItemMarkCharAttribute]) {
@@ -1391,7 +1391,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if ([attributeName isEqualToString:NSAccessibilityPathAttribute])
         return [self path];
 
-    if ([attributeName isEqualToString:@"AXLineRectsAndText"]) {
+    if ([attributeName isEqualToString:NSAccessibilityLineRectsAndTextAttribute]) {
         return Accessibility::retrieveAutoreleasedValueFromMainThread<NSArray *>([protectedSelf = retainPtr(self)] () -> RetainPtr<NSArray> {
             return protectedSelf.get().lineRectsAndText;
         });
@@ -1629,7 +1629,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
     if ([attributeName isEqualToString:NSAccessibilityBlockQuoteLevelAttribute])
         return @(backingObject->blockquoteLevel());
-    if ([attributeName isEqualToString:@"AXTableLevel"])
+    if ([attributeName isEqualToString:NSAccessibilityTableLevelAttribute])
         return @(backingObject->tableLevel());
 
     if ([attributeName isEqualToString: NSAccessibilityLinkedUIElementsAttribute])
@@ -1797,11 +1797,11 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return createNSArray(backingObject->classList()).autorelease();
 
     // This allows us to connect to a plugin that creates a shadow node for editing (like PDFs).
-    if ([attributeName isEqualToString:@"_AXAssociatedPluginParent"])
+    if ([attributeName isEqualToString:NSAccessibilityAssociatedPluginParentAttribute])
         return [self _associatedPluginParentWith:backingObject];
 
     // This used to be a testing-only attribute, but unfortunately some ATs do actually request it.
-    if ([attributeName isEqualToString:@"AXDRTSpeechAttribute"])
+    if ([attributeName isEqualToString:NSAccessibilityDRTSpeechAttributeAttribute])
         return [self baseAccessibilitySpeechHint];
 
     if ([attributeName isEqualToString:NSAccessibilityPopupValueAttribute])
@@ -1816,13 +1816,13 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if ([attributeName isEqualToString:NSAccessibilityHasWebApplicationAncestorAttribute])
         return [NSNumber numberWithBool:backingObject->hasWebApplicationAncestor()];
 
-    if ([attributeName isEqualToString:@"AXIsInDescriptionListDetail"])
+    if ([attributeName isEqualToString:NSAccessibilityIsInDescriptionListDetailAttribute])
         return [NSNumber numberWithBool:backingObject->isInDescriptionListDetail()];
 
-    if ([attributeName isEqualToString:@"AXIsInDescriptionListTerm"])
+    if ([attributeName isEqualToString:NSAccessibilityIsInDescriptionListTermAttribute])
         return [NSNumber numberWithBool:backingObject->isInDescriptionListTerm()];
 
-    if ([attributeName isEqualToString:@"AXDetailsElements"])
+    if ([attributeName isEqualToString:NSAccessibilityDetailsElementsAttribute])
         return makeNSArray(backingObject->detailedByObjects());
 
     if ([attributeName isEqualToString:NSAccessibilityBrailleLabelAttribute])
@@ -1834,7 +1834,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if ([attributeName isEqualToString:NSAccessibilityRelativeFrameAttribute])
         return [NSValue valueWithRect:(NSRect)backingObject->relativeFrame()];
 
-    if ([attributeName isEqualToString:@"AXErrorMessageElements"]) {
+    if ([attributeName isEqualToString:NSAccessibilityErrorMessageElementsAttribute]) {
         // Only expose error messages for objects in an invalid state.
         // https://www.w3.org/TR/wai-aria-1.2/#aria-errormessage
         if (backingObject->invalidStatus() == "false"_s)
@@ -1869,7 +1869,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     }
 
     // VoiceOver property to ignore certain groups.
-    if ([attributeName isEqualToString:@"AXAutoInteractable"])
+    if ([attributeName isEqualToString:NSAccessibilityAutoInteractableAttribute])
         return @(backingObject->isRemoteFrame());
 
     if (AXObjectCache::clientIsInTestMode())
@@ -1881,80 +1881,80 @@ id attributeValueForTesting(const RefPtr<AXCoreObject>& backingObject, NSString 
 {
     ASSERT_WITH_MESSAGE(AXObjectCache::clientIsInTestMode(), "Should be used for testing only, not for AT clients.");
 
-    if ([attributeName isEqualToString:@"AXARIARole"])
+    if ([attributeName isEqualToString:NSAccessibilityARIARoleAttribute])
         return backingObject->computedRoleString();
 
-    if ([attributeName isEqualToString:@"AXStringValue"])
+    if ([attributeName isEqualToString:NSAccessibilityStringValueAttribute])
         return backingObject->stringValue();
 
-    if ([attributeName isEqualToString:@"AXDateTimeComponentsType"])
+    if ([attributeName isEqualToString:NSAccessibilityDateTimeComponentsTypeAttribute])
         return [NSNumber numberWithUnsignedShort:(uint8_t)backingObject->dateTimeComponentsType()];
 
-    if ([attributeName isEqualToString:@"AXControllers"])
+    if ([attributeName isEqualToString:NSAccessibilityControllersAttribute])
         return makeNSArray(backingObject->controllers());
 
-    if ([attributeName isEqualToString:@"AXControllerFor"])
+    if ([attributeName isEqualToString:NSAccessibilityControllerForAttribute])
         return makeNSArray(backingObject->controlledObjects());
 
-    if ([attributeName isEqualToString:@"AXDescribedBy"])
+    if ([attributeName isEqualToString:NSAccessibilityDescribedByAttribute])
         return makeNSArray(backingObject->describedByObjects());
 
-    if ([attributeName isEqualToString:@"AXDescriptionFor"])
+    if ([attributeName isEqualToString:NSAccessibilityDescriptionForAttribute])
         return makeNSArray(backingObject->descriptionForObjects());
 
-    if ([attributeName isEqualToString:@"AXDetailsFor"])
+    if ([attributeName isEqualToString:NSAccessibilityDetailsForAttribute])
         return makeNSArray(backingObject->detailsForObjects());
 
-    if ([attributeName isEqualToString:@"AXErrorMessageFor"])
+    if ([attributeName isEqualToString:NSAccessibilityErrorMessageForAttribute])
         return makeNSArray(backingObject->errorMessageForObjects());
 
-    if ([attributeName isEqualToString:@"AXFlowFrom"])
+    if ([attributeName isEqualToString:NSAccessibilityFlowFromAttribute])
         return makeNSArray(backingObject->flowFromObjects());
 
-    if ([attributeName isEqualToString:@"AXFlowTo"])
+    if ([attributeName isEqualToString:NSAccessibilityFlowToAttribute])
         return makeNSArray(backingObject->flowToObjects());
 
-    if ([attributeName isEqualToString:@"AXLabelledBy"])
+    if ([attributeName isEqualToString:NSAccessibilityLabelledByAttribute])
         return makeNSArray(backingObject->labeledByObjects());
 
-    if ([attributeName isEqualToString:@"AXLabelFor"])
+    if ([attributeName isEqualToString:NSAccessibilityLabelForAttribute])
         return makeNSArray(backingObject->labelForObjects());
 
-    if ([attributeName isEqualToString:@"AXOwners"])
+    if ([attributeName isEqualToString:NSAccessibilityOwnersAttribute])
         return makeNSArray(backingObject->owners());
 
-    if ([attributeName isEqualToString:@"AXIsInCell"])
+    if ([attributeName isEqualToString:NSAccessibilityIsInCellAttribute])
         return [NSNumber numberWithBool:backingObject->isInCell()];
 
-    if ([attributeName isEqualToString:@"AXARIAPressedIsPresent"])
+    if ([attributeName isEqualToString:NSAccessibilityARIAPressedIsPresentAttribute])
         return [NSNumber numberWithBool:backingObject->pressedIsPresent()];
 
-    if ([attributeName isEqualToString:@"AXAutocompleteValue"])
+    if ([attributeName isEqualToString:NSAccessibilityAutocompleteValueAttribute])
         return backingObject->autoCompleteValue();
 
-    if ([attributeName isEqualToString:@"AXClickPoint"])
+    if ([attributeName isEqualToString:NSAccessibilityClickPointAttribute])
         return [NSValue valueWithPoint:backingObject->clickPoint()];
 
-    if ([attributeName isEqualToString:@"AXIsIndeterminate"])
+    if ([attributeName isEqualToString:NSAccessibilityIsIndeterminateAttribute])
         return [NSNumber numberWithBool:backingObject->isIndeterminate()];
 
-    if ([attributeName isEqualToString:@"AXIsMultiSelectable"])
+    if ([attributeName isEqualToString:NSAccessibilityIsMultiSelectableAttribute])
         return [NSNumber numberWithBool:backingObject->isMultiSelectable()];
 
-    if ([attributeName isEqualToString:@"AXIsOnScreen"])
+    if ([attributeName isEqualToString:NSAccessibilityIsOnScreenAttribute])
         return [NSNumber numberWithBool:backingObject->isOnScreen()];
 
-    if ([attributeName isEqualToString:@"_AXIsInTable"]) {
+    if ([attributeName isEqualToString:NSAccessibilityIsInTableAttribute]) {
         auto* table = Accessibility::findAncestor(*backingObject, false, [&] (const auto& ancestor) {
             return ancestor.isTable();
         });
         return [NSNumber numberWithBool:!!table];
     }
 
-    if ([attributeName isEqualToString:@"AXIsRemoteFrame"])
+    if ([attributeName isEqualToString:NSAccessibilityIsRemoteFrameAttribute])
         return [NSNumber numberWithBool:backingObject->isRemoteFrame()];
 
-    if ([attributeName isEqualToString:@"AXInfoStringForTesting"])
+    if ([attributeName isEqualToString:NSAccessibilityInfoStringForTestingAttribute])
         return backingObject->infoStringForTesting();
 
     return nil;
@@ -1978,10 +1978,10 @@ id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>& backingObje
     else
         return nil;
 
-    if ([attribute isEqualToString:@"AXTextMarkerIsNull"])
+    if ([attribute isEqualToString:NSAccessibilityTextMarkerIsNullParameterizedAttribute])
         return [NSNumber numberWithBool:AXTextMarker(markerRef).isNull()];
 
-    if ([attribute isEqualToString:@"AXTextMarkerRangeIsValid"]) {
+    if ([attribute isEqualToString:NSAccessibilityTextMarkerRangeIsValidParameterizedAttribute]) {
         AXTextMarkerRange markerRange { markerRangeRef };
         return [NSNumber numberWithBool:markerRange.start().isValid() && markerRange.end().isValid()];
     }
@@ -2114,7 +2114,7 @@ id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>& backingObje
         }
     } else {
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        callback([hitTestResult accessibilityAttributeValue:@"AXInfoStringForTesting"]);
+        callback([hitTestResult accessibilityAttributeValue:NSAccessibilityInfoStringForTestingAttribute]);
         ALLOW_DEPRECATED_DECLARATIONS_END
     }
 }
@@ -2430,13 +2430,12 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
     if ([action isEqualToString:NSAccessibilityPressAction])
         [self accessibilityPerformPressAction];
-    else if ([action isEqualToString:@"AXSyncPressAction"]) {
+    else if ([action isEqualToString:NSAccessibilitySyncPressAction]) {
         // Used in layout tests, so that we don't have to wait for the async press action.
         [self _accessibilityPerformPressAction];
-    }
-    else if ([action isEqualToString:@"AXSyncIncrementAction"])
+    } else if ([action isEqualToString:NSAccessibilitySyncIncrementAction])
         [self _accessibilityPerformIncrementAction];
-    else if ([action isEqualToString:@"AXSyncDecrementAction"])
+    else if ([action isEqualToString:NSAccessibilitySyncDecrementAction])
         [self _accessibilityPerformDecrementAction];
     else if ([action isEqualToString:NSAccessibilityShowMenuAction])
         [self accessibilityPerformShowMenuAction];
@@ -2446,7 +2445,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         [self accessibilityPerformDecrementAction];
     else if ([action isEqualToString:NSAccessibilityScrollToVisibleAction])
         [self accessibilityScrollToVisible];
-    else if ([action isEqualToString:@"AXDismissAction"])
+    else if ([action isEqualToString:NSAccessibilityDismissAction])
         backingObject->performDismissActionIgnoringResult();
     else if (AXObjectCache::clientIsInTestMode() && [action isEqualToString:@"AXLogTrees"])
         [self _accessibilityPrintTrees];
@@ -2995,7 +2994,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return createNSArray(operationResult).autorelease();
     }
 
-    if ([attribute isEqualToString:@"AXRangesForSearchPredicate"]) {
+    if ([attribute isEqualToString:NSAccessibilityRangesForSearchPredicateParameterizedAttribute]) {
         auto criteria = accessibilitySearchCriteriaForSearchPredicate(*backingObject, dictionary);
         if (criteria.searchKeys.size() == 1 && criteria.searchKeys[0] == AccessibilitySearchKey::MisspelledWord) {
             // Request for the next/previous misspelling.
@@ -3008,8 +3007,8 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
                 return nil;
 
             RetainPtr result = adoptNS([[NSMutableDictionary alloc] initWithObjectsAndKeys:
-                object->wrapper(), @"AXSearchResultElement",
-                textMarkerRange->platformData().bridgingAutorelease(), @"AXSearchResultRange",
+                object->wrapper(), NSAccessibilitySearchResultElementKey,
+                textMarkerRange->platformData().bridgingAutorelease(), NSAccessibilitySearchResultRangeKey,
                 nil]);
             return [[[NSArray alloc] initWithObjects:result.get(), nil] autorelease];
         }
@@ -3331,12 +3330,12 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
         if (dictionary) {
             AXTextMarkerRangeRef textMarkerRange = nil;
-            id parameter = [dictionary objectForKey:@"AXTextMarkerRange"];
+            id parameter = [dictionary objectForKey:NSAccessibilityTextMarkerRangeParam];
             if (AXObjectIsTextMarkerRange(parameter))
                 textMarkerRange = (AXTextMarkerRangeRef)parameter;
 
             auto spellCheck = AXCoreObject::SpellCheck::No;
-            parameter = [dictionary objectForKey:@"AXSpellCheck"];
+            parameter = [dictionary objectForKey:NSAccessibilitySpellCheckParam];
             if ([parameter isKindOfClass:[NSNumber class]] && [parameter boolValue])
                 spellCheck = AXCoreObject::SpellCheck::Yes;
             return attributedStringForTextMarkerRange(*backingObject, textMarkerRange, spellCheck);
