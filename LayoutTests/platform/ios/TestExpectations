@@ -7692,3 +7692,5 @@ fast/forms/switch/pointer-tracking-there-and-back-again.html [ Timeout ]
 webkit.org/b/287204 [ Release ] fast/forms/date/date-input-rendering-basic.html [ Pass Failure ]
 
 webkit.org/b/287291 http/tests/site-isolation/selection-focus.html [ ImageOnlyFailure ]
+
+webkit.org/b/287650 [ Debug ] compositing/repaint/scroller-repaints-once.html [ Crash ]
