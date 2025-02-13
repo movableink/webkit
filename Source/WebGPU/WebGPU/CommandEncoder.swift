@@ -25,7 +25,8 @@
 
 import Metal
 import WebGPU_Internal
-
+public typealias WTFString = String
+public typealias String = Swift.String
 // FIXME: rdar://140819194
 private let WGPU_COPY_STRIDE_UNDEFINED = WGPU_COPY_STRIDE_UNDEFINED_
 
@@ -93,13 +94,13 @@ public func CommandEncoder_finish_thunk(commandEncoder: WebGPU.CommandEncoder, d
 }
 
 extension WebGPU.CommandEncoder {
-    private func validateFinishError() -> Swift.String? {
+    private func validateFinishError() -> String? {
         if !isValid() {
             return "GPUCommandEncoder.finish: encoder is not valid"
         }
 
         if getEncoderState() != WebGPU.CommandsMixin.EncoderState.Open {
-            return "GPUCommandEncoder.finish: encoder state is \(Swift.String(describing: encoderStateNameWrapper())), expected 'Open'"
+            return "GPUCommandEncoder.finish: encoder state is \(String(describing: encoderStateNameWrapper())), expected 'Open'"
         }
 
         if m_debugGroupStackSize != 0 {
@@ -114,7 +115,7 @@ extension WebGPU.CommandEncoder {
         if descriptor.nextInChain != nil ||  !isValid() || (m_existingCommandEncoder != nil && m_existingCommandEncoder !== m_blitCommandEncoder) {
             setEncoderState(WebGPU.CommandsMixin.EncoderState.Ended)
             discardCommandBuffer();
-            protectedDevice().ptr().generateAValidationError(m_lastErrorString != nil ? m_lastErrorString! as Swift.String : Swift.String("Invalid CommandEncoder"))
+            protectedDevice().ptr().generateAValidationError(m_lastErrorString != nil ? m_lastErrorString! as String : String("Invalid CommandEncoder"))
             return WebGPU.CommandBuffer.createInvalid(m_device.ptr())
         }
 
@@ -128,7 +129,7 @@ extension WebGPU.CommandEncoder {
         setEncoderState(WebGPU.CommandsMixin.EncoderState.Ended)
         if validationFailedError != nil {
             discardCommandBuffer()
-            protectedDevice().ptr().generateAValidationError(m_lastErrorString != nil ? m_lastErrorString! as Swift.String : validationFailedError);
+            protectedDevice().ptr().generateAValidationError(m_lastErrorString != nil ? m_lastErrorString! as String : validationFailedError);
             return WebGPU.CommandBuffer.createInvalid(m_device.ptr())
         }
 
@@ -158,7 +159,7 @@ extension WebGPU.CommandEncoder {
         m_cachedCommandBuffer = WebGPU_Internal.commandBufferThreadSafeWeakPtr(result.ptr())
         result.ptr().setBufferMapCount(m_bufferMapCount)
         if m_makeSubmitInvalid {
-            result.ptr().makeInvalid(m_lastErrorString as Swift.String)
+            result.ptr().makeInvalid(m_lastErrorString as String)
         }
 
         return result
@@ -321,7 +322,7 @@ extension WebGPU.CommandEncoder {
                 pso = try deviceMetal.makeRenderPipelineState(descriptor: mtlRenderPipelineDescriptor)
                 depthStencil = depthStencilDescriptor != nil ? deviceMetal.makeDepthStencilState(descriptor: depthStencilDescriptor!) : nil
             } catch let e {
-                precondition(false, "\(Swift.String(describing: e))")
+                precondition(false, "\(String(describing: e))")
             }
 
             return (pso, depthStencil)
@@ -392,8 +393,8 @@ extension WebGPU.CommandEncoder {
     {
         return writeIndex == WGPU_QUERY_SET_INDEX_UNDEFINED ? 0 : writeIndex
     }
-    private func errorValidatingCopyBufferToBuffer(source: WebGPU.Buffer, sourceOffset: UInt64, destination: WebGPU.Buffer, destinationOffset: UInt64, size: UInt64) -> Swift.String? {
-        func errorString(_ format: Swift.String) -> Swift.String {
+    private func errorValidatingCopyBufferToBuffer(source: WebGPU.Buffer, sourceOffset: UInt64, destination: WebGPU.Buffer, destinationOffset: UInt64, size: UInt64) -> String? {
+        func errorString(_ format: String) -> String {
             return "GPUCommandEncoder.copyBufferToBuffer: \(format)"
         }
         if !source.isDestroyed() && !WebGPU_Internal.isValidToUseWithBufferCommandEncoder(source, self) {
@@ -458,7 +459,7 @@ extension WebGPU.CommandEncoder {
         // https://gpuweb.github.io/gpuweb/#copy-compatible
         return format1 == format2 ? true : WebGPU.Texture.removeSRGBSuffix(format1) == WebGPU.Texture.removeSRGBSuffix(format2)
     }
-    private func errorValidatingCopyTextureToTexture(source: WGPUImageCopyTexture, destination: WGPUImageCopyTexture, copySize: WGPUExtent3D) -> Swift.String? {
+    private func errorValidatingCopyTextureToTexture(source: WGPUImageCopyTexture, destination: WGPUImageCopyTexture, copySize: WGPUExtent3D) -> String? {
         func refersToAllAspects(format: WGPUTextureFormat, aspect: WGPUTextureAspect) -> Bool {
             switch (aspect) {
             case WGPUTextureAspect_All:
@@ -475,7 +476,7 @@ extension WebGPU.CommandEncoder {
                 return false
             }
         }
-        func errorString(_ error: Swift.String) -> Swift.String {
+        func errorString(_ error: String) -> String {
              "GPUCommandEncoder.copyTextureToTexture: \(error)"
         }
         let sourceTexture = WebGPU.fromAPI(source.texture)
@@ -565,8 +566,8 @@ extension WebGPU.CommandEncoder {
 
         return nil
     }
-    private func errorValidatingCopyTextureToBuffer(source: WGPUImageCopyTexture, destination: WGPUImageCopyBuffer, copySize: WGPUExtent3D) -> Swift.String? {
-        func errorString(_ error: Swift.String) -> Swift.String {
+    private func errorValidatingCopyTextureToBuffer(source: WGPUImageCopyTexture, destination: WGPUImageCopyBuffer, copySize: WGPUExtent3D) -> String? {
+        func errorString(_ error: String) -> String {
             return "GPUCommandEncoder.copyTextureToBuffer: \(error)"
         }
         let sourceTexture = WebGPU.fromAPI(source.texture)
@@ -631,7 +632,7 @@ extension WebGPU.CommandEncoder {
         }
         return nil
     }
-    private func errorValidatingImageCopyBuffer(imageCopyBuffer: WGPUImageCopyBuffer) -> Swift.String? {
+    private func errorValidatingImageCopyBuffer(imageCopyBuffer: WGPUImageCopyBuffer) -> String? {
         // https://gpuweb.github.io/gpuweb/#abstract-opdef-validating-gpuimagecopybuffer
         let buffer = WebGPU.fromAPI(imageCopyBuffer.buffer)
         if !WebGPU_Internal.isValidToUseWithBufferCommandEncoder(buffer, self) {
@@ -651,8 +652,8 @@ extension WebGPU.CommandEncoder {
         return nil
     }
 
-    private func errorValidatingCopyBufferToTexture(source: WGPUImageCopyBuffer, destination: WGPUImageCopyTexture, copySize: WGPUExtent3D) -> Swift.String? {
-        func errorString(_ error: Swift.String) -> Swift.String {
+    private func errorValidatingCopyBufferToTexture(source: WGPUImageCopyBuffer, destination: WGPUImageCopyTexture, copySize: WGPUExtent3D) -> String? {
+        func errorString(_ error: String) -> String {
             return "GPUCommandEncoder.copyBufferToTexture: \(error)"
         }
         let destinationTexture = WebGPU.fromAPI(destination.texture)
@@ -720,7 +721,7 @@ extension WebGPU.CommandEncoder {
     }
 
 
-    private func errorValidatingRenderPassDescriptor(descriptor: WGPURenderPassDescriptor) -> Swift.String? {
+    private func errorValidatingRenderPassDescriptor(descriptor: WGPURenderPassDescriptor) -> String? {
         if let wgpuOcclusionQuery = descriptor.occlusionQuerySet {
             let occlusionQuery = WebGPU.fromAPI(wgpuOcclusionQuery)
             if !WebGPU_Internal.isValidToUseWithQuerySetCommandEncoder(occlusionQuery, self) {
@@ -736,7 +737,7 @@ extension WebGPU.CommandEncoder {
         return nil
     }
 
-    private func errorValidatingTimestampWrites(timestampWrites: WGPUComputePassTimestampWrites) -> Swift.String? {
+    private func errorValidatingTimestampWrites(timestampWrites: WGPUComputePassTimestampWrites) -> String? {
 
             if (!self.protectedDevice().ptr().hasFeature(WGPUFeatureName_TimestampQuery)) {
                 return "device does not have timestamp query feature"
@@ -761,7 +762,7 @@ extension WebGPU.CommandEncoder {
             return nil
     }
 
-    private func errorValidatingComputePassDescriptor(descriptor: WGPUComputePassDescriptor) -> Swift.String? {
+    private func errorValidatingComputePassDescriptor(descriptor: WGPUComputePassDescriptor) -> String? {
         if descriptor.timestampWrites != nil {
             return errorValidatingTimestampWrites(timestampWrites: descriptor.timestampWrites.pointee)
         }
@@ -2052,7 +2053,7 @@ extension WebGPU.CommandEncoder {
 
         let error = self.errorValidatingComputePassDescriptor(descriptor: descriptor)
         guard error == nil else {
-            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), Swift.String(error!))
+            return WebGPU.ComputePassEncoder.createInvalid(self, m_device.ptr(), String(error!))
         }
 
         guard m_commandBuffer.status.rawValue < MTLCommandBufferStatus.enqueued.rawValue else {
@@ -2085,9 +2086,9 @@ extension WebGPU.CommandEncoder {
         }
 
         self.setExistingEncoder(computeCommandEncoder)
-        // FIXME: Figure out a way so that WTFString does not override Swift.String in the global
+        // FIXME: Figure out a way so that WTFString does not override String in the global
         //        namespace. At the moment it is and that's why we need this.
-        computeCommandEncoder.label = Swift.String(cString: descriptor.label)
+        computeCommandEncoder.label = String(cString: descriptor.label)
 
         return WebGPU.ComputePassEncoder.create(computeCommandEncoder, descriptor, self, m_device.ptr())
 

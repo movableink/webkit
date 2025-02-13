@@ -559,14 +559,10 @@ inline bool startsWithLettersIgnoringASCIICase(const String& string, ASCIILitera
 
 inline namespace StringLiterals {
 
-#ifndef __swift__
-// Swift will import this as global and then all literals will be WTF.String
-// instead of Swift.String
 inline String operator""_str(const char* characters, size_t)
 {
     return ASCIILiteral::fromLiteralUnsafe(characters);
 }
-#endif
 
 inline String operator""_str(const UChar* characters, size_t length)
 {
