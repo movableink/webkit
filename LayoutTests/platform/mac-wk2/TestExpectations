@@ -1944,8 +1944,6 @@ imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-t
 [ Ventura+ arm64 ] fast/selectors/selection-window-inactive-stroke-color.html [ Pass ImageOnlyFailure ]
 [ Ventura+ arm64 ] fast/selectors/text-field-selection-stroke-color.html [ Pass ImageOnlyFailure ]
 
-webkit.org/b/286080 fast/webgpu/nocrash/fuzz-284937.html [ Failure Timeout Crash ]
-
 webkit.org/b/286371 [ Sequoia Release x86_64 ] webrtc/captureCanvas-webrtc-software-h264-high.html [ Failure ]
 
 webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
@@ -1960,5 +1958,9 @@ webkit.org/b/286653 [ Sequoia ] pdf/images/jpeg2000-embed-pdf.html [ Pass Failur
 
 webkit.org/b/287122 [ Ventura+ ] imported/w3c/web-platform-tests/html/capability-delegation/delegate-fullscreen-request-subframe-same-origin.https.tentative.html [ Pass Failure ]
 
-# rdar://141631699 ([ macOS wk2 arm64 ] Multiple fast/css/webkit-named-image/apple-pay-logo-white/* tests are failing on EWS.)
-[ arm64 ] fast/css/webkit-named-image/apple-pay-logo-white [ Skip ]
+# rdar://141631699 ([ macOS wk2 arm64 ] Multiple fast/webgpu/* tests are causing testing instability.)
+[ arm64 ] fast/webgpu/regression/repro_283595-for.html [ Skip ]
+[ arm64 ] fast/webgpu/regression/repro_283595-loop.html [ Skip ]
+[ arm64 ] fast/webgpu/regression/repro_283595-while.html [ Skip ]
+[ arm64 ] fast/webgpu/nocrash/fuzz-284937.html [ Skip ]
+[ arm64 ] fast/webgpu/nocrash/fuzz-287444.html [ Skip ]
