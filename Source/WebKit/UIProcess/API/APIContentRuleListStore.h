@@ -80,6 +80,10 @@ public:
     void invalidateContentRuleListHeader(const WTF::String& identifier);
     void getContentRuleListSource(WTF::String&& identifier, CompletionHandler<void(WTF::String)>);
 
+    Ref<WTF::ConcurrentWorkQueue> protectedCompileQueue();
+    Ref<WTF::WorkQueue> protectedReadQueue();
+    Ref<WTF::WorkQueue> protectedRemoveQueue();
+
 private:
     WTF::String defaultStorePath();
 
