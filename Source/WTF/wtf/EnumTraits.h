@@ -241,7 +241,8 @@ constexpr std::underlying_type_t<E> enumNamesMax()
         return EnumTraits<E>::max;
     }
 
-    constexpr Underlying defaultMax = std::is_signed_v<Underlying> ? INT8_MAX : UINT8_MAX;
+    constexpr Underlying defaultMax = std::is_signed_v<Underlying>
+        ? static_cast<Underlying>(INT8_MAX) : static_cast<Underlying>(UINT8_MAX);
     constexpr Underlying computedMax = (sizeof(E) > 1) ? static_cast<Underlying>(defaultMax << 1) : defaultMax;
     return computedMax;
 }
