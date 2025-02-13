@@ -496,6 +496,7 @@ public:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     WebCore::ResourceMonitorThrottler& resourceMonitorThrottler();
+    Ref<WebCore::ResourceMonitorThrottler> protectedResourceMonitorThrottler() { return resourceMonitorThrottler(); }
     void resetResourceMonitorThrottlerForTesting();
 #endif
 

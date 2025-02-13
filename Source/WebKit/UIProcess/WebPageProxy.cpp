@@ -8857,7 +8857,7 @@ void WebPageProxy::showContactPicker(IPC::Connection& connection, const Contacts
 void WebPageProxy::showDigitalCredentialsPicker(IPC::Connection& connection, const WebCore::DigitalCredentialsRequestData& requestData, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& completionHandler)
 {
     MESSAGE_CHECK_COMPLETION_BASE(
-        m_preferences->digitalCredentialsEnabled(),
+        protectedPreferences()->digitalCredentialsEnabled(),
         connection,
         completionHandler(makeUnexpected(WebCore::ExceptionData { WebCore::ExceptionCode::SecurityError, "Digital credentials feature is disabled by preference."_s }))
     );
@@ -8878,7 +8878,7 @@ void WebPageProxy::showDigitalCredentialsPicker(IPC::Connection& connection, con
 void WebPageProxy::dismissDigitalCredentialsPicker(IPC::Connection& connection, WTF::CompletionHandler<void(bool)>&& completionHandler)
 {
     MESSAGE_CHECK_COMPLETION_BASE(
-        m_preferences->digitalCredentialsEnabled(),
+        protectedPreferences()->digitalCredentialsEnabled(),
         connection,
         completionHandler(false)
     );
@@ -12456,7 +12456,7 @@ void WebPageProxy::pageWillLikelyUseNotifications()
 
 void WebPageProxy::showNotification(IPC::Connection& connection, const WebCore::NotificationData& notificationData, RefPtr<WebCore::NotificationResources>&& notificationResources)
 {
-    m_legacyMainFrameProcess->processPool().protectedSupplement<WebNotificationManagerProxy>()->show(this, connection, notificationData, WTFMove(notificationResources));
+    m_legacyMainFrameProcess->protectedProcessPool()->protectedSupplement<WebNotificationManagerProxy>()->show(this, connection, notificationData, WTFMove(notificationResources));
     WEBPAGEPROXY_RELEASE_LOG(ViewState, "showNotification: This page shows notifications and is allowed to run in the background");
     if (!internals().pageAllowedToRunInTheBackgroundActivityDueToNotifications)
         internals().pageAllowedToRunInTheBackgroundActivityDueToNotifications = legacyMainFrameProcess().protectedThrottler()->backgroundActivity("Page has shown notification"_s);
@@ -14102,7 +14102,8 @@ void WebPageProxy::requestAttachmentIcon(IPC::Connection& connection, const Stri
 
 #if PLATFORM(MAC)
     if (RefPtr attachment = attachmentForIdentifier(identifier); attachment && attachment->shouldUseFileWrapperIconForDirectory()) {
-        attachment->doWithFileWrapper([&, protectedThis = Ref { *this }, updateAttachmentIcon = WTFMove(updateAttachmentIcon)] (NSFileWrapper *fileWrapper) {
+        // FIXME: remove SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE once rdar://144729499 is resolved.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE attachment->doWithFileWrapper([&, updateAttachmentIcon = WTFMove(updateAttachmentIcon)] (NSFileWrapper *fileWrapper) {
             if (updateIconForDirectory(fileWrapper, attachment->identifier()))
                 return;
 
@@ -16060,7 +16061,7 @@ void WebPageProxy::setPresentingApplicationAuditToken(const audit_token_t& prese
 #if ENABLE(CONTENT_EXTENSIONS)
 void WebPageProxy::shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&& completionHandler) const
 {
-    bool wasGranted = protectedWebsiteDataStore()->resourceMonitorThrottler().tryAccess(host);
+    bool wasGranted = protectedWebsiteDataStore()->protectedResourceMonitorThrottler()->tryAccess(host);
     completionHandler(wasGranted);
 }
 #endif
