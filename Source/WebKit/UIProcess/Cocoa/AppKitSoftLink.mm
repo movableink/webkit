@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,12 +24,13 @@
  */
 
 #import "config.h"
-
-#if PLATFORM(MACCATALYST)
-
 #import <wtf/SoftLinking.h>
 
+#if PLATFORM(MACCATALYST)
 SOFT_LINK_FRAMEWORK_FOR_SOURCE(WebKit, AppKit)
 SOFT_LINK_CLASS_FOR_SOURCE(WebKit, AppKit, NSAccessibilityRemoteUIElement)
+#endif
 
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/AppKitSoftLinkAdditions.mm>)
+#import <WebKitAdditions/AppKitSoftLinkAdditions.mm>
 #endif

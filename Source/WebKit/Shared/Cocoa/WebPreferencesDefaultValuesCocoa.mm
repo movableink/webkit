@@ -98,4 +98,8 @@ bool defaultUseSCContentSharingPicker()
 
 } // namespace WebKit
 
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebPreferencesDefaultValuesCocoaAdditions.mm>)
+#import <WebKitAdditions/WebPreferencesDefaultValuesCocoaAdditions.mm>
+#endif
+
 #endif // PLATFORM(COCOA)

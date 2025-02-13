@@ -27,6 +27,7 @@
 
 #if PLATFORM(MAC)
 
+#include "AppKitSPI.h"
 #include "DrawingAreaInfo.h"
 #include "EditorState.h"
 #include "ImageAnalysisUtilities.h"
@@ -132,6 +133,10 @@ enum class ReplacementBehavior : uint8_t;
 }
 
 } // namespace WebCore
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebViewImplAdditionsBefore.h>)
+#import <WebKitAdditions/WebViewImplAdditionsBefore.h>
+#endif
 
 @protocol WebViewImplDelegate
 
@@ -771,6 +776,10 @@ public:
     bool allowsInlinePredictions() const;
 #endif
 
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    void updateContentInsetFillViews();
+#endif
+
 private:
 #if HAVE(TOUCH_BAR)
     void setUpTextTouchBar(NSTouchBar *);
@@ -1040,8 +1049,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     WeakObjCPtr<NSPopover> m_lastContextMenuTranslationPopover;
 #endif
 
-#if HAVE(REDESIGNED_TEXT_CURSOR) && PLATFORM(MAC)
-    RetainPtr<_WKWebViewTextInputNotifications> _textInputNotifications;
+#if HAVE(REDESIGNED_TEXT_CURSOR)
+    RetainPtr<_WKWebViewTextInputNotifications> m_textInputNotifications;
+#endif
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    RetainPtr<WKNSContentInsetFillView> m_topContentInsetFillView;
 #endif
 
 #if HAVE(INLINE_PREDICTIONS)
