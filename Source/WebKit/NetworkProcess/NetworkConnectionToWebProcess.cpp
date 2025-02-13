@@ -1180,6 +1180,10 @@ void NetworkConnectionToWebProcess::writeBlobsToTemporaryFilesForIndexedDB(const
         if (auto* session = networkSession())
             session->protectedStorageManager()->registerTemporaryBlobFilePaths(Ref { m_connection }, filePaths);
 
+        // Web process might create Blob with these files during index key generation.
+        for (auto& path : filePaths)
+            allowAccessToFile(path);
+
         completionHandler(WTFMove(filePaths));
     });
 }

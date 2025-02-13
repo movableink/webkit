@@ -228,13 +228,13 @@ void IDBConnectionToServer::didRenameIndex(const IDBResultData& resultData)
     m_proxy->completeOperation(resultData);
 }
 
-void IDBConnectionToServer::putOrAdd(const IDBRequestData& requestData, const IDBKeyData& key, const IDBValue& value, const IndexedDB::ObjectStoreOverwriteMode overwriteMode)
+void IDBConnectionToServer::putOrAdd(const IDBRequestData& requestData, const IDBKeyData& key, const IDBValue& value, const IndexIDToIndexKeyMap& indexKeys, const IndexedDB::ObjectStoreOverwriteMode overwriteMode)
 {
     LOG(IndexedDB, "IDBConnectionToServer::putOrAdd");
     ASSERT(isMainThread());
 
     if (m_serverConnectionIsValid)
-        m_delegate->putOrAdd(requestData, key, value, overwriteMode);
+        m_delegate->putOrAdd(requestData, key, value, indexKeys, overwriteMode);
     else
         callResultFunctionWithErrorLater(&IDBConnectionToServer::didPutOrAdd, requestData.requestIdentifier());
 }

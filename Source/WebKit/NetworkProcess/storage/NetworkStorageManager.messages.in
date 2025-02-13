@@ -77,7 +77,7 @@
     CreateIndex(WebCore::IDBRequestData requestData, WebCore::IDBIndexInfo info)
     DeleteIndex(WebCore::IDBRequestData requestData, WebCore::IDBObjectStoreIdentifier objectStoreIdentifier, String indexName)
     RenameIndex(WebCore::IDBRequestData requestData, WebCore::IDBObjectStoreIdentifier objectStoreIdentifier, WebCore::IDBIndexIdentifier indexIdentifier, String newName)
-    PutOrAdd(WebCore::IDBRequestData requestData, WebCore::IDBKeyData key, WebCore::IDBValue value, WebCore::IndexedDB::ObjectStoreOverwriteMode overwriteMode)
+    PutOrAdd(WebCore::IDBRequestData requestData, WebCore::IDBKeyData key, WebCore::IDBValue value, WebCore::IndexIDToIndexKeyMap indexKeys, WebCore::IndexedDB::ObjectStoreOverwriteMode overwriteMode)
     GetRecord(WebCore::IDBRequestData requestData, struct WebCore::IDBGetRecordData getRecordData)
     GetAllRecords(WebCore::IDBRequestData requestData, struct WebCore::IDBGetAllRecordsData getAllRecordsData)
     GetCount(WebCore::IDBRequestData requestData, struct WebCore::IDBKeyRangeData range)
