@@ -12,7 +12,6 @@ UIProcess/API/Cocoa/WKWebView.mm
 UIProcess/API/Cocoa/WKWebViewTesting.mm
 UIProcess/API/Cocoa/WKWebsiteDataStore.mm
 UIProcess/Inspector/InspectorTargetProxy.cpp
-UIProcess/Launcher/ProcessLauncher.cpp
 UIProcess/MediaKeySystemPermissionRequestManagerProxy.cpp
 UIProcess/Notifications/WebNotificationManagerProxy.cpp
 UIProcess/ProvisionalFrameProxy.cpp
