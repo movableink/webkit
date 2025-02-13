@@ -59,6 +59,7 @@ public:
     const Layout::InlineTextBox* layoutBox() const;
 
     WEBCORE_EXPORT Text* textNode() const;
+    RefPtr<Text> protectedTextNode() const { return textNode(); }
 
     const RenderStyle& style() const;
     const RenderStyle& firstLineStyle() const;

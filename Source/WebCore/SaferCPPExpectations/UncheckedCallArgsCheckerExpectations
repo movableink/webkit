@@ -69,7 +69,6 @@ platform/mac/VideoPresentationInterfaceMac.mm
 rendering/BackgroundPainter.cpp
 rendering/InlineBoxPainter.cpp
 rendering/RenderBlock.cpp
-rendering/RenderBlockFlow.cpp
 rendering/RenderBox.cpp
 rendering/RenderBoxModelObject.cpp
 rendering/RenderElement.cpp
