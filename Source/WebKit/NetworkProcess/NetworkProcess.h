@@ -574,6 +574,10 @@ private:
 
     void setShouldRelaxThirdPartyCookieBlockingForPage(WebPageProxyIdentifier);
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    void resetResourceMonitorThrottlerForTesting(PAL::SessionID, CompletionHandler<void()>&&);
+#endif
+
     // Connections to WebProcesses.
     HashMap<WebCore::ProcessIdentifier, Ref<NetworkConnectionToWebProcess>> m_webProcessConnections;
 

@@ -3313,10 +3313,6 @@ private:
 
 RefPtr<SpeechRecognitionPermissionManager> protectedSpeechRecognitionPermissionManager();
 
-#if ENABLE(CONTENT_EXTENSIONS)
-    void shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&&) const;
-#endif
-
 #if PLATFORM(COCOA)
     String presentingApplicationBundleIdentifier() const;
 #endif

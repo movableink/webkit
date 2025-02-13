@@ -16058,14 +16058,6 @@ void WebPageProxy::setPresentingApplicationAuditToken(const audit_token_t& prese
 }
 #endif
 
-#if ENABLE(CONTENT_EXTENSIONS)
-void WebPageProxy::shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&& completionHandler) const
-{
-    bool wasGranted = protectedWebsiteDataStore()->protectedResourceMonitorThrottler()->tryAccess(host);
-    completionHandler(wasGranted);
-}
-#endif
-
 bool WebPageProxy::canStartNavigationSwipeAtLastInteractionLocation() const
 {
     RefPtr client = pageClient();

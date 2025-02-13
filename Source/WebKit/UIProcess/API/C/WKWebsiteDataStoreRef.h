@@ -228,7 +228,8 @@ WK_EXPORT void WKWebsiteDataStoreClearBundleIdentifierInNetworkProcess(WKWebsite
 typedef void (*KWebsiteDataStoreSetOriginQuotaRatioEnabledCallback)(void* functionContext);
 WK_EXPORT void WKWebsiteDataStoreSetOriginQuotaRatioEnabled(WKWebsiteDataStoreRef dataStoreRef, bool enabled, void* context, KWebsiteDataStoreSetOriginQuotaRatioEnabledCallback callback);
 
-WK_EXPORT void WKWebsiteDataStoreResetResourceMonitorThrottler(WKWebsiteDataStoreRef dataStoreRef);
+typedef void (*KWebsiteDataStoreResetResourceMonitorThrottler)(void* functionContext);
+WK_EXPORT void WKWebsiteDataStoreResetResourceMonitorThrottler(WKWebsiteDataStoreRef dataStoreRef, void* context, KWebsiteDataStoreResetResourceMonitorThrottler callback);
 
 #ifdef __cplusplus
 }

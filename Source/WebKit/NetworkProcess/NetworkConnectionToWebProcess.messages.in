@@ -146,4 +146,8 @@ messages -> NetworkConnectionToWebProcess WantsDispatchMessage {
 
     SetLoginStatus(WebCore::RegistrableDomain domain, enum:uint8_t WebCore::IsLoggedIn loggedInStatus, std::optional<WebCore::LoginStatus> lastAuthentication) -> ()
     IsLoggedIn(WebCore::RegistrableDomain domain) -> (bool result)
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    ShouldOffloadIFrameForHost(String host) -> (bool wasGranted)
+#endif
 }

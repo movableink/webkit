@@ -71,6 +71,9 @@
 #if USE(CURL)
 #include "NetworkSessionCurl.h"
 #endif
+#if ENABLE(CONTENT_EXTENSIONS)
+#include <WebCore/ResourceMonitorThrottler.h>
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -926,5 +929,25 @@ Ref<NetworkBroadcastChannelRegistry> NetworkSession::protectedBroadcastChannelRe
 {
     return m_broadcastChannelRegistry;
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+WebCore::ResourceMonitorThrottler& NetworkSession::resourceMonitorThrottler()
+{
+    if (!m_resourceMonitorThrottler)
+        m_resourceMonitorThrottler = WebCore::ResourceMonitorThrottler::create();
+
+    return *m_resourceMonitorThrottler;
+}
+
+Ref<WebCore::ResourceMonitorThrottler> NetworkSession::protectedResourceMonitorThrottler()
+{
+    return resourceMonitorThrottler();
+}
+
+void NetworkSession::resetResourceMonitorThrottlerForTesting()
+{
+    m_resourceMonitorThrottler = nullptr;
+}
+#endif
 
 } // namespace WebKit

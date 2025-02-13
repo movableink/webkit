@@ -114,6 +114,10 @@
 #include <WebCore/MockContentFilterSettings.h>
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+#include <WebCore/ResourceMonitorThrottler.h>
+#endif
+
 #define CONNECTION_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [webProcessIdentifier=%" PRIu64 "] NetworkConnectionToWebProcess::" fmt, this, this->webProcessIdentifier().toUInt64(), ##__VA_ARGS__)
 #define CONNECTION_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - [webProcessIdentifier=%" PRIu64 "] NetworkConnectionToWebProcess::" fmt, this, this->webProcessIdentifier().toUInt64(), ##__VA_ARGS__)
 
@@ -1785,6 +1789,20 @@ void NetworkConnectionToWebProcess::updateSharedPreferencesForWebProcess(SharedP
     if (CheckedPtr session = networkSession())
         session->protectedStorageManager()->updateSharedPreferencesForConnection(protectedConnection(), m_sharedPreferencesForWebProcess);
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+void NetworkConnectionToWebProcess::shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&& completionHandler)
+{
+    bool wasGranted = false;
+
+    if (CheckedPtr session = networkSession()) {
+        wasGranted = session->protectedResourceMonitorThrottler()->tryAccess(host);
+        CONNECTION_RELEASE_LOG(Loading, "shouldOffloadIFrameForHost: (host=%" PUBLIC_LOG_STRING ", wasGranted=%d)", host.utf8().data(), wasGranted ? 1 : 0);
+    }
+
+    completionHandler(wasGranted);
+}
+#endif
 
 } // namespace WebKit
 

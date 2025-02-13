@@ -272,4 +272,8 @@ messages -> NetworkProcess : AuxiliaryProcess WantsAsyncDispatchMessage {
     RestoreSessionStorage(PAL::SessionID sessionID, WebKit::WebPageProxyIdentifier pageID, HashMap<WebCore::ClientOrigin, HashMap<String, String>> localStorageMap) -> (bool succeeded)
 
     SetShouldRelaxThirdPartyCookieBlockingForPage(WebKit::WebPageProxyIdentifier pageID)
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    ResetResourceMonitorThrottlerForTesting(PAL::SessionID sessionID) -> ();
+#endif
 }
