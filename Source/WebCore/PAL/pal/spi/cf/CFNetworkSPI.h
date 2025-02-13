@@ -455,6 +455,7 @@ enum : NSUInteger {
 @interface NSURLSessionTask ()
 @property (nonatomic, copy, nullable) NSArray<NSHTTPCookie*>* (^_cookieTransformCallback)(NSArray<NSHTTPCookie*>* cookies);
 @property (nonatomic, readonly, nullable) NSArray<NSString*>* _resolvedCNAMEChain;
+@property (nonatomic, readonly) int64_t _countOfBytesReceivedEncoded;
 @end
 
 #endif // defined(__OBJC__)
