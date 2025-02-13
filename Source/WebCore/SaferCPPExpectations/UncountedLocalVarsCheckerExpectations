@@ -573,7 +573,6 @@ page/ResizeObservation.cpp
 page/ResizeObserver.cpp
 page/ScreenOrientation.cpp
 page/ScrollBehavior.cpp
-page/SecurityOriginData.cpp
 page/SettingsBase.cpp
 page/SpatialNavigation.cpp
 page/TextIndicator.cpp
