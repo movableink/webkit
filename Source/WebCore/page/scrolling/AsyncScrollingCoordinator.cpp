@@ -794,8 +794,10 @@ void AsyncScrollingCoordinator::reconcileScrollingState(LocalFrameView& frameVie
     auto obscuredContentInsets = frameView.obscuredContentInsets();
 
     FloatPoint positionForInsetClipLayer;
-    if (insetClipLayer)
+    if (insetClipLayer) {
         positionForInsetClipLayer = LocalFrameView::positionForInsetClipLayer(scrollPosition, obscuredContentInsets);
+        positionForInsetClipLayer.move(frameView.insetForLeftScrollbarSpace(), 0);
+    }
     FloatPoint positionForContentsLayer = frameView.positionForRootContentLayer();
     
     FloatPoint positionForHeaderLayer = FloatPoint(scrollPositionForFixed.x(), LocalFrameView::yPositionForHeaderLayer(scrollPosition, obscuredContentInsets.top()));
