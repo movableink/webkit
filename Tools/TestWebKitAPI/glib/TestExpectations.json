@@ -405,7 +405,7 @@
                              "wpe": {"status": ["PASS", "FAIL"], "bug": "webkit.org/b/281986"}}
             },
             "/webkit/WebKitPolicyClient/new-window-policy": {
-                "expected": {"wpe": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/281812"}}
+                "expected": {"all": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/281812"}}
             }
         }
     },
@@ -485,6 +485,9 @@
         "subtests": {
             "/webkit/WebKitWebsiteData/storage": {
                 "expected": {"gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/284812"}}
+            },
+            "/webkit/WebKitWebsiteData/service-worker-registrations": {
+                "expected": {"all" : { "status": ["PASS", "FAIL"], "bug": "webkit.org/b/287621"}}
             }
         }
     },
