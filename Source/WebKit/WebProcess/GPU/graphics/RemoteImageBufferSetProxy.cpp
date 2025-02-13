@@ -153,6 +153,8 @@ ALWAYS_INLINE auto RemoteImageBufferSetProxy::sendSync(T&& message)
     RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] Proxy::sendSync - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
         remoteRenderingBackendProxy->renderingBackendIdentifier().toUInt64(), IPC::description(T::name()).characters(), IPC::errorAsString(result.error()).characters());
     didBecomeUnresponsive();
+
+    return result;
 }
 
 ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteImageBufferSetProxy::connection() const
