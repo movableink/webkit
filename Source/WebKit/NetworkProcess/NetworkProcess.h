@@ -190,6 +190,7 @@ public:
     AuthenticationManager& authenticationManager();
     Ref<AuthenticationManager> protectedAuthenticationManager();
     DownloadManager& downloadManager();
+    CheckedRef<DownloadManager> checkedDownloadManager();
 
     void setSession(PAL::SessionID, std::unique_ptr<NetworkSession>&&);
     NetworkSession* networkSession(PAL::SessionID) const final;

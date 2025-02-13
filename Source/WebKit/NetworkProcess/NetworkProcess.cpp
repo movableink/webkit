@@ -203,6 +203,11 @@ DownloadManager& NetworkProcess::downloadManager()
     return m_downloadManager;
 }
 
+CheckedRef<DownloadManager> NetworkProcess::checkedDownloadManager()
+{
+    return downloadManager();
+}
+
 void NetworkProcess::removeNetworkConnectionToWebProcess(NetworkConnectionToWebProcess& connection)
 {
     ASSERT(m_webProcessConnections.contains(connection.webProcessIdentifier()));
