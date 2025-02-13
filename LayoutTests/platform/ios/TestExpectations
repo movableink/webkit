@@ -4499,7 +4499,6 @@ fast/images/pagewide-play-pause-offscreen-animations.html [ Pass ]
 
 # Re-enabling tests fixed by DocumentManager in iOS16+ rdar://102159271
 fast/forms/ios/file-upload-panel-capture.html [ Pass Crash ] # remove crash after this is resolved: webkit.org/b/268568
-fast/forms/ios/file-upload-panel.html [ Pass ]
 fast/forms/ios/show-file-upload-context-menu-above-keyboard.html [ Pass ]
 fast/forms/ios/file-upload-panel-accept.html [ Pass ]
 
@@ -7694,3 +7693,5 @@ webkit.org/b/287204 [ Release ] fast/forms/date/date-input-rendering-basic.html 
 webkit.org/b/287291 http/tests/site-isolation/selection-focus.html [ ImageOnlyFailure ]
 
 webkit.org/b/287650 [ Debug ] compositing/repaint/scroller-repaints-once.html [ Crash ]
+
+webkit.org/b/287660 fast/forms/ios/file-upload-panel.html [ Pass Crash ]
