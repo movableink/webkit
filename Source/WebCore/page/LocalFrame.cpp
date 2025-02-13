@@ -129,6 +129,7 @@
 #include <WebKitAdditions/LocalFrameAdditions.h>
 #endif
 
+#define FRAME_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - Frame::" fmt, this, ##__VA_ARGS__)
 #define FRAME_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - Frame::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
@@ -1455,6 +1456,17 @@ void LocalFrame::showResourceMonitoringError()
     if (!iframeElement || !document)
         return;
 
+    URL url;
+    URL mainFrameURL;
+    if (document)
+        url = document->url();
+    if (RefPtr page = protectedPage())
+        mainFrameURL = page->mainFrameURL();
+
+    FRAME_RELEASE_LOG(ResourceLoading, "Detected excessive network usage in frame at %" SENSITIVE_LOG_STRING " and main frame at %" SENSITIVE_LOG_STRING ": unloading", url.isValid() ? url.string().utf8().data() : "invalid", mainFrameURL.isValid() ? mainFrameURL.string().utf8().data() : "invalid");
+
+    document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Error, "Frame was unloaded because its network usage exceeded the limit."_s);
+
     for (RefPtr<Frame> frame = this; frame; frame = frame->tree().traverseNext()) {
         if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame)) {
             if (RefPtr window = localFrame->window())
@@ -1470,12 +1482,19 @@ void LocalFrame::showResourceMonitoringError()
 #endif
 
     iframeElement->setSrcdoc(generateResourceMonitorErrorHTML(colorScheme));
-
-    document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Error, "Frame was unloaded because its network usage exceeded the limit."_s);
 }
 
 void LocalFrame::reportResourceMonitoringWarning()
 {
+    URL url;
+    URL mainFrameURL;
+    if (RefPtr document = protectedDocument())
+        url = document->url();
+    if (RefPtr page = protectedPage())
+        mainFrameURL = page->mainFrameURL();
+
+    FRAME_RELEASE_LOG(ResourceLoading, "Detected excessive network usage in frame at %" SENSITIVE_LOG_STRING " and main frame at %" SENSITIVE_LOG_STRING ": not unloading due to global limits", url.isValid() ? url.string().utf8().data() : "invalid", mainFrameURL.isValid() ? mainFrameURL.string().utf8().data() : "invalid");
+
     if (RefPtr document = this->document())
         document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Warning, "Frame's network usage exceeded the limit."_s);
 }
