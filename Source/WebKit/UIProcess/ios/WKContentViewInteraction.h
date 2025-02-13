@@ -445,13 +445,33 @@ struct ImageAnalysisContextMenuActionData {
     RetainPtr<WKSTextAnimationManager> _textAnimationManager;
 #endif
 
-    BOOL _isInSelectionInteraction;
+    enum class SelectionInteractionType : uint8_t {
+        None,
+        Touch,
+        ExtentPoint,
+        ExtentPointAndBoundary,
+    };
+    SelectionInteractionType _selectionInteractionType;
+
     struct LastSelectionTouch {
         CGPoint point;
         BOOL baseIsStart;
         WKBESelectionFlags flags;
     };
     LastSelectionTouch _lastSelectionTouch;
+
+    struct LastSelectionExtentPoint {
+        CGPoint point;
+        WebKit::RespectSelectionAnchor respectSelectionAnchor;
+    };
+    LastSelectionExtentPoint _lastSelectionExtentPoint;
+
+    struct LastSelectionExtentPointAndBoundary {
+        CGPoint point;
+        WebCore::TextGranularity granularity;
+        WebKit::TextInteractionSource interactionSource;
+    };
+    LastSelectionExtentPointAndBoundary _lastSelectionExtentPointAndBoundary;
 
     RefPtr<WebKit::SmartMagnificationController> _smartMagnificationController;
 

@@ -1150,6 +1150,7 @@ public:
     void cancelAutoscroll();
     void hardwareKeyboardAvailabilityChanged(HardwareKeyboardState);
     bool isScrollingOrZooming() const { return m_isScrollingOrZooming; }
+    bool isAutoscrolling() const { return m_isAutoscrolling; }
     void requestEvasionRectsAboveSelection(CompletionHandler<void(const Vector<WebCore::FloatRect>&)>&&);
     void updateSelectionWithDelta(int64_t locationDelta, int64_t lengthDelta, CompletionHandler<void()>&&);
     void requestDocumentEditingContext(DocumentEditingContextRequest&&, CompletionHandler<void(DocumentEditingContext&&)>&&);
@@ -3407,6 +3408,7 @@ RefPtr<SpeechRecognitionPermissionManager> protectedSpeechRecognitionPermissionM
     bool m_hasNetworkRequestsOnSuspended { false };
     bool m_isKeyboardAnimatingIn { false };
     bool m_isScrollingOrZooming { false };
+    bool m_isAutoscrolling { false };
 #endif
 
 #if PLATFORM(MAC)

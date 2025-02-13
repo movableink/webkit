@@ -1485,6 +1485,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     _sourceAnimationIDtoDestinationAnimationID = adoptNS([[NSMutableDictionary alloc] init]);
 
+    _selectionInteractionType = SelectionInteractionType::None;
+
     _hasSetUpInteractions = YES;
 }
 
@@ -1658,6 +1660,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     self.pasteConfiguration = nil;
 #endif
 
+    _selectionInteractionType = SelectionInteractionType::None;
+
     _cachedHasCustomTintColor = std::nullopt;
     _cachedSelectedTextRange = nil;
 }
@@ -1778,6 +1782,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)cancelAutoscroll
 {
+    _selectionInteractionType = SelectionInteractionType::None;
     _page->cancelAutoscroll();
 }
 
@@ -5276,8 +5281,19 @@ static void selectionChangedWithTouch(WKTextInteractionWrapper *interaction, con
 
 - (void)updateSelection
 {
-    if (_isInSelectionInteraction)
+    switch (_selectionInteractionType) {
+    case SelectionInteractionType::None:
+        break;
+    case SelectionInteractionType::Touch:
         [self updateSelectionWithTouchAt:[self convertPoint:_lastSelectionTouch.point fromView:self.webView] withSelectionTouch:WKBESelectionTouchPhaseMoved baseIsStart:_lastSelectionTouch.baseIsStart withFlags:_lastSelectionTouch.flags];
+        break;
+    case SelectionInteractionType::ExtentPoint:
+        [self updateSelectionWithExtentPoint:[self convertPoint:_lastSelectionExtentPoint.point fromView:self.webView] hasFocusedElement:self._hasFocusedElement respectSelectionAnchor:_lastSelectionExtentPoint.respectSelectionAnchor completionHandler:^(BOOL selectionEndIsMoving) { }];
+        break;
+    case SelectionInteractionType::ExtentPointAndBoundary:
+        [self updateSelectionWithExtentPointAndBoundary:[self convertPoint:_lastSelectionExtentPointAndBoundary.point fromView:self.webView] textGranularity:_lastSelectionExtentPointAndBoundary.granularity textInteractionSource:_lastSelectionExtentPointAndBoundary.interactionSource completionHandler:^(BOOL selectionEndIsMoving) { }];
+        break;
+    }
 }
 
 - (void)changeSelectionWithTouchAt:(CGPoint)point withSelectionTouch:(WKBESelectionTouchPhase)touch baseIsStart:(BOOL)baseIsStart withFlags:(WKBESelectionFlags)flags
@@ -5287,27 +5303,23 @@ static void selectionChangedWithTouch(WKTextInteractionWrapper *interaction, con
     _autocorrectionContextNeedsUpdate = YES;
     _usingGestureForSelection = YES;
 
-    auto touchType = toSelectionTouch(touch);
-    switch (touchType) {
-    case WebKit::SelectionTouch::Started:
-        _isInSelectionInteraction = YES;
-        _lastSelectionTouch.point = [self convertPoint:point toView:self.webView];
-        _lastSelectionTouch.baseIsStart = baseIsStart;
-        _lastSelectionTouch.flags = flags;
-        break;
-    case WebKit::SelectionTouch::Moved:
-        if (_isInSelectionInteraction) {
+    if (_page->isAutoscrolling()) {
+        auto touchType = toSelectionTouch(touch);
+        switch (touchType) {
+        case WebKit::SelectionTouch::Started:
+        case WebKit::SelectionTouch::Moved:
+            _selectionInteractionType = SelectionInteractionType::Touch;
             _lastSelectionTouch.point = [self convertPoint:point toView:self.webView];
             _lastSelectionTouch.baseIsStart = baseIsStart;
             _lastSelectionTouch.flags = flags;
+            break;
+        case WebKit::SelectionTouch::Ended:
+        case WebKit::SelectionTouch::EndedMovingForward:
+        case WebKit::SelectionTouch::EndedMovingBackward:
+        case WebKit::SelectionTouch::EndedNotMoving:
+            _selectionInteractionType = SelectionInteractionType::None;
+            break;
         }
-        break;
-    case WebKit::SelectionTouch::Ended:
-    case WebKit::SelectionTouch::EndedMovingForward:
-    case WebKit::SelectionTouch::EndedMovingBackward:
-    case WebKit::SelectionTouch::EndedNotMoving:
-        _isInSelectionInteraction = NO;
-        break;
     }
 
     [self updateSelectionWithTouchAt:point withSelectionTouch:touch baseIsStart:baseIsStart withFlags:flags];
@@ -5317,7 +5329,7 @@ static void selectionChangedWithTouch(WKTextInteractionWrapper *interaction, con
 - (void)updateSelectionWithTouchAt:(CGPoint)point withSelectionTouch:(WKBESelectionTouchPhase)touch baseIsStart:(BOOL)baseIsStart withFlags:(WKBESelectionFlags)flags
 {
     _page->updateSelectionWithTouches(WebCore::IntPoint(point), toSelectionTouch(touch), baseIsStart, [self, strongSelf = retainPtr(self), flags](const WebCore::IntPoint& point, WebKit::SelectionTouch touch, OptionSet<WebKit::SelectionFlags> innerFlags) {
-        if (_isInSelectionInteraction && innerFlags.contains(WebKit::SelectionFlags::SelectionFlipped))
+        if (_selectionInteractionType == SelectionInteractionType::Touch && innerFlags.contains(WebKit::SelectionFlags::SelectionFlipped))
             _lastSelectionTouch.baseIsStart = !_lastSelectionTouch.baseIsStart;
         selectionChangedWithTouch(_textInteractionWrapper.get(), point, touch, toSelectionFlags(flags) | innerFlags);
         if (toWKBESelectionTouchPhase(touch) != WKBESelectionTouchPhaseStarted && toWKBESelectionTouchPhase(touch) != WKBESelectionTouchPhaseMoved)
@@ -5675,15 +5687,38 @@ static void logTextInteraction(const char* methodName, UIGestureRecognizer *loup
             && !self.textInteractionTapGestureRecognizer._wk_hasRecognizedOrEnded;
 
         auto respectSelectionAnchor = triggeredByFloatingCursor ? WebKit::RespectSelectionAnchor::Yes : WebKit::RespectSelectionAnchor::No;
-        _page->updateSelectionWithExtentPoint(WebCore::IntPoint(point), self._hasFocusedElement, respectSelectionAnchor, [selectionHandler = makeBlockPtr(completionHandler)](bool endIsMoving) {
-            selectionHandler(static_cast<BOOL>(endIsMoving));
-        });
+        [self updateSelectionWithExtentPoint:point hasFocusedElement:self._hasFocusedElement respectSelectionAnchor:respectSelectionAnchor completionHandler:completionHandler];
+
+        if (!triggeredByFloatingCursor && _page->isAutoscrolling()) {
+            _selectionInteractionType = SelectionInteractionType::ExtentPoint;
+            _lastSelectionExtentPoint.point = [self convertPoint:point toView:self.webView];
+            _lastSelectionExtentPoint.respectSelectionAnchor = respectSelectionAnchor;
+        }
         return;
     }
 
     auto source = _usingMouseDragForSelection ? WebKit::TextInteractionSource::Mouse : WebKit::TextInteractionSource::Touch;
+    [self updateSelectionWithExtentPointAndBoundary:point textGranularity:toWKTextGranularity(granularity) textInteractionSource:source completionHandler:completionHandler];
+
+    if (_page->isAutoscrolling()) {
+        _selectionInteractionType = SelectionInteractionType::ExtentPointAndBoundary;
+        _lastSelectionExtentPointAndBoundary.point = [self convertPoint:point toView:self.webView];
+        _lastSelectionExtentPointAndBoundary.granularity = toWKTextGranularity(granularity);
+        _lastSelectionExtentPointAndBoundary.interactionSource = source;
+    }
+}
+
+- (void)updateSelectionWithExtentPoint:(CGPoint)point hasFocusedElement:(BOOL)hasFocusedElement respectSelectionAnchor:(WebKit::RespectSelectionAnchor)respectSelectionAnchor completionHandler:(void (^)(BOOL selectionEndIsMoving))completionHandler
+{
+    _page->updateSelectionWithExtentPoint(WebCore::IntPoint(point), self._hasFocusedElement, respectSelectionAnchor, [completionHandler = makeBlockPtr(completionHandler)](bool endIsMoving) {
+        completionHandler(static_cast<BOOL>(endIsMoving));
+    });
+}
+
+- (void)updateSelectionWithExtentPointAndBoundary:(CGPoint)point textGranularity:(WebCore::TextGranularity)textGranularity textInteractionSource:(WebKit::TextInteractionSource)interactionSource completionHandler:(void (^)(BOOL selectionEndIsMoving))completionHandler
+{
     ++_suppressNonEditableSingleTapTextInteractionCount;
-    _page->updateSelectionWithExtentPointAndBoundary(WebCore::IntPoint(point), toWKTextGranularity(granularity), self._hasFocusedElement, source, [completionHandler = makeBlockPtr(completionHandler), protectedSelf = retainPtr(self)] (bool endIsMoving) {
+    _page->updateSelectionWithExtentPointAndBoundary(WebCore::IntPoint(point), textGranularity, self._hasFocusedElement, interactionSource, [completionHandler = makeBlockPtr(completionHandler), protectedSelf = retainPtr(self)] (bool endIsMoving) {
         completionHandler(static_cast<BOOL>(endIsMoving));
         --protectedSelf->_suppressNonEditableSingleTapTextInteractionCount;
     });
