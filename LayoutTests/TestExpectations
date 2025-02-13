@@ -1619,8 +1619,6 @@ css2.1/20110323/replaced-intrinsic-002.htm [ Failure ]
 
 webkit.org/b/133057 fast/table/border-collapsing/collapsed-borders-adjoining-sections.html [ ImageOnlyFailure ]
 
-webkit.org/b/169075 editing/selection/extend-by-character-007.html [ Failure ]
-
 webkit.org/b/169359 http/tests/cache/disk-cache/disk-cache-remove-several-pending-writes.html [ Pass Failure ]
 
 # CSS Font Loading is not yet enabled on all platforms

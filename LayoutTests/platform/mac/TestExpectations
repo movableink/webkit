@@ -836,9 +836,6 @@ fast/forms/focus-selection-textarea.html [ Pass Failure ]
 # See also: rdar://problem/27356144
 webkit.org/b/142726 fast/images/animated-png.html [ Skip ]
 
-# OS X 10.10.3+ has the necessary glyphs.
-webkit.org/b/142548 editing/selection/extend-by-character-007.html [ Pass ]
-
 webkit.org/b/145432 media/video-transformed-by-javascript.html [ Failure ]
 
 webkit.org/b/140022 http/tests/media/track-in-band-hls-metadata.html [ Pass Timeout Failure ]
