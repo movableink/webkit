@@ -1980,7 +1980,6 @@ webkit.org/b/179853 imported/blink/fast/text/international-iteration-simple-text
 webkit.org/b/230062 fast/text/FontFaceSet-check-after-style-update.html [ Pass Failure ]
 
 # Skip anything related to WebAuthN
-http/wpt/credential-management/ [ Skip ]
 http/wpt/webauthn/ [ Skip ]
 imported/w3c/web-platform-tests/credential-management/ [ Skip ]
 imported/w3c/web-platform-tests/webauthn [ Skip ]
