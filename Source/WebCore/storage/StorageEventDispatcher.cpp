@@ -35,6 +35,7 @@
 #include "PageGroup.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginData.h"
+#include "Storage.h"
 #include "StorageEvent.h"
 #include "StorageType.h"
 
