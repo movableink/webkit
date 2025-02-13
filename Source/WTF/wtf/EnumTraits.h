@@ -220,8 +220,11 @@ constexpr std::underlying_type_t<E> enumNamesMin()
 {
     using Underlying = std::underlying_type_t<E>;
 
-    if constexpr (requires { { EnumTraits<E>::min } -> std::same_as<Underlying>; })
+    if constexpr (requires { EnumTraits<E>::min; }) {
+        static_assert(std::is_same_v<std::remove_cv_t<decltype(EnumTraits<E>::min)>, Underlying>,
+            "EnumTraits<E>::min must have the same type as the underlying type of the enum.");
         return EnumTraits<E>::min;
+    }
 
     // Default for both signed and unsigned enums.
     return 0;
@@ -232,8 +235,11 @@ constexpr std::underlying_type_t<E> enumNamesMax()
 {
     using Underlying = std::underlying_type_t<E>;
 
-    if constexpr (requires { { EnumTraits<E>::max } -> std::same_as<Underlying>; })
+    if constexpr (requires { EnumTraits<E>::max; }) {
+        static_assert(std::is_same_v<std::remove_cv_t<decltype(EnumTraits<E>::max)>, Underlying>,
+            "EnumTraits<E>::max must have the same type as the underlying type of the enum.");
         return EnumTraits<E>::max;
+    }
 
     constexpr Underlying defaultMax = std::is_signed_v<Underlying> ? INT8_MAX : UINT8_MAX;
     constexpr Underlying computedMax = (sizeof(E) > 1) ? static_cast<Underlying>(defaultMax << 1) : defaultMax;
