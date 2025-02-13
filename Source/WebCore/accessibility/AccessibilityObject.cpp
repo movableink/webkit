@@ -4067,31 +4067,13 @@ Vector<Ref<Element>> AccessibilityObject::elementsFromAttribute(const QualifiedN
     if (!element)
         return { };
 
-    if (Element::isElementReflectionAttribute(document()->settings(), attribute)) {
-        if (RefPtr reflectedElement = element->getElementAttribute(attribute)) {
-            Vector<Ref<Element>> elements;
-            elements.append(reflectedElement.releaseNonNull());
-            return elements;
-        }
-    } else if (Element::isElementsArrayReflectionAttribute(attribute)) {
-        if (auto reflectedElements = element->getElementsArrayAttribute(attribute)) {
-            return reflectedElements.value();
-        }
-    }
+    if (auto elementsFromAttribute = element->elementsArrayForAttributeInternal(attribute))
+        return elementsFromAttribute.value();
 
-    auto& idsString = getAttribute(attribute);
-    if (idsString.isEmpty()) {
-        if (auto* defaultARIA = element->customElementDefaultARIAIfExists()) {
-            return defaultARIA->elementsForAttribute(*element, attribute);
-        }
-        return { };
-    }
+    if (auto* defaultARIA = element->customElementDefaultARIAIfExists())
+        return defaultARIA->elementsForAttribute(*element, attribute);
 
-    auto& treeScope = element->treeScope();
-    SpaceSplitString ids(idsString, SpaceSplitString::ShouldFoldCase::No);
-    return WTF::compactMap(ids, [&](auto& id) {
-        return treeScope.getElementById(id);
-    });
+    return { };
 }
 
 #if PLATFORM(COCOA)

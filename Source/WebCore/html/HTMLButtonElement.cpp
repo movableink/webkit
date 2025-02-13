@@ -146,7 +146,7 @@ RefPtr<Element> HTMLButtonElement::commandForElement() const
     if (!canInvoke(*this))
         return nullptr;
 
-    return getElementAttribute(commandforAttr);
+    return elementForAttributeInternal(commandforAttr);
 }
 
 constexpr ASCIILiteral togglePopoverLiteral = "toggle-popover"_s;
