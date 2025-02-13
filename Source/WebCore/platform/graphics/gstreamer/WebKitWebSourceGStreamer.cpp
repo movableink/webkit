@@ -639,11 +639,6 @@ static void webKitWebSrcMakeRequest(WebKitWebSrc* src, DataMutexLocker<WebKitWeb
         request.setAcceptEncoding(false);
 #endif
 
-    // Let Apple web servers know we want to access their nice movie trailers.
-    if (!g_ascii_strcasecmp("movies.apple.com", url.host().utf8().data())
-        || !g_ascii_strcasecmp("trailers.apple.com", url.host().utf8().data()))
-        request.setHTTPUserAgent("Quicktime/7.6.6"_s);
-
     if (members->requestedPosition || members->stopPosition != UINT64_MAX) {
         GUniquePtr<char> formatedRange;
         if (members->stopPosition != UINT64_MAX)
