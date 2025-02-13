@@ -801,7 +801,7 @@ auto AnchorPositionEvaluator::makeAnchorPositionedForAnchorMap(Document& documen
         for (auto& anchorElement : elementAndState.value->anchorElements) {
             if (!anchorElement.value)
                 continue;
-            CheckedPtr renderer = dynamicDowncast<RenderBoxModelObject>(anchorElement.value->renderer());
+            CheckedPtr renderer = dynamicDowncast<RenderBoxModelObject>(Ref { *anchorElement.value }->renderer());
             if (!renderer)
                 continue;
             map.ensure(*renderer, [&] {
