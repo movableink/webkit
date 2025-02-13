@@ -1279,7 +1279,7 @@ void UIDelegate::UIClient::didChangeFontAttributes(const WebCore::FontAttributes
     [privateUIDelegate _webView:uiDelegate->m_webView.get().get() didChangeFontAttributes:fontAttributes.createDictionary().get()];
 }
 
-void UIDelegate::UIClient::callDisplayCapturePermissionDelegate(WebPageProxy& page, WebFrameProxy& frame, API::SecurityOrigin& userMediaOrigin, API::SecurityOrigin& topLevelOrigin, UserMediaPermissionRequestProxy& request)
+void UIDelegate::UIClient::callDisplayCapturePermissionDelegate(WebPageProxy& page, WebFrameProxy& frame, FrameInfoData&& frameInfo, API::SecurityOrigin& userMediaOrigin, API::SecurityOrigin& topLevelOrigin, UserMediaPermissionRequestProxy& request)
 {
     RefPtr uiDelegate = m_uiDelegate.get();
     auto delegate = (id<WKUIDelegatePrivate>)uiDelegate->m_delegate.get();
@@ -1310,7 +1310,6 @@ void UIDelegate::UIClient::callDisplayCapturePermissionDelegate(WebPageProxy& pa
     std::optional<WebCore::FrameIdentifier> mainFrameID;
     if (RefPtr mainFrame = frame.page() ? frame.page()->mainFrame() : nullptr)
         mainFrameID = mainFrame->frameID();
-    FrameInfoData frameInfo { frame.isMainFrame(), FrameType::Local, { }, userMediaOrigin.securityOrigin(), { }, frame.frameID(), mainFrameID, std::nullopt, frame.process().processID(), frame.isFocused() };
     RetainPtr<WKFrameInfo> frameInfoWrapper = wrapper(API::FrameInfo::create(WTFMove(frameInfo), frame.page()));
 
     BOOL requestSystemAudio = !!request.requiresDisplayCaptureWithAudio();
@@ -1339,7 +1338,7 @@ void UIDelegate::UIClient::decidePolicyForUserMediaPermissionRequest(WebPageProx
             return;
         }
 
-        callDisplayCapturePermissionDelegate(page, frame, userMediaOrigin, topLevelOrigin, request);
+        callDisplayCapturePermissionDelegate(page, frame, FrameInfoData { request.frameInfo() }, userMediaOrigin, topLevelOrigin, request);
         return;
     }
 
@@ -1382,8 +1381,7 @@ void UIDelegate::UIClient::decidePolicyForUserMediaPermissionRequest(WebPageProx
         std::optional<WebCore::FrameIdentifier> mainFrameID;
         if (RefPtr mainFrame = frame.page() ? frame.page()->mainFrame() : nullptr)
             mainFrameID = mainFrame->frameID();
-        FrameInfoData frameInfo { frame.isMainFrame(), FrameType::Local, { }, userMediaOrigin.securityOrigin(), { }, frame.frameID(), mainFrameID, std::nullopt, frame.process().processID(), frame.isFocused() };
-        RetainPtr<WKFrameInfo> frameInfoWrapper = wrapper(API::FrameInfo::create(WTFMove(frameInfo), frame.page()));
+        RetainPtr<WKFrameInfo> frameInfoWrapper = wrapper(API::FrameInfo::create(FrameInfoData { request.frameInfo() }, frame.page()));
 
         WKMediaCaptureType type = WKMediaCaptureTypeCamera;
         if (request.requiresAudioCapture())
@@ -1426,7 +1424,7 @@ void UIDelegate::UIClient::decidePolicyForUserMediaPermissionRequest(WebPageProx
 #endif
 }
 
-void UIDelegate::UIClient::decidePolicyForScreenCaptureUnmuting(WebPageProxy& page, WebFrameProxy& frame, API::SecurityOrigin& userMediaOrigin, API::SecurityOrigin& topLevelOrigin, CompletionHandler<void(bool isAllowed)>&& completionHandler)
+void UIDelegate::UIClient::decidePolicyForScreenCaptureUnmuting(WebPageProxy& page, WebFrameProxy& frame, FrameInfoData&& frameInfo, API::SecurityOrigin& userMediaOrigin, API::SecurityOrigin& topLevelOrigin, CompletionHandler<void(bool isAllowed)>&& completionHandler)
 {
     RefPtr uiDelegate = m_uiDelegate.get();
     if (!uiDelegate) {
@@ -1459,7 +1457,6 @@ void UIDelegate::UIClient::decidePolicyForScreenCaptureUnmuting(WebPageProxy& pa
     std::optional<WebCore::FrameIdentifier> mainFrameID;
     if (RefPtr mainFrame = frame.page() ? frame.page()->mainFrame() : nullptr)
         mainFrameID = mainFrame->frameID();
-    FrameInfoData frameInfo { frame.isMainFrame(), FrameType::Local, { }, userMediaOrigin.securityOrigin(), { }, frame.frameID(), mainFrameID, std::nullopt, frame.process().processID(), frame.isFocused() };
     RetainPtr<WKFrameInfo> frameInfoWrapper = wrapper(API::FrameInfo::create(WTFMove(frameInfo), frame.page()));
 
     [delegate _webView:uiDelegate->m_webView.get().get() decidePolicyForScreenCaptureUnmutingForOrigin:wrapper(topLevelOrigin) initiatedByFrame:frameInfoWrapper.get() decisionHandler:decisionHandler.get()];

@@ -1565,7 +1565,7 @@ struct WebCore::SpeechRecognitionRequestInfo {
     bool interimResults;
     uint64_t maxAlternatives;
     WebCore::ClientOrigin clientOrigin;
-    WebCore::FrameIdentifier frameIdentifier;
+    WebCore::FrameIdentifier mainFrameIdentifier;
 };
 
 [CustomHeader] struct WebCore::SpeechRecognitionAlternativeData {

@@ -96,7 +96,7 @@ public:
 
     void invalidatePendingRequests();
 
-    void requestUserMediaPermissionForFrame(WebCore::UserMediaRequestIdentifier, WebCore::FrameIdentifier, Ref<WebCore::SecurityOrigin>&&  userMediaDocumentOrigin, Ref<WebCore::SecurityOrigin>&& topLevelDocumentOrigin, WebCore::MediaStreamRequest&&);
+    void requestUserMediaPermissionForFrame(WebCore::UserMediaRequestIdentifier, FrameInfoData&&, Ref<WebCore::SecurityOrigin>&&  userMediaDocumentOrigin, Ref<WebCore::SecurityOrigin>&& topLevelDocumentOrigin, WebCore::MediaStreamRequest&&);
 
     void resetAccess(WebFrameProxy* = nullptr);
     void didCommitLoadForFrame(WebCore::FrameIdentifier);
@@ -128,7 +128,7 @@ public:
     void setMockCaptureDevicesEnabledOverride(std::optional<bool>);
     bool hasPendingCapture() const { return m_hasPendingCapture; }
 
-    void checkUserMediaPermissionForSpeechRecognition(WebCore::FrameIdentifier, const WebCore::SecurityOrigin&, const WebCore::SecurityOrigin&, const WebCore::CaptureDevice&, CompletionHandler<void(bool)>&&);
+    void checkUserMediaPermissionForSpeechRecognition(WebCore::FrameIdentifier mainFrameIdentifier, FrameInfoData&&, const WebCore::SecurityOrigin&, const WebCore::SecurityOrigin&, const WebCore::CaptureDevice&, CompletionHandler<void(bool)>&&);
 
     struct DeniedRequest {
         WebCore::FrameIdentifier mainFrameID;

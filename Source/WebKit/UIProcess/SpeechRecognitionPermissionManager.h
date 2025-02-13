@@ -42,7 +42,7 @@ public:
     static Ref<SpeechRecognitionPermissionManager> create(WebPageProxy&);
     ~SpeechRecognitionPermissionManager();
 
-    void request(WebCore::SpeechRecognitionRequest&, SpeechRecognitionPermissionRequestCallback&&);
+    void request(WebCore::SpeechRecognitionRequest&, FrameInfoData&&, SpeechRecognitionPermissionRequestCallback&&);
 
     void decideByDefaultAction(const WebCore::SecurityOriginData&, CompletionHandler<void(bool)>&&);
     WebPageProxy* page();
@@ -57,10 +57,10 @@ private:
     void completeCurrentRequest(std::optional<WebCore::SpeechRecognitionError>&& = std::nullopt);
     void requestMicrophoneAccess();
     void requestSpeechRecognitionServiceAccess();
-    void requestUserPermission(WebCore::SpeechRecognitionRequest& request);
+    void requestUserPermission(WebCore::SpeechRecognitionRequest&, FrameInfoData&&);
 
     WeakPtr<WebPageProxy> m_page;
-    Deque<Ref<SpeechRecognitionPermissionRequest>> m_requests;
+    Deque<std::pair<Ref<SpeechRecognitionPermissionRequest>, FrameInfoData>> m_requests;
     CheckResult m_microphoneCheck { CheckResult::Unknown };
     CheckResult m_speechRecognitionServiceCheck { CheckResult::Unknown };
     CheckResult m_userPermissionCheck { CheckResult::Unknown };

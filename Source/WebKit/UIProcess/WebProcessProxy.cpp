@@ -2448,14 +2448,14 @@ void WebProcessProxy::createSpeechRecognitionServer(SpeechRecognitionServerIdent
     ASSERT(!m_speechRecognitionServerMap.contains(identifier));
     MESSAGE_CHECK(!m_speechRecognitionServerMap.contains(identifier));
 
-    auto permissionChecker = [weakPage = WeakPtr { targetPage }](auto& request, SpeechRecognitionPermissionRequestCallback&& completionHandler) mutable {
+    auto permissionChecker = [weakPage = WeakPtr { targetPage }](auto& request, FrameInfoData&& frameInfo, SpeechRecognitionPermissionRequestCallback&& completionHandler) mutable {
         RefPtr page = weakPage.get();
         if (!page) {
             completionHandler(WebCore::SpeechRecognitionError { SpeechRecognitionErrorType::NotAllowed, "Page no longer exists"_s });
             return;
         }
 
-        page->requestSpeechRecognitionPermission(request, WTFMove(completionHandler));
+        page->requestSpeechRecognitionPermission(request, WTFMove(frameInfo), WTFMove(completionHandler));
     };
     auto checkIfMockCaptureDevicesEnabled = [weakPage = WeakPtr { targetPage }]() {
         return weakPage && weakPage->protectedPreferences()->mockCaptureDevicesEnabled();
