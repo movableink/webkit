@@ -11,5 +11,5 @@ PASS scroll-timeline-axis is block
 PASS scroll-timeline-axis is inline
 PASS scroll-timeline-axis is x
 PASS scroll-timeline-axis is y
-FAIL scroll-timeline-axis is mutated assert_equals: expected "75" but got "25"
+PASS scroll-timeline-axis is mutated
 

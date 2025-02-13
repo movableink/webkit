@@ -879,7 +879,7 @@ void Styleable::updateCSSScrollTimelines(const RenderStyle* currentStyle, const 
     };
 
     auto updateNamedScrollTimelines = [&]() {
-        if (currentStyle && currentStyle->scrollTimelineNames() == afterChangeStyle.scrollTimelineNames())
+        if (currentStyle && currentStyle->scrollTimelineNames() == afterChangeStyle.scrollTimelineNames() && currentStyle->scrollTimelineAxes() == afterChangeStyle.scrollTimelineAxes())
             return;
 
         CheckedRef timelinesController = element.protectedDocument()->ensureTimelinesController();
