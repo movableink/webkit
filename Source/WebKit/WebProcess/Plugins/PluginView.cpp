@@ -1182,6 +1182,14 @@ bool PluginView::populateEditorStateIfNeeded(EditorState& state) const
     return protectedPlugin()->populateEditorStateIfNeeded(state);
 }
 
+WebCore::FloatRect PluginView::absoluteBoundingRectForSmartMagnificationAtPoint(WebCore::FloatPoint point) const
+{
+    if (!m_isInitialized)
+        return { };
+
+    return protectedPlugin()->absoluteBoundingRectForSmartMagnificationAtPoint(point);
+}
+
 void PluginView::updateDocumentForPluginSizingBehavior()
 {
     if (!protectedPlugin()->shouldSizeToFitContent())

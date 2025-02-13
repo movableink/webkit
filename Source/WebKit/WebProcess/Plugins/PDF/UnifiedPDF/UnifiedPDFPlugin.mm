@@ -4453,6 +4453,21 @@ auto UnifiedPDFPlugin::rootViewToPage(FloatPoint pointInRootView) const -> PageA
     return { m_documentLayout.pageAtIndex(pageIndex), pointInPage };
 }
 
+FloatRect UnifiedPDFPlugin::absoluteBoundingRectForSmartMagnificationAtPoint(FloatPoint rootViewPoint) const
+{
+    auto pluginPoint = convertFromRootViewToPlugin(roundedIntPoint(rootViewPoint));
+    auto documentPoint = convertDown(CoordinateSpace::Plugin, CoordinateSpace::PDFDocumentLayout, FloatPoint { pluginPoint });
+    auto pageIndex = m_presentationController->pageIndexForDocumentPoint(documentPoint);
+    if (!pageIndex)
+        return { };
+
+    RetainPtr page = m_documentLayout.pageAtIndex(*pageIndex);
+    auto pagePoint = convertDown(CoordinateSpace::PDFDocumentLayout, CoordinateSpace::PDFPage, documentPoint, pageIndex);
+    FloatRect pageColumnFrame = [page columnFrameAtPoint:pagePoint];
+
+    return pageToRootView(pageColumnFrame, pageIndex);
+}
+
 TextStream& operator<<(TextStream& ts, RepaintRequirement requirement)
 {
     switch (requirement) {

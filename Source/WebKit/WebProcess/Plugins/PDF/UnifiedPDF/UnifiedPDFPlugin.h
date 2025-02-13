@@ -434,6 +434,8 @@ private:
 
     bool performDictionaryLookupAtLocation(const WebCore::FloatPoint&) override;
 
+    WebCore::FloatRect absoluteBoundingRectForSmartMagnificationAtPoint(WebCore::FloatPoint) const final;
+
     enum class FirstPageOnly : bool { No, Yes };
     PDFPageCoverage pageCoverageForSelection(PDFSelection *, FirstPageOnly = FirstPageOnly::No) const;
 

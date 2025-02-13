@@ -119,6 +119,10 @@
 @end
 #endif // HAVE(INCREMENTAL_PDF_APIS)
 
+@interface PDFPage (SPI)
+- (PDFRect)columnFrameAtPoint:(PDFPoint)point;
+@end
+
 #endif // HAVE(PDFKIT)
 
 #endif // USE(APPLE_INTERNAL_SDK)
