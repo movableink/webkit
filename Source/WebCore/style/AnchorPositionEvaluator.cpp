@@ -451,6 +451,11 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorAndAttemptResolution(const Bu
     return anchorElement;
 }
 
+bool AnchorPositionEvaluator::propertyAllowsAnchorFunction(CSSPropertyID propertyID)
+{
+    return CSSProperty::isInsetProperty(propertyID);
+}
+
 std::optional<double> AnchorPositionEvaluator::evaluate(const BuilderState& builderState, std::optional<ScopedName> elementName, Side side)
 {
     auto propertyID = builderState.cssPropertyID();
@@ -459,7 +464,7 @@ std::optional<double> AnchorPositionEvaluator::evaluate(const BuilderState& buil
     // https://drafts.csswg.org/css-anchor-position-1/#anchor-valid
     auto isValidAnchor = [&] {
         // It’s being used in an inset property...
-        if (!CSSProperty::isInsetProperty(propertyID))
+        if (!propertyAllowsAnchorFunction(propertyID))
             return false;
 
         // ...on an absolutely-positioned element.
@@ -563,6 +568,11 @@ static BoxAxis anchorSizeDimensionToPhysicalDimension(AnchorSizeDimension dimens
     return BoxAxis::Horizontal;
 }
 
+bool AnchorPositionEvaluator::propertyAllowsAnchorSizeFunction(CSSPropertyID propertyID)
+{
+    return CSSProperty::isSizingProperty(propertyID) || CSSProperty::isInsetProperty(propertyID) || CSSProperty::isMarginProperty(propertyID);
+}
+
 std::optional<double> AnchorPositionEvaluator::evaluateSize(const BuilderState& builderState, std::optional<ScopedName> elementName, std::optional<AnchorSizeDimension> dimension)
 {
     auto propertyID = builderState.cssPropertyID();
@@ -570,7 +580,7 @@ std::optional<double> AnchorPositionEvaluator::evaluateSize(const BuilderState& 
 
     auto isValidAnchorSize = [&] {
         // It’s being used in a sizing property, an inset property, or a margin property...
-        if (!CSSProperty::isSizingProperty(propertyID) && !CSSProperty::isInsetProperty(propertyID) && !CSSProperty::isMarginProperty(propertyID))
+        if (!propertyAllowsAnchorSizeFunction(propertyID))
             return false;
 
         // ...on an absolutely-positioned element.

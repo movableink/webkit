@@ -314,14 +314,17 @@ void BlendingKeyframes::updatePropertiesMetadata(const StyleProperties& properti
             m_containsCSSVariableReferences = true;
 
         if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(cssValue)) {
+            auto propertyID = propertyReference.id();
             auto valueId = primitiveValue->valueID();
+
             if (valueId == CSSValueInherit)
-                m_propertiesSetToInherit.add(propertyReference.id());
+                m_propertiesSetToInherit.add(propertyID);
             else if (valueId == CSSValueCurrentcolor)
-                m_propertiesSetToCurrentColor.add(propertyReference.id());
-            else if (!m_usesRelativeFontWeight && propertyReference.id() == CSSPropertyFontWeight && (valueId == CSSValueBolder || valueId == CSSValueLighter))
+                m_propertiesSetToCurrentColor.add(propertyID);
+            else if (!m_usesRelativeFontWeight && propertyID == CSSPropertyFontWeight && (valueId == CSSValueBolder || valueId == CSSValueLighter))
                 m_usesRelativeFontWeight = true;
-            if (CSSProperty::isInsetProperty(propertyReference.id())) {
+
+            if (Style::AnchorPositionEvaluator::propertyAllowsAnchorFunction(propertyID) || Style::AnchorPositionEvaluator::propertyAllowsAnchorSizeFunction(propertyID)) {
                 auto dependencies = cssValue->computedStyleDependencies();
                 if (dependencies.anchors)
                     m_usesAnchorFunctions = true;

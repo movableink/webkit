@@ -42,6 +42,8 @@ class LayoutRect;
 class RenderBlock;
 class RenderBoxModelObject;
 
+enum CSSPropertyID : uint16_t;
+
 namespace Style {
 
 class BuilderState;
@@ -95,7 +97,10 @@ public:
     static RefPtr<Element> findAnchorAndAttemptResolution(const BuilderState&, std::optional<ScopedName> elementName);
 
     using Side = std::variant<CSSValueID, double>;
+    static bool propertyAllowsAnchorFunction(CSSPropertyID);
     static std::optional<double> evaluate(const BuilderState&, std::optional<ScopedName> elementName, Side);
+
+    static bool propertyAllowsAnchorSizeFunction(CSSPropertyID);
     static std::optional<double> evaluateSize(const BuilderState&, std::optional<ScopedName> elementName, std::optional<AnchorSizeDimension>);
 
     static void updateAnchorPositioningStatesAfterInterleavedLayout(const Document&);
