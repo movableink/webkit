@@ -78,10 +78,6 @@ platform/graphics/avfoundation/objc/WebCoreAVFResourceLoader.mm
 platform/graphics/ca/TileController.h
 platform/graphics/controls/PlatformControl.h
 platform/graphics/cv/GraphicsContextGLCVCocoa.h
-platform/graphics/filters/software/FEConvolveMatrixSoftwareApplier.h
-platform/graphics/filters/software/FELightingSoftwareApplier.h
-platform/graphics/filters/software/FEMorphologySoftwareApplier.h
-platform/graphics/filters/software/FETurbulenceSoftwareApplier.h
 platform/graphics/mac/controls/ControlMac.h
 platform/mediarecorder/MediaRecorderPrivate.h
 platform/mediastream/AudioMediaStreamTrackRenderer.h

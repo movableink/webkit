@@ -27,7 +27,7 @@
 
 #include "IntSize.h"
 #include "PixelBufferFormat.h"
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 
 namespace WTF {
 class TextStream;
@@ -35,7 +35,7 @@ class TextStream;
 
 namespace WebCore {
 
-class PixelBuffer : public RefCounted<PixelBuffer> {
+class PixelBuffer : public ThreadSafeRefCounted<PixelBuffer> {
     WTF_MAKE_NONCOPYABLE(PixelBuffer);
 public:
     static CheckedUint32 computePixelCount(const IntSize&);

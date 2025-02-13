@@ -61,9 +61,9 @@ bool FEComponentTransferCoreImageApplier::supportsCoreImageRendering(const FECom
 bool FEComponentTransferCoreImageApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
 {
     ASSERT(inputs.size() == 1);
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
-    auto inputImage = input.ciImage();
+    auto inputImage = input->ciImage();
     if (!inputImage)
         return false;
 

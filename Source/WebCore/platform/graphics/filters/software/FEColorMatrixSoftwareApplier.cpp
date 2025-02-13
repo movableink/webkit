@@ -259,15 +259,15 @@ void FEColorMatrixSoftwareApplier::applyPlatform(PixelBuffer& pixelBuffer) const
 
 bool FEColorMatrixSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
     RefPtr resultImage = result.imageBuffer();
     if (!resultImage)
         return false;
 
-    RefPtr inputImage = input.imageBuffer();
+    RefPtr inputImage = input->imageBuffer();
     if (inputImage) {
-        auto inputImageRect = input.absoluteImageRectRelativeTo(result);
+        auto inputImageRect = input->absoluteImageRectRelativeTo(result);
         resultImage->context().drawImageBuffer(*inputImage, inputImageRect);
     }
 

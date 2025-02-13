@@ -179,11 +179,11 @@ inline void FEConvolveMatrixSoftwareApplier::setInteriorPixels(PaintingData& pai
             totals[3] = 0;
 
             while (kernelValue >= 0) {
-                totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel++));
-                totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel++));
-                totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel++));
+                totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(kernelPixel++));
+                totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(kernelPixel++));
+                totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(kernelPixel++));
                 if (!paintingData.preserveAlpha)
-                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel));
+                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(kernelPixel));
                 ++kernelPixel;
                 --kernelValue;
                 if (!--width) {
@@ -231,12 +231,12 @@ inline void FEConvolveMatrixSoftwareApplier::setOuterPixels(PaintingData& painti
             while (kernelValue >= 0) {
                 int pixelIndex = getPixelValue(paintingData, kernelPixelX, kernelPixelY);
                 if (pixelIndex >= 0) {
-                    totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex));
-                    totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex + 1));
-                    totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex + 2));
+                    totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(pixelIndex));
+                    totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(pixelIndex + 1));
+                    totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(pixelIndex + 2));
                 }
                 if (!paintingData.preserveAlpha && pixelIndex >= 0)
-                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex + 3));
+                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(pixelIndex + 3));
                 ++kernelPixelX;
                 --kernelValue;
                 if (!--width) {
@@ -304,23 +304,23 @@ void FEConvolveMatrixSoftwareApplier::applyPlatform(PaintingData& paintingData) 
 
 bool FEConvolveMatrixSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
     auto alphaFormat = m_effect->preserveAlpha() ? AlphaPremultiplication::Unpremultiplied : AlphaPremultiplication::Premultiplied;
-    auto destinationPixelBuffer = result.pixelBuffer(alphaFormat);
+    RefPtr destinationPixelBuffer = result.pixelBuffer(alphaFormat);
     if (!destinationPixelBuffer)
         return false;
 
     auto effectDrawingRect = result.absoluteImageRectRelativeTo(input);
-    auto sourcePixelBuffer = input.getPixelBuffer(alphaFormat, effectDrawingRect, m_effect->operatingColorSpace());
+    RefPtr sourcePixelBuffer = input->getPixelBuffer(alphaFormat, effectDrawingRect, m_effect->operatingColorSpace());
     if (!sourcePixelBuffer)
         return false;
 
     auto paintSize = result.absoluteImageRect().size();
 
     PaintingData paintingData = {
-        *sourcePixelBuffer,
-        *destinationPixelBuffer,
+        sourcePixelBuffer.releaseNonNull(),
+        destinationPixelBuffer.releaseNonNull(),
         paintSize.width(),
         paintSize.height(),
         m_effect->kernelSize(),

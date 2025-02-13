@@ -45,7 +45,7 @@ bool FEImageSoftwareApplier::apply(const Filter& filter, const FilterImageVector
     auto primitiveSubregion = result.primitiveSubregion();
     auto& context = resultImage->context();
 
-    if (auto nativeImage = sourceImage.nativeImageIfExists()) {
+    if (RefPtr nativeImage = sourceImage.nativeImageIfExists()) {
         auto imageRect = primitiveSubregion;
         auto srcRect = m_effect->sourceImageRect();
         m_effect->preserveAspectRatio().transformRect(imageRect, srcRect);
@@ -55,7 +55,7 @@ bool FEImageSoftwareApplier::apply(const Filter& filter, const FilterImageVector
         return true;
     }
 
-    if (auto imageBuffer = sourceImage.imageBufferIfExists()) {
+    if (RefPtr imageBuffer = sourceImage.imageBufferIfExists()) {
         auto imageRect = primitiveSubregion;
         imageRect.moveBy(m_effect->sourceImageRect().location());
         imageRect.scale(filter.filterScale());

@@ -46,10 +46,10 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(FEColorMatrixSkiaApplier);
 bool FEColorMatrixSkiaApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
 {
     ASSERT(inputs.size() == 1);
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
     RefPtr resultImage = result.imageBuffer();
-    RefPtr sourceImage = input.imageBuffer();
+    RefPtr sourceImage = input->imageBuffer();
     if (!resultImage || !sourceImage)
         return false;
 
@@ -103,7 +103,7 @@ bool FEColorMatrixSkiaApplier::apply(const Filter&, const FilterImageVector& inp
     SkPaint paint;
     paint.setColorFilter(SkColorFilters::Matrix(matrix.data()));
 
-    auto inputOffsetWithinResult = input.absoluteImageRectRelativeTo(result).location();
+    auto inputOffsetWithinResult = input->absoluteImageRectRelativeTo(result).location();
     resultImage->context().platformContext()->drawImage(nativeImage->platformImage(), inputOffsetWithinResult.x(), inputOffsetWithinResult.y(), { }, &paint);
     return true;
 }
