@@ -972,7 +972,6 @@
 		A17C47A52C98E5C20023F3C7 /* IndexUpgrade.blob in Copy Resources */ = {isa = PBXBuildFile; fileRef = 5110FCF21E01CD77006F8D0B /* IndexUpgrade.blob */; };
 		A17C47A62C98E5C20023F3C7 /* IndexUpgrade.sqlite3 in Copy Resources */ = {isa = PBXBuildFile; fileRef = 5110FCF31E01CD77006F8D0B /* IndexUpgrade.sqlite3 */; };
 		A17C47A72C98E5C20023F3C7 /* IndexUpgradeWithMultipleIndices.sqlite3 in Copy Resources */ = {isa = PBXBuildFile; fileRef = 93A274A1252163D600A1B6D4 /* IndexUpgradeWithMultipleIndices.sqlite3 */; };
-		A17C47A82C98E5C20023F3C7 /* IndexUpgradeWithMultipleIndicesHaveSameID.sqlite3 in Copy Resources */ = {isa = PBXBuildFile; fileRef = 93A274A4252241D000A1B6D4 /* IndexUpgradeWithMultipleIndicesHaveSameID.sqlite3 */; };
 		A17C47A92C98E5C20023F3C7 /* input-field-in-scrollable-document.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = 2EFF06CC1D8A42910004BB30 /* input-field-in-scrollable-document.html */; };
 		A17C47AA2C98E5C20023F3C7 /* InspectorExtension-basic-page.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = 996EDCCA270E70AB006DF175 /* InspectorExtension-basic-page.html */; };
 		A17C47AB2C98E5C20023F3C7 /* InspectorExtension-basic-tab.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = 99E2846726F9413B0003F1FA /* InspectorExtension-basic-tab.html */; };
@@ -1839,7 +1838,6 @@
 				A17C47A52C98E5C20023F3C7 /* IndexUpgrade.blob in Copy Resources */,
 				A17C47A62C98E5C20023F3C7 /* IndexUpgrade.sqlite3 in Copy Resources */,
 				A17C47A72C98E5C20023F3C7 /* IndexUpgradeWithMultipleIndices.sqlite3 in Copy Resources */,
-				A17C47A82C98E5C20023F3C7 /* IndexUpgradeWithMultipleIndicesHaveSameID.sqlite3 in Copy Resources */,
 				A17C47A92C98E5C20023F3C7 /* input-field-in-scrollable-document.html in Copy Resources */,
 				A17C46C32C98E54B0023F3C7 /* input-focus-blur.html in Copy Resources */,
 				A17C46612C98E4BB0023F3C7 /* insert-text.html in Copy Resources */,
@@ -3176,7 +3174,6 @@
 		93A258981F92FF15003E510C /* TextCodec.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TextCodec.cpp; sourceTree = "<group>"; };
 		93A2749A251EF52A00A1B6D4 /* IDBIndexUpgradeToV2WithMultipleIndices.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = IDBIndexUpgradeToV2WithMultipleIndices.html; sourceTree = "<group>"; };
 		93A274A1252163D600A1B6D4 /* IndexUpgradeWithMultipleIndices.sqlite3 */ = {isa = PBXFileReference; lastKnownFileType = file; path = IndexUpgradeWithMultipleIndices.sqlite3; sourceTree = "<group>"; };
-		93A274A4252241D000A1B6D4 /* IndexUpgradeWithMultipleIndicesHaveSameID.sqlite3 */ = {isa = PBXFileReference; lastKnownFileType = file; path = IndexUpgradeWithMultipleIndicesHaveSameID.sqlite3; sourceTree = "<group>"; };
 		93A427A8180D9B0700CD24D7 /* RefPtr.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RefPtr.cpp; sourceTree = "<group>"; };
 		93A427AA180DA26400CD24D7 /* Ref.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Ref.cpp; sourceTree = "<group>"; };
 		93A427AC180DA60F00CD24D7 /* MoveOnly.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MoveOnly.h; sourceTree = "<group>"; };
@@ -5269,7 +5266,6 @@
 				5110FCF21E01CD77006F8D0B /* IndexUpgrade.blob */,
 				5110FCF31E01CD77006F8D0B /* IndexUpgrade.sqlite3 */,
 				93A274A1252163D600A1B6D4 /* IndexUpgradeWithMultipleIndices.sqlite3 */,
-				93A274A4252241D000A1B6D4 /* IndexUpgradeWithMultipleIndicesHaveSameID.sqlite3 */,
 				2EFF06CC1D8A42910004BB30 /* input-field-in-scrollable-document.html */,
 				996EDCCA270E70AB006DF175 /* InspectorExtension-basic-page.html */,
 				99E2846726F9413B0003F1FA /* InspectorExtension-basic-tab.html */,
