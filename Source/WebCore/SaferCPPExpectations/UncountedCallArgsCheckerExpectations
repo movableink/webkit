@@ -411,7 +411,6 @@ bindings/js/ScriptControllerMac.mm
 bindings/js/ScriptModuleLoader.cpp
 bindings/js/ScriptSourceCode.h
 bindings/js/SerializedScriptValue.cpp
-bindings/js/WebAssemblyCachedScriptSourceProvider.h
 bindings/js/WebAssemblyScriptBufferSourceProvider.h
 bindings/js/WebCoreJSClientData.cpp
 bindings/js/WebCoreTypedArrayController.cpp
@@ -951,7 +950,6 @@ loader/cache/CachedResourceRequest.cpp
 loader/cache/CachedResourceRequestInitiatorTypes.h
 loader/cache/CachedSVGDocumentReference.cpp
 loader/cache/CachedSVGFont.cpp
-loader/cache/CachedScript.cpp
 loader/cache/MemoryCache.cpp
 loader/cocoa/BundleResourceLoader.mm
 loader/icon/IconLoader.cpp

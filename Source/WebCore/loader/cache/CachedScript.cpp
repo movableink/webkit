@@ -96,7 +96,7 @@ StringView CachedScript::script(ShouldDecodeAsUTF8Only shouldDecodeAsUTF8Only)
             forceUTF8Decoder->setAlwaysUseUTF8();
             m_script = forceUTF8Decoder->decodeAndFlush(contiguousData->span());
         } else
-            m_script = m_decoder->decodeAndFlush(contiguousData->span());
+            m_script = protectedDecoder()->decodeAndFlush(contiguousData->span());
         if (m_decodingState == NeverDecoded || shouldForceRedecoding)
             m_scriptHash = m_script.hash();
         ASSERT(!m_scriptHash || m_scriptHash == m_script.hash());
@@ -137,7 +137,7 @@ void CachedScript::destroyDecodedData()
 void CachedScript::setBodyDataFrom(const CachedResource& resource)
 {
     ASSERT(resource.type() == type());
-    auto& script = static_cast<const CachedScript&>(resource);
+    auto& script = downcast<const CachedScript>(resource);
 
     CachedResource::setBodyDataFrom(resource);
 

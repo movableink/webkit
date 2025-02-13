@@ -101,7 +101,6 @@ loader/cache/CachedImage.cpp
 loader/cache/CachedResourceClientWalker.h
 loader/cache/CachedResourceHandle.h
 loader/cache/CachedResourceLoader.cpp
-loader/cache/CachedScript.cpp
 mathml/MathMLRowElement.cpp
 page/NavigatorLoginStatus.cpp
 page/mac/EventHandlerMac.mm
