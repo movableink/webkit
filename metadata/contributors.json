@@ -529,8 +529,9 @@
    },
    {
       "emails" : [
-         "aboxhall@chromium.org"
+         "alice@igalia.com"
       ],
+      "github" : "alice",
       "name" : "Alice Boxhall",
       "nicks" : [
          "aboxhall"
