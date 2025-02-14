@@ -133,7 +133,7 @@ void FEBlendNeonApplier::applyPlatform(unsigned char* srcPixelArrayA, unsigned c
         uint16x8_t alphaB = vcombine_u16(vdup_n_u16(alphaB1), vdup_n_u16(alphaB2));
 
         uint16x8_t result;
-        switch (m_effect.blendMode()) {
+        switch (m_effect->blendMode()) {
         case BlendMode::Normal:
             result = FEBlendUtilitiesNEON::normal(doubblePixelA, doubblePixelB, alphaA, alphaB, sixteenConst255, sixteenConstOne);
             break;
