@@ -1684,7 +1684,7 @@ void configureVideoRTPDepayloader(GstElement* element)
         g_object_set(element, "wait-for-keyframe", TRUE, nullptr);
 }
 
-static bool gstObjectHasProperty(GstObject* gstObject, const char* name)
+bool gstObjectHasProperty(GstObject* gstObject, const char* name)
 {
     return g_object_class_find_property(G_OBJECT_GET_CLASS(gstObject), name);
 }
