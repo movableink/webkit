@@ -30,7 +30,6 @@ NetworkProcess/storage/CacheStorageDiskStore.cpp
 NetworkProcess/storage/IDBStorageRegistry.cpp
 NetworkProcess/webrtc/NetworkRTCUDPSocketCocoa.mm
 Platform/IPC/ArgumentCoders.h
-Platform/IPC/SharedBufferReference.cpp
 Shared/API/APIArray.h
 Shared/API/APISerializedScriptValue.h
 Shared/API/Cocoa/WKRemoteObjectCoder.mm
