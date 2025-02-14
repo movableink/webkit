@@ -807,3 +807,5 @@ webkit.org/b/265700 webrtc/multi-video.html [ Pass Failure ]
 webkit.org/b/286450 imported/w3c/web-platform-tests/webcodecs/audio-encoder.https.any.html [ Pass Failure ]
 
 webkit.org/b/287126 fast/forms/datalist/datalist-hide-using-escape-key.html [ Pass Timeout Failure ]
+
+webkit.org/b/287724 imported/w3c/web-platform-tests/feature-policy/reporting/picture-in-picture-reporting.html [ Pass Failure ]
