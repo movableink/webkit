@@ -1078,8 +1078,6 @@ platform/graphics/BitmapImage.cpp
 platform/graphics/BitmapImage.h
 platform/graphics/BitmapImageDescriptor.cpp
 platform/graphics/BitmapImageSource.cpp
-platform/graphics/Color.cpp
-platform/graphics/Color.h
 platform/graphics/ComplexTextController.cpp
 platform/graphics/DisplayRefreshMonitorManager.h
 platform/graphics/FontCache.cpp

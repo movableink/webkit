@@ -607,7 +607,6 @@ platform/audio/AudioBus.cpp
 platform/cocoa/PlaybackSessionModelMediaElement.mm
 platform/cocoa/VideoPresentationModelVideoElement.mm
 platform/graphics/BitmapImageDescriptor.cpp
-platform/graphics/Color.cpp
 platform/graphics/ComplexTextController.cpp
 platform/graphics/DisplayRefreshMonitorManager.cpp
 platform/graphics/FontCache.cpp
