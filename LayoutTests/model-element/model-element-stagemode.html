@@ -10,19 +10,15 @@
 'use strict';
 
 promise_test(async t => {
-    const model = document.createElement("model");
-    const firstSource = model.appendChild(makeSource("resources/cube.usdz"));
+    const [model, source] = createModelAndSource(t, "resources/cube.usdz");
     await model.ready;
 
     assert_equals(model.stageMode, "");
     model.stageMode = "orbit";
     assert_equals(model.stageMode, "orbit");
 
-    const secondSource = model.appendChild(makeSource("resources/heart.usdz"));
-    firstSource.remove();
-    assert_equals(model.currentSrc, secondSource.src);
+    source.src = "resources/heart.usdz";
     await model.ready;
-
     assert_equals(model.stageMode, "orbit");
 }, `Setting stage mode persists after changing source on the same model element`);
 
