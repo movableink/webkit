@@ -19,7 +19,6 @@ UIProcess/API/Cocoa/WKWebViewConfiguration.mm
 UIProcess/API/Cocoa/WKWebsiteDataStore.mm
 UIProcess/API/Cocoa/_WKDataTask.mm
 UIProcess/API/Cocoa/_WKInspectorConfiguration.mm
-UIProcess/RemoteLayerTree/mac/RemoteScrollingTreeMac.mm
 UIProcess/WebAuthentication/Virtual/VirtualService.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/GPU/graphics/WebGPU/WebGPUDowncastConvertToBackingContext.cpp

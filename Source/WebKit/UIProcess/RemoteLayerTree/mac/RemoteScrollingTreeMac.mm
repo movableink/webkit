@@ -71,8 +71,8 @@ RemoteScrollingTreeMac::~RemoteScrollingTreeMac() = default;
 
 void RemoteScrollingTreeMac::handleWheelEventPhase(ScrollingNodeID nodeID, PlatformWheelEventPhase phase)
 {
-    auto* targetNode = nodeForID(nodeID);
-    if (auto* node = dynamicDowncast<ScrollingTreeScrollingNode>(targetNode))
+    RefPtr targetNode = nodeForID(nodeID);
+    if (RefPtr node = dynamicDowncast<ScrollingTreeScrollingNode>(targetNode))
         node->handleWheelEventPhase(phase);
 }
 
@@ -423,7 +423,7 @@ void RemoteScrollingTreeMac::unlockLayersForHitTesting()
 
 static std::optional<ScrollingNodeID> scrollingNodeIDForLayer(CALayer *layer)
 {
-    auto* layerTreeNode = RemoteLayerTreeNode::forCALayer(layer);
+    RefPtr layerTreeNode = RemoteLayerTreeNode::forCALayer(layer);
     if (!layerTreeNode)
         return std::nullopt;
 
@@ -437,14 +437,14 @@ static bool isScrolledBy(const ScrollingTree& tree, ScrollingNodeID scrollingNod
         if (nodeID == scrollingNodeID)
             return true;
 
-        auto* scrollingNode = tree.nodeForID(nodeID);
-        if (auto* scollProxyNode = dynamicDowncast<ScrollingTreeOverflowScrollProxyNode>(scrollingNode)) {
+        RefPtr scrollingNode = tree.nodeForID(nodeID);
+        if (RefPtr scollProxyNode = dynamicDowncast<ScrollingTreeOverflowScrollProxyNode>(scrollingNode)) {
             auto actingOverflowScrollingNodeID = scollProxyNode->overflowScrollingNodeID();
             if (actingOverflowScrollingNodeID == scrollingNodeID)
                 return true;
         }
 
-        if (auto* positionedNode = dynamicDowncast<ScrollingTreePositionedNode>(scrollingNode)) {
+        if (RefPtr positionedNode = dynamicDowncast<ScrollingTreePositionedNode>(scrollingNode)) {
             if (positionedNode->relatedOverflowScrollingNodes().contains(scrollingNodeID))
                 return false;
         }
@@ -455,7 +455,7 @@ static bool isScrolledBy(const ScrollingTree& tree, ScrollingNodeID scrollingNod
 
 static const EventRegion* eventRegionForLayer(CALayer *layer)
 {
-    auto* layerTreeNode = RemoteLayerTreeNode::forCALayer(layer);
+    RefPtr layerTreeNode = RemoteLayerTreeNode::forCALayer(layer);
     if (!layerTreeNode)
         return nullptr;
 
@@ -544,13 +544,13 @@ RefPtr<ScrollingTreeNode> RemoteScrollingTreeMac::scrollingNodeForPoint(FloatPoi
 #if ENABLE(WHEEL_EVENT_REGIONS)
 OptionSet<EventListenerRegionType> RemoteScrollingTreeMac::eventListenerRegionTypesForPoint(FloatPoint point) const
 {
-    auto* rootScrollingNode = rootNode();
+    RefPtr rootScrollingNode = downcast<ScrollingTreeFrameScrollingNodeMac>(rootNode());
     if (!rootScrollingNode)
         return { };
 
     ASSERT(m_layerHitTestMutex.isLocked());
 
-    auto rootContentsLayer = static_cast<ScrollingTreeFrameScrollingNodeMac*>(rootScrollingNode)->rootContentsLayer();
+    auto rootContentsLayer = rootScrollingNode->rootContentsLayer();
 
     Vector<LayerAndPoint, 16> layersAtPoint;
     collectDescendantLayersAtPoint(layersAtPoint, rootContentsLayer.get(), point, layerEventRegionContainsPoint);
