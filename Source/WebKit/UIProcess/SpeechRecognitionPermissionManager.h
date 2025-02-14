@@ -34,6 +34,7 @@
 namespace WebKit {
 
 class WebPageProxy;
+struct FrameInfoData;
 
 class SpeechRecognitionPermissionManager : public RefCountedAndCanMakeWeakPtr<SpeechRecognitionPermissionManager> {
     WTF_MAKE_TZONE_ALLOCATED(SpeechRecognitionPermissionManager);

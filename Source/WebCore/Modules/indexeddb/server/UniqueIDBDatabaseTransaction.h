@@ -29,6 +29,7 @@
 #include "IDBIndexIdentifier.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "IDBTransactionInfo.h"
+#include "IndexKey.h"
 #include <wtf/Deque.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>

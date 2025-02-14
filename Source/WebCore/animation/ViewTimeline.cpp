@@ -32,6 +32,7 @@
 #include "Document.h"
 #include "Element.h"
 #include "LegacyRenderSVGModelObject.h"
+#include "RenderBlock.h"
 #include "RenderBox.h"
 #include "RenderBoxInlines.h"
 #include "RenderInline.h"

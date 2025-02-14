@@ -33,6 +33,7 @@
 #include "WebProcess.h"
 #include "WebProcessProxyMessages.h"
 #include "WebSpeechRecognitionConnectionMessages.h"
+#include <WebCore/Frame.h>
 #include <WebCore/SpeechRecognitionConnectionClient.h>
 #include <WebCore/SpeechRecognitionRequestInfo.h>
 #include <WebCore/SpeechRecognitionUpdate.h>

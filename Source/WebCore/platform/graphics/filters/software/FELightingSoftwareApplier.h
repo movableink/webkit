@@ -29,6 +29,7 @@
 
 #include "Color.h"
 #include "FELighting.h"
+#include "Filter.h"
 #include "FilterEffect.h"
 #include "FilterEffectApplier.h"
 #include "FilterImageVector.h"

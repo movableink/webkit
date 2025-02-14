@@ -50,6 +50,7 @@
 #include "AnchorPositionEvaluator.h"
 #include "Chrome.h"
 #include "DebugPageOverlays.h"
+#include "DocumentInlines.h"
 #include "Editor.h"
 #include "ElementRuleCollector.h"
 #include "EventHandler.h"
