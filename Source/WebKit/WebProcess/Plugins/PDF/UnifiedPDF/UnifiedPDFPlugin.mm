@@ -4048,6 +4048,7 @@ void UnifiedPDFPlugin::handleSyntheticClick(PlatformMouseEvent&& event)
     if (RetainPtr annotation = annotationForRootViewPoint(pointInRootView)) {
         if (annotationIsLinkWithDestination(annotation.get()))
             followLinkAnnotation(annotation.get(), { WTFMove(event) });
+        clearSelection();
         return;
     }
 

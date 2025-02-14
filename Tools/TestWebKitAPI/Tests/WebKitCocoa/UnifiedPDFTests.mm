@@ -49,6 +49,7 @@
 #import <WebKit/WKNavigationDelegatePrivate.h>
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebpagePreferencesPrivate.h>
 #import <WebKit/_WKFeature.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
@@ -452,6 +453,28 @@ UNIFIED_PDF_TEST(MouseDidMoveOverPDF)
 
     TestWebKitAPI::MouseEventTestHarness { webView.get() }.mouseMove(50, 50);
     TestWebKitAPI::Util::run(&done);
+}
+
+UNIFIED_PDF_TEST(SelectionClearsOnAnchorLinkTap)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+    RetainPtr preferences = adoptNS([[WKWebpagePreferences alloc] init]);
+    [preferences _setMouseEventPolicy:_WKWebsiteMouseEventPolicySynthesizeTouchEvents];
+    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"anchorLink" withExtension:@"pdf"]];
+    [webView synchronouslyLoadRequest:request.get()];
+    RetainPtr contentView = [webView textInputContentView];
+
+    [webView selectTextInGranularity:UITextGranularityWord atPoint:CGPointMake(224, 404)];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_WK_STREQ("Bye", [contentView selectedText]);
+
+    TestWebKitAPI::MouseEventTestHarness testHarness { webView.get() };
+    testHarness.mouseMove(224, 50);
+    testHarness.mouseDown();
+    testHarness.mouseUp();
+    [webView waitForPendingMouseEvents];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_WK_STREQ("", [contentView selectedText]);
 }
 
 #endif
