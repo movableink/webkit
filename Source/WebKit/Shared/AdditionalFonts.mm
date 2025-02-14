@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,27 +23,26 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#include "SandboxExtension.h"
-#include <wtf/URL.h>
-#include <wtf/Vector.h>
-
-#if PLATFORM(COCOA)
+#import "config.h"
+#import "AdditionalFonts.h"
 
 namespace WebKit {
 
-struct FontData {
-    URL fontURL;
-    SandboxExtensionHandle sandboxExtensionHandle;
-};
+AdditionalFonts AdditionalFonts::additionalFonts(const Vector<URL>& fontURLs, std::optional<audit_token_t> auditToken)
+{
+    AdditionalFonts additionalFonts;
+    additionalFonts.fontDataList = WTF::compactMap(fontURLs, [auditToken = WTFMove(auditToken)](auto& fontURL) -> std::optional<FontData> {
+        std::optional<SandboxExtension::Handle> sandboxExtensionHandle;
+        if (auditToken)
+            sandboxExtensionHandle = SandboxExtension::createHandleForReadByAuditToken(fontURL.fileSystemPath(), *auditToken);
+        else
+            sandboxExtensionHandle = SandboxExtension::createHandle(fontURL.fileSystemPath(), SandboxExtension::Type::ReadOnly);
 
-struct AdditionalFonts {
-    Vector<FontData> fontDataList;
-
-    static AdditionalFonts additionalFonts(const Vector<URL>& fontURLs, std::optional<audit_token_t>);
-};
-
+        if (sandboxExtensionHandle)
+            return FontData { fontURL, WTFMove(*sandboxExtensionHandle) };
+        return FontData { fontURL, SandboxExtension::Handle() };
+    });
+    return additionalFonts;
 }
 
-#endif // PLATFORM(COCOA)
+}

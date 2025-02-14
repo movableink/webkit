@@ -2353,6 +2353,7 @@
 		E36A00E329CF7AC000AC4E8A /* TextTrackRepresentationCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = E36A00E229CF7AC000AC4E8A /* TextTrackRepresentationCocoa.mm */; };
 		E36FF00327F36FBD004BE21A /* SandboxStateVariables.h in Headers */ = {isa = PBXBuildFile; fileRef = E36FF00127F36FBD004BE21A /* SandboxStateVariables.h */; };
 		E37726022D0DF251000BCBA6 /* AdditionalFonts.h in Headers */ = {isa = PBXBuildFile; fileRef = E37726002D0DF248000BCBA6 /* AdditionalFonts.h */; };
+		E37AE22D2D5E7A100010402E /* AdditionalFonts.mm in Sources */ = {isa = PBXBuildFile; fileRef = E37AE22C2D5E7A100010402E /* AdditionalFonts.mm */; };
 		E38034DC2C63D6670095F1E0 /* LogStreamMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = E38034DB2C63D6670095F1E0 /* LogStreamMessages.h */; };
 		E3816B3D27E2463A005EAFC0 /* WebMockContentFilterManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3816B3B27E24639005EAFC0 /* WebMockContentFilterManager.cpp */; };
 		E3816B3E27E2463A005EAFC0 /* WebMockContentFilterManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E3816B3C27E24639005EAFC0 /* WebMockContentFilterManager.h */; };
@@ -8060,6 +8061,7 @@
 		E37A2F1A2B8523300087F394 /* NetworkingProcessExtension.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = NetworkingProcessExtension.entitlements; sourceTree = "<group>"; };
 		E37A2F1B2B8523B10087F394 /* WebContentProcessExtension.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = WebContentProcessExtension.entitlements; sourceTree = "<group>"; };
 		E37A2F1C2B8523B10087F394 /* GPUProcessExtension.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = GPUProcessExtension.entitlements; sourceTree = "<group>"; };
+		E37AE22C2D5E7A100010402E /* AdditionalFonts.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AdditionalFonts.mm; sourceTree = "<group>"; };
 		E38034DB2C63D6670095F1E0 /* LogStreamMessages.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LogStreamMessages.h; sourceTree = "<group>"; };
 		E3816B3B27E24639005EAFC0 /* WebMockContentFilterManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = WebMockContentFilterManager.cpp; path = Network/WebMockContentFilterManager.cpp; sourceTree = "<group>"; };
 		E3816B3C27E24639005EAFC0 /* WebMockContentFilterManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WebMockContentFilterManager.h; path = Network/WebMockContentFilterManager.h; sourceTree = "<group>"; };
@@ -9256,6 +9258,7 @@
 				A7D792D51767CB6E00881CBE /* ActivityAssertion.cpp */,
 				A7D792D41767CB0900881CBE /* ActivityAssertion.h */,
 				E37726002D0DF248000BCBA6 /* AdditionalFonts.h */,
+				E37AE22C2D5E7A100010402E /* AdditionalFonts.mm */,
 				E37726012D0DF248000BCBA6 /* AdditionalFonts.serialization.in */,
 				F4EFD8AF29C256BD00570001 /* AlternativeTextClient.serialization.in */,
 				BC329D9A16ACCE9900316DE2 /* APIWebArchive.h */,
@@ -19956,6 +19959,7 @@
 				337822432947F679002106BB /* _WKWebExtensionWebNavigationURLFilter.mm in Sources */,
 				3370420A2B58A8390077FF78 /* _WKWebExtensionWebRequestFilter.mm in Sources */,
 				07E4BDC82A3A7089000D5509 /* _WKWebViewTextInputNotifications.mm in Sources */,
+				E37AE22D2D5E7A100010402E /* AdditionalFonts.mm in Sources */,
 				EBA8D3B227A5E33F00CB7900 /* ApplePushServiceConnection.mm in Sources */,
 				A1D615722B06C7C2002D0E19 /* AssertionCapability.mm in Sources */,
 				A1D615722B06C7C2002D0E19 /* AssertionCapability.mm in Sources */,

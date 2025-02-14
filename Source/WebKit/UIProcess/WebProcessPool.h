@@ -831,6 +831,7 @@ private:
     RetainPtr<NSObject> m_activationObserver;
     RetainPtr<NSObject> m_accessibilityEnabledObserver;
     RetainPtr<NSObject> m_applicationLaunchObserver;
+    RetainPtr<NSObject> m_finishedMobileAssetFontDownloadObserver;
 
     RetainPtr<WKProcessPoolWeakObserver> m_weakObserver;
 #endif

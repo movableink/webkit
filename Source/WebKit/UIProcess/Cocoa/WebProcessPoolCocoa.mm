@@ -855,7 +855,7 @@ void WebProcessPool::registerNotificationObservers()
     m_deactivationObserver = [[NSNotificationCenter defaultCenter] addObserverForName:NSApplicationDidResignActiveNotification object:NSApp queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
         setApplicationIsActive(false);
     }];
-    
+
     addCFNotificationObserver(colorPreferencesDidChangeCallback, AppleColorPreferencesChangedNotification, CFNotificationCenterGetDistributedCenter());
 
     const char* messages[] = { kNotifyDSCacheInvalidation, kNotifyDSCacheInvalidationGroup, kNotifyDSCacheInvalidationHost, kNotifyDSCacheInvalidationService, kNotifyDSCacheInvalidationUser };
@@ -918,6 +918,22 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }
 #endif
 
+    m_finishedMobileAssetFontDownloadObserver = [[NSNotificationCenter defaultCenter] addObserverForName:@"FontActivateNotification" object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
+        NSString *fontFamily = notification.userInfo[@"FontActivateNotificationFontFamilyKey"];
+        if ([fontFamily isKindOfClass:[NSString class]]) {
+            RetainPtr ctFont = adoptCF(CTFontCreateWithName((__bridge CFStringRef)fontFamily, 0.0, nullptr));
+            RetainPtr downloaded = adoptCF(static_cast<CFBooleanRef>(CTFontCopyAttribute(ctFont.get(), kCTFontDownloadedAttribute)));
+            if (downloaded == kCFBooleanFalse)
+                return;
+            RetainPtr url = adoptCF(static_cast<CFURLRef>(CTFontCopyAttribute(ctFont.get(), kCTFontURLAttribute)));
+            for (Ref process : m_processes) {
+                if (!process->canSendMessage())
+                    continue;
+                process->send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts({ URL(url.get()) }, process->auditToken())), 0);
+            }
+        }
+    }];
+
     m_powerSourceNotifier = WTF::makeUnique<WebCore::PowerSourceNotifier>([weakThis = WeakPtr { this }] (bool hasAC) {
         if (RefPtr webProcessPool = weakThis.get())
             webProcessPool->sendToAllProcesses(Messages::WebProcess::PowerSourceDidChange(hasAC));
@@ -969,6 +985,7 @@ void WebProcessPool::unregisterNotificationObservers()
     [[NSWorkspace.sharedWorkspace notificationCenter] removeObserver:m_accessibilityDisplayOptionsNotificationObserver.get()];
     [[NSNotificationCenter defaultCenter] removeObserver:m_scrollerStyleNotificationObserver.get()];
     [[NSNotificationCenter defaultCenter] removeObserver:m_deactivationObserver.get()];
+    [[NSNotificationCenter defaultCenter] removeObserver:m_finishedMobileAssetFontDownloadObserver.get()];
     removeCFNotificationObserver(AppleColorPreferencesChangedNotification, CFNotificationCenterGetDistributedCenter());
     for (auto token : m_openDirectoryNotifyTokens)
         notify_cancel(token);
@@ -1396,23 +1413,6 @@ void WebProcessPool::platformCompileResourceMonitorRuleList(const String& rulesT
 }
 #endif
 
-static AdditionalFonts additionalFonts(const Vector<URL>& fontURLs, std::optional<audit_token_t> auditToken)
-{
-    AdditionalFonts additionalFonts;
-    additionalFonts.fontDataList = WTF::compactMap(fontURLs, [auditToken = WTFMove(auditToken)](auto& fontURL) -> std::optional<FontData> {
-        std::optional<SandboxExtension::Handle> sandboxExtensionHandle;
-        if (auditToken)
-            sandboxExtensionHandle = SandboxExtension::createHandleForReadByAuditToken(fontURL.fileSystemPath(), *auditToken);
-        else
-            sandboxExtensionHandle = SandboxExtension::createHandle(fontURL.fileSystemPath(), SandboxExtension::Type::ReadOnly);
-
-        if (sandboxExtensionHandle)
-            return FontData { fontURL, WTFMove(*sandboxExtensionHandle) };
-        return FontData { fontURL, SandboxExtension::Handle() };
-    });
-    return additionalFonts;
-}
-
 static void addUserInstalledFontURLs(NSString *path, Vector<URL>& fontURLs)
 {
     RetainPtr enumerator = [NSFileManager.defaultManager enumeratorAtPath:path];
@@ -1431,7 +1431,7 @@ static void addUserInstalledFontURLs(NSString *path, Vector<URL>& fontURLs)
 void WebProcessPool::registerUserInstalledFonts(WebProcessProxy& process)
 {
     if (m_userInstalledFontURLs) {
-        process.send(Messages::WebProcess::RegisterAdditionalFonts(additionalFonts(*m_userInstalledFontURLs, process.auditToken())), 0);
+        process.send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts(*m_userInstalledFontURLs, process.auditToken())), 0);
         return;
     }
 
@@ -1444,7 +1444,7 @@ void WebProcessPool::registerUserInstalledFonts(WebProcessProxy& process)
 
         RunLoop::protectedMain()->dispatch([weakThis = WTFMove(weakThis), weakProcess = WTFMove(weakProcess), fontURLs = crossThreadCopy(WTFMove(fontURLs))] {
             if (weakProcess)
-                weakProcess->send(Messages::WebProcess::RegisterAdditionalFonts(additionalFonts(fontURLs, weakProcess->auditToken())), 0);
+                weakProcess->send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts(fontURLs, weakProcess->auditToken())), 0);
             if (RefPtr protectedThis = weakThis.get())
                 protectedThis->m_userInstalledFontURLs = WTFMove(fontURLs);
         });
@@ -1470,7 +1470,7 @@ static RetainPtr<CTFontDescriptorRef> fontDescription(ASCIILiteral fontName)
 void WebProcessPool::registerAssetFonts(WebProcessProxy& process)
 {
     if (m_assetFontURLs) {
-        process.send(Messages::WebProcess::RegisterAdditionalFonts(additionalFonts({ *m_assetFontURLs }, process.auditToken())), 0);
+        process.send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts({ *m_assetFontURLs }, process.auditToken())), 0);
         return;
     }
 
@@ -1497,7 +1497,7 @@ void WebProcessPool::registerAssetFonts(WebProcessProxy& process)
                 }
             }
             if (weakProcess)
-                weakProcess->send(Messages::WebProcess::RegisterAdditionalFonts(additionalFonts({ *protectedThis->m_assetFontURLs }, weakProcess->auditToken())), 0);
+                weakProcess->send(Messages::WebProcess::RegisterAdditionalFonts(AdditionalFonts::additionalFonts({ *protectedThis->m_assetFontURLs }, weakProcess->auditToken())), 0);
         });
         return true;
     });
