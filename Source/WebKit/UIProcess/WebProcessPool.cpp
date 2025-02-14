@@ -680,7 +680,7 @@ void WebProcessPool::establishRemoteWorkerContextConnectionToNetworkProcess(Remo
     }
 
     // Prioritize the requesting WebProcess for running the service worker.
-    if (!remoteWorkerProcessProxy && !s_useSeparateServiceWorkerProcess && requestingProcess) {
+    if (!remoteWorkerProcessProxy && !s_useSeparateServiceWorkerProcess && requestingProcess && requestingProcess->state() != WebProcessProxy::State::Terminated) {
         if (requestingProcess->websiteDataStore() == websiteDataStore && requestingProcess->site() == site)
             useProcessForRemoteWorkers(*requestingProcess);
     }
@@ -1657,6 +1657,18 @@ void WebProcessPool::terminateAllWebContentProcesses(ProcessTerminationReason re
     Vector<Ref<WebProcessProxy>> processes = m_processes;
     for (Ref process : processes)
         process->requestTermination(reason);
+}
+
+void WebProcessPool::terminateServiceWorkersForSession(PAL::SessionID sessionID)
+{
+    Ref protectedThis { *this };
+    Vector<Ref<WebProcessProxy>> serviceWorkerProcesses;
+    remoteWorkerProcesses().forEach([&](auto& process) {
+        if (process.isRunningServiceWorkers() && process.sessionID() == sessionID)
+            serviceWorkerProcesses.append(process);
+    });
+    for (Ref serviceWorkerProcess : serviceWorkerProcesses)
+        serviceWorkerProcess->disableRemoteWorkers(RemoteWorkerType::ServiceWorker);
 }
 
 void WebProcessPool::terminateServiceWorkers()

@@ -802,16 +802,66 @@ auto WebsiteDataStore::computeWebProcessAccessTypeForDataRemoval(OptionSet<Websi
 {
     if (dataTypes.contains(WebsiteDataType::MemoryCache))
         return ProcessAccessType::OnlyIfLaunched;
+
+    if (dataTypes.contains(WebsiteDataType::ResourceLoadStatistics))
+        return ProcessAccessType::OnlyIfLaunched;
+
     return ProcessAccessType::None;
+}
+
+static WebsiteDataStore::ProcessAccessType computeWebProcessAccessTypeForDataRemovalWithRecords(OptionSet<WebsiteDataType> dataTypes)
+{
+    // FIXME: We currently don't remove resource load statistics in web process for origin data removal as TestRunner might dead lock.
+    if (dataTypes.contains(WebsiteDataType::MemoryCache))
+        return WebsiteDataStore::ProcessAccessType::OnlyIfLaunched;
+
+    return WebsiteDataStore::ProcessAccessType::None;
+}
+
+HashSet<WebCore::ProcessIdentifier> WebsiteDataStore::activeWebProcesses(ServiceWorkerProcessCanBeActive serviceWorkerProcessCanBeActive) const
+{
+    HashSet<WebCore::ProcessIdentifier> identifiers;
+    // m_processes does not include worker processes now, so we iterate all processes.
+    for (Ref processPool : WebProcessPool::allProcessPools()) {
+        for (Ref process : processPool->processes()) {
+            if (process->isPrewarmed() || process->websiteDataStore() != this)
+                continue;
+
+            if (process->pageCount() || process->provisionalPageCount())
+                identifiers.add(process->coreProcessIdentifier());
+            else if (serviceWorkerProcessCanBeActive == ServiceWorkerProcessCanBeActive::Yes && process->isRunningServiceWorkers())
+                identifiers.add(process->coreProcessIdentifier());
+        }
+    }
+
+    return identifiers;
+}
+
+void WebsiteDataStore::removeDataInNetworkProcess(WebsiteDataStore::ProcessAccessType networkProcessAccessType, OptionSet<WebsiteDataType> dataTypes, WallTime modifiedSince, CompletionHandler<void()>&& completionHandler)
+{
+    RefPtr<NetworkProcessProxy> networkProcess;
+    if (networkProcessAccessType == ProcessAccessType::Launch)
+        networkProcess = &this->networkProcess();
+    else if (networkProcessAccessType == ProcessAccessType::OnlyIfLaunched)
+        networkProcess = networkProcessIfExists();
+
+    if (!networkProcess)
+        return completionHandler();
+
+    // Service worker processes will be terminated for data removal if types include service worker registrations,
+    // so they cannot be treated as active process.
+    ServiceWorkerProcessCanBeActive canBeActive = dataTypes.contains(WebsiteDataType::ServiceWorkerRegistrations) ? ServiceWorkerProcessCanBeActive::No : ServiceWorkerProcessCanBeActive::Yes;
+    networkProcess->deleteWebsiteData(m_sessionID, dataTypes, modifiedSince, activeWebProcesses(canBeActive), WTFMove(completionHandler));
 }
 
 void WebsiteDataStore::removeData(OptionSet<WebsiteDataType> dataTypes, WallTime modifiedSince, Function<void()>&& completionHandler)
 {
     RELEASE_LOG(Storage, "WebsiteDataStore::removeData started to delete data modified since %f for session %" PRIu64, modifiedSince.secondsSinceEpoch().value(), m_sessionID.toUInt64());
-    Ref callbackAggregator = MainRunLoopCallbackAggregator::create([protectedThis = Ref { *this }, sessionID = m_sessionID, completionHandler = WTFMove(completionHandler)] {
+    Ref callbackAggregator = MainRunLoopCallbackAggregator::create([protectedThis = Ref { *this }, sessionID = m_sessionID, completionHandler = WTFMove(completionHandler), token = m_removeDataTaskCounter.count()] {
 #if RELEASE_LOG_DISABLED
         UNUSED_PARAM(sessionID);
 #endif
+        UNUSED_PARAM(token);
         RELEASE_LOG(Storage, "WebsiteDataStore::removeData finished deleting modified data for session %" PRIu64, sessionID.toUInt64());
         completionHandler();
     });
@@ -824,38 +874,32 @@ void WebsiteDataStore::removeData(OptionSet<WebsiteDataType> dataTypes, WallTime
     }
 #endif
 
-    bool didNotifyNetworkProcessToDeleteWebsiteData = false;
-    auto networkProcessAccessType = computeNetworkProcessAccessTypeForDataRemoval(dataTypes, !isPersistent());
-    switch (networkProcessAccessType) {
-    case ProcessAccessType::Launch:
-        networkProcess();
-        ASSERT(m_networkProcess);
-        FALLTHROUGH;
-    case ProcessAccessType::OnlyIfLaunched:
-        if (RefPtr networkProcess = m_networkProcess) {
-            networkProcess->deleteWebsiteData(m_sessionID, dataTypes, modifiedSince, [callbackAggregator] { });
-            didNotifyNetworkProcessToDeleteWebsiteData = true;
-        }
-        break;
-    case ProcessAccessType::None:
-        break;
-    }
-
     auto webProcessAccessType = computeWebProcessAccessTypeForDataRemoval(dataTypes, !isPersistent());
-    if (webProcessAccessType != ProcessAccessType::None) {
-        for (RefPtr processPool : processPools()) {
+    auto networkProcessAccessType = computeNetworkProcessAccessTypeForDataRemoval(dataTypes, !isPersistent());
+    // Terminate web processes to avoid new data being created during deletion.
+    if (webProcessAccessType != ProcessAccessType::None || networkProcessAccessType != ProcessAccessType::None) {
+        for (Ref processPool : WebProcessPool::allProcessPools()) {
             // Clear back/forward cache first as processes removed from the back/forward cache will likely
             // be added to the WebProcess cache.
             processPool->protectedBackForwardCache()->removeEntriesForSession(sessionID());
             processPool->checkedWebProcessCache()->clearAllProcessesForSession(sessionID());
-        }
 
+            // Terminate worker processes if we will also delete service worker registrations.
+            if (dataTypes.contains(WebsiteDataType::ServiceWorkerRegistrations))
+                processPool->terminateServiceWorkersForSession(sessionID());
+        }
+    }
+
+    if (webProcessAccessType != ProcessAccessType::None) {
         for (Ref process : processes()) {
             if (webProcessAccessType == ProcessAccessType::OnlyIfLaunched && process->state() != WebProcessProxy::State::Running)
                 continue;
+
             process->deleteWebsiteData(m_sessionID, dataTypes, modifiedSince, [callbackAggregator] { });
         }
     }
+
+    removeDataInNetworkProcess(networkProcessAccessType, dataTypes, modifiedSince, [callbackAggregator] { });
 
     if (dataTypes.contains(WebsiteDataType::DeviceIdHashSalt) || (dataTypes.contains(WebsiteDataType::Cookies)))
         ensureProtectedDeviceIdHashSaltStorage()->deleteDeviceIdHashSaltOriginsModifiedSince(modifiedSince, [callbackAggregator] { });
@@ -869,13 +913,6 @@ void WebsiteDataStore::removeData(OptionSet<WebsiteDataType> dataTypes, WallTime
 
     if (dataTypes.contains(WebsiteDataType::SearchFieldRecentSearches) && isPersistent())
         removeRecentSearches(modifiedSince, [callbackAggregator] { });
-
-    if (dataTypes.contains(WebsiteDataType::ResourceLoadStatistics)) {
-        if (!didNotifyNetworkProcessToDeleteWebsiteData)
-            protectedNetworkProcess()->deleteWebsiteData(m_sessionID, dataTypes, modifiedSince, [callbackAggregator] { });
-
-        clearResourceLoadStatisticsInWebProcesses([callbackAggregator] { });
-    }
 }
 
 void WebsiteDataStore::removeData(OptionSet<WebsiteDataType> dataTypes, const Vector<WebsiteDataRecord>& dataRecords, Function<void()>&& completionHandler)
@@ -940,7 +977,7 @@ void WebsiteDataStore::removeData(OptionSet<WebsiteDataType> dataTypes, const Ve
         }
     }
 
-    auto webProcessAccessType = computeWebProcessAccessTypeForDataRemoval(dataTypes, !isPersistent());
+    auto webProcessAccessType = computeWebProcessAccessTypeForDataRemovalWithRecords(dataTypes);
     if (webProcessAccessType != ProcessAccessType::None) {
         for (Ref process : processes()) {
             if (webProcessAccessType == ProcessAccessType::OnlyIfLaunched && process->state() != WebProcessProxy::State::Running)

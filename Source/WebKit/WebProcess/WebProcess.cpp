@@ -1547,6 +1547,10 @@ void WebProcess::deleteWebsiteData(OptionSet<WebsiteDataType> websiteDataTypes, 
 
         CrossOriginPreflightResultCache::singleton().clear();
     }
+
+    if (websiteDataTypes.contains(WebsiteDataType::ResourceLoadStatistics))
+        clearResourceLoadStatistics();
+
     completionHandler();
 }
 

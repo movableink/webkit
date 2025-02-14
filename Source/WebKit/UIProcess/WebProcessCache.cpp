@@ -82,6 +82,14 @@ bool WebProcessCache::canCacheProcess(WebProcessProxy& process) const
         return false;
     }
 
+    if (RefPtr websiteDataStore = process.websiteDataStore()) {
+        // Network process might wait for this web process to exit before clearing data.
+        if (websiteDataStore->isRemovingData()) {
+            WEBPROCESSCACHE_RELEASE_LOG("canCacheProcess: Not caching process because its website data store is removing data", process.processID());
+            return false;
+        }
+    }
+
     if (MemoryPressureHandler::singleton().isUnderMemoryPressure()) {
         WEBPROCESSCACHE_RELEASE_LOG("canCacheProcess: Not caching process because we are under memory pressure", process.processID());
         return false;
