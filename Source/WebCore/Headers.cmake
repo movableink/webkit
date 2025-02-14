@@ -1842,6 +1842,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/FileHandle.h
     platform/FileMonitor.h
     platform/FileStreamClient.h
+    platform/FixedContainerEdges.h
     platform/FloatConversion.h
     platform/GraphicsClient.h
     platform/HostWindow.h

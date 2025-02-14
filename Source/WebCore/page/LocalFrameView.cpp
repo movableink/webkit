@@ -46,6 +46,7 @@
 #include "EventHandler.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "FixedContainerEdges.h"
 #include "FloatRect.h"
 #include "FocusController.h"
 #include "FragmentDirectiveParser.h"
@@ -79,6 +80,7 @@
 #include "NullGraphicsContext.h"
 #include "OverflowEvent.h"
 #include "Page.h"
+#include "PageColorSampler.h"
 #include "PageOverlayController.h"
 #include "PerformanceLoggingClient.h"
 #include "ProgressTracker.h"
@@ -1866,6 +1868,73 @@ LayoutPoint LocalFrameView::scrollPositionForFixedPosition(const LayoutRect& vis
     float dragFactorY = (fixedElementsLayoutRelativeToFrame || !maxSize.height()) ? 1 : (totalContentsSize.height() - visibleContentRect.height() * frameScaleFactor) / maxSize.height();
 
     return LayoutPoint(position.x() * dragFactorX / frameScaleFactor, position.y() * dragFactorY / frameScaleFactor);
+}
+
+FixedContainerEdges LocalFrameView::fixedContainerEdges() const
+{
+    RefPtr page = m_frame->page();
+    if (!page)
+        return { };
+
+    if (!m_viewportConstrainedObjects)
+        return { };
+
+    RefPtr document = m_frame->document();
+    if (!document)
+        return { };
+
+    auto fixedRect = rectForFixedPositionLayout();
+    auto hasFixedContainer = [&](LayoutUnit x, LayoutUnit y) {
+        using enum HitTestRequest::Type;
+        HitTestResult result { { x, y } };
+        if (!document->hitTest({ HitTestSource::User, { ReadOnly, DisallowUserAgentShadowContent, IgnoreClipping } }, result))
+            return false;
+
+        RefPtr hitNode = result.innerNonSharedNode();
+        if (!hitNode)
+            return false;
+
+        CheckedPtr renderer = hitNode->renderer();
+        if (!renderer)
+            return false;
+
+        for (CheckedPtr layer = renderer->enclosingLayer(); layer; layer = layer->parent()) {
+            CheckedRef renderer = layer->renderer();
+            if (renderer->isFixedPositioned() || renderer->isStickilyPositioned())
+                return true;
+        }
+
+        return false;
+    };
+
+    RectEdges<bool> fixedEdges;
+    RectEdges<Color> sampledColors;
+
+    static constexpr auto sampleRectThickness = 2;
+    static constexpr auto sampleRectMargin = 2;
+    fixedRect.contract({ sampleRectMargin });
+
+    if (hasFixedContainer((fixedRect.x() + fixedRect.maxX()) / 2, fixedRect.y())) {
+        fixedEdges.setTop(true);
+        sampledColors.setTop(PageColorSampler::predominantColor(*page, { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.maxX(), fixedRect.y() + sampleRectThickness } }));
+    }
+
+    if (hasFixedContainer(fixedRect.x(), (fixedRect.y() + fixedRect.maxY()) / 2)) {
+        fixedEdges.setLeft(true);
+        sampledColors.setLeft(PageColorSampler::predominantColor(*page, { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.x() + sampleRectThickness, fixedRect.maxY() } }));
+    }
+
+    if (hasFixedContainer(fixedRect.maxX(), (fixedRect.y() + fixedRect.maxY()) / 2)) {
+        fixedEdges.setRight(true);
+        sampledColors.setRight(PageColorSampler::predominantColor(*page, { LayoutPoint { fixedRect.maxX() - sampleRectThickness, fixedRect.y() }, fixedRect.maxXMaxYCorner() }));
+    }
+
+    if (hasFixedContainer((fixedRect.x() + fixedRect.maxX()) / 2, fixedRect.maxY())) {
+        fixedEdges.setBottom(true);
+        sampledColors.setBottom(PageColorSampler::predominantColor(*page, { LayoutPoint { fixedRect.x(), fixedRect.maxY() - sampleRectThickness }, fixedRect.maxXMaxYCorner() }));
+    }
+
+    return { WTFMove(sampledColors), WTFMove(fixedEdges) };
 }
 
 FloatPoint LocalFrameView::positionForInsetClipLayer(const FloatPoint& scrollPosition, const FloatBoxExtent& obscuredContentInset)

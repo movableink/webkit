@@ -76,6 +76,7 @@ class ScrollingCoordinator;
 class ScrollAnchoringController;
 class TiledBacking;
 
+struct FixedContainerEdges;
 struct ScrollRectToVisibleOptions;
 struct SimpleRange;
 struct VelocityData;
@@ -357,6 +358,8 @@ public:
     // Functions for querying the current scrolled position, negating the effects of overhang
     // and adjusting for page scale.
     LayoutPoint scrollPositionForFixedPosition() const;
+
+    WEBCORE_EXPORT FixedContainerEdges fixedContainerEdges() const;
     
     // Static function can be called from another thread.
     WEBCORE_EXPORT static LayoutPoint scrollPositionForFixedPosition(const LayoutRect& visibleContentRect, const LayoutSize& totalContentsSize, const LayoutPoint& scrollPosition, const LayoutPoint& scrollOrigin, float frameScaleFactor, bool fixedElementsLayoutRelativeToFrame, ScrollBehaviorForFixedElements, int headerHeight, int footerHeight);
