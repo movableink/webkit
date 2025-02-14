@@ -72,11 +72,12 @@ bool SharedVideoFrameWriter::wait(const Function<void(IPC::Semaphore&)>& newSema
 
 bool SharedVideoFrameWriter::allocateStorage(size_t size, NOESCAPE const Function<void(SharedMemory::Handle&&)>& newMemoryCallback)
 {
-    m_storage = SharedMemory::allocate(size);
-    if (!m_storage)
+    RefPtr storage = SharedMemory::allocate(size);
+    m_storage = storage;
+    if (!storage)
         return false;
 
-    auto handle = m_storage->createHandle(SharedMemory::Protection::ReadOnly);
+    auto handle = storage->createHandle(SharedMemory::Protection::ReadOnly);
     if (!handle)
         return false;
 

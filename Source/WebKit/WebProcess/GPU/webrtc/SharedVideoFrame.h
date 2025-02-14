@@ -117,7 +117,7 @@ private:
     CVPixelBufferPoolRef pixelBufferPool(const WebCore::SharedVideoFrameInfo&);
     RetainPtr<CVPixelBufferRef> readBufferFromSharedMemory();
 
-    RefPtr<RemoteVideoFrameObjectHeap> m_objectHeap;
+    const RefPtr<RemoteVideoFrameObjectHeap> m_objectHeap;
     WebCore::ProcessIdentity m_resourceOwner;
     UseIOSurfaceBufferPool m_useIOSurfaceBufferPool { UseIOSurfaceBufferPool::No };
     std::optional<IPC::Semaphore> m_semaphore;
