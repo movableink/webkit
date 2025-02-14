@@ -42,7 +42,7 @@ template<typename Keyword> concept PrimitiveKeyword
 
 // Concept for use in generic contexts to filter on keywords that are valid for the provided `Keywords` list.
 template<typename Keyword, typename KeywordsList> concept ValidKeywordForList
-    = PrimitiveKeyword<Keyword> && (KeywordsList::isValidKeyword(Keyword()));
+    = KeywordsList::isValidKeyword(Keyword()) && PrimitiveKeyword<Keyword>;
 
 // MARK: - Primitive Keywords List
 
