@@ -132,7 +132,7 @@ float ScrollableArea::adjustVerticalPageScrollStepForFixedContent(float step)
 
 bool ScrollableArea::scroll(ScrollDirection direction, ScrollGranularity granularity, unsigned stepCount)
 {
-    auto* scrollbar = scrollbarForDirection(direction);
+    RefPtr scrollbar = scrollbarForDirection(direction);
     if (!scrollbar)
         return false;
 

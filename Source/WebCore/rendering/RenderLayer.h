@@ -173,6 +173,7 @@ public:
     String name() const;
 
     Page& page() const { return renderer().page(); }
+    Ref<Page> protectedPage() const { return renderer().page(); }
     RenderLayerModelObject& renderer() const { return m_renderer; }
     RenderBox* renderBox() const { return dynamicDowncast<RenderBox>(renderer()); }
 
