@@ -90,7 +90,7 @@ auto LinkIconCollector::iconsOfTypes(OptionSet<LinkIconType> iconTypes) -> Vecto
             continue;
 
         auto url = linkElement.href();
-        if (!url.protocolIsInHTTPFamily())
+        if (!url.protocolIsInHTTPFamily() && !url.protocolIsData())
             continue;
 
         // This icon size parsing is a little wonky - it only parses the first
