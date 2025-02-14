@@ -109,7 +109,7 @@ private:
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) final;
 
-    std::unique_ptr<DOMTokenList> m_blockingList;
+    const std::unique_ptr<DOMTokenList> m_blockingList;
     bool m_isRenderBlocking { false };
 };
 

@@ -315,7 +315,6 @@ dom/QualifiedNameCache.cpp
 dom/RadioButtonGroups.cpp
 dom/Range.cpp
 dom/RejectedPromiseTracker.cpp
-dom/ScriptElement.cpp
 dom/ScriptExecutionContext.cpp
 dom/ScriptedAnimationController.cpp
 dom/SelectorQuery.cpp

@@ -182,6 +182,11 @@ inline ScriptExecutionContext* Node::scriptExecutionContext() const
     return &document().contextDocument();
 }
 
+inline RefPtr<ScriptExecutionContext> Node::protectedScriptExecutionContext() const
+{
+    return scriptExecutionContext();
+}
+
 inline bool Document::hasBrowsingContext() const
 {
     return !!frame();

@@ -112,11 +112,11 @@ void HTMLScriptElement::setText(String&& value)
 DOMTokenList& HTMLScriptElement::blocking()
 {
     if (!m_blockingList) {
-        m_blockingList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
+        lazyInitialize(m_blockingList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
             if (equalLettersIgnoringASCIICase(token, "render"_s))
                 return true;
             return false;
-        });
+        }));
     }
     return *m_blockingList;
 }
@@ -132,7 +132,7 @@ void HTMLScriptElement::potentiallyBlockRendering()
 {
     bool explicitRenderBlocking = m_blockingList && m_blockingList->contains("render"_s);
     if (explicitRenderBlocking || isImplicitlyPotentiallyRenderBlocking()) {
-        document().blockRenderingOn(*this, explicitRenderBlocking ? Document::ImplicitRenderBlocking::No : Document::ImplicitRenderBlocking::Yes);
+        protectedDocument()->blockRenderingOn(*this, explicitRenderBlocking ? Document::ImplicitRenderBlocking::No : Document::ImplicitRenderBlocking::Yes);
         m_isRenderBlocking = true;
     }
 }
@@ -140,7 +140,7 @@ void HTMLScriptElement::potentiallyBlockRendering()
 void HTMLScriptElement::unblockRendering()
 {
     if (m_isRenderBlocking) {
-        document().unblockRenderingOn(*this);
+        protectedDocument()->unblockRenderingOn(*this);
         m_isRenderBlocking = false;
     }
 }
@@ -148,12 +148,12 @@ void HTMLScriptElement::unblockRendering()
 // https://html.spec.whatwg.org/multipage/scripting.html#dom-script-text
 ExceptionOr<void> HTMLScriptElement::setText(std::variant<RefPtr<TrustedScript>, String>&& value)
 {
-    return setTextContent(trustedTypeCompliantString(*scriptExecutionContext(), WTFMove(value), "HTMLScriptElement text"_s));
+    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), WTFMove(value), "HTMLScriptElement text"_s));
 }
 
 ExceptionOr<void> HTMLScriptElement::setTextContent(std::optional<std::variant<RefPtr<TrustedScript>, String>>&& value)
 {
-    return setTextContent(trustedTypeCompliantString(*scriptExecutionContext(), value ? WTFMove(*value) : emptyString(), "HTMLScriptElement textContent"_s));
+    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), value ? WTFMove(*value) : emptyString(), "HTMLScriptElement textContent"_s));
 }
 
 ExceptionOr<void> HTMLScriptElement::setTextContent(ExceptionOr<String> value)
@@ -170,7 +170,7 @@ ExceptionOr<void> HTMLScriptElement::setTextContent(ExceptionOr<String> value)
 
 ExceptionOr<void> HTMLScriptElement::setInnerText(std::variant<RefPtr<TrustedScript>, String>&& value)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*scriptExecutionContext(), WTFMove(value), "HTMLScriptElement innerText"_s);
+    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTFMove(value), "HTMLScriptElement innerText"_s);
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
 
@@ -209,7 +209,7 @@ String HTMLScriptElement::src() const
 
 ExceptionOr<void> HTMLScriptElement::setSrc(std::variant<RefPtr<TrustedScriptURL>, String>&& value)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*scriptExecutionContext(), WTFMove(value), "HTMLScriptElement src"_s);
+    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTFMove(value), "HTMLScriptElement src"_s);
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
 
@@ -221,7 +221,7 @@ void HTMLScriptElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) cons
 {
     HTMLElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(sourceAttributeValue()));
+    addSubresourceURL(urls, protectedDocument()->completeURL(sourceAttributeValue()));
 }
 
 String HTMLScriptElement::sourceAttributeValue() const

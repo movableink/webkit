@@ -606,7 +606,6 @@ dom/QualifiedName.cpp
 dom/Range.cpp
 dom/RangeBoundaryPoint.h
 dom/RejectedPromiseTracker.cpp
-dom/ScriptElement.cpp
 dom/ScriptExecutionContext.cpp
 dom/ScriptExecutionContext.h
 dom/ScriptRunner.cpp
@@ -754,7 +753,6 @@ html/HTMLOptionsCollectionInlines.h
 html/HTMLPlugInElement.cpp
 html/HTMLPlugInImageElement.cpp
 html/HTMLProgressElement.cpp
-html/HTMLScriptElement.cpp
 html/HTMLSelectElement.cpp
 html/HTMLStyleElement.cpp
 html/HTMLSummaryElement.cpp
@@ -1465,7 +1463,6 @@ svg/SVGRadialGradientElement.h
 svg/SVGRectElement.h
 svg/SVGSVGElement.cpp
 svg/SVGSVGElement.h
-svg/SVGScriptElement.cpp
 svg/SVGStopElement.h
 svg/SVGTRefElement.cpp
 svg/SVGTSpanElement.cpp

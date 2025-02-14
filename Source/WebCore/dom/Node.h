@@ -523,6 +523,7 @@ public:
 
     enum EventTargetInterfaceType eventTargetInterface() const override;
     ScriptExecutionContext* scriptExecutionContext() const final; // Implemented in DocumentInlines.h.
+    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
 
     WEBCORE_EXPORT bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
     bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) override;
