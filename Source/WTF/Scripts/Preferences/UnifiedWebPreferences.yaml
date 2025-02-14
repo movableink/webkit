@@ -6392,16 +6392,19 @@ SansSerifFontFamily:
 
 ScopedCustomElementRegistryEnabled:
   type: bool
-  status: preview
+  status: stable
   category: dom
   humanReadableName: "Scoped custom element registry"
   humanReadableDescription: "Enable scoped custom element registry"
   defaultValue:
     WebKitLegacy:
+      "PLATFORM(COCOA)": true
       default: false
     WebKit:
+      "PLATFORM(COCOA)": true
       default: false
     WebCore:
+      "PLATFORM(COCOA)": true
       default: false
 
 # FIXME: Is this implemented for WebKitLegacy? If not, this should be excluded from WebKitLegacy entirely.
