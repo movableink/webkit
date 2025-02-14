@@ -86,8 +86,9 @@ void HTMLScriptElement::attributeChanged(const QualifiedName& name, const AtomSt
     else if (name == asyncAttr)
         handleAsyncAttribute();
     else if (name == blockingAttr) {
-        blocking().associatedAttributeValueChanged();
-        if (!blocking().contains("render"_s))
+        Ref blocking = this->blocking();
+        blocking->associatedAttributeValueChanged();
+        if (!blocking->contains("render"_s))
             unblockRendering();
     } else
         HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
