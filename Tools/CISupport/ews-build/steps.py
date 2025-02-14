@@ -7213,27 +7213,28 @@ class FindUnexpectedStaticAnalyzerResults(shell.ShellCommandNewStyle, AddToLogMi
             results_data_obj = json.dumps(self.unexpected_results_filtered, indent=4)
             f.write(results_data_obj)
 
+    @defer.inlineCallbacks
     def decode_results_data(self, string):
         content_string = ''.join(string.splitlines())
         try:
             results_json = json.loads(content_string)
-            return results_json
+            return defer.returnValue(results_json)
         except json.JSONDecodeError:
             yield self._addToLog(self.results_db_log_name, f'Failed to decode JSON, retrying with workaround\n')
             content_string += '}'  # Workaround for getStdout() removing the last bracket
             try:
                 results_json = json.loads(content_string)
-                return results_json
+                return defer.returnValue(results_json)
             except json.JSONDecodeError:
                 yield self._addToLog(self.results_db_log_name, f'Failed to decode JSON\n')
-                return None
+                return defer.returnValue(None)
 
     @defer.inlineCallbacks
     def filter_results_using_results_db(self, string):
         if not string:
             return defer.returnValue(False)
 
-        results_json = self.decode_results_data(string)
+        results_json = yield self.decode_results_data(string)
         if not results_json:
             return defer.returnValue(False)
         self.unexpected_results_filtered = results_json
