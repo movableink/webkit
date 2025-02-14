@@ -338,7 +338,7 @@ protected:
     virtual bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
 
     virtual void adjustSearchFieldStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
     virtual void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const IntRect&) { }
 
     virtual void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const { }

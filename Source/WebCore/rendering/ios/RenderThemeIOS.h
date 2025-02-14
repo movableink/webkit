@@ -116,6 +116,7 @@ private:
     int sliderTickOffsetFromTrackCenter() const override;
 
     void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
+    bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const IntRect&) override;
 
     Color checkboxRadioBorderColor(OptionSet<ControlStyle::State>, OptionSet<StyleColorOptions>);

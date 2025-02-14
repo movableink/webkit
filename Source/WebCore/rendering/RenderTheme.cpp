@@ -835,7 +835,7 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     case StyleAppearance::Listbox:
         return true;
     case StyleAppearance::SearchField:
-        return paintSearchField(box, paintInfo, integralSnappedRect);
+        return paintSearchField(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldCancelButton:
         return paintSearchFieldCancelButton(box, paintInfo, integralSnappedRect);
     case StyleAppearance::SearchFieldDecoration:

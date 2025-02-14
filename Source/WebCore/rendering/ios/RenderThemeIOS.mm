@@ -895,6 +895,19 @@ void RenderThemeIOS::adjustSearchFieldStyle(RenderStyle& style, const Element* e
     adjustRoundBorderRadius(style, *box);
 }
 
+bool RenderThemeIOS::paintSearchField(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (paintSearchFieldForCatalyst(renderer, paintInfo, rect))
+        return false;
+#else
+    UNUSED_PARAM(renderer);
+    UNUSED_PARAM(paintInfo);
+    UNUSED_PARAM(rect);
+#endif
+    return true;
+}
+
 void RenderThemeIOS::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
