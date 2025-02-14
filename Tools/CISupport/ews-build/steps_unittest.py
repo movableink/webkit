@@ -9263,7 +9263,10 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
         return self.tearDownBuildStep()
 
     def configureStep(self, use_expectations, was_filtered=False):
-        self.setupStep(FindUnexpectedStaticAnalyzerResults(use_expectations=use_expectations, was_filtered=was_filtered))
+        if use_expectations:
+            self.setupStep(FindUnexpectedStaticAnalyzerResults(was_filtered=was_filtered))
+        else:
+            self.setupStep(FindUnexpectedStaticAnalyzerResultsWithoutChange(was_filtered=was_filtered))
         self.setProperty('builddir', 'wkdir')
         self.setProperty('buildnumber', 1234)
         self.setProperty('architecture', 'arm64')
