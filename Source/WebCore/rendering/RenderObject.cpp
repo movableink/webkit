@@ -42,6 +42,7 @@
 #include "HTMLTableElement.h"
 #include "HitTestResult.h"
 #include "LayoutBox.h"
+#include "LayoutIntegrationCoverage.h"
 #include "LegacyRenderSVGModelObject.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
@@ -1200,7 +1201,7 @@ std::optional<FloatRect> RenderObject::computeFloatVisibleRectInContainer(const 
 static void outputRenderTreeLegend(TextStream& stream)
 {
     stream.nextLine();
-    stream << "(B)lock/(I)nline Box/(A)tomic inline, (A)bsolute/Fi(X)ed/(R)elative/Stic(K)y, (F)loating, (O)verflow clip, Anon(Y)mous, (G)enerated, has(L)ayer, hasLayer(S)crollableArea, (C)omposited, Content-visibility:(H)idden/(A)uto, (S)kipped content, (+)Dirty style, (+)Dirty layout";
+    stream << "(B)lock/(I)nline Box/(A)tomic inline, (A)bsolute/Fi(X)ed/(R)elative/Stic(K)y, (F)loating, (O)verflow clip, Anon(Y)mous/(P)seudo, has(L)ayer, (C)omposited, Content-visibility:(H)idden/(A)uto, (S)kipped content, (M)odern/(L)egacy/Not(-)applicable layout, (+)Needs style recalc, (+)Needs layout";
     stream.nextLine();
 }
 
@@ -1309,39 +1310,20 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
     } else
         stream << "-";
 
-    if (isFloating())
-        stream << "F";
-    else
-        stream << "-";
+    stream << (isFloating() ? "F" : "-");
 
-    if (hasNonVisibleOverflow())
-        stream << "O";
-    else
-        stream << "-";
+    stream << (hasNonVisibleOverflow() ? "O" : "-");
 
     if (isAnonymous())
         stream << "Y";
+    else if (isPseudoElement())
+        stream << "P";
     else
         stream << "-";
 
-    if (isPseudoElement() || isAnonymous())
-        stream << "G";
-    else
-        stream << "-";
+    stream << (hasLayer() ? "L" : "-");
 
-    if (hasLayer()) {
-        stream << "L";
-        if (downcast<RenderLayerModelObject>(*this).layer()->scrollableArea())
-            stream << "S";
-        else
-            stream << "-";
-    } else
-        stream << "--";
-
-    if (isComposited())
-        stream << "C";
-    else
-        stream << "-";
+    stream << (isComposited() ? "C" : "-");
 
     auto contentVisibility = style().contentVisibility();
     if (contentVisibility == ContentVisibility::Hidden)
@@ -1351,22 +1333,23 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
     else
         stream << "-";
 
-    if (isSkippedContent())
-        stream << "S";
-    else
+    stream << (isSkippedContent() ? "S" : "-");
+
+    if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(*this); renderBlock && renderBlock->createsNewFormattingContext()) {
+        if (CheckedPtr blockBox = dynamicDowncast<RenderBlockFlow>(*renderBlock))
+            stream << (blockBox->childrenInline() && LayoutIntegration::canUseForLineLayout(*blockBox) ? "M" : "L");
+        else if (CheckedPtr flexBox = dynamicDowncast<RenderFlexibleBox>(*renderBlock))
+            stream << (LayoutIntegration::canUseForFlexLayout(*flexBox) ? "M" : "L");
+        else
+            stream << "L";
+    } else
         stream << "-";
 
     stream << " ";
 
-    if (node() && node()->needsStyleRecalc())
-        stream << "+";
-    else
-        stream << "-";
+    stream << (node() && node()->needsStyleRecalc() ? "+" : "-");
 
-    if (needsLayout())
-        stream << "+";
-    else
-        stream << "-";
+    stream << (needsLayout() ? "+" : "-");
 
     int printedCharacters = 0;
     if (mark) {
