@@ -15,6 +15,6 @@ PASS animation-timeline: view(inline)
 PASS animation-timeline: view(x)
 PASS animation-timeline: view(y)
 PASS animation-timeline: view(x 50px)
-FAIL animation-timeline: view(), view(inline) assert_equals: At exit 0% inline expected "10px" but got "10.000001px"
+PASS animation-timeline: view(), view(inline)
 PASS animation-timeline: view(inline) changes to view(inline 50px)
 
