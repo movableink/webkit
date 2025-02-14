@@ -5,7 +5,7 @@
  *           (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
- * Copyright (C) 2008-2015 Google Inc. All rights reserved.
+ * Copyright (C) 2008-2014 Google Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) Research In Motion Limited 2010-2011. All rights reserved.
  *
@@ -9250,7 +9250,7 @@ void Document::updateHoverActiveState(const HitTestRequest& request, Element* in
             elementsToSetActive.append(element);
         if (element == commonAncestor)
             sawCommonAncestor = true;
-        if (!sawCommonAncestor || element == m_hoveredElement)
+        if (!sawCommonAncestor)
             elementsToSetHover.append(element);
     }
 
