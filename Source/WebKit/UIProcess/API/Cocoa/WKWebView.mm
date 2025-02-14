@@ -196,10 +196,14 @@
 #endif
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
+#if USE(APPLE_INTERNAL_SDK)  && __has_include(<WebKitAdditions/WKDigitalCredentialsPickerAdditions.h>)
+#import <WebKitAdditions/WKDigitalCredentialsPickerAdditions.h>
+#else
+#import <WebKit/WKDigitalCredentialsPicker.h>
+#endif
 #import <WebCore/DigitalCredentialsRequestData.h>
 #import <WebCore/DigitalCredentialsResponseData.h>
 #import <WebCore/ExceptionData.h>
-#import <WebKit/WKDigitalCredentialsPicker.h>
 #endif
 
 #if ENABLE(SCREEN_TIME)

@@ -24,6 +24,11 @@
  */
 
 #include "config.h"
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKDigitalCredentialsPickerAdditions.mm>)
+#import <WebKitAdditions/WKDigitalCredentialsPickerAdditions.mm>
+
+#else
 #import "WKDigitalCredentialsPicker.h"
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
@@ -171,3 +176,4 @@ using WebCore::IdentityCredentialProtocol;
 @end // WKDigitalCredentialsPicker
 
 #endif // HAVE(DIGITAL_CREDENTIALS_UI)
+#endif // USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKDigitalCredentialsPickerAdditions.mm>)

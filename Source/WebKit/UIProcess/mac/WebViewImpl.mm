@@ -163,7 +163,11 @@
 #import <wtf/text/MakeString.h>
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
+#if USE(APPLE_INTERNAL_SDK)  && __has_include(<WebKitAdditions/WKDigitalCredentialsPickerAdditions.h>)
+#import <WebKitAdditions/WKDigitalCredentialsPickerAdditions.h>
+#else
 #import <WebKit/WKDigitalCredentialsPicker.h>
+#endif
 #endif
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
