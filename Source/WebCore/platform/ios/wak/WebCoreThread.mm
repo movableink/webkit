@@ -313,7 +313,7 @@ void WebThreadRunOnMainThread(void(^delegateBlock)())
     JSC::JSLock::DropAllLocks dropAllLocks(WebCore::commonVM());
     _WebThreadUnlock();
 
-    WorkQueue::main().dispatchSync(makeBlockPtr(delegateBlock).get());
+    WorkQueue::protectedMain()->dispatchSync(makeBlockPtr(delegateBlock).get());
 
     _WebThreadLock();
 }

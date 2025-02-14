@@ -1276,7 +1276,7 @@ static const char **_argv;
 - (void)_webThreadInvoked
 {
     ASSERT(WebThreadIsCurrent());
-    WorkQueue::main().dispatch([self, retainedSelf = retainPtr(self)] {
+    WorkQueue::protectedMain()->dispatch([self, retainedSelf = retainPtr(self)] {
         [self _webThreadEventLoopHasRun];
     });
 }

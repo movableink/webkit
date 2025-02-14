@@ -247,7 +247,7 @@ void WebPushDaemon::setPushService(RefPtr<PushService>&& pushService)
     if (!m_pendingPushServiceFunctions.size())
         return;
 
-    WorkQueue::main().dispatch([this]() {
+    WorkQueue::protectedMain()->dispatch([this]() {
         while (m_pendingPushServiceFunctions.size()) {
             auto function = m_pendingPushServiceFunctions.takeFirst();
             function();
@@ -520,7 +520,7 @@ void WebPushDaemon::handleIncomingPush(const PushSubscriptionSetIdentifier& iden
             return;
         }
 
-        WorkQueue::main().dispatch([this, identifier = crossThreadCopy(identifier), message = WTFMove(message)] mutable {
+        WorkQueue::protectedMain()->dispatch([this, identifier = crossThreadCopy(identifier), message = WTFMove(message)] mutable {
             handleIncomingPushImpl(identifier, WTFMove(message));
         });
     });
@@ -1018,7 +1018,7 @@ ALLOW_NONLITERAL_FORMAT_END
     center.get().notificationCategories = [NSSet setWithObject:category];
 
     auto blockPtr = makeBlockPtr([this, identifier = crossThreadCopy(identifier), scope = crossThreadCopy(notificationData.serviceWorkerRegistrationURL.string()), completionHandler = WTFMove(completionHandler)](NSError *error) mutable {
-        WorkQueue::main().dispatch([this, identifier = crossThreadCopy(identifier), scope = crossThreadCopy(scope), error = RetainPtr { error }, completionHandler = WTFMove(completionHandler)] mutable {
+        WorkQueue::protectedMain()->dispatch([this, identifier = crossThreadCopy(identifier), scope = crossThreadCopy(scope), error = RetainPtr { error }, completionHandler = WTFMove(completionHandler)] mutable {
             if (error)
                 RELEASE_LOG_ERROR(Push, "Failed to add notification request: %{public}@", error.get());
             else
@@ -1122,7 +1122,7 @@ void WebPushDaemon::getPushPermissionState(PushClientConnection& connection, con
         }(settings.authorizationStatus);
         RELEASE_LOG(Push, "getPushPermissionState for %{sensitive}s with result: %u", originString.utf8().data(), static_cast<unsigned>(permissionState));
 
-        WorkQueue::main().dispatch([replySender = WTFMove(replySender), permissionState] mutable {
+        WorkQueue::protectedMain()->dispatch([replySender = WTFMove(replySender), permissionState] mutable {
             replySender(permissionState);
         });
     });
@@ -1165,7 +1165,7 @@ void WebPushDaemon::requestPushPermission(PushClientConnection& connection, cons
         else
             RELEASE_LOG(Push, "Requested push permission for %{sensitive}s with result: %d", originString.utf8().data(), granted);
 
-        WorkQueue::main().dispatch([replySender = WTFMove(replySender), granted] mutable {
+        WorkQueue::protectedMain()->dispatch([replySender = WTFMove(replySender), granted] mutable {
             replySender(granted);
         });
     });
