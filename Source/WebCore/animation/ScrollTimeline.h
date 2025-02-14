@@ -80,6 +80,11 @@ public:
 
     void removeTimelineFromDocument(Element*);
 
+    struct ResolvedScrollDirection {
+        bool isVertical;
+        bool isReversed;
+    };
+
 protected:
     explicit ScrollTimeline(const AtomString&, ScrollAxis);
 
@@ -93,10 +98,6 @@ protected:
 
     static ScrollableArea* scrollableAreaForSourceRenderer(const RenderElement*, Document&);
 
-    struct ResolvedScrollDirection {
-        bool isVertical;
-        bool isReversed;
-    };
     std::optional<ResolvedScrollDirection> resolvedScrollDirection() const;
 
 private:

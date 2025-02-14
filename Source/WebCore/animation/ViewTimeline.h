@@ -40,8 +40,33 @@ class BuilderState;
 }
 
 class Element;
+class StickyPositionViewportConstraints;
 
 struct TimelineRange;
+
+struct StickinessAdjustmentData {
+    bool operator==(const StickinessAdjustmentData& other) const = default;
+
+    enum class StickinessLocation {
+        BeforeEntry,
+        DuringEntry,
+        WhileContained,
+        DuringExit,
+        AfterExit
+    };
+
+    float entryDistanceAdjustment() const;
+    float exitDistanceAdjustment() const;
+    float rangeStartAdjustment() const;
+    float rangeEndAdjustment() const;
+
+    static StickinessAdjustmentData computeStickinessAdjustmentData(const StickyPositionViewportConstraints&, ScrollTimeline::ResolvedScrollDirection, float scrollContainerSize, float subjectSize, float subjectOffset);
+
+    float stickyTopOrLeftAdjustment { 0 };
+    StickinessLocation topOrLeftAdjustmentLocation { StickinessLocation::WhileContained };
+    float stickyBottomOrRightAdjustment { 0 };
+    StickinessLocation bottomOrRightAdjustmentLocation { StickinessLocation::WhileContained };
+};
 
 class ViewTimeline final : public ScrollTimeline {
 public:
@@ -63,6 +88,7 @@ public:
     AnimationTimelinesController* controller() const override;
 
     const RenderBox* sourceScrollerRenderer() const;
+    const RenderElement* stickyContainer() const;
     Element* source() const override;
     TimelineRange defaultRange() const final;
 
@@ -87,6 +113,7 @@ private:
         float subjectSize { 0 };
         float insetStart { 0 };
         float insetEnd { 0 };
+        StickinessAdjustmentData stickinessData { };
     };
 
     void cacheCurrentTime();
@@ -103,6 +130,9 @@ private:
     ViewTimelineInsets m_insets;
     CurrentTimeData m_cachedCurrentTimeData { };
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, const StickinessAdjustmentData&);
+WTF::TextStream& operator<<(WTF::TextStream&, const StickinessAdjustmentData::StickinessLocation&);
 
 } // namespace WebCore
 
