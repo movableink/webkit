@@ -739,7 +739,6 @@ html/HTMLIFrameElement.cpp
 html/HTMLImageElement.cpp
 html/HTMLImageLoader.cpp
 html/HTMLInputElement.cpp
-html/HTMLLabelElement.cpp
 html/HTMLLinkElement.cpp
 html/HTMLMapElement.cpp
 html/HTMLMaybeFormAssociatedCustomElement.cpp
