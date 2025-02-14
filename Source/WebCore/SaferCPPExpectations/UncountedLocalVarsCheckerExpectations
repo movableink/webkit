@@ -295,8 +295,6 @@ dom/ElementIteratorInlines.h
 dom/ElementTextDirection.cpp
 dom/ElementTraversal.h
 dom/Event.cpp
-dom/EventLoop.cpp
-dom/EventLoop.h
 dom/EventPath.cpp
 dom/EventTarget.cpp
 dom/FragmentDirectiveGenerator.cpp
@@ -812,7 +810,6 @@ testing/js/WebCoreTestSupport.cpp
 workers/AbstractWorker.cpp
 workers/Worker.cpp
 workers/WorkerConsoleClient.cpp
-workers/WorkerEventLoop.cpp
 workers/WorkerGlobalScope.cpp
 workers/WorkerMessagingProxy.cpp
 workers/WorkerOrWorkletGlobalScope.cpp

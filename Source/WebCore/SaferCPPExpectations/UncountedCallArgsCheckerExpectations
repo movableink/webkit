@@ -569,8 +569,6 @@ dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
 dom/EmptyScriptExecutionContext.h
 dom/EventListenerMap.cpp
-dom/EventLoop.cpp
-dom/EventLoop.h
 dom/EventPath.cpp
 dom/EventTarget.cpp
 dom/ExtensionStyleSheets.cpp
@@ -629,7 +627,6 @@ dom/TreeWalker.cpp
 dom/ViewTransition.cpp
 dom/ViewTransitionTypeSet.cpp
 dom/VisitedLinkState.cpp
-dom/WindowEventLoop.cpp
 dom/WindowOrWorkerGlobalScopeTrustedTypes.cpp
 dom/mac/ImageControlsMac.cpp
 editing/AlternativeTextController.cpp
@@ -1508,7 +1505,6 @@ workers/DedicatedWorkerGlobalScope.cpp
 workers/Worker.cpp
 workers/WorkerAnimationController.cpp
 workers/WorkerConsoleClient.cpp
-workers/WorkerEventLoop.cpp
 workers/WorkerFontLoadRequest.cpp
 workers/WorkerGlobalScope.cpp
 workers/WorkerInspectorProxy.cpp

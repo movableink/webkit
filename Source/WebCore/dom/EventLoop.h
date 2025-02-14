@@ -167,7 +167,7 @@ public:
 
     ~EventLoopTaskGroup()
     {
-        if (auto* eventLoop = m_eventLoop.get())
+        if (RefPtr eventLoop = m_eventLoop.get())
             eventLoop->unregisterGroup(*this);
     }
 
@@ -192,7 +192,7 @@ public:
     {
         ASSERT(isReadyToStop());
         m_state = State::Stopped;
-        if (auto* eventLoop = m_eventLoop.get())
+        if (RefPtr eventLoop = m_eventLoop.get())
             eventLoop->stopGroup(*this);
     }
 
@@ -208,7 +208,7 @@ public:
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#queue-a-microtask
     WEBCORE_EXPORT void queueMicrotask(EventLoop::TaskFunction&&);
-    MicrotaskQueue& microtaskQueue() { return m_eventLoop->microtaskQueue(); }
+    MicrotaskQueue& microtaskQueue() { return protectedEventLoop()->microtaskQueue(); }
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#perform-a-microtask-checkpoint
     void performMicrotaskCheckpoint();

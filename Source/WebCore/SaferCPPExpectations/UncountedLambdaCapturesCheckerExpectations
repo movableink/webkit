@@ -91,7 +91,6 @@ dom/Node.cpp
 dom/Subscriber.cpp
 dom/ViewTransition.cpp
 dom/ViewportArguments.cpp
-dom/WindowEventLoop.cpp
 editing/Editor.cpp
 fileapi/Blob.cpp
 fileapi/FileReader.cpp
