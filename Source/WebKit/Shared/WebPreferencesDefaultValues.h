@@ -167,4 +167,8 @@ bool defaultCookieStoreAPIEnabled();
 bool defaultContentInsetBackgroundFillEnabled();
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+bool defaultIFrameResourceMonitoringEnabled();
+#endif
+
 } // namespace WebKit

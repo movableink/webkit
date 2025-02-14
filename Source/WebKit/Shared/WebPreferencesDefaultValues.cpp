@@ -29,6 +29,7 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
+#include "DefaultWebBrowserChecks.h"
 #include <wtf/NumberOfCores.h>
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #if PLATFORM(IOS_FAMILY)
@@ -343,5 +344,16 @@ bool defaultCookieStoreAPIEnabled()
     return false;
 #endif
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+bool defaultIFrameResourceMonitoringEnabled()
+{
+#if PLATFORM(COCOA)
+    return isFullWebBrowserOrRunningTest();
+#else
+    return false;
+#endif
+}
+#endif
 
 } // namespace WebKit
