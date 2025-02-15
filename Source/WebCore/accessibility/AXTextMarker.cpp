@@ -622,15 +622,30 @@ unsigned AXTextMarker::offsetFromRoot() const
     if (RefPtr root = tree ? tree->rootNode() : nullptr) {
         AXTextMarker rootMarker { root->treeID(), root->objectID(), 0 };
         unsigned offset = 0;
-        auto current = rootMarker.toTextRunMarker();
+        auto current = rootMarker;
         while (current.isValid() && !hasSameObjectAndOffset(current)) {
+            RefPtr currentObject = current.isolatedObject();
             auto previous = current;
-            current = previous.findMarker(AXDirection::Next, CoalesceObjectBreaks::No, IgnoreBRs::No);
+            // If an object has text runs, and we are not at the very last position in those runs, use findMarker to navigate within them.
+            // Otherwise, we want to explore all objects.
+            if (currentObject->hasTextRuns() && current.runs() && current.offset() < current.runs()->totalLength()) {
+                current = previous.findMarker(AXDirection::Next, CoalesceObjectBreaks::No, IgnoreBRs::No);
+                // While searching, we want to explore all positions (hence, we don't coalesce newlines or skip line breaks above)
+                // But, don't increment if the previous and current have the same visual position.
+                if (!previous.equivalentTextPosition(current))
+                    offset++;
+            } else {
+                RefPtr nextObject = currentObject ? currentObject->nextInPreOrder() : nullptr;
+                current = nextObject ? AXTextMarker { *nextObject, 0 } : AXTextMarker();
+                bool nextOrPreviousObjectIsLineBreak = currentObject->roleValue() == AccessibilityRole::LineBreak || (nextObject && nextObject->roleValue() == AccessibilityRole::LineBreak);
 
-            // While searching, we want to explore all positions (hence, we don't coalesce newlines or skip line breaks above)
-            // But, don't increment if the previous and current have the same visual position.
-            if (!previous.equivalentTextPosition(current))
-                offset++;
+                // If we come across an object on a new line, we need to increment the offset, since the previous + current
+                // text marker won't share an equivalent visual text position.
+                // However, if we are moving on or off of a line break, don't compare lineIDs. The line break object has
+                // it's own text runs which will already be considered in the offset count.
+                if (!nextOrPreviousObjectIsLineBreak && previous.lineID() && current.lineID() && previous.lineID() != current.lineID())
+                    offset++;
+            }
         }
         // If this assert fails, it means we couldn't navigate from root to `this`, which should never happen.
         TEXT_MARKER_ASSERT_DOBULE(hasSameObjectAndOffset(current), (*this), current);
