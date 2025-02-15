@@ -498,7 +498,7 @@ inline Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8Conver
 {
     if (!m_impl)
         return function(nonNullEmptyUTF8Span());
-    return m_impl->tryGetUTF8(function, mode);
+    SUPPRESS_UNCOUNTED_ARG return m_impl->tryGetUTF8(function, mode);
 }
 
 #if USE(FOUNDATION) && defined(__OBJC__)

@@ -60,7 +60,7 @@ public:
     String releaseString() { return WTFMove(m_string); }
 
     // FIXME: What guarantees this isn't a SymbolImpl rather than an AtomStringImpl?
-    AtomStringImpl* impl() const { return static_cast<AtomStringImpl*>(m_string.impl()); }
+    AtomStringImpl* impl() const { SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<AtomStringImpl*>(m_string.impl()); }
     RefPtr<AtomStringImpl> releaseImpl() { return static_pointer_cast<AtomStringImpl>(m_string.releaseImpl()); }
 
     bool is8Bit() const { return m_string.is8Bit(); }
