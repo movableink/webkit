@@ -1120,7 +1120,7 @@ bool RenderTheme::isControlStyled(const RenderStyle& style, const RenderStyle& u
     }
 }
 
-bool RenderTheme::supportsFocusRing(const RenderStyle& style) const
+bool RenderTheme::supportsFocusRing(const RenderObject&, const RenderStyle& style) const
 {
     return style.hasUsedAppearance()
         && style.usedAppearance() != StyleAppearance::TextField

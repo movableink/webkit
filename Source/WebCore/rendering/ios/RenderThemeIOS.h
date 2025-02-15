@@ -147,7 +147,7 @@ private:
     void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const final;
     bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) final;
 
-    bool supportsFocusRing(const RenderStyle&) const final;
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const final;
 
     bool supportsBoxShadow(const RenderStyle&) const final;
 

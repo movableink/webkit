@@ -1083,9 +1083,15 @@ bool RenderThemeIOS::shouldHaveSpinButton(const HTMLInputElement&) const
     return false;
 }
 
-bool RenderThemeIOS::supportsFocusRing(const RenderStyle&) const
+bool RenderThemeIOS::supportsFocusRing(const RenderObject& renderer, const RenderStyle& style) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    return supportsFocusRingForCatalyst(renderer, style);
+#else
+    UNUSED_PARAM(renderer);
+    UNUSED_PARAM(style);
     return false;
+#endif
 }
 
 bool RenderThemeIOS::supportsBoxShadow(const RenderStyle& style) const

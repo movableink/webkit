@@ -114,7 +114,7 @@ bool RenderThemeAdwaita::canCreateControlPartForDecorations(const RenderObject& 
     return renderer.style().usedAppearance() == StyleAppearance::MenulistButton;
 }
 
-bool RenderThemeAdwaita::supportsFocusRing(const RenderStyle& style) const
+bool RenderThemeAdwaita::supportsFocusRing(const RenderObject&, const RenderStyle& style) const
 {
     switch (style.usedAppearance()) {
     case StyleAppearance::PushButton:
