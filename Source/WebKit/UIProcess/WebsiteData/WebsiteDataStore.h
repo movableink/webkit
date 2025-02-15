@@ -283,6 +283,10 @@ public:
     void resetCacheMaxAgeCapForPrevalentResources(CompletionHandler<void()>&&);
     const WebsiteDataStoreConfiguration::Directories& resolvedDirectories() const;
     FileSystem::Salt mediaKeysStorageSalt() const;
+#if ENABLE(SCREEN_TIME)
+    void removeScreenTimeData(const HashSet<URL>& websitesToRemove);
+    void removeScreenTimeDataWithInterval(WallTime);
+#endif
 
     static void setCachedProcessSuspensionDelayForTesting(Seconds);
 

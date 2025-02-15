@@ -74,6 +74,9 @@ const OptionSet<WebsiteDataType>& WebResourceLoadStatisticsStore::monitoredDataT
         WebsiteDataType::SessionStorage,
         WebsiteDataType::ServiceWorkerRegistrations,
         WebsiteDataType::FileSystem,
+#if ENABLE(SCREEN_TIME)
+        WebsiteDataType::ScreenTime
+#endif
     }));
 
     ASSERT(RunLoop::isMain());

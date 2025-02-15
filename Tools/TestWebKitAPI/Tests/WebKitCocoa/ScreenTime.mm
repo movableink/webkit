@@ -36,6 +36,7 @@
 #import <WebKit/WKWebViewConfiguration.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebViewPrivateForTesting.h>
+#import <WebKit/WKWebsiteDataRecordPrivate.h>
 #import <WebKit/WKWebsiteDataStore.h>
 #import <WebKit/_WKFeature.h>
 #import <pal/cocoa/ScreenTimeSoftLink.h>
@@ -434,4 +435,45 @@ TEST(ScreenTime, URLIsPictureInPictureMacos)
 }
 
 #endif
+
+TEST(ScreenTime, RemoveDataWithTimeInterval)
+{
+    if (![PAL::getSTWebHistoryClass() instancesRespondToSelector:@selector(deleteHistoryDuringInterval:)])
+        return;
+
+    __block bool removedHistory = false;
+    InstanceMethodSwizzler swizzler {
+        PAL::getSTWebHistoryClass(),
+        @selector(deleteHistoryDuringInterval:),
+        imp_implementationWithBlock(^(id object, NSDateInterval * interval) {
+            removedHistory = true;
+        })
+    };
+
+    RetainPtr dataTypeScreenTime = adoptNS([[NSSet alloc] initWithArray:@[_WKWebsiteDataTypeScreenTime]]);
+
+    RetainPtr uuid = [NSUUID UUID];
+    RetainPtr websiteDataStore = [WKWebsiteDataStore dataStoreForIdentifier:uuid.get()];
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setWebsiteDataStore:websiteDataStore.get()];
+
+    RetainPtr webView = webViewForScreenTimeTests(configuration.get());
+    [webView synchronouslyLoadHTMLString:@""];
+
+    __block bool done = false;
+    [websiteDataStore removeDataOfTypes:dataTypeScreenTime.get() modifiedSince:[NSDate distantPast] completionHandler:^() {
+        done = true;
+    }];
+
+    TestWebKitAPI::Util::run(&done);
+
+    EXPECT_TRUE(removedHistory);
+}
+
+TEST(ScreenTime, RemoveData)
+{
+    // FIXME: Add test once Screen Time implements fetchAllHistoryWithCompletionHandler API
+}
+
 #endif

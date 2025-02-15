@@ -57,10 +57,20 @@
 #import "GPUProcessProxy.h"
 #endif
 
+#if ENABLE(SCREEN_TIME)
+#import <pal/cocoa/ScreenTimeSoftLink.h>
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 #import <UIKit/UIApplication.h>
 #import <pal/ios/ManagedConfigurationSoftLink.h>
 #import <pal/spi/ios/ManagedConfigurationSPI.h>
+#endif
+
+#if ENABLE(SCREEN_TIME)
+@interface STWebHistory (Staging_140439004)
+- (void)fetchAllHistoryWithCompletionHandler:(void (^)(NSSet<NSURL *> *urls, NSError *error))completionHandler;
+@end
 #endif
 
 namespace WebKit {
@@ -331,6 +341,41 @@ void WebsiteDataStore::removeDataStoreWithIdentifier(const WTF::UUID& identifier
         });
     });
 }
+
+#if ENABLE(SCREEN_TIME)
+
+void WebsiteDataStore::removeScreenTimeData(const HashSet<URL>& websitesToRemove)
+{
+    if (![PAL::getSTWebHistoryClass() instancesRespondToSelector:@selector(fetchAllHistoryWithCompletionHandler:)])
+        return;
+
+    STWebHistoryProfileIdentifier profileIdentifier = nil;
+    if (configuration().identifier())
+        profileIdentifier = configuration().identifier()->toString();
+
+    RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier]);
+
+    for (auto& url : websitesToRemove)
+        [webHistory deleteHistoryForURL:url];
+}
+
+void WebsiteDataStore::removeScreenTimeDataWithInterval(WallTime modifiedSince)
+{
+    STWebHistoryProfileIdentifier profileIdentifier = nil;
+    if (configuration().identifier())
+        profileIdentifier = configuration().identifier()->toString();
+
+    RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier]);
+
+    if (!modifiedSince.isNaN()) {
+        NSTimeInterval timeInterval = modifiedSince.secondsSinceEpoch().seconds();
+        NSDate *date = [NSDate dateWithTimeIntervalSince1970:timeInterval];
+        RetainPtr dateInterval = adoptNS([[NSDateInterval alloc] initWithStartDate:date endDate:NSDate.now]);
+        [webHistory deleteHistoryDuringInterval:dateInterval.get()];
+    }
+}
+
+#endif
 
 String WebsiteDataStore::defaultWebsiteDataStoreDirectory(const WTF::UUID& identifier)
 {

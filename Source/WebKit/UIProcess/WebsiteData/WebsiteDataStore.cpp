@@ -759,6 +759,22 @@ private:
             callbackAggregator->addWebsiteData(WTFMove(websiteData));
         });
     }
+
+#if ENABLE(SCREEN_TIME)
+    if (dataTypes.contains(WebsiteDataType::ScreenTime) && isPersistent()) {
+        m_client->getScreenTimeURLs(configuration().identifier(), [callbackAggregator](HashSet<URL> urls) {
+            WebsiteData websiteData;
+            Vector<WebCore::SecurityOriginData> origins;
+            for (auto url : urls)
+                origins.append(SecurityOriginData::fromURL(url));
+
+            websiteData.entries = WTF::map(origins, [](auto& origin) {
+                return WebsiteData::Entry { origin, WebsiteDataType::ScreenTime, 0 };
+            });
+            callbackAggregator->addWebsiteData(WTFMove(websiteData));
+        });
+    }
+#endif
 }
 
 void WebsiteDataStore::fetchDataForRegistrableDomains(OptionSet<WebsiteDataType> dataTypes, OptionSet<WebsiteDataFetchOption> fetchOptions, Vector<WebCore::RegistrableDomain>&& domains, CompletionHandler<void(Vector<WebsiteDataRecord>&&, HashSet<WebCore::RegistrableDomain>&&)>&& completionHandler)
@@ -913,6 +929,11 @@ void WebsiteDataStore::removeData(OptionSet<WebsiteDataType> dataTypes, WallTime
 
     if (dataTypes.contains(WebsiteDataType::SearchFieldRecentSearches) && isPersistent())
         removeRecentSearches(modifiedSince, [callbackAggregator] { });
+
+#if ENABLE(SCREEN_TIME)
+    if (dataTypes.contains(WebsiteDataType::ScreenTime) && isPersistent())
+        removeScreenTimeDataWithInterval(modifiedSince);
+#endif
 }
 
 void WebsiteDataStore::removeData(OptionSet<WebsiteDataType> dataTypes, const Vector<WebsiteDataRecord>& dataRecords, Function<void()>&& completionHandler)
@@ -1001,6 +1022,18 @@ void WebsiteDataStore::removeData(OptionSet<WebsiteDataType> dataTypes, const Ve
             removeMediaKeysStorage(mediaKeysStorageDirectory, origins, salt);
         });
     }
+#if ENABLE(SCREEN_TIME)
+    if (dataTypes.contains(WebsiteDataType::ScreenTime) && isPersistent()) {
+        HashSet<URL> websitesToRemove;
+        for (const auto& dataRecord : dataRecords) {
+            if (dataRecord.types.contains(WebsiteDataType::ScreenTime)) {
+                for (const auto& origin : dataRecord.origins)
+                    websitesToRemove.add(origin.toURL());
+            }
+        }
+        removeScreenTimeData(websitesToRemove);
+    }
+#endif
 }
 
 DeviceIdHashSaltStorage& WebsiteDataStore::ensureDeviceIdHashSaltStorage()
