@@ -1090,7 +1090,6 @@ platform/graphics/ImageFrame.cpp
 platform/graphics/ImageFrameWorkQueue.cpp
 platform/graphics/Path.cpp
 platform/graphics/SourceBufferPrivate.cpp
-platform/graphics/TrackBuffer.cpp
 platform/graphics/TransparencyLayerContextSwitcher.cpp
 platform/graphics/WidthIterator.cpp
 platform/graphics/avfoundation/AudioSourceProviderAVFObjC.mm
