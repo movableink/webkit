@@ -937,8 +937,6 @@ loader/archive/cf/LegacyWebArchive.cpp
 loader/cache/CachedCSSStyleSheet.cpp
 loader/cache/CachedImage.cpp
 loader/cache/CachedRawResource.cpp
-loader/cache/CachedResource.cpp
-loader/cache/CachedResourceLoader.cpp
 loader/cache/CachedResourceRequest.cpp
 loader/cache/CachedResourceRequestInitiatorTypes.h
 loader/cache/CachedSVGDocumentReference.cpp
