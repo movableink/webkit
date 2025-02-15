@@ -29,6 +29,7 @@
 #include "Logging.h"
 #include "WebExtensionDataType.h"
 #include "WebExtensionSQLiteHelpers.h"
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -59,7 +60,7 @@ WebExtensionStorageSQLiteStore::WebExtensionStorageSQLiteStore(const String& uni
 
 void WebExtensionStorageSQLiteStore::getAllKeys(CompletionHandler<void(Vector<String> keys, const String& errorMessage)>&& completionHandler)
 {
-    queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, uniqueIdentifier = uniqueIdentifier(), completionHandler = WTFMove(completionHandler)]() mutable {
+    queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, uniqueIdentifier = crossThreadCopy(uniqueIdentifier()), completionHandler = WTFMove(completionHandler)]() mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis) {
             RELEASE_LOG_ERROR(Extensions, "Failed to retrieve all keys for extension %s.", uniqueIdentifier.utf8().data());
@@ -70,7 +71,7 @@ void WebExtensionStorageSQLiteStore::getAllKeys(CompletionHandler<void(Vector<St
         String errorMessage;
         auto keysArray = protectedThis->getAllKeysWithErrorMessage(errorMessage);
 
-        WorkQueue::protectedMain()->dispatch([keysArray = WTFMove(keysArray), errorMessage = WTFMove(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
+        WorkQueue::protectedMain()->dispatch([keysArray = crossThreadCopy(keysArray), errorMessage = crossThreadCopy(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler(keysArray, errorMessage);
         });
     });
@@ -78,7 +79,7 @@ void WebExtensionStorageSQLiteStore::getAllKeys(CompletionHandler<void(Vector<St
 
 void WebExtensionStorageSQLiteStore::getValuesForKeys(Vector<String> keys, CompletionHandler<void(HashMap<String, String> results, const String& errorMessage)>&& completionHandler)
 {
-    queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, uniqueIdentifier = uniqueIdentifier(), keys = WTFMove(keys), completionHandler = WTFMove(completionHandler)]() mutable {
+    queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, uniqueIdentifier = crossThreadCopy(uniqueIdentifier()), keys = crossThreadCopy(keys), completionHandler = WTFMove(completionHandler)]() mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis) {
             RELEASE_LOG_ERROR(Extensions, "Failed to retrieve values for keys: %s for extension %s.", rowFilterStringFromRowKeys(keys).utf8().data(), uniqueIdentifier.utf8().data());
@@ -89,7 +90,7 @@ void WebExtensionStorageSQLiteStore::getValuesForKeys(Vector<String> keys, Compl
         String errorMessage;
         auto results = keys.size() ? protectedThis->getValuesForKeysWithErrorMessage(keys, errorMessage) : protectedThis->getValuesForAllKeys(errorMessage);
 
-        WorkQueue::protectedMain()->dispatch([results = WTFMove(results), errorMessage = WTFMove(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
+        WorkQueue::protectedMain()->dispatch([results = crossThreadCopy(results), errorMessage = crossThreadCopy(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler(results, errorMessage);
         });
     });
@@ -110,11 +111,11 @@ static size_t storageSizeOf(HashMap<String, String> map)
 
 void WebExtensionStorageSQLiteStore::getStorageSizeForKeys(Vector<String> keys, CompletionHandler<void(size_t storageSize, const String& errorMessage)>&& completionHandler)
 {
-    queue()->dispatch([protectedThis = Ref { *this }, uniqueIdentifier = uniqueIdentifier(), keys = WTFMove(keys), completionHandler = WTFMove(completionHandler)]() mutable {
+    queue()->dispatch([protectedThis = Ref { *this }, uniqueIdentifier = crossThreadCopy(uniqueIdentifier()), keys = crossThreadCopy(keys), completionHandler = WTFMove(completionHandler)]() mutable {
         String errorMessage;
         if (!keys.isEmpty()) {
             auto keysAndValues = protectedThis->getValuesForKeysWithErrorMessage(keys, errorMessage);
-            WorkQueue::protectedMain()->dispatch([keysAndValues = WTFMove(keysAndValues), errorMessage = WTFMove(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
+            WorkQueue::protectedMain()->dispatch([keysAndValues = crossThreadCopy(keysAndValues), errorMessage = crossThreadCopy(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
                 completionHandler(storageSizeOf(keysAndValues), errorMessage);
             });
 
@@ -123,7 +124,7 @@ void WebExtensionStorageSQLiteStore::getStorageSizeForKeys(Vector<String> keys, 
 
         // Return storage size for all keys if no keys are specified.
         if (!protectedThis->openDatabaseIfNecessary(errorMessage, false)) {
-            WorkQueue::protectedMain()->dispatch([errorMessage = WTFMove(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
+            WorkQueue::protectedMain()->dispatch([errorMessage = crossThreadCopy(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
                 completionHandler(0, errorMessage);
             });
             return;
@@ -133,11 +134,11 @@ void WebExtensionStorageSQLiteStore::getStorageSizeForKeys(Vector<String> keys, 
         RefPtr<API::Error> error;
         bool success = SQLiteDatabaseEnumerate(*(protectedThis->database()), error, "SELECT SUM(LENGTH(key) + LENGTH(value)) FROM extension_storage"_s, std::tie(result));
 
-        WorkQueue::protectedMain()->dispatch([success, result, error = WTFMove(error), protectedThis = Ref { protectedThis }, keys = WTFMove(keys), completionHandler = WTFMove(completionHandler)]() mutable {
+        WorkQueue::protectedMain()->dispatch([success, result, error, completionHandler = WTFMove(completionHandler)]() mutable {
             if (success)
                 completionHandler(result, { });
             else {
-                RELEASE_LOG_ERROR(Extensions, "Failed to calculate storage size for keys: %s for extension %s. %s", rowFilterStringFromRowKeys(keys).utf8().data(), protectedThis->uniqueIdentifier().utf8().data(), error->localizedDescription().utf8().data());
+                RELEASE_LOG_ERROR(Extensions, "Failed to calculate storage size for keys: %s", error->localizedDescription().utf8().data());
                 completionHandler(0, error->localizedDescription());
             }
         });
@@ -166,7 +167,7 @@ void WebExtensionStorageSQLiteStore::getStorageSizeForAllKeys(HashMap<String, St
             return;
         }
 
-        queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, uniqueIdentifier = uniqueIdentifier(), storageSize, additionalKeyedData = WTFMove(additionalKeyedData), completionHandler = WTFMove(completionHandler)]() mutable {
+        queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, uniqueIdentifier = crossThreadCopy(uniqueIdentifier()), storageSize, additionalKeyedData = crossThreadCopy(additionalKeyedData), completionHandler = WTFMove(completionHandler)]() mutable {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis) {
                 RELEASE_LOG_ERROR(Extensions, "Failed to calculate storage size for extension %s.", uniqueIdentifier.utf8().data());
@@ -176,14 +177,14 @@ void WebExtensionStorageSQLiteStore::getStorageSizeForAllKeys(HashMap<String, St
 
             String errorMessage;
             auto oldValuesForAdditionalKeys = protectedThis->getValuesForKeysWithErrorMessage(toVector(additionalKeyedData, true), errorMessage);
-            size_t oldStorageSizeForAdditionalKeys = storageSizeOf(oldValuesForAdditionalKeys);
-            size_t newStorageSizeForAdditionalKeys = storageSizeOf(additionalKeyedData);
-            size_t updatedStorageSize = storageSize - oldStorageSizeForAdditionalKeys + newStorageSizeForAdditionalKeys;
+            auto oldStorageSizeForAdditionalKeys = storageSizeOf(oldValuesForAdditionalKeys);
+            auto newStorageSizeForAdditionalKeys = storageSizeOf(additionalKeyedData);
+            auto updatedStorageSize = storageSize - oldStorageSizeForAdditionalKeys + newStorageSizeForAdditionalKeys;
 
             auto existingAndAdditionalKeys = protectedThis->getAllKeysWithErrorMessage(errorMessage);
             existingAndAdditionalKeys.appendVector(toVector(additionalKeyedData, true));
 
-            WorkQueue::protectedMain()->dispatch([updatedStorageSize, existingAndAdditionalKeys = WTFMove(existingAndAdditionalKeys), oldValuesForAdditionalKeys = WTFMove(oldValuesForAdditionalKeys), errorMessage = WTFMove(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
+            WorkQueue::protectedMain()->dispatch([updatedStorageSize, existingAndAdditionalKeys = crossThreadCopy(existingAndAdditionalKeys), oldValuesForAdditionalKeys = crossThreadCopy(oldValuesForAdditionalKeys), errorMessage = crossThreadCopy(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
                 completionHandler(updatedStorageSize, existingAndAdditionalKeys.size(), oldValuesForAdditionalKeys, errorMessage);
             });
         });
@@ -192,7 +193,7 @@ void WebExtensionStorageSQLiteStore::getStorageSizeForAllKeys(HashMap<String, St
 
 void WebExtensionStorageSQLiteStore::setKeyedData(HashMap<String, String> keyedData, CompletionHandler<void(Vector<String> keysSuccessfullySet, const String& errorMessage)>&& completionHandler)
 {
-    queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, keyedData = WTFMove(keyedData), completionHandler = WTFMove(completionHandler)]() mutable {
+    queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, keyedData = crossThreadCopy(keyedData), completionHandler = WTFMove(completionHandler)]() mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis) {
             completionHandler({ }, makeString("Failed to set keys: "_s, rowFilterStringFromRowKeys(toVector(keyedData, true))));
@@ -201,7 +202,7 @@ void WebExtensionStorageSQLiteStore::setKeyedData(HashMap<String, String> keyedD
 
         String errorMessage;
         if (!protectedThis->openDatabaseIfNecessary(errorMessage, true)) {
-            WorkQueue::protectedMain()->dispatch([errorMessage = WTFMove(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
+            WorkQueue::protectedMain()->dispatch([errorMessage = crossThreadCopy(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
                 completionHandler({ }, errorMessage);
             });
             return;
@@ -218,7 +219,7 @@ void WebExtensionStorageSQLiteStore::setKeyedData(HashMap<String, String> keyedD
             keysSuccessfullySet.append(key);
         }
 
-        WorkQueue::protectedMain()->dispatch([keysSuccessfullySet = WTFMove(keysSuccessfullySet), errorMessage = WTFMove(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
+        WorkQueue::protectedMain()->dispatch([keysSuccessfullySet = crossThreadCopy(keysSuccessfullySet), errorMessage = crossThreadCopy(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler(keysSuccessfullySet, errorMessage);
         });
     });
@@ -226,7 +227,7 @@ void WebExtensionStorageSQLiteStore::setKeyedData(HashMap<String, String> keyedD
 
 void WebExtensionStorageSQLiteStore::deleteValuesForKeys(Vector<String> keys, CompletionHandler<void(const String& errorMessage)>&& completionHandler)
 {
-    queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, keys = WTFMove(keys), completionHandler = WTFMove(completionHandler)]() mutable {
+    queue()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, keys = crossThreadCopy(keys), completionHandler = WTFMove(completionHandler)]() mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis) {
             completionHandler(makeString("Failed to delete keys: "_s, rowFilterStringFromRowKeys(keys)));
@@ -235,7 +236,7 @@ void WebExtensionStorageSQLiteStore::deleteValuesForKeys(Vector<String> keys, Co
 
         String errorMessage;
         if (!protectedThis->openDatabaseIfNecessary(errorMessage, false)) {
-            WorkQueue::protectedMain()->dispatch([errorMessage = WTFMove(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
+            WorkQueue::protectedMain()->dispatch([errorMessage = crossThreadCopy(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
                 completionHandler(errorMessage);
             });
             return;
@@ -249,9 +250,9 @@ void WebExtensionStorageSQLiteStore::deleteValuesForKeys(Vector<String> keys, Co
             errorMessage = makeString("Failed to delete keys "_s, rowFilterStringFromRowKeys(keys));
         }
 
-        String deleteDatabaseErrorMessage = protectedThis->deleteDatabaseIfEmpty();
+        auto deleteDatabaseErrorMessage = protectedThis->deleteDatabaseIfEmpty();
 
-        WorkQueue::protectedMain()->dispatch([deleteDatabaseErrorMessage = WTFMove(deleteDatabaseErrorMessage), errorMessage = WTFMove(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
+        WorkQueue::protectedMain()->dispatch([deleteDatabaseErrorMessage = crossThreadCopy(deleteDatabaseErrorMessage), errorMessage = crossThreadCopy(errorMessage), completionHandler = WTFMove(completionHandler)]() mutable {
             // Errors from opening the database or deleting keys take precedence over an error deleting the database.
             completionHandler(!errorMessage.isEmpty() ? errorMessage : deleteDatabaseErrorMessage);
         });
