@@ -190,7 +190,9 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
             return;
         }
 
-        group->rebindSamplersIfNeeded();
+        protectedParentEncoder()->addOnCommitHandler([group](CommandBuffer&) {
+            return group ? group->rebindSamplersIfNeeded() : true;
+        });
         const Vector<uint32_t>* dynamicOffsets = nullptr;
         if (auto it = m_bindGroupDynamicOffsets.find(bindGroupIndex); it != m_bindGroupDynamicOffsets.end())
             dynamicOffsets = &it->value;

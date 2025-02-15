@@ -140,7 +140,7 @@ public:
     static void trackEncoder(CommandEncoder&, WeakHashSet<CommandEncoder>&);
     uint64_t uniqueId() const { return m_uniqueId; }
     NSMutableSet<id<MTLCounterSampleBuffer>> *timestampBuffers() const { return m_retainedTimestampBuffers; };
-    void addOnCommitHandler(Function<void(CommandBuffer&)>&&);
+    void addOnCommitHandler(Function<bool(CommandBuffer&)>&&);
 
 private:
     CommandEncoder(id<MTLCommandBuffer>, Device&, uint64_t uniqueId);
@@ -184,7 +184,7 @@ private:
     NSMutableSet<id<MTLBuffer>> *m_retainedBuffers { nil };
     HashSet<RefPtr<const Sampler>> m_retainedSamplers;
     NSMutableSet<id<MTLCounterSampleBuffer>> *m_retainedTimestampBuffers { nil };
-    Vector<Function<void(CommandBuffer&)>> m_onCommitHandlers;
+    Vector<Function<bool(CommandBuffer&)>> m_onCommitHandlers;
 private PUBLIC_IN_WEBGPU_SWIFT:
     int m_bufferMapCount { 0 };
     bool m_makeSubmitInvalid { false };

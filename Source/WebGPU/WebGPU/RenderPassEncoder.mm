@@ -555,7 +555,9 @@ bool RenderPassEncoder::executePreDrawCommands(uint32_t firstInstance, uint32_t 
         UNUSED_PARAM(passWasSplit);
 #endif
 
-        group->rebindSamplersIfNeeded();
+        protectedParentEncoder()->addOnCommitHandler([group](CommandBuffer&) {
+            return group->rebindSamplersIfNeeded();
+        });
         const Vector<uint32_t>* dynamicOffsets = nullptr;
         if (auto it = m_bindGroupDynamicOffsets.find(groupIndex); it != m_bindGroupDynamicOffsets.end())
             dynamicOffsets = &it->value;
@@ -1121,6 +1123,9 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
         }
 
         commandEncoder = renderCommandEncoder();
+        protectedParentEncoder()->addOnCommitHandler([bundle](CommandBuffer&) {
+            return bundle->rebindSamplersIfNeeded();
+        });
         if (!bundle->requiresCommandReplay()) {
             bool splitPass = false;
             for (RenderBundleICBWithResources* icb in bundle->renderBundlesResources()) {

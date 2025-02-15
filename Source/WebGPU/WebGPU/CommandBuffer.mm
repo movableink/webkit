@@ -33,7 +33,7 @@ namespace WebGPU {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CommandBuffer);
 
-CommandBuffer::CommandBuffer(id<MTLCommandBuffer> commandBuffer, Device& device, id<MTLSharedEvent> sharedEvent, uint64_t sharedEventSignalValue, Vector<Function<void(CommandBuffer&)>>&& onCommitHandlers, CommandEncoder& commandEncoder)
+CommandBuffer::CommandBuffer(id<MTLCommandBuffer> commandBuffer, Device& device, id<MTLSharedEvent> sharedEvent, uint64_t sharedEventSignalValue, Vector<Function<bool(CommandBuffer&)>>&& onCommitHandlers, CommandEncoder& commandEncoder)
     : m_commandBuffer(commandBuffer)
     , m_device(device)
     , m_sharedEvent(sharedEvent)
@@ -83,12 +83,14 @@ void CommandBuffer::makeInvalid(NSString* lastError)
     m_postCommitHandlers.clear();
 }
 
-void CommandBuffer::preCommitHandler()
+bool CommandBuffer::preCommitHandler()
 {
+    bool result = true;
     for (auto& function : m_preCommitHandlers)
-        function(*this);
+        result = function(*this) && result;
 
     m_preCommitHandlers.clear();
+    return result;
 }
 
 void CommandBuffer::postCommitHandler()

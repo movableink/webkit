@@ -2272,7 +2272,7 @@ void CommandEncoder::trackEncoder(CommandEncoder& commandEncoder, WeakHashSet<Co
     encoderHashSet.add(commandEncoder);
 }
 
-void CommandEncoder::addOnCommitHandler(Function<void(CommandBuffer&)>&& onCommitHandler)
+void CommandEncoder::addOnCommitHandler(Function<bool(CommandBuffer&)>&& onCommitHandler)
 {
     ASSERT(m_commandBuffer);
     m_onCommitHandlers.append(WTFMove(onCommitHandler));

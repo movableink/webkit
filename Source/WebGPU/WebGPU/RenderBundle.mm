@@ -27,6 +27,7 @@
 #import "RenderBundle.h"
 
 #import "APIConversions.h"
+#import "BindGroup.h"
 #import <wtf/TZoneMallocInlines.h>
 
 @implementation ResourceUsageAndRenderStage
@@ -49,12 +50,13 @@ namespace WebGPU {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderBundle);
 
-RenderBundle::RenderBundle(NSArray<RenderBundleICBWithResources*> *resources, RefPtr<RenderBundleEncoder> encoder, const WGPURenderBundleEncoderDescriptor& descriptor, uint64_t commandCount, bool makeSubmitInvalid, Device& device)
+RenderBundle::RenderBundle(NSArray<RenderBundleICBWithResources*> *resources, RefPtr<RenderBundleEncoder> encoder, const WGPURenderBundleEncoderDescriptor& descriptor, uint64_t commandCount, bool makeSubmitInvalid, HashSet<RefPtr<const BindGroup>>&& bindGroups, Device& device)
     : m_device(device)
     , m_renderBundleEncoder(encoder)
     , m_renderBundlesResources(resources)
     , m_descriptor(descriptor)
     , m_descriptorColorFormats(descriptor.colorFormatsSpan())
+    , m_bindGroups(bindGroups)
     , m_commandCount(commandCount)
     , m_makeSubmitInvalid(makeSubmitInvalid)
 {
@@ -174,6 +176,15 @@ NSString* RenderBundle::lastError() const
 bool RenderBundle::makeSubmitInvalid() const
 {
     return m_makeSubmitInvalid;
+}
+
+bool RenderBundle::rebindSamplersIfNeeded() const
+{
+    bool result = true;
+    for (RefPtr bindGroup : m_bindGroups)
+        result = bindGroup->rebindSamplersIfNeeded() && result;
+
+    return result;
 }
 
 } // namespace WebGPU

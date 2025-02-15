@@ -997,7 +997,7 @@ Ref<RenderBundle> RenderBundleEncoder::finish(const WGPURenderBundleDescriptor& 
 
     auto createRenderBundle = ^{
         if (m_requiresCommandReplay)
-            return RenderBundle::create(m_icbArray, this, m_descriptor, m_currentCommandIndex, m_makeSubmitInvalid, device);
+            return RenderBundle::create(m_icbArray, this, m_descriptor, m_currentCommandIndex, m_makeSubmitInvalid, WTFMove(m_allBindGroups), device);
 
         auto commandCount = m_currentCommandIndex;
         endCurrentICB();
@@ -1008,7 +1008,7 @@ Ref<RenderBundle> RenderBundleEncoder::finish(const WGPURenderBundleDescriptor& 
 
         RELEASE_ASSERT(m_icbArray || m_lastErrorString);
         if (m_icbArray)
-            return RenderBundle::create(m_icbArray, nullptr, m_descriptor, commandCount, m_makeSubmitInvalid, device);
+            return RenderBundle::create(m_icbArray, nullptr, m_descriptor, commandCount, m_makeSubmitInvalid, WTFMove(m_allBindGroups), device);
 
         device->generateAValidationError(m_lastErrorString);
         return RenderBundle::createInvalid(device, m_lastErrorString);
@@ -1099,6 +1099,7 @@ void RenderBundleEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& gro
     id<MTLIndirectRenderCommand> icbCommand = currentRenderCommand();
     m_maxBindGroupSlot = std::max(groupIndex, m_maxBindGroupSlot);
     if (!icbCommand) {
+        m_allBindGroups.add(RefPtr { &group });
         if (!isValidToUseWith(group, *this)) {
             makeInvalid(@"setBindGroup: invalid bind group passed");
             return;
