@@ -139,7 +139,6 @@ platform/audio/PlatformMediaSessionManager.cpp
 platform/audio/cocoa/AudioSampleBufferConverter.mm
 platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/clearkey/CDMClearKey.cpp
-platform/graphics/SourceBufferPrivate.cpp
 platform/graphics/avfoundation/InbandTextTrackPrivateAVF.cpp
 platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.mm
 platform/graphics/avfoundation/objc/InbandChapterTrackPrivateAVFObjC.mm
