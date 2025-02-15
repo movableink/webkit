@@ -2195,6 +2195,30 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static fixedContainerEdgeColors()
+    {
+        if (!this.isWebKit2())
+            return { };
+
+        const script = "JSON.stringify(uiController.fixedContainerEdgeColors)";
+        return new Promise(resolve => testRunner.runUIScript(script, colors => {
+            resolve(JSON.parse(colors));
+        }));
+    }
+
+    static async waitForFixedContainerEdgeColors(expectedColors)
+    {
+        while (true) {
+            await this.renderingUpdate();
+            const colors = await this.fixedContainerEdgeColors();
+            for (const edge of ["top", "left", "right", "bottom"]) {
+                if (colors[edge] !== expectedColors[edge])
+                    continue;
+            }
+            break;
+        }
+    }
+
     static addChromeInputField()
     {
         return new Promise(resolve => testRunner.addChromeInputField(resolve));

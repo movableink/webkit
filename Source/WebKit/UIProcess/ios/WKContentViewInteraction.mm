@@ -1648,6 +1648,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [self _tearDownImageAnalysis];
 #endif
 
+    [_webView _updateFixedContainerEdges:WebCore::FixedContainerEdges { }];
+
     [self _removeContainerForContextMenuHintPreviews];
     [self _removeContainerForDragPreviews];
     [self _removeContainerForDropPreviews];

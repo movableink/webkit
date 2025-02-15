@@ -133,6 +133,7 @@ struct AppHighlight;
 struct DataDetectorElementInfo;
 struct DictionaryPopupInfo;
 struct ElementContext;
+struct FixedContainerEdges;
 struct TextIndicatorData;
 struct ShareDataWithParsedURL;
 

@@ -32,6 +32,7 @@
 #import "WKIntelligenceSmartReplyTextEffectCoordinator.h"
 #import "WKIntelligenceTextEffectCoordinator.h"
 #import "WKTextAnimationType.h"
+#import <WebCore/FixedContainerEdges.h>
 #import <WebKit/WKShareSheet.h>
 #import <WebKit/WKWebViewConfiguration.h>
 #import <WebKit/WKWebViewPrivate.h>
@@ -423,6 +424,8 @@ struct PerWebProcessState {
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
     BOOL _isScrollingWithOverlayRegion;
 #endif
+
+    WebCore::FixedContainerEdges _fixedContainerEdges;
 }
 
 - (BOOL)_isValid;
@@ -507,6 +510,8 @@ struct PerWebProcessState {
 - (void)_setAllowGamepadsAccess;
 #endif
 #endif
+
+- (void)_updateFixedContainerEdges:(const WebCore::FixedContainerEdges&)edges;
 
 - (WKPageRef)_pageForTesting;
 - (NakedPtr<WebKit::WebPageProxy>)_page;

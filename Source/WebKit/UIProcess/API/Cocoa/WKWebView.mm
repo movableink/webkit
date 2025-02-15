@@ -565,7 +565,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
 #endif
 
 #if PLATFORM(MAC)
-    _impl = makeUnique<WebKit::WebViewImpl>(self, self, processPool, pageConfiguration.copyRef());
+    _impl = makeUnique<WebKit::WebViewImpl>(self, processPool, pageConfiguration.copyRef());
     lazyInitialize(_page, Ref { _impl->page() });
 
     _impl->setAutomaticallyAdjustsContentInsets(true);
@@ -2849,6 +2849,101 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 
 #endif // PLATFORM(VISION)
 #endif // ENABLE(GAMEPAD)
+
+- (WebCore::CocoaColor *)_sampledBottomFixedPositionContentColor:(const WebCore::FixedContainerEdges&)edges
+{
+    if (!edges.fixedEdges.bottom())
+        return nil;
+
+    return cocoaColorOrNil(edges.predominantColors.bottom()).autorelease();
+}
+
+- (WebCore::CocoaColor *)_sampledLeftFixedPositionContentColor:(const WebCore::FixedContainerEdges&)edges
+{
+    if (!edges.fixedEdges.left())
+        return nil;
+
+    return cocoaColorOrNil(edges.predominantColors.left()).autorelease();
+}
+
+- (WebCore::CocoaColor *)_sampledTopFixedPositionContentColor:(const WebCore::FixedContainerEdges&)edges
+{
+    if (!edges.fixedEdges.top())
+        return nil;
+
+    return cocoaColorOrNil(edges.predominantColors.top()).autorelease();
+}
+
+- (WebCore::CocoaColor *)_sampledRightFixedPositionContentColor:(const WebCore::FixedContainerEdges&)edges
+{
+    if (!edges.fixedEdges.right())
+        return nil;
+
+    return cocoaColorOrNil(edges.predominantColors.right()).autorelease();
+}
+
+- (WebCore::CocoaColor *)_sampledBottomFixedPositionContentColor
+{
+    return [self _sampledBottomFixedPositionContentColor:_fixedContainerEdges];
+}
+
+- (WebCore::CocoaColor *)_sampledLeftFixedPositionContentColor
+{
+    return [self _sampledLeftFixedPositionContentColor:_fixedContainerEdges];
+}
+
+- (WebCore::CocoaColor *)_sampledTopFixedPositionContentColor
+{
+    return [self _sampledTopFixedPositionContentColor:_fixedContainerEdges];
+}
+
+- (WebCore::CocoaColor *)_sampledRightFixedPositionContentColor
+{
+    return [self _sampledRightFixedPositionContentColor:_fixedContainerEdges];
+}
+
+- (void)_updateFixedContainerEdges:(const WebCore::FixedContainerEdges&)edges
+{
+    if (_fixedContainerEdges == edges)
+        return;
+
+    Vector<SEL, 4> changedSelectors;
+
+    using FixedEdgeColors = WebCore::RectEdges<RetainPtr<WebCore::CocoaColor>>;
+    FixedEdgeColors oldColors {
+        [self _sampledTopFixedPositionContentColor],
+        [self _sampledRightFixedPositionContentColor],
+        [self _sampledBottomFixedPositionContentColor],
+        [self _sampledLeftFixedPositionContentColor]
+    };
+
+    FixedEdgeColors newColors {
+        [self _sampledTopFixedPositionContentColor:edges],
+        [self _sampledRightFixedPositionContentColor:edges],
+        [self _sampledBottomFixedPositionContentColor:edges],
+        [self _sampledLeftFixedPositionContentColor:edges]
+    };
+
+    if (oldColors.bottom() != newColors.bottom() || ![oldColors.bottom() isEqual:newColors.bottom().get()])
+        changedSelectors.append(@selector(_sampledBottomFixedPositionContentColor));
+
+    if (oldColors.left() != newColors.left() || ![oldColors.left() isEqual:newColors.left().get()])
+        changedSelectors.append(@selector(_sampledLeftFixedPositionContentColor));
+
+    if (oldColors.right() != newColors.right() || ![oldColors.right() isEqual:newColors.right().get()])
+        changedSelectors.append(@selector(_sampledRightFixedPositionContentColor));
+
+    if (oldColors.top() != newColors.top() || ![oldColors.top() isEqual:newColors.top().get()])
+        changedSelectors.append(@selector(_sampledTopFixedPositionContentColor));
+
+    for (auto selector : changedSelectors)
+        [self willChangeValueForKey:NSStringFromSelector(selector)];
+
+    _fixedContainerEdges = edges;
+
+    for (auto selector : changedSelectors)
+        [self didChangeValueForKey:NSStringFromSelector(selector)];
+}
 
 @end
 

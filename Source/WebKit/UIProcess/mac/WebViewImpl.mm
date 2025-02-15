@@ -71,7 +71,7 @@
 #import "WKTextAnimationManager.h"
 #import "WKTextPlaceholder.h"
 #import "WKViewLayoutStrategy.h"
-#import "WKWebViewInternal.h"
+#import "WKWebViewMac.h"
 #import "WebBackForwardList.h"
 #import "WebEditCommandProxy.h"
 #import "WebEventFactory.h"
@@ -102,6 +102,7 @@
 #import <WebCore/DragData.h>
 #import <WebCore/DragItem.h>
 #import <WebCore/Editor.h>
+#import <WebCore/FixedContainerEdges.h>
 #import <WebCore/FontAttributeChanges.h>
 #import <WebCore/FontAttributes.h>
 #import <WebCore/KeypressCommand.h>
@@ -1232,9 +1233,9 @@ static bool isInRecoveryOS()
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebViewImpl);
 
-WebViewImpl::WebViewImpl(NSView <WebViewImplDelegate> *view, WKWebView *outerWebView, WebProcessPool& processPool, Ref<API::PageConfiguration>&& configuration)
+WebViewImpl::WebViewImpl(WKWebView *view, WebProcessPool& processPool, Ref<API::PageConfiguration>&& configuration)
     : m_view(view)
-    , m_pageClient(makeUniqueWithoutRefCountedCheck<PageClientImpl>(view, outerWebView))
+    , m_pageClient(makeUniqueWithoutRefCountedCheck<PageClientImpl>(view, view))
     , m_page(processPool.createWebPage(*m_pageClient, WTFMove(configuration)))
     , m_needsViewFrameInWindowCoordinates(false)
     , m_intrinsicContentSize(CGSizeMake(NSViewNoIntrinsicMetric, NSViewNoIntrinsicMetric))
@@ -1328,7 +1329,7 @@ WebViewImpl::WebViewImpl(NSView <WebViewImplDelegate> *view, WKWebView *outerWeb
     view.layerContentsPlacement = NSViewLayerContentsPlacementTopLeft;
 
 #if ENABLE(FULLSCREEN_API)
-    m_page->setFullscreenClient(makeUnique<WebKit::FullscreenClient>(outerWebView));
+    m_page->setFullscreenClient(makeUnique<WebKit::FullscreenClient>(view));
 #endif
 
 #if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
@@ -1389,6 +1390,8 @@ void WebViewImpl::handleProcessSwapOrExit()
     updateRemoteAccessibilityRegistration(false);
 
     hideDOMPasteMenuWithResult(WebCore::DOMPasteAccessResponse::DeniedForGesture);
+
+    [view() _updateFixedContainerEdges:FixedContainerEdges { }];
 }
 
 void WebViewImpl::processWillSwap()

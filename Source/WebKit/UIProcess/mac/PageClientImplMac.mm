@@ -781,10 +781,6 @@ void PageClientImpl::setEditableElementIsFocused(bool editableElementIsFocused)
     m_impl->setEditableElementIsFocused(editableElementIsFocused);
 }
 
-void PageClientImpl::didCommitLayerTree(const RemoteLayerTreeTransaction& layerTreeTransaction)
-{
-}
-
 void PageClientImpl::layerTreeCommitComplete()
 {
 }

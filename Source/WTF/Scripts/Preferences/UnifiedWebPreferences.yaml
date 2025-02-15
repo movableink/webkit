@@ -3076,6 +3076,20 @@ FilterLinkDecorationByDefaultEnabled:
     WebCore:
       default: true
 
+FixedContainerEdgeSamplingEnabled:
+  type: bool
+  status: internal
+  humanReadableName: "Fixed container edge sampling"
+  humanReadableDescription: "Enable fixed container edge sampling"
+  condition: PLATFORM(COCOA)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: WebKit::defaultFixedContainerEdgeSamplingEnabled()
+    WebCore:
+      default: false
+
 FixedFontFamily:
   type: String
   status: embedder

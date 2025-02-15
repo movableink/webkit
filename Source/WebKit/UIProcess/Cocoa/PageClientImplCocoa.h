@@ -46,6 +46,7 @@ struct AppHighlight;
 
 namespace WebKit {
 
+class RemoteLayerTreeTransaction;
 struct TextAnimationData;
 enum class TextAnimationType : uint8_t;
 
@@ -100,6 +101,8 @@ public:
 #if ENABLE(APP_HIGHLIGHTS)
     void storeAppHighlight(const WebCore::AppHighlight&) final;
 #endif
+
+    void didCommitLayerTree(const RemoteLayerTreeTransaction&) override;
 
     void microphoneCaptureWillChange() final;
     void cameraCaptureWillChange() final;

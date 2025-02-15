@@ -651,6 +651,8 @@ void PageClientImpl::didGetTapHighlightGeometries(WebKit::TapIdentifier requestI
 
 void PageClientImpl::didCommitLayerTree(const RemoteLayerTreeTransaction& layerTreeTransaction)
 {
+    PageClientImplCocoa::didCommitLayerTree(layerTreeTransaction);
+
     [contentView() _didCommitLayerTree:layerTreeTransaction];
 }
 

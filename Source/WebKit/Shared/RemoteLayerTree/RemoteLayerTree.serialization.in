@@ -137,6 +137,7 @@ header: "RemoteLayerBackingStore.h"
     WebCore::Color m_themeColor;
     WebCore::Color m_pageExtendedBackgroundColor;
     WebCore::Color m_sampledPageTopColor;
+    WebCore::FixedContainerEdges m_fixedContainerEdges;
 
 #if PLATFORM(MAC)
     Markable<WebCore::PlatformLayerIdentifier> m_pageScalingLayerID;

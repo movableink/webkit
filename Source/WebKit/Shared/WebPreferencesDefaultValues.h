@@ -93,10 +93,11 @@ bool defaultVideoFullscreenRequiresElementFullscreen();
 bool defaultScrollAnimatorEnabled();
 bool defaultPassiveWheelListenersAsDefaultOnDocument();
 bool defaultWheelEventGesturesBecomeNonBlocking();
+bool defaultAppleMailPaginationQuirkEnabled();
 #endif
 
-#if PLATFORM(MAC)
-bool defaultAppleMailPaginationQuirkEnabled();
+#if PLATFORM(COCOA)
+bool defaultFixedContainerEdgeSamplingEnabled();
 #endif
 
 #if ENABLE(MEDIA_STREAM)

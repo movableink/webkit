@@ -220,7 +220,7 @@ class WebViewImpl final : public CanMakeWeakPtr<WebViewImpl>, public CanMakeChec
     WTF_MAKE_TZONE_ALLOCATED(WebViewImpl);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebViewImpl);
 public:
-    WebViewImpl(NSView <WebViewImplDelegate> *, WKWebView *outerWebView, WebProcessPool&, Ref<API::PageConfiguration>&&);
+    WebViewImpl(WKWebView *, WebProcessPool&, Ref<API::PageConfiguration>&&);
 
     ~WebViewImpl();
 
@@ -229,7 +229,7 @@ public:
     WebPageProxy& page() { return m_page.get(); }
     Ref<WebPageProxy> protectedPage() const;
 
-    NSView *view() const { return m_view.getAutoreleased(); }
+    WKWebView *view() const { return m_view.getAutoreleased(); }
 
     void processWillSwap();
     void processDidExit();
@@ -881,7 +881,7 @@ private:
 
     std::optional<EditorState::PostLayoutData> postLayoutDataForContentEditable();
 
-    WeakObjCPtr<NSView<WebViewImplDelegate>> m_view;
+    WeakObjCPtr<WKWebView> m_view;
     std::unique_ptr<PageClient> m_pageClient;
     Ref<WebPageProxy> m_page;
 

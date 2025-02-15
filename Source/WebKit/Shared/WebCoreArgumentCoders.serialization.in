@@ -1993,6 +1993,13 @@ header: <WebCore/RectEdges.h>
     bool left();
 }
 
+[CustomHeader] class WebCore::RectEdges<WebCore::Color> {
+    WebCore::Color top();
+    WebCore::Color right();
+    WebCore::Color bottom();
+    WebCore::Color left();
+}
+
 [AdditionalEncoder=StreamConnectionEncoder] class WebCore::Path {
     Vector<WebCore::PathSegment> segments();
 }
@@ -8986,3 +8993,8 @@ header: <WebCore/DocumentClasses.h>
 header: <WebCore/StageModeOperations.h>
 enum class WebCore::StageModeOperation : bool;
 #endif
+
+struct WebCore::FixedContainerEdges {
+    WebCore::RectEdges<WebCore::Color> predominantColors;
+    WebCore::RectEdges<bool> fixedEdges;
+};

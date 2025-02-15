@@ -26,11 +26,13 @@
 #import "config.h"
 #import "PageClientImplCocoa.h"
 
+#import "RemoteLayerTreeTransaction.h"
 #import "WKTextAnimationType.h"
 #import "WKWebViewInternal.h"
 #import "WebFullScreenManagerProxy.h"
 #import "WebPageProxy.h"
 #import <WebCore/AlternativeTextUIController.h>
+#import <WebCore/FixedContainerEdges.h>
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/WritingToolsTypes.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
@@ -420,5 +422,10 @@ void PageClientImplCocoa::setFullScreenClientForTesting(std::unique_ptr<WebFullS
     m_fullscreenClientForTesting = WTFMove(client);
 }
 #endif
+
+void PageClientImplCocoa::didCommitLayerTree(const RemoteLayerTreeTransaction& transaction)
+{
+    [webView() _updateFixedContainerEdges:transaction.fixedContainerEdges()];
+}
 
 } // namespace WebKit

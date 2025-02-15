@@ -118,6 +118,8 @@ public:
     virtual void endInteractiveObscuredInsetsChange() { notImplemented(); }
     virtual void setObscuredInsets(double, double, double, double) { notImplemented(); }
 
+    virtual JSObjectRef fixedContainerEdgeColors() const { return nullptr; }
+
     // View Parenting and Visibility
 
     virtual void becomeFirstResponder() { notImplemented(); }

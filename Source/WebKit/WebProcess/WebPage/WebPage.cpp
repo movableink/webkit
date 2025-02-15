@@ -4951,6 +4951,7 @@ void WebPage::willCommitLayerTree(RemoteLayerTreeTransaction& layerTransaction, 
     if (!frameView)
         return;
 
+    Ref page = *corePage();
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
     if (auto* document = localRootFrame->document()) {
         if (CheckedPtr timelinesController = document->timelinesController()) {
@@ -4962,11 +4963,13 @@ void WebPage::willCommitLayerTree(RemoteLayerTreeTransaction& layerTransaction, 
 
     layerTransaction.setContentsSize(frameView->contentsSize());
     layerTransaction.setScrollOrigin(frameView->scrollOrigin());
-    layerTransaction.setPageScaleFactor(corePage()->pageScaleFactor());
-    layerTransaction.setRenderTreeSize(corePage()->renderTreeSize());
-    layerTransaction.setThemeColor(corePage()->themeColor());
-    layerTransaction.setPageExtendedBackgroundColor(corePage()->pageExtendedBackgroundColor());
-    layerTransaction.setSampledPageTopColor(corePage()->sampledPageTopColor());
+    layerTransaction.setPageScaleFactor(page->pageScaleFactor());
+    layerTransaction.setRenderTreeSize(page->renderTreeSize());
+    layerTransaction.setThemeColor(page->themeColor());
+    layerTransaction.setPageExtendedBackgroundColor(page->pageExtendedBackgroundColor());
+    layerTransaction.setSampledPageTopColor(page->sampledPageTopColor());
+    if (page->settings().fixedContainerEdgeSamplingEnabled())
+        layerTransaction.setFixedContainerEdges(frameView->fixedContainerEdges());
 
     layerTransaction.setBaseLayoutViewportSize(frameView->baseLayoutViewportSize());
     layerTransaction.setMinStableLayoutViewportOrigin(frameView->minStableLayoutViewportOrigin());

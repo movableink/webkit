@@ -33,6 +33,7 @@
 #include "RemoteLayerBackingStore.h"
 #include "TransactionID.h"
 #include <WebCore/Color.h>
+#include <WebCore/FixedContainerEdges.h>
 #include <WebCore/FloatPoint3D.h>
 #include <WebCore/FloatSize.h>
 #include <WebCore/HTMLMediaElementIdentifier.h>
@@ -257,6 +258,9 @@ public:
     void setAcceleratedTimelineTimeOrigin(Seconds timeOrigin) { m_acceleratedTimelineTimeOrigin = timeOrigin; }
 #endif
 
+    const WebCore::FixedContainerEdges& fixedContainerEdges() const { return m_fixedContainerEdges; }
+    void setFixedContainerEdges(WebCore::FixedContainerEdges&& edges) { m_fixedContainerEdges = WTFMove(edges); }
+
 private:
     friend struct IPC::ArgumentCoder<RemoteLayerTreeTransaction, void>;
 
@@ -284,6 +288,7 @@ private:
     WebCore::Color m_themeColor;
     WebCore::Color m_pageExtendedBackgroundColor;
     WebCore::Color m_sampledPageTopColor;
+    WebCore::FixedContainerEdges m_fixedContainerEdges;
 
 #if PLATFORM(MAC)
     Markable<WebCore::PlatformLayerIdentifier> m_pageScalingLayerID; // Only used for non-delegated scaling.

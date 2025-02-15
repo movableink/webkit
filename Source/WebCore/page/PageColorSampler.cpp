@@ -331,7 +331,7 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
         static constexpr auto maxDistanceSquaredForSimilarColors = 36;
         auto [redA, greenA, blueA, alphaA] = a.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
         auto [redB, greenB, blueB, alphaB] = b.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
-        auto distance = pow(redA - redB, 2) + pow(greenA - greenB, 2) + pow(blueA - blueB, 2);
+        auto distance = pow(255 * (redA - redB), 2) + pow(255 * (greenA - greenB), 2) + pow(255 * (blueA - blueB), 2);
         return distance <= maxDistanceSquaredForSimilarColors;
     };
 
@@ -364,7 +364,7 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
             return WTFMove(*mostFrequentColor);
     }
 
-    return { };
+    return page.pageExtendedBackgroundColor();
 }
 
 } // namespace WebCore

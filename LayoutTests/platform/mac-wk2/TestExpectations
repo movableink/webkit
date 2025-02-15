@@ -42,6 +42,7 @@ http/tests/pdf [ Pass ]
 [ Sonoma+ ] pdf [ Pass ]
 tiled-drawing [ Pass ]
 ipc/restrictedendpoints/mac [ Pass ]
+fast/page-color-sampling [ Pass ]
 
 fast/events/autoscroll-when-zoomed.html [ Pass ]
 fast/events/autoscroll-main-document.html [ Pass ]
