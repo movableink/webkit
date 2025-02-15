@@ -48,7 +48,6 @@
 #include "InspectorLayerTreeAgent.h"
 #include "InspectorMemoryAgent.h"
 #include "InspectorPageAgent.h"
-#include "InspectorTimelineAgent.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMBindingSecurity.h"
 #include "JSDOMWindow.h"
@@ -65,6 +64,7 @@
 #include "PageHeapAgent.h"
 #include "PageNetworkAgent.h"
 #include "PageRuntimeAgent.h"
+#include "PageTimelineAgent.h"
 #include "PageWorkerAgent.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
@@ -191,7 +191,7 @@ void InspectorController::createLazyAgents()
     m_agents.append(makeUnique<PageHeapAgent>(pageContext));
     m_agents.append(makeUnique<PageAuditAgent>(pageContext));
     m_agents.append(makeUnique<PageCanvasAgent>(pageContext));
-    m_agents.append(makeUnique<InspectorTimelineAgent>(pageContext));
+    m_agents.append(makeUnique<PageTimelineAgent>(pageContext));
     m_agents.append(makeUnique<InspectorAnimationAgent>(pageContext));
 
     if (auto& commandLineAPIHost = m_injectedScriptManager->commandLineAPIHost())

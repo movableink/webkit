@@ -247,6 +247,8 @@ WI.HeapAllocationsTimelineView = class HeapAllocationsTimelineView extends WI.Ti
         WI.ContentView.removeEventListener(WI.ContentView.Event.SelectionPathComponentsDidChange, this._contentViewSelectionPathComponentDidChange, this);
         WI.HeapSnapshotProxy.removeEventListener(WI.HeapSnapshotProxy.Event.Invalidated, this._heapSnapshotInvalidated, this);
         WI.HeapSnapshotWorkerProxy.singleton().removeEventListener(WI.HeapSnapshotWorkerProxy.Event.Collection, this._heapSnapshotCollectionEvent, this);
+
+        super.closed();
     }
 
     layout()

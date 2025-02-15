@@ -29,7 +29,7 @@ WI.TimelineObserver = class TimelineObserver extends InspectorBackend.Dispatcher
 
     eventRecorded(record)
     {
-        WI.timelineManager.eventRecorded(record);
+        WI.timelineManager.eventRecorded(this._target, record);
     }
 
     recordingStarted(startTime)

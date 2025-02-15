@@ -128,7 +128,7 @@ WI.HeapManager = class HeapManager extends WI.Object
             return;
 
         let collection = WI.GarbageCollection.fromPayload(payload);
-        this.dispatchEventToListeners(WI.HeapManager.Event.GarbageCollected, {collection});
+        this.dispatchEventToListeners(WI.HeapManager.Event.GarbageCollected, {target, collection});
     }
 };
 

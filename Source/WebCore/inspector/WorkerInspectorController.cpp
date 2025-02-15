@@ -47,6 +47,7 @@
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerRuntimeAgent.h"
 #include "WorkerThread.h"
+#include "WorkerTimelineAgent.h"
 #include "WorkerToPageFrontendChannel.h"
 #include "WorkerWorkerAgent.h"
 #include <JavaScriptCore/InspectorAgentBase.h>
@@ -215,6 +216,7 @@ void WorkerInspectorController::createLazyAgents()
     m_agents.append(makeUnique<WorkerDOMDebuggerAgent>(workerContext, debuggerAgentPtr));
     m_agents.append(makeUnique<WorkerAuditAgent>(workerContext));
     m_agents.append(makeUnique<WorkerCanvasAgent>(workerContext));
+    m_agents.append(makeUnique<WorkerTimelineAgent>(workerContext));
     m_agents.append(makeUnique<WorkerWorkerAgent>(workerContext));
 
     auto scriptProfilerAgentPtr = makeUnique<InspectorScriptProfilerAgent>(workerContext);

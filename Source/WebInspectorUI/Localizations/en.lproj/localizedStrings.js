@@ -446,6 +446,7 @@ localizedStrings["Console prompt"] = "Console prompt";
 localizedStrings["Console:"] = "Console:";
 localizedStrings["Containing"] = "Containing";
 localizedStrings["Content Security Policy violation of directive: %s"] = "Content Security Policy violation of directive: %s";
+localizedStrings["Context"] = "Context";
 /* Property value for `font-variant-ligatures: contextual`. */
 localizedStrings["Contextual Alternates @ Font Details Sidebar Property Value"] = "Contextual Alternates";
 localizedStrings["Continuation Frame"] = "Continuation Frame";
@@ -1985,6 +1986,7 @@ localizedStrings["With Object Properties"] = "With Object Properties";
 localizedStrings["Worker"] = "Worker";
 localizedStrings["Worker Thread"] = "Worker Thread";
 localizedStrings["Worker Threads"] = "Worker Threads";
+localizedStrings["Worker \u201C%s\u201D"] = "Worker \u201C%s\u201D";
 localizedStrings["Worker \u201C%s\u201D Snapshot %s"] = "Worker \u201C%s\u201D Snapshot %s";
 localizedStrings["Worker: %s"] = "Worker: %s";
 /* Title for list of JavaScript web worker execution contexts */

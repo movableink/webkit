@@ -177,7 +177,9 @@ public:
     static void didDispatchEventOnWindow(LocalFrame*, const Event&);
     static void eventDidResetAfterDispatch(const Event&);
     static void willEvaluateScript(LocalFrame&, const String& url, int lineNumber, int columnNumber);
+    static void willEvaluateScript(WorkerOrWorkletGlobalScope&, const String& url, int lineNumber, int columnNumber);
     static void didEvaluateScript(LocalFrame&);
+    static void didEvaluateScript(WorkerOrWorkletGlobalScope&);
     static void willFireTimer(ScriptExecutionContext&, int timerId, bool oneShot);
     static void didFireTimer(ScriptExecutionContext&, int timerId, bool oneShot);
     static void didInvalidateLayout(LocalFrame&);
@@ -953,11 +955,23 @@ inline void InspectorInstrumentation::willEvaluateScript(LocalFrame& frame, cons
         willEvaluateScriptImpl(*agents, url, lineNumber, columnNumber);
 }
 
+inline void InspectorInstrumentation::willEvaluateScript(WorkerOrWorkletGlobalScope& globalScope, const String& url, int lineNumber, int columnNumber)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    willEvaluateScriptImpl(instrumentingAgents(globalScope), url, lineNumber, columnNumber);
+}
+
 inline void InspectorInstrumentation::didEvaluateScript(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(frame))
         didEvaluateScriptImpl(*agents);
+}
+
+inline void InspectorInstrumentation::didEvaluateScript(WorkerOrWorkletGlobalScope& globalScope)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    didEvaluateScriptImpl(instrumentingAgents(globalScope));
 }
 
 inline void InspectorInstrumentation::willFireTimer(ScriptExecutionContext& context, int timerId, bool oneShot)

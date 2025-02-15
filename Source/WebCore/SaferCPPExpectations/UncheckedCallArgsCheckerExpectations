@@ -34,7 +34,7 @@ html/parser/HTMLTreeBuilder.cpp
 inspector/InspectorFrontendClientLocal.cpp
 inspector/InspectorOverlay.cpp
 inspector/agents/InspectorPageAgent.cpp
-inspector/agents/InspectorTimelineAgent.cpp
+inspector/agents/page/PageTimelineAgent.cpp
 loader/WorkerThreadableLoader.cpp
 page/DragController.cpp
 page/EventHandler.cpp

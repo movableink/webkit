@@ -49,8 +49,6 @@ WI.ScriptInstrument = class ScriptInstrument extends WI.Instrument
 
     stopInstrumentation(initiatedByBackend)
     {
-        let target = WI.assumingMainTarget();
-
         if (!initiatedByBackend) {
             for (let target of WI.targets) {
                 if (target.type === WI.TargetType.Worker && !WI.settings.experimentalEnableWorkerTimelineRecording.value)

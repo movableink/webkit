@@ -444,6 +444,8 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
             timelinesGroup.addSetting(WI.settings.experimentalEnableWorkerTimelineRecording, WI.UIString("Enable recording in Workers", "Label for checkbox that controls whether timeline recordings can capture activity in Worker contexts."));
         }
 
+        experimentalSettingsView.addSeparator();
+
         let diagnosticsGroup = experimentalSettingsView.addGroup(WI.UIString("Diagnostics:", "Diagnostics: @ Experimental Settings", "Category label for experimental settings related to Web Inspector diagnostics."));
         diagnosticsGroup.addSetting(WI.settings.experimentalAllowInspectingInspector, WI.UIString("Allow Inspecting Web Inspector", "Allow Inspecting Web Inspector @ Experimental Settings", "Label for setting that allows the user to inspect the Web Inspector user interface."));
         experimentalSettingsView.addSeparator();
