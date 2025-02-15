@@ -242,7 +242,7 @@ RefPtr<NavigationActivation> Navigation::createForPageswapEvent(HistoryItem* new
     RefPtr<NavigationHistoryEntry> oldEntry;
     if (frame()->document() && frame()->document()->settings().navigationAPIEnabled())
         oldEntry = currentEntry();
-    else if (RefPtr currentItem = frame()->loader().checkedHistory()->currentItem())
+    else if (RefPtr currentItem = frame()->loader().protectedHistory()->currentItem())
         oldEntry = NavigationHistoryEntry::create(*this, *currentItem);
 
     RefPtr<NavigationHistoryEntry> newEntry;

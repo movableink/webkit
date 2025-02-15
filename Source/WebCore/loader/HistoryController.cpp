@@ -230,7 +230,7 @@ void HistoryController::saveDocumentAndScrollState()
         RefPtr localFrame = dynamicDowncast<LocalFrame>(*descendant);
         if (!localFrame)
             continue;
-        CheckedRef history = localFrame->loader().history();
+        Ref history = localFrame->loader().history();
         history->saveDocumentState();
         history->saveScrollPositionAndViewStateToItem(history->protectedCurrentItem().get());
     }
@@ -652,8 +652,8 @@ void HistoryController::updateForCommit()
         // restore their scroll position.  We'll avoid this frame (which has already
         // committed) and its children (which will be replaced).
         if (RefPtr localFrame = dynamicDowncast<LocalFrame>(m_frame->mainFrame())) {
-            if (localFrame->loader().checkedHistory()->isFrameLoadComplete())
-                localFrame->loader().checkedHistory()->recursiveUpdateForCommit();
+            if (localFrame->loader().protectedHistory()->isFrameLoadComplete())
+                localFrame->loader().protectedHistory()->recursiveUpdateForCommit();
         }
     }
 }
@@ -705,7 +705,7 @@ void HistoryController::recursiveUpdateForCommit()
     // Iterate over the rest of the tree
     for (RefPtr child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
         if (auto* localChild = dynamicDowncast<LocalFrame>(child.get()))
-            localChild->loader().checkedHistory()->recursiveUpdateForCommit();
+            localChild->loader().protectedHistory()->recursiveUpdateForCommit();
     }
 }
 
@@ -726,7 +726,7 @@ void HistoryController::updateForSameDocumentNavigation()
         addVisitedLink(*page, frame->document()->url());
 
     if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame()))
-        localFrame->loader().checkedHistory()->recursiveUpdateForSameDocumentNavigation();
+        localFrame->loader().protectedHistory()->recursiveUpdateForSameDocumentNavigation();
 
     if (RefPtr currentItem = m_currentItem) {
         currentItem->setURL(frame->document()->url());
@@ -757,7 +757,7 @@ void HistoryController::recursiveUpdateForSameDocumentNavigation()
     // Iterate over the rest of the tree.
     for (RefPtr child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
         if (auto* localChild = dynamicDowncast<LocalFrame>(child.get()))
-            localChild->loader().checkedHistory()->recursiveUpdateForSameDocumentNavigation();
+            localChild->loader().protectedHistory()->recursiveUpdateForSameDocumentNavigation();
     }
 }
 
@@ -797,7 +797,7 @@ void HistoryController::clearPreviousItem()
     m_previousItem = nullptr;
     for (RefPtr child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
         if (auto* localChild = dynamicDowncast<LocalFrame>(child.get()))
-            localChild->loader().checkedHistory()->clearPreviousItem();
+            localChild->loader().protectedHistory()->clearPreviousItem();
     }
 }
 
@@ -919,7 +919,7 @@ Ref<HistoryItem> HistoryController::createItemTree(HistoryItemClient& client, Lo
         }
 
         for (RefPtr child = m_frame->tree().firstLocalDescendant(); child; child = child->tree().nextLocalSibling())
-            item->addChildItem(child->loader().checkedHistory()->createItemTree(client, targetFrame, clipAtTarget, itemID));
+            item->addChildItem(child->loader().protectedHistory()->createItemTree(client, targetFrame, clipAtTarget, itemID));
     }
     if (m_frame.ptr() == &targetFrame)
         item->setIsTargetItem(true);
@@ -950,7 +950,7 @@ void HistoryController::recursiveSetProvisionalItem(HistoryItem& item, HistoryIt
             continue;
 
         if (RefPtr childFrame = dynamicDowncast<LocalFrame>(m_frame->tree().descendantByFrameID(*frameID)))
-            childFrame->loader().checkedHistory()->recursiveSetProvisionalItem(childItem, fromChildItem.get());
+            childFrame->loader().protectedHistory()->recursiveSetProvisionalItem(childItem, fromChildItem.get());
     }
 }
 
@@ -972,7 +972,7 @@ void HistoryController::recursiveGoToItem(HistoryItem& item, HistoryItem* fromIt
             continue;
 
         if (RefPtr childFrame = dynamicDowncast<LocalFrame>(m_frame->tree().descendantByFrameID(*frameID)))
-            childFrame->loader().checkedHistory()->recursiveGoToItem(childItem, fromChildItem.get(), type, shouldTreatAsContinuingLoad);
+            childFrame->loader().protectedHistory()->recursiveGoToItem(childItem, fromChildItem.get(), type, shouldTreatAsContinuingLoad);
     }
 }
 
@@ -1053,7 +1053,7 @@ void HistoryController::pushState(RefPtr<SerializedScriptValue>&& stateObject, c
     bool shouldRestoreScrollPosition = currentItem->shouldRestoreScrollPosition();
 
     // Get a HistoryItem tree for the current frame tree.
-    Ref topItem = frame->rootFrame().loader().checkedHistory()->createItemTree(page->historyItemClient(), frame, false, BackForwardItemIdentifier::generate());
+    Ref topItem = frame->rootFrame().loader().protectedHistory()->createItemTree(page->historyItemClient(), frame, false, BackForwardItemIdentifier::generate());
 
     RefPtr document = frame->document();
     if (document && !document->hasRecentUserInteractionForNavigationFromJS())

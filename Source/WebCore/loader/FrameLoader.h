@@ -123,7 +123,7 @@ public:
     PolicyChecker& policyChecker() const { return *m_policyChecker; }
 
     HistoryController& history() const { return m_history; }
-    WEBCORE_EXPORT CheckedRef<HistoryController> checkedHistory() const;
+    WEBCORE_EXPORT Ref<HistoryController> protectedHistory() const;
 
     ResourceLoadNotifier& notifier() const { return m_notifier; }
 

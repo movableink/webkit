@@ -2387,7 +2387,7 @@ void WebPage::goToBackForwardItemWaitingForProcessLaunch(GoToBackForwardItemPara
 void WebPage::tryRestoreScrollPosition()
 {
     if (RefPtr localMainFrame = this->localMainFrame())
-        localMainFrame->loader().checkedHistory()->restoreScrollPositionAndViewState();
+        localMainFrame->loader().protectedHistory()->restoreScrollPositionAndViewState();
 }
 
 WebPage* WebPage::fromCorePage(Page& page)
@@ -3263,7 +3263,7 @@ void WebPage::pageStoppedScrolling()
 {
     // Maintain the current history item's scroll position up-to-date.
     if (RefPtr frame = m_mainFrame->coreLocalFrame())
-        frame->loader().checkedHistory()->saveScrollPositionAndViewStateToItem(frame->loader().history().currentItem());
+        frame->loader().protectedHistory()->saveScrollPositionAndViewStateToItem(frame->loader().history().currentItem());
 }
 
 void WebPage::setHasActiveAnimatedScrolls(bool hasActiveAnimatedScrolls)
@@ -3815,7 +3815,7 @@ void WebPage::setNeedsFontAttributes(bool needsFontAttributes)
 void WebPage::setCurrentHistoryItemForReattach(Ref<FrameState>&& mainFrameState)
 {
     if (RefPtr localMainFrame = this->localMainFrame())
-        localMainFrame->loader().checkedHistory()->setCurrentItem(toHistoryItem(m_historyItemClient, mainFrameState));
+        localMainFrame->loader().protectedHistory()->setCurrentItem(toHistoryItem(m_historyItemClient, mainFrameState));
 }
 
 void WebPage::requestFontAttributesAtSelectionStart(CompletionHandler<void(const WebCore::FontAttributes&)>&& completionHandler)
@@ -4154,7 +4154,7 @@ void WebPage::visibilityDidChange()
         // We save the document / scroll state when backgrounding a tab so that we are able to restore it
         // if it gets terminated while in the background.
         if (RefPtr frame = m_mainFrame->coreLocalFrame())
-            frame->loader().checkedHistory()->saveDocumentAndScrollState();
+            frame->loader().protectedHistory()->saveDocumentAndScrollState();
     }
 }
 
