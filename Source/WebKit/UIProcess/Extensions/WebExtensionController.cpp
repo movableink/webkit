@@ -39,7 +39,9 @@
 
 namespace WebKit {
 
+#if PLATFORM(COCOA)
 constexpr auto freshlyCreatedTimeout = 5_s;
+#endif
 
 static HashMap<WebExtensionControllerIdentifier, WeakPtr<WebExtensionController>>& webExtensionControllers()
 {

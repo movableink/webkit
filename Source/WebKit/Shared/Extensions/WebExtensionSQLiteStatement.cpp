@@ -29,6 +29,7 @@
 #include "Logging.h"
 #include "WebExtensionSQLiteDatabase.h"
 #include "WebExtensionSQLiteHelpers.h"
+#include "WebExtensionSQLiteRow.h"
 #include <sqlite3.h>
 #include <wtf/TZoneMallocInlines.h>
 

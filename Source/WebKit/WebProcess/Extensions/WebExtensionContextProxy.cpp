@@ -37,6 +37,7 @@
 #include "WebFrame.h"
 #include "WebPage.h"
 #include "WebProcess.h"
+#include <WebCore/Page.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {

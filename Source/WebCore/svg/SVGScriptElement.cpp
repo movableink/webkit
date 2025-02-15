@@ -23,6 +23,7 @@
 #include "SVGScriptElement.h"
 
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Event.h"
 #include <wtf/TZoneMallocInlines.h>
 

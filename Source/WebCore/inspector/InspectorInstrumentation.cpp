@@ -60,6 +60,7 @@
 #include "PageDebuggerAgent.h"
 #include "PageHeapAgent.h"
 #include "PageRuntimeAgent.h"
+#include "PageTimelineAgent.h"
 #include "PlatformStrategies.h"
 #include "RenderObject.h"
 #include "RenderView.h"

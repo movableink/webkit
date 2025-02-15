@@ -26,9 +26,12 @@
 #include "config.h"
 #include "WebExtensionSQLiteStore.h"
 
+#include "Logging.h"
 #include "WebExtensionSQLiteHelpers.h"
+#include "WebExtensionSQLiteRow.h"
 #include <sqlite3.h>
 #include <wtf/CrossThreadCopier.h>
+#include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>

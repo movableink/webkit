@@ -32,6 +32,7 @@
 #include "WebExtensionControllerMessages.h"
 #include "WebExtensionControllerProxyMessages.h"
 #include "WebFrame.h"
+#include "WebProcess.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
