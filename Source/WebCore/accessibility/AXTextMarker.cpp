@@ -55,6 +55,9 @@ static std::optional<AXID> nodeID(AXObjectCache& cache, Node* node)
 TextMarkerData::TextMarkerData(AXObjectCache& cache, const VisiblePosition& visiblePosition, int charStart, int charOffset, bool ignoredParam, TextMarkerOrigin originParam)
 {
     ASSERT(isMainThread());
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    RELEASE_ASSERT(!AXObjectCache::shouldCreateAXThreadCompatibleMarkers());
+#endif
 
     zeroBytes(*this);
     treeID = cache.treeID().toUInt64();
@@ -75,10 +78,19 @@ TextMarkerData::TextMarkerData(AXObjectCache& cache, const CharacterOffset& char
     ASSERT(isMainThread());
 
     zeroBytes(*this);
+
+    auto visiblePosition = cache.visiblePositionFromCharacterOffset(characterOffsetParam);
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::shouldCreateAXThreadCompatibleMarkers()) {
+        if (std::optional data = cache.textMarkerDataForVisiblePosition(WTFMove(visiblePosition), origin))
+            *this = *data;
+        return;
+    }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
     treeID = cache.treeID().toUInt64();
     auto optionalObjectID = nodeID(cache, characterOffsetParam.node.get());
     objectID = optionalObjectID ? optionalObjectID->toUInt64() : 0;
-    auto visiblePosition = cache.visiblePositionFromCharacterOffset(characterOffsetParam);
     auto position = visiblePosition.deepEquivalent();
     offset = !visiblePosition.isNull() ? std::max(position.deprecatedEditingOffset(), 0) : 0;
     anchorType = Position::PositionIsOffsetInAnchor;
@@ -247,12 +259,19 @@ AXTextMarkerRange::AXTextMarkerRange(const std::optional<SimpleRange>& range)
     if (!range)
         return;
 
-    auto* cache = range->start.document().axObjectCache();
-    if (!cache)
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (AXObjectCache::shouldCreateAXThreadCompatibleMarkers()) {
+        auto visiblePositionRange = makeVisiblePositionRange(range);
+        m_start = AXTextMarker { visiblePositionRange.start };
+        m_end = AXTextMarker { visiblePositionRange.end };
         return;
+    }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 
-    m_start = AXTextMarker(cache->startOrEndCharacterOffsetForRange(*range, true));
-    m_end = AXTextMarker(cache->startOrEndCharacterOffsetForRange(*range, false));
+    if (CheckedPtr cache = range->start.document().axObjectCache()) {
+        m_start = AXTextMarker(cache->startOrEndCharacterOffsetForRange(*range, true));
+        m_end = AXTextMarker(cache->startOrEndCharacterOffsetForRange(*range, false));
+    }
 }
 
 AXTextMarkerRange::AXTextMarkerRange(const AXTextMarker& start, const AXTextMarker& end)
@@ -336,6 +355,17 @@ std::optional<AXTextMarkerRange> AXTextMarkerRange::intersectionWith(const AXTex
         } };
     }
 
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    // FIXME: We should not hit the main-thread here with ENABLE(AX_THREAD_TEXT_APIS).
+    // Until we implement this properly off the main-thread, pass the DOM offset version of this marker to the main-thread.
+    if (AXObjectCache::useAXThreadTextApis()) {
+        return Accessibility::retrieveValueFromMainThread<std::optional<AXTextMarkerRange>>([thisRange = convertToDomOffsetRange(), otherRange = other.convertToDomOffsetRange()] () -> std::optional<AXTextMarkerRange> {
+            auto intersection = WebCore::intersection(thisRange, otherRange);
+            return intersection.isNull() ? std::nullopt : std::optional(intersection);
+        });
+    }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
+
     return Accessibility::retrieveValueFromMainThread<std::optional<AXTextMarkerRange>>([this, &other] () -> std::optional<AXTextMarkerRange> {
         auto intersection = WebCore::intersection(*this, other);
         if (intersection.isNull())
@@ -386,6 +416,24 @@ bool AXTextMarkerRange::isConfinedTo(std::optional<AXID> objectID) const
 }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
+AXTextMarker AXTextMarker::convertToDomOffset() const
+{
+    RELEASE_ASSERT(!isMainThread());
+
+    if (!isValid())
+        return { };
+    if (!isInTextRun())
+        return toTextRunMarker().convertToDomOffset();
+
+    auto newData = m_data;
+    newData.offset = runs()->domOffset(offset());
+    newData.characterOffset = m_data.offset;
+    newData.characterStart = 0;
+    newData.affinity = Affinity::Downstream;
+
+    return { newData };
+}
+
 AXTextRunLineID AXTextMarker::lineID() const
 {
     if (!isValid())
@@ -722,6 +770,16 @@ FloatRect AXTextMarkerRange::viewportRelativeFrame() const
     return result;
 }
 
+AXTextMarkerRange AXTextMarkerRange::convertToDomOffsetRange() const
+{
+    RELEASE_ASSERT(!isMainThread());
+
+    return {
+        m_start.convertToDomOffset(),
+        m_end.convertToDomOffset()
+    };
+}
+
 String AXTextMarkerRange::toString() const
 {
     RELEASE_ASSERT(!isMainThread());
@@ -786,6 +844,8 @@ String AXTextMarkerRange::toString() const
 
 const AXTextRuns* AXTextMarker::runs() const
 {
+    ASSERT(!isMainThread());
+
     RefPtr object = isolatedObject();
     return object ? object->textRuns() : nullptr;
 }

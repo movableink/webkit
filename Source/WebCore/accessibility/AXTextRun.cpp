@@ -90,6 +90,43 @@ String AXTextRuns::substring(unsigned start, unsigned length) const
     return result.toString();
 }
 
+unsigned AXTextRuns::domOffset(unsigned renderedTextOffset) const
+{
+    unsigned cumulativeDomOffset = 0;
+    unsigned previousEndDomOffset = 0;
+    for (size_t i = 0; i < size(); i++) {
+        const auto& domOffsets = at(i).domOffsets();
+        for (const auto& domOffsetPair : domOffsets) {
+            RELEASE_ASSERT(domOffsetPair[0] >= previousEndDomOffset);
+            // domOffsetPair[0] represents the start DOM offset of this run. Subtracting it
+            // from the previous run's end DOM offset, we know how much whitespace was collapsed,
+            // and thus know the offset between the DOM text and what was actually rendered.
+            // For example, given domOffsets: [2, 10], [13, 18]
+            // The first offset to rendered text is 2 (2 - 0), e.g. because of two leading
+            // whitespaces that were trimmed: "  foo"
+            // The second offset to rendered text is 3 (13 - 10), e.g. because of three
+            // collapsed whitespaces in between the first and second runs.
+            cumulativeDomOffset += domOffsetPair[0] - previousEndDomOffset;
+
+            // Using the example above, these values would be 0 and 8 for the first run,
+            // and 8 and 13 for the second run. Text that would fits this example would be:
+            // "  Charlie    Delta", rendered as: "Charlie Delta".
+            unsigned startRenderedTextOffset = domOffsetPair[0] - cumulativeDomOffset;
+            unsigned endRenderedTextOffset = domOffsetPair[1] - cumulativeDomOffset;
+            if (renderedTextOffset >= startRenderedTextOffset && renderedTextOffset <= endRenderedTextOffset) {
+                // The rendered text offset is in range of this run. We can get the DOM offset
+                // by adding the accumulated difference between the rendered text and DOM text.
+                return renderedTextOffset + cumulativeDomOffset;
+            }
+            previousEndDomOffset = domOffsetPair[1];
+        }
+    }
+    // We were provided with a rendered-text offset that didn't actually fit into our
+    // runs. This should never happen.
+    RELEASE_ASSERT_NOT_REACHED();
+    return renderedTextOffset;
+}
+
 FloatRect AXTextRuns::localRect(unsigned start, unsigned end, float lineHeight) const
 {
     unsigned smallerOffset = start;

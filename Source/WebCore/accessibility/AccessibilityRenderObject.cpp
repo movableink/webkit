@@ -1403,15 +1403,16 @@ CharacterRange AccessibilityRenderObject::selectedTextRange() const
 #if ENABLE(AX_THREAD_TEXT_APIS)
 AXTextRuns AccessibilityRenderObject::textRuns()
 {
+    constexpr std::array<uint16_t, 2> lengthOneDomOffsets = { 0, 1 };
     CheckedPtr renderer = this->renderer();
     if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer.get())) {
         auto box = InlineIterator::boxFor(*renderLineBreak);
-        return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy()) }, 12 };
+        return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy(), { lengthOneDomOffsets }) }, /* estimatedCharacterSize */ 12 };
     }
 
     if (is<HTMLImageElement>(node()) || is<HTMLMediaElement>(node())) {
         auto* containingBlock = renderer ? renderer->containingBlock() : nullptr;
-        return containingBlock ? AXTextRuns(containingBlock, { AXTextRun(0, String(span(objectReplacementCharacter))) }, 255) : AXTextRuns();
+        return containingBlock ? AXTextRuns(containingBlock, { AXTextRun(0, String(span(objectReplacementCharacter)), { lengthOneDomOffsets }) }, /* estimatedCharacterSize */ 255) : AXTextRuns();
     }
 
     WeakPtr renderText = dynamicDowncast<RenderText>(renderer.get());
@@ -1458,13 +1459,22 @@ AXTextRuns AccessibilityRenderObject::textRuns()
         }
     };
 
+    auto domOffset = [] (unsigned value) -> uint16_t {
+        // It shouldn't be possible for any textbox to have more than 65535 characters.
+        RELEASE_ASSERT(value <= std::numeric_limits<uint16_t>::max());
+        return static_cast<uint16_t>(value);
+    };
+
+    Vector<std::array<uint16_t, 2>> textRunDomOffsets;
+    // FIXME: Use InlineIteratorLogicalOrderTraversal instead. Otherwise we'll do the wrong thing for mixed direction content.
     auto textBox = InlineIterator::lineLeftmostTextBoxFor(*renderText);
     size_t currentLineIndex = textBox ? textBox->lineIndex() : 0;
     for (; textBox; textBox.traverseNextTextBox()) {
+        textRunDomOffsets.append({ domOffset(textBox->minimumCaretOffset()), domOffset(textBox->maximumCaretOffset()) });
         size_t newLineIndex = textBox->lineIndex();
         if (newLineIndex != currentLineIndex) {
             // FIXME: Currently, this is only ever called to ship text runs off to the accessibility thread. But maybe we should we make the isolatedCopy()s in this function optional based on a parameter?
-            runs.append({ currentLineIndex, lineString.toString().isolatedCopy() });
+            runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), { std::exchange(textRunDomOffsets, { }) } });
             lineString.clear();
         }
         currentLineIndex = newLineIndex;
@@ -1473,7 +1483,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     }
 
     if (!lineString.isEmpty())
-        runs.append({ currentLineIndex, lineString.toString().isolatedCopy() });
+        runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), WTFMove(textRunDomOffsets) });
     return { renderText->containingBlock(), WTFMove(runs), estimatedCharacterWidth.value_or(AXTextRuns::defaultEstimatedCharacterWidth) };
 }
 

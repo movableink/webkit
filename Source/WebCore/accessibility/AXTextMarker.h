@@ -267,6 +267,7 @@ public:
     AXTextMarker toTextRunMarker(std::optional<AXID> stopAtID = std::nullopt) const;
     // True if this marker points to an object with non-empty text runs.
     bool isInTextRun() const;
+    AXTextMarker convertToDomOffset() const;
 
     // Find the next or previous marker, optionally stopping at the given ID and returning an invalid marker.
     AXTextMarker findMarker(AXDirection, CoalesceObjectBreaks = CoalesceObjectBreaks::Yes, IgnoreBRs = IgnoreBRs::No, std::optional<AXID> = std::nullopt) const;
@@ -410,6 +411,7 @@ public:
     // Returns the bounds (frame) of the text in this range relative to the viewport.
     // Analagous to AXCoreObject::relativeFrame().
     FloatRect viewportRelativeFrame() const;
+    AXTextMarkerRange convertToDomOffsetRange() const;
 #if PLATFORM(COCOA)
     RetainPtr<NSAttributedString> toAttributedString(AXCoreObject::SpellCheck) const;
 #endif // PLATFORM(COCOA)

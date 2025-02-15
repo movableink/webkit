@@ -97,6 +97,7 @@
 #include "HTMLTableSectionElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "HitTestSource.h"
+#include "InlineIteratorLogicalOrderTraversal.h"
 #include "InlineRunAndOffset.h"
 #include "LocalFrame.h"
 #include "MathMLElement.h"
@@ -3584,6 +3585,61 @@ std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(co
 
     if (auto* input = dynamicDowncast<HTMLInputElement>(node.get()); input && input->isSecureField())
         return std::nullopt;
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    if (shouldCreateAXThreadCompatibleMarkers()) {
+        // We need to convert the DOM offset (which is offset into pre-whitespace-collapse text) into an offset into
+        // the rendered, post-whitespace-collapse text.
+        unsigned domOffset = position.deprecatedEditingOffset();
+        CheckedPtr<const RenderText> renderText = dynamicDowncast<RenderText>(node ? node->renderer() : nullptr);
+
+        if (!renderText) {
+            auto boxAndOffset = visiblePosition.inlineBoxAndOffset();
+            if (!boxAndOffset.box)
+                return std::nullopt;
+
+            renderText = dynamicDowncast<RenderText>(boxAndOffset.box->renderer());
+            if (!renderText)
+                return std::nullopt;
+            domOffset = boxAndOffset.offset;
+        }
+
+        auto [textBox, orderCache] = InlineIterator::firstTextBoxInLogicalOrderFor(*renderText);
+        if (!textBox)
+            return std::nullopt;
+
+        unsigned differenceBetweenDomAndRenderedOffsets = textBox->minimumCaretOffset();
+        unsigned previousEndDomOffset = textBox->maximumCaretOffset();
+
+        while (domOffset > textBox->maximumCaretOffset()) {
+            textBox = InlineIterator::nextTextBoxInLogicalOrder(textBox, orderCache);
+            differenceBetweenDomAndRenderedOffsets += textBox->minimumCaretOffset() - previousEndDomOffset;
+            previousEndDomOffset = textBox->maximumCaretOffset();
+        }
+        RELEASE_ASSERT(domOffset >= differenceBetweenDomAndRenderedOffsets);
+        unsigned renderedOffset = domOffset - differenceBetweenDomAndRenderedOffsets;
+
+        CheckedPtr cache = renderText->document().axObjectCache();
+        if (!cache)
+            return std::nullopt;
+
+        RefPtr object = cache->getOrCreate(const_cast<RenderText&>(*renderText));
+        if (!object)
+            return std::nullopt;
+
+        return std::optional(TextMarkerData {
+            cache->treeID(),
+            object->objectID(),
+            renderedOffset,
+            Position::PositionIsOffsetInAnchor,
+            Affinity::Downstream,
+            0,
+            renderedOffset,
+            object->isIgnored(),
+            origin
+        });
+    }
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 
     // If the visible position has an anchor type referring to a node other than the anchored node, we should
     // set the text marker data with CharacterOffset so that the offset will correspond to the node.

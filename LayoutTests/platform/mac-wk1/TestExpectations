@@ -920,6 +920,8 @@ accessibility/dynamic-rowspan.html [ Skip ]
 accessibility/dynamic-colspan.html [ Skip ]
 accessibility/dynamic-table-descendants.html [ Skip ]
 
+accessibility/select-whitespace-collapsed-text.html [ Skip ]
+
 # Missing AccessibilityUIElement::isIndeterminate() implementation.
 accessibility/indeterminate-progressbar-custom-element.html [ Skip ]
 accessibility/progress-indeterminate-value.html [ Skip ]

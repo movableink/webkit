@@ -59,10 +59,25 @@ struct AXTextRun {
     // The line index of this run within the context of the containing RenderBlock of the main-thread AX object.
     size_t lineIndex;
     String text;
+    // This data structure stores the DOM offsets that form the text runs that are concatenated to create |text|.
+    // DOM offsets are offsets into the raw text node contents, pre-whitespace-collapse, while the |text| we store
+    // is the rendered-text, post-whitespace-collapse.
+    //
+    // These offsets allow us to convert an offset into |text| (a "rendered-text offset") into a DOM offset, and
+    // vice versa. This is required when we need to create a VisiblePosition from this text run.
+    //
+    // For example, consider this text, where "_" is a space: "__Charlie__Delta"
+    // This would result in two inline textboxes in layout:
+    // "Charlie "
+    // "Delta"
+    // which we combine into |text|: "Charlie Delta"
+    // This Vector would then have values: [[2, 10], [11, 16]]
+    Vector<std::array<uint16_t, 2>> textRunDomOffsets;
 
-    AXTextRun(size_t lineIndex, String&& text)
+    AXTextRun(size_t lineIndex, String&& text, Vector<std::array<uint16_t, 2>>&& domOffsets)
         : lineIndex(lineIndex)
         , text(WTFMove(text))
+        , textRunDomOffsets(WTFMove(domOffsets))
     { }
 
     String debugDescription(void* containingBlock) const
@@ -70,6 +85,7 @@ struct AXTextRun {
         AXTextRunLineID lineID = { containingBlock, lineIndex };
         return makeString(lineID.debugDescription(), ": |"_s, makeStringByReplacingAll(text, '\n', "{newline}"_s), "|(len "_s, text.length(), ")"_s);
     }
+    const Vector<std::array<uint16_t, 2>>& domOffsets() const { return textRunDomOffsets; }
 
     // Convenience methods for TextUnit movement.
     bool startsWithLineBreak() const { return text.startsWith('\n'); }
@@ -137,6 +153,7 @@ struct AXTextRuns {
         return size ? runLengthSumTo(size - 1) : 0;
     }
     unsigned runLengthSumTo(size_t index) const;
+    unsigned domOffset(unsigned) const;
 
     size_t indexForOffset(unsigned textOffset) const;
     AXTextRunLineID lineIDForOffset(unsigned textOffset) const;
