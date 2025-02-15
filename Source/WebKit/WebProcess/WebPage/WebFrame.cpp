@@ -266,6 +266,11 @@ WebCore::Frame* WebFrame::coreFrame() const
     return m_coreFrame.get();
 }
 
+RefPtr<WebCore::Frame> WebFrame::protectedCoreFrame() const
+{
+    return coreFrame();
+}
+
 FrameInfoData WebFrame::info() const
 {
     RefPtr parent = parentFrame();

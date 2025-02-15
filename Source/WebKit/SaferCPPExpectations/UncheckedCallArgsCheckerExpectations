@@ -18,8 +18,8 @@ UIProcess/ProvisionalFrameProxy.cpp
 UIProcess/SuspendedPageProxy.cpp
 UIProcess/UserMediaPermissionRequestManagerProxy.cpp
 UIProcess/WebContextMenuProxy.cpp
-UIProcess/WebPageProxy.cpp
 UIProcess/WebEditCommandProxy.cpp
+UIProcess/WebPageProxy.cpp
 UIProcess/WebURLSchemeTask.cpp
 UIProcess/mac/WKImmediateActionController.mm
 UIProcess/mac/WebViewImpl.mm
@@ -35,13 +35,11 @@ WebProcess/Plugins/PDF/UnifiedPDF/PDFPresentationController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFScrollingPresentationController.mm
 WebProcess/WebCoreSupport/WebPopupMenu.cpp
 WebProcess/WebCoreSupport/mac/WebPopupMenuMac.mm
-WebProcess/WebPage/Cocoa/WebPageCocoa.mm
 WebProcess/WebPage/DrawingArea.cpp
 WebProcess/WebPage/FindController.cpp
 WebProcess/WebPage/RemoteLayerTree/RemoteScrollbarsController.mm
 WebProcess/WebPage/WebFoundTextRangeController.cpp
 WebProcess/WebPage/WebFrame.cpp
-WebProcess/WebPage/WebPage.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/WebPage/mac/WebPageMac.mm
 WebProcess/cocoa/PlaybackSessionManager.mm

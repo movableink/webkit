@@ -536,8 +536,10 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
 
     SandboxExtension::consumePermanently(parameters.additionalSandboxExtensionHandles);
 
-    if (!parameters.injectedBundlePath.isEmpty())
-        m_injectedBundle = InjectedBundle::create(parameters, transformHandlesToObjects(parameters.initializationUserData.object()));
+    if (!parameters.injectedBundlePath.isEmpty()) {
+        if (RefPtr injectedBundle = InjectedBundle::create(parameters, transformHandlesToObjects(parameters.initializationUserData.object())))
+            lazyInitialize(m_injectedBundle, injectedBundle.releaseNonNull());
+    }
 
     for (auto& supplement : m_supplements.values())
         supplement->initialize(parameters);

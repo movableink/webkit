@@ -14,6 +14,5 @@ WebProcess/WebCoreSupport/WebLocalFrameLoaderClient.cpp
 WebProcess/WebPage/DrawingArea.cpp
 WebProcess/WebPage/RemoteLayerTree/GraphicsLayerCARemote.mm
 WebProcess/WebPage/RemoteLayerTree/RemoteScrollingCoordinator.mm
-WebProcess/WebPage/WebPage.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/WebPage/mac/WebPageMac.mm

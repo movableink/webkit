@@ -66,7 +66,7 @@ DOMWrapperWorld& normalWorld(JSC::VM& vm)
 {
     VM::ClientData* clientData = vm.clientData;
     ASSERT(clientData);
-    return downcast<JSVMClientData>(clientData)->normalWorld();
+    return downcast<JSVMClientData>(clientData)->normalWorldSingleton();
 }
 
 DOMWrapperWorld& mainThreadNormalWorld()

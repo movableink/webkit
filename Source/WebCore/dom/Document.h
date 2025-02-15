@@ -1877,6 +1877,7 @@ public:
 #if ENABLE(APP_HIGHLIGHTS)
     HighlightRegistry* appHighlightRegistryIfExists() { return m_appHighlightRegistry.get(); }
     WEBCORE_EXPORT HighlightRegistry& appHighlightRegistry();
+    WEBCORE_EXPORT Ref<HighlightRegistry> protectedAppHighlightRegistry();
 
     WEBCORE_EXPORT AppHighlightStorage& appHighlightStorage();
     AppHighlightStorage* appHighlightStorageIfExists() const { return m_appHighlightStorage.get(); };
@@ -1896,8 +1897,8 @@ public:
 
     WEBCORE_EXPORT Editor& editor();
     WEBCORE_EXPORT const Editor& editor() const;
-    Ref<Editor> protectedEditor();
-    Ref<const Editor> protectedEditor() const;
+    WEBCORE_EXPORT Ref<Editor> protectedEditor();
+    WEBCORE_EXPORT Ref<const Editor> protectedEditor() const;
     FrameSelection& selection() { return m_selection; }
     const FrameSelection& selection() const { return m_selection; }
     CheckedRef<FrameSelection> checkedSelection();

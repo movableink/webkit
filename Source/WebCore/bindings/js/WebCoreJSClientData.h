@@ -126,7 +126,7 @@ public:
     
     WEBCORE_EXPORT static void initNormalWorld(JSC::VM*, WorkerThreadType);
 
-    DOMWrapperWorld& normalWorld() { return *m_normalWorld; }
+    DOMWrapperWorld& normalWorldSingleton() { return *m_normalWorld; }
 
     void getAllWorlds(Vector<Ref<DOMWrapperWorld>>&);
 

@@ -1120,6 +1120,7 @@ public:
 
 #if ENABLE(CONTEXT_MENUS)
     WebContextMenu& contextMenu();
+    Ref<WebContextMenu> protectedContextMenu();
     WebContextMenu* contextMenuAtPointInWindow(WebCore::FrameIdentifier, const WebCore::IntPoint&);
 #endif
 
@@ -2500,7 +2501,7 @@ private:
 
     RefPtr<WebPageTesting> m_webPageTesting;
 
-    Ref<WebFrame> m_mainFrame;
+    const Ref<WebFrame> m_mainFrame;
 
     RefPtr<WebPageGroupProxy> m_pageGroup;
 
@@ -2645,7 +2646,7 @@ private:
     RefPtr<WebOpenPanelResultListener> m_activeOpenPanelResultListener;
     RefPtr<NotificationPermissionRequestManager> m_notificationPermissionRequestManager;
 
-    Ref<WebUserContentController> m_userContentController;
+    const Ref<WebUserContentController> m_userContentController;
 
 #if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     RefPtr<WebExtensionControllerProxy> m_webExtensionController;

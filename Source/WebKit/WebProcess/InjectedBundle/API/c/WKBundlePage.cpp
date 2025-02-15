@@ -689,7 +689,7 @@ bool WKBundlePageIsSuspended(WKBundlePageRef pageRef)
 
 void WKBundlePageAddUserScript(WKBundlePageRef pageRef, WKStringRef source, _WKUserScriptInjectionTime injectionTime, WKUserContentInjectedFrames injectedFrames)
 {
-    WebKit::toImpl(pageRef)->addUserScript(WebKit::toWTFString(source), WebKit::InjectedBundleScriptWorld::normalWorld(), WebKit::toUserContentInjectedFrames(injectedFrames), WebKit::toUserScriptInjectionTime(injectionTime));
+    WebKit::toImpl(pageRef)->addUserScript(WebKit::toWTFString(source), WebKit::InjectedBundleScriptWorld::normalWorldSingleton(), WebKit::toUserContentInjectedFrames(injectedFrames), WebKit::toUserScriptInjectionTime(injectionTime));
 }
 
 void WKBundlePageAddUserScriptInWorld(WKBundlePageRef page, WKStringRef source, WKBundleScriptWorldRef scriptWorld, _WKUserScriptInjectionTime injectionTime, WKUserContentInjectedFrames injectedFrames)

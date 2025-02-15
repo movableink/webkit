@@ -182,7 +182,7 @@ public:
     WEBCORE_EXPORT DocumentLoader* activeDocumentLoader() const;
     RefPtr<DocumentLoader> protectedActiveDocumentLoader() const;
     DocumentLoader* documentLoader() const { return m_documentLoader.get(); }
-    RefPtr<DocumentLoader> protectedDocumentLoader() const;
+    WEBCORE_EXPORT RefPtr<DocumentLoader> protectedDocumentLoader() const;
     DocumentLoader* policyDocumentLoader() const { return m_policyDocumentLoader.get(); }
     DocumentLoader* provisionalDocumentLoader() const { return m_provisionalDocumentLoader.get(); }
     RefPtr<DocumentLoader> protectedProvisionalDocumentLoader() const;

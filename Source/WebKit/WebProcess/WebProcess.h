@@ -727,7 +727,7 @@ private:
 
     HashMap<WebCore::PageIdentifier, RefPtr<WebPage>> m_pageMap;
     HashMap<PageGroupIdentifier, RefPtr<WebPageGroupProxy>> m_pageGroupMap;
-    RefPtr<InjectedBundle> m_injectedBundle;
+    const RefPtr<InjectedBundle> m_injectedBundle;
 
     EventDispatcher m_eventDispatcher;
 #if PLATFORM(IOS_FAMILY)

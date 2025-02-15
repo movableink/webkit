@@ -1358,7 +1358,7 @@ Vector<String> removeQueryParameters(URL& url, const UncheckedKeyHashSet<String>
     });
 }
 
-Vector<String> removeQueryParameters(URL& url, Function<bool(const String&)>&& shouldRemove) 
+Vector<String> removeQueryParameters(URL& url, NOESCAPE const Function<bool(const String&)>& shouldRemove)
 {
     if (!url.hasQuery())
         return { };

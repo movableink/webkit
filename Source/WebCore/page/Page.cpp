@@ -4938,7 +4938,7 @@ JSC::JSGlobalObject* Page::serviceWorkerGlobalObject(DOMWrapperWorld& world)
         return nullptr;
 
     // FIXME: We currently do not support non-normal worlds in service workers.
-    RELEASE_ASSERT(&downcast<JSVMClientData>(serviceWorkerGlobalScope->vm().clientData)->normalWorld() == &world);
+    RELEASE_ASSERT(&downcast<JSVMClientData>(serviceWorkerGlobalScope->vm().clientData)->normalWorldSingleton() == &world);
     return scriptController->globalScopeWrapper();
 }
 
