@@ -77,4 +77,3 @@ dom/DOMRect.h
 dom/Document.h
 dom/ShadowRoot.cpp
 dom/ShadowRoot.h
-platform/SharedBuffer.h

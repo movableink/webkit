@@ -1046,8 +1046,6 @@ platform/ScrollAnimationSmooth.cpp
 platform/ScrollAnimator.cpp
 platform/ScrollView.cpp
 platform/ShareableResource.cpp
-platform/SharedBuffer.cpp
-platform/SharedBuffer.h
 platform/animation/AcceleratedEffectValues.cpp
 platform/animation/Animation.cpp
 platform/animation/AnimationList.cpp
@@ -1063,7 +1061,6 @@ platform/audio/cocoa/AudioFileReaderCocoa.cpp
 platform/audio/cocoa/AudioSampleDataSource.mm
 platform/cocoa/DragImageCocoa.mm
 platform/cocoa/PlaybackSessionModelMediaElement.mm
-platform/cocoa/SharedBufferCocoa.mm
 platform/cocoa/VideoPresentationModelVideoElement.mm
 platform/cocoa/WebAVPlayerLayer.mm
 platform/encryptedmedia/CDMProxy.cpp

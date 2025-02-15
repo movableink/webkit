@@ -167,8 +167,8 @@ static Vector<uint8_t> combineSegmentsData(const FragmentedSharedBuffer::DataSeg
 
 Ref<SharedBuffer> FragmentedSharedBuffer::makeContiguous() const
 {
-    if (m_contiguous)
-        return Ref { *static_cast<SharedBuffer*>(const_cast<FragmentedSharedBuffer*>(this)) };
+    if (RefPtr sharedBuffer = dynamicDowncast<SharedBuffer>(*const_cast<FragmentedSharedBuffer*>(this)))
+        return sharedBuffer.releaseNonNull();
     if (!m_segments.size())
         return SharedBuffer::create();
     if (m_segments.size() == 1)
@@ -680,7 +680,8 @@ void SharedBufferBuilder::initialize(Ref<FragmentedSharedBuffer>&& buffer)
 
 RefPtr<ArrayBuffer> SharedBufferBuilder::tryCreateArrayBuffer() const
 {
-    return m_buffer ? m_buffer->tryCreateArrayBuffer() : ArrayBuffer::tryCreate();
+    RefPtr buffer = m_buffer;
+    return buffer ? buffer->tryCreateArrayBuffer() : ArrayBuffer::tryCreate();
 }
 
 Ref<FragmentedSharedBuffer> SharedBufferBuilder::take()

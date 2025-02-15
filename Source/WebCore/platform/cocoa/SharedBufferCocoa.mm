@@ -84,7 +84,7 @@
 
 - (const void *)bytes
 {
-    return _dataSegment->span().subspan(_position).data();
+    return Ref { *_dataSegment }->span().subspan(_position).data();
 }
 
 @end
