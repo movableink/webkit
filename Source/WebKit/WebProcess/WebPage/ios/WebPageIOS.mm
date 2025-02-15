@@ -33,6 +33,7 @@
 #import "EditingRange.h"
 #import "EditorState.h"
 #import "InteractionInformationAtPosition.h"
+#import "KeyEventInterpretationContext.h"
 #import "Logging.h"
 #import "MessageSenderInlines.h"
 #import "NativeWebKeyboardEvent.h"
@@ -615,8 +616,23 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent& event)
 
     updateLastNodeBeforeWritingSuggestions(event);
 
+    auto scrollingNodeID = [&] -> std::optional<WebCore::ScrollingNodeID> {
+        RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
+        if (!frame)
+            return std::nullopt;
+
+        auto scrollableArea = frame->eventHandler().focusedScrollableArea();
+        if (!scrollableArea)
+            return std::nullopt;
+
+        return scrollableArea->scrollingNodeID();
+    }();
+
+    auto isCharEvent = platformEvent->type() == PlatformKeyboardEvent::Type::Char;
+    auto context = KeyEventInterpretationContext { isCharEvent, scrollingNodeID };
+
     // FIXME: Interpret the event immediately upon receiving it in UI process, without sending to WebProcess first.
-    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPageProxy::InterpretKeyEvent(editorState(ShouldPerformLayout::Yes), platformEvent->type() == PlatformKeyboardEvent::Type::Char), m_identifier);
+    auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPageProxy::InterpretKeyEvent(editorState(ShouldPerformLayout::Yes), context), m_identifier);
     auto [eventWasHandled] = sendResult.takeReplyOr(false);
     return eventWasHandled;
 }

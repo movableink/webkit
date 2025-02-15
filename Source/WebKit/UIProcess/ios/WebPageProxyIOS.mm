@@ -38,6 +38,7 @@
 #import "EditingRange.h"
 #import "GlobalFindInPageState.h"
 #import "InteractionInformationAtPosition.h"
+#import "KeyEventInterpretationContext.h"
 #import "Logging.h"
 #import "MessageSenderInlines.h"
 #import "NativeWebKeyboardEvent.h"
@@ -741,13 +742,22 @@ void WebPageProxy::moveSelectionByOffset(int32_t offset, CompletionHandler<void(
     }, webPageIDInMainFrameProcess());
 }
 
-void WebPageProxy::interpretKeyEvent(EditorState&& state, bool isCharEvent, CompletionHandler<void(bool)>&& completionHandler)
+void WebPageProxy::interpretKeyEvent(EditorState&& state, KeyEventInterpretationContext&& context, CompletionHandler<void(bool)>&& completionHandler)
 {
     updateEditorState(WTFMove(state));
-    if (!hasQueuedKeyEvent())
-        return completionHandler(false);
+    if (!hasQueuedKeyEvent()) {
+        completionHandler(false);
+        return;
+    }
+
     RefPtr pageClient = this->pageClient();
-    completionHandler(pageClient && pageClient->interpretKeyEvent(firstQueuedKeyEvent(), isCharEvent));
+    if (!pageClient) {
+        completionHandler(false);
+        return;
+    }
+
+    auto didInterpret = pageClient->interpretKeyEvent(firstQueuedKeyEvent(), WTFMove(context));
+    completionHandler(didInterpret);
 }
 
 void WebPageProxy::setSmartInsertDeleteEnabled(bool)

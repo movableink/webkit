@@ -35,6 +35,7 @@
 #import "EndowmentStateTracker.h"
 #import "FrameInfoData.h"
 #import "InteractionInformationAtPosition.h"
+#import "KeyEventInterpretationContext.h"
 #import "NativeWebKeyboardEvent.h"
 #import "NavigationState.h"
 #import "PlatformXRSystem.h"
@@ -395,9 +396,9 @@ void PageClientImpl::accessibilityWebProcessTokenReceived(std::span<const uint8_
     [contentView() _setAccessibilityWebProcessToken:toNSData(data).get()];
 }
 
-bool PageClientImpl::interpretKeyEvent(const NativeWebKeyboardEvent& event, bool isCharEvent)
+bool PageClientImpl::interpretKeyEvent(const NativeWebKeyboardEvent& event, KeyEventInterpretationContext&& context)
 {
-    return [contentView() _interpretKeyEvent:event.nativeEvent() isCharEvent:isCharEvent];
+    return [contentView() _interpretKeyEvent:event.nativeEvent() withContext:WTFMove(context)];
 }
 
 void PageClientImpl::positionInformationDidChange(const InteractionInformationAtPosition& info)

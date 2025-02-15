@@ -160,6 +160,7 @@
 		0735F3242D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 0735F3232D38C7790003D029 /* WKIntelligenceSmartReplyTextEffectCoordinator.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		07438C722D4C645600BD1E68 /* _WebKit_SwiftUI.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 07275C4F2D00C934002315A5 /* _WebKit_SwiftUI.framework */; };
 		0744DA552CE05FE400AACC81 /* WebKitInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 0744DA542CE05FE400AACC81 /* WebKitInternal.h */; };
+		074A6FC72D5F1FAF0027F958 /* KeyEventInterpretationContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 074A6FC52D5F1DEA0027F958 /* KeyEventInterpretationContext.h */; };
 		074E75FE1DF2211900D318EC /* UserMediaProcessManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 074E75FB1DF1FD1300D318EC /* UserMediaProcessManager.h */; };
 		074E87E12CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074E87E02CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift */; };
 		074F34812CC5F7D500CA5301 /* WKIntelligenceTextEffectCoordinator.h in Headers */ = {isa = PBXBuildFile; fileRef = 074F34802CC5F7D500CA5301 /* WKIntelligenceTextEffectCoordinator.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -3147,6 +3148,9 @@
 		0744720525E5BD020054B231 /* MediaOverridesForTesting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MediaOverridesForTesting.h; sourceTree = "<group>"; };
 		0744DA532CE05F9500AACC81 /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		0744DA542CE05FE400AACC81 /* WebKitInternal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebKitInternal.h; sourceTree = "<group>"; };
+		074A6FC52D5F1DEA0027F958 /* KeyEventInterpretationContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = KeyEventInterpretationContext.h; sourceTree = "<group>"; };
+		074A6FC62D5F1DEA0027F958 /* KeyEventInterpretationContext.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = KeyEventInterpretationContext.cpp; sourceTree = "<group>"; };
+		074A6FC82D5F20190027F958 /* KeyEventInterpretationContext.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = KeyEventInterpretationContext.serialization.in; sourceTree = "<group>"; };
 		074E75FB1DF1FD1300D318EC /* UserMediaProcessManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UserMediaProcessManager.h; sourceTree = "<group>"; };
 		074E75FC1DF2002400D318EC /* UserMediaProcessManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UserMediaProcessManager.cpp; sourceTree = "<group>"; };
 		074E76001DF7075D00D318EC /* MediaDeviceSandboxExtensions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MediaDeviceSandboxExtensions.cpp; sourceTree = "<group>"; };
@@ -9348,6 +9352,9 @@
 				86EFFA402B03A6B900ABE77D /* IPCTester.messages.in */,
 				7BF19B60290FC5B400EF322A /* IPCTesterReceiver.cpp */,
 				7BF19B5F290FC5B400EF322A /* IPCTesterReceiver.h */,
+				074A6FC62D5F1DEA0027F958 /* KeyEventInterpretationContext.cpp */,
+				074A6FC52D5F1DEA0027F958 /* KeyEventInterpretationContext.h */,
+				074A6FC82D5F20190027F958 /* KeyEventInterpretationContext.serialization.in */,
 				1A92DC1012F8BA460017AF65 /* LayerTreeContext.h */,
 				F476894628D2B5CD00073641 /* LayerTreeContext.serialization.in */,
 				5C37A5BE2970DB6000D222A0 /* LoadedWebArchive.h */,
@@ -16829,6 +16836,7 @@
 				1C5ACFA82A96F8C400C041C0 /* JSWebExtensionAPIWindowsEvent.h in Headers */,
 				1C5DC46F290B27260061EC62 /* JSWebExtensionWrappable.h in Headers */,
 				1C5DC46E290B27260061EC62 /* JSWebExtensionWrapper.h in Headers */,
+				074A6FC72D5F1FAF0027F958 /* KeyEventInterpretationContext.h in Headers */,
 				C1663E5B24AEAA2F00C6A3B2 /* LaunchServicesDatabaseXPCConstants.h in Headers */,
 				51E9049A27BCB9D400929E7E /* LaunchServicesSPI.h in Headers */,
 				BCE0937814FB128C001138D9 /* LayerHostingContext.h in Headers */,

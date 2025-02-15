@@ -644,6 +644,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/DrawingAreaInfo.serialization.in \
 	Shared/EditingRange.serialization.in \
 	Shared/EditorState.serialization.in \
+	Shared/KeyEventInterpretationContext.serialization.in \
 	Shared/Extensions/WebExtensionActionClickBehavior.serialization.in \
 	Shared/Extensions/WebExtensionAlarmParameters.serialization.in \
 	Shared/Extensions/WebExtensionCommandParameters.serialization.in \

@@ -323,6 +323,7 @@ $(PROJECT_DIR)/Shared/IPCTesterReceiver.messages.in
 $(PROJECT_DIR)/Shared/ImageOptions.serialization.in
 $(PROJECT_DIR)/Shared/InspectorExtensionTypes.serialization.in
 $(PROJECT_DIR)/Shared/JavaScriptCore.serialization.in
+$(PROJECT_DIR)/Shared/KeyEventInterpretationContext.serialization.in
 $(PROJECT_DIR)/Shared/LayerTreeContext.serialization.in
 $(PROJECT_DIR)/Shared/LoadParameters.serialization.in
 $(PROJECT_DIR)/Shared/MediaPlaybackState.serialization.in

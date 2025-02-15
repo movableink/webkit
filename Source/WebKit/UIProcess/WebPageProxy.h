@@ -533,6 +533,7 @@ struct InputMethodState;
 struct InsertTextOptions;
 struct InteractionInformationAtPosition;
 struct InteractionInformationRequest;
+struct KeyEventInterpretationContext;
 struct LoadParameters;
 struct ModelIdentifier;
 struct NavigationActionData;
@@ -2989,7 +2990,7 @@ private:
     void didReceiveEvent(WebEventType, bool handled, std::optional<WebCore::RemoteUserInputEventData>);
     void didUpdateRenderingAfterCommittingLoad();
 #if PLATFORM(IOS_FAMILY)
-    void interpretKeyEvent(EditorState&&, bool isCharEvent, CompletionHandler<void(bool)>&&);
+    void interpretKeyEvent(EditorState&&, KeyEventInterpretationContext&&, CompletionHandler<void(bool)>&&);
     void showPlaybackTargetPicker(bool hasVideo, const WebCore::IntRect& elementRect, WebCore::RouteSharingPolicy, const String&);
 
     void updateStringForFind(const String&);

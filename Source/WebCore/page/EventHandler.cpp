@@ -2085,7 +2085,7 @@ bool EventHandler::handleMouseDoubleClickEvent(const PlatformMouseEvent& platfor
     return swallowMouseUpEvent || swallowClickEvent || swallowMouseReleaseEvent;
 }
 
-ScrollableArea* EventHandler::enclosingScrollableArea(Node* node)
+ScrollableArea* EventHandler::enclosingScrollableArea(Node* node) const
 {
     for (auto ancestor = node; ancestor; ancestor = ancestor->parentOrShadowHostNode()) {
         if (is<HTMLIFrameElement>(*ancestor))
@@ -4832,16 +4832,21 @@ bool EventHandler::startKeyboardScrollAnimationOnEnclosingScrollableContainer(Sc
     return false;
 }
 
+ScrollableArea* EventHandler::focusedScrollableArea() const
+{
+    RefPtr<Node> node = m_frame->document()->focusedElement();
+    if (!node)
+        node = m_mousePressNode;
+
+    return enclosingScrollableArea(node.get());
+}
+
 bool EventHandler::shouldUseSmoothKeyboardScrollingForFocusedScrollableArea()
 {
     if (!m_frame->settings().eventHandlerDrivenSmoothKeyboardScrollingEnabled())
         return false;
 
-    RefPtr<Node> node = m_frame->document()->focusedElement();
-    if (!node)
-        node = m_mousePressNode;
-
-    auto scrollableArea = enclosingScrollableArea(node.get());
+    auto scrollableArea = focusedScrollableArea();
     if (!scrollableArea)
         return false;
 

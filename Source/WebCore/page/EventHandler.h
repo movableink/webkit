@@ -163,6 +163,8 @@ public:
     bool mousePressed() const { return m_mousePressed; }
     Node* mousePressNode() const { return m_mousePressNode.get(); }
 
+    WEBCORE_EXPORT ScrollableArea* focusedScrollableArea() const;
+
     WEBCORE_EXPORT void setCapturingMouseEventsElement(RefPtr<Element>&&);
     void pointerCaptureElementDidChange(Element*);
 
@@ -452,7 +454,7 @@ private:
     enum class FireMouseOverOut : bool { No, Yes };
     void updateMouseEventTargetNode(const AtomString& eventType, Node*, const PlatformMouseEvent&, FireMouseOverOut);
 
-    ScrollableArea* enclosingScrollableArea(Node*);
+    ScrollableArea* enclosingScrollableArea(Node*) const;
     void notifyScrollableAreasOfMouseEvents(const AtomString& eventType, Element* lastElementUnderMouse, Element* elementUnderMouse);
 
     MouseEventWithHitTestResults prepareMouseEvent(const HitTestRequest&, const PlatformMouseEvent&);

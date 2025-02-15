@@ -200,7 +200,7 @@ private:
     void reconcileEnclosingScrollViewContentOffset(EditorState&) final;
     bool isFocusingElement() override;
     void selectionDidChange() override;
-    bool interpretKeyEvent(const NativeWebKeyboardEvent&, bool isCharEvent) override;
+    bool interpretKeyEvent(const NativeWebKeyboardEvent&, KeyEventInterpretationContext&&) override;
     void positionInformationDidChange(const InteractionInformationAtPosition&) override;
     void saveImageToLibrary(Ref<WebCore::SharedBuffer>&&) override;
     void showPlaybackTargetPicker(bool hasVideo, const WebCore::IntRect& elementRect, WebCore::RouteSharingPolicy, const String&) override;
