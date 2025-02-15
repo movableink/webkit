@@ -182,6 +182,9 @@
 #import <WebCore/DragItem.h>
 #import <WebCore/PlatformPasteboard.h>
 #import <WebCore/WebItemProviderPasteboard.h>
+#if ENABLE(MODEL_PROCESS)
+#import "ModelPresentationManagerProxy.h"
+#endif
 #endif
 
 #if HAVE(LOOKUP_GESTURE_RECOGNIZER)
@@ -10351,6 +10354,17 @@ static BOOL shouldEnableDragInteractionForPolicy(_WKDragInteractionPolicy policy
 {
     ASSERT(item.sourceAction);
 
+#if ENABLE(MODEL_PROCESS)
+    if (item.modelLayerID && _page) {
+        if (RefPtr modelPresentationManager = _page->modelPresentationManagerProxy()) {
+            if (RetainPtr viewForDragPreview = modelPresentationManager->startDragForModel(*item.modelLayerID)) {
+                _dragDropInteractionState.stageDragItem(item, viewForDragPreview);
+                return;
+            }
+        }
+    }
+#endif
+
     if (item.promisedAttachmentInfo)
         [self _prepareToDragPromisedAttachment:item.promisedAttachmentInfo];
 
@@ -10480,6 +10494,13 @@ static std::optional<WebCore::DragOperation> coreDragOperationForUIDropOperation
 
     [[WebItemProviderPasteboard sharedInstance] clearRegistrationLists];
     [self _restoreEditMenuIfNeeded];
+
+#if ENABLE(MODEL_PROCESS)
+    if (_page) {
+        if (RefPtr modelPresentationManager = _page->modelPresentationManagerProxy())
+            modelPresentationManager->doneWithCurrentDragSession();
+    }
+#endif
 
     [self _removeContainerForDragPreviews];
     [std::exchange(_visibleContentViewSnapshot, nil) removeFromSuperview];
@@ -13948,6 +13969,18 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
     using enum WebCore::TouchAction;
     return touchActions.containsAny({ Auto, PanX, Manipulation });
 }
+
+#if ENABLE(MODEL_PROCESS)
+- (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView
+{
+    // The model is being removed while it's in the middle of a drag.
+    // We need to make sure it stays in a window by adding it to the
+    // WKContentView's container for drag previews, but keep it hidden.
+    [containerView setFrame:CGRectZero];
+    containerView.hidden = YES;
+    [self.containerForDragPreviews addSubview:containerView];
+}
+#endif
 
 @end
 

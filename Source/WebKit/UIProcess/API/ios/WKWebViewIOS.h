@@ -227,6 +227,10 @@ enum class TapHandlingResult : uint8_t;
 - (void)_updatePageLoadObserverState NS_DIRECT;
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+- (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView;
+#endif
+
 @end
 
 _WKTapHandlingResult wkTapHandlingResult(WebKit::TapHandlingResult);

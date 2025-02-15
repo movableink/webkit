@@ -62,8 +62,10 @@
     [portalLayer setSeparatedState:kCALayerSeparatedStateSeparated];
 
     REPtr<REComponentRef> clientComponent = RECALayerGetCALayerClientComponent(portalLayer);
-    _rootEntity = REComponentGetEntity(clientComponent.get());
-    REEntitySetName(_rootEntity.get(), "WebKit:PageHostedModelViewEntity");
+    if (clientComponent) {
+        _rootEntity = REComponentGetEntity(clientComponent.get());
+        REEntitySetName(_rootEntity.get(), "WebKit:PageHostedModelViewEntity");
+    }
 
     _containerView = adoptNS([[UIView alloc] initWithFrame:self.bounds]);
     [_containerView setAutoresizingMask:(UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight)];
@@ -73,25 +75,27 @@
     [containerViewLayer setValue:@NO forKeyPath:@"separatedOptions.updates.transform"];
     containerViewLayer.separatedState = kCALayerSeparatedStateTracked;
     REPtr<REComponentRef> containerViewLayerClientComponent = RECALayerGetCALayerClientComponent(containerViewLayer);
-    _containerEntity = REComponentGetEntity(containerViewLayerClientComponent.get());
-    REEntitySetName(_containerEntity.get(), "WebKit:ModelContainerEntity");
-    REEntitySetParent(_containerEntity.get(), _rootEntity.get());
-    REEntitySubtreeAddNetworkComponentRecursive(_containerEntity.get());
+    if (containerViewLayerClientComponent) {
+        _containerEntity = REComponentGetEntity(containerViewLayerClientComponent.get());
+        REEntitySetName(_containerEntity.get(), "WebKit:ModelContainerEntity");
+        REEntitySetParent(_containerEntity.get(), _rootEntity.get());
+        REEntitySubtreeAddNetworkComponentRecursive(_containerEntity.get());
 
-    // FIXME: Clipping workaround for rdar://125188888 (blocked by rdar://123516357 -> rdar://124718417).
-    // containerEntity is required to add a clipping primitive that is independent from model's rootEntity.
-    // Adding the primitive directly to clientComponentEntity has no visual effect.
-    constexpr float clippingBoxHalfSize = 500; // meters
-    REPtr<REComponentRef> clipComponent = REEntityGetOrAddComponentByClass(_containerEntity.get(), REClippingPrimitiveComponentGetComponentType());
-    REClippingPrimitiveComponentSetShouldClipChildren(clipComponent.get(), true);
-    REClippingPrimitiveComponentSetShouldClipSelf(clipComponent.get(), true);
+        // FIXME: Clipping workaround for rdar://125188888 (blocked by rdar://123516357 -> rdar://124718417).
+        // containerEntity is required to add a clipping primitive that is independent from model's rootEntity.
+        // Adding the primitive directly to clientComponentEntity has no visual effect.
+        constexpr float clippingBoxHalfSize = 500; // meters
+        REPtr<REComponentRef> clipComponent = REEntityGetOrAddComponentByClass(_containerEntity.get(), REClippingPrimitiveComponentGetComponentType());
+        REClippingPrimitiveComponentSetShouldClipChildren(clipComponent.get(), true);
+        REClippingPrimitiveComponentSetShouldClipSelf(clipComponent.get(), true);
 
-    REAABB clipBounds { simd_make_float3(-clippingBoxHalfSize, -clippingBoxHalfSize, -2 * clippingBoxHalfSize),
-        simd_make_float3(clippingBoxHalfSize, clippingBoxHalfSize, 0) };
-    REClippingPrimitiveComponentClipToBox(clipComponent.get(), clipBounds);
+        REAABB clipBounds { simd_make_float3(-clippingBoxHalfSize, -clippingBoxHalfSize, -2 * clippingBoxHalfSize),
+            simd_make_float3(clippingBoxHalfSize, clippingBoxHalfSize, 0) };
+        REClippingPrimitiveComponentClipToBox(clipComponent.get(), clipBounds);
 
-    RENetworkMarkEntityMetadataDirty(_rootEntity.get());
-    RENetworkMarkEntityMetadataDirty(_containerEntity.get());
+        RENetworkMarkEntityMetadataDirty(_rootEntity.get());
+        RENetworkMarkEntityMetadataDirty(_containerEntity.get());
+    }
 
     [self applyBackgroundColor:std::nullopt];
 
