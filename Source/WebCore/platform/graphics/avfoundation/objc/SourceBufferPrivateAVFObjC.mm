@@ -993,7 +993,7 @@ bool SourceBufferPrivateAVFObjC::canEnqueueSample(TrackID trackID, const MediaSa
 
     // if sample's set of keyIDs does not match the current set of keyIDs, consult with the CDM
     // to determine if the keyIDs are usable; if so, update the current set of keyIDs and enqueue sample.
-    if (RefPtr cdmInstance = m_cdmInstance; cdmInstance && m_cdmInstance->isAnyKeyUsable(sample.keyIDs())) {
+    if (RefPtr cdmInstance = m_cdmInstance; cdmInstance && cdmInstance->isAnyKeyUsable(sample.keyIDs())) {
         m_currentTrackIDs.try_emplace(trackID, sample.keyIDs());
         return true;
     }
@@ -1131,12 +1131,13 @@ void SourceBufferPrivateAVFObjC::enqueueSampleBuffer(MediaSampleAVFObjC& sample)
                 return;
             }
 
-            if (!protectedThis->m_videoRenderer) {
+            RefPtr videoRenderer = protectedThis->m_videoRenderer;
+            if (!videoRenderer) {
                 ERROR_LOG_WITH_THIS(protectedThis, logSiteIdentifier, "prerollDecodeWithCompletionHandler called after renderer destroyed");
                 return;
             }
 
-            protectedThis->videoRendererReadyForDisplayChanged(protectedThis->m_videoRenderer->renderer(), true);
+            protectedThis->videoRendererReadyForDisplayChanged(videoRenderer->renderer(), true);
         });
     }];
 }
