@@ -281,6 +281,7 @@
 #include "StyleAdjuster.h"
 #include "StyleColorOptions.h"
 #include "StyleColorScheme.h"
+#include "StyleOriginatedTimelinesController.h"
 #include "StyleProperties.h"
 #include "StyleResolveForDocument.h"
 #include "StyleResolver.h"
@@ -2812,8 +2813,8 @@ void Document::resolveStyle(ResolveStyleType type)
     frameView->updateBaseBackgroundColorIfNecessary();
 #endif
 
-    if (CheckedPtr timelinesController = this->timelinesController())
-        timelinesController->documentDidResolveStyle();
+    if (CheckedPtr styleOriginatedTimelinesController = this->styleOriginatedTimelinesController())
+        styleOriginatedTimelinesController->documentDidResolveStyle();
 }
 
 void Document::updateTextRenderer(Text& text, unsigned offsetOfReplacedText, unsigned lengthOfReplacedText)
@@ -10202,6 +10203,13 @@ AnimationTimelinesController& Document::ensureTimelinesController()
     if (!m_timelinesController)
         lazyInitialize(m_timelinesController, makeUnique<AnimationTimelinesController>(*this));
     return *m_timelinesController.get();
+}
+
+StyleOriginatedTimelinesController& Document::ensureStyleOriginatedTimelinesController()
+{
+    if (!m_styleOriginatedTimelinesController)
+        lazyInitialize(m_styleOriginatedTimelinesController, makeUnique<StyleOriginatedTimelinesController>());
+    return *m_styleOriginatedTimelinesController.get();
 }
 
 void Document::updateAnimationsAndSendEvents()
