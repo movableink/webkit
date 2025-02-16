@@ -665,7 +665,7 @@ void FullscreenManager::exitRemovedFullscreenElement(Element& element)
     auto fullscreenElement = fullscreenOrPendingElement();
     if (fullscreenElement == &element) {
         INFO_LOG(LOGIDENTIFIER, "Fullscreen element removed; exiting fullscreen");
-        exitFullscreen(nullptr);
+        exitFullscreen([] (auto) { });
     } else
         clearFullscreenFlags(element);
 }
