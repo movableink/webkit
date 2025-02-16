@@ -10210,7 +10210,7 @@ void Document::updateAnimationsAndSendEvents()
     if (!domWindow)
         return;
 
-    if (auto* timelinesController = this->timelinesController())
+    if (CheckedPtr timelinesController = this->timelinesController())
         timelinesController->updateAnimationsAndSendEvents(domWindow->frozenNowTimestamp());
 }
 
