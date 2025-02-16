@@ -125,26 +125,32 @@ CredentialPromise* CredentialRequestCoordinator::currentPromise()
     return m_currentPromise ? &m_currentPromise.value() : nullptr;
 }
 
-bool CredentialRequestCoordinator::presentPicker(CredentialPromise&& promise, DigitalCredentialsRequestData&& requestData, RefPtr<AbortSignal> signal)
+void CredentialRequestCoordinator::presentPicker(CredentialPromise&& promise, DigitalCredentialsRequestData&& requestData, RefPtr<AbortSignal> signal)
 {
+    if (!canPresentDigitalCredentialsUI()) {
+        LOG(DigitalCredentials, "There's no digital credentials UI available.");
+        promise.reject(Exception { ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s });
+        return;
+    }
+
     if (m_state != PickerState::Idle) {
         LOG(DigitalCredentials, "A credential picker operation is already in progress");
         promise.reject(Exception {
             ExceptionCode::InvalidStateError,
             "A credential picker operation is already in progress."_s });
-        return false;
+        return;
     }
 
     if (!m_page) {
         promise.reject(ExceptionCode::InvalidStateError, "Page no longer valid."_s);
-        return false;
+        return;
     }
 
     if (signal) {
         if (signal->aborted()) {
             LOG(DigitalCredentials, "AbortSignal was already aborted before presenting the credential picker");
             promise.rejectType<IDLAny>(signal->reason().getValue());
-            return false;
+            return;
         }
 
         auto weakThis = WeakPtr { *this };
@@ -166,8 +172,6 @@ bool CredentialRequestCoordinator::presentPicker(CredentialPromise&& promise, Di
             if (RefPtr protectedThis = weakThis.get())
                 protectedThis->handleDigitalCredentialsPickerResult(WTFMove(responseOrException), signal);
         });
-
-    return true;
 }
 
 void CredentialRequestCoordinator::handleDigitalCredentialsPickerResult(Expected<DigitalCredentialsResponseData, ExceptionData>&& responseOrException, RefPtr<AbortSignal> signal)

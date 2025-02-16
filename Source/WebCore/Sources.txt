@@ -4224,6 +4224,7 @@ JSMessageChannel.cpp
 JSMessageEvent.cpp
 JSMessagePort.cpp
 JSMeteringMode.cpp
+JSMobileDocumentRequest.cpp
 JSMouseEvent.cpp
 JSMouseEventInit.cpp
 JSMultiCacheQueryOptions.cpp

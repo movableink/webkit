@@ -35,6 +35,7 @@
 #include "DigitalCredentialsRequestData.h"
 #include "Document.h"
 #include "DocumentInlines.h"
+#include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "IdentityCredentialProtocol.h"
 #include "LocalDOMWindow.h"
@@ -63,6 +64,30 @@ DigitalCredential::DigitalCredential(JSC::Strong<JSC::JSObject>&& data, Identity
 {
 }
 
+static ExceptionOr<DigitalCredentialRequestTypes> jsToCredentialRequest(const Document& document, const DigitalCredentialRequest& request)
+{
+    auto scope = DECLARE_THROW_SCOPE(document.globalObject()->vm());
+    auto* globalObject = document.globalObject();
+
+    switch (request.protocol) {
+    case IdentityCredentialProtocol::OrgIsoMdoc: {
+        auto result = convertDictionary<MobileDocumentRequest>(*globalObject, request.data.get());
+        if (result.hasException(scope))
+            return Exception { ExceptionCode::ExistingExceptionError };
+        return DigitalCredentialRequestTypes { std::in_place_type<MobileDocumentRequest>, result.releaseReturnValue() };
+    }
+    case IdentityCredentialProtocol::Openid4vp: {
+        auto result = convertDictionary<OpenID4VPRequest>(*globalObject, request.data.get());
+        if (result.hasException(scope))
+            return Exception { ExceptionCode::ExistingExceptionError };
+        return DigitalCredentialRequestTypes { std::in_place_type<OpenID4VPRequest>, result.releaseReturnValue() };
+    }
+    default:
+        ASSERT_NOT_REACHED();
+        return Exception { ExceptionCode::TypeError, "Unsupported protocol."_s };
+    }
+}
+
 void DigitalCredential::discoverFromExternalSource(const Document& document, CredentialPromise&& promise, CredentialRequestOptions&& options)
 {
     ASSERT(options.digital);
@@ -77,7 +102,16 @@ void DigitalCredential::discoverFromExternalSource(const Document& document, Cre
         return;
     }
 
-    if (!document.protectedFrame() || !document.protectedFrame()->protectedPage() || !document.protectedWindow()) {
+    RefPtr frame = document.protectedFrame();
+    RefPtr window = document.protectedWindow();
+    if (!frame || !window) {
+        LOG(DigitalCredentials, "Preconditions for DigitalCredential.get() are not met");
+        promise.reject(ExceptionCode::InvalidStateError, "Preconditions for calling .get() are not met."_s);
+        return;
+    }
+
+    RefPtr page = frame->protectedPage();
+    if (!page) {
         LOG(DigitalCredentials, "Preconditions for DigitalCredential.get() are not met");
         promise.reject(ExceptionCode::InvalidStateError, "Preconditions for calling .get() are not met."_s);
         return;
@@ -98,20 +132,35 @@ void DigitalCredential::discoverFromExternalSource(const Document& document, Cre
         return;
     }
 
-    if (!document.protectedWindow()->consumeTransientActivation()) {
+    if (!window->consumeTransientActivation()) {
         promise.reject(Exception { ExceptionCode::NotAllowedError, "Calling get() needs to be triggered by an activation triggering user event."_s });
         return;
     }
 
-#if HAVE(DIGITAL_CREDENTIALS_UI)
     DigitalCredentialsRequestData requestData;
-    requestData.options = options.digital.value();
-    requestData.topOrigin = document.protectedTopOrigin()->data().isolatedCopy();
-    requestData.documentOrigin = document.protectedSecurityOrigin()->data().isolatedCopy();
+    for (auto& request : options.digital->requests) {
+        auto resultOrException = jsToCredentialRequest(document, request);
+        if (resultOrException.hasException()) {
+            promise.reject(resultOrException.releaseException());
+            return;
+        }
 
-    Ref coordinator = document.protectedFrame()->protectedPage()->credentialRequestCoordinator();
-    if (!coordinator->presentPicker(WTFMove(promise), WTFMove(requestData), options.signal))
-        LOG(DigitalCredentials, "Failed to present the credential picker.");
+        DigitalCredentialRequestTypes credentialVariant = resultOrException.releaseReturnValue();
+        std::visit(
+            [&](auto& credential) { requestData.requests.append(credential); },
+            credentialVariant);
+    }
+    RefPtr topOrigin = document.protectedTopOrigin();
+    RefPtr documentOrigin = document.protectedSecurityOrigin();
+    if (!topOrigin || !documentOrigin) {
+        promise.reject(Exception { ExceptionCode::SecurityError, "Required document origin is not available."_s });
+        return;
+    }
+    requestData.topOrigin = topOrigin->data().isolatedCopy();
+    requestData.documentOrigin = documentOrigin->data().isolatedCopy();
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    Ref coordinator = page->credentialRequestCoordinator();
+    coordinator->presentPicker(WTFMove(promise), WTFMove(requestData), options.signal);
 #else
     promise.reject(Exception { ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s });
 #endif

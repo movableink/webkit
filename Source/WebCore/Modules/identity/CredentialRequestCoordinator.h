@@ -53,12 +53,19 @@ class CredentialRequestCoordinator final : public RefCounted<CredentialRequestCo
 
 public:
     static Ref<CredentialRequestCoordinator> create(UniqueRef<CredentialRequestCoordinatorClient>&&, Page&);
-    WEBCORE_EXPORT bool presentPicker(CredentialPromise&&, DigitalCredentialsRequestData&&, RefPtr<AbortSignal>);
+    WEBCORE_EXPORT void presentPicker(CredentialPromise&&, DigitalCredentialsRequestData&&, RefPtr<AbortSignal>);
     WEBCORE_EXPORT void abortPicker(JSC::JSValue reason);
-
     ~CredentialRequestCoordinator();
 
 private:
+    static constexpr bool canPresentDigitalCredentialsUI()
+    {
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+        return true;
+#else
+        return false;
+#endif
+    }
     class PickerStateGuard final {
     public:
         explicit PickerStateGuard(CredentialRequestCoordinator&);

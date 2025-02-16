@@ -27,9 +27,9 @@
 
 namespace WebCore {
 
-enum class IdentityCredentialProtocol : uint8_t {
-    Openid4vp,
-    OrgIsoMdoc,
+struct MobileDocumentRequest {
+    String deviceRequest;
+    String encryptionInfo;
 };
 
 } // namespace WebCore

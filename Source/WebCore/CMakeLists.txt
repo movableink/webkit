@@ -403,6 +403,7 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/identity/DigitalCredentialRequest.idl
     Modules/identity/DigitalCredentialRequestOptions.idl
     Modules/identity/IdentityCredentialProtocol.idl
+    Modules/identity/MobileDocumentRequest.idl
     Modules/identity/OpenID4VPRequest.idl
 
     Modules/indexeddb/IDBCursor.idl
