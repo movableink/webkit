@@ -80,6 +80,7 @@
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/ViolationReportType.h>
 #include <wtf/CallbackAggregator.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/Expected.h>
 #include <wtf/RunLoop.h>
 #include <wtf/text/MakeString.h>
@@ -1154,6 +1155,9 @@ void NetworkResourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLo
         send(Messages::WebResourceLoader::DidFinishResourceLoad(networkLoadMetrics));
     }
 
+    if (networkLoadMetrics.responseBodyBytesReceived != std::numeric_limits<uint64_t>::max())
+        updateBytesTransferredOverNetwork(networkLoadMetrics.responseBodyBytesReceived);
+
     tryStoreAsCacheEntry();
 
     if (shouldSendResourceLoadMessages())
@@ -2184,31 +2188,34 @@ void NetworkResourceLoader::useRedirectionForCurrentNavigation(WebCore::Resource
 
 void NetworkResourceLoader::sendDidReceiveDataMessage(const FragmentedSharedBuffer& buffer, size_t encodedDataLength)
 {
-    auto delta = bytesTransferredOverNetworkDelta();
+    RefPtr networkLoad = m_networkLoad;
+    auto bytesTransferredOverNetwork = networkLoad ? networkLoad->bytesTransferredOverNetwork() : 0;
 
-    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength, delta));
+    updateBytesTransferredOverNetwork(bytesTransferredOverNetwork);
+
+    send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength, bytesTransferredOverNetwork));
+}
+
+void NetworkResourceLoader::updateBytesTransferredOverNetwork(size_t bytesTransferredOverNetwork)
+{
+    CheckedSize delta = bytesTransferredOverNetwork - m_bytesTransferredOverNetwork;
+    ASSERT(!delta.hasOverflowed());
+    m_bytesTransferredOverNetwork = bytesTransferredOverNetwork;
 
     if (!delta)
         return;
 
     if (auto workerIdentifier = m_parameters.workerIdentifier)
-        reportNetworkUsageToAllSharedWorkers(*workerIdentifier, delta);
+        reportNetworkUsageToAllSharedWorkers(*workerIdentifier, m_bytesTransferredOverNetwork);
 }
 
-void NetworkResourceLoader::reportNetworkUsageToAllSharedWorkers(WebCore::SharedWorkerIdentifier identifier, size_t delta)
+void NetworkResourceLoader::reportNetworkUsageToAllSharedWorkers(WebCore::SharedWorkerIdentifier identifier, size_t bytes)
 {
     Ref connection = m_connection;
     if (CheckedPtr session = connection->protectedNetworkProcess()->networkSession(sessionID())) {
         if (CheckedPtr server = session->sharedWorkerServer())
-            server->reportNetworkUsageToAllSharedWorkerClients(identifier, delta);
+            server->reportNetworkUsageToAllSharedWorkerClients(identifier, bytes);
     }
-}
-
-uint64_t NetworkResourceLoader::bytesTransferredOverNetworkDelta() const
-{
-    if (RefPtr networkLoad = m_networkLoad)
-        return networkLoad->bytesTransferredOverNetworkDelta();
-    return 0;
 }
 
 } // namespace WebKit

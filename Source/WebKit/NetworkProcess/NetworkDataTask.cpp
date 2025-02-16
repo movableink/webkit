@@ -242,14 +242,4 @@ PendingDownload* NetworkDataTask::pendingDownload() const
     return m_pendingDownload.get();
 }
 
-size_t NetworkDataTask::calculateBytesTransferredOverNetworkDelta()
-{
-    if (m_totalBytesTransferredOverNetwork <= m_bytesTransferredOverNetworkReported)
-        return 0;
-
-    size_t delta = m_totalBytesTransferredOverNetwork - m_bytesTransferredOverNetworkReported;
-    m_bytesTransferredOverNetworkReported = m_totalBytesTransferredOverNetwork;
-    return delta;
-}
-
 } // namespace WebKit

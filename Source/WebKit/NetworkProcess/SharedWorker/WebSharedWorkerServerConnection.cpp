@@ -146,10 +146,10 @@ void WebSharedWorkerServerConnection::postErrorToWorkerObject(WebCore::SharedWor
     send(Messages::WebSharedWorkerObjectConnection::PostErrorToWorkerObject { sharedWorkerObjectIdentifier, errorMessage, lineNumber, columnNumber, sourceURL, isErrorEvent });
 }
 
-void WebSharedWorkerServerConnection::reportNetworkUsageToWorkerObject(WebCore::SharedWorkerObjectIdentifier sharedWorkerObjectIdentifier, size_t bytesTransferredOverNetworkDelta)
+void WebSharedWorkerServerConnection::reportNetworkUsageToWorkerObject(WebCore::SharedWorkerObjectIdentifier sharedWorkerObjectIdentifier, size_t bytesTransferredOverNetwork)
 {
-    CONNECTION_RELEASE_LOG("reportNetworkUsageToWorkerObject: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", bytesTransferredOverNetworkDelta=%zu", sharedWorkerObjectIdentifier.toString().utf8().data(), bytesTransferredOverNetworkDelta);
-    send(Messages::WebSharedWorkerObjectConnection::ReportNetworkUsageToWorkerObject { sharedWorkerObjectIdentifier, bytesTransferredOverNetworkDelta });
+    CONNECTION_RELEASE_LOG("reportNetworkUsageToWorkerObject: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", bytesTransferredOverNetwork=%zu", sharedWorkerObjectIdentifier.toString().utf8().data(), bytesTransferredOverNetwork);
+    send(Messages::WebSharedWorkerObjectConnection::ReportNetworkUsageToWorkerObject { sharedWorkerObjectIdentifier, bytesTransferredOverNetwork });
 }
 
 #undef CONNECTION_RELEASE_LOG

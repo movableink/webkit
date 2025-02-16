@@ -211,9 +211,6 @@ void NetworkDataTaskCurl::curlDidReceiveData(CurlRequest&, Ref<SharedBuffer>&& b
         return;
     }
 
-    // FIXME: This should be exact network transferred size rather than decoded bytes.
-    setTotalBytesTransferredOverNetwork(totalBytesTransferredOverNetwork() + buffer->size());
-
     m_client->didReceiveData(buffer.get());
 }
 

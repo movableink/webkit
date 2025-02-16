@@ -1048,10 +1048,6 @@ void NetworkDataTaskSoup::didRead(gssize bytesRead)
         writeDownload();
     } else {
         ASSERT(m_client);
-
-        // FIXME: This should be exact network transferred size rather than decoded bytes.
-        setTotalBytesTransferredOverNetwork(totalBytesTransferredOverNetwork() + bytesRead);
-
         m_client->didReceiveData(SharedBuffer::create(WTFMove(m_readBuffer)));
         read();
     }

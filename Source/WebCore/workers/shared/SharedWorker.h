@@ -79,12 +79,14 @@ private:
     Ref<MessagePort> m_port;
     String m_identifierForInspector;
     URLKeepingBlobAlive m_blobURLExtension;
-    bool m_isActive { true };
-    bool m_isSuspendedForBackForwardCache { false };
+    size_t m_bytesTransferredOverNetwork { 0 };
 
 #if ENABLE(CONTENT_EXTENSIONS)
     RefPtr<ResourceMonitor> m_resourceMonitor;
 #endif
+
+    bool m_isActive { true };
+    bool m_isSuspendedForBackForwardCache { false };
 };
 
 } // namespace WebCore

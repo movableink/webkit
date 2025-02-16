@@ -357,10 +357,10 @@ RefPtr<NetworkDataTask> NetworkLoad::protectedTask()
     return m_task;
 }
 
-size_t NetworkLoad::bytesTransferredOverNetworkDelta() const
+size_t NetworkLoad::bytesTransferredOverNetwork() const
 {
     if (RefPtr task = m_task)
-        return task->calculateBytesTransferredOverNetworkDelta();
+        return task->bytesTransferredOverNetwork();
     return 0;
 }
 

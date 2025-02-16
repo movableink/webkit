@@ -136,7 +136,7 @@ void ResourceMonitor::checkNetworkUsageExcessIfNecessary()
         if (!frame)
             return;
 
-        RESOURCEMONITOR_RELEASE_LOG("The frame exceeds the network usage threshold: used %ld", m_networkUsage.value());
+        RESOURCEMONITOR_RELEASE_LOG("The frame exceeds the network usage threshold: used %zu", m_networkUsage.hasOverflowed() ? std::numeric_limits<size_t>::max() : m_networkUsage.value());
 
         // If the frame has sticky user activation, don't do offloading.
         if (RefPtr protectedWindow = frame->window(); protectedWindow && protectedWindow->hasStickyActivation()) {

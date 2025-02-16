@@ -387,15 +387,6 @@ void NetworkDataTaskCocoa::didNegotiateModernTLS(const URL& url)
 
 void NetworkDataTaskCocoa::didCompleteWithError(const WebCore::ResourceError& error, const WebCore::NetworkLoadMetrics& networkLoadMetrics)
 {
-    if (networkLoadMetrics.responseBodyBytesReceived > totalBytesTransferredOverNetwork()) {
-        WTFEmitSignpost(m_task.get(), DataTask, "responseBodyBytesReceived (%llu bytes) exceeded totalBytesTransferredOverNetwork (%zu bytes)", networkLoadMetrics.responseBodyBytesReceived, totalBytesTransferredOverNetwork());
-
-        setTotalBytesTransferredOverNetwork(networkLoadMetrics.responseBodyBytesReceived);
-
-        if (m_client)
-            m_client->didReceiveData(WebCore::SharedBuffer::create());
-    }
-
     WTFEmitSignpost(m_task.get(), DataTask, "completed with error: %d", !error.isNull());
 
     if (m_client)
@@ -406,7 +397,7 @@ void NetworkDataTaskCocoa::didReceiveData(const WebCore::SharedBuffer& data)
 {
     WTFEmitSignpost(m_task.get(), DataTask, "received %zd bytes", data.size());
 
-    setTotalBytesTransferredOverNetwork([m_task _countOfBytesReceivedEncoded]);
+    setBytesTransferredOverNetwork([m_task _countOfBytesReceivedEncoded]);
 
     if (m_client)
         m_client->didReceiveData(data);

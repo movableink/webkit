@@ -54,6 +54,7 @@
 #include <WebCore/ResourceLoader.h>
 #include <WebCore/SubresourceLoader.h>
 #include <WebCore/SubstituteData.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/text/MakeString.h>
 
@@ -246,12 +247,7 @@ void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, uint64
 
     coreLoader->didReceiveData(data.isNull() ? SharedBuffer::create() : data.unsafeBuffer().releaseNonNull(), encodedDataLength, DataPayloadBytes);
 
-#if ENABLE(CONTENT_EXTENSIONS)
-    if (bytesTransferredOverNetwork > 0) {
-        if (RefPtr resourceMonitor = coreLoader ? coreLoader->resourceMonitorIfExists() : nullptr)
-            resourceMonitor->addNetworkUsage(bytesTransferredOverNetwork);
-    }
-#endif
+    updateBytesTransferredOverNetwork(bytesTransferredOverNetwork);
 }
 
 void WebResourceLoader::didFinishResourceLoad(NetworkLoadMetrics&& networkLoadMetrics)
@@ -269,6 +265,9 @@ void WebResourceLoader::didFinishResourceLoad(NetworkLoadMetrics&& networkLoadMe
     }
 
     networkLoadMetrics.workerStart = m_workerStart;
+
+    if (networkLoadMetrics.responseBodyBytesReceived != std::numeric_limits<uint64_t>::max())
+        updateBytesTransferredOverNetwork(networkLoadMetrics.responseBodyBytesReceived);
 
     ASSERT_WITH_MESSAGE(!m_isProcessingNetworkResponse, "Load should not be able to finish before we've validated the response");
     coreLoader->didFinishLoading(networkLoadMetrics);
@@ -382,6 +381,22 @@ void WebResourceLoader::contentFilterDidBlockLoad(const WebCore::ContentFilterUn
     documentLoader->cancelMainResourceLoad(error);
 }
 #endif // ENABLE(CONTENT_FILTERING)
+
+void WebResourceLoader::updateBytesTransferredOverNetwork(uint64_t bytesTransferredOverNetwork)
+{
+#if ENABLE(CONTENT_EXTENSIONS)
+    CheckedSize delta = bytesTransferredOverNetwork - m_bytesTransferredOverNetwork;
+    ASSERT(!delta.hasOverflowed());
+
+    if (delta) {
+        RefPtr coreLoader = m_coreLoader;
+        if (RefPtr resourceMonitor = coreLoader ? coreLoader->resourceMonitorIfExists() : nullptr)
+            resourceMonitor->addNetworkUsage(delta);
+    }
+#endif
+
+    m_bytesTransferredOverNetwork = bytesTransferredOverNetwork;
+}
 
 RefPtr<WebCore::ResourceLoader> WebResourceLoader::protectedCoreLoader() const
 {

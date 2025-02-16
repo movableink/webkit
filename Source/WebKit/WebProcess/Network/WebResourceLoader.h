@@ -107,11 +107,14 @@ private:
 #if ENABLE(CONTENT_FILTERING)
     void contentFilterDidBlockLoad(const WebCore::ContentFilterUnblockHandler&, String&& unblockRequestDeniedScript, const WebCore::ResourceError&, const URL& blockedPageURL, WebCore::SubstituteData&&);
 #endif
-    
+
+    void updateBytesTransferredOverNetwork(uint64_t bytesTransferredOverNetwork);
+
     RefPtr<WebCore::ResourceLoader> m_coreLoader;
     const TrackingParameters m_trackingParameters;
     WebResourceInterceptController m_interceptController;
     size_t m_numBytesReceived { 0 };
+    size_t m_bytesTransferredOverNetwork { 0 };
 
 #if ASSERT_ENABLED
     bool m_isProcessingNetworkResponse { false };

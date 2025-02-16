@@ -82,7 +82,7 @@ public:
     void addConnection(Ref<WebSharedWorkerServerConnection>&&);
     void removeConnection(WebCore::ProcessIdentifier);
 
-    void reportNetworkUsageToAllSharedWorkerClients(WebCore::SharedWorkerIdentifier, size_t bytesTransferredOverNetworkDelta);
+    void reportNetworkUsageToAllSharedWorkerClients(WebCore::SharedWorkerIdentifier, size_t bytesTransferredOverNetwork);
 
 private:
     void createContextConnection(const WebCore::Site&, std::optional<WebCore::ProcessIdentifier> requestingProcessIdentifier);

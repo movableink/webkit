@@ -42,6 +42,7 @@
 #include "TrustedType.h"
 #include "WorkerOptions.h"
 #include <JavaScriptCore/IdentifiersFactory.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -192,14 +193,19 @@ void SharedWorker::resume()
     }
 }
 
-void SharedWorker::reportNetworkUsage(size_t bytesTransferredOverNetworkDelta)
+void SharedWorker::reportNetworkUsage(size_t bytesTransferredOverNetwork)
 {
 #if ENABLE(CONTENT_EXTENSIONS)
-    if (RefPtr resourceMonitor = m_resourceMonitor)
-        resourceMonitor->addNetworkUsage(bytesTransferredOverNetworkDelta);
-#else
-    UNUSED_PARAM(bytesTransferredOverNetworkDelta);
+    CheckedSize delta = bytesTransferredOverNetwork - m_bytesTransferredOverNetwork;
+    ASSERT(!delta.hasOverflowed());
+
+    if (delta) {
+        if (RefPtr resourceMonitor = m_resourceMonitor)
+            resourceMonitor->addNetworkUsage(delta);
+    }
 #endif
+
+    m_bytesTransferredOverNetwork = bytesTransferredOverNetwork;
 }
 
 #undef SHARED_WORKER_RELEASE_LOG
