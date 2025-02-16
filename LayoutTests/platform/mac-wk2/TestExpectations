@@ -1967,5 +1967,3 @@ webkit.org/b/287122 [ Ventura+ ] imported/w3c/web-platform-tests/html/capability
 [ arm64 ] fast/webgpu/nocrash/fuzz-287444.html [ Skip ]
 
 webkit.org/b/287679 [ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/modal-pseudo-class-in-has.html [ Pass Failure ]
-
-webkit.org/b/287753 [ Debug ] http/tests/cache/network-error-during-revalidation.html [ Skip ]
