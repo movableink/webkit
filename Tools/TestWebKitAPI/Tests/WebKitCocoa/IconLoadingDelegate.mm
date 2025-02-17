@@ -98,7 +98,8 @@ static constexpr auto mainBody =
 TEST(IconLoading, DefaultFavicon)
 {
     TestWebKitAPI::HTTPServer server({
-        { "/"_s, { mainBody } }
+        { "/"_s, { mainBody } },
+        { "/favicon.ico"_s, { "Actual response is immaterial."_s } },
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
@@ -138,7 +139,8 @@ TEST(IconLoading, AlreadyCachedIcon)
 
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { "Oh, hello there!"_s } },
-        { "/favicon.ico"_s, { iconDataFromDisk.get() } }
+        { "/favicon.ico"_s, { iconDataFromDisk.get() } },
+        { "/main"_s, { "Main? Yes."_s } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
