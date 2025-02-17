@@ -4190,6 +4190,9 @@
     "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/button-event-dispatch.tentative.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/command-reflection.tentative.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/fullscreen-behavior.tentative.html": [
         "slow"
     ],
@@ -4221,6 +4224,18 @@
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-video-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/interest-target/interesttarget-basic-delays.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/interest-target/interesttarget-hide-delay.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/interest-target/interesttarget-keyboard-behavior.tentative.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/html/semantics/the-button-element/interest-target/interesttarget-show-delay.tentative.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/syntax/parsing/html5lib_adoption01.html": [

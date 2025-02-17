@@ -36,6 +36,6 @@ PASS event does not dispatch if invoker is disabled
 PASS event does NOT dispatch if button is form associated, with implicit type
 PASS event dispatches if button is form associated, with explicit type=button
 PASS event does NOT dispatch if button is form associated, with explicit type=submit
-PASS event does NOT dispatch if button is form associated, with explicit type=reset
+FAIL event does dispatch if button is form associated, with explicit type=reset assert_true: event was called expected true got false
 PASS event dispatches if invokee is non-HTML Element
 

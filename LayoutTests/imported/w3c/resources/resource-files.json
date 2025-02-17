@@ -10071,6 +10071,7 @@
         "web-platform-tests/html/semantics/text-level-semantics/the-br-element/br-bidi-ref.html",
         "web-platform-tests/html/semantics/text-level-semantics/the-ruby-element/ruby-usage-notref.html",
         "web-platform-tests/html/semantics/text-level-semantics/the-wbr-element/wbr-element-ref.html",
+        "web-platform-tests/html/semantics/the-button-element/interest-target/interesttarget-keyboard-invalidation-ref.html",
         "web-platform-tests/html/syntax/charset/references/after-1kb-ref.html",
         "web-platform-tests/html/syntax/charset/references/after-bogus-after-1kb-ref.html",
         "web-platform-tests/html/syntax/charset/references/after-bogus-ref.html",

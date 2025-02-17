@@ -2954,6 +2954,9 @@ imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-co
 imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-input-number.tentative.html [ Skip ]
 imported/w3c/web-platform-tests/html/semantics/the-button-element/command-and-commandfor/on-video-behavior.tentative.html [ Skip ]
 
+# interesttarget failures - not specced yet
+imported/w3c/web-platform-tests/html/semantics/the-button-element/interest-target/interesttarget-keyboard-invalidation.tentative.html [ ImageOnlyFailure ]
+
 # text-transform: full-width
 # no full width mapping for characters ( and )
 imported/w3c/web-platform-tests/css/css-text/text-transform/text-transform-fullwidth-001.xht [ ImageOnlyFailure ]
