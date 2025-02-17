@@ -77,14 +77,15 @@ WebDriverService::~WebDriverService()
 
 static void printUsageStatement(const char* programName)
 {
-    printf("Usage: %s options\n", programName);
-    printf("  -h,          --help             Prints this help message\n");
-    printf("  -p <port>,   --port=<port>      Port number the driver will use\n");
-    printf("               --host=<host>      Host IP the driver will use, or either 'local' or 'all' (default: 'local')\n");
-    printf("  -t <ip:port> --target=<ip:port> Target IP and port\n");
+    SAFE_PRINTF("Usage: %s options\n", String::fromLatin1(programName).utf8());
+    SAFE_PRINTF("  -h,          --help             Prints this help message\n");
+    SAFE_PRINTF("  -p <port>,   --port=<port>      Port number the driver will use\n");
+    SAFE_PRINTF("               --host=<host>      Host IP the driver will use, or either 'local' or 'all' (default: 'local')\n");
+    SAFE_PRINTF("  -t <ip:port> --target=<ip:port> Target IP and port\n");
 #if ENABLE(WEBDRIVER_BIDI)
-    printf("               --bidi-port=<port>        Port number to use for BiDi's WebSocket connections\n");
+    SAFE_PRINTF("               --bidi-port=<port>        Port number to use for BiDi's WebSocket connections\n");
 #endif
+    SAFE_PRINTF("               --replace-on-new-session  Replace the existing session on new session request\n");
 }
 
 int WebDriverService::run(int argc, char** argv)
@@ -145,6 +146,11 @@ int WebDriverService::run(int argc, char** argv)
         static constexpr auto targetArgument = "--target="_span;
         if (spanHasPrefix(arg, targetArgument) && targetString.isNull()) {
             targetString = arg.subspan(targetArgument.size());
+            continue;
+        }
+
+        if (equalSpans(arg, "--replace-on-new-session"_span)) {
+            m_replaceOnNewSession = true;
             continue;
         }
     }
@@ -1019,18 +1025,35 @@ void WebDriverService::newSession(RefPtr<JSON::Object>&& parameters, Function<vo
 {
     // §8.1 New Session.
     // https://www.w3.org/TR/webdriver/#new-session
-    if (m_session) {
-        completionHandler(CommandResult::fail(CommandResult::ErrorCode::SessionNotCreated, String("Maximum number of active sessions"_s)));
-        return;
-    }
-
     auto matchedCapabilitiesList = processCapabilities(*parameters, completionHandler);
     if (matchedCapabilitiesList.isEmpty())
         return;
 
-    // Reverse the vector to always take last item.
-    matchedCapabilitiesList.reverse();
-    connectToBrowser(WTFMove(matchedCapabilitiesList), WTFMove(completionHandler));
+    if (!m_session) {
+        // Reverse the vector to always take last item.
+        matchedCapabilitiesList.reverse();
+        connectToBrowser(WTFMove(matchedCapabilitiesList), WTFMove(completionHandler));
+        return;
+    }
+
+    if (m_replaceOnNewSession) {
+        RELEASE_LOG(WebDriverClassic, "WebDriverService::newSession: Replacing existing session.");
+        auto session = std::exchange(m_session, nullptr);
+        session->close([this, session, matchedCapabilitiesList, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
+#if ENABLE(WEBDRIVER_BIDI)
+            m_bidiServer.disconnectSession(session->id());
+#endif
+            // Ignore unknown errors when closing the session if the session has abeen actually closed.
+            if ((!result.isError()) || (result.errorCode() == CommandResult::ErrorCode::UnknownError && !session->isConnected())) {
+                matchedCapabilitiesList.reverse();
+                connectToBrowser(WTFMove(matchedCapabilitiesList), WTFMove(completionHandler));
+            } else
+                completionHandler(WTFMove(result));
+        });
+        return;
+    }
+    RELEASE_LOG(WebDriverClassic, "WebDriverService::newSession: Maximum number of active sessions reached. Returning error.");
+    completionHandler(CommandResult::fail(CommandResult::ErrorCode::SessionNotCreated, String("Maximum number of active sessions"_s)));
 }
 
 void WebDriverService::connectToBrowser(Vector<Capabilities>&& capabilitiesList, Function<void (CommandResult&&)>&& completionHandler)
@@ -1173,7 +1196,7 @@ void WebDriverService::deleteSession(RefPtr<JSON::Object>&& parameters, Function
 #if ENABLE(WEBDRIVER_BIDI)
         m_bidiServer.disconnectSession(session->id());
 #endif
-        // Ignore unknown errors when closing the session if the browser is closed.
+        // Ignore unknown errors when closing the session if the session has abeen actually closed.
         if (result.isError() && result.errorCode() == CommandResult::ErrorCode::UnknownError && !session->isConnected())
             completionHandler(CommandResult::success());
         else

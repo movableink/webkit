@@ -183,6 +183,8 @@ private:
 
     String m_targetAddress;
     uint16_t m_targetPort { 0 };
+
+    bool m_replaceOnNewSession { false };
 };
 
 } // namespace WebDriver
