@@ -68,7 +68,7 @@ void StringBuilder::reifyString() const
     if (m_length == m_buffer->length())
         m_string = m_buffer.get();
     else
-        m_string = StringImpl::createSubstringSharingImpl(*m_buffer, 0, m_length);
+        m_string = StringImpl::createSubstringSharingImpl(Ref { *m_buffer }, 0, m_length);
 }
 
 void StringBuilder::shrink(unsigned newLength)

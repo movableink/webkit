@@ -480,7 +480,7 @@ template<typename CharacterType> static String makeStringBySimplifyingNewLinesSl
         }
     }
     if (resultLength < length)
-        result = StringImpl::createSubstringSharingImpl(*result.impl(), 0, resultLength);
+        result = StringImpl::createSubstringSharingImpl(Ref { *result.impl() }, 0, resultLength);
     return result;
 }
 

@@ -8,7 +8,6 @@ wtf/PrintStream.h
 wtf/ThreadGroup.cpp
 wtf/WorkerPool.cpp
 wtf/text/AtomStringImpl.cpp
-wtf/text/StringBuilder.cpp
 wtf/text/StringView.cpp
 wtf/text/WTFString.cpp
 wtf/text/cf/StringCF.cpp
