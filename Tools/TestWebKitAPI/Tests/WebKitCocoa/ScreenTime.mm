@@ -48,7 +48,7 @@ static bool receivedLoadMessage = false;
 static bool hasVideoInPictureInPictureValue = false;
 static bool hasVideoInPictureInPictureCalled = false;
 
-static RetainPtr<TestWKWebView> webViewForScreenTimeTests(WKWebViewConfiguration *configuration = nil)
+static RetainPtr<TestWKWebView> webViewForScreenTimeTests(WKWebViewConfiguration *configuration = nil, BOOL addToWindow = YES)
 {
     if (!configuration)
         configuration = adoptNS([[WKWebViewConfiguration alloc] init]).autorelease();
@@ -58,7 +58,7 @@ static RetainPtr<TestWKWebView> webViewForScreenTimeTests(WKWebViewConfiguration
         if ([feature.key isEqualToString:@"ScreenTimeEnabled"])
             [preferences _setEnabled:YES forFeature:feature];
     }
-    return adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 300) configuration:configuration]);
+    return adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 300) configuration:configuration addToWindow:addToWindow]);
 }
 
 static void testSuppressUsageRecordingWithDataStore(RetainPtr<WKWebsiteDataStore>&& websiteDataStore, bool suppressUsageRecordingExpectation)
@@ -340,6 +340,46 @@ TEST(ScreenTime, ShowSystemScreenTimeBlockingFalseAndRemoved)
     EXPECT_FALSE([[webView configuration] _showsSystemScreenTimeBlockingView]);
     // Check if blurred blocking view is removed when URLIsBlocked is false.
     EXPECT_FALSE(blurredViewIsPresent(webView.get()));
+}
+
+TEST(ScreenTime, WKWebViewFillsStackView)
+{
+    CGRect windowRect = CGRectMake(0, 0, 800, 600);
+
+    RetainPtr webView = webViewForScreenTimeTests(nil, NO);
+    [webView setTranslatesAutoresizingMaskIntoConstraints:NO];
+    [webView synchronouslyLoadHTMLString:@"<style> body { background-color: red; } </style>"];
+
+#if PLATFORM(MAC)
+    RetainPtr stackView = adoptNS([[NSStackView alloc] init]);
+    RetainPtr window = adoptNS([[NSWindow alloc] initWithContentRect:NSRectFromCGRect(windowRect) styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO]);
+    RetainPtr contentView = [window contentView];
+#else
+    RetainPtr stackView = adoptNS([[UIStackView alloc] init]);
+    RetainPtr hostWindow = adoptNS([[UIWindow alloc] initWithFrame:windowRect]);
+    RetainPtr contentView = hostWindow;
+#endif
+
+    [contentView addSubview:stackView.get()];
+    [stackView addArrangedSubview:webView.get()];
+
+    [stackView setTranslatesAutoresizingMaskIntoConstraints:NO];
+    [NSLayoutConstraint activateConstraints:@[
+        [[stackView topAnchor] constraintEqualToAnchor:[contentView topAnchor]],
+        [[stackView leadingAnchor] constraintEqualToAnchor:[contentView leadingAnchor]],
+        [[stackView bottomAnchor] constraintEqualToAnchor:[contentView bottomAnchor]],
+        [[stackView trailingAnchor] constraintEqualToAnchor:[contentView trailingAnchor]]
+    ]];
+
+#if PLATFORM(MAC)
+    [window makeKeyAndOrderFront:nil];
+#else
+    [hostWindow setHidden:NO];
+    [hostWindow setNeedsLayout];
+    [hostWindow layoutIfNeeded];
+#endif
+
+    EXPECT_TRUE(CGRectEqualToRect([webView frame], windowRect));
 }
 
 TEST(ScreenTime, URLIsPlayingVideo)

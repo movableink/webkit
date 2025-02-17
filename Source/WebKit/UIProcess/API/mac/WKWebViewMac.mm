@@ -211,6 +211,10 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (void)renewGState
 ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
+#if ENABLE(SCREEN_TIME)
+    [self _updateScreenTimeViewGeometry];
+#endif
+
     if (_impl)
         _impl->renewGState();
     [super renewGState];

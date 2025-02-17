@@ -180,6 +180,10 @@ static WebCore::IntDegrees deviceOrientationForUIInterfaceOrientation(UIInterfac
 
 - (void)layoutSubviews
 {
+#if ENABLE(SCREEN_TIME)
+    [self _updateScreenTimeViewGeometry];
+#endif
+
     [_warningView setFrame:self.bounds];
     [super layoutSubviews];
     [self _frameOrBoundsMayHaveChanged];
