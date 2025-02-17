@@ -183,8 +183,6 @@ void InspectorTimelineAgent::internalStart(std::optional<int>&& maxCallStackDept
 
 void InspectorTimelineAgent::internalStop()
 {
-    ASSERT(tracking());
-
     m_instrumentingAgents.setTrackingTimelineAgent(nullptr);
 
     m_environment.debugger()->removeObserver(*this, true);
