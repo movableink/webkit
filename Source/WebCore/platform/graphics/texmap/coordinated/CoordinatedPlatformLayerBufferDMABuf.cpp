@@ -109,9 +109,7 @@ static RefPtr<BitmapTexture> importToTexture(const IntSize& size, const IntSize&
     if (!image)
         return nullptr;
 
-    auto texture = textureMapper.acquireTextureFromPool(size, textureFlags);
-    glBindTexture(GL_TEXTURE_2D, texture->id());
-    glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
+    auto texture = textureMapper.createTextureForImage(image, textureFlags);
     display.destroyEGLImage(image);
     return texture;
 }

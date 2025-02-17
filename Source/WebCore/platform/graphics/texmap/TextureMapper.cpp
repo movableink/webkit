@@ -231,6 +231,13 @@ Ref<BitmapTexture> TextureMapper::acquireTextureFromPool(const IntSize& size, Op
     return m_texturePool.acquireTexture(size, flags);
 }
 
+#if USE(GBM)
+Ref<BitmapTexture> TextureMapper::createTextureForImage(EGLImage image, OptionSet<BitmapTexture::Flags> flags)
+{
+    return m_texturePool.createTextureForImage(image, flags);
+}
+#endif
+
 #if USE(GRAPHICS_LAYER_WC)
 void TextureMapper::releaseUnusedTexturesNow()
 {

@@ -31,6 +31,8 @@
 #include "BitmapTexture.h"
 #include <wtf/RunLoop.h>
 
+typedef void *EGLImage;
+
 namespace WebCore {
 class BitmapTexturePool;
 }
@@ -51,6 +53,9 @@ public:
     BitmapTexturePool();
 
     Ref<BitmapTexture> acquireTexture(const IntSize&, OptionSet<BitmapTexture::Flags>);
+#if USE(GBM)
+    Ref<BitmapTexture> createTextureForImage(EGLImage, OptionSet<BitmapTexture::Flags>);
+#endif
     void releaseUnusedTexturesTimerFired();
 
 private:
@@ -71,6 +76,9 @@ private:
     void exitLimitExceededModeIfNeeded();
 
     Vector<Entry> m_textures;
+#if USE(GBM)
+    Vector<Ref<BitmapTexture>> m_imageTextures;
+#endif
     RunLoop::Timer m_releaseUnusedTexturesTimer;
     uint64_t m_poolSize { 0 };
     bool m_onLimitExceededMode { false };

@@ -73,6 +73,16 @@ Ref<BitmapTexture> BitmapTexturePool::acquireTexture(const IntSize& size, Option
     return selectedEntry->m_texture;
 }
 
+#if USE(GBM)
+Ref<BitmapTexture> BitmapTexturePool::createTextureForImage(EGLImage image, OptionSet<BitmapTexture::Flags> flags)
+{
+    auto texture = BitmapTexture::create(image, flags);
+    m_imageTextures.append(texture.copyRef());
+    scheduleReleaseUnusedTextures();
+    return texture;
+}
+#endif
+
 void BitmapTexturePool::scheduleReleaseUnusedTextures()
 {
     if (m_releaseUnusedTexturesTimer.isActive())
@@ -83,24 +93,34 @@ void BitmapTexturePool::scheduleReleaseUnusedTextures()
 
 void BitmapTexturePool::releaseUnusedTexturesTimerFired()
 {
-    if (m_textures.isEmpty())
-        return;
+    if (!m_textures.isEmpty()) {
+        // Delete entries, which have been unused in releaseUnusedSecondsTolerance.
+        MonotonicTime minUsedTime = MonotonicTime::now() - m_releaseUnusedSecondsTolerance;
 
-    // Delete entries, which have been unused in releaseUnusedSecondsTolerance.
-    MonotonicTime minUsedTime = MonotonicTime::now() - m_releaseUnusedSecondsTolerance;
+        m_textures.removeAllMatching([this, &minUsedTime](const Entry& entry) {
+            if (entry.canBeReleased(minUsedTime)) {
+                m_poolSize -= entry.m_texture->size().unclampedArea();
+                return true;
+            }
+            return false;
+        });
 
-    m_textures.removeAllMatching([this, &minUsedTime](const Entry& entry) {
-        if (entry.canBeReleased(minUsedTime)) {
-            m_poolSize -= entry.m_texture->size().unclampedArea();
-            return true;
-        }
-        return false;
-    });
+        exitLimitExceededModeIfNeeded();
+    }
 
-    exitLimitExceededModeIfNeeded();
+#if USE(GBM)
+    if (!m_imageTextures.isEmpty()) {
+        m_imageTextures.removeAllMatching([](const BitmapTexture& texture) {
+            return texture.refCount() == 1;
+        });
+    }
 
+    if (!m_textures.isEmpty() && !m_imageTextures.isEmpty())
+        scheduleReleaseUnusedTextures();
+#else
     if (!m_textures.isEmpty())
         scheduleReleaseUnusedTextures();
+#endif
 }
 
 void BitmapTexturePool::enterLimitExceededModeIfNeeded()

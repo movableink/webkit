@@ -38,6 +38,8 @@
 // TextureMapper is a mechanism that enables hardware acceleration of CSS animations (accelerated compositing) without
 // a need for a platform specific scene-graph library like CoreAnimation.
 
+typedef void *EGLImage;
+
 namespace WebCore {
 
 class ClipPath;
@@ -95,6 +97,9 @@ public:
     RefPtr<BitmapTexture> applyFilters(RefPtr<BitmapTexture>&, const FilterOperations&, bool defersLastPass);
 
     WEBCORE_EXPORT Ref<BitmapTexture> acquireTextureFromPool(const IntSize&, OptionSet<BitmapTexture::Flags>);
+#if USE(GBM)
+    WEBCORE_EXPORT Ref<BitmapTexture> createTextureForImage(EGLImage, OptionSet<BitmapTexture::Flags>);
+#endif
 
 #if USE(GRAPHICS_LAYER_WC)
     WEBCORE_EXPORT void releaseUnusedTexturesNow();

@@ -37,6 +37,8 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
+typedef void *EGLImage;
+
 namespace WebCore {
 
 class GraphicsLayer;
@@ -55,6 +57,13 @@ public:
     {
         return adoptRef(*new BitmapTexture(size, flags));
     }
+
+#if USE(GBM)
+    static Ref<BitmapTexture> create(EGLImage image, OptionSet<Flags> flags = { })
+    {
+        return adoptRef(*new BitmapTexture(image, flags));
+    }
+#endif
 
     WEBCORE_EXPORT ~BitmapTexture();
 
@@ -89,6 +98,9 @@ public:
 
 private:
     BitmapTexture(const IntSize&, OptionSet<Flags>);
+#if USE(GBM)
+    BitmapTexture(EGLImage, OptionSet<Flags>);
+#endif
 
     void clearIfNeeded();
     void createFboIfNeeded();
