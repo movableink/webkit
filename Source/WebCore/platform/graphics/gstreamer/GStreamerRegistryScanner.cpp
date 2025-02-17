@@ -255,7 +255,7 @@ GStreamerRegistryScanner::RegistryLookupResult GStreamerRegistryScanner::Element
     return hasElementForCaps(factoryType, caps, shouldCheckHardwareClassifier, disallowedList);
 }
 
-static Vector<GRefPtr<GstElementFactory>> findCompatibleFactories(GList* list, const GRefPtr<GstCaps>& caps, GstPadDirection direction)
+static Vector<GRefPtr<GstElementFactory>> findCompatibleFactories(GList* list, const GRefPtr<GstCaps>& caps, GstPadDirection direction, std::optional<Vector<String>> disallowedList)
 {
     Vector<GRefPtr<GstElementFactory>> results;
     results.reserveInitialCapacity(g_list_length(list));
@@ -271,6 +271,11 @@ static Vector<GRefPtr<GstElementFactory>> findCompatibleFactories(GList* list, c
             if (gst_caps_is_any(templateCaps.get()) || !gst_caps_can_intersect(caps.get(), templateCaps.get()))
                 continue;
 
+            if (disallowedList && !disallowedList->isEmpty()) {
+                auto name = StringView::fromLatin1(gst_plugin_feature_get_name(GST_PLUGIN_FEATURE_CAST(factory)));
+                if (disallowedList->contains(name))
+                    continue;
+            }
             results.append(factory);
             break;
         }
@@ -294,30 +299,12 @@ GStreamerRegistryScanner::RegistryLookupResult GStreamerRegistryScanner::Element
 
     // We can't use gst_element_factory_list_filter here because it would allow-list elements with
     // pads using ANY in their caps template.
-    auto candidates = findCompatibleFactories(elementFactories, caps, padDirection);
+    auto candidates = findCompatibleFactories(elementFactories, caps, padDirection, disallowedList);
     bool isSupported = !candidates.isEmpty();
     bool isUsingHardware = false;
     GRefPtr<GstElementFactory> selectedFactory;
     if (isSupported)
         selectedFactory = candidates.first();
-
-    if (disallowedList && !disallowedList->isEmpty()) {
-        bool hasValidCandidate = false;
-        for (auto& factory : candidates) {
-            String name = String::fromUTF8(gst_plugin_feature_get_name(GST_PLUGIN_FEATURE_CAST(factory.get())));
-            if (disallowedList->contains(name))
-                continue;
-
-            selectedFactory = factory;
-            hasValidCandidate = true;
-            break;
-        }
-        if (!hasValidCandidate) {
-            GST_WARNING("All %s elements matching caps %" GST_PTR_FORMAT " are disallowed", elementFactoryTypeToString(factoryType), caps.get());
-            isSupported = false;
-            shouldCheckHardwareClassifier = CheckHardwareClassifier::No;
-        }
-    }
 
     if (shouldCheckHardwareClassifier == CheckHardwareClassifier::Yes) {
         for (auto& factory : candidates) {
@@ -462,7 +449,7 @@ void GStreamerRegistryScanner::initializeDecoders(const GStreamerRegistryScanner
     bool matroskaSupported = factories.hasElementForMediaType(ElementFactories::Type::Demuxer, "video/x-matroska"_s);
     if (matroskaSupported) {
         auto vp8DecoderAvailable = factories.hasElementForMediaType(ElementFactories::Type::VideoDecoder, "video/x-vp8"_s, ElementFactories::CheckHardwareClassifier::Yes, { { "vp8alphadecodebin"_s } });
-        auto vp9DecoderAvailable = factories.hasElementForMediaType(ElementFactories::Type::VideoDecoder, "video/x-vp9"_s, ElementFactories::CheckHardwareClassifier::Yes, { { "vp9alphadecodebin"_s } });
+        auto vp9DecoderAvailable = factories.hasElementForMediaType(ElementFactories::Type::VideoDecoder, "video/x-vp9"_s, ElementFactories::CheckHardwareClassifier::Yes, { { "vp9alphadecodebin"_s, "vavp9alphadecodebin"_s } });
 
         if (vp8DecoderAvailable || vp9DecoderAvailable)
             m_decoderMimeTypeSet.add("video/webm"_s);
