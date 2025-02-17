@@ -3039,3 +3039,6 @@ webkit.org/b/286602 media/media-source/media-detachablemse-append.html [ Pass Fa
 webkit.org/b/255555 [ Ventura+ ] imported/w3c/web-platform-tests/xhr/request-content-length.any.worker.html [ Pass Failure ]
 
 webkit.org/b/287713 printing/background-clip-text.html [ Failure ]
+
+webkit.org/b/287810 http/tests/webarchive/cross-origin-stylesheet-crash.html [ Failure ]
+
