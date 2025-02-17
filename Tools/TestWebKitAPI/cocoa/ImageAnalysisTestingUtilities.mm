@@ -224,7 +224,8 @@
 
 - (CGImageRef)createCGImage
 {
-    return _image.get();
+    // VKCRemoveBackgroundResult expects callers to release this CGImage, so we need to leak a +1 retain count.
+    return RetainPtr { _image }.leakRef();
 }
 
 - (CGRect)cropRect

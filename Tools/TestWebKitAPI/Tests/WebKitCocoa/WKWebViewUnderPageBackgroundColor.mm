@@ -136,6 +136,12 @@ TEST(WKWebViewUnderPageBackgroundColor, MultipleBlendedColors)
     return self;
 }
 
+- (void)dealloc
+{
+    [_webView removeObserver:self forKeyPath:@"underPageBackgroundColor"];
+    [super dealloc];
+}
+
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
     if ([_state isEqualToString:@"before-init"]) {

@@ -3343,6 +3343,8 @@
 		A198D0A12BC64D8E0058BBEB /* NowPlayingMetadataObserver.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NowPlayingMetadataObserver.mm; sourceTree = "<group>"; };
 		A1A4FE5D18DD3DB700B5EA8A /* Download.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Download.mm; sourceTree = "<group>"; };
 		A1AD38272C3D9FAF003499BE /* FullscreenLifecycle.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FullscreenLifecycle.mm; sourceTree = "<group>"; };
+		A1AE4A092D5DBFCC00320629 /* HostWindowManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = HostWindowManager.h; path = cocoa/HostWindowManager.h; sourceTree = "<group>"; };
+		A1AE4A0A2D5DBFCC00320629 /* HostWindowManager.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = HostWindowManager.mm; path = cocoa/HostWindowManager.mm; sourceTree = "<group>"; };
 		A1C142C124AA7B2E00444207 /* ContextMenuMouseEvents.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ContextMenuMouseEvents.mm; sourceTree = "<group>"; };
 		A1C1F5E72C9C96C00042E924 /* TestWebKitAPI.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = TestWebKitAPI.xctestplan; sourceTree = "<group>"; };
 		A1C4FB6C1BACCE50003742D0 /* QuickLook.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = QuickLook.mm; sourceTree = "<group>"; };
@@ -4163,6 +4165,8 @@
 				3302A64D2A11B4410093FA2A /* DragAndDropSimulator.mm */,
 				F44D06481F3962E3001A0E29 /* EditingTestHarness.h */,
 				F44D06491F3962E3001A0E29 /* EditingTestHarness.mm */,
+				A1AE4A092D5DBFCC00320629 /* HostWindowManager.h */,
+				A1AE4A0A2D5DBFCC00320629 /* HostWindowManager.mm */,
 				5C7C24FB237C972300599C91 /* HTTPServer.h */,
 				5C7C24FA237C972300599C91 /* HTTPServer.mm */,
 				F42F081727449FFD007E0D90 /* ImageAnalysisTestingUtilities.h */,

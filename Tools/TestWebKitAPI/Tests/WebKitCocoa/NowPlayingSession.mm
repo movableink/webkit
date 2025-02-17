@@ -69,6 +69,8 @@ TEST(NowPlayingSession, HasSession)
         TestWebKitAPI::Util::run(&hasActiveNowPlayingSessionChanged);
 
     ASSERT_TRUE([webView _hasActiveNowPlayingSession]);
+
+    [webView removeObserver:observer.get() forKeyPath:nowPlayingSessionKeyPath];
 }
 
 TEST(NowPlayingSession, NavigateAfterHasSession)
@@ -96,6 +98,8 @@ TEST(NowPlayingSession, NavigateAfterHasSession)
         TestWebKitAPI::Util::run(&hasActiveNowPlayingSessionChanged);
 
     ASSERT_FALSE([webView _hasActiveNowPlayingSession]);
+
+    [webView removeObserver:observer.get() forKeyPath:nowPlayingSessionKeyPath];
 }
 
 TEST(NowPlayingSession, NavigateToFragmentAfterHasSession)
@@ -120,6 +124,8 @@ TEST(NowPlayingSession, NavigateToFragmentAfterHasSession)
     [webView _test_waitForDidSameDocumentNavigation];
 
     ASSERT_TRUE([webView _hasActiveNowPlayingSession]);
+
+    [webView removeObserver:observer.get() forKeyPath:nowPlayingSessionKeyPath];
 }
 
 TEST(NowPlayingSession, LoadSubframeAfterHasSession)
@@ -144,6 +150,8 @@ TEST(NowPlayingSession, LoadSubframeAfterHasSession)
     [webView waitForMessage:@"subframeLoaded"];
 
     ASSERT_TRUE([webView _hasActiveNowPlayingSession]);
+
+    [webView removeObserver:observer.get() forKeyPath:nowPlayingSessionKeyPath];
 }
 
 @end

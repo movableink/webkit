@@ -368,6 +368,8 @@ TEST(WebKit2, ToggleScreenshare)
     messageReceived = false;
     [webView stringByEvaluatingJavaScript:@"validateActionState('setScreenshareActive successful, muting screenshare, setScreenshareActive successful, unmuting screenshare, end')"];
     TestWebKitAPI::Util::run(&messageReceived);
+
+    [webView removeObserver:observer.get() forKeyPath:@"_displayCaptureState"];
 }
 
 } // namespace TestWebKitAPI

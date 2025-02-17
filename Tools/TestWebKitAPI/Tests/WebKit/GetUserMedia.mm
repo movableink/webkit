@@ -621,6 +621,9 @@ TEST(WebKit, TransferTrackBetweenSameProcessPages)
 
     EXPECT_EQ(webView2.get().microphoneCaptureState, WKMediaCaptureStateActive);
     EXPECT_EQ(webView2.get().cameraCaptureState, WKMediaCaptureStateActive);
+
+    [webView2 removeObserver:observer.get() forKeyPath:@"microphoneCaptureState"];
+    [webView2 removeObserver:observer.get() forKeyPath:@"cameraCaptureState"];
 }
 
 static constexpr auto KeepPermissionForWebAppSameOriginNavigationsText = R"DOCDOCDOC(
@@ -776,6 +779,9 @@ TEST(WebKit, InterruptionBetweenGetDisplayMediaAndGetUserMedia)
 
     cameraCaptureStateChange = false;
     EXPECT_TRUE(waitUntilCameraState(webView1.get(), WKMediaCaptureStateMuted));
+
+    [webView1 removeObserver:observer.get() forKeyPath:@"microphoneCaptureState"];
+    [webView1 removeObserver:observer.get() forKeyPath:@"cameraCaptureState"];
 }
 #endif // PLATFORM(MAC)
 
@@ -1640,6 +1646,9 @@ TEST(WebKit2, ConnectedToHardwareConsole)
     while (--retryCount)
         TestWebKitAPI::Util::spinRunLoop(10);
     EXPECT_TRUE(cameraCaptureState == WKMediaCaptureStateMuted);
+
+    [webView removeObserver:observer.get() forKeyPath:@"microphoneCaptureState"];
+    [webView removeObserver:observer.get() forKeyPath:@"cameraCaptureState"];
 }
 
 TEST(WebKit2, DoNotUnmuteWhenTakingAThumbnail)
@@ -1670,6 +1679,9 @@ TEST(WebKit2, DoNotUnmuteWhenTakingAThumbnail)
         TestWebKitAPI::Util::spinRunLoop(10);
     }
     EXPECT_TRUE(cameraCaptureState == WKMediaCaptureStateMuted);
+
+    [webView removeObserver:observer.get() forKeyPath:@"microphoneCaptureState"];
+    [webView removeObserver:observer.get() forKeyPath:@"cameraCaptureState"];
 }
 #endif
 
@@ -1752,6 +1764,9 @@ TEST(WebKit2, WebRTCAndRemoteCommands)
 
     EXPECT_TRUE(waitUntilCameraState(webView.get(), WKMediaCaptureStateActive));
     EXPECT_TRUE(waitUntilMicrophoneState(webView.get(), WKMediaCaptureStateActive));
+
+    [webView removeObserver:observer.get() forKeyPath:@"microphoneCaptureState"];
+    [webView removeObserver:observer.get() forKeyPath:@"cameraCaptureState"];
 }
 
 TEST(WebKit2, ToggleCameraCaptureWhenRestarting)
@@ -1815,6 +1830,9 @@ TEST(WebKit2, ToggleCameraCaptureWhenRestarting)
     done = false;
     [webView stringByEvaluatingJavaScript:@"validateActionState('deactivating camera, muting camera, deactivating microphone, muting microphone, setCameraActive successful, unmuting camera, end')"];
     TestWebKitAPI::Util::run(&done);
+
+    [webView removeObserver:observer.get() forKeyPath:@"microphoneCaptureState"];
+    [webView removeObserver:observer.get() forKeyPath:@"cameraCaptureState"];
 }
 
 TEST(WebKit2, ToggleMicrophoneCaptureWhenRestarting)
@@ -1882,6 +1900,9 @@ TEST(WebKit2, ToggleMicrophoneCaptureWhenRestarting)
     done = false;
     [webView stringByEvaluatingJavaScript:@"validateActionState('deactivating camera, muting camera, deactivating microphone, muting microphone, setMicrophoneActive successful, unmuting microphone, end')"];
     TestWebKitAPI::Util::run(&done);
+
+    [webView removeObserver:observer.get() forKeyPath:@"microphoneCaptureState"];
+    [webView removeObserver:observer.get() forKeyPath:@"cameraCaptureState"];
 }
 #endif // WK_HAVE_C_SPI
 

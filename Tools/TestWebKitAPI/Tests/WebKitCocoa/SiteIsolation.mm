@@ -3398,6 +3398,9 @@ TEST(SiteIsolation, ThemeColor)
     Util::run(&observedThemeColor);
     Util::run(&observedUnderPageBackgroundColor);
     Util::runFor(0.1_s);
+
+    [webView.get() removeObserver:observer.get() forKeyPath:@"themeColor"];
+    [webView.get() removeObserver:observer.get() forKeyPath:@"underPageBackgroundColor"];
 }
 
 static WebViewAndDelegates makeWebViewAndDelegates(HTTPServer& server)
