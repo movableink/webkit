@@ -3881,4 +3881,99 @@ TEST(SiteIsolation, ReuseConfiguration)
     [navigationDelegate2 waitForDidFinishNavigation];
 }
 
+static void callMethodOnFirstVideoElementInFrame(WKWebView *webView, NSString *methodName, WKFrameInfo *frame)
+{
+    __block RetainPtr<NSError> error;
+    __block bool done = false;
+
+    NSString *source = [NSString stringWithFormat:@"document.getElementsByTagName('video')[0].%@()", methodName];
+    [webView callAsyncJavaScript:source arguments:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *callError) {
+        error = callError;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+
+    EXPECT_FALSE(!!error) << [error description].UTF8String;
+}
+
+static void expectPlayingAudio(WKWebView *webView, bool expected, ASCIILiteral reason)
+{
+    bool success = TestWebKitAPI::Util::waitFor([webView, expected]() {
+        return [webView _isPlayingAudio] == expected;
+    });
+    EXPECT_TRUE(success) << reason.characters();
+}
+
+TEST(SiteIsolation, PlayAudioInMultipleFrames)
+{
+    auto mainFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"
+    "<iframe src='https://webkit.org/subframe'></iframe>"_s;
+    auto subFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"_s;
+
+    RetainPtr<NSData> videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
+    HTTPResponse videoResponse { videoData.get() };
+    videoResponse.headerFields.set("Content-Type"_s, "video/mp4"_s);
+
+    HTTPServer server({
+        { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, subFrameHTML } },
+        { "/video-with-audio.mp4"_s, { videoData.get() } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", nil);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in main frame"_s);
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", [webView firstChildFrame]);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in remote frame"_s);
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"pause", nil);
+    expectPlayingAudio(webView.get(), true, "Should still be playing audio after pausing one of the two frames"_s);
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"pause", [webView firstChildFrame]);
+    expectPlayingAudio(webView.get(), false, "Should not be playing audio after pausing in both frames"_s);
+}
+
+TEST(SiteIsolation, PlayAudioInRemoteFrameThenRemove)
+{
+    auto mainFrameHTML = "<iframe src='https://webkit.org/subframe'></iframe>"_s;
+    auto subFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"_s;
+
+    RetainPtr<NSData> videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
+    HTTPResponse videoResponse { videoData.get() };
+    videoResponse.headerFields.set("Content-Type"_s, "video/mp4"_s);
+
+    HTTPServer server({
+        { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, subFrameHTML } },
+        { "/video-with-audio.mp4"_s, { videoData.get() } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", [webView firstChildFrame]);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in main frame"_s);
+
+    __block bool done = false;
+    __block RetainPtr<NSError> error;
+    [webView evaluateJavaScript:@"document.querySelectorAll('iframe').forEach(iframe => iframe.remove())" completionHandler:^(id result, NSError *scriptError) {
+        error = scriptError;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    EXPECT_FALSE(!!error) << [error description].UTF8String;
+    done = false;
+
+    expectPlayingAudio(webView.get(), false, "Should not be playing audio after removing iframe"_s);
+}
+
 }

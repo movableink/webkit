@@ -737,6 +737,7 @@ WebPageProxy::Internals::Internals(WebPageProxy& page)
     : page(page)
     , audibleActivityTimer(RunLoop::main(), &page, &WebPageProxy::clearAudibleActivity)
     , geolocationPermissionRequestManager(page)
+    , updatePlayingMediaDidChangeTimer(RunLoop::main(), &page, &WebPageProxy::updatePlayingMediaDidChangeTimerFired)
     , notificationManagerMessageHandler(page)
     , pageLoadState(page)
     , resetRecentCrashCountTimer(RunLoop::main(), &page, &WebPageProxy::resetRecentCrashCount)
@@ -963,6 +964,8 @@ WebPageProxy::~WebPageProxy()
     if (RefPtr gpuProcess = GPUProcessProxy::singletonIfCreated())
         gpuProcess->setPresentingApplicationAuditToken(m_legacyMainFrameProcess->coreProcessIdentifier(), m_webPageID, std::nullopt);
 #endif
+
+    internals().updatePlayingMediaDidChangeTimer.stop();
 }
 
 Ref<WebPageProxy> WebPageProxy::Internals::protectedPage() const
@@ -1816,7 +1819,6 @@ void WebPageProxy::close()
     internals().audibleActivityTimer.stop();
 
     stopAllURLSchemeTasks();
-    updatePlayingMediaDidChange(MediaProducer::IsNotPlaying);
 
 #if ENABLE(GAMEPAD)
     m_recentGamepadAccessHysteresis.cancel();
@@ -7472,6 +7474,11 @@ void WebPageProxy::processIsNoLongerAssociatedWithPage(WebProcessProxy& process)
     protectedNavigationState()->clearNavigationsFromProcess(process.coreProcessIdentifier());
 }
 
+void WebPageProxy::isNoLongerAssociatedWithRemotePage(RemotePageProxy&)
+{
+    internals().updatePlayingMediaDidChangeTimer.startOneShot(0_s);
+}
+
 bool WebPageProxy::hasAllowedToRunInTheBackgroundActivity() const
 {
     return internals().pageAllowedToRunInTheBackgroundActivityDueToTitleChanges || internals().pageAllowedToRunInTheBackgroundActivityDueToNotifications;
@@ -11167,7 +11174,8 @@ void WebPageProxy::resetState(ResetStateReason resetStateReason)
 
     m_activePopupMenu = nullptr;
 
-    updatePlayingMediaDidChange(MediaProducer::IsNotPlaying);
+    internals().mainFrameMediaState = MediaProducer::IsNotPlaying;
+    updatePlayingMediaDidChange();
 #if ENABLE(MEDIA_STREAM)
     if (RefPtr userMediaPermissionRequestManager = std::exchange(m_userMediaPermissionRequestManager, nullptr))
         userMediaPermissionRequestManager->disconnectFromPage();
@@ -11305,8 +11313,6 @@ void WebPageProxy::resetStateAfterProcessExited(ProcessTerminationReason termina
         auto transaction = protectedPageLoadState->transaction();
         protectedPageLoadState->reset(transaction);
     }
-
-    updatePlayingMediaDidChange(MediaProducer::IsNotPlaying);
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     internals().fullscreenVideoTextRecognitionTimer.stop();
@@ -13367,8 +13373,12 @@ void WebPageProxy::isPlayingMediaDidChange(MediaProducerMediaStateFlags newState
         return;
 #endif
 
+    if (internals().mainFrameMediaState == newState)
+        return;
+    internals().mainFrameMediaState = newState;
+
     if (!m_isClosed)
-        updatePlayingMediaDidChange(newState, CanDelayNotification::Yes);
+        updatePlayingMediaDidChange(CanDelayNotification::Yes);
 }
 
 bool WebPageProxy::isPlayingAudio() const
@@ -13406,8 +13416,13 @@ MediaProducerMediaStateFlags WebPageProxy::reportedMediaState() const
     return internals().reportedMediaCaptureState | (internals().mediaState - MediaProducer::MediaCaptureMask);
 }
 
-void WebPageProxy::updatePlayingMediaDidChange(MediaProducerMediaStateFlags newState, CanDelayNotification canDelayNotification)
+void WebPageProxy::updatePlayingMediaDidChange(CanDelayNotification canDelayNotification)
 {
+    MediaProducerMediaStateFlags newState = internals().mainFrameMediaState;
+    protectedBrowsingContextGroup()->forEachRemotePage(*this, [&newState](auto& remotePage) {
+        newState.add(remotePage.mediaState());
+    });
+
 #if ENABLE(MEDIA_STREAM)
     auto updateMediaCaptureStateImmediatelyIfNeeded = [&] {
         if (canDelayNotification == CanDelayNotification::No && internals().updateReportedMediaCaptureStateTimer.isActive()) {
@@ -13478,11 +13493,16 @@ void WebPageProxy::updatePlayingMediaDidChange(MediaProducerMediaStateFlags newS
     if ((oldState.containsAny(MediaProducerMediaState::HasAudioOrVideo)) != (internals().mediaState.containsAny(MediaProducerMediaState::HasAudioOrVideo)))
         videoControlsManagerDidChange();
 
-    Ref process = m_legacyMainFrameProcess;
-    process->updateAudibleMediaAssertions();
+    forEachWebContentProcess([&] (auto& process, auto) {
+        process.updateAudibleMediaAssertions();
+    });
+
     bool mediaStreamingChanges = oldState.contains(MediaProducerMediaState::HasStreamingActivity) != newState.contains(MediaProducerMediaState::HasStreamingActivity);
-    if (mediaStreamingChanges)
-        process->updateMediaStreamingActivity();
+    if (mediaStreamingChanges) {
+        forEachWebContentProcess([&] (auto& process, auto) {
+            process.updateMediaStreamingActivity();
+        });
+    }
 
 #if ENABLE(EXTENSION_CAPABILITIES)
     updateMediaCapability();
@@ -13492,6 +13512,11 @@ void WebPageProxy::updatePlayingMediaDidChange(MediaProducerMediaStateFlags newS
     if (oldState.contains(MediaProducerMediaState::IsPlayingVideo) != newState.contains(MediaProducerMediaState::IsPlayingVideo))
         m_pageClient->setURLIsPlayingVideoForScreenTime(newState.contains(MediaProducerMediaState::IsPlayingVideo));
 #endif
+}
+
+void WebPageProxy::updatePlayingMediaDidChangeTimerFired()
+{
+    updatePlayingMediaDidChange(CanDelayNotification::Yes);
 }
 
 void WebPageProxy::updateReportedMediaCaptureState()

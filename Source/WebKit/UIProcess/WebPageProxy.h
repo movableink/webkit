@@ -368,7 +368,7 @@ using MediaSessionIdentifier = ObjectIdentifier<MediaSessionIdentifierType>;
 using PageIdentifier = ObjectIdentifier<PageIdentifierType>;
 using PlatformDisplayID = uint32_t;
 using PlatformLayerIdentifier = ProcessQualified<ObjectIdentifier<PlatformLayerIdentifierType>>;
-using PlaybackTargetClientContextIdentifier = ObjectIdentifier<PlaybackTargetClientContextIdentifierType>;
+using PlaybackTargetClientContextIdentifier = ProcessQualified<ObjectIdentifier<PlaybackTargetClientContextIdentifierType>>;
 using PointerID = uint32_t;
 using ResourceLoaderIdentifier = AtomicObjectIdentifier<ResourceLoader>;
 using SandboxFlags = OptionSet<SandboxFlag>;
@@ -675,6 +675,8 @@ public:
     bool hasSameGPUAndNetworkProcessPreferencesAs(const WebPageProxy&) const;
 
     void processIsNoLongerAssociatedWithPage(WebProcessProxy&);
+
+    void isNoLongerAssociatedWithRemotePage(RemotePageProxy&);
 
 #if ENABLE(DATA_DETECTION)
     NSArray *dataDetectionResults() { return m_dataDetectionResults.get(); }
@@ -1896,7 +1898,8 @@ public:
     void updateReportedMediaCaptureState();
 
     enum class CanDelayNotification : bool { No, Yes };
-    void updatePlayingMediaDidChange(WebCore::MediaProducerMediaStateFlags, CanDelayNotification = CanDelayNotification::No);
+    void updatePlayingMediaDidChange(CanDelayNotification = CanDelayNotification::No);
+    void updatePlayingMediaDidChangeTimerFired();
     bool isCapturingAudio() const;
     bool isCapturingVideo() const;
     bool hasActiveAudioStream() const;

@@ -118,7 +118,7 @@ public:
         if (!state->client.alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, unsafeSpan(methodName), ' '), state->contextId.toUInt64(), state->flags, arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, unsafeSpan(methodName), ' '), state->contextId.loggingString(), state->flags, arguments...);
     }
 
     template<typename... Arguments>
@@ -211,7 +211,7 @@ std::optional<PlaybackTargetClientContextIdentifier> WebMediaSessionManager::add
     if (index != notFound)
         return std::nullopt;
 
-    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, contextId.toUInt64());
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, contextId.loggingString());
     m_clientState.append(makeUnique<ClientState>(client, contextId));
 
     if (m_externalOutputDeviceAvailable || m_playbackTarget)

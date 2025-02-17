@@ -47,11 +47,14 @@ namespace WebCore {
 enum class CrossOriginOpenerPolicyValue : uint8_t;
 enum class FrameLoadType : uint8_t;
 enum class HasInsecureContent : bool;
+enum class MediaProducerMediaState : uint32_t;
 enum class MouseEventPolicy : uint8_t;
 
 class CertificateInfo;
 class ResourceResponse;
 class ResourceRequest;
+
+using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 }
 
 namespace WebKit {
@@ -98,6 +101,8 @@ public:
 
     WebProcessActivityState& processActivityState();
 
+    WebCore::MediaProducerMediaStateFlags mediaState() const { return m_mediaState; }
+
 private:
     RemotePageProxy(WebPageProxy&, WebProcessProxy&, const WebCore::Site&, WebPageProxyMessageReceiverRegistration*, std::optional<WebCore::PageIdentifier>);
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
@@ -110,6 +115,7 @@ private:
     void didStartProvisionalLoadForFrame(WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, std::optional<WebCore::NavigationIdentifier>, URL&&, URL&& unreachableURL, const UserData&, WallTime);
     void didChangeProvisionalURLForFrame(WebCore::FrameIdentifier, std::optional<WebCore::NavigationIdentifier>, URL&&);
     void handleMessage(const String& messageName, const UserData& messageBody);
+    void isPlayingMediaDidChange(WebCore::MediaProducerMediaStateFlags);
 
     const WebCore::PageIdentifier m_webPageID;
     const Ref<WebProcessProxy> m_process;
@@ -122,6 +128,7 @@ private:
 #endif
     std::unique_ptr<RemotePageVisitedLinkStoreRegistration> m_visitedLinkStoreRegistration;
     WebPageProxyMessageReceiverRegistration m_messageReceiverRegistration;
+    WebCore::MediaProducerMediaStateFlags m_mediaState;
 };
 
 }

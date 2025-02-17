@@ -573,7 +573,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebCore::PageIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::PlatformLayerIdentifierID));
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    static_assert(sizeof(uint64_t) == sizeof(WebCore::PlaybackTargetClientContextIdentifier));
+    static_assert(sizeof(uint64_t) == sizeof(WebCore::PlaybackTargetClientContextID));
 #endif
     static_assert(sizeof(uint64_t) == sizeof(WebCore::PortIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::ProcessIdentifier));
@@ -725,7 +725,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebCore::PageIdentifier"_s,
         "WebCore::PlatformLayerIdentifierID"_s,
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-        "WebCore::PlaybackTargetClientContextIdentifier"_s,
+        "WebCore::PlaybackTargetClientContextID"_s,
 #endif
         "WebCore::PortIdentifier"_s,
         "WebCore::ProcessIdentifier"_s,

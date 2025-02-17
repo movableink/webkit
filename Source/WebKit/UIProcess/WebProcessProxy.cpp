@@ -88,6 +88,7 @@
 #include "WebsiteDataFetchOption.h"
 #include <WebCore/AudioSession.h>
 #include <WebCore/DiagnosticLoggingKeys.h>
+#include <WebCore/MediaProducer.h>
 #include <WebCore/PermissionName.h>
 #include <WebCore/PlatformMediaSessionManager.h>
 #include <WebCore/PrewarmInformation.h>
@@ -1946,9 +1947,13 @@ void WebProcessProxy::updateAudibleMediaAssertions()
         return;
 #endif
 
-    bool hasAudibleWebPage = WTF::anyOf(pages(), [] (auto& page) {
+    bool hasAudibleMainPage = WTF::anyOf(pages(), [] (auto& page) {
         return page->isPlayingAudio();
     });
+    bool hasAudibleRemotePage = WTF::anyOf(remotePages(), [](auto& remotePage) {
+        return remotePage ? remotePage->mediaState().contains(MediaProducerMediaState::IsPlayingAudio) : false;
+    });
+    bool hasAudibleWebPage = hasAudibleMainPage || hasAudibleRemotePage;
 
     if (!!m_audibleMediaActivity == hasAudibleWebPage)
         return;
@@ -1967,9 +1972,13 @@ void WebProcessProxy::updateAudibleMediaAssertions()
 
 void WebProcessProxy::updateMediaStreamingActivity()
 {
-    bool hasMediaStreamingWebPage = WTF::anyOf(pages(), [] (auto& page) {
+    bool hasMediaStreamingMainPage = WTF::anyOf(pages(), [] (auto& page) {
         return page->hasMediaStreaming();
     });
+    bool hasMediaStreamingRemotePage = WTF::anyOf(remotePages(), [] (auto& remotePage) {
+        return remotePage ? remotePage->mediaState().contains(MediaProducerMediaState::HasStreamingActivity) : false;
+    });
+    bool hasMediaStreamingWebPage = hasMediaStreamingMainPage || hasMediaStreamingRemotePage;
 
     if (!!m_mediaStreamingActivity == hasMediaStreamingWebPage)
         return;
