@@ -614,8 +614,8 @@ static IntPoint adjustAutoscrollDestinationForInsetEdges(IntPoint autoscrollPoin
 {
     IntPoint resultPoint = autoscrollPoint;
 
-    const float edgeInset = 75;
-    const float maximumScrollingSpeed = 20;
+    const float edgeInset = 100;
+    const float maximumScrollingSpeed = 40;
     const float insetDistanceThreshold = edgeInset / 2;
 
     // FIXME: Ideally we would only inset on edges that touch the edge of the screen,
@@ -630,14 +630,14 @@ static IntPoint adjustAutoscrollDestinationForInsetEdges(IntPoint autoscrollPoin
         // to make it possible to select text that abuts the edge of `unobscuredRootViewRect` without causing
         // unwanted autoscrolling.
         if (autoscrollDelta.width() < insetDistanceThreshold)
-            insetUnobscuredRootViewRect.shiftXEdgeTo(insetUnobscuredRootViewRect.x() + std::min<float>(edgeInset, -autoscrollDelta.width() - insetDistanceThreshold));
+            insetUnobscuredRootViewRect.shiftXEdgeTo(insetUnobscuredRootViewRect.x() + edgeInset);
         else if (autoscrollDelta.width() > insetDistanceThreshold)
-            insetUnobscuredRootViewRect.shiftMaxXEdgeTo(insetUnobscuredRootViewRect.maxX() - std::min<float>(edgeInset, autoscrollDelta.width() - insetDistanceThreshold));
+            insetUnobscuredRootViewRect.shiftMaxXEdgeTo(insetUnobscuredRootViewRect.maxX() - edgeInset);
 
         if (autoscrollDelta.height() < insetDistanceThreshold)
-            insetUnobscuredRootViewRect.shiftYEdgeTo(insetUnobscuredRootViewRect.y() + std::min<float>(edgeInset, -autoscrollDelta.height() - insetDistanceThreshold));
+            insetUnobscuredRootViewRect.shiftYEdgeTo(insetUnobscuredRootViewRect.y() + edgeInset);
         else if (autoscrollDelta.height() > insetDistanceThreshold)
-            insetUnobscuredRootViewRect.shiftMaxYEdgeTo(insetUnobscuredRootViewRect.maxY() - std::min<float>(edgeInset, autoscrollDelta.height() - insetDistanceThreshold));
+            insetUnobscuredRootViewRect.shiftMaxYEdgeTo(insetUnobscuredRootViewRect.maxY() - edgeInset);
     }
 
     // If the current autoscroll point is beyond the edge of the view (respecting insets), shift it outside
