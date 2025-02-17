@@ -42,6 +42,8 @@ public:
     std::optional<Vector<LayoutUnit>> computeParagraphLevelConstraints(TextWrapStyle);
 
 private:
+    friend struct SlidingWidth;
+
     void initialize();
     void updateCachedWidths();
     void checkCanConstrainInlineItems();
@@ -62,37 +64,37 @@ private:
     const HorizontalConstraints& m_horizontalConstraints;
 
     Vector<InlineItemRange> m_originalLineInlineItemRanges;
-    Vector<float> m_originalLineWidths;
+    Vector<LayoutUnit> m_originalLineConstraints;
+    LayoutUnit m_maximumLineWidthConstraint { 0 };
     Vector<bool> m_originalLineEndsWithForcedBreak;
     Vector<InlineLayoutUnit> m_inlineItemWidths;
     Vector<InlineLayoutUnit> m_firstLineStyleInlineItemWidths;
     size_t m_numberOfLinesInOriginalLayout { 0 };
     size_t m_numberOfInlineItems { 0 };
-    double m_maximumLineWidth { 0 };
     bool m_cannotConstrainContent { false };
     bool m_hasSingleLineVisibleContent { false };
     bool m_hasValidInlineItemWidthCache { false };
+};
 
-    struct SlidingWidth {
-        SlidingWidth(const InlineContentConstrainer&, const InlineItemList&, size_t start, size_t end, bool useFirstLineStyle, bool isFirstLineInChunk);
-        InlineLayoutUnit width();
-        void advanceStart();
-        void advanceStartTo(size_t newStart);
-        void advanceEnd();
-        void advanceEndTo(size_t newEnd);
+struct SlidingWidth {
+    SlidingWidth(const InlineContentConstrainer&, const InlineItemList&, size_t start, size_t end, bool useFirstLineStyle, bool isFirstLineInChunk);
+    InlineLayoutUnit width();
+    void advanceStart();
+    void advanceStartTo(size_t newStart);
+    void advanceEnd();
+    void advanceEndTo(size_t newEnd);
 
-    private:
-        const InlineContentConstrainer& m_inlineContentConstrainer;
-        const InlineItemList& m_inlineItemList;
-        size_t m_start { 0 };
-        size_t m_end { 0 };
-        bool m_useFirstLineStyle { false };
-        bool m_isFirstLineInChunk { false };
-        InlineLayoutUnit m_totalWidth { 0 };
-        InlineLayoutUnit m_leadingTrimmableWidth { 0 };
-        InlineLayoutUnit m_trailingTrimmableWidth { 0 };
-        std::optional<size_t> m_firstLeadingNonTrimmedItem;
-    };
+private:
+    const InlineContentConstrainer& m_inlineContentConstrainer;
+    const InlineItemList& m_inlineItemList;
+    size_t m_start { 0 };
+    size_t m_end { 0 };
+    bool m_useFirstLineStyle { false };
+    bool m_isFirstLineInChunk { false };
+    InlineLayoutUnit m_totalWidth { 0 };
+    InlineLayoutUnit m_leadingTrimmableWidth { 0 };
+    InlineLayoutUnit m_trailingTrimmableWidth { 0 };
+    std::optional<size_t> m_firstLeadingNonTrimmedItem;
 };
 
 }
