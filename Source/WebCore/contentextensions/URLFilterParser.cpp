@@ -248,6 +248,11 @@ public:
         fail(URLFilterParser::Group);
     }
 
+    void atomParentheticalModifierBegin(OptionSet<JSC::Yarr::Flags>, OptionSet<JSC::Yarr::Flags>)
+    {
+        fail(URLFilterParser::Group);
+    }
+
     void atomParenthesesEnd()
     {
         if (hasError())
