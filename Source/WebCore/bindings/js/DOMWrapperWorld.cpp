@@ -69,7 +69,7 @@ DOMWrapperWorld& normalWorld(JSC::VM& vm)
     return downcast<JSVMClientData>(clientData)->normalWorldSingleton();
 }
 
-DOMWrapperWorld& mainThreadNormalWorld()
+DOMWrapperWorld& mainThreadNormalWorldSingleton()
 {
     ASSERT(isMainThread());
     static DOMWrapperWorld& cachedNormalWorld = normalWorld(commonVM());

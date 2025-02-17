@@ -1050,7 +1050,7 @@ void InspectorPageAgent::defaultAppearanceDidChange()
 
 void InspectorPageAgent::didClearWindowObjectInWorld(LocalFrame& frame, DOMWrapperWorld& world)
 {
-    if (&world != &mainThreadNormalWorld())
+    if (&world != &mainThreadNormalWorldSingleton())
         return;
 
     if (m_bootstrapScript.isEmpty())

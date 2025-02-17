@@ -723,7 +723,7 @@ JSDOMWindow& mainWorldGlobalObject(LocalFrame& frame)
     // FIXME: What guarantees the result of jsWindowProxy() is non-null?
     // FIXME: What guarantees the result of window() is non-null?
     // FIXME: What guarantees the result of window() a JSDOMWindow?
-    return *jsCast<JSDOMWindow*>(frame.windowProxy().jsWindowProxy(mainThreadNormalWorld())->window());
+    return *jsCast<JSDOMWindow*>(frame.windowProxy().jsWindowProxy(mainThreadNormalWorldSingleton())->window());
 }
 
 } // namespace WebCore

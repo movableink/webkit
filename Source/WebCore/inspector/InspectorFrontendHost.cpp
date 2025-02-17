@@ -825,13 +825,13 @@ ExceptionOr<JSC::JSValue> InspectorFrontendHost::evaluateScriptInExtensionTab(HT
 
     Ref protectedFrame(*frame);
 
-    JSDOMGlobalObject* frameGlobalObject = frame->script().globalObject(mainThreadNormalWorld());
+    JSDOMGlobalObject* frameGlobalObject = frame->script().globalObject(mainThreadNormalWorldSingleton());
     if (!frameGlobalObject)
         return Exception { ExceptionCode::InvalidStateError, "Unable to find global object for <iframe>"_s };
 
 
     JSC::SuspendExceptionScope scope(frameGlobalObject->vm());
-    ValueOrException result = frame->script().evaluateInWorld(ScriptSourceCode(scriptSource, JSC::SourceTaintedOrigin::Untainted), mainThreadNormalWorld());
+    ValueOrException result = frame->script().evaluateInWorld(ScriptSourceCode(scriptSource, JSC::SourceTaintedOrigin::Untainted), mainThreadNormalWorldSingleton());
     
     if (!result)
         return Exception { ExceptionCode::InvalidStateError, result.error().message };

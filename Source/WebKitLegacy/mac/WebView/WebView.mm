@@ -7501,8 +7501,8 @@ static NSAppleEventDescriptor* aeDescFromJSValue(JSC::JSGlobalObject* lexicalGlo
     JSC::JSValue result = coreFrame->script().executeScriptIgnoringException(script, JSC::SourceTaintedOrigin::Untainted, true);
     if (!result) // FIXME: pass errors
         return 0;
-    JSC::JSLockHolder lock(coreFrame->script().globalObject(WebCore::mainThreadNormalWorld()));
-    return aeDescFromJSValue(coreFrame->script().globalObject(WebCore::mainThreadNormalWorld()), result);
+    JSC::JSLockHolder lock(coreFrame->script().globalObject(WebCore::mainThreadNormalWorldSingleton()));
+    return aeDescFromJSValue(coreFrame->script().globalObject(WebCore::mainThreadNormalWorldSingleton()), result);
 }
 #endif
 

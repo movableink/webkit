@@ -439,6 +439,8 @@ public:
     // regardless of the settings.
     virtual bool allowsAcceleratedCompositing() const { return true; }
 
+    virtual bool isWebChromeClient() const { return false; }
+
     enum CompositingTrigger {
         ThreeDTransformTrigger = 1 << 0,
         VideoTrigger = 1 << 1,

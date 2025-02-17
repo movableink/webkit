@@ -81,6 +81,7 @@
 #import <WebCore/RenderElement.h>
 #import <WebCore/RenderLayer.h>
 #import <WebCore/RenderedDocumentMarker.h>
+#import <WebCore/StylePropertiesInlines.h>
 #import <WebCore/TextIterator.h>
 #import <WebCore/UTIRegistry.h>
 #import <WebCore/UTIUtilities.h>
@@ -120,7 +121,7 @@ void WebPage::platformInitialize(const WebPageCreationParameters& parameters)
     platformInitializeAccessibility();
 
 #if ENABLE(MEDIA_STREAM)
-    if (auto* captureManager = WebProcess::singleton().supplement<UserMediaCaptureManager>()) {
+    if (RefPtr captureManager = WebProcess::singleton().supplement<UserMediaCaptureManager>()) {
         captureManager->setupCaptureProcesses(parameters.shouldCaptureAudioInUIProcess, parameters.shouldCaptureAudioInGPUProcess, parameters.shouldCaptureVideoInUIProcess, parameters.shouldCaptureVideoInGPUProcess, parameters.shouldCaptureDisplayInUIProcess, parameters.shouldCaptureDisplayInGPUProcess,
 #if ENABLE(WEB_RTC)
             m_page->settings().webRTCRemoteVideoFrameEnabled()
@@ -181,7 +182,7 @@ void WebPage::platformDidReceiveLoadParameters(const LoadParameters& parameters)
 
 void WebPage::requestActiveNowPlayingSessionInfo(CompletionHandler<void(bool, WebCore::NowPlayingInfo&&)>&& completionHandler)
 {
-    if (auto* sharedManager = WebCore::PlatformMediaSessionManager::singletonIfExists()) {
+    if (RefPtr sharedManager = WebCore::PlatformMediaSessionManager::singletonIfExists()) {
         if (auto nowPlayingInfo = sharedManager->nowPlayingInfo()) {
             bool registeredAsNowPlayingApplication = sharedManager->registeredAsNowPlayingApplication();
             completionHandler(registeredAsNowPlayingApplication, WTFMove(*nowPlayingInfo));
@@ -217,20 +218,20 @@ bool WebPage::shouldUsePDFPlugin(const String& contentType, StringView path) con
 void WebPage::performDictionaryLookupAtLocation(const FloatPoint& floatPoint)
 {
 #if ENABLE(PDF_PLUGIN)
-    if (auto* pluginView = mainFramePlugIn()) {
+    if (RefPtr pluginView = mainFramePlugIn()) {
         if (pluginView->performDictionaryLookupAtLocation(floatPoint))
             return;
     }
 #endif
     
-    RefPtr localMainFrame = m_page->localMainFrame();
+    RefPtr localMainFrame = protectedCorePage()->localMainFrame();
     if (!localMainFrame)
         return;
     // Find the frame the point is over.
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
     auto result = localMainFrame->eventHandler().hitTestResultAtPoint(localMainFrame->protectedView()->windowToContents(roundedIntPoint(floatPoint)), hitType);
 
-    RefPtr frame = result.innerNonSharedNode() ? result.innerNonSharedNode()->document().frame() : m_page->checkedFocusController()->focusedOrMainFrame();
+    RefPtr frame = result.innerNonSharedNode() ? result.innerNonSharedNode()->document().frame() : protectedCorePage()->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -257,17 +258,17 @@ void WebPage::performDictionaryLookupForRange(LocalFrame& frame, const SimpleRan
 
 DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(LocalFrame& frame, const SimpleRange& range, TextIndicatorPresentationTransition presentationTransition)
 {
-    Editor& editor = frame.editor();
-    editor.setIsGettingDictionaryPopupInfo(true);
+    Ref editor = frame.editor();
+    editor->setIsGettingDictionaryPopupInfo(true);
 
     if (plainText(range).find(deprecatedIsNotSpaceOrNewline) == notFound) {
-        editor.setIsGettingDictionaryPopupInfo(false);
+        editor->setIsGettingDictionaryPopupInfo(false);
         return { };
     }
 
     auto quads = RenderObject::absoluteTextQuads(range);
     if (quads.isEmpty()) {
-        editor.setIsGettingDictionaryPopupInfo(false);
+        editor->setIsGettingDictionaryPopupInfo(false);
         return { };
     }
 
@@ -275,7 +276,7 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(LocalFrame& frame, cons
 
     IntRect rangeRect = frame.protectedView()->contentsToWindow(quads[0].enclosingBoundingBox());
 
-    const RenderStyle* style = range.startContainer().renderStyle();
+    const RenderStyle* style = range.protectedStartContainer()->renderStyle();
     float scaledAscent = style ? style->metricsOfPrimaryFont().intAscent() * pageScaleFactor() : 0;
     dictionaryPopupInfo.origin = FloatPoint(rangeRect.x(), rangeRect.y() + scaledAscent);
 
@@ -303,7 +304,7 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(LocalFrame& frame, cons
     
     auto textIndicator = TextIndicator::createWithRange(range, indicatorOptions, presentationTransition);
     if (!textIndicator) {
-        editor.setIsGettingDictionaryPopupInfo(false);
+        editor->setIsGettingDictionaryPopupInfo(false);
         return dictionaryPopupInfo;
     }
 
@@ -314,13 +315,13 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(LocalFrame& frame, cons
     dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(adoptNS([[NSMutableAttributedString alloc] initWithString:plainText(range)]));
 #endif
 
-    editor.setIsGettingDictionaryPopupInfo(false);
+    editor->setIsGettingDictionaryPopupInfo(false);
     return dictionaryPopupInfo;
 }
 
 void WebPage::insertDictatedTextAsync(const String& text, const EditingRange& replacementEditingRange, const Vector<WebCore::DictationAlternative>& dictationAlternativeLocations, InsertTextOptions&& options)
 {
-    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
+    RefPtr frame = protectedCorePage()->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -340,7 +341,7 @@ void WebPage::insertDictatedTextAsync(const String& text, const EditingRange& re
     if (frame->editor().hasComposition())
         return;
 
-    frame->editor().insertDictatedText(text, dictationAlternativeLocations, nullptr /* triggeringEvent */);
+    frame->protectedEditor()->insertDictatedText(text, dictationAlternativeLocations, nullptr /* triggeringEvent */);
 
     if (focusedElement && options.shouldSimulateKeyboardInput) {
         focusedElement->dispatchEvent(Event::create(eventNames().keyupEvent, Event::CanBubble::Yes, Event::IsCancelable::Yes));
@@ -350,7 +351,7 @@ void WebPage::insertDictatedTextAsync(const String& text, const EditingRange& re
 
 void WebPage::addDictationAlternative(const String& text, DictationContext context, CompletionHandler<void(bool)>&& completion)
 {
-    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
+    RefPtr frame = protectedCorePage()->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -389,7 +390,7 @@ void WebPage::addDictationAlternative(const String& text, DictationContext conte
 
 void WebPage::dictationAlternativesAtSelection(CompletionHandler<void(Vector<DictationContext>&&)>&& completion)
 {
-    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
+    RefPtr frame = protectedCorePage()->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -417,7 +418,7 @@ void WebPage::dictationAlternativesAtSelection(CompletionHandler<void(Vector<Dic
 
 void WebPage::clearDictationAlternatives(Vector<DictationContext>&& contexts)
 {
-    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
+    RefPtr frame = protectedCorePage()->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -516,8 +517,8 @@ WebPaymentCoordinator* WebPage::paymentCoordinator()
 
 void WebPage::getContentsAsAttributedString(CompletionHandler<void(const WebCore::AttributedString&)>&& completionHandler)
 {
-    RefPtr localFrame = m_page->localMainFrame();
-    completionHandler(localFrame ? attributedString(makeRangeSelectingNodeContents(Ref { *localFrame->document() }), IgnoreUserSelectNone::No) : AttributedString { });
+    RefPtr localFrame = protectedCorePage()->localMainFrame();
+    completionHandler(localFrame ? attributedString(makeRangeSelectingNodeContents(*localFrame->protectedDocument()), IgnoreUserSelectNone::No) : AttributedString { });
 }
 
 void WebPage::setRemoteObjectRegistry(WebRemoteObjectRegistry* registry)
@@ -644,7 +645,7 @@ void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState&
             if (editingStyle->hasStyle(CSSPropertyWebkitTextDecorationsInEffect, "underline"_s))
                 postLayoutData.typingAttributes.add(TypingAttribute::Underline);
 
-            if (auto* styleProperties = editingStyle->style()) {
+            if (RefPtr styleProperties = editingStyle->style()) {
                 bool isLeftToRight = styleProperties->propertyAsValueID(CSSPropertyDirection) == CSSValueLtr;
                 switch (styleProperties->propertyAsValueID(CSSPropertyTextAlign).value_or(CSSValueInvalid)) {
                 case CSSValueRight:
@@ -685,7 +686,7 @@ void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState&
                 ASSERT_NOT_REACHED();
         }
 
-        postLayoutData.baseWritingDirection = frame.editor().baseWritingDirectionForSelectionStart();
+        postLayoutData.baseWritingDirection = frame.protectedEditor()->baseWritingDirectionForSelectionStart();
         postLayoutData.canEnableWritingSuggestions = [&] {
             if (!selection.canEnableWritingSuggestions())
                 return false;
@@ -693,7 +694,7 @@ void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState&
             if (!m_lastNodeBeforeWritingSuggestions)
                 return true;
 
-            RefPtr currentNode = frame.editor().nodeBeforeWritingSuggestions();
+            RefPtr currentNode = frame.protectedEditor()->nodeBeforeWritingSuggestions();
             return !currentNode || m_lastNodeBeforeWritingSuggestions == currentNode.get();
         }();
     }
@@ -724,7 +725,7 @@ void WebPage::getPDFFirstPageSize(WebCore::FrameIdentifier frameID, CompletionHa
         return completionHandler({ });
 
 #if ENABLE(PDF_PLUGIN)
-    if (auto* pluginView = pluginViewForFrame(webFrame->coreLocalFrame()))
+    if (RefPtr pluginView = pluginViewForFrame(webFrame->protectedCoreLocalFrame().get()))
         return completionHandler(pluginView->pdfDocumentSizeForPrinting());
 #endif
 
@@ -771,7 +772,7 @@ private:
 
 void WebPage::replaceImageForRemoveBackground(const ElementContext& elementContext, const Vector<String>& types, std::span<const uint8_t> data)
 {
-    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
+    RefPtr frame = protectedCorePage()->checkedFocusController()->focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -800,7 +801,7 @@ void WebPage::replaceImageForRemoveBackground(const ElementContext& elementConte
     {
         OverridePasteboardForSelectionReplacement overridePasteboard { types, data };
         IgnoreSelectionChangeForScope ignoreSelectionChanges { *frame };
-        frame->editor().replaceNodeFromPasteboard(*element, replaceSelectionPasteboardName(), EditAction::RemoveBackground);
+        frame->protectedEditor()->replaceNodeFromPasteboard(*element, replaceSelectionPasteboardName(), EditAction::RemoveBackground);
 
         auto position = frame->selection().selection().visibleStart();
         if (auto imageRange = makeSimpleRange(WebCore::VisiblePositionRange { position.previous(), position })) {
@@ -852,7 +853,7 @@ void WebPage::readSelectionFromPasteboard(const String& pasteboardName, Completi
         return completionHandler(false);
     if (frame->selection().isNone())
         return completionHandler(false);
-    frame->editor().readSelectionFromPasteboard(pasteboardName);
+    frame->protectedEditor()->readSelectionFromPasteboard(pasteboardName);
     completionHandler(true);
 }
 
@@ -1117,7 +1118,7 @@ void WebPage::didEndPartialIntelligenceTextAnimation()
 
 static std::optional<bool> elementHasHiddenVisibility(StyledElement* styledElement)
 {
-    auto* inlineStyle = styledElement->inlineStyle();
+    RefPtr inlineStyle = styledElement->inlineStyle();
     if (!inlineStyle)
         return std::nullopt;
 
@@ -1130,7 +1131,7 @@ static std::optional<bool> elementHasHiddenVisibility(StyledElement* styledEleme
 
 void WebPage::createTextIndicatorForElementWithID(const String& elementID, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>&&)>&& completionHandler)
 {
-    RefPtr frame = m_page->checkedFocusController()->focusedOrMainFrame();
+    RefPtr frame = protectedCorePage()->checkedFocusController()->focusedOrMainFrame();
     if (!frame) {
         ASSERT_NOT_REACHED();
         completionHandler(std::nullopt);

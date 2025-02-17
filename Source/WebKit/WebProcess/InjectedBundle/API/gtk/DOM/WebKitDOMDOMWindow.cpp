@@ -1054,14 +1054,14 @@ gboolean webkit_dom_dom_window_webkit_message_handlers_post_message(WebKitDOMDOM
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
     WebCore::LocalDOMWindow* domWindow = WebKit::core(window);
-    if (!domWindow->shouldHaveWebKitNamespaceForWorld(WebCore::mainThreadNormalWorld()))
+    if (!domWindow->shouldHaveWebKitNamespaceForWorld(WebCore::mainThreadNormalWorldSingleton()))
         return FALSE;
 
     auto webkitNamespace = domWindow->webkitNamespace();
     if (!webkitNamespace)
         return FALSE;
 
-    auto handler = webkitNamespace->messageHandlers()->namedItem(WebCore::mainThreadNormalWorld(), AtomString::fromUTF8(handlerName));
+    auto handler = webkitNamespace->messageHandlers()->namedItem(WebCore::mainThreadNormalWorldSingleton(), AtomString::fromUTF8(handlerName));
     if (!handler)
         return FALSE;
     
@@ -1069,7 +1069,7 @@ gboolean webkit_dom_dom_window_webkit_message_handlers_post_message(WebKitDOMDOM
     if (!scriptExecutionContext)
         return FALSE;
     
-    auto* globalObject = toJSDOMGlobalObject(*scriptExecutionContext, WebCore::mainThreadNormalWorld());
+    auto* globalObject = toJSDOMGlobalObject(*scriptExecutionContext, WebCore::mainThreadNormalWorldSingleton());
     if (!globalObject)
         return FALSE;
 

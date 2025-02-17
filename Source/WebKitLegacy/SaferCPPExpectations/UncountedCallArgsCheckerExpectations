@@ -94,7 +94,6 @@ mac/DOM/DOMHTMLTitleElement.mm
 mac/DOM/DOMHTMLUListElement.mm
 mac/DOM/DOMHTMLVideoElement.mm
 mac/DOM/DOMImplementation.mm
-mac/DOM/DOMInternal.mm
 mac/DOM/DOMKeyboardEvent.mm
 mac/DOM/DOMMediaList.mm
 mac/DOM/DOMMouseEvent.mm

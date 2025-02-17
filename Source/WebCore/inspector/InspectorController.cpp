@@ -234,7 +234,7 @@ unsigned InspectorController::inspectionLevel() const
 
 void InspectorController::didClearWindowObjectInWorld(LocalFrame& frame, DOMWrapperWorld& world)
 {
-    if (&world != &mainThreadNormalWorld())
+    if (&world != &mainThreadNormalWorldSingleton())
         return;
 
     if (frame.isMainFrame())

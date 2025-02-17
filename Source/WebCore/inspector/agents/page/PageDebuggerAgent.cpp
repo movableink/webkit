@@ -163,7 +163,7 @@ InjectedScript PageDebuggerAgent::injectedScriptForEval(Inspector::Protocol::Err
 
 void PageDebuggerAgent::didClearWindowObjectInWorld(LocalFrame& frame, DOMWrapperWorld& world)
 {
-    if (!frame.isMainFrame() || &world != &mainThreadNormalWorld())
+    if (!frame.isMainFrame() || &world != &mainThreadNormalWorldSingleton())
         return;
 
     didClearGlobalObject();

@@ -190,6 +190,12 @@ WebLocalFrameLoaderClient* WebFrame::localFrameLoaderClient() const
         return toWebLocalFrameLoaderClient(localFrame->loader().client());
     return nullptr;
 }
+
+RefPtr<WebLocalFrameLoaderClient> WebFrame::protectedLocalFrameLoaderClient() const
+{
+    return localFrameLoaderClient();
+}
+
 WebRemoteFrameClient* WebFrame::remoteFrameClient() const
 {
     if (auto* remoteFrame = dynamicDowncast<RemoteFrame>(m_coreFrame.get()))
@@ -847,7 +853,7 @@ JSGlobalContextRef WebFrame::jsContext()
     if (!localFrame)
         return nullptr;
 
-    return toGlobalRef(localFrame->script().globalObject(mainThreadNormalWorld()));
+    return toGlobalRef(localFrame->script().globalObject(mainThreadNormalWorldSingleton()));
 }
 
 JSGlobalContextRef WebFrame::jsContextForWorld(DOMWrapperWorld& world)

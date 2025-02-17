@@ -39,6 +39,8 @@ public:
 #endif
 
 private:
+    bool isWebMediaStrategy() const final { return true; }
+
 #if ENABLE(WEB_AUDIO)
     Ref<WebCore::AudioDestination> createAudioDestination(WebCore::AudioIOCallback&,
         const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate) override;
@@ -58,3 +60,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebMediaStrategy) \
+    static bool isType(const WebCore::MediaStrategy& strategy) { return strategy.isWebMediaStrategy(); } \
+SPECIALIZE_TYPE_TRAITS_END()

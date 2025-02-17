@@ -170,7 +170,7 @@ WKArrayRef WKBundlePageCopyContextMenuAtPointInWindow(WKBundlePageRef pageRef, W
     if (!page)
         return nullptr;
 
-    WebKit::WebContextMenu* contextMenu = WebKit::toImpl(pageRef)->contextMenuAtPointInWindow(page->mainFrame().frameID(), WebKit::toIntPoint(point));
+    RefPtr contextMenu = WebKit::toImpl(pageRef)->contextMenuAtPointInWindow(page->mainFrame().frameID(), WebKit::toIntPoint(point));
     if (!contextMenu)
         return nullptr;
 

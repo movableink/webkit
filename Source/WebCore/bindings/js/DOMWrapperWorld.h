@@ -92,11 +92,11 @@ private:
 };
 
 DOMWrapperWorld& normalWorld(JSC::VM&);
-WEBCORE_EXPORT DOMWrapperWorld& mainThreadNormalWorld();
-inline Ref<DOMWrapperWorld> protectedMainThreadNormalWorld() { return mainThreadNormalWorld(); }
+WEBCORE_EXPORT DOMWrapperWorld& mainThreadNormalWorldSingleton();
+inline Ref<DOMWrapperWorld> protectedMainThreadNormalWorld() { return mainThreadNormalWorldSingleton(); }
 
-inline DOMWrapperWorld& debuggerWorld() { return mainThreadNormalWorld(); }
-inline DOMWrapperWorld& pluginWorld() { return mainThreadNormalWorld(); }
+inline DOMWrapperWorld& debuggerWorld() { return mainThreadNormalWorldSingleton(); }
+inline DOMWrapperWorld& pluginWorld() { return mainThreadNormalWorldSingleton(); }
 
 DOMWrapperWorld& currentWorld(JSC::JSGlobalObject&);
 DOMWrapperWorld& worldForDOMObject(JSC::JSObject&);

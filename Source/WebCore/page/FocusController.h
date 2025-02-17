@@ -61,6 +61,7 @@ public:
     Frame* focusedFrame() const { return m_focusedFrame.get(); }
     LocalFrame* focusedLocalFrame() const { return dynamicDowncast<LocalFrame>(m_focusedFrame.get()); }
     WEBCORE_EXPORT LocalFrame* focusedOrMainFrame() const;
+    RefPtr<LocalFrame> protectedFocusedOrMainFrame() const { return focusedOrMainFrame(); }
 
     WEBCORE_EXPORT bool setInitialFocus(FocusDirection, KeyboardEvent*);
     bool advanceFocus(FocusDirection, KeyboardEvent*, bool initialFocus = false);

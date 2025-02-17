@@ -604,6 +604,7 @@ public:
 
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
     PlaybackSessionManager& playbackSessionManager();
+    Ref<PlaybackSessionManager> protectedPlaybackSessionManager();
     void videoControlsManagerDidChange();
 #endif
 
@@ -1121,7 +1122,7 @@ public:
 #if ENABLE(CONTEXT_MENUS)
     WebContextMenu& contextMenu();
     Ref<WebContextMenu> protectedContextMenu();
-    WebContextMenu* contextMenuAtPointInWindow(WebCore::FrameIdentifier, const WebCore::IntPoint&);
+    RefPtr<WebContextMenu> contextMenuAtPointInWindow(WebCore::FrameIdentifier, const WebCore::IntPoint&);
 #endif
 
     static bool canHandleRequest(const WebCore::ResourceRequest&);

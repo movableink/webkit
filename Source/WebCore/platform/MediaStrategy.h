@@ -54,6 +54,9 @@ public:
 #if PLATFORM(COCOA) && ENABLE(MEDIA_RECORDER)
     virtual std::unique_ptr<MediaRecorderPrivateWriter> createMediaRecorderPrivateWriter(const String&, MediaRecorderPrivateWriterListener&) const;
 #endif
+
+    virtual bool isWebMediaStrategy() const { return false; }
+
 protected:
     MediaStrategy();
     virtual ~MediaStrategy();

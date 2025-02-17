@@ -51,6 +51,8 @@ public:
 
     const WebCore::DOMWrapperWorld& coreWorld() const;
     WebCore::DOMWrapperWorld& coreWorld();
+    Ref<const WebCore::DOMWrapperWorld> protectedCoreWorld() const;
+    Ref<WebCore::DOMWrapperWorld> protectedCoreWorld();
 
     void clearWrappers();
     void setAllowAutofill();
@@ -63,7 +65,7 @@ public:
 private:
     InjectedBundleScriptWorld(WebCore::DOMWrapperWorld&, const String&);
 
-    Ref<WebCore::DOMWrapperWorld> m_world;
+    const Ref<WebCore::DOMWrapperWorld> m_world;
     String m_name;
 };
 

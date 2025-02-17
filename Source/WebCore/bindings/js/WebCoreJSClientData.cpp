@@ -155,7 +155,7 @@ void JSVMClientData::getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
     // is ready to start evaluating JavaScript. For example, Web Inspector waits for the main world
     // change to clear any injected scripts and debugger/breakpoint state.
 
-    auto& mainNormalWorld = mainThreadNormalWorld();
+    auto& mainNormalWorld = mainThreadNormalWorldSingleton();
 
     // Add main normal world.
     if (m_worldSet.contains(&mainNormalWorld))

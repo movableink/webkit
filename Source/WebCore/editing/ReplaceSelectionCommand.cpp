@@ -187,7 +187,7 @@ ReplacementFragment::ReplacementFragment(RefPtr<DocumentFragment>&& inputFragmen
         return;
 
     RefPtr shadowHost { editableRoot->shadowHost() };
-    if (!editableRoot->attributeEventListener(eventNames().webkitBeforeTextInsertedEvent, mainThreadNormalWorld())
+    if (!editableRoot->attributeEventListener(eventNames().webkitBeforeTextInsertedEvent, mainThreadNormalWorldSingleton())
         && !(shadowHost && shadowHost->renderer() && shadowHost->renderer()->isRenderTextControl())
         && editableRoot->hasRichlyEditableStyle()) {
         removeInterchangeNodes(fragment.get());

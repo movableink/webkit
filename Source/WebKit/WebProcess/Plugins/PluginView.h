@@ -167,6 +167,8 @@ private:
     PluginView(WebCore::HTMLPlugInElement&, const URL&, const String& contentType, bool shouldUseManualLoader, WebPage&);
     virtual ~PluginView();
 
+    bool isPluginView() const final { return true; }
+
     void initializePlugin();
 
     Ref<PDFPluginBase> protectedPlugin() const;
@@ -259,5 +261,9 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::PluginView) \
+    static bool isType(const WebCore::PluginViewBase& view) { return view.isPluginView(); } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

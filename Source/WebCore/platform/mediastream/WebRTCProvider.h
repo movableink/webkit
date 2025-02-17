@@ -83,6 +83,8 @@ public:
     void setPortAllocatorRange(StringView);
     std::optional<std::pair<int, int>> portAllocatorRange() const;
 
+    virtual bool isLibWebRTCProvider() const { return false; }
+
 protected:
 #if ENABLE(WEB_RTC)
     std::optional<RTCRtpCapabilities>& audioDecodingCapabilities();

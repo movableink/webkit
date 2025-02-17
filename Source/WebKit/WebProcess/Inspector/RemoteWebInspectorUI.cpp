@@ -99,7 +99,7 @@ void RemoteWebInspectorUI::windowObjectCleared()
         m_frontendHost->disconnectClient();
 
     m_frontendHost = InspectorFrontendHost::create(this, m_page->protectedCorePage().get());
-    m_frontendHost->addSelfToGlobalObjectInWorld(mainThreadNormalWorld());
+    m_frontendHost->addSelfToGlobalObjectInWorld(mainThreadNormalWorldSingleton());
 }
 
 void RemoteWebInspectorUI::frontendLoaded()

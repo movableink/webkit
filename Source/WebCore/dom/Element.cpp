@@ -3473,7 +3473,7 @@ void Element::childrenChanged(const ChildChange& change)
 
 void Element::setAttributeEventListener(const AtomString& eventType, const QualifiedName& attributeName, const AtomString& attributeValue)
 {
-    setAttributeEventListener(eventType, JSLazyEventListener::create(*this, attributeName, attributeValue), mainThreadNormalWorld());
+    setAttributeEventListener(eventType, JSLazyEventListener::create(*this, attributeName, attributeValue), mainThreadNormalWorldSingleton());
 }
 
 void Element::removeAllEventListeners()

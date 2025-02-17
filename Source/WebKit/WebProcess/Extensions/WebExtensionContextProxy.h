@@ -96,7 +96,7 @@ public:
     bool hasDOMWrapperWorld(WebExtensionContentWorldType contentWorldType) const { return contentWorldType != WebExtensionContentWorldType::ContentScript || hasContentScriptWorld(); }
     Ref<WebCore::DOMWrapperWorld> toDOMWrapperWorld(WebExtensionContentWorldType) const;
 
-    static WebCore::DOMWrapperWorld& mainWorldSingleton() { return WebCore::mainThreadNormalWorld(); }
+    static WebCore::DOMWrapperWorld& mainWorldSingleton() { return WebCore::mainThreadNormalWorldSingleton(); }
 
     bool hasContentScriptWorld() const { return !!m_contentScriptWorld; }
     WebCore::DOMWrapperWorld& contentScriptWorld() const { RELEASE_ASSERT(hasContentScriptWorld()); return *m_contentScriptWorld; }

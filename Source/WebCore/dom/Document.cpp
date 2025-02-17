@@ -10801,7 +10801,7 @@ void Document::dispatchSystemPreviewActionEvent(const SystemPreviewInfo& systemP
 HTMLVideoElement* Document::pictureInPictureElement() const
 {
     if (quirks().returnNullPictureInPictureElementDuringFullscreenChange()) {
-        auto* JSDOMWindowBase = toJSDOMWindow(frame(), mainThreadNormalWorld());
+        auto* JSDOMWindowBase = toJSDOMWindow(frame(), mainThreadNormalWorldSingleton());
 
         if (!JSDOMWindowBase)
             return m_pictureInPictureElement.get();

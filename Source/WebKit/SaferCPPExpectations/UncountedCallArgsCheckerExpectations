@@ -336,7 +336,6 @@ WebProcess/InjectedBundle/InjectedBundle.cpp
 WebProcess/InjectedBundle/InjectedBundleDOMWindowExtension.cpp
 WebProcess/InjectedBundle/InjectedBundleHitTestResult.cpp
 WebProcess/InjectedBundle/InjectedBundlePageUIClient.cpp
-WebProcess/InjectedBundle/InjectedBundleScriptWorld.cpp
 WebProcess/Inspector/RemoteWebInspectorUI.cpp
 WebProcess/Inspector/WebInspectorClient.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
@@ -395,7 +394,6 @@ WebProcess/WebCoreSupport/WebValidationMessageClient.cpp
 WebProcess/WebCoreSupport/mac/WebContextMenuClientMac.mm
 WebProcess/WebCoreSupport/mac/WebDragClientMac.mm
 WebProcess/WebCoreSupport/mac/WebEditorClientMac.mm
-WebProcess/WebPage/Cocoa/WebPageCocoa.mm
 WebProcess/WebPage/DrawingArea.cpp
 WebProcess/WebPage/EventDispatcher.cpp
 WebProcess/WebPage/FindController.cpp
@@ -419,7 +417,6 @@ WebProcess/WebPage/WebPageInlines.h
 WebProcess/WebPage/WebPageOverlay.cpp
 WebProcess/WebPage/WebURLSchemeHandlerProxy.cpp
 WebProcess/WebPage/WebURLSchemeTaskProxy.cpp
-WebProcess/WebPage/WebUndoStep.h
 WebProcess/WebPage/mac/PageBannerMac.mm
 WebProcess/WebPage/mac/RemoteLayerTreeDrawingAreaMac.mm
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm

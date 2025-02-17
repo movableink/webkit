@@ -63,7 +63,7 @@ Ref<InjectedBundleScriptWorld> InjectedBundleScriptWorld::create(const String& n
 
 Ref<InjectedBundleScriptWorld> InjectedBundleScriptWorld::getOrCreate(DOMWrapperWorld& world)
 {
-    if (&world == &mainThreadNormalWorld())
+    if (&world == &mainThreadNormalWorldSingleton())
         return normalWorldSingleton();
 
     if (auto existingWorld = allWorlds().get(world))
@@ -83,7 +83,7 @@ InjectedBundleScriptWorld* InjectedBundleScriptWorld::find(const String& name)
 
 InjectedBundleScriptWorld& InjectedBundleScriptWorld::normalWorldSingleton()
 {
-    static InjectedBundleScriptWorld& world = adoptRef(*new InjectedBundleScriptWorld(mainThreadNormalWorld(), String())).leakRef();
+    static InjectedBundleScriptWorld& world = adoptRef(*new InjectedBundleScriptWorld(mainThreadNormalWorldSingleton(), String())).leakRef();
     return world;
 }
 
@@ -134,6 +134,16 @@ void InjectedBundleScriptWorld::makeAllShadowRootsOpen()
 void InjectedBundleScriptWorld::disableOverrideBuiltinsBehavior()
 {
     m_world->disableLegacyOverrideBuiltInsBehavior();
+}
+
+Ref<const WebCore::DOMWrapperWorld> InjectedBundleScriptWorld::protectedCoreWorld() const
+{
+    return m_world;
+}
+
+Ref<WebCore::DOMWrapperWorld> InjectedBundleScriptWorld::protectedCoreWorld()
+{
+    return m_world;
 }
 
 } // namespace WebKit

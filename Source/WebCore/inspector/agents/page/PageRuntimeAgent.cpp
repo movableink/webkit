@@ -149,7 +149,7 @@ void PageRuntimeAgent::reportExecutionContextCreation()
 
         // Always send the main world first.
         auto& mainGlobalObject = mainWorldGlobalObject(frame);
-        notifyContextCreated(frameId, &mainGlobalObject, mainThreadNormalWorld());
+        notifyContextCreated(frameId, &mainGlobalObject, mainThreadNormalWorldSingleton());
 
         for (auto& jsWindowProxy : frame.windowProxy().jsWindowProxiesAsVector()) {
             auto* globalObject = jsWindowProxy->window();

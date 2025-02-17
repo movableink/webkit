@@ -211,6 +211,8 @@ public:
 #endif
 
     WebLocalFrameLoaderClient* localFrameLoaderClient() const;
+    RefPtr<WebLocalFrameLoaderClient> protectedLocalFrameLoaderClient() const;
+
     WebRemoteFrameClient* remoteFrameClient() const;
     WebFrameLoaderClient* frameLoaderClient() const;
 

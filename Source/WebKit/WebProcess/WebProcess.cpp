@@ -738,6 +738,13 @@ void WebProcess::setHasSuspendedPageProxy(bool hasSuspendedPageProxy)
     m_hasSuspendedPageProxy = hasSuspendedPageProxy;
 }
 
+#if ENABLE(GPU_PROCESS) && HAVE(AVASSETREADER)
+Ref<RemoteImageDecoderAVFManager> WebProcess::protectedRemoteImageDecoderAVFManager()
+{
+    return m_remoteImageDecoderAVFManager;
+}
+#endif
+
 void WebProcess::setIsInProcessCache(bool isInProcessCache, CompletionHandler<void()>&& completionHandler)
 {
 #if PLATFORM(COCOA)

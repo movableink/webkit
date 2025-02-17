@@ -187,7 +187,7 @@ ValueOrException ScriptController::evaluateInWorld(const ScriptSourceCode& sourc
 
 JSC::JSValue ScriptController::evaluateIgnoringException(const ScriptSourceCode& sourceCode)
 {
-    return evaluateInWorldIgnoringException(sourceCode, mainThreadNormalWorld());
+    return evaluateInWorldIgnoringException(sourceCode, mainThreadNormalWorldSingleton());
 }
 
 void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScript, const URL& topLevelModuleURL, Ref<JSC::ScriptFetchParameters>&& topLevelFetchParameters, DOMWrapperWorld& world)
@@ -205,7 +205,7 @@ void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScrip
 
 void ScriptController::loadModuleScript(LoadableModuleScript& moduleScript, const URL& topLevelModuleURL, Ref<JSC::ScriptFetchParameters>&& topLevelFetchParameters)
 {
-    loadModuleScriptInWorld(moduleScript, topLevelModuleURL, WTFMove(topLevelFetchParameters), mainThreadNormalWorld());
+    loadModuleScriptInWorld(moduleScript, topLevelModuleURL, WTFMove(topLevelFetchParameters), mainThreadNormalWorldSingleton());
 }
 
 void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScript, const ScriptSourceCode& sourceCode, DOMWrapperWorld& world)
@@ -223,7 +223,7 @@ void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScrip
 
 void ScriptController::loadModuleScript(LoadableModuleScript& moduleScript, const ScriptSourceCode& sourceCode)
 {
-    loadModuleScriptInWorld(moduleScript, sourceCode, mainThreadNormalWorld());
+    loadModuleScriptInWorld(moduleScript, sourceCode, mainThreadNormalWorldSingleton());
 }
 
 JSC::JSValue ScriptController::linkAndEvaluateModuleScriptInWorld(LoadableModuleScript& moduleScript, DOMWrapperWorld& world)
@@ -252,7 +252,7 @@ JSC::JSValue ScriptController::linkAndEvaluateModuleScriptInWorld(LoadableModule
 
 JSC::JSValue ScriptController::linkAndEvaluateModuleScript(LoadableModuleScript& moduleScript)
 {
-    return linkAndEvaluateModuleScriptInWorld(moduleScript, mainThreadNormalWorld());
+    return linkAndEvaluateModuleScriptInWorld(moduleScript, mainThreadNormalWorldSingleton());
 }
 
 JSC::JSValue ScriptController::evaluateModule(const URL& sourceURL, AbstractModuleRecord& moduleRecord, DOMWrapperWorld& world, JSC::JSValue awaitedValue, JSC::JSValue resumeMode)
@@ -289,7 +289,7 @@ JSC::JSValue ScriptController::evaluateModule(const URL& sourceURL, AbstractModu
 
 JSC::JSValue ScriptController::evaluateModule(const URL& sourceURL, AbstractModuleRecord& moduleRecord, JSC::JSValue awaitedValue, JSC::JSValue resumeMode)
 {
-    return evaluateModule(sourceURL, moduleRecord, mainThreadNormalWorld(), awaitedValue, resumeMode);
+    return evaluateModule(sourceURL, moduleRecord, mainThreadNormalWorldSingleton(), awaitedValue, resumeMode);
 }
 
 Ref<DOMWrapperWorld> ScriptController::createWorld(const String& name, WorldType type)
@@ -451,7 +451,7 @@ TextPosition ScriptController::eventHandlerPosition() const
 
 void ScriptController::setEvalEnabled(bool value, const String& errorMessage)
 {
-    auto* jsWindowProxy = windowProxy().existingJSWindowProxy(mainThreadNormalWorld());
+    auto* jsWindowProxy = windowProxy().existingJSWindowProxy(mainThreadNormalWorldSingleton());
     if (!jsWindowProxy)
         return;
     jsWindowProxy->window()->setEvalEnabled(value, errorMessage);
@@ -459,7 +459,7 @@ void ScriptController::setEvalEnabled(bool value, const String& errorMessage)
 
 void ScriptController::setWebAssemblyEnabled(bool value, const String& errorMessage)
 {
-    auto* jsWindowProxy = windowProxy().existingJSWindowProxy(mainThreadNormalWorld());
+    auto* jsWindowProxy = windowProxy().existingJSWindowProxy(mainThreadNormalWorldSingleton());
     if (!jsWindowProxy)
         return;
     jsWindowProxy->window()->setWebAssemblyEnabled(value, errorMessage);
@@ -467,7 +467,7 @@ void ScriptController::setWebAssemblyEnabled(bool value, const String& errorMess
 
 void ScriptController::setRequiresTrustedTypes(bool required)
 {
-    auto* proxy = windowProxy().existingJSWindowProxy(mainThreadNormalWorld());
+    auto* proxy = windowProxy().existingJSWindowProxy(mainThreadNormalWorldSingleton());
     if (!proxy)
         return;
     proxy->window()->setRequiresTrustedTypes(required);
@@ -603,7 +603,7 @@ void ScriptController::clearScriptObjects()
 
 JSC::JSValue ScriptController::executeScriptIgnoringException(const String& script, JSC::SourceTaintedOrigin taintedness, bool forceUserGesture)
 {
-    return executeScriptInWorldIgnoringException(mainThreadNormalWorld(), script, taintedness, forceUserGesture);
+    return executeScriptInWorldIgnoringException(mainThreadNormalWorldSingleton(), script, taintedness, forceUserGesture);
 }
 
 JSC::JSValue ScriptController::executeScriptInWorldIgnoringException(DOMWrapperWorld& world, const String& script, JSC::SourceTaintedOrigin taintedness, bool forceUserGesture)
@@ -847,7 +847,7 @@ void ScriptController::executeJavaScriptURL(const URL& url, const NavigationActi
     if (!frame->page())
         return;
 
-    JSDOMGlobalObject* globalObject = jsWindowProxy(mainThreadNormalWorld()).window();
+    JSDOMGlobalObject* globalObject = jsWindowProxy(mainThreadNormalWorldSingleton()).window();
 
     RefPtr scriptExecutionContext = globalObject->scriptExecutionContext();
     if (!scriptExecutionContext)
@@ -871,7 +871,7 @@ void ScriptController::executeJavaScriptURL(const URL& url, const NavigationActi
     String decodedURL = PAL::decodeURLEscapeSequences(preNavigationCheckURLString);
     // FIXME: This probably needs to figure out if the origin is considered tainted.
     auto result = executeScriptIgnoringException(decodedURL.substring(javascriptSchemeLength), JSC::SourceTaintedOrigin::Untainted);
-    RELEASE_ASSERT(&vm == &jsWindowProxy(mainThreadNormalWorld()).window()->vm());
+    RELEASE_ASSERT(&vm == &jsWindowProxy(mainThreadNormalWorldSingleton()).window()->vm());
 
     // If executing script caused this frame to be removed from the page, we
     // don't want to try to replace its document!
@@ -923,7 +923,7 @@ void ScriptController::executeJavaScriptURL(const URL& url, const NavigationActi
 
 void ScriptController::reportExceptionFromScriptError(LoadableScript::Error error, bool isModule)
 {
-    auto& world = mainThreadNormalWorld();
+    auto& world = mainThreadNormalWorldSingleton();
     JSC::VM& vm = world.vm();
     JSLockHolder lock(vm);
 
@@ -957,7 +957,7 @@ private:
 
 void ScriptController::registerImportMap(const ScriptSourceCode& sourceCode, const URL& baseURL)
 {
-    auto& world = mainThreadNormalWorld();
+    auto& world = mainThreadNormalWorldSingleton();
     JSC::VM& vm = world.vm();
     JSLockHolder lock(vm);
     JSDOMGlobalObject* globalObject = jsWindowProxy(world).window();

@@ -646,7 +646,7 @@ JSC::JSGlobalObject* ScriptExecutionContext::globalObject() const
 {
     if (auto* document = dynamicDowncast<Document>(*this)) {
         auto frame = document->frame();
-        return frame ? frame->script().globalObject(mainThreadNormalWorld()) : nullptr;
+        return frame ? frame->script().globalObject(mainThreadNormalWorldSingleton()) : nullptr;
     }
 
     if (auto* globalScope = dynamicDowncast<WorkerOrWorkletGlobalScope>(*this)) {
