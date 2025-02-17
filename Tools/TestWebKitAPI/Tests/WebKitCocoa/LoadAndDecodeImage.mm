@@ -30,6 +30,7 @@
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
+#import "TestWKWebView.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/Expected.h>
@@ -159,6 +160,18 @@ TEST(WebKit, LoadAndDecodeImage)
         EXPECT_NULL(image);
         EXPECT_EQ(error.code, 103);
         EXPECT_WK_STREQ(error.domain, "WebKitErrorDomain");
+        done = true;
+    }];
+    Util::run(&done);
+
+    done = false;
+    RetainPtr syncedWebView = adoptNS([TestWKWebView new]);
+    [syncedWebView synchronouslyLoadHTMLString:@""];
+    [syncedWebView _close];
+    [syncedWebView _loadAndDecodeImage:tlsServer.request() constrainedToSize:CGSizeZero maximumBytesFromNetwork:36541 completionHandler:^(Util::PlatformImage *image, NSError *error) {
+        EXPECT_NULL(image);
+        EXPECT_EQ(error.code, NSURLErrorCannotDecodeContentData);
+        EXPECT_WK_STREQ(error.domain, "NSURLErrorDomain");
         done = true;
     }];
     Util::run(&done);
