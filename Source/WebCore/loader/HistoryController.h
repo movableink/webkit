@@ -141,8 +141,8 @@ private:
     bool m_frameLoadComplete;
 
     bool m_defersLoading;
-    RefPtr<HistoryItem> m_deferredItem;
     FrameLoadType m_deferredFrameLoadType;
+    RefPtr<HistoryItem> m_deferredItem;
 };
 
 } // namespace WebCore
