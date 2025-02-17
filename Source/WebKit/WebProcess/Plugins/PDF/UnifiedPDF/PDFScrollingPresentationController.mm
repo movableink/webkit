@@ -201,7 +201,8 @@ void PDFScrollingPresentationController::updatePageBackgroundLayers()
         auto destinationRect = pageBoundsRect;
         destinationRect.scale(documentLayout.scale());
 
-        auto pageContainerLayer = [&](PDFDocumentLayout::PageIndex pageIndex) {
+        // FIXME: <rdar://144977686> Remove suppression when the false positive in the static analyzer is fixed.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE auto pageContainerLayer = [&](PDFDocumentLayout::PageIndex pageIndex) {
             if (pageIndex < pageContainerLayers.size())
                 return pageContainerLayers[pageIndex];
 
