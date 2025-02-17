@@ -7468,6 +7468,9 @@ void WebPageProxy::viewIsBecomingInvisible()
     protectedLegacyMainFrameProcess()->pageIsBecomingInvisible(m_webPageID);
     if (auto* drawingAreaProxy = drawingArea())
         drawingAreaProxy->viewIsBecomingInvisible();
+
+    RefPtr protectedPageClient { pageClient() };
+    protectedPageClient->viewIsBecomingInvisible();
 }
 
 void WebPageProxy::processIsNoLongerAssociatedWithPage(WebProcessProxy& process)

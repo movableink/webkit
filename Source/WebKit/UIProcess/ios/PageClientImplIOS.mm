@@ -167,6 +167,8 @@ bool PageClientImpl::isViewVisible()
 
 void PageClientImpl::viewIsBecomingVisible()
 {
+    PageClientImplCocoa::viewIsBecomingVisible();
+
 #if ENABLE(PAGE_LOAD_OBSERVER)
     if (RetainPtr webView = this->webView())
         [webView _updatePageLoadObserverState];

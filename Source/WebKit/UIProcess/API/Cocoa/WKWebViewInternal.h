@@ -452,6 +452,7 @@ struct PerWebProcessState {
 #if ENABLE(SCREEN_TIME)
 - (void)_installScreenTimeWebpageController;
 - (void)_uninstallScreenTimeWebpageController;
+- (void)_updateScreenTimeShieldVisibilityForWindow;
 #endif
 
 #if ENABLE(WRITING_TOOLS)
@@ -518,6 +519,11 @@ struct PerWebProcessState {
 - (RefPtr<WebKit::WebPageProxy>)_protectedPage;
 #if ENABLE(SCREEN_TIME)
 - (STWebpageController *)_screenTimeWebpageController;
+#if PLATFORM(MAC)
+- (NSVisualEffectView *)_screenTimeBlurredSnapshot;
+#else
+- (UIVisualEffectView *)_screenTimeBlurredSnapshot;
+#endif
 #endif
 
 @property (nonatomic, setter=_setHasActiveNowPlayingSession:) BOOL _hasActiveNowPlayingSession;

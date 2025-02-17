@@ -372,6 +372,20 @@ void PageClientImplCocoa::setURLIsPlayingVideoForScreenTime(bool value)
 
 #endif
 
+void PageClientImplCocoa::viewIsBecomingVisible()
+{
+#if ENABLE(SCREEN_TIME)
+    [m_webView _updateScreenTimeShieldVisibilityForWindow];
+#endif
+}
+
+void PageClientImplCocoa::viewIsBecomingInvisible()
+{
+#if ENABLE(SCREEN_TIME)
+    [m_webView _updateScreenTimeShieldVisibilityForWindow];
+#endif
+}
+
 #if ENABLE(GAMEPAD)
 void PageClientImplCocoa::setGamepadsRecentlyAccessed(GamepadsRecentlyAccessed gamepadsRecentlyAccessed)
 {

@@ -96,6 +96,11 @@ static void testSuppressUsageRecordingWithDataStore(RetainPtr<WKWebsiteDataStore
 
 @interface WKWebView (Internal)
 - (STWebpageController *)_screenTimeWebpageController;
+#if PLATFORM(MAC)
+- (NSVisualEffectView *) _screenTimeBlurredSnapshot;
+#else
+- (UIVisualEffectView *) _screenTimeBlurredSnapshot;
+#endif
 @end
 
 @interface BlockedStateObserver : NSObject
@@ -474,6 +479,94 @@ TEST(ScreenTime, RemoveDataWithTimeInterval)
 TEST(ScreenTime, RemoveData)
 {
     // FIXME: Add test once Screen Time implements fetchAllHistoryWithCompletionHandler API
+}
+
+TEST(ScreenTime, OffscreenSystemScreenTimeBlockingView)
+{
+    RetainPtr webView = webViewForScreenTimeTests();
+    [webView synchronouslyLoadHTMLString:@""];
+
+    EXPECT_FALSE([[[webView _screenTimeWebpageController] view] isHidden]);
+
+    [webView removeFromTestWindow];
+
+    [webView waitUntilActivityStateUpdateDone];
+
+    EXPECT_TRUE([[[webView _screenTimeWebpageController] view] isHidden]);
+
+    [webView addToTestWindow];
+
+    EXPECT_FALSE([[[webView _screenTimeWebpageController] view] isHidden]);
+}
+
+TEST(ScreenTime, OffscreenBlurredScreenTimeBlockingView)
+{
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration _setShowsSystemScreenTimeBlockingView:NO];
+
+    RetainPtr webView = webViewForScreenTimeTests(configuration.get());
+    [webView synchronouslyLoadHTMLString:@""];
+
+    RetainPtr controller = [webView _screenTimeWebpageController];
+    [controller setURLIsBlocked:YES];
+
+    EXPECT_TRUE(blurredViewIsPresent(webView.get()));
+
+    [webView removeFromTestWindow];
+
+    [webView waitUntilActivityStateUpdateDone];
+
+    EXPECT_TRUE([[webView _screenTimeBlurredSnapshot] isHidden]);
+
+    [webView addToTestWindow];
+
+    EXPECT_TRUE(blurredViewIsPresent(webView.get()));
+
+    EXPECT_FALSE([[webView _screenTimeBlurredSnapshot] isHidden]);
+}
+
+TEST(ScreenTime, DoNotDonateURLsInOffscreenWebView)
+{
+    __block bool suppressUsageRecording = false;
+    __block bool done = false;
+
+    InstanceMethodSwizzler swizzler {
+        PAL::getSTWebpageControllerClass(),
+        @selector(setSuppressUsageRecording:),
+        imp_implementationWithBlock(^(id object, bool value) {
+            suppressUsageRecording = value;
+            done = true;
+        })
+    };
+
+    RetainPtr webView = webViewForScreenTimeTests();
+
+    RetainPtr controller = [webView _screenTimeWebpageController];
+    [controller setURLIsBlocked:YES];
+
+    [webView synchronouslyLoadHTMLString:@""];
+
+    TestWebKitAPI::Util::run(&done);
+
+    EXPECT_FALSE(suppressUsageRecording);
+
+    suppressUsageRecording = false;
+    done = false;
+
+    [webView removeFromTestWindow];
+
+    TestWebKitAPI::Util::run(&done);
+
+    EXPECT_TRUE(suppressUsageRecording);
+
+    suppressUsageRecording = false;
+    done = false;
+
+    [webView addToTestWindow];
+
+    TestWebKitAPI::Util::run(&done);
+
+    EXPECT_FALSE(suppressUsageRecording);
 }
 
 #endif

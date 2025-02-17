@@ -141,6 +141,9 @@ public:
     void updateScreenTimeWebpageControllerURL(WKWebView *);
 #endif
 
+    void viewIsBecomingVisible() override;
+    void viewIsBecomingInvisible() override;
+
 #if ENABLE(GAMEPAD)
     void setGamepadsRecentlyAccessed(GamepadsRecentlyAccessed) final;
 #if PLATFORM(VISION)
@@ -160,6 +163,7 @@ private:
 #if ENABLE(FULLSCREEN_API)
     void setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&&) final;
 #endif
+
 protected:
     RetainPtr<WKWebView> webView() const { return m_webView.get(); }
 

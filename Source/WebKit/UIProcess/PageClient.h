@@ -263,6 +263,9 @@ public:
     // Called when the activity state of the page transitions from non-visible to visible.
     virtual void viewIsBecomingVisible() { }
 
+    // Called when the activity state of the page transitions from visible to non-visible.
+    virtual void viewIsBecomingInvisible() { }
+
 #if PLATFORM(COCOA)
     virtual bool canTakeForegroundAssertions() = 0;
 #endif

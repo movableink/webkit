@@ -452,10 +452,38 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     if (!_screenTimeWebpageController)
         return;
 
+    [std::exchange(_screenTimeBlurredSnapshot, nil) removeFromSuperview];
+
     [[_screenTimeWebpageController view] removeFromSuperview];
     [_screenTimeWebpageController removeObserver:self forKeyPath:@"URLIsBlocked" context:&screenTimeWebpageControllerBlockedKVOContext];
     _screenTimeWebpageController = nil;
 }
+
+- (void)_updateScreenTimeShieldVisibilityForWindow
+{
+    BOOL viewIsInWindow = !!self.window;
+
+    BOOL showsSystemScreenTimeBlockingView = [_configuration _showsSystemScreenTimeBlockingView];
+
+    if (viewIsInWindow) {
+        if (!showsSystemScreenTimeBlockingView && _screenTimeBlurredSnapshot)
+            [_screenTimeBlurredSnapshot setHidden:NO];
+        else if (showsSystemScreenTimeBlockingView)
+            [[_screenTimeWebpageController view] setHidden:NO];
+    } else {
+        if (_screenTimeBlurredSnapshot)
+            [_screenTimeBlurredSnapshot setHidden:YES];
+        else if (showsSystemScreenTimeBlockingView)
+            [[_screenTimeWebpageController view] setHidden:YES];
+    }
+
+    BOOL viewIsVisible = self.window;
+#if PLATFORM(MAC)
+    viewIsVisible &= ((self.window.occlusionState & NSWindowOcclusionStateVisible) == NSWindowOcclusionStateVisible);
+#endif
+    [_screenTimeWebpageController setSuppressUsageRecording:(![_configuration websiteDataStore].isPersistent || !viewIsVisible)];
+}
+
 #endif // ENABLE(SCREEN_TIME)
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey, id> *)change context:(void *)context
@@ -2041,6 +2069,15 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 - (STWebpageController *)_screenTimeWebpageController
 {
     return _screenTimeWebpageController.get();
+}
+
+#if PLATFORM(MAC)
+- (NSVisualEffectView *) _screenTimeBlurredSnapshot
+#else
+- (UIVisualEffectView *) _screenTimeBlurredSnapshot
+#endif
+{
+    return _screenTimeBlurredSnapshot.get();
 }
 #endif
 
