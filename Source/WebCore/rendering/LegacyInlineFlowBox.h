@@ -169,7 +169,7 @@ private:
 #endif
 
 protected:
-    RefPtr<RenderOverflow> m_overflow;
+    std::unique_ptr<RenderOverflow> m_overflow;
 
     LegacyInlineBox* m_firstChild { nullptr };
     LegacyInlineBox* m_lastChild { nullptr };

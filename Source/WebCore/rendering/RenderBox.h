@@ -550,7 +550,7 @@ public:
     LayoutRect logicalLayoutOverflowRectForPropagation(const WritingMode) const;
     LayoutRect layoutOverflowRectForPropagation(const WritingMode) const;
 
-    bool hasRenderOverflow() const { return m_overflow; }    
+    bool hasRenderOverflow() const { return !!m_overflow; }
     bool hasVisualOverflow() const { return m_overflow && !borderBoxRect().contains(m_overflow->visualOverflowRect()); }
 
     virtual bool needsPreferredWidthsRecalculation() const;
@@ -772,7 +772,7 @@ protected:
     LayoutUnit m_maxPreferredLogicalWidth;
 
     // Our overflow information.
-    RefPtr<RenderOverflow> m_overflow;
+    std::unique_ptr<RenderOverflow> m_overflow;
 
 private:
     // Used to store state between styleWillChange and styleDidChange

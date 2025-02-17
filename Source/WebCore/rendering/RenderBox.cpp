@@ -5362,7 +5362,7 @@ void RenderBox::addLayoutOverflow(const LayoutRect& rect, const LayoutRect& clie
     }
 
     if (!m_overflow)
-        m_overflow = adoptRef(new RenderOverflow(clientBox, borderBoxRect()));
+        m_overflow = makeUnique<RenderOverflow>(clientBox, borderBoxRect());
     
     m_overflow->addLayoutOverflow(overflowRect);
 }
@@ -5374,14 +5374,14 @@ void RenderBox::addVisualOverflow(const LayoutRect& rect)
         return;
         
     if (!m_overflow)
-        m_overflow = adoptRef(new RenderOverflow(flippedClientBoxRect(), borderBox));
+        m_overflow = makeUnique<RenderOverflow>(flippedClientBoxRect(), borderBox);
     
     m_overflow->addVisualOverflow(rect);
 }
 
 void RenderBox::clearOverflow()
 {
-    m_overflow = nullptr;
+    m_overflow = { };
     if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow())
         fragmentedFlow->clearFragmentsOverflow(*this);
 }
