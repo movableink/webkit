@@ -477,7 +477,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
             [[_screenTimeWebpageController view] setHidden:YES];
     }
 
-    BOOL viewIsVisible = self.window;
+    BOOL viewIsVisible = viewIsInWindow;
 #if PLATFORM(MAC)
     viewIsVisible &= ((self.window.occlusionState & NSWindowOcclusionStateVisible) == NSWindowOcclusionStateVisible);
 #endif
