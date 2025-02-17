@@ -21,7 +21,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-public import SwiftUI
+internal import SwiftUI
 @_spi(Private) @_spi(CrossImportOverlay) import WebKit
 internal import WebKit_Internal
 
@@ -51,6 +51,12 @@ struct WebViewRepresentable {
 
         webView.allowsBackForwardNavigationGestures = environment.webViewAllowsBackForwardNavigationGestures.value != .disabled
         webView.allowsLinkPreview = environment.webViewAllowsLinkPreview.value != .disabled
+
+#if os(macOS)
+        webView._drawsBackground = environment.webViewContentBackground != .hidden
+#else
+        webView.isOpaque = environment.webViewContentBackground != .hidden
+#endif
 
         webView.configuration.preferences.isTextInteractionEnabled = environment.webViewTextSelection
         webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewAllowsElementFullscreen

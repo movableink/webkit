@@ -43,6 +43,9 @@ extension EnvironmentValues {
 
     @Entry
     var webViewContextMenuContext: ContextMenuContext? = nil
+
+    @Entry
+    var webViewContentBackground: Visibility = .automatic
 }
 
 extension View {
@@ -99,6 +102,11 @@ extension View {
 #else
         return self
 #endif
+    }
+
+    @_spi(Private)
+    public func webViewContentBackground(_ visibility: Visibility) -> some View {
+        environment(\.webViewContentBackground, visibility)
     }
 }
 
