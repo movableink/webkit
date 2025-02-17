@@ -40,6 +40,8 @@ NS_ASSUME_NONNULL_BEGIN
 NS_SWIFT_UI_ACTOR
 @interface WKMaterialHostingSupport : NSObject
 
++ (BOOL)isMaterialHostingAvailable;
+
 + (CALayer *)createHostingLayer;
 + (void)updateHostingLayer:(CALayer *)hostingLayer cornerRadius:(CGFloat)cornerRadius;
 + (nullable CALayer *)contentLayerForMaterialHostingLayer:(CALayer *)hostingLayer;

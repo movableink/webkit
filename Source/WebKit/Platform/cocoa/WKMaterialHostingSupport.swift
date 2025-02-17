@@ -26,9 +26,9 @@
 internal import WebKit_Internal
 
 #if canImport(UIKit)
-@_spi(Private) @_spi(ForUIKitOnly) internal import SwiftUI
+@_weakLinked @_spi(Private) @_spi(ForUIKitOnly) internal import SwiftUI
 #else
-@_spi(Private) @_spi(ForAppKitOnly) internal import SwiftUI
+@_weakLinked @_spi(Private) @_spi(ForAppKitOnly) internal import SwiftUI
 #endif
 
 #if canImport(UIKit)
@@ -113,6 +113,14 @@ private extension CALayer {
 }
 
 @objc @implementation extension WKMaterialHostingSupport {
+    class func isMaterialHostingAvailable() -> Bool {
+        guard #_hasSymbol(Material.self) else {
+            return false
+        }
+
+        return true;
+    }
+
     class func createHostingLayer() -> CALayer {
         let contentLayer = CALayer()
 
