@@ -663,6 +663,10 @@ public:
 
     Document* outermostFullscreenDocument() const;
 
+#if HAVE(HDR_SUPPORT)
+    bool canDrawHDRContents() const;
+#endif
+
     bool shouldSuppressScrollbarAnimations() const { return m_suppressScrollbarAnimations; }
     WEBCORE_EXPORT void setShouldSuppressScrollbarAnimations(bool suppressAnimations);
     void lockAllOverlayScrollbarsToHidden(bool lockOverlayScrollbars);

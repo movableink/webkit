@@ -2488,10 +2488,25 @@ header: <WebCore/ScreenProperties.h>
 #endif
 };
 
+#if HAVE(HDR_SUPPORT)
+[OptionSet] enum class WebCore::ContentsFormat : uint8_t {
+    RGBA8,
+#if ENABLE(PIXEL_FORMAT_RGB10)
+    RGBA10,
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    RGBA16F,
+#endif
+};
+#endif
+
 using WebCore::PlatformDisplayID = uint32_t;
 struct WebCore::ScreenProperties {
     WebCore::PlatformDisplayID primaryDisplayID;
     HashMap<WebCore::PlatformDisplayID, WebCore::ScreenData> screenDataMap;
+#if HAVE(HDR_SUPPORT)
+    OptionSet<WebCore::ContentsFormat> screenContentsFormatsForTesting;
+#endif
 };
 
 class WebCore::PlatformTimeRanges {

@@ -99,7 +99,7 @@ public:
 
     Headroom headroom() const;
 #if ENABLE(HDR_FOR_IMAGES)
-    bool drawsHDRContent() const { return headroom() > Headroom::None; }
+    bool isHDR() const { return headroom() > Headroom::None; }
 #endif
 
     bool isManuallyCached() const { return m_isManuallyCached; }

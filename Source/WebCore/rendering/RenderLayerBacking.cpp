@@ -61,6 +61,7 @@
 #include "RemoteFrameClient.h"
 #include "RenderAncestorIterator.h"
 #include "RenderBoxInlines.h"
+#include "RenderDescendantIterator.h"
 #include "RenderElementInlines.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderFragmentContainer.h"
@@ -138,7 +139,7 @@ CanvasCompositingStrategy canvasCompositingStrategy(const RenderObject& renderer
 // This acts as a cache of what we know about what is painting into this RenderLayerBacking.
 class PaintedContentsInfo {
 public:
-    enum class ContentsTypeDetermination {
+    enum class ContentsType {
         Unknown,
         SimpleContainer,
         DirectlyCompositedImage,
@@ -149,6 +150,12 @@ public:
     PaintedContentsInfo(RenderLayerBacking& inBacking)
         : m_backing(inBacking)
     {
+#if HAVE(HDR_SUPPORT)
+        if (m_backing.renderer().page().canDrawHDRContents()) {
+            m_hdrContent = RequestState::Unknown;
+            m_isReplacedElementWithHDR = RequestState::Unknown;
+        }
+#endif
     }
 
     void determinePaintsBoxDecorations();
@@ -156,6 +163,16 @@ public:
     {
         determinePaintsBoxDecorations();
         return m_boxDecorations == RequestState::True || m_boxDecorations == RequestState::Undetermined;
+    }
+
+
+    bool isPaintsContentSatisfied() const
+    {
+#if HAVE(HDR_SUPPORT)
+        if (m_hdrContent == RequestState::Unknown)
+            return false;
+#endif
+        return m_content != RequestState::Unknown;
     }
 
     void determinePaintsContent();
@@ -169,34 +186,55 @@ public:
     bool paintsHDRContent()
     {
         determinePaintsContent();
-        return m_hdrContent == RequestState::True || m_hdrContent == RequestState::Undetermined;
+        return m_hdrContent == RequestState::True;
     }
 #endif
 
-    ContentsTypeDetermination contentsTypeDetermination();
+    bool isContentsTypeSatisfied() const
+    {
+#if HAVE(HDR_SUPPORT)
+        if (m_isReplacedElementWithHDR == RequestState::Unknown)
+            return false;
+#endif
+        return m_contentsType != ContentsType::Unknown;
+    }
+
+    void determineContentsType();
     bool isSimpleContainer()
     {
-        return contentsTypeDetermination() == ContentsTypeDetermination::SimpleContainer;
+        determineContentsType();
+        return m_contentsType == ContentsType::SimpleContainer;
     }
 
     bool isDirectlyCompositedImage()
     {
-        return contentsTypeDetermination() == ContentsTypeDetermination::DirectlyCompositedImage;
+        determineContentsType();
+        return m_contentsType == ContentsType::DirectlyCompositedImage;
     }
 
     bool isUnscaledBitmapOnly()
     {
-        return contentsTypeDetermination() == ContentsTypeDetermination::UnscaledBitmapOnly;
+        determineContentsType();
+        return m_contentsType == ContentsType::UnscaledBitmapOnly;
     }
+
+#if HAVE(HDR_SUPPORT)
+    bool isReplacedElementWithHDR()
+    {
+        determineContentsType();
+        return m_isReplacedElementWithHDR == RequestState::True;
+    }
+#endif
 
     RenderLayerBacking& m_backing;
     RequestState m_boxDecorations { RequestState::Unknown };
     RequestState m_content { RequestState::Unknown };
 #if HAVE(HDR_SUPPORT)
-    RequestState m_hdrContent { RequestState::Unknown };
+    RequestState m_hdrContent { RequestState::DontCare };
+    RequestState m_isReplacedElementWithHDR { RequestState::DontCare };
 #endif
 
-    ContentsTypeDetermination m_contentsType { ContentsTypeDetermination::Unknown };
+    ContentsType m_contentsType { ContentsType::Unknown };
 };
 
 void PaintedContentsInfo::determinePaintsBoxDecorations()
@@ -209,7 +247,7 @@ void PaintedContentsInfo::determinePaintsBoxDecorations()
 
 void PaintedContentsInfo::determinePaintsContent()
 {
-    if (m_content != RequestState::Unknown)
+    if (isPaintsContentSatisfied())
         return;
 
     RenderLayer::PaintedContentRequest contentRequest(m_backing.owningLayer());
@@ -221,21 +259,24 @@ void PaintedContentsInfo::determinePaintsContent()
 #endif
 }
 
-PaintedContentsInfo::ContentsTypeDetermination PaintedContentsInfo::contentsTypeDetermination()
+void PaintedContentsInfo::determineContentsType()
 {
-    if (m_contentsType != ContentsTypeDetermination::Unknown)
-        return m_contentsType;
+    if (isContentsTypeSatisfied())
+        return;
 
     if (m_backing.isSimpleContainerCompositingLayer(*this))
-        m_contentsType = ContentsTypeDetermination::SimpleContainer;
+        m_contentsType = ContentsType::SimpleContainer;
     else if (m_backing.isDirectlyCompositedImage())
-        m_contentsType = ContentsTypeDetermination::DirectlyCompositedImage;
+        m_contentsType = ContentsType::DirectlyCompositedImage;
     else if (m_backing.isUnscaledBitmapOnly())
-        m_contentsType = ContentsTypeDetermination::UnscaledBitmapOnly;
+        m_contentsType = ContentsType::UnscaledBitmapOnly;
     else
-        m_contentsType = ContentsTypeDetermination::Painted;
+        m_contentsType = ContentsType::Painted;
 
-    return m_contentsType;
+#if HAVE(HDR_SUPPORT)
+    if (m_isReplacedElementWithHDR == RequestState::Unknown)
+        m_isReplacedElementWithHDR = m_backing.isReplacedElementWithHDR() ? RequestState::True : RequestState::False;
+#endif
 }
 
 
@@ -1980,6 +2021,11 @@ void RenderLayerBacking::updateDrawsContent(PaintedContentsInfo& contentsInfo)
 
     if (m_backgroundLayer)
         m_backgroundLayer->setDrawsContent(m_backgroundLayerPaintsFixedRootBackground ? hasPaintedContent : contentsInfo.paintsBoxDecorations());
+
+#if HAVE(HDR_SUPPORT)
+    if (contentsInfo.paintsHDRContent() || contentsInfo.isReplacedElementWithHDR())
+        m_graphicsLayer->setDrawsHDRContent(true);
+#endif
 }
 
 #if ENABLE(ASYNC_SCROLLING)
@@ -3152,7 +3198,7 @@ void RenderLayerBacking::determineNonCompositedLayerDescendantsPaintedContent(Re
 {
     bool hasPaintingDescendant = false;
     traverseVisibleNonCompositedDescendantLayers(m_owningLayer, [&hasPaintingDescendant, &request, this](const RenderLayer& layer) {
-        RenderLayer::PaintedContentRequest localRequest;
+        RenderLayer::PaintedContentRequest localRequest(m_owningLayer);
         if (layer.isVisuallyNonEmpty(&localRequest)) {
             bool mayIntersect = intersectsWithAncestor(layer, m_owningLayer, compositedBounds()).value_or(true);
             if (mayIntersect) {
@@ -3160,6 +3206,10 @@ void RenderLayerBacking::determineNonCompositedLayerDescendantsPaintedContent(Re
                 request.setHasPaintedContent();
             }
         }
+#if HAVE(HDR_SUPPORT)
+        if (localRequest.probablyHasPaintedContent())
+            request.hasPaintedHDRContent = localRequest.hasPaintedHDRContent;
+#endif
         return (hasPaintingDescendant && request.isSatisfied()) ? LayerTraversal::Stop : LayerTraversal::Continue;
     });
 }
@@ -3308,6 +3358,13 @@ bool RenderLayerBacking::isUnscaledBitmapOnly() const
         return true;
     return false;
 }
+
+#if HAVE(HDR_SUPPORT)
+bool RenderLayerBacking::isReplacedElementWithHDR() const
+{
+    return m_owningLayer.isReplacedElementWithHDR();
+}
+#endif
 
 void RenderLayerBacking::contentChanged(ContentChangeType changeType)
 {
@@ -4096,13 +4153,6 @@ bool RenderLayerBacking::shouldDumpPropertyForLayer(const GraphicsLayer* layer, 
 
     return true;
 }
-
-#if ENABLE(HDR_FOR_IMAGES)
-bool RenderLayerBacking::hdrForImagesEnabled() const
-{
-    return renderer().settings().hdrForImagesEnabled();
-}
-#endif
 
 bool RenderLayerBacking::shouldAggressivelyRetainTiles(const GraphicsLayer*) const
 {

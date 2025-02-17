@@ -472,15 +472,6 @@ auto RemoteLayerTreeDrawingArea::rootLayerInfoWithFrameIdentifier(WebCore::Frame
     return &m_rootLayers[index];
 }
 
-#if ENABLE(HDR_FOR_IMAGES)
-bool RemoteLayerTreeDrawingArea::hdrForImagesEnabled() const
-{
-    if (auto corePage = m_webPage->corePage())
-        return corePage->settings().hdrForImagesEnabled();
-    return false;
-}
-#endif
-
 void RemoteLayerTreeDrawingArea::mainFrameContentSizeChanged(WebCore::FrameIdentifier frameID, const IntSize& contentsSize)
 {
     if (auto* layerInfo = rootLayerInfoWithFrameIdentifier(frameID))

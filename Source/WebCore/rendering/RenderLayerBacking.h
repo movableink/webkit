@@ -249,9 +249,6 @@ public:
     bool isTrackingRepaints() const override;
     bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const override;
     bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
-#if ENABLE(HDR_FOR_IMAGES)
-    bool hdrForImagesEnabled() const override;
-#endif
 
     bool shouldAggressivelyRetainTiles(const GraphicsLayer*) const override;
     bool shouldTemporarilyRetainTileCohorts(const GraphicsLayer*) const override;
@@ -395,6 +392,9 @@ private:
     void updateImageContents(PaintedContentsInfo&);
     bool isUnscaledBitmapOnly() const;
     bool isBitmapOnly() const;
+#if HAVE(HDR_SUPPORT)
+    bool isReplacedElementWithHDR() const;
+#endif
 
     void updateDirectlyCompositedBoxDecorations(PaintedContentsInfo&, bool& didUpdateContentsRect);
     void updateDirectlyCompositedBackgroundColor(PaintedContentsInfo&, bool& didUpdateContentsRect);

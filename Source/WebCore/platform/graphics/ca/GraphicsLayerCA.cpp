@@ -730,6 +730,17 @@ void GraphicsLayerCA::setDrawsContent(bool drawsContent)
     noteLayerPropertyChanged(DrawsContentChanged | DebugIndicatorsChanged);
 }
 
+#if HAVE(HDR_SUPPORT)
+void GraphicsLayerCA::setDrawsHDRContent(bool drawsHDRContent)
+{
+    if (drawsHDRContent == m_drawsHDRContent)
+        return;
+
+    GraphicsLayer::setDrawsHDRContent(drawsHDRContent);
+    noteLayerPropertyChanged(DrawsHDRContentChanged | DebugIndicatorsChanged);
+}
+#endif
+
 void GraphicsLayerCA::setContentsVisible(bool contentsVisible)
 {
     if (contentsVisible == m_contentsVisible)
@@ -2132,6 +2143,11 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     if (m_uncommittedChanges & DrawsContentChanged)
         updateDrawsContent();
 
+#if HAVE(HDR_SUPPORT)
+    if (m_uncommittedChanges & DrawsHDRContentChanged)
+        updateDrawsHDRContent();
+#endif
+
     if (m_uncommittedChanges & NameChanged)
         updateNames();
 
@@ -3290,6 +3306,14 @@ void GraphicsLayerCA::updateReplicatedLayers()
     else
         m_layer->insertSublayer(*replicaRoot, 0);
 }
+
+#if HAVE(HDR_SUPPORT)
+void GraphicsLayerCA::updateDrawsHDRContent()
+{
+    auto contentsFormat = PlatformCALayer::contentsFormatForLayer(nullptr, this);
+    m_layer->setContentsFormat(contentsFormat);
+}
+#endif
 
 // For now, this assumes that layers only ever have one replica, so replicaIndices contains only 0 and 1.
 GraphicsLayerCA::CloneID GraphicsLayerCA::ReplicaState::cloneID() const
@@ -4600,6 +4624,9 @@ ASCIILiteral GraphicsLayerCA::layerChangeAsString(LayerChange layerChange)
     case LayerChange::BackdropRootChanged: return "BackdropRootChanged"_s;
 #if HAVE(CORE_MATERIAL)
     case LayerChange::AppleVisualEffectChanged: return "AppleVisualEffectChanged"_s;
+#endif
+#if HAVE(HDR_SUPPORT)
+    case LayerChange::DrawsHDRContentChanged: return "DrawsHDRContentChanged"_s;
 #endif
     }
     ASSERT_NOT_REACHED();

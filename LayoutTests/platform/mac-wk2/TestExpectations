@@ -1518,6 +1518,9 @@ webkit.org/b/260113 [ arm64 ] http/wpt/webauthn/ctap-hid-failure.https.html [ Pa
 [ Sonoma+ ] fast/images/mac/animation-context-menu-items-presence.html [ Pass ]
 # This test was added in https://bugs.webkit.org/show_bug.cgi?id=250475 — re-enable it here for Sonoma.
 
+# Only applicable on platforms with HDR support
+[ Sequoia+ ] compositing/hdr/hdr-basic-canvas.html [ Pass ]
+
 # The direct image codepath is not used with the remote layer tree.
 [ Sonoma+ ] compositing/images/direct-image-object-fit.html [ Skip ]
 [ Sonoma+ ] compositing/reflections/direct-image-object-fit-reflected.html [ Skip ]

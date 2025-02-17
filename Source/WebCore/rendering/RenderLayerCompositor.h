@@ -431,9 +431,6 @@ private:
     bool backdropRootIsOpaque(const GraphicsLayer*) const override;
     bool isFlushingLayers() const override { return m_flushingLayers; }
     bool isTrackingRepaints() const override { return m_isTrackingRepaints; }
-#if ENABLE(HDR_FOR_IMAGES)
-    bool hdrForImagesEnabled() const override;
-#endif
 
     // Copy the accelerated compositing related flags from Settings
     void cacheAcceleratedCompositingFlags();

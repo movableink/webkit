@@ -424,6 +424,11 @@ public:
     bool drawsContent() const { return m_drawsContent; }
     WEBCORE_EXPORT virtual void setDrawsContent(bool);
 
+#if HAVE(HDR_SUPPORT)
+    bool drawsHDRContent() const { return m_drawsHDRContent; }
+    WEBCORE_EXPORT virtual void setDrawsHDRContent(bool);
+#endif
+
     bool contentsAreVisible() const { return m_contentsVisible; }
     virtual void setContentsVisible(bool b) { m_contentsVisible = b; }
 
@@ -612,11 +617,6 @@ public:
 
     virtual void setShowRepaintCounter(bool show) { m_showRepaintCounter = show; }
     bool isShowingRepaintCounter() const { return m_showRepaintCounter; }
-
-#if ENABLE(HDR_FOR_IMAGES)
-    virtual void setHDRForImagesEnabled(bool b) { m_hdrForImagesEnabled = b; }
-    bool hdrForImagesEnabled() const { return m_hdrForImagesEnabled; }
-#endif
 
     // FIXME: this is really a paint count.
     int repaintCount() const { return m_repaintCount; }
@@ -822,6 +822,9 @@ protected:
     bool m_backfaceVisibility : 1;
     bool m_masksToBounds : 1;
     bool m_drawsContent : 1;
+#if HAVE(HDR_SUPPORT)
+    bool m_drawsHDRContent : 1 { false };
+#endif
     bool m_contentsVisible : 1;
     bool m_contentsRectClipsDescendants : 1;
     bool m_acceleratesDrawing : 1;
@@ -845,9 +848,6 @@ protected:
     bool m_isSeparatedPortal : 1;
     bool m_isDescendentOfSeparatedPortal : 1;
 #endif
-#endif
-#if ENABLE(HDR_FOR_IMAGES)
-    bool m_hdrForImagesEnabled : 1;
 #endif
 
     int m_repaintCount { 0 };

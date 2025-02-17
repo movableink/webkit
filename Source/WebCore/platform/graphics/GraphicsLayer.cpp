@@ -444,6 +444,14 @@ void GraphicsLayer::setDrawsContent(bool b)
     m_drawsContent = b;
 }
 
+#if HAVE(HDR_SUPPORT)
+void GraphicsLayer::setDrawsHDRContent(bool b)
+{
+    ASSERT(m_type != Type::Structural);
+    m_drawsHDRContent = b;
+}
+#endif
+
 const TransformationMatrix& GraphicsLayer::transform() const
 {
     return m_transform ? *m_transform : TransformationMatrix::identity;
@@ -975,6 +983,11 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
 
     if (m_drawsContent && client().shouldDumpPropertyForLayer(this, "drawsContent"_s, options))
         ts << indent << "(drawsContent "_s << m_drawsContent << ")\n"_s;
+
+#if HAVE(HDR_SUPPORT)
+    if (m_drawsHDRContent)
+        ts << indent << "(drawsHDRContent "_s << m_drawsHDRContent << ")\n"_s;
+#endif
 
     if (!m_contentsVisible)
         ts << indent << "(contentsVisible "_s << m_contentsVisible << ")\n"_s;

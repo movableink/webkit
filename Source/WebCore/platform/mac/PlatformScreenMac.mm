@@ -384,6 +384,11 @@ OptionSet<ContentsFormat> screenContentsFormats(Widget* widget)
 
 bool screenSupportsExtendedColor(Widget* widget)
 {
+#if HAVE(HDR_SUPPORT) && ENABLE(PIXEL_FORMAT_RGB10)
+    if (screenContentsFormatsForTesting().contains(ContentsFormat::RGBA10))
+        return true;
+#endif
+
     if (auto data = screenProperties(widget))
         return data->screenSupportsExtendedColor;
 
@@ -393,6 +398,11 @@ bool screenSupportsExtendedColor(Widget* widget)
 
 bool screenSupportsHighDynamicRange(Widget* widget)
 {
+#if HAVE(HDR_SUPPORT) && ENABLE(PIXEL_FORMAT_RGBA16F)
+    if (screenContentsFormatsForTesting().contains(ContentsFormat::RGBA16F))
+        return true;
+#endif
+
     if (auto data = screenProperties(widget))
         return data->screenSupportsHighDynamicRange;
 

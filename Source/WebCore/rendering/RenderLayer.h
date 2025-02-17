@@ -569,7 +569,6 @@ public:
 #if HAVE(HDR_SUPPORT)
         void setHasPaintedHDRContent() { hasPaintedHDRContent = RequestState::True; }
         void makePaintedHDRContentUnknown() { hasPaintedHDRContent = RequestState::Unknown; }
-        bool probablyHasPaintedHDRContent() const { return hasPaintedHDRContent == RequestState::True || hasPaintedHDRContent == RequestState::Undetermined; }
         bool isPaintedHDRContentSatisfied() const { return hasPaintedHDRContent != RequestState::Unknown; }
 #endif
 
@@ -594,6 +593,10 @@ public:
     bool isVisuallyNonEmpty(PaintedContentRequest* = nullptr) const;
     // True if this layer container renderers that paint.
     void determineNonLayerDescendantsPaintedContent(PaintedContentRequest&) const;
+#if HAVE(HDR_SUPPORT)
+    // True of if renderer itself draws HDR content, no traversal is done.
+    bool isReplacedElementWithHDR() const;
+#endif
 
     // FIXME: We should ASSERT(!m_hasSelfPaintingLayerDescendantDirty); here but we hit the same bugs as visible content above.
     // Part of the issue is with subtree relayout: we don't check if our ancestors have some descendant flags dirty, missing some updates.

@@ -353,9 +353,6 @@ void PageOverlayController::updateSettingsForLayer(GraphicsLayer& layer)
     layer.setAcceleratesDrawing(settings->acceleratedDrawingEnabled());
     layer.setShowDebugBorder(settings->showDebugBorders());
     layer.setShowRepaintCounter(settings->showRepaintCounter());
-#if ENABLE(HDR_FOR_IMAGES)
-    layer.setHDRForImagesEnabled(settings->hdrForImagesEnabled());
-#endif
 }
 
 bool PageOverlayController::handleMouseEvent(const PlatformMouseEvent& mouseEvent)

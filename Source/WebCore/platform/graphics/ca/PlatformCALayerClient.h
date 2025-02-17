@@ -73,8 +73,8 @@ public:
 
     virtual bool isUsingDisplayListDrawing(PlatformCALayer*) const { return false; }
 
-#if ENABLE(HDR_FOR_IMAGES)
-    virtual bool hdrForImagesEnabled() const { return false; }
+#if HAVE(HDR_SUPPORT)
+    virtual bool drawsHDRContent() const { return false; }
 #endif
 
     virtual void platformCALayerLogFilledVisibleFreshTile(unsigned /* blankPixelCount */) { }

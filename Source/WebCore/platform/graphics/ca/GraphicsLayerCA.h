@@ -99,6 +99,9 @@ public:
     WEBCORE_EXPORT void setPreserves3D(bool) override;
     WEBCORE_EXPORT void setMasksToBounds(bool) override;
     WEBCORE_EXPORT void setDrawsContent(bool) override;
+#if HAVE(HDR_SUPPORT)
+    WEBCORE_EXPORT void setDrawsHDRContent(bool) override;
+#endif
     WEBCORE_EXPORT void setContentsVisible(bool) override;
     WEBCORE_EXPORT void setAcceleratesDrawing(bool) override;
     WEBCORE_EXPORT void setUsesDisplayListDrawing(bool) override;
@@ -272,8 +275,9 @@ private:
 
     bool isCommittingChanges() const override { return m_isCommittingChanges; }
     bool isUsingDisplayListDrawing(PlatformCALayer*) const override { return m_usesDisplayListDrawing; }
-#if ENABLE(HDR_FOR_IMAGES)
-    bool hdrForImagesEnabled() const override { return client().hdrForImagesEnabled(); }
+#if HAVE(HDR_SUPPORT)
+    bool drawsHDRContent() const override { return m_drawsHDRContent; }
+    void updateDrawsHDRContent();
 #endif
 
     WEBCORE_EXPORT void setAllowsBackingStoreDetaching(bool) override;
@@ -654,6 +658,9 @@ private:
         BackdropRootChanged                     = 1LLU << 45,
 #if HAVE(CORE_MATERIAL)
         AppleVisualEffectChanged                = 1LLU << 46,
+#endif
+#if HAVE(HDR_SUPPORT)
+        DrawsHDRContentChanged                  = 1LLU << 47,
 #endif
     };
     typedef uint64_t LayerChangeFlags;

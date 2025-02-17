@@ -651,6 +651,17 @@ public:
     void setFullscreenInsets(FullscreenInsets);
     ExceptionOr<void> setFullscreenAutoHideDuration(double);
 
+    enum ContentsFormat {
+        RGBA8,
+#if ENABLE(PIXEL_FORMAT_RGB10)
+        RGBA10,
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+        RGBA16F,
+#endif
+    };
+    void setScreenContentsFormatsForTesting(const Vector<Internals::ContentsFormat>&);
+
 #if ENABLE(VIDEO)
     bool isChangingPresentationMode(HTMLVideoElement&) const;
 #endif

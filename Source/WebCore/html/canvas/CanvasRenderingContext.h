@@ -119,7 +119,7 @@ public:
     virtual std::optional<RenderingMode> renderingModeForTesting() const { return std::nullopt; }
 
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    bool drawsHDRContent() const { return pixelFormat() == ImageBufferPixelFormat::RGBA16F; }
+    bool isHDR() const { return pixelFormat() == ImageBufferPixelFormat::RGBA16F; }
 #endif
 
     void setIsInPreparationForDisplayOrFlush(bool flag) { m_isInPreparationForDisplayOrFlush = flag; }

@@ -77,7 +77,7 @@ void PlatformCALayer::drawRepaintIndicator(GraphicsContext& graphicsContext, Pla
     constexpr auto unacceleratedContextLabelColor = Color::white;
     constexpr auto displayListBorderColor = Color::black.colorWithAlphaByte(166);
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    constexpr auto rgba16FBackgroundColor = SRGBA<uint8_t> { 116, 214, 255 };
+    constexpr auto rgba16FBackgroundColor = SRGBA<uint8_t> { 255, 215, 0 };
 #endif
 
     TextRun textRun(String::number(repaintCount));
@@ -182,7 +182,7 @@ ContentsFormat PlatformCALayer::contentsFormatForLayer(Widget* widget, PlatformC
 {
     auto contentsFormats = screenContentsFormats(widget);
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    if (client && client->hdrForImagesEnabled() && contentsFormats.contains(ContentsFormat::RGBA16F))
+    if (client && client->drawsHDRContent() && contentsFormats.contains(ContentsFormat::RGBA16F))
         return ContentsFormat::RGBA16F;
 #endif
 #if ENABLE(PIXEL_FORMAT_RGB10)

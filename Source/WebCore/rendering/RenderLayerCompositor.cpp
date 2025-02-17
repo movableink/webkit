@@ -774,13 +774,6 @@ bool RenderLayerCompositor::backdropRootIsOpaque(const GraphicsLayer* layer) con
     return !viewHasTransparentBackground();
 }
 
-#if ENABLE(HDR_FOR_IMAGES)
-bool RenderLayerCompositor::hdrForImagesEnabled() const
-{
-    return m_renderView.settings().hdrForImagesEnabled();
-}
-#endif
-
 void RenderLayerCompositor::notifyFlushRequired(const GraphicsLayer*)
 {
     scheduleRenderingUpdate();

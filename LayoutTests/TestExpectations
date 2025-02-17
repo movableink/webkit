@@ -2491,6 +2491,9 @@ fast/images/jpegxl-as-image.html [ Skip ]
 fast/images/jpegxl-with-color-profile.html [ Skip ]
 fast/images/animated-jpegxl-loop-count.html [ Skip ]
 
+# Only applicable on platforms with HDR support
+compositing/hdr/hdr-basic-canvas.html [ Skip ]
+
 # Experimental H265 support.
 webrtc/h265.html [ Pass Failure ]
 
