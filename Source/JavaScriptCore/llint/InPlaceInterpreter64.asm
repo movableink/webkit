@@ -515,7 +515,7 @@ if ARM64 or ARM64E
     const IPIntCallCallee = sc1
     const IPIntCallFunctionSlot = sc0
 elsif X86_64
-    const IPIntCallCallee = a5
+    const IPIntCallCallee = t7
     const IPIntCallFunctionSlot = t6
 end
 

@@ -104,7 +104,7 @@ my $runMozillaTests = RUN_IF_NO_TESTS_SPECIFIED;
 # Instead it is only meaningful for when we want to disable using JIT test configurations
 # on the JSC stress test or mozilla tests.
 my $runJITStressTests = 1;
-my $runJITlessWasm = 0;
+my $runJITlessWasm = 1;
 
 my $runCLoopMode = 0;
 my $runQuickMode = 0;

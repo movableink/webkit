@@ -1071,7 +1071,7 @@ WASM_IPINT_EXTERN_CPP_DECL(prepare_call_ref, CallFrame* callFrame, Wasm::TypeInd
     else
         sp->ref = CalleeBits::encodeNullCallee();
 
-    auto functionInfoSlot = std::bit_cast<Register*>(sp)[1];
+    Register& functionInfoSlot = std::bit_cast<Register*>(sp)[1];
     if (!function.targetInstance)
         functionInfoSlot = reinterpret_cast<uintptr_t>(wasmFunction->callLinkInfo());
     else

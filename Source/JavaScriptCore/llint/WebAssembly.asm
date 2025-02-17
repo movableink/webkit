@@ -909,7 +909,11 @@ end)
 op(wasm_to_wasm_wrapper_entry, macro()
     # We have only pushed PC (intel) or pushed nothing(others), and we
     # are still in the caller frame.
+if X86_64
+    loadp (Callee - CallerFrameAndPCSize + 8)[sp], ws0
+else
     loadp (Callee - CallerFrameAndPCSize)[sp], ws0
+end
 
 if JSVALUE64
     andp ~(constexpr JSValue::NativeCalleeTag), ws0
@@ -921,7 +925,11 @@ end
     loadp JSC::Wasm::LLIntCallee::m_entrypoint[ws0], ws0
 
     # Load the instance
+if X86_64
+    loadp (CodeBlock - CallerFrameAndPCSize + 8)[sp], wasmInstance
+else
     loadp (CodeBlock - CallerFrameAndPCSize)[sp], wasmInstance
+end
 
     # Memory
     if ARM64 or ARM64E
@@ -940,7 +948,11 @@ end)
 op(wasm_to_wasm_ipint_wrapper_entry, macro()
     # We have only pushed PC (intel) or pushed nothing(others), and we
     # are still in the caller frame.
+if X86_64
+    loadp (Callee - CallerFrameAndPCSize + 8)[sp], ws0
+else
     loadp (Callee - CallerFrameAndPCSize)[sp], ws0
+end
 
 if JSVALUE64
     andp ~(constexpr JSValue::NativeCalleeTag), ws0
@@ -952,7 +964,11 @@ end
     loadp JSC::Wasm::IPIntCallee::m_entrypoint[ws0], ws0
 
     # Load the instance
+if X86_64
+    loadp (CodeBlock - CallerFrameAndPCSize + 8)[sp], wasmInstance
+else
     loadp (CodeBlock - CallerFrameAndPCSize)[sp], wasmInstance
+end
 
     # Memory
     if ARM64 or ARM64E
@@ -975,11 +991,11 @@ op(wasm_to_js_wrapper_entry, macro()
     # Load this before we create the stack frame, since we lose old cfr, which we wrote Callee to
 
     # We repurpose this slot temporarily for a WasmCallableFunction* from doWasmCall and friends.
-    loadp (CodeBlock - CallerFrameAndPCSize)[sp], ws0
-    loadp (Callee - CallerFrameAndPCSize)[sp], ws1
-
     tagReturnAddress sp
     preserveCallerPCAndCFR()
+
+    loadp (CodeBlock)[sp], ws0
+    loadp (Callee)[sp], ws1
 
     const ScratchSpaceSize = 0x8 * 3 + 0x8 # alignment
     const CalleeScratch = -0x10
