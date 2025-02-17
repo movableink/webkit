@@ -47,7 +47,7 @@ namespace DisplayList {
 class DrawingContext;
 }
 
-class CustomPaintCanvas final : public RefCounted<CustomPaintCanvas>, public CanvasBase, private ContextDestructionObserver {
+class CustomPaintCanvas final : public CanvasBase, public RefCounted<CustomPaintCanvas>, private ContextDestructionObserver {
     WTF_MAKE_TZONE_ALLOCATED(CustomPaintCanvas);
 public:
 

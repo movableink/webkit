@@ -176,16 +176,18 @@ private:
 
     String m_lastFillText;
 
+    WeakHashSet<CanvasObserver> m_observers;
+    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
+
     CanvasNoiseInjection m_canvasNoiseInjection;
     Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt, std::numeric_limits<int64_t>::max()>> m_canvasNoiseHashSalt;
+
     bool m_originClean { true };
     // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     bool m_hasCreatedImageBuffer { false };
 #if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };
 #endif
-    WeakHashSet<CanvasObserver> m_observers;
-    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
 };
 
 WebCoreOpaqueRoot root(CanvasBase*);

@@ -61,7 +61,7 @@ struct CanvasRenderingContext2DSettings;
 struct ImageBitmapRenderingContextSettings;
 struct UncachedString;
 
-class HTMLCanvasElement final : public HTMLElement, public CanvasBase, public ActiveDOMObject {
+class HTMLCanvasElement final : public HTMLElement, public ActiveDOMObject, public CanvasBase {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLCanvasElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLCanvasElement);
 public:
@@ -182,15 +182,16 @@ private:
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
-    std::unique_ptr<CanvasRenderingContext> m_context;
-    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
     bool m_ignoreReset { false };
     mutable bool m_didClearImageBuffer { false };
 #if ENABLE(WEBGL)
     bool m_hasRelevantWebGLEventListener { false };
 #endif
     bool m_isSnapshotting { false };
+
+    std::unique_ptr<CanvasRenderingContext> m_context;
+    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
+    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 };
 
 WebCoreOpaqueRoot root(HTMLCanvasElement*);
