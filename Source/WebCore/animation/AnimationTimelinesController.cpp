@@ -45,6 +45,7 @@
 #include "WebAnimationTypes.h"
 #include <JavaScriptCore/VM.h>
 #include <wtf/HashSet.h>
+#include <wtf/Ref.h>
 #include <wtf/text/TextStream.h>
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)

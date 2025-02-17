@@ -39,6 +39,7 @@ namespace WebCore {
 class AnimationTimeline;
 class Document;
 class WeakPtrImplWithEventTargetData;
+class WebAnimation;
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 class AcceleratedEffectStackUpdater;

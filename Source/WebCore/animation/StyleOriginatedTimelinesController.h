@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CSSAnimation.h"
 #include "ScrollAxis.h"
 #include "Styleable.h"
 #include "TimelineScope.h"
@@ -34,7 +35,6 @@
 
 namespace WebCore {
 
-class CSSAnimation;
 class ScrollTimeline;
 class WebAnimation;
 
