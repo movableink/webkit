@@ -171,15 +171,15 @@ function createTables(prefix, maxValue, canonicalGroups)
     }
     print();
     const canonicalizationSetsVarName = `${prefixLower}CanonicalizationSets`;
-    print(`static constexpr size_t ${canonicalizationSetsVarName} = ${characterSetInfo.length};`);
-    print(`const char32_t* const ${prefixLower}CharacterSetInfo[${canonicalizationSetsVarName}] = {`);
+    print(`static constinit const size_t ${canonicalizationSetsVarName} = ${characterSetInfo.length};`);
+    print(`constinit const char32_t* const ${prefixLower}CharacterSetInfo[${canonicalizationSetsVarName}] = {`);
     for (i in characterSetInfo)
         print(`    ${characterSetVarName + i},`);
     print("};");
     print();
     const canonicalizationRangesVarName = `${prefixLower}CanonicalizationRanges`;
-    print(`const size_t ${canonicalizationRangesVarName} = ${rangeInfo.length};`);
-    print(`const CanonicalizationRange ${prefixLower}RangeInfo[${canonicalizationRangesVarName}] = {`);
+    print(`constinit const size_t ${canonicalizationRangesVarName} = ${rangeInfo.length};`);
+    print(`constinit const CanonicalizationRange ${prefixLower}RangeInfo[${canonicalizationRangesVarName}] = {`);
     for (i in rangeInfo) {
         var info = rangeInfo[i];
         var typeAndValue = info.type.split(':');
@@ -188,7 +188,7 @@ function createTables(prefix, maxValue, canonicalGroups)
     print("};");
     print();
     // Create canonical table for LChar domain
-    let line = "const uint16_t canonicalTableLChar[256] = {";
+    let line = "constinit const uint16_t canonicalTableLChar[256] = {";
     for (let i = 0; i < 256; i++) {
         if (!(i % 16)) {
             print(line);

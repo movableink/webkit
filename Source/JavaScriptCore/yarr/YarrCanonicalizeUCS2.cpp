@@ -55,8 +55,8 @@ constexpr char32_t ucs2CharacterSet20[] = { 0x0462, 0x0463, 0x1c87, 0 };
 constexpr char32_t ucs2CharacterSet21[] = { 0x1e60, 0x1e61, 0x1e9b, 0 };
 constexpr char32_t ucs2CharacterSet22[] = { 0x1c88, 0xa64a, 0xa64b, 0 };
 
-static constexpr size_t ucs2CanonicalizationSets = 23;
-const char32_t* const ucs2CharacterSetInfo[ucs2CanonicalizationSets] = {
+static constinit const size_t ucs2CanonicalizationSets = 23;
+constinit const char32_t* const ucs2CharacterSetInfo[ucs2CanonicalizationSets] = {
     ucs2CharacterSet0,
     ucs2CharacterSet1,
     ucs2CharacterSet2,
@@ -82,8 +82,8 @@ const char32_t* const ucs2CharacterSetInfo[ucs2CanonicalizationSets] = {
     ucs2CharacterSet22,
 };
 
-const size_t ucs2CanonicalizationRanges = 460;
-const CanonicalizationRange ucs2RangeInfo[ucs2CanonicalizationRanges] = {
+constinit const size_t ucs2CanonicalizationRanges = 460;
+constinit const CanonicalizationRange ucs2RangeInfo[ucs2CanonicalizationRanges] = {
     { 0x0000, 0x0040, 0x0000, CanonicalizeUnique },
     { 0x0041, 0x005a, 0x0020, CanonicalizeRangeLo },
     { 0x005b, 0x0060, 0x0000, CanonicalizeUnique },
@@ -546,7 +546,7 @@ const CanonicalizationRange ucs2RangeInfo[ucs2CanonicalizationRanges] = {
     { 0xff5b, 0xffff, 0x0000, CanonicalizeUnique },
 };
 
-const uint16_t canonicalTableLChar[256] = {
+constinit const uint16_t canonicalTableLChar[256] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
     0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
