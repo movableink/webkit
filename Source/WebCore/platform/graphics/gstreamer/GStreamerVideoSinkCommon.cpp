@@ -55,10 +55,8 @@ public:
                     GST_DEBUG_OBJECT(pad, "FLUSH_START received, aborting all pending tasks in the player sinkTaskQueue.");
                     self->m_isFlushing = true;
                     player->sinkTaskQueue().startAborting();
-#if USE(GSTREAMER_GL)
                     GST_DEBUG_OBJECT(pad, "Flushing current buffer in response to %" GST_PTR_FORMAT, info->data);
                     player->flushCurrentBuffer();
-#endif
                 } else
                     GST_DEBUG_OBJECT(pad, "Received FLUSH_START while already flushing, ignoring.");
             } else if (GST_EVENT_TYPE(GST_PAD_PROBE_INFO_EVENT(info)) == GST_EVENT_FLUSH_STOP) {
