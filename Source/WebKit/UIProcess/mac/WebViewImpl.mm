@@ -2398,7 +2398,7 @@ WebCore::DestinationColorSpace WebViewImpl::colorSpace()
 
         if (!m_colorSpace)
             m_colorSpace = [NSScreen mainScreen].colorSpace;
-    
+
         if (!m_colorSpace)
             m_colorSpace = [NSColorSpace sRGBColorSpace];
     }
@@ -5855,6 +5855,26 @@ _WKRectEdge WebViewImpl::rubberBandingEnabled()
 void WebViewImpl::setRubberBandingEnabled(_WKRectEdge state)
 {
     m_page->setRubberBandableEdges(toRectEdges(state));
+}
+
+bool WebViewImpl::alwaysBounceVertical()
+{
+    return m_page->alwaysBounceVertical();
+}
+
+void WebViewImpl::setAlwaysBounceVertical(bool value)
+{
+    m_page->setAlwaysBounceVertical(value);
+}
+
+bool WebViewImpl::alwaysBounceHorizontal()
+{
+    return m_page->alwaysBounceHorizontal();
+}
+
+void WebViewImpl::setAlwaysBounceHorizontal(bool value)
+{
+    m_page->setAlwaysBounceHorizontal(value);
 }
 
 void WebViewImpl::mouseDown(NSEvent *event)

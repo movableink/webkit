@@ -1431,6 +1431,26 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _impl->setRubberBandingEnabled(state);
 }
 
+- (BOOL)_alwaysBounceVertical
+{
+    return _impl->alwaysBounceVertical();
+}
+
+- (void)_setAlwaysBounceVertical:(BOOL)value
+{
+    _impl->setAlwaysBounceVertical(value);
+}
+
+- (BOOL)_alwaysBounceHorizontal
+{
+    return _impl->alwaysBounceHorizontal();
+}
+
+- (void)_setAlwaysBounceHorizontal:(BOOL)value
+{
+    _impl->setAlwaysBounceHorizontal(value);
+}
+
 - (NSColor *)_backgroundColor
 {
     return _impl->backgroundColor();

@@ -556,4 +556,9 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const WebCore::ExceptionDetails&)
 
 @interface WKWebView (NonCpp)
 
+#if PLATFORM(MAC)
+@property (nonatomic, setter=_setAlwaysBounceVertical:) BOOL _alwaysBounceVertical;
+@property (nonatomic, setter=_setAlwaysBounceHorizontal:) BOOL _alwaysBounceHorizontal;
+#endif
+
 @end

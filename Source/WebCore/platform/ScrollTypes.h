@@ -151,6 +151,13 @@ enum class ScrollElasticity : uint8_t {
     Allowed
 };
 
+// Determines if rubber-banding should be enabled if the content size is less than the scroll view size.
+enum class RubberBandingBehavior : uint8_t {
+    Always,
+    Never,
+    BasedOnSize
+};
+
 enum class ScrollbarOrientation : uint8_t {
     Horizontal,
     Vertical
@@ -385,6 +392,7 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollClamping);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollBehaviorForFixedElements);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollBehavior);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollElasticity);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, RubberBandingBehavior);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollbarMode);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, OverflowAnchor);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollDirection);

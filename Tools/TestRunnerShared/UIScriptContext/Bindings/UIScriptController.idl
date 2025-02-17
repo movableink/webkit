@@ -299,6 +299,9 @@ interface UIScriptController {
 
     undefined setScrollViewKeyboardAvoidanceEnabled(boolean enabled);
 
+    undefined setAlwaysBounceVertical(boolean value);
+    undefined setAlwaysBounceHorizontal(boolean value);
+
     undefined beginInteractiveObscuredInsetsChange();
     undefined endInteractiveObscuredInsetsChange();
     undefined setObscuredInsets(double top, double right, double bottom, double left);

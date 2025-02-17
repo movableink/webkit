@@ -361,6 +361,11 @@ public:
     _WKRectEdge rubberBandingEnabled();
     void setRubberBandingEnabled(_WKRectEdge);
 
+    bool alwaysBounceVertical();
+    void setAlwaysBounceVertical(bool);
+    bool alwaysBounceHorizontal();
+    void setAlwaysBounceHorizontal(bool);
+
     void setOverlayScrollbarStyle(std::optional<WebCore::ScrollbarOverlayStyle> scrollbarStyle);
     std::optional<WebCore::ScrollbarOverlayStyle> overlayScrollbarStyle() const;
 

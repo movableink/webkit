@@ -4040,6 +4040,31 @@ void WebPageProxy::handleNativeWheelEvent(const NativeWebWheelEvent& nativeWheel
     handleWheelEvent(eventToDispatch);
 }
 
+static RectEdges<WebCore::RubberBandingBehavior> resolvedRubberBandingBehaviorEdges(RectEdges<bool> rubberBandableEdges, bool alwaysBounceVertical, bool alwaysBounceHorizontal)
+{
+    auto rubberBandingBehaviorValue = [&](WebCore::BoxSide side) {
+        if (!rubberBandableEdges[side])
+            return WebCore::RubberBandingBehavior::Never;
+
+        auto isVertical = side == WebCore::BoxSide::Top || side == WebCore::BoxSide::Bottom;
+        auto isHorizontal = !isVertical;
+
+        if (isVertical && alwaysBounceVertical)
+            return WebCore::RubberBandingBehavior::Always;
+
+        if (isHorizontal && alwaysBounceHorizontal)
+            return WebCore::RubberBandingBehavior::Always;
+
+        return WebCore::RubberBandingBehavior::BasedOnSize;
+    };
+
+    RectEdges<WebCore::RubberBandingBehavior> result;
+    for (const auto side : WebCore::allBoxSides)
+        result[side] = rubberBandingBehaviorValue(side);
+
+    return result;
+}
+
 void WebPageProxy::handleWheelEvent(const WebWheelEvent& wheelEvent)
 {
     if (!hasRunningProcess())
@@ -4053,7 +4078,9 @@ void WebPageProxy::handleWheelEvent(const WebWheelEvent& wheelEvent)
 #if ENABLE(ASYNC_SCROLLING) && PLATFORM(MAC)
     if (m_scrollingCoordinatorProxy) {
         auto rubberBandableEdges = rubberBandableEdgesRespectingHistorySwipe();
-        m_scrollingCoordinatorProxy->handleWheelEvent(wheelEvent, rubberBandableEdges);
+        auto rubberBandingBehavior = resolvedRubberBandingBehaviorEdges(rubberBandableEdges, alwaysBounceVertical(), alwaysBounceHorizontal());
+
+        m_scrollingCoordinatorProxy->handleWheelEvent(wheelEvent, rubberBandingBehavior);
         // continueWheelEventHandling() will get called after the event has been handled by the scrolling thread.
     }
 #endif
@@ -4077,10 +4104,12 @@ void WebPageProxy::continueWheelEventHandling(const WebWheelEvent& wheelEvent, c
         return;
 
     auto rubberBandableEdges = rubberBandableEdgesRespectingHistorySwipe();
-    sendWheelEvent(m_mainFrame->frameID(), wheelEvent, result.steps, rubberBandableEdges, willStartSwipe, result.wasHandled);
+    auto rubberBandingBehavior = resolvedRubberBandingBehaviorEdges(rubberBandableEdges, alwaysBounceVertical(), alwaysBounceHorizontal());
+
+    sendWheelEvent(m_mainFrame->frameID(), wheelEvent, result.steps, rubberBandingBehavior, willStartSwipe, result.wasHandled);
 }
 
-void WebPageProxy::sendWheelEvent(WebCore::FrameIdentifier frameID, const WebWheelEvent& event, OptionSet<WheelEventProcessingSteps> processingSteps, RectEdges<bool> rubberBandableEdges, std::optional<bool> willStartSwipe, bool wasHandledForScrolling)
+void WebPageProxy::sendWheelEvent(WebCore::FrameIdentifier frameID, const WebWheelEvent& event, OptionSet<WheelEventProcessingSteps> processingSteps, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges, std::optional<bool> willStartSwipe, bool wasHandledForScrolling)
 {
 #if HAVE(DISPLAY_LINK)
     internals().wheelEventActivityHysteresis.impulse();
@@ -5767,6 +5796,26 @@ RectEdges<bool> WebPageProxy::rubberBandableEdges() const
 void WebPageProxy::setRubberBandableEdges(RectEdges<bool> edges)
 {
     internals().rubberBandableEdges = edges;
+}
+
+bool WebPageProxy::alwaysBounceVertical() const
+{
+    return internals().alwaysBounceVertical;
+}
+
+void WebPageProxy::setAlwaysBounceVertical(bool value)
+{
+    internals().alwaysBounceVertical = value;
+}
+
+bool WebPageProxy::alwaysBounceHorizontal() const
+{
+    return internals().alwaysBounceHorizontal;
+}
+
+void WebPageProxy::setAlwaysBounceHorizontal(bool value)
+{
+    internals().alwaysBounceHorizontal = value;
 }
 
 RectEdges<bool> WebPageProxy::rubberBandableEdgesRespectingHistorySwipe() const

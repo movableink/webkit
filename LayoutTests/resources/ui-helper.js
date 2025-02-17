@@ -1437,6 +1437,22 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => testRunner.runUIScript(`uiController.setScrollViewKeyboardAvoidanceEnabled(${enabled})`, resolve));
     }
 
+    static async setAlwaysBounceVertical(enabled)
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setAlwaysBounceVertical(${enabled})`, resolve));
+    }
+
+    static async setAlwaysBounceHorizontal(enabled)
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setAlwaysBounceHorizontal(${enabled})`, resolve));
+    }
+
     static presentFindNavigator() {
         if (!this.isWebKit2() || !this.isIOSFamily())
             return Promise.resolve();

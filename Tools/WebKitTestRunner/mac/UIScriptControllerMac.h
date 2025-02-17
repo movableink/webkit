@@ -77,6 +77,9 @@ private:
     int64_t pasteboardChangeCount() const final;
 
     void setInlinePrediction(JSStringRef text, unsigned startIndex) final;
+
+    void setAlwaysBounceVertical(bool) final;
+    void setAlwaysBounceHorizontal(bool) final;
 };
 
 } // namespace WTR

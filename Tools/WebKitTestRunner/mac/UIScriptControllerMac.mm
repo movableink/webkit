@@ -51,6 +51,13 @@
 #import <wtf/WorkQueue.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
+@interface WKWebView (Internal_RubberBandingBehavior)
+
+@property (nonatomic, setter=_setAlwaysBounceVertical:) BOOL _alwaysBounceVertical;
+@property (nonatomic, setter=_setAlwaysBounceHorizontal:) BOOL _alwaysBounceHorizontal;
+
+@end
+
 namespace WTR {
 
 Ref<UIScriptController> UIScriptController::create(UIScriptContext& context)
@@ -489,6 +496,16 @@ void UIScriptControllerMac::setInlinePrediction(JSStringRef jsText, unsigned sta
     UNUSED_PARAM(jsText);
     UNUSED_PARAM(startIndex);
 #endif
+}
+
+void UIScriptControllerMac::setAlwaysBounceVertical(bool value)
+{
+    webView()._alwaysBounceVertical = value;
+}
+
+void UIScriptControllerMac::setAlwaysBounceHorizontal(bool value)
+{
+    webView()._alwaysBounceHorizontal = value;
 }
 
 } // namespace WTR

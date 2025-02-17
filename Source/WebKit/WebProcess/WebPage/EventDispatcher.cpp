@@ -116,7 +116,7 @@ void EventDispatcher::initializeConnection(IPC::Connection& connection)
     connection.addMessageReceiver(m_queue.get(), *this, Messages::EventDispatcher::messageReceiverName());
 }
 
-void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEvent& wheelEvent, RectEdges<bool> rubberBandableEdges, WheelEventOrigin wheelEventOrigin)
+void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEvent& wheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges, WheelEventOrigin wheelEventOrigin)
 {
     auto processingSteps = OptionSet<WebCore::WheelEventProcessingSteps> { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch };
 
@@ -195,7 +195,7 @@ void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEv
 #endif
 }
 
-void EventDispatcher::wheelEvent(PageIdentifier pageID, const WebWheelEvent& wheelEvent, RectEdges<bool> rubberBandableEdges)
+void EventDispatcher::wheelEvent(PageIdentifier pageID, const WebWheelEvent& wheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
     if (m_momentumEventDispatcher->handleWheelEvent(pageID, wheelEvent, rubberBandableEdges)) {
@@ -367,7 +367,7 @@ void EventDispatcher::setScrollingAccelerationCurve(PageIdentifier pageID, std::
     m_momentumEventDispatcher->setScrollingAccelerationCurve(pageID, curve);
 }
 
-void EventDispatcher::handleSyntheticWheelEvent(WebCore::PageIdentifier pageIdentifier, const WebWheelEvent& event, WebCore::RectEdges<bool> rubberBandableEdges)
+void EventDispatcher::handleSyntheticWheelEvent(WebCore::PageIdentifier pageIdentifier, const WebWheelEvent& event, WebCore::RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     internalWheelEvent(pageIdentifier, event, rubberBandableEdges, WheelEventOrigin::MomentumEventDispatcher);
 }

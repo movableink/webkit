@@ -893,14 +893,14 @@ void ScrollingTree::setMainFramePinnedState(RectEdges<bool> edgePinningState)
     m_swipeState.mainFramePinnedState = edgePinningState;
 }
 
-void ScrollingTree::setClientAllowedMainFrameRubberBandableEdges(RectEdges<bool> clientAllowedRubberBandableEdges)
+void ScrollingTree::setClientAllowedMainFrameRubberBandableEdges(RectEdges<RubberBandingBehavior> clientAllowedRubberBandableEdges)
 {
     Locker locker { m_swipeStateLock };
 
     m_swipeState.clientAllowedRubberBandableEdges = clientAllowedRubberBandableEdges;
 }
 
-bool ScrollingTree::clientAllowsMainFrameRubberBandingOnSide(BoxSide side)
+RubberBandingBehavior ScrollingTree::clientAllowsMainFrameRubberBandingOnSide(BoxSide side)
 {
     Locker locker { m_swipeStateLock };
     return m_swipeState.clientAllowedRubberBandableEdges.at(side);
@@ -953,13 +953,13 @@ bool ScrollingTree::willWheelEventStartSwipeGesture(const PlatformWheelEvent& wh
 
     Locker locker { m_swipeStateLock };
 
-    if (wheelEvent.deltaX() > 0 && m_swipeState.mainFramePinnedState.left() && !m_swipeState.clientAllowedRubberBandableEdges.left())
+    if (wheelEvent.deltaX() > 0 && m_swipeState.mainFramePinnedState.left() && m_swipeState.clientAllowedRubberBandableEdges.left() == RubberBandingBehavior::Never)
         return true;
-    if (wheelEvent.deltaX() < 0 && m_swipeState.mainFramePinnedState.right() && !m_swipeState.clientAllowedRubberBandableEdges.right())
+    if (wheelEvent.deltaX() < 0 && m_swipeState.mainFramePinnedState.right() && m_swipeState.clientAllowedRubberBandableEdges.right() == RubberBandingBehavior::Never)
         return true;
-    if (wheelEvent.deltaY() > 0 && m_swipeState.mainFramePinnedState.top() && !m_swipeState.clientAllowedRubberBandableEdges.top())
+    if (wheelEvent.deltaY() > 0 && m_swipeState.mainFramePinnedState.top() && m_swipeState.clientAllowedRubberBandableEdges.top() == RubberBandingBehavior::Never)
         return true;
-    if (wheelEvent.deltaY() < 0 && m_swipeState.mainFramePinnedState.bottom() && !m_swipeState.clientAllowedRubberBandableEdges.bottom())
+    if (wheelEvent.deltaY() < 0 && m_swipeState.mainFramePinnedState.bottom() && m_swipeState.clientAllowedRubberBandableEdges.bottom() == RubberBandingBehavior::Never)
         return true;
 
     return false;

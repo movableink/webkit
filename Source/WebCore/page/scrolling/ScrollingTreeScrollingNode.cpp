@@ -142,7 +142,9 @@ bool ScrollingTreeScrollingNode::shouldRubberBandOnSide(BoxSide side, RectEdges<
     if (!pinnedEdges[side])
         return false;
 
-    if (isRootNode() && !scrollingTree()->clientAllowsMainFrameRubberBandingOnSide(side))
+    auto mainFrameRubberBandingBehavior = scrollingTree()->clientAllowsMainFrameRubberBandingOnSide(side);
+
+    if (isRootNode() && mainFrameRubberBandingBehavior == RubberBandingBehavior::Never)
         return false;
 
     switch (side) {
@@ -152,8 +154,12 @@ bool ScrollingTreeScrollingNode::shouldRubberBandOnSide(BoxSide side, RectEdges<
             return false;
 
         // The root allows rubberbanding if it doesn't have enough content, but only if a scrollbar is allowed.
-        if (isRootNode() && canHaveVerticalScrollbar())
+        if (isRootNode() && canHaveVerticalScrollbar()) {
+            if (!allowsVerticalScrolling() && mainFrameRubberBandingBehavior == RubberBandingBehavior::BasedOnSize)
+                return false;
+
             return true;
+        }
 
         if (!allowsVerticalScrolling())
             return false;
@@ -166,8 +172,12 @@ bool ScrollingTreeScrollingNode::shouldRubberBandOnSide(BoxSide side, RectEdges<
             return false;
 
         // The root allows rubberbanding if it doesn't have enough content, but only if a scrollbar is allowed.
-        if (isRootNode() && canHaveHorizontalScrollbar())
+        if (isRootNode() && canHaveHorizontalScrollbar()) {
+            if (!allowsHorizontalScrolling() && mainFrameRubberBandingBehavior == RubberBandingBehavior::BasedOnSize)
+                return false;
+
             return true;
+        }
 
         if (!allowsHorizontalScrolling())
             return false;

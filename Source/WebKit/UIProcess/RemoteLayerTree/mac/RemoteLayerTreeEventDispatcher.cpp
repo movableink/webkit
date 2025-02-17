@@ -188,7 +188,7 @@ void RemoteLayerTreeEventDispatcher::willHandleWheelEvent(const WebWheelEvent& w
     m_wheelEventsBeingProcessed.append(wheelEvent);
 }
 
-void RemoteLayerTreeEventDispatcher::handleWheelEvent(const WebWheelEvent& wheelEvent, RectEdges<bool> rubberBandableEdges)
+void RemoteLayerTreeEventDispatcher::handleWheelEvent(const WebWheelEvent& wheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     ASSERT(isMainRunLoop());
 
@@ -208,7 +208,7 @@ void RemoteLayerTreeEventDispatcher::handleWheelEvent(const WebWheelEvent& wheel
     });
 }
 
-void RemoteLayerTreeEventDispatcher::scrollingThreadHandleWheelEvent(const WebWheelEvent& webWheelEvent, RectEdges<bool> rubberBandableEdges)
+void RemoteLayerTreeEventDispatcher::scrollingThreadHandleWheelEvent(const WebWheelEvent& webWheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     ASSERT(ScrollingThread::isCurrentThread());
     
@@ -260,7 +260,7 @@ void RemoteLayerTreeEventDispatcher::continueWheelEventHandling(WheelEventHandli
     m_scrollingCoordinator->continueWheelEventHandling(event, handlingResult);
 }
 
-OptionSet<WheelEventProcessingSteps> RemoteLayerTreeEventDispatcher::determineWheelEventProcessing(const PlatformWheelEvent& wheelEvent, RectEdges<bool> rubberBandableEdges)
+OptionSet<WheelEventProcessingSteps> RemoteLayerTreeEventDispatcher::determineWheelEventProcessing(const PlatformWheelEvent& wheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     auto scrollingTree = this->scrollingTree();
     if (!scrollingTree)
@@ -693,7 +693,7 @@ void RemoteLayerTreeEventDispatcher::endMomentumSignpostInterval()
 }
 
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
-void RemoteLayerTreeEventDispatcher::handleSyntheticWheelEvent(PageIdentifier pageID, const WebWheelEvent& event, RectEdges<bool> rubberBandableEdges)
+void RemoteLayerTreeEventDispatcher::handleSyntheticWheelEvent(PageIdentifier pageID, const WebWheelEvent& event, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     ASSERT_UNUSED(pageID, m_pageIdentifier == pageID);
 

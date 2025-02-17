@@ -28,6 +28,7 @@
 
 #include "FloatRect.h"
 #include "GraphicsContext.h"
+#include "ImageBuffer.h"
 #include "ImageDecoderCG.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"

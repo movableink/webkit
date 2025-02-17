@@ -329,6 +329,8 @@ public:
     WebCore::MediaProducerMediaStateFlags reportedMediaCaptureState;
     RunLoop::Timer resetRecentCrashCountTimer;
     WebCore::RectEdges<bool> rubberBandableEdges { true, true, true, true };
+    bool alwaysBounceVertical { true };
+    bool alwaysBounceHorizontal { true };
     WebCore::Color sampledPageTopColor;
     WebCore::ScrollPinningBehavior scrollPinningBehavior { WebCore::ScrollPinningBehavior::DoNotPin };
     WebCore::IntSize sizeToContentAutoSizeMaximumSize;

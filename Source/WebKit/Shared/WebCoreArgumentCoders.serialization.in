@@ -2000,6 +2000,13 @@ header: <WebCore/RectEdges.h>
     WebCore::Color left();
 }
 
+[CustomHeader] class WebCore::RectEdges<WebCore::RubberBandingBehavior> {
+    WebCore::RubberBandingBehavior top();
+    WebCore::RubberBandingBehavior right();
+    WebCore::RubberBandingBehavior bottom();
+    WebCore::RubberBandingBehavior left();
+}
+
 [AdditionalEncoder=StreamConnectionEncoder] class WebCore::Path {
     Vector<WebCore::PathSegment> segments();
 }
