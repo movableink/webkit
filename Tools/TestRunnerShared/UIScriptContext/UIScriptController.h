@@ -122,6 +122,8 @@ public:
 
     virtual JSObjectRef fixedContainerEdgeColors() const { return nullptr; }
 
+    virtual void cookiesForDomain(JSStringRef, JSValueRef) { notImplemented(); }
+
     // View Parenting and Visibility
 
     virtual void becomeFirstResponder() { notImplemented(); }

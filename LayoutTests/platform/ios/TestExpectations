@@ -2818,6 +2818,7 @@ http/tests/resourceLoadStatistics/cap-cache-max-age-for-prevalent-resource.html 
 http/tests/storageAccess/has-storage-access-false-by-default.https.html [ Pass ]
 http/tests/storageAccess/has-storage-access-false-by-default-ephemeral.https.html [ Pass ]
 http/tests/storageAccess/has-storage-access-true-if-third-party-has-cookies.https.html [ Pass Timeout ]
+http/tests/resourceLoadStatistics/capped-lifetime-for-cookie-set-with-link-query-using-cookiestore-api.https.html [ Pass ]
 
 # Enable on appropriate platforms: rdar://140222322
 http/tests/storageAccess/grant-with-prompt-under-general-third-party-cookie-blocking-with-partitioned-cookies.https.html [ Skip ]

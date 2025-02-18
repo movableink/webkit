@@ -405,4 +405,37 @@ JSObjectRef UIScriptControllerCocoa::fixedContainerEdgeColors() const
     return JSValueToObject(m_context->jsContext(), [jsValue JSValueRef], nullptr);
 }
 
+static NSDictionary *propertyDictionaryForJS(NSHTTPCookie *cookie)
+{
+    return @{
+        @"name"             : cookie.name ?: [NSNull null],
+        @"value"            : cookie.value ?: [NSNull null],
+        @"domain"           : cookie.domain ?: [NSNull null],
+        @"path"             : cookie.path ?: [NSNull null],
+        @"expires"          : cookie.expiresDate ? @(1000 * [cookie.expiresDate timeIntervalSinceReferenceDate]) : [NSNull null],
+        @"isHttpOnly"       : @(cookie.HTTPOnly),
+        @"isSecure"         : @(cookie.secure),
+        @"isSession"        : @(cookie.sessionOnly),
+        @"isSameSiteNone"   : @(!cookie.sameSitePolicy),
+        @"isSameSiteLax"    : @([cookie.sameSitePolicy isEqualToString:NSHTTPCookieSameSiteLax]),
+        @"isSameSiteStrict" : @([cookie.sameSitePolicy isEqualToString:NSHTTPCookieSameSiteStrict]),
+    };
+}
+
+void UIScriptControllerCocoa::cookiesForDomain(JSStringRef jsDomain, JSValueRef callback)
+{
+    unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
+    RetainPtr cookieStore = [webView().configuration.websiteDataStore httpCookieStore];
+    [cookieStore getAllCookies:[this, callbackID, domain = toWTFString(jsDomain)](NSArray<NSHTTPCookie *> *cookies) {
+        RetainPtr matchingCookieProperties = adoptNS([NSMutableArray new]);
+        for (NSHTTPCookie *cookie in cookies) {
+            if (![cookie.domain isEqualToString:domain])
+                continue;
+            [matchingCookieProperties addObject:propertyDictionaryForJS(cookie)];
+        }
+        RetainPtr jsValue = [JSValue valueWithObject:matchingCookieProperties.get() inContext:[JSContext contextWithJSGlobalContextRef:m_context->jsContext()]];
+        m_context->asyncTaskComplete(callbackID, { JSValueToObject(m_context->jsContext(), [jsValue JSValueRef], nullptr) });
+    }];
+}
+
 } // namespace WTR

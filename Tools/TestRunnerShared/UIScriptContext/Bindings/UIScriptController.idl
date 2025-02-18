@@ -402,6 +402,8 @@ interface UIScriptController {
 
     readonly attribute object fixedContainerEdgeColors;
 
+    undefined cookiesForDomain(DOMString domain, object callback);
+
     // Only affects macOS.
     undefined setWebViewAllowsMagnification(boolean allowsMagnification);
 
