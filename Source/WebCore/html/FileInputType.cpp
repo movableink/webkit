@@ -26,7 +26,6 @@
 #include "DOMFormData.h"
 #include "DirectoryFileListCreator.h"
 #include "DragData.h"
-#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "Event.h"
 #include "File.h"
@@ -242,11 +241,8 @@ void FileInputType::createShadowSubtree()
 
 static RefPtr<HTMLInputElement> fileSelectorButton(const Element& element)
 {
-    auto root = element.userAgentShadowRoot();
-    if (!root)
-        return nullptr;
-
-    return childrenOfType<HTMLInputElement>(*root).first();
+    RefPtr root = element.userAgentShadowRoot();
+    return root ? downcast<HTMLInputElement>(root->firstChild()) : nullptr;
 }
 
 void FileInputType::disabledStateChanged()

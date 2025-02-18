@@ -34,7 +34,6 @@
 
 #include "Decimal.h"
 #include "DocumentInlines.h"
-#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "EventNames.h"
 #include "HTMLCollection.h"
@@ -270,27 +269,22 @@ HTMLElement* RangeInputType::sliderTrackElement() const
 
     RefPtr root = element()->userAgentShadowRoot();
     ASSERT(root);
-    ASSERT(root->firstChild()); // container
-    ASSERT(root->firstChild()->isHTMLElement());
+    ASSERT(is<SliderContainerElement>(root->firstChild())); // container
     ASSERT(root->firstChild()->firstChild()); // track
 
     if (!root)
         return nullptr;
     
-    RefPtr container = childrenOfType<SliderContainerElement>(*root).first();
-    if (!container)
-        return nullptr;
-
-    return childrenOfType<HTMLElement>(*container).first();
+    RefPtr container = root->firstChild();
+    return container ? downcast<HTMLElement>(container->firstChild()) : nullptr;
 }
 
 SliderThumbElement& RangeInputType::typedSliderThumbElement() const
 {
     ASSERT(hasCreatedShadowSubtree());
     ASSERT(sliderTrackElement()->firstChild()); // thumb
-    ASSERT(sliderTrackElement()->firstChild()->isHTMLElement());
 
-    return static_cast<SliderThumbElement&>(*sliderTrackElement()->firstChild());
+    return downcast<SliderThumbElement>(*sliderTrackElement()->firstChild());
 }
 
 HTMLElement* RangeInputType::sliderThumbElement() const

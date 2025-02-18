@@ -38,7 +38,6 @@
 #include "Color.h"
 #include "ColorSerialization.h"
 #include "ColorTypes.h"
-#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "Event.h"
 #include "HTMLDataListElement.h"
@@ -348,11 +347,8 @@ HTMLElement* ColorInputType::shadowColorSwatch() const
     if (!shadow)
         return nullptr;
 
-    RefPtr wrapper = childrenOfType<HTMLDivElement>(*shadow).first();
-    if (!wrapper)
-        return nullptr;
-
-    return childrenOfType<HTMLDivElement>(*wrapper).first();
+    RefPtr wrapper = shadow->firstChild();
+    return wrapper ? downcast<HTMLElement>(wrapper->firstChild()) : nullptr;
 }
 
 IntRect ColorInputType::elementRectRelativeToRootView() const

@@ -296,7 +296,7 @@ void SVGUseElement::updateUserAgentShadowTree()
 RefPtr<SVGElement> SVGUseElement::targetClone() const
 {
     RefPtr root = userAgentShadowRoot();
-    return root ? childrenOfType<SVGElement>(*root).first() : nullptr;
+    return root ? downcast<SVGElement>(root->firstChild()) : nullptr;
 }
 
 RenderPtr<RenderElement> SVGUseElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
