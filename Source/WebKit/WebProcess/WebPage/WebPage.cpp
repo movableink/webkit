@@ -2015,25 +2015,17 @@ void WebPage::sendClose()
     send(Messages::WebPageProxy::ClosePage());
 }
 
-void WebPage::suspendForProcessSwap()
+void WebPage::suspendForProcessSwap(CompletionHandler<void(std::optional<bool>)>&& completionHandler)
 {
     flushDeferredDidReceiveMouseEvent();
 
-    auto failedToSuspend = [this, protectedThis = Ref { *this }] {
-        send(Messages::WebPageProxy::DidFailToSuspendAfterProcessSwap());
-    };
-
     // FIXME: Make this work if the main frame is not a LocalFrame.
     RefPtr currentHistoryItem = m_mainFrame->coreLocalFrame()->loader().history().currentItem();
-    if (!currentHistoryItem) {
-        failedToSuspend();
-        return;
-    }
+    if (!currentHistoryItem)
+        return completionHandler(false);
 
-    if (!BackForwardCache::singleton().addIfCacheable(*currentHistoryItem, protectedCorePage().get())) {
-        failedToSuspend();
-        return;
-    }
+    if (!BackForwardCache::singleton().addIfCacheable(*currentHistoryItem, protectedCorePage().get()))
+        return completionHandler(false);
 
     // Back/forward cache does not break the opener link for the main frame (only does so for the subframes) because the
     // main frame is normally re-used for the navigation. However, in the case of process-swapping, the main frame
@@ -2041,7 +2033,7 @@ void WebPage::suspendForProcessSwap()
     if (RefPtr frame = m_mainFrame->coreLocalFrame())
         frame->detachFromAllOpenedFrames();
 
-    send(Messages::WebPageProxy::DidSuspendAfterProcessSwap());
+    completionHandler(true);
 }
 
 void WebPage::loadURLInFrame(URL&& url, const String& referrer, FrameIdentifier frameID)
@@ -8513,15 +8505,15 @@ void WebPage::urlSchemeTaskDidComplete(WebURLSchemeHandlerIdentifier handlerIden
     handler->taskDidComplete(taskIdentifier, error);
 }
 
-void WebPage::setIsSuspended(bool suspended)
+void WebPage::setIsSuspended(bool suspended, CompletionHandler<void(std::optional<bool>)>&& completionHandler)
 {
     if (m_isSuspended == suspended)
-        return;
+        return completionHandler({ });
 
     m_isSuspended = suspended;
 
     if (!suspended)
-        return;
+        return completionHandler({ });
 
     // Unfrozen on drawing area reset.
     freezeLayerTree(LayerTreeFreezeReason::PageSuspended);
@@ -8532,7 +8524,7 @@ void WebPage::setIsSuspended(bool suspended)
 
     WebProcess::singleton().sendPrewarmInformation(m_mainFrame->url());
 
-    suspendForProcessSwap();
+    suspendForProcessSwap(WTFMove(completionHandler));
 }
 
 void WebPage::hasStorageAccess(RegistrableDomain&& subFrameDomain, RegistrableDomain&& topFrameDomain, WebFrame& frame, CompletionHandler<void(bool)>&& completionHandler)

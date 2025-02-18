@@ -506,9 +506,6 @@ messages -> WebPageProxy {
     RequestPointerUnlock()
 #endif
 
-    DidFailToSuspendAfterProcessSwap()
-    DidSuspendAfterProcessSwap()
-
     ImageOrMediaDocumentSizeChanged(WebCore::IntSize newSize)
 
     UseFixedLayoutDidChange(bool useFixedLayout)

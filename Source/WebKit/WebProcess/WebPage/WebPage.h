@@ -763,7 +763,7 @@ public:
     void executeEditingCommand(const String& commandName, const String& argument);
     void sendClose();
 
-    void suspendForProcessSwap();
+    void suspendForProcessSwap(CompletionHandler<void(std::optional<bool>)>&&);
 
     void sendSetWindowFrame(const WebCore::FloatRect&);
 
@@ -2375,7 +2375,7 @@ private:
     void setIsTakingSnapshotsForApplicationSuspension(bool);
     void setNeedsDOMWindowResizeEvent();
 
-    void setIsSuspended(bool);
+    void setIsSuspended(bool, CompletionHandler<void(std::optional<bool>)>&&);
 
     RefPtr<WebImage> snapshotAtSize(const WebCore::IntRect&, const WebCore::IntSize& bitmapSize, SnapshotOptions, WebCore::LocalFrame&, WebCore::LocalFrameView&);
     RefPtr<WebImage> snapshotNode(WebCore::Node&, SnapshotOptions, unsigned maximumPixelCount = std::numeric_limits<unsigned>::max());

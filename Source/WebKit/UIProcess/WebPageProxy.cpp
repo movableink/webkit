@@ -5208,20 +5208,6 @@ bool WebPageProxy::isPageOpenedByDOMShowingInitialEmptyDocument() const
     return openedByDOM() && !hasCommittedAnyProvisionalLoads();
 }
 
-// MSVC gives a redeclaration error if noreturn is used on the definition and not the declaration, while
-// Cocoa tests segfault if it is moved to the declaration site (even if we move the definition with it!).
-NO_RETURN_DUE_TO_ASSERT void WebPageProxy::didFailToSuspendAfterProcessSwap()
-{
-    // Only the SuspendedPageProxy should be getting this call.
-    ASSERT_NOT_REACHED();
-}
-
-NO_RETURN_DUE_TO_ASSERT void WebPageProxy::didSuspendAfterProcessSwap()
-{
-    // Only the SuspendedPageProxy should be getting this call.
-    ASSERT_NOT_REACHED();
-}
-
 void WebPageProxy::setUserAgent(String&& userAgent, IsCustomUserAgent isCustomUserAgent)
 {
     if (m_userAgent == userAgent)

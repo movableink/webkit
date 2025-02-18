@@ -2866,8 +2866,6 @@ private:
 
     void launchProcess(const WebCore::Site&, ProcessLaunchReason);
     void swapToProvisionalPage(Ref<ProvisionalPageProxy>&&);
-    void didFailToSuspendAfterProcessSwap();
-    void didSuspendAfterProcessSwap();
     void finishAttachingToWebProcess(const WebCore::Site&, ProcessLaunchReason);
 
     RefPtr<API::Navigation> launchProcessForReload();

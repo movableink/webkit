@@ -109,11 +109,12 @@ private:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) final;
 
-    template<typename T> void sendToAllProcesses(T&&);
+    template<typename M> void send(M&&);
+    template<typename M, typename C> void sendWithAsyncReply(M&&, C&&);
 
     WeakPtr<WebPageProxy> m_page;
-    WebCore::PageIdentifier m_webPageID;
-    Ref<WebProcessProxy> m_process;
+    const WebCore::PageIdentifier m_webPageID;
+    const Ref<WebProcessProxy> m_process;
     Ref<WebFrameProxy> m_mainFrame;
     Ref<BrowsingContextGroup> m_browsingContextGroup;
     WebPageProxyMessageReceiverRegistration m_messageReceiverRegistration;
