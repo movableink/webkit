@@ -256,16 +256,6 @@ void WKContextSetDownloadClient(WKContextRef context, const WKContextDownloadCli
     WebKit::toImpl(context)->setLegacyDownloadClient(adoptRef(*new LegacyDownloadClient(wkClient, context)));
 }
 
-WKDownloadRef WKContextDownloadURLRequest(WKContextRef, WKURLRequestRef)
-{
-    return nullptr;
-}
-
-WKDownloadRef WKContextResumeDownload(WKContextRef, WKDataRef, WKStringRef)
-{
-    return nullptr;
-}
-
 void WKContextSetInitializationUserDataForInjectedBundle(WKContextRef contextRef,  WKTypeRef userDataRef)
 {
     WebKit::toImpl(contextRef)->setInjectedBundleInitializationUserData(WebKit::toImpl(userDataRef));

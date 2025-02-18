@@ -122,9 +122,6 @@ WK_CLASS_AVAILABLE(macos(14.5), ios(17.5), visionos(1.2))
 - (void)_registerURLSchemeAsBypassingContentSecurityPolicy:(NSString *)scheme WK_API_AVAILABLE(macos(12.0), ios(15.0));
 - (void)_setDomainRelaxationForbiddenForURLScheme:(NSString *)scheme WK_API_AVAILABLE(macos(12.0), ios(15.0));
 
-- (_WKDownload *)_downloadURLRequest:(NSURLRequest *)request websiteDataStore:(WKWebsiteDataStore *)dataStore originatingWebView:(WKWebView *)webView WK_API_DEPRECATED_WITH_REPLACEMENT("WKWebView _downloadRequest", macos(10.10, 12.0), ios(8.0, 15.0));
-- (_WKDownload *)_resumeDownloadFromData:(NSData *)resumeData websiteDataStore:(WKWebsiteDataStore *)dataStore  path:(NSString *)path originatingWebView:(WKWebView *)webView WK_API_DEPRECATED_WITH_REPLACEMENT("WKWebView.resumeDownloadFromResumeData:completionHandler:", macos(10.10, 12.0), ios(8.0, 15.0));
-
 + (void)_setLinkedOnOrAfterEverything WK_API_AVAILABLE(macos(13.0), ios(16.0));
 
 // Test only. Should be called only while no web content processes are running.
