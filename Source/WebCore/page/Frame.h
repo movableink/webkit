@@ -126,6 +126,8 @@ public:
 
     virtual void updateScrollingMode() = 0;
 
+    void stopForBackForwardCache();
+
 protected:
     Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent, Frame* opener);
     void resetWindowProxy();

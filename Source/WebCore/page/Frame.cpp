@@ -26,6 +26,7 @@
 #include "config.h"
 #include "Frame.h"
 
+#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLIFrameElement.h"
@@ -302,6 +303,16 @@ void Frame::updateSandboxFlags(SandboxFlags flags, NotifyUIProcess notifyUIProce
 {
     if (notifyUIProcess == NotifyUIProcess::Yes)
         loaderClient().updateSandboxFlags(flags);
+}
+
+void Frame::stopForBackForwardCache()
+{
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(*this))
+        localFrame->protectedLoader()->stopForBackForwardCache();
+    else {
+        for (RefPtr child = tree().firstChild(); child; child = child->tree().nextSibling())
+            child->stopForBackForwardCache();
+    }
 }
 
 } // namespace WebCore

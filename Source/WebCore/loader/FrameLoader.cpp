@@ -2109,10 +2109,8 @@ void FrameLoader::stopForBackForwardCache()
     if (RefPtr documentLoader = m_documentLoader)
         documentLoader->stopLoading();
 
-    for (RefPtr child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
-        if (RefPtr localChild = dynamicDowncast<LocalFrame>(child.get()))
-            localChild->protectedLoader()->stopForBackForwardCache();
-    }
+    for (RefPtr child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling())
+        child->stopForBackForwardCache();
 
     // We cancel pending navigations & policy checks *after* cancelling loads because cancelling loads might end up
     // running script, which could schedule new navigations.

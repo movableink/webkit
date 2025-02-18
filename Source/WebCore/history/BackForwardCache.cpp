@@ -433,33 +433,30 @@ static void setBackForwardCacheState(Page& page, Document::BackForwardCacheState
     });
 }
 
-static void firePageHideEventRecursively(LocalFrame& frame)
+static void firePageHideEventRecursively(Frame& frame)
 {
-    RefPtr document = frame.document();
-    if (!document)
-        return;
+    std::optional<UnloadCountIncrementer> unloadCountIncrementer;
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame)) {
+        RefPtr document = localFrame->document();
+        if (!document)
+            return;
 
-    // stopLoading() will fire the pagehide event in each subframe and the HTML specification states
-    // that the parent document's ignore-opens-during-unload counter should be incremented while the
-    // pagehide event is being fired in its subframes:
-    // https://html.spec.whatwg.org/multipage/browsers.html#unload-a-document
-    UnloadCountIncrementer UnloadCountIncrementer(document.get());
+        // stopLoading() will fire the pagehide event in each subframe and the HTML specification states
+        // that the parent document's ignore-opens-during-unload counter should be incremented while the
+        // pagehide event is being fired in its subframes:
+        // https://html.spec.whatwg.org/multipage/browsers.html#unload-a-document
+        unloadCountIncrementer.emplace(document.get());
 
-    frame.loader().stopLoading(UnloadEventPolicy::UnloadAndPageHide);
-
-    for (RefPtr child = frame.tree().firstChild(); child; child = child->tree().nextSibling()) {
-        if (auto* localChild = dynamicDowncast<LocalFrame>(child.get()))
-            firePageHideEventRecursively(*localChild);
+        localFrame->protectedLoader()->stopLoading(UnloadEventPolicy::UnloadAndPageHide);
     }
+    for (RefPtr child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
+        firePageHideEventRecursively(*child);
 }
 
 std::unique_ptr<CachedPage> BackForwardCache::trySuspendPage(Page& page, ForceSuspension forceSuspension)
 {
-    RefPtr localMainFrame = page.localMainFrame();
-    if (!localMainFrame)
-        return nullptr;
-
-    localMainFrame->protectedLoader()->stopForBackForwardCache();
+    Ref mainFrame = page.mainFrame();
+    mainFrame->stopForBackForwardCache();
 
     if (forceSuspension == ForceSuspension::No && !canCache(page))
         return nullptr;
@@ -471,16 +468,16 @@ std::unique_ptr<CachedPage> BackForwardCache::trySuspendPage(Page& page, ForceSu
     // Focus the main frame, defocusing a focused subframe (if we have one). We do this here,
     // before the page enters the back/forward cache, while we still can dispatch DOM blur/focus events.
     if (CheckedRef focusController = page.focusController(); focusController->focusedLocalFrame())
-        focusController->setFocusedFrame(localMainFrame.get());
+        focusController->setFocusedFrame(mainFrame.ptr());
 
     // Fire the pagehide event in all frames.
-    firePageHideEventRecursively(*localMainFrame);
+    firePageHideEventRecursively(mainFrame);
 
     page.destroyRenderTrees();
 
     // Stop all loads again before checking if we can still cache the page after firing the pagehide
     // event, since the page may have started ping loads in its pagehide event handler.
-    localMainFrame->protectedLoader()->stopForBackForwardCache();
+    mainFrame->stopForBackForwardCache();
 
     // Check that the page is still page-cacheable after firing the pagehide event. The JS event handlers
     // could have altered the page in a way that could prevent caching.
