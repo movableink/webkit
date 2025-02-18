@@ -37,11 +37,11 @@ def add_optargs(func, suite_name_flag='suite'):
 
 
 def upload_options(suite_name_flag='suite'):
-    return add_optargs(optparse.make_option)
+    return add_optargs(optparse.make_option, suite_name_flag=suite_name_flag)
 
 
 def upload_args(suite_name_flag='suite'):
     parser = argparse.ArgumentParser(add_help=False)
     upload_options = parser.add_argument_group('Upload options')
-    add_optargs(upload_options.add_argument)
+    add_optargs(upload_options.add_argument, suite_name_flag=suite_name_flag)
     return parser
