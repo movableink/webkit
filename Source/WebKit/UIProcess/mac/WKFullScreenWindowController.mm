@@ -139,6 +139,9 @@ static void makeResponderFirstResponderIfDescendantOfView(NSWindow *window, NSRe
     
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 
+    if (_exitFullScreenCompletionHandler)
+        _exitFullScreenCompletionHandler();
+
     [super dealloc];
 }
 
@@ -369,7 +372,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         _page->scalePageRelativeToScrollPosition(_savedScale, { });
         _page->setObscuredContentInsets(_savedObscuredContentInsets);
         [self _manager]->setAnimatingFullScreen(false);
-        [self _manager]->didExitFullScreen();
+        [self _manager]->requestExitFullScreen();
 
         // FIXME(53342): remove once pointer events fire when elements move out from under the pointer.
         NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved
@@ -447,11 +450,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [self _manager]->requestExitFullScreen();
 }
 
-- (void)beganExitFullScreenWithInitialFrame:(NSRect)initialFrame finalFrame:(NSRect)finalFrame
+- (void)beganExitFullScreenWithInitialFrame:(NSRect)initialFrame finalFrame:(NSRect)finalFrame completionHandler:(CompletionHandler<void()>&&)completionHandler
 {
     if (_fullScreenState != WaitingToExitFullScreen)
-        return;
+        return completionHandler();
     _fullScreenState = ExitingFullScreen;
+    _exitFullScreenCompletionHandler = WTFMove(completionHandler);
 
     if (![[self window] isOnActiveSpace]) {
         // If the full screen window is not in the active space, the NSWindow full screen animation delegate methods
@@ -540,7 +544,8 @@ static RetainPtr<CGImageRef> takeWindowSnapshot(CGSWindowID windowID, bool captu
 
     // These messages must be sent after the swap or flashing will occur during forceRepaint:
     [self _manager]->setAnimatingFullScreen(false);
-    [self _manager]->didExitFullScreen();
+    if (_exitFullScreenCompletionHandler)
+        _exitFullScreenCompletionHandler();
     _page->scalePageRelativeToScrollPosition(_savedScale, { });
     _page->setObscuredContentInsets(_savedObscuredContentInsets);
     _page->flushDeferredResizeEvents();

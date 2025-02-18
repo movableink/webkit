@@ -259,10 +259,8 @@ ViewLegacy::ViewLegacy(struct wpe_view_backend* backend, const API::PageConfigur
             view.page().fullScreenManager()->didEnterFullScreen();
         },
         // did_exit_fullscreen
-        [](void* data)
+        [](void*)
         {
-            auto& view = *reinterpret_cast<ViewLegacy*>(data);
-            view.page().fullScreenManager()->didExitFullScreen();
         },
         // request_enter_fullscreen
         [](void* data)

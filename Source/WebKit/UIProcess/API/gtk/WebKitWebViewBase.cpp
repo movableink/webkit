@@ -2685,8 +2685,6 @@ static void webkitWebViewBaseDidExitFullScreen(WebKitWebViewBase* webkitWebViewB
 {
     WebKitWebViewBasePrivate* priv = webkitWebViewBase->priv;
     ASSERT(priv->fullScreenState == WebFullScreenManagerProxy::FullscreenState::ExitingFullscreen);
-    if (auto* fullScreenManagerProxy = priv->pageProxy->fullScreenManager())
-        fullScreenManagerProxy->didExitFullScreen();
     priv->fullScreenState = WebFullScreenManagerProxy::FullscreenState::NotInFullscreen;
     priv->sleepDisabler = nullptr;
 }

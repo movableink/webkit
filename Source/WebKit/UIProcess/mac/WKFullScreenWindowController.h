@@ -61,6 +61,7 @@ typedef enum FullScreenState : NSInteger FullScreenState;
 
     bool _requestedExitFullScreen;
     FullScreenState _fullScreenState;
+    CompletionHandler<void()> _exitFullScreenCompletionHandler;
 
     double _savedScale;
     WebCore::FloatBoxExtent _savedObscuredContentInsets;
@@ -82,7 +83,7 @@ typedef enum FullScreenState : NSInteger FullScreenState;
 - (void)requestExitFullScreen;
 - (void)close;
 - (void)beganEnterFullScreenWithInitialFrame:(NSRect)initialFrame finalFrame:(NSRect)finalFrame;
-- (void)beganExitFullScreenWithInitialFrame:(NSRect)initialFrame finalFrame:(NSRect)finalFrame;
+- (void)beganExitFullScreenWithInitialFrame:(NSRect)initialFrame finalFrame:(NSRect)finalFrame completionHandler:(CompletionHandler<void()>&&)completionHandler;
 
 - (void)videoControlsManagerDidChange;
 

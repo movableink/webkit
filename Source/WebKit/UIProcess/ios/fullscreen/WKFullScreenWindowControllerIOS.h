@@ -52,7 +52,7 @@
 - (void)requestRestoreFullScreen:(CompletionHandler<void(bool)>&&)completionHandler;
 - (void)requestExitFullScreen;
 - (void)exitFullScreen;
-- (void)beganExitFullScreenWithInitialFrame:(CGRect)initialFrame finalFrame:(CGRect)finalFrame;
+- (void)beganExitFullScreenWithInitialFrame:(CGRect)initialFrame finalFrame:(CGRect)finalFrame completionHandler:(CompletionHandler<void()>&&)completionHandler;
 - (void)setSupportedOrientations:(UIInterfaceOrientationMask)orientations;
 - (void)resetSupportedOrientations;
 - (void)close;

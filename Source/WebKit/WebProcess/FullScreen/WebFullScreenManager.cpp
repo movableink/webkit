@@ -462,7 +462,9 @@ void WebFullScreenManager::willExitFullScreen()
 #endif
     // FIXME: The order of these frames is switched, but that is kept for historical reasons.
     // It should probably be fixed to be consistent at some point.
-    m_page->send(Messages::WebFullScreenManagerProxy::BeganExitFullScreen(m_finalFrame, m_initialFrame));
+    m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::BeganExitFullScreen(m_finalFrame, m_initialFrame), [this, protectedThis = Ref { *this }] {
+        didExitFullScreen();
+    });
 }
 
 static Vector<Ref<Element>> collectFullscreenElementsFromElement(Element* element)

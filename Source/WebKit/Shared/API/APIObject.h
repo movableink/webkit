@@ -201,6 +201,7 @@ public:
         WebsiteDataStoreConfiguration,
         WebsitePolicies,
         WindowFeatures,
+        CompletionListener,
 
 #if ENABLE(WEB_AUTHN)
         WebAuthenticationAssertionResponse,

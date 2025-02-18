@@ -151,22 +151,6 @@ void WebFullScreenManagerProxy::closeWithCallback(CompletionHandler<void()>&& co
     close();
 }
 
-void WebFullScreenManagerProxy::didExitFullScreen()
-{
-    ALWAYS_LOG(LOGIDENTIFIER);
-    m_fullscreenState = FullscreenState::NotInFullscreen;
-    if (RefPtr page = m_page.get()) {
-        page->fullscreenClient().didExitFullscreen(page.get());
-        sendToWebProcess(Messages::WebFullScreenManager::DidExitFullScreen());
-
-        if (page->isControlledByAutomation()) {
-            if (RefPtr automationSession = page->configuration().processPool().automationSession())
-                automationSession->didExitFullScreenForPage(*page);
-        }
-    }
-    callCloseCompletionHandlers();
-}
-
 void WebFullScreenManagerProxy::setAnimatingFullScreen(bool animating)
 {
     sendToWebProcess(Messages::WebFullScreenManager::SetAnimatingFullScreen(animating));
@@ -316,10 +300,26 @@ void WebFullScreenManagerProxy::beganEnterFullScreen(const IntRect& initialFrame
     });
 }
 
-void WebFullScreenManagerProxy::beganExitFullScreen(const IntRect& initialFrame, const IntRect& finalFrame)
+void WebFullScreenManagerProxy::beganExitFullScreen(const IntRect& initialFrame, const IntRect& finalFrame, CompletionHandler<void()>&& completionHandler)
 {
-    if (CheckedPtr client = m_client)
-        client->beganExitFullScreen(initialFrame, finalFrame);
+    CheckedPtr client = m_client;
+    if (!client)
+        return completionHandler();
+    client->beganExitFullScreen(initialFrame, finalFrame, [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler), logIdentifier = LOGIDENTIFIER] mutable {
+        m_fullscreenState = FullscreenState::NotInFullscreen;
+        RefPtr page = m_page.get();
+        if (!page)
+            return completionHandler();
+        ALWAYS_LOG(logIdentifier);
+        page->fullscreenClient().didExitFullscreen(page.get());
+        completionHandler();
+
+        if (page->isControlledByAutomation()) {
+            if (RefPtr automationSession = page->configuration().processPool().automationSession())
+                automationSession->didExitFullScreenForPage(*page);
+        }
+        callCloseCompletionHandlers();
+    });
 }
 
 bool WebFullScreenManagerProxy::lockFullscreenOrientation(WebCore::ScreenOrientationType orientation)

@@ -253,7 +253,7 @@ private:
 #endif
     void exitFullScreen() override;
     void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) override;
-    void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) override;
+    void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void()>&&) override;
     bool lockFullscreenOrientation(WebCore::ScreenOrientationType) override;
     void unlockFullscreenOrientation() override;
 #endif

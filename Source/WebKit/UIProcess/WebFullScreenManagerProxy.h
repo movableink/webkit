@@ -74,7 +74,7 @@ public:
 #endif
     virtual void exitFullScreen() = 0;
     virtual void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) = 0;
-    virtual void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) = 0;
+    virtual void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void()>&&) = 0;
 
     virtual bool lockFullscreenOrientation(WebCore::ScreenOrientationType) { return false; }
     virtual void unlockFullscreenOrientation() { }
@@ -115,7 +115,6 @@ public:
     void willEnterFullScreen(CompletionHandler<void(bool)>&&);
     void didEnterFullScreen();
     void willExitFullScreen();
-    void didExitFullScreen();
     void setAnimatingFullScreen(bool);
     void requestRestoreFullScreen(CompletionHandler<void(bool)>&&);
     void requestExitFullScreen();
@@ -136,7 +135,7 @@ private:
 #endif
     void exitFullScreen();
     void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
-    void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
+    void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void()>&&);
     void callCloseCompletionHandlers();
     template<typename M> void sendToWebProcess(M&&);
 

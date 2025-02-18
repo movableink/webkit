@@ -197,9 +197,6 @@ void ViewPlatform::exitFullScreen()
 void ViewPlatform::didExitFullScreen()
 {
     ASSERT(m_fullscreenState == WebFullScreenManagerProxy::FullscreenState::ExitingFullscreen);
-
-    if (auto* fullScreenManagerProxy = page().fullScreenManager())
-        fullScreenManagerProxy->didExitFullScreen();
     m_fullscreenState = WebFullScreenManagerProxy::FullscreenState::NotInFullscreen;
 }
 

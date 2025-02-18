@@ -500,12 +500,12 @@ void TestController::exitFullScreen(WKPageRef page)
     WKPageWillExitFullScreen(page);
 }
 
-void TestController::beganExitFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame, const void* clientInfo)
+void TestController::beganExitFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame, WKCompletionListenerRef listener, const void* clientInfo)
 {
-    static_cast<TestController*>(const_cast<void*>(clientInfo))->beganExitFullScreen(page, initialFrame, finalFrame);
+    return static_cast<TestController*>(const_cast<void*>(clientInfo))->beganExitFullScreen(page, initialFrame, finalFrame, listener);
 }
 
-void TestController::beganExitFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame)
+void TestController::beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, WKCompletionListenerRef listener)
 {
     if (m_dumpFullScreenCallbacks) {
         protectedCurrentInvocation()->outputText(makeString(
@@ -521,13 +521,16 @@ void TestController::beganExitFullScreen(WKPageRef page, WKRect initialFrame, WK
         ));
     }
 
+    m_finishExitFullscreenHandler = [listener = WKRetainPtr { listener }] {
+        WKCompletionListenerComplete(listener.get());
+    };
     if (!m_waitBeforeFinishingFullscreenExit)
-        finishFullscreenExit(page);
+        finishFullscreenExit();
 }
 
-void TestController::finishFullscreenExit(WKPageRef page)
+void TestController::finishFullscreenExit()
 {
-    WKPageDidExitFullScreen(page);
+    m_finishExitFullscreenHandler();
 }
 
 void TestController::requestExitFullscreenFromUIProcess(WKPageRef page)
@@ -1436,6 +1439,8 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
     m_dumpPolicyDelegateCallbacks = false;
     m_dumpFullScreenCallbacks = false;
     m_waitBeforeFinishingFullscreenExit = false;
+    if (m_finishExitFullscreenHandler)
+        m_finishExitFullscreenHandler();
 
     return m_doneResetting;
 }

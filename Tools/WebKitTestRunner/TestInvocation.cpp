@@ -708,7 +708,7 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "FinishFullscreenExit")) {
-        TestController::singleton().finishFullscreenExit(TestController::singleton().mainWebView()->page());
+        TestController::singleton().finishFullscreenExit();
         return;
     }
 

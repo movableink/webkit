@@ -864,9 +864,11 @@ void PageClientImpl::beganEnterFullScreen(const IntRect& initialFrame, const Int
     [[webView() fullScreenWindowController] beganEnterFullScreenWithInitialFrame:initialFrame finalFrame:finalFrame];
 }
 
-void PageClientImpl::beganExitFullScreen(const IntRect& initialFrame, const IntRect& finalFrame)
+void PageClientImpl::beganExitFullScreen(const IntRect& initialFrame, const IntRect& finalFrame, CompletionHandler<void()>&& completionHandler)
 {
-    [[webView() fullScreenWindowController] beganExitFullScreenWithInitialFrame:initialFrame finalFrame:finalFrame];
+    if (![webView() fullScreenWindowController])
+        return completionHandler();
+    [[webView() fullScreenWindowController] beganExitFullScreenWithInitialFrame:initialFrame finalFrame:finalFrame completionHandler:WTFMove(completionHandler)];
 }
 
 #endif // ENABLE(FULLSCREEN_API)

@@ -34,6 +34,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Seconds.h>
@@ -198,7 +199,7 @@ public:
     void dumpPolicyDelegateCallbacks() { m_dumpPolicyDelegateCallbacks = true; }
     void dumpFullScreenCallbacks() { m_dumpFullScreenCallbacks = true; }
     void waitBeforeFinishingFullscreenExit() { m_waitBeforeFinishingFullscreenExit = true; }
-    void finishFullscreenExit(WKPageRef);
+    void finishFullscreenExit();
     void requestExitFullscreenFromUIProcess(WKPageRef);
 
     static bool willEnterFullScreen(WKPageRef, const void*);
@@ -207,8 +208,8 @@ public:
     void beganEnterFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame);
     static void exitFullScreen(WKPageRef, const void*);
     void exitFullScreen(WKPageRef);
-    static void beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, const void*);
-    void beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame);
+    static void beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, WKCompletionListenerRef, const void*);
+    void beganExitFullScreen(WKPageRef, WKRect initialFrame, WKRect finalFrame, WKCompletionListenerRef);
 
     void setShouldLogHistoryClientCallbacks(bool shouldLog) { m_shouldLogHistoryClientCallbacks = shouldLog; }
     void setShouldLogCanAuthenticateAgainstProtectionSpace(bool shouldLog) { m_shouldLogCanAuthenticateAgainstProtectionSpace = shouldLog; }
@@ -787,6 +788,7 @@ private:
         { }
     };
     HashMap<String, AbandonedDocumentInfo> m_abandonedDocumentInfo;
+    CompletionHandler<void()> m_finishExitFullscreenHandler;
 
     uint64_t m_serverTrustEvaluationCallbackCallsCount { 0 };
     bool m_shouldDismissJavaScriptAlertsAsynchronously { false };

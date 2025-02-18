@@ -1308,7 +1308,6 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
         if (auto* manager = self._manager) {
             OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
             manager->willExitFullScreen();
-            manager->didExitFullScreen();
             return;
         }
 
@@ -1336,11 +1335,11 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     [self _exitFullscreenImmediately];
 }
 
-- (void)beganExitFullScreenWithInitialFrame:(CGRect)initialFrame finalFrame:(CGRect)finalFrame
+- (void)beganExitFullScreenWithInitialFrame:(CGRect)initialFrame finalFrame:(CGRect)finalFrame completionHandler:(CompletionHandler<void()>&&)completionHandler
 {
     if (_fullScreenState != WebKit::WaitingToExitFullScreen) {
         OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER, _fullScreenState, " != WaitingToExitFullScreen, dropping");
-        return;
+        return completionHandler();
     }
     OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER, WebCore::FloatRect { initialFrame }, ", ", WebCore::FloatRect { finalFrame });
 
@@ -1359,21 +1358,17 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
         page->startDeferringScrollEvents();
     }
 
-    CompletionHandler<void()> completionHandler = [strongSelf = retainPtr(self), self] () mutable {
-        [_fullscreenViewController setPrefersStatusBarHidden:NO];
+    [_fullscreenViewController setPrefersStatusBarHidden:NO];
 
 #if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
-        if (_interactiveDismissTransitionCoordinator) {
-            [_interactiveDismissTransitionCoordinator finishInteractiveTransition];
-            _interactiveDismissTransitionCoordinator = nil;
-            return;
-        }
+    if (_interactiveDismissTransitionCoordinator) {
+        [_interactiveDismissTransitionCoordinator finishInteractiveTransition];
+        _interactiveDismissTransitionCoordinator = nil;
+        return completionHandler();
+    }
 #endif
 
-        [self _dismissFullscreenViewController];
-    };
-
-    completionHandler();
+    [self _dismissFullscreenViewController:WTFMove(completionHandler)];
 }
 
 - (void)_reinsertWebViewUnderPlaceholder
@@ -1401,11 +1396,11 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     [CATransaction commit];
 }
 
-- (void)_completedExitFullScreen
+- (void)_completedExitFullScreen:(CompletionHandler<void()>&&)completionHandler
 {
     if (_fullScreenState != WebKit::ExitingFullScreen) {
         OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER, _fullScreenState, " != ExitingFullScreen, dropping");
-        return;
+        return completionHandler();
     }
     _fullScreenState = WebKit::NotInFullScreen;
     OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
@@ -1417,10 +1412,9 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
 
     [self _reinsertWebViewUnderPlaceholder];
 
-    if (auto* manager = self._manager) {
+    if (auto* manager = self._manager)
         manager->setAnimatingFullScreen(false);
-        manager->didExitFullScreen();
-    }
+    completionHandler();
 
     if (auto page = [self._webView _page]) {
         page->flushDeferredResizeEvents();
@@ -1438,7 +1432,7 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     _parentWindowState = nil;
 #endif
 
-    CompletionHandler<void()> completionHandler([protectedSelf = retainPtr(self), self, windowWasKey, logIdentifier = OBJC_LOGIDENTIFIER] {
+    CompletionHandler<void()> completionHandlerAfterRenderingUpdateIfFocused([protectedSelf = retainPtr(self), self, windowWasKey, logIdentifier = OBJC_LOGIDENTIFIER] {
         _webViewPlaceholder.get().parent = nil;
         [_webViewPlaceholder removeFromSuperview];
 
@@ -1465,9 +1459,9 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
 
     auto* page = [self._webView _page].get();
     if (page && page->isViewFocused())
-        page->updateRenderingWithForcedRepaint(WTFMove(completionHandler));
+        page->updateRenderingWithForcedRepaint(WTFMove(completionHandlerAfterRenderingUpdateIfFocused));
     else
-        completionHandler();
+        completionHandlerAfterRenderingUpdateIfFocused();
 
     [_fullscreenViewController setPrefersStatusBarHidden:YES];
     [_fullscreenViewController invalidate];
@@ -1644,7 +1638,6 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
         manager->setAnimatingFullScreen(true);
         manager->willExitFullScreen();
         manager->setAnimatingFullScreen(false);
-        manager->didExitFullScreen();
     }
 
     [_webViewPlaceholder removeFromSuperview];
@@ -1768,14 +1761,14 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
 
     OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
     _inInteractiveDismiss = true;
-    [self _dismissFullscreenViewController];
+    [self requestExitFullScreen];
 }
 
-- (void)_dismissFullscreenViewController
+- (void)_dismissFullscreenViewController:(CompletionHandler<void()>&&)completionHandler
 {
     if (!_fullscreenViewController) {
         OBJC_ERROR_LOG(OBJC_LOGIDENTIFIER, "no fullscreenViewController");
-        [self _completedExitFullScreen];
+        [self _completedExitFullScreen:WTFMove(completionHandler)];
         return;
     }
     OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
@@ -1784,33 +1777,31 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     if (WebKit::useSpatialFullScreenTransition()) {
         [self _configureSpatialFullScreenTransition];
 
-        CompletionHandler<void()> completionHandler = [strongSelf = retainPtr(self), self] () {
-            [self _completedExitFullScreen];
-        };
-
-        [self _performSpatialFullScreenTransition:NO completionHandler:WTFMove(completionHandler)];
+        [self _performSpatialFullScreenTransition:NO completionHandler:[self, strongSelf = retainPtr(self), completionHandler = WTFMove(completionHandler)] mutable {
+            [self _completedExitFullScreen:WTFMove(completionHandler)];
+        }];
         return;
     }
-#endif // ENABLE(VISION)
+#endif // PLATFORM(VISION)
 
     [_fullscreenViewController setAnimating:YES];
-    __block auto logIdentifier = OBJC_LOGIDENTIFIER;
-    [_fullscreenViewController dismissViewControllerAnimated:YES completion:^{
-        if (![self._webView _page])
-            return;
+    [_fullscreenViewController dismissViewControllerAnimated:YES completion:makeBlockPtr([self, weakSelf = WeakObjCPtr { self }, completionHandler = WTFMove(completionHandler), logIdentifier = OBJC_LOGIDENTIFIER] mutable {
+        RetainPtr strongSelf = weakSelf.get();
+        if (!strongSelf || ![strongSelf.get()._webView _page])
+            return completionHandler();
 
         OBJC_ALWAYS_LOG(logIdentifier, "dismiss completed");
 #if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
         if (_interactiveDismissTransitionCoordinator.get().animator.context.transitionWasCancelled)
             [_fullscreenViewController setAnimating:NO];
         else
-            [self _completedExitFullScreen];
+            [strongSelf _completedExitFullScreen:WTFMove(completionHandler)];
 
         _interactiveDismissTransitionCoordinator = nil;
 #else
-        [self _completedExitFullScreen];
+        [strongSelf _completedExitFullScreen:WTFMove(completionHandler)];
 #endif
-    }];
+    }).get()];
 }
 
 #if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)

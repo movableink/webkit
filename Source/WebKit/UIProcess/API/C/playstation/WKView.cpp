@@ -107,12 +107,8 @@ void WKViewSetVisible(WKViewRef view, bool visible)
     setViewActivityStateFlag(view, WebCore::ActivityState::IsVisible, visible);
 }
 
-void WKViewWillEnterFullScreen(WKViewRef view)
+void WKViewWillEnterFullScreen(WKViewRef)
 {
-#if ENABLE(FULLSCREEN_API)
-    // FIXME: Replace this and WKViewSetViewClient's enterFullScreen with a listener object.
-    WebKit::toImpl(view)->willEnterFullScreen([] (bool) { });
-#endif
 }
 
 void WKViewDidEnterFullScreen(WKViewRef view)
@@ -129,11 +125,8 @@ void WKViewWillExitFullScreen(WKViewRef view)
 #endif
 }
 
-void WKViewDidExitFullScreen(WKViewRef view)
+void WKViewDidExitFullScreen(WKViewRef)
 {
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(view)->didExitFullScreen();
-#endif
 }
 
 void WKViewRequestExitFullScreen(WKViewRef view)
@@ -174,9 +167,7 @@ void WKViewSetViewClient(WKViewRef view, const WKViewClientBase* client)
             if (!m_client.enterFullScreen)
                 return completionHandler(false);
             m_client.enterFullScreen(WebKit::toAPI(&view), m_client.base.clientInfo);
-
-            // FIXME: Replace this and WKViewWillEnterFullScreen with a listener object.
-            completionHandler(false);
+            completionHandler(true);
         }
         
         void exitFullScreen(WebKit::PlayStationWebView& view)
@@ -200,11 +191,12 @@ void WKViewSetViewClient(WKViewRef view, const WKViewClientBase* client)
             m_client.beganEnterFullScreen(WebKit::toAPI(&view), WebKit::toAPI(initialFrame), WebKit::toAPI(finalFrame), m_client.base.clientInfo);
         }
         
-        void beganExitFullScreen(WebKit::PlayStationWebView& view, const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame)
+        void beganExitFullScreen(WebKit::PlayStationWebView& view, const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void()>&& completionHandler)
         {
             if (!m_client.beganExitFullScreen)
-                return;
+                return completionHandler();
             m_client.beganExitFullScreen(WebKit::toAPI(&view), WebKit::toAPI(initialFrame), WebKit::toAPI(finalFrame), m_client.base.clientInfo);
+            completionHandler();
         }
 
         void setCursor(WebKit::PlayStationWebView& view, const WebCore::Cursor& cursor) final
