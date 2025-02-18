@@ -3639,6 +3639,9 @@ ExceptionOr<RefPtr<Attr>> Element::setAttributeNode(Attr& attrNode)
         if (attributeNodeValue.hasException())
             return attributeNodeValue.releaseException();
         attrNodeValue = AtomString(attributeNodeValue.releaseReturnValue());
+
+        if (!attributeTypeAndSink.attributeType.isNull() && attrNode.ownerElement() && attrNode.ownerElement() != this)
+            return Exception { ExceptionCode::InUseAttributeError };
     }
 
     auto existingAttributeIndex = elementData.findAttributeIndexByName(attrNode.qualifiedName());
@@ -3689,6 +3692,9 @@ ExceptionOr<RefPtr<Attr>> Element::setAttributeNodeNS(Attr& attrNode)
         if (attributeNodeValue.hasException())
             return attributeNodeValue.releaseException();
         attrNodeValue = AtomString(attributeNodeValue.releaseReturnValue());
+
+        if (!attributeTypeAndSink.attributeType.isNull() && attrNode.ownerElement() && attrNode.ownerElement() != this)
+            return Exception { ExceptionCode::InUseAttributeError };
     }
 
     {
