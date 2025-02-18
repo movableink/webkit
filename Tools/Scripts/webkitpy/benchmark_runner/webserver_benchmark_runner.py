@@ -2,9 +2,6 @@ import collections
 import json
 import logging
 import os
-import subprocess
-import signal
-import time
 
 from webkitcorepy import NullContext, Timeout
 
