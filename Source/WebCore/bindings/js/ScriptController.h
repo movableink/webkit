@@ -183,6 +183,7 @@ private:
 
     void disconnectPlatformScriptObjects();
 
+    Ref<WindowProxy> protectedWindowProxy() { return windowProxy(); }
     WEBCORE_EXPORT WindowProxy& windowProxy();
     WEBCORE_EXPORT JSWindowProxy& jsWindowProxy(DOMWrapperWorld&);
 

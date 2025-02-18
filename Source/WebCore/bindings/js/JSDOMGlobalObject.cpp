@@ -355,6 +355,11 @@ void JSDOMGlobalObject::finishCreation(VM& vm, JSObject* thisValue)
 #endif
 }
 
+RefPtr<ScriptExecutionContext> JSDOMGlobalObject::protectedScriptExecutionContext() const
+{
+    return scriptExecutionContext();
+}
+
 ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
 {
     if (inherits<JSDOMWindowBase>())
