@@ -2554,6 +2554,10 @@ void WebPage::didScalePage(double scale, const IntPoint& origin)
 {
     double totalScale = scale * viewScaleFactor();
     bool willChangeScaleFactor = totalScale != totalScaleFactor();
+    auto platformDidScalePageIfNeeded = makeScopeExit([willChangeScaleFactor, this, protectedThis = Ref { *this }] {
+        if (willChangeScaleFactor)
+            platformDidScalePage();
+    });
 
 #if PLATFORM(IOS_FAMILY)
     if (willChangeScaleFactor) {
@@ -2566,7 +2570,7 @@ void WebPage::didScalePage(double scale, const IntPoint& origin)
     RefPtr page = m_page;
 #if ENABLE(PDF_PLUGIN)
     if (RefPtr pluginView = mainFramePlugIn(); pluginView && pluginView->pluginHandlesPageScaleFactor()) {
-        // Since the main-frame PDF plug-in handles the page scale factor, make sure to reset WebCore's page scale.
+        // Whenever the PDF plug-in handles the page scale factor, make sure to reset WebCore's page scale.
         // Otherwise, we can end up with an immutable but non-1 page scale applied by WebCore on top of whatever the plugin does.
         if (page->pageScaleFactor() != 1)
             page->setPageScaleFactor(1, origin);
@@ -2587,8 +2591,6 @@ void WebPage::didScalePage(double scale, const IntPoint& origin)
             pluginView->setPageScaleFactor(totalScale, { origin });
     }
 #endif
-
-    platformDidScalePage();
 }
 
 void WebPage::didScalePageInViewCoordinates(double scale, const IntPoint& origin)

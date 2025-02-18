@@ -882,17 +882,27 @@ void PluginView::viewGeometryDidChange()
         return;
 
     ASSERT(frame());
-    float pageScaleFactor = frame()->page() ? frame()->page()->pageScaleFactor() : 1;
-
-    IntPoint scaledFrameRectLocation(frameRect().location().x() * pageScaleFactor, frameRect().location().y() * pageScaleFactor);
-    IntPoint scaledLocationInRootViewCoordinates(protectedParent()->contentsToRootView(scaledFrameRectLocation));
 
     // FIXME: We still don't get the right coordinates for transformed plugins.
-    AffineTransform transform;
-    transform.translate(scaledLocationInRootViewCoordinates.x(), scaledLocationInRootViewCoordinates.y());
-    transform.scale(pageScaleFactor);
+    auto pluginToRootViewTransform = [this, protectedThis = Ref { *this }] {
+        AffineTransform transform;
 
-    protectedPlugin()->geometryDidChange(size(), transform);
+        RefPtr plugin = protectedPlugin();
+        RefPtr frame = this->frame();
+        if (frame->isMainFrame() && plugin->isFullFramePlugin() && !plugin->handlesPageScaleFactor())
+            return transform;
+
+        float pageScaleFactor = frame->page() ? frame->page()->pageScaleFactor() : 1;
+        IntPoint scaledFrameRectLocation { frameRect().location().scaled(pageScaleFactor) };
+        IntPoint scaledLocationInRootViewCoordinates { protectedParent()->contentsToRootView(scaledFrameRectLocation) };
+
+        transform.translate(scaledLocationInRootViewCoordinates);
+        transform.scale(pageScaleFactor);
+
+        return transform;
+    }();
+
+    protectedPlugin()->geometryDidChange(size(), pluginToRootViewTransform);
 }
 
 void PluginView::viewVisibilityDidChange()

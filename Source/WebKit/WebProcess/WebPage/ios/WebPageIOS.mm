@@ -4963,6 +4963,18 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
     })();
 
     if (!pageHasBeenScaledSinceLastLayerTreeCommitThatChangedPageScale) {
+        bool shouldSetCorePageScale = [this, protectedThis = Ref { *this }] {
+#if ENABLE(PDF_PLUGIN)
+            RefPtr pluginView = mainFramePlugIn();
+            if (!pluginView)
+                return true;
+            return pluginView->pluginHandlesPageScaleFactor() ? false : m_isInStableState;
+#else
+            UNUSED_PARAM(this);
+            return true;
+#endif
+        }();
+
         bool hasSetPageScale = false;
         if (scaleFromUIProcess) {
             m_scaleWasSetByUIProcess = true;
@@ -4970,24 +4982,14 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
 
             m_dynamicSizeUpdateHistory.clear();
 
-            // FIXME: <webkit.org/b/287511> Also call Page::setPageScaleFactor() for main frame plugins that do not handle page scale factor.
-            bool pluginHandlesPageScaleFactor = [this] {
-#if ENABLE(PDF_PLUGIN)
-                return this->mainFramePlugIn();
-#else
-                UNUSED_PARAM(this);
-                return false;
-#endif
-            }();
-
-            if (!pluginHandlesPageScaleFactor)
+            if (shouldSetCorePageScale)
                 m_page->setPageScaleFactor(scaleFromUIProcess.value(), scrollPosition, m_isInStableState);
 
             hasSetPageScale = true;
             send(Messages::WebPageProxy::PageScaleFactorDidChange(scaleFromUIProcess.value()));
         }
 
-        if (!hasSetPageScale && m_isInStableState)
+        if (!hasSetPageScale && m_isInStableState && shouldSetCorePageScale)
             m_page->setPageScaleFactor(scaleToUse, scrollPosition, true);
     }
 
