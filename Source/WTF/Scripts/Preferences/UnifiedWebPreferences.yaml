@@ -1048,7 +1048,6 @@ BuiltInNotificationsEnabled:
     WebKit:
       default: defaultBuiltInNotificationsEnabled()
   sharedPreferenceForWebProcess: true
-  richJavaScript: true
 
 CFNetworkNetworkLoaderEnabled:
   type: bool
