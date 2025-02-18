@@ -83,6 +83,7 @@ public:
     WEBCORE_EXPORT RefPtr<Element> getElementById(const AtomString&) const;
     WEBCORE_EXPORT RefPtr<Element> getElementById(const String&) const;
     RefPtr<Element> getElementById(StringView) const;
+    RefPtr<Element> elementByIdResolvingReferenceTarget(const AtomString&) const;
     const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* getAllElementsById(const AtomString&) const;
     inline bool hasElementWithId(const AtomString&) const; // Defined in TreeScopeInlines.h.
     inline bool containsMultipleElementsWithId(const AtomString& id) const; // Defined in TreeScopeInlines.h.

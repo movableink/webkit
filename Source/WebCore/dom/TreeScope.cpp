@@ -176,6 +176,12 @@ RefPtr<Element> TreeScope::getElementById(StringView elementId) const
     return nullptr;
 }
 
+RefPtr<Element> TreeScope::elementByIdResolvingReferenceTarget(const AtomString& elementId) const
+{
+    RefPtr elementForId = getElementById(elementId);
+    return elementForId ? elementForId->resolveReferenceTarget() : nullptr;
+}
+
 const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* TreeScope::getAllElementsById(const AtomString& elementId) const
 {
     if (elementId.isEmpty())
@@ -225,7 +231,6 @@ void TreeScope::removeElementByName(const AtomString& name, Element& element)
         return;
     m_elementsByName->remove(name, element);
 }
-
 
 Ref<Node> TreeScope::retargetToScope(Node& node) const
 {

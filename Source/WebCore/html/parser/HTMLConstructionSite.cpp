@@ -556,6 +556,7 @@ void HTMLConstructionSite::insertHTMLTemplateElement(AtomHTMLToken&& token)
         auto delegatesFocus = ShadowRootDelegatesFocus::No;
         auto clonable = ShadowRootClonable::No;
         auto serializable = ShadowRootSerializable::No;
+        String referenceTarget;
         auto registryKind = Element::CustomElementRegistryKind::Window;
         for (auto& attribute : token.attributes()) {
             if (attribute.name() == HTMLNames::shadowrootmodeAttr) {
@@ -569,11 +570,13 @@ void HTMLConstructionSite::insertHTMLTemplateElement(AtomHTMLToken&& token)
                 clonable = ShadowRootClonable::Yes;
             else if (attribute.name() == HTMLNames::shadowrootserializableAttr)
                 serializable = ShadowRootSerializable::Yes;
+            else if (document().settings().shadowRootReferenceTargetEnabled() && attribute.name() == HTMLNames::shadowrootreferencetargetAttr)
+                referenceTarget = AtomString(attribute.value());
             else if (attribute.name() == HTMLNames::shadowrootcustomelementsAttr)
                 registryKind = Element::CustomElementRegistryKind::Null;
         }
         if (mode && is<Element>(currentNode())) {
-            auto exceptionOrShadowRoot = currentElement().attachDeclarativeShadow(*mode, delegatesFocus, clonable, serializable, registryKind);
+            auto exceptionOrShadowRoot = currentElement().attachDeclarativeShadow(*mode, delegatesFocus, clonable, serializable, referenceTarget, registryKind);
             if (!exceptionOrShadowRoot.hasException()) {
                 Ref shadowRoot = exceptionOrShadowRoot.releaseReturnValue();
                 auto element = createHTMLElement(token);

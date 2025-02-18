@@ -73,14 +73,18 @@ Ref<HTMLLabelElement> HTMLLabelElement::create(Document& document)
 
 RefPtr<HTMLElement> HTMLLabelElement::control() const
 {
-    auto& controlId = attributeWithoutSynchronization(forAttr);
-    if (controlId.isNull()) {
-        // Search the children and descendants of the label element for a form element.
-        // per http://dev.w3.org/html5/spec/Overview.html#the-label-element
-        // the form element must be "labelable form-associated element".
-        for (const auto& labelableElement : descendantsOfType<HTMLElement>(*this)) {
-            if (labelableElement.isLabelable())
-                return const_cast<HTMLElement*>(&labelableElement);
+    if (!hasAttributeWithoutSynchronization(forAttr)) {
+        // https://html.spec.whatwg.org/multipage/forms.html#labeled-control
+        for (auto& descendant : descendantsOfType<HTMLElement>(*this)) {
+            if (document().settings().shadowRootReferenceTargetEnabled()) {
+                RefPtr referenceTarget = dynamicDowncast<HTMLElement>(descendant.resolveReferenceTarget());
+                if (referenceTarget && referenceTarget->isLabelable())
+                    return referenceTarget.get();
+                continue;
+            }
+
+            if (descendant.isLabelable())
+                return const_cast<HTMLElement*>(&descendant);
         }
         return nullptr;
     }
@@ -89,7 +93,7 @@ RefPtr<HTMLElement> HTMLLabelElement::control() const
 
 RefPtr<HTMLElement> HTMLLabelElement::controlForBindings() const
 {
-    return control();
+    return dynamicDowncast<HTMLElement>(retargetReferenceTargetForBindings(control()));
 }
 
 HTMLFormElement* HTMLLabelElement::form() const
@@ -103,7 +107,8 @@ HTMLFormElement* HTMLLabelElement::form() const
 
 HTMLFormElement* HTMLLabelElement::formForBindings() const
 {
-    return form();
+    // FIXME: The downcast should be unnecessary, but the WPT was written before https://github.com/WICG/webcomponents/issues/1072 was resolved. Update once the WPT has been updated.
+    return dynamicDowncast<HTMLFormElement>(retargetReferenceTargetForBindings(form())).get();
 }
 
 void HTMLLabelElement::setActive(bool down, Style::InvalidationScope invalidationScope)

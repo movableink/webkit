@@ -63,9 +63,9 @@ public:
 
     static Ref<ShadowRoot> create(Document& document, ShadowRootMode type, SlotAssignmentMode assignmentMode = SlotAssignmentMode::Named,
         DelegatesFocus delegatesFocus = DelegatesFocus::No, Clonable clonable = Clonable::No, Serializable serializable = Serializable::No, AvailableToElementInternals availableToElementInternals = AvailableToElementInternals::No,
-        RefPtr<CustomElementRegistry>&& registry = nullptr, ScopedCustomElementRegistry scopedRegistry = ScopedCustomElementRegistry::No)
+        RefPtr<CustomElementRegistry>&& registry = nullptr, ScopedCustomElementRegistry scopedRegistry = ScopedCustomElementRegistry::No, const AtomString& referenceTarget = nullAtom())
     {
-        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, clonable, serializable, availableToElementInternals, WTFMove(registry), scopedRegistry));
+        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, clonable, serializable, availableToElementInternals, WTFMove(registry), scopedRegistry, referenceTarget));
     }
 
     static Ref<ShadowRoot> create(Document& document, std::unique_ptr<SlotAssignment>&& assignment)
@@ -152,8 +152,16 @@ public:
 
     Vector<RefPtr<WebAnimation>> getAnimations();
 
+    bool hasReferenceTarget() const { return !m_referenceTarget.isNull(); }
+    const AtomString& referenceTarget() const { return m_referenceTarget; }
+    void setReferenceTarget(const AtomString&);
+    RefPtr<Element> referenceTargetElement() const
+    {
+        return m_referenceTarget.isNull() ? nullptr : getElementById(m_referenceTarget);
+    }
+
 private:
-    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, DelegatesFocus, Clonable, Serializable, AvailableToElementInternals, RefPtr<CustomElementRegistry>&&, ScopedCustomElementRegistry);
+    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, DelegatesFocus, Clonable, Serializable, AvailableToElementInternals, RefPtr<CustomElementRegistry>&&, ScopedCustomElementRegistry, const AtomString& referenceTarget);
     ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
 
     bool childTypeAllowed(NodeType) const override;
@@ -182,6 +190,8 @@ private:
     std::unique_ptr<Style::Scope> m_styleScope;
     std::unique_ptr<SlotAssignment> m_slotAssignment;
     mutable std::optional<PartMappings> m_partMappings;
+
+    AtomString m_referenceTarget;
 };
 
 inline Element* ShadowRoot::activeElement() const

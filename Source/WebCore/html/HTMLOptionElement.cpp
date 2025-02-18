@@ -147,7 +147,8 @@ HTMLFormElement* HTMLOptionElement::form() const
 
 HTMLFormElement* HTMLOptionElement::formForBindings() const
 {
-    return form();
+    // FIXME: The downcast should be unnecessary, but the WPT was written before https://github.com/WICG/webcomponents/issues/1072 was resolved. Update once the WPT has been updated.
+    return dynamicDowncast<HTMLFormElement>(retargetReferenceTargetForBindings(form())).get();
 }
 
 int HTMLOptionElement::index() const

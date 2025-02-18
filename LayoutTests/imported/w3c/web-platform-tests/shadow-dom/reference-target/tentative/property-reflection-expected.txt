@@ -1254,9 +1254,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to button with reference targetappendTestDeclaratively
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to button with reference targetappendTestDeclaratively
 PASS label.form has reflection behavior IsNull when pointing to button with reference targetappendTestDeclaratively
-FAIL label.control has reflection behavior ReflectsHost when pointing to button with reference targetappendTestDeclaratively assert_equals: expected Element node <div id="host-id">
-
-        </div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to button with reference targetappendTestDeclaratively
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to input with reference targetappendTestDeclaratively
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to input with reference targetappendTestDeclaratively
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to input with reference targetappendTestDeclaratively
@@ -1267,9 +1265,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to input with reference targetappendTestDeclaratively
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to input with reference targetappendTestDeclaratively
 PASS label.form has reflection behavior IsNull when pointing to input with reference targetappendTestDeclaratively
-FAIL label.control has reflection behavior ReflectsHost when pointing to input with reference targetappendTestDeclaratively assert_equals: expected Element node <div id="host-id">
-
-        </div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to input with reference targetappendTestDeclaratively
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to meter with reference targetappendTestDeclaratively
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to meter with reference targetappendTestDeclaratively
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to meter with reference targetappendTestDeclaratively
@@ -1280,9 +1276,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to meter with reference targetappendTestDeclaratively
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to meter with reference targetappendTestDeclaratively
 PASS label.form has reflection behavior IsNull when pointing to meter with reference targetappendTestDeclaratively
-FAIL label.control has reflection behavior ReflectsHost when pointing to meter with reference targetappendTestDeclaratively assert_equals: expected Element node <div id="host-id">
-
-        </div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to meter with reference targetappendTestDeclaratively
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to output with reference targetappendTestDeclaratively
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to output with reference targetappendTestDeclaratively
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to output with reference targetappendTestDeclaratively
@@ -1293,9 +1287,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to output with reference targetappendTestDeclaratively
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to output with reference targetappendTestDeclaratively
 PASS label.form has reflection behavior IsNull when pointing to output with reference targetappendTestDeclaratively
-FAIL label.control has reflection behavior ReflectsHost when pointing to output with reference targetappendTestDeclaratively assert_equals: expected Element node <div id="host-id">
-
-        </div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to output with reference targetappendTestDeclaratively
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to progress with reference targetappendTestDeclaratively
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to progress with reference targetappendTestDeclaratively
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to progress with reference targetappendTestDeclaratively
@@ -1306,9 +1298,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to progress with reference targetappendTestDeclaratively
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to progress with reference targetappendTestDeclaratively
 PASS label.form has reflection behavior IsNull when pointing to progress with reference targetappendTestDeclaratively
-FAIL label.control has reflection behavior ReflectsHost when pointing to progress with reference targetappendTestDeclaratively assert_equals: expected Element node <div id="host-id">
-
-        </div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to progress with reference targetappendTestDeclaratively
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to select with reference targetappendTestDeclaratively
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to select with reference targetappendTestDeclaratively
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to select with reference targetappendTestDeclaratively
@@ -1319,9 +1309,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to select with reference targetappendTestDeclaratively
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to select with reference targetappendTestDeclaratively
 PASS label.form has reflection behavior IsNull when pointing to select with reference targetappendTestDeclaratively
-FAIL label.control has reflection behavior ReflectsHost when pointing to select with reference targetappendTestDeclaratively assert_equals: expected Element node <div id="host-id">
-
-        </div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to select with reference targetappendTestDeclaratively
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to textarea with reference targetappendTestDeclaratively
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to textarea with reference targetappendTestDeclaratively
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to textarea with reference targetappendTestDeclaratively
@@ -1332,9 +1320,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to textarea with reference targetappendTestDeclaratively
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to textarea with reference targetappendTestDeclaratively
 PASS label.form has reflection behavior IsNull when pointing to textarea with reference targetappendTestDeclaratively
-FAIL label.control has reflection behavior ReflectsHost when pointing to textarea with reference targetappendTestDeclaratively assert_equals: expected Element node <div id="host-id">
-
-        </div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to textarea with reference targetappendTestDeclaratively
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to div with reference targetappendTestDeclaratively
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to div with reference targetappendTestDeclaratively
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to div with reference targetappendTestDeclaratively
@@ -3323,7 +3309,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to button with reference targetappendTestWithOptions
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to button with reference targetappendTestWithOptions
 PASS label.form has reflection behavior IsNull when pointing to button with reference targetappendTestWithOptions
-FAIL label.control has reflection behavior ReflectsHost when pointing to button with reference targetappendTestWithOptions assert_equals: expected Element node <div id="host-id"></div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to button with reference targetappendTestWithOptions
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to input with reference targetappendTestWithOptions
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to input with reference targetappendTestWithOptions
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to input with reference targetappendTestWithOptions
@@ -3334,7 +3320,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to input with reference targetappendTestWithOptions
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to input with reference targetappendTestWithOptions
 PASS label.form has reflection behavior IsNull when pointing to input with reference targetappendTestWithOptions
-FAIL label.control has reflection behavior ReflectsHost when pointing to input with reference targetappendTestWithOptions assert_equals: expected Element node <div id="host-id"></div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to input with reference targetappendTestWithOptions
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to meter with reference targetappendTestWithOptions
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to meter with reference targetappendTestWithOptions
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to meter with reference targetappendTestWithOptions
@@ -3345,7 +3331,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to meter with reference targetappendTestWithOptions
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to meter with reference targetappendTestWithOptions
 PASS label.form has reflection behavior IsNull when pointing to meter with reference targetappendTestWithOptions
-FAIL label.control has reflection behavior ReflectsHost when pointing to meter with reference targetappendTestWithOptions assert_equals: expected Element node <div id="host-id"></div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to meter with reference targetappendTestWithOptions
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to output with reference targetappendTestWithOptions
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to output with reference targetappendTestWithOptions
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to output with reference targetappendTestWithOptions
@@ -3356,7 +3342,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to output with reference targetappendTestWithOptions
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to output with reference targetappendTestWithOptions
 PASS label.form has reflection behavior IsNull when pointing to output with reference targetappendTestWithOptions
-FAIL label.control has reflection behavior ReflectsHost when pointing to output with reference targetappendTestWithOptions assert_equals: expected Element node <div id="host-id"></div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to output with reference targetappendTestWithOptions
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to progress with reference targetappendTestWithOptions
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to progress with reference targetappendTestWithOptions
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to progress with reference targetappendTestWithOptions
@@ -3367,7 +3353,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to progress with reference targetappendTestWithOptions
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to progress with reference targetappendTestWithOptions
 PASS label.form has reflection behavior IsNull when pointing to progress with reference targetappendTestWithOptions
-FAIL label.control has reflection behavior ReflectsHost when pointing to progress with reference targetappendTestWithOptions assert_equals: expected Element node <div id="host-id"></div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to progress with reference targetappendTestWithOptions
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to select with reference targetappendTestWithOptions
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to select with reference targetappendTestWithOptions
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to select with reference targetappendTestWithOptions
@@ -3378,7 +3364,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to select with reference targetappendTestWithOptions
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to select with reference targetappendTestWithOptions
 PASS label.form has reflection behavior IsNull when pointing to select with reference targetappendTestWithOptions
-FAIL label.control has reflection behavior ReflectsHost when pointing to select with reference targetappendTestWithOptions assert_equals: expected Element node <div id="host-id"></div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to select with reference targetappendTestWithOptions
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to textarea with reference targetappendTestWithOptions
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to textarea with reference targetappendTestWithOptions
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to textarea with reference targetappendTestWithOptions
@@ -3389,7 +3375,7 @@ PASS label.ariaLabelledByElements has reflection behavior ReflectsHostInArray wh
 PASS label.ariaOwnsElements has reflection behavior ReflectsHostInArray when pointing to textarea with reference targetappendTestWithOptions
 PASS label.htmlFor has reflection behavior ReflectsHostID when pointing to textarea with reference targetappendTestWithOptions
 PASS label.form has reflection behavior IsNull when pointing to textarea with reference targetappendTestWithOptions
-FAIL label.control has reflection behavior ReflectsHost when pointing to textarea with reference targetappendTestWithOptions assert_equals: expected Element node <div id="host-id"></div> but got null
+PASS label.control has reflection behavior ReflectsHost when pointing to textarea with reference targetappendTestWithOptions
 PASS label.ariaControlsElements has reflection behavior ReflectsHostInArray when pointing to div with reference targetappendTestWithOptions
 PASS label.ariaActiveDescendantElement has reflection behavior ReflectsHost when pointing to div with reference targetappendTestWithOptions
 PASS label.ariaDescribedByElements has reflection behavior ReflectsHostInArray when pointing to div with reference targetappendTestWithOptions

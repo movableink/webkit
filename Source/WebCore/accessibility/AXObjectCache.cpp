@@ -2716,9 +2716,9 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         if (RefPtr label = dynamicDowncast<HTMLLabelElement>(element)) {
             updateLabelFor(*label);
 
-            if (RefPtr oldControl = element->treeScope().getElementById(oldValue))
+            if (RefPtr oldControl = element->treeScope().elementByIdResolvingReferenceTarget(oldValue))
                 postNotification(oldControl.get(), AXNotification::TextChanged);
-            if (RefPtr newControl = element->treeScope().getElementById(newValue))
+            if (RefPtr newControl = element->treeScope().elementByIdResolvingReferenceTarget(newValue))
                 postNotification(newControl.get(), AXNotification::TextChanged);
         }
     } else if (attrName == requiredAttr)
@@ -5342,7 +5342,7 @@ bool AXObjectCache::addRelation(Element& origin, const QualifiedName& attribute)
 
     SpaceSplitString ids(value, SpaceSplitString::ShouldFoldCase::No);
     for (auto& id : ids) {
-        RefPtr target = origin.treeScope().getElementById(id);
+        RefPtr target = origin.treeScope().elementByIdResolvingReferenceTarget(id);
         if (!target || target == &origin)
             continue;
 

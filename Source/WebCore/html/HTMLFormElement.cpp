@@ -539,7 +539,11 @@ unsigned HTMLFormElement::formElementIndex(FormListedElement& listedElement)
     // Treats separately the case where this element has the form attribute
     // for performance consideration.
     if (listedHTMLElement.hasAttributeWithoutSynchronization(formAttr) && listedHTMLElement.isConnected()) {
-        unsigned short position = compareDocumentPosition(listedHTMLElement);
+        unsigned short position;
+        if (document().settings().shadowRootReferenceTargetEnabled())
+            position = listedHTMLElement.treeScope().retargetToScope(*this)->compareDocumentPosition(listedHTMLElement);
+        else
+            position = compareDocumentPosition(listedHTMLElement);
         ASSERT(!(position & DOCUMENT_POSITION_DISCONNECTED));
         if (position & DOCUMENT_POSITION_PRECEDING) {
             ++m_listedElementsBeforeIndex;

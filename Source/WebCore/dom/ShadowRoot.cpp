@@ -60,6 +60,7 @@ struct SameSizeAsShadowRoot : public DocumentFragment, public TreeScope {
     void* styleScope;
     void* slotAssignment;
     std::optional<UncheckedKeyHashMap<AtomString, AtomString>> partMappings;
+    AtomString referenceTarget;
 };
 
 static_assert(sizeof(ShadowRoot) == sizeof(SameSizeAsShadowRoot), "shadowroot should stay small");
@@ -67,8 +68,7 @@ static_assert(sizeof(ShadowRoot) == sizeof(SameSizeAsShadowRoot), "shadowroot sh
 static_assert(sizeof(WeakPtr<Element, WeakPtrImplWithEventTargetData>) == sizeof(void*), "WeakPtr should be same size as raw pointer");
 #endif
 
-ShadowRoot::ShadowRoot(Document& document, ShadowRootMode mode, SlotAssignmentMode assignmentMode, DelegatesFocus delegatesFocus,
-    Clonable clonable, Serializable serializable, AvailableToElementInternals availableToElementInternals, RefPtr<CustomElementRegistry>&& registry, ScopedCustomElementRegistry scopedRegistry)
+ShadowRoot::ShadowRoot(Document& document, ShadowRootMode mode, SlotAssignmentMode assignmentMode, DelegatesFocus delegatesFocus, Clonable clonable, Serializable serializable, AvailableToElementInternals availableToElementInternals, RefPtr<CustomElementRegistry>&& registry, ScopedCustomElementRegistry scopedRegistry, const AtomString& referenceTarget)
     : DocumentFragment(document, TypeFlag::IsShadowRoot)
     , TreeScope(*this, document, WTFMove(registry))
     , m_delegatesFocus(delegatesFocus == DelegatesFocus::Yes)
@@ -79,6 +79,7 @@ ShadowRoot::ShadowRoot(Document& document, ShadowRootMode mode, SlotAssignmentMo
     , m_mode(mode)
     , m_slotAssignmentMode(assignmentMode)
     , m_styleScope(makeUnique<Style::Scope>(*this))
+    , m_referenceTarget(referenceTarget)
 {
     setEventTargetFlag(EventTargetFlag::IsInShadowTree);
     if (m_mode == ShadowRootMode::UserAgent)
@@ -466,4 +467,12 @@ Vector<RefPtr<WebAnimation>> ShadowRoot::getAnimations()
     });
 }
 
+void ShadowRoot::setReferenceTarget(const AtomString& referenceTarget)
+{
+    if (!document().settings().shadowRootReferenceTargetEnabled())
+        return;
+
+    m_referenceTarget = referenceTarget;
 }
+
+} // namespace WebCore
