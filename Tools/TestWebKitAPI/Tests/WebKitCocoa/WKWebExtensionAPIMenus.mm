@@ -1918,7 +1918,8 @@ TEST(WKWebExtensionAPIMenus, MacLinkContextMenuItems)
     [manager run];
 }
 
-TEST(WKWebExtensionAPIMenus, MacImageContextMenuItems)
+// rdar://144626088 ([ macOS ] 3x TestWebKitAPI.WKWebExtensionAPIMenus.* (api-tests) are flaky timeouts (287490))
+TEST(WKWebExtensionAPIMenus, DISABLED_MacImageContextMenuItems)
 {
     auto *backgroundScript = Util::constructScript(@[
         @"browser.menus.create({",
@@ -2002,7 +2003,8 @@ TEST(WKWebExtensionAPIMenus, MacImageContextMenuItems)
     [manager run];
 }
 
-TEST(WKWebExtensionAPIMenus, MacVideoContextMenuItems)
+// rdar://144626088 ([ macOS ] 3x TestWebKitAPI.WKWebExtensionAPIMenus.* (api-tests) are flaky timeouts (287490))
+TEST(WKWebExtensionAPIMenus, DISABLED_MacVideoContextMenuItems)
 {
     auto *backgroundScript = Util::constructScript(@[
         @"browser.menus.create({",
@@ -2086,7 +2088,8 @@ TEST(WKWebExtensionAPIMenus, MacVideoContextMenuItems)
     [manager run];
 }
 
-TEST(WKWebExtensionAPIMenus, MacAudioContextMenuItems)
+// rdar://144626088 ([ macOS ] 3x TestWebKitAPI.WKWebExtensionAPIMenus.* (api-tests) are flaky timeouts (287490))
+TEST(WKWebExtensionAPIMenus, DISABLED_MacAudioContextMenuItems)
 {
     auto *backgroundScript = Util::constructScript(@[
         @"browser.menus.create({",
