@@ -1346,7 +1346,6 @@ storage/StorageNamespaceProvider.cpp
 style/AttributeChangeInvalidation.cpp
 style/ChildChangeInvalidation.cpp
 style/ChildChangeInvalidation.h
-style/ClassChangeInvalidation.cpp
 style/ContainerQueryEvaluator.cpp
 style/ElementRuleCollector.cpp
 style/IdChangeInvalidation.cpp
