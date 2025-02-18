@@ -34,7 +34,6 @@
 ./bytecode/StructureStubInfo.cpp
 ./bytecode/UnlinkedCodeBlockGenerator.cpp
 ./bytecode/UnlinkedFunctionExecutable.cpp
-./bytecode/Watchpoint.h
 ./bytecompiler/BytecodeGenerator.cpp
 ./bytecompiler/NodesCodegen.cpp
 ./debugger/Debugger.cpp
@@ -91,7 +90,6 @@
 ./jit/ICStats.cpp
 ./jit/ICStats.h
 ./jit/JIT.cpp
-./jit/JITCode.cpp
 ./jit/JITSafepoint.cpp
 ./jit/JITWorklist.cpp
 ./jit/JITWorklistThread.cpp
@@ -123,10 +121,8 @@
 ./runtime/JSGlobalObject.cpp
 ./runtime/JSLock.cpp
 ./runtime/JSModuleEnvironment.cpp
-./runtime/JSModuleNamespaceObject.cpp
 ./runtime/JSObject.cpp
 ./runtime/JSRunLoopTimer.cpp
-./runtime/JSString.cpp
 ./runtime/JSSymbolTableObject.cpp
 ./runtime/ModuleProgramExecutable.cpp
 ./runtime/NativeExecutable.cpp
@@ -187,10 +183,8 @@ API/tests/CompareAndSwapTest.cpp
 API/tests/testapi.cpp
 bytecode/CodeBlock.h
 bytecode/DirectEvalCodeCache.h
-bytecode/InlineCacheCompiler.h
 bytecode/SharedJITStubSet.h
 bytecode/UnlinkedCodeBlock.h
-bytecode/Watchpoint.h
 bytecompiler/BytecodeGenerator.h
 dfg/DFGAbstractInterpreterInlines.h
 dfg/DFGJITCompiler.h
@@ -203,7 +197,6 @@ inspector/InspectorBackendDispatchers.cpp
 inspector/InspectorFrontendDispatchers.cpp
 inspector/InspectorProtocolObjects.h
 inspector/JavaScriptCallFrame.h
-jit/JITStubRoutine.h
 jit/JITWorklistInlines.h
 jsc.cpp
 parser/Parser.cpp
@@ -216,14 +209,12 @@ runtime/CacheableIdentifierInlines.h
 runtime/InferredValue.h
 runtime/JSGenericTypedArrayViewInlines.h
 runtime/JSObjectInlines.h
-runtime/JSSymbolTableObject.h
 runtime/RegExpKey.h
 runtime/ScriptExecutable.h
 runtime/StructureInlines.h
 runtime/VM.h
 wasm/WasmBBQJIT.cpp
 wasm/WasmBBQJIT64.cpp
-wasm/WasmCallee.h
 wasm/WasmFormat.h
 wasm/WasmIPIntSlowPaths.cpp
 wasm/WasmMemory.h

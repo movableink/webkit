@@ -99,7 +99,6 @@ rendering/updating/RenderTreeBuilder.cpp
 style/StyleAdjuster.cpp
 style/StyleResolveForDocument.cpp
 style/StyleScope.cpp
-svg/properties/SVGPropertyOwnerRegistry.h
 testing/Internals.cpp
 testing/Internals.mm
 workers/DedicatedWorkerGlobalScope.cpp

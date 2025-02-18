@@ -226,7 +226,6 @@ Modules/webaudio/RealtimeAnalyser.cpp
 Modules/webaudio/ScriptProcessorNode.cpp
 Modules/webaudio/StereoPannerNode.cpp
 Modules/webauthn/AuthenticatorCoordinator.cpp
-Modules/webauthn/PublicKeyCredential.cpp
 Modules/webauthn/fido/Pin.cpp
 Modules/webcodecs/WebCodecsAudioData.cpp
 Modules/webcodecs/WebCodecsAudioDecoder.cpp
@@ -259,12 +258,10 @@ accessibility/AXObjectCache.cpp
 accessibility/AXObjectCache.h
 accessibility/AXSearchManager.cpp
 accessibility/AXTextMarker.cpp
-accessibility/AccessibilityARIAGridRow.cpp
 accessibility/AccessibilityImageMapLink.cpp
 accessibility/AccessibilityList.cpp
 accessibility/AccessibilityListBox.cpp
 accessibility/AccessibilityListBoxOption.cpp
-accessibility/AccessibilityMathMLElement.cpp
 accessibility/AccessibilityMenuList.cpp
 accessibility/AccessibilityMenuListOption.cpp
 accessibility/AccessibilityMenuListPopup.cpp
@@ -281,7 +278,6 @@ accessibility/AccessibilityTable.cpp
 accessibility/AccessibilityTableCell.cpp
 accessibility/AccessibilityTableColumn.cpp
 accessibility/AccessibilityTableHeaderContainer.cpp
-accessibility/AccessibilityTableRow.cpp
 accessibility/isolatedtree/AXIsolatedObject.cpp
 accessibility/isolatedtree/AXIsolatedObject.h
 accessibility/isolatedtree/AXIsolatedTree.cpp
@@ -303,7 +299,6 @@ animation/KeyframeEffect.cpp
 animation/ScrollTimeline.cpp
 animation/StyleOriginatedAnimation.cpp
 animation/StyleOriginatedAnimationEvent.cpp
-animation/TimelineRange.cpp
 animation/ViewTimeline.cpp
 animation/WebAnimation.cpp
 animation/WebAnimationUtilities.cpp
@@ -428,7 +423,6 @@ css/CSSComputedStyleDeclaration.cpp
 css/CSSCounterStyle.cpp
 css/CSSCounterStyleDescriptors.cpp
 css/CSSCounterStyleRegistry.cpp
-css/CSSCounterStyleRule.cpp
 css/CSSCounterStyleRule.h
 css/CSSCounterValue.cpp
 css/CSSCounterValue.h
@@ -543,7 +537,6 @@ dom/BoundaryPoint.cpp
 dom/BroadcastChannel.cpp
 dom/ChildListMutationScope.h
 dom/ComposedTreeIterator.cpp
-dom/ComposedTreeIterator.h
 dom/ContainerNode.cpp
 dom/ContainerNodeAlgorithms.cpp
 dom/ContentVisibilityDocumentState.cpp
@@ -562,13 +555,11 @@ dom/DocumentInlines.h
 dom/DocumentOrShadowRootFullscreen.cpp
 dom/DocumentStorageAccess.cpp
 dom/Element.cpp
-dom/ElementAndTextDescendantIterator.h
 dom/ElementData.cpp
 dom/ElementInlines.h
 dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
 dom/EmptyScriptExecutionContext.h
-dom/EventListenerMap.cpp
 dom/EventPath.cpp
 dom/EventTarget.cpp
 dom/ExtensionStyleSheets.cpp
@@ -619,7 +610,6 @@ dom/StaticNodeList.cpp
 dom/StaticRange.cpp
 dom/StyledElement.cpp
 dom/Subscriber.cpp
-dom/Text.cpp
 dom/TextDecoderStreamDecoder.h
 dom/Traversal.cpp
 dom/TreeScope.cpp
@@ -654,12 +644,10 @@ editing/InsertParagraphSeparatorCommand.cpp
 editing/InsertTextCommand.cpp
 editing/ModifySelectionListLevel.cpp
 editing/RemoveFormatCommand.cpp
-editing/RenderedPosition.cpp
 editing/ReplaceNodeWithSpanCommand.cpp
 editing/ReplaceSelectionCommand.cpp
 editing/ReplaceSelectionCommand.h
 editing/SelectionGeometryGatherer.cpp
-editing/SimplifyMarkupCommand.cpp
 editing/SpellChecker.cpp
 editing/SplitTextNodeCommand.cpp
 editing/SplitTextNodeContainingElementCommand.cpp
@@ -701,15 +689,12 @@ html/CustomPaintCanvas.cpp
 html/DOMFormData.cpp
 html/DOMTokenList.cpp
 html/DOMURL.cpp
-html/DateInputType.cpp
-html/DateTimeLocalInputType.cpp
 html/DirectoryFileListCreator.cpp
 html/EmailInputType.cpp
 html/FTPDirectoryDocument.cpp
 html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
 html/FormAssociatedElement.cpp
-html/FormController.cpp
 html/FormListedElement.cpp
 html/HTMLAllCollection.cpp
 html/HTMLAnchorElement.cpp
@@ -746,7 +731,6 @@ html/HTMLObjectElement.cpp
 html/HTMLOptGroupElement.cpp
 html/HTMLOptionElement.cpp
 html/HTMLOptionsCollection.cpp
-html/HTMLOptionsCollectionInlines.h
 html/HTMLPlugInElement.cpp
 html/HTMLPlugInImageElement.cpp
 html/HTMLProgressElement.cpp
@@ -791,12 +775,10 @@ html/ResetInputType.cpp
 html/SearchInputType.cpp
 html/SubmitInputType.cpp
 html/TextFieldInputType.cpp
-html/TimeInputType.cpp
 html/URLInputType.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidatedFormListedElement.h
 html/ValidationMessage.cpp
-html/WeekInputType.cpp
 html/canvas/CanvasFilterContextSwitcher.cpp
 html/canvas/CanvasGradient.cpp
 html/canvas/CanvasPattern.cpp
@@ -837,7 +819,6 @@ html/parser/HTMLTreeBuilder.cpp
 html/shadow/DateTimeEditElement.cpp
 html/shadow/DateTimeFieldElement.cpp
 html/shadow/MediaControlTextTrackContainerElement.cpp
-html/shadow/ProgressShadowElement.cpp
 html/shadow/SliderThumbElement.cpp
 html/shadow/SpinButtonElement.cpp
 html/shadow/TextControlInnerElements.cpp
@@ -935,7 +916,6 @@ loader/archive/ArchiveResource.cpp
 loader/archive/cf/LegacyWebArchive.cpp
 loader/cache/CachedCSSStyleSheet.cpp
 loader/cache/CachedImage.cpp
-loader/cache/CachedRawResource.cpp
 loader/cache/CachedResourceRequest.cpp
 loader/cache/CachedResourceRequestInitiatorTypes.h
 loader/cache/CachedSVGDocumentReference.cpp
@@ -962,14 +942,12 @@ page/Frame.cpp
 page/FrameDestructionObserver.cpp
 page/FrameSnapshotting.cpp
 page/FrameTree.cpp
-page/FrameView.cpp
 page/History.cpp
 page/ImageAnalysisQueue.cpp
 page/ImageOverlayController.cpp
 page/InteractionRegion.cpp
 page/IntersectionObserver.cpp
 page/LocalDOMWindow.cpp
-page/LocalDOMWindowProperty.cpp
 page/LocalFrame.cpp
 page/LocalFrameView.cpp
 page/LocalFrameViewLayoutContext.cpp
@@ -1194,7 +1172,6 @@ rendering/GlyphDisplayListCache.h
 rendering/HitTestResult.cpp
 rendering/ImageQualityController.cpp
 rendering/InlineBoxPainter.cpp
-rendering/LayerAncestorClippingStack.cpp
 rendering/LegacyInlineFlowBox.cpp
 rendering/LegacyLineLayout.cpp
 rendering/MarkedText.cpp
@@ -1241,7 +1218,6 @@ rendering/RenderTable.cpp
 rendering/RenderTable.h
 rendering/RenderTableCell.cpp
 rendering/RenderTableCell.h
-rendering/RenderTableCol.cpp
 rendering/RenderTableRow.cpp
 rendering/RenderTableSection.cpp
 rendering/RenderTableSection.h
@@ -1258,7 +1234,6 @@ rendering/RenderVideo.cpp
 rendering/RenderView.cpp
 rendering/RenderViewTransitionCapture.cpp
 rendering/RenderWidget.cpp
-rendering/TextAutoSizing.cpp
 rendering/TextBoxPainter.cpp
 rendering/TextPaintStyle.cpp
 rendering/cocoa/RenderThemeCocoa.mm
@@ -1290,13 +1265,10 @@ rendering/style/StyleMiscNonInheritedData.cpp
 rendering/style/StyleMultiImage.cpp
 rendering/style/StylePaintImage.cpp
 rendering/svg/RenderSVGEllipse.cpp
-rendering/svg/RenderSVGGradientStop.cpp
 rendering/svg/RenderSVGImage.cpp
 rendering/svg/RenderSVGInline.cpp
 rendering/svg/RenderSVGInlineText.cpp
-rendering/svg/RenderSVGModelObject.cpp
 rendering/svg/RenderSVGRect.cpp
-rendering/svg/RenderSVGResourceContainer.cpp
 rendering/svg/RenderSVGResourceFilterInlines.h
 rendering/svg/RenderSVGResourceFilterPrimitive.cpp
 rendering/svg/RenderSVGResourcePattern.cpp
@@ -1346,10 +1318,8 @@ storage/StorageNamespaceProvider.cpp
 style/AttributeChangeInvalidation.cpp
 style/ChildChangeInvalidation.cpp
 style/ChildChangeInvalidation.h
-style/ContainerQueryEvaluator.cpp
 style/ElementRuleCollector.cpp
 style/IdChangeInvalidation.cpp
-style/InlineTextBoxStyle.cpp
 style/InspectorCSSOMWrappers.cpp
 style/MatchedDeclarationsCache.cpp
 style/PageRuleCollector.cpp
@@ -1363,7 +1333,6 @@ style/StyleBuilder.cpp
 style/StyleBuilderConverter.h
 style/StyleBuilderCustom.h
 style/StyleBuilderState.cpp
-style/StyleInvalidationFunctions.h
 style/StyleInvalidator.cpp
 style/StylePendingResources.cpp
 style/StyleResolveForDocument.cpp
@@ -1411,11 +1380,9 @@ svg/SVGFESpecularLightingElement.h
 svg/SVGFETileElement.h
 svg/SVGFETurbulenceElement.h
 svg/SVGFilterElement.h
-svg/SVGFilterPrimitiveStandardAttributes.cpp
 svg/SVGFilterPrimitiveStandardAttributes.h
 svg/SVGFitToViewBox.h
 svg/SVGFontFaceElement.cpp
-svg/SVGFontFaceFormatElement.cpp
 svg/SVGFontFaceUriElement.cpp
 svg/SVGForeignObjectElement.h
 svg/SVGGeometryElement.h
@@ -1448,7 +1415,6 @@ svg/SVGSVGElement.cpp
 svg/SVGSVGElement.h
 svg/SVGStopElement.h
 svg/SVGTRefElement.cpp
-svg/SVGTSpanElement.cpp
 svg/SVGTextContentElement.cpp
 svg/SVGTextContentElement.h
 svg/SVGTextPathElement.cpp
@@ -1467,7 +1433,6 @@ svg/properties/SVGAnimatedDecoratedProperty.h
 svg/properties/SVGAnimatedPrimitiveProperty.h
 svg/properties/SVGAnimatedPropertyAnimator.h
 svg/properties/SVGAnimatedPropertyAnimatorImpl.h
-svg/properties/SVGAnimatedPropertyList.h
 svg/properties/SVGAnimatedPropertyPairAccessorImpl.h
 svg/properties/SVGAnimatedPropertyPairAnimator.h
 svg/properties/SVGAnimatedPropertyPairAnimatorImpl.h
@@ -1476,8 +1441,6 @@ svg/properties/SVGAnimatedValueProperty.h
 svg/properties/SVGAttributeAnimator.cpp
 svg/properties/SVGPointerMemberAccessor.h
 svg/properties/SVGPrimitivePropertyAnimator.h
-svg/properties/SVGPropertyAccessorImpl.h
-svg/properties/SVGPropertyOwnerRegistry.h
 svg/properties/SVGValuePropertyAnimator.h
 svg/properties/SVGValuePropertyListAnimatorImpl.h
 testing/InternalSettings.cpp

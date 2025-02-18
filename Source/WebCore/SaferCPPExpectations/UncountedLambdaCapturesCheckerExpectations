@@ -73,7 +73,6 @@ bindings/js/SerializedScriptValue.cpp
 contentextensions/ContentExtensionsBackend.cpp
 crypto/SubtleCrypto.cpp
 css/CSSFontFace.cpp
-css/CSSImageSetValue.cpp
 css/CSSPendingSubstitutionValue.cpp
 css/CSSValue.cpp
 css/CSSVariableReferenceValue.cpp
@@ -109,7 +108,6 @@ html/canvas/CanvasStyle.cpp
 html/canvas/GPUCanvasContextCocoa.mm
 html/canvas/WebGLRenderingContextBase.cpp
 html/track/LoadableTextTrack.cpp
-html/track/TextTrack.cpp
 html/track/TrackBase.cpp
 html/track/TrackListBase.cpp
 html/track/VTTCue.cpp
@@ -165,7 +163,6 @@ rendering/RenderListItem.cpp
 rendering/style/StyleCustomPropertyData.cpp
 rendering/updating/RenderTreePosition.cpp
 rendering/updating/RenderTreeUpdater.cpp
-storage/Storage.cpp
 style/ElementRuleCollector.cpp
 style/StyleBuilderConverter.h
 style/StyleTreeResolver.cpp

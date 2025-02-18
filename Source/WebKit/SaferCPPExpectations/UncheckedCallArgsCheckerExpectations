@@ -4,7 +4,6 @@ NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/NetworkLoad.cpp
 NetworkProcess/PingLoad.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp
-NetworkProcess/PrivateClickMeasurement/cocoa/PrivateClickMeasurementConnectionCocoa.mm
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/C/mac/WKPagePrivateMac.mm
 UIProcess/API/Cocoa/WKBrowsingContextController.mm
@@ -19,13 +18,11 @@ UIProcess/SuspendedPageProxy.cpp
 UIProcess/UserMediaPermissionRequestManagerProxy.cpp
 UIProcess/WebContextMenuProxy.cpp
 UIProcess/WebEditCommandProxy.cpp
-UIProcess/WebPageProxy.cpp
 UIProcess/WebURLSchemeTask.cpp
 UIProcess/mac/WKImmediateActionController.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/FullScreen/WebFullScreenManager.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
-WebProcess/Plugins/PDF/PDFPlugin.mm
 WebProcess/Plugins/PDF/PDFPluginAnnotation.mm
 WebProcess/Plugins/PDF/PDFPluginChoiceAnnotation.mm
 WebProcess/Plugins/PDF/PDFPluginPasswordField.mm

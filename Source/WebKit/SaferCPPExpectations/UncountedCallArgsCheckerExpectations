@@ -14,7 +14,6 @@ NetworkProcess/PingLoad.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementManager.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementPersistentStore.cpp
-NetworkProcess/PrivateClickMeasurement/cocoa/PrivateClickMeasurementConnectionCocoa.mm
 NetworkProcess/ServiceWorker/ServiceWorkerNavigationPreloader.cpp
 NetworkProcess/ServiceWorker/ServiceWorkerSoftUpdateLoader.cpp
 NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
@@ -32,7 +31,6 @@ NetworkProcess/webrtc/NetworkRTCUDPSocketCocoa.mm
 Platform/IPC/ArgumentCoders.h
 Shared/API/APIArray.h
 Shared/API/APISerializedScriptValue.h
-Shared/API/Cocoa/WKRemoteObjectCoder.mm
 Shared/API/c/WKArray.cpp
 Shared/API/c/WKContextMenuItem.cpp
 Shared/API/c/WKData.cpp
@@ -180,8 +178,6 @@ UIProcess/API/Cocoa/_WKUserStyleSheet.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationAssertionResponse.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationPanel.mm
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
-UIProcess/API/mac/WKWebViewMac.mm
-UIProcess/API/mac/WKWebViewTestingMac.mm
 UIProcess/BackgroundProcessResponsivenessTimer.cpp
 UIProcess/Cocoa/GroupActivities/GroupActivitiesCoordinator.mm
 UIProcess/Cocoa/LegacyDownloadClient.mm
@@ -351,7 +347,6 @@ WebProcess/Network/webrtc/LibWebRTCProvider.cpp
 WebProcess/Network/webrtc/LibWebRTCSocketFactory.cpp
 WebProcess/Network/webrtc/RTCDataChannelRemoteManager.cpp
 WebProcess/Network/webrtc/WebRTCMonitor.cpp
-WebProcess/Plugins/PDF/PDFPlugin.mm
 WebProcess/Plugins/PDF/PDFPluginAnnotation.mm
 WebProcess/Plugins/PDF/PDFPluginBase.mm
 WebProcess/Plugins/PDF/PDFPluginChoiceAnnotation.mm

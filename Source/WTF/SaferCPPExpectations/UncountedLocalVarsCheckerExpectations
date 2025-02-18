@@ -1,8 +1,6 @@
 wtf/AutomaticThread.cpp
 wtf/MemoryPressureHandler.cpp
-wtf/MetaAllocator.h
 wtf/RecursiveLockAdapter.h
-wtf/RedBlackTree.h
 wtf/Ref.h
 wtf/ThreadSafeWeakPtr.h
 wtf/text/AtomStringImpl.cpp
