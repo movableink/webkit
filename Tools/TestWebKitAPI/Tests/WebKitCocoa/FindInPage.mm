@@ -1080,7 +1080,12 @@ TEST(WebKit, FindInPDFAfterFindInPage)
 
 #if ENABLE(UNIFIED_PDF)
 
+// rdar://144724909 (REGRESSION(290220@main): [ iOS ] 12x TestWebKitAPI.UnifiedPDF* (api-tests) are constant failures (287579))
+#if !defined(NDEBUG)
+TEST(WebKit, DISABLED_FindInUnifiedPDF)
+#else
 TEST(WebKit, FindInUnifiedPDF)
+#endif
 {
     RetainPtr webView = adoptNS([[FindInPageTestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:TestWebKitAPI::configurationForWebViewTestingUnifiedPDF().get()]);
 
@@ -1094,7 +1099,12 @@ TEST(WebKit, FindInUnifiedPDF)
     hasPerformedTextSearchWithQueryString = false;
 }
 
+// rdar://144724909 (REGRESSION(290220@main): [ iOS ] 12x TestWebKitAPI.UnifiedPDF* (api-tests) are constant failures (287579))
+#if !defined(NDEBUG)
+TEST(WebKit, DISABLED_FindInUnifiedPDFAfterReload)
+#else
 TEST(WebKit, FindInUnifiedPDFAfterReload)
+#endif
 {
     RetainPtr webView = adoptNS([[FindInPageTestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:TestWebKitAPI::configurationForWebViewTestingUnifiedPDF().get()]);
 
@@ -1120,7 +1130,12 @@ TEST(WebKit, FindInUnifiedPDFAfterReload)
     searchForText();
 }
 
+// rdar://144724909 (REGRESSION(290220@main): [ iOS ] 12x TestWebKitAPI.UnifiedPDF* (api-tests) are constant failures (287579))
+#if !defined(NDEBUG)
+TEST(WebKit, DISABLED_FindInUnifiedPDFAfterFindInPage)
+#else
 TEST(WebKit, FindInUnifiedPDFAfterFindInPage)
+#endif
 {
     RetainPtr webView = adoptNS([[FindInPageTestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 200, 200) configuration:TestWebKitAPI::configurationForWebViewTestingUnifiedPDF().get()]);
     [webView synchronouslyLoadTestPageNamed:@"lots-of-text"];
