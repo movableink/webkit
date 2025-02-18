@@ -1978,3 +1978,5 @@ webkit.org/b/287679 [ Debug ] imported/w3c/web-platform-tests/css/selectors/inva
 
 webkit.org/b/287865 [ Release ] pdf/two-pages-continuous-to-discrete.html [ Pass ImageOnlyFailure ]
 webkit.org/b/287865 [ Debug ] pdf/two-pages-continuous-to-discrete.html [ Pass Crash ]
+
+webkit.org/b/287889 [ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.sharedworker.html [ Skip ]
