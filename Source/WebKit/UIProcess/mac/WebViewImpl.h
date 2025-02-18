@@ -324,6 +324,7 @@ public:
     void windowDidChangeScreen();
     void windowDidChangeLayerHosting();
     void windowDidChangeOcclusionState();
+    void windowWillClose();
     void screenDidChangeColorSpace();
     bool shouldDelayWindowOrderingForEvent(NSEvent *);
     bool windowResizeMouseLocationIsInVisibleScrollerThumb(CGPoint);
