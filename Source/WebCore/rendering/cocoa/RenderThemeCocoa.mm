@@ -293,4 +293,458 @@ Color RenderThemeCocoa::platformGrammarMarkerColor(OptionSet<StyleColorOptions> 
     return useDarkMode ? SRGBA<uint8_t> { 50, 215, 75, 217 } : SRGBA<uint8_t> { 25, 175, 50, 191 };
 }
 
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/RenderThemeCocoaAdditions.mm>
+#endif
+
+void RenderThemeCocoa::adjustCheckboxStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustCheckboxStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustCheckboxStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintCheckbox(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintCheckboxForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintCheckbox(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustRadioStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustRadioStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustRadioStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintRadio(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintRadioForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintRadio(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustButtonStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustButtonStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustButtonStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintButton(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintButtonForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintButton(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustColorWellStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustColorWellStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustColorWellStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintColorWell(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintColorWellForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintColorWell(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::paintColorWellDecorations(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintColorWellDecorationsForVectorBasedControls(box, paintInfo, rect))
+        return;
+#endif
+
+    RenderTheme::paintColorWellDecorations(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustInnerSpinButtonStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustInnerSpinButtonStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustInnerSpinButtonStyle(style, element);
+}
+
+void RenderThemeCocoa::adjustTextFieldStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustTextFieldStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustTextFieldStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintTextField(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintTextFieldForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintTextField(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::paintTextFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintTextFieldDecorationsForVectorBasedControls(box, paintInfo, rect))
+        return;
+#endif
+
+    RenderTheme::paintTextFieldDecorations(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustTextAreaStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustTextAreaStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustTextAreaStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintTextArea(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintTextAreaForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintTextArea(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::paintTextAreaDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintTextAreaDecorationsForVectorBasedControls(box, paintInfo, rect))
+        return;
+#endif
+
+    RenderTheme::paintTextAreaDecorations(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustMenuListStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustMenuListStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustMenuListStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintMenuList(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintMenuListForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintMenuList(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::paintMenuListDecorations(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintMenuListDecorationsForVectorBasedControls(box, paintInfo, rect))
+        return;
+#endif
+
+    RenderTheme::paintMenuListDecorations(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustMenuListButtonStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustMenuListButtonStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustMenuListButtonStyle(style, element);
+}
+
+void RenderThemeCocoa::paintMenuListButtonDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintMenuListButtonDecorationsForVectorBasedControls(box, paintInfo, rect))
+        return;
+#endif
+
+    RenderTheme::paintMenuListButtonDecorations(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustMeterStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustMeterStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustMeterStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintMeter(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintMeterForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintMeter(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustListButtonStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustListButtonStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustListButtonStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintListButton(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintListButtonForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintListButton(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustProgressBarStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustProgressBarStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustProgressBarStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintProgressBar(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintProgressBarForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintProgressBar(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustSliderTrackStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustSliderTrackStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustSliderTrackStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintSliderTrack(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSliderTrackForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintSliderTrack(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustSliderThumbStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustSliderThumbStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustSliderThumbStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintSliderThumb(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSliderThumbForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintSliderThumb(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustSearchFieldStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustSearchFieldStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustSearchFieldStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintSearchField(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSearchFieldForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintSearchField(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSearchFieldDecorationsForVectorBasedControls(box, paintInfo, rect))
+        return;
+#endif
+
+    RenderTheme::paintSearchFieldDecorations(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustSearchFieldCancelButtonStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustSearchFieldCancelButtonStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustSearchFieldCancelButtonStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintSearchFieldCancelButton(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSearchFieldCancelButtonForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintSearchFieldCancelButton(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustSearchFieldDecorationPartStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustSearchFieldDecorationPartStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustSearchFieldDecorationPartStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintSearchFieldDecorationPart(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSearchFieldDecorationPartForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintSearchFieldDecorationPart(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustSearchFieldResultsDecorationPartStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustSearchFieldResultsDecorationPartStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustSearchFieldResultsDecorationPartStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintSearchFieldResultsDecorationPart(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSearchFieldResultsDecorationPartForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintSearchFieldResultsDecorationPart(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustSearchFieldResultsButtonStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustSearchFieldResultsButtonStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustSearchFieldResultsButtonStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintSearchFieldResultsButton(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSearchFieldResultsButtonForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintSearchFieldResultsButton(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustSwitchStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustSwitchStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustSwitchStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintSwitchThumb(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSwitchThumbForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintSwitchThumb(box, paintInfo, rect);
+}
+
+bool RenderThemeCocoa::paintSwitchTrack(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintSwitchTrackForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintSwitchTrack(box, paintInfo, rect);
+}
+
 }

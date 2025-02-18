@@ -190,6 +190,11 @@ RenderThemeMac::RenderThemeMac()
 
 bool RenderThemeMac::canCreateControlPartForRenderer(const RenderObject& renderer) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (renderer.settings().vectorBasedControlsOnMacEnabled())
+        return RenderThemeCocoa::canCreateControlPartForRendererForVectorBasedControls(renderer);
+#endif
+
     auto type = renderer.style().usedAppearance();
     return type == StyleAppearance::Button
         || type == StyleAppearance::Checkbox
@@ -222,6 +227,11 @@ bool RenderThemeMac::canCreateControlPartForRenderer(const RenderObject& rendere
 
 bool RenderThemeMac::canCreateControlPartForBorderOnly(const RenderObject& renderer) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (renderer.settings().vectorBasedControlsOnMacEnabled())
+        return RenderThemeCocoa::canCreateControlPartForBorderOnlyForVectorBasedControls(renderer);
+#endif
+
     auto appearance = renderer.style().usedAppearance();
     return appearance == StyleAppearance::Listbox
         || appearance == StyleAppearance::TextArea
@@ -230,6 +240,11 @@ bool RenderThemeMac::canCreateControlPartForBorderOnly(const RenderObject& rende
 
 bool RenderThemeMac::canCreateControlPartForDecorations(const RenderObject& renderer) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (renderer.settings().vectorBasedControlsOnMacEnabled())
+        return RenderThemeCocoa::canCreateControlPartForDecorationsForVectorBasedControls(renderer);
+#endif
+
     return renderer.style().usedAppearance() == StyleAppearance::MenulistButton;
 }
 
@@ -980,7 +995,7 @@ static std::span<const IntSize, 4> menuListButtonSizes()
 
 void RenderThemeMac::adjustMenuListStyle(RenderStyle& style, const Element* e) const
 {
-    RenderTheme::adjustMenuListStyle(style, e);
+    RenderThemeCocoa::adjustMenuListStyle(style, e);
     NSControlSize controlSize = controlSizeForFont(style);
 
     style.resetBorder();
@@ -1077,7 +1092,7 @@ void RenderThemeMac::adjustSliderTrackStyle(RenderStyle& style, const Element*) 
 
 void RenderThemeMac::adjustSliderThumbStyle(RenderStyle& style, const Element* element) const
 {
-    RenderTheme::adjustSliderThumbStyle(style, element);
+    RenderThemeCocoa::adjustSliderThumbStyle(style, element);
     style.setBoxShadow(nullptr);
 }
 

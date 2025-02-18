@@ -8140,6 +8140,20 @@ VP9DecoderEnabled:
     WebKit:
       default: true
 
+VectorBasedControlsOnMacEnabled:
+  type: bool
+  status: internal
+  humanReadableName: "Vector based controls on macOS"
+  humanReadableDescription: "Enable vector based controls on macOS"
+  condition: ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+  defaultValue:
+    WebKit:
+      default: false
+    WebKitLegacy:
+      default: false
+    WebCore:
+      default: false
+
 VerifyWindowOpenUserGestureFromUIProcess:
   type: bool
   status: testable
