@@ -473,6 +473,22 @@ UNIFIED_PDF_TEST(PrintPDFUsingPrintInteractionController)
     EXPECT_EQ(pdf->pageCount(), 16UL);
 }
 
+UNIFIED_PDF_TEST(ShouldNotRespectSetViewScale)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+
+    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"test" withExtension:@"pdf"]];
+    [webView synchronouslyLoadRequest:request.get()];
+    [webView waitForNextPresentationUpdate];
+    auto colorsBefore = [webView sampleColors];
+
+    [webView _setViewScale:1.5];
+    [webView waitForNextPresentationUpdate];
+    auto colorsAfter = [webView sampleColors];
+
+    EXPECT_EQ(colorsBefore, colorsAfter);
+}
+
 #endif // PLATFORM(IOS_FAMILY)
 
 #if HAVE(UIKIT_WITH_MOUSE_SUPPORT)

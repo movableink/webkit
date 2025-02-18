@@ -2671,6 +2671,8 @@ public:
     bool hasAccessibilityActivityForTesting();
 #endif
 
+    bool mainFramePluginOverridesViewScale() const;
+
 private:
     void getWebCryptoMasterKey(CompletionHandler<void(std::optional<Vector<uint8_t>>&&)>&&);
     WebPageProxy(PageClient&, WebProcessProxy&, Ref<API::PageConfiguration>&&);

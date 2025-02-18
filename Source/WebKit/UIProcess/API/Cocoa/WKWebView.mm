@@ -5161,6 +5161,12 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 #if PLATFORM(MAC)
     _impl->setViewScale(viewScale);
 #else
+    if (_page->mainFramePluginOverridesViewScale()) {
+        if (_page->layoutSizeScaleFactorFromClient() != 1)
+            _page->setViewportConfigurationViewLayoutSize(_page->viewLayoutSize(), 1, _page->minimumEffectiveDeviceWidth());
+        return;
+    }
+
     if (_page->layoutSizeScaleFactorFromClient() == viewScale)
         return;
 

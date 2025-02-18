@@ -7664,6 +7664,13 @@ void WebPageProxy::mainFramePluginHandlesPageScaleGestureDidChange(bool mainFram
     m_pluginMaxZoomFactor = maxScale;
 }
 
+bool WebPageProxy::mainFramePluginOverridesViewScale() const
+{
+    if (m_mainFramePluginHandlesPageScaleGesture)
+        return false;
+    return m_pluginMaxZoomFactor.has_value() || m_pluginMinZoomFactor.has_value();
+}
+
 #if !PLATFORM(COCOA)
 void WebPageProxy::beginSafeBrowsingCheck(const URL&, bool, WebFramePolicyListenerProxy& listener)
 {
