@@ -47,6 +47,7 @@ private:
     void initialize();
     void updateCachedWidths();
     void checkCanConstrainInlineItems();
+    std::optional<size_t> buildLineWithHyphenationFrom(size_t lastValidBreakpoint);
 
     std::optional<Vector<LayoutUnit>> balanceRangeWithLineRequirement(InlineItemRange, InlineLayoutUnit idealLineWidth, size_t numberOfLines, bool isFirstChunk);
     std::optional<Vector<LayoutUnit>> balanceRangeWithNoLineRequirement(InlineItemRange, InlineLayoutUnit idealLineWidth, bool isFirstChunk);
