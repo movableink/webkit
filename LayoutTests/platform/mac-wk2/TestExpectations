@@ -1987,3 +1987,5 @@ webkit.org/b/287889 [ Debug ] imported/w3c/web-platform-tests/file-system-access
 # webkit.org/b/287875 [ macOS Release wk2 x86_64 ] 2x fast/borders/border-painting-*.html are consistently failing.
 [ Sonoma x86_64 Release ] fast/borders/border-painting-inset.html [ Pass ImageOnlyFailure  ]
 [ Sonoma x86_64 Release ] fast/borders/border-painting-outset.html [ Pass ImageOnlyFailure ] 
+
+webkit.org/b/287877 pdf/pdf-plugin-printing.html [ Pass Timeout ]
