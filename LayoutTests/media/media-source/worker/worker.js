@@ -24,6 +24,17 @@ function logErrorToMain(msg) {
     postMessage({topic: 'error', arg: msg});
 }
 
+function logTrackInfo(sourceBuffer, type) {
+    let tracks = sourceBuffer[type];
+    if (tracks) {
+        logErrorToMain(`sourceBuffer.${type} is not null`);
+        return false;
+    }
+    
+    logToMain(`sourceBuffer.${type} is undefined`);
+    return true;
+}
+
 function getPath(fullpath) {
     return fullpath.substring(0, fullpath.lastIndexOf('/'));
 }
@@ -61,6 +72,15 @@ onmessage = async (msg) => {
         sourceBuffer.appendBuffer(loader.mediaSegment(0));
         await waitForEvent(sourceBuffer, 'update');
         logToMain("sourceBuffer 'update' event received");
+
+        if (!logTrackInfo(sourceBuffer, 'audioTracks'))
+            return;
+        
+        if (!logTrackInfo(sourceBuffer, 'videoTracks'))
+            return;
+        
+        if (!logTrackInfo(sourceBuffer, 'textTracks'))
+            return;
 
         postMessage({topic: 'done'});
         break;
