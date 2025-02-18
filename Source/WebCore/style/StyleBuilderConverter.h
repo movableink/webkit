@@ -2774,19 +2774,19 @@ inline Style::DynamicRangeLimit BuilderConverter::convertDynamicRangeLimit(Build
             return Style::DynamicRangeLimit { CSS::Keyword::Standard { } };
         case CSSValueConstrainedHigh:
             return Style::DynamicRangeLimit { CSS::Keyword::ConstrainedHigh { } };
-        case CSSValueHigh:
-            return Style::DynamicRangeLimit { CSS::Keyword::High { } };
+        case CSSValueNoLimit:
+            return Style::DynamicRangeLimit { CSS::Keyword::NoLimit { } };
         default:
             break;
         }
 
         builderState.setCurrentPropertyInvalidAtComputedValueTime();
-        return Style::DynamicRangeLimit { CSS::Keyword::High { } };
+        return Style::DynamicRangeLimit { CSS::Keyword::NoLimit { } };
     }
 
     RefPtr dynamicRangeLimit = requiredDowncast<CSSDynamicRangeLimitValue>(builderState, value);
     if (!dynamicRangeLimit)
-        return Style::DynamicRangeLimit { CSS::Keyword::High { } };
+        return Style::DynamicRangeLimit { CSS::Keyword::NoLimit { } };
 
     return toStyle(dynamicRangeLimit->dynamicRangeLimit(), builderState);
 }

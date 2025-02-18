@@ -42,7 +42,7 @@ using DynamicRangeLimitMixPercentage = Percentage<CSS::Range{0, 100}>;
 struct DynamicRangeLimitMixParameters {
     DynamicRangeLimitMixPercentage standard;
     DynamicRangeLimitMixPercentage constrainedHigh;
-    DynamicRangeLimitMixPercentage high;
+    DynamicRangeLimitMixPercentage noLimit;
 
     bool operator==(const DynamicRangeLimitMixParameters&) const = default;
 };
@@ -55,7 +55,7 @@ template<size_t I> const auto& get(const DynamicRangeLimitMixParameters& value)
     else if constexpr (I == 1)
         return value.constrainedHigh;
     else if constexpr (I == 2)
-        return value.high;
+        return value.noLimit;
 }
 
 // Overload of operator== for UniqueRef<DynamicRangeLimitMixFunction> to make DynamicRangeLimit::Kind's operator== work.

@@ -33,12 +33,12 @@ namespace CSS {
 
 struct DynamicRangeLimitMixFunction;
 
-// <'dynamic-range-limit'> = standard | high | constrained-high | <dynamic-range-limit-mix()>
+// <'dynamic-range-limit'> = standard | no-limit | constrained-high | <dynamic-range-limit-mix()>
 // https://drafts.csswg.org/css-color-hdr/#propdef-dynamic-range-limit
 struct DynamicRangeLimit {
     DynamicRangeLimit(CSS::Keyword::Standard);
     DynamicRangeLimit(CSS::Keyword::ConstrainedHigh);
-    DynamicRangeLimit(CSS::Keyword::High);
+    DynamicRangeLimit(CSS::Keyword::NoLimit);
     DynamicRangeLimit(DynamicRangeLimitMixFunction&&);
 
     DynamicRangeLimit(DynamicRangeLimit&&);
@@ -58,7 +58,7 @@ private:
     using Kind = CompactVariant<
        CSS::Keyword::Standard,
        CSS::Keyword::ConstrainedHigh,
-       CSS::Keyword::High,
+       CSS::Keyword::NoLimit,
        UniqueRef<DynamicRangeLimitMixFunction>
     >;
 

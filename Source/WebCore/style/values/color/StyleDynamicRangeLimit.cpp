@@ -49,8 +49,8 @@ static DynamicRangeLimit resolve(DynamicRangeLimitMixFunction&& mix)
         return DynamicRangeLimit(CSS::Keyword::Standard { });
     if (mix->constrainedHigh == 100_css_percentage)
         return DynamicRangeLimit(CSS::Keyword::ConstrainedHigh { });
-    if (mix->high == 100_css_percentage)
-        return DynamicRangeLimit(CSS::Keyword::High { });
+    if (mix->noLimit == 100_css_percentage)
+        return DynamicRangeLimit(CSS::Keyword::NoLimit { });
     return DynamicRangeLimit(WTFMove(mix));
 }
 

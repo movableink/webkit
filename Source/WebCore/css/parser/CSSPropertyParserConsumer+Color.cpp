@@ -903,27 +903,34 @@ static std::optional<CSS::DynamicRangeLimitMixComponent> consumeUnresolvedDynami
 
 static std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimitMix(CSSParserTokenRange& range, const CSSParserContext& context)
 {
-    // dynamic-range-limit-mix() = dynamic-range-limit-mix( [ <'dynamic-range-limit'> && <percentage [0,100]> ]#)
+    // dynamic-range-limit-mix() = dynamic-range-limit-mix( [ <'dynamic-range-limit'> && <percentage [0,100]> ]#{2,} )
 
     ASSERT(range.peek().functionId() == CSSValueDynamicRangeLimitMix);
 
     auto rangeCopy = range;
     auto args = consumeFunction(rangeCopy);
 
-    CSS::DynamicRangeLimitMixFunction result;
+    CSS::DynamicRangeLimitMixParameters::Vector resultBuilder;
 
     do {
         auto component = consumeUnresolvedDynamicRangeLimitMixComponent(args, context);
         if (!component)
             return { };
-        result->parameters.value.append(WTFMove(*component));
+        resultBuilder.append(WTFMove(*component));
     } while (consumeCommaIncludingWhitespace(args));
 
     if (!args.atEnd())
         return { };
 
+    if (resultBuilder.size() < 2)
+        return { };
+
     range = rangeCopy;
-    return result;
+    return CSS::DynamicRangeLimit {
+        CSS::DynamicRangeLimitMixFunction {
+            CSS::DynamicRangeLimitMixFunctionValue { CSS::DynamicRangeLimitMixParameters { WTFMove(resultBuilder) } }
+        }
+    };
 }
 
 // MARK: - <'dynamic-range-limit'> (unresolved)
@@ -940,9 +947,9 @@ std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimit(CSSPars
     case CSSValueConstrainedHigh:
         range.consumeIncludingWhitespace();
         return CSS::DynamicRangeLimit { CSS::Keyword::ConstrainedHigh { } };
-    case CSSValueHigh:
+    case CSSValueNoLimit:
         range.consumeIncludingWhitespace();
-        return CSS::DynamicRangeLimit { CSS::Keyword::High { } };
+        return CSS::DynamicRangeLimit { CSS::Keyword::NoLimit { } };
     default:
         break;
     }

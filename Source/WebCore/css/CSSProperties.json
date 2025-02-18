@@ -3600,8 +3600,8 @@
             "inherited": true,
             "values": [
                 "standard",
-                "constrained-high",
-                "high"
+                "high",
+                "no-limit"
             ],
             "codegen-properties": {
                 "settings-flag": "cssDynamicRangeLimitPropertyEnabled",

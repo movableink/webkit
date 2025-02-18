@@ -1707,8 +1707,12 @@ from-font
 
 // dynamic-range
 standard
-constrained-high
 high
+
+// dynamic-range-limit
+// standard
+constrained-high
+// no-limit
 dynamic-range-limit-mix
 
 // @counter-style `system` descriptor values
