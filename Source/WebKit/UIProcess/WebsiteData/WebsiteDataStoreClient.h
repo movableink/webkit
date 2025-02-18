@@ -119,8 +119,9 @@ public:
     {
     }
 
-    virtual void getScreenTimeURLs(std::optional<WTF::UUID>, CompletionHandler<void(HashSet<URL>&&)>&&) const
+    virtual void getScreenTimeURLs(std::optional<WTF::UUID>, CompletionHandler<void(HashSet<URL>&&)>&& completionHandler) const
     {
+        completionHandler({ });
     }
 
     enum class CanSuspend : bool { No, Yes };
