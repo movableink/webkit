@@ -2021,6 +2021,8 @@ constexpr CSSValueID toCSSValueID(AppleVisualEffect effect)
 #if HAVE(MATERIAL_HOSTING)
     case AppleVisualEffect::HostedBlurMaterial:
         return CSSValueAppleSystemHostedBlurMaterial;
+    case AppleVisualEffect::HostedThinBlurMaterial:
+        return CSSValueAppleSystemHostedThinBlurMaterial;
 #endif
     case AppleVisualEffect::VibrancyLabel:
         return CSSValueAppleSystemVibrancyLabel;
@@ -2061,6 +2063,8 @@ template<> constexpr AppleVisualEffect fromCSSValueID(CSSValueID valueID)
 #if HAVE(MATERIAL_HOSTING)
     case CSSValueAppleSystemHostedBlurMaterial:
         return AppleVisualEffect::HostedBlurMaterial;
+    case CSSValueAppleSystemHostedThinBlurMaterial:
+        return AppleVisualEffect::HostedThinBlurMaterial;
 #endif
     case CSSValueAppleSystemVibrancyLabel:
         return AppleVisualEffect::VibrancyLabel;

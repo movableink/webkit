@@ -45,10 +45,6 @@
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
-#if HAVE(MATERIAL_HOSTING)
-#import "WKMaterialHostingSupport.h"
-#endif
-
 namespace WTF {
 
 static std::optional<RetainPtr<UIView>> makeVectorElement(const RetainPtr<UIView>*, UIView *arrayElement)
@@ -427,9 +423,9 @@ static Class scrollViewScrollIndicatorClass()
     [_hostingView setFrame:CGRectMake(0, 0, size.width(), size.height())];
 }
 
-- (void)updateCornerRadius:(CGFloat)cornerRadius
+- (void)updateMaterialEffectType:(WKHostedMaterialEffectType)materialEffectType cornerRadius:(CGFloat)cornerRadius
 {
-    [WKMaterialHostingSupport updateHostingView:_hostingView.get() contentView:_contentView.get() cornerRadius:cornerRadius];
+    [WKMaterialHostingSupport updateHostingView:_hostingView.get() contentView:_contentView.get() materialEffectType:materialEffectType cornerRadius:cornerRadius];
 }
 
 @end

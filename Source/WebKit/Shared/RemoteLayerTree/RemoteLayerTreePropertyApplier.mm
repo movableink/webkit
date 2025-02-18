@@ -167,6 +167,7 @@ static MTCoreMaterialRecipe materialRecipeForAppleVisualEffect(AppleVisualEffect
         return PAL::get_CoreMaterial_MTCoreMaterialRecipeNone();
 #if HAVE(MATERIAL_HOSTING)
     case AppleVisualEffect::HostedBlurMaterial:
+    case AppleVisualEffect::HostedThinBlurMaterial:
 #endif
     case AppleVisualEffect::VibrancyLabel:
     case AppleVisualEffect::VibrancySecondaryLabel:
@@ -205,6 +206,7 @@ static MTCoreMaterialVisualStyle materialVisualStyleForAppleVisualEffect(AppleVi
     case AppleVisualEffect::BlurChromeMaterial:
 #if HAVE(MATERIAL_HOSTING)
     case AppleVisualEffect::HostedBlurMaterial:
+    case AppleVisualEffect::HostedThinBlurMaterial:
 #endif
         ASSERT_NOT_REACHED();
         return nil;
@@ -232,11 +234,42 @@ static MTCoreMaterialVisualStyleCategory materialVisualStyleCategoryForAppleVisu
     case AppleVisualEffect::BlurChromeMaterial:
 #if HAVE(MATERIAL_HOSTING)
     case AppleVisualEffect::HostedBlurMaterial:
+    case AppleVisualEffect::HostedThinBlurMaterial:
 #endif
         ASSERT_NOT_REACHED();
         return nil;
     }
 }
+
+#if HAVE(MATERIAL_HOSTING)
+
+static WKHostedMaterialEffectType hostedMaterialEffectTypeForAppleVisualEffect(AppleVisualEffect effect)
+{
+    switch (effect) {
+    case AppleVisualEffect::HostedBlurMaterial:
+        return WKHostedMaterialEffectTypeBlur;
+    case AppleVisualEffect::HostedThinBlurMaterial:
+        return WKHostedMaterialEffectTypeThinBlur;
+    case AppleVisualEffect::None:
+    case AppleVisualEffect::BlurUltraThinMaterial:
+    case AppleVisualEffect::BlurThinMaterial:
+    case AppleVisualEffect::BlurMaterial:
+    case AppleVisualEffect::BlurThickMaterial:
+    case AppleVisualEffect::BlurChromeMaterial:
+    case AppleVisualEffect::VibrancyLabel:
+    case AppleVisualEffect::VibrancySecondaryLabel:
+    case AppleVisualEffect::VibrancyTertiaryLabel:
+    case AppleVisualEffect::VibrancyQuaternaryLabel:
+    case AppleVisualEffect::VibrancyFill:
+    case AppleVisualEffect::VibrancySecondaryFill:
+    case AppleVisualEffect::VibrancyTertiaryFill:
+    case AppleVisualEffect::VibrancySeparator:
+        ASSERT_NOT_REACHED();
+        return WKHostedMaterialEffectTypeNone;
+    }
+}
+
+#endif
 
 static void applyVisualStylingToLayer(CALayer *layer, AppleVisualEffect material, AppleVisualEffect visualStyling)
 {
@@ -295,11 +328,11 @@ static void updateAppleVisualEffect(CALayer *layer, RemoteLayerTreeNode* layerTr
 #if PLATFORM(IOS_FAMILY)
         if (layerTreeNode) {
             if (RetainPtr materialHostingView = dynamic_objc_cast<WKMaterialHostingView>(layerTreeNode->uiView()))
-                [materialHostingView updateCornerRadius:cornerRadius];
+                [materialHostingView updateMaterialEffectType:hostedMaterialEffectTypeForAppleVisualEffect(effectData.effect) cornerRadius:cornerRadius];
         }
 #endif
 
-        [WKMaterialHostingSupport updateHostingLayer:layer cornerRadius:cornerRadius];
+        [WKMaterialHostingSupport updateHostingLayer:layer materialEffectType:hostedMaterialEffectTypeForAppleVisualEffect(effectData.effect) cornerRadius:cornerRadius];
     }
 #endif // HAVE(MATERIAL_HOSTING)
 }

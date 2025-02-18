@@ -45,6 +45,7 @@ static bool isKeywordValidForAppleVisualEffect(CSSValueID keyword)
     case CSSValueID::CSSValueAppleSystemBlurMaterialUltraThin:
 #if HAVE(MATERIAL_HOSTING)
     case CSSValueID::CSSValueAppleSystemHostedBlurMaterial:
+    case CSSValueID::CSSValueAppleSystemHostedThinBlurMaterial:
 #endif
     case CSSValueID::CSSValueAppleSystemVibrancyFill:
     case CSSValueID::CSSValueAppleSystemVibrancyLabel:

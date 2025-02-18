@@ -44,6 +44,7 @@ bool appleVisualEffectNeedsBackdrop(AppleVisualEffect effect)
     case AppleVisualEffect::None:
 #if HAVE(MATERIAL_HOSTING)
     case AppleVisualEffect::HostedBlurMaterial:
+    case AppleVisualEffect::HostedThinBlurMaterial:
 #endif
     case AppleVisualEffect::VibrancyLabel:
     case AppleVisualEffect::VibrancySecondaryLabel:
@@ -71,6 +72,7 @@ bool appleVisualEffectAppliesFilter(AppleVisualEffect effect)
     case AppleVisualEffect::BlurChromeMaterial:
 #if HAVE(MATERIAL_HOSTING)
     case AppleVisualEffect::HostedBlurMaterial:
+    case AppleVisualEffect::HostedThinBlurMaterial:
 #endif
         return false;
     case AppleVisualEffect::VibrancyLabel:
@@ -93,6 +95,7 @@ bool appleVisualEffectIsHostedMaterial(AppleVisualEffect effect)
 {
     switch (effect) {
     case AppleVisualEffect::HostedBlurMaterial:
+    case AppleVisualEffect::HostedThinBlurMaterial:
         return true;
     case AppleVisualEffect::None:
     case AppleVisualEffect::BlurUltraThinMaterial:
@@ -140,6 +143,9 @@ TextStream& operator<<(TextStream& ts, AppleVisualEffect effect)
 #if HAVE(MATERIAL_HOSTING)
     case AppleVisualEffect::HostedBlurMaterial:
         ts << "hosted-blur-material";
+        break;
+    case AppleVisualEffect::HostedThinBlurMaterial:
+        ts << "hosted-thin-blur-material";
         break;
 #endif
     case AppleVisualEffect::VibrancyLabel:

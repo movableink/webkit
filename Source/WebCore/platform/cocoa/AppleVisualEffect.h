@@ -44,6 +44,7 @@ enum class AppleVisualEffect : uint8_t {
     BlurChromeMaterial,
 #if HAVE(MATERIAL_HOSTING)
     HostedBlurMaterial,
+    HostedThinBlurMaterial,
 #endif
     VibrancyLabel,
     VibrancySecondaryLabel,

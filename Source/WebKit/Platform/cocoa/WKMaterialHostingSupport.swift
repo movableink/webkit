@@ -75,20 +75,33 @@ private struct ViewBackedMaterialHostingProvider: MaterialHostingProvider {
 
 private struct MaterialHostingView<P: MaterialHostingProvider>: View {
     private let content: P.Source
-    private let useMaterialEffect: Bool
+    private let materialEffectType: WKHostedMaterialEffectType
     private let cornerRadius: CGFloat
 
-    init(content: P.Source, useMaterialEffect: Bool = false, cornerRadius: CGFloat = 0) {
+    static func resolvedMaterialEffect(for type: WKHostedMaterialEffectType) -> Material? {
+        switch type {
+        case .none:
+            return nil
+        case .blur:
+            return Material._hostedBlurMaterial
+        case .thinBlur:
+            return Material._hostedThinBlurMaterial
+        @unknown default:
+            return nil
+        }
+    }
+
+    init(content: P.Source, materialEffectType: WKHostedMaterialEffectType = .none, cornerRadius: CGFloat = 0) {
         self.content = content
-        self.useMaterialEffect = useMaterialEffect
+        self.materialEffectType = materialEffectType
         self.cornerRadius = cornerRadius
     }
 
     var body: some View {
         let view = P.view(for: content)
 
-        if useMaterialEffect {
-            view.materialEffect(Material._hostedBlurMaterial, in: .rect(cornerRadius: cornerRadius))
+        if let effect = MaterialHostingView<P>.resolvedMaterialEffect(for: materialEffectType) {
+            view.materialEffect(effect, in: .rect(cornerRadius: cornerRadius))
         } else {
             view
         }
@@ -100,14 +113,10 @@ private extension CALayer {
 
     var materialHostingContentLayer: CALayer? {
         get {
-            guard let contentLayer = self.value(forKeyPath: Self.materialHostingContentLayerKey) as? CALayer else {
-                return nil
-            }
-
-            return contentLayer
+            value(forKeyPath: Self.materialHostingContentLayerKey) as? CALayer
         }
         set {
-            self.setValue(newValue, forKeyPath: Self.materialHostingContentLayerKey)
+            setValue(newValue, forKeyPath: Self.materialHostingContentLayerKey)
         }
     }
 }
@@ -131,7 +140,7 @@ private extension CALayer {
         return hostingLayer
     }
 
-    class func updateHostingLayer(_ layer: CALayer, cornerRadius: CGFloat) {
+    class func updateHostingLayer(_ layer: CALayer, materialEffectType: WKHostedMaterialEffectType, cornerRadius: CGFloat) {
         guard let hostingLayer = layer as? CAHostingLayer<MaterialHostingView<LayerBackedMaterialHostingProvider>> else {
             assertionFailure("updateHostingLayer should only be called with a hosting layer.")
             return
@@ -142,7 +151,7 @@ private extension CALayer {
             return
         }
 
-        hostingLayer.rootView = MaterialHostingView<LayerBackedMaterialHostingProvider>(content: contentLayer, useMaterialEffect: true, cornerRadius: cornerRadius)
+        hostingLayer.rootView = MaterialHostingView<LayerBackedMaterialHostingProvider>(content: contentLayer, materialEffectType: materialEffectType, cornerRadius: cornerRadius)
     }
 
     class func contentLayer(forMaterialHostingLayer layer: CALayer) -> CALayer? {
@@ -155,12 +164,12 @@ private extension CALayer {
         _UIHostingView(rootView: MaterialHostingView<ViewBackedMaterialHostingProvider>(content: contentView))
     }
 
-    class func updateHostingView(_ view: UIView, contentView: UIView, cornerRadius: CGFloat) {
+    class func updateHostingView(_ view: UIView, contentView: UIView, materialEffectType: WKHostedMaterialEffectType, cornerRadius: CGFloat) {
         guard let hostingView = view as? _UIHostingView<MaterialHostingView<ViewBackedMaterialHostingProvider>> else {
             return;
         }
 
-        hostingView.rootView = MaterialHostingView<ViewBackedMaterialHostingProvider>(content: contentView, useMaterialEffect: true, cornerRadius: cornerRadius)
+        hostingView.rootView = MaterialHostingView<ViewBackedMaterialHostingProvider>(content: contentView, materialEffectType: materialEffectType, cornerRadius: cornerRadius)
     }
 
 #endif
