@@ -81,7 +81,7 @@ private:
     GRefPtr<GstCaps> m_inputCaps;
 };
 
-void GStreamerAudioEncoder::create(const String& codecName, const AudioEncoder::Config& config, CreateCallback&& callback, DescriptionCallback&& descriptionCallback, OutputCallback&& outputCallback)
+Ref<AudioEncoder::CreatePromise> GStreamerAudioEncoder::create(const String& codecName, const AudioEncoder::Config& config, DescriptionCallback&& descriptionCallback, OutputCallback&& outputCallback)
 {
     static std::once_flag debugRegisteredFlag;
     std::call_once(debugRegisteredFlag, [] {
@@ -91,39 +91,28 @@ void GStreamerAudioEncoder::create(const String& codecName, const AudioEncoder::
     GRefPtr<GstElement> element;
     if (codecName.startsWith("pcm-"_s)) {
         auto components = codecName.split('-');
-        if (components.size() != 2) {
-            auto errorMessage = makeString("Invalid LPCM codec string: "_s, codecName);
-            callback(makeUnexpected(WTFMove(errorMessage)));
-            return;
-        }
+        if (components.size() != 2)
+            return CreatePromise::createAndReject(makeString("Invalid LPCM codec string: "_s, codecName));
         element = gst_element_factory_make("identity", nullptr);
     } else {
         auto& scanner = GStreamerRegistryScanner::singleton();
         auto lookupResult = scanner.isCodecSupported(GStreamerRegistryScanner::Configuration::Encoding, codecName);
-        if (!lookupResult) {
-            auto errorMessage = makeString("No GStreamer encoder found for codec "_s, codecName);
-            callback(makeUnexpected(WTFMove(errorMessage)));
-            return;
-        }
+        if (!lookupResult)
+            return CreatePromise::createAndReject(makeString("No GStreamer encoder found for codec "_s, codecName));
         element = gst_element_factory_create(lookupResult.factory.get(), nullptr);
     }
-    Ref encoder = adoptRef(*new GStreamerAudioEncoder(WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(element)));
-    Ref internalEncoder = encoder->m_internalEncoder;
+    auto internalEncoder = GStreamerInternalAudioEncoder::create(WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(element));
     auto error = internalEncoder->initialize(codecName, config);
     if (!error.isEmpty()) {
         GST_WARNING("Error creating encoder: %s", error.ascii().data());
-        callback(makeUnexpected(makeString("GStreamer encoding initialization failed with error: "_s, error)));
-        return;
+        return CreatePromise::createAndReject(makeString("GStreamer encoding initialization failed with error: "_s, codecName));
     }
-    gstEncoderWorkQueue().dispatch([callback = WTFMove(callback), encoder = WTFMove(encoder)]() mutable {
-        auto internalEncoder = encoder->m_internalEncoder;
-        GST_DEBUG("Encoder created");
-        callback(Ref<AudioEncoder> { WTFMove(encoder) });
-    });
+    auto encoder = adoptRef(*new GStreamerAudioEncoder(WTFMove(internalEncoder)));
+    return CreatePromise::createAndResolve(WTFMove(encoder));
 }
 
-GStreamerAudioEncoder::GStreamerAudioEncoder(DescriptionCallback&& descriptionCallback, OutputCallback&& outputCallback, GRefPtr<GstElement>&& element)
-    : m_internalEncoder(GStreamerInternalAudioEncoder::create(WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(element)))
+GStreamerAudioEncoder::GStreamerAudioEncoder(Ref<GStreamerInternalAudioEncoder>&& internalEncoder)
+    : m_internalEncoder(WTFMove(internalEncoder))
 {
 }
 
