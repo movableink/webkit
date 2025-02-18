@@ -4176,7 +4176,7 @@ ExceptionOr<void> Document::write(Document* entryDocument, FixedVector<std::vari
         ));
     }
 
-    if (isTrusted || !scriptExecutionContext()->settingsValues().trustedTypesEnabled) {
+    if (isTrusted || !settings().trustedTypesEnabled()) {
         text.append(lineFeed);
         return write(entryDocument, WTFMove(text));
     }
@@ -4536,11 +4536,15 @@ void Document::disableWebAssembly(const String& errorMessage)
 
 void Document::setRequiresTrustedTypes(bool required)
 {
+    if (!settings().trustedTypesEnabled())
+        return;
+
     RefPtr frame = this->frame();
     if (!frame)
         return;
 
     frame->checkedScript()->setRequiresTrustedTypes(required);
+    m_requiresTrustedTypes = required;
 }
 
 IDBClient::IDBConnectionProxy* Document::idbConnectionProxy()

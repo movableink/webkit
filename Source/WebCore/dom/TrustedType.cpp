@@ -163,9 +163,15 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
     if (!scriptExecutionContext.settingsValues().trustedTypesEnabled)
         return stringValue;
 
-    CheckedPtr contentSecurityPolicy = scriptExecutionContext.checkedContentSecurityPolicy();
+    auto requireTrustedTypes = false;
 
-    auto requireTrustedTypes = contentSecurityPolicy && contentSecurityPolicy->requireTrustedTypesForSinkGroup("script"_s);
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext))
+        requireTrustedTypes = document->requiresTrustedTypes();
+    else {
+        CheckedPtr contentSecurityPolicy = scriptExecutionContext.checkedContentSecurityPolicy();
+
+        requireTrustedTypes = contentSecurityPolicy && contentSecurityPolicy->requireTrustedTypesForSinkGroup("script"_s);
+    }
 
     if (!requireTrustedTypes)
         return stringValue;
@@ -181,6 +187,7 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
     }
 
     if (std::holds_alternative<std::monostate>(convertedInput)) {
+        CheckedPtr contentSecurityPolicy = scriptExecutionContext.checkedContentSecurityPolicy();
         auto allowMissingTrustedTypes = contentSecurityPolicy->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, "script"_s, stringValue);
 
         if (!allowMissingTrustedTypes)
