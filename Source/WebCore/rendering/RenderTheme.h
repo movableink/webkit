@@ -242,9 +242,9 @@ public:
     virtual Seconds switchAnimationHeldDuration() const { return 0_s; }
     float switchPointerTrackingMagnitudeProportion() const { return 0.4f; }
     virtual bool hasSwitchHapticFeedback(SwitchTrigger) const { return false; }
+    OptionSet<ControlStyle::State> extractControlStyleStatesForRenderer(const RenderObject&) const;
 
 protected:
-    OptionSet<ControlStyle::State> extractControlStyleStatesForRenderer(const RenderObject&) const;
     ControlStyle extractControlStyleForRenderer(const RenderObject&) const;
 
     virtual bool canPaint(const PaintInfo&, const Settings&, StyleAppearance) const { return true; }
