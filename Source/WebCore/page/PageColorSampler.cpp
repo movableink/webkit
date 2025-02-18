@@ -364,7 +364,7 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
             return WTFMove(*mostFrequentColor);
     }
 
-    return page.pageExtendedBackgroundColor();
+    return { };
 }
 
 } // namespace WebCore

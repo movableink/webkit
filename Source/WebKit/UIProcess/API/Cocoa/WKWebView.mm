@@ -2883,6 +2883,20 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 #endif // PLATFORM(VISION)
 #endif // ENABLE(GAMEPAD)
 
+- (_WKRectEdge)_fixedContainerEdges
+{
+    _WKRectEdge edges = _WKRectEdgeNone;
+    if (_fixedContainerEdges.fixedEdges.bottom())
+        edges |= _WKRectEdgeBottom;
+    if (_fixedContainerEdges.fixedEdges.left())
+        edges |= _WKRectEdgeLeft;
+    if (_fixedContainerEdges.fixedEdges.right())
+        edges |= _WKRectEdgeRight;
+    if (_fixedContainerEdges.fixedEdges.top())
+        edges |= _WKRectEdgeTop;
+    return edges;
+}
+
 - (WebCore::CocoaColor *)_sampledBottomFixedPositionContentColor:(const WebCore::FixedContainerEdges&)edges
 {
     if (!edges.fixedEdges.bottom())
@@ -2940,7 +2954,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     if (_fixedContainerEdges == edges)
         return;
 
-    Vector<SEL, 4> changedSelectors;
+    Vector<SEL, 5> changedSelectors;
 
     using FixedEdgeColors = WebCore::RectEdges<RetainPtr<WebCore::CocoaColor>>;
     FixedEdgeColors oldColors {
@@ -2968,6 +2982,9 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 
     if (oldColors.top() != newColors.top() || ![oldColors.top() isEqual:newColors.top().get()])
         changedSelectors.append(@selector(_sampledTopFixedPositionContentColor));
+
+    if (_fixedContainerEdges.fixedEdges != edges.fixedEdges)
+        changedSelectors.append(@selector(_fixedContainerEdges));
 
     for (auto selector : changedSelectors)
         [self willChangeValueForKey:NSStringFromSelector(selector)];
