@@ -77,7 +77,7 @@ public:
 #if ENABLE(FULLSCREEN_API)
     bool isFullScreen() const;
     void willEnterFullScreen(CompletionHandler<void(bool)>&&);
-    void willExitFullScreen();
+    void willExitFullScreen(CompletionHandler<void()>&&);
 #endif
 
     void selectionDidChange();

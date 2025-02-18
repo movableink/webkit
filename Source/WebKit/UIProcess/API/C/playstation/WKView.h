@@ -49,7 +49,7 @@ WK_EXPORT void WKViewSetVisible(WKViewRef, bool);
 
 WK_EXPORT void WKViewWillEnterFullScreen(WKViewRef) WK_C_API_DEPRECATED;
 WK_EXPORT void WKViewDidEnterFullScreen(WKViewRef);
-WK_EXPORT void WKViewWillExitFullScreen(WKViewRef);
+WK_EXPORT void WKViewWillExitFullScreen(WKViewRef) WK_C_API_DEPRECATED;
 WK_EXPORT void WKViewDidExitFullScreen(WKViewRef) WK_C_API_DEPRECATED;
 WK_EXPORT void WKViewRequestExitFullScreen(WKViewRef);
 WK_EXPORT bool WKViewIsFullScreen(WKViewRef);

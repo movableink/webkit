@@ -59,7 +59,7 @@ void webkitWebViewBaseChildMoveResize(WebKitWebViewBase*, GtkWidget*, const WebC
 #if ENABLE(FULLSCREEN_API)
 void webkitWebViewBaseWillEnterFullScreen(WebKitWebViewBase*, CompletionHandler<void(bool)>&&);
 void webkitWebViewBaseEnterFullScreen(WebKitWebViewBase*);
-void webkitWebViewBaseWillExitFullScreen(WebKitWebViewBase*);
+void webkitWebViewBaseWillExitFullScreen(WebKitWebViewBase*, CompletionHandler<void()>&&);
 void webkitWebViewBaseExitFullScreen(WebKitWebViewBase*);
 bool webkitWebViewBaseIsFullScreen(WebKitWebViewBase*);
 #endif

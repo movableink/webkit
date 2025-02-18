@@ -324,9 +324,10 @@ void PageClientImpl::enterFullScreen(CompletionHandler<void(bool)>&& completionH
     completionHandler(false);
 }
 
-void PageClientImpl::exitFullScreen()
+void PageClientImpl::exitFullScreen(CompletionHandler<void()>&& completionHandler)
 {
     notImplemented();
+    completionHandler();
 }
 
 void PageClientImpl::beganEnterFullScreen(const IntRect& /* initialFrame */, const IntRect& /* finalFrame */)

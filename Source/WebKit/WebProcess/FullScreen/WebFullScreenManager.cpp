@@ -336,12 +336,15 @@ void WebFullScreenManager::exitFullScreenForElement(WebCore::Element* element)
         ALWAYS_LOG(LOGIDENTIFIER, "null");
 
     m_page->prepareToExitElementFullScreen();
-    m_page->send(Messages::WebFullScreenManagerProxy::ExitFullScreen());
 
     if (m_inWindowFullScreenMode) {
         willExitFullScreen();
         didExitFullScreen();
         m_inWindowFullScreenMode = false;
+    } else {
+        m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::ExitFullScreen(), [this, protectedThis = Ref { *this }] {
+            willExitFullScreen();
+        });
     }
 #if ENABLE(VIDEO)
     setMainVideoElement(nullptr);

@@ -72,7 +72,7 @@ public:
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     virtual void updateImageSource() = 0;
 #endif
-    virtual void exitFullScreen() = 0;
+    virtual void exitFullScreen(CompletionHandler<void()>&&) = 0;
     virtual void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) = 0;
     virtual void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void()>&&) = 0;
 
@@ -114,7 +114,6 @@ public:
     FullscreenState fullscreenState() const { return m_fullscreenState; }
     void willEnterFullScreen(CompletionHandler<void(bool)>&&);
     void didEnterFullScreen();
-    void willExitFullScreen();
     void setAnimatingFullScreen(bool);
     void requestRestoreFullScreen(CompletionHandler<void(bool)>&&);
     void requestExitFullScreen();
@@ -133,7 +132,7 @@ private:
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     void updateImageSource(FullScreenMediaDetails&&);
 #endif
-    void exitFullScreen();
+    void exitFullScreen(CompletionHandler<void()>&&);
     void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
     void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void()>&&);
     void callCloseCompletionHandlers();

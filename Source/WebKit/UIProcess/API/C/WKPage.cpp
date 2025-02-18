@@ -1230,11 +1230,12 @@ void WKPageSetFullScreenClientForTesting(WKPageRef pageRef, const WKPageFullScre
             m_client.beganEnterFullScreen(toAPI(m_page.get()), toAPI(initialFrame), toAPI(finalFrame), m_client.base.clientInfo);
         }
 
-        void exitFullScreen() override
+        void exitFullScreen(CompletionHandler<void()>&& completionHandler) override
         {
             if (!m_client.exitFullScreen)
-                return;
+                return completionHandler();
             m_client.exitFullScreen(toAPI(m_page.get()), m_client.base.clientInfo);
+            completionHandler();
         }
 
         void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void()>&& completionHandler) override
@@ -1265,15 +1266,6 @@ void WKPageDidEnterFullScreen(WKPageRef pageRef)
 #if ENABLE(FULLSCREEN_API)
     if (RefPtr manager = toImpl(pageRef)->fullScreenManager())
         manager->didEnterFullScreen();
-#endif
-}
-
-void WKPageWillExitFullScreen(WKPageRef pageRef)
-{
-    CRASH_IF_SUSPENDED;
-#if ENABLE(FULLSCREEN_API)
-    if (RefPtr manager = toImpl(pageRef)->fullScreenManager())
-        manager->willExitFullScreen();
 #endif
 }
 

@@ -1282,17 +1282,17 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     [self _exitFullscreenImmediately];
 }
 
-- (void)exitFullScreen
+- (void)exitFullScreen:(CompletionHandler<void()>&&)completionHandler
 {
     if (_fullScreenState == WebKit::NotInFullScreen) {
         OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER, _fullScreenState, ", dropping");
-        return;
+        return completionHandler();
     }
 
     if (_fullScreenState < WebKit::InFullScreen) {
         OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER, _fullScreenState, " < InFullScreen");
         _exitRequested = YES;
-        return;
+        return completionHandler();
     }
 
 #if ENABLE(QUICKLOOK_FULLSCREEN)
@@ -1307,14 +1307,14 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
 
         if (auto* manager = self._manager) {
             OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
-            manager->willExitFullScreen();
+            completionHandler();
             return;
         }
 
         OBJC_ERROR_LOG(OBJC_LOGIDENTIFIER, "manager missing");
         ASSERT_NOT_REACHED();
         [self _exitFullscreenImmediately];
-        return;
+        return completionHandler();
     }
 #endif
 
@@ -1326,13 +1326,13 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     if (auto* manager = self._manager) {
         OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
         manager->setAnimatingFullScreen(true);
-        manager->willExitFullScreen();
-        return;
+        return completionHandler();
     }
 
     OBJC_ERROR_LOG(OBJC_LOGIDENTIFIER, "manager missing");
     ASSERT_NOT_REACHED();
     [self _exitFullscreenImmediately];
+    completionHandler();
 }
 
 - (void)beganExitFullScreenWithInitialFrame:(CGRect)initialFrame finalFrame:(CGRect)finalFrame completionHandler:(CompletionHandler<void()>&&)completionHandler
@@ -1633,12 +1633,8 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
 
     [self _reinsertWebViewUnderPlaceholder];
 
-    if (auto* manager = self._manager) {
+    if (auto* manager = self._manager)
         manager->requestExitFullScreen();
-        manager->setAnimatingFullScreen(true);
-        manager->willExitFullScreen();
-        manager->setAnimatingFullScreen(false);
-    }
 
     [_webViewPlaceholder removeFromSuperview];
     _webViewPlaceholder = nil;

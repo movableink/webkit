@@ -118,11 +118,8 @@ void WKViewDidEnterFullScreen(WKViewRef view)
 #endif
 }
 
-void WKViewWillExitFullScreen(WKViewRef view)
+void WKViewWillExitFullScreen(WKViewRef)
 {
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(view)->willExitFullScreen();
-#endif
 }
 
 void WKViewDidExitFullScreen(WKViewRef)

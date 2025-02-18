@@ -454,12 +454,12 @@ void PageClientImpl::enterFullScreen(CompletionHandler<void(bool)>&& completionH
     }
 }
 
-void PageClientImpl::exitFullScreen()
+void PageClientImpl::exitFullScreen(CompletionHandler<void()>&& completionHandler)
 {
     if (!isFullScreen())
-        return;
+        return completionHandler();
 
-    m_view.willExitFullScreen();
+    m_view.willExitFullScreen(WTFMove(completionHandler));
 #if ENABLE(WPE_PLATFORM)
     if (m_view.wpeView()) {
         static_cast<WKWPE::ViewPlatform&>(m_view).exitFullScreen();

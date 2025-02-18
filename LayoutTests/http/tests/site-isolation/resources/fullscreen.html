@@ -15,6 +15,10 @@
             await exitFullScreen();
         });
     }
+    function becomeUnresponsive() {
+        while (1);
+    }
 </script>
 <button onclick="enterFullScreen()">Enter</button>
 <button onclick="exitFullScreen()">Exit</button>
+<button onclick="becomeUnresponsive()">Become Unresponsive</button>

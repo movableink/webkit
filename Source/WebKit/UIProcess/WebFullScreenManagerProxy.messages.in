@@ -32,7 +32,7 @@ messages -> WebFullScreenManagerProxy {
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     UpdateImageSource(struct WebKit::FullScreenMediaDetails mediaDetails)
 #endif
-    ExitFullScreen()
+    ExitFullScreen() -> ()
     BeganEnterFullScreen(WebCore::IntRect initialRect, WebCore::IntRect finalRect)
     BeganExitFullScreen(WebCore::IntRect initialRect, WebCore::IntRect finalRect) -> ()
     Close()

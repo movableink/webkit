@@ -427,15 +427,15 @@ void PageClientImpl::enterFullScreen(CompletionHandler<void(bool)>&& completionH
         webkitWebViewBaseEnterFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
 }
 
-void PageClientImpl::exitFullScreen()
+void PageClientImpl::exitFullScreen(CompletionHandler<void()>&& completionHandler)
 {
     if (!m_viewWidget)
-        return;
+        return completionHandler();
 
     if (!isFullScreen())
-        return;
+        return completionHandler();
 
-    webkitWebViewBaseWillExitFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
+    webkitWebViewBaseWillExitFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget), WTFMove(completionHandler));
 
     if (!WEBKIT_IS_WEB_VIEW(m_viewWidget) || !webkitWebViewExitFullScreen(WEBKIT_WEB_VIEW(m_viewWidget)))
         webkitWebViewBaseExitFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget));

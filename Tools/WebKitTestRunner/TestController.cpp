@@ -496,8 +496,6 @@ void TestController::exitFullScreen(WKPageRef page)
 {
     if (m_dumpFullScreenCallbacks)
         protectedCurrentInvocation()->outputText("exitFullScreenForElement()\n"_s);
-
-    WKPageWillExitFullScreen(page);
 }
 
 void TestController::beganExitFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame, WKCompletionListenerRef listener, const void* clientInfo)
