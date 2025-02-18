@@ -939,9 +939,6 @@ void RenderTheme::paintDecorations(const RenderBox& box, const PaintInfo& paintI
     case StyleAppearance::TextArea:
         paintTextAreaDecorations(box, paintInfo, devicePixelSnappedRect);
         break;
-    case StyleAppearance::SquareButton:
-        paintSquareButtonDecorations(box, paintInfo, integralSnappedRect);
-        break;
     case StyleAppearance::ColorWell:
         paintColorWellDecorations(box, paintInfo, devicePixelSnappedRect);
         break;
