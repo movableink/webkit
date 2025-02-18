@@ -40,11 +40,11 @@ namespace GCClient {
 class IsoSubspace;
 }
 
-class IsoSubspace : public Subspace {
+class IsoSubspace final : public Subspace {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(IsoSubspace, JS_EXPORT_PRIVATE);
 public:
     JS_EXPORT_PRIVATE IsoSubspace(CString name, Heap&, const HeapCellType&, size_t size, bool preciseOnly, uint8_t numberOfLowerTierPreciseCells, std::unique_ptr<IsoMemoryAllocatorBase>&& = nullptr);
-    JS_EXPORT_PRIVATE ~IsoSubspace() override;
+    JS_EXPORT_PRIVATE ~IsoSubspace() final;
 
     size_t cellSize() { return m_directory.cellSize(); }
 
@@ -62,9 +62,9 @@ private:
     friend class IsoCellSet;
     friend class GCClient::IsoSubspace;
     
-    void didResizeBits(unsigned newSize) override;
-    void didRemoveBlock(unsigned blockIndex) override;
-    void didBeginSweepingToFreeList(MarkedBlock::Handle*) override;
+    void didResizeBits(unsigned newSize) final;
+    void didRemoveBlock(unsigned blockIndex) final;
+    void didBeginSweepingToFreeList(MarkedBlock::Handle*) final;
 
     BlockDirectory m_directory;
     std::unique_ptr<IsoMemoryAllocatorBase> m_isoAlignedMemoryAllocator;

@@ -562,7 +562,6 @@ heap/IsoCellSet.cpp
 heap/IsoHeapCellType.cpp
 heap/IsoMemoryAllocatorBase.cpp
 heap/IsoSubspace.cpp
-heap/IsoSubspacePerVM.cpp
 heap/JITStubRoutineSet.cpp
 heap/PreciseAllocation.cpp
 heap/LocalAllocator.cpp

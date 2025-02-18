@@ -56,7 +56,7 @@ private:
 class ObjcMethod : public Method {
 public:
     ObjcMethod() : _objcClass(0), _selector(0), _javaScriptName(0) {}
-    ObjcMethod(ClassStructPtr aClass, SEL _selector);
+    ObjcMethod(ClassStructPtr aClass, SELStructPtr _selector);
 
     virtual int numParameters() const;
 
@@ -66,11 +66,11 @@ public:
     void setJavaScriptName(CFStringRef n) { _javaScriptName = n; }
     CFStringRef javaScriptName() const { return _javaScriptName.get(); }
     
-    SEL selector() const { return _selector; }
+    SELStructPtr selector() const { return _selector; }
 
 private:
     ClassStructPtr _objcClass;
-    SEL _selector;
+    SELStructPtr _selector;
     RetainPtr<CFStringRef> _javaScriptName;
 };
 
@@ -126,11 +126,12 @@ public:
 
     ObjcInstance* getInternalObjCInstance() const { return _instance.get(); }
 
+    static void destroy(JSCell*);
+
 private:
     ObjcFallbackObjectImp(JSGlobalObject*, Structure*, ObjcInstance*, const String& propertyName);
     void finishCreation(JSGlobalObject*);
 
-    static void destroy(JSCell*);
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static CallData getCallData(JSCell*);

@@ -73,6 +73,9 @@ private:
     Lock m_lock;
 
     JSC::IsoHeapCellType m_runtimeArrayHeapCellType;
+#if PLATFORM(COCOA)
+    JSC::IsoHeapCellType m_objcFallbackObjectImpHeapCellType;
+#endif
     JSC::IsoHeapCellType m_observableArrayHeapCellType;
     JSC::IsoHeapCellType m_runtimeObjectHeapCellType;
     JSC::IsoHeapCellType m_windowProxyHeapCellType;
@@ -96,6 +99,9 @@ private:
     JSC::IsoSubspace m_domNamespaceObjectSpace;
     JSC::IsoSubspace m_domWindowPropertiesSpace;
     JSC::IsoSubspace m_runtimeArraySpace;
+#if PLATFORM(COCOA)
+    JSC::IsoSubspace m_objcFallbackObjectImpSpace;
+#endif
     JSC::IsoSubspace m_observableArraySpace;
     JSC::IsoSubspace m_runtimeMethodSpace;
     JSC::IsoSubspace m_runtimeObjectSpace;
@@ -154,6 +160,9 @@ public:
     JSC::GCClient::IsoSubspace& domNamespaceObjectSpace() { return m_domNamespaceObjectSpace; }
     JSC::GCClient::IsoSubspace& domWindowPropertiesSpace() { return m_domWindowPropertiesSpace; }
     JSC::GCClient::IsoSubspace& runtimeArraySpace() { return m_runtimeArraySpace; }
+#if PLATFORM(COCOA)
+    JSC::GCClient::IsoSubspace& objcFallbackObjectImpSpace() { return m_objcFallbackObjectImpSpace; }
+#endif
     JSC::GCClient::IsoSubspace& observableArraySpace() { return m_observableArraySpace; }
     JSC::GCClient::IsoSubspace& runtimeMethodSpace() { return m_runtimeMethodSpace; }
     JSC::GCClient::IsoSubspace& runtimeObjectSpace() { return m_runtimeObjectSpace; }
@@ -179,6 +188,9 @@ private:
     JSC::GCClient::IsoSubspace m_domNamespaceObjectSpace;
     JSC::GCClient::IsoSubspace m_domWindowPropertiesSpace;
     JSC::GCClient::IsoSubspace m_runtimeArraySpace;
+#if PLATFORM(COCOA)
+    JSC::GCClient::IsoSubspace m_objcFallbackObjectImpSpace;
+#endif
     JSC::GCClient::IsoSubspace m_observableArraySpace;
     JSC::GCClient::IsoSubspace m_runtimeMethodSpace;
     JSC::GCClient::IsoSubspace m_runtimeObjectSpace;

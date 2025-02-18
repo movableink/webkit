@@ -75,7 +75,6 @@ class Heap;
 class HeapProfiler;
 class HeapVerifier;
 class IncrementalSweeper;
-class IsoSubspacePerVM;
 class JITStubRoutine;
 class JITStubRoutineSet;
 class JSCell;
@@ -615,7 +614,6 @@ private:
     friend class HandleSet;
     friend class HeapUtil;
     friend class HeapVerifier;
-    friend class IsoSubspacePerVM;
     friend class JITStubRoutine;
     friend class LLIntOffsetsExtractor;
     friend class MarkStackMergingConstraint;
@@ -1185,7 +1183,6 @@ public:
     using UnlinkedFunctionExecutableSpaceAndSet = SpaceAndSet;
     UnlinkedFunctionExecutableSpaceAndSet unlinkedFunctionExecutableSpaceAndSet;
 
-    Vector<IsoSubspacePerVM*> perVMIsoSubspaces;
 #undef DYNAMIC_SPACE_AND_SET_DEFINE_MEMBER
     CString m_signpostMessage;
 };
@@ -1241,10 +1238,8 @@ private:
     IsoSubspace programExecutableSpace;
     IsoSubspace unlinkedFunctionExecutableSpace;
 
-    Vector<IsoSubspacePerVM*> perVMIsoSubspaces;
 
     friend class JSC::VM;
-    friend class JSC::IsoSubspacePerVM;
 };
 
 } // namespace GCClient

@@ -751,7 +751,6 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     heap/IsoMemoryAllocatorBase.h
     heap/IsoSubspace.h
     heap/IsoSubspaceInlines.h
-    heap/IsoSubspacePerVM.h
     heap/LocalAllocator.h
     heap/LocalAllocatorInlines.h
     heap/MachineStackMarker.h

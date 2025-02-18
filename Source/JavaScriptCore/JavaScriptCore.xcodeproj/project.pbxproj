@@ -328,7 +328,6 @@
 		0F5CF9841E9D537700C18692 /* AirLowerStackArgs.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F5CF9831E9D537500C18692 /* AirLowerStackArgs.h */; };
 		0F5CF9891E9ED65200C18692 /* AirStackAllocation.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F5CF9871E9ED64E00C18692 /* AirStackAllocation.h */; };
 		0F5E0FD8207C72730097F0DE /* DFGAbstractInterpreterClobberState.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F5E0FD6207C72710097F0DE /* DFGAbstractInterpreterClobberState.h */; };
-		0F5E0FE72086AD480097F0DE /* IsoSubspacePerVM.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F5E0FE52086AD460097F0DE /* IsoSubspacePerVM.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0F5EF91F16878F7D003E5C25 /* JITThunks.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F5EF91C16878F78003E5C25 /* JITThunks.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0F61832A1C45BF070072450B /* AirCCallingConvention.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F6183211C45BF070072450B /* AirCCallingConvention.h */; };
 		0F61832D1C45BF070072450B /* AirEmitShuffle.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F6183241C45BF070072450B /* AirEmitShuffle.h */; };
@@ -2997,8 +2996,6 @@
 		0F5D085C1B8CF99D001143B4 /* DFGNodeOrigin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DFGNodeOrigin.cpp; path = dfg/DFGNodeOrigin.cpp; sourceTree = "<group>"; };
 		0F5E0FD6207C72710097F0DE /* DFGAbstractInterpreterClobberState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DFGAbstractInterpreterClobberState.h; path = dfg/DFGAbstractInterpreterClobberState.h; sourceTree = "<group>"; };
 		0F5E0FD7207C72710097F0DE /* DFGAbstractInterpreterClobberState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DFGAbstractInterpreterClobberState.cpp; path = dfg/DFGAbstractInterpreterClobberState.cpp; sourceTree = "<group>"; };
-		0F5E0FE52086AD460097F0DE /* IsoSubspacePerVM.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IsoSubspacePerVM.h; sourceTree = "<group>"; };
-		0F5E0FE62086AD470097F0DE /* IsoSubspacePerVM.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IsoSubspacePerVM.cpp; sourceTree = "<group>"; };
 		0F5EF91B16878F78003E5C25 /* JITThunks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JITThunks.cpp; sourceTree = "<group>"; };
 		0F5EF91C16878F78003E5C25 /* JITThunks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JITThunks.h; sourceTree = "<group>"; };
 		0F6183201C45BF070072450B /* AirCCallingConvention.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AirCCallingConvention.cpp; path = b3/air/AirCCallingConvention.cpp; sourceTree = "<group>"; };
@@ -7210,8 +7207,6 @@
 				0FDCE12C1FAFB4DE006F3901 /* IsoSubspace.cpp */,
 				0FDCE12B1FAFB4DE006F3901 /* IsoSubspace.h */,
 				0FD2FD9220B52BDC00F09441 /* IsoSubspaceInlines.h */,
-				0F5E0FE62086AD470097F0DE /* IsoSubspacePerVM.cpp */,
-				0F5E0FE52086AD460097F0DE /* IsoSubspacePerVM.h */,
 				0F766D2915A8CC34008F363E /* JITStubRoutineSet.cpp */,
 				0F766D2A15A8CC34008F363E /* JITStubRoutineSet.h */,
 				0F75A059200D25F00038E2CF /* LocalAllocator.cpp */,
@@ -11264,7 +11259,6 @@
 				533699B327A3079200C9561D /* IsoMemoryAllocatorBase.h in Headers */,
 				0FDCE12D1FAFB4E5006F3901 /* IsoSubspace.h in Headers */,
 				0FD2FD9520B52BE200F09441 /* IsoSubspaceInlines.h in Headers */,
-				0F5E0FE72086AD480097F0DE /* IsoSubspacePerVM.h in Headers */,
 				8B9F6D561D5912FA001C739F /* IterationKind.h in Headers */,
 				53D41EC923C0081A00AE984B /* IterationModeMetadata.h in Headers */,
 				70113D4C1A8DB093003848C4 /* IteratorOperations.h in Headers */,

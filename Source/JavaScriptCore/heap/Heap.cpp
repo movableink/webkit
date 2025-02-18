@@ -48,7 +48,6 @@
 #include "Interpreter.h"
 #include "IsoCellSetInlines.h"
 #include "IsoInlinedHeapCellTypeInlines.h"
-#include "IsoSubspacePerVM.h"
 #include "JITStubRoutineSet.h"
 #include "JITWorklistInlines.h"
 #include "JSFinalizationRegistry.h"
@@ -456,9 +455,6 @@ Heap::~Heap()
     
     for (WeakBlock* block : m_logicallyEmptyWeakBlocks)
         WeakBlock::destroy(*this, block);
-
-    for (auto* perVMIsoSubspace : perVMIsoSubspaces)
-        perVMIsoSubspace->releaseIsoSubspace(*this);
 }
 
 bool Heap::isPagedOut()
@@ -3434,8 +3430,6 @@ Heap::Heap(JSC::Heap& heap)
 
 Heap::~Heap()
 {
-    for (auto* perVMIsoSubspace : perVMIsoSubspaces)
-        perVMIsoSubspace->releaseClientIsoSubspace(vm());
 }
 
 #undef INIT_CLIENT_ISO_SUBSPACE
