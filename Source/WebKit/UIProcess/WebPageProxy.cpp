@@ -2578,15 +2578,15 @@ RefPtr<API::Navigation> WebPageProxy::goToBackForwardItem(WebBackForwardListFram
     auto transaction = pageLoadState->transaction();
     pageLoadState->setPendingAPIRequest(transaction, { navigation->navigationID(), item->url() });
 
-    if (item->isRemoteFrameNavigation() || frameItem.identifier().processIdentifier() != item->protectedNavigatedFrameItem()->identifier().processIdentifier()) {
-        ASSERT(m_preferences->siteIsolationEnabled());
-        if (RefPtr frame = WebFrameProxy::webFrame(frameItem.frameID()))
-            process = frame->process();
-    }
-
     process->markProcessAsRecentlyUsed();
 
-    Ref frameState = WebFrameProxy::webFrame(frameItem.frameID()) ? frameItem.copyFrameStateWithChildren() : item->mainFrameState();
+    Ref frameState = item->mainFrameState();
+    if (m_preferences->siteIsolationEnabled()) {
+        if (RefPtr frame = WebFrameProxy::webFrame(frameItem.frameID())) {
+            process = frame->process();
+            frameState = frameItem.copyFrameStateWithChildren();
+        }
+    }
     auto publicSuffix = WebCore::PublicSuffixStore::singleton().publicSuffix(URL(item->url()));
     process->send(Messages::WebPage::GoToBackForwardItem({ navigation->navigationID(), WTFMove(frameState), frameLoadType, ShouldTreatAsContinuingLoad::No, std::nullopt, m_lastNavigationWasAppInitiated, std::nullopt, WTFMove(publicSuffix), { } }), webPageIDInProcess(process));
     process->startResponsivenessTimer();

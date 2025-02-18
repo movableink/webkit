@@ -2353,10 +2353,8 @@ void WebPage::goToBackForwardItem(GoToBackForwardItemParameters&& parameters)
     m_internals->pendingWebsitePolicies = WTFMove(parameters.websitePolicies);
 
     Ref targetFrame = m_mainFrame;
-    if (!item->wasRestoredFromSession()) {
-        if (RefPtr historyItemFrame = WebProcess::singleton().webFrame(item->frameID()))
-            targetFrame = historyItemFrame.releaseNonNull();
-    }
+    if (RefPtr historyItemFrame = WebProcess::singleton().webFrame(item->frameID()); historyItemFrame && historyItemFrame->page() == this)
+        targetFrame = historyItemFrame.releaseNonNull();
 
     if (RefPtr targetLocalFrame = targetFrame->provisionalFrame() ? targetFrame->provisionalFrame() : targetFrame->coreLocalFrame())
         protectedCorePage()->goToItem(*targetLocalFrame, *item, parameters.backForwardType, parameters.shouldTreatAsContinuingLoad);
