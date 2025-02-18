@@ -3025,7 +3025,8 @@ TEST(WritingTools, ShowPanelWithRangedSelection)
     EXPECT_TRUE(NSEqualRects(expectedRect, selectionRect));
 }
 
-TEST(WritingTools, ShowToolWithRangedSelection)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ShowToolWithRangedSelection)
 {
     __block bool done = false;
     __block WTRequestedTool requestedTool = WTRequestedToolIndex;
@@ -3052,7 +3053,8 @@ TEST(WritingTools, ShowToolWithRangedSelection)
     EXPECT_TRUE(NSEqualRects(expectedRect, selectionRect));
 }
 
-TEST(WritingTools, ShowInvalidToolWithRangedSelection)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ShowInvalidToolWithRangedSelection)
 {
     __block bool done = false;
     __block WTRequestedTool requestedTool = WTRequestedToolIndex;
@@ -3167,7 +3169,8 @@ TEST(WritingTools, FocusWebViewAfterProofreadingAnimation)
     EXPECT_EQ([[webView window] firstResponder], webView.get());
 }
 
-TEST(WritingTools, ContextMenuItemsNonEditable)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ContextMenuItemsNonEditable)
 {
     RetainPtr delegate = adoptNS([[TestUIDelegate alloc] init]);
 
@@ -3202,7 +3205,8 @@ TEST(WritingTools, ContextMenuItemsNonEditable)
     }
 }
 
-TEST(WritingTools, ContextMenuItemsEditable)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ContextMenuItemsEditable)
 {
     RetainPtr delegate = adoptNS([[TestUIDelegate alloc] init]);
 
@@ -3237,7 +3241,8 @@ TEST(WritingTools, ContextMenuItemsEditable)
     }
 }
 
-TEST(WritingTools, ContextMenuItemsEditableEmpty)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ContextMenuItemsEditableEmpty)
 {
     RetainPtr delegate = adoptNS([[TestUIDelegate alloc] init]);
 
@@ -3529,7 +3534,8 @@ TEST(WritingTools, ContextRangeFromRangeSelection)
     TestWebKitAPI::Util::run(&finished);
 }
 
-TEST(WritingTools, SuggestedTextIsSelectedAfterSmartReply)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_SuggestedTextIsSelectedAfterSmartReply)
 {
     auto session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeComposition textViewDelegate:nil]);
     [session setCompositionSessionType:WTCompositionSessionTypeSmartReply];
