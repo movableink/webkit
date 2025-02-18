@@ -3044,5 +3044,7 @@ webkit.org/b/287810 http/tests/webarchive/cross-origin-stylesheet-crash.html [ F
 
 webkit.org/b/287833 [ Release arm64 ] imported/w3c/web-platform-tests/css/css-masking/clip-path/animations/clip-path-animation-font-size-mixed-change.html [ Pass ImageOnlyFailure ]
 
+webkit.org/b/287902 imported/w3c/web-platform-tests/css/css-grid/alignment/self-baseline/grid-self-baseline-changes-grid-area-size-012.html [ Pass ImageOnlyFailure ]
+
 webkit.org/b/287836 compositing/animation/repaint-after-clearing-shared-backing.html [ ImageOnlyFailure ]
 
