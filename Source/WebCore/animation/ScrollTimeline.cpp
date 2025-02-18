@@ -47,7 +47,7 @@ Ref<ScrollTimeline> ScrollTimeline::create(Document& document, ScrollTimelineOpt
         // If the source member of options is present,
         // The source member of options.
         timeline->setSource(optionalSource->get());
-    } else if (RefPtr scrollingElement = Ref { document }->scrollingElement()) {
+    } else if (RefPtr scrollingElement = Ref { document }->scrollingElementForAPI()) {
         // Otherwise,
         // The scrollingElement of the Document associated with the Window that is the current global object.
         timeline->setSource(scrollingElement.get());

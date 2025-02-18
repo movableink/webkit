@@ -1,5 +1,3 @@
 
-FAIL Style of <body> is reflected in source attribute in quirks mode assert_equals: expected null but got Element node <body id="body1" style="overflow: scroll;">
-<script>
-test...
+PASS Style of <body> is reflected in source attribute in quirks mode
 
