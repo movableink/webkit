@@ -37,7 +37,6 @@ WebProcess/WebPage/ViewGestureGeometryCollector.cpp
 WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/WebPageTesting.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
-WebProcess/WebPage/mac/WebPageMac.mm
 WebProcess/WebProcess.cpp
 WebProcess/WebStorage/StorageAreaMap.cpp
 WebProcess/cocoa/WebProcessCocoa.mm

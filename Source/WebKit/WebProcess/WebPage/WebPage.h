@@ -2687,7 +2687,7 @@ private:
                 m_webPage->endPrintingImmediately();
         }
     private:
-        Ref<WebPage> m_webPage;
+        const Ref<WebPage> m_webPage;
         const bool m_wasInActivePrintContextAccessScope;
     };
 

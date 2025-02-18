@@ -15,4 +15,3 @@ WebProcess/WebPage/DrawingArea.cpp
 WebProcess/WebPage/RemoteLayerTree/GraphicsLayerCARemote.mm
 WebProcess/WebPage/RemoteLayerTree/RemoteScrollingCoordinator.mm
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
-WebProcess/WebPage/mac/WebPageMac.mm

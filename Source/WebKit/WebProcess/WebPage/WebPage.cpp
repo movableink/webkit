@@ -2399,7 +2399,7 @@ void WebPage::setSize(const WebCore::IntSize& viewSize)
         return;
 
     m_viewSize = viewSize;
-    RefPtr view = m_page->protectedMainFrame()->virtualView();
+    RefPtr view = protectedCorePage()->protectedMainFrame()->virtualView();
     if (!view) {
         ASSERT_NOT_REACHED();
         return;
@@ -3167,7 +3167,7 @@ static DestinationColorSpace snapshotColorSpace(SnapshotOptions options, WebPage
 {
 #if USE(CG)
     if (options.contains(SnapshotOption::UseScreenColorSpace))
-        return screenColorSpace(page.corePage()->protectedMainFrame()->virtualView());
+        return screenColorSpace(page.protectedCorePage()->protectedMainFrame()->virtualView());
 #endif
     return DestinationColorSpace::SRGB();
 }
@@ -3261,7 +3261,7 @@ void WebPage::pageStoppedScrolling()
 {
     // Maintain the current history item's scroll position up-to-date.
     if (RefPtr frame = m_mainFrame->coreLocalFrame())
-        frame->loader().protectedHistory()->saveScrollPositionAndViewStateToItem(frame->loader().history().protectedCurrentItem().get());
+        frame->loader().protectedHistory()->saveScrollPositionAndViewStateToItem(frame->loader().protectedHistory()->protectedCurrentItem().get());
 }
 
 void WebPage::setHasActiveAnimatedScrolls(bool hasActiveAnimatedScrolls)
@@ -7544,7 +7544,7 @@ void WebPage::setAlwaysShowsHorizontalScroller(bool alwaysShowsHorizontalScrolle
 
     m_alwaysShowsHorizontalScroller = alwaysShowsHorizontalScroller;
 
-    RefPtr view = corePage()->protectedMainFrame()->virtualView();
+    RefPtr view = protectedCorePage()->protectedMainFrame()->virtualView();
     if (!alwaysShowsHorizontalScroller)
         view->setHorizontalScrollbarLock(false);
     view->setHorizontalScrollbarMode(alwaysShowsHorizontalScroller ? ScrollbarMode::AlwaysOn : m_mainFrameIsScrollable ? ScrollbarMode::Auto : ScrollbarMode::AlwaysOff, alwaysShowsHorizontalScroller || !m_mainFrameIsScrollable);
@@ -7557,7 +7557,7 @@ void WebPage::setAlwaysShowsVerticalScroller(bool alwaysShowsVerticalScroller)
 
     m_alwaysShowsVerticalScroller = alwaysShowsVerticalScroller;
 
-    RefPtr view = corePage()->protectedMainFrame()->virtualView();
+    RefPtr view = protectedCorePage()->protectedMainFrame()->virtualView();
     if (!alwaysShowsVerticalScroller)
         view->setVerticalScrollbarLock(false);
     view->setVerticalScrollbarMode(alwaysShowsVerticalScroller ? ScrollbarMode::AlwaysOn : m_mainFrameIsScrollable ? ScrollbarMode::Auto : ScrollbarMode::AlwaysOff, alwaysShowsVerticalScroller || !m_mainFrameIsScrollable);

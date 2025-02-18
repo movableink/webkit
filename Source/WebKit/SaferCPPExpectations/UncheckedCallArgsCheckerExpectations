@@ -41,6 +41,5 @@ WebProcess/WebPage/RemoteLayerTree/RemoteScrollbarsController.mm
 WebProcess/WebPage/WebFoundTextRangeController.cpp
 WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
-WebProcess/WebPage/mac/WebPageMac.mm
 WebProcess/cocoa/PlaybackSessionManager.mm
 WebProcess/cocoa/VideoPresentationManager.mm
