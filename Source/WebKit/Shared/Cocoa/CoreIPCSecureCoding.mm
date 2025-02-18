@@ -33,6 +33,7 @@
 #import "WKCrashReporter.h"
 #import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/TZoneMallocInlines.h>
+#import <wtf/cocoa/NSStringExtras.h>
 #import <wtf/text/StringHash.h>
 
 namespace WebKit {
@@ -100,7 +101,7 @@ NO_RETURN static void crashWithClassName(Class objectClass)
     WebKit::logAndSetCrashLogMessage("NSSecureCoding path used for unexpected object"_s);
 
     std::array<uint64_t, 6> values { 0, 0, 0, 0, 0, 0 };
-    strncpy(reinterpret_cast<char*>(values.data()), NSStringFromClass(objectClass).UTF8String, sizeof(values));
+    memcpySpan(asMutableByteSpan(std::span { values }), span(NSStringFromClass(objectClass)));
     CRASH_WITH_INFO(values[0], values[1], values[2], values[3], values[4], values[5]);
 }
 
