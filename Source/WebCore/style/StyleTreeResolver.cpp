@@ -1292,8 +1292,12 @@ auto TreeResolver::updateAnchorPositioningState(Element& element, const RenderSt
     if (!style)
         return AnchorPositionedElementAction::None;
 
+    AnchorPositionEvaluator::updateAnchorPositionedStateForLayoutTimePositioned(element, *style);
+
     auto* anchorPositionedState = m_document->styleScope().anchorPositionedStates().get(element);
-    if (!anchorPositionedState || anchorPositionedState->stage >= AnchorPositionResolutionStage::Resolved)
+
+    auto needsInterleavedLayout = anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved;
+    if (!needsInterleavedLayout)
         return AnchorPositionedElementAction::None;
 
     m_hasUnresolvedAnchorPositionedElements = true;

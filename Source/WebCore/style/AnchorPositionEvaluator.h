@@ -41,6 +41,7 @@ class Element;
 class LayoutRect;
 class RenderBlock;
 class RenderBoxModelObject;
+class RenderStyle;
 
 enum CSSPropertyID : uint16_t;
 
@@ -49,8 +50,8 @@ namespace Style {
 class BuilderState;
 
 enum class AnchorPositionResolutionStage : uint8_t {
-    Initial,
-    FoundAnchors,
+    FindAnchors,
+    ResolveAnchorFunctions,
     Resolved,
     Positioned,
 };
@@ -62,7 +63,8 @@ struct AnchorPositionedState {
 public:
     AnchorElements anchorElements;
     UncheckedKeyHashSet<AtomString> anchorNames;
-    AnchorPositionResolutionStage stage;
+    AnchorPositionResolutionStage stage { AnchorPositionResolutionStage::FindAnchors };
+    bool hasAnchorFunctions { false };
 };
 
 using AnchorsForAnchorName = HashMap<AtomString, Vector<SingleThreadWeakRef<const RenderBoxModelObject>>>;
@@ -94,7 +96,7 @@ class AnchorPositionEvaluator {
 public:
     // Find the anchor element indicated by `elementName` and update the associated anchor resolution data.
     // Returns nullptr if the anchor element can't be found.
-    static RefPtr<Element> findAnchorAndAttemptResolution(const BuilderState&, std::optional<ScopedName> elementName);
+    static RefPtr<Element> findAnchorForAnchorFunctionAndAttemptResolution(const BuilderState&, std::optional<ScopedName> elementName);
 
     using Side = std::variant<CSSValueID, double>;
     static bool propertyAllowsAnchorFunction(CSSPropertyID);
@@ -106,11 +108,14 @@ public:
     static void updateAnchorPositioningStatesAfterInterleavedLayout(const Document&);
     static void cleanupAnchorPositionedState(Element&);
     static void updateSnapshottedScrollOffsets(Document&);
+    static void updateAnchorPositionedStateForLayoutTimePositioned(Element&, const RenderStyle&);
 
     static LayoutRect computeAnchorRectRelativeToContainingBlock(CheckedRef<const RenderBoxModelObject> anchorBox, const RenderBlock& containingBlock);
 
     using AnchorToAnchorPositionedMap = SingleThreadWeakHashMap<const RenderBoxModelObject, Vector<Ref<Element>>>;
     static AnchorToAnchorPositionedMap makeAnchorPositionedForAnchorMap(Document&);
+
+    static bool isLayoutTimeAnchorPositioned(const RenderStyle&);
 
 private:
     static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);

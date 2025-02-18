@@ -377,7 +377,7 @@ static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<co
     return removeBorderForInsetValue(insetValue, insetPropertySide, *containingBlock);
 }
 
-RefPtr<Element> AnchorPositionEvaluator::findAnchorAndAttemptResolution(const BuilderState& builderState, std::optional<ScopedName> elementName)
+RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptResolution(const BuilderState& builderState, std::optional<ScopedName> elementName)
 {
     const auto& style = builderState.style();
 
@@ -402,6 +402,8 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorAndAttemptResolution(const Bu
         return WTF::makeUnique<AnchorPositionedState>();
     }).iterator->value.get();
 
+    anchorPositionedState.hasAnchorFunctions = true;
+
     if (!elementName)
         elementName = builderState.style().positionAnchor();
 
@@ -409,10 +411,10 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorAndAttemptResolution(const Bu
         // Collect anchor names that this element refers to in anchor() or anchor-size()
         bool isNewAnchorName = anchorPositionedState.anchorNames.add(elementName->name).isNewEntry;
 
-        // If anchor resolution has progressed past Initial, and we pick up a new anchor name, set the
+        // If anchor resolution has progressed past FindAnchors, and we pick up a new anchor name, set the
         // stage back to Initial. This restarts the resolution process to resolve newly added names.
         if (isNewAnchorName)
-            anchorPositionedState.stage = AnchorPositionResolutionStage::Initial;
+            anchorPositionedState.stage = AnchorPositionResolutionStage::FindAnchors;
     }
 
     // An anchor() instance will be ready to be resolved when all referenced anchor-names
@@ -420,7 +422,7 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorAndAttemptResolution(const Bu
     // should also have layout information for the anchor-positioned element alongside
     // the anchors referenced by the anchor-positioned element. Until then, we cannot
     // resolve this anchor() instance.
-    if (anchorPositionedState.stage == AnchorPositionResolutionStage::Initial)
+    if (anchorPositionedState.stage == AnchorPositionResolutionStage::FindAnchors)
         return { };
 
     CheckedPtr anchorPositionedRenderer = anchorPositionedElement->renderer();
@@ -482,7 +484,7 @@ std::optional<double> AnchorPositionEvaluator::evaluate(const BuilderState& buil
     if (!isValidAnchor())
         return { };
 
-    auto anchorElement = findAnchorAndAttemptResolution(builderState, elementName);
+    auto anchorElement = findAnchorForAnchorFunctionAndAttemptResolution(builderState, elementName);
     if (!anchorElement)
         return { };
 
@@ -593,7 +595,7 @@ std::optional<double> AnchorPositionEvaluator::evaluateSize(const BuilderState& 
     if (!isValidAnchorSize())
         return { };
 
-    auto anchorElement = findAnchorAndAttemptResolution(builderState, elementName);
+    auto anchorElement = findAnchorForAnchorFunctionAndAttemptResolution(builderState, elementName);
     if (!anchorElement)
         return { };
 
@@ -744,16 +746,31 @@ void AnchorPositionEvaluator::updateAnchorPositioningStatesAfterInterleavedLayou
 
     for (auto elementAndState : document.styleScope().anchorPositionedStates()) {
         auto& state = *elementAndState.value;
-        if (state.stage == AnchorPositionResolutionStage::Initial) {
+        if (state.stage == AnchorPositionResolutionStage::FindAnchors) {
             Ref element { elementAndState.key };
-            if (element->renderer())
+            if (CheckedPtr renderer = element->renderer()) {
                 state.anchorElements = findAnchorsForAnchorPositionedElement(element, state.anchorNames, anchorsForAnchorName);
-            state.stage = AnchorPositionResolutionStage::FoundAnchors;
+                if (isLayoutTimeAnchorPositioned(renderer->style()))
+                    renderer->setNeedsLayout();
+            }
+            state.stage = state.hasAnchorFunctions ? AnchorPositionResolutionStage::ResolveAnchorFunctions : AnchorPositionResolutionStage::Resolved;
             continue;
         }
         if (state.stage == AnchorPositionResolutionStage::Resolved)
             state.stage = AnchorPositionResolutionStage::Positioned;
     }
+}
+
+void AnchorPositionEvaluator::updateAnchorPositionedStateForLayoutTimePositioned(Element& element, const RenderStyle& style)
+{
+    if (!isLayoutTimeAnchorPositioned(style))
+        return;
+
+    auto* state = element.document().styleScope().anchorPositionedStates().ensure(element, [&] {
+        return makeUnique<AnchorPositionedState>();
+    }).iterator->value.get();
+
+    state->anchorNames.add(style.positionAnchor()->name);
 }
 
 void AnchorPositionEvaluator::updateSnapshottedScrollOffsets(Document& document)
@@ -829,6 +846,18 @@ void AnchorPositionEvaluator::cleanupAnchorPositionedState(Element& element)
             renderer->layer()->clearSnapshottedScrollOffsetForAnchorPositioning();
     }
 }
+
+bool AnchorPositionEvaluator::isLayoutTimeAnchorPositioned(const RenderStyle& style)
+{
+    if (!style.positionAnchor())
+        return false;
+
+    if (style.positionArea())
+        return true;
+
+    return style.justifySelf().position() == ItemPosition::AnchorCenter || style.alignSelf().position() == ItemPosition::AnchorCenter;
+}
+
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, PositionTryOrder order)
 {

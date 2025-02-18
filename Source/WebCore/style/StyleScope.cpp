@@ -1017,8 +1017,13 @@ bool Scope::invalidateForAnchorDependencies(LayoutDependencyUpdateContext& conte
         }
     }
 
-    for (auto& toInvalidate : anchoredElementsToInvalidate)
-        toInvalidate->invalidateForAnchorRectChange();
+    for (auto& toInvalidate : anchoredElementsToInvalidate) {
+        CheckedPtr renderer = toInvalidate->renderer();
+        if (renderer && AnchorPositionEvaluator::isLayoutTimeAnchorPositioned(renderer->style()))
+            renderer->setNeedsLayout();
+        else
+            toInvalidate->invalidateForAnchorRectChange();
+    }
 
     return !anchoredElementsToInvalidate.isEmpty();
 }
@@ -1087,7 +1092,8 @@ void Scope::resetAnchorPositioningStateBeforeStyleResolution()
     // FIXME: Move this transient state to TreeResolver.
     for (auto elementAndState : m_anchorPositionedStates) {
         elementAndState.value->anchorNames.clear();
-        elementAndState.value->stage = AnchorPositionResolutionStage::Initial;
+        elementAndState.value->stage = AnchorPositionResolutionStage::FindAnchors;
+        elementAndState.value->hasAnchorFunctions = false;
     }
 }
 
@@ -1097,7 +1103,7 @@ void Scope::updateAnchorPositioningStateAfterStyleResolution()
 
     m_anchorPositionedStates.removeIf([](auto& elementAndState) {
         // Remove if we have no anchors after initial resolution.
-        return elementAndState.value->stage != AnchorPositionResolutionStage::Initial && elementAndState.value->anchorNames.isEmpty();
+        return elementAndState.value->stage != AnchorPositionResolutionStage::FindAnchors && elementAndState.value->anchorNames.isEmpty();
     });
 }
 
