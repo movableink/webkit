@@ -68,6 +68,59 @@ extension WebPageWebView {
     }
 }
 
+extension WebPageWebView {
+    // MARK: Platform-agnostic scrolling capabilities
+
+#if canImport(UIKit)
+    @_spi(CrossImportOverlay)
+    public var alwaysBounceVertical: Bool {
+        get { scrollView.alwaysBounceVertical }
+        set { scrollView.alwaysBounceVertical = newValue }
+    }
+
+    @_spi(CrossImportOverlay)
+    public var alwaysBounceHorizontal: Bool {
+        get { scrollView.alwaysBounceHorizontal }
+        set { scrollView.alwaysBounceHorizontal = newValue }
+    }
+
+    @_spi(CrossImportOverlay)
+    public var bouncesVertically: Bool {
+        get { scrollView.bouncesVertically }
+        set { scrollView.bouncesVertically = newValue }
+    }
+
+    @_spi(CrossImportOverlay)
+    public var bouncesHorizontally: Bool {
+        get { scrollView.bouncesHorizontally }
+        set { scrollView.bouncesHorizontally = newValue }
+    }
+#else
+    @_spi(CrossImportOverlay)
+    public var alwaysBounceVertical: Bool {
+        get { self._alwaysBounceVertical }
+        set { self._alwaysBounceVertical = newValue }
+    }
+
+    @_spi(CrossImportOverlay)
+    public var alwaysBounceHorizontal: Bool {
+        get { self._alwaysBounceHorizontal }
+        set { self._alwaysBounceHorizontal = newValue }
+    }
+
+    @_spi(CrossImportOverlay)
+    public var bouncesVertically: Bool {
+        get { self._rubberBandingEnabled.contains(.top) && self._rubberBandingEnabled.contains(.bottom) }
+        set { self._rubberBandingEnabled.formUnion([.top, .bottom]) }
+    }
+
+    @_spi(CrossImportOverlay)
+    public var bouncesHorizontally: Bool {
+        get { self._rubberBandingEnabled.contains(.left) && self._rubberBandingEnabled.contains(.right) }
+        set { self._rubberBandingEnabled.formUnion([.left, .right]) }
+    }
+#endif
+}
 
 /// An object that controls and manages the behavior of interactive web content.
 @MainActor

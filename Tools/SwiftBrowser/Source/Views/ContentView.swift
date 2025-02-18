@@ -216,6 +216,8 @@ struct ContentView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(BrowserViewModel.self) private var viewModel
 
+    @AppStorage(AppStorageKeys.scrollBounceBehaviorBasedOnSize) private var scrollBounceBehaviorBasedOnSize: Bool?
+
     #if os(iOS)
     private static let navigationToolbarItemPlacement = ToolbarItemPlacement.bottomBar
     #else
@@ -272,6 +274,7 @@ struct ContentView: View {
                     DownloadsList(downloads: viewModel.downloadCoordinator.downloads)
                         .presentationDetents([.medium, .large])
                 }
+                .scrollBounceBehavior(scrollBounceBehaviorBasedOnSize == true ? .basedOnSize : .automatic)
                 .webViewContextMenu { element in
                     if let url = element.linkURL {
                         Button("Open Link in New Window") {

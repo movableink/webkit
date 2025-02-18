@@ -40,11 +40,26 @@ private struct PermissionDecisionView: View {
     }
 }
 
+private struct ScrollBounceBehaviorPicker: View {
+    @Binding var basedOnSize: Bool
+
+    var body: some View {
+        Picker(selection: $basedOnSize) {
+            Text("Automatic").tag(false)
+            Text("Based on Size").tag(true)
+        } label: {
+            Text("Scroll Bounce Behavior")
+        }
+    }
+}
+
 struct GeneralSettingsView: View {
     @AppStorage(AppStorageKeys.homepage) private var homepage = "https://www.webkit.org"
 
     @AppStorage(AppStorageKeys.orientationAndMotionAuthorization) private var orientationAndMotionAuthorization = WKPermissionDecision.prompt
     @AppStorage(AppStorageKeys.mediaCaptureAuthorization) private var mediaCaptureAuthorization = WKPermissionDecision.prompt
+
+    @AppStorage(AppStorageKeys.scrollBounceBehaviorBasedOnSize) private var scrollBounceBehaviorBasedOnSize = false
 
     let currentURL: URL?
 
@@ -73,6 +88,11 @@ struct GeneralSettingsView: View {
                     permissionDecision: $orientationAndMotionAuthorization,
                     label: "Allow sites to access sensors:"
                 )
+            }
+
+            Section {
+                ScrollBounceBehaviorPicker(basedOnSize: $scrollBounceBehaviorBasedOnSize)
+                    .padding(.top)
             }
         }
     }

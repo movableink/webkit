@@ -58,6 +58,22 @@ struct WebViewRepresentable {
         webView.isOpaque = environment.webViewContentBackground != .hidden
 #endif
 
+        if EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .always || EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .automatic {
+            webView.alwaysBounceVertical = true
+            webView.bouncesVertically = true
+        } else if EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .basedOnSize {
+            webView.alwaysBounceVertical = false
+            webView.bouncesVertically = true
+        }
+
+        if EquatableScrollBounceBehavior(environment.horizontalScrollBounceBehavior) == .always || EquatableScrollBounceBehavior(environment.horizontalScrollBounceBehavior) == .automatic {
+            webView.alwaysBounceHorizontal = true
+            webView.bouncesHorizontally = true
+        } else if EquatableScrollBounceBehavior(environment.horizontalScrollBounceBehavior) == .basedOnSize {
+            webView.alwaysBounceHorizontal = false
+            webView.bouncesHorizontally = true
+        }
+
         webView.configuration.preferences.isTextInteractionEnabled = environment.webViewTextSelection
         webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewAllowsElementFullscreen
 
@@ -70,6 +86,16 @@ struct WebViewRepresentable {
 
     func makeCoordinator() -> WebViewCoordinator {
         WebViewCoordinator(configuration: self)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, platformView: CocoaWebViewAdapter, context: Context) -> CGSize? {
+        guard let width = proposal.width, let height = proposal.height else {
+            return nil
+        }
+
+        // By default, SwiftUI allows representable views to have fractional sizes, however WebKit does not support this
+        // (it may result in incorrect behavior such as the size of the content view and scroll view being slightly mismatched).
+        return CGSize(width: width.rounded(), height: height.rounded());
     }
 }
 
@@ -127,6 +153,10 @@ extension WebViewRepresentable: UIViewRepresentable {
     func updateUIView(_ uiView: CocoaWebViewAdapter, context: Context) {
         updatePlatformView(uiView, context: context)
     }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: CocoaWebViewAdapter, context: Context) -> CGSize? {
+        sizeThatFits(proposal, platformView: uiView, context: context)
+    }
 }
 #else
 extension WebViewRepresentable: NSViewRepresentable {
@@ -137,5 +167,28 @@ extension WebViewRepresentable: NSViewRepresentable {
     func updateNSView(_ nsView: CocoaWebViewAdapter, context: Context) {
         updatePlatformView(nsView, context: context)
     }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: CocoaWebViewAdapter, context: Context) -> CGSize? {
+        sizeThatFits(proposal, platformView: nsView, context: context)
+    }
 }
 #endif
+
+// FIXME: (rdar://145030632) Remove this workaround when possible.
+struct EquatableScrollBounceBehavior: Equatable {
+    static let automatic = Self(.automatic)
+
+    static let always = Self(.always)
+
+    static let basedOnSize = Self(.basedOnSize)
+
+    init(_ behavior: ScrollBounceBehavior) {
+        self.behavior = behavior
+    }
+
+    let behavior: ScrollBounceBehavior
+
+    static func == (lhs: EquatableScrollBounceBehavior, rhs: EquatableScrollBounceBehavior) -> Bool {
+        unsafeBitCast(lhs.behavior, to: Int8.self) == unsafeBitCast(rhs.behavior, to: Int8.self)
+    }
+}

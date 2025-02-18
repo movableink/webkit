@@ -27,4 +27,5 @@ enum AppStorageKeys {
     static let homepage = "homepage"
     static let orientationAndMotionAuthorization = "orientationAndMotionAuthorization2"
     static let mediaCaptureAuthorization = "mediaCaptureAuthorization2"
+    static let scrollBounceBehaviorBasedOnSize = "scrollBounceBehaviorBasedOnSize"
 }
