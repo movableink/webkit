@@ -305,6 +305,7 @@ FrameInfoData WebFrame::info() const
         frameID(),
         parent ? std::optional { parent->frameID() } : std::nullopt,
         document ? std::optional { document->identifier() } : std::nullopt,
+        certificateInfo(),
         getCurrentProcessID(),
         isFocused(),
         coreLocalFrame ? coreLocalFrame->loader().errorOccurredInLoading() : false,

@@ -244,6 +244,7 @@ void ProvisionalPageProxy::cancel()
         mainFrame->frameID(),
         std::nullopt,
         std::nullopt,
+        { },
         mainFrame->processID(),
         mainFrame->isFocused(),
     };

@@ -3979,4 +3979,20 @@ TEST(SiteIsolation, PlayAudioInRemoteFrameThenRemove)
     expectPlayingAudio(webView.get(), false, "Should not be playing audio after removing iframe"_s);
 }
 
+TEST(SiteIsolation, FrameServerTrust)
+{
+    HTTPServer plaintextServer({
+        { "/"_s, { "<iframe src='https://webkit.org/iframe'></iframe>"_s } },
+    });
+    HTTPServer secureServer({
+        { "/iframe"_s, { "<script>alert('iframe loaded')</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(secureServer);
+    [webView loadRequest:plaintextServer.request()];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "iframe loaded");
+    EXPECT_NULL([webView mainFrame].info._serverTrust);
+    verifyCertificateAndPublicKey([webView firstChildFrame]._serverTrust);
+}
+
 }
