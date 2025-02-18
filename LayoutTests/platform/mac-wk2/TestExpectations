@@ -1970,3 +1970,7 @@ webkit.org/b/287122 [ Ventura+ ] imported/w3c/web-platform-tests/html/capability
 [ arm64 ] fast/webgpu/nocrash/fuzz-287444.html [ Skip ]
 
 webkit.org/b/287679 [ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/modal-pseudo-class-in-has.html [ Pass Failure ]
+
+# webkit.org/b/ 2x [ wk2 x86_64 ] imported/w3c/web-platform-tests/css/css-shapes/shape-outside/supported-shapes/ellipse/shape-outside-ellipse-0*.html are constantly failing
+[ x86_64 ] imported/w3c/web-platform-tests/css/css-shapes/shape-outside/supported-shapes/ellipse/shape-outside-ellipse-046.html [ ImageOnlyFailure ]
+[ x86_64 ] imported/w3c/web-platform-tests/css/css-shapes/shape-outside/supported-shapes/ellipse/shape-outside-ellipse-048.html [ ImageOnlyFailure ]
