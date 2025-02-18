@@ -195,14 +195,15 @@ void VideoPresentationInterfaceIOS::ensurePipPlacardIsShowing()
     if (placardHeight < 100)
         [pipLabel setHidden:YES];
 
-    UIView *parentView = layerHostView().superview;
-    [parentView.superview insertSubview:pipPlacard.get() atIndex:0];
-    [NSLayoutConstraint activateConstraints:@[
-        [parentView.leadingAnchor constraintEqualToAnchor:[pipPlacard leadingAnchor]],
-        [parentView.trailingAnchor constraintEqualToAnchor:[pipPlacard trailingAnchor]],
-        [parentView.topAnchor constraintEqualToAnchor:[pipPlacard topAnchor]],
-        [parentView.bottomAnchor constraintEqualToAnchor:[pipPlacard bottomAnchor]],
-    ]];
+    if (UIView *parentView = layerHostView().superview) {
+        [parentView.superview insertSubview:pipPlacard.get() atIndex:0];
+        [NSLayoutConstraint activateConstraints:@[
+            [parentView.leadingAnchor constraintEqualToAnchor:[pipPlacard leadingAnchor]],
+            [parentView.trailingAnchor constraintEqualToAnchor:[pipPlacard trailingAnchor]],
+            [parentView.topAnchor constraintEqualToAnchor:[pipPlacard topAnchor]],
+            [parentView.bottomAnchor constraintEqualToAnchor:[pipPlacard bottomAnchor]],
+        ]];
+    }
 
     m_pipPlacard = pipPlacard;
 }
