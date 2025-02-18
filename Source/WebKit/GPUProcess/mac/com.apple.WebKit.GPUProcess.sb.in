@@ -149,8 +149,24 @@
     ;; OpenCL
     (allow IOKIT_OPEN_SERVICE
         (iokit-connection "IOAccelerator"))
-    (allow IOKIT_OPEN_USER_CLIENT
-        (iokit-connection "IOAccelerator"))
+    (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-connection "IOAccelerator")
+            (apply-message-filter
+                (allow (with report) (with telemetry)
+                    iokit-async-external-method
+                    iokit-external-method
+                    iokit-external-trap)
+                (allow iokit-external-method
+                    (iokit-method-number 0 2 5 6 7 8 10 15 16 17 29 31 40 256 258 261 263 264))
+                (allow iokit-external-trap
+                    (iokit-trap-number 0 1 3))
+                (allow iokit-async-external-method
+                    (iokit-method-number 263))))
+        ;; else
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-connection "IOAccelerator")))
+
     (allow IOKIT_OPEN_USER_CLIENT
         (iokit-user-client-class "IOSurfaceRootUserClient"))
     (deny IOKIT_OPEN_USER_CLIENT
