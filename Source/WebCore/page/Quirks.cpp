@@ -1403,29 +1403,6 @@ bool Quirks::needsIPadMiniUserAgent(const URL& url)
     if (host == "cctv.com"_s || host.endsWith(".cctv.com"_s))
         return true;
 
-#if USE(HSBC_MOBILE_SITE_FOR_IPAD)
-    if (host.contains("hsbc."_s)) {
-        if (host == "hsbc.com.au"_s || host.endsWith(".hsbc.com.au"_s))
-            return true;
-        if (host == "hsbc.com.eg"_s || host.endsWith(".hsbc.com.eg"_s))
-            return true;
-        if (host == "hsbc.lk"_s || host.endsWith(".hsbc.lk"_s))
-            return true;
-        if (host == "hsbc.co.uk"_s || host.endsWith(".hsbc.co.uk"_s))
-            return true;
-        if (host == "hsbc.com.hk"_s || host.endsWith(".hsbc.com.hk"_s))
-            return true;
-        if (host == "hsbc.com.mx"_s || host.endsWith(".hsbc.com.mx"_s))
-            return true;
-        if (host == "hsbc.com.ph"_s || host.endsWith(".hsbc.com.ph"_s))
-            return true;
-        if (host == "hsbc.com"_s || host.endsWith(".hsbc.com"_s))
-            return true;
-        if (host == "hsbc.com.cn"_s || host.endsWith(".hsbc.com.cn"_s))
-            return true;
-    }
-#endif
-
     // FIXME: Remove this quirk when <rdar://problem/61733101> is complete.
     if (host == "roblox.com"_s || host.endsWith(".roblox.com"_s))
         return true;
