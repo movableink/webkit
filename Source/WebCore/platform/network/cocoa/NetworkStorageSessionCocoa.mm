@@ -503,7 +503,7 @@ static NSHTTPCookie *parseDOMCookie(String cookieString, NSURL* cookieURL, std::
     return adjustScriptWrittenCookie([NSHTTPCookie _cookieForSetCookieString:cookieString forURL:cookieURL partition:nsStringNilIfEmpty(partition)], cappedLifetime);
 }
 
-void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ApplyTrackingPrevention applyTrackingPrevention, const String& cookieString, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
+void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ApplyTrackingPrevention applyTrackingPrevention, RequiresScriptTelemetry requiresScriptTelemetry, const String& cookieString, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies) || m_isInMemoryCookieStore);
 
@@ -514,7 +514,7 @@ void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameS
 
     NSURL *cookieURL = url;
 
-    std::optional<Seconds> cookieCap = clientSideCookieCap(RegistrableDomain { firstParty }, pageID);
+    auto cookieCap = clientSideCookieCap(RegistrableDomain { firstParty }, requiresScriptTelemetry, pageID);
 
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
     String partitionKey = isOptInCookiePartitioningEnabled() ? cookiePartitionIdentifier(firstParty) : String { };
@@ -531,7 +531,7 @@ void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameS
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
-bool NetworkStorageSession::setCookieFromDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ApplyTrackingPrevention applyTrackingPrevention, const Cookie& cookie, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
+bool NetworkStorageSession::setCookieFromDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ApplyTrackingPrevention applyTrackingPrevention, RequiresScriptTelemetry requiresScriptTelemetry, const Cookie& cookie, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies) || m_isInMemoryCookieStore);
 
@@ -540,7 +540,7 @@ bool NetworkStorageSession::setCookieFromDOM(const URL& firstParty, const SameSi
     if (applyTrackingPrevention == ApplyTrackingPrevention::Yes && shouldBlockCookies(firstParty, url, frameID, pageID, shouldRelaxThirdPartyCookieBlocking))
         return false;
 
-    auto expiryCap = clientSideCookieCap(RegistrableDomain { firstParty }, pageID);
+    auto expiryCap = clientSideCookieCap(RegistrableDomain { firstParty }, requiresScriptTelemetry, pageID);
     RetainPtr nshttpCookie = adjustScriptWrittenCookie((NSHTTPCookie *)cookie, expiryCap);
     if (!nshttpCookie)
         return false;

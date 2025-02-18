@@ -1041,6 +1041,7 @@ def headers_for_type(type):
         'WebCore::RenderAsTextFlag': ['<WebCore/RenderTreeAsText.h>'],
         'WebCore::RenderingPurpose': ['<WebCore/RenderingMode.h>'],
         'WebCore::RequestStorageAccessResult': ['<WebCore/DocumentStorageAccess.h>'],
+        'WebCore::RequiresScriptTelemetry': ['<WebCore/NetworkStorageSession.h>'],
         'WebCore::RouteSharingPolicy': ['<WebCore/AudioSession.h>'],
         'WebCore::RubberBandingBehavior': ['<WebCore/ScrollTypes.h>'],
         'WebCore::SameSiteStrictEnforcementEnabled': ['<WebCore/NetworkStorageSession.h>'],

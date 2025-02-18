@@ -127,7 +127,7 @@ void CookieJar::setCookies(Document& document, const URL& url, const String& coo
         frameID = frame->frameID();
 
     if (CheckedPtr session = protectedStorageSessionProvider()->storageSession())
-        session->setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo(document, IsForDOMCookieAccess::Yes), url, frameID, pageID, ApplyTrackingPrevention::Yes, cookieString, shouldRelaxThirdPartyCookieBlocking(document));
+        session->setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo(document, IsForDOMCookieAccess::Yes), url, frameID, pageID, ApplyTrackingPrevention::Yes, RequiresScriptTelemetry::No, cookieString, shouldRelaxThirdPartyCookieBlocking(document));
     else
         ASSERT_NOT_REACHED();
 }

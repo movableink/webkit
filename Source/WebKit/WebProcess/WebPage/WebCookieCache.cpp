@@ -94,7 +94,7 @@ String WebCookieCache::cookiesForDOM(const URL& firstParty, const SameSiteInfo& 
 void WebCookieCache::setCookiesFromDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, FrameIdentifier frameID, PageIdentifier pageID, const String& cookieString, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking)
 {
     if (m_hostsWithInMemoryStorage.contains<StringViewHashTranslator>(url.host()))
-        inMemoryStorageSession().setCookiesFromDOM(firstParty, sameSiteInfo, url, frameID, pageID, ApplyTrackingPrevention::No, cookieString, shouldRelaxThirdPartyCookieBlocking);
+        inMemoryStorageSession().setCookiesFromDOM(firstParty, sameSiteInfo, url, frameID, pageID, ApplyTrackingPrevention::No, RequiresScriptTelemetry::No, cookieString, shouldRelaxThirdPartyCookieBlocking);
 }
 
 PendingCookieUpdateCounter::Token WebCookieCache::willSetCookieFromDOM()
@@ -105,7 +105,7 @@ PendingCookieUpdateCounter::Token WebCookieCache::willSetCookieFromDOM()
 void WebCookieCache::didSetCookieFromDOM(PendingCookieUpdateCounter::Token, const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, FrameIdentifier frameID, PageIdentifier pageID, const WebCore::Cookie& cookie, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking)
 {
     if (m_hostsWithInMemoryStorage.contains<StringViewHashTranslator>(url.host()))
-        inMemoryStorageSession().setCookieFromDOM(firstParty, sameSiteInfo, url, frameID, pageID, ApplyTrackingPrevention::No, cookie, shouldRelaxThirdPartyCookieBlocking);
+        inMemoryStorageSession().setCookieFromDOM(firstParty, sameSiteInfo, url, frameID, pageID, ApplyTrackingPrevention::No, RequiresScriptTelemetry::No, cookie, shouldRelaxThirdPartyCookieBlocking);
 }
 
 void WebCookieCache::cookiesAdded(const String& host, const Vector<WebCore::Cookie>& cookies)
