@@ -1252,26 +1252,38 @@ Ref<IDBRequest> IDBTransaction::requestPutOrAdd(IDBObjectStore& objectStore, Ref
     LOG(IndexedDBOperations, "IDB putOrAdd operation: %s key: %s", objectStore.info().condensedLoggingString().utf8().data(), key ? key->loggingString().utf8().data() : "<null key>");
     scheduleOperation(IDBClient::TransactionOperationImpl::create(*this, request.get(), [protectedThis = Ref { *this }, request] (const auto& result) {
         protectedThis->didPutOrAddOnServer(request.get(), result);
-    }, [protectedThis = Ref { *this }, key, value = Ref { value }, overwriteMode, objectStoreInfo = objectStore.info()] (auto& operation) {
-        protectedThis->putOrAddOnServer(operation, objectStoreInfo, key.get(), value.ptr(), overwriteMode);
+    }, [protectedThis = Ref { *this }, key = WTFMove(key), value = Ref { value }, overwriteMode, objectStoreInfo = objectStore.info()] (auto& operation) mutable {
+        protectedThis->putOrAddOnServer(operation, objectStoreInfo, WTFMove(key), WTFMove(value), overwriteMode);
     }), IsWriteOperation::Yes);
 
     return request;
 }
 
-void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation, const IDBObjectStoreInfo& objectStoreInfo, RefPtr<IDBKey> key, RefPtr<SerializedScriptValue> value, const IndexedDB::ObjectStoreOverwriteMode& overwriteMode)
+void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation, const IDBObjectStoreInfo& objectStoreInfo, RefPtr<IDBKey>&& key, Ref<SerializedScriptValue>&& value, const IndexedDB::ObjectStoreOverwriteMode& overwriteMode)
 {
     LOG(IndexedDB, "IDBTransaction::putOrAddOnServer");
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(!isReadOnly());
-    ASSERT(value);
-    ASSERT(scriptExecutionContext());
+
+    RefPtr context = scriptExecutionContext();
+    auto* globalObject = context ? context->globalObject() : nullptr;
+    RELEASE_ASSERT(context);
+    RELEASE_ASSERT(globalObject);
+    if (!globalObject) {
+        if (context) {
+            context->postTask([protectedOperation = Ref { operation }](ScriptExecutionContext&) {
+                auto result = IDBResultData::error(protectedOperation->identifier(), IDBError { ExceptionCode::InvalidStateError, "Script execution context has stopped"_s });
+                protectedOperation->doComplete(result);
+            });
+        }
+        return;
+    }
 
     // Create placeholder key to be replaced by auto generated key on server side.
     IDBKeyData keyData = key ? IDBKeyData { key.get() } : IDBKeyData::placeholder();
     if (!value->hasBlobURLs()) {
-        auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*scriptExecutionContext()->globalObject(), objectStoreInfo, keyData, *value);
-        m_database->connectionProxy().putOrAdd(operation, WTFMove(keyData), *value, indexKeys, overwriteMode);
+        auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*globalObject, objectStoreInfo, keyData, value.get());
+        m_database->connectionProxy().putOrAdd(operation, WTFMove(keyData), value.get(), indexKeys, overwriteMode);
         return;
     }
 
@@ -1282,14 +1294,13 @@ void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation
     if (!isMainThread()) {
         auto idbValue = value->writeBlobsToDiskForIndexedDBSynchronously(isEphemeral);
         if (idbValue.data().data()) {
-            auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*scriptExecutionContext()->globalObject(), objectStoreInfo, keyData, idbValue);
+            auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*globalObject, objectStoreInfo, keyData, idbValue);
             m_database->connectionProxy().putOrAdd(operation, WTFMove(keyData), idbValue, indexKeys, overwriteMode);
         } else {
             // If the IDBValue doesn't have any data, then something went wrong writing the blobs to disk.
             // In that case, we cannot successfully store this record, so we callback with an error.
-            RefPtr<IDBClient::TransactionOperation> protectedOperation(&operation);
-            auto result = IDBResultData::error(operation.identifier(), IDBError { ExceptionCode::UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
-            scriptExecutionContext()->postTask([protectedOperation = WTFMove(protectedOperation), result = WTFMove(result)](ScriptExecutionContext&) {
+            context->postTask([protectedOperation = Ref { operation }](ScriptExecutionContext&) {
+                auto result = IDBResultData::error(protectedOperation->identifier(), IDBError { ExceptionCode::UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
                 protectedOperation->doComplete(result);
             });
         }
@@ -1303,8 +1314,12 @@ void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation
     value->writeBlobsToDiskForIndexedDB(isEphemeral, [protectedThis = Ref { *this }, this, protectedOperation = Ref<IDBClient::TransactionOperation>(operation), objectStoreInfo = crossThreadCopy(objectStoreInfo), keyData = crossThreadCopy(WTFMove(keyData)), overwriteMode](IDBValue&& idbValue) mutable {
         ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
         ASSERT(isMainThread());
-        if (idbValue.data().data() && scriptExecutionContext()) {
-            auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*scriptExecutionContext()->globalObject(), objectStoreInfo, keyData, idbValue);
+
+        RefPtr context = scriptExecutionContext();
+        auto* globalObject = context ? context->globalObject() : nullptr;
+        RELEASE_ASSERT(globalObject);
+        if (idbValue.data().data() && globalObject) {
+            auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*globalObject, objectStoreInfo, keyData, idbValue);
             m_database->connectionProxy().putOrAdd(protectedOperation.get(), WTFMove(keyData), idbValue, indexKeys, overwriteMode);
             return;
         }
