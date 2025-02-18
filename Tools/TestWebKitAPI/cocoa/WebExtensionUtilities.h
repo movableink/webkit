@@ -62,6 +62,9 @@ using CocoaColor = UIColor;
 @property (nonatomic, readonly, strong) TestWebExtensionWindow *defaultWindow;
 @property (nonatomic, readonly, strong) TestWebExtensionTab *defaultTab;
 @property (nonatomic, readonly, copy) NSArray<TestWebExtensionWindow *> *windows;
+@property (nonatomic, readonly, copy) NSArray<NSString *> *testsAdded;
+@property (nonatomic, readonly, copy) NSArray<NSString *> *testsStarted;
+@property (nonatomic, readonly, copy) NSDictionary<NSString *, id> *testResults;
 
 - (TestWebExtensionWindow *)openNewWindow;
 - (TestWebExtensionWindow *)openNewWindowUsingPrivateBrowsing:(BOOL)usesPrivateBrowsing;

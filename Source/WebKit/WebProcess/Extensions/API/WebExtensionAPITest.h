@@ -31,6 +31,7 @@
 #include "WebExtensionAPIEvent.h"
 #include "WebExtensionAPIObject.h"
 #include "WebExtensionAPIWebNavigationEvent.h"
+#include <wtf/Deque.h>
 
 OBJC_CLASS NSString;
 
@@ -69,8 +70,31 @@ public:
 
     JSValue *assertSafeResolve(JSContextRef, JSValue *function, NSString *message);
 
+    JSValue *addTest(JSContextRef, JSValue *testFunction);
+
 private:
     RefPtr<WebExtensionAPIEvent> m_onMessage;
+
+    struct Test {
+        String testName;
+        std::pair<String, unsigned> location;
+        WebExtensionControllerIdentifier webExtensionControllerIdentifier;
+        RetainPtr<JSValue> testFunction;
+        RetainPtr<JSValue> resolveCallback;
+        RetainPtr<JSValue> rejectCallback;
+    };
+
+    Deque<Test> m_testQueue;
+    bool m_runningTest { false };
+    bool m_hitAssertion { false };
+
+    void assertEquals(JSContextRef, bool result, NSString *expectedString, NSString *actualString, NSString *message);
+    void startNextTest();
+    void recordAssertionIfNeeded(bool result)
+    {
+        if (m_runningTest && !m_hitAssertion && !result)
+            m_hitAssertion = true;
+    }
 #endif
 };
 

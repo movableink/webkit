@@ -49,6 +49,7 @@ static constexpr BOOL shouldEnableSiteIsolation = NO;
 @implementation TestWebExtensionManager {
     bool _done;
     bool _receivedMessage;
+    bool _runningTestFromQueue;
     NSMutableDictionary *_messages;
     NSMutableArray *_windows;
 }
@@ -163,6 +164,9 @@ static constexpr BOOL shouldEnableSiteIsolation = NO;
     _defaultWindow = window;
     _defaultTab = window.tabs.firstObject;
     _controllerDelegate = _internalDelegate;
+    _testsAdded = [NSArray array];
+    _testsStarted = [NSArray array];
+    _testResults = [NSDictionary dictionary];
 
     return self;
 }
@@ -311,7 +315,7 @@ static constexpr BOOL shouldEnableSiteIsolation = NO;
 
 - (void)_webExtensionController:(WKWebExtensionController *)controller recordTestAssertionResult:(BOOL)result withMessage:(NSString *)message andSourceURL:(NSString *)sourceURL lineNumber:(unsigned)lineNumber
 {
-    if (result)
+    if (result || _runningTestFromQueue)
         return;
 
     if (!message.length)
@@ -322,7 +326,7 @@ static constexpr BOOL shouldEnableSiteIsolation = NO;
 
 - (void)_webExtensionController:(WKWebExtensionController *)controller recordTestEqualityResult:(BOOL)result expectedValue:(NSString *)expectedValue actualValue:(NSString *)actualValue withMessage:(NSString *)message andSourceURL:(NSString *)sourceURL lineNumber:(unsigned)lineNumber
 {
-    if (result)
+    if (result || _runningTestFromQueue)
         return;
 
     if (!message.length)
@@ -355,8 +359,29 @@ static constexpr BOOL shouldEnableSiteIsolation = NO;
     [messagesArray addObject:argument ?: NSNull.null];
 }
 
-- (void)_webExtensionController:(WKWebExtensionController *)controller recordTestFinishedWithResult:(BOOL)result message:(NSString *)message andSourceURL:(NSString *)sourceURL lineNumber:(unsigned)lineNumber
+- (void)_webExtensionController:(WKWebExtensionController *)controller recordTestAddedWithName:(NSString *)testName andSourceURL:(NSString *)sourceURL lineNumber:(unsigned)lineNumber
 {
+    _testsAdded = [_testsAdded arrayByAddingObject:testName];
+}
+
+- (void)_webExtensionController:(WKWebExtensionController *)controller recordTestStartedWithName:(NSString *)testName andSourceURL:(NSString *)sourceURL lineNumber:(unsigned)lineNumber
+{
+    _runningTestFromQueue = YES;
+    _testsStarted = [_testsStarted arrayByAddingObject:testName];
+}
+
+- (void)_webExtensionController:(WKWebExtensionController *)controller recordTestFinishedWithName:(NSString *)testName result:(BOOL)result message:(NSString *)message andSourceURL:(NSString *)sourceURL lineNumber:(unsigned)lineNumber
+{
+    if (_runningTestFromQueue) {
+        _runningTestFromQueue = NO;
+
+        NSMutableDictionary<NSString *, id> *testResults = [_testResults mutableCopy];
+        testResults[testName] = @(result);
+        _testResults = [NSDictionary dictionaryWithDictionary:testResults];
+
+        return;
+    }
+
     _done = true;
 
     if (result)

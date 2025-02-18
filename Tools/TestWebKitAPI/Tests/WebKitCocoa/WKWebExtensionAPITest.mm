@@ -218,6 +218,264 @@ TEST(WKWebExtensionAPITest, SendMessageOutOfOrder)
     EXPECT_NS_EQUAL(firstMessage, @{ @"key": @"One" });
 }
 
+TEST(WKWebExtensionAPITest, AddAnonymousAsyncTest)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertRejects(browser.test.addTest(async () => {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('Passing an anonymous function into addTest resolved the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, @[ ]);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, @[ ]);
+    EXPECT_NS_EQUAL(manager.get().testResults, @{ });
+}
+
+TEST(WKWebExtensionAPITest, AddAsyncTestThatPasses)
+{
+    auto *testName = @"passingTest";
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertResolves(browser.test.addTest(async function passingTest() {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('A passing assertion in the addTest method rejected the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testResults, @{ testName: @YES });
+}
+
+TEST(WKWebExtensionAPITest, AddAsyncTestThatFails)
+{
+    auto *testName = @"failingTest";
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertRejects(browser.test.addTest(async function failingTest() {",
+        @"  browser.test.assertTrue(false)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('A failing assertion in the addTest method resolved the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testResults, @{ testName: @NO });
+}
+
+TEST(WKWebExtensionAPITest, AddAsyncTestThatThrows)
+{
+    auto *testName = @"failingTest";
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertRejects(browser.test.addTest(async function failingTest() {",
+        @"  throw new Error('fail the test')",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('Throwing an error in the addTest method resolved the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testResults, @{ testName: @0 });
+}
+
+TEST(WKWebExtensionAPITest, AddMultipleAsyncTestsThatPass)
+{
+    auto *testNames = @[ @"testA", @"testB" ];
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertResolves(browser.test.addTest(async function testA() {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .catch(() => browser.test.notifyFail('A passing assertion in the addTest method rejected the promise.'))",
+
+        @"browser.test.assertResolves(browser.test.addTest(async function testB() {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('A passing assertion in the addTest method rejected the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, testNames);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, testNames);
+    EXPECT_NS_EQUAL(manager.get().testResults, (@{ testNames.firstObject: @YES, testNames.lastObject: @YES }));
+}
+
+TEST(WKWebExtensionAPITest, AddMultipleAsyncTestsWithFailure)
+{
+    auto *testNames = @[ @"testA", @"testB" ];
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertRejects(browser.test.addTest(async function testA() {",
+        @"  browser.test.assertTrue(false)",
+        @"}))",
+        @"  .catch(() => browser.test.notifyFail('A failing assertion in the addTest method resolved the promise.'))",
+
+        @"browser.test.assertResolves(browser.test.addTest(async function testB() {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('A passing assertion in the addTest method rejected the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, testNames);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, testNames);
+    EXPECT_NS_EQUAL(manager.get().testResults, (@{ testNames.firstObject: @NO, testNames.lastObject: @YES }));
+}
+
+TEST(WKWebExtensionAPITest, AddAnonymousTest)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertRejects(browser.test.addTest(() => {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('Passing an anonymous function into addTest resolved the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, @[ ]);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, @[ ]);
+    EXPECT_NS_EQUAL(manager.get().testResults, @{ });
+}
+
+TEST(WKWebExtensionAPITest, AddTestThatPasses)
+{
+    auto *testName = @"passingTest";
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertResolves(browser.test.addTest(function passingTest() {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('A passing assertion in the addTest method rejected the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testResults, @{ testName: @YES });
+}
+
+TEST(WKWebExtensionAPITest, AddTestThatFails)
+{
+    auto *testName = @"failingTest";
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertRejects(browser.test.addTest(function failingTest() {",
+        @"  browser.test.assertTrue(false)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('A failing assertion in the addTest method resolved the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testResults, @{ testName: @NO });
+}
+
+TEST(WKWebExtensionAPITest, AddTestThatThrows)
+{
+    auto *testName = @"failingTest";
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertRejects(browser.test.addTest(function failingTest() {",
+        @"  throw new Error('fail the test')",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('Throwing an error in the addTest method resolved the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, @[ testName ]);
+    EXPECT_NS_EQUAL(manager.get().testResults, @{ testName: @0 });
+}
+
+TEST(WKWebExtensionAPITest, AddMultipleTestsThatPass)
+{
+    auto *testNames = @[ @"testA", @"testB" ];
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertResolves(browser.test.addTest(function testA() {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .catch(() => browser.test.notifyFail('A passing assertion in the addTest method rejected the promise.'))",
+
+        @"browser.test.assertResolves(browser.test.addTest(function testB() {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('A passing assertion in the addTest method rejected the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, testNames);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, testNames);
+    EXPECT_NS_EQUAL(manager.get().testResults, (@{ testNames.firstObject: @YES, testNames.lastObject: @YES }));
+}
+
+TEST(WKWebExtensionAPITest, AddMultipleTestsWithFailure)
+{
+    auto *testNames = @[ @"testA", @"testB" ];
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.assertRejects(browser.test.addTest(function testA() {",
+        @"  browser.test.assertTrue(false)",
+        @"}))",
+        @"  .catch(() => browser.test.notifyFail('A failing assertion in the addTest method resolved the promise.'))",
+
+        @"browser.test.assertResolves(browser.test.addTest(function testB() {",
+        @"  browser.test.assertTrue(true)",
+        @"}))",
+        @"  .then(() => browser.test.notifyPass())",
+        @"  .catch(() => browser.test.notifyFail('A passing assertion in the addTest method rejected the promise.'))"
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+
+    [manager run];
+
+    EXPECT_NS_EQUAL(manager.get().testsAdded, testNames);
+    EXPECT_NS_EQUAL(manager.get().testsStarted, testNames);
+    EXPECT_NS_EQUAL(manager.get().testResults, (@{ testNames.firstObject: @NO, testNames.lastObject: @YES }));
+}
+
 } // namespace TestWebKitAPI
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)

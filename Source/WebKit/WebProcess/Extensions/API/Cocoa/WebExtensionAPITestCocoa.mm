@@ -74,7 +74,7 @@ void WebExtensionAPITest::notifyFail(JSContextRef context, NSString *message)
     if (!webExtensionControllerProxy)
         return;
 
-    WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(false, message, location.first, location.second), webExtensionControllerProxy->identifier());
+    WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(nullString(), false, message, location.first, location.second), webExtensionControllerProxy->identifier());
 }
 
 void WebExtensionAPITest::notifyPass(JSContextRef context, NSString *message)
@@ -89,7 +89,7 @@ void WebExtensionAPITest::notifyPass(JSContextRef context, NSString *message)
     if (!webExtensionControllerProxy)
         return;
 
-    WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(true, message, location.first, location.second), webExtensionControllerProxy->identifier());
+    WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(nullString(), true, message, location.first, location.second), webExtensionControllerProxy->identifier());
 }
 
 void WebExtensionAPITest::sendMessage(JSContextRef context, NSString *message, JSValue *argument)
@@ -172,6 +172,8 @@ void WebExtensionAPITest::assertTrue(JSContextRef context, bool actualValue, NSS
     if (!webExtensionControllerProxy)
         return;
 
+    recordAssertionIfNeeded(actualValue);
+
     WebProcess::singleton().send(Messages::WebExtensionController::TestResult(actualValue, message, location.first, location.second), webExtensionControllerProxy->identifier());
 }
 
@@ -200,6 +202,8 @@ void WebExtensionAPITest::assertDeepEq(JSContextRef context, JSValue *actualValu
     if (!webExtensionControllerProxy)
         return;
 
+    recordAssertionIfNeeded(deepEqual);
+
     WebProcess::singleton().send(Messages::WebExtensionController::TestEqual(deepEqual, expectedJSONValue, actualJSONValue, message, location.first, location.second), webExtensionControllerProxy->identifier());
 }
 
@@ -212,7 +216,7 @@ static NSString *combineMessages(NSString *messageOne, NSString *messageTwo)
     return messageTwo;
 }
 
-static void assertEquals(JSContextRef context, bool result, NSString *expectedString, NSString *actualString, NSString *message)
+void WebExtensionAPITest::assertEquals(JSContextRef context, bool result, NSString *expectedString, NSString *actualString, NSString *message)
 {
     auto location = scriptLocation(context);
 
@@ -223,6 +227,8 @@ static void assertEquals(JSContextRef context, bool result, NSString *expectedSt
     RefPtr webExtensionControllerProxy = page->webExtensionControllerProxy();
     if (!webExtensionControllerProxy)
         return;
+
+    recordAssertionIfNeeded(result);
 
     WebProcess::singleton().send(Messages::WebExtensionController::TestEqual(result, expectedString, actualString, message, location.first, location.second), webExtensionControllerProxy->identifier());
 }
@@ -296,7 +302,7 @@ JSValue *WebExtensionAPITest::assertResolves(JSContextRef context, JSValue *prom
         }
 
         JSValue *errorMessageValue = error.isObject && [error hasProperty:@"message"] ? error[@"message"] : error;
-        notifyFail(context, combineMessages(message, [NSString stringWithFormat:@"Promise rejected with an error: %@", debugString(errorMessageValue)]));
+        fail(context, combineMessages(message, [NSString stringWithFormat:@"Promise rejected with an error: %@", debugString(errorMessageValue)]));
 
         [resolveCallback callWithArguments:nil];
     }];
@@ -347,7 +353,7 @@ JSValue *WebExtensionAPITest::assertSafe(JSContextRef context, JSValue *function
     function.context.exception = nil;
 
     JSValue *exceptionMessageValue = exceptionValue.isObject && [exceptionValue hasProperty:@"message"] ? exceptionValue[@"message"] : exceptionValue;
-    notifyFail(context, combineMessages(message, [NSString stringWithFormat:@"Function threw an exception: %@", debugString(exceptionMessageValue)]));
+    fail(context, combineMessages(message, [NSString stringWithFormat:@"Function threw an exception: %@", debugString(exceptionMessageValue)]));
 
     return [JSValue valueWithUndefinedInContext:function.context];
 }
@@ -359,6 +365,86 @@ JSValue *WebExtensionAPITest::assertSafeResolve(JSContextRef context, JSValue *f
         return result;
 
     return assertResolves(context, result, message);
+}
+
+JSValue *WebExtensionAPITest::addTest(JSContextRef context, JSValue *testFunction)
+{
+    auto testName = testFunction[@"name"].toString;
+    if (!testName.length)
+        return [JSValue valueWithNewPromiseRejectedWithReason:toErrorString("test.addTest()"_s, nullString(), "The supplied test function must be named."_s) inContext:toJSContext(context)];
+
+    RefPtr page = toWebPage(context);
+    if (!page)
+        return [JSValue valueWithNewPromiseRejectedWithReason:toErrorString("test.addTest()"_s, nullString(), "Error creating a new test."_s) inContext:toJSContext(context)];
+
+    RefPtr webExtensionControllerProxy = page->webExtensionControllerProxy();
+    if (!webExtensionControllerProxy)
+        return [JSValue valueWithNewPromiseRejectedWithReason:toErrorString("test.addTest()"_s, nullString(), "Error creating a new test."_s) inContext:toJSContext(context)];
+
+    __block JSValue *resolveCallback;
+    __block JSValue *rejectCallback;
+    JSValue *resultPromise = [JSValue valueWithNewPromiseInContext:testFunction.context fromExecutor:^(JSValue *resolve, JSValue *reject) {
+        resolveCallback = resolve;
+        rejectCallback = reject;
+    }];
+
+    auto location = scriptLocation(context);
+    auto webExtensionControllerIdentifier = webExtensionControllerProxy->identifier();
+
+    m_testQueue.append({
+        testName,
+        location,
+        webExtensionControllerIdentifier,
+        testFunction,
+        resolveCallback,
+        rejectCallback
+    });
+
+    WebProcess::singleton().send(Messages::WebExtensionController::TestAdded(testName, location.first, location.second), webExtensionControllerIdentifier);
+
+    if (!m_runningTest) {
+        m_runningTest = true;
+
+        WorkQueue::protectedMain()->dispatch([this, protectedThis = Ref { *this }] {
+            startNextTest();
+        });
+    }
+
+    return resultPromise;
+}
+
+void WebExtensionAPITest::startNextTest()
+{
+    auto test = m_testQueue.takeFirst();
+
+    WebProcess::singleton().send(Messages::WebExtensionController::TestStarted(test.testName, test.location.first, test.location.second), test.webExtensionControllerIdentifier);
+
+    JSValue *result = [test.testFunction callWithArguments:nil];
+
+    auto testComplete = [this, protectedThis = Ref { *this }, test](JSValue *result, JSValue *error) {
+        if (error || m_hitAssertion) {
+            JSValue *errorMessageValue = error.isObject && [error hasProperty:@"message"] ? error[@"message"] : error;
+            WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(test.testName, false, [NSString stringWithFormat:@"Promise rejected with an error: %@", debugString(errorMessageValue)], test.location.first, test.location.second), test.webExtensionControllerIdentifier);
+            [test.rejectCallback callWithArguments:nil];
+        } else {
+            WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(test.testName, true, @"Promise resolved without an error.", test.location.first, test.location.second), test.webExtensionControllerIdentifier);
+            [test.resolveCallback callWithArguments:@[ result ]];
+        }
+
+        m_hitAssertion = false;
+
+        if (!m_testQueue.isEmpty())
+            startNextTest();
+        else
+            m_runningTest = false;
+    };
+
+    if (result._isThenable) {
+        [result _awaitThenableResolutionWithCompletionHandler:^(JSValue *result, JSValue *error) {
+            testComplete(result, error);
+        }];
+    } else
+        testComplete(result, test.testFunction.get().context.exception);
 }
 
 void WebExtensionContextProxy::dispatchTestMessageEvent(const String& message, const String& argumentJSON, WebExtensionContentWorldType contentWorldType)

@@ -102,23 +102,48 @@ void WebExtensionController::testSentMessage(String message, String argument, St
     RELEASE_LOG_INFO(Extensions, "Test sent message: %{public}@ %{public}@ (%{public}@:%{public}u)", (NSString *)message, (NSString *)argument, (NSString *)sourceURL, lineNumber);
 }
 
-void WebExtensionController::testFinished(bool result, String message, String sourceURL, unsigned lineNumber)
+void WebExtensionController::testAdded(String testName, String sourceURL, unsigned lineNumber)
 {
     auto delegate = this->delegate();
-    if ([delegate respondsToSelector:@selector(_webExtensionController:recordTestFinishedWithResult:message:andSourceURL:lineNumber:)]) {
-        [delegate _webExtensionController:wrapper() recordTestFinishedWithResult:result message:message andSourceURL:sourceURL lineNumber:lineNumber];
+    if ([delegate respondsToSelector:@selector(_webExtensionController:recordTestAddedWithName:andSourceURL:lineNumber:)]) {
+        [delegate _webExtensionController:wrapper() recordTestAddedWithName:testName andSourceURL:sourceURL lineNumber:lineNumber];
         return;
     }
+
+    RELEASE_LOG_INFO(Extensions, "Test added: %{public}@ (%{public}@:%{public}u)", (NSString *)testName, (NSString *)sourceURL, lineNumber);
+}
+
+void WebExtensionController::testStarted(String testName, String sourceURL, unsigned lineNumber)
+{
+    auto delegate = this->delegate();
+    if ([delegate respondsToSelector:@selector(_webExtensionController:recordTestStartedWithName:andSourceURL:lineNumber:)]) {
+        [delegate _webExtensionController:wrapper() recordTestStartedWithName:testName andSourceURL:sourceURL lineNumber:lineNumber];
+        return;
+    }
+
+    RELEASE_LOG_INFO(Extensions, "Test started: %{public}@ (%{public}@:%{public}u)", (NSString *)testName, (NSString *)sourceURL, lineNumber);
+}
+
+void WebExtensionController::testFinished(String testName, bool result, String message, String sourceURL, unsigned lineNumber)
+{
+    auto delegate = this->delegate();
+    if ([delegate respondsToSelector:@selector(_webExtensionController:recordTestFinishedWithName:result:message:andSourceURL:lineNumber:)]) {
+        [delegate _webExtensionController:wrapper() recordTestFinishedWithName:testName result:result message:message andSourceURL:sourceURL lineNumber:lineNumber];
+        return;
+    }
+
+    if (testName.isEmpty())
+        testName = "(no test name)"_s;
 
     if (message.isEmpty())
         message = "(no message)"_s;
 
     if (result) {
-        RELEASE_LOG_INFO(Extensions, "Test passed: %{public}@ (%{public}@:%{public}u)", (NSString *)message, (NSString *)sourceURL, lineNumber);
+        RELEASE_LOG_INFO(Extensions, "Test passed: %{public}@ %{public}@ (%{public}@:%{public}u)", (NSString *)testName, (NSString *)message, (NSString *)sourceURL, lineNumber);
         return;
     }
 
-    RELEASE_LOG_ERROR(Extensions, "Test failed: %{public}@ (%{public}@:%{public}u)", (NSString *)message, (NSString *)sourceURL, lineNumber);
+    RELEASE_LOG_ERROR(Extensions, "Test failed: %{public}@ %{public}@ (%{public}@:%{public}u)", (NSString *)testName, (NSString *)message, (NSString *)sourceURL, lineNumber);
 }
 
 } // namespace WebKit

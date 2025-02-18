@@ -223,7 +223,9 @@ private:
     void testEqual(bool result, String expected, String actual, String message, String sourceURL, unsigned lineNumber);
     void testLogMessage(String message, String sourceURL, unsigned lineNumber);
     void testSentMessage(String message, String argument, String sourceURL, unsigned lineNumber);
-    void testFinished(bool result, String message, String sourceURL, unsigned lineNumber);
+    void testAdded(String testName, String sourceURL, unsigned lineNumber);
+    void testStarted(String testName, String sourceURL, unsigned lineNumber);
+    void testFinished(String testName, bool result, String message, String sourceURL, unsigned lineNumber);
 
     class HTTPCookieStoreObserver : public API::HTTPCookieStoreObserver {
         WTF_MAKE_TZONE_ALLOCATED_INLINE(HTTPCookieStoreObserver);
