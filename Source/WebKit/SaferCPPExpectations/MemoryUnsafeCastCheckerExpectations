@@ -1,6 +1,5 @@
 AutomationProtocolObjects.h
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
-NetworkProcess/cocoa/WebSocketTaskCocoa.mm
 Platform/cocoa/CocoaHelpers.mm
 Shared/API/APIArray.h
 Shared/API/APIDictionary.h

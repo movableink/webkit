@@ -187,7 +187,7 @@ WebSocketTask::TaskIdentifier WebSocketTask::identifier() const
 
 NetworkSessionCocoa* WebSocketTask::networkSession()
 {
-    return static_cast<NetworkSessionCocoa*>(protectedChannel()->session());
+    return downcast<NetworkSessionCocoa>(protectedChannel()->session());
 }
 
 NSURLSessionTask* WebSocketTask::task() const
