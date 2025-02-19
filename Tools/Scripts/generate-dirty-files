@@ -111,6 +111,7 @@ def find_project_results(args, project, file_list, results_data, issue_to_report
         elif not re.match(DERIVED_SOURCES_RE, file_name):
             # Truncate path after project name to match the expectations file
             file_name = file_name.split(f'{project}/')[-1]
+            file_name = file_name.removeprefix('./')
 
         # Map filename to issues for each bug type
         file_dict = results_data.get(CHECKER_MAP[bug_type], {})

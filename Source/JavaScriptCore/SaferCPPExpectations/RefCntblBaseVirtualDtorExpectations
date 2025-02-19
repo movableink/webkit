@@ -1,7 +1,7 @@
-./bytecode/InstanceOfAccessCase.h
-./bytecode/IntrinsicGetterAccessCase.h
-./bytecode/ModuleNamespaceAccessCase.h
-./bytecode/ProxyableAccessCase.h
+bytecode/InstanceOfAccessCase.h
+bytecode/IntrinsicGetterAccessCase.h
+bytecode/ModuleNamespaceAccessCase.h
+bytecode/ProxyableAccessCase.h
 domjit/DOMJITCallDOMGetterSnippet.h
 jit/GCAwareJITStubRoutine.h
 jit/PolymorphicCallStubRoutine.h
