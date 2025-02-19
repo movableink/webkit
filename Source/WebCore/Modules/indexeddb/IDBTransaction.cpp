@@ -1267,8 +1267,6 @@ void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation
 
     RefPtr context = scriptExecutionContext();
     auto* globalObject = context ? context->globalObject() : nullptr;
-    RELEASE_ASSERT(context);
-    RELEASE_ASSERT(globalObject);
     if (!globalObject) {
         if (context) {
             context->postTask([protectedOperation = Ref { operation }](ScriptExecutionContext&) {
@@ -1317,7 +1315,6 @@ void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation
 
         RefPtr context = scriptExecutionContext();
         auto* globalObject = context ? context->globalObject() : nullptr;
-        RELEASE_ASSERT(globalObject);
         if (idbValue.data().data() && globalObject) {
             auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*globalObject, objectStoreInfo, keyData, idbValue);
             m_database->connectionProxy().putOrAdd(protectedOperation.get(), WTFMove(keyData), idbValue, indexKeys, overwriteMode);
