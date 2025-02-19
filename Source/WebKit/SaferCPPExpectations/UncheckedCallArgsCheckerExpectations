@@ -7,7 +7,6 @@ NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/C/mac/WKPagePrivateMac.mm
 UIProcess/API/Cocoa/WKBrowsingContextController.mm
-UIProcess/API/Cocoa/WKWebView.mm
 UIProcess/API/Cocoa/WKWebViewTesting.mm
 UIProcess/API/Cocoa/WKWebsiteDataStore.mm
 UIProcess/Inspector/InspectorTargetProxy.cpp
