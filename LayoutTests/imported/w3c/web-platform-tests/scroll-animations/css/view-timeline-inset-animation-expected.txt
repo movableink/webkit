@@ -13,14 +13,14 @@ PASS view-timeline-inset:auto, block, vertical-rl
 PASS view-timeline-inset:auto, inline
 PASS view-timeline-inset:auto, inline, vertical-rl
 PASS view-timeline-inset:auto, inline, vertical-lr
-FAIL view-timeline-inset:auto, inline, rtl assert_equals: expected "50" but got "30"
-FAIL view-timeline-inset:auto, inline, vertical-rl, rtl assert_equals: expected "50" but got "25"
-FAIL view-timeline-inset:auto, inline, vertical-lr, rtl assert_equals: expected "50" but got "25"
+PASS view-timeline-inset:auto, inline, rtl
+PASS view-timeline-inset:auto, inline, vertical-rl, rtl
+PASS view-timeline-inset:auto, inline, vertical-lr, rtl
 PASS view-timeline-inset:auto, y
 PASS view-timeline-inset:auto, y, vertical-rl
-FAIL view-timeline-inset:auto, y, vertical-rl, rtl assert_equals: expected "50" but got "25"
+PASS view-timeline-inset:auto, y, vertical-rl, rtl
 PASS view-timeline-inset:auto, x
-FAIL view-timeline-inset:auto, x, rtl assert_equals: expected "50" but got "30"
+PASS view-timeline-inset:auto, x, rtl
 PASS view-timeline-inset:auto, x, vertical-lr
 PASS view-timeline-inset:auto, x, vertical-rl
 PASS view-timeline-inset:auto, mix
