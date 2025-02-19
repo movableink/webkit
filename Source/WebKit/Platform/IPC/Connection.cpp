@@ -1447,7 +1447,12 @@ void Connection::dispatchMessage(UniqueRef<Decoder> message)
     if (m_ignoreInvalidMessageForTesting)
         return;
 #endif
-    ASSERT(!didReceiveInvalidMessage);
+#if ASSERT_ENABLED
+    if (didReceiveInvalidMessage) {
+        WTFLogAlways("Received invalid message %s for destination %" PRIu64, description(message->messageName()).characters(), message->destinationID());
+        ASSERT_NOT_REACHED();
+    }
+#endif
     if (didReceiveInvalidMessage && isValid())
         m_client->didReceiveInvalidMessage(*this, message->messageName(), message->indexOfObjectFailingDecoding());
 }
