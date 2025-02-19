@@ -26,6 +26,7 @@
 #include "DOMFormData.h"
 #include "DirectoryFileListCreator.h"
 #include "DragData.h"
+#include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "Event.h"
 #include "File.h"

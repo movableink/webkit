@@ -34,6 +34,7 @@
 #include "DOMFormData.h"
 #include "Document.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FormController.h"

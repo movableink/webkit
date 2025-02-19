@@ -34,6 +34,7 @@
 
 #include "Decimal.h"
 #include "DocumentInlines.h"
+#include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "EventNames.h"
 #include "HTMLCollection.h"
