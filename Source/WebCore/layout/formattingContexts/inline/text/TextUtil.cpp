@@ -578,8 +578,6 @@ size_t TextUtil::firstUserPerceivedCharacterLength(const InlineTextItem& inlineT
 
 TextDirection TextUtil::directionForTextContent(StringView content)
 {
-    if (content.is8Bit())
-        return TextDirection::LTR;
     return baseTextDirection(content).value_or(TextDirection::LTR);
 }
 
