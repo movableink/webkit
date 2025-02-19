@@ -154,6 +154,14 @@ public:
         }
     }
 
+    template<Bank bank, typename Func>
+    void forEachTmp(const Func& func)
+    {
+        unsigned numTmps = this->numTmps(bank);
+        for (unsigned i = 0; i < numTmps; ++i)
+            func(Tmp::tmpForIndex(bank, i));
+    }
+
     unsigned callArgAreaSizeInBytes() const { return m_callArgAreaSize; }
 
     // You can call this before code generation to force a minimum call arg area size.

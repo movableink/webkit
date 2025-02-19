@@ -2270,12 +2270,13 @@ void allocateRegistersByGraphColoring(Code& code)
 {
     PhaseScope phaseScope(code, "allocateRegistersByGraphColoring"_s);
 
-    if (traceDebug)
-        dataLog("Code before graph coloring:\n", code);
+    dataLogIf(traceDebug, "Code before graph coloring:\n", code);
 
     UseCounts useCounts(code);
     GraphColoringRegisterAllocation graphColoringRegisterAllocation(code, useCounts);
     graphColoringRegisterAllocation.run();
+
+    dataLogIf(traceDebug, "Code after graph coloring:\n", code);
 }
 
 } } } // namespace JSC::B3::Air

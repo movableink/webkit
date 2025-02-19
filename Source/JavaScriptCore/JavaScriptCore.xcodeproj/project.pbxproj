@@ -1517,6 +1517,7 @@
 		A3C7EDBA26B0DB38004C34C5 /* TemporalDurationConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = A3C7EDB426B0DB37004C34C5 /* TemporalDurationConstructor.h */; };
 		A3EE8543262514B000FC9B8D /* IntlWorkaround.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A37619402625127C00CBCBA9 /* IntlWorkaround.cpp */; };
 		A3FF9BC72234749100B1A9AB /* YarrFlags.h in Headers */ = {isa = PBXBuildFile; fileRef = A3FF9BC52234746600B1A9AB /* YarrFlags.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		A40755D92D10CAE000DC55FF /* AirAllocateRegistersByGreedy.h in Headers */ = {isa = PBXBuildFile; fileRef = A40755D72D10CABA00DC55FF /* AirAllocateRegistersByGreedy.h */; };
 		A503FA1A188E0FB000110F14 /* JavaScriptCallFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = A503FA14188E0FAF00110F14 /* JavaScriptCallFrame.h */; };
 		A503FA1E188E0FB000110F14 /* JSJavaScriptCallFramePrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = A503FA18188E0FB000110F14 /* JSJavaScriptCallFramePrototype.h */; };
 		A503FA2A188F105900110F14 /* JSGlobalObjectDebugger.h in Headers */ = {isa = PBXBuildFile; fileRef = A503FA28188F105900110F14 /* JSGlobalObjectDebugger.h */; };
@@ -4985,6 +4986,8 @@
 		A3C7EDB526B0DB37004C34C5 /* TemporalDurationPrototype.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TemporalDurationPrototype.cpp; sourceTree = "<group>"; };
 		A3FF9BC52234746600B1A9AB /* YarrFlags.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = YarrFlags.h; path = yarr/YarrFlags.h; sourceTree = "<group>"; };
 		A3FF9BC62234746600B1A9AB /* YarrFlags.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = YarrFlags.cpp; path = yarr/YarrFlags.cpp; sourceTree = "<group>"; };
+		A40755D72D10CABA00DC55FF /* AirAllocateRegistersByGreedy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AirAllocateRegistersByGreedy.h; path = b3/air/AirAllocateRegistersByGreedy.h; sourceTree = "<group>"; };
+		A40755D82D10CABA00DC55FF /* AirAllocateRegistersByGreedy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AirAllocateRegistersByGreedy.cpp; path = b3/air/AirAllocateRegistersByGreedy.cpp; sourceTree = "<group>"; };
 		A503FA13188E0FAF00110F14 /* JavaScriptCallFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JavaScriptCallFrame.cpp; sourceTree = "<group>"; };
 		A503FA14188E0FAF00110F14 /* JavaScriptCallFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JavaScriptCallFrame.h; sourceTree = "<group>"; };
 		A503FA15188E0FB000110F14 /* JSJavaScriptCallFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSJavaScriptCallFrame.cpp; sourceTree = "<group>"; };
@@ -6729,6 +6732,8 @@
 				0F2AC5691E8A0BD10001EE3F /* AirAllocateRegistersAndStackByLinearScan.h */,
 				7965C2141E5D799600B7591D /* AirAllocateRegistersByGraphColoring.cpp */,
 				7965C2151E5D799600B7591D /* AirAllocateRegistersByGraphColoring.h */,
+				A40755D82D10CABA00DC55FF /* AirAllocateRegistersByGreedy.cpp */,
+				A40755D72D10CABA00DC55FF /* AirAllocateRegistersByGreedy.h */,
 				0FEC85481BDACDC70080FF74 /* AirAllocateStackByGraphColoring.cpp */,
 				0FEC85491BDACDC70080FF74 /* AirAllocateStackByGraphColoring.h */,
 				0FEC854A1BDACDC70080FF74 /* AirArg.cpp */,
@@ -10333,6 +10338,7 @@
 				524E9D7322092B5200A6BEEE /* AirAllocateRegistersAndStackAndGenerateCode.h in Headers */,
 				0F2AC56B1E8A0BD50001EE3F /* AirAllocateRegistersAndStackByLinearScan.h in Headers */,
 				7965C2171E5D799600B7591D /* AirAllocateRegistersByGraphColoring.h in Headers */,
+				A40755D92D10CAE000DC55FF /* AirAllocateRegistersByGreedy.h in Headers */,
 				0FEC856E1BDACDC70080FF74 /* AirAllocateStackByGraphColoring.h in Headers */,
 				0FEC85701BDACDC70080FF74 /* AirArg.h in Headers */,
 				0F64EAF31C4ECD0600621E9B /* AirArgInlines.h in Headers */,

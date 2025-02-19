@@ -81,7 +81,9 @@ public:
     {
         return widths(tmp).use;
     }
-    
+
+    void setWidths(Tmp, Width useWidth, Width defWidth);
+
 private:
     struct Widths {
         Widths() { }
@@ -120,6 +122,9 @@ private:
     {
         return bank == GP ? m_widthGP : m_widthFP;
     }
+
+    template <Bank bank>
+    void ensureSize(Tmp);
 
     // These are initialized at the beginning of recompute<bank>, which is called in the constructor for both values of bank.
     Vector<Widths> m_widthGP;

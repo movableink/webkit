@@ -466,6 +466,9 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, airLinearScanSpillsEverything, false, Normal, nullptr) \
     v(Bool, airForceBriggsAllocator, false, Normal, nullptr) \
     v(Bool, airForceIRCAllocator, false, Normal, nullptr) \
+    v(Bool, airGreedyRegAllocVerbose, false, Normal, nullptr) \
+    v(Bool, airUseGreedyRegAlloc, false, Normal, nullptr) \
+    v(Bool, airValidateGreedRegAlloc, ASSERT_ENABLED, Normal, nullptr) \
     v(Bool, airRandomizeRegs, false, Normal, nullptr) \
     v(Unsigned, airRandomizeRegsSeed, 0, Normal, nullptr) \
     v(Bool, coalesceSpillSlots, true, Normal, nullptr) \
