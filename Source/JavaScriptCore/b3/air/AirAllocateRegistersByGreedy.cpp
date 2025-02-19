@@ -1238,10 +1238,15 @@ private:
 
                 ASSERT(&tmpData == &m_map[tmp]); // Verify m_map hasn't been resized on this path
                 switch (tmpData.stage) {
-                case Stage::TryAllocate:
+                case Stage::TryAllocate: {
                     // If we couldn't allocate tmp, allow it to split next time.
-                    setStageAndEnqueue(tmp, tmpData, tmpData.liveRange.size() >= splitMinRangeSize ? Stage::TrySplit : Stage::Spill);
+                    Stage nextStage = Stage::TrySplit;
+                    // If we already know splitting won't be profitable, skip it.
+                    if (!tmpData.isGroup() && tmpData.liveRange.size() < splitMinRangeSize)
+                        nextStage = Stage::Spill;
+                    setStageAndEnqueue(tmp, tmpData, nextStage);
                     continue;
+                }
                 case Stage::TrySplit:
                     if (!trySplit<bank>(tmp, tmpData))
                         setStageAndEnqueue(tmp, tmpData, Stage::Spill);
