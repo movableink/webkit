@@ -824,7 +824,7 @@ class CheckOutSource(git.Git):
         defer.returnValue(rc)
 
 
-class CleanUpGitIndexLock(shell.ShellCommand):
+class CleanUpGitIndexLock(shell.ShellCommand, ShellMixin):
     name = 'clean-git-index-lock'
     command = ['rm', '-f', '.git/index.lock']
     descriptionDone = ['Deleted .git/index.lock']
@@ -833,8 +833,7 @@ class CleanUpGitIndexLock(shell.ShellCommand):
         super().__init__(timeout=2 * 60, logEnviron=False, **kwargs)
 
     def start(self):
-        platform = self.getProperty('platform', '*')
-        if platform == 'win':
+        if self.has_windows_shell():
             self.command = ['del', r'.git\index.lock']
 
         self.send_email_for_git_issue()

@@ -108,7 +108,7 @@ class CustomFlagsMixin(object):
 
 
 class ShellMixin(object):
-    WINDOWS_SHELL_PLATFORMS = ['win']
+    WINDOWS_SHELL_PLATFORMS = ['win', 'playstation']
 
     def has_windows_shell(self):
         return self.getProperty('platform', '*') in self.WINDOWS_SHELL_PLATFORMS
@@ -259,7 +259,7 @@ class CheckOutSource(git.Git):
         defer.returnValue(rc)
 
 
-class CleanUpGitIndexLock(shell.ShellCommandNewStyle):
+class CleanUpGitIndexLock(shell.ShellCommandNewStyle, ShellMixin):
     name = 'clean-git-index-lock'
     command = ['rm', '-f', '.git/index.lock']
     descriptionDone = ['Deleted .git/index.lock']
@@ -269,8 +269,7 @@ class CleanUpGitIndexLock(shell.ShellCommandNewStyle):
 
     @defer.inlineCallbacks
     def run(self):
-        platform = self.getProperty('platform', '*')
-        if platform == 'win':
+        if self.has_windows_shell():
             self.command = ['del', r'.git\index.lock']
 
         rc = yield super().run()
