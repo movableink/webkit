@@ -629,11 +629,6 @@ void ResourceLoader::didReceiveResponse(const ResourceResponse& r, CompletionHan
     RefPtr frameLoader = this->frameLoader();
     if (frameLoader && m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks)
         frameLoader->notifier().didReceiveResponse(this, m_response);
-
-#if ENABLE(CONTENT_EXTENSIONS)
-    if (RefPtr monitor = resourceMonitorIfExists())
-        monitor->didReceiveResponse(m_response.url(), m_resourceType);
-#endif
 }
 
 void ResourceLoader::didReceiveData(const SharedBuffer& buffer, long long encodedDataLength, DataPayloadType dataPayloadType)
