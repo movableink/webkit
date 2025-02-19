@@ -1990,3 +1990,5 @@ webkit.org/b/287877 pdf/pdf-plugin-printing.html [ Pass Timeout ]
 webkit.org/b/287967 media/modern-media-controls/overflow-support/playback-speed.html [ Pass Timeout ]
 
 webkit.org/b/287974 [ Sonoma Release arm64 ] imported/w3c/web-platform-tests/css/css-view-transitions/massive-element-below-viewport-offscreen-old.html [ Pass Failure ]
+
+webkit.org/b/287987 media/media-source/media-source-minimumupcomingpresentationtime.html [ Pass Failure ]
