@@ -6470,7 +6470,8 @@ ScreenOrientationLockingAPIEnabled:
 
 ScreenTimeEnabled:
   type: bool
-  status: unstable
+  status: internal
+  defaultsOverridable: true
   condition: ENABLE(SCREEN_TIME)
   humanReadableName: "Screen Time"
   humanReadableDescription: "Enable Screen Time"
