@@ -28,6 +28,12 @@
     "imported/selenium/py/test/selenium/webdriver/common/appcache_tests.py": {
         "expected": {"all": {"status": ["SKIP"]}}
     },
+    "imported/selenium/py/test/selenium/webdriver/common/fedcm_tests.py": {
+        "expected": {"all": {"status": ["SKIP"], "note": "FEDCM is not supported in WebKit"}}
+    },
+    "imported/selenium/py/test/selenium/webdriver/common/selenium_manager_tests.py": {
+        "expected": {"all": {"status": ["SKIP"], "note": "We handle the driver service directly"}}
+    },
     "imported/selenium/py/test/selenium/webdriver/common/driver_element_finding_tests.py": {
         "subtests": {
             "test_finding_asingle_element_by_empty_tag_name_should_throw": {
@@ -40,17 +46,8 @@
     },
     "imported/selenium/py/test/selenium/webdriver/common/click_scrolling_tests.py": {
         "subtests": {
-            "test_should_not_scroll_if_already_scrolled_and_element_is_in_view": {
-                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/181729"}}
-            },
             "test_should_scroll_overflow_elements_if_click_point_is_out_of_view_but_element_is_in_view": {
                 "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/181730"}}
-            },
-            "test_should_be_able_to_click_element_in_aframe_that_is_out_of_view": {
-                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/181731"}}
-            },
-            "test_should_be_able_to_click_element_that_is_out_of_view_in_aframe_that_is_out_of_view": {
-                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/181731"}}
             },
             "test_should_be_able_to_click_element_that_is_out_of_view_in_anested_frame": {
                 "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/216026"}}
