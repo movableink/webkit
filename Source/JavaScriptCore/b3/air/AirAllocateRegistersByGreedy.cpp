@@ -818,6 +818,8 @@ private:
         // The LiveRanges of a and b overlap, but the move is still coalescable (unless there
         // is a non-coalescable-move def of 'a' or 'b' during the lifetime of the other).
         auto addMaybeCoalescable = [&](Tmp a, Tmp b, BasicBlock* block) {
+            if (a == b)
+                return;
             TmpData& tmpData = m_map[a];
             float freq = adjustedBlockFrequency(block);
             for (auto& with : tmpData.coalescables) {
@@ -842,6 +844,7 @@ private:
             Tmp movSrc = coalescableMoveSrc(inst);
             dataLogLnIf(verbose(), "Checking affinity ", inst, " def=", def, " movSrc=", movSrc);
             defData.coalescables.removeAllMatching([&](TmpData::CoalescableWith& with) {
+                ASSERT(with.tmp != def);
                 if (with.tmp != movSrc && activeIntervals[with.tmp]) {
                     dataLogLnIf(verbose(), "Pruning affinity ", def, " ", with.tmp);
                     m_map[with.tmp].coalescables.removeAllMatching([def](TmpData::CoalescableWith& with) {
