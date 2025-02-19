@@ -251,7 +251,11 @@ TEST_F(CARingBufferTest, FetchTimeBoundsConsistent)
         thread->waitForCompletion();
     });
     CARingBuffer::TimeBounds maxBounds { };
+#if !defined(NDEBUG)
+    for (int i = 0; i < 100000; ++i) {
+#else
     for (int i = 0; i < 10000000; ++i) {
+#endif
         auto fetchBounds = ringBuffer().getFetchTimeBounds();
         EXPECT_LE(fetchBounds.startFrame, fetchBounds.endFrame);
         EXPECT_LE(maxBounds.startFrame, fetchBounds.startFrame);
