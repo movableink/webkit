@@ -86,15 +86,15 @@ protected:
     RefPtr<GstMappedOwnedBuffer> m_mappedBuffer;
 };
 
-class GStreamerVideoEncoder : public webrtc::VideoEncoder {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(GStreamerVideoEncoder);
+class LibWebRTCGStreamerVideoEncoder : public webrtc::VideoEncoder {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(LibWebRTCGStreamerVideoEncoder);
 public:
-    GStreamerVideoEncoder(const webrtc::SdpVideoFormat&)
-        : GStreamerVideoEncoder()
+    LibWebRTCGStreamerVideoEncoder(const webrtc::SdpVideoFormat&)
+        : LibWebRTCGStreamerVideoEncoder()
     {
     }
 
-    GStreamerVideoEncoder()
+    LibWebRTCGStreamerVideoEncoder()
         : m_firstFramePts(GST_CLOCK_TIME_NONE)
         , m_restrictionCaps(adoptGRef(gst_caps_new_empty_simple("video/x-raw")))
     {
@@ -343,9 +343,9 @@ private:
     GRefPtr<GstElement> m_sink;
 };
 
-class GStreamerH264Encoder : public GStreamerVideoEncoder {
+class LibWebRTCGStreamerVideoEncoderH264 : public LibWebRTCGStreamerVideoEncoder {
 public:
-    GStreamerH264Encoder() { }
+    LibWebRTCGStreamerVideoEncoderH264() { }
 
     int KeyframeInterval(const webrtc::VideoCodec* codecSettings) final
     {
@@ -388,7 +388,7 @@ std::unique_ptr<webrtc::VideoEncoder> GStreamerVideoEncoderFactory::Create(const
         return webrtc::CreateH264Encoder(environment, webrtc::H264EncoderSettings::Parse(format));
 #else
         GST_INFO("Using H264 GStreamer encoder.");
-        return makeUnique<GStreamerH264Encoder>();
+        return makeUnique<LibWebRTCGStreamerVideoEncoderH264>();
 #endif
     }
 
@@ -422,7 +422,7 @@ std::vector<webrtc::SdpVideoFormat> GStreamerVideoEncoderFactory::GetSupportedFo
     auto formats = supportedH264Formats();
     supportedCodecs.insert(supportedCodecs.end(), formats.begin(), formats.end());
 #else
-    GStreamerH264Encoder().AddCodecIfSupported(supportedCodecs);
+    LibWebRTCGStreamerVideoEncoderH264().AddCodecIfSupported(supportedCodecs);
 #endif
 
     return supportedCodecs;
