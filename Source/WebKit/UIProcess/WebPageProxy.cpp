@@ -2581,7 +2581,7 @@ RefPtr<API::Navigation> WebPageProxy::goToBackForwardItem(WebBackForwardListFram
     process->markProcessAsRecentlyUsed();
 
     Ref frameState = item->mainFrameState();
-    if (m_preferences->siteIsolationEnabled()) {
+    if (protectedPreferences()->siteIsolationEnabled()) {
         if (RefPtr frame = WebFrameProxy::webFrame(frameItem.frameID())) {
             process = frame->process();
             frameState = frameItem.copyFrameStateWithChildren();
@@ -10147,7 +10147,7 @@ void WebPageProxy::contextMenuItemSelected(const WebContextMenuItemData& item)
 
     case ContextMenuItemTagInspectElement:
         // The web process can no longer demand Web Inspector to show, so handle that part here.
-        m_inspector->show();
+        protectedInspector()->show();
         // The actual element-selection is still handled in the web process, so we break instead of return.
         break;
 #endif // PLATFORM(MAC)
