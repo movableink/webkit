@@ -930,6 +930,17 @@ static InputSessionChangeCount nextInputSessionChangeCount()
     return self;
 }
 
+#if PLATFORM(IOS_FAMILY)
+static UIWindowScene *windowScene()
+{
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if ([scene isKindOfClass:UIWindowScene.class])
+            return (UIWindowScene *)scene;
+    }
+    return nil;
+}
+#endif
+
 - (instancetype)initWithFrame:(CGRect)frame configuration:(WKWebViewConfiguration *)configuration processPoolConfiguration:(_WKProcessPoolConfiguration *)processPoolConfiguration
 {
     [configuration setProcessPool:adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration]).get()];
@@ -950,6 +961,8 @@ static InputSessionChangeCount nextInputSessionChangeCount()
     [hostWindow makeKeyAndOrderFront:self];
 #else
     hostWindow = adoptNS([[TestWKWebViewHostWindow alloc] initWithWebView:self frame:frame]);
+    if (UIWindowScene *windowScene = ::windowScene())
+        [hostWindow setWindowScene:windowScene];
     [hostWindow setHidden:NO];
     [hostWindow addSubview:self];
 #endif

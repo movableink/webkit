@@ -57,6 +57,7 @@ void HostWindowManager::OnTestEnd(const testing::TestInfo&)
         [hostWindow close];
 #else
         [hostWindow setHidden:YES];
+        [hostWindow setWindowScene:nil];
 #endif
     }
 }
