@@ -76,7 +76,7 @@ void RemoteLayerTreeDrawingAreaMac::adjustTransientZoom(double scale, WebCore::F
 {
     LOG_WITH_STREAM(ViewGestures, stream << "RemoteLayerTreeDrawingAreaMac::adjustTransientZoom - scale " << scale << " origin " << origin);
 
-    auto totalScale = scale * m_webPage->viewScaleFactor();
+    auto totalScale = scale * protectedWebPage()->viewScaleFactor();
 
     // FIXME: Need to trigger some re-rendering here to render at the new scale, so tiles update while zooming.
 
@@ -86,7 +86,7 @@ void RemoteLayerTreeDrawingAreaMac::adjustTransientZoom(double scale, WebCore::F
 void RemoteLayerTreeDrawingAreaMac::willCommitLayerTree(RemoteLayerTreeTransaction& transaction)
 {
     // FIXME: Probably need something here for PDF.
-    RefPtr frameView = m_webPage->localMainFrameView();
+    RefPtr frameView = protectedWebPage()->localMainFrameView();
     if (!frameView)
         return;
 

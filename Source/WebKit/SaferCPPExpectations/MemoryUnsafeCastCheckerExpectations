@@ -29,7 +29,6 @@ WebProcess/Plugins/PluginView.cpp
 WebProcess/WebCoreSupport/WebLocalFrameLoaderClient.cpp
 WebProcess/WebCoreSupport/WebLocalFrameLoaderClient.h
 WebProcess/WebPage/RemoteLayerTree/GraphicsLayerCARemote.mm
-WebProcess/WebPage/RemoteLayerTree/RemoteLayerTreeDrawingArea.mm
 WebProcess/WebPage/ViewGestureGeometryCollector.cpp
 WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/WebPageTesting.cpp

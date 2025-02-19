@@ -200,6 +200,8 @@ protected:
         return webPage->send(std::forward<T>(message), m_identifier.toUInt64(), { });
     }
 
+    Ref<WebPage> protectedWebPage() const { return m_webPage.get(); }
+
     const DrawingAreaType m_type;
     DrawingAreaIdentifier m_identifier;
     WeakRef<WebPage> m_webPage;

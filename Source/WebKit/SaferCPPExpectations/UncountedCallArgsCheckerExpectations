@@ -1,8 +1,6 @@
 AutomationBackendDispatchers.cpp
 AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
-WebDriverBidiBackendDispatchers.cpp
-WebDriverBidiFrontendDispatchers.cpp
 NetworkProcess/BackgroundFetchLoad.cpp
 NetworkProcess/Downloads/Download.cpp
 NetworkProcess/Downloads/DownloadManager.cpp
@@ -248,6 +246,8 @@ UIProcess/mac/WebContextMenuProxyMac.mm
 UIProcess/mac/WebDataListSuggestionsDropdownMac.mm
 UIProcess/mac/WebDateTimePickerMac.mm
 UIProcess/mac/WebViewImpl.mm
+WebDriverBidiBackendDispatchers.cpp
+WebDriverBidiFrontendDispatchers.cpp
 WebProcess/ApplePay/WebPaymentCoordinator.cpp
 WebProcess/Automation/WebAutomationDOMWindowObserver.cpp
 WebProcess/Cache/WebCacheStorageConnection.cpp
@@ -410,7 +410,6 @@ WebProcess/WebPage/WebPageOverlay.cpp
 WebProcess/WebPage/WebURLSchemeHandlerProxy.cpp
 WebProcess/WebPage/WebURLSchemeTaskProxy.cpp
 WebProcess/WebPage/mac/PageBannerMac.mm
-WebProcess/WebPage/mac/RemoteLayerTreeDrawingAreaMac.mm
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/WebPage/mac/TiledCoreAnimationScrollingCoordinator.mm
 WebProcess/WebPage/mac/WKAccessibilityWebPageObjectBase.mm
