@@ -1994,3 +1994,5 @@ webkit.org/b/287974 [ Sonoma Release arm64 ] imported/w3c/web-platform-tests/css
 webkit.org/b/287987 media/media-source/media-source-minimumupcomingpresentationtime.html [ Pass Failure ]
 
 webkit.org/b/287990 [ Sonoma Release ] fast/canvas/webgl/drawingbuffer-test.html [ Pass Failure ]
+
+webkit.org/b/288005 imported/w3c/web-platform-tests/css/selectors/invalidation/nth-last-child-in-shadow-root.html [ Pass ImageOnlyFailure ]
