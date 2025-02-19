@@ -86,7 +86,6 @@ private:
         return true;
 #endif
     }
-    void didCreateGLContext() override;
     void willDestroyGLContext() override;
     void willRenderFrame() override;
     void didRenderFrame() override;
@@ -125,17 +124,11 @@ private:
         void addDamage(const WebCore::Damage&);
 #endif
 
-        virtual void willRenderFrame() const;
-        virtual void didRenderFrame()
-        {
-#if ENABLE(DAMAGE_TRACKING)
-            m_damage = WebCore::Damage { };
-#endif
-        }
+        virtual void willRenderFrame();
+        virtual void didRenderFrame();
 
         std::unique_ptr<WebCore::GLFence> createRenderingFence(bool) const;
         void setReleaseFenceFD(UnixFileDescriptor&&);
-        void waitRelease();
 
     protected:
         RenderTarget(uint64_t, const WebCore::IntSize&);
@@ -143,22 +136,13 @@ private:
         virtual bool supportsExplicitSync() const = 0;
 
         uint64_t m_id { 0 };
+        unsigned m_fbo { 0 };
         uint64_t m_surfaceID { 0 };
         unsigned m_depthStencilBuffer { 0 };
         UnixFileDescriptor m_releaseFenceFD;
 #if ENABLE(DAMAGE_TRACKING)
         WebCore::Damage m_damage { WebCore::Damage::invalid() };
 #endif
-    };
-
-    class RenderTargetColorBuffer : public RenderTarget {
-    protected:
-        RenderTargetColorBuffer(uint64_t, const WebCore::IntSize&);
-        virtual ~RenderTargetColorBuffer();
-
-        void willRenderFrame() const final;
-
-        unsigned m_colorBuffer { 0 };
     };
 
 #if USE(GBM)
@@ -193,7 +177,7 @@ private:
         RefPtr<WebCore::DRMDeviceNode> drmDeviceNode;
     };
 
-    class RenderTargetEGLImage final : public RenderTargetColorBuffer {
+    class RenderTargetEGLImage final : public RenderTarget {
     public:
         static std::unique_ptr<RenderTarget> create(uint64_t, const WebCore::IntSize&, const BufferFormat&);
         RenderTargetEGLImage(uint64_t, const WebCore::IntSize&, EGLImage, uint32_t format, Vector<WTF::UnixFileDescriptor>&&, Vector<uint32_t>&& offsets, Vector<uint32_t>&& strides, uint64_t modifier, DMABufRendererBufferFormat::Usage);
@@ -202,20 +186,22 @@ private:
     private:
         bool supportsExplicitSync() const override { return true; }
 
+        unsigned m_colorBuffer { 0 };
         EGLImage m_image { nullptr };
     };
 #endif
 
-    class RenderTargetSHMImage final : public RenderTargetColorBuffer {
+    class RenderTargetSHMImage final : public RenderTarget {
     public:
         static std::unique_ptr<RenderTarget> create(uint64_t, const WebCore::IntSize&);
         RenderTargetSHMImage(uint64_t, const WebCore::IntSize&, Ref<WebCore::ShareableBitmap>&&, WebCore::ShareableBitmapHandle&&);
-        ~RenderTargetSHMImage() = default;
+        ~RenderTargetSHMImage();
 
     private:
         bool supportsExplicitSync() const override { return false; }
         void didRenderFrame() override;
 
+        unsigned m_colorBuffer { 0 };
         Ref<WebCore::ShareableBitmap> m_bitmap;
     };
 
@@ -227,7 +213,6 @@ private:
 
     private:
         bool supportsExplicitSync() const override { return true; }
-        void willRenderFrame() const override;
 
         unsigned m_texture { 0 };
     };
@@ -283,7 +268,6 @@ private:
 
     CheckedRef<ThreadedCompositor> m_compositor;
     uint64_t m_id { 0 };
-    unsigned m_fbo { 0 };
     SwapChain m_swapChain;
     RenderTarget* m_target { nullptr };
     bool m_isVisible { false };
