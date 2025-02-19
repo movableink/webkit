@@ -99,8 +99,9 @@ public:
 
         auto pixels = pixelsStartingAt(rect.x(), rect.y());
         for (int i = 0; i < rect.height(); ++i) {
+            if (i)
+                skip(pixels, m_size.width());
             zeroSpan(pixels.first(rect.width()));
-            skip(pixels, m_size.width());
         }
     }
 
@@ -112,9 +113,10 @@ public:
         auto pixels = pixelsStartingAt(rect.x(), rect.y());
         uint32_t pixelValue = this->pixelValue(r, g, b, a);
         for (int i = 0; i < rect.height(); ++i) {
+            if (i)
+                skip(pixels, m_size.width());
             for (int j = 0; j < rect.width(); ++j)
                 pixels[j] = pixelValue;
-            skip(pixels, m_size.width());
         }
     }
 
@@ -127,8 +129,9 @@ public:
         auto destinationPixels = sourcePixels.subspan(m_size.width());
         auto sourceRow = sourcePixels.first(rect.width());
         for (int i = 1; i < rect.height(); ++i) {
+            if (i != 1)
+                skip(destinationPixels, m_size.width());
             memcpySpan(destinationPixels, sourceRow);
-            skip(destinationPixels, m_size.width());
         }
     }
 
