@@ -3051,3 +3051,5 @@ webkit.org/b/287836 compositing/animation/repaint-after-clearing-shared-backing.
 webkit.org/b/287904 imported/w3c/web-platform-tests/video-rvfc/request-video-frame-callback-dom.html [ Pass Failure ]
 
 webkit.org/b/287914 imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/moving-between-documents/after-prepare-createHTMLDocument-parse-error-external-classic.html [ Pass Failure ]
+
+webkit.org/b/287919 imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/moving-between-documents/after-prepare-createHTMLDocument-success-external-module.html [ Pass Failure ]
