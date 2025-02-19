@@ -102,6 +102,7 @@ public:
     virtual IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const = 0;
     virtual bool frameIsCompleteAtIndex(size_t) const = 0;
     virtual ImageOrientation frameOrientationAtIndex(size_t) const { return ImageOrientation::Orientation::None; }
+    virtual Headroom frameHeadroomAtIndex(size_t) const { return Headroom::None; }
     virtual std::optional<IntSize> frameDensityCorrectedSizeAtIndex(size_t) const { return std::nullopt; }
 
     virtual Seconds frameDurationAtIndex(size_t) const = 0;

@@ -168,6 +168,7 @@ bool ImageDecoder::fetchFrameMetaDataAtIndex(size_t index, SubsamplingLevel subs
     frame.m_decodingOptions = options;
     frame.m_hasAlpha = frameHasAlphaAtIndex(index);
     frame.m_orientation = frameOrientationAtIndex(index);
+    frame.m_headroom = frameHeadroomAtIndex(index);
     frame.m_decodingStatus = frameIsCompleteAtIndex(index) ? DecodingStatus::Complete : DecodingStatus::Partial;
     return true;
 }

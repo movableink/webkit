@@ -3396,7 +3396,7 @@ GraphicsContextFiltersEnabled:
 
 HDRForImagesEnabled:
   type: bool
-  status: unstable
+  status: testable
   category: media
   webcoreOnChange: setNeedsRelayoutAllFrames
   humanReadableName: "HDR for Images Support"
