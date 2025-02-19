@@ -9249,6 +9249,120 @@ class TestParseStaticAnalyzerResults(BuildStepMixinAdditions, unittest.TestCase)
         return self.runStep()
 
 
+class TestFindModifiedSaferCPPExpectations(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        return self.tearDownBuildStep()
+
+    def configureStep(self):
+        self.setupStep(FindModifiedSaferCPPExpectations())
+
+    def test_success(self):
+        self.configureStep()
+        self.setProperty('builddir', 'wkdir')
+        self.setProperty('buildnumber', 1234)
+
+        commit_diff = '''
+diff --git a/Source/WebCore/SaferCPPExpectations/NoUncountedMemberCheckerExpectations b/Source/WebCore/SaferCPPExpectations/NoUncountedMemberCheckerExpectations
+--- a/Source/WebCore/SaferCPPExpectations/NoUncountedMemberCheckerExpectations
++++ b/Source/WebCore/SaferCPPExpectations/NoUncountedMemberCheckerExpectations
+-css/ShorthandSerializer.cpp
+@@ -53,6 +52,7 @@ inspector/InspectorStyleSheet.cpp
+ inspector/agents/worker/WorkerAuditAgent.h
++inspector/agents/worker/WorkerWorkerAgent.h
+diff --git a/Source/WebCore/SaferCPPExpectations/UncountedCallArgsCheckerExpectations b/Source/WebCore/SaferCPPExpectations/UncountedCallArgsCheckerExpectations
+--- a/Source/WebCore/SaferCPPExpectations/UncountedCallArgsCheckerExpectations
++++ b/Source/WebCore/SaferCPPExpectations/UncountedCallArgsCheckerExpectations
+@@ -17,7 +17,6 @@ Modules/WebGPU/GPUExternalTexture.cpp
+-Modules/WebGPU/GPUQueue.cpp
+ Modules/WebGPU/GPURenderBundle.cpp
+'''
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        command=['git', 'diff', 'head~1', '--', '*Expectations'])
+            + ExpectShell.log('stdio', stdout=commit_diff)
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Found modified expectations')
+        rc = self.runStep()
+        self.assertEqual(self.getProperty('user_added_tests'), ['WebCore/inspector/agents/worker/WorkerWorkerAgent.h/NoUncountedMemberChecker'])
+        self.assertEqual(self.getProperty('user_removed_tests'), ['WebCore/css/ShorthandSerializer.cpp/NoUncountedMemberChecker', 'WebCore/Modules/WebGPU/GPUQueue.cpp/UncountedCallArgsChecker'])
+        return rc
+
+    def test_replace(self):
+        self.configureStep()
+        self.setProperty('builddir', 'wkdir')
+        self.setProperty('buildnumber', 1234)
+
+        commit_diff = '''
+diff --git a/Source/WebCore/SaferCPPExpectations/NoUncountedMemberCheckerExpectations b/Source/WebCore/SaferCPPExpectations/NoUncountedMemberCheckerExpectations
+index 8a2d2375b8d2..f7ebc3b11b94 100644
+--- a/Source/WebCore/SaferCPPExpectations/NoUncountedMemberCheckerExpectations
++++ b/Source/WebCore/SaferCPPExpectations/NoUncountedMemberCheckerExpectations
+@@ -51,7 +51,7 @@ inspector/InspectorShaderProgram.h
+ inspector/InspectorStyleSheet.cpp
+ inspector/InspectorStyleSheet.h
+ inspector/InspectorWebAgentBase.h
+-inspector/agents/worker/WorkerAuditAgent.h
++inspector/agents/worker/WorkerWorkerAgent.h
+ layout/formattingContexts/inline/InlineItemsBuilder.h
+ loader/appcache/ApplicationCacheStorage.cpp
+ page/FrameSnapshotting.cpp
+'''
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        command=['git', 'diff', 'head~1', '--', '*Expectations'])
+            + ExpectShell.log('stdio', stdout=commit_diff)
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Found modified expectations')
+        rc = self.runStep()
+        self.assertEqual(self.getProperty('user_added_tests'), ['WebCore/inspector/agents/worker/WorkerWorkerAgent.h/NoUncountedMemberChecker'])
+        self.assertEqual(self.getProperty('user_removed_tests'), ['WebCore/inspector/agents/worker/WorkerAuditAgent.h/NoUncountedMemberChecker'])
+        return rc
+
+    def test_unmodified(self):
+        self.configureStep()
+        self.setProperty('builddir', 'wkdir')
+        self.setProperty('buildnumber', 1234)
+
+        commit_diff = ''
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        command=['git', 'diff', 'head~1', '--', '*Expectations'])
+            + ExpectShell.log('stdio', stdout=commit_diff)
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='No modified expectations')
+        rc = self.runStep()
+        self.assertEqual(self.getProperty('user_added_tests'), None)
+        self.assertEqual(self.getProperty('user_removed_tests'), None)
+        return rc
+
+    def test_failure(self):
+        self.configureStep()
+        self.setProperty('builddir', 'wkdir')
+        self.setProperty('buildnumber', 1234)
+
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        command=['git', 'diff', 'head~1', '--', '*Expectations'])
+            + ExpectShell.log('stdio', stdout='Failure')
+            + 1,
+        )
+        self.expectOutcome(result=FAILURE, state_string='Unable to find modified expectations')
+        rc = self.runStep()
+        self.assertEqual(self.getProperty('user_added_tests'), None)
+        self.assertEqual(self.getProperty('user_removed_tests'), None)
+        return rc
+
+
 class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.TestCase):
     command = ['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/build/new', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--archived-dir', 'wkdir/build/baseline', '--scan-build-path', '../llvm-project/clang/tools/scan-build/bin/scan-build', '--delete-results']
     upload_options = ['--builder-name', 'Safer-CPP-Checks', '--build-number', 1234, '--buildbot-worker', 'ews123', '--buildbot-master', EWS_BUILD_HOSTNAMES[0], '--report', 'https://results.webkit.org/']
@@ -9267,6 +9381,8 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
             self.setupStep(FindUnexpectedStaticAnalyzerResults(was_filtered=was_filtered))
         else:
             self.setupStep(FindUnexpectedStaticAnalyzerResultsWithoutChange(was_filtered=was_filtered))
+        FindUnexpectedStaticAnalyzerResults._get_patch = lambda x: b'Test patch 123'
+        FindUnexpectedStaticAnalyzerResults.decode_results_data = lambda self: {'passes': {'project': {'checker': ['filename']}}, 'failures': {'project': {'checker': ['filename2']}}}
         self.setProperty('builddir', 'wkdir')
         self.setProperty('buildnumber', 1234)
         self.setProperty('architecture', 'arm64')
@@ -9285,7 +9401,6 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
 
     def test_success_no_issues(self):
         self.configureStep(False)
-
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
@@ -9301,7 +9416,6 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
 
     def test_new_issues(self):
         self.configureStep(False)
-
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
@@ -9327,7 +9441,7 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
                         command=['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/build/new', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--check-expectations'],
                         env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
             + ExpectShell.log('stdio', stdout='Total new issues: 19\nTotal fixed files: 3\n')
-            + 0,
+            + 0
         )
         self.expectOutcome(result=SUCCESS, state_string='19 new issues 3 fixed files')
         with current_hostname(EWS_BUILD_HOSTNAMES[0]):
@@ -9376,6 +9490,94 @@ class TestFindUnexpectedStaticAnalyzerResults(BuildStepMixinAdditions, unittest.
         self.assertEqual([GenerateSaferCPPResultsIndex(), DeleteStaticAnalyzerResults(), ArchiveStaticAnalyzerResults(), UploadStaticAnalyzerResults(), ExtractStaticAnalyzerTestResults(), DisplaySaferCPPResults()], next_steps)
         return rc
 
+    def test_changed_expectations_match(self):
+        self.configureStep(True)
+        FindUnexpectedStaticAnalyzerResults.decode_results_data = lambda self: {'passes': {'WebCore': {'NoUncountedMemberChecker': ['css/ShorthandSerializer.cpp']}}, 'failures': {'WebCore': {'NoUncountedMemberChecker': ['inspector/agents/worker/WorkerWorkerAgent.h']}}}
+        self.setProperty('user_removed_tests', ['WebCore/inspector/agents/worker/WorkerWorkerAgent.h/NoUncountedMemberChecker'])
+        self.setProperty('user_added_tests', ['WebCore/css/ShorthandSerializer.cpp/NoUncountedMemberChecker'])
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        logfiles={'json': self.jsonFileName},
+                        command=['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/build/new', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--check-expectations'],
+                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
+            + ExpectShell.log('stdio', stdout='Total new issues: 1\nTotal fixed files: 1\n')
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='1 new issue 1 fixed file')
+        with current_hostname(EWS_BUILD_HOSTNAMES[0]):
+            rc = self.runStep()
+        self.assertEqual([GenerateSaferCPPResultsIndex(), DeleteStaticAnalyzerResults(), ArchiveStaticAnalyzerResults(), UploadStaticAnalyzerResults(), ExtractStaticAnalyzerTestResults(), DisplaySaferCPPResults()], next_steps)
+        return rc
+
+    def test_changed_expectations_no_match(self):
+        self.configureStep(True)
+        FindUnexpectedStaticAnalyzerResults.decode_results_data = lambda self: {'passes': {'WebCore': {'NoUncountedMemberChecker': ['css/ShorthandSerializer.cpp']}}, 'failures': {'WebCore': {'NoUncountedMemberChecker': ['inspector/agents/worker/WorkerWorkerAgent.h']}}}
+        self.setProperty('user_removed_tests', [])
+        self.setProperty('user_added_tests', ['WebCore/css/ShorthandSerializer.cpp/NoUncountedMemberChecker'])
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        logfiles={'json': self.jsonFileName},
+                        command=['python3', 'Tools/Scripts/compare-static-analysis-results', 'wkdir/build/new', '--build-output', SCAN_BUILD_OUTPUT_DIR, '--check-expectations'],
+                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
+            + ExpectShell.log('stdio', stdout='Total new issues: 1\nTotal fixed files: 2\n')
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='1 new issue 2 fixed files')
+        with current_hostname(EWS_BUILD_HOSTNAMES[0]):
+            return self.runStep()
+        self.assertEqual([ValidateChange(verifyBugClosed=False, addURLs=False), RevertAppliedChanges(exclude=['new*', 'scan-build-output*']), ScanBuildWithoutChange()], next_steps)
+        return rc
+
+    def test_second_pass_changed_expectations(self):
+        self.configureStep(False)
+        FindUnexpectedStaticAnalyzerResults.decode_results_data = lambda self: {'passes': {'WebCore': {'NoUncountedMemberChecker': []}}, 'failures': {'WebCore': {'NoUncountedMemberChecker': []}}}
+        self.setProperty('test_failures', ['WebCore/inspector/agents/worker/WorkerWorkerAgent.h/NoUncountedMemberChecker'])
+        self.setProperty('test_passes', [])
+        self.setProperty('user_removed_tests', ['WebCore/inspector/agents/worker/WorkerWorkerAgent.h/NoUncountedMemberChecker'])
+        self.setProperty('user_added_tests', [])
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        logfiles={'json': self.jsonFileName},
+                        command=self.command + self.upload_options + self.configuration,
+                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
+            + ExpectShell.log('stdio', stdout='No unexpected results\n')
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='1 failing file ')
+        with current_hostname(EWS_BUILD_HOSTNAMES[0]):
+            rc = self.runStep()
+        self.assertEqual([DownloadUnexpectedResultsFromMaster(), DeleteStaticAnalyzerResults(results_dir='StaticAnalyzerUnexpectedRegressions'), GenerateSaferCPPResultsIndex(), DeleteStaticAnalyzerResults(), ArchiveStaticAnalyzerResults(), UploadStaticAnalyzerResults(), ExtractStaticAnalyzerTestResults(), DisplaySaferCPPResults()], next_steps)
+        return rc
+
+    def test_second_pass_no_results(self):
+        self.configureStep(False)
+        FindUnexpectedStaticAnalyzerResults.decode_results_data = lambda self: {'passes': {'WebCore': {'NoUncountedMemberChecker': []}}, 'failures': {'WebCore': {'NoUncountedMemberChecker': ['css/ShorthandSerializer.cpp']}}}
+        self.setProperty('user_added_tests', ['WebCore/css/ShorthandSerializer.cpp/NoUncountedMemberChecker'])
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        logfiles={'json': self.jsonFileName},
+                        command=self.command + self.upload_options + self.configuration,
+                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'})
+            + ExpectShell.log('stdio', stdout='Total failing files: 1\n')
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Found no unexpected results')
+        with current_hostname(EWS_BUILD_HOSTNAMES[0]):
+            rc = self.runStep()
+        self.assertEqual([], next_steps)
+        return rc
 
 class TestDownloadUnexpectedResultsfromMaster(BuildStepMixinAdditions, unittest.TestCase):
     READ_LIMIT = 1000

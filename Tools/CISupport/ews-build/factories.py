@@ -112,6 +112,7 @@ class SaferCPPStaticAnalyzerFactory(factory.BuildFactory):
         self.addStep(CheckOutPullRequest())
         self.addStep(KillOldProcesses())
         self.addStep(ValidateChange(addURLs=False))
+        self.addStep(FindModifiedSaferCPPExpectations())
         self.addStep(ScanBuild())
 
 

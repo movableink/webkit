@@ -311,6 +311,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'checkout-pull-request',
             'kill-old-processes',
             'validate-change',
+            'find-modified-safer-cpp-expectations',
             'scan-build'
         ],
         'macOS-Release-WK2-Stress-Tests-EWS': [
