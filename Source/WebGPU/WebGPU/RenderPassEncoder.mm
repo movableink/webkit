@@ -1218,6 +1218,18 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
 
         bundle->replayCommands(*this);
     }
+
+    m_vertexBuffers.clear();
+    m_bindGroups.clear();
+    m_bindGroupDynamicOffsets.clear();
+    m_pipeline = nullptr;
+    m_vertexDynamicOffsets.clear();
+    m_priorVertexDynamicOffsets.clear();
+    m_fragmentDynamicOffsets.clear();
+    m_priorFragmentDynamicOffsets.clear();
+    m_indexBuffer = nullptr;
+    m_maxVertexBufferSlot = 0;
+    m_maxBindGroupSlot = 0;
 }
 
 bool RenderPassEncoder::colorDepthStencilTargetsMatch(const RenderPipeline& pipeline) const
