@@ -1989,3 +1989,7 @@ webkit.org/b/287889 [ Debug ] imported/w3c/web-platform-tests/file-system-access
 [ Sonoma x86_64 Release ] fast/borders/border-painting-outset.html [ Pass ImageOnlyFailure ] 
 
 webkit.org/b/287877 pdf/pdf-plugin-printing.html [ Pass Timeout ]
+
+# webkit.org/287922 REGRESSION (289994@main?): [macOS Debug] imported/w3c/web-platform-tests/fullscreen/api/element tests are flaky failure
+[ Debug ] imported/w3c/web-platform-tests/fullscreen/api/element-request-fullscreen-namespaces.html [ Pass Failure ]
+[ Debug ] imported/w3c/web-platform-tests/fullscreen/api/element-ready-check-containing-iframe.html [ Pass Failure ]
