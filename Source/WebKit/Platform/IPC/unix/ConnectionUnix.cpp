@@ -129,7 +129,7 @@ void Connection::platformInitialize(Identifier&& identifier)
 void Connection::platformInvalidate()
 {
 #if USE(GLIB)
-    m_socket = nullptr;
+    g_socket_close(m_socket.get(), nullptr);
 #else
     if (m_socketDescriptor.value() != -1)
         closeWithRetry(m_socketDescriptor.release());
