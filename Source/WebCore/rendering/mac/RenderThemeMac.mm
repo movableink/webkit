@@ -591,6 +591,8 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
             case CSSValueAppleSystemQuaternaryLabel:
                 return @selector(quaternaryLabelColor);
 #if HAVE(NSCOLOR_FILL_COLOR_HIERARCHY)
+            case CSSValueAppleSystemOpaqueFill:
+                return @selector(systemFillColor);
             case CSSValueAppleSystemTertiaryFill:
                 return @selector(tertiarySystemFillColor);
 #endif
@@ -1085,8 +1087,9 @@ int RenderThemeMac::minimumMenuListSize(const RenderStyle& style) const
     return sizeForSystemFont(style, menuListSizes()).width();
 }
 
-void RenderThemeMac::adjustSliderTrackStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSliderTrackStyle(RenderStyle& style, const Element* element) const
 {
+    RenderThemeCocoa::adjustSliderTrackStyle(style, element);
     style.setBoxShadow(nullptr);
 }
 
@@ -1210,8 +1213,17 @@ int RenderThemeMac::sliderTickOffsetFromTrackCenter() const
 // However, the method currently returns an incorrect value, both with and without a control view associated with the cell.
 constexpr int sliderThumbThickness = 17;
 
-void RenderThemeMac::adjustSliderThumbSize(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSliderThumbSize(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustSliderThumbSize(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     float zoomLevel = style.usedZoom();
     if (style.usedAppearance() == StyleAppearance::SliderThumbHorizontal || style.usedAppearance() == StyleAppearance::SliderThumbVertical) {
         style.setWidth(Length(static_cast<int>(sliderThumbThickness * zoomLevel), LengthType::Fixed));

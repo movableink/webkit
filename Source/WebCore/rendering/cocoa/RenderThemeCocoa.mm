@@ -28,15 +28,20 @@
 
 #import "AttachmentLayout.h"
 #import "CaretRectComputation.h"
+#import "ColorBlending.h"
 #import "DrawGlyphsRecorder.h"
 #import "FloatRoundedRect.h"
 #import "FontCacheCoreText.h"
 #import "GraphicsContextCG.h"
+#import "HTMLDataListElement.h"
 #import "HTMLInputElement.h"
+#import "HTMLOptionElement.h"
 #import "ImageBuffer.h"
 #import "Page.h"
 #import "RenderProgress.h"
+#import "RenderSlider.h"
 #import "RenderText.h"
+#import "TypedElementDescendantIteratorInlines.h"
 #import "UserAgentScripts.h"
 #import "UserAgentStyleSheets.h"
 #import <CoreGraphics/CoreGraphics.h>
@@ -291,6 +296,14 @@ Color RenderThemeCocoa::platformGrammarMarkerColor(OptionSet<StyleColorOptions> 
         return useDarkMode ? SRGBA<uint8_t> { 40, 145, 255, 217 } : SRGBA<uint8_t> { 0, 122, 255, 191 };
 #endif
     return useDarkMode ? SRGBA<uint8_t> { 50, 215, 75, 217 } : SRGBA<uint8_t> { 25, 175, 50, 191 };
+}
+
+Color RenderThemeCocoa::controlTintColor(const RenderStyle& style, OptionSet<StyleColorOptions> options) const
+{
+    if (!style.hasAutoAccentColor())
+        return style.usedAccentColor(options);
+
+    return systemColor(CSSValueAppleSystemBlue, options);
 }
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -585,6 +598,16 @@ bool RenderThemeCocoa::paintSliderTrack(const RenderObject& box, const PaintInfo
 #endif
 
     return RenderTheme::paintSliderTrack(box, paintInfo, rect);
+}
+
+void RenderThemeCocoa::adjustSliderThumbSize(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustSliderThumbSizeForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustSliderThumbSize(style, element);
 }
 
 void RenderThemeCocoa::adjustSliderThumbStyle(RenderStyle& style, const Element* element) const

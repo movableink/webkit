@@ -49,6 +49,8 @@ protected:
     Color platformDictationAlternativesMarkerColor(OptionSet<StyleColorOptions>) const override;
     Color platformGrammarMarkerColor(OptionSet<StyleColorOptions>) const override;
 
+    Color controlTintColor(const RenderStyle&, OptionSet<StyleColorOptions>) const;
+
     void adjustCheckboxStyle(RenderStyle&, const Element*) const override;
     bool paintCheckbox(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
@@ -91,6 +93,7 @@ protected:
     void adjustSliderTrackStyle(RenderStyle&, const Element*) const override;
     bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
+    void adjustSliderThumbSize(RenderStyle&, const Element*) const override;
     void adjustSliderThumbStyle(RenderStyle&, const Element*) const override;
     bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
