@@ -3298,7 +3298,7 @@ static Ref<CSSValue> valueForPositionArea(const std::optional<PositionArea>& pos
     return CSSPropertyParserHelpers::valueForPositionArea(blockOrXAxisKeyword, inlineOrYAxisKeyword).releaseNonNull();
 }
 
-static Ref<CSSValue> valueForTimelineScopeNames(const Vector<AtomString>& names)
+static Ref<CSSValue> valueForNameScopeNames(const Vector<AtomString>& names)
 {
     if (names.isEmpty())
         return CSSPrimitiveValue::create(CSSValueNone);
@@ -5005,12 +5005,12 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     }
     case CSSPropertyTimelineScope:
         switch (style.timelineScope().type) {
-        case TimelineScope::Type::None:
+        case NameScope::Type::None:
             return CSSPrimitiveValue::create(CSSValueNone);
-        case TimelineScope::Type::All:
+        case NameScope::Type::All:
             return CSSPrimitiveValue::create(CSSValueAll);
-        case TimelineScope::Type::Ident:
-            return valueForTimelineScopeNames(style.timelineScope().scopeNames);
+        case NameScope::Type::Ident:
+            return valueForNameScopeNames(style.timelineScope().names);
         }
         ASSERT_NOT_REACHED();
         return CSSPrimitiveValue::create(CSSValueNone);

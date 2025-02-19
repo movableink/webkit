@@ -11224,7 +11224,7 @@
                 "all"
             ],
            "codegen-properties": {
-               "style-builder-converter": "TimelineScope",
+               "style-builder-converter": "NameScope",
                "parser-grammar": "none | all | <dashed-ident>#",
                "settings-flag": "scrollDrivenAnimationsEnabled"
            },

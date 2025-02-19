@@ -30,6 +30,7 @@
 #include "GapLength.h"
 #include "LengthPoint.h"
 #include "LineClampValue.h"
+#include "NameScope.h"
 #include "NinePieceImage.h"
 #include "OffsetRotation.h"
 #include "PathOperation.h"
@@ -52,7 +53,6 @@
 #include "StyleSelfAlignmentData.h"
 #include "StyleTextEdge.h"
 #include "TextDecorationThickness.h"
-#include "TimelineScope.h"
 #include "TouchAction.h"
 #include "TranslateTransformOperation.h"
 #include "ViewTimeline.h"
@@ -208,7 +208,7 @@ public:
     Vector<ViewTimelineInsets> viewTimelineInsets;
     Vector<AtomString> viewTimelineNames;
 
-    TimelineScope timelineScope;
+    NameScope timelineScope;
 
     ScrollbarGutter scrollbarGutter;
 

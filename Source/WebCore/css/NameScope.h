@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,26 +30,26 @@
 
 namespace WebCore {
 
-struct TimelineScope {
+struct NameScope {
     enum class Type : uint8_t { None, All, Ident };
 
     Type type { Type::None };
-    Vector<AtomString> scopeNames;
+    Vector<AtomString> names;
 
-    bool operator==(const TimelineScope& other) const = default;
+    bool operator==(const NameScope& other) const = default;
 };
 
-inline TextStream& operator<<(TextStream& ts, const TimelineScope& timelineScope)
+inline TextStream& operator<<(TextStream& ts, const NameScope& scope)
 {
-    switch (timelineScope.type) {
-    case TimelineScope::Type::None:
+    switch (scope.type) {
+    case NameScope::Type::None:
         ts << "none";
         break;
-    case TimelineScope::Type::All:
+    case NameScope::Type::All:
         ts << "all";
         break;
-    case TimelineScope::Type::Ident:
-        ts << "ident: " << timelineScope.scopeNames;
+    case NameScope::Type::Ident:
+        ts << "ident: " << scope.names;
         break;
     }
     return ts;

@@ -253,7 +253,7 @@ public:
 
     static RefPtr<TimingFunction> convertTimingFunction(BuilderState&, const CSSValue&);
 
-    static TimelineScope convertTimelineScope(BuilderState&, const CSSValue&);
+    static NameScope convertNameScope(BuilderState&, const CSSValue&);
 
     static SingleTimelineRange convertAnimationRangeStart(BuilderState&, const CSSValue&);
     static SingleTimelineRange convertAnimationRangeEnd(BuilderState&, const CSSValue&);
@@ -2696,16 +2696,16 @@ inline RefPtr<TimingFunction> BuilderConverter::convertTimingFunction(BuilderSta
     return Style::createTimingFunction(value, builderState.cssToLengthConversionData());
 }
 
-inline TimelineScope BuilderConverter::convertTimelineScope(BuilderState& builderState, const CSSValue& value)
+inline NameScope BuilderConverter::convertNameScope(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         switch (primitiveValue->valueID()) {
         case CSSValueNone:
             return { };
         case CSSValueAll:
-            return { TimelineScope::Type::All, { } };
+            return { NameScope::Type::All, { } };
         default:
-            return { TimelineScope::Type::Ident, { AtomString { primitiveValue->stringValue() } } };
+            return { NameScope::Type::Ident, { AtomString { primitiveValue->stringValue() } } };
         }
     }
 
@@ -2713,7 +2713,7 @@ inline TimelineScope BuilderConverter::convertTimelineScope(BuilderState& builde
     if (!list)
         return { };
 
-    return { TimelineScope::Type::Ident, WTF::map(*list, [&](auto& item) {
+    return { NameScope::Type::Ident, WTF::map(*list, [&](auto& item) {
         return AtomString { item.stringValue() };
     }) };
 }

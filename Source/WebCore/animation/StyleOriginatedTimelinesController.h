@@ -26,9 +26,9 @@
 #pragma once
 
 #include "CSSAnimation.h"
+#include "NameScope.h"
 #include "ScrollAxis.h"
 #include "Styleable.h"
-#include "TimelineScope.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/AtomStringHash.h>
@@ -72,7 +72,7 @@ public:
     void registerNamedViewTimeline(const AtomString&, const Styleable&, ScrollAxis, ViewTimelineInsets&&);
     void unregisterNamedTimeline(const AtomString&, const Styleable&);
     void setTimelineForName(const AtomString&, const Styleable&, CSSAnimation&);
-    void updateNamedTimelineMapForTimelineScope(const TimelineScope&, const Styleable&);
+    void updateNamedTimelineMapForTimelineScope(const NameScope&, const Styleable&);
     void updateTimelineForTimelineScope(const Ref<ScrollTimeline>&, const AtomString&);
     void unregisterNamedTimelinesAssociatedWithElement(const Styleable&);
     void removePendingOperationsForCSSAnimation(const CSSAnimation&);
@@ -92,7 +92,7 @@ private:
     ScrollTimeline& inactiveNamedTimeline(const AtomString&);
 
     Vector<TimelineMapAttachOperation> m_pendingAttachOperations;
-    Vector<std::pair<TimelineScope, WeakStyleable>> m_timelineScopeEntries;
+    Vector<std::pair<NameScope, WeakStyleable>> m_timelineScopeEntries;
     UncheckedKeyHashMap<AtomString, Vector<Ref<ScrollTimeline>>> m_nameToTimelineMap;
     HashSet<Ref<ScrollTimeline>> m_removedTimelines;
 };

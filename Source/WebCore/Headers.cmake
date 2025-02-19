@@ -745,7 +745,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     animation/StyleOriginatedTimelinesController.h
     animation/TimelineRange.h
     animation/TimelineRangeOffset.h
-    animation/TimelineScope.h
     animation/ViewTimeline.h
     animation/ViewTimelineOptions.h
     animation/WebAnimationTime.h
@@ -941,6 +940,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/MediaList.h
     css/MediaQueryParserContext.h
     css/MutableStyleProperties.h
+    css/NameScope.h
     css/Quad.h
     css/Rect.h
     css/RectBase.h
