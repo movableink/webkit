@@ -1315,7 +1315,9 @@ fast/dom/Window/window-focus-self.html [ Failure ]
 fast/dom/Window/window-resize-and-move-arguments.html [ Failure ]
 fast/dom/Window/window-resize.html [ Failure ]
 
+http/tests/dom/noreferrer-window-not-targetable.html [ Failure ]
 
+ 
 #//////////////////////////////////////////////////////////////////////////////////////////
 # Editing
 #//////////////////////////////////////////////////////////////////////////////////////////
@@ -4469,3 +4471,5 @@ fast/box-shadow/shadow-repaint.html [ Skip ] # Failure
 fast/css/highlight-text-repaint.html [ Skip ] # Failure
 fast/css/text-underline-offset-repaint.html [ Skip ] # Failure
 fast/flexbox/missing-repaint-when-flext-item-never-had-layout.html [ Skip ] # Failure
+
+webkit.org/b/285033 http/tests/download/sandboxed-iframe-download-not-allowed.html [ Failure ]
