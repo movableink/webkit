@@ -277,6 +277,8 @@ private:
 
     bool siteIsolationEnabled() const;
 
+    Ref<WebCore::LocalFrame> protectedLocalFrame() const;
+
 #if ENABLE(CONTENT_EXTENSIONS)
     void didExceedNetworkUsageThreshold();
 #endif
