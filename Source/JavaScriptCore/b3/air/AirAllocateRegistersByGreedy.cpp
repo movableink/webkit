@@ -56,9 +56,6 @@ static constexpr bool eagerGroups = true;
 static constexpr bool eagerGroupsSplitFully = false;
 static constexpr bool eagerGroupsExhaustiveSearch = false;
 
-// Multiplier of 0 means split around clobbers at ever opportunity. The higher the multiplier,
-// the less often the split will be applied (i.e. treats splitting as more costly).
-static constexpr float splitCostMultiplier = 0.0f;
 // Quickly filters out short ranges from live range splitting consideration.
 static constexpr size_t splitMinRangeSize = 8;
 
@@ -1503,7 +1500,9 @@ private:
         ASSERT(tmpData.spillCost != unspillableCost); // Should have evicted.
         if (minSplitCost >= unspillableCost)
             return false; // Other conflicts exist, so splitting is not productive
-        if (minSplitCost * splitCostMultiplier >= tmpData.spillCost)
+        // Multiplier of 0 means split around clobbers at every opportunity. The higher the multiplier,
+        // the less often the split will be applied (i.e. treats splitting as more costly).
+        if (minSplitCost * Options::airGreedyRegAllocSplitMultiplier() >= tmpData.spillCost)
             return false; // Better to spill than to split
 
         LiveRange holeRange;
@@ -1542,7 +1541,7 @@ private:
             metadata.gapTmps.append(gapTmp);
             setStageAndEnqueue(gapTmp, m_map[gapTmp], Stage::TryAllocate);
         }
-        dataLogLnIf(verbose(), "Split (clobbers): reg = ", bestSplitReg, " splitCost = ", minSplitCost, " split tmp = ", metadata);
+        dataLogLnIf(verbose(), "Split (clobbers): reg = ", bestSplitReg, " spillCost = ", m_map[tmp].spillCost, " splitCost = ", minSplitCost, " split tmp = ", metadata);
         m_splitMetadata.append(WTFMove(metadata));
         return true;
     }
