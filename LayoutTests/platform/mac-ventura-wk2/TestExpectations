@@ -64,9 +64,6 @@ view-gestures/smart-magnify/double-tap-zoom-scroll-above-top.html [ Timeout Pass
 [ Release x86_64 ] platform/mac/media/mediacapabilities/vp9-decodingInfo-sw.html [ Skip ]
 [ Release x86_64 ] media/media-source/media-managedmse-resume-after-remove.html [ Skip ]
 
-# webkit.org/b/280019 [EWS] fast/canvas/offscreen-giant.html is constant failure in Ventura Intel EWS
-[ Release x86_64 ] fast/canvas/offscreen-giant.html [ Skip ]
-
 # webkit.org/b/280098 4 tests in imported/w3c/web-platform-tests/css/ are constant failures in Ventura Intel EWS
 [ Release x86_64 ] imported/w3c/web-platform-tests/css/css-backgrounds/box-shadow-border-radius-001.html [ Skip ]
 [ Release x86_64 ] imported/w3c/web-platform-tests/css/css-images/image-orientation/image-orientation-background-properties.html [ Skip ]
