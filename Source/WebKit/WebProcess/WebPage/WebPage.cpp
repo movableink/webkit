@@ -3159,7 +3159,7 @@ static DestinationColorSpace snapshotColorSpace(SnapshotOptions options, WebPage
 {
 #if USE(CG)
     if (options.contains(SnapshotOption::UseScreenColorSpace))
-        return screenColorSpace(page.protectedCorePage()->protectedMainFrame()->virtualView());
+        return screenColorSpace(page.protectedCorePage()->protectedMainFrame()->protectedVirtualView().get());
 #endif
     return DestinationColorSpace::SRGB();
 }
