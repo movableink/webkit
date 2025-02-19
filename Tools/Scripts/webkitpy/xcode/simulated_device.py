@@ -168,7 +168,7 @@ class SimulatedDeviceManager(object):
         return
 
     @staticmethod
-    def available_devices(host=None):
+    def available_devices(host=None, udids=None):
         host = host or SystemHost.get_default()
         if SimulatedDeviceManager.AVAILABLE_DEVICES == []:
             SimulatedDeviceManager.populate_available_devices(host)
