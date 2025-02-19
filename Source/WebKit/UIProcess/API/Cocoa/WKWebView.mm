@@ -3624,6 +3624,32 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 #endif
 }
 
+- (void)_convertPoint:(CGPoint)point fromFrame:(WKFrameInfo *)frame toMainFrameCoordinates:(void (^)(CGPoint, NSError *error))completionHandler
+{
+    if (!frame)
+        [NSException raise:NSInternalInconsistencyException format:@"frame must be non-null"];
+
+    _page->convertPointToMainFrameCoordinates(point, frame->_frameInfo->frameInfoData().frameID.asOptional(), [completionHandler = makeBlockPtr(completionHandler)] (std::optional<WebCore::FloatPoint> result) {
+        if (result)
+            completionHandler(*result, nil);
+        else
+            completionHandler({ }, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+    });
+}
+
+- (void)_convertRect:(CGRect)rect fromFrame:(WKFrameInfo *)frame toMainFrameCoordinates:(void (^)(CGRect, NSError *error))completionHandler
+{
+    if (!frame)
+        [NSException raise:NSInternalInconsistencyException format:@"frame must be non-null"];
+
+    _page->convertRectToMainFrameCoordinates(rect, frame->_frameInfo->frameInfoData().frameID.asOptional(), [completionHandler = makeBlockPtr(completionHandler)] (std::optional<WebCore::FloatRect> result) {
+        if (result)
+            completionHandler(*result, nil);
+        else
+            completionHandler({ }, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+    });
+}
+
 - (void)_toggleInWindow
 {
     THROW_IF_SUSPENDED;

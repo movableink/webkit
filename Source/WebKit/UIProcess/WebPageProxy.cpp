@@ -9796,19 +9796,13 @@ void WebPageProxy::setTextIndicatorFromFrame(FrameIdentifier frameID, WebCore::T
     if (!frame)
         return;
 
-    RefPtr rootFrameParent = frame->rootFrame().parentFrame();
-    if (!rootFrameParent) {
-        setTextIndicator(WTFMove(indicatorData), lifetime);
-        return;
-    }
-
-    ASSERT(m_preferences->siteIsolationEnabled());
-
-    auto parentFrameID = rootFrameParent->frameID();
-    auto textBoundingRect = indicatorData.textBoundingRectInRootViewCoordinates;
-    sendWithAsyncReplyToProcessContainingFrame(parentFrameID, Messages::WebPage::RemoteViewRectToRootView(frameID, textBoundingRect), [protectedThis = Ref { *this }, indicatorData = WTFMove(indicatorData), rootFrameParent = WTFMove(rootFrameParent), lifetime](FloatRect rect) mutable {
-        indicatorData.textBoundingRectInRootViewCoordinates = rect;
-        protectedThis->setTextIndicatorFromFrame(rootFrameParent->rootFrame().frameID(), WTFMove(indicatorData), lifetime);
+    auto rect = indicatorData.textBoundingRectInRootViewCoordinates;
+    convertRectToMainFrameCoordinates(rect, frame->rootFrame().frameID(), [weakThis = WeakPtr { *this }, indicatorData = WTFMove(indicatorData), lifetime] (std::optional<FloatRect> convertedRect) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !convertedRect)
+            return;
+        indicatorData.textBoundingRectInRootViewCoordinates = *convertedRect;
+        protectedThis->setTextIndicator(WTFMove(indicatorData), lifetime);
     });
 }
 
@@ -9932,24 +9926,17 @@ void WebPageProxy::showPopupMenuFromFrame(IPC::Connection& connection, FrameIden
     if (!frame)
         return;
 
-    RefPtr rootFrameParent = frame->rootFrame().parentFrame();
-    if (!rootFrameParent) {
-        showPopupMenu(connection, rect, textDirection, items, selectedIndex, data);
-        return;
-    }
-
-    ASSERT(m_preferences->siteIsolationEnabled());
-
-    auto parentFrameID = rootFrameParent->frameID();
-    sendWithAsyncReplyToProcessContainingFrame(parentFrameID, Messages::WebPage::RemoteViewRectToRootView(frameID, FloatRect(rect)), [protectedThis = Ref { *this }, rootFrameParent = WTFMove(rootFrameParent), textDirection, selectedIndex, data, items = WTFMove(items)](FloatRect rect) mutable {
-        if (!rootFrameParent->process().hasConnection())
+    convertRectToMainFrameCoordinates(rect, frame->rootFrame().frameID(), [weakThis = WeakPtr { *this }, textDirection, selectedIndex, data, items = WTFMove(items), connection = Ref { connection }] (std::optional<FloatRect> convertedRect) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !convertedRect)
             return;
-        protectedThis->showPopupMenuFromFrame(rootFrameParent->process().protectedConnection(), rootFrameParent->rootFrame().frameID(), IntRect(rect), textDirection, WTFMove(items), selectedIndex, data);
+        protectedThis->showPopupMenu(connection, IntRect(*convertedRect), textDirection, items, selectedIndex, data);
     });
 }
 
 void WebPageProxy::showPopupMenu(IPC::Connection& connection, const IntRect& rect, uint64_t textDirection, const Vector<WebPopupItem>& items, int32_t selectedIndex, const PlatformPopupMenuData& data)
 {
+    // FIXME: Move all IPC callers of this to WebPageProxy::showPopupMenuFromFrame and move the message check to there before converting coordinates.
     MESSAGE_CHECK_BASE(selectedIndex == -1 || static_cast<uint32_t>(selectedIndex) < items.size(), connection);
 
     if (RefPtr activePopupMenu = std::exchange(m_activePopupMenu, nullptr)) {
@@ -9996,19 +9983,15 @@ void WebPageProxy::showContextMenuFromFrame(FrameIdentifier frameID, ContextMenu
     if (!frame)
         return;
 
-    RefPtr rootFrameParent = frame->rootFrame().parentFrame();
-    if (!rootFrameParent) {
-        showContextMenu(WTFMove(contextMenuContextData), userData);
-        return;
-    }
-
-    ASSERT(m_preferences->siteIsolationEnabled());
-
-    auto parentFrameID = rootFrameParent->frameID();
     auto menuLocation = contextMenuContextData.menuLocation();
-    sendWithAsyncReplyToProcessContainingFrame(parentFrameID, Messages::WebPage::RemoteViewPointToRootView(frameID, menuLocation), [protectedThis = Ref { *this }, contextMenuContextData = WTFMove(contextMenuContextData), userData = WTFMove(userData), rootFrameParent = WTFMove(rootFrameParent)](FloatPoint point) mutable {
-        contextMenuContextData.setMenuLocation(IntPoint(point));
-        protectedThis->showContextMenuFromFrame(rootFrameParent->rootFrame().frameID(), WTFMove(contextMenuContextData), WTFMove(userData));
+    convertPointToMainFrameCoordinates(menuLocation, frame->rootFrame().frameID(), [weakThis = WeakPtr { *this }, contextMenuContextData = WTFMove(contextMenuContextData), userData = WTFMove(userData)] (std::optional<FloatPoint> result) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        if (!result)
+            return;
+        contextMenuContextData.setMenuLocation(IntPoint(*result));
+        protectedThis->showContextMenu(WTFMove(contextMenuContextData), userData);
     });
 }
 
@@ -12741,6 +12724,42 @@ void WebPageProxy::updateWebsitePolicies(WebsitePoliciesData&& websitePolicies)
 {
     forEachWebContentProcess([&] (auto& process, auto pageID) {
         process.send(Messages::WebPage::UpdateWebsitePolicies(websitePolicies), pageID);
+    });
+}
+
+void WebPageProxy::convertPointToMainFrameCoordinates(WebCore::FloatPoint point, std::optional<WebCore::FrameIdentifier> frameID, CompletionHandler<void(std::optional<WebCore::FloatPoint>)>&& completionHandler)
+{
+    RefPtr frame = WebFrameProxy::webFrame(frameID);
+    if (!frame)
+        return completionHandler(std::nullopt);
+
+    RefPtr parent = frame->parentFrame();
+    if (!parent)
+        return completionHandler(point);
+
+    sendWithAsyncReplyToProcessContainingFrame(parent->frameID(), Messages::WebPage::ContentsToRootViewPoint(frame->frameID(), point), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler), nextFrameID = parent->rootFrame().frameID()](FloatPoint convertedPoint) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return completionHandler(std::nullopt);
+        protectedThis->convertPointToMainFrameCoordinates(convertedPoint, nextFrameID, WTFMove(completionHandler));
+    });
+}
+
+void WebPageProxy::convertRectToMainFrameCoordinates(WebCore::FloatRect rect, std::optional<WebCore::FrameIdentifier> frameID, CompletionHandler<void(std::optional<WebCore::FloatRect>)>&& completionHandler)
+{
+    RefPtr frame = WebFrameProxy::webFrame(frameID);
+    if (!frame)
+        return completionHandler(std::nullopt);
+
+    RefPtr parent = frame->parentFrame();
+    if (!parent)
+        return completionHandler(rect);
+
+    sendWithAsyncReplyToProcessContainingFrame(parent->frameID(), Messages::WebPage::ContentsToRootViewRect(frame->frameID(), rect), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler), nextFrameID = parent->rootFrame().frameID()](FloatRect convertedRect) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return completionHandler(std::nullopt);
+        protectedThis->convertRectToMainFrameCoordinates(convertedRect, nextFrameID, WTFMove(completionHandler));
     });
 }
 
