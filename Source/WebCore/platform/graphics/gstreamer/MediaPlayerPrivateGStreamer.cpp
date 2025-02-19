@@ -443,7 +443,8 @@ void MediaPlayerPrivateGStreamer::play()
 
     if (!m_playbackRate) {
         if (m_playbackRatePausedState == PlaybackRatePausedState::InitiallyPaused
-            || m_playbackRatePausedState == PlaybackRatePausedState::ManuallyPaused)
+            || m_playbackRatePausedState == PlaybackRatePausedState::ManuallyPaused
+            || m_playbackRatePausedState == PlaybackRatePausedState::BufferingPaused)
             m_playbackRatePausedState = PlaybackRatePausedState::RatePaused;
         return;
     }
@@ -2751,8 +2752,13 @@ void MediaPlayerPrivateGStreamer::updateStates()
             m_isPaused = false;
 
             shouldPauseForBuffering = (!m_wasBuffering && m_isBuffering && !m_isLiveStream.value_or(false));
-            if (shouldPauseForBuffering || !m_playbackRate) {
-                GST_INFO_OBJECT(pipeline(), "[Buffering] Pausing stream for buffering or because of zero playback rate.");
+            if (!m_playbackRate) {
+                GST_INFO_OBJECT(pipeline(), "[Buffering] Pausing stream because of zero playback rate.");
+                m_playbackRatePausedState = PlaybackRatePausedState::RatePaused;
+                changePipelineState(GST_STATE_PAUSED);
+            } else if (shouldPauseForBuffering) {
+                GST_INFO_OBJECT(pipeline(), "[Buffering] Pausing stream for buffering.");
+                m_playbackRatePausedState = PlaybackRatePausedState::BufferingPaused;
                 changePipelineState(GST_STATE_PAUSED);
             }
         } else
