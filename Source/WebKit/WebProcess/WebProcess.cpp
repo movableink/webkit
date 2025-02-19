@@ -425,7 +425,7 @@ static void scheduleLogMemoryStatistics(LogMemoryStatisticsReason reason)
 }
 
 void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters, CompletionHandler<void(ProcessIdentity)>&& completionHandler)
-{    
+{
     TraceScope traceScope(InitializeWebProcessStart, InitializeWebProcessEnd);
     // Reply immediately so that the identity is available as soon as possible.
     completionHandler(ProcessIdentity { ProcessIdentity::CurrentProcess });
@@ -544,7 +544,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
     for (auto& supplement : m_supplements.values())
         supplement->initialize(parameters);
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)
-    m_remoteMediaPlayerManager->initialize(parameters);
+    protectedRemoteMediaPlayerManager()->initialize(parameters);
 #endif
 
     setCacheModel(parameters.cacheModel);
@@ -1267,7 +1267,7 @@ NetworkProcessConnection& WebProcess::ensureNetworkProcessConnection()
 #endif
 
         // This can be called during a WebPage's constructor, so wait until after the constructor returns to touch the WebPage.
-        RunLoop::protectedMain()->dispatch([this] {
+        RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }] {
             for (auto& webPage : m_pageMap.values())
                 webPage->synchronizeCORSDisablingPatternsWithNetworkProcess();
         });
@@ -1706,7 +1706,7 @@ void WebProcess::prepareToSuspend(bool isSuspensionImminent, MonotonicTime estim
     updateFreezerStatus();
 #endif
 
-    markAllLayersVolatile([this, completionHandler = WTFMove(completionHandler)]() mutable {
+    markAllLayersVolatile([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
         WEBPROCESS_RELEASE_LOG(ProcessSuspension, "prepareToSuspend: Process is ready to suspend");
         completionHandler();
     });
@@ -1731,7 +1731,7 @@ void WebProcess::markAllLayersVolatile(CompletionHandler<void()>&& completionHan
     WEBPROCESS_RELEASE_LOG(ProcessSuspension, "markAllLayersVolatile:");
     auto callbackAggregator = CallbackAggregator::create(WTFMove(completionHandler));
     for (auto& page : m_pageMap.values()) {
-        page->markLayersVolatile([this, callbackAggregator, pageID = page->identifier()] (bool succeeded) {
+        page->markLayersVolatile([this, protectedThis = Ref { *this }, callbackAggregator, pageID = page->identifier()] (bool succeeded) {
             if (succeeded)
                 WEBPROCESS_RELEASE_LOG(ProcessSuspension, "markAllLayersVolatile: Successfuly marked layers as volatile for webPageID=%" PRIu64, pageID.toUInt64());
             else
@@ -2074,7 +2074,7 @@ void WebProcess::clearCachedPage(BackForwardItemIdentifier backForwardItemID, Co
 LibWebRTCNetwork& WebProcess::libWebRTCNetwork()
 {
     if (!m_libWebRTCNetwork)
-        m_libWebRTCNetwork = makeUniqueWithoutRefCountedCheck<LibWebRTCNetwork>(*this);
+        lazyInitialize(m_libWebRTCNetwork, makeUniqueWithoutRefCountedCheck<LibWebRTCNetwork>(*this));
     return *m_libWebRTCNetwork;
 }
 
@@ -2371,11 +2371,11 @@ void WebProcess::setUseGPUProcessForMedia(bool useGPUProcessForMedia)
 
 #if PLATFORM(COCOA)
     if (useGPUProcessForMedia) {
-        SystemBatteryStatusTestingOverrides::singleton().setConfigurationChangedCallback([this] (bool forceUpdate) {
+        SystemBatteryStatusTestingOverrides::singleton().setConfigurationChangedCallback([this, protectedThis = Ref { *this }] (bool forceUpdate) {
             ensureGPUProcessConnection().updateMediaConfiguration(forceUpdate);
         });
 #if ENABLE(VP9)
-        VP9TestingOverrides::singleton().setConfigurationChangedCallback([this] (bool forceUpdate) {
+        VP9TestingOverrides::singleton().setConfigurationChangedCallback([this, protectedThis = Ref { *this }] (bool forceUpdate) {
             ensureGPUProcessConnection().updateMediaConfiguration(forceUpdate);
         });
 #endif

@@ -762,7 +762,7 @@ private:
 
     String m_uiProcessBundleIdentifier;
     RefPtr<NetworkProcessConnection> m_networkProcessConnection;
-    UniqueRef<WebLoaderStrategy> m_webLoaderStrategy;
+    const UniqueRef<WebLoaderStrategy> m_webLoaderStrategy;
     RefPtr<WebFileSystemStorageConnection> m_fileSystemStorageConnection;
 
 #if ENABLE(GPU_PROCESS)
@@ -792,10 +792,10 @@ private:
     Ref<RemoteImageDecoderAVFManager> m_remoteImageDecoderAVFManager;
 #endif
     Ref<WebBroadcastChannelRegistry> m_broadcastChannelRegistry;
-    Ref<WebCookieJar> m_cookieJar;
+    const Ref<WebCookieJar> m_cookieJar;
     WebSocketChannelManager m_webSocketChannelManager;
 
-    std::unique_ptr<LibWebRTCNetwork> m_libWebRTCNetwork;
+    const std::unique_ptr<LibWebRTCNetwork> m_libWebRTCNetwork;
 
     HashSet<String> m_dnsPrefetchedHosts;
     PAL::HysteresisActivity m_dnsPrefetchHystereris;
