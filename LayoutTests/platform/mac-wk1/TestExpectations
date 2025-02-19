@@ -3053,3 +3053,5 @@ webkit.org/b/287914 imported/w3c/web-platform-tests/html/semantics/scripting-1/t
 webkit.org/b/287919 imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/moving-between-documents/after-prepare-createHTMLDocument-success-external-module.html [ Pass Failure ]
 
 webkit.org/b/287973 imported/w3c/web-platform-tests/css/css-grid/grid-definition/grid-auto-repeat-max-size-001.tentative.html [ Pass Failure ]
+
+webkit.org/b/287976 imported/w3c/web-platform-tests/css/css-box/margin-trim/computed-margin-values/block-container-block-start-self-collapsing-nested.html [ Pass Failure ]
