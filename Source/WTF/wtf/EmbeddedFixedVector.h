@@ -26,6 +26,7 @@
 #pragma once
 
 #include <iterator>
+#include <wtf/MallocCommon.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Nonmovable.h>
 #include <wtf/TrailingArray.h>
@@ -37,7 +38,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(EmbeddedFixedVector);
 
 template<typename T, typename Malloc = EmbeddedFixedVectorMalloc>
 class EmbeddedFixedVector final : public TrailingArray<EmbeddedFixedVector<T, Malloc>, T> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(EmbeddedFixedVector);
+    WTF_MAKE_CONFIGURABLE_ALLOCATED_WITH_HEAP_IDENTIFIER(EmbeddedFixedVector, Malloc);
     WTF_MAKE_NONCOPYABLE(EmbeddedFixedVector);
     WTF_MAKE_NONMOVABLE(EmbeddedFixedVector);
 public:

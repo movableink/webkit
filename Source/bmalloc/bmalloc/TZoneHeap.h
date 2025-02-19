@@ -171,7 +171,7 @@ public: \
         ::bmalloc::api::tzoneFree(p); \
     } \
     \
-    using WTFIsFastAllocated = int;
+    using WTFIsFastMallocAllocated = int;
 
 #define MAKE_BTZONE_MALLOCED_COMMON_NON_TEMPLATE(_type, _compactMode, _exportMacro) \
 private: \

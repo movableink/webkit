@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <wtf/MallocCommon.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
 
@@ -40,7 +41,7 @@ namespace WTF {
     // An iterator for SegmentedVector. It supports only the pre ++ operator
     template <typename T, size_t SegmentSize = 8, typename Malloc = SegmentedVectorMalloc> class SegmentedVector;
     template <typename T, size_t SegmentSize = 8, typename Malloc = SegmentedVectorMalloc> class SegmentedVectorIterator {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_CONFIGURABLE_ALLOCATED(FastMalloc);
     private:
         friend class SegmentedVector<T, SegmentSize, Malloc>;
     public:
@@ -83,7 +84,7 @@ namespace WTF {
         {
         }
 
-        SegmentedVector<T, SegmentSize>& m_vector;
+        SegmentedVector<T, SegmentSize, Malloc>& m_vector;
         size_t m_index;
     };
 

@@ -27,6 +27,7 @@
 
 #include <utility>
 #include <wtf/FastMalloc.h>
+#include <wtf/MallocCommon.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TypeTraits.h>

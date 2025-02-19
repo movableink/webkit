@@ -26,12 +26,15 @@
 #pragma once
 
 #include <wtf/EmbeddedFixedVector.h>
+#include <wtf/MallocCommon.h>
 
 namespace WTF {
 
 template<typename T, typename Malloc>
 class FixedVector {
+    WTF_MAKE_CONFIGURABLE_ALLOCATED(Malloc);
 public:
+
     using Storage = EmbeddedFixedVector<T, Malloc>;
     using Self = FixedVector<T, Malloc>;
     using value_type = typename Storage::value_type;

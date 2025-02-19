@@ -72,7 +72,7 @@ public: \
         ::bmalloc::api::tzoneFree(p); \
     } \
     \
-    using WTFIsFastAllocated = int;
+    using WTFIsFastMallocAllocated = int;
 
 #define MAKE_BTZONE_MALLOCED_INLINE(_type, _compactMode) \
 public: \

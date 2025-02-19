@@ -194,7 +194,7 @@ public: \
     \
     exportMacro static void freeAfterDestruction(void*); \
     \
-    using WTFIsFastAllocated = int; \
+    using WTFIsFastMallocAllocated = int; \
 private: \
     using __makeBisoMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 
@@ -220,7 +220,7 @@ public: \
     \
     exportMacro static void freeAfterDestruction(void*); \
     \
-    using WTFIsFastAllocated = int; \
+    using WTFIsFastMallocAllocated = int; \
 private: \
     using __makeBisoMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 
