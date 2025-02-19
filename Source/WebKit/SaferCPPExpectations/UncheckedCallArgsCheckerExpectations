@@ -14,7 +14,6 @@ UIProcess/Inspector/InspectorTargetProxy.cpp
 UIProcess/MediaKeySystemPermissionRequestManagerProxy.cpp
 UIProcess/Notifications/WebNotificationManagerProxy.cpp
 UIProcess/ProvisionalFrameProxy.cpp
-UIProcess/SuspendedPageProxy.cpp
 UIProcess/UserMediaPermissionRequestManagerProxy.cpp
 UIProcess/WebContextMenuProxy.cpp
 UIProcess/WebEditCommandProxy.cpp
