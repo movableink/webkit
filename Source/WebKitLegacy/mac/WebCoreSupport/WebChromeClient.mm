@@ -1057,16 +1057,18 @@ void WebChromeClient::enterFullScreenForElement(Element& element, HTMLMediaEleme
 #endif
 }
 
-void WebChromeClient::exitFullScreenForElement(Element* element)
+void WebChromeClient::exitFullScreenForElement(Element* element, CompletionHandler<void()>&& completionHandler)
 {
     SEL selector = @selector(webView:exitFullScreenForElement:listener:);
     if ([[m_webView UIDelegate] respondsToSelector:selector]) {
-        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:element completionHandler:nullptr]);
+        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:element completionHandler:[completionHandler = WTFMove(completionHandler)] (auto) mutable {
+            completionHandler();
+        }]);
         CallUIDelegate(m_webView, selector, kit(element), listener.get());
     }
 #if !PLATFORM(IOS_FAMILY)
     else
-        [m_webView _exitFullScreenForElement:element];
+        [m_webView _exitFullScreenForElement:element completionHandler:WTFMove(completionHandler)];
 #endif
 }
 

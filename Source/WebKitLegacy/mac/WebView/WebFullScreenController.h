@@ -26,6 +26,7 @@
 #if ENABLE(FULLSCREEN_API) && !PLATFORM(IOS_FAMILY)
 
 #import <WebCore/IntPoint.h>
+#import <wtf/CompletionHandler.h>
 #import <wtf/RefPtr.h>
 #import <wtf/RetainPtr.h>
 
@@ -53,7 +54,7 @@ template<typename> class ExceptionOr;
     float _savedScale;
 
     BOOL _isEnteringFullScreen;
-    BOOL _isExitingFullScreen;
+    CompletionHandler<void()> _exitCompletionHandler;
     BOOL _isFullScreen;
 }
 
@@ -71,7 +72,7 @@ template<typename> class ExceptionOr;
 - (WebCore::Element*)element;
 
 - (void)enterFullScreen:(NSScreen *)screen completionHandler:(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&)completionHandler;
-- (void)exitFullScreen;
+- (void)exitFullScreen:(CompletionHandler<void()>&&)completionHandler;
 - (void)close;
 @end
 

@@ -8968,11 +8968,11 @@ FORWARD(toggleUnderline)
     [_private->newFullscreenController enterFullScreen:[[self window] screen] completionHandler:WTFMove(completionHandler)];
 }
 
-- (void)_exitFullScreenForElement:(NakedPtr<WebCore::Element>)element
+- (void)_exitFullScreenForElement:(NakedPtr<WebCore::Element>)element completionHandler:(CompletionHandler<void()>&&)completionHandler
 {
     if (!_private->newFullscreenController)
-        return;
-    [_private->newFullscreenController exitFullScreen];
+        return completionHandler();
+    [_private->newFullscreenController exitFullScreen:WTFMove(completionHandler)];
 }
 #endif
 

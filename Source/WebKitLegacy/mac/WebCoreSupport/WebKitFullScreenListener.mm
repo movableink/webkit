@@ -66,8 +66,8 @@ using namespace WebCore;
 
 - (void)webkitDidExitFullScreen
 {
-    if (_element)
-        _element->document().fullscreenManager().didExitFullscreen();
+    if (_completionHandler)
+        _completionHandler({ });
 }
 
 @end

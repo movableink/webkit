@@ -301,10 +301,10 @@ static void setClipRectForWindow(NSWindow *window, NSRect clipRect)
     _element->document().fullscreenManager().cancelFullscreen();
 }
 
-- (void)exitFullScreen
+- (void)exitFullScreen:(CompletionHandler<void()>&&)completionHandler
 {
     if (!_isFullScreen)
-        return;
+        return completionHandler();
     _isFullScreen = NO;
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
@@ -338,19 +338,18 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [webWindow setAnimationBehavior:animationBehavior];
 
     [self _startExitFullScreenAnimationWithDuration:defaultAnimationDuration];
-    _isExitingFullScreen = YES;    
+    _exitCompletionHandler = WTFMove(completionHandler);
 }
 
 - (void)finishedExitFullScreenAnimation:(bool)completed
 {
-    if (!_isExitingFullScreen)
+    if (!_exitCompletionHandler)
         return;
-    _isExitingFullScreen = NO;
     
     [self _updateMenuAndDockForFullScreen];
 
     [self _manager]->setAnimatingFullscreen(false);
-    [self _manager]->didExitFullscreen();
+    _exitCompletionHandler();
     [_webView _scaleWebView:_savedScale atOrigin:NSMakePoint(0, 0)];
 
     NSResponder *firstResponder = [[self window] firstResponder];
@@ -388,9 +387,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // normal exit full screen sequence, but don't wait to be called back
     // in response.
     if (_isFullScreen)
-        [self exitFullScreen];
+        [self exitFullScreen:[] { }];
     
-    if (_isExitingFullScreen)
+    if (_exitCompletionHandler)
         [self finishedExitFullScreenAnimation:YES];
     
     [super close];

@@ -70,12 +70,12 @@ public:
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     void updateImageSource(WebCore::Element&);
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
-    void exitFullScreenForElement(WebCore::Element*);
+    void exitFullScreenForElement(WebCore::Element*, CompletionHandler<void()>&&);
 
     void willEnterFullScreen(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard);
     void didEnterFullScreen();
-    void willExitFullScreen();
-    void didExitFullScreen();
+    void willExitFullScreen(CompletionHandler<void()>&&);
+    void didExitFullScreen(CompletionHandler<void()>&&);
 
     WebCore::Element* element();
 
