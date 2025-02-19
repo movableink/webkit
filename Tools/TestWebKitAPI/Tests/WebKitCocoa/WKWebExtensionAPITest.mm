@@ -218,6 +218,41 @@ TEST(WKWebExtensionAPITest, SendMessageOutOfOrder)
     EXPECT_NS_EQUAL(firstMessage, @{ @"key": @"One" });
 }
 
+TEST(WKWebExtensionAPITest, SendMessageBeforeListenerAdded)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto testMessage = @"Queued test message";
+
+    auto *contentScript = Util::constructScript(@[
+        @"browser.test.onMessage.addListener((message, data) => {",
+        [NSString stringWithFormat:@"  browser.test.assertEq(message, '%@')", testMessage],
+        @"  browser.test.notifyPass()",
+        @"})",
+    ]);
+
+    auto *resources = @{
+        @"background.js": @"// This script is intentionally left blank.",
+        @"content.js": contentScript
+    };
+
+    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+
+    [manager load];
+
+    [manager sendTestMessage:testMessage];
+
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
 TEST(WKWebExtensionAPITest, AddAnonymousAsyncTest)
 {
     auto *backgroundScript = Util::constructScript(@[

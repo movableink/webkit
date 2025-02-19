@@ -61,6 +61,7 @@
 #include "WebProcessProxy.h"
 #include <WebCore/ContentRuleListResults.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
@@ -1077,6 +1078,19 @@ private:
     RefPtr<WebExtensionStorageSQLiteStore> m_localStorageStore;
     RefPtr<WebExtensionStorageSQLiteStore> m_sessionStorageStore;
     RefPtr<WebExtensionStorageSQLiteStore> m_syncStorageStore;
+
+    struct TestMessage {
+        String message;
+#if PLATFORM(COCOA)
+        RetainPtr<id> argument;
+#endif
+    };
+
+    size_t m_testMessageListenersCount { 0 };
+    Deque<TestMessage> m_testMessageQueue;
+
+    bool hasTestMessageEventListeners() { return m_testMessageListenersCount; }
+    void flushTestMessageQueueIfNeeded();
 };
 
 template<typename T>

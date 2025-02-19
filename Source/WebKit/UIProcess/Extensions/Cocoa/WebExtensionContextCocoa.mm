@@ -4991,6 +4991,12 @@ void WebExtensionContext::sendTestMessage(const String& message, id argument)
     if (!isLoaded() || !inTestingMode())
         return;
 
+    if (!hasTestMessageEventListeners()) {
+        m_testMessageQueue.append({ message, argument });
+
+        return;
+    }
+
     String argumentJSON = encodeJSONString(argument, JSONOptions::FragmentsAllowed);
 
     constexpr auto eventType = WebExtensionEventListenerType::TestOnMessage;
@@ -5002,6 +5008,14 @@ void WebExtensionContext::sendTestMessage(const String& message, id argument)
     wakeUpBackgroundContentIfNecessaryToFireEvents({ eventType }, [=, this, protectedThis = Ref { *this }] {
         sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchTestMessageEvent(message, argumentJSON, WebExtensionContentWorldType::Main));
     });
+}
+
+void WebExtensionContext::flushTestMessageQueueIfNeeded()
+{
+    while (!m_testMessageQueue.isEmpty()) {
+        auto testMessage = m_testMessageQueue.takeFirst();
+        sendTestMessage(testMessage.message, testMessage.argument.get());
+    }
 }
 
 } // namespace WebKit
