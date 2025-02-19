@@ -324,6 +324,47 @@ void VideoPresentationManager::willRemoveLayerForID(PlaybackSessionContextIdenti
     removeClientForContext(contextId);
 }
 
+void VideoPresentationManager::swapFullscreenModes(WebCore::HTMLVideoElement& firstElement, WebCore::HTMLVideoElement& secondElement)
+{
+    auto firstContextId = m_playbackSessionManager->contextIdForMediaElement(firstElement);
+    auto secondContextId = m_playbackSessionManager->contextIdForMediaElement(secondElement);
+
+    auto firstFullscreenMode = firstElement.fullscreenMode();
+    auto secondFullscreenMode = secondElement.fullscreenMode();
+
+    firstElement.setFullscreenMode(secondFullscreenMode);
+    secondElement.setFullscreenMode(firstFullscreenMode);
+
+    // Do not allow our client context count to get out of sync; this will cause
+    // the interfaces to be torn down prematurely. Also, notify the media elements
+    // that they either entered or exited fullscreen mode.
+    auto firstIsInFullscreen = firstElement.fullscreenMode() & HTMLMediaElement::VideoFullscreenModeStandard;
+    auto firstWasInFullscreen = firstFullscreenMode & HTMLMediaElement::VideoFullscreenModeStandard;
+
+    if (firstIsInFullscreen != firstWasInFullscreen) {
+        if (firstIsInFullscreen) {
+            firstElement.didEnterFullscreenOrPictureInPicture({ });
+            addClientForContext(firstContextId);
+        } else {
+            firstElement.didExitFullscreenOrPictureInPicture();
+            removeClientForContext(firstContextId);
+        }
+    }
+
+    auto secondIsInFullscreen = secondElement.fullscreenMode() & HTMLMediaElement::VideoFullscreenModeStandard;
+    auto secondWasInFullscreen = secondFullscreenMode & HTMLMediaElement::VideoFullscreenModeStandard;
+
+    if (secondIsInFullscreen != secondWasInFullscreen) {
+        if (secondIsInFullscreen) {
+            secondElement.didEnterFullscreenOrPictureInPicture({ });
+            addClientForContext(secondContextId);
+        } else {
+            secondElement.didExitFullscreenOrPictureInPicture();
+            removeClientForContext(secondContextId);
+        }
+    }
+}
+
 void VideoPresentationManager::enterVideoFullscreenForVideoElement(HTMLVideoElement& videoElement, HTMLMediaElementEnums::VideoFullscreenMode mode, bool standby)
 {
     ASSERT(m_page);

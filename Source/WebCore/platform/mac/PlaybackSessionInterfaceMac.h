@@ -80,6 +80,8 @@ public:
     void beginScrubbing();
     void endScrubbing();
 
+    void swapFullscreenModesWith(PlaybackSessionInterfaceMac&) { }
+
     void invalidate();
 
 #if !RELEASE_LOG_DISABLED

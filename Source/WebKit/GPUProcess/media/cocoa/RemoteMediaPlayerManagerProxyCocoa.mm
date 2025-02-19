@@ -36,6 +36,13 @@
 namespace WebKit {
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
+PlatformVideoTarget RemoteMediaPlayerManagerProxy::videoTargetForIdentifier(const std::optional<WebCore::VideoReceiverEndpointIdentifier>& identifier)
+{
+    if (identifier)
+        return m_videoTargetCache.get(*identifier);
+    return nullptr;
+}
+
 PlatformVideoTarget RemoteMediaPlayerManagerProxy::takeVideoTargetForMediaElementIdentifier(WebCore::HTMLMediaElementIdentifier mediaElementIdentifier, WebCore::MediaPlayerIdentifier playerIdentifier)
 {
     auto cachedEntry = m_videoReceiverEndpointCache.find(mediaElementIdentifier);
@@ -48,75 +55,124 @@ PlatformVideoTarget RemoteMediaPlayerManagerProxy::takeVideoTargetForMediaElemen
             mediaPlayer->setVideoTarget(nullptr);
         cachedEntry->value.playerIdentifier = playerIdentifier;
     }
-    return cachedEntry->value.videoTarget;
+
+    return videoTargetForIdentifier(cachedEntry->value.endpointIdentifier);
 }
 
 void RemoteMediaPlayerManagerProxy::handleVideoReceiverEndpointMessage(const VideoReceiverEndpointMessage& endpointMessage)
 {
-    auto cachedEntry = m_videoReceiverEndpointCache.find(endpointMessage.mediaElementIdentifier());
-    if (cachedEntry == m_videoReceiverEndpointCache.end()) {
-        ALWAYS_LOG(LOGIDENTIFIER, "New entry");
-        // If no entry for the specified mediaElementIdentifier exists, add a new entry to
-        // the cache, and set the new t on the specified MediaPlayer.
-        auto videoTarget = WebCore::VideoTargetFactory::createTargetFromEndpoint(endpointMessage.endpoint());
-        m_videoReceiverEndpointCache.set(endpointMessage.mediaElementIdentifier(), VideoRecevierEndpointCacheEntry { endpointMessage.playerIdentifier(), endpointMessage.endpoint(), videoTarget });
+    // A message with an empty endpoint signals that the VideoTarget should be uncached and
+    // removed from the existing player.
+    if (!endpointMessage.endpoint()) {
+        m_videoTargetCache.remove(endpointMessage.endpointIdentifier());
+        auto cacheEntry = m_videoReceiverEndpointCache.takeOptional(endpointMessage.mediaElementIdentifier());
+        if (!cacheEntry)
+            return;
 
-        if (RefPtr mediaPlayer = this->mediaPlayer(endpointMessage.playerIdentifier()))
-            mediaPlayer->setVideoTarget(videoTarget);
+        if (RefPtr mediaPlayer = this->mediaPlayer(cacheEntry->playerIdentifier))
+            mediaPlayer->setVideoTarget(nullptr);
 
         return;
     }
 
-    // A cached entry implies a MediaPlayer has already been given this endpoint.
-    auto cachedPlayerIdentifier = cachedEntry->value.playerIdentifier;
-    auto cachedEndpoint = cachedEntry->value.endpoint;
+    // Handle caching or uncaching of VideoTargets. Because a VideoTarget can only be created
+    // once during the lifetime of an endpoint, we should avoid re-creating these VideoTargets.
+    auto ensureVideoTargetResult = m_videoTargetCache.ensure(endpointMessage.endpointIdentifier(), [&] {
+        return WebCore::VideoTargetFactory::createTargetFromEndpoint(endpointMessage.endpoint());
+    });
+    PlatformVideoTarget cachedVideoTarget = ensureVideoTargetResult.iterator->value;
+
+    auto cacheResult = m_videoReceiverEndpointCache.add(endpointMessage.mediaElementIdentifier(), VideoRecevierEndpointCacheEntry { endpointMessage.playerIdentifier(), endpointMessage.endpointIdentifier() });
+    if (cacheResult.isNewEntry) {
+        // If no entry for the specified mediaElementIdentifier exists, set the new target
+        // on the specified player.
+        if (RefPtr mediaPlayer = this->mediaPlayer(endpointMessage.playerIdentifier())) {
+            ALWAYS_LOG(LOGIDENTIFIER, "New entry for player ", endpointMessage.playerIdentifier()->loggingString());
+            mediaPlayer->setVideoTarget(cachedVideoTarget);
+        }
+
+        return;
+    }
+
+    // A previously cached entry already exists
+    auto& cachedEntry = cacheResult.iterator->value;
+    auto cachedPlayerIdentifier = cachedEntry.playerIdentifier;
+    auto cachedEndpointIdentifier = cachedEntry.endpointIdentifier;
 
     // If nothing has actually changed, bail.
     if (cachedPlayerIdentifier == endpointMessage.playerIdentifier()
-        && cachedEndpoint.get() == endpointMessage.endpoint().get())
+        && cachedEndpointIdentifier == endpointMessage.endpointIdentifier())
         return;
 
-    // If the endpoint has been cleared, remove the entry from the cache entirely.
-    if (!endpointMessage.endpoint()) {
-        if (RefPtr mediaPlayer = this->mediaPlayer(cachedEntry->value.playerIdentifier)) {
-            ALWAYS_LOG(LOGIDENTIFIER, "Cache cleared; removing target from player ", cachedEntry->value.playerIdentifier->loggingString());
+    // If the VideoTarget has been cleared, remove the entry from the cache entirely.
+    if (!cachedVideoTarget) {
+        if (RefPtr mediaPlayer = this->mediaPlayer(cachedPlayerIdentifier)) {
+            ALWAYS_LOG(LOGIDENTIFIER, "Cache cleared; removing target from player ", cachedPlayerIdentifier->loggingString());
             mediaPlayer->setVideoTarget(nullptr);
         } else
             ALWAYS_LOG(LOGIDENTIFIER, "Cache cleared; no current player target");
 
-        m_videoReceiverEndpointCache.remove(cachedEntry);
+        m_videoReceiverEndpointCache.remove(cacheResult.iterator);
         return;
     }
 
-    ALWAYS_LOG(LOGIDENTIFIER, "Update entry");
-
     RefPtr cachedPlayer = mediaPlayer(cachedPlayerIdentifier);
-    auto cachedTarget = cachedEntry->value.videoTarget;
 
-    if (cachedEndpoint.get() != endpointMessage.endpoint().get()) {
-        // If the endpoint changed, create a new VideoTarget from that new endpoint.
-        if (endpointMessage.endpoint())
-            cachedTarget = WebCore::VideoTargetFactory::createTargetFromEndpoint(endpointMessage.endpoint());
-        else
-            cachedTarget = nullptr;
-    }
-
-    if (cachedPlayerIdentifier != endpointMessage.playerIdentifier()) {
+    if (cachedPlayerIdentifier != endpointMessage.playerIdentifier() && cachedPlayer) {
         // A endpoint can only be used by one MediaPlayer at a time, so if the playerIdentifier
         // has changed, first remove the endpoint from that cached MediaPlayer.
-        if (cachedPlayer)
-            cachedPlayer->setVideoTarget(nullptr);
+        ALWAYS_LOG(LOGIDENTIFIER, "Update entry; removing target from player ", cachedPlayerIdentifier->loggingString());
+        cachedPlayer->setVideoTarget(nullptr);
     }
 
     // Then set the new target, which may have changed, on the specified MediaPlayer.
-    if (RefPtr mediaPlayer = this->mediaPlayer(endpointMessage.playerIdentifier()))
-        mediaPlayer->setVideoTarget(cachedTarget);
+    if (RefPtr mediaPlayer = this->mediaPlayer(endpointMessage.playerIdentifier())) {
+        ALWAYS_LOG(LOGIDENTIFIER, "Update entry; ", !cachedVideoTarget ? "removing target" : "setting target", " on player ", endpointMessage.playerIdentifier()->loggingString());
+        mediaPlayer->setVideoTarget(cachedVideoTarget);
+    }
 
     // Otherwise, update the cache entry with updated values.
-    cachedEntry->value.playerIdentifier = endpointMessage.playerIdentifier();
-    cachedEntry->value.endpoint = endpointMessage.endpoint();
-    cachedEntry->value.videoTarget = cachedTarget;
+    cachedEntry.playerIdentifier = endpointMessage.playerIdentifier();
+    cachedEntry.endpointIdentifier = endpointMessage.endpointIdentifier();
 }
+
+void RemoteMediaPlayerManagerProxy::handleVideoReceiverSwapEndpointsMessage(const VideoReceiverSwapEndpointsMessage& swapMessage)
+{
+    auto sourceCacheEntry = m_videoReceiverEndpointCache.takeOptional(swapMessage.sourceMediaElementIdentifier());
+    RefPtr sourcePlayer = mediaPlayer(swapMessage.sourceMediaPlayerIdentifier());
+    auto sourceTarget = sourceCacheEntry ? videoTargetForIdentifier(sourceCacheEntry->endpointIdentifier) : nullptr;
+
+    auto destinationCacheEntry = m_videoReceiverEndpointCache.takeOptional(swapMessage.destinationMediaElementIdentifier());
+    RefPtr destinationPlayer = mediaPlayer(swapMessage.destinationMediaPlayerIdentifier());
+    auto destinationTarget = destinationCacheEntry ? videoTargetForIdentifier(destinationCacheEntry->endpointIdentifier) : nullptr;
+
+    ALWAYS_LOG(LOGIDENTIFIER, "swapping from media element ", swapMessage.sourceMediaElementIdentifier().loggingString(), " to media element ", swapMessage.destinationMediaElementIdentifier().loggingString());
+
+    // To avoid two media players using the VideoTarget simultaneously, set both players
+    // to have null targets before continuing
+    if (sourcePlayer)
+        sourcePlayer->setVideoTarget(nullptr);
+
+    if (destinationPlayer)
+        destinationPlayer->setVideoTarget(nullptr);
+
+    if (sourcePlayer)
+        sourcePlayer->setVideoTarget(destinationTarget);
+
+    if (destinationPlayer)
+        destinationPlayer->setVideoTarget(sourceTarget);
+
+    if (sourceCacheEntry) {
+        sourceCacheEntry->playerIdentifier = swapMessage.destinationMediaPlayerIdentifier();
+        m_videoReceiverEndpointCache.set(swapMessage.destinationMediaElementIdentifier(), *sourceCacheEntry);
+    }
+
+    if (destinationCacheEntry) {
+        destinationCacheEntry->playerIdentifier = swapMessage.sourceMediaPlayerIdentifier();
+        m_videoReceiverEndpointCache.set(swapMessage.sourceMediaElementIdentifier(), *destinationCacheEntry);
+    }
+}
+
 #endif
 
 }

@@ -244,6 +244,8 @@ public:
 
     bool needsLimitedMatroskaSupport() const;
 
+    WEBCORE_EXPORT bool needsNowPlayingFullscreenSwapQuirk() const;
+
 private:
     bool needsQuirks() const;
     bool isDomain(const String&) const;

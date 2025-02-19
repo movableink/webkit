@@ -186,6 +186,8 @@ public:
     void willRemoveLayerForID(PlaybackSessionContextIdentifier);
     std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 
+    void swapFullscreenModes(PlaybackSessionContextIdentifier, PlaybackSessionContextIdentifier);
+
 private:
     friend class VideoPresentationModelContext;
 
@@ -268,6 +270,7 @@ private:
     HashMap<PlaybackSessionContextIdentifier, int> m_clientCounts;
     Vector<CompletionHandler<void()>> m_closeCompletionHandlers;
     WeakHashSet<VideoInPictureInPictureDidChangeObserver> m_pipChangeObservers;
+    Markable<PlaybackSessionContextIdentifier> m_controlsManagerContextId;
 };
 
 } // namespace WebKit

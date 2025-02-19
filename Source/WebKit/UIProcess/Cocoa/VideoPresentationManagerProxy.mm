@@ -46,6 +46,7 @@
 #import "WebProcessPool.h"
 #import "WebProcessProxy.h"
 #import <QuartzCore/CoreAnimation.h>
+#import <WebCore/HTMLMediaElement.h>
 #import <WebCore/MediaPlayerEnums.h>
 #import <WebCore/NullVideoPresentationInterface.h>
 #import <WebCore/PlaybackSessionInterfaceAVKit.h>
@@ -926,6 +927,41 @@ std::optional<SharedPreferencesForWebProcess> VideoPresentationManagerProxy::sha
 
     // FIXME: Remove SUPPRESS_UNCOUNTED_ARG once https://github.com/llvm/llvm-project/pull/111198 lands.
     SUPPRESS_UNCOUNTED_ARG return m_page->legacyMainFrameProcess().sharedPreferencesForWebProcess();
+}
+
+void VideoPresentationManagerProxy::swapFullscreenModes(PlaybackSessionContextIdentifier firstContextId, PlaybackSessionContextIdentifier secondContextId)
+{
+    auto firstInterface = findInterface(firstContextId);
+    auto secondInterface = findInterface(secondContextId);
+    if (!firstInterface || !secondInterface)
+        return;
+
+    auto firstFullscreenMode = firstInterface->mode();
+    auto secondFullscreenMode = secondInterface->mode();
+
+    firstInterface->swapFullscreenModesWith(*secondInterface);
+
+    // Do not allow our client context count to get out of sync; this will cause
+    // the interfaces to be torn down prematurely.
+    auto firstIsInFullscreen = firstInterface->mode() & HTMLMediaElement::VideoFullscreenModeStandard;
+    auto firstWasInFullscreen = firstFullscreenMode & HTMLMediaElement::VideoFullscreenModeStandard;
+
+    if (firstIsInFullscreen != firstWasInFullscreen) {
+        if (firstIsInFullscreen)
+            addClientForContext(firstContextId);
+        else
+            removeClientForContext(firstContextId);
+    }
+
+    auto secondIsInFullscreen = secondInterface->mode() & HTMLMediaElement::VideoFullscreenModeStandard;
+    auto secondWasInFullscreen = secondFullscreenMode & HTMLMediaElement::VideoFullscreenModeStandard;
+
+    if (secondIsInFullscreen != secondWasInFullscreen) {
+        if (secondIsInFullscreen)
+            addClientForContext(secondContextId);
+        else
+            removeClientForContext(secondContextId);
+    }
 }
 
 #pragma mark Messages from VideoPresentationManager

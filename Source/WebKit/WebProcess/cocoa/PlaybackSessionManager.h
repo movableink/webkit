@@ -130,6 +130,7 @@ public:
     void mediaEngineChanged(WebCore::HTMLMediaElement&);
     PlaybackSessionContextIdentifier contextIdForMediaElement(WebCore::HTMLMediaElement&);
 
+    WebCore::HTMLMediaElement* mediaElementWithContextId(PlaybackSessionContextIdentifier) const;
     WebCore::HTMLMediaElement* currentPlaybackControlsElement() const;
 
 #if !RELEASE_LOG_DISABLED

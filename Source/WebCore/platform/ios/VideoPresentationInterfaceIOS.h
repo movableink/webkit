@@ -169,6 +169,8 @@ public:
     virtual LMPlayableViewController *playableViewController() { return nil; }
 #endif
 
+    virtual void swapFullscreenModesWith(VideoPresentationInterfaceIOS&) { }
+
 #if !RELEASE_LOG_DISABLED
     WEBCORE_EXPORT uint64_t logIdentifier() const;
     WEBCORE_EXPORT const Logger* loggerPtr() const;

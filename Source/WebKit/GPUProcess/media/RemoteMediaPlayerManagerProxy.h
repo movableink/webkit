@@ -35,6 +35,7 @@
 #include <WebCore/MediaPlayer.h>
 #include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/ShareableBitmap.h>
+#include <WebCore/VideoTarget.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/Logger.h>
@@ -50,10 +51,6 @@
 #endif
 
 namespace WebKit {
-class VideoReceiverEndpointMessage;
-}
-
-namespace WebKit {
 
 class RemoteMediaPlayerProxy;
 struct RemoteMediaPlayerConfiguration;
@@ -61,6 +58,7 @@ struct RemoteMediaPlayerProxyConfiguration;
 struct SharedPreferencesForWebProcess;
 class RemoteMediaSourceProxy;
 class VideoReceiverEndpointMessage;
+class VideoReceiverSwapEndpointsMessage;
 
 class RemoteMediaPlayerManagerProxy
     : public RefCounted<RemoteMediaPlayerManagerProxy>, public IPC::MessageReceiver
@@ -94,8 +92,10 @@ public:
     std::optional<WebCore::ShareableBitmap::Handle> bitmapImageForCurrentTime(WebCore::MediaPlayerIdentifier);
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
+    WebCore::PlatformVideoTarget videoTargetForIdentifier(const std::optional<WebCore::VideoReceiverEndpointIdentifier>&);
     WebCore::PlatformVideoTarget takeVideoTargetForMediaElementIdentifier(WebCore::HTMLMediaElementIdentifier, WebCore::MediaPlayerIdentifier);
     void handleVideoReceiverEndpointMessage(const VideoReceiverEndpointMessage&);
+    void handleVideoReceiverSwapEndpointsMessage(const VideoReceiverSwapEndpointsMessage&);
 #endif
 
 #if ENABLE(MEDIA_SOURCE)
@@ -130,10 +130,10 @@ private:
     ThreadSafeWeakPtr<GPUConnectionToWebProcess> m_gpuConnectionToWebProcess;
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
+    HashMap<WebCore::VideoReceiverEndpointIdentifier, WebCore::PlatformVideoTarget> m_videoTargetCache;
     struct VideoRecevierEndpointCacheEntry {
         Markable<WebCore::MediaPlayerIdentifier> playerIdentifier;
-        WebCore::VideoReceiverEndpoint endpoint;
-        WebCore::PlatformVideoTarget videoTarget;
+        Markable<WebCore::VideoReceiverEndpointIdentifier> endpointIdentifier;
     };
     HashMap<WebCore::HTMLMediaElementIdentifier, VideoRecevierEndpointCacheEntry> m_videoReceiverEndpointCache;
 #endif

@@ -69,6 +69,7 @@ public:
     void setMode(HTMLMediaElementEnums::VideoFullscreenMode, bool) { }
     bool pictureInPictureWasStartedWhenEnteringBackground() const { return false; }
     AVPlayerViewController *avPlayerViewController() const { return nullptr; }
+    void swapFullscreenModesWith(NullPlaybackSessionInterface&) { }
 
 private:
     NullPlaybackSessionInterface(PlaybackSessionModel& model)

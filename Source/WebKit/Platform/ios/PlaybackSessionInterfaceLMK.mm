@@ -419,6 +419,14 @@ void PlaybackSessionInterfaceLMK::nowPlayingMetadataChanged(const WebCore::NowPl
     [m_player setArtwork:artworkData(metadata).get()];
 }
 
+void PlaybackSessionInterfaceLMK::swapFullscreenModesWith(PlaybackSessionInterfaceIOS& otherInterfaceIOS)
+{
+    auto& otherInterface = static_cast<PlaybackSessionInterfaceLMK&>(otherInterfaceIOS);
+    std::swap(m_player, otherInterface.m_player);
+    [m_player setDelegate:m_playerDelegate.get()];
+    [otherInterface.m_player setDelegate:otherInterface.m_playerDelegate.get()];
+}
+
 #if !RELEASE_LOG_DISABLED
 ASCIILiteral PlaybackSessionInterfaceLMK::logClassName() const
 {

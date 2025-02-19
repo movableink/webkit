@@ -85,6 +85,8 @@ public:
     virtual void startObservingNowPlayingMetadata();
     virtual void stopObservingNowPlayingMetadata();
 
+    virtual void swapFullscreenModesWith(PlaybackSessionInterfaceIOS&) { }
+
 #if !RELEASE_LOG_DISABLED
     uint64_t logIdentifier() const;
     const Logger* loggerPtr() const;

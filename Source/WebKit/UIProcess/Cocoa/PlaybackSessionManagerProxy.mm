@@ -32,6 +32,7 @@
 #import "PlaybackSessionInterfaceLMK.h"
 #import "PlaybackSessionManagerMessages.h"
 #import "PlaybackSessionManagerProxyMessages.h"
+#import "VideoPresentationManagerProxy.h"
 #import "VideoReceiverEndpointMessage.h"
 #import "WebFullScreenManagerProxy.h"
 #import "WebPageProxy.h"
@@ -89,13 +90,14 @@ void PlaybackSessionModelContext::setVideoReceiverEndpoint(const WebCore::VideoR
 
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
 
-    if (m_manager && m_videoReceiverEndpoint)
-        m_manager->uncacheVideoReceiverEndpoint(m_contextId);
+    if (m_manager && m_videoReceiverEndpoint && m_videoReceiverEndpointIdentifier)
+        m_manager->setVideoReceiverEndpoint(m_contextId, nullptr, *m_videoReceiverEndpointIdentifier);
 
     m_videoReceiverEndpoint = endpoint;
+    m_videoReceiverEndpointIdentifier = endpoint ? std::make_optional(VideoReceiverEndpointIdentifier::generate()) : std::nullopt;
 
-    if (m_manager && m_videoReceiverEndpoint)
-        m_manager->setVideoReceiverEndpoint(m_contextId, endpoint);
+    if (m_manager && m_videoReceiverEndpoint && m_videoReceiverEndpointIdentifier)
+        m_manager->setVideoReceiverEndpoint(m_contextId, m_videoReceiverEndpoint, *m_videoReceiverEndpointIdentifier);
 #else
     UNUSED_PARAM(endpoint);
 #endif
@@ -501,6 +503,12 @@ void PlaybackSessionModelContext::invalidate()
     setVideoReceiverEndpoint(nullptr);
 }
 
+void PlaybackSessionModelContext::swapVideoReceiverEndpointsWith(PlaybackSessionModelContext& otherModel)
+{
+    std::swap(m_videoReceiverEndpoint, otherModel.m_videoReceiverEndpoint);
+    std::swap(m_videoReceiverEndpointIdentifier, otherModel.m_videoReceiverEndpointIdentifier);
+}
+
 #if !RELEASE_LOG_DISABLED
 const Logger* PlaybackSessionModelContext::loggerPtr() const
 {
@@ -652,6 +660,29 @@ void PlaybackSessionManagerProxy::clearPlaybackControlsManager()
 
     if (RefPtr page = m_page.get())
         page->videoControlsManagerDidChange();
+}
+
+void PlaybackSessionManagerProxy::swapFullscreenModes(PlaybackSessionContextIdentifier firstContextId, PlaybackSessionContextIdentifier secondContextId)
+{
+    auto firstModelInterface = ensureModelAndInterface(firstContextId);
+    auto secondModelInterface = ensureModelAndInterface(secondContextId);
+
+    ALWAYS_LOG(LOGIDENTIFIER, "swapping from media element ", firstContextId.loggingString(), " to media element ", secondContextId.loggingString());
+
+    Ref firstInterface = WTFMove(get<1>(firstModelInterface));
+    Ref secondInterface = WTFMove(get<1>(secondModelInterface));
+    firstInterface->swapFullscreenModesWith(secondInterface);
+
+    Ref firstModel = WTFMove(get<0>(firstModelInterface));
+    Ref secondModel = WTFMove(get<0>(secondModelInterface));
+    firstModel->swapVideoReceiverEndpointsWith(secondModel);
+
+    swapVideoReceiverEndpoints(firstContextId, secondContextId);
+
+    if (RefPtr page = m_page.get()) {
+        if (RefPtr videoPresentationManager = page->videoPresentationManager())
+            videoPresentationManager->swapFullscreenModes(firstContextId, secondContextId);
+    }
 }
 
 void PlaybackSessionManagerProxy::currentTimeChanged(PlaybackSessionContextIdentifier contextId, double currentTime, double hostTime)
@@ -932,7 +963,7 @@ void PlaybackSessionManagerProxy::sendRemoteCommand(PlaybackSessionContextIdenti
         page->protectedLegacyMainFrameProcess()->send(Messages::PlaybackSessionManager::SendRemoteCommand(contextId, command, argument), page->webPageIDInMainFrameProcess());
 }
 
-void PlaybackSessionManagerProxy::setVideoReceiverEndpoint(PlaybackSessionContextIdentifier contextId, const WebCore::VideoReceiverEndpoint& endpoint)
+void PlaybackSessionManagerProxy::setVideoReceiverEndpoint(PlaybackSessionContextIdentifier contextId, const WebCore::VideoReceiverEndpoint& endpoint, WebCore::VideoReceiverEndpointIdentifier endpointIdentifier)
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     auto it = m_contextMap.find(contextId);
@@ -968,7 +999,7 @@ void PlaybackSessionManagerProxy::setVideoReceiverEndpoint(PlaybackSessionContex
     if (!xpcConnection)
         return;
 
-    VideoReceiverEndpointMessage endpointMessage(WTFMove(processIdentifier), contextId, WTFMove(playerIdentifier), endpoint);
+    VideoReceiverEndpointMessage endpointMessage(WTFMove(processIdentifier), contextId, WTFMove(playerIdentifier), endpoint, endpointIdentifier);
     xpc_connection_send_message(xpcConnection.get(), endpointMessage.encode().get());
 #else
     UNUSED_PARAM(contextId);
@@ -976,12 +1007,14 @@ void PlaybackSessionManagerProxy::setVideoReceiverEndpoint(PlaybackSessionContex
 #endif
 }
 
-void PlaybackSessionManagerProxy::uncacheVideoReceiverEndpoint(PlaybackSessionContextIdentifier contextId)
+void PlaybackSessionManagerProxy::swapVideoReceiverEndpoints(PlaybackSessionContextIdentifier firstContextId, PlaybackSessionContextIdentifier secondContextId)
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     RefPtr page = m_page.get();
-    if (!page)
+    if (!page) {
+        ALWAYS_LOG(LOGIDENTIFIER, "no page");
         return;
+    }
 
     Ref process = page->protectedLegacyMainFrameProcess();
     WebCore::ProcessIdentifier processIdentifier = process->coreProcessIdentifier();
@@ -995,10 +1028,14 @@ void PlaybackSessionManagerProxy::uncacheVideoReceiverEndpoint(PlaybackSessionCo
     if (!xpcConnection)
         return;
 
-    VideoReceiverEndpointMessage endpointMessage(WTFMove(processIdentifier), contextId, std::nullopt, nullptr);
+    auto firstInterface = ensureInterface(firstContextId);
+    auto secondInterface = ensureInterface(secondContextId);
+
+    VideoReceiverSwapEndpointsMessage endpointMessage(WTFMove(processIdentifier), firstContextId, firstInterface->playerIdentifier(), secondContextId, secondInterface->playerIdentifier());
     xpc_connection_send_message(xpcConnection.get(), endpointMessage.encode().get());
 #else
-    UNUSED_PARAM(contextId);
+    UNUSED_PARAM(firstContextId);
+    UNUSED_PARAM(secondContextId);
 #endif
 }
 

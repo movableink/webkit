@@ -145,6 +145,11 @@ void PlaybackSessionModelMediaElement::handleEvent(WebCore::ScriptExecutionConte
     updateForEventName(event.type());
 }
 
+void PlaybackSessionModelMediaElement::updateAll()
+{
+    updateForEventName(eventNameAll());
+}
+
 void PlaybackSessionModelMediaElement::updateForEventName(const WTF::AtomString& eventName)
 {
     if (m_clients.isEmpty())

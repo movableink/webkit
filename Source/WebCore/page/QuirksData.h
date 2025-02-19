@@ -171,6 +171,8 @@ struct WEBCORE_EXPORT QuirksData {
     bool requiresUserGestureToPauseInPictureInPictureQuirk { false };
     bool shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk { false };
 #endif
+
+    bool needsNowPlayingFullscreenSwapQuirk { false };
 };
 
 } // namespace WebCore

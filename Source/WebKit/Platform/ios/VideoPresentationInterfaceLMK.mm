@@ -225,6 +225,18 @@ void VideoPresentationInterfaceLMK::ensurePlayableViewController()
     [m_playerViewController view].alpha = 0;
 }
 
+void VideoPresentationInterfaceLMK::swapFullscreenModesWith(VideoPresentationInterfaceIOS& otherInterfaceIOS)
+{
+    auto& otherInterface = static_cast<VideoPresentationInterfaceLMK&>(otherInterfaceIOS);
+    std::swap(m_playerViewController, otherInterface.m_playerViewController);
+
+    auto currentMode = mode();
+    auto previousMode = otherInterface.mode();
+
+    setMode(previousMode, true);
+    otherInterface.setMode(currentMode, true);
+}
+
 } // namespace WebKit
 
 #endif // ENABLE(LINEAR_MEDIA_PLAYER)

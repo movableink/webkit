@@ -52,6 +52,8 @@ messages -> PlaybackSessionManagerProxy {
     SetUpPlaybackControlsManagerWithID(WebKit::PlaybackSessionContextIdentifier contextId, bool isVideo)
     ClearPlaybackControlsManager()
 
+    SwapFullscreenModes(WebKit::PlaybackSessionContextIdentifier firstContextId, WebKit::PlaybackSessionContextIdentifier secondContextId)
+
     HandleControlledElementIDResponse(WebKit::PlaybackSessionContextIdentifier contextId, String id)
 
 #if !RELEASE_LOG_DISABLED

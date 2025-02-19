@@ -109,6 +109,8 @@ public:
 
     WEBCORE_EXPORT void documentVisibilityChanged(bool) final;
 
+    void swapFullscreenModesWith(VideoPresentationInterfaceMac&) { }
+
 #if !RELEASE_LOG_DISABLED
     uint64_t logIdentifier() const;
     const Logger* loggerPtr() const;

@@ -4123,6 +4123,7 @@ void MediaPlayerPrivateAVFoundationObjC::isInFullscreenOrPictureInPictureChanged
     else if (RetainPtr videoTarget = std::exchange(m_videoTarget, nullptr)) {
         INFO_LOG(LOGIDENTIFIER, "Clearing videoTarget");
         [m_avPlayer removeVideoTarget:videoTarget.get()];
+        [m_videoLayer setPlayer:m_avPlayer.get()];
     }
 #else
     UNUSED_PARAM(isInFullscreenOrPictureInPicture);
