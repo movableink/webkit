@@ -434,6 +434,7 @@ void BorderPainter::paintSides(const Sides& sides) const
     if (sides.innerBorder.contains(m_paintInfo.rect))
         return;
 
+    auto deviceScaleFactor = document().deviceScaleFactor();
     bool haveAlphaColor = false;
     bool haveAllDoubleEdges = true;
     int numEdgesVisible = 4;
@@ -470,73 +471,96 @@ void BorderPainter::paintSides(const Sides& sides) const
             haveAllDoubleEdges = false;
     }
 
-    auto deviceScaleFactor = document().deviceScaleFactor();
+    auto drawUniformRoundedOrAlphaBorders = [&]() {
+        ASSERT(numEdgesVisible == 4);
+        ASSERT(allEdgesShareColor);
+        ASSERT(sides.haveAllSolidEdges);
+        ASSERT(sides.outerBorder.isRounded() || haveAlphaColor);
+
+        Path path;
+        auto pixelSnappedOuterBorder = sides.outerBorder.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+        if (pixelSnappedOuterBorder.isRounded() && sides.bleedAvoidance != BleedAvoidance::UseTransparencyLayer)
+            path.addRoundedRect(pixelSnappedOuterBorder);
+        else
+            path.addRect(pixelSnappedOuterBorder.rect());
+
+        auto pixelSnappedInnerBorder = sides.innerBorder.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+        if (pixelSnappedInnerBorder.isRounded())
+            path.addRoundedRect(pixelSnappedInnerBorder);
+        else
+            path.addRect(pixelSnappedInnerBorder.rect());
+
+        graphicsContext.setFillRule(WindRule::EvenOdd);
+        graphicsContext.setFillColor(sides.edges.at(*firstVisibleSide).color());
+        graphicsContext.fillPath(path);
+    };
+
+    auto drawUniformDoubleBorders = [&]() {
+        ASSERT(numEdgesVisible == 4);
+        ASSERT(allEdgesShareColor);
+        ASSERT(haveAllDoubleEdges);
+        ASSERT(haveAlphaColor);
+        // FIXME: We could update this to render double borders which are all rounded.
+        ASSERT(!sides.outerBorder.isRounded() && !sides.innerBorder.isRounded());
+
+        Path path;
+        auto pixelSnappedOuterBorder = snapRectToDevicePixels(sides.outerBorder.rect(), deviceScaleFactor);
+        path.addRect(pixelSnappedOuterBorder);
+
+        auto innerThirdRect = sides.outerBorder.rect();
+        auto outerThirdRect = sides.outerBorder.rect();
+        for (auto side : allBoxSides) {
+            LayoutUnit outerWidth;
+            LayoutUnit innerWidth;
+            sides.edges.at(side).getDoubleBorderStripeWidths(outerWidth, innerWidth);
+            switch (side) {
+            case BoxSide::Top:
+                innerThirdRect.shiftYEdgeTo(innerThirdRect.y() + innerWidth);
+                outerThirdRect.shiftYEdgeTo(outerThirdRect.y() + outerWidth);
+                break;
+            case BoxSide::Right:
+                innerThirdRect.setWidth(innerThirdRect.width() - innerWidth);
+                outerThirdRect.setWidth(outerThirdRect.width() - outerWidth);
+                break;
+            case BoxSide::Bottom:
+                innerThirdRect.setHeight(innerThirdRect.height() - innerWidth);
+                outerThirdRect.setHeight(outerThirdRect.height() - outerWidth);
+                break;
+            case BoxSide::Left:
+                innerThirdRect.shiftXEdgeTo(innerThirdRect.x() + innerWidth);
+                outerThirdRect.shiftXEdgeTo(outerThirdRect.x() + outerWidth);
+                break;
+            }
+        }
+
+        auto pixelSnappedOuterThird = snapRectToDevicePixels(outerThirdRect, deviceScaleFactor);
+        path.addRect(pixelSnappedOuterThird);
+
+        auto pixelSnappedInnerThird = snapRectToDevicePixels(innerThirdRect, deviceScaleFactor);
+        path.addRect(pixelSnappedInnerThird);
+
+        auto pixelSnappedInnerBorder = snapRectToDevicePixels(sides.innerBorder.rect(), deviceScaleFactor);
+        path.addRect(pixelSnappedInnerBorder);
+
+        graphicsContext.setFillRule(WindRule::EvenOdd);
+        graphicsContext.setFillColor(sides.edges.at(*firstVisibleSide).color());
+        graphicsContext.fillPath(path);
+    };
+
     if ((sides.haveAllSolidEdges || haveAllDoubleEdges) && allEdgesShareColor) {
-        // Fast path for drawing all solid edges and all unrounded double edges
-        if (numEdgesVisible == 4 && (sides.outerBorder.isRounded() || haveAlphaColor)
-            && (sides.haveAllSolidEdges || (!sides.outerBorder.isRounded() && !sides.innerBorder.isRounded()))) {
-            Path path;
-
-            FloatRoundedRect pixelSnappedOuterBorder = sides.outerBorder.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
-            if (pixelSnappedOuterBorder.isRounded() && sides.bleedAvoidance != BleedAvoidance::UseTransparencyLayer)
-                path.addRoundedRect(pixelSnappedOuterBorder);
-            else
-                path.addRect(pixelSnappedOuterBorder.rect());
-
-            if (haveAllDoubleEdges) {
-                LayoutRect innerThirdRect = sides.outerBorder.rect();
-                LayoutRect outerThirdRect = sides.outerBorder.rect();
-                for (auto side : allBoxSides) {
-                    LayoutUnit outerWidth;
-                    LayoutUnit innerWidth;
-                    sides.edges.at(side).getDoubleBorderStripeWidths(outerWidth, innerWidth);
-                    switch (side) {
-                    case BoxSide::Top:
-                        innerThirdRect.shiftYEdgeTo(innerThirdRect.y() + innerWidth);
-                        outerThirdRect.shiftYEdgeTo(outerThirdRect.y() + outerWidth);
-                        break;
-                    case BoxSide::Right:
-                        innerThirdRect.setWidth(innerThirdRect.width() - innerWidth);
-                        outerThirdRect.setWidth(outerThirdRect.width() - outerWidth);
-                        break;
-                    case BoxSide::Bottom:
-                        innerThirdRect.setHeight(innerThirdRect.height() - innerWidth);
-                        outerThirdRect.setHeight(outerThirdRect.height() - outerWidth);
-                        break;
-                    case BoxSide::Left:
-                        innerThirdRect.shiftXEdgeTo(innerThirdRect.x() + innerWidth);
-                        outerThirdRect.shiftXEdgeTo(outerThirdRect.x() + outerWidth);
-                        break;
-                    }
-                }
-
-                FloatRoundedRect pixelSnappedOuterThird = sides.outerBorder.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
-                pixelSnappedOuterThird.setRect(snapRectToDevicePixels(outerThirdRect, deviceScaleFactor));
-
-                if (pixelSnappedOuterThird.isRounded() && sides.bleedAvoidance != BleedAvoidance::UseTransparencyLayer)
-                    path.addRoundedRect(pixelSnappedOuterThird);
-                else
-                    path.addRect(pixelSnappedOuterThird.rect());
-
-                FloatRoundedRect pixelSnappedInnerThird = sides.innerBorder.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
-                pixelSnappedInnerThird.setRect(snapRectToDevicePixels(innerThirdRect, deviceScaleFactor));
-                if (pixelSnappedInnerThird.isRounded() && sides.bleedAvoidance != BleedAvoidance::UseTransparencyLayer)
-                    path.addRoundedRect(pixelSnappedInnerThird);
-                else
-                    path.addRect(pixelSnappedInnerThird.rect());
+        // Fast path for drawing all solid edges and all unrounded double edges which need path-based rendering because of rounding or alpha colors.
+        if (numEdgesVisible == 4 && (sides.outerBorder.isRounded() || haveAlphaColor)) {
+            if (sides.haveAllSolidEdges) {
+                drawUniformRoundedOrAlphaBorders();
+                return;
             }
 
-            FloatRoundedRect pixelSnappedInnerBorder = sides.innerBorder.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
-            if (pixelSnappedInnerBorder.isRounded())
-                path.addRoundedRect(pixelSnappedInnerBorder);
-            else
-                path.addRect(pixelSnappedInnerBorder.rect());
-
-            graphicsContext.setFillRule(WindRule::EvenOdd);
-            graphicsContext.setFillColor(sides.edges.at(*firstVisibleSide).color());
-            graphicsContext.fillPath(path);
-            return;
+            if (haveAllDoubleEdges && !sides.outerBorder.isRounded() && !sides.innerBorder.isRounded()) {
+                drawUniformDoubleBorders();
+                return;
+            }
         }
+
         // Avoid creating transparent layers
         if (sides.haveAllSolidEdges && numEdgesVisible != 4 && !sides.outerBorder.isRounded() && haveAlphaColor) {
             Path path;
