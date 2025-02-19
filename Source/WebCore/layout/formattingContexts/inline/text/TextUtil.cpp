@@ -267,13 +267,6 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
                 return alignedStartIndex;
             };
 
-            auto nextUserPerceivedCharacterIndex = [&] (auto index) -> size_t {
-                if (text.is8Bit())
-                    return index + 1;
-                U16_FWD_1(text, index, startPosition + length);
-                return index;
-            };
-
             auto trySimplifiedBreakingPosition = [&] (auto start) -> std::optional<WordBreakLeft> {
                 auto mayUseSimplifiedBreakingPositionForFixedPitch = fontCascade.isFixedPitch() && inlineTextBox.canUseSimplifiedContentMeasuring();
                 if (!mayUseSimplifiedBreakingPositionForFixedPitch)
@@ -292,6 +285,44 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
             };
             if (auto leftSide = trySimplifiedBreakingPosition(startPosition))
                 return *leftSide;
+
+            auto tryEstimateBreakingPosition = [&] (auto start) -> std::optional<WordBreakLeft> {
+                // Determine if the breaking position can be found within the range of [-1, 1] by using the average width of the characters.
+                auto averageCharacterWidth = InlineLayoutUnit { textWidth / length };
+                size_t candidateLength = availableWidth / averageCharacterWidth;
+                auto candidateEnd = userPerceivedCharacterBoundaryAlignedIndex(start + candidateLength);
+                if (candidateEnd <= start || candidateEnd >= start + length)
+                    return { };
+                auto contentWidthAtCandidatePosition = TextUtil::width(inlineTextBox, fontCascade, start, candidateEnd, contentLogicalLeft);
+                if (contentWidthAtCandidatePosition == availableWidth)
+                    return { WordBreakLeft { candidateEnd - start, contentWidthAtCandidatePosition } };
+
+                if (contentWidthAtCandidatePosition > availableWidth) {
+                    // Overshot.
+                    if (auto adjustedCandidateEnd = userPerceivedCharacterBoundaryAlignedIndex(candidateEnd - 1); adjustedCandidateEnd > start) {
+                        auto adjustedContentWidth = TextUtil::width(inlineTextBox, fontCascade, start, adjustedCandidateEnd, contentLogicalLeft);
+                        if (adjustedContentWidth <= availableWidth)
+                            return { WordBreakLeft { adjustedCandidateEnd - start, adjustedContentWidth } };
+                    }
+                } else if (auto adjustedCandidateEnd = userPerceivedCharacterBoundaryAlignedIndex(candidateEnd + 1); adjustedCandidateEnd < start + length) {
+                    // Undershot.
+                    auto adjustedContentWidth = TextUtil::width(inlineTextBox, fontCascade, start, adjustedCandidateEnd, contentLogicalLeft);
+                    if (adjustedContentWidth > availableWidth)
+                        return { WordBreakLeft { candidateEnd - start, contentWidthAtCandidatePosition } };
+                    if (adjustedContentWidth == availableWidth)
+                        return { WordBreakLeft { adjustedCandidateEnd - start, adjustedContentWidth } };
+                }
+                return { };
+            };
+            if (auto leftSide = tryEstimateBreakingPosition(startPosition))
+                return *leftSide;
+
+            auto nextUserPerceivedCharacterIndex = [&] (auto index) -> size_t {
+                if (text.is8Bit())
+                    return index + 1;
+                U16_FWD_1(text, index, startPosition + length);
+                return index;
+            };
 
             auto left = startPosition;
             auto right = left + length - 1;
