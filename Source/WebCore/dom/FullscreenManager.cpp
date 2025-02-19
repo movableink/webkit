@@ -85,16 +85,6 @@ Element* FullscreenManager::fullscreenElement() const
     return nullptr;
 }
 
-Document* FullscreenManager::mainFrameDocument()
-{
-    return m_topDocument ? m_topDocument.get() : document().mainFrameDocument();
-}
-
-RefPtr<Document> FullscreenManager::protectedMainFrameDocument()
-{
-    return mainFrameDocument();
-}
-
 // https://fullscreen.spec.whatwg.org/#dom-element-requestfullscreen
 void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, FullscreenCheckType checkType, CompletionHandler<void(ExceptionOr<void>)>&& completionHandler, HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
@@ -175,9 +165,6 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, Full
     INFO_LOG(identifier);
 
     m_pendingFullscreenElement = RefPtr { element.ptr() };
-
-    // We cache the top document here, so we still have the correct one when we exit fullscreen after navigation.
-    m_topDocument = document().mainFrameDocument();
 
     protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, element = WTFMove(element), completionHandler = WTFMove(completionHandler), hasKeyboardAccess, fullscreenElementReadyCheck, handleError, identifier, mode] () mutable {
         if (!weakThis)

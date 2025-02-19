@@ -108,15 +108,14 @@ private:
     WTFLogChannel& logChannel() const;
 #endif
 
-    Document* mainFrameDocument();
-    RefPtr<Document> protectedMainFrameDocument();
+    Document* mainFrameDocument() { return document().mainFrameDocument(); }
+    RefPtr<Document> protectedMainFrameDocument() { return mainFrameDocument(); }
 
     RefPtr<Element> fullscreenOrPendingElement() const { return m_fullscreenElement ? m_fullscreenElement : m_pendingFullscreenElement; }
 
     void addElementToChangeEventQueue(Node& target) { m_fullscreenChangeEventTargetQueue.append(GCReachableRef(target)); }
 
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
-    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_topDocument;
 
     RefPtr<Element> m_pendingFullscreenElement;
     RefPtr<Element> m_fullscreenElement;
