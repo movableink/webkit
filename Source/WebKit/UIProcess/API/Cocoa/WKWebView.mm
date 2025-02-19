@@ -317,8 +317,10 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const WebCore::ExceptionDetails& 
     [userInfo setObject:@(details.lineNumber) forKey:_WKJavaScriptExceptionLineNumberErrorKey];
     [userInfo setObject:@(details.columnNumber) forKey:_WKJavaScriptExceptionColumnNumberErrorKey];
 
-    if (!details.sourceURL.isEmpty())
-        [userInfo setObject:[NSURL _web_URLWithWTFString:details.sourceURL] forKey:_WKJavaScriptExceptionSourceURLErrorKey];
+    if (!details.sourceURL.isEmpty()) {
+        if (NSURL *url = URL(details.sourceURL))
+            [userInfo setObject:url forKey:_WKJavaScriptExceptionSourceURLErrorKey];
+    }
 
     return adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:errorCode userInfo:userInfo.get()]);
 }
