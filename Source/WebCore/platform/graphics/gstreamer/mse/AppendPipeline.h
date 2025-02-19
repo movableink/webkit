@@ -62,6 +62,7 @@ private:
     enum StreamType { Audio, Video, Text, Unknown, Invalid };
 #ifndef GST_DISABLE_GST_DEBUG
     static const char * streamTypeToString(StreamType);
+    static const char * streamTypeToStringLower(StreamType);
 #endif
 
     struct Track {
@@ -81,12 +82,15 @@ private:
         TrackID trackId;
         StreamType streamType;
         GRefPtr<GstCaps> caps;
+        GRefPtr<GstCaps> finalCaps;
         FloatSize presentationSize;
 
-        // Needed by some formats. To simplify the code, parser can be a GstIdentity when not needed.
+        // Needed by some formats. To simplify the code, parser/encoder can be a GstIdentity when not needed.
         GRefPtr<GstElement> parser;
+        GRefPtr<GstElement> encoder;
         GRefPtr<GstElement> appsink;
         GRefPtr<GstPad> entryPad; // Sink pad of the parser/GstIdentity.
+        GRefPtr<GstPad> encoderPad; // Sink pad of the encoder/GstIdentity.
         GRefPtr<GstPad> appsinkPad;
 
         RefPtr<WebCore::TrackPrivateBase> webKitTrack;
@@ -98,6 +102,7 @@ private:
         struct PadProbeInformation appsinkPadEventProbeInformation;
 #endif
 
+        void emplaceOptionalEncoderForFormat(GstBin*, const GRefPtr<GstCaps>&);
         void emplaceOptionalParserForFormat(GstBin*, const GRefPtr<GstCaps>&);
         void initializeElements(AppendPipeline*, GstBin*);
         bool isLinked() const { return gst_pad_is_linked(entryPad.get()); }

@@ -212,7 +212,7 @@ void TrackPrivateBaseGStreamer::tagsChanged()
     if (!tags)
         tags = adoptGRef(gst_tag_list_new_empty());
 
-    GST_DEBUG("Inspecting track at index %d with tags: %" GST_PTR_FORMAT, m_index, tags.get());
+    GST_DEBUG("Inspecting track %" PRIu64 " with tags: %" GST_PTR_FORMAT, m_id, tags.get());
     {
         Locker locker { m_tagMutex };
         m_tags.swap(tags);
@@ -228,7 +228,7 @@ bool TrackPrivateBaseGStreamer::getLanguageCode(GstTagList* tags, AtomString& va
     String language;
     if (getTag(tags, GST_TAG_LANGUAGE_CODE, language)) {
         AtomString convertedLanguage = AtomString(unsafeSpan8(gst_tag_get_language_code_iso_639_1(language.utf8().data())));
-        GST_DEBUG("Converted track %d's language code to %s.", m_index, convertedLanguage.string().utf8().data());
+        GST_DEBUG("Converted track %" PRIu64 "'s language code to %s.", m_id, convertedLanguage.string().utf8().data());
         if (convertedLanguage != value) {
             value = WTFMove(convertedLanguage);
             return true;
@@ -242,7 +242,7 @@ bool TrackPrivateBaseGStreamer::getTag(GstTagList* tags, const gchar* tagName, S
 {
     GUniqueOutPtr<gchar> tagValue;
     if (gst_tag_list_get_string(tags, tagName, &tagValue.outPtr())) {
-        GST_DEBUG("Track %d got %s %s.", m_index, tagName, tagValue.get());
+        GST_DEBUG("Track %" PRIu64 " got %s %s.", m_id, tagName, tagValue.get());
         value = StringType { String::fromLatin1(tagValue.get()) };
         return true;
     }
@@ -293,9 +293,9 @@ void TrackPrivateBaseGStreamer::notifyTrackOfStreamChanged()
         return;
 
     ASSERT(isMainThread()); // because this code writes to AtomString members.
-    GST_INFO("Track %d got stream start for stream %" PRIu64 ". GStreamer stream-id: %s", m_index, streamId.value(), gstStreamId.string().utf8().data());
     m_gstStreamId = gstStreamId;
     m_id = streamId.value();
+    GST_INFO("Track %" PRIu64 " got stream start. GStreamer stream-id: %s", m_id, m_gstStreamId.string().utf8().data());
 }
 
 void TrackPrivateBaseGStreamer::streamChanged()
