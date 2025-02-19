@@ -929,7 +929,7 @@ add_custom_command(
     VERBATIM
 )
 
-set(WebKit_AUTOMATION_PROTOCOL_GENERATOR_SCRIPTS
+set(WebKit_JSON_RPC_PROTOCOL_GENERATOR_SCRIPTS
     ${PROTOCOL_GENERATOR_SCRIPTS_DIR}/generate-inspector-protocol-bindings.py
     ${PROTOCOL_GENERATOR_SCRIPTS_DIR}/codegen/cpp_generator.py
     ${PROTOCOL_GENERATOR_SCRIPTS_DIR}/codegen/cpp_generator_templates.py
@@ -951,20 +951,46 @@ set(WebKit_AUTOMATION_PROTOCOL_GENERATOR_INPUTS
 add_custom_command(
     OUTPUT ${WebKit_DERIVED_SOURCES_DIR}/AutomationBackendDispatchers.h ${WebKit_DERIVED_SOURCES_DIR}/AutomationBackendDispatchers.cpp ${WebKit_DERIVED_SOURCES_DIR}/AutomationProtocolObjects.h ${WebKit_DERIVED_SOURCES_DIR}/AutomationProtocolObjects.cpp ${WebKit_DERIVED_SOURCES_DIR}/AutomationFrontendDispatchers.h ${WebKit_DERIVED_SOURCES_DIR}/AutomationFrontendDispatchers.cpp
     MAIN_DEPENDENCY ${WebKit_AUTOMATION_PROTOCOL_GENERATOR_INPUTS}
-    DEPENDS ${WebKit_AUTOMATION_PROTOCOL_GENERATOR_SCRIPTS}
+    DEPENDS ${WebKit_JSON_RPC_PROTOCOL_GENERATOR_SCRIPTS}
     COMMAND ${PYTHON_EXECUTABLE} ${PROTOCOL_GENERATOR_SCRIPTS_DIR}/generate-inspector-protocol-bindings.py --outputDir "${WebKit_DERIVED_SOURCES_DIR}" --framework WebKit ${WebKit_AUTOMATION_PROTOCOL_GENERATOR_EXTRA_FLAGS} --backend ${WebKit_AUTOMATION_PROTOCOL_GENERATOR_INPUTS}
+    VERBATIM)
+
+set(WebKit_WEBDRIVER_BIDI_PROTOCOL_GENERATOR_INPUTS
+    ${WEBKIT_DIR}/UIProcess/Automation/protocol/BidiBrowser.json
+    ${WEBKIT_DIR}/UIProcess/Automation/protocol/BidiBrowsingContext.json
+    ${WEBKIT_DIR}/UIProcess/Automation/protocol/BidiLog.json
+)
+
+add_custom_command(
+    OUTPUT ${WebKit_DERIVED_SOURCES_DIR}/CombinedWebDriverBidiDomains.json
+    MAIN_DEPENDENCY ${JavaScriptCore_SCRIPTS_DIR}/generate-combined-inspector-json.py
+    DEPENDS ${WebKit_WEBDRIVER_BIDI_PROTOCOL_GENERATOR_INPUTS}
+    COMMAND ${PYTHON_EXECUTABLE} ${JavaScriptCore_SCRIPTS_DIR}/generate-combined-inspector-json.py ${WebKit_WEBDRIVER_BIDI_PROTOCOL_GENERATOR_INPUTS} "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}" > ${WebKit_DERIVED_SOURCES_DIR}/CombinedWebDriverBidiDomains.json
+    VERBATIM)
+
+add_custom_command(
+    OUTPUT ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiBackendDispatchers.h ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiBackendDispatchers.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiProtocolObjects.h ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiProtocolObjects.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiFrontendDispatchers.h ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiFrontendDispatchers.cpp
+    MAIN_DEPENDENCY ${WebKit_DERIVED_SOURCES_DIR}/CombinedWebDriverBidiDomains.json
+    DEPENDS ${WebKit_JSON_RPC_PROTOCOL_GENERATOR_SCRIPTS}
+    COMMAND ${PYTHON_EXECUTABLE} ${PROTOCOL_GENERATOR_SCRIPTS_DIR}/generate-inspector-protocol-bindings.py --outputDir "${WebKit_DERIVED_SOURCES_DIR}" --framework WebDriverBidi ${WebKit_AUTOMATION_PROTOCOL_GENERATOR_EXTRA_FLAGS} --backend ${WebKit_DERIVED_SOURCES_DIR}/CombinedWebDriverBidiDomains.json
     VERBATIM)
 
 list(APPEND WebKit_HEADERS
     ${WebKit_DERIVED_SOURCES_DIR}/AutomationBackendDispatchers.h
     ${WebKit_DERIVED_SOURCES_DIR}/AutomationFrontendDispatchers.h
     ${WebKit_DERIVED_SOURCES_DIR}/AutomationProtocolObjects.h
+    ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiBackendDispatchers.h
+    ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiFrontendDispatchers.h
+    ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiProtocolObjects.h
 )
 
 list(APPEND WebKit_SOURCES
     ${WebKit_DERIVED_SOURCES_DIR}/AutomationBackendDispatchers.cpp
     ${WebKit_DERIVED_SOURCES_DIR}/AutomationFrontendDispatchers.cpp
     ${WebKit_DERIVED_SOURCES_DIR}/AutomationProtocolObjects.cpp
+    ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiBackendDispatchers.cpp
+    ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiFrontendDispatchers.cpp
+    ${WebKit_DERIVED_SOURCES_DIR}/WebDriverBidiProtocolObjects.cpp
 )
 
 add_custom_command(

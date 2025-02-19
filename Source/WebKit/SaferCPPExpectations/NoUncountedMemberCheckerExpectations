@@ -1,2 +1,3 @@
 AutomationFrontendDispatchers.h
+WebDriverBidiFrontendDispatchers.h
 UIProcess/Inspector/WebPageInspectorAgentBase.h

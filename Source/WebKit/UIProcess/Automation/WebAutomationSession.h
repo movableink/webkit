@@ -86,6 +86,10 @@ class WebOpenPanelResultListenerProxy;
 class WebPageProxy;
 class WebProcessPool;
 
+#if ENABLE(WEBDRIVER_BIDI)
+class WebDriverBidiProcessor;
+#endif
+
 enum class ForceSoftwareCapturingViewportSnapshot : bool;
 
 class AutomationCommandError {
@@ -253,6 +257,11 @@ public:
     void unloadWebExtension(const String& identifier, Ref<UnloadWebExtensionCallback>&&) override;
 #endif
 
+#if ENABLE(WEBDRIVER_BIDI)
+    Inspector::Protocol::ErrorStringOr<void> processBidiMessage(const String&) override;
+    void sendBidiMessage(const String&);
+#endif
+
 #if PLATFORM(MAC)
     void inspectBrowsingContext(const Inspector::Protocol::Automation::BrowsingContextHandle&, std::optional<bool>&& enableAutoCapturing, Ref<InspectBrowsingContextCallback>&&) override;
 #endif
@@ -348,6 +357,10 @@ private:
     Ref<Inspector::BackendDispatcher> m_backendDispatcher;
     Ref<Inspector::AutomationBackendDispatcher> m_domainDispatcher;
     std::unique_ptr<Inspector::AutomationFrontendDispatcher> m_domainNotifier;
+
+#if ENABLE(WEBDRIVER_BIDI)
+    std::unique_ptr<WebDriverBidiProcessor> m_bidiProcessor;
+#endif
 
     HashMap<WebPageProxyIdentifier, String> m_webPageHandleMap;
     HashMap<String, WebPageProxyIdentifier> m_handleWebPageMap;

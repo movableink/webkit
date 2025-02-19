@@ -1857,6 +1857,14 @@
 		997965A3253128C700B31AE3 /* _WKInspectorExtensionHost.h in Headers */ = {isa = PBXBuildFile; fileRef = 997965A2253128C700B31AE3 /* _WKInspectorExtensionHost.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		9979CA58237F49F10039EC05 /* _WKInspectorPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 9979CA57237F49F00039EC05 /* _WKInspectorPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		99996A9F25004BCC004F7559 /* _WKInspectorPrivateForTesting.h in Headers */ = {isa = PBXBuildFile; fileRef = 99996A9D25004BCB004F7559 /* _WKInspectorPrivateForTesting.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		99A514512D5AB7D500937177 /* WebDriverBidiProcessor.h in Headers */ = {isa = PBXBuildFile; fileRef = 99A5144E2D5AB7D500937177 /* WebDriverBidiProcessor.h */; };
+		99A514642D5AC3E400937177 /* WebDriverBidiProtocolObjects.h in Headers */ = {isa = PBXBuildFile; fileRef = 99A514622D5AC33F00937177 /* WebDriverBidiProtocolObjects.h */; };
+		99A514652D5AC3E400937177 /* WebDriverBidiFrontendDispatchers.h in Headers */ = {isa = PBXBuildFile; fileRef = 99A514602D5AC33F00937177 /* WebDriverBidiFrontendDispatchers.h */; };
+		99A514662D5AC3E400937177 /* WebDriverBidiBackendDispatchers.h in Headers */ = {isa = PBXBuildFile; fileRef = 99A5145E2D5AC33F00937177 /* WebDriverBidiBackendDispatchers.h */; };
+		99A514672D5ACF1800937177 /* WebDriverBidiBackendDispatchers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 99A5145F2D5AC33F00937177 /* WebDriverBidiBackendDispatchers.cpp */; };
+		99A514682D5ACF1800937177 /* WebDriverBidiFrontendDispatchers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 99A514612D5AC33F00937177 /* WebDriverBidiFrontendDispatchers.cpp */; };
+		99A514692D5ACF1800937177 /* WebDriverBidiProtocolObjects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 99A514632D5AC33F00937177 /* WebDriverBidiProtocolObjects.cpp */; };
+		99A5146A2D5ACF1800937177 /* WebDriverBidiProcessor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 99A5144F2D5AB7D500937177 /* WebDriverBidiProcessor.cpp */; };
 		99A7ACE526012922006D57FD /* WKInspectorResourceURLSchemeHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 99A7ACE326012919006D57FD /* WKInspectorResourceURLSchemeHandler.h */; };
 		99B16757252BB7E10073140E /* _WKInspectorExtension.h in Headers */ = {isa = PBXBuildFile; fileRef = 99B16754252BB7E00073140E /* _WKInspectorExtension.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		99B16758252BB7E10073140E /* _WKInspectorExtensionInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 99B16755252BB7E10073140E /* _WKInspectorExtensionInternal.h */; };
@@ -7054,6 +7062,17 @@
 		99996A9E25004BCB004F7559 /* _WKInspectorTesting.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = _WKInspectorTesting.mm; sourceTree = "<group>"; };
 		999B7ED82550E4A800F450A4 /* InspectorExtensionTypes.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorExtensionTypes.cpp; sourceTree = "<group>"; };
 		999B7F4F2554BA3F00F450A4 /* APIInspectorExtension.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = APIInspectorExtension.cpp; sourceTree = "<group>"; };
+		99A5144E2D5AB7D500937177 /* WebDriverBidiProcessor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebDriverBidiProcessor.h; sourceTree = "<group>"; };
+		99A5144F2D5AB7D500937177 /* WebDriverBidiProcessor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebDriverBidiProcessor.cpp; sourceTree = "<group>"; };
+		99A5145E2D5AC33F00937177 /* WebDriverBidiBackendDispatchers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebDriverBidiBackendDispatchers.h; sourceTree = "<group>"; };
+		99A5145F2D5AC33F00937177 /* WebDriverBidiBackendDispatchers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebDriverBidiBackendDispatchers.cpp; sourceTree = "<group>"; };
+		99A514602D5AC33F00937177 /* WebDriverBidiFrontendDispatchers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebDriverBidiFrontendDispatchers.h; sourceTree = "<group>"; };
+		99A514612D5AC33F00937177 /* WebDriverBidiFrontendDispatchers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebDriverBidiFrontendDispatchers.cpp; sourceTree = "<group>"; };
+		99A514622D5AC33F00937177 /* WebDriverBidiProtocolObjects.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebDriverBidiProtocolObjects.h; sourceTree = "<group>"; };
+		99A514632D5AC33F00937177 /* WebDriverBidiProtocolObjects.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebDriverBidiProtocolObjects.cpp; sourceTree = "<group>"; };
+		99A514992D5C0CA000937177 /* BidiBrowser.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BidiBrowser.json; sourceTree = "<group>"; };
+		99A5149A2D5C0CA000937177 /* BidiBrowsingContext.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BidiBrowsingContext.json; sourceTree = "<group>"; };
+		99A5149D2D5C0CF600937177 /* BidiLog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BidiLog.json; sourceTree = "<group>"; };
 		99A7ACE326012919006D57FD /* WKInspectorResourceURLSchemeHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKInspectorResourceURLSchemeHandler.h; sourceTree = "<group>"; };
 		99A7ACE42601291A006D57FD /* WKInspectorResourceURLSchemeHandler.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WKInspectorResourceURLSchemeHandler.mm; sourceTree = "<group>"; };
 		99B16754252BB7E00073140E /* _WKInspectorExtension.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKInspectorExtension.h; sourceTree = "<group>"; };
@@ -13781,8 +13800,20 @@
 				9955A6EB1C7980BB00EB6A93 /* WebAutomationSession.h */,
 				1C0A19591C9006EA00FE0EBB /* WebAutomationSession.messages.in */,
 				99C3AE2C1DADA6A700AF5C16 /* WebAutomationSessionMacros.h */,
+				99A5144F2D5AB7D500937177 /* WebDriverBidiProcessor.cpp */,
+				99A5144E2D5AB7D500937177 /* WebDriverBidiProcessor.h */,
 			);
 			path = Automation;
+			sourceTree = "<group>";
+		};
+		99A5149C2D5C0CA000937177 /* protocol */ = {
+			isa = PBXGroup;
+			children = (
+				99A514992D5C0CA000937177 /* BidiBrowser.json */,
+				99A5149A2D5C0CA000937177 /* BidiBrowsingContext.json */,
+				99A5149D2D5C0CF600937177 /* BidiLog.json */,
+			);
+			path = protocol;
 			sourceTree = "<group>";
 		};
 		99C3AE221DAD8E1400AF5C16 /* mac */ = {
@@ -15708,6 +15739,12 @@
 				E3866B072399979D00F88FE9 /* WebDeviceOrientationUpdateProviderMessages.h */,
 				E3866B042399979C00F88FE9 /* WebDeviceOrientationUpdateProviderProxyMessageReceiver.cpp */,
 				E3866B052399979C00F88FE9 /* WebDeviceOrientationUpdateProviderProxyMessages.h */,
+				99A5145F2D5AC33F00937177 /* WebDriverBidiBackendDispatchers.cpp */,
+				99A5145E2D5AC33F00937177 /* WebDriverBidiBackendDispatchers.h */,
+				99A514612D5AC33F00937177 /* WebDriverBidiFrontendDispatchers.cpp */,
+				99A514602D5AC33F00937177 /* WebDriverBidiFrontendDispatchers.h */,
+				99A514632D5AC33F00937177 /* WebDriverBidiProtocolObjects.cpp */,
+				99A514622D5AC33F00937177 /* WebDriverBidiProtocolObjects.h */,
 				1C0234C828A00FA800AC1E5B /* WebExtensionContextMessageReceiver.cpp */,
 				1C0234CC28A00FA900AC1E5B /* WebExtensionContextMessages.h */,
 				1C0234CB28A00FA900AC1E5B /* WebExtensionContextProxyMessageReceiver.cpp */,
@@ -17297,6 +17334,10 @@
 				CD19A26E1A13E834008D650E /* WebDiagnosticLoggingClient.h in Headers */,
 				7AFA6F712A9F590A0055322A /* WebDisplayRefreshMonitor.h in Headers */,
 				BC032D7B10F4378D0058C15A /* WebDragClient.h in Headers */,
+				99A514662D5AC3E400937177 /* WebDriverBidiBackendDispatchers.h in Headers */,
+				99A514652D5AC3E400937177 /* WebDriverBidiFrontendDispatchers.h in Headers */,
+				99A514512D5AB7D500937177 /* WebDriverBidiProcessor.h in Headers */,
+				99A514642D5AC3E400937177 /* WebDriverBidiProtocolObjects.h in Headers */,
 				BCA0EF9F12332642007D3CFB /* WebEditCommandProxy.h in Headers */,
 				BC032D7D10F4378D0058C15A /* WebEditorClient.h in Headers */,
 				7AF236211E79A40800438A05 /* WebErrors.h in Headers */,
@@ -20264,6 +20305,10 @@
 				EB44A69B2C8A4F6E006595BF /* WebClipCache.mm in Sources */,
 				E39628DE23960CC600658ECD /* WebDeviceOrientationUpdateProvider.cpp in Sources */,
 				E3866AE52397400400F88FE9 /* WebDeviceOrientationUpdateProviderProxy.mm in Sources */,
+				99A514672D5ACF1800937177 /* WebDriverBidiBackendDispatchers.cpp in Sources */,
+				99A514682D5ACF1800937177 /* WebDriverBidiFrontendDispatchers.cpp in Sources */,
+				99A5146A2D5ACF1800937177 /* WebDriverBidiProcessor.cpp in Sources */,
+				99A514692D5ACF1800937177 /* WebDriverBidiProtocolObjects.cpp in Sources */,
 				1CF0C9502AC380E900EC82F2 /* WebExtensionActionCocoa.mm in Sources */,
 				1CC94E582AC92FA50045F269 /* WebExtensionAPIActionCocoa.mm in Sources */,
 				1C2B4D442A8199C100C528A1 /* WebExtensionAPIAlarmsCocoa.mm in Sources */,

@@ -466,7 +466,7 @@ NOTIFICATION_ALLOW_LISTS = \
 	$(WebKit2)/Scripts/compile-sandbox.sh $@.tmp $* $(SDK_NAME) $(SANDBOX_IMPORT_DIR)
 	mv $@.tmp $@
 
-AUTOMATION_PROTOCOL_GENERATOR_SCRIPTS = \
+JSON_RPC_GENERATOR_SCRIPTS = \
 	$(JavaScriptCore_SCRIPTS_DIR)/cpp_generator_templates.py \
 	$(JavaScriptCore_SCRIPTS_DIR)/cpp_generator.py \
 	$(JavaScriptCore_SCRIPTS_DIR)/generate_cpp_backend_dispatcher_header.py \
@@ -479,6 +479,8 @@ AUTOMATION_PROTOCOL_GENERATOR_SCRIPTS = \
 	$(JavaScriptCore_SCRIPTS_DIR)/generator.py \
 	$(JavaScriptCore_SCRIPTS_DIR)/models.py \
 	$(JavaScriptCore_SCRIPTS_DIR)/generate-inspector-protocol-bindings.py \
+	$(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py \
+	$(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py \
 #
 
 AUTOMATION_PROTOCOL_INPUT_FILES = \
@@ -495,12 +497,13 @@ AUTOMATION_PROTOCOL_OUTPUT_FILES = \
 #
 AUTOMATION_PROTOCOL_OUTPUT_PATTERNS = $(call to-pattern, $(AUTOMATION_PROTOCOL_OUTPUT_FILES))
 
-# JSON-RPC Frontend Dispatchers, Backend Dispatchers, Type Builders
-$(AUTOMATION_PROTOCOL_OUTPUT_PATTERNS) : $(AUTOMATION_PROTOCOL_INPUT_FILES) $(AUTOMATION_PROTOCOL_GENERATOR_SCRIPTS)
+# Files for the Automation protocol which implements WebDriver Classic commands.
+$(AUTOMATION_PROTOCOL_OUTPUT_PATTERNS) : $(AUTOMATION_PROTOCOL_INPUT_FILES) $(JSON_RPC_GENERATOR_SCRIPTS)
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-inspector-protocol-bindings.py --framework WebKit --backend --outputDir . $(AUTOMATION_PROTOCOL_INPUT_FILES)
 
 all : $(AUTOMATION_PROTOCOL_OUTPUT_FILES)
 
+# For JavaScript Selenium / WebDriver atoms, generate symbols with byte arrays that contain the minified file contents.
 %ScriptSource.h : %.js $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl
 	echo "//# sourceURL=__InjectedScript_$(notdir $<)" > $(basename $(notdir $<)).min.js
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py < $< >> $(basename $(notdir $<)).min.js
@@ -508,6 +511,38 @@ all : $(AUTOMATION_PROTOCOL_OUTPUT_FILES)
 	$(DELETE) $(basename $(notdir $<)).min.js
 
 all : WebAutomationSessionProxyScriptSource.h
+
+WEBDRIVER_BIDI_PROTOCOL_INPUT_FILES = \
+    $(WebKit2)/UIProcess/Automation/protocol/BidiBrowser.json \
+    $(WebKit2)/UIProcess/Automation/protocol/BidiBrowsingContext.json \
+    $(WebKit2)/UIProcess/Automation/protocol/BidiLog.json \
+#
+
+WEBDRIVER_BIDI_PROTOCOL_OUTPUT_FILES = \
+    WebDriverBidiBackendDispatchers.h \
+    WebDriverBidiBackendDispatchers.cpp \
+    WebDriverBidiFrontendDispatchers.h \
+    WebDriverBidiFrontendDispatchers.cpp \
+    WebDriverBidiProtocolObjects.h \
+    WebDriverBidiProtocolObjects.cpp \
+#
+
+# The combined JSON file depends on the actual set of domains and their file contents, so that
+# adding, modifying, or removing domains will trigger regeneration of inspector files.
+.PHONY: force
+EnabledWebDriverBidiDomains : $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py force
+	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py '$(WEBDRIVER_BIDI_PROTOCOL_INPUT_FILES)' $@
+
+CombinedWebDriverBidiDomains.json : $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(WEBDRIVER_BIDI_PROTOCOL_INPUT_FILES) EnabledWebDriverBidiDomains
+	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(WEBDRIVER_BIDI_PROTOCOL_INPUT_FILES) "$(FEATURE_AND_PLATFORM_DEFINES)" > ./CombinedWebDriverBidiDomains.json
+
+WEBDRIVER_BIDI_PROTOCOL_OUTPUT_PATTERNS = $(call to-pattern, $(WEBDRIVER_BIDI_PROTOCOL_OUTPUT_FILES))
+
+# Files for the WebDriverBidi protocol which implements WebDriver BiDi commands.
+$(WEBDRIVER_BIDI_PROTOCOL_OUTPUT_PATTERNS) : CombinedWebDriverBidiDomains.json $(JSON_RPC_GENERATOR_SCRIPTS)
+	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-inspector-protocol-bindings.py --framework WebDriverBidi --backend --outputDir . ./CombinedWebDriverBidiDomains.json
+
+all : $(WEBDRIVER_BIDI_PROTOCOL_OUTPUT_FILES)
 
 # WebPreferences generation
 

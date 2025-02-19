@@ -20,8 +20,10 @@ $(BUILT_PRODUCTS_DIR)/usr/local/include/wtf/Scripts/Preferences/WebPreferences.y
 $(BUILT_PRODUCTS_DIR)/usr/local/include/wtf/Scripts/Preferences/WebPreferencesDebug.yaml
 $(BUILT_PRODUCTS_DIR)/usr/local/include/wtf/Scripts/Preferences/WebPreferencesExperimental.yaml
 $(BUILT_PRODUCTS_DIR)/usr/local/include/wtf/Scripts/Preferences/WebPreferencesInternal.yaml
+$(JAVASCRIPTCORE_PRIVATE_HEADERS_DIR)/UpdateContents.py
 $(JAVASCRIPTCORE_PRIVATE_HEADERS_DIR)/cpp_generator.py
 $(JAVASCRIPTCORE_PRIVATE_HEADERS_DIR)/cpp_generator_templates.py
+$(JAVASCRIPTCORE_PRIVATE_HEADERS_DIR)/generate-combined-inspector-json.py
 $(JAVASCRIPTCORE_PRIVATE_HEADERS_DIR)/generate-inspector-protocol-bindings.py
 $(JAVASCRIPTCORE_PRIVATE_HEADERS_DIR)/generate_cpp_backend_dispatcher_header.py
 $(JAVASCRIPTCORE_PRIVATE_HEADERS_DIR)/generate_cpp_backend_dispatcher_implementation.py
@@ -505,6 +507,9 @@ $(PROJECT_DIR)/Shared/mac/SecItemResponseData.serialization.in
 $(PROJECT_DIR)/Shared/mac/WebHitTestResultPlatformData.serialization.in
 $(PROJECT_DIR)/UIProcess/Automation/Automation.json
 $(PROJECT_DIR)/UIProcess/Automation/WebAutomationSession.messages.in
+$(PROJECT_DIR)/UIProcess/Automation/protocol/BidiBrowser.json
+$(PROJECT_DIR)/UIProcess/Automation/protocol/BidiBrowsingContext.json
+$(PROJECT_DIR)/UIProcess/Automation/protocol/BidiLog.json
 $(PROJECT_DIR)/UIProcess/Cocoa/PlaybackSessionManagerProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Cocoa/UserMediaCaptureManagerProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Cocoa/VideoPresentationManagerProxy.messages.in

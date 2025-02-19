@@ -1,0 +1,11 @@
+{
+    "domain": "BidiBrowser",
+    "description": "The browser module contains commands for managing the remote end browser process.",
+    "condition": "ENABLE(WEBDRIVER_BIDI)",
+    "commands": [
+        {
+            "name": "close",
+            "description": "Terminates the WebDriver session to which it is sent."
+        }
+    ]
+}

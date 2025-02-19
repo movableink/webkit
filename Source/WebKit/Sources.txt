@@ -560,6 +560,7 @@ UIProcess/Authentication/WebProtectionSpace.cpp
 // FIXME(206266): AutomationProtocolObjects.h's "namespace Protocol" conflicts with objc/runtime.h's "typedef struct objc_object Protocol"
 UIProcess/Automation/SimulatedInputDispatcher.cpp @no-unify
 UIProcess/Automation/WebAutomationSession.cpp @no-unify
+UIProcess/Automation/WebDriverBidiProcessor.cpp @no-unify
 
 UIProcess/Downloads/DownloadProxy.cpp
 UIProcess/Downloads/DownloadProxyMap.cpp

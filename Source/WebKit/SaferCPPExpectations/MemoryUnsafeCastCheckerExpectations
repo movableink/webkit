@@ -1,4 +1,5 @@
 AutomationProtocolObjects.h
+WebDriverBidiProtocolObjects.h
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/cocoa/WebSocketTaskCocoa.mm
 Platform/cocoa/CocoaHelpers.mm
