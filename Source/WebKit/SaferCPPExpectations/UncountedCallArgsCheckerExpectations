@@ -3,7 +3,6 @@ AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
 WebDriverBidiBackendDispatchers.cpp
 WebDriverBidiFrontendDispatchers.cpp
-WebDriverBidiProtocolObjects.h
 NetworkProcess/BackgroundFetchLoad.cpp
 NetworkProcess/Downloads/Download.cpp
 NetworkProcess/Downloads/DownloadManager.cpp
