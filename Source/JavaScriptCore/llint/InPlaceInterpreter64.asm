@@ -867,7 +867,13 @@ instructionLabel(_table_set)
 
 reservedOpcode(0x27)
 
+macro popMemoryIndex(reg, tmp)
+    popInt32(reg, tmp)
+    ori 0, reg
+end
+
 macro ipintCheckMemoryBound(mem, scratch, size)
+    # Memory indices are 32 bit
     leap size - 1[mem], scratch
     bpb scratch, boundsCheckingSize, .continuation
     ipintException(OutOfBoundsMemoryAccess)
@@ -877,8 +883,7 @@ end
 instructionLabel(_i32_load_mem)
     # i32.load
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 4)
@@ -894,8 +899,7 @@ instructionLabel(_i32_load_mem)
 instructionLabel(_i64_load_mem)
     # i32.load
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 8)
@@ -911,8 +915,7 @@ instructionLabel(_i64_load_mem)
 instructionLabel(_f32_load_mem)
     # f32.load
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 4)
@@ -928,8 +931,7 @@ instructionLabel(_f32_load_mem)
 instructionLabel(_f64_load_mem)
     # f64.load
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 8)
@@ -946,8 +948,7 @@ instructionLabel(_f64_load_mem)
 instructionLabel(_i32_load8s_mem)
     # i32.load8_s
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 1)
@@ -964,8 +965,7 @@ instructionLabel(_i32_load8s_mem)
 instructionLabel(_i32_load8u_mem)
     # i32.load8_u
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 1)
@@ -981,8 +981,7 @@ instructionLabel(_i32_load8u_mem)
 instructionLabel(_i32_load16s_mem)
     # i32.load16_s
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 2)
@@ -999,8 +998,7 @@ instructionLabel(_i32_load16s_mem)
 instructionLabel(_i32_load16u_mem)
     # i32.load16_u
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 2)
@@ -1017,8 +1015,7 @@ instructionLabel(_i32_load16u_mem)
 instructionLabel(_i64_load8s_mem)
     # i64.load8_s
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 1)
@@ -1035,8 +1032,7 @@ instructionLabel(_i64_load8s_mem)
 instructionLabel(_i64_load8u_mem)
     # i64.load8_u
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 1)
@@ -1052,8 +1048,7 @@ instructionLabel(_i64_load8u_mem)
 instructionLabel(_i64_load16s_mem)
     # i64.load16_s
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 2)
@@ -1070,8 +1065,7 @@ instructionLabel(_i64_load16s_mem)
 instructionLabel(_i64_load16u_mem)
     # i64.load16_u
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 2)
@@ -1087,8 +1081,7 @@ instructionLabel(_i64_load16u_mem)
 instructionLabel(_i64_load32s_mem)
     # i64.load32_s
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 4)
@@ -1105,8 +1098,7 @@ instructionLabel(_i64_load32s_mem)
 instructionLabel(_i64_load32u_mem)
     # i64.load8_s
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 4)
@@ -1125,8 +1117,7 @@ instructionLabel(_i32_store_mem)
     # pop data
     popInt32(t1, t2)
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 4)
@@ -1143,8 +1134,7 @@ instructionLabel(_i64_store_mem)
     # pop data
     popInt64(t1, t2)
     # pop index
-    popInt64(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 8)
@@ -1161,8 +1151,7 @@ instructionLabel(_f32_store_mem)
     # pop data
     popFloat32(ft0)
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 4)
@@ -1179,8 +1168,7 @@ instructionLabel(_f64_store_mem)
     # pop data
     popFloat64(ft0)
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 8)
@@ -1197,8 +1185,7 @@ instructionLabel(_i32_store8_mem)
     # pop data
     popInt32(t1, t2)
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 1)
@@ -1215,8 +1202,7 @@ instructionLabel(_i32_store16_mem)
     # pop data
     popInt32(t1, t2)
     # pop index
-    popInt32(t0, t2)
-    ori 0, t0
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 2)
@@ -1233,7 +1219,7 @@ instructionLabel(_i64_store8_mem)
     # pop data
     popInt64(t1, t2)
     # pop index
-    popInt64(t0, t2)
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 1)
@@ -1250,7 +1236,7 @@ instructionLabel(_i64_store16_mem)
     # pop data
     popInt64(t1, t2)
     # pop index
-    popInt64(t0, t2)
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 2)
@@ -1267,7 +1253,7 @@ instructionLabel(_i64_store32_mem)
     # pop data
     popInt64(t1, t2)
     # pop index
-    popInt64(t0, t2)
+    popMemoryIndex(t0, t2)
     loadi IPInt::Const32Metadata::value[MC], t2
     addp t2, t0
     ipintCheckMemoryBound(t0, t2, 4)
