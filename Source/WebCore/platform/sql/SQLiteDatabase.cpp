@@ -478,6 +478,11 @@ bool SQLiteDatabase::tableExists(StringView tableName)
     return !tableSQL(tableName).isEmpty();
 }
 
+bool SQLiteDatabase::indexExists(StringView indexName)
+{
+    return !indexSQL(indexName).isEmpty();
+}
+
 String SQLiteDatabase::tableSQL(StringView tableName)
 {
     if (!isOpen())

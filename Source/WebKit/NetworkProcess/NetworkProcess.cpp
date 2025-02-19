@@ -1754,6 +1754,11 @@ void NetworkProcess::deleteWebsiteDataImpl(PAL::SessionID sessionID, OptionSet<W
         session->clearAlternativeServices(modifiedSince);
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (websiteDataTypes.contains(WebsiteDataType::DiskCache) && session)
+        session->clearResourceMonitorThrottlerData([clearTasksHandler] { });
+#endif
+
     if (NetworkStorageManager::canHandleTypes(websiteDataTypes) && session)
         session->protectedStorageManager()->deleteDataModifiedSince(websiteDataTypes, modifiedSince, [clearTasksHandler] { });
 }

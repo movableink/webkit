@@ -464,6 +464,11 @@ static void resolveDirectories(WebsiteDataStoreConfiguration::Directories& direc
         auto resolvedCookieDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(FileSystem::parentPath(directories.cookieStorageFile));
         directories.cookieStorageFile = FileSystem::pathByAppendingComponent(resolvedCookieDirectory, FileSystem::pathFileName(directories.cookieStorageFile));
     }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (!directories.resourceMonitorThrottlerDirectory.isEmpty())
+        directories.resourceMonitorThrottlerDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(directories.resourceMonitorThrottlerDirectory);
+#endif
 }
 
 const WebsiteDataStoreConfiguration::Directories& WebsiteDataStore::resolvedDirectories() const
@@ -2057,6 +2062,12 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
     SandboxExtension::Handle hstsStorageDirectoryExtensionHandle;
     createHandleFromResolvedPathIfPossible(hstsStorageDirectory, hstsStorageDirectoryExtensionHandle);
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    auto resourceMonitorThrottlerDirectory = directories.resourceMonitorThrottlerDirectory;
+    SandboxExtension::Handle resourceMonitorThrottlerDirectoryExtensionHandle;
+    createHandleFromResolvedPathIfPossible(resourceMonitorThrottlerDirectory, resourceMonitorThrottlerDirectoryExtensionHandle);
+#endif
+
     bool shouldIncludeLocalhostInResourceLoadStatistics = false;
     auto firstPartyWebsiteDataRemovalMode = WebCore::FirstPartyWebsiteDataRemovalMode::AllButCookies;
     WebCore::RegistrableDomain standaloneApplicationDomain;
@@ -2157,6 +2168,11 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
     platformSetNetworkParameters(parameters);
 #if PLATFORM(COCOA)
     parameters.networkSessionParameters.useNetworkLoader = useNetworkLoader();
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    networkSessionParameters.resourceMonitorThrottlerDirectory = WTFMove(resourceMonitorThrottlerDirectory);
+    networkSessionParameters.resourceMonitorThrottlerDirectoryExtensionHandle = WTFMove(resourceMonitorThrottlerDirectoryExtensionHandle);
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -2380,6 +2396,17 @@ String WebsiteDataStore::defaultJavaScriptConfigurationDirectory(const String&)
     // be renamed accordingly.
     return String();
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+String WebsiteDataStore::defaultResourceMonitorThrottlerDirectory(const String& baseDataDirectory)
+{
+#if PLATFORM(PLAYSTATION) || USE(GLIB)
+    return websiteDataDirectoryFileSystemRepresentation("resourcemonitorthrottler"_s, baseDataDirectory);
+#else
+    return websiteDataDirectoryFileSystemRepresentation("ResourceMonitorThrottler"_s, baseDataDirectory);
+#endif
+}
+#endif
 
 bool WebsiteDataStore::networkProcessHasEntitlementForTesting(const String&)
 {
@@ -2827,5 +2854,4 @@ void WebsiteDataStore::resetResourceMonitorThrottlerForTesting(CompletionHandler
     protectedNetworkProcess()->resetResourceMonitorThrottlerForTesting(m_sessionID, WTFMove(completionHandler));
 }
 #endif
-
 } // namespace WebKit

@@ -133,6 +133,11 @@ struct NetworkSessionCreationParameters {
     std::optional<Vector<std::pair<Vector<uint8_t>, WTF::UUID>>> proxyConfigData;
 #endif
     ResourceLoadStatisticsParameters resourceLoadStatisticsParameters;
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    String resourceMonitorThrottlerDirectory;
+    SandboxExtension::Handle resourceMonitorThrottlerDirectoryExtensionHandle;
+#endif
 };
 
 } // namespace WebKit

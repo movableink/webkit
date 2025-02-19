@@ -117,6 +117,10 @@ void WebsiteDataStoreConfiguration::initializePaths()
     setCookieStorageFile(WebsiteDataStore::defaultCookieStorageFile(m_baseDataDirectory));
     setSearchFieldHistoryDirectory(WebsiteDataStore::defaultSearchFieldHistoryDirectory(m_baseDataDirectory));
 #endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    setResourceMonitorThrottlerDirectory(WebsiteDataStore::defaultResourceMonitorThrottlerDirectory(m_baseDataDirectory));
+#endif
 }
 
 Ref<WebsiteDataStoreConfiguration> WebsiteDataStoreConfiguration::copy() const
@@ -202,6 +206,9 @@ WebsiteDataStoreConfiguration::Directories WebsiteDataStoreConfiguration::Direct
 #if ENABLE(ARKIT_INLINE_PREVIEW)
         crossThreadCopy(modelElementCacheDirectory),
 #endif
+#if ENABLE(CONTENT_EXTENSIONS)
+        crossThreadCopy(resourceMonitorThrottlerDirectory),
+#endif
     };
 }
 
@@ -228,6 +235,9 @@ WebsiteDataStoreConfiguration::Directories WebsiteDataStoreConfiguration::Direct
         crossThreadCopy(WTFMove(webSQLDatabaseDirectory)),
 #if ENABLE(ARKIT_INLINE_PREVIEW)
         crossThreadCopy(WTFMove(modelElementCacheDirectory)),
+#endif
+#if ENABLE(CONTENT_EXTENSIONS)
+        crossThreadCopy(WTFMove(resourceMonitorThrottlerDirectory)),
 #endif
     };
 }

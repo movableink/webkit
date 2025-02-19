@@ -389,6 +389,10 @@ public:
     static String defaultDeviceIdHashSaltsStorageDirectory(const String& baseDataDirectory = nullString());
     static String defaultJavaScriptConfigurationDirectory(const String& baseDataDirectory = nullString());
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    static String defaultResourceMonitorThrottlerDirectory(const String& baseDataDirectory = nullString());
+#endif
+
     static constexpr uint64_t defaultPerOriginQuota() { return 1000 * MB; }
     static constexpr uint64_t defaultStandardVolumeCapacity() {
 #if PLATFORM(MAC)

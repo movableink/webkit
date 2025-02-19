@@ -28,7 +28,9 @@
 #if ENABLE(CONTENT_EXTENSIONS)
 
 #include "Utilities.h"
-#include <WebCore/ResourceMonitorThrottler.h>
+#include <WebCore/ResourceMonitorThrottlerHolder.h>
+#include <wtf/FileSystem.h>
+#include <wtf/MainThread.h>
 
 namespace TestWebKitAPI {
 
@@ -38,21 +40,29 @@ class ResourceMonitorTest : public testing::Test {
 public:
     void SetUp() override
     {
-        m_reference = ApproximateTime::now();
+        WTF::initializeMainThread();
+        m_reference = ContinuousApproximateTime::now();
     }
 
 protected:
-    ApproximateTime m_reference;
-    RefPtr<ResourceMonitorThrottler> m_throttler;
+    ContinuousApproximateTime m_reference;
+    RefPtr<ResourceMonitorThrottlerHolder> m_throttler;
+    String m_temporayDatabasePath;
 
-    void prepareThrottler(size_t count, Seconds duration, size_t maxHosts)
+    void prepareThrottler(size_t count, Seconds duration, size_t maxHosts, bool withPersistence = false)
     {
-        m_throttler = ResourceMonitorThrottler::create(count, duration, maxHosts);
+        if (withPersistence)
+            m_throttler = ResourceMonitorThrottlerHolder::create(temporaryDatabasePath(), count, duration, maxHosts);
+        else
+            m_throttler = ResourceMonitorThrottlerHolder::create(count, duration, maxHosts);
     }
 
-    void prepareThrottler()
+    void prepareThrottler(bool withPersistence = false)
     {
-        m_throttler = ResourceMonitorThrottler::create();
+        if (withPersistence)
+            m_throttler = ResourceMonitorThrottlerHolder::create(temporaryDatabasePath());
+        else
+            m_throttler = ResourceMonitorThrottlerHolder::create();
     }
 
     void disposeThrottler()
@@ -60,27 +70,45 @@ protected:
         m_throttler = nullptr;
     }
 
-    ResourceMonitorThrottler* throttler()
+    ResourceMonitorThrottlerHolder* throttler()
     {
         return m_throttler.get();
     }
 
-    ApproximateTime now()
+    ContinuousApproximateTime now()
     {
         auto t = m_reference;
         m_reference += 1_ms;
         return t;
     }
 
-    ApproximateTime later(Seconds delta)
+    ContinuousApproximateTime later(Seconds delta)
     {
         m_reference += delta;
         return m_reference;
     }
 
-    bool tryAccess(const String& host, ApproximateTime time)
+    bool tryAccess(const String& host, ContinuousApproximateTime time)
     {
-        return m_throttler->tryAccess(host, time);
+        bool result;
+        bool completed = false;
+        m_throttler->tryAccess(host, time, [&] (bool wasGranted) {
+            result = wasGranted;
+            completed = true;
+        });
+
+        Util::run(&completed);
+
+        return result;
+    }
+
+    String& temporaryDatabasePath()
+    {
+        if (m_temporayDatabasePath.isEmpty()) {
+            m_temporayDatabasePath = FileSystem::createTemporaryFile("tempDatabaseForResourceMonitorThrottler"_s);
+            FileSystem::deleteFile(m_temporayDatabasePath);
+        }
+        return m_temporayDatabasePath;
     }
 };
 
@@ -159,6 +187,36 @@ TEST_F(ResourceMonitorTest, ThrottlerEmptyHostname)
 
     // Accessing with an empty hostname should not crash.
     EXPECT_FALSE(tryAccess(emptyHost, now()));
+}
+
+TEST_F(ResourceMonitorTest, ThrottlerPersistence)
+{
+    auto host = "example.com"_s;
+
+    prepareThrottler(/* size */ 2, /* duration */ 1_s, /* maxHosts */ 2, /* withPersistence */ true);
+
+    // first access must be okay.
+    EXPECT_TRUE(tryAccess(host, now()));
+    // second one is alse okay.
+    EXPECT_TRUE(tryAccess(host, now()));
+    // but third one is not okay because size is 2.
+    EXPECT_FALSE(tryAccess(host, now()));
+
+    disposeThrottler();
+
+    prepareThrottler(/* size */ 2, /* duration */ 1_s, /* maxHosts */ 2, /* withPersistence */ true);
+
+    // recover all history from database so still third one is not okay because size is 2.
+    EXPECT_FALSE(tryAccess(host, now()));
+}
+
+TEST_F(ResourceMonitorTest, ThrottlerCreateAndDelete)
+{
+    // Shouldn't crash with immediate disposal.
+    prepareThrottler(true);
+    disposeThrottler();
+
+    EXPECT_FALSE(throttler());
 }
 
 } // namespace TestWebKitAPI

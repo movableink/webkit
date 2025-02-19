@@ -793,6 +793,7 @@ void TestController::configureWebsiteDataStoreTemporaryDirectories(WKWebsiteData
         WKWebsiteDataStoreConfigurationSetResourceLoadStatisticsDirectory(configuration, toWK(makeString(temporaryFolder, pathSeparator, "ResourceLoadStatistics"_s, pathSeparator, randomNumber)).get());
         WKWebsiteDataStoreConfigurationSetServiceWorkerRegistrationDirectory(configuration, toWK(makeString(temporaryFolder, pathSeparator, "ServiceWorkers"_s, pathSeparator, randomNumber)).get());
         WKWebsiteDataStoreConfigurationSetGeneralStorageDirectory(configuration, toWK(makeString(temporaryFolder, pathSeparator, "Default"_s, pathSeparator, randomNumber)).get());
+        WKWebsiteDataStoreConfigurationSetResourceMonitorThrottlerDirectory(configuration, toWK(makeString(temporaryFolder, pathSeparator, "ResourceMonitorThrottler"_s, pathSeparator, randomNumber)).get());
 #if PLATFORM(WIN)
         WKWebsiteDataStoreConfigurationSetCookieStorageFile(configuration, toWK(makeString(temporaryFolder, pathSeparator, "cookies"_s, pathSeparator, randomNumber, pathSeparator, "cookiejar.db"_s)).get());
 #endif

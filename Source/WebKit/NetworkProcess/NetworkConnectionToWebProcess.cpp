@@ -115,7 +115,7 @@
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
-#include <WebCore/ResourceMonitorThrottler.h>
+#include <WebCore/ResourceMonitorThrottlerHolder.h>
 #endif
 
 #define CONNECTION_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [webProcessIdentifier=%" PRIu64 "] NetworkConnectionToWebProcess::" fmt, this, this->webProcessIdentifier().toUInt64(), ##__VA_ARGS__)
@@ -1793,14 +1793,11 @@ void NetworkConnectionToWebProcess::updateSharedPreferencesForWebProcess(SharedP
 #if ENABLE(CONTENT_EXTENSIONS)
 void NetworkConnectionToWebProcess::shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&& completionHandler)
 {
-    bool wasGranted = false;
-
-    if (CheckedPtr session = networkSession()) {
-        wasGranted = session->protectedResourceMonitorThrottler()->tryAccess(host);
-        CONNECTION_RELEASE_LOG(Loading, "shouldOffloadIFrameForHost: (host=%" PUBLIC_LOG_STRING ", wasGranted=%d)", host.utf8().data(), wasGranted ? 1 : 0);
-    }
-
-    completionHandler(wasGranted);
+    CONNECTION_RELEASE_LOG(Loading, "shouldOffloadIFrameForHost: (host=%" SENSITIVE_LOG_STRING ")", host.utf8().data());
+    if (CheckedPtr session = networkSession())
+        session->protectedResourceMonitorThrottler()->tryAccess(host, ContinuousApproximateTime::now(), WTFMove(completionHandler));
+    else
+        completionHandler(false);
 }
 #endif
 

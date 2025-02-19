@@ -43,6 +43,8 @@ public:
     // This is the epoch. So, x.secondsSinceEpoch() should be the same as x - ContinuousApproximateTime().
     constexpr ContinuousApproximateTime() = default;
 
+    WTF_EXPORT_PRIVATE static ContinuousApproximateTime fromWallTime(WallTime);
+
 #if OS(DARWIN)
     WTF_EXPORT_PRIVATE static ContinuousApproximateTime fromMachContinuousApproximateTime(uint64_t);
     WTF_EXPORT_PRIVATE uint64_t toMachContinuousApproximateTime() const;

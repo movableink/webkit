@@ -560,6 +560,16 @@ String WebsiteDataStore::defaultModelElementCacheDirectory(const String& baseDir
 }
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+String WebsiteDataStore::defaultResourceMonitorThrottlerDirectory(const String& baseDirectory)
+{
+    if (!baseDirectory.isEmpty())
+        return FileSystem::pathByAppendingComponent(baseDirectory, "ResourceMonitorThrottler"_s);
+
+    return websiteDataDirectoryFileSystemRepresentation("ResourceMonitorThrottler"_s, { }, ShouldCreateDirectory::No);
+}
+#endif
+
 String WebsiteDataStore::tempDirectoryFileSystemRepresentation(const String& directoryName, ShouldCreateDirectory shouldCreateDirectory)
 {
     static dispatch_once_t onceToken;

@@ -59,7 +59,7 @@
 namespace WebCore {
 class CertificateInfo;
 class NetworkStorageSession;
-class ResourceMonitorThrottler;
+class ResourceMonitorThrottlerHolder;
 class ResourceRequest;
 class ResourceError;
 class SWServer;
@@ -295,9 +295,10 @@ public:
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    WebCore::ResourceMonitorThrottler& resourceMonitorThrottler();
-    Ref<WebCore::ResourceMonitorThrottler> protectedResourceMonitorThrottler();
+    WebCore::ResourceMonitorThrottlerHolder& resourceMonitorThrottler();
+    Ref<WebCore::ResourceMonitorThrottlerHolder> protectedResourceMonitorThrottler();
 
+    void clearResourceMonitorThrottlerData(CompletionHandler<void()>&&);
     void resetResourceMonitorThrottlerForTesting();
 #endif
 
@@ -412,7 +413,8 @@ protected:
     bool m_isDeclarativeWebPushEnabled { false };
 #endif
 #if ENABLE(CONTENT_EXTENSIONS)
-    RefPtr<WebCore::ResourceMonitorThrottler> m_resourceMonitorThrottler;
+    RefPtr<WebCore::ResourceMonitorThrottlerHolder> m_resourceMonitorThrottler;
+    String m_resourceMonitorThrottlerDirectory;
 #endif
 };
 
