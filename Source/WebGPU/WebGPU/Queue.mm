@@ -146,6 +146,10 @@ id<MTLCommandBuffer> Queue::commandBufferWithDescriptor(MTLCommandBufferDescript
     if (buffer)
         [m_createdNotCommittedBuffers addObject:buffer];
 
+    if (auto instance = m_instance.get()) {
+        if (auto device = m_device.get())
+            instance->retainDevice(*device, buffer);
+    }
     return buffer;
 }
 
