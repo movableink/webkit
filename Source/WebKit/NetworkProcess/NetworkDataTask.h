@@ -111,6 +111,7 @@ public:
     virtual State state() const = 0;
 
     NetworkDataTaskClient* client() const { return m_client.get(); }
+    RefPtr<NetworkDataTaskClient> protectedClient() const { return client(); }
     void clearClient() { m_client = nullptr; }
 
     std::optional<DownloadID> pendingDownloadID() const { return m_pendingDownloadID.asOptional(); }
