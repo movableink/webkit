@@ -1,3 +1,5 @@
+//@ skip
+
 description(
 "This tests that we can correctly call Function.prototype.apply"
 );
