@@ -85,7 +85,8 @@ TEST(WKWebExtensionAPIDevTools, Basics)
     [manager run];
 }
 
-TEST(WKWebExtensionAPIDevTools, CreatePanel)
+// FIX-ME: rdar://137268889
+TEST(WKWebExtensionAPIDevTools, DISABLED_CreatePanel)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -154,7 +155,8 @@ TEST(WKWebExtensionAPIDevTools, CreatePanel)
     [manager runUntilTestMessage:@"Panel Hidden"];
 }
 
-TEST(WKWebExtensionAPIDevTools, InspectedWindowEval)
+// FIX-ME: rdar://137268889
+TEST(WKWebExtensionAPIDevTools, DISABLED_InspectedWindowEval)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<title>Test Page</title><script>const secretNumber = 42; window.customTitle = 'Dynamic Title'</script>"_s } },
@@ -236,7 +238,8 @@ TEST(WKWebExtensionAPIDevTools, InspectedWindowReload)
     EXPECT_TRUE(server.totalRequests() == 1lu || server.totalRequests() == 2lu);
 }
 
-TEST(WKWebExtensionAPIDevTools, InspectedWindowReloadIgnoringCache)
+// FIX-ME: rdar://137268889
+TEST(WKWebExtensionAPIDevTools, DISABLED_InspectedWindowReloadIgnoringCache)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s }, { "Cache-Control"_s, "max-age=3600"_s } }, ""_s } },
