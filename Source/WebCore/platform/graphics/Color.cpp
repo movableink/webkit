@@ -76,8 +76,7 @@ std::optional<ColorDataForIPC> Color::data() const
         return std::nullopt;
 
     if (isOutOfLine()) {
-        // FIXME: We should not need SUPPRESS_UNCOUNTED_ARG as unresolvedComponents() is trivial and inline (rdar://144880581).
-        SUPPRESS_UNCOUNTED_ARG auto [c1, c2, c3, alpha] = asOutOfLine().unresolvedComponents();
+        auto [c1, c2, c3, alpha] = asOutOfLine().unresolvedComponents();
 
         OutOfLineColorDataForIPC oolcd = {
             .colorSpace = colorSpace(),

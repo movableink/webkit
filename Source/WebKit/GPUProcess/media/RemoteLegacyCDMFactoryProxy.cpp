@@ -65,10 +65,10 @@ void RemoteLegacyCDMFactoryProxy::clear()
         return;
 
     for (auto const& session : sessions)
-        SUPPRESS_UNCOUNTED_ARG connection->messageReceiverMap().removeMessageReceiver(Messages::RemoteLegacyCDMSessionProxy::messageReceiverName(), session.key.toUInt64());
+        connection->messageReceiverMap().removeMessageReceiver(Messages::RemoteLegacyCDMSessionProxy::messageReceiverName(), session.key.toUInt64());
 
     for (auto const& proxy : proxies)
-        SUPPRESS_UNCOUNTED_ARG connection->messageReceiverMap().removeMessageReceiver(Messages::RemoteLegacyCDMProxy::messageReceiverName(), proxy.key.toUInt64());
+        connection->messageReceiverMap().removeMessageReceiver(Messages::RemoteLegacyCDMProxy::messageReceiverName(), proxy.key.toUInt64());
 }
 
 void RemoteLegacyCDMFactoryProxy::createCDM(const String& keySystem, std::optional<MediaPlayerIdentifier>&& playerId, CompletionHandler<void(std::optional<RemoteLegacyCDMIdentifier>&&)>&& completion)

@@ -14202,8 +14202,7 @@ void WebPageProxy::requestAttachmentIcon(IPC::Connection& connection, const Stri
 
 #if PLATFORM(MAC)
     if (RefPtr attachment = attachmentForIdentifier(identifier); attachment && attachment->shouldUseFileWrapperIconForDirectory()) {
-        // FIXME: remove SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE once rdar://144729499 is resolved.
-        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE attachment->doWithFileWrapper([&, updateAttachmentIcon = WTFMove(updateAttachmentIcon)] (NSFileWrapper *fileWrapper) {
+        attachment->doWithFileWrapper([&, updateAttachmentIcon = WTFMove(updateAttachmentIcon)] (NSFileWrapper *fileWrapper) {
             if (updateIconForDirectory(fileWrapper, attachment->identifier()))
                 return;
 

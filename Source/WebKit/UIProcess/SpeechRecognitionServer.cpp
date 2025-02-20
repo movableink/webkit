@@ -70,8 +70,7 @@ SpeechRecognitionServer::SpeechRecognitionServer(WebProcessProxy& process, Speec
 
 std::optional<SharedPreferencesForWebProcess> SpeechRecognitionServer::sharedPreferencesForWebProcess() const
 {
-    // FIXME: Remove SUPPRESS_UNCOUNTED_ARG once https://github.com/llvm/llvm-project/pull/111198 lands.
-    SUPPRESS_UNCOUNTED_ARG return m_process ? m_process->sharedPreferencesForWebProcess() : std::nullopt;
+    return m_process ? m_process->sharedPreferencesForWebProcess() : std::nullopt;
 }
 
 void SpeechRecognitionServer::start(WebCore::SpeechRecognitionConnectionClientIdentifier clientIdentifier, String&& lang, bool continuous, bool interimResults, uint64_t maxAlternatives, WebCore::ClientOrigin&& origin, WebCore::FrameIdentifier mainFrameIdentifier, FrameInfoData&& frameInfo)

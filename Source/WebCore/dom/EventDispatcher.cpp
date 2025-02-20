@@ -138,8 +138,7 @@ static HTMLInputElement* findInputElementInEventPath(const EventPath& path)
     size_t size = path.size();
     for (size_t i = 0; i < size; ++i) {
         auto& eventContext = path.contextAt(i);
-        // FIXME: Remove SUPPRESS_UNCOUNTED_LOCAL once rdar://144654664 is resolved.
-        SUPPRESS_UNCOUNTED_LOCAL if (auto* inputElement = dynamicDowncast<HTMLInputElement>(eventContext.currentTarget()))
+        if (auto* inputElement = dynamicDowncast<HTMLInputElement>(eventContext.currentTarget()))
             return inputElement;
     }
     return nullptr;

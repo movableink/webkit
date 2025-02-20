@@ -925,8 +925,7 @@ std::optional<SharedPreferencesForWebProcess> VideoPresentationManagerProxy::sha
     if (!m_page)
         return std::nullopt;
 
-    // FIXME: Remove SUPPRESS_UNCOUNTED_ARG once https://github.com/llvm/llvm-project/pull/111198 lands.
-    SUPPRESS_UNCOUNTED_ARG return m_page->legacyMainFrameProcess().sharedPreferencesForWebProcess();
+    return m_page->legacyMainFrameProcess().sharedPreferencesForWebProcess();
 }
 
 void VideoPresentationManagerProxy::swapFullscreenModes(PlaybackSessionContextIdentifier firstContextId, PlaybackSessionContextIdentifier secondContextId)
