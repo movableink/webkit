@@ -138,7 +138,6 @@ UIProcess/API/Cocoa/WKProcessPool.mm
 UIProcess/API/Cocoa/WKURLSchemeTask.mm
 UIProcess/API/Cocoa/WKUserContentController.mm
 UIProcess/API/Cocoa/WKUserScript.mm
-UIProcess/API/Cocoa/WKWebView.mm
 UIProcess/API/Cocoa/WKWebViewConfiguration.mm
 UIProcess/API/Cocoa/WKWebViewTesting.mm
 UIProcess/API/Cocoa/WKWebpagePreferences.mm
@@ -388,7 +387,6 @@ WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemote.mm
 WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemoteCustom.mm
 WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemoteModelHosting.mm
 WebProcess/WebPage/RemoteLayerTree/RemoteLayerTreeContext.mm
-WebProcess/WebPage/RemoteLayerTree/RemoteLayerTreeDrawingArea.mm
 WebProcess/WebPage/RemoteLayerTree/RemoteScrollingCoordinator.mm
 WebProcess/WebPage/ViewGestureGeometryCollector.cpp
 WebProcess/WebPage/VisitedLinkTableController.cpp

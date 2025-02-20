@@ -665,7 +665,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
         pageConfiguration->setWebExtensionController(&controller._webExtensionController);
 
     if (auto *controller = _configuration.get()._weakWebExtensionController)
-        pageConfiguration->setWeakWebExtensionController(&controller._webExtensionController);
+        pageConfiguration->setWeakWebExtensionController(Ref { controller._webExtensionController }.ptr());
 #endif
 
     NSString *groupIdentifier = [_configuration _groupIdentifier];
@@ -1410,7 +1410,7 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
         frameID = frame._handle->_frameHandle->frameID();
 
     auto removeTransientActivation = !_dontResetTransientActivationAfterRunJavaScript && WebKit::shouldEvaluateJavaScriptWithoutTransientActivation() ? WebCore::RemoveTransientActivation::Yes : WebCore::RemoveTransientActivation::No;
-    _page->runJavaScriptInFrameInScriptWorld({ javaScriptString, JSC::SourceTaintedOrigin::Untainted, sourceURL, !!asAsyncFunction, WTFMove(argumentsMap), !!forceUserGesture, removeTransientActivation }, frameID, *world->_contentWorld.get(), [handler] (auto&& result) {
+    _page->runJavaScriptInFrameInScriptWorld({ javaScriptString, JSC::SourceTaintedOrigin::Untainted, sourceURL, !!asAsyncFunction, WTFMove(argumentsMap), !!forceUserGesture, removeTransientActivation }, frameID, Ref { *world->_contentWorld }, [handler] (auto&& result) {
         if (!handler)
             return;
 
@@ -4363,7 +4363,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 - (void)_clearBackForwardCache
 {
     THROW_IF_SUSPENDED;
-    _page->configuration().processPool().protectedBackForwardCache()->removeEntriesForPage(*_page);
+    _page->configuration().protectedProcessPool()->protectedBackForwardCache()->removeEntriesForPage(*_page);
 }
 
 + (BOOL)_handlesSafeBrowsing

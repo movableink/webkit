@@ -376,7 +376,7 @@ void RemoteLayerTreeDrawingArea::updateRendering()
         RemoteLayerTreeTransaction layerTransaction(transactionID);
         layerTransaction.setCallbackIDs(WTFMove(m_pendingCallbackIDs));
 
-        m_remoteLayerTreeContext->buildTransaction(layerTransaction, *downcast<GraphicsLayerCARemote>(rootLayer.layer.get()).protectedPlatformCALayer().get(), rootLayer.frameID);
+        m_remoteLayerTreeContext->buildTransaction(layerTransaction, *downcast<GraphicsLayerCARemote>(rootLayer.layer.get()).protectedPlatformCALayer(), rootLayer.frameID);
 
         // FIXME: Investigate whether this needs to be done multiple times in a page with multiple root frames. <rdar://116202678>
         webPage->willCommitLayerTree(layerTransaction, rootLayer.frameID);
