@@ -43,7 +43,6 @@
 #include <wtf/HashMap.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/StringHash.h>
@@ -158,7 +157,7 @@ FontCache::FontCache()
 
 FontCache::~FontCache() = default;
 
-std::optional<ASCIILiteral> FontCache::alternateFamilyName(const String& familyName)
+ASCIILiteral FontCache::alternateFamilyName(const String& familyName)
 {
     if (auto platformSpecificAlternate = platformAlternateFamilyName(familyName))
         return platformSpecificAlternate;
@@ -195,7 +194,7 @@ std::optional<ASCIILiteral> FontCache::alternateFamilyName(const String& familyN
         break;
     }
 
-    return std::nullopt;
+    return { };
 }
 
 FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontDescription, const String& passedFamilyName, const FontCreationContext& fontCreationContext, OptionSet<FontLookupOptions> options)
@@ -228,7 +227,7 @@ FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontD
             // We were unable to find a font. We have a small set of fonts that we alias to other names,
             // e.g., Arial/Helvetica, Courier/Courier New, etc. Try looking up the font under the aliased name.
             if (auto alternateName = alternateFamilyName(familyName)) {
-                auto* alternateData = cachedFontPlatformData(fontDescription, *alternateName, fontCreationContext, options | FontLookupOptions::ExactFamilyNameMatch);
+                auto* alternateData = cachedFontPlatformData(fontDescription, alternateName, fontCreationContext, options | FontLookupOptions::ExactFamilyNameMatch);
                 // Look up the key in the hash table again as the previous iterator may have
                 // been invalidated by the recursive call to cachedFontPlatformData().
                 it = m_fontDataCaches->platformData.find(key);

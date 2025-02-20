@@ -227,8 +227,8 @@ private:
     // These functions are implemented by each platform (unclear which functions this comment applies to).
     WEBCORE_EXPORT std::unique_ptr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomString& family, const FontCreationContext&, OptionSet<FontLookupOptions>);
 
-    static std::optional<ASCIILiteral> alternateFamilyName(const String&);
-    static std::optional<ASCIILiteral> platformAlternateFamilyName(const String&);
+    static ASCIILiteral alternateFamilyName(const String&);
+    static ASCIILiteral platformAlternateFamilyName(const String&);
 
 #if PLATFORM(MAC)
     bool shouldAutoActivateFontIfNeeded(const AtomString& family);

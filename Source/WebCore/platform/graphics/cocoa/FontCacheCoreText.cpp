@@ -793,7 +793,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacterCluster(const FontDescription&
     return fontForPlatformData(alternateFont);
 }
 
-std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String& familyName)
+ASCIILiteral FontCache::platformAlternateFamilyName(const String& familyName)
 {
     static const UChar heitiString[] = { 0x9ed1, 0x4f53 };
     static const UChar songtiString[] = { 0x5b8b, 0x4f53 };
@@ -839,7 +839,7 @@ std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&
         break;
     }
 
-    return std::nullopt;
+    return { };
 }
 
 void addAttributesForInstalledFonts(CFMutableDictionaryRef attributes, AllowUserInstalledFonts allowUserInstalledFonts)

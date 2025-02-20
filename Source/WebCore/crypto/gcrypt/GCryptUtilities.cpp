@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-std::optional<ASCIILiteral> hashAlgorithmName(CryptoAlgorithmIdentifier identifier)
+ASCIILiteral hashAlgorithmName(CryptoAlgorithmIdentifier identifier)
 {
     switch (identifier) {
     case CryptoAlgorithmIdentifier::SHA_1:
@@ -46,7 +46,7 @@ std::optional<ASCIILiteral> hashAlgorithmName(CryptoAlgorithmIdentifier identifi
     case CryptoAlgorithmIdentifier::SHA_512:
         return "sha512"_s;
     default:
-        return std::nullopt;
+        return { };
     }
 }
 
