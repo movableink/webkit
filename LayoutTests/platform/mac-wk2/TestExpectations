@@ -1972,11 +1972,6 @@ webkit.org/b/287865 [ Debug ] pdf/two-pages-continuous-to-discrete.html [ Pass C
 
 webkit.org/b/287889 [ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.sharedworker.html [ Skip ]
 
-# webkit.org/b/287679 REGRESSION(289499@main):[macOS Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/modal-pseudo-class-in-has.html is flaky (failure in EWS)
-[ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/modal-pseudo-class-in-has.html [ Pass Failure ]
-[ Debug ] imported/w3c/web-platform-tests/screen-orientation/fullscreen-interactions.html [ Pass Failure ]
-[ Debug ] imported/w3c/web-platform-tests/screen-orientation/lock-basic.html [ Pass Failure ]
-
 # webkit.org/b/287875 [ macOS Release wk2 x86_64 ] 2x fast/borders/border-painting-*.html are consistently failing.
 [ Sonoma x86_64 Release ] fast/borders/border-painting-inset.html [ Pass ImageOnlyFailure  ]
 [ Sonoma x86_64 Release ] fast/borders/border-painting-outset.html [ Pass ImageOnlyFailure ] 
@@ -2006,3 +2001,10 @@ webkit.org/b/280019 [ Sonoma+ Release ] fast/canvas/offscreen-giant.html [ Pass 
 webkit.org/b/288026 [ Sonoma+ Release ] imported/w3c/web-platform-tests/css/css-images/tiled-radial-gradients.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/288006 http/tests/dom/noreferrer-window-not-targetable.html [ Failure ]
+
+# webkit.org/b/287679 REGRESSION(289499@main):[macOS Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/modal-pseudo-class-in-has.html is flaky (failure in EWS)
+[ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/modal-pseudo-class-in-has.html [ Pass Failure ]
+[ Debug ] imported/w3c/web-platform-tests/screen-orientation/fullscreen-interactions.html [ Pass Failure ]
+[ Debug ] imported/w3c/web-platform-tests/screen-orientation/lock-basic.html [ Pass Failure ]
+[ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/fullscreen-pseudo-class-in-has.html [ Pass Failure ]
+
