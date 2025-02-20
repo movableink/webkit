@@ -2004,3 +2004,5 @@ webkit.org/b/288011 [ Sonoma+ Release ] tiled-drawing/top-left-content-insets.ht
 webkit.org/b/280019 [ Sonoma+ Release ] fast/canvas/offscreen-giant.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/288026 [ Sonoma+ Release ] imported/w3c/web-platform-tests/css/css-images/tiled-radial-gradients.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/288006 http/tests/dom/noreferrer-window-not-targetable.html [ Failure ]
