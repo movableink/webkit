@@ -2017,3 +2017,5 @@ webkit.org/b/288053 imported/w3c/web-platform-tests/fetch/http-cache/invalidate.
 webkit.org/b/288118 imported/w3c/web-platform-tests/css/selectors/invalidation/fullscreen-pseudo-class-in-has.html [ Pass Failure ]
 
 webkit.org/b/288119 imported/w3c/web-platform-tests/preload/preload-type-match.html [ Pass Failure ]
+
+webkit.org/b/288120 [ Sonoma+ Release ] fast/animation/request-animation-frame-throttling-lowPowerMode.html [ Pass Failure ]
