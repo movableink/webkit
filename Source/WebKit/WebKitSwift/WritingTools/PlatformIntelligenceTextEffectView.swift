@@ -38,6 +38,8 @@ internal import UIKit_Private
 #endif
 
 import WebKitSwift
+// Work around rdar://145157171 by manually importing the cross-import module.
+internal import _WebKit_SwiftUI
 internal import SwiftUI
 
 // MARK: Platform abstraction type aliases
