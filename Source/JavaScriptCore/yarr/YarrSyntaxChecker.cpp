@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,6 +59,7 @@ public:
     void disjunction(CreateDisjunctionPurpose) { }
     void resetForReparsing() { }
 };
+static_assert(YarrSyntaxCheckable<SyntaxChecker>);
 
 ErrorCode checkSyntax(StringView pattern, StringView flags)
 {

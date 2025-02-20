@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Alexey Shvayka <shvaikalesh@gmail.com>.
+ * Copyright (C) 2025 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,13 +48,76 @@ enum class CharacterClassSetOp : uint8_t {
     Subtraction
 };
 
+template <class T> concept YarrSyntaxCheckable = requires (T& checker, Vector<Vector<char32_t>>& disjunctionStrings, const String& subpatternName) {
+    { checker.assertionBOL() } -> std::same_as<void>;
+    { checker.assertionEOL() } -> std::same_as<void>;
+    { checker.assertionWordBoundary(bool{}) } -> std::same_as<void>;
+    { checker.atomPatternCharacter(char32_t{}) } -> std::same_as<void>;
+    { checker.atomBuiltInCharacterClass(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBegin(bool{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBegin() } -> std::same_as<void>;
+    { checker.atomCharacterClassAtom(UChar{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassRange(UChar{}, UChar{}) } -> std::same_as<void>;
+    { checker.atomPatternCharacter(char32_t{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBuiltIn(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
+    { checker.atomClassStringDisjunction(disjunctionStrings) } -> std::same_as<void>;
+    { checker.atomCharacterClassSetOp(CharacterClassSetOp{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassPushNested() } -> std::same_as<void>;
+    { checker.atomCharacterClassPopNested() } -> std::same_as<void>;
+    { checker.atomCharacterClassEnd() } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin() } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool{}) } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool{}, std::optional<String>{}) } -> std::same_as<void>;
+    { checker.atomParentheticalAssertionBegin(bool{}, MatchDirection{}) } -> std::same_as<void>;
+    { checker.atomParentheticalModifierBegin(OptionSet<Flags>{}, OptionSet<Flags>{})} -> std::same_as<void>;
+    { checker.atomParenthesesEnd() } -> std::same_as<void>;
+    { checker.atomBackReference(unsigned{}) } -> std::same_as<void>;
+    { checker.atomNamedBackReference(subpatternName) } -> std::same_as<void>;
+    { checker.atomNamedForwardReference(subpatternName) } -> std::same_as<void>;
+    { checker.quantifyAtom(unsigned{}, unsigned{}, bool{}) } -> std::same_as<void>;
+    { checker.disjunction(CreateDisjunctionPurpose{}) } -> std::same_as<void>;
+    { checker.resetForReparsing() } -> std::same_as<void>;
+};
+
 // The Parser class should not be used directly - only via the Yarr::parse() method.
-template<class Delegate, typename CharType>
+template<YarrSyntaxCheckable Delegate, typename CharType>
 class Parser {
+public:
+    Parser(Delegate& delegate, StringView pattern, CompileMode compileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
+        : m_delegate(delegate)
+        , m_data(pattern.span<CharType>().data())
+        , m_size(pattern.length())
+        , m_compileMode(compileMode)
+        , m_backReferenceLimit(backReferenceLimit)
+        , m_isNamedForwardReferenceAllowed(isNamedForwardReferenceAllowed)
+    {
+    }
+
+    /*
+     * parse():
+     *
+     * This method calls parseTokens() to parse over the input and returns error code for a result.
+     */
+    ErrorCode parse()
+    {
+        if (m_size > MAX_PATTERN_SIZE)
+            return ErrorCode::PatternTooLarge;
+
+        parseTokens();
+
+        if (!hasError(m_errorCode)) {
+            ASSERT(atEndOfPattern());
+            handleIllegalReferences();
+            ASSERT(atEndOfPattern());
+        }
+
+        return m_errorCode;
+    }
+
 private:
     static constexpr char32_t errorCodePoint = 0xFFFFFFFFu;
 
-    template<class FriendDelegate>
+    template<YarrSyntaxCheckable FriendDelegate>
     friend ErrorCode parse(FriendDelegate&, StringView pattern, CompileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed);
 
     enum class UnicodeParseContext : uint8_t { PatternCodePoint, GroupName };
@@ -791,16 +855,6 @@ private:
         Vector<char32_t> m_stringInProgress;
         Vector<Vector<char32_t>> m_strings;
     };
-
-    Parser(Delegate& delegate, StringView pattern, CompileMode compileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
-        : m_delegate(delegate)
-        , m_data(pattern.span<CharType>().data())
-        , m_size(pattern.length())
-        , m_compileMode(compileMode)
-        , m_backReferenceLimit(backReferenceLimit)
-        , m_isNamedForwardReferenceAllowed(isNamedForwardReferenceAllowed)
-    {
-    }
 
     // The handling of IdentityEscapes is different depending on which unicode flag if any is active.
     // For both Unicode and UnicodeSet patterns, IdentityEscapes only include SyntaxCharacters or '/'.
@@ -1785,27 +1839,6 @@ private:
             m_errorCode = ErrorCode::MissingParentheses;
     }
 
-    /*
-     * parse():
-     *
-     * This method calls parseTokens() to parse over the input and returns error code for a result.
-     */
-    ErrorCode parse()
-    {
-        if (m_size > MAX_PATTERN_SIZE)
-            return ErrorCode::PatternTooLarge;
-
-        parseTokens();
-
-        if (!hasError(m_errorCode)) {
-            ASSERT(atEndOfPattern());
-            handleIllegalReferences();
-            ASSERT(atEndOfPattern());
-        }
-
-        return m_errorCode;
-    }
-
     void handleIllegalReferences()
     {
         bool shouldReparse = false;
@@ -2179,36 +2212,7 @@ private:
  * Yarr::parse() returns null on success, or a const C string providing an error
  * message where a parse error occurs.
  *
- * The Delegate must implement the following interface:
- *
- *    void assertionBOL();
- *    void assertionEOL();
- *    void assertionWordBoundary(bool invert);
- *
- *    void atomPatternCharacter(char32_t ch);
- *    void atomBuiltInCharacterClass(BuiltInCharacterClassID classID, bool invert);
- *    void atomCharacterClassBegin(bool invert)
- *    void atomCharacterClassAtom(char32_t ch)
- *    void atomCharacterClassRange(char32_t begin, char32_t end)
- *    void atomCharacterClassBuiltIn(BuiltInCharacterClassID classID, bool invert)
- *    void atomClassStringDisjunction(Vector<Vector<char32_t>>&)
- *    void atomCharacterClassSetOp(CharacterClassSetOp setOp)
- *    void atomCharacterClassPushNested()
- *    void atomCharacterClassPopNested()
- *    void atomCharacterClassEnd()
- *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
- *    void atomParentheticalAssertionBegin(bool invert, MatchDirection matchDirection);
- *    void atomParentheticalModifierBegin(OptionSet<Flags> set, OptionSet<Flags> unset);
- *    void atomParenthesesEnd();
- *    void atomBackReference(unsigned subpatternId);
- *    void atomNamedBackReference(const String& subpatternName);
- *    void atomNamedForwardReference(const String& subpatternName);
- *
- *    void quantifyAtom(unsigned min, unsigned max, bool greedy);
- *
- *    void disjunction(CreateDisjunctionPurpose purpose);
- *
- *    void resetForReparsing();
+ * The Delegate must implement `YarrSyntaxCheckable` concept.
  *
  * The regular expression is described by a sequence of assertion*() and atom*()
  * callbacks to the delegate, describing the terms in the regular expression.
@@ -2250,7 +2254,7 @@ inline CompileMode compileMode(std::optional<OptionSet<Flags>> flags)
     return CompileMode::Legacy;
 }
 
-template<class Delegate>
+template<YarrSyntaxCheckable Delegate>
 ErrorCode parse(Delegate& delegate, const StringView pattern, CompileMode compileMode, unsigned backReferenceLimit = quantifyInfinite, bool isNamedForwardReferenceAllowed = true)
 {
     if (pattern.is8Bit())

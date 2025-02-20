@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Peter Varga (pvarga@inf.u-szeged.hu), University of Szeged
+ * Copyright (C) 2025 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -2266,6 +2267,7 @@ private:
     OptionSet<Flags> m_initialFlags;
     OptionSet<Flags> m_flags;
 };
+static_assert(YarrSyntaxCheckable<YarrPatternConstructor>);
 
 ErrorCode YarrPattern::compile(StringView patternString)
 {
