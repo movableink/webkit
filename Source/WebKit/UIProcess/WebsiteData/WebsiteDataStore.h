@@ -298,6 +298,11 @@ public:
     DeviceIdHashSaltStorage& ensureDeviceIdHashSaltStorage();
     Ref<DeviceIdHashSaltStorage> ensureProtectedDeviceIdHashSaltStorage();
 
+#if ENABLE(ENCRYPTED_MEDIA)
+    DeviceIdHashSaltStorage& ensureMediaKeysHashSaltStorage();
+    Ref<DeviceIdHashSaltStorage> ensureProtectedMediaKeysHashSaltStorage();
+#endif
+
     WebsiteDataStoreParameters parameters();
     static Vector<WebsiteDataStoreParameters> parametersFromEachWebsiteDataStore();
 
@@ -387,6 +392,9 @@ public:
     static String defaultMediaCacheDirectory(const String& baseCacheDirectory = nullString());
     static String defaultMediaKeysStorageDirectory(const String& baseDataDirectory = nullString());
     static String defaultDeviceIdHashSaltsStorageDirectory(const String& baseDataDirectory = nullString());
+#if ENABLE(ENCRYPTED_MEDIA)
+    static String defaultMediaKeysHashSaltsStorageDirectory(const String& baseDataDirectory = nullString());
+#endif
     static String defaultJavaScriptConfigurationDirectory(const String& baseDataDirectory = nullString());
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -581,6 +589,9 @@ private:
     Ref<const WebsiteDataStoreConfiguration> m_configuration;
     bool m_hasResolvedDirectories { false };
     RefPtr<DeviceIdHashSaltStorage> m_deviceIdHashSaltStorage;
+#if ENABLE(ENCRYPTED_MEDIA)
+    RefPtr<DeviceIdHashSaltStorage> m_mediaKeysHashSaltStorage;
+#endif
 #if PLATFORM(IOS_FAMILY)
     String m_resolvedContainerCachesWebContentDirectory;
     String m_resolvedContainerCachesNetworkingDirectory;

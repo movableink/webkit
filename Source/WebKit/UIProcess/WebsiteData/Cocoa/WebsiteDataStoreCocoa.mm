@@ -526,6 +526,16 @@ String WebsiteDataStore::defaultDeviceIdHashSaltsStorageDirectory(const String& 
     return websiteDataDirectoryFileSystemRepresentation("DeviceIdHashSalts"_s);
 }
 
+#if ENABLE(ENCRYPTED_MEDIA)
+String WebsiteDataStore::defaultMediaKeysHashSaltsStorageDirectory(const String& baseDirectory)
+{
+    if (!baseDirectory.isEmpty())
+        return FileSystem::pathByAppendingComponent(baseDirectory, "MediaKeysHashSalts"_s);
+
+    return websiteDataDirectoryFileSystemRepresentation("MediaKeysHashSalts"_s);
+}
+#endif
+
 String WebsiteDataStore::defaultWebSQLDatabaseDirectory(const String& baseDirectory)
 {
     if (!baseDirectory.isEmpty())

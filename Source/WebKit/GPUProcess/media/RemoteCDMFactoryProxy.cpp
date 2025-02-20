@@ -67,7 +67,7 @@ static CDMFactory* factoryForKeySystem(const String& keySystem)
     return factories[foundIndex];
 }
 
-void RemoteCDMFactoryProxy::createCDM(const String& keySystem, CompletionHandler<void(std::optional<RemoteCDMIdentifier>&&, RemoteCDMConfiguration&&)>&& completion)
+void RemoteCDMFactoryProxy::createCDM(const String& keySystem, const String& mediaKeysHashSalt, CompletionHandler<void(std::optional<RemoteCDMIdentifier>&&, RemoteCDMConfiguration&&)>&& completion)
 {
     auto factory = factoryForKeySystem(keySystem);
     if (!factory) {
@@ -75,7 +75,7 @@ void RemoteCDMFactoryProxy::createCDM(const String& keySystem, CompletionHandler
         return;
     }
 
-    auto privateCDM = factory->createCDM(keySystem, *this);
+    auto privateCDM = factory->createCDM(keySystem, mediaKeysHashSalt, *this);
     if (!privateCDM) {
         completion(std::nullopt, { });
         return;

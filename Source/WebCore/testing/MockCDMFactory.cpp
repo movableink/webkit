@@ -116,13 +116,14 @@ void MockCDMFactory::setSupportedDataTypes(Vector<String>&& types)
         m_supportedDataTypes.append(type);
 }
 
-std::unique_ptr<CDMPrivate> MockCDMFactory::createCDM(const String&, const CDMPrivateClient&)
+std::unique_ptr<CDMPrivate> MockCDMFactory::createCDM(const String&, const String& mediaKeysHashSalt, const CDMPrivateClient&)
 {
-    return makeUnique<MockCDM>(*this);
+    return makeUnique<MockCDM>(*this, mediaKeysHashSalt);
 }
 
-MockCDM::MockCDM(WeakPtr<MockCDMFactory> factory)
+MockCDM::MockCDM(WeakPtr<MockCDMFactory> factory, const String& mediaKeysHashSalt)
     : m_factory(WTFMove(factory))
+    , m_mediaKeysHashSalt { mediaKeysHashSalt }
 {
 }
 

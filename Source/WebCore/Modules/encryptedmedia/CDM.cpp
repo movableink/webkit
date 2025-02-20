@@ -59,23 +59,24 @@ bool CDM::supportsKeySystem(const String& keySystem)
     return false;
 }
 
-Ref<CDM> CDM::create(Document& document, const String& keySystem)
+Ref<CDM> CDM::create(Document& document, const String& keySystem, const String& mediaKeysHashSalt)
 {
-    return adoptRef(*new CDM(document, keySystem));
+    return adoptRef(*new CDM(document, keySystem, mediaKeysHashSalt));
 }
 
-CDM::CDM(Document& document, const String& keySystem)
+CDM::CDM(Document& document, const String& keySystem, const String& mediaKeysHashSalt)
     : ContextDestructionObserver(&document)
 #if !RELEASE_LOG_DISABLED
     , m_logger(document.logger())
     , m_logIdentifier(LoggerHelper::uniqueLogIdentifier())
 #endif
     , m_keySystem(keySystem)
+    , m_mediaKeysHashSalt { mediaKeysHashSalt }
 {
     ASSERT(supportsKeySystem(keySystem));
     for (auto* factory : CDMFactory::registeredFactories()) {
         if (factory->supportsKeySystem(keySystem)) {
-            m_private = factory->createCDM(keySystem, *this);
+            m_private = factory->createCDM(keySystem, m_mediaKeysHashSalt, *this);
 #if !RELEASE_LOG_DISABLED
             m_private->setLogIdentifier(m_logIdentifier);
 #endif

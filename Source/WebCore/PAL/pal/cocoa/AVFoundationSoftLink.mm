@@ -311,4 +311,7 @@ SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, AVFoundation, AVSampleBu
 
 SOFT_LINK_FUNCTION_FOR_SOURCE(PAL, AVFoundation, AVSampleBufferAttachContentKey, BOOL, (CMSampleBufferRef sbuf, AVContentKey *contentKey, NSError **outError), (sbuf, contentKey, outError))
 
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, AVFoundation, AVContentKeyRequestShouldRandomizeDeviceIdentifierKey, NSString *, PAL_EXPORT)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(PAL, AVFoundation, AVContentKeyRequestRandomDeviceIdentifierSeedKey, NSString *, PAL_EXPORT)
+
 #endif // USE(AVFOUNDATION)

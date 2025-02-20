@@ -28,6 +28,7 @@
 
 #include "APISecurityOrigin.h"
 #include "APIUIClient.h"
+#include "DeviceIdHashSaltStorage.h"
 #include "Logging.h"
 #include "MessageSenderInlines.h"
 #include "WebAutomationSession.h"
@@ -108,18 +109,24 @@ void MediaKeySystemPermissionRequestManagerProxy::grantRequest(MediaKeySystemPer
 #if ENABLE(ENCRYPTED_MEDIA)
     ALWAYS_LOG(LOGIDENTIFIER, request.mediaKeySystemID().toUInt64(), ", keySystem: ", request.keySystem());
 
-    m_page->legacyMainFrameProcess().send(Messages::WebPage::MediaKeySystemWasGranted { request.mediaKeySystemID() }, m_page->webPageIDInMainFrameProcess());
+    m_page->legacyMainFrameProcess().send(Messages::WebPage::MediaKeySystemWasGranted { request.mediaKeySystemID(), request.mediaKeysHashSalt() }, m_page->webPageIDInMainFrameProcess());
 #else
     UNUSED_PARAM(request);
 #endif
 }
 
-Ref<MediaKeySystemPermissionRequestProxy> MediaKeySystemPermissionRequestManagerProxy::createRequestForFrame(MediaKeySystemRequestIdentifier mediaKeySystemID, FrameIdentifier frameID, Ref<SecurityOrigin>&& topLevelDocumentOrigin, const String& keySystem)
+void MediaKeySystemPermissionRequestManagerProxy::createRequestForFrame(MediaKeySystemRequestIdentifier mediaKeySystemID, FrameIdentifier frameID, Ref<SecurityOrigin>&& mediaKeyRequestOrigin, Ref<SecurityOrigin>&& topLevelDocumentOrigin, const String& keySystem, CompletionHandler<void(Ref<MediaKeySystemPermissionRequestProxy>&&)>&& completionHandler)
 {
     ALWAYS_LOG(LOGIDENTIFIER, mediaKeySystemID.toUInt64());
-    auto request = MediaKeySystemPermissionRequestProxy::create(*this, mediaKeySystemID, m_page->mainFrame()->frameID(), frameID, WTFMove(topLevelDocumentOrigin), keySystem);
+    auto request = MediaKeySystemPermissionRequestProxy::create(*this, mediaKeySystemID, m_page->mainFrame()->frameID(), frameID, WTFMove(mediaKeyRequestOrigin), WTFMove(topLevelDocumentOrigin), keySystem);
     m_pendingRequests.add(mediaKeySystemID, request.ptr());
-    return request;
+
+    Ref mediaKeyRequestDocumentSecurityOrigin = request->mediaKeyRequestSecurityOrigin();
+    Ref topLevelDocumentSecurityOrigin = request->topLevelDocumentSecurityOrigin();
+    m_page->websiteDataStore().ensureProtectedDeviceIdHashSaltStorage()->deviceIdHashSaltForOrigin(mediaKeyRequestDocumentSecurityOrigin, topLevelDocumentSecurityOrigin, [request = WTFMove(request), completionHandler = WTFMove(completionHandler)] (String&& mediaKeysHashSalt) mutable {
+        request->setMediaKeysHashSalt(WTFMove(mediaKeysHashSalt));
+        completionHandler(WTFMove(request));
+    });
 }
 
 void MediaKeySystemPermissionRequestManagerProxy::ref() const

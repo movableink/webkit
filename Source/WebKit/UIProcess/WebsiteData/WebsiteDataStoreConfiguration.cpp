@@ -111,6 +111,9 @@ void WebsiteDataStoreConfiguration::initializePaths()
     setMediaKeysStorageDirectory(WebsiteDataStore::defaultMediaKeysStorageDirectory(m_baseDataDirectory));
     setResourceLoadStatisticsDirectory(WebsiteDataStore::defaultResourceLoadStatisticsDirectory(m_baseDataDirectory));
     setDeviceIdHashSaltsStorageDirectory(WebsiteDataStore::defaultDeviceIdHashSaltsStorageDirectory(m_baseDataDirectory));
+#if ENABLE(ENCRYPTED_MEDIA)
+    setMediaKeysHashSaltsStorageDirectory(WebsiteDataStore::defaultMediaKeysHashSaltsStorageDirectory(m_baseDataDirectory));
+#endif
     setJavaScriptConfigurationDirectory(WebsiteDataStore::defaultJavaScriptConfigurationDirectory(m_baseDataDirectory));
     setGeneralStorageDirectory(WebsiteDataStore::defaultGeneralStorageDirectory(m_baseDataDirectory));
 #if PLATFORM(COCOA)
@@ -191,6 +194,9 @@ WebsiteDataStoreConfiguration::Directories WebsiteDataStoreConfiguration::Direct
         crossThreadCopy(cacheStorageDirectory),
         crossThreadCopy(cookieStorageFile),
         crossThreadCopy(deviceIdHashSaltsStorageDirectory),
+#if ENABLE(ENCRYPTED_MEDIA)
+        crossThreadCopy(mediaKeysHashSaltsStorageDirectory),
+#endif
         crossThreadCopy(generalStorageDirectory),
         crossThreadCopy(hstsStorageDirectory),
         crossThreadCopy(indexedDBDatabaseDirectory),
@@ -221,6 +227,9 @@ WebsiteDataStoreConfiguration::Directories WebsiteDataStoreConfiguration::Direct
         crossThreadCopy(WTFMove(cacheStorageDirectory)),
         crossThreadCopy(WTFMove(cookieStorageFile)),
         crossThreadCopy(WTFMove(deviceIdHashSaltsStorageDirectory)),
+#if ENABLE(ENCRYPTED_MEDIA)
+        crossThreadCopy(WTFMove(mediaKeysHashSaltsStorageDirectory)),
+#endif
         crossThreadCopy(WTFMove(generalStorageDirectory)),
         crossThreadCopy(WTFMove(hstsStorageDirectory)),
         crossThreadCopy(WTFMove(indexedDBDatabaseDirectory)),

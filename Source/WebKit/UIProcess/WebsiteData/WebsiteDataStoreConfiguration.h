@@ -161,6 +161,11 @@ public:
     const String& deviceIdHashSaltsStorageDirectory() const { return m_directories.deviceIdHashSaltsStorageDirectory; }
     void setDeviceIdHashSaltsStorageDirectory(String&& directory) { m_directories.deviceIdHashSaltsStorageDirectory = WTFMove(directory); }
 
+#if ENABLE(ENCRYPTED_MEDIA)
+    const String& mediaKeysHashSaltsStorageDirectory() const { return m_directories.mediaKeysHashSaltsStorageDirectory; }
+    void setMediaKeysHashSaltsStorageDirectory(String&& directory) { m_directories.mediaKeysHashSaltsStorageDirectory = WTFMove(directory); }
+#endif
+
     const String& cookieStorageFile() const { return m_directories.cookieStorageFile; }
     void setCookieStorageFile(String&& directory) { m_directories.cookieStorageFile = WTFMove(directory); }
     
@@ -261,6 +266,9 @@ public:
         String cacheStorageDirectory;
         String cookieStorageFile;
         String deviceIdHashSaltsStorageDirectory;
+#if ENABLE(ENCRYPTED_MEDIA)
+        String mediaKeysHashSaltsStorageDirectory;
+#endif
         String generalStorageDirectory;
         String hstsStorageDirectory;
         String indexedDBDatabaseDirectory;

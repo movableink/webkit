@@ -157,6 +157,8 @@ public:
     ASCIILiteral logClassName() const { return "CDMInstanceFairPlayStreamingAVFObjC"_s; }
 #endif
 
+    const String& mediaKeysHashSalt() const { return m_mediaKeysHashSalt; }
+
 private:
     void handleUnexpectedRequests(Vector<RetainPtr<AVContentKeyRequest>>&&);
 
@@ -169,6 +171,8 @@ private:
     Vector<WeakPtr<CDMInstanceSessionFairPlayStreamingAVFObjC>> m_sessions;
     UncheckedKeyHashSet<RetainPtr<AVContentKeyRequest>> m_unexpectedKeyRequests;
     WeakHashSet<KeyStatusesChangedObserver> m_keyStatusChangedObservers;
+    String m_mediaKeysHashSalt;
+
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     uint64_t m_logIdentifier { 0 };

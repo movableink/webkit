@@ -58,6 +58,7 @@
 static NSString * const ContentKeyReportGroupKey = @"ContentKeyReportGroup";
 static NSString * const InitializationDataTypeKey = @"InitializationDataType";
 static const NSInteger SecurityLevelError = -42811;
+static const size_t kMaximumDeviceIdentifierSeedSize = 16;
 
 @interface WebCoreFPSContentKeySessionDelegate : NSObject <AVContentKeySessionDelegate>
 @end
@@ -244,8 +245,9 @@ static Ref<SharedBuffer> initializationDataForRequest(AVContentKeyRequest* reque
 }
 
 CDMInstanceFairPlayStreamingAVFObjC::CDMInstanceFairPlayStreamingAVFObjC(const CDMPrivateFairPlayStreaming& cdmPrivate)
+    : m_mediaKeysHashSalt { cdmPrivate.mediaKeysHashSalt() }
 #if !RELEASE_LOG_DISABLED
-    : m_logger(cdmPrivate.logger())
+    , m_logger { cdmPrivate.logger() }
 #endif
 {
 }
@@ -1191,7 +1193,25 @@ void CDMInstanceSessionFairPlayStreamingAVFObjC::didProvideRequest(AVContentKeyR
 
     RetainPtr<NSData> contentIdentifier = keyIDs.first()->makeContiguous()->createNSData();
     @try {
-        [request makeStreamingContentKeyRequestDataForApp:appIdentifier.get() contentIdentifier:contentIdentifier.get() options:nil completionHandler:[this, weakThis = WeakPtr { *this }] (NSData *contentKeyRequestData, NSError *error) mutable {
+        auto options = adoptNS([[NSMutableDictionary alloc] init]);
+        if (PAL::canLoad_AVFoundation_AVContentKeyRequestRandomDeviceIdentifierSeedKey() && PAL::canLoad_AVFoundation_AVContentKeyRequestShouldRandomizeDeviceIdentifierKey()) {
+            auto mediaKeysHashSeedString = m_instance->mediaKeysHashSalt();
+            Vector<uint8_t> seedData;
+            seedData.reserveInitialCapacity(mediaKeysHashSeedString.length());
+            for (auto character : mediaKeysHashSeedString.span8()) {
+                if (isASCIIHexDigit(character))
+                    seedData.append(toASCIIHexValue(character));
+            }
+            if (seedData.size() > kMaximumDeviceIdentifierSeedSize)
+                seedData.resize(kMaximumDeviceIdentifierSeedSize);
+            else if (seedData.size() < kMaximumDeviceIdentifierSeedSize)
+                seedData.insertFill(seedData.size(), 0, kMaximumDeviceIdentifierSeedSize - seedData.size());
+
+            [options setValue:@YES forKey:AVContentKeyRequestShouldRandomizeDeviceIdentifierKey];
+            [options setValue:[NSData dataWithBytes:seedData.data() length:seedData.sizeInBytes()] forKey:AVContentKeyRequestRandomDeviceIdentifierSeedKey];
+        }
+
+        [request makeStreamingContentKeyRequestDataForApp:appIdentifier.get() contentIdentifier:contentIdentifier.get() options:options.get() completionHandler:[this, weakThis = WeakPtr { *this }] (NSData *contentKeyRequestData, NSError *error) mutable {
             callOnMainThread([this, weakThis = WTFMove(weakThis), error = retainPtr(error), contentKeyRequestData = retainPtr(contentKeyRequestData)] {
                 if (!weakThis)
                     return;
