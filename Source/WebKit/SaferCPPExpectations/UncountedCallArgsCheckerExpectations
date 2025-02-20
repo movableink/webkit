@@ -73,7 +73,6 @@ Shared/WebMemorySampler.cpp
 Shared/graphics/ImageBufferSet.cpp
 UIProcess/API/APIAttachment.cpp
 UIProcess/API/APIDownloadClient.h
-UIProcess/API/APIHTTPCookieStore.cpp
 UIProcess/API/APIInspectorExtension.cpp
 UIProcess/API/APINavigationClient.h
 UIProcess/API/APIPageConfiguration.cpp

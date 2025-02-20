@@ -1,4 +1,3 @@
-UIProcess/API/APIHTTPCookieStore.cpp
 UIProcess/API/C/WKContext.cpp
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/Cocoa/WKProcessPool.mm
