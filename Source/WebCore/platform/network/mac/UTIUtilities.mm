@@ -99,7 +99,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return nullptr;
 }
 
-static NSString *UTIFromUnknownMIMEType(StringView mimeType)
+static NSString *UTIFromPotentiallyUnknownMIMEType(StringView mimeType)
 {
     static constexpr std::pair<ComparableLettersLiteral, NSString *> typesArray[] = {
         { "model/usd"_s, @"com.pixar.universal-scene-description-mobile" },
@@ -108,17 +108,20 @@ static NSString *UTIFromUnknownMIMEType(StringView mimeType)
         { "model/vnd.usdz+zip"_s, @"com.pixar.universal-scene-description-mobile" },
     };
     static constexpr SortedArrayMap typesMap { typesArray };
-    return typesMap.get(mimeType, @"");
+    return typesMap.get(mimeType, nil);
 }
 
 struct UTIFromMIMETypeCachePolicy : TinyLRUCachePolicy<String, RetainPtr<NSString>> {
 public:
     static RetainPtr<NSString> createValueForKey(const String& mimeType)
     {
+        if (auto type = UTIFromPotentiallyUnknownMIMEType(mimeType))
+            return type;
+
         if (RetainPtr type = [UTType typeWithMIMEType:mimeType])
             return type.get().identifier;
 
-        return UTIFromUnknownMIMEType(mimeType);
+        return @"";
     }
 
     static String createKeyForStorage(const String& key) { return key.isolatedCopy(); }
