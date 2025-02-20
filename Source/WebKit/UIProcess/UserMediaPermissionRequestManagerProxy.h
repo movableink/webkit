@@ -24,6 +24,7 @@
 #include <WebCore/MediaProducer.h>
 #include <WebCore/PermissionDescriptor.h>
 #include <WebCore/PermissionState.h>
+#include <WebCore/ProcessIdentifier.h>
 #include <WebCore/RealtimeMediaSourceCenter.h>
 #include <WebCore/RealtimeMediaSourceFactory.h>
 #include <WebCore/SecurityOrigin.h>
@@ -31,6 +32,7 @@
 #include <wtf/Deque.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RunLoop.h>
@@ -223,7 +225,7 @@ private:
     const uint64_t m_logIdentifier;
 #endif
 #if PLATFORM(COCOA)
-    bool m_hasCreatedSandboxExtensionForTCCD { false };
+    HashSet<WebCore::ProcessIdentifier> m_hasCreatedSandboxExtensionForTCCD;
 #endif
     uint64_t m_hasPendingCapture { 0 };
     std::optional<bool> m_mockDevicesEnabledOverride;

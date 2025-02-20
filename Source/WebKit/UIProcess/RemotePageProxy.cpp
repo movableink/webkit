@@ -38,6 +38,7 @@
 #include "RemotePageDrawingAreaProxy.h"
 #include "RemotePageFullscreenManagerProxy.h"
 #include "RemotePageVisitedLinkStoreRegistration.h"
+#include "UserMediaProcessManager.h"
 #include "WebFrameProxy.h"
 #include "WebPageMessages.h"
 #include "WebPageProxy.h"
@@ -266,6 +267,11 @@ WebProcessActivityState& RemotePageProxy::processActivityState()
 
 void RemotePageProxy::isPlayingMediaDidChange(WebCore::MediaProducerMediaStateFlags newState)
 {
+#if ENABLE(MEDIA_STREAM)
+    bool didStopAudioCapture = m_mediaState.containsAny(WebCore::MediaProducer::IsCapturingAudioMask) && !newState.containsAny(WebCore::MediaProducer::IsCapturingAudioMask);
+    bool didStopVideoCapture = m_mediaState.containsAny(WebCore::MediaProducer::IsCapturingVideoMask) && !newState.containsAny(WebCore::MediaProducer::IsCapturingVideoMask);
+#endif
+
     m_mediaState = newState;
 
     RefPtr page = m_page.get();
@@ -273,6 +279,11 @@ void RemotePageProxy::isPlayingMediaDidChange(WebCore::MediaProducerMediaStateFl
         return;
 
     page->updatePlayingMediaDidChange(WebPageProxy::CanDelayNotification::Yes);
+
+#if ENABLE(MEDIA_STREAM)
+    if (didStopAudioCapture || didStopVideoCapture)
+        UserMediaProcessManager::singleton().revokeSandboxExtensionsIfNeeded(protectedProcess().get());
+#endif
 }
 
 }

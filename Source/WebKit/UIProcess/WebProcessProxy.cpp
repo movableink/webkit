@@ -127,6 +127,10 @@
 #include "APIPageConfiguration.h"
 #endif
 
+#if ENABLE(MEDIA_STREAM)
+#include "UserMediaProcessManager.h"
+#endif
+
 #if ENABLE(SEC_ITEM_SHIM)
 #include "SecItemShimProxy.h"
 #endif
@@ -910,6 +914,10 @@ void WebProcessProxy::removeWebPage(WebPageProxy& webPage, EndsUsingDataStore en
     updateMediaStreamingActivity();
     updateBackgroundResponsivenessTimer();
     protectedWebsiteDataStore()->propagateSettingUpdates();
+
+#if ENABLE(MEDIA_STREAM)
+    UserMediaProcessManager::singleton().revokeSandboxExtensionsIfNeeded(Ref { *this });
+#endif
 
     maybeShutDown();
 }

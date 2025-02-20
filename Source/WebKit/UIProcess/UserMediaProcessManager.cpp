@@ -23,11 +23,13 @@
 
 #include "Logging.h"
 #include "MediaDeviceSandboxExtensions.h"
+#include "RemotePageProxy.h"
 #include "SpeechRecognitionPermissionManager.h"
 #include "UserMediaPermissionRequestProxy.h"
 #include "WebPageProxy.h"
 #include "WebProcessMessages.h"
 #include "WebProcessProxy.h"
+#include <WebCore/MediaProducer.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TranslatedProcess.h>
@@ -80,11 +82,15 @@ bool UserMediaProcessManager::willCreateMediaStream(UserMediaPermissionRequestMa
     ASSERT(request.hasAudioDevice() || request.hasVideoDevice());
 
 #if ENABLE(SANDBOX_EXTENSIONS) && USE(APPLE_INTERNAL_SDK)
-    RefPtr proxyPage = proxy.page();
+    RefPtr frame = WebFrameProxy::webFrame(request.frameID());
+    if (!frame)
+        return false;
+
+    RefPtr proxyPage = frame->page();
     if (!proxyPage)
         return false;
 
-    Ref process = proxyPage->legacyMainFrameProcess();
+    Ref process = frame->process();
     size_t extensionCount = 0;
 
     bool needsAudioSandboxExtension = request.hasAudioDevice() && !process->hasAudioCaptureExtension() && !proxyPage->preferences().captureAudioInUIProcessEnabled() && !proxyPage->preferences().captureAudioInGPUProcessEnabled();
@@ -188,20 +194,26 @@ bool UserMediaProcessManager::willCreateMediaStream(UserMediaPermissionRequestMa
 void UserMediaProcessManager::revokeSandboxExtensionsIfNeeded(WebProcessProxy& process)
 {
 #if ENABLE(SANDBOX_EXTENSIONS)
+    if (!process.hasAudioCaptureExtension() && !process.hasVideoCaptureExtension())
+        return;
+
     bool hasAudioCapture = false;
     bool hasVideoCapture = false;
     bool hasPendingCapture = false;
 
-    UserMediaPermissionRequestManagerProxy::forEach([&hasAudioCapture, &hasVideoCapture, &hasPendingCapture, &process](auto& managerProxy) {
-        RefPtr proxyPage = managerProxy.page();
-        if (!proxyPage)
-            return;
-        if (&process != &proxyPage->legacyMainFrameProcess())
-            return;
-        hasAudioCapture |= proxyPage->isCapturingAudio();
-        hasVideoCapture |= proxyPage->isCapturingVideo();
-        hasPendingCapture |= managerProxy.hasPendingCapture();
-    });
+    for (auto& mainPage : process.mainPages()) {
+        hasAudioCapture |= mainPage->isCapturingAudio();
+        hasVideoCapture |= mainPage->isCapturingVideo();
+        if (RefPtr managerProxy = mainPage->userMediaPermissionRequestManagerIfExists())
+            hasPendingCapture |= managerProxy->hasPendingCapture();
+    }
+
+    for (auto& weakRemotePage : process.remotePages()) {
+        if (RefPtr remotePage = weakRemotePage.get()) {
+            hasAudioCapture |= remotePage->mediaState().containsAny(MediaProducer::IsCapturingAudioMask);
+            hasVideoCapture |= remotePage->mediaState().containsAny(MediaProducer::IsCapturingVideoMask);
+        }
+    }
 
     if (hasPendingCapture)
         return;
