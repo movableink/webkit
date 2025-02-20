@@ -29,9 +29,8 @@
 #if PLATFORM(IOS_FAMILY)
 #import <UIKit/UIKit.h>
 #endif
-#import <WebKit/WKWebView.h>
-#import <wtf/CompletionHandler.h>
 
+@class WKWebView;
 @class WKDigitalCredentialsPicker;
 
 namespace WebCore {
@@ -54,9 +53,6 @@ struct ExceptionData;
 
 - (void)presentWithRequestData:(const WebCore::DigitalCredentialsRequestData&)requestData completionHandler:(WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&)completionHandler;
 - (void)dismissWithCompletionHandler:(WTF::CompletionHandler<void(bool)>&&)completionHandler;
-@end
-
-@interface WKDigitalCredentialsPicker (WKTesting)
 - (void)dismissWithResponse:(NSObject *)response;
 @end
 

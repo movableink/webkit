@@ -34,11 +34,13 @@
 #if HAVE(DIGITAL_CREDENTIALS_UI)
 
 #import "Logging.h"
+#import "WKWebView.h"
 #import <WebCore/DigitalCredentialsRequestData.h>
 #import <WebCore/DigitalCredentialsResponseData.h>
 #import <WebCore/ExceptionData.h>
 #import <WebCore/IdentityCredentialProtocol.h>
 #import <wtf/Expected.h>
+#import <wtf/Forward.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
 
