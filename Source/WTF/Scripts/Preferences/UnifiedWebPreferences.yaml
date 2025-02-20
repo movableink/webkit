@@ -8522,7 +8522,6 @@ WebAuthenticationEnabled:
     WebCore:
       default: true
   sharedPreferenceForWebProcess: true
-  richJavaScript: true
 
 WebCodecsAV1Enabled:
   type: bool
@@ -9128,7 +9127,6 @@ WebXREnabled:
       default: true
   disableInLockdownMode: true
   sharedPreferenceForWebProcess: true
-  richJavaScript: true
 
 WebXRGamepadsModuleEnabled:
   type: bool
