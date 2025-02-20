@@ -1026,8 +1026,11 @@ void ContainerNode::childrenChanged(const ChildChange& change)
     }
 }
 
-void ContainerNode::cloneChildNodes(Document& document, CustomElementRegistry* registry, ContainerNode& clone)
+void ContainerNode::cloneChildNodes(Document& document, CustomElementRegistry* registry, ContainerNode& clone, size_t currentDepth)
 {
+    if (currentDepth == 1024)
+        return;
+
     NodeVector postInsertionNotificationTargets;
     bool hadElement = false;
     for (RefPtr child = firstChild(); child; child = child->nextSibling()) {
@@ -1044,7 +1047,7 @@ void ContainerNode::cloneChildNodes(Document& document, CustomElementRegistry* r
             hadElement = hadElement || is<Element>(clonedChild);
         }
         if (RefPtr childAsContainerNode = dynamicDowncast<ContainerNode>(*child))
-            childAsContainerNode->cloneChildNodes(document, registry, downcast<ContainerNode>(clonedChild));
+            childAsContainerNode->cloneChildNodes(document, registry, downcast<ContainerNode>(clonedChild), currentDepth + 1);
     }
     clone.childrenChanged(makeChildChangeForCloneInsertion(hadElement ? ClonedChildIncludesElements::Yes : ClonedChildIncludesElements::No));
 
