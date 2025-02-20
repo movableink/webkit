@@ -559,7 +559,6 @@ dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
 dom/EmptyScriptExecutionContext.h
 dom/EventPath.cpp
-dom/EventTarget.cpp
 dom/ExtensionStyleSheets.cpp
 dom/FragmentDirectiveRangeFinder.cpp
 dom/FullscreenManager.cpp

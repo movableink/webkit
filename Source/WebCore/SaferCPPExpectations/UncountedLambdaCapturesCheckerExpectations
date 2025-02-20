@@ -84,7 +84,6 @@ dom/ContainerNode.cpp
 dom/ContentVisibilityDocumentState.cpp
 dom/CustomElementDefaultARIA.cpp
 dom/Document.cpp
-dom/EventTarget.cpp
 dom/MessagePort.cpp
 dom/Node.cpp
 dom/Subscriber.cpp

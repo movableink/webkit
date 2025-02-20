@@ -105,8 +105,8 @@ bool EventTarget::addEventListener(const AtomString& eventType, Ref<EventListene
     if (!ensureEventTargetData().eventListenerMap.add(eventType, listener.copyRef(), { options.capture, passive.value_or(false), options.once }))
         return false;
 
-    if (options.signal) {
-        options.signal->addAlgorithm([weakThis = WeakPtr { *this }, eventType, listener = WeakPtr { listener }, capture = options.capture](JSC::JSValue) {
+    if (RefPtr signal = options.signal) {
+        signal->addAlgorithm([weakThis = WeakPtr { *this }, eventType, listener = WeakPtr { listener }, capture = options.capture](JSC::JSValue) {
             if (weakThis && listener)
                 Ref { *weakThis }->removeEventListener(eventType, *listener, capture);
         });
@@ -125,9 +125,11 @@ void EventTarget::addEventListenerForBindings(const AtomString& eventType, RefPt
         return;
 
     auto visitor = WTF::makeVisitor([&](const AddEventListenerOptions& options) {
-        addEventListener(eventType, listener.releaseNonNull(), options);
+        // FIXME: Ideally we'd be able to mark the makeVisitor() lamdbas as NOESCAPE to avoid having to suppress.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE addEventListener(eventType, listener.releaseNonNull(), options);
     }, [&](bool capture) {
-        addEventListener(eventType, listener.releaseNonNull(), capture);
+        // FIXME: Ideally we'd be able to mark the makeVisitor() lamdbas as NOESCAPE to avoid having to suppress.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE addEventListener(eventType, listener.releaseNonNull(), capture);
     });
 
     std::visit(visitor, variant);
@@ -139,9 +141,11 @@ void EventTarget::removeEventListenerForBindings(const AtomString& eventType, Re
         return;
 
     auto visitor = WTF::makeVisitor([&](const EventListenerOptions& options) {
-        removeEventListener(eventType, *listener, options);
+        // FIXME: Ideally we'd be able to mark the makeVisitor() lamdbas as NOESCAPE to avoid having to suppress.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE removeEventListener(eventType, *listener, options);
     }, [&](bool capture) {
-        removeEventListener(eventType, *listener, capture);
+        // FIXME: Ideally we'd be able to mark the makeVisitor() lamdbas as NOESCAPE to avoid having to suppress.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE removeEventListener(eventType, *listener, capture);
     });
 
     std::visit(visitor, variant);
@@ -396,10 +400,10 @@ const EventListenerVector& EventTarget::eventListeners(const AtomString& eventTy
 
 void EventTarget::removeAllEventListeners()
 {
-    auto& threadData = threadGlobalData();
-    RELEASE_ASSERT(!threadData.isInRemoveAllEventListeners());
+    Ref threadData = threadGlobalData();
+    RELEASE_ASSERT(!threadData->isInRemoveAllEventListeners());
 
-    threadData.setIsInRemoveAllEventListeners(true);
+    threadData->setIsInRemoveAllEventListeners(true);
 
     auto* data = eventTargetData();
     if (data && !data->eventListenerMap.isEmpty()) {
@@ -407,7 +411,7 @@ void EventTarget::removeAllEventListeners()
         eventListenersDidChange();
     }
 
-    threadData.setIsInRemoveAllEventListeners(false);
+    threadData->setIsInRemoveAllEventListeners(false);
 }
 
 } // namespace WebCore

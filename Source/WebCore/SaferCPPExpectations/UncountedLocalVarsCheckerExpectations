@@ -289,7 +289,6 @@ dom/ElementIteratorInlines.h
 dom/ElementTextDirection.cpp
 dom/ElementTraversal.h
 dom/EventPath.cpp
-dom/EventTarget.cpp
 dom/FragmentDirectiveGenerator.cpp
 dom/FragmentDirectiveRangeFinder.cpp
 dom/FullscreenManager.cpp
