@@ -344,7 +344,8 @@ void FullscreenManager::exitFullscreen(CompletionHandler<void(ExceptionOr<void>)
         // If there is a pending fullscreen element but no fullscreen element
         // there is a pending task in requestFullscreenForElement(). Cause it to cancel and fire an error
         // by clearing the pending fullscreen element.
-        if (!m_fullscreenElement && m_pendingFullscreenElement) {
+        RefPtr exitedFullscreenElement = fullscreenElement();
+        if (!exitedFullscreenElement && m_pendingFullscreenElement) {
             INFO_LOG(identifier, "task - Cancelling pending fullscreen request.");
             m_pendingFullscreenElement = nullptr;
             m_pendingExitFullscreen = false;
@@ -353,7 +354,7 @@ void FullscreenManager::exitFullscreen(CompletionHandler<void(ExceptionOr<void>)
 
         // Notify the chrome of the new full screen element.
         if (mode == ExitMode::Resize) {
-            page->chrome().client().exitFullScreenForElement(m_fullscreenElement.get(), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] mutable {
+            page->chrome().client().exitFullScreenForElement(exitedFullscreenElement.get(), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] mutable {
                 if (weakThis)
                     weakThis->didExitFullscreen(WTFMove(completionHandler));
                 else
@@ -362,6 +363,7 @@ void FullscreenManager::exitFullscreen(CompletionHandler<void(ExceptionOr<void>)
         } else {
             finishExitFullscreen(protectedDocument(), ExitMode::NoResize);
 
+            // We just popped off one fullscreen element out of the top layer, query the new one.
             m_pendingFullscreenElement = fullscreenElement();
             if (m_pendingFullscreenElement)
                 page->chrome().client().enterFullScreenForElement(*m_pendingFullscreenElement, HTMLMediaElementEnums::VideoFullscreenModeStandard, WTFMove(completionHandler));
