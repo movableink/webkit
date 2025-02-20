@@ -724,14 +724,24 @@
     (allow-read-write-directory-and-issue-read-write-extensions (param "DARWIN_USER_TEMP_DIR")))
 
 ;; IOKit user clients
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+        (iokit-user-client-class "AppleUpstreamUserClient")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "AppleUpstreamUserClient")))
+
 (allow IOKIT_OPEN_USER_CLIENT
-    (iokit-user-client-class "AppleUpstreamUserClient")
     (iokit-user-client-class "RootDomainUserClient")
     (iokit-user-client-class "IOAudioControlUserClient")
     (iokit-user-client-class "IOAudioEngineUserClient")
     ;; Following is needed due to <rdar://problem/10427451> && <rdar://problem/10808817>
-    (iokit-user-client-class "AudioAUUC")
-)
+    (iokit-user-client-class "AudioAUUC"))
 
 #if HAVE(APPLE_CAMERA_USER_CLIENT)
 ;; Following is needed due to <rdar://problem/108282689>
