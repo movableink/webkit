@@ -423,6 +423,7 @@ namespace WebCore {
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     WEBCORE_EXPORT String fullscreenControllerViewSpatial();
+    WEBCORE_EXPORT String fullscreenControllerViewImmersive();
 #endif
 
 #if PLATFORM(COCOA)

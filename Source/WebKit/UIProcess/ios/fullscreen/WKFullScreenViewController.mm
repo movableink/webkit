@@ -426,6 +426,29 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
+- (void)_setTopButtonLabel:(const String&)label
+{
+    UIButtonConfiguration *fullscreenButtonConfiguration = [UIButtonConfiguration filledButtonConfiguration];
+    fullscreenButtonConfiguration.imagePadding = 9;
+    fullscreenButtonConfiguration.contentInsets = NSDirectionalEdgeInsetsMake(12, 18, 12, 22);
+    fullscreenButtonConfiguration.titleLineBreakMode = NSLineBreakByClipping;
+
+    RetainPtr imageConfiguration = [[UIImageSymbolConfiguration configurationWithTextStyle:UIFontTextStyleBody] configurationByApplyingConfiguration:[UIImageSymbolConfiguration configurationWithWeight:UIImageSymbolWeightMedium]];
+
+    fullscreenButtonConfiguration.image = [[UIImage systemImageNamed:@"cube" withConfiguration:imageConfiguration.get()] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+
+    RetainPtr descriptor = [UIFontDescriptor preferredFontDescriptorWithTextStyle:UIFontTextStyleBody];
+    descriptor = [descriptor fontDescriptorByAddingAttributes:@{
+        UIFontWeightTrait : [NSNumber numberWithDouble:UIFontWeightMedium]
+    }];
+    RetainPtr buttonTitle = adoptNS([[NSMutableAttributedString alloc] initWithString:label attributes:@{
+        NSFontAttributeName : [UIFont fontWithDescriptor:descriptor.get() size:0]
+    }]);
+    fullscreenButtonConfiguration.attributedTitle = buttonTitle.get();
+    [_enterVideoFullscreenButton setConfiguration:fullscreenButtonConfiguration];
+    [_enterVideoFullscreenButton sizeToFit];
+}
+
 - (void)configureEnvironmentPickerOrFullscreenVideoButtonView
 {
     ASSERT(_valid);
@@ -445,8 +468,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return;
     }
 
-    if (RetainPtr mediaPlayer = playbackSessionInterface->linearMediaPlayer(); [mediaPlayer spatialVideoMetadata]) {
+    if (RetainPtr mediaPlayer = playbackSessionInterface->linearMediaPlayer(); [mediaPlayer spatialVideoMetadata] || [mediaPlayer isImmersiveVideo]) {
         if (!_buttonState.contains(FullscreenVideo)) {
+            [self _setTopButtonLabel:[mediaPlayer isImmersiveVideo] ? WebCore::fullscreenControllerViewImmersive() : WebCore::fullscreenControllerViewSpatial()];
             [_centeredStackView addArrangedSubview:_enterVideoFullscreenButton.get()];
             _buttonState.add(FullscreenVideo);
         }
@@ -733,30 +757,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if ENABLE(LINEAR_MEDIA_PLAYER)
         _enterVideoFullscreenButton = [UIButton buttonWithType:UIButtonTypeSystem];
         [self _setupButton:_enterVideoFullscreenButton.get()];
-
-        UIButtonConfiguration *fullscreenButtonConfiguration = [UIButtonConfiguration filledButtonConfiguration];
-        fullscreenButtonConfiguration.imagePadding = 9;
-        fullscreenButtonConfiguration.contentInsets = NSDirectionalEdgeInsetsMake(12, 18, 12, 22);
-        fullscreenButtonConfiguration.titleLineBreakMode = NSLineBreakByClipping;
-
-        RetainPtr imageConfiguration = [[UIImageSymbolConfiguration configurationWithTextStyle:UIFontTextStyleBody] configurationByApplyingConfiguration:[UIImageSymbolConfiguration configurationWithWeight:UIImageSymbolWeightMedium]];
-
-        fullscreenButtonConfiguration.image = [[UIImage systemImageNamed:@"cube" withConfiguration:imageConfiguration.get()] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-
-        RetainPtr descriptor = [UIFontDescriptor preferredFontDescriptorWithTextStyle:UIFontTextStyleBody];
-        descriptor = [descriptor fontDescriptorByAddingAttributes:@{
-            UIFontWeightTrait : [NSNumber numberWithDouble:UIFontWeightMedium]
-        }];
-        RetainPtr buttonTitle = adoptNS([[NSMutableAttributedString alloc] initWithString:WebCore::fullscreenControllerViewSpatial() attributes:@{
-            NSFontAttributeName : [UIFont fontWithDescriptor:descriptor.get() size:0]
-        }]);
-        fullscreenButtonConfiguration.attributedTitle = buttonTitle.get();
-
-        [_enterVideoFullscreenButton setConfiguration:fullscreenButtonConfiguration];
         [_enterVideoFullscreenButton setContentHorizontalAlignment:UIControlContentHorizontalAlignmentLeft];
-
-        [_enterVideoFullscreenButton sizeToFit];
-
         [_enterVideoFullscreenButton addTarget:self action:@selector(_enterVideoFullscreenAction:) forControlEvents:UIControlEventTouchUpInside];
 
         _centeredStackView = adoptNS([[UIStackView alloc] init]);

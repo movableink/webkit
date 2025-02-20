@@ -1578,6 +1578,11 @@ String fullscreenControllerViewSpatial()
 {
     return WEB_UI_STRING("View Spatial", "Title for View Spatial action button while in fullscreen");
 }
+
+String fullscreenControllerViewImmersive()
+{
+    return WEB_UI_STRING("View Immersive", "Title for View Immersive action button while in fullscreen");
+}
 #endif
 
 } // namespace WebCore

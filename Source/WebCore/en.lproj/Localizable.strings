@@ -1711,6 +1711,9 @@
 /* Title for View Spatial action button while in fullscreen */
 "View Spatial" = "View Spatial";
 
+/* Title for View Immersive action button while in fullscreen */
+"View Immersive" = "View Immersive";
+
 /* Title for View Spatial Photo action button */
 "View Spatial Photo" = "View Spatial Photo";
 
