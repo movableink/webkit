@@ -232,12 +232,18 @@ static void wpe_screen_class_init(WPEScreenClass* screenClass)
      * WPEScreen:scale:
      *
      * The scale factor for the screen.
+     *
+     * Scaling factor applied to views displayed on this screen. Those views
+     * will have the value forwarded to their [property@View:scale] property.
+     *
+     * The accepted values are in the `0.05` to `20.0` range, meaning that
+     * rendering would be done up to 20 times smaller or bigger.
      */
     sObjProperties[PROP_SCALE] =
         g_param_spec_double(
             "scale",
             nullptr, nullptr,
-            0., G_MAXDOUBLE, 1.,
+            0.05, 20., 1.,
             WEBKIT_PARAM_READWRITE);
 
     /**
@@ -480,7 +486,8 @@ gdouble wpe_screen_get_scale(WPEScreen* screen)
 void wpe_screen_set_scale(WPEScreen* screen, double scale)
 {
     g_return_if_fail(WPE_IS_SCREEN(screen));
-    g_return_if_fail(scale > 0);
+    g_return_if_fail(scale >= 0.05);
+    g_return_if_fail(scale <= 20.0);
 
     if (screen->priv->scale == scale)
         return;

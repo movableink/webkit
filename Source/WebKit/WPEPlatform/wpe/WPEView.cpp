@@ -245,13 +245,21 @@ static void wpe_view_class_init(WPEViewClass* viewClass)
     /**
      * WPEView:scale:
      *
-     * The view scale
+     * The view scale.
+     *
+     * Scaling factor applied to the rendered output. This property follows
+     * the value of [property@Screen:scale] for the screen used to display
+     * the view.
+     *
+     * The [property@View:width] and [property@View:height] logical sizes
+     * are multiplied by this scaling factor to determine the physical size
+     * to be used for displaying the view.
      */
     sObjProperties[PROP_SCALE] =
         g_param_spec_double(
             "scale",
             nullptr, nullptr,
-            0., G_MAXDOUBLE, 1.,
+            0.05, 20., 1.,
             WEBKIT_PARAM_READABLE);
 
     /**
