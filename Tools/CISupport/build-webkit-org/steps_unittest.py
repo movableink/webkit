@@ -416,7 +416,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
     def test_success_architecture(self):
         self.setupStep(CompileWebKit())
         self.setProperty('platform', 'mac')
-        self.setProperty('fullPlatform', 'mac-ventura')
+        self.setProperty('fullPlatform', 'mac-sonoma')
         self.setProperty('configuration', 'release')
         self.setProperty('architecture', 'x86_64 arm64')
         self.expectRemoteCommands(
@@ -432,7 +432,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_bigsur_timeout(self):
         self.setupStep(CompileWebKit())
-        self.setProperty('fullPlatform', 'mac-ventura')
+        self.setProperty('fullPlatform', 'mac-sonoma')
         self.setProperty('configuration', 'release')
         self.expectRemoteCommands(
             ExpectShell(
@@ -1186,9 +1186,9 @@ class TestSetPermissions(BuildStepMixinAdditions, unittest.TestCase):
 
     def test_success(self):
         self.setupStep(SetPermissions())
-        self.setProperty('result_directory', 'public_html/results/Apple-Ventura-Release-WK2-Tests/r277034 (2346)')
+        self.setProperty('result_directory', 'public_html/results/Apple-Sonoma-Release-WK2-Tests/r277034 (2346)')
         self.expectLocalCommands(
-            ExpectMasterShellCommand(command=['chmod', 'a+rx', 'public_html/results/Apple-Ventura-Release-WK2-Tests/r277034 (2346)'])
+            ExpectMasterShellCommand(command=['chmod', 'a+rx', 'public_html/results/Apple-Sonoma-Release-WK2-Tests/r277034 (2346)'])
             + 0,
         )
         self.expectOutcome(result=SUCCESS, state_string='Ran')

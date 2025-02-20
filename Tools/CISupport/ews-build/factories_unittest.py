@@ -209,7 +209,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-Ventura-Release-Build-EWS': [
+        'macOS-Sonoma-Release-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -224,7 +224,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'validate-change',
             'compile-webkit'
         ],
-        'macOS-Ventura-Release-WK1-Tests-EWS': [
+        'macOS-Sonoma-Release-WK1-Tests-EWS': [
             'configure-build',
             'check-change-relevance',
             'validate-change',
@@ -248,7 +248,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-Ventura-Release-WK2-Tests-EWS': [
+        'macOS-Sonoma-Release-WK2-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -271,7 +271,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-Ventura-Release-WK2-Intel-Tests-EWS': [
+        'macOS-Sonoma-Release-WK2-Intel-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',

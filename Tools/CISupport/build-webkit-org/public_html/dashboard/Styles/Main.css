@@ -231,10 +231,6 @@ table.queue-grid tr.platform.macos-sequoia img.logo {
     content: url(../Images/Sequoia.png);
 }
 
-table.queue-grid tr.platform.macos-ventura img.logo {
-    content: url(../Images/Ventura.png);
-}
-
 table.queue-grid tr.platform.windows img.logo {
     content: url(../Images/Windows10.png);
 }
