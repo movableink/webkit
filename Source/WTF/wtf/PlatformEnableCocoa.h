@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010, 2011 Research In Motion Limited. All rights reserved.
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
@@ -372,7 +372,7 @@
 #define ENABLE_WEBASSEMBLY_OMGJIT 0
 #endif
 
-#if !defined(ENABLE_FTL_JIT) && CPU(ADDRESS64) && !PLATFORM(WATCHOS)
+#if !defined(ENABLE_FTL_JIT) && CPU(ADDRESS64)
 #define ENABLE_FTL_JIT 1
 #endif
 

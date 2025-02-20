@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010, 2011 Research In Motion Limited. All rights reserved.
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
@@ -627,7 +627,7 @@
 #endif
 
 /* The JIT is enabled by default on all x86-64 & ARM64 platforms. */
-#if !defined(ENABLE_JIT) && (CPU(X86_64) || (CPU(ARM64) && CPU(ADDRESS64) && !PLATFORM(WATCHOS)))
+#if !defined(ENABLE_JIT) && (CPU(X86_64) || (CPU(ARM64) && CPU(ADDRESS64)))
 #define ENABLE_JIT 1
 #endif
 
@@ -750,13 +750,13 @@
 #define ENABLE_WEBASSEMBLY_BBQJIT 1
 #endif
 
-#if !defined(ENABLE_WEBASSEMBLY) && (ENABLE(B3_JIT) && PLATFORM(COCOA) && CPU(ADDRESS64) && !PLATFORM(WATCHOS))
+#if !defined(ENABLE_WEBASSEMBLY) && (ENABLE(B3_JIT) && PLATFORM(COCOA) && CPU(ADDRESS64))
 #define ENABLE_WEBASSEMBLY 1
 #define ENABLE_WEBASSEMBLY_OMGJIT 1
 #define ENABLE_WEBASSEMBLY_BBQJIT 1
 #endif
 
-#if !defined(ENABLE_WEBASSEMBLY) && CPU(ADDRESS64) && PLATFORM(COCOA) && !ENABLE(C_LOOP) && !PLATFORM(WATCHOS)
+#if !defined(ENABLE_WEBASSEMBLY) && CPU(ADDRESS64) && PLATFORM(COCOA) && !ENABLE(C_LOOP)
 #define ENABLE_WEBASSEMBLY 1
 #endif
 
@@ -913,7 +913,7 @@
 #define ENABLE_JIT_OPERATION_DISASSEMBLY 1
 #endif
 
-#if CPU(ARM64E) && ENABLE(JIT)
+#if CPU(ARM64E)
 #define ENABLE_JIT_SIGN_ASSEMBLER_BUFFER 1
 #endif
 

@@ -1507,6 +1507,15 @@ bool canUseHandlerIC()
 #endif
 }
 
+bool canUseWasm()
+{
+#if ENABLE(WEBASSEMBLY) && !PLATFORM(WATCHOS)
+    return true;
+#else
+    return false;
+#endif
+}
+
 bool hasCapacityToUseLargeGigacage()
 {
     // Gigacage::hasCapacityToUseLargeGigacage is determined based on EFFECTIVE_ADDRESS_WIDTH.

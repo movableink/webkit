@@ -42,6 +42,7 @@ namespace JSC {
 
 JS_EXPORT_PRIVATE bool canUseJITCage();
 bool canUseHandlerIC();
+bool canUseWasm();
 bool hasCapacityToUseLargeGigacage();
 
 // How do JSC VM options work?
@@ -508,7 +509,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useSourceProviderCache, true, Normal, "If false, the parser will not use the source provider cache. It's good to verify everything works when this is false. Because the cache is so successful, it can mask bugs."_s) \
     v(Bool, useCodeCache, true, Normal, "If false, the unlinked byte code cache will not be used."_s) \
     \
-    v(Bool, useWasm, true, Normal, "Expose the Wasm global object."_s) \
+    v(Bool, useWasm, canUseWasm(), Normal, "Expose the Wasm global object."_s) \
     \
     v(Bool, failToCompileWasmCode, false, Normal, "If true, no Wasm::Plan will sucessfully compile a function."_s) \
     v(Size, wasmSmallPartialCompileLimit, 5000, Normal, "Limit on the number of bytes a Wasm::Plan::compile should attempt for small wasm binary before checking for other work."_s) \
