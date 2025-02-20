@@ -126,7 +126,6 @@
 #define HAVE_TLS_VERSION_DURING_CHALLENGE 1
 #endif
 
-// FIXME (rdar://133488399): Weak link PDFKit on tvOS and use HAVE(PDFKit) in TestWebKitAPI.
-#if HAVE(PDFKIT) && !PLATFORM(APPLETV)
+#if HAVE(PDFKIT)
 #define USE_PDFKIT_FOR_TESTING 1
 #endif
