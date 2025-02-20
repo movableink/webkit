@@ -149,7 +149,7 @@ void FragmentDirectiveGenerator::generateFragmentDirective(const SimpleRange& te
     auto generateDirective = [&] (unsigned wordsOfContext, unsigned wordsOfStartAndEndText) {
         ParsedTextDirective directive;
 
-        if (textFromRange.length() >= maximumInlineStringLength) {
+        if (textFromRange.length() >= maximumInlineStringLength || !positionsHaveSameBlockAncestor(visibleStartPosition, visibleEndPosition)) {
             directive.startText = nextWordsFromPositionInSameBlock(wordsOfStartAndEndText, visibleStartPosition);
             directive.endText = previousWordsFromPositionInSameBlock(wordsOfStartAndEndText, visibleEndPosition);
         } else
