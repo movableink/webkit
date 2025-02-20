@@ -154,8 +154,8 @@ public:
     const URL& environmentMap() const;
     void setEnvironmentMap(const URL&);
     WEBCORE_EXPORT bool supportsStageModeInteraction() const;
-    WEBCORE_EXPORT void beginStageModeTransform(TransformationMatrix);
-    WEBCORE_EXPORT void updateStageModeTransform(TransformationMatrix);
+    WEBCORE_EXPORT void beginStageModeTransform(const TransformationMatrix&);
+    WEBCORE_EXPORT void updateStageModeTransform(const TransformationMatrix&);
     WEBCORE_EXPORT void endStageModeInteraction();
 #endif
 
