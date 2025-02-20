@@ -32,6 +32,7 @@
 #include "FragmentDirectiveUtilities.h"
 #include "HTMLParserIdioms.h"
 #include "Logging.h"
+#include "Position.h"
 #include "Range.h"
 #include "SimpleRange.h"
 #include "VisibleUnits.h"
@@ -59,6 +60,26 @@ static bool positionsHaveSameBlockAncestor(const VisiblePosition& a, const Visib
     RefPtr aNode = a.deepEquivalent().containerNode();
     RefPtr bNode = b.deepEquivalent().containerNode();
     return aNode && bNode && &nearestBlockAncestor(*aNode) == &nearestBlockAncestor(*bNode);
+}
+
+static VisiblePosition beforeStartOfCurrentBlock(const VisiblePosition& visiblePosition)
+{
+    auto position = visiblePosition.deepEquivalent();
+    Ref blockContainer = nearestBlockAncestor(*position.protectedContainerNode().get());
+    VisiblePosition firstPositionInBlock = firstPositionInNode(blockContainer.ptr());
+    if (firstPositionInBlock == visiblePosition)
+        return visiblePosition.previous();
+    return visiblePosition;
+}
+
+static VisiblePosition afterEndOfCurrentBlock(const VisiblePosition& visiblePosition)
+{
+    auto position = visiblePosition.deepEquivalent();
+    Ref blockContainer = nearestBlockAncestor(*position.protectedContainerNode().get());
+    VisiblePosition lastPositionInBlock = lastPositionInNode(blockContainer.ptr());
+    if (lastPositionInBlock == visiblePosition)
+        return visiblePosition.next();
+    return visiblePosition;
 }
 
 static String previousWordsFromPositionInSameBlock(unsigned numberOfWords, VisiblePosition& startPosition)
@@ -121,6 +142,10 @@ void FragmentDirectiveGenerator::generateFragmentDirective(const SimpleRange& te
     VisiblePosition visibleStartPosition = VisiblePosition(Position(textFragmentRange.protectedStartContainer(), textFragmentRange.startOffset(), Position::PositionIsOffsetInAnchor));
     VisiblePosition visibleEndPosition = VisiblePosition(Position(textFragmentRange.protectedEndContainer(), textFragmentRange.endOffset(), Position::PositionIsOffsetInAnchor));
 
+
+    VisiblePosition visiblePrefixEndPosition = beforeStartOfCurrentBlock(visibleStartPosition);
+    VisiblePosition visibleSuffixStartPosition = afterEndOfCurrentBlock(visibleEndPosition);
+
     auto generateDirective = [&] (unsigned wordsOfContext, unsigned wordsOfStartAndEndText) {
         ParsedTextDirective directive;
 
@@ -131,8 +156,8 @@ void FragmentDirectiveGenerator::generateFragmentDirective(const SimpleRange& te
             directive.startText = textFromRange;
 
         if (wordsOfContext) {
-            directive.prefix = previousWordsFromPositionInSameBlock(wordsOfContext, visibleStartPosition);
-            directive.suffix = nextWordsFromPositionInSameBlock(wordsOfContext, visibleEndPosition);
+            directive.prefix = previousWordsFromPositionInSameBlock(wordsOfContext, visiblePrefixEndPosition);
+            directive.suffix = nextWordsFromPositionInSameBlock(wordsOfContext, visibleSuffixStartPosition);
         }
 
         return directive;

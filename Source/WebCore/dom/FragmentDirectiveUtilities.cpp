@@ -35,7 +35,7 @@ namespace WebCore {
 namespace FragmentDirectiveUtilities {
 
 // https://wicg.github.io/scroll-to-text-fragment/#nearest-block-ancestor
-const Node& nearestBlockAncestor(const Node& node)
+Node& nearestBlockAncestor(Node& node)
 {
     for (RefPtr currentNode = &node; currentNode; currentNode = currentNode->parentNode()) {
         if (!currentNode->isTextNode() && currentNode->renderer() && currentNode->renderer()->style().isDisplayBlockLevel())
