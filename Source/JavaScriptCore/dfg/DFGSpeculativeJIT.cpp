@@ -608,8 +608,7 @@ void SpeculativeJIT::terminateSpeculativeExecution(ExitKind kind, JSValueRegs js
         return;
     speculationCheck(kind, jsValueRegs, node, jump());
     m_compileOkay = false;
-    if (verboseCompilationEnabled())
-        dataLog("Bailing compilation.\n");
+    dataLogLnIf(verboseCompilationEnabled(), "Bailing compilation.");
 }
 
 void SpeculativeJIT::terminateSpeculativeExecution(ExitKind kind, JSValueRegs jsValueRegs, Edge nodeUse)
@@ -2019,8 +2018,7 @@ void SpeculativeJIT::compileCheckDetached(Node* node)
 
 void SpeculativeJIT::bail(AbortReason reason)
 {
-    if (verboseCompilationEnabled())
-        dataLog("Bailing compilation.\n");
+    dataLogLnIf(verboseCompilationEnabled(), "Bailing compilation.");
     m_compileOkay = true;
     abortWithReason(reason, m_lastGeneratedNode);
     clearGenerationInfo();
@@ -2116,8 +2114,7 @@ void SpeculativeJIT::compileCurrentBlock()
         
         ASSERT(m_currentNode->shouldGenerate());
         
-        if (verboseCompilationEnabled())
-            dataLogLn("SpeculativeJIT generating Node @", (int)m_currentNode->index(), " (", m_currentNode->origin.semantic.bytecodeIndex().offset(), ") at JIT offset 0x", debugOffset());
+        dataLogLnIf(verboseCompilationEnabled(), "SpeculativeJIT generating Node @", (int)m_currentNode->index(), " (", m_currentNode->origin.semantic.bytecodeIndex().offset(), ") at JIT offset 0x", debugOffset());
 
         if (Options::validateDFGExceptionHandling() && (mayExit(m_graph, m_currentNode) != DoesNotExit || m_currentNode->isTerminal()))
             jitReleaseAssertNoException(vm());
@@ -2305,13 +2302,15 @@ void SpeculativeJIT::linkOSREntries(LinkBuffer& linkBuffer)
 
     ASSERT(osrEntryIndex == m_osrEntryHeads.size());
     
-    if (verboseCompilationEnabled()) {
-        DumpContext dumpContext;
-        dataLog("OSR Entries:\n");
-        for (OSREntryData& entryData : jitCode()->m_osrEntry)
-            dataLog("    ", inContext(entryData, &dumpContext), "\n");
-        if (!dumpContext.isEmpty())
-            dumpContext.dump(WTF::dataFile());
+    if (UNLIKELY(verboseCompilationEnabled())) {
+        WTF::dataFile().atomically([&](auto& out) {
+            DumpContext dumpContext;
+            dataLogLn("OSR Entries:");
+            for (OSREntryData& entryData : jitCode()->m_osrEntry)
+                dataLogLn("    ", inContext(entryData, &dumpContext));
+            if (!dumpContext.isEmpty())
+                dumpContext.dump(out);
+        });
     }
 }
     
@@ -12340,10 +12339,11 @@ void SpeculativeJIT::emitBinarySwitchStringRecurse(
     static constexpr bool verbose = false;
     
     if (verbose) {
-        dataLog("We're down to the following cases, alreadyCheckedLength = ", alreadyCheckedLength, ":\n");
-        for (unsigned i = begin; i < end; ++i) {
-            dataLog("    ", cases[i].string, "\n");
-        }
+        WTF::dataFile().atomically([&](auto&) {
+            dataLogLn("We're down to the following cases, alreadyCheckedLength = ", alreadyCheckedLength, ":");
+            for (unsigned i = begin; i < end; ++i)
+                dataLogLn("    ", cases[i].string);
+        });
     }
     
     if (begin == end) {
@@ -12360,8 +12360,7 @@ void SpeculativeJIT::emitBinarySwitchStringRecurse(
             j < std::min(cases[begin].string->length(), cases[i].string->length());
             ++j) {
             if (cases[begin].string->at(j) != cases[i].string->at(j)) {
-                if (verbose)
-                    dataLog("string(", cases[i].string, ")[", j, "] != string(", cases[begin].string, ")[", j, "]\n");
+                dataLogLnIf(verbose, "string(", cases[i].string, ")[", j, "] != string(", cases[begin].string, ")[", j, "]");
                 break;
             }
             myCommonChars++;
@@ -12379,8 +12378,7 @@ void SpeculativeJIT::emitBinarySwitchStringRecurse(
     
     RELEASE_ASSERT(minLength >= commonChars);
     
-    if (verbose)
-        dataLog("length = ", minLength, ", commonChars = ", commonChars, ", allLengthsEqual = ", allLengthsEqual, "\n");
+    dataLogLnIf(verbose, "length = ", minLength, ", commonChars = ", commonChars, ", allLengthsEqual = ", allLengthsEqual);
     
     if (!allLengthsEqual && alreadyCheckedLength < minLength)
         branch32(Below, length, Imm32(minLength), data->fallThrough.block);
@@ -12436,8 +12434,7 @@ void SpeculativeJIT::emitBinarySwitchStringRecurse(
     currentCase.end = begin + 1;
     for (unsigned i = begin + 1; i < end; ++i) {
         if (cases[i].string->at(commonChars) != currentCase.character) {
-            if (verbose)
-                dataLog("string(", cases[i].string, ")[", commonChars, "] != string(", cases[begin].string, ")[", commonChars, "]\n");
+            dataLogLnIf(verbose, "string(", cases[i].string, ")[", commonChars, "] != string(", cases[begin].string, ")[", commonChars, "]");
             currentCase.end = i;
             characterCases.append(currentCase);
             currentCase.character = cases[i].string->at(commonChars);

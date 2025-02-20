@@ -628,8 +628,7 @@ private:
                 if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>()) {
                     JSGlobalObject* globalObject = regExpObject->globalObject();
                     if (globalObject->isRegExpRecompiled()) {
-                        if (verbose)
-                            dataLog("Giving up because RegExp recompile happens.\n");
+                        dataLogLnIf(verbose, "Giving up because RegExp recompile happens.");
                         break;
                     }
                     m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
@@ -638,15 +637,13 @@ private:
                 } else if (regExpObjectNode->op() == NewRegexp) {
                     JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
                     if (globalObject->isRegExpRecompiled()) {
-                        if (verbose)
-                            dataLog("Giving up because RegExp recompile happens.\n");
+                        dataLogLnIf(verbose, "Giving up because RegExp recompile happens.");
                         break;
                     }
                     m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                     regExp = regExpObjectNode->castOperand<RegExp*>();
                 } else {
-                    if (verbose)
-                        dataLog("Giving up because the regexp is unknown.\n");
+                    dataLogLnIf(verbose, "Giving up because the regexp is unknown.");
                     break;
                 }
             } else
@@ -756,8 +753,7 @@ private:
                 // strings in the first place.
                 String string = stringNode->tryGetString(m_graph);
                 if (!string) {
-                    if (verbose)
-                        dataLog("Giving up because the string is unknown.\n");
+                    dataLogLnIf(verbose, "Giving up because the string is unknown.");
                     return false;
                 }
 
@@ -767,8 +763,7 @@ private:
                 // subpatterns.
                 unsigned ginormousNumberOfSubPatterns = 1000;
                 if (regExp->numSubpatterns() > ginormousNumberOfSubPatterns) {
-                    if (verbose)
-                        dataLog("Giving up because of pattern limit.\n");
+                    dataLogLnIf(verbose, "Giving up because of pattern limit.");
                     return false;
                 }
 
@@ -776,16 +771,14 @@ private:
                     if (regExp->hasNamedCaptures()) {
                         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=176464
                         // Implement strength reduction optimization for named capture groups.
-                        if (verbose)
-                            dataLog("Giving up because of named capture groups.\n");
+                        dataLogLnIf(verbose, "Giving up because of named capture groups.");
                         return false;
                     }
 
                     if (regExp->hasIndices()) {
                         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=220930
                         // Implement strength reduction optimization for RegExp with match indices.
-                        if (verbose)
-                            dataLog("Giving up because of match indices.\n");
+                        dataLogLnIf(verbose, "Giving up because of match indices.");
                         return false;
                     }
                 }
@@ -795,8 +788,7 @@ private:
                 Structure* structure = globalObject->regExpMatchesArrayStructure();
                 if (structure->indexingType() != ArrayWithContiguous) {
                     // This is further protection against a race with haveABadTime.
-                    if (verbose)
-                        dataLog("Giving up because the structure has the wrong indexing type.\n");
+                    dataLogLnIf(verbose, "Giving up because the structure has the wrong indexing type.");
                     return false;
                 }
                 m_graph.registerStructure(structure);
@@ -810,16 +802,14 @@ private:
                 if (m_node->op() == RegExpExec || m_node->op() == RegExpExecNonGlobalOrSticky) {
                     int position;
                     if (!regExp->matchConcurrently(vm(), string, lastIndex, position, ovector)) {
-                        if (verbose)
-                            dataLog("Giving up because match failed.\n");
+                        dataLogLnIf(verbose, "Giving up because match failed.");
                         return false;
                     }
                     result.start = position;
                     result.end = ovector[1];
                 } else {
                     if (!regExp->matchConcurrently(vm(), string, lastIndex, result)) {
-                        if (verbose)
-                            dataLog("Giving up because match failed.\n");
+                        dataLogLnIf(verbose, "Giving up because match failed.");
                         return false;
                     }
                 }
@@ -1076,8 +1066,7 @@ private:
                 m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                 regExp = regExpObjectNode->castOperand<RegExp*>();
             } else {
-                if (verbose)
-                    dataLog("Giving up because the regexp is unknown.\n");
+                dataLogLnIf(verbose, "Giving up because the regexp is unknown.");
                 break;
             }
 

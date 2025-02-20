@@ -1092,13 +1092,15 @@ private:
     {
         if (m_graphDumpMode == DontDumpGraph)
             return;
-        dataLog("\n");
-        if (!m_graphDumpBeforePhase.isNull()) {
-            dataLog("Before phase:\n");
-            dataLog(m_graphDumpBeforePhase);
-        }
-        dataLog("At time of failure:\n");
-        m_graph.dump();
+        WTF::dataFile().atomically([&](auto&) {
+            dataLog("\n");
+            if (!m_graphDumpBeforePhase.isNull()) {
+                dataLog("Before phase:\n");
+                dataLog(m_graphDumpBeforePhase);
+            }
+            dataLog("At time of failure:\n");
+            dataLog(m_graph);
+        });
     }
 
     Graph& m_graph;

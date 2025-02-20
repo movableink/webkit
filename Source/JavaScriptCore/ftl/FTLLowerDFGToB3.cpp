@@ -230,8 +230,7 @@ public:
 
         m_graph.ensureSSADominators();
 
-        if (verboseCompilationEnabled())
-            dataLog("Function ready, beginning lowering.\n");
+        dataLogLnIf(verboseCompilationEnabled(), "Function ready, beginning lowering.");
 
         m_out.initialize(m_heaps);
 
@@ -486,8 +485,7 @@ private:
         if (!block)
             return;
 
-        if (verboseCompilationEnabled())
-            dataLog("Compiling block ", *block, "\n");
+        dataLogLnIf(verboseCompilationEnabled(), "Compiling block ", *block);
 
         m_highBlock = block;
 
@@ -516,8 +514,7 @@ private:
             m_out.trap();
 
         if (!m_highBlock->cfaHasVisited) {
-            if (verboseCompilationEnabled())
-                dataLog("Bailing because CFA didn't reach.\n");
+            dataLogLnIf(verboseCompilationEnabled(), "Bailing because CFA didn't reach.");
             crash(m_highBlock, nullptr);
             return;
         }
@@ -556,8 +553,7 @@ private:
 
     void safelyInvalidateAfterTermination()
     {
-        if (verboseCompilationEnabled())
-            dataLog("Bailing.\n");
+        dataLogLnIf(verboseCompilationEnabled(), "Bailing.");
         crash();
 
         // Invalidate dominated blocks. Under normal circumstances we would expect
@@ -570,8 +566,7 @@ private:
             if (!target)
                 continue;
             if (m_graph.m_ssaDominators->dominates(m_highBlock, target)) {
-                if (verboseCompilationEnabled())
-                    dataLog("Block ", *target, " will bail also.\n");
+                dataLogLnIf(verboseCompilationEnabled(), "Block ", *target, " will bail also.");
                 target->cfaHasVisited = false;
             }
         }
@@ -672,16 +667,18 @@ private:
                     double doubleInput;
 
                     auto dumpAndCrash = [&] {
-                        dataLogLn("Validation failed at node: @", highParentIndex);
-                        dataLogLn("Failed validating live value: @", highChildIndex);
-                        dataLogLn();
-                        dataLogLn("Expected AI value = ", value);
-                        if (flushFormat != FlushedDouble)
-                            dataLogLn("Unexpected value = ", input);
-                        else
-                            dataLogLn("Unexpected double value = ", doubleInput);
-                        dataLogLn();
-                        dataLogLn(graphDump);
+                        WTF::dataFile().atomically([&](auto&) {
+                            dataLogLn("Validation failed at node: @", highParentIndex);
+                            dataLogLn("Failed validating live value: @", highChildIndex);
+                            dataLogLn();
+                            dataLogLn("Expected AI value = ", value);
+                            if (flushFormat != FlushedDouble)
+                                dataLogLn("Unexpected value = ", input);
+                            else
+                                dataLogLn("Unexpected double value = ", doubleInput);
+                            dataLogLn();
+                            dataLogLn(graphDump);
+                        });
                         CRASH();
                     };
 
@@ -724,8 +721,7 @@ private:
         m_origin = m_node->origin;
         m_out.setOrigin(m_node);
 
-        if (verboseCompilationEnabled())
-            dataLog("Lowering ", m_node, "\n");
+        dataLogLnIf(verboseCompilationEnabled(), "Lowering ", m_node);
 
         m_interpreter.startExecuting();
         m_interpreter.executeKnownEdgeTypes(m_node);
@@ -13633,8 +13629,7 @@ IGNORE_CLANG_WARNINGS_END
 
     void compileInvalidationPoint()
     {
-        if (verboseCompilationEnabled())
-            dataLog("    Invalidation point with availability: ", availabilityMap(), "\n");
+        dataLogLnIf(verboseCompilationEnabled(), "    Invalidation point with availability: ", availabilityMap());
 
         DFG_ASSERT(m_graph, m_node, m_origin.exitOK);
 
@@ -23466,13 +23461,15 @@ IGNORE_CLANG_WARNINGS_END
                 exitValue);
         }
 
-        if (verboseCompilationEnabled()) {
-            dataLog("        Exit values: ", exitDescriptor->m_values, "\n");
-            if (!exitDescriptor->m_materializations.isEmpty()) {
-                dataLog("        Materializations: \n");
-                for (ExitTimeObjectMaterialization* materialization : exitDescriptor->m_materializations)
-                    dataLog("            ", pointerDump(materialization), "\n");
-            }
+        if (UNLIKELY(verboseCompilationEnabled())) {
+            WTF::dataFile().atomically([&](auto&) {
+                dataLogLn("        Exit values: ", exitDescriptor->m_values);
+                if (!exitDescriptor->m_materializations.isEmpty()) {
+                    dataLogLn("        Materializations:");
+                    for (ExitTimeObjectMaterialization* materialization : exitDescriptor->m_materializations)
+                        dataLogLn("            ", pointerDump(materialization));
+                }
+            });
         }
     }
 

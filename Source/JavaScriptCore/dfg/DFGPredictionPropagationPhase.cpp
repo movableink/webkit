@@ -77,8 +77,7 @@ public:
             propagateForward();
         } while (m_changed);
 
-        if (verboseFixPointLoops)
-            dataLog("Iterated ", counter, " times in double voting fixpoint.\n");
+        dataLogLnIf(verboseFixPointLoops, "Iterated ", counter, " times in double voting fixpoint.");
         
         return true;
     }
@@ -107,8 +106,7 @@ private:
             propagateBackward();
         } while (m_changed);
 
-        if (verboseFixPointLoops)
-            dataLog("Iterated ", counter, " times in propagateToFixpoint.\n");
+        dataLogLnIf(verboseFixPointLoops, "Iterated ", counter, " times in propagateToFixpoint.");
     }
     
     bool setPrediction(SpeculatedType prediction)

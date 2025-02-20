@@ -504,14 +504,12 @@ inline CapabilityLevel canCompile(Node* node)
 CapabilityLevel canCompile(Graph& graph)
 {
     if (graph.m_codeBlock->bytecodeCost() > Options::maximumFTLCandidateBytecodeCost()) {
-        if (verboseCapabilities())
-            dataLog("FTL rejecting ", *graph.m_codeBlock, " because it's too big.\n");
+        dataLogLnIf(verboseCapabilities(), "FTL rejecting ", *graph.m_codeBlock, " because it's too big.");
         return CannotCompile;
     }
     
     if (UNLIKELY(graph.m_codeBlock->ownerExecutable()->neverFTLOptimize())) {
-        if (verboseCapabilities())
-            dataLog("FTL rejecting ", *graph.m_codeBlock, " because it is marked as never FTL compile.\n");
+        dataLogLnIf(verboseCapabilities(), "FTL rejecting ", *graph.m_codeBlock, " because it is marked as never FTL compile.");
         return CannotCompile;
     }
     
@@ -592,9 +590,11 @@ CapabilityLevel canCompile(Graph& graph)
                     break;
                 default:
                     // Don't know how to handle anything else.
-                    if (verboseCapabilities()) {
-                        dataLog("FTL rejecting node in ", *graph.m_codeBlock, " because of bad use kind: ", edge.useKind(), " in node:\n");
-                        graph.dump(WTF::dataFile(), "    ", node);
+                    if (UNLIKELY(verboseCapabilities())) {
+                        WTF::dataFile().atomically([&](auto&) {
+                            dataLogLn("FTL rejecting node in ", *graph.m_codeBlock, " because of bad use kind: ", edge.useKind(), " in node:");
+                            graph.dump(WTF::dataFile(), "    ", node);
+                        });
                     }
                     return CannotCompile;
                 }
@@ -602,16 +602,20 @@ CapabilityLevel canCompile(Graph& graph)
             
             switch (canCompile(node)) {
             case CannotCompile: 
-                if (verboseCapabilities()) {
-                    dataLog("FTL rejecting node in ", *graph.m_codeBlock, ":\n");
-                    graph.dump(WTF::dataFile(), "    ", node);
+                if (UNLIKELY(verboseCapabilities())) {
+                    WTF::dataFile().atomically([&](auto&) {
+                        dataLogLn("FTL rejecting node in ", *graph.m_codeBlock, ":");
+                        graph.dump(WTF::dataFile(), "    ", node);
+                    });
                 }
                 return CannotCompile;
                 
             case CanCompile:
-                if (result == CanCompileAndOSREnter && verboseCompilationEnabled()) {
-                    dataLog("FTL disabling OSR entry because of node:\n");
-                    graph.dump(WTF::dataFile(), "    ", node);
+                if (UNLIKELY(result == CanCompileAndOSREnter && verboseCompilationEnabled())) {
+                    WTF::dataFile().atomically([&](auto&) {
+                        dataLogLn("FTL disabling OSR entry because of node:");
+                        graph.dump(WTF::dataFile(), "    ", node);
+                    });
                 }
                 result = CanCompile;
                 break;

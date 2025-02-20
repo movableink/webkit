@@ -128,7 +128,7 @@ void AbstractHeap::deepDump(PrintStream& out, unsigned indent) const
 
 void AbstractHeap::badRangeError() const
 {
-    dataLog("Heap does not have range: ", *this, "\n");
+    dataLogLn("Heap does not have range: ", *this);
     RELEASE_ASSERT_NOT_REACHED();
 }
 

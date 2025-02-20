@@ -88,10 +88,7 @@ public:
 
     bool run()
     {
-        if (UNLIKELY(Options::verboseLoopUnrolling())) {
-            dataLogLn("Graph before Loop Unrolling Phase:");
-            m_graph.dump();
-        }
+        dataLogIf(Options::verboseLoopUnrolling(), "Graph before Loop Unrolling Phase:\n", m_graph);
 
         uint32_t unrolledCount = 0;
         while (true) {
@@ -191,13 +188,8 @@ public:
         BasicBlock* header = data.header();
         unrollLoop(data);
 
-        if (UNLIKELY(Options::verboseLoopUnrolling())) {
-            dataLogLn("\tGraph after Loop Unrolling for loop");
-            m_graph.dump();
-        }
-
-        if (UNLIKELY(Options::printEachUnrolledLoop()))
-            dataLogLn("\tIn function ", m_graph.m_codeBlock->inferredName(), ", successfully unrolled the loop header=", *header);
+        dataLogIf(Options::verboseLoopUnrolling(), "\tGraph after Loop Unrolling for loop\n", m_graph);
+        dataLogLnIf(Options::printEachUnrolledLoop(), "\tIn function ", m_graph.m_codeBlock->inferredName(), ", successfully unrolled the loop header=", *header);
         return true;
     }
 

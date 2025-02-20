@@ -286,7 +286,17 @@ public:
     void assertIsRegistered(Structure* structure);
     
     // CodeBlock is optional, but may allow additional information to be dumped (e.g. Identifier names).
-    void dump(PrintStream& = WTF::dataFile(), DumpContext* = nullptr);
+    void dump() const
+    {
+        const_cast<Graph&>(*this).dump(WTF::dataFile(), nullptr);
+    }
+
+    void dump(PrintStream& out) const
+    {
+        const_cast<Graph&>(*this).dump(out, nullptr);
+    }
+
+    void dump(PrintStream&, DumpContext*);
 
     bool terminalsAreValid();
     

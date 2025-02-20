@@ -198,12 +198,14 @@ private:
                 auto dumpEscape = [&](const char* description, Node* node) {
                     if constexpr (!verbose)
                         return;
-                    dataLogLn(description);
-                    dataLog("   candidate: ");
-                    m_graph.dump(WTF::dataFile(), Prefix::noString, candidate);
-                    dataLog("   reason: ");
-                    m_graph.dump(WTF::dataFile(), Prefix::noString, node);
-                    dataLogLn();
+                    WTF::dataFile().atomically([&](auto&) {
+                        dataLogLn(description);
+                        dataLog("   candidate: ");
+                        m_graph.dump(WTF::dataFile(), Prefix::noString, candidate);
+                        dataLog("   reason: ");
+                        m_graph.dump(WTF::dataFile(), Prefix::noString, node);
+                        dataLogLn();
+                    });
                 };
 
                 if (candidate->op() == Phi) {

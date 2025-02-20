@@ -108,8 +108,7 @@ static constexpr bool verbose = true;
 } // namespace DFGByteCodeParserInternal
 
 #define VERBOSE_LOG(...) do { \
-if (DFGByteCodeParserInternal::verbose && Options::verboseDFGBytecodeParsing()) \
-dataLog(__VA_ARGS__); \
+    dataLogIf(DFGByteCodeParserInternal::verbose && Options::verboseDFGBytecodeParsing(), __VA_ARGS__); \
 } while (false)
 
 // === ByteCodeParser ===
@@ -10225,24 +10224,28 @@ void ByteCodeParser::parseCodeBlock()
     }
 
     if (UNLIKELY(Options::dumpBytecodeAtDFGTime())) {
-        dataLog("Parsing ", *codeBlock);
-        if (inlineCallFrame()) {
-            dataLog(
-                " for inlining at ", CodeBlockWithJITType(m_codeBlock, JITType::DFGJIT),
-                " ", inlineCallFrame()->directCaller);
-        }
-        dataLogLn();
-        codeBlock->baselineVersion()->dumpBytecode();
+        WTF::dataFile().atomically([&](auto&) {
+            dataLog("Parsing ", *codeBlock);
+            if (inlineCallFrame()) {
+                dataLog(
+                    " for inlining at ", CodeBlockWithJITType(m_codeBlock, JITType::DFGJIT),
+                    " ", inlineCallFrame()->directCaller);
+            }
+            dataLogLn();
+            codeBlock->baselineVersion()->dumpBytecode();
+        });
     }
 
     Vector<JSInstructionStream::Offset, 32> jumpTargets;
     computePreciseJumpTargets(codeBlock, jumpTargets);
     if (UNLIKELY(Options::dumpBytecodeAtDFGTime())) {
-        dataLog("Jump targets: ");
-        CommaPrinter comma;
-        for (unsigned i = 0; i < jumpTargets.size(); ++i)
-            dataLog(comma, jumpTargets[i]);
-        dataLog("\n");
+        WTF::dataFile().atomically([&](auto&) {
+            dataLog("Jump targets: ");
+            CommaPrinter comma;
+            for (unsigned i = 0; i < jumpTargets.size(); ++i)
+                dataLog(comma, jumpTargets[i]);
+            dataLogLn();
+        });
     }
     
     for (unsigned jumpTargetIndex = 0; jumpTargetIndex <= jumpTargets.size(); ++jumpTargetIndex) {

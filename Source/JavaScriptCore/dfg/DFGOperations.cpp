@@ -4934,7 +4934,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTriggerTierUpNow, void, (VM* vmPointe
     sanitizeStackForVM(vm);
 
     if (codeBlock->jitType() != JITType::DFGJIT) {
-        dataLog("Unexpected code block in DFG->FTL tier-up: ", *codeBlock, "\n");
+        dataLogLn("Unexpected code block in DFG->FTL tier-up: ", *codeBlock);
         RELEASE_ASSERT_NOT_REACHED();
     }
     
@@ -5232,7 +5232,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTriggerOSREntryNow, char*, (VM* vmPoi
     sanitizeStackForVM(vm);
 
     if (codeBlock->jitType() != JITType::DFGJIT) {
-        dataLog("Unexpected code block in DFG->FTL tier-up: ", *codeBlock, "\n");
+        dataLogLn("Unexpected code block in DFG->FTL tier-up: ", *codeBlock);
         RELEASE_ASSERT_NOT_REACHED();
     }
 

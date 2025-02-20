@@ -821,10 +821,7 @@ public:
         if (!performSinking())
             return false;
 
-        if constexpr (DFGObjectAllocationSinkingPhaseInternal::verbose) {
-            dataLog("Graph after elimination:\n");
-            m_graph.dump();
-        }
+        dataLogIf(DFGObjectAllocationSinkingPhaseInternal::verbose, "Graph after elimination:\n", m_graph);
 
         return true;
     }
@@ -846,10 +843,7 @@ private:
             graphBeforeSinking = out.toCString();
         }
 
-        if constexpr (DFGObjectAllocationSinkingPhaseInternal::verbose) {
-            dataLog("Graph before elimination:\n");
-            m_graph.dump();
-        }
+        dataLogIf(DFGObjectAllocationSinkingPhaseInternal::verbose, "Graph before elimination:\n", m_graph);
 
         performAnalysis();
         ASSERT(m_rootInsertionSet.isEmpty());
@@ -858,16 +852,18 @@ private:
             return false;
 
         if constexpr (DFGObjectAllocationSinkingPhaseInternal::verbose) {
-            for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
-                dataLog("Heap at head of ", *block, ": \n", m_heapAtHead[block]);
-                dataLog("Heap at tail of ", *block, ": \n", m_heapAtTail[block]);
-            }
+            WTF::dataFile().atomically([&](auto&) {
+                for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
+                    dataLog("Heap at head of ", *block, ": \n", m_heapAtHead[block]);
+                    dataLog("Heap at tail of ", *block, ": \n", m_heapAtTail[block]);
+                }
+            });
         }
 
         promoteLocalHeap();
         removeICStatusFilters();
 
-        if (Options::validateGraphAtEachPhase())
+        if (UNLIKELY(Options::validateGraphAtEachPhase()))
             DFG::validate(m_graph, DumpGraph, graphBeforeSinking);
         return true;
     }
@@ -2155,10 +2151,9 @@ escapeChildren:
                 }
             }
 
-            if constexpr (DFGObjectAllocationSinkingPhaseInternal::verbose) {
-                dataLog("Local mapping at ", pointerDump(block), ": ", mapDump(m_localMapping), "\n");
-                dataLog("Local materializations at ", pointerDump(block), ": ", mapDump(m_escapeeToMaterialization), "\n");
-            }
+            dataLogLnIf(DFGObjectAllocationSinkingPhaseInternal::verbose,
+                "Local mapping at ", pointerDump(block), ": ", mapDump(m_localMapping),
+                "Local materializations at ", pointerDump(block), ": ", mapDump(m_escapeeToMaterialization));
 
             for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                 Node* node = block->at(nodeIndex);
@@ -2400,12 +2395,11 @@ escapeChildren:
 
     void insertOSRHintsForUpdate(unsigned nodeIndex, NodeOrigin origin, bool& canExit, AvailabilityMap& availability, Node* escapee, Node* materialization)
     {
-        if constexpr (DFGObjectAllocationSinkingPhaseInternal::verbose) {
-            dataLog("Inserting OSR hints at ", origin, ":\n");
-            dataLog("    Escapee: ", escapee, "\n");
-            dataLog("    Materialization: ", materialization, "\n");
-            dataLog("    Availability: ", availability, "\n");
-        }
+        dataLogLnIf(DFGObjectAllocationSinkingPhaseInternal::verbose,
+            "Inserting OSR hints at ", origin, ":\n",
+            "    Escapee: ", escapee, "\n",
+            "    Materialization: ", materialization, "\n",
+            "    Availability: ", availability);
         
         // We need to follow() the value in the heap.
         // Consider the following graph:

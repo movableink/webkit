@@ -65,10 +65,7 @@ public:
         // version over LoadStore.
         DFG_ASSERT(m_graph, nullptr, m_graph.m_form == SSA);
         
-        if (DFGArgumentsEliminationPhaseInternal::verbose) {
-            dataLog("Graph before arguments elimination:\n");
-            m_graph.dump();
-        }
+        dataLogIf(DFGArgumentsEliminationPhaseInternal::verbose, "Graph before arguments elimination:\n", m_graph);
         
         identifyCandidates();
         if (m_candidates.isEmpty())

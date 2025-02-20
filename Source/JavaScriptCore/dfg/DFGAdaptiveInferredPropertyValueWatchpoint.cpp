@@ -50,8 +50,7 @@ void AdaptiveInferredPropertyValueWatchpoint::initialize(const ObjectPropertyCon
 
 void AdaptiveInferredPropertyValueWatchpoint::handleFire(VM&, const FireDetail& detail)
 {
-    if (DFG::shouldDumpDisassembly())
-        dataLog("Firing watchpoint ", RawPointer(this), " (", key(), ") on ", *m_codeBlock, "\n");
+    dataLogLnIf(DFG::shouldDumpDisassembly(), "Firing watchpoint ", RawPointer(this), " (", key(), ") on ", *m_codeBlock);
 
 
     auto lambda = scopedLambda<void(PrintStream&)>([&](PrintStream& out) {

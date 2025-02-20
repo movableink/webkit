@@ -885,31 +885,33 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationDebugPrintSpeculationFailure, void, (
     VM& vm = codeBlock->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
 
-    dataLog("Speculation failure in ", *codeBlock);
-    dataLog(" @ exit #", debugInfo->exitIndex, " (", debugInfo->bytecodeIndex, ", ", debugInfo->kind, ") with ");
-    if (alternative) {
-        dataLog(
-            "executeCounter = ", alternative->baselineExecuteCounter(),
-            ", reoptimizationRetryCounter = ", alternative->reoptimizationRetryCounter(),
-            ", optimizationDelayCounter = ", alternative->optimizationDelayCounter());
-    } else
-        dataLog("no alternative code block (i.e. we've been jettisoned)");
-    dataLog(", osrExitCounter = ", codeBlock->osrExitCounter(), "\n");
-    dataLog("    GPRs at time of exit:");
-    for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i) {
-        GPRReg gpr = GPRInfo::toRegister(i);
-        dataLog(" ", GPRInfo::debugName(gpr), ":", RawPointer(context.gpr<void*>(gpr)));
-    }
-    dataLog("\n");
-    dataLog("    FPRs at time of exit:");
-    for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
-        FPRReg fpr = FPRInfo::toRegister(i);
-        dataLog(" ", FPRInfo::debugName(fpr), ":");
-        uint64_t bits = context.fpr<uint64_t>(fpr);
-        double value = std::bit_cast<double>(bits);
-        dataLogF("%llx:%lf", static_cast<long long>(bits), value);
-    }
-    dataLog("\n");
+    WTF::dataFile().atomically([&](auto&) {
+        dataLog("Speculation failure in ", *codeBlock);
+        dataLog(" @ exit #", debugInfo->exitIndex, " (", debugInfo->bytecodeIndex, ", ", debugInfo->kind, ") with ");
+        if (alternative) {
+            dataLog(
+                "executeCounter = ", alternative->baselineExecuteCounter(),
+                ", reoptimizationRetryCounter = ", alternative->reoptimizationRetryCounter(),
+                ", optimizationDelayCounter = ", alternative->optimizationDelayCounter());
+        } else
+            dataLog("no alternative code block (i.e. we've been jettisoned)");
+        dataLogLn(", osrExitCounter = ", codeBlock->osrExitCounter());
+        dataLog("    GPRs at time of exit:");
+        for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i) {
+            GPRReg gpr = GPRInfo::toRegister(i);
+            dataLog(" ", GPRInfo::debugName(gpr), ":", RawPointer(context.gpr<void*>(gpr)));
+        }
+        dataLogLn();
+        dataLog("    FPRs at time of exit:");
+        for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
+            FPRReg fpr = FPRInfo::toRegister(i);
+            dataLog(" ", FPRInfo::debugName(fpr), ":");
+            uint64_t bits = context.fpr<uint64_t>(fpr);
+            double value = std::bit_cast<double>(bits);
+            dataLogF("%llx:%lf", static_cast<long long>(bits), value);
+        }
+        dataLogLn();
+    });
 }
 
 } } // namespace JSC::DFG
