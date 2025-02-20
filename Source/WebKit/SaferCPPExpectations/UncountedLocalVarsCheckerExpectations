@@ -25,7 +25,6 @@ UIProcess/API/Cocoa/WKBrowsingContextController.mm
 UIProcess/API/Cocoa/WKDownload.mm
 UIProcess/API/Cocoa/WKFrameInfo.mm
 UIProcess/API/Cocoa/WKNSURLAuthenticationChallenge.mm
-UIProcess/API/Cocoa/WKNavigationAction.mm
 UIProcess/API/Cocoa/WKProcessPool.mm
 UIProcess/API/Cocoa/WKWebViewTesting.mm
 UIProcess/API/Cocoa/_WKDataTask.mm

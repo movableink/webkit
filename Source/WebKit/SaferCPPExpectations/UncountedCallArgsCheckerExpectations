@@ -99,9 +99,6 @@ UIProcess/API/C/WKInspector.cpp
 UIProcess/API/C/WKMediaKeySystemPermissionCallback.cpp
 UIProcess/API/C/WKMessageListener.cpp
 UIProcess/API/C/WKMockMediaDevice.cpp
-UIProcess/API/C/WKNavigationActionRef.cpp
-UIProcess/API/C/WKNavigationDataRef.cpp
-UIProcess/API/C/WKNavigationResponseRef.cpp
 UIProcess/API/C/WKNotification.cpp
 UIProcess/API/C/WKNotificationManager.cpp
 UIProcess/API/C/WKNotificationPermissionRequest.cpp
@@ -134,9 +131,7 @@ UIProcess/API/Cocoa/WKDownload.mm
 UIProcess/API/Cocoa/WKFrameInfo.mm
 UIProcess/API/Cocoa/WKHTTPCookieStore.mm
 UIProcess/API/Cocoa/WKNSURLAuthenticationChallenge.mm
-UIProcess/API/Cocoa/WKNavigation.mm
 UIProcess/API/Cocoa/WKNavigationAction.mm
-UIProcess/API/Cocoa/WKNavigationData.mm
 UIProcess/API/Cocoa/WKOpenPanelParameters.mm
 UIProcess/API/Cocoa/WKPreferences.mm
 UIProcess/API/Cocoa/WKProcessGroup.mm

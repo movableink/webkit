@@ -40,7 +40,7 @@
     if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKNavigationData.class, self))
         return;
 
-    _data->~NavigationData();
+    Ref { *_data }->~NavigationData();
 
     [super dealloc];
 }

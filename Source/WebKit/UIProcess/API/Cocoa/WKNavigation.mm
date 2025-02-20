@@ -41,7 +41,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
     if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKNavigation.class, self))
         return;
 
-    _navigation->~Navigation();
+    Ref { *_navigation }->~Navigation();
 
     [super dealloc];
 }

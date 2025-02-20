@@ -131,9 +131,21 @@ auto toAPI(T* t) -> APIType
 }
 
 template<typename T, typename APIType = typename ImplTypeInfo<T>::APIType>
+auto toAPILeakingRef(RefPtr<T>&& t) -> APIType
+{
+    return reinterpret_cast<APIType>(API::Object::wrap(t.leakRef()));
+}
+
+template<typename T, typename APIType = typename ImplTypeInfo<T>::APIType>
 auto toAPI(T& t) -> APIType
 {
     return reinterpret_cast<APIType>(API::Object::wrap(&t));
+}
+
+template<typename T, typename APIType = typename ImplTypeInfo<T>::APIType>
+auto toAPILeakingRef(Ref<T>&& t) -> APIType
+{
+    return reinterpret_cast<APIType>(API::Object::wrap(&t.leakRef()));
 }
 
 template<typename T, typename ImplType = typename APITypeInfo<T>::ImplType>
