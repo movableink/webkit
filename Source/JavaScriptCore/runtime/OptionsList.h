@@ -602,6 +602,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, forceAllFunctionsToUseSIMD, false, Normal, "Force all functions to act conservatively w.r.t fp/vector registers for testing."_s) \
     v(Bool, useOMGInlining, true, Normal, "Use OMG inlining"_s) \
     v(Bool, freeRetiredWasmCode, true, Normal, "free BBQ/OMG-OSR wasm code once it's no longer reachable."_s) \
+    v(Bool, useArrayAllocationSinking, true, Normal, "free BBQ/OMG-OSR wasm code once it's no longer reachable."_s) \
     \
     /* Feature Flags */\
     \

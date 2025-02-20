@@ -1709,6 +1709,9 @@ private:
         case MaterializeNewObject:
             compileMaterializeNewObject();
             break;
+        case MaterializeNewArrayWithConstantSize:
+            compileMaterializeNewArrayWithConstantSize();
+            break;
         case MaterializeCreateActivation:
             compileMaterializeCreateActivation();
             break;
@@ -1850,6 +1853,7 @@ private:
         case ZombieHint:
         case ExitOK:
         case PhantomNewObject:
+        case PhantomNewArrayWithConstantSize:
         case PhantomNewFunction:
         case PhantomNewGeneratorFunction:
         case PhantomNewAsyncGeneratorFunction:
@@ -9467,7 +9471,7 @@ IGNORE_CLANG_WARNINGS_END
         setJSValue(vmCall(Int64, operationNewArrayWithSize, weakPointer(globalObject), structureValue, publicLength, m_out.intPtrZero));
     }
 
-    void compileNewArrayWithConstantSize()
+    LValue compileNewArrayWithConstantSizeImpl()
     {
         LValue publicLength = m_out.constInt32(m_node->newArraySize());
 
@@ -9476,9 +9480,14 @@ IGNORE_CLANG_WARNINGS_END
         ASSERT(m_graph.isWatchingHavingABadTimeWatchpoint(m_node));
         ASSERT(!hasAnyArrayStorage(m_node->indexingType()));
         IndexingType indexingType = m_node->indexingType();
-        setJSValue(
-            allocateJSArray(
-                publicLength, publicLength, weakPointer(globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType)), m_out.constInt32(indexingType)).array);
+        LValue result = allocateJSArray(
+            publicLength, publicLength, weakPointer(globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType)), m_out.constInt32(indexingType)).array;
+        return result;
+    }
+
+    void compileNewArrayWithConstantSize()
+    {
+        setJSValue(compileNewArrayWithConstantSizeImpl());
         mutatorFence();
     }
 
@@ -16266,6 +16275,44 @@ IGNORE_CLANG_WARNINGS_END
             [this] (RegisteredStructure structure) {
                 return weakStructure(structure);
             });
+    }
+
+    void compileMaterializeNewArrayWithConstantSize()
+    {
+        // Step 1: Speculate appropriately on all of the children.
+        for (unsigned i = 0; i < m_node->numChildren(); ++i)
+            speculate(m_graph.varArgChild(m_node, i));
+
+        // Step 2: Create a new array with constant size.
+        LValue result = compileNewArrayWithConstantSizeImpl();
+
+        // Step 3: Get the buttferfly storage and fill the slots.
+        LValue butterfly = m_out.loadPtr(result, m_heaps.JSObject_butterfly);
+        IndexingType indexingType = m_node->indexingType();
+        ObjectMaterializationData& data = m_node->objectMaterializationData();
+        for (unsigned i = 0; i < data.m_properties.size(); ++i) {
+            Edge edge = m_graph.varArgChild(m_node, i);
+            unsigned index = data.m_properties[i].info();
+            switch (m_node->indexingType()) {
+            case ALL_DOUBLE_INDEXING_TYPES:
+                m_out.storeDouble(lowDouble(edge), butterfly, m_heaps.indexedDoubleProperties[index]);
+                break;
+            case ALL_INT32_INDEXING_TYPES:
+            case ALL_CONTIGUOUS_INDEXING_TYPES: {
+                LValue value = lowJSValue(edge, ManualOperandSpeculation);
+                if (hasInt32(m_node->indexingType()))
+                    speculate(BadType, noValue(), nullptr, isNotInt32(value));
+                m_out.store64(value, butterfly, m_heaps.forIndexingType(indexingType)->at(index));
+                break;
+            }
+            default:
+                DFG_CRASH(m_graph, m_node, "Bad indexing type");
+                break;
+            }
+        }
+
+        setJSValue(result);
+        mutatorFence();
     }
 
     void compileMaterializeNewObject()
@@ -23384,7 +23431,7 @@ IGNORE_CLANG_WARNINGS_END
                 auto result = map.add(node, nullptr);
                 if (result.isNewEntry) {
                     result.iterator->value =
-                        exitDescriptor->m_materializations.add(node->op(), node->origin.semantic);
+                        exitDescriptor->m_materializations.add(node, node->origin.semantic);
                 }
             });
 

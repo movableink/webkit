@@ -394,6 +394,7 @@ private:
             case NewSet:
             case NewSymbol:
             case MaterializeNewObject:
+            case MaterializeNewArrayWithConstantSize:
             case MaterializeCreateActivation:
             case MakeRope:
             case MakeAtomString:

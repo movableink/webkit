@@ -1032,10 +1032,11 @@ GPRReg SpeculativeJIT::fillSpeculateInt32Internal(Edge edge, DataFormat& returnF
         // Check the value is an integer.
         GPRReg tagGPR = info.tagGPR();
         GPRReg payloadGPR = info.payloadGPR();
+        JSValueRegs valueRegs = JSValueRegs(tagGPR, payloadGPR);
         m_gprs.lock(tagGPR);
         m_gprs.lock(payloadGPR);
         if (type & ~SpecInt32Only)
-            speculationCheck(BadType, JSValueRegs(tagGPR, payloadGPR), edge, branchIfNotInt32(tagGPR));
+            speculateInt32(edge, valueRegs);
         m_gprs.unlock(tagGPR);
         m_gprs.release(tagGPR);
         m_gprs.release(payloadGPR);
@@ -4259,6 +4260,10 @@ void SpeculativeJIT::compile(Node* node)
         compileMaterializeNewObject(node);
         break;
 
+    case MaterializeNewArrayWithConstantSize:
+        compileMaterializeNewArrayWithConstantSize(node);
+        break;
+
     case PutDynamicVar: {
         compilePutDynamicVar(node);
         break;
@@ -4348,6 +4353,7 @@ void SpeculativeJIT::compile(Node* node)
     case CheckBadValue:
     case BottomValue:
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:
@@ -5383,6 +5389,11 @@ void SpeculativeJIT::cachedPutById(Node* node, CodeOrigin codeOrigin, GPRReg bas
 
     addPutById(gen, slowPath.get());
     addSlowPathGenerator(WTFMove(slowPath));
+}
+
+void SpeculativeJIT::speculateInt32(Edge edge, JSValueRegs regs)
+{
+    speculationCheck(BadType, regs, edge, branchIfNotInt32(regs.tagGPR()));
 }
 
 #endif

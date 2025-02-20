@@ -415,6 +415,8 @@ namespace JSC { namespace DFG {
     \
     macro(Spread, NodeResultJS | NodeMustGenerate) \
     /* Support for allocation sinking. */\
+    macro(PhantomNewArrayWithConstantSize, NodeResultJS | NodeMustGenerate) \
+    macro(MaterializeNewArrayWithConstantSize, NodeResultJS | NodeHasVarArgs) \
     macro(PhantomNewObject, NodeResultJS | NodeMustGenerate) \
     macro(PutHint, NodeMustGenerate) \
     macro(CheckStructureImmediate, NodeMustGenerate) \

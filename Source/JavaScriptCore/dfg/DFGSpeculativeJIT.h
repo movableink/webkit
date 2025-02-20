@@ -1713,6 +1713,7 @@ public:
     void compileSetRegExpObjectLastIndex(Node*);
     void compileLazyJSConstant(Node*);
     void compileMaterializeNewObject(Node*);
+    void compileMaterializeNewArrayWithConstantSize(Node*);
     void compileRecordRegExpCachedResult(Node*);
     void compileToObjectOrCallObjectConstructor(Node*);
     void compileResolveScope(Node*);
@@ -1759,6 +1760,7 @@ public:
     void compileStrCat(Node*);
     void compileNewArrayBuffer(Node*);
     void compileNewArrayWithSize(Node*);
+    void compileNewArrayWithConstantSizeImpl(Node*, GPRReg, GPRReg);
     void compileNewArrayWithConstantSize(Node*);
     void compileNewArrayWithSpecies(Node*);
     void compileNewArrayWithSizeAndStructure(Node*);
@@ -1893,10 +1895,10 @@ public:
     void speculateCellType(Edge, GPRReg cellGPR, SpeculatedType, JSType);
     
     void speculateInt32(Edge);
+    void speculateInt32(Edge, JSValueRegs);
 #if USE(JSVALUE64)
     void convertAnyInt(Edge, GPRReg resultGPR);
     void speculateAnyInt(Edge);
-    void speculateInt32(Edge, JSValueRegs);
     void speculateDoubleRepAnyInt(Edge);
 #endif // USE(JSVALUE64)
 #if USE(BIGINT32)

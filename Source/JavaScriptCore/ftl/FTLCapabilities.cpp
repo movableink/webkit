@@ -336,6 +336,7 @@ inline CapabilityLevel canCompile(Node* node)
     case EnumeratorPutByVal:
     case BottomValue:
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncGeneratorFunction:
@@ -346,6 +347,7 @@ inline CapabilityLevel canCompile(Node* node)
     case PutHint:
     case CheckStructureImmediate:
     case MaterializeNewObject:
+    case MaterializeNewArrayWithConstantSize:
     case MaterializeCreateActivation:
     case MaterializeNewInternalFieldObject:
     case PhantomDirectArguments:

@@ -5884,6 +5884,10 @@ void SpeculativeJIT::compile(Node* node)
         compileMaterializeNewObject(node);
         break;
 
+    case MaterializeNewArrayWithConstantSize:
+        compileMaterializeNewArrayWithConstantSize(node);
+        break;
+
     case CallDOM:
         compileCallDOM(node);
         break;
@@ -6472,6 +6476,7 @@ void SpeculativeJIT::compile(Node* node)
     case CheckBadValue:
     case BottomValue:
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:

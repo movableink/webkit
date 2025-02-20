@@ -1740,6 +1740,8 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
 
     case NewArrayWithConstantSize:
+    case PhantomNewArrayWithConstantSize:
+    case MaterializeNewArrayWithConstantSize:
         read(HeapObjectCount);
         write(HeapObjectCount);
         def(HeapLocation(ArrayLengthLoc, Butterfly_publicLength, node), LazyNode(graph.freeze(jsNumber(node->newArraySize()))));

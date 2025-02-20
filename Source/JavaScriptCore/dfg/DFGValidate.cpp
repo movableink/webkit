@@ -364,6 +364,9 @@ public:
                         VALIDATE((node), !hasAnyArrayStorage(structure->indexingType()));
                     }
                     break;
+                case MaterializeNewArrayWithConstantSize:
+                    VALIDATE((node), isNewArrayWithConstantSizeIndexingType(node->indexingType()));
+                    break;
                 case DoubleConstant:
                 case Int52Constant:
                     VALIDATE((node), node->isNumberConstant());
@@ -675,6 +678,7 @@ private:
                 case CheckInBounds:
                 case CheckInBoundsInt52:
                 case PhantomNewObject:
+                case PhantomNewArrayWithConstantSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:
@@ -895,6 +899,7 @@ private:
                     continue;
                 switch (node->op()) {
                 case PhantomNewObject:
+                case PhantomNewArrayWithConstantSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:

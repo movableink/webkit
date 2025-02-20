@@ -619,7 +619,7 @@ public:
         
         return m_opInfo.as<FrozenValue*>();
     }
-    
+
     // Don't call this directly - use Graph::convertToConstant() instead!
     void convertToConstant(FrozenValue* value)
     {
@@ -695,6 +695,17 @@ public:
         ASSERT(m_op == PutById || m_op == PutByIdDirect || m_op == PutByIdFlush || m_op == PutPrivateNameById || m_op == PutByIdMegamorphic);
         m_opInfo = data;
         m_op = MultiPutByOffset;
+    }
+
+    void convertToPhantomNewArrayWithConstantSize()
+    {
+        ASSERT(m_op == NewArrayWithConstantSize);
+        m_op = PhantomNewArrayWithConstantSize;
+        m_flags &= ~NodeHasVarArgs;
+        m_flags |= NodeMustGenerate;
+        // No need to clear the infos, as the indexing type and array
+        // size are still required for materialization when an OSR exit occurs.
+        children = AdjacencyList();
     }
     
     void convertToPhantomNewObject()
@@ -1398,6 +1409,8 @@ public:
     {
         switch (op()) {
         case NewArrayWithConstantSize:
+        case PhantomNewArrayWithConstantSize:
+        case MaterializeNewArrayWithConstantSize:
             return true;
         default:
             return false;
@@ -1407,7 +1420,7 @@ public:
     unsigned newArraySize()
     {
         ASSERT(hasNewArraySize());
-        return m_opInfo2.as<unsigned>();
+        return op() == MaterializeNewArrayWithConstantSize ? objectMaterializationData().m_newArraySize : m_opInfo2.as<unsigned>();
     }
 
     bool hasIndexingType()
@@ -1416,6 +1429,8 @@ public:
         case NewArray:
         case NewArrayWithSize:
         case NewArrayWithConstantSize:
+        case PhantomNewArrayWithConstantSize:
+        case MaterializeNewArrayWithConstantSize:
         case NewArrayBuffer:
         case PhantomNewArrayBuffer:
         case NewArrayWithSpecies:
@@ -2419,6 +2434,7 @@ public:
     {
         switch (op()) {
         case MaterializeNewObject:
+        case MaterializeNewArrayWithConstantSize:
         case MaterializeNewInternalFieldObject:
         case MaterializeCreateActivation:
             return true;
@@ -2506,6 +2522,7 @@ public:
     bool isPhantomAllocation()
     {
         switch (op()) {
+        case PhantomNewArrayWithConstantSize:
         case PhantomNewObject:
         case PhantomDirectArguments:
         case PhantomCreateRest:
@@ -2785,6 +2802,11 @@ public:
     unsigned refCount()
     {
         return m_refCount;
+    }
+
+    unsigned decRef()
+    {
+        return m_refCount--;
     }
 
     unsigned postfixRef()
