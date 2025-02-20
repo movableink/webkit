@@ -105,6 +105,7 @@
 #import <WebCore/HTMLImageElement.h>
 #import <WebCore/HTMLInputElement.h>
 #import <WebCore/HTMLLabelElement.h>
+#import <WebCore/HTMLModelElement.h>
 #import <WebCore/HTMLOptGroupElement.h>
 #import <WebCore/HTMLOptionElement.h>
 #import <WebCore/HTMLPlugInElement.h>
@@ -3863,6 +3864,11 @@ InteractionInformationAtPosition WebPage::positionInformation(const InteractionI
     // Prevent the callout bar from showing when tapping on the datalist button.
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(nodeRespondingToClickEvents))
         textInteractionPositionInformation(*this, *input, request, info);
+
+#if ENABLE(MODEL_PROCESS)
+    if (RefPtr modelElement = dynamicDowncast<HTMLModelElement>(hitTestNode))
+        info.isInteractiveModel = modelElement->model() && modelElement->supportsStageModeInteraction();
+#endif
 
 #if ENABLE(PDF_PLUGIN)
     if (pluginView) {

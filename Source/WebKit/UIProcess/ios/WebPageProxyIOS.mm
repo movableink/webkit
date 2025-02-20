@@ -69,6 +69,7 @@
 #import "WebProcessProxy.h"
 #import "WebScreenOrientationManagerProxy.h"
 #import <WebCore/AGXCompilerService.h>
+#import <WebCore/ElementIdentifier.h>
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/NotImplemented.h>
 #import <WebCore/PlatformScreen.h>
@@ -1345,7 +1346,14 @@ void WebPageProxy::didConcludeDrop()
 {
     m_legacyMainFrameProcess->send(Messages::WebPage::DidConcludeDrop(), webPageIDInMainFrameProcess());
 }
+#endif
 
+#if ENABLE(MODEL_PROCESS)
+void WebPageProxy::didReceiveInteractiveModelElement(std::optional<WebCore::ElementIdentifier> elementID)
+{
+    if (RefPtr pageClient = this->pageClient())
+        pageClient->didReceiveInteractiveModelElement(elementID);
+}
 #endif
 
 #if USE(QUICK_LOOK)

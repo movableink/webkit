@@ -90,6 +90,7 @@ private:
 #endif // ENABLE(GPU_PROCESS)
 #if ENABLE(MODEL_PROCESS)
     void didCreateContextInModelProcessForVisibilityPropagation(LayerHostingContextID) override;
+    void didReceiveInteractiveModelElement(std::optional<WebCore::ElementIdentifier>) override;
 #endif // ENABLE(MODEL_PROCESS)
 #if USE(EXTENSIONKIT)
     UIView *createVisibilityPropagationView() override;

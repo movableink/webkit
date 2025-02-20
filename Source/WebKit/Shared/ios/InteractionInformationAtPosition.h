@@ -71,6 +71,9 @@ struct InteractionInformationAtPosition {
     bool touchCalloutEnabled { true };
     bool isLink { false };
     bool isImage { false };
+#if ENABLE(MODEL_PROCESS)
+    bool isInteractiveModel { false };
+#endif
     bool isAttachment { false };
     bool isAnimatedImage { false };
     bool isAnimating { false };

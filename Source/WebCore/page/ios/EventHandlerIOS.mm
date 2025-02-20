@@ -35,6 +35,7 @@
 #import "DataTransfer.h"
 #import "DocumentInlines.h"
 #import "DragState.h"
+#import "ElementIdentifier.h"
 #import "EventNames.h"
 #import "FocusController.h"
 #import "FrameLoader.h"
@@ -64,6 +65,12 @@
 
 #if ENABLE(IOS_TOUCH_EVENTS)
 #import <WebKitAdditions/EventHandlerIOSTouch.cpp>
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+#import "DOMMatrixReadOnly.h"
+#import "DOMPointReadOnly.h"
+#import "HTMLModelElement.h"
 #endif
 
 namespace WebCore {
@@ -692,6 +699,85 @@ bool EventHandler::shouldUpdateAutoscroll()
 {
     return m_isAutoscrolling;
 }
+
+#if ENABLE(MODEL_PROCESS)
+std::optional<ElementIdentifier> EventHandler::requestInteractiveModelElementAtPoint(const IntPoint& clientPosition)
+{
+    Ref frame = m_frame.get();
+
+    RefPtr document = frame->document();
+    RefPtr frameView = frame->view();
+    if (!document || !frameView)
+        return std::nullopt;
+
+    SetForScope shouldAllowMouseDownToStartDrag { m_shouldAllowMouseDownToStartDrag, true };
+
+    document->updateLayoutIgnorePendingStylesheets();
+
+    FloatPoint adjustedClientPositionAsFloatPoint(clientPosition);
+    frame->nodeRespondingToClickEvents(clientPosition, adjustedClientPositionAsFloatPoint);
+    auto adjustedClientPosition = roundedIntPoint(adjustedClientPositionAsFloatPoint);
+    auto adjustedGlobalPosition = frameView->windowToContents(adjustedClientPosition);
+
+    PlatformMouseEvent syntheticMousePressEvent(adjustedClientPosition, adjustedGlobalPosition, MouseButton::Left, PlatformEvent::Type::MousePressed, 1, { }, WallTime::now(), 0, SyntheticClickType::NoTap);
+    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent };
+    auto documentPoint = frameView->windowToContents(syntheticMousePressEvent.position());
+    auto hitTestedMouseEvent = document->prepareMouseEvent(hitType, documentPoint, syntheticMousePressEvent);
+
+    RefPtr targetElement = hitTestedMouseEvent.hitTestResult().targetElement();
+    if (RefPtr modelElement = dynamicDowncast<HTMLModelElement>(targetElement)) {
+        if (modelElement->supportsStageModeInteraction()) {
+            auto transform = TransformationMatrix::identity;
+            transform.translate(clientPosition.x(), clientPosition.y());
+
+            modelElement->beginStageModeTransform(transform);
+            return modelElement->identifier();
+        }
+    }
+
+    return std::nullopt;
+}
+
+void EventHandler::stageModeSessionDidUpdate(std::optional<ElementIdentifier> elementID, const TransformationMatrix& transform)
+{
+    if (!elementID)
+        return;
+
+    RefPtr element = Element::fromIdentifier(*elementID);
+    if (!element)
+        return;
+
+    RefPtr modelElement = dynamicDowncast<HTMLModelElement>(element);
+    if (!modelElement)
+        return;
+
+    // It's possible that interactivity can change via JS during the session
+    if (!modelElement->supportsStageModeInteraction())
+        return;
+
+    modelElement->updateStageModeTransform(transform);
+}
+
+void EventHandler::stageModeSessionDidEnd(std::optional<ElementIdentifier> elementID)
+{
+    if (!elementID)
+        return;
+
+    RefPtr element = Element::fromIdentifier(*elementID);
+    if (!element)
+        return;
+
+    RefPtr modelElement = dynamicDowncast<HTMLModelElement>(element);
+    if (!modelElement)
+        return;
+
+    // It's possible that interactivity can change via JS during the session
+    if (!modelElement->supportsStageModeInteraction())
+        return;
+
+    modelElement->endStageModeInteraction();
+}
+#endif
 
 #if ENABLE(DRAG_SUPPORT)
 

@@ -38,6 +38,9 @@
 #import "InteractionInformationAtPosition.h"
 #import "PasteboardAccessIntent.h"
 #import "RevealFocusedElementDeferrer.h"
+#if ENABLE(MODEL_PROCESS)
+#import "StageModeInteractionState.h"
+#endif
 #import "SyntheticEditingCommandType.h"
 #import "TextCheckingController.h"
 #import "TransactionID.h"
@@ -107,6 +110,7 @@ struct TextRecognitionResult;
 enum class DOMPasteAccessCategory : uint8_t;
 enum class DOMPasteAccessResponse : uint8_t;
 enum class DOMPasteRequiresInteraction : bool;
+enum class ElementIdentifierType;
 enum class MouseEventPolicy : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
 enum class TextIndicatorDismissalAnimation : uint8_t;
@@ -114,6 +118,8 @@ enum class TextIndicatorDismissalAnimation : uint8_t;
 #if ENABLE(DRAG_SUPPORT)
 struct DragItem;
 #endif
+
+using ElementIdentifier = ObjectIdentifier<ElementIdentifierType>;
 }
 
 namespace WebKit {
@@ -350,6 +356,9 @@ struct ImageAnalysisContextMenuActionData {
     RetainPtr<WKHighlightLongPressGestureRecognizer> _highlightLongPressGestureRecognizer;
     RetainPtr<UILongPressGestureRecognizer> _longPressGestureRecognizer;
     RetainPtr<WKSyntheticTapGestureRecognizer> _doubleTapGestureRecognizer;
+#if ENABLE(MODEL_PROCESS)
+    RetainPtr<UIPanGestureRecognizer> _modelInteractionPanGestureRecognizer;
+#endif
     RetainPtr<UITapGestureRecognizer> _nonBlockingDoubleTapGestureRecognizer;
     RetainPtr<UITapGestureRecognizer> _doubleTapGestureRecognizerForDoubleClick;
     RetainPtr<UITapGestureRecognizer> _twoFingerDoubleTapGestureRecognizer;
@@ -602,6 +611,11 @@ struct ImageAnalysisContextMenuActionData {
     RetainPtr<_UITextDragCaretView> _editDropCaretView;
     BlockPtr<void()> _actionToPerformAfterReceivingEditDragSnapshot;
 #endif
+
+#if ENABLE(MODEL_PROCESS)
+    std::optional<WebKit::StageModeSession> _stageModeSession;
+#endif
+
 #if HAVE(UI_TEXT_CURSOR_DROP_POSITION_ANIMATOR)
     RetainPtr<UIView<UITextCursorView>> _editDropTextCursorView;
     RetainPtr<UITextCursorDropPositionAnimator> _editDropCaretAnimator;
@@ -861,6 +875,13 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_willReceiveEditDragSnapshot;
 - (void)_didReceiveEditDragSnapshot:(std::optional<WebCore::TextIndicatorData>)data;
 - (void)_didChangeDragCaretRect:(CGRect)previousRect currentRect:(CGRect)rect;
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+- (void)modelInteractionPanGestureDidBeginAtPoint:(CGPoint)inputPoint;
+- (void)modelInteractionPanGestureDidUpdateWithPoint:(CGPoint)inputPoint;
+- (void)modelInteractionPanGestureDidEnd;
+- (void)didReceiveInteractiveModelElement:(std::optional<WebCore::ElementIdentifier>)elementID;
 #endif
 
 - (void)reloadContextViewForPresentedListViewController;

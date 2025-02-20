@@ -346,6 +346,21 @@ void ModelProcessModelPlayer::setStageMode(WebCore::StageModeOperation stagemode
     send(Messages::ModelProcessModelPlayerProxy::SetStageMode(m_stageModeOperation));
 }
 
+void ModelProcessModelPlayer::beginStageModeTransform(const WebCore::TransformationMatrix& transform)
+{
+    send(Messages::ModelProcessModelPlayerProxy::BeginStageModeTransform(transform));
+}
+
+void ModelProcessModelPlayer::updateStageModeTransform(const WebCore::TransformationMatrix& transform)
+{
+    send(Messages::ModelProcessModelPlayerProxy::UpdateStageModeTransform(transform));
+}
+
+void ModelProcessModelPlayer::endStageModeInteraction()
+{
+    send(Messages::ModelProcessModelPlayerProxy::EndStageModeInteraction());
+}
+
 }
 
 #endif // ENABLE(MODEL_PROCESS)

@@ -105,6 +105,9 @@ private:
     void setEnvironmentMap(Ref<WebCore::SharedBuffer>&& data) final;
     void setHasPortal(bool) final;
     void setStageMode(WebCore::StageModeOperation) final;
+    void beginStageModeTransform(const WebCore::TransformationMatrix&) final;
+    void updateStageModeTransform(const WebCore::TransformationMatrix&) final;
+    void endStageModeInteraction() final;
 
     WebCore::ModelPlayerIdentifier m_id;
     WeakPtr<WebPage> m_page;

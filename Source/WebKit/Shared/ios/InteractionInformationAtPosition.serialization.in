@@ -44,6 +44,9 @@ struct WebKit::InteractionInformationAtPosition {
     bool touchCalloutEnabled;
     bool isLink;
     bool isImage;
+#if ENABLE(MODEL_PROCESS)
+    bool isInteractiveModel;
+#endif
     bool isAttachment;
     bool isAnimatedImage;
     bool isAnimating;

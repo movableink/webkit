@@ -97,7 +97,10 @@ public:
     virtual void setCurrentTime(Seconds, CompletionHandler<void()>&&);
     virtual void setEnvironmentMap(Ref<SharedBuffer>&& data);
     virtual void setHasPortal(bool);
-    virtual void setStageMode(WebCore::StageModeOperation);
+    virtual void setStageMode(StageModeOperation);
+    virtual void beginStageModeTransform(const TransformationMatrix&);
+    virtual void updateStageModeTransform(const TransformationMatrix&);
+    virtual void endStageModeInteraction();
 #endif
 };
 

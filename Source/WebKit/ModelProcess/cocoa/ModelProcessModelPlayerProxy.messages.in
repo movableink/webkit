@@ -39,6 +39,9 @@ messages -> ModelProcessModelPlayerProxy {
     SetEnvironmentMap(Ref<WebCore::SharedBuffer> data)
     SetHasPortal(bool hasPortal)
     SetStageMode(enum:bool WebCore::StageModeOperation stagemodeOp)
+    BeginStageModeTransform(WebCore::TransformationMatrix transform)
+    UpdateStageModeTransform(WebCore::TransformationMatrix transform)
+    EndStageModeInteraction()
 }
 
 #endif

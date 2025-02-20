@@ -463,6 +463,9 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
 
     computeTransform();
     updateTransform();
+
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287820
+
     updateOpacity();
     startAnimating();
 
@@ -668,6 +671,21 @@ void ModelProcessModelPlayerProxy::setEnvironmentMap(Ref<WebCore::SharedBuffer>&
     m_transientEnvironmentMapData = WTFMove(data);
     if (m_modelRKEntity)
         applyEnvironmentMapDataAndRelease();
+}
+
+void ModelProcessModelPlayerProxy::beginStageModeTransform(const WebCore::TransformationMatrix& transform)
+{
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287820
+}
+
+void ModelProcessModelPlayerProxy::updateStageModeTransform(const WebCore::TransformationMatrix& transform)
+{
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287820
+}
+
+void ModelProcessModelPlayerProxy::endStageModeInteraction()
+{
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287820
 }
 
 void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()

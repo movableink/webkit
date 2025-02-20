@@ -411,9 +411,13 @@ class ShareableBitmap;
 class ShareableBitmapHandle;
 class ShareableResourceHandle;
 class Site;
+class TransformationMatrix;
 struct TextAnimationData;
 enum class ImageDecodingError : uint8_t;
+enum class ElementIdentifierType;
 enum class ExceptionCode : uint8_t;
+
+using ElementIdentifier = ObjectIdentifier<ElementIdentifierType>;
 }
 
 namespace WebKit {
@@ -1176,6 +1180,13 @@ public:
     void didConcludeDrop();
 #endif
 #endif // PLATFORM(IOS_FAMILY)
+
+#if ENABLE(MODEL_PROCESS)
+    void requestInteractiveModelElementAtPoint(WebCore::IntPoint);
+    void didReceiveInteractiveModelElement(std::optional<WebCore::ElementIdentifier>);
+    void stageModeSessionDidUpdate(std::optional<WebCore::ElementIdentifier>, const WebCore::TransformationMatrix&);
+    void stageModeSessionDidEnd(std::optional<WebCore::ElementIdentifier>);
+#endif
 
 #if PLATFORM(COCOA)
     void insertTextPlaceholder(const WebCore::IntSize&, CompletionHandler<void(const std::optional<WebCore::ElementContext>&)>&&);

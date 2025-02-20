@@ -67,6 +67,7 @@
 #import <WebCore/Cursor.h>
 #import <WebCore/DOMPasteAccess.h>
 #import <WebCore/DictionaryLookup.h>
+#import <WebCore/ElementIdentifier.h>
 #import <WebCore/NotImplemented.h>
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/PromisedAttachmentInfo.h>
@@ -243,6 +244,11 @@ void PageClientImpl::didCreateContextInGPUProcessForVisibilityPropagation(LayerH
 void PageClientImpl::didCreateContextInModelProcessForVisibilityPropagation(LayerHostingContextID)
 {
     [m_contentView _modelProcessDidCreateContextForVisibilityPropagation];
+}
+
+void PageClientImpl::didReceiveInteractiveModelElement(std::optional<WebCore::ElementIdentifier> elementID)
+{
+    [m_contentView didReceiveInteractiveModelElement:elementID];
 }
 #endif // ENABLE(MODEL_PROCESS)
 

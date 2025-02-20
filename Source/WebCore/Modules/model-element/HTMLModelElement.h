@@ -87,7 +87,7 @@ public:
     using ReadyPromise = DOMPromiseProxyWithResolveCallback<IDLInterface<HTMLModelElement>>;
     ReadyPromise& ready() { return m_readyPromise.get(); }
 
-    RefPtr<Model> model() const;
+    WEBCORE_EXPORT RefPtr<Model> model() const;
 
     bool usesPlatformLayer() const;
     PlatformLayer* platformLayer() const;
@@ -153,6 +153,10 @@ public:
     void setCurrentTime(double);
     const URL& environmentMap() const;
     void setEnvironmentMap(const URL&);
+    WEBCORE_EXPORT bool supportsStageModeInteraction() const;
+    WEBCORE_EXPORT void beginStageModeTransform(TransformationMatrix);
+    WEBCORE_EXPORT void updateStageModeTransform(TransformationMatrix);
+    WEBCORE_EXPORT void endStageModeInteraction();
 #endif
 
 #if PLATFORM(COCOA)

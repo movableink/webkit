@@ -347,6 +347,10 @@ messages -> WebPageProxy {
     DidReceiveEditDragSnapshot(std::optional<WebCore::TextIndicatorData> textIndicator)
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+    DidReceiveInteractiveModelElement(std::optional<WebCore::ElementIdentifier> elementID)
+#endif
+
 #if PLATFORM(COCOA)
     # Dictionary support.
     DidPerformDictionaryLookup(struct WebCore::DictionaryPopupInfo dictionaryPopupInfo)

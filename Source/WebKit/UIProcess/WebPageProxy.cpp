@@ -3853,6 +3853,23 @@ void WebPageProxy::setDragCaretRect(const IntRect& dragCaretRect)
 
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+void WebPageProxy::requestInteractiveModelElementAtPoint(const IntPoint clientPosition)
+{
+    send(Messages::WebPage::RequestInteractiveModelElementAtPoint(clientPosition));
+}
+
+void WebPageProxy::stageModeSessionDidUpdate(std::optional<ElementIdentifier> elementID, const TransformationMatrix& transform)
+{
+    send(Messages::WebPage::StageModeSessionDidUpdate(elementID, transform));
+}
+
+void WebPageProxy::stageModeSessionDidEnd(std::optional<ElementIdentifier> elementID)
+{
+    send(Messages::WebPage::StageModeSessionDidEnd(elementID));
+}
+#endif
+
 static std::optional<NativeWebMouseEvent> removeOldRedundantEvent(Deque<NativeWebMouseEvent>& queue, WebEventType incomingEventType)
 {
     if (incomingEventType != WebEventType::MouseMove && incomingEventType != WebEventType::MouseForceChanged)
