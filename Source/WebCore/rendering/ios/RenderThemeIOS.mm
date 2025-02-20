@@ -1558,8 +1558,8 @@ void RenderThemeIOS::paintCheckboxRadioInnerShadow(const PaintInfo& paintInfo, c
 bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (paintCheckboxForCatalyst(box, paintInfo, rect))
-        return false;
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintCheckbox(box, paintInfo, rect);
 #endif
 
     bool isVision = PAL::currentUserInterfaceIdiomIsVision();
@@ -1648,8 +1648,8 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
 bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (paintRadioForCatalyst(box, paintInfo, rect))
-        return false;
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintRadio(box, paintInfo, rect);
 #endif
 
     bool isVision = PAL::currentUserInterfaceIdiomIsVision();

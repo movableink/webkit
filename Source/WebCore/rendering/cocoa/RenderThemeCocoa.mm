@@ -50,6 +50,7 @@
 #import <algorithm>
 #import <pal/spi/cf/CoreTextSPI.h>
 #import <pal/spi/cocoa/FeatureFlagsSPI.h>
+#import <pal/system/ios/UserInterfaceIdiom.h>
 #import <wtf/Language.h>
 
 #if ENABLE(APPLE_PAY)
