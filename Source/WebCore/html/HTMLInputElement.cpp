@@ -881,17 +881,17 @@ void HTMLInputElement::attributeChanged(const QualifiedName& name, const AtomStr
         if (document().settings().switchControlEnabled()) {
             auto hasSwitchAttribute = !newValue.isNull();
             m_hasSwitchAttribute = hasSwitchAttribute;
+#if ENABLE(TOUCH_EVENTS)
+            updateTouchEventHandler();
+#endif
             if (attributeModificationReason != AttributeModificationReason::Directly)
-                return; // initializeInputTypeAfterParsingOrCloning and updateUserAgentShadowTree will take care of this.
+                return; // updateUserAgentShadowTree will take care of this.
             if (isSwitch())
                 m_inputType->createShadowSubtreeIfNeeded();
             else if (isCheckbox())
                 m_inputType->removeShadowSubtree();
             if (renderer())
                 invalidateStyleAndRenderersForSubtree();
-#if ENABLE(TOUCH_EVENTS)
-            updateTouchEventHandler();
-#endif
         }
         break;
     case AttributeNames::alphaAttr:

@@ -36,6 +36,16 @@ fast/forms/ios [ Pass ]
 fast/forms/ios/ipad [ Skip ]
 fast/forms/switch [ Pass ]
 
+# Missing public painting code
+fast/forms/switch/click-animation-redundant-checked.html [ ImageOnlyFailure ]
+fast/forms/switch/click-animation-redundant-disabled.html [ ImageOnlyFailure ]
+fast/forms/switch/click-animation.html [ ImageOnlyFailure ]
+
+# These require touch event support
+fast/forms/switch/pointer-tracking-there-and-back-again-rtl.html [ Skip ]
+fast/forms/switch/pointer-tracking-there-and-back-again.html [ Skip ]
+fast/forms/switch/pointer-tracking.html [ Skip ]
+
 # These tests fail or are flaky in non-internal iOS 14 simulator
 fast/forms/ios/inputmode-none-with-hardware-keyboard.html [ Pass Failure ]
 
@@ -6920,12 +6930,6 @@ http/wpt/opener/iframe-access-top-via-windowproxy.html [ Pass ]
 http/wpt/opener/parent-access-child-via-windowproxy.html [ Pass ]
 http/wpt/opener/same-site-child-access-parent-iframe-via-windowproxy.html [ Pass ]
 
-# webkit.org/b/267890 REGRESSION (273260@main): [ iOS17 ] 3 tests in fast/forms/switch regularly timeout
-# fast/forms/switch/pointer-tracking-there-and-back-again-rtl.html [ Timeout ]
-# fast/forms/switch/pointer-tracking-there-and-back-again.html [ Timeout ]
-# fast/forms/switch/pointer-tracking.html [ Timeout ]
-# UNCOMMENT ABOVE AND REMOVE FROM platform/ios-17/TestExpectations WHEN BELOW IS RESOLVED.
-
 webkit.org/b/267796 [ Release ] imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF-dynamic.html [ Pass Failure ]
 
 webkit.org/b/264296 fast/forms/ios/show-and-dismiss-date-input-in-landscape.html [ Pass Timeout Crash ]
@@ -7307,11 +7311,6 @@ webkit.org/b/284300 imported/w3c/web-platform-tests/scroll-animations/view-timel
 
 webkit.org/b/269506 fast/forms/ios/autocapitalize-words.html [ Pass Failure ]
 
-# webkit.org/b/271850 [iOS] 10 fast/forms/switch/click-animation*.html layout tests are passing.
-fast/forms/switch/click-animation-redundant-checked.html [ ImageOnlyFailure ]
-fast/forms/switch/click-animation-redundant-disabled.html [ ImageOnlyFailure ]
-fast/forms/switch/click-animation.html [ ImageOnlyFailure ]
-
 webkit.org/b/272910 fast/scrolling/ios/video-atop-overflow-scroll.html [ Skip ]
 
 webkit.org/b/273848 [ Release ] imported/w3c/web-platform-tests/html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-multiple-times.html [ Pass Failure ]
@@ -7666,9 +7665,6 @@ imported/w3c/web-platform-tests/html/interaction/focus/sequential-focus-navigati
 fast/writing-mode/inline-block-baseline.html [ ImageOnlyFailure ]
 fast/writing-mode/vertical-subst-font-vert-no-dflt.html [ ImageOnlyFailure ]
 
-# webkit.org/b/267890 REGRESSION (273260@main): [ iOS17 ] 3 tests in fast/forms/switch regularly timeout
-fast/forms/switch/pointer-tracking.html [ Timeout ]
-
 # webkit.org/b/288409 [ MacOS iOS ] 3x imported/w3c/web-platform-tests/navigation-api/navigation are consistent failures 
 imported/w3c/web-platform-tests/navigation-api/navigation-activation/activation-traverse-not-in-entries.html [ Failure ]
 imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-forward.html [ Failure ]
@@ -7685,12 +7681,6 @@ webkit.org/b/286594 http/wpt/cache-storage/quota-third-party.https.html [ Pass F
 webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
 
 # webkit.org/b/286934 [ Debug ] ipc/create-media-source-with-invalid-constraints-crash.html [ Skip ]
-
-# webkit.org/b/287098 fast/forms/switch/click-animation-twice-fast.html [ Timeout ]
-
-# webkit.org/b/287181 [ iOS ] 2x fast/forms/switch/pointer-tracking-there-and-back-again*.html are constant timeouts
-fast/forms/switch/pointer-tracking-there-and-back-again-rtl.html [ Timeout ]
-fast/forms/switch/pointer-tracking-there-and-back-again.html [ Timeout ]
 
 webkit.org/b/287204 [ Release ] fast/forms/date/date-input-rendering-basic.html [ Pass Failure ]
 
