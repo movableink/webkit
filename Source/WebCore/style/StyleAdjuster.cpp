@@ -313,7 +313,7 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
 {
     auto types = parentTypes;
 
-#if ENABLE(WHEEL_EVENT_REGIONS)
+#if ENABLE(WHEEL_EVENT_REGIONS) || ENABLE(TOUCH_EVENT_REGIONS)
     auto findListeners = [&](auto& eventName, auto type, auto nonPassiveType) {
         auto* eventListenerVector = eventTarget.eventTargetData()->eventListenerMap.find(eventName);
         if (!eventListenerVector)
@@ -332,10 +332,19 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
         if (!isPassiveOnly)
             types.add(nonPassiveType);
     };
-
+#endif
+#if ENABLE(WHEEL_EVENT_REGIONS)
     if (eventTarget.hasEventListeners()) {
         findListeners(eventNames().wheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
         findListeners(eventNames().mousewheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+    }
+#endif
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    if (eventTarget.hasEventListeners()) {
+        findListeners(eventNames().touchstartEvent, EventListenerRegionType::TouchStart, EventListenerRegionType::NonPassiveTouchStart);
+        findListeners(eventNames().touchendEvent, EventListenerRegionType::TouchEnd, EventListenerRegionType::NonPassiveTouchEnd);
+        findListeners(eventNames().touchcancelEvent, EventListenerRegionType::TouchCancel, EventListenerRegionType::NonPassiveTouchCancel);
+        findListeners(eventNames().touchmoveEvent, EventListenerRegionType::TouchMove, EventListenerRegionType::NonPassiveTouchMove);
     }
 #endif
 

@@ -1157,10 +1157,18 @@ enum class FontLoadingBehavior : uint8_t {
     Optional
 };
 
-enum class EventListenerRegionType : uint8_t {
-    Wheel           = 1 << 0,
-    NonPassiveWheel = 1 << 1,
-    MouseClick      = 1 << 2,
+enum class EventListenerRegionType : uint16_t {
+    Wheel                 = 1 << 0,
+    NonPassiveWheel       = 1 << 1,
+    MouseClick            = 1 << 2,
+    TouchStart            = 1 << 3,
+    NonPassiveTouchStart  = 1 << 4,
+    TouchEnd              = 1 << 5,
+    NonPassiveTouchEnd    = 1 << 6,
+    TouchCancel           = 1 << 7,
+    NonPassiveTouchCancel = 1 << 8,
+    TouchMove             = 1 << 9,
+    NonPassiveTouchMove   = 1 << 10,
 };
 
 enum class MathStyle : bool {

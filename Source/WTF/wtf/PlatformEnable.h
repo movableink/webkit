@@ -565,6 +565,10 @@
 #define ENABLE_WHEEL_EVENT_REGIONS 0
 #endif
 
+#if !defined(ENABLE_TOUCH_EVENT_REGIONS)
+#define ENABLE_TOUCH_EVENT_REGIONS 0
+#endif
+
 #if !defined(ENABLE_WRITING_TOOLS)
 #define ENABLE_WRITING_TOOLS 0
 #endif

@@ -2057,6 +2057,10 @@ bool RenderLayerBacking::maintainsEventRegion() const
     if (renderer().page().shouldBuildInteractionRegions())
         return true;
 #endif
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    if (renderer().document().hasTouchEventHandlers())
+        return true;
+#endif
 
     if (m_owningLayer.isRenderViewLayer())
         return false;
@@ -3892,6 +3896,16 @@ static RefPtr<Pattern> patternForEventListenerRegionType(EventListenerRegionType
             return { "sync"_s, { 0, 9 }, SRGBA<uint8_t> { 200, 0, 0, 128 } };
         case EventListenerRegionType::MouseClick:
             break;
+        case EventListenerRegionType::TouchStart:
+        case EventListenerRegionType::TouchMove:
+        case EventListenerRegionType::TouchEnd:
+        case EventListenerRegionType::TouchCancel:
+            return { "touch"_s, { }, Color::lightGray.colorWithAlphaByte(128) };
+        case EventListenerRegionType::NonPassiveTouchStart:
+        case EventListenerRegionType::NonPassiveTouchEnd:
+        case EventListenerRegionType::NonPassiveTouchCancel:
+        case EventListenerRegionType::NonPassiveTouchMove:
+            return { "sync touch"_s, { 0, 9 }, SRGBA<uint8_t> { 200, 200, 0, 128 } };
         }
         ASSERT_NOT_REACHED();
         return { ""_s, { }, Color::black };

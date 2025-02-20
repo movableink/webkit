@@ -39,7 +39,7 @@ class FloatRect;
 class FloatSize;
 class IntPoint;
 
-enum class EventListenerRegionType : uint8_t;
+enum class EventListenerRegionType : uint16_t;
 enum class TouchAction : uint8_t;
 }
 

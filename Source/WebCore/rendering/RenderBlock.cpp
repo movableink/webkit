@@ -1280,6 +1280,11 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
         needsTraverseDescendants |= document().hasWheelEventHandlers();
         LOG_WITH_STREAM(EventRegions, stream << "  has wheel event handlers: " << document().hasWheelEventHandlers());
 #endif
+#if ENABLE(TOUCH_EVENT_REGIONS)
+        needsTraverseDescendants |= document().hasTouchEventHandlers();
+        LOG_WITH_STREAM(EventRegions, stream << "  has touch event handlers: " << document().hasTouchEventHandlers());
+#endif
+
 #if ENABLE(EDITABLE_REGION)
         // We treat the entire text control as editable to match users' expectation even
         // though it's actually the inner text element of the control that is editable.

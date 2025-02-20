@@ -58,7 +58,7 @@ class ScrollingTreeOverflowScrollProxyNode;
 class ScrollingTreePositionedNode;
 class ScrollingTreeScrollingNode;
 class ScrollingTreeFrameHostingNode;
-enum class EventListenerRegionType : uint8_t;
+enum class EventListenerRegionType : uint16_t;
 
 using FramesPerSecond = unsigned;
 using PlatformDisplayID = uint32_t;
