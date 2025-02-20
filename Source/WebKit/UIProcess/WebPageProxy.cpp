@@ -9583,7 +9583,8 @@ void WebPageProxy::backForwardAddItemShared(IPC::Connection& connection, Ref<Fra
     if (RefPtr targetFrame = WebFrameProxy::webFrame(navigatedFrameState->frameID)) {
         if (RefPtr pendingChildBackForwardItem = targetFrame->takePendingChildBackForwardItem())
             return pendingChildBackForwardItem->setChild(WTFMove(navigatedFrameState));
-    }
+    } else
+        return;
 
     RefPtr provisionalPage = m_provisionalPage;
     const bool isRemoteFrameNavigation = m_legacyMainFrameProcess != *process && (!provisionalPage || provisionalPage->process() != *process);
