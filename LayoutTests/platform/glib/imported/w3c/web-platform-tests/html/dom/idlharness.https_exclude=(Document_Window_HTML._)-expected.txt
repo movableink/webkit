@@ -1357,6 +1357,7 @@ PASS SVGElement interface: attribute oncanplaythrough
 PASS SVGElement interface: attribute onchange
 PASS SVGElement interface: attribute onclick
 PASS SVGElement interface: attribute onclose
+PASS SVGElement interface: attribute oncommand
 FAIL SVGElement interface: attribute oncontextlost assert_true: The prototype object must have a property "oncontextlost" expected true got false
 PASS SVGElement interface: attribute oncontextmenu
 FAIL SVGElement interface: attribute oncontextrestored assert_true: The prototype object must have a property "oncontextrestored" expected true got false

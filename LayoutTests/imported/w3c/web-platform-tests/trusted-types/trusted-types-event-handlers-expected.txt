@@ -196,6 +196,8 @@ CONSOLE MESSAGE: This requires a TrustedScript value else it violates the follow
 CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
 CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
 CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
+CONSOLE MESSAGE: This requires a TrustedScript value else it violates the following Content Security Policy directive: "require-trusted-types-for 'script'"
 
 PASS Event handler onclick should be blocked.
 PASS Event handler onchange should be blocked.
@@ -222,6 +224,7 @@ PASS Event handler div.oncanplaythrough should be blocked.
 PASS Event handler div.onchange should be blocked.
 PASS Event handler div.onclick should be blocked.
 PASS Event handler div.onclose should be blocked.
+PASS Event handler div.oncommand should be blocked.
 PASS Event handler div.oncontentvisibilityautostatechange should be blocked.
 PASS Event handler div.oncontextmenu should be blocked.
 PASS Event handler div.oncopy should be blocked.

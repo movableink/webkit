@@ -644,6 +644,7 @@ namespace WebCore {
     macro(onbackgroundfetchfail) \
     macro(onbackgroundfetchabort) \
     macro(onbackgroundfetchclick) \
+    macro(oncommand) \
     macro(oncookiechange) \
     macro(onnotificationclick) \
     macro(onnotificationclose) \

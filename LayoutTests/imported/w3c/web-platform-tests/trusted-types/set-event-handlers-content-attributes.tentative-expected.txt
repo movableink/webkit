@@ -65,6 +65,12 @@ PASS g.setAttribute(onclose, "unsafe_handler()") calls default policy
 PASS g.setAttributeNS(onclose, "unsafe_handler()") calls default policy
 PASS mrow.setAttribute(onclose, "unsafe_handler()") calls default policy
 PASS mrow.setAttributeNS(onclose, "unsafe_handler()") calls default policy
+PASS DIV.setAttribute(oncommand, "unsafe_handler()") calls default policy
+PASS DIV.setAttributeNS(oncommand, "unsafe_handler()") calls default policy
+PASS g.setAttribute(oncommand, "unsafe_handler()") calls default policy
+PASS g.setAttributeNS(oncommand, "unsafe_handler()") calls default policy
+PASS mrow.setAttribute(oncommand, "unsafe_handler()") calls default policy
+PASS mrow.setAttributeNS(oncommand, "unsafe_handler()") calls default policy
 PASS DIV.setAttribute(oncontextmenu, "unsafe_handler()") calls default policy
 PASS DIV.setAttributeNS(oncontextmenu, "unsafe_handler()") calls default policy
 PASS g.setAttribute(oncontextmenu, "unsafe_handler()") calls default policy
