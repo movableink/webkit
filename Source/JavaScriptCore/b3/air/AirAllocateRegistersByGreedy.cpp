@@ -832,9 +832,19 @@ private:
             return mayBeCoalescable(inst) ? inst.args[0].tmp() : Tmp();
         };
 
+        auto isLiveAt = [&](Tmp tmp, Point point) {
+            if (activeIntervals[tmp])
+                return true;
+            // Tmp may have had a dead def at point (e.g. clobber).
+            auto& intervals = m_map[tmp].liveRange.intervals();
+            if (intervals.isEmpty())
+                return false;
+            return intervals.first().contains(point);
+        };
+
         // Remove def from any coalescable pair of a live tmp. We now know from liveness analysis
         // that these pairs are not coalescable.
-        auto pruneCoalescable = [&](Inst& inst, Tmp def) {
+        auto pruneCoalescable = [&](Inst& inst, Tmp def, Point point) {
             TmpData& defData = m_map[def];
             if (!defData.coalescables.size())
                 return;
@@ -842,7 +852,7 @@ private:
             dataLogLnIf(verbose(), "Checking affinity ", inst, " def=", def, " movSrc=", movSrc);
             defData.coalescables.removeAllMatching([&](TmpData::CoalescableWith& with) {
                 ASSERT(with.tmp != def);
-                if (with.tmp != movSrc && activeIntervals[with.tmp]) {
+                if (with.tmp != movSrc && isLiveAt(with.tmp, point)) {
                     dataLogLnIf(verbose(), "Pruning affinity ", def, " ", with.tmp);
                     m_map[with.tmp].coalescables.removeAllMatching([def](TmpData::CoalescableWith& with) {
                         return with.tmp == def;
@@ -886,6 +896,7 @@ private:
         // Second pass: Run liveness analysis and build the LiveRange for each Tmp. Also,
         // prune conflicts from the coalescables.
         BasicBlock* blockAfter = nullptr;
+        Vector<Tmp, 8> earlyUses, earlyDefs, lateUses, lateDefs;
         for (size_t blockIndex = m_code.size(); blockIndex--;) {
             BasicBlock* block = m_code[blockIndex];
             if (!block)
@@ -919,23 +930,34 @@ private:
                 Inst& inst = block->at(instIndex);
                 Point positionOfEarly = positionOfHead + instIndex * pointsPerInst;
 
+                lateUses.shrink(0);
+                lateDefs.shrink(0);
+                earlyUses.shrink(0);
+                earlyDefs.shrink(0);
                 inst.forEachTmp([&](Tmp& tmp, Arg::Role role, Bank, Width) {
-                    auto& interval = activeIntervals[tmp];
                     if (Arg::isLateUse(role))
-                        interval |= lateInterval(positionOfEarly);
-                    if (Arg::isLateDef(role)) {
-                        interval |= lateInterval(positionOfEarly);
-                        closeInterval(tmp);
-                        pruneCoalescable(inst, tmp);
-                    }
+                        lateUses.append(tmp);
+                    if (Arg::isLateDef(role))
+                        lateDefs.append(tmp);
                     if (Arg::isEarlyUse(role))
-                        interval |= earlyInterval(positionOfEarly);
-                    if (Arg::isEarlyDef(role)) {
-                        interval |= earlyInterval(positionOfEarly);
-                        closeInterval(tmp);
-                        pruneCoalescable(inst, tmp);
-                    }
+                        earlyUses.append(tmp);
+                    if (Arg::isEarlyDef(role))
+                        earlyDefs.append(tmp);
                 });
+                for (Tmp tmp : lateUses)
+                    activeIntervals[tmp] |= lateInterval(positionOfEarly);
+                for (Tmp tmp : lateDefs) {
+                    activeIntervals[tmp] |= lateInterval(positionOfEarly);
+                    closeInterval(tmp);
+                    pruneCoalescable(inst, tmp, positionOfEarly + 1);
+                }
+                for (Tmp tmp : earlyUses)
+                    activeIntervals[tmp] |= earlyInterval(positionOfEarly);
+                for (Tmp tmp : earlyDefs) {
+                    activeIntervals[tmp] |= earlyInterval(positionOfEarly);
+                    closeInterval(tmp);
+                    pruneCoalescable(inst, tmp, positionOfEarly);
+                }
                 if (inst.kind.opcode == Patch) {
                     auto clobberReg = [&](Reg reg, Interval interval) {
                         Tmp tmp = Tmp(reg);
