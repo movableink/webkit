@@ -876,6 +876,8 @@ http/tests/security/contentSecurityPolicy/xsl-redirect-blocked.html [ Skip ] # F
 http/tests/security/contentSecurityPolicy/audioworklet-script-src-allowed.html [ Skip ] # Timeout
 http/tests/security/contentSecurityPolicy/audioworklet-script-src-blocked.html [ Skip ] # Timeout
 
+http/tests/security/contentSecurityPolicy/block-all-mixed-content/insecure-iframe-in-main-frame.html [ Failure Pass ]
+
 http/tests/security/cookie-module-import-propagate.html [ Skip ] # Failure
 http/tests/security/cookie-module-import.html [ Skip ] # Failure
 http/tests/security/cookie-module-propagate.html [ Skip ] # Failure
@@ -1315,7 +1317,8 @@ fast/dom/Window/window-focus-self.html [ Failure ]
 fast/dom/Window/window-resize-and-move-arguments.html [ Failure ]
 fast/dom/Window/window-resize.html [ Failure ]
 
-http/tests/dom/noreferrer-window-not-targetable.html [ Failure ]
+webkit.org/b/288006 http/tests/dom/noreferrer-window-not-targetable.html [ Failure Pass ]
+webkit.org/b/288006 http/tests/dom/noopener-window-not-targetable.html [ Failure Pass ]
 
  
 #//////////////////////////////////////////////////////////////////////////////////////////
