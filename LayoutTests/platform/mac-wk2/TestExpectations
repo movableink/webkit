@@ -1951,8 +1951,6 @@ webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
 
 webkit.org/b/286693 [ Sequoia Debug arm64 ] media/video-canvas-createPattern.html [ Pass Failure ]
 
-webkit.org/b/286843 [ Debug ] imported/w3c/web-platform-tests/screen-orientation/orientation-reading.html [ Pass Failure ]
-
 webkit.org/b/287040 [ Sonoma arm64 ] fast/webgpu/ftoi.html [ Skip ]
 
 webkit.org/b/286653 [ Sequoia ] pdf/images/jpeg2000-embed-pdf.html [ Pass Failure ]
@@ -2015,6 +2013,7 @@ webkit.org/b/288043 [ Release ] inspector/canvas/create-context-bitmaprenderer.h
 webkit.org/b/288053 imported/w3c/web-platform-tests/fetch/http-cache/invalidate.any.serviceworker.html [ Pass Failure ]
 
 webkit.org/b/288118 imported/w3c/web-platform-tests/css/selectors/invalidation/fullscreen-pseudo-class-in-has.html [ Pass Failure ]
+webkit.org/b/288118 imported/w3c/web-platform-tests/screen-orientation/orientation-reading.html [ Pass Failure ]
 
 webkit.org/b/288119 imported/w3c/web-platform-tests/preload/preload-type-match.html [ Pass Failure ]
 
