@@ -2006,3 +2006,5 @@ webkit.org/b/288006 http/tests/dom/noreferrer-window-not-targetable.html [ Failu
 [ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/fullscreen-pseudo-class-in-has.html [ Pass Failure ]
 
 webkit.org/b/288025 http/wpt/mediarecorder/MediaRecorder-AV-audio-video-dataavailable.html [ Pass Failure ]
+
+webkit.org/b/288036 [ Debug ] http/wpt/mediarecorder/MediaRecorder-matroska-AV-audio-video-dataavailable.html [ Skip ]
