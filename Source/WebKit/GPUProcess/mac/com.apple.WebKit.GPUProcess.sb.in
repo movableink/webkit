@@ -176,9 +176,20 @@
         (iokit-user-client-class "IOFramebufferSharedUserClient"))
 
     ;; These are needed for Encrypted Media on some hardware (MacMini8,1 for example)
+    (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+        (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+            (iokit-user-client-class "AppleIntelMEUserClient")
+            (apply-message-filter
+                (allow (with report) (with telemetry)
+                    iokit-async-external-method
+                    iokit-external-method
+                    iokit-external-trap)))
+        ;; else
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-user-client-class "AppleIntelMEUserClient")))
+
     (allow IOKIT_OPEN_USER_CLIENT
         (iokit-user-client-class
-            "AppleIntelMEUserClient"
             "AppleSNBFBUserClient"))
 
     ;; QuartzCore
