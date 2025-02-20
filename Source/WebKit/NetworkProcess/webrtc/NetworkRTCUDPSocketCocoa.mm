@@ -80,7 +80,7 @@ private:
     void setListeningPort(int);
 
     WebCore::LibWebRTCSocketIdentifier m_identifier;
-    Ref<IPC::Connection> m_connection;
+    const Ref<IPC::Connection> m_connection;
     bool m_isFirstParty { false };
     bool m_isKnownTracker { false };
     bool m_shouldBypassRelay { false };
