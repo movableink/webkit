@@ -51,18 +51,6 @@ static const InlineLayoutUnit textWrapPrettyShrinkability = 10;
 // Defines the maximum shrink/stretch factor allowed for text-wrap-pretty.
 static const float textWrapPrettyMaxStretch = 2;
 static const float textWrapPrettyMaxShrink = 2;
-struct EntryBalance {
-    float accumulatedCost { std::numeric_limits<float>::infinity() };
-    size_t previousBreakIndex { 0 };
-};
-
-struct EntryPretty {
-    float accumulatedCost { std::numeric_limits<float>::infinity() };
-    size_t previousBreakIndex { 0 };
-    InlineLayoutUnit lastLineWidth { 0 };
-    bool endsWithHyphen { false };
-    auto operator<=>(const EntryPretty&) const = default;
-};
 
 static bool validLineWidthPretty(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth)
 {
@@ -90,7 +78,6 @@ static float computeCostPretty(InlineLayoutUnit candidateLineWidth, InlineLayout
 {
     // Keeping the last line width longer than 20% of the previous is a heuristic to avoid orphan and "orphan-like" paragraph endings
     // (lines that have more than one word but are still sufficiently short to appear like an orphan)
-    // FIXME: add consecutive hyphenation detection.
     // FIXME: add support for river minimization.
     if (breakIndex == numberOfBreakOpportunities - 1) {
         const auto minimumLastLineWidth = lastLineWidth * 0.2;
@@ -154,6 +141,11 @@ static bool cannotConstrainInlineItem(const InlineItem& inlineItem)
     return false;
 }
 
+static PreviousLine buildPreviousLine(size_t lineIndex, LineLayoutResult lineLayoutResult)
+{
+    return PreviousLine { lineIndex, lineLayoutResult.contentGeometry.trailingOverflowingContentWidth, !lineLayoutResult.inlineContent.isEmpty() && lineLayoutResult.inlineContent.last().isLineBreak(), !lineLayoutResult.inlineContent.isEmpty(), lineLayoutResult.directionality.inlineBaseDirection, WTFMove(lineLayoutResult.floatContent.suspendedFloats) };
+}
+
 InlineContentConstrainer::InlineContentConstrainer(InlineFormattingContext& inlineFormattingContext, const InlineItemList& inlineItemList, const HorizontalConstraints& horizontalConstraints)
     : m_inlineFormattingContext(inlineFormattingContext)
     , m_inlineItemList(inlineItemList)
@@ -187,13 +179,21 @@ void InlineContentConstrainer::checkCanConstrainInlineItems()
     }
 }
 
-std::optional<size_t> InlineContentConstrainer::buildLineWithHyphenationFrom(size_t)
+InlineContentConstrainer::EntryPretty InlineContentConstrainer::layoutSingleLineForPretty(InlineItemRange layoutRange, InlineLayoutUnit idealLineWidth, EntryPretty lastValidEntry)
 {
-    // TODO: Check that hyphenation is enabled. Lay out a line from the last valid breakpoint.
-    // TODO: Split the hyphenated inlineItem into two inline text items.
-    // TODO: Return the next valid breakpoint.
-    // TODO: This will also change numberOfBreakOpportunities and we should update state[].
-    return { };
+    auto lineBuilder = LineBuilder { m_inlineFormattingContext, m_horizontalConstraints, m_inlineItemList };
+    InlineRect lineInitialRect = InlineRect { 0.f, m_horizontalConstraints.logicalLeft, idealLineWidth, 0.f };
+    LineLayoutResult lineLayoutResult = lineBuilder.layoutInlineContent({ layoutRange, lineInitialRect }, lastValidEntry.previousLine);
+    auto lineEnd = InlineFormattingUtils::leadingInlineItemPositionForNextLine(lineLayoutResult.inlineItemRange.end, lastValidEntry.lineEnd, !lineLayoutResult.floatContent.hasIntrusiveFloat.isEmpty() || !lineLayoutResult.floatContent.placedFloats.isEmpty(), layoutRange.end);
+    return { lastValidEntry.accumulatedCost,
+        // This function is only called when there are no more viable break points for PrettifyRange.
+        // Use the last valid entry's accumulated cost as we must use this breakpoint no matter what.
+        layoutRange.startIndex(),
+        lastValidEntry.lineIndex + 1,
+        lineLayoutResult.contentGeometry.logicalWidth,
+        lineEnd,
+        buildPreviousLine(lastValidEntry.lineIndex + 1, lineLayoutResult)
+    };
 }
 
 void InlineContentConstrainer::initialize()
@@ -248,7 +248,7 @@ void InlineContentConstrainer::initialize()
 
         layoutRange.start = InlineFormattingUtils::leadingInlineItemPositionForNextLine(lineLayoutResult.inlineItemRange.end, previousLineEnd, !lineLayoutResult.floatContent.hasIntrusiveFloat.isEmpty() || !lineLayoutResult.floatContent.placedFloats.isEmpty(), layoutRange.end);
         previousLineEnd = layoutRange.start;
-        previousLine = PreviousLine { lineIndex, lineLayoutResult.contentGeometry.trailingOverflowingContentWidth, !lineLayoutResult.inlineContent.isEmpty() && lineLayoutResult.inlineContent.last().isLineBreak(), !lineLayoutResult.inlineContent.isEmpty(), lineLayoutResult.directionality.inlineBaseDirection, WTFMove(lineLayoutResult.floatContent.suspendedFloats) };
+        previousLine = buildPreviousLine(lineIndex, lineLayoutResult);
         lineIndex++;
     }
 
@@ -532,18 +532,26 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
             break;
 
         auto cost = computeCostPretty(firstLineCandidateWidth, idealLineWidth, breakIndex, numberOfBreakOpportunities, idealLineWidth);
-        if (cost < std::numeric_limits<float>::infinity())
+        if (cost < state[breakIndex].accumulatedCost) {
             lastValidBreakpoint = std::max(lastValidBreakpoint.value_or(0), breakIndex);
-        state[breakIndex].accumulatedCost = cost;
-        state[breakIndex].lastLineWidth = firstLineCandidateWidth;
+            state[breakIndex].accumulatedCost = cost;
+            state[breakIndex].previousBreakIndex = range.startIndex();
+            state[breakIndex].lineIndex = state[range.startIndex()].lineIndex + 1;
+            state[breakIndex].lastLineWidth = firstLineCandidateWidth;
+            state[breakIndex].lineEnd = { .index = breakIndex, .offset = 0 };
+            auto lineInitialRect = InlineRect { 0.f, m_horizontalConstraints.logicalLeft, firstLineCandidateWidth, 0.f };
+            auto lineBuilder = LineBuilder { m_inlineFormattingContext, m_horizontalConstraints, m_inlineItemList };
+            auto lineLayoutResult = lineBuilder.layoutInlineContent({ { range.startIndex(), breakIndex }, lineInitialRect }, state[range.startIndex()].previousLine);
+            state[breakIndex].previousLine = buildPreviousLine(state[breakIndex].lineIndex, lineLayoutResult);
+        }
     }
 
     // If we are unable to build a valid line from without hyphenation,
     // try to build a valid line using hyphenation from the beginning.
     if (!lastValidBreakpoint.has_value()) {
-        // If hyphenation does not create a valid solution, we should return early.
-        if (!buildLineWithHyphenationFrom(breakOpportunities[0]).has_value())
-            return { };
+        auto newEntry = layoutSingleLineForPretty({ breakOpportunities[0], range.endIndex() }, idealLineWidth, state[breakOpportunities[0]]);
+        state[newEntry.lineEnd.index] = newEntry;
+        lastValidBreakpoint = newEntry.lineEnd.index;
     }
     ASSERT(lastValidBreakpoint.has_value());
 
@@ -566,9 +574,11 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
         // Try to find a solution using hyphenation.
         if (firstStartIndex>lastValidBreakpoint.value()) {
             // If hyphenation does not create a valid solution, we should return early.
-            if (!buildLineWithHyphenationFrom(lastValidBreakpoint.value()).has_value())
-                return { };
+            auto newEntry = layoutSingleLineForPretty({ lastValidBreakpoint.value(), range.endIndex() }, idealLineWidth, state[lastValidBreakpoint.value()]);
+            state[newEntry.lineEnd.index] = newEntry;
+            lastValidBreakpoint = newEntry.lineEnd.index;
         }
+
         // Evaluate all possible lines that break before m_inlineItemList[end]
         auto innerSlidingWidth = slidingWidth;
         for (size_t startIndex = firstStartIndex; startIndex < breakIndex; startIndex++) {
@@ -576,6 +586,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
             ASSERT(start != range.startIndex());
             innerSlidingWidth.advanceStartTo(start);
             auto candidateLineWidth = computeLineWidthFromSlidingWidth(textIndent, innerSlidingWidth);
+            // TODO: update candidateLineWidth here using state[startIndex].lineEnd.offset.
             auto candidateLineCost = computeCostPretty(candidateLineWidth, idealLineWidth, breakIndex, numberOfBreakOpportunities, state[startIndex].lastLineWidth);
             auto accumulatedCost = candidateLineCost + state[startIndex].accumulatedCost;
 
@@ -583,6 +594,12 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
                 state[breakIndex].accumulatedCost = accumulatedCost;
                 state[breakIndex].previousBreakIndex = startIndex;
                 state[breakIndex].lastLineWidth = candidateLineWidth;
+                state[breakIndex].lineEnd = { .index = breakIndex, .offset = 0 };
+                state[breakIndex].lineIndex = state[startIndex].lineIndex + 1;
+                auto lineInitialRect = InlineRect { 0.f, m_horizontalConstraints.logicalLeft, candidateLineWidth, 0.f };
+                auto lineBuilder = LineBuilder { m_inlineFormattingContext, m_horizontalConstraints, m_inlineItemList };
+                auto lineLayoutResult = lineBuilder.layoutInlineContent({ { startIndex, breakIndex }, lineInitialRect }, state[startIndex].previousLine);
+                state[breakIndex].previousLine = buildPreviousLine(state[breakIndex].lineIndex, lineLayoutResult);
                 lastValidBreakpoint = std::max(lastValidBreakpoint.value(), breakIndex);
             }
         }
@@ -592,15 +609,14 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
     if (std::isinf(state[numberOfBreakOpportunities - 1].accumulatedCost))
         return { };
     // breaks[i] equals the index into m_inlineItemList before which the ith line will break
-    Vector<size_t> breaks;
+    Vector<LayoutUnit> widths;
     size_t breakIndex = numberOfBreakOpportunities - 1;
     do {
-        breaks.append(breakOpportunities[breakIndex]);
+        widths.append(state[breakIndex].lastLineWidth);
         breakIndex = state[breakIndex].previousBreakIndex;
     } while (breakIndex);
-    breaks.reverse();
-
-    return computeLineWidthsFromBreaks(range, breaks, isFirstChunk);
+    widths.reverse();
+    return widths;
 }
 
 InlineLayoutUnit InlineContentConstrainer::inlineItemWidth(size_t inlineItemIndex, bool useFirstLineStyle) const

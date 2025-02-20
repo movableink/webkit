@@ -44,10 +44,24 @@ public:
 private:
     friend struct SlidingWidth;
 
+    struct EntryBalance {
+        float accumulatedCost { std::numeric_limits<float>::infinity() };
+        size_t previousBreakIndex { 0 };
+    };
+
+    struct EntryPretty {
+        float accumulatedCost { std::numeric_limits<float>::infinity() };
+        size_t previousBreakIndex { 0 };
+        size_t lineIndex { 0 };
+        InlineLayoutUnit lastLineWidth { 0 };
+        InlineItemPosition lineEnd { };
+        std::optional<PreviousLine> previousLine { };
+    };
+
     void initialize();
     void updateCachedWidths();
     void checkCanConstrainInlineItems();
-    std::optional<size_t> buildLineWithHyphenationFrom(size_t lastValidBreakpoint);
+    EntryPretty layoutSingleLineForPretty(InlineItemRange layoutRange, InlineLayoutUnit idealLineWidth, EntryPretty lastValidEntry);
 
     std::optional<Vector<LayoutUnit>> balanceRangeWithLineRequirement(InlineItemRange, InlineLayoutUnit idealLineWidth, size_t numberOfLines, bool isFirstChunk);
     std::optional<Vector<LayoutUnit>> balanceRangeWithNoLineRequirement(InlineItemRange, InlineLayoutUnit idealLineWidth, bool isFirstChunk);
