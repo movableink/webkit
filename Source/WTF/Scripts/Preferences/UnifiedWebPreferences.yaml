@@ -8642,21 +8642,6 @@ WebExtensionSidebarEnabled:
     WebCore:
       default: false
 
-WebExtensionWebDriverEnabled:
-  type: bool
-  status: testable
-  category: extensions
-  humanReadableName: "WebExtensions in WebDriver"
-  humanReadableDescription: "Enable support for WebExtensions in WebDriver"
-  condition: ENABLE(WK_WEB_EXTENSIONS_IN_WEBDRIVER)
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
-
 WebGLDraftExtensionsEnabled:
   type: bool
   status: testable
