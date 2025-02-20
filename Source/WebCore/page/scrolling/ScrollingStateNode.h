@@ -171,7 +171,7 @@ public:
             ASSERT(m_representation == GraphicsLayerRepresentation);
             return LayerRepresentation(m_graphicsLayer.get());
         case PlatformLayerRepresentation:
-            return m_graphicsLayer ? platformLayerFromGraphicsLayer(*m_graphicsLayer) : nullptr;
+            return m_graphicsLayer ? platformLayerFromGraphicsLayer(Ref { *m_graphicsLayer }) : nullptr;
         case PlatformLayerIDRepresentation:
             return LayerRepresentation(m_layerID);
         }
