@@ -2018,3 +2018,8 @@ webkit.org/b/288118 imported/w3c/web-platform-tests/screen-orientation/orientati
 webkit.org/b/288119 imported/w3c/web-platform-tests/preload/preload-type-match.html [ Pass Failure ]
 
 webkit.org/b/288120 [ Sonoma+ Release ] fast/animation/request-animation-frame-throttling-lowPowerMode.html [ Pass Failure ]
+
+# webkit.org/b/288150 [macOS Debug ] ASSERTION FAILED void WTF::RefCountedBase::applyRefDerefThreadingCheck() const
+[ Debug ] imported/w3c/web-platform-tests/service-workers/service-worker/historical.https.any.serviceworker.html [ Pass Crash ]
+[ Debug ] imported/w3c/web-platform-tests/service-workers/service-worker/update-no-cache-request-headers.https.html [ Pass Crash ]
+[ Debug ] imported/w3c/web-platform-tests/service-workers/service-worker/xhr-content-length.https.window.html [ Pass Crash ]
