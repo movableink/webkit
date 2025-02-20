@@ -213,6 +213,10 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapGetOrInsertComputed, (JSGlobalObject* g
                 RETURN_IF_EXCEPTION(scope, { });
             }
 
+            // FIXME: rdar://145147128 can we optimize this more to detect a rehash like Map does?
+
+            // Call to valueCallback can modify our state, so we need to check if we re-hashed
+            index = map->findBucketIndex(keyCell, hash).first;
             map->addBucket(vm, keyCell, value, hash, index);
         }
     }
