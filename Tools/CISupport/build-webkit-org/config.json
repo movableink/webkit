@@ -519,7 +519,7 @@
                   {
                     "name": "GTK-Linux-64-bit-Release-Perf", "factory": "DownloadAndPerfTestFactory",
                     "platform": "gtk", "configuration": "release", "architectures": ["x86_64"],
-                    "additionalArguments": ["--display-server=xorg"],
+                    "additionalArguments": ["--display-server=wayland"],
                     "workernames": ["gtk-linux-bot-8"]
                   },
                   {
