@@ -10149,13 +10149,13 @@ void WebPageProxy::contextMenuItemSelected(const WebContextMenuItemData& item, c
     case ContextMenuItemTagShowColors:
         showColorPanel();
         return;
+#endif // PLATFORM(MAC)
 
     case ContextMenuItemTagInspectElement:
         // The web process can no longer demand Web Inspector to show, so handle that part here.
         protectedInspector()->show();
         // The actual element-selection is still handled in the web process, so we break instead of return.
         break;
-#endif // PLATFORM(MAC)
 
     case ContextMenuItemTagShowSpellingPanel:
         if (!TextChecker::spellingUIIsShowing())
