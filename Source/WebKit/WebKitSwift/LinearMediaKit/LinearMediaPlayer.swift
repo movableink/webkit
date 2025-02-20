@@ -50,10 +50,13 @@ private class SwiftOnlyData: NSObject {
     @Published var presentationState: WKSLinearMediaPresentationState = .inline
 
     // Will be set to true if we entered via Docking Environment button (inline) or false otherwise.
-    var enteredFromInline: Bool = false
+    var enteredFromInline = false
 
     var spatialVideoMetadata: WKSLinearMediaSpatialVideoMetadata?
     var videoReceiverEndpointObserver: Cancellable?
+
+    var isImmersiveVideo = false
+    weak var defaultEntity: Entity?
 }
 
 enum LinearMediaPlayerErrors: Error {
@@ -127,7 +130,17 @@ enum LinearMediaPlayerErrors: Error {
 #endif
         }
     }
-    var isImmersiveVideo = false
+    var isImmersiveVideo: Bool {
+        get { swiftOnlyData.isImmersiveVideo }
+        set {
+            swiftOnlyData.isImmersiveVideo = newValue
+            // FIXME: Should limit ContentTypePublisher to only publish changes to contentType if we have already created a default entity
+            // rather than having to use a isImmersive attribute.
+            if !swiftOnlyData.enteredFromInline && swiftOnlyData.defaultEntity != nil {
+                contentType = newValue ? .immersive : .planar
+            }
+        }
+    }
     var enteredFromInline: Bool {
         get { swiftOnlyData.enteredFromInline }
     }
@@ -245,7 +258,7 @@ extension WKSLinearMediaPlayer {
     private func maybeCreateSpatialOrImmersiveEntity() {
 #if canImport(LinearMediaKit, _version: 211.60.3)
         if swiftOnlyData.enteredFromInline || swiftOnlyData.peculiarEntity != nil || contentType == .immersive { return }
-        if isImmersiveVideo {
+        if swiftOnlyData.isImmersiveVideo {
             contentType = .immersive
             return
         }
@@ -261,7 +274,7 @@ extension WKSLinearMediaPlayer {
     }
 
     private func maybeClearSpatialOrImmersiveEntity() {
-        if isImmersiveVideo && contentType == .immersive {
+        if swiftOnlyData.isImmersiveVideo && contentType == .immersive {
             contentType = .none
             return
         }
@@ -713,10 +726,13 @@ extension WKSLinearMediaPlayer: @retroactive Playable {
         }
 #endif
         if let captionLayer {
-            return ContentType.makeEntity(captionLayer: captionLayer)
+            let entity = ContentType.makeEntity(captionLayer: captionLayer)
+            swiftOnlyData.defaultEntity = entity
+            return entity
         }
 
         Logger.linearMediaPlayer.error("\(#function): failed to find spatialVideoMetadata and captionLayer")
+        swiftOnlyData.defaultEntity = nil
         return nil
     }
 
