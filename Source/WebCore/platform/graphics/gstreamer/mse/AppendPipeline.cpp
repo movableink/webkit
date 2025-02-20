@@ -816,6 +816,10 @@ std::pair<AppendPipeline::CreateTrackResult, AppendPipeline::Track*> AppendPipel
     }
 
     size_t newTrackIndex = m_tracks.size();
+    size_t webkitTrackIndex = std::count_if(m_tracks.begin(), m_tracks.end(), [streamType](std::unique_ptr<Track>& other) -> bool {
+        return other->streamType == streamType;
+    });
+
     TrackID preferredTrackId = getStreamIdFromPad(demuxerSrcPad).value_or((static_cast<TrackID>(newTrackIndex)));
     auto assignedTrackId = m_sourceBufferPrivate.tryRegisterTrackId(preferredTrackId);
     TrackID trackId = assignedTrackId.value_or(preferredTrackId);
@@ -823,11 +827,12 @@ std::pair<AppendPipeline::CreateTrackResult, AppendPipeline::Track*> AppendPipel
     if (!assignedTrackId)
         GST_WARNING_OBJECT(pipeline(), "Failed to register track ID %" PRIu64 ", this could cause ID collisions", preferredTrackId);
 
-    GST_DEBUG_OBJECT(pipeline(), "Creating new AppendPipeline::Track with id '%" PRIu64 "'", trackId);
+    GST_DEBUG_OBJECT(pipeline(), "Creating new AppendPipeline::Track with type %s, index %" PRIu64" and id '%" PRIu64 "'", streamTypeToString(streamType), webkitTrackIndex, trackId);
     m_tracks.append(makeUnique<Track>(trackId, streamType, parsedCaps, presentationSize));
     Track& track = *m_tracks.at(newTrackIndex);
+
     track.initializeElements(this, GST_BIN(m_pipeline.get()));
-    track.webKitTrack = makeWebKitTrack(newTrackIndex, trackId);
+    track.webKitTrack = makeWebKitTrack(track, webkitTrackIndex, trackId);
     hookTrackEvents(track);
     return { CreateTrackResult::TrackCreated, &track };
 }
@@ -911,10 +916,8 @@ void AppendPipeline::linkPadWithTrack(GstPad* demuxerSrcPad, Track& track)
     GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN(m_pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, "append-pipeline-after-link");
 }
 
-Ref<WebCore::TrackPrivateBase> AppendPipeline::makeWebKitTrack(int trackIndex, TrackID trackId)
+Ref<WebCore::TrackPrivateBase> AppendPipeline::makeWebKitTrack(Track& appendPipelineTrack, int trackIndex, TrackID trackId)
 {
-    Track& appendPipelineTrack = *m_tracks.at(trackIndex);
-
     RefPtr<WebCore::TrackPrivateBase> track;
     TrackPrivateBaseGStreamer* gstreamerTrack = nullptr;
     // FIXME: AudioTrackPrivateGStreamer etc. should probably use pads of the playback pipeline rather than the append pipeline.
