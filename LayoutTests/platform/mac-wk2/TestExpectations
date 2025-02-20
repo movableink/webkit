@@ -2011,3 +2011,4 @@ webkit.org/b/288036 [ Debug ] http/wpt/mediarecorder/MediaRecorder-matroska-AV-a
 
 webkit.org/b/288043 [ Release ] inspector/canvas/create-context-bitmaprenderer.html [ Pass Failure ]
  
+webkit.org/b/288053 imported/w3c/web-platform-tests/fetch/http-cache/invalidate.any.serviceworker.html [ Pass Failure ]
