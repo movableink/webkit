@@ -229,9 +229,10 @@
 namespace WebKit {
 using namespace WebCore;
 
-WebContextMenuProxyMac::WebContextMenuProxyMac(NSView *webView, WebPageProxy& page, ContextMenuContextData&& context, const UserData& userData)
+WebContextMenuProxyMac::WebContextMenuProxyMac(NSView *webView, WebPageProxy& page, FrameInfoData&& frameInfo, ContextMenuContextData&& context, const UserData& userData)
     : WebContextMenuProxy(page, WTFMove(context), userData)
     , m_webView(webView)
+    , m_frameInfo(WTFMove(frameInfo))
 {
 }
 
@@ -246,7 +247,7 @@ void WebContextMenuProxyMac::contextMenuItemSelected(const WebContextMenuItemDat
     clearServicesMenu();
 #endif
 
-    page()->contextMenuItemSelected(item);
+    page()->contextMenuItemSelected(item, m_frameInfo);
 }
 
 #if ENABLE(WRITING_TOOLS)

@@ -1540,9 +1540,9 @@ void WebChromeClient::handleClickForDataDetectionResult(const DataDetectorElemen
 
 #if ENABLE(SERVICE_CONTROLS)
 
-void WebChromeClient::handleSelectionServiceClick(FrameSelection& selection, const Vector<String>& telephoneNumbers, const IntPoint& point)
+void WebChromeClient::handleSelectionServiceClick(WebCore::FrameIdentifier frameID, FrameSelection& selection, const Vector<String>& telephoneNumbers, const IntPoint& point)
 {
-    protectedPage()->handleSelectionServiceClick(selection, telephoneNumbers, point);
+    protectedPage()->handleSelectionServiceClick(frameID, selection, telephoneNumbers, point);
 }
 
 bool WebChromeClient::hasRelevantSelectionServices(bool isTextOnly) const
@@ -1550,14 +1550,14 @@ bool WebChromeClient::hasRelevantSelectionServices(bool isTextOnly) const
     return (isTextOnly && WebProcess::singleton().hasSelectionServices()) || WebProcess::singleton().hasRichContentServices();
 }
 
-void WebChromeClient::handleImageServiceClick(const IntPoint& point, Image& image, HTMLImageElement& element)
+void WebChromeClient::handleImageServiceClick(WebCore::FrameIdentifier frameID, const IntPoint& point, Image& image, HTMLImageElement& element)
 {
-    protectedPage()->handleImageServiceClick(point, image, element);
+    protectedPage()->handleImageServiceClick(frameID, point, image, element);
 }
 
-void WebChromeClient::handlePDFServiceClick(const IntPoint& point, HTMLAttachmentElement& element)
+void WebChromeClient::handlePDFServiceClick(WebCore::FrameIdentifier frameID, const IntPoint& point, HTMLAttachmentElement& element)
 {
-    protectedPage()->handlePDFServiceClick(point, element);
+    protectedPage()->handlePDFServiceClick(frameID, point, element);
 }
 
 #endif

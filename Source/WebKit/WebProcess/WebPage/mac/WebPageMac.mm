@@ -637,7 +637,7 @@ void WebPage::handleTelephoneNumberClick(const String& number, const IntPoint& p
 
 #if ENABLE(SERVICE_CONTROLS)
 
-void WebPage::handleSelectionServiceClick(FrameSelection& selection, const Vector<String>& phoneNumbers, const IntPoint& point)
+void WebPage::handleSelectionServiceClick(WebCore::FrameIdentifier frameID, FrameSelection& selection, const Vector<String>& phoneNumbers, const IntPoint& point)
 {
     auto range = selection.selection().firstRange();
     if (!range)
@@ -647,13 +647,21 @@ void WebPage::handleSelectionServiceClick(FrameSelection& selection, const Vecto
     if (selectionString.isNull())
         return;
 
+    RefPtr webFrame = WebProcess::singleton().webFrame(frameID);
+    if (!webFrame)
+        return;
+
     flushPendingEditorStateUpdate();
-    send(Messages::WebPageProxy::ShowContextMenu(ContextMenuContextData(point, WTFMove(selectionString), phoneNumbers, selection.selection().isContentEditable()), UserData()));
+    send(Messages::WebPageProxy::ShowContextMenuFromFrame(webFrame->info(), ContextMenuContextData(point, WTFMove(selectionString), phoneNumbers, selection.selection().isContentEditable()), UserData()));
 }
 
-void WebPage::handleImageServiceClick(const IntPoint& point, Image& image, HTMLImageElement& element)
+void WebPage::handleImageServiceClick(WebCore::FrameIdentifier frameID, const IntPoint& point, Image& image, HTMLImageElement& element)
 {
-    send(Messages::WebPageProxy::ShowContextMenu(ContextMenuContextData {
+    RefPtr webFrame = WebProcess::singleton().webFrame(frameID);
+    if (!webFrame)
+        return;
+
+    send(Messages::WebPageProxy::ShowContextMenuFromFrame(webFrame->info(), ContextMenuContextData {
         point,
         image,
         element.isContentEditable(),
@@ -664,9 +672,13 @@ void WebPage::handleImageServiceClick(const IntPoint& point, Image& image, HTMLI
     }, { }));
 }
 
-void WebPage::handlePDFServiceClick(const IntPoint& point, HTMLAttachmentElement& element)
+void WebPage::handlePDFServiceClick(WebCore::FrameIdentifier frameID, const IntPoint& point, HTMLAttachmentElement& element)
 {
-    send(Messages::WebPageProxy::ShowContextMenu(ContextMenuContextData {
+    RefPtr webFrame = WebProcess::singleton().webFrame(frameID);
+    if (!webFrame)
+        return;
+
+    send(Messages::WebPageProxy::ShowContextMenuFromFrame(webFrame->info(), ContextMenuContextData {
         point,
         element.isContentEditable(),
         element.renderBox()->absoluteContentQuad().enclosingBoundingBox(),

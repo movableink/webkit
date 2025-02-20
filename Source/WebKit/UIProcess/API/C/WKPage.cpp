@@ -3058,12 +3058,11 @@ void WKPageSetMayStartMediaWhenInWindow(WKPageRef pageRef, bool mayStartMedia)
     toImpl(pageRef)->setMayStartMediaWhenInWindow(mayStartMedia);
 }
 
-
-void WKPageSelectContextMenuItem(WKPageRef pageRef, WKContextMenuItemRef item)
+void WKPageSelectContextMenuItem(WKPageRef pageRef, WKContextMenuItemRef item, WKFrameInfoRef frameInfo)
 {
     CRASH_IF_SUSPENDED;
 #if ENABLE(CONTEXT_MENUS)
-    toImpl(pageRef)->contextMenuItemSelected((toImpl(item)->data()));
+    toImpl(pageRef)->contextMenuItemSelected((toImpl(item)->data()), toImpl(frameInfo)->frameInfoData());
 #else
     UNUSED_PARAM(pageRef);
     UNUSED_PARAM(item);

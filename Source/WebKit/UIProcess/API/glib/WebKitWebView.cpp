@@ -27,6 +27,7 @@
 #include "APINavigation.h"
 #include "APIPageConfiguration.h"
 #include "APISerializedScriptValue.h"
+#include "FrameInfoData.h"
 #include "ImageOptions.h"
 #include "NotificationService.h"
 #include "PageLoadState.h"
@@ -4944,7 +4945,7 @@ WebKitDownload* webkit_web_view_download_uri(WebKitWebView* webView, const char*
     g_return_val_if_fail(uri, nullptr);
 
     Ref page = getPage(webView);
-    auto downloadProxy = page->configuration().processPool().download(page->websiteDataStore(), page.ptr(), ResourceRequest { String::fromUTF8(uri) });
+    auto downloadProxy = page->configuration().processPool().download(page->websiteDataStore(), page.ptr(), ResourceRequest { String::fromUTF8(uri) }, { });
     auto download = webkitDownloadCreate(downloadProxy, webView);
 #if ENABLE(2022_GLIB_API)
     downloadProxy->setDidStartCallback([session = GRefPtr<WebKitNetworkSession> { webView->priv->networkSession }, download = download.get()](auto* downloadProxy) {

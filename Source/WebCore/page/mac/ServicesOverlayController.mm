@@ -667,7 +667,7 @@ void ServicesOverlayController::handleClick(const IntPoint& clickPoint, DataDete
             return plainText(range);
         });
 
-        page->chrome().client().handleSelectionServiceClick(focusedOrMainFrame->selection(), WTFMove(selectedTelephoneNumbers), windowPoint);
+        page->chrome().client().handleSelectionServiceClick(focusedOrMainFrame->frameID(), focusedOrMainFrame->selection(), WTFMove(selectedTelephoneNumbers), windowPoint);
     } else if (highlight.type() == DataDetectorHighlight::Type::TelephoneNumber)
         page->chrome().client().handleTelephoneNumberClick(plainText(highlight.range()), windowPoint, frameView->contentsToWindow(focusedOrMainFrame->editor().firstRectForRange(highlight.range())));
 }

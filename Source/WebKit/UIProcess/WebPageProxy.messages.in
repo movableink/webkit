@@ -289,8 +289,7 @@ messages -> WebPageProxy {
     HidePopupMenu()
 
 #if ENABLE(CONTEXT_MENUS)
-    ShowContextMenu(WebKit::ContextMenuContextData contextMenuContextData, WebKit::UserData userData)
-    ShowContextMenuFromFrame(WebCore::FrameIdentifier frameID, WebKit::ContextMenuContextData contextMenuContextData, WebKit::UserData userData)
+    ShowContextMenuFromFrame(struct WebKit::FrameInfoData frameInfo, WebKit::ContextMenuContextData contextMenuContextData, WebKit::UserData userData)
 #endif
 
     [EnabledBy=ServiceWorkersEnabled] DidFinishServiceWorkerPageRegistration(bool success)
