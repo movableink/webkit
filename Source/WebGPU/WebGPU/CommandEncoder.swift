@@ -165,7 +165,7 @@ extension WebGPU.CommandEncoder {
         return result
     }
     public func clearTextureIfNeeded(destination: WGPUImageCopyTexture, slice: UInt) {
-        return clearTextureIfNeeded(destination: destination, slice: slice, device: m_device.ptr(), blitCommandEncoder: m_blitCommandEncoder)
+        return WebGPU.CommandEncoder.clearTextureIfNeeded(destination, slice, m_device.ptr(), m_blitCommandEncoder)
     }
     private func clearTextureIfNeeded(destination: WGPUImageCopyTexture , slice: UInt, device: WebGPU.Device , blitCommandEncoder: MTLBlitCommandEncoder?)
     {
@@ -849,7 +849,7 @@ extension WebGPU.CommandEncoder {
                 mtlDescriptor.sampleBufferAttachments[0].endOfVertexSampleIndex = Int(descriptor.timestampWrites.pointee.endOfPassWriteIndex)
                 mtlDescriptor.sampleBufferAttachments[0].startOfFragmentSampleIndex = Int(descriptor.timestampWrites.pointee.endOfPassWriteIndex)
                 mtlDescriptor.sampleBufferAttachments[0].endOfFragmentSampleIndex = Int(descriptor.timestampWrites.pointee.endOfPassWriteIndex)
-                m_device.trackTimestampsBuffer(m_commandBuffer, counterSampleBuffer);
+                m_device.ptr().trackTimestampsBuffer(m_commandBuffer, counterSampleBuffer);
             } else {
                 mtlDescriptor.sampleBufferAttachments[0].sampleBuffer = counterSampleBuffer != nil ? counterSampleBuffer : m_device.ptr().timestampsBuffer(m_commandBuffer, 4)
                 mtlDescriptor.sampleBufferAttachments[0].startOfVertexSampleIndex = 0
@@ -2077,8 +2077,8 @@ extension WebGPU.CommandEncoder {
             computePassDescriptor.sampleBufferAttachments[0].sampleBuffer = counterSampleBuffer != nil ? computePassDescriptor.sampleBufferAttachments[0].sampleBuffer : m_device.ptr().timestampsBuffer(m_commandBuffer, 2)
             computePassDescriptor.sampleBufferAttachments[0].startOfEncoderSampleIndex = timestampWrites != nil ? Int(timestampWrites.pointee.beginningOfPassWriteIndex) : 0
             computePassDescriptor.sampleBufferAttachments[0].endOfEncoderSampleIndex = timestampWrites != nil ? Int(timestampWrites.pointee.endOfPassWriteIndex) : 1
-            if counterSampleBuffer {
-                m_device.trackTimestampsBuffer(m_commandBuffer, counterSampleBuffer);
+            if counterSampleBuffer != nil {
+                m_device.ptr().trackTimestampsBuffer(m_commandBuffer, counterSampleBuffer);
             }
         }
         guard let computeCommandEncoder = m_commandBuffer.makeComputeCommandEncoder(descriptor: computePassDescriptor) else {
