@@ -1079,7 +1079,6 @@ platform/graphics/ca/cocoa/PlatformCAAnimationCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/cg/GraphicsContextGLCG.cpp
 platform/graphics/cg/PDFDocumentImage.cpp
-platform/graphics/cocoa/CMUtilities.mm
 platform/graphics/cocoa/FontCacheCoreText.cpp
 platform/graphics/cocoa/ImageAdapterCocoa.mm
 platform/graphics/cocoa/SourceBufferParser.cpp

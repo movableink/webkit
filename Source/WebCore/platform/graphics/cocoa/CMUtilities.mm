@@ -61,8 +61,9 @@ CAAudioStreamDescription audioStreamDescriptionFromAudioInfo(const AudioInfo& in
     AudioStreamBasicDescription asbd { };
     asbd.mFormatID = info.codecName.value;
     std::span<const uint8_t> cookieDataSpan { };
-    if (info.cookieData)
-        cookieDataSpan = info.cookieData->span();
+    RefPtr cookieData = info.cookieData;
+    if (cookieData)
+        cookieDataSpan = cookieData->span();
     UInt32 size = sizeof(asbd);
     if (auto error = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, cookieDataSpan.size(), cookieDataSpan.data(), &size, &asbd)) {
         RELEASE_LOG_DEBUG(Media, "kAudioFormatProperty_FormatInfo failed with error %d (%.4s)", static_cast<int>(error), (char *)&error);
@@ -78,9 +79,10 @@ CAAudioStreamDescription audioStreamDescriptionFromAudioInfo(const AudioInfo& in
 static RetainPtr<CMFormatDescriptionRef> createAudioFormatDescription(const AudioInfo& info)
 {
     auto streamDescription = audioStreamDescriptionFromAudioInfo(info);
-    std::span<const uint8_t> cookie { };
-    if (info.cookieData)
-        cookie = info.cookieData->span();
+    std::span<const uint8_t> cookie;
+    RefPtr cookieData = info.cookieData;
+    if (cookieData)
+        cookie = cookieData->span();
     return createAudioFormatDescription(streamDescription, cookie);
 }
 
@@ -188,8 +190,8 @@ RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrackInfo(const Tra
 
     RetainPtr extensions = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 5, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
-    if (videoInfo.atomData) {
-        RetainPtr data = videoInfo.atomData->createCFData();
+    if (RefPtr atomData = videoInfo.atomData) {
+        RetainPtr data = atomData->createCFData();
         ASSERT(videoInfo.codecName == kCMVideoCodecType_VP9 || videoInfo.codecName == 'vp08' || videoInfo.codecName == kCMVideoCodecType_H264 || videoInfo.codecName == kCMVideoCodecType_HEVC || videoInfo.codecName == kCMVideoCodecType_AV1);
         CFStringRef keyName = [](auto codec) {
             switch (codec) {
@@ -276,7 +278,7 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(const MediaSamp
     if (!samples.info())
         return makeUnexpected("No TrackInfo found");
 
-    RetainPtr format = formatDescription ? retainPtr(formatDescription) : createFormatDescriptionFromTrackInfo(*samples.info());
+    RetainPtr format = formatDescription ? retainPtr(formatDescription) : createFormatDescriptionFromTrackInfo(*samples.protectedInfo());
     if (!format)
         return makeUnexpected("No CMFormatDescription available");
 
@@ -296,7 +298,8 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(const MediaSamp
     packetSizes.reserveInitialCapacity(samples.size());
     auto cumulativeTrimDuration = MediaTime::zeroTime();
     for (auto& sample : samples) {
-        auto blockBuffer = sample.data->createCMBlockBuffer();
+        RefPtr sampleData = sample.data;
+        auto blockBuffer = sampleData->createCMBlockBuffer();
         if (!blockBuffer)
             return makeUnexpected("Couldn't create CMBlockBuffer");
 
@@ -308,7 +311,7 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(const MediaSamp
                 return makeUnexpected("CMBlockBufferAppendBufferReference failed");
         }
         packetTimings.append({ PAL::toCMTime(sample.duration), PAL::toCMTime(sample.presentationTime), PAL::toCMTime(sample.decodeTime) });
-        packetSizes.append(sample.data->size());
+        packetSizes.append(sampleData->size());
         cumulativeTrimDuration += sample.trimInterval.first;
     }
 
@@ -329,7 +332,7 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(const MediaSamp
 
             // Attach HDR10+ (aka SMPTE ST 2094-40) metadata, if present:
             if (samples[i].hdrMetadataType == HdrMetadataType::SmpteSt209440 && samples[i].hdrMetadata)
-                CFDictionarySetValue(attachments, PAL::kCMSampleAttachmentKey_HDR10PlusPerFrameData, samples[i].hdrMetadata->createCFData().get());
+                CFDictionarySetValue(attachments, PAL::kCMSampleAttachmentKey_HDR10PlusPerFrameData, Ref { *samples[i].hdrMetadata }->createCFData().get());
         }
     } else if (samples.isAudio() && samples.discontinuity())
         PAL::CMSetAttachment(rawSampleBuffer, PAL::kCMSampleBufferAttachmentKey_FillDiscontinuitiesWithSilence, *samples.discontinuity() ? kCFBooleanTrue : kCFBooleanFalse, kCMAttachmentMode_ShouldPropagate);
@@ -407,7 +410,8 @@ PacketDurationParser::PacketDurationParser(const AudioInfo& info)
     AudioStreamBasicDescription asbd { };
     asbd.mFormatID = info.codecName.value;
     UInt32 size = sizeof(asbd);
-    auto cookieDataSpan = info.cookieData->span();
+    RefPtr cookieData = info.cookieData;
+    auto cookieDataSpan = cookieData->span();
     auto error = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, cookieDataSpan.size(), cookieDataSpan.data(), &size, &asbd);
     if (error || !info.rate) {
         RELEASE_LOG_ERROR(Media, "createAudioFormatDescription failed with error %d (%.4s)", (int)error, (char*)&error);

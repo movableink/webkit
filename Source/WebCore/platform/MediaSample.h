@@ -239,6 +239,7 @@ public:
 
     void setInfo(RefPtr<const TrackInfo>&& info) { m_info = WTFMove(info); }
     const TrackInfo* info() const { return m_info.get(); }
+    RefPtr<const TrackInfo> protectedInfo() const { return m_info; }
     MediaTime presentationTime() const { return isEmpty() ? MediaTime::invalidTime() : first().presentationTime; }
     MediaTime duration() const
     {
