@@ -742,7 +742,10 @@ void Session::switchToFrame(RefPtr<JSON::Value>&& frameID, Function<void(Command
             parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
 
         if (auto frameIndex = frameID->asInteger()) {
-            ASSERT(*frameIndex >= 0 && *frameIndex < std::numeric_limits<unsigned short>::max());
+            if (*frameIndex < 0 || *frameIndex > std::numeric_limits<unsigned short>::max()) {
+                completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument));
+                return;
+            }
             parameters->setInteger("ordinal"_s, *frameIndex);
         } else {
             String frameElementID = extractElementID(*frameID);
