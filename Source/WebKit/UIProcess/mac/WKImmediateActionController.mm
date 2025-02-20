@@ -58,16 +58,16 @@
 
 @implementation WKImmediateActionController
 
-- (instancetype)initWithPage:(NakedRef<WebKit::WebPageProxy>)page view:(NSView *)view viewImpl:(NakedRef<WebKit::WebViewImpl>)viewImpl recognizer:(NSImmediateActionGestureRecognizer *)immediateActionRecognizer
+- (instancetype)initWithPage:(std::reference_wrapper<WebKit::WebPageProxy>)page view:(NSView *)view viewImpl:(std::reference_wrapper<WebKit::WebViewImpl>)viewImpl recognizer:(NSImmediateActionGestureRecognizer *)immediateActionRecognizer
 {
     self = [super init];
 
     if (!self)
         return nil;
 
-    _page = page.ptr();
+    _page = page.get();
     _view = view;
-    _viewImpl = viewImpl.ptr();
+    _viewImpl = viewImpl.get();
     _type = kWKImmediateActionNone;
     _immediateActionRecognizer = immediateActionRecognizer;
     _hasActiveImmediateAction = NO;

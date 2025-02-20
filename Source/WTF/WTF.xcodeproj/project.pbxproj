@@ -221,6 +221,8 @@
 		AD89B6B71E6415080090707F /* MemoryPressureHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AD89B6B51E6415080090707F /* MemoryPressureHandler.cpp */; };
 		AD89B6BA1E64150F0090707F /* MemoryPressureHandlerCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = AD89B6B91E64150F0090707F /* MemoryPressureHandlerCocoa.mm */; };
 		ADF2CE671E39F106006889DB /* MemoryFootprintCocoa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ADF2CE651E39F106006889DB /* MemoryFootprintCocoa.cpp */; };
+		BBEA08042CCFDB33000AC148 /* MallocCommon.h in Headers */ = {isa = PBXBuildFile; fileRef = BBEA08032CCFDB33000AC148 /* MallocCommon.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		BBFA08042CCFDB33000AC148 /* MallocCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBFA08032CCFDB33000AC148 /* MallocCommon.cpp */; settings = {ATTRIBUTES = (Private, ); }; };
 		BC05ACA62CEA70E500750CB1 /* VariantListOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = BC05ACA52CEA70E500750CB1 /* VariantListOperations.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		BC2C0C212D2C54A900FCFBA0 /* FlatteningVariantAdaptor.h in Headers */ = {isa = PBXBuildFile; fileRef = BC2C0C202D2C54A900FCFBA0 /* FlatteningVariantAdaptor.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		BC5267672C2726D600E422DD /* MakeString.h in Headers */ = {isa = PBXBuildFile; fileRef = BC5267662C2726D600E422DD /* MakeString.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -230,8 +232,6 @@
 		BCEA08042CCFDB33000AC148 /* VariantList.h in Headers */ = {isa = PBXBuildFile; fileRef = BCEA08032CCFDB33000AC148 /* VariantList.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C2BCFC401F61D13000C9222C /* Language.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2BCFC3E1F61D13000C9222C /* Language.cpp */; };
 		C2BCFC421F61D61600C9222C /* LanguageCF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2BCFC411F61D61600C9222C /* LanguageCF.cpp */; };
-		BBEA08042CCFDB33000AC148 /* MallocCommon.h in Headers */ = {isa = PBXBuildFile; fileRef = BBEA08032CCFDB33000AC148 /* MallocCommon.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		BBFA08042CCFDB33000AC148 /* MallocCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBFA08032CCFDB33000AC148 /* MallocCommon.cpp */; settings = {ATTRIBUTES = (Private, ); }; };
 		C2BCFC551F621F3F00C9222C /* LineEnding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2BCFC531F621F3F00C9222C /* LineEnding.cpp */; };
 		C805EF39E5F14481A96D39FC /* ASCIILiteral.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C6F050790D9C432A99085E75 /* ASCIILiteral.cpp */; };
 		CD5497AC15857D0300B5BC30 /* MediaTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CD5497AA15857D0300B5BC30 /* MediaTime.cpp */; };
@@ -532,7 +532,6 @@
 		DD3DC98627A4BF8E007E5B61 /* DebugUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 996B17841EBA441C007E10EB /* DebugUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98727A4BF8E007E5B61 /* UniqueArray.h in Headers */ = {isa = PBXBuildFile; fileRef = E300E521203D645F00DA79BE /* UniqueArray.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98827A4BF8E007E5B61 /* LockAlgorithm.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F0FCDDD1DD167F900CCAB53 /* LockAlgorithm.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		DD3DC98A27A4BF8E007E5B61 /* NakedRef.h in Headers */ = {isa = PBXBuildFile; fileRef = E32A207323C5902D0034A092 /* NakedRef.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98B27A4BF8E007E5B61 /* InstanceCounted.h in Headers */ = {isa = PBXBuildFile; fileRef = 5182C22C1F2BC7E60059BA7C /* InstanceCounted.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98C27A4BF8E007E5B61 /* NoLock.h in Headers */ = {isa = PBXBuildFile; fileRef = 0F0D85B317234CB100338210 /* NoLock.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98D27A4BF8E007E5B61 /* PackedRef.h in Headers */ = {isa = PBXBuildFile; fileRef = E36895CB23A445CD008DD4C8 /* PackedRef.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1584,6 +1583,8 @@
 		AD89B6B91E64150F0090707F /* MemoryPressureHandlerCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MemoryPressureHandlerCocoa.mm; sourceTree = "<group>"; };
 		ADF2CE641E39F106006889DB /* MemoryFootprint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MemoryFootprint.h; sourceTree = "<group>"; };
 		ADF2CE651E39F106006889DB /* MemoryFootprintCocoa.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryFootprintCocoa.cpp; sourceTree = "<group>"; };
+		BBEA08032CCFDB33000AC148 /* MallocCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MallocCommon.h; sourceTree = "<group>"; };
+		BBFA08032CCFDB33000AC148 /* MallocCommon.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MallocCommon.cpp; sourceTree = "<group>"; };
 		BC05ACA52CEA70E500750CB1 /* VariantListOperations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VariantListOperations.h; sourceTree = "<group>"; };
 		BC2C0C202D2C54A900FCFBA0 /* FlatteningVariantAdaptor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FlatteningVariantAdaptor.h; sourceTree = "<group>"; };
 		BC5267662C2726D600E422DD /* MakeString.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MakeString.h; sourceTree = "<group>"; };
@@ -1591,8 +1592,6 @@
 		BCE0DFA82D1865C4003F0349 /* CompactVariantOperations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CompactVariantOperations.h; sourceTree = "<group>"; };
 		BCE0DFAA2D18670B003F0349 /* VariantExtras.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VariantExtras.h; sourceTree = "<group>"; };
 		BCEA08032CCFDB33000AC148 /* VariantList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VariantList.h; sourceTree = "<group>"; };
-		BBEA08032CCFDB33000AC148 /* MallocCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MallocCommon.h; sourceTree = "<group>"; };
-		BBFA08032CCFDB33000AC148 /* MallocCommon.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MallocCommon.cpp; sourceTree = "<group>"; };
 		C2BCFC3E1F61D13000C9222C /* Language.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Language.cpp; sourceTree = "<group>"; };
 		C2BCFC3F1F61D13000C9222C /* Language.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Language.h; sourceTree = "<group>"; };
 		C2BCFC411F61D61600C9222C /* LanguageCF.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LanguageCF.cpp; sourceTree = "<group>"; };
@@ -1850,7 +1849,6 @@
 		E320BFE42A7CB712003C0B3A /* localematcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = localematcher.h; sourceTree = "<group>"; };
 		E324FAA228C9ADBA007089DF /* StringSearch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StringSearch.h; sourceTree = "<group>"; };
 		E32561122611B5B600A72CC5 /* RobinHoodHashSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RobinHoodHashSet.h; sourceTree = "<group>"; };
-		E32A207323C5902D0034A092 /* NakedRef.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NakedRef.h; sourceTree = "<group>"; };
 		E32AB4FF2B5CE35D00B9FAAE /* LazyRef.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LazyRef.h; sourceTree = "<group>"; };
 		E32AB5002B5CE35D00B9FAAE /* LazyUniqueRef.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LazyUniqueRef.h; sourceTree = "<group>"; };
 		E33667492722550900259122 /* Int128.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Int128.cpp; sourceTree = "<group>"; };
@@ -2394,7 +2392,6 @@
 				0F66B2821DC97BAB004A1D3F /* MonotonicTime.cpp */,
 				0F66B2831DC97BAB004A1D3F /* MonotonicTime.h */,
 				FE8225301B2A1E5B00BA68FD /* NakedPtr.h */,
-				E32A207323C5902D0034A092 /* NakedRef.h */,
 				51B07F532AB8797300E14EE9 /* NativePromise.cpp */,
 				5164042C2AB1D46B0042B1C3 /* NativePromise.h */,
 				0F5BF1651F2317830029D91D /* NaturalLoops.h */,
@@ -3495,7 +3492,6 @@
 				46F071BB2CDEA45300074E61 /* Mmap.h in Headers */,
 				DD3DC96827A4BF8E007E5B61 /* MonotonicTime.h in Headers */,
 				DD3DC96227A4BF8E007E5B61 /* NakedPtr.h in Headers */,
-				DD3DC98A27A4BF8E007E5B61 /* NakedRef.h in Headers */,
 				5164042D2AB1D46B0042B1C3 /* NativePromise.h in Headers */,
 				DD3DC8D827A4BF8E007E5B61 /* NaturalLoops.h in Headers */,
 				E396C11D2BE885D9000CBAE1 /* neon.h in Headers */,

@@ -28,7 +28,6 @@
 #if PLATFORM(MAC)
 
 #import "WKLayoutMode.h"
-#import <wtf/NakedRef.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/WeakPtr.h>
 
@@ -48,7 +47,7 @@ class WebViewImpl;
     WKLayoutMode _layoutMode;
 }
 
-+ (instancetype)layoutStrategyWithPage:(NakedRef<WebKit::WebPageProxy>)page view:(NSView *)view viewImpl:(NakedRef<WebKit::WebViewImpl>)webViewImpl mode:(WKLayoutMode)mode;
++ (instancetype)layoutStrategyWithPage:(std::reference_wrapper<WebKit::WebPageProxy>)page view:(NSView *)view viewImpl:(std::reference_wrapper<WebKit::WebViewImpl>)webViewImpl mode:(WKLayoutMode)mode;
 
 - (void)invalidate;
 

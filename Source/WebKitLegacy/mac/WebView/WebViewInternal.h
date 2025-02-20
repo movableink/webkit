@@ -50,7 +50,6 @@
 #import <functional>
 #import <wtf/Forward.h>
 #import <wtf/NakedPtr.h>
-#import <wtf/NakedRef.h>
 #import <wtf/RetainPtr.h>
 
 #if !TARGET_OS_IPHONE
@@ -318,7 +317,7 @@ WebLayoutMilestones kitLayoutMilestones(OptionSet<WebCore::LayoutMilestone>);
 - (void)_exitVideoFullscreen;
 #if PLATFORM(MAC)
 - (BOOL)_hasActiveVideoForControlsInterface;
-- (void)_setUpPlaybackControlsManagerForMediaElement:(NakedRef<WebCore::HTMLMediaElement>)mediaElement;
+- (void)_setUpPlaybackControlsManagerForMediaElement:(std::reference_wrapper<WebCore::HTMLMediaElement>)mediaElement;
 - (void)_clearPlaybackControlsManager;
 - (void)_playbackControlsMediaEngineChanged;
 #endif

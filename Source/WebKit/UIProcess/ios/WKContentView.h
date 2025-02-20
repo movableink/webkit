@@ -28,7 +28,6 @@
 #import "WKBrowsingContextController.h"
 #import "WKProcessGroup.h"
 #import <WebCore/InspectorOverlay.h>
-#import <wtf/NakedRef.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
 
@@ -75,7 +74,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 @property (nonatomic, readonly) const String& spatialTrackingLabel;
 #endif
 
-- (instancetype)initWithFrame:(CGRect)frame processPool:(NakedRef<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration webView:(WKWebView *)webView;
+- (instancetype)initWithFrame:(CGRect)frame processPool:(std::reference_wrapper<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration webView:(WKWebView *)webView;
 
 - (void)didUpdateVisibleRect:(CGRect)visibleRect
     unobscuredRect:(CGRect)unobscuredRect

@@ -51,7 +51,6 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/MathExtras.h>
 #import <wtf/NakedPtr.h>
-#import <wtf/NakedRef.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/WeakPtr.h>
@@ -60,14 +59,14 @@
 #import "WebKitSwiftSoftLink.h"
 
 @interface WKModelProcessModelPlayerProxyObjCAdapter : NSObject<WKSRKEntityDelegate>
-- (instancetype)initWithModelProcessModelPlayerProxy:(NakedRef<WebKit::ModelProcessModelPlayerProxy>)modelProcessModelPlayerProxy;
+- (instancetype)initWithModelProcessModelPlayerProxy:(std::reference_wrapper<WebKit::ModelProcessModelPlayerProxy>)modelProcessModelPlayerProxy;
 @end
 
 @implementation WKModelProcessModelPlayerProxyObjCAdapter {
     WeakPtr<WebKit::ModelProcessModelPlayerProxy> _modelProcessModelPlayerProxy;
 }
 
-- (instancetype)initWithModelProcessModelPlayerProxy:(NakedRef<WebKit::ModelProcessModelPlayerProxy>)modelProcessModelPlayerProxy
+- (instancetype)initWithModelProcessModelPlayerProxy:(std::reference_wrapper<WebKit::ModelProcessModelPlayerProxy>)modelProcessModelPlayerProxy
 {
     if (!(self = [super init]))
         return nil;

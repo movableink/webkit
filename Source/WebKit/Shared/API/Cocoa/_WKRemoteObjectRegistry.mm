@@ -106,7 +106,7 @@ struct PendingReply {
     return remoteObject.autorelease();
 }
 
-- (id)_initWithWebPage:(NakedRef<WebKit::WebPage>)page
+- (id)_initWithWebPage:(std::reference_wrapper<WebKit::WebPage>)page
 {
     if (!(self = [super init]))
         return nil;
@@ -116,7 +116,7 @@ struct PendingReply {
     return self;
 }
 
-- (id)_initWithWebPageProxy:(NakedRef<WebKit::WebPageProxy>)page
+- (id)_initWithWebPageProxy:(std::reference_wrapper<WebKit::WebPageProxy>)page
 {
     if (!(self = [super init]))
         return nil;

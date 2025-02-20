@@ -27,7 +27,6 @@
 
 #import <AppKit/AppKit.h>
 #import <wtf/CompletionHandler.h>
-#import <wtf/NakedRef.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/WeakPtr.h>
@@ -71,7 +70,7 @@ typedef enum FullScreenState : NSInteger FullScreenState;
 @property (readonly) NSRect finalFrame;
 @property (assign) NSArray *savedConstraints;
 
-- (id)initWithWindow:(NSWindow *)window webView:(NSView *)webView page:(NakedRef<WebKit::WebPageProxy>)page;
+- (id)initWithWindow:(NSWindow *)window webView:(NSView *)webView page:(std::reference_wrapper<WebKit::WebPageProxy>)page;
 
 - (WebCoreFullScreenPlaceholderView*)webViewPlaceholder;
 

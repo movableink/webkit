@@ -8907,14 +8907,14 @@ FORWARD(toggleUnderline)
     return mediaElement->hasAudio() || mediaElement->hasVideo();
 }
 
-- (void)_setUpPlaybackControlsManagerForMediaElement:(NakedRef<WebCore::HTMLMediaElement>)mediaElement
+- (void)_setUpPlaybackControlsManagerForMediaElement:(std::reference_wrapper<WebCore::HTMLMediaElement>)mediaElement
 {
-    if (_private->playbackSessionModel && _private->playbackSessionModel->mediaElement() == mediaElement.ptr())
+    if (_private->playbackSessionModel && _private->playbackSessionModel->mediaElement() == &mediaElement.get())
         return;
 
     if (!_private->playbackSessionModel)
         _private->playbackSessionModel = WebCore::PlaybackSessionModelMediaElement::create();
-    _private->playbackSessionModel->setMediaElement(mediaElement.ptr());
+    _private->playbackSessionModel->setMediaElement(&mediaElement.get());
 
     if (!_private->playbackSessionInterface)
         _private->playbackSessionInterface = WebCore::PlaybackSessionInterfaceMac::create(*_private->playbackSessionModel);

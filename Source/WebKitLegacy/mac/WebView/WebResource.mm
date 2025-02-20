@@ -264,7 +264,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     return self;
 }
 
-- (NakedRef<WebCore::ArchiveResource>)_coreResource
+- (std::reference_wrapper<WebCore::ArchiveResource>)_coreResource
 {
     return *_private->coreResource;
 }

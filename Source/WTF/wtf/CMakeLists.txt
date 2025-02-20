@@ -181,7 +181,6 @@ set(WTF_PUBLIC_HEADERS
     Mmap.h
     MonotonicTime.h
     NakedPtr.h
-    NakedRef.h
     NativePromise.h
     NaturalLoops.h
     NeverDestroyed.h

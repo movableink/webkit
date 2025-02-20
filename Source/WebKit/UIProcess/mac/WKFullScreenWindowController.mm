@@ -52,7 +52,6 @@
 #import <pal/spi/mac/NSWindowSPI.h>
 #import <pal/system/SleepDisabler.h>
 #import <wtf/BlockObjCExceptions.h>
-#import <wtf/NakedRef.h>
 
 static const NSTimeInterval DefaultWatchdogTimerInterval = 1;
 
@@ -94,7 +93,7 @@ static void makeResponderFirstResponderIfDescendantOfView(NSWindow *window, NSRe
 
 #pragma mark -
 #pragma mark Initialization
-- (id)initWithWindow:(NSWindow *)window webView:(NSView *)webView page:(NakedRef<WebKit::WebPageProxy>)page
+- (id)initWithWindow:(NSWindow *)window webView:(NSView *)webView page:(std::reference_wrapper<WebKit::WebPageProxy>)page
 {
     self = [super initWithWindow:window];
     if (!self)
@@ -124,7 +123,7 @@ static void makeResponderFirstResponderIfDescendantOfView(NSWindow *window, NSRe
     [self windowDidLoad];
     [window displayIfNeeded];
     _webView = webView;
-    _page = page.ptr();
+    _page = page.get();
 
     [self videoControlsManagerDidChange];
 
