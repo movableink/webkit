@@ -908,6 +908,47 @@ TEST(DocumentEditingContext, SpatialAndCurrentSelectionRequest_LimitContextToEdi
     }
 }
 
+TEST(DocumentEditingContext, SpatialAndCurrentSelectionRequest_LimitContextToVisibleText)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 980, 600)]);
+    [webView synchronouslyLoadHTMLString:DocumentEditingContextTestHelpers::applyAhemStyle(String {
+        "<body style='font-size: 16px; width: 100%; height: 100%;'>"
+        "    <p>Here's to the crazy ones.</p>"
+        "    <p id='target' style='color: tomato'>The misfits.</p>"
+        "    <p>The rebels.</p>"
+        "    <p>The troublemakers.</p>"
+        "    <div style='width: 1em; height: 1500px;'></div>"
+        "    <p>The round pegs in the square holes.</p>"
+        "    <div style='position: fixed; bottom: 0; right: 0;'>Bottom right</div>"
+        "    <script>"
+        "        getSelection().selectAllChildren(document.getElementById('target'));"
+        "    </script>"
+        "</body>"_s
+    })];
+
+    auto trimmedComponentsSeparatedByNewlines = [](const String& string) {
+        auto components = string.split('\n');
+        return WTF::compactMap(components, [](auto& component) -> std::optional<String> {
+            auto result = component.trim(isASCIIWhitespace);
+            if (result.isEmpty())
+                return std::nullopt;
+            return { result };
+        });
+    };
+
+    RetainPtr context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestSpatialAndCurrentSelection, UITextGranularityCharacter, 0, CGRectMake(1, 1, 978, 598))];
+    String selectedText = dynamic_objc_cast<NSString>([context selectedText]);
+    auto contextBeforeParts = trimmedComponentsSeparatedByNewlines(dynamic_objc_cast<NSString>([context contextBefore]));
+    auto contextAfterParts = trimmedComponentsSeparatedByNewlines(dynamic_objc_cast<NSString>([context contextAfter]));
+
+    EXPECT_EQ(contextBeforeParts.size(), 1U);
+    EXPECT_WK_STREQ("Here's to the crazy ones.", contextBeforeParts[0]);
+    EXPECT_WK_STREQ("The misfits.", selectedText);
+    EXPECT_EQ(contextAfterParts.size(), 2U);
+    EXPECT_WK_STREQ("The rebels.", contextAfterParts[0]);
+    EXPECT_WK_STREQ("The troublemakers.", contextAfterParts[1]);
+}
+
 TEST(DocumentEditingContext, RequestRectsInTextAreaAcrossWordWrappedLine)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);

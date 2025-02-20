@@ -5494,6 +5494,10 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
         return completionHandler(pluginView->documentEditingContext(WTFMove(request)));
 #endif
 
+    RefPtr view = frame->view();
+    if (!view)
+        return completionHandler({ });
+
     frame->protectedDocument()->updateLayout(LayoutOptions::IgnorePendingStylesheets);
 
     VisibleSelection selection = frame->selection().selection();
@@ -5502,6 +5506,7 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
     auto selectionRange = VisiblePositionRange { selection.visibleStart(), selection.visibleEnd() };
 
     bool isSpatialRequest = request.options.containsAny({ DocumentEditingContextRequest::Options::Spatial, DocumentEditingContextRequest::Options::SpatialAndCurrentSelection });
+    bool isSpatialRequestWithCurrentSelection = request.options.contains(DocumentEditingContextRequest::Options::SpatialAndCurrentSelection);
     bool wantsRects = request.options.contains(DocumentEditingContextRequest::Options::Rects);
     bool wantsMarkedTextRects = request.options.contains(DocumentEditingContextRequest::Options::MarkedTextRects);
 
@@ -5526,18 +5531,49 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
         // FIXME: We might need to be a bit more careful that we get something useful (test the other corners?).
         rangeOfInterest.start = visiblePositionForPointInRootViewCoordinates(*frame, request.rect.minXMinYCorner());
         rangeOfInterest.end = visiblePositionForPointInRootViewCoordinates(*frame, request.rect.maxXMaxYCorner());
+
+        if (isSpatialRequestWithCurrentSelection && !selection.isNoneOrOrphaned()) {
+            static constexpr auto maximumNumberOfLines = 10;
+            auto intersectsSpatialRect = [&](const VisiblePosition& position) {
+                FloatRect caretInRootView = view->contentsToRootView(position.absoluteCaretBounds());
+                return caretInRootView.intersects(request.rect);
+            };
+
+            auto startPositionNearSelection = [&] {
+                auto start = selectionRange.start;
+                unsigned lineCount = 0;
+                do {
+                    auto previous = previousLinePosition(start, start.lineDirectionPointForBlockDirectionNavigation());
+                    if (previous.isNull() || previous == start)
+                        break;
+                    start = WTFMove(previous);
+                    lineCount++;
+                } while (intersectsSpatialRect(start) && lineCount < maximumNumberOfLines);
+                return start;
+            }();
+
+            auto endPositionNearSelection = [&] {
+                auto end = selectionRange.end;
+                unsigned lineCount = 0;
+                do {
+                    auto next = nextLinePosition(end, end.lineDirectionPointForBlockDirectionNavigation());
+                    if (next.isNull() || next == end)
+                        break;
+                    end = WTFMove(next);
+                    lineCount++;
+                } while (intersectsSpatialRect(end) && lineCount < maximumNumberOfLines);
+                return end;
+            }();
+
+            rangeOfInterest.start = std::clamp(rangeOfInterest.start, startPositionNearSelection, endPositionNearSelection);
+            rangeOfInterest.end = std::clamp(rangeOfInterest.end, startPositionNearSelection, endPositionNearSelection);
+        }
         if (request.options.contains(DocumentEditingContextRequest::Options::SpatialAndCurrentSelection)) {
             if (RefPtr rootEditableElement = selection.rootEditableElement()) {
                 VisiblePosition startOfEditableRoot { firstPositionInOrBeforeNode(rootEditableElement.get()) };
                 VisiblePosition endOfEditableRoot { lastPositionInOrAfterNode(rootEditableElement.get()) };
-                auto clampToEditableRoot = [&](VisiblePosition& position) {
-                    if (position < startOfEditableRoot)
-                        position = startOfEditableRoot;
-                    else if (position > endOfEditableRoot)
-                        position = endOfEditableRoot;
-                };
-                clampToEditableRoot(rangeOfInterest.start);
-                clampToEditableRoot(rangeOfInterest.end);
+                rangeOfInterest.start = std::clamp(rangeOfInterest.start, startOfEditableRoot, endOfEditableRoot);
+                rangeOfInterest.end = std::clamp(rangeOfInterest.end, startOfEditableRoot, endOfEditableRoot);
             }
         }
     } else if (!selection.isNone())

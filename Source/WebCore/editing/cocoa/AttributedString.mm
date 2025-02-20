@@ -719,7 +719,7 @@ static std::optional<AttributedString::AttributeValue> extractValue(id value, Ta
     }
 #endif
     if ([value isKindOfClass:PlatformNSTextAttachment]) {
-        if ([value image] == webCoreTextAttachmentMissingPlatformImage())
+        if (isWebCoreTextAttachmentMissingPlatformImage(static_cast<CocoaImage *>([value image])))
             return { { TextAttachmentMissingImage() } };
         TextAttachmentFileWrapper textAttachment;
         if (auto accessibilityLabel = [value accessibilityLabel])
