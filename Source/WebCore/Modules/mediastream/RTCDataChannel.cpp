@@ -95,6 +95,8 @@ RTCDataChannel::RTCDataChannel(ScriptExecutionContext& context, std::unique_ptr<
 {
 }
 
+RTCDataChannel::~RTCDataChannel() = default;
+
 std::optional<unsigned short> RTCDataChannel::id() const
 {
     if (!m_options.id && m_handler)
