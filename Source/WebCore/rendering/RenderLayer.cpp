@@ -405,7 +405,7 @@ RenderLayer::~RenderLayer()
 
 RenderLayer::PaintedContentRequest::PaintedContentRequest(const RenderLayer& owningLayer)
 {
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     if (owningLayer.page().canDrawHDRContents())
         makePaintedHDRContentUnknown();
 #else
@@ -5774,10 +5774,9 @@ static bool hasVisibleBoxDecorationsOrBackground(const RenderElement& renderer)
     return renderer.hasVisibleBoxDecorations() || renderer.style().hasOutline();
 }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
 static bool isReplacedElementWithHDR(const RenderElement& renderer)
 {
-#if ENABLE(HDR_FOR_IMAGES)
     if (CheckedPtr imageRenderer = dynamicDowncast<RenderImage>(renderer)) {
         if (auto* cachedImage = imageRenderer->cachedImage()) {
             if (cachedImage->isHDR())
@@ -5785,7 +5784,6 @@ static bool isReplacedElementWithHDR(const RenderElement& renderer)
         }
         return false;
     }
-#endif
 
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
     if (CheckedPtr canavsRenderer = dynamicDowncast<RenderHTMLCanvas>(renderer)) {
@@ -5848,7 +5846,7 @@ static void determineNonLayerDescendantsPaintedContent(const RenderElement& rend
                 return;
         }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
         if (!request.isPaintedHDRContentSatisfied() && isReplacedElementWithHDR(*childElement)) {
             request.setHasPaintedHDRContent();
 
@@ -5869,7 +5867,7 @@ void RenderLayer::determineNonLayerDescendantsPaintedContent(PaintedContentReque
     WebCore::determineNonLayerDescendantsPaintedContent(renderer(), renderersTraversed, request);
 }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
 bool RenderLayer::isReplacedElementWithHDR() const
 {
     if (auto* imageDocument = dynamicDowncast<ImageDocument>(renderer().document())) {

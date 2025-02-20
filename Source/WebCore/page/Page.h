@@ -663,7 +663,7 @@ public:
 
     Document* outermostFullscreenDocument() const;
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     bool canDrawHDRContents() const;
 #endif
 

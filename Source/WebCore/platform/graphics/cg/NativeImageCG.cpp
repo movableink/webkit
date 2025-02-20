@@ -55,7 +55,7 @@ DestinationColorSpace PlatformImageNativeImageBackend::colorSpace() const
 
 Headroom PlatformImageNativeImageBackend::headroom() const
 {
-#if ENABLE(HDR_FOR_IMAGES)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     return CGImageGetContentHeadroom(m_platformImage.get());
 #else
     return Headroom::None;

@@ -444,7 +444,7 @@ void GraphicsLayer::setDrawsContent(bool b)
     m_drawsContent = b;
 }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
 void GraphicsLayer::setDrawsHDRContent(bool b)
 {
     ASSERT(m_type != Type::Structural);
@@ -984,7 +984,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     if (m_drawsContent && client().shouldDumpPropertyForLayer(this, "drawsContent"_s, options))
         ts << indent << "(drawsContent "_s << m_drawsContent << ")\n"_s;
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     if (m_drawsHDRContent)
         ts << indent << "(drawsHDRContent "_s << m_drawsHDRContent << ")\n"_s;
 #endif

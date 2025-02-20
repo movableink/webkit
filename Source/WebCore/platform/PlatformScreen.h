@@ -112,7 +112,7 @@ const ScreenProperties& getScreenProperties();
 WEBCORE_EXPORT const ScreenData* screenData(PlatformDisplayID screendisplayID);
 WEBCORE_EXPORT PlatformDisplayID primaryScreenDisplayID();
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
 WEBCORE_EXPORT void setScreenContentsFormatsForTesting(OptionSet<ContentsFormat>);
 OptionSet<ContentsFormat> screenContentsFormatsForTesting();
 #endif

@@ -73,7 +73,7 @@ public:
 
     virtual bool isUsingDisplayListDrawing(PlatformCALayer*) const { return false; }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     virtual bool drawsHDRContent() const { return false; }
 #endif
 

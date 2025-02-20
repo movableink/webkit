@@ -70,7 +70,7 @@ const ScreenData* screenData(PlatformDisplayID screenDisplayID)
     return &screenProperties().screenDataMap.begin()->value;
 }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
 void setScreenContentsFormatsForTesting(OptionSet<ContentsFormat> contentsFormats)
 {
     screenProperties().screenContentsFormatsForTesting = contentsFormats;

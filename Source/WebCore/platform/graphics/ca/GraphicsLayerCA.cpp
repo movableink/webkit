@@ -730,7 +730,7 @@ void GraphicsLayerCA::setDrawsContent(bool drawsContent)
     noteLayerPropertyChanged(DrawsContentChanged | DebugIndicatorsChanged);
 }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
 void GraphicsLayerCA::setDrawsHDRContent(bool drawsHDRContent)
 {
     if (drawsHDRContent == m_drawsHDRContent)
@@ -2143,7 +2143,7 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     if (m_uncommittedChanges & DrawsContentChanged)
         updateDrawsContent();
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     if (m_uncommittedChanges & DrawsHDRContentChanged)
         updateDrawsHDRContent();
 #endif
@@ -3307,7 +3307,7 @@ void GraphicsLayerCA::updateReplicatedLayers()
         m_layer->insertSublayer(*replicaRoot, 0);
 }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
 void GraphicsLayerCA::updateDrawsHDRContent()
 {
     auto contentsFormat = PlatformCALayer::contentsFormatForLayer(nullptr, this);
@@ -4625,7 +4625,7 @@ ASCIILiteral GraphicsLayerCA::layerChangeAsString(LayerChange layerChange)
 #if HAVE(CORE_MATERIAL)
     case LayerChange::AppleVisualEffectChanged: return "AppleVisualEffectChanged"_s;
 #endif
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     case LayerChange::DrawsHDRContentChanged: return "DrawsHDRContentChanged"_s;
 #endif
     }

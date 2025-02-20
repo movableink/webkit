@@ -98,7 +98,7 @@ public:
     void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
 
     Headroom headroom() const;
-#if ENABLE(HDR_FOR_IMAGES)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     bool isHDR() const { return headroom() > Headroom::None; }
 #endif
 

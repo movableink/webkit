@@ -424,7 +424,7 @@ public:
     bool drawsContent() const { return m_drawsContent; }
     WEBCORE_EXPORT virtual void setDrawsContent(bool);
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     bool drawsHDRContent() const { return m_drawsHDRContent; }
     WEBCORE_EXPORT virtual void setDrawsHDRContent(bool);
 #endif
@@ -822,7 +822,7 @@ protected:
     bool m_backfaceVisibility : 1;
     bool m_masksToBounds : 1;
     bool m_drawsContent : 1;
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     bool m_drawsHDRContent : 1 { false };
 #endif
     bool m_contentsVisible : 1;

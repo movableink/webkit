@@ -4033,7 +4033,7 @@
                 "no-limit"
             ],
             "codegen-properties": {
-                "settings-flag": "cssDynamicRangeLimitPropertyEnabled",
+                "settings-flag": "supportHDRDisplayEnabled",
                 "style-builder-converter": "DynamicRangeLimit",
                 "parser-function": "consumeDynamicRangeLimit",
                 "parser-grammar-unused": "<<values>> | <dynamic-range-limit-mix()>",

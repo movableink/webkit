@@ -4230,10 +4230,10 @@ void Page::setFullscreenAutoHideDuration(Seconds duration)
     });
 }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
 bool Page::canDrawHDRContents() const
 {
-    if (!(m_settings->hdrForImagesEnabled() || m_settings->canvasPixelFormatEnabled()))
+    if (!(m_settings->supportHDRDisplayEnabled() || m_settings->canvasPixelFormatEnabled()))
         return false;
 
     return screenSupportsHighDynamicRange();

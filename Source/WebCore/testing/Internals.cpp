@@ -3949,7 +3949,7 @@ void Internals::setScreenContentsFormatsForTesting(const Vector<Internals::Conte
         }
     }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     WebCore::setScreenContentsFormatsForTesting(contentsFormats);
 #else
     UNUSED_PARAM(contentsFormats);

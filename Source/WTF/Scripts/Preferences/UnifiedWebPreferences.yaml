@@ -1216,20 +1216,6 @@ CSSDPropertyEnabled:
     WebCore:
       default: false
 
-CSSDynamicRangeLimitPropertyEnabled:
-  type: bool
-  status: testable
-  category: css
-  humanReadableName: "CSS dynamic-range-limit"
-  humanReadableDescription: "Enable support for the CSS Color HDR Module Level 1 dynamic-range-limit CSS property"
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
-
 CSSFieldSizingEnabled:
   type: bool
   status: testable
@@ -3393,22 +3379,6 @@ GraphicsContextFiltersEnabled:
        default: true
      WebCore:
        default: true
-
-HDRForImagesEnabled:
-  type: bool
-  status: testable
-  category: media
-  webcoreOnChange: setNeedsRelayoutAllFrames
-  humanReadableName: "HDR for Images Support"
-  humanReadableDescription: "HDR for Images Support"
-  condition: ENABLE(HDR_FOR_IMAGES)
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
 
 HTTPEquivEnabled:
   type: bool
@@ -7381,6 +7351,21 @@ StorageBlockingPolicy:
       default: WebCore::StorageBlockingPolicy::BlockThirdParty
     WebCore:
       default: StorageBlockingPolicy::AllowAll
+
+SupportHDRDisplayEnabled:
+  type: bool
+  status: testable
+  category: media
+  webcoreOnChange: setNeedsRelayoutAllFrames
+  humanReadableName: "Support HDR Display"
+  humanReadableDescription: "Support HDR Display"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
 
 SuppressesIncrementalRendering:
   type: bool

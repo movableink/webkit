@@ -392,7 +392,7 @@ private:
     void updateImageContents(PaintedContentsInfo&);
     bool isUnscaledBitmapOnly() const;
     bool isBitmapOnly() const;
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     bool isReplacedElementWithHDR() const;
 #endif
 

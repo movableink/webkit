@@ -566,7 +566,7 @@ public:
         bool probablyHasPaintedContent() const { return hasPaintedContent == RequestState::True || hasPaintedContent == RequestState::Undetermined; }
         bool isPaintedContentSatisfied() const { return hasPaintedContent != RequestState::Unknown; }
 
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
         void setHasPaintedHDRContent() { hasPaintedHDRContent = RequestState::True; }
         void makePaintedHDRContentUnknown() { hasPaintedHDRContent = RequestState::Unknown; }
         bool isPaintedHDRContentSatisfied() const { return hasPaintedHDRContent != RequestState::Unknown; }
@@ -574,7 +574,7 @@ public:
 
         bool isSatisfied() const
         {
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
             if (!isPaintedHDRContentSatisfied())
                 return false;
 #endif
@@ -582,7 +582,7 @@ public:
         }
 
         RequestState hasPaintedContent { RequestState::Unknown };
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
         RequestState hasPaintedHDRContent { RequestState::DontCare };
 #endif
     };
@@ -593,7 +593,7 @@ public:
     bool isVisuallyNonEmpty(PaintedContentRequest* = nullptr) const;
     // True if this layer container renderers that paint.
     void determineNonLayerDescendantsPaintedContent(PaintedContentRequest&) const;
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     // True of if renderer itself draws HDR content, no traversal is done.
     bool isReplacedElementWithHDR() const;
 #endif

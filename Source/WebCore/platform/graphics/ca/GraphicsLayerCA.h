@@ -100,7 +100,7 @@ public:
     WEBCORE_EXPORT void setPreserves3D(bool) override;
     WEBCORE_EXPORT void setMasksToBounds(bool) override;
     WEBCORE_EXPORT void setDrawsContent(bool) override;
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     WEBCORE_EXPORT void setDrawsHDRContent(bool) override;
 #endif
     WEBCORE_EXPORT void setContentsVisible(bool) override;
@@ -276,7 +276,7 @@ private:
 
     bool isCommittingChanges() const override { return m_isCommittingChanges; }
     bool isUsingDisplayListDrawing(PlatformCALayer*) const override { return m_usesDisplayListDrawing; }
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
     bool drawsHDRContent() const override { return m_drawsHDRContent; }
     void updateDrawsHDRContent();
 #endif
@@ -660,7 +660,7 @@ private:
 #if HAVE(CORE_MATERIAL)
         AppleVisualEffectChanged                = 1LLU << 46,
 #endif
-#if HAVE(HDR_SUPPORT)
+#if HAVE(SUPPORT_HDR_DISPLAY)
         DrawsHDRContentChanged                  = 1LLU << 47,
 #endif
     };
