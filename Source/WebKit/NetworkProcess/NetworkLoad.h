@@ -121,7 +121,7 @@ private:
     void notifyDidReceiveResponse(WebCore::ResourceResponse&&, NegotiatedLegacyTLS, PrivateRelayed, ResponseCompletionHandler&&);
 
     std::reference_wrapper<NetworkLoadClient> m_client;
-    Ref<NetworkProcess> m_networkProcess;
+    const Ref<NetworkProcess> m_networkProcess;
     const NetworkLoadParameters m_parameters;
     RefPtr<NetworkDataTask> m_task;
     WeakPtr<NetworkLoadScheduler> m_scheduler;

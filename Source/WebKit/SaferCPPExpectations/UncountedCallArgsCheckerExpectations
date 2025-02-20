@@ -8,7 +8,6 @@ NetworkProcess/Downloads/PendingDownload.cpp
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/Downloads/cocoa/WKDownloadProgress.mm
 NetworkProcess/NetworkDataTask.cpp
-NetworkProcess/NetworkLoad.cpp
 NetworkProcess/PingLoad.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementManager.cpp
