@@ -195,7 +195,7 @@ private:
 
     bool isStyleNestedContext()
     {
-        return m_styleRuleNestingLevel && context().cssNestingEnabled;
+        return m_styleRuleNestingLevel;
     }
 
     // FIXME: we could unify all those into a single stack data structure.
