@@ -2493,6 +2493,8 @@ fast/images/animated-jpegxl-loop-count.html [ Skip ]
 
 # Only applicable on platforms with HDR support
 compositing/hdr/hdr-basic-canvas.html [ Skip ]
+compositing/hdr/hdr-basic-image.html [ Skip ]
+fast/images/hdr-basic-image.html [ Skip ]
 
 # Experimental H265 support.
 webrtc/h265.html [ Pass Failure ]

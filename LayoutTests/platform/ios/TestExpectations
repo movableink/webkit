@@ -4510,6 +4510,8 @@ fast/images/pagewide-play-pause-offscreen-animations.html [ Pass ]
 
 # Only applicable on platforms with HDR support
 compositing/hdr/hdr-basic-canvas.html [ Pass ]
+compositing/hdr/hdr-basic-image.html [ Pass ]
+webkit.org/b/287985 fast/images/hdr-basic-image.html [ ImageOnlyFailure ]
 
 # Re-enabling tests fixed by DocumentManager in iOS16+ rdar://102159271
 fast/forms/ios/file-upload-panel-capture.html [ Pass Crash ] # remove crash after this is resolved: webkit.org/b/268568
