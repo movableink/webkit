@@ -201,9 +201,9 @@ void HTTPServer::terminateAllConnections(CompletionHandler<void()>&& completionH
         connection.terminate([aggregator] { });
 }
 
-HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> responses, Protocol protocol, CertificateVerifier&& verifier, RetainPtr<SecIdentityRef>&& identity, std::optional<uint16_t> port)
+HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> responses, Protocol protocol, CertificateVerifier&& verifier, SecIdentityRef identity, std::optional<uint16_t> port)
     : m_requestData(adoptRef(*new RequestData(responses)))
-    , m_listener(adoptNS(nw_listener_create(listenerParameters(protocol, WTFMove(verifier), WTFMove(identity), port).get())))
+    , m_listener(adoptNS(nw_listener_create(listenerParameters(protocol, WTFMove(verifier), identity, port).get())))
     , m_protocol(protocol)
 {
     nw_listener_set_queue(m_listener.get(), dispatch_get_main_queue());

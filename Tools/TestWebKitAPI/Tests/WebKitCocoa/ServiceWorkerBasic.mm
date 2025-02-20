@@ -2725,7 +2725,7 @@ TEST(ServiceWorkers, ChangeOfServerCertificate)
         TestWebKitAPI::HTTPServer server1({
             { "/"_s, { main } },
             { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, js } }
-        }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity());
+        }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity().get());
         serverPort = server1.port();
 
         [webView1 loadRequest:server1.request()];
@@ -2740,7 +2740,7 @@ TEST(ServiceWorkers, ChangeOfServerCertificate)
         TestWebKitAPI::HTTPServer server2({
             { "/"_s, { main } },
             { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, js } }
-        }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity2(), serverPort);
+        }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity2().get(), serverPort);
 
         [webView2 loadRequest:server2.request()];
         EXPECT_WK_STREQ([webView2 _test_waitForAlert], "new worker");

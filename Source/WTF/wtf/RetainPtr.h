@@ -57,6 +57,7 @@ typedef struct objc_object *id;
 // both ways, we need a separate copy of our code when ARC is enabled.
 #if __has_feature(objc_arc)
 #define adoptNS adoptNSArc
+#define RetainPtr RetainPtrArc
 #endif
 
 namespace WTF {

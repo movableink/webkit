@@ -23,6 +23,13 @@
 #include <stddef.h>
 #include <wtf/Platform.h>
 
+#if defined(__has_feature)
+#if __has_feature(objc_arc)
+#define OSObjectPtr OSObjectPtrArc
+#define RetainPtr RetainPtrArc
+#endif
+#endif
+
 namespace WTF {
 
 class ASCIILiteral;
