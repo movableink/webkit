@@ -227,6 +227,20 @@ void MarkedSpace::sweepBlocks()
         });
 }
 
+void MarkedSpace::registerPreciseAllocation(PreciseAllocation* allocation, bool isNewAllocation)
+{
+    // FIXME: This is a bit of a mess we should really consolidate setting all the bits to here.
+    allocation->setIndexInSpace(m_preciseAllocations.size());
+    allocation->m_hasValidCell = true;
+    ASSERT(allocation->isNewlyAllocated());
+    ASSERT(!allocation->isMarked());
+    m_preciseAllocations.append(allocation);
+    if (isNewAllocation)
+        m_capacity += allocation->cellSize();
+    if (auto* set = preciseAllocationSet())
+        set->add(allocation->cell());
+}
+
 void MarkedSpace::sweepPreciseAllocations()
 {
     RELEASE_ASSERT(m_preciseAllocationsNurseryOffset == m_preciseAllocations.size());
