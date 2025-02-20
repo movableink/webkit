@@ -102,8 +102,9 @@ void WebContextMenuProxyWin::showContextMenuWithItems(Vector<Ref<WebContextMenuI
     ::TrackPopupMenuEx(m_menu, flags, pt.x, pt.y, wnd, nullptr);
 }
 
-WebContextMenuProxyWin::WebContextMenuProxyWin(WebPageProxy& page, ContextMenuContextData&& context, const UserData& userData)
+WebContextMenuProxyWin::WebContextMenuProxyWin(WebPageProxy& page, FrameInfoData&& frameInfo, ContextMenuContextData&& context, const UserData& userData)
     : WebContextMenuProxy(page, WTFMove(context), userData)
+    , m_frameInfo(WTFMove(frameInfo))
 {
     m_menu = createMenu(m_context);
 }
