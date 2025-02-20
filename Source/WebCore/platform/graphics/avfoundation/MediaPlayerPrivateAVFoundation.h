@@ -47,7 +47,6 @@ class InbandTextTrackPrivateAVF;
 class MediaPlayerPrivateAVFoundation
     : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaPlayerPrivateAVFoundation, WTF::DestructionThread::Main>
     , public MediaPlayerPrivateInterface
-    , public AVFInbandTrackParent
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
@@ -316,8 +315,7 @@ protected:
     String engineDescription() const override { return "AVFoundation"_s; }
     long platformErrorCode() const override { return assetErrorCode(); }
 
-    void trackModeChanged() override;
-    void notifyTrackModeChanged() override { }
+    void trackModeChanged();
     virtual void synchronizeTextTrackState() { }
     void processNewAndRemovedTextTracks(const Vector<RefPtr<InbandTextTrackPrivateAVF>>&);
     void clearTextTracks();

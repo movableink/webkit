@@ -120,14 +120,14 @@ void RemoteMediaSourceProxy::failedToCreateRenderer(RendererType)
     notImplemented();
 }
 
-void RemoteMediaSourceProxy::addSourceBuffer(const WebCore::ContentType& contentType, AddSourceBufferCallback&& callback)
+void RemoteMediaSourceProxy::addSourceBuffer(const WebCore::ContentType& contentType, const WebCore::MediaSourceConfiguration& configuration, AddSourceBufferCallback&& callback)
 {
     RefPtr connection = connectionToWebProcess();
     if (!m_remoteMediaPlayerProxy || !connection)
         return;
 
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    MediaSourcePrivate::AddStatus status = mediaSourcePrivate()->addSourceBuffer(contentType, sourceBufferPrivate);
+    MediaSourcePrivate::AddStatus status = mediaSourcePrivate()->addSourceBuffer(contentType, configuration, sourceBufferPrivate);
 
     std::optional<RemoteSourceBufferIdentifier> remoteSourceIdentifier;
     if (status == MediaSourcePrivate::AddStatus::Ok) {

@@ -61,7 +61,7 @@ public:
 
     constexpr MediaPlatformType platformType() const final { return MediaPlatformType::GStreamer; }
 
-    AddStatus addSourceBuffer(const ContentType&, RefPtr<SourceBufferPrivate>&) override;
+    AddStatus addSourceBuffer(const ContentType&, const MediaSourceConfiguration&, RefPtr<SourceBufferPrivate>&) override;
 
     void durationChanged(const MediaTime&) override;
     void markEndOfStream(EndOfStreamStatus) override;

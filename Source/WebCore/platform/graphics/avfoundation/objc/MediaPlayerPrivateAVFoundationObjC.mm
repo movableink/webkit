@@ -3159,13 +3159,18 @@ void MediaPlayerPrivateAVFoundationObjC::processMediaSelectionOptions()
         if (!newTrack)
             continue;
 
+        InbandTextTrackPrivateAVF::ModeChangedCallback&& modeChangedCallback = [weakThis = ThreadSafeWeakPtr { *this }] {
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->configureInbandTracks();
+        };
+
         if ([option outOfBandSource]) {
-            m_textTracks.append(OutOfBandTextTrackPrivateAVF::create(this, option, m_currentTextTrackID++));
+            m_textTracks.append(OutOfBandTextTrackPrivateAVF::create(option, m_currentTextTrackID++, WTFMove(modeChangedCallback)));
             m_textTracks.last()->setHasBeenReported(true); // Ignore out-of-band tracks that we passed to AVFoundation so we do not double-count them
             continue;
         }
 
-        m_textTracks.append(InbandTextTrackPrivateAVFObjC::create(this, legibleGroup, option, m_currentTextTrackID++, InbandTextTrackPrivate::CueFormat::Generic));
+        m_textTracks.append(InbandTextTrackPrivateAVFObjC::create(legibleGroup, option, m_currentTextTrackID++, InbandTextTrackPrivate::CueFormat::Generic, WTFMove(modeChangedCallback)));
     }
 
     processNewAndRemovedTextTracks(removedTextTracks);

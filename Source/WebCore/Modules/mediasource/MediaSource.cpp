@@ -48,6 +48,7 @@
 #include "Logging.h"
 #include "ManagedMediaSource.h"
 #include "ManagedSourceBuffer.h"
+#include "MediaSourceConfiguration.h"
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
 #include "MediaSourceHandle.h"
 #endif
@@ -1453,7 +1454,10 @@ ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(con
     Ref msp = protectedPrivate().releaseNonNull();
 
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    switch (msp->addSourceBuffer(type, sourceBufferPrivate)) {
+    MediaSourceConfiguration configuration = {
+        scriptExecutionContext()->settingsValues().textTracksInMSEEnabled
+    };
+    switch (msp->addSourceBuffer(type, configuration, sourceBufferPrivate)) {
     case MediaSourcePrivate::AddStatus::Ok:
         return sourceBufferPrivate.releaseNonNull();
     case MediaSourcePrivate::AddStatus::NotSupported:

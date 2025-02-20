@@ -81,7 +81,7 @@ MediaSourcePrivateGStreamer::~MediaSourcePrivateGStreamer()
     ALWAYS_LOG(LOGIDENTIFIER);
 }
 
-MediaSourcePrivateGStreamer::AddStatus MediaSourcePrivateGStreamer::addSourceBuffer(const ContentType& contentType, RefPtr<SourceBufferPrivate>& sourceBufferPrivate)
+MediaSourcePrivateGStreamer::AddStatus MediaSourcePrivateGStreamer::addSourceBuffer(const ContentType& contentType, const MediaSourceConfiguration&, RefPtr<SourceBufferPrivate>& sourceBufferPrivate)
 {
     DEBUG_LOG(LOGIDENTIFIER, contentType);
 

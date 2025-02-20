@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,6 +65,7 @@ namespace WebCore {
 class CDMInstance;
 class CDMInstanceFairPlayStreamingAVFObjC;
 class CDMSessionAVContentKeySession;
+class InbandTextTrackPrivate;
 class MediaPlayerPrivateMediaSourceAVFObjC;
 class MediaSourcePrivateAVFObjC;
 class TimeRanges;
@@ -199,6 +200,8 @@ ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
     void flushAudio(AVSampleBufferAudioRenderer *);
 ALLOW_NEW_API_WITHOUT_GUARDS_END
 
+    bool isTextTrack(TrackID) const;
+
     RefPtr<MediaPlayerPrivateMediaSourceAVFObjC> player() const;
     bool canEnqueueSample(TrackID, const MediaSampleAVFObjC&);
     bool trackIsBlocked(TrackID) const;
@@ -214,6 +217,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
 
     StdUnorderedMap<TrackID, RefPtr<VideoTrackPrivate>> m_videoTracks;
     StdUnorderedMap<TrackID, RefPtr<AudioTrackPrivate>> m_audioTracks;
+    StdUnorderedMap<TrackID, RefPtr<InbandTextTrackPrivate>> m_textTracks;
     Vector<SourceBufferPrivateAVFObjCErrorClient*> m_errorClients;
 
     const Ref<SourceBufferParser> m_parser;
