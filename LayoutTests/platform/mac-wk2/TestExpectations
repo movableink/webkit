@@ -2005,7 +2005,6 @@ webkit.org/b/288006 http/tests/dom/noreferrer-window-not-targetable.html [ Failu
 [ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/modal-pseudo-class-in-has.html [ Pass Failure ]
 [ Debug ] imported/w3c/web-platform-tests/screen-orientation/fullscreen-interactions.html [ Pass Failure ]
 [ Debug ] imported/w3c/web-platform-tests/screen-orientation/lock-basic.html [ Pass Failure ]
-[ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/fullscreen-pseudo-class-in-has.html [ Pass Failure ]
 
 webkit.org/b/288025 http/wpt/mediarecorder/MediaRecorder-AV-audio-video-dataavailable.html [ Pass Failure ]
 
@@ -2014,3 +2013,5 @@ webkit.org/b/288036 [ Debug ] http/wpt/mediarecorder/MediaRecorder-matroska-AV-a
 webkit.org/b/288043 [ Release ] inspector/canvas/create-context-bitmaprenderer.html [ Pass Failure ]
  
 webkit.org/b/288053 imported/w3c/web-platform-tests/fetch/http-cache/invalidate.any.serviceworker.html [ Pass Failure ]
+
+webkit.org/b/288118 imported/w3c/web-platform-tests/css/selectors/invalidation/fullscreen-pseudo-class-in-has.html [ Pass Failure ]
