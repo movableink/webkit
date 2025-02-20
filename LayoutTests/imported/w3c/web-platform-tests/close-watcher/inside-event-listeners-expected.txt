@@ -1,8 +1,8 @@
 
 PASS destroy() inside oncancel
-PASS destroy() inside onclose
+FAIL destroy() inside onclose assert_array_equals: expected property 0 to be "cancel[cancelable=true]" but got "cancel[cancelable=false]" (expected array ["cancel[cancelable=true]", "close"] got ["cancel[cancelable=false]", "close"])
 PASS close() inside oncancel
-PASS close() inside onclose
+FAIL close() inside onclose assert_array_equals: expected property 0 to be "cancel[cancelable=true]" but got "cancel[cancelable=false]" (expected array ["cancel[cancelable=true]", "close"] got ["cancel[cancelable=false]", "close"])
 PASS requestClose() inside oncancel
-PASS requestClose() inside onclose
+FAIL requestClose() inside onclose assert_array_equals: expected property 0 to be "cancel[cancelable=true]" but got "cancel[cancelable=false]" (expected array ["cancel[cancelable=true]", "close"] got ["cancel[cancelable=false]", "close"])
 

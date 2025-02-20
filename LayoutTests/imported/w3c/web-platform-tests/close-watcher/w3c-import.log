@@ -15,6 +15,7 @@ None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/close-watcher/META.yml
+/LayoutTests/imported/w3c/web-platform-tests/close-watcher/WEB_FEATURES.yml
 /LayoutTests/imported/w3c/web-platform-tests/close-watcher/abortsignal.html
 /LayoutTests/imported/w3c/web-platform-tests/close-watcher/basic.html
 /LayoutTests/imported/w3c/web-platform-tests/close-watcher/event-properties.html
