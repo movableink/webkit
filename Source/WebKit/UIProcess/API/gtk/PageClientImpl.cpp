@@ -300,9 +300,9 @@ RefPtr<WebPopupMenuProxy> PageClientImpl::createPopupMenuProxy(WebPageProxy& pag
 }
 
 #if ENABLE(CONTEXT_MENUS)
-Ref<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPageProxy& page, FrameInfoData&&, ContextMenuContextData&& context, const UserData& userData)
+Ref<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPageProxy& page, FrameInfoData&& frameInfoData, ContextMenuContextData&& context, const UserData& userData)
 {
-    return WebContextMenuProxyGtk::create(m_viewWidget, page, WTFMove(context), userData);
+    return WebContextMenuProxyGtk::create(m_viewWidget, page, WTFMove(frameInfoData), WTFMove(context), userData);
 }
 #endif // ENABLE(CONTEXT_MENUS)
 
