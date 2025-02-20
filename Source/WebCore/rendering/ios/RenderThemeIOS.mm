@@ -1710,8 +1710,8 @@ bool RenderThemeIOS::supportsMeter(StyleAppearance appearance) const
 bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (paintMeterForCatalyst(renderer, paintInfo, rect))
-        return false;
+    if (renderer.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintMeter(renderer, paintInfo, rect);
 #endif
 
     auto* renderMeter = dynamicDowncast<RenderMeter>(renderer);
