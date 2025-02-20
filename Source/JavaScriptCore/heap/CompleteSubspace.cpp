@@ -37,7 +37,7 @@
 namespace JSC {
 
 CompleteSubspace::CompleteSubspace(CString name, JSC::Heap& heap, const HeapCellType& heapCellType, AlignedMemoryAllocator* alignedMemoryAllocator)
-    : Subspace(name, heap)
+    : Subspace(SubspaceKind::CompleteSubspace, name, heap)
 {
     initialize(heapCellType, alignedMemoryAllocator);
 }

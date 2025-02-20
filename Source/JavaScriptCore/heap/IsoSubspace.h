@@ -43,7 +43,7 @@ class IsoSubspace;
 class IsoSubspace final : public Subspace {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(IsoSubspace, JS_EXPORT_PRIVATE);
 public:
-    JS_EXPORT_PRIVATE IsoSubspace(CString name, Heap&, const HeapCellType&, size_t size, bool preciseOnly, uint8_t numberOfLowerTierPreciseCells, std::unique_ptr<IsoMemoryAllocatorBase>&& = nullptr);
+    JS_EXPORT_PRIVATE IsoSubspace(CString name, Heap&, const HeapCellType&, size_t size, uint8_t numberOfLowerTierPreciseCells, std::unique_ptr<IsoMemoryAllocatorBase>&& = nullptr);
     JS_EXPORT_PRIVATE ~IsoSubspace() final;
 
     size_t cellSize() { return m_directory.cellSize(); }
@@ -51,7 +51,7 @@ public:
     void sweepLowerTierPreciseCell(PreciseAllocation*);
     void clearIsoCellSetBit(PreciseAllocation*);
 
-    void* tryAllocatePreciseOrLowerTierPrecise(size_t cellSize);
+    void* tryAllocateLowerTierPrecise(size_t cellSize);
     void destroyLowerTierPreciseFreeList();
 
     void sweep();
@@ -100,7 +100,7 @@ ALWAYS_INLINE Allocator IsoSubspace::allocatorFor(size_t size, AllocatorForMode)
 
 } // namespace GCClient
 
-#define ISO_SUBSPACE_INIT(heap, heapCellType, type) ("IsoSpace " #type ""_s, (heap), (heapCellType), sizeof(type), type::usePreciseAllocationsOnly, type::numberOfLowerTierPreciseCells)
+#define ISO_SUBSPACE_INIT(heap, heapCellType, type) ("IsoSpace " #type ""_s, (heap), (heapCellType), sizeof(type), type::numberOfLowerTierPreciseCells)
 
 } // namespace JSC
 
