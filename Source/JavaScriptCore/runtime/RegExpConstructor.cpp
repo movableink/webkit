@@ -95,8 +95,7 @@ void RegExpConstructor::finishCreation(VM& vm, RegExpPrototype* regExpPrototype)
 
     JSGlobalObject* globalObject = regExpPrototype->globalObject();
 
-    if (Options::useRegExpEscape())
-        JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("escape"_s, regExpConstructorEscape, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("escape"_s, regExpConstructorEscape, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
 
     GetterSetter* speciesGetterSetter = GetterSetter::create(vm, globalObject, JSFunction::create(vm, globalObject, 0, "get [Symbol.species]"_s, globalFuncSpeciesGetter, ImplementationVisibility::Public, SpeciesGetterIntrinsic), nullptr);
     putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->speciesSymbol, speciesGetterSetter, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);

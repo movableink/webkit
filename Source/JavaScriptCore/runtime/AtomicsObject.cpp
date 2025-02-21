@@ -91,8 +91,7 @@ void AtomicsObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
     FOR_EACH_ATOMICS_FUNC(PUT_DIRECT_NATIVE_FUNC)
 #undef PUT_DIRECT_NATIVE_FUNC
 
-    if (Options::useAtomicsPause())
-        JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("pause"_s, atomicsFuncPause, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public, AtomicsPauseIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("pause"_s, atomicsFuncPause, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public, AtomicsPauseIntrinsic);
 
     if (vm.vmType == VM::VMType::Default)
         JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("waitAsync"_s, atomicsFuncWaitAsync, static_cast<unsigned>(PropertyAttribute::DontEnum), 4, ImplementationVisibility::Public, AtomicsWaitAsyncIntrinsic);

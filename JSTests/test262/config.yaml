@@ -3,15 +3,10 @@
 flags:
   SharedArrayBuffer: useSharedArrayBuffer
   Atomics: useSharedArrayBuffer
-  Atomics.pause: useAtomicsPause
   iterator-helpers: useIteratorHelpers
   Temporal: useTemporal
   ShadowRealm: useShadowRealm
-  promise-try: usePromiseTryMethod
-  uint8array-base64: useUint8ArrayBase64Methods
-  RegExp.escape: useRegExpEscape
   Math.sumPrecise: useMathSumPreciseMethod
-  Error.isError: useErrorIsError
   json-parse-with-source: useJSONSourceTextAccess
   iterator-sequencing: useIteratorSequencing
 skip:

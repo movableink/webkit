@@ -1435,9 +1435,6 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     IntlObject* intl = IntlObject::create(vm, this, IntlObject::createStructure(vm, this, m_objectPrototype.get()));
     putDirectWithoutTransition(vm, vm.propertyNames->Intl, intl, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
-    if (Options::useFloat16Array())
-        putDirectWithoutTransition(vm, Identifier::fromString(vm, "Float16Array"_s), JSGlobalObject::m_typedArrayFloat16.constructor(this), static_cast<unsigned>(PropertyAttribute::DontEnum));
-
     if (Options::useTemporal()) {
         m_calendarStructure.initLater(
             [] (const Initializer<Structure>& init) {

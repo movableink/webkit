@@ -606,9 +606,6 @@ bool hasCapacityToUseLargeGigacage();
     \
     /* Feature Flags */\
     \
-    v(Bool, useAtomicsPause, true, Normal, "Expose Atomics.pause."_s) \
-    v(Bool, useErrorIsError, true, Normal, "Expose Error.isError feature."_s) \
-    v(Bool, useFloat16Array, true, Normal, "Expose Float16Array."_s) \
     v(Bool, useImportDefer, false, Normal, "Enable deferred module import."_s) \
     v(Bool, useIteratorChunking, false, Normal, "Expose the Iterator.prototype.chunks and Iterator.prototype.windows methods."_s) \
     v(Bool, useIteratorHelpers, true, Normal, "Expose the Iterator Helpers."_s) \
@@ -617,13 +614,10 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useMapGetOrInsert, false, Normal, "Expose the Map.prototype.getOrInsert family of methods."_s) \
     v(Bool, useMathSumPreciseMethod, false, Normal, "Expose the Math.sumPrecise() method."_s) \
     v(Bool, useMoreCurrencyDisplayChoices, false, Normal, "Enable more currencyDisplay choices for Intl.NumberFormat"_s) \
-    v(Bool, usePromiseTryMethod, true, Normal, "Expose the Promise.try() method."_s) \
-    v(Bool, useRegExpEscape, true, Normal, "Expose RegExp.escape feature."_s) \
     v(Bool, useSharedArrayBuffer, false, Normal, nullptr) \
     v(Bool, useShadowRealm, false, Normal, "Expose the ShadowRealm object."_s) \
     v(Bool, useTemporal, false, Normal, "Expose the Temporal object."_s) \
     v(Bool, useTrustedTypes, false, Normal, "Enable trusted types eval protection feature."_s) \
-    v(Bool, useUint8ArrayBase64Methods, true, Normal, "Expose methods for converting Uint8Array to/from base64 and hex."_s) \
     v(Bool, useWasmSIMD, true, Normal, "Allow the new simd instructions and types from the wasm simd spec."_s) \
     v(Bool, useWasmRelaxedSIMD, false, Normal, "Allow the relaxed simd instructions and types from the wasm relaxed simd spec."_s) \
     v(Bool, useWasmTailCalls, true, Normal, "Allow the new instructions from the wasm tail calls spec."_s) \
