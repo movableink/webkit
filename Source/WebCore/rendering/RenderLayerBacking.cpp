@@ -954,6 +954,7 @@ void RenderLayerBacking::updateAppleVisualEffect(const RenderStyle& style)
 
     visualEffectData.effect = style.appleVisualEffect();
     visualEffectData.contextEffect = style.usedAppleVisualEffectForSubtree();
+    visualEffectData.colorScheme = renderer().document().useDarkAppearance(&style) ? AppleVisualEffectData::ColorScheme::Dark : AppleVisualEffectData::ColorScheme::Light;
 
 #if HAVE(MATERIAL_HOSTING)
     if (appleVisualEffectIsHostedMaterial(style.appleVisualEffect())) {

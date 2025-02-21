@@ -8057,9 +8057,16 @@ enum class WebCore::AppleVisualEffect : uint8_t {
 };
 
 header: <WebCore/AppleVisualEffect.h>
+[Nested] enum class WebCore::AppleVisualEffectData::ColorScheme : uint8_t {
+    Light,
+    Dark
+};
+
+header: <WebCore/AppleVisualEffect.h>
 [CustomHeader] struct WebCore::AppleVisualEffectData {
     WebCore::AppleVisualEffect effect;
     WebCore::AppleVisualEffect contextEffect;
+    WebCore::AppleVisualEffectData::ColorScheme colorScheme;
     std::optional<WebCore::FloatRoundedRect> borderRect;
 };
 

@@ -77,7 +77,7 @@ class WebPageProxy;
 @property (nonatomic, readonly) UIView *contentView;
 
 - (void)updateHostingSize:(WebCore::FloatSize)size;
-- (void)updateMaterialEffectType:(WKHostedMaterialEffectType)materialEffectType cornerRadius:(CGFloat)cornerRadius;
+- (void)updateMaterialEffectType:(WKHostedMaterialEffectType)materialEffectType colorScheme:(WKHostedMaterialColorScheme)colorScheme cornerRadius:(CGFloat)cornerRadius;
 
 @end
 #endif

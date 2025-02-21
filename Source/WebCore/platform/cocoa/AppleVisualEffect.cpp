@@ -176,10 +176,24 @@ TextStream& operator<<(TextStream& ts, AppleVisualEffect effect)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, AppleVisualEffectData::ColorScheme colorScheme)
+{
+    switch (colorScheme) {
+    case AppleVisualEffectData::ColorScheme::Light:
+        ts << "light";
+        break;
+    case AppleVisualEffectData::ColorScheme::Dark:
+        ts << "dark";
+        break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, AppleVisualEffectData effectData)
 {
     ts.dumpProperty("effect", effectData.effect);
     ts.dumpProperty("contextEffect", effectData.contextEffect);
+    ts.dumpProperty("colorScheme", effectData.colorScheme);
     return ts;
 }
 

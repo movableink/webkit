@@ -10,6 +10,7 @@ four
     (GraphicsLayer
       (bounds 800.00 600.00)
       (contentsOpaque 1)
+      (backgroundColor #000000)
       (children 1
         (GraphicsLayer
           (position 8.00 28.00)
@@ -18,7 +19,7 @@ four
           (appleVisualEffectData
           (effect blur-material)
           (contextEffect blur-material)
-          (colorScheme light))
+          (colorScheme dark))
           (structural layer
             (position 108.00 128.00)
             (bounds 200.00 200.00)
@@ -35,7 +36,7 @@ four
               (appleVisualEffectData
               (effect vibrancy-secondary-label)
               (contextEffect blur-material)
-              (colorScheme light))
+              (colorScheme dark))
             )
             (GraphicsLayer
               (position 0.00 40.00)
@@ -44,7 +45,7 @@ four
               (appleVisualEffectData
               (effect vibrancy-tertiary-label)
               (contextEffect blur-material)
-              (colorScheme light))
+              (colorScheme dark))
             )
             (GraphicsLayer
               (position 0.00 60.00)
@@ -53,7 +54,7 @@ four
               (appleVisualEffectData
               (effect vibrancy-quaternary-label)
               (contextEffect blur-material)
-              (colorScheme light))
+              (colorScheme dark))
             )
           )
         )
