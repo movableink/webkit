@@ -242,8 +242,12 @@ LineLayout::LineLayout(RenderBlockFlow& flow)
 LineLayout::~LineLayout()
 {
     auto& rootRenderer = flow();
-
-    if (!isDamaged() && !rootRenderer.document().renderTreeBeingDestroyed())
+    auto shouldPopulateBreakingPositionCache = [&] {
+        if (rootRenderer.document().renderTreeBeingDestroyed() || isDamaged())
+            return false;
+        return !m_inlineContentCache.inlineItems().isPopulatedFromCache();
+    };
+    if (shouldPopulateBreakingPositionCache())
         Layout::InlineItemsBuilder::populateBreakingPositionCache(m_inlineContentCache.inlineItems().content(), rootRenderer.document());
     clearInlineContent();
     layoutState().destroyInlineContentCache(rootLayoutBox());
