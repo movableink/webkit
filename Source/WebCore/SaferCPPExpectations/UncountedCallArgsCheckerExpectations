@@ -1152,7 +1152,6 @@ platform/network/DataURLDecoder.cpp
 platform/network/FormData.cpp
 platform/network/NetworkLoadMetrics.cpp
 platform/network/SynchronousLoaderClient.cpp
-platform/network/mac/AuthenticationMac.mm
 platform/network/mac/ResourceHandleMac.mm
 platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.mm
 platform/text/BidiContext.cpp
