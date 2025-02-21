@@ -71,7 +71,7 @@
     if (!(self = [super init]))
         return nil;
 
-    _modelProcessModelPlayerProxy = modelProcessModelPlayerProxy.ptr();
+    _modelProcessModelPlayerProxy = modelProcessModelPlayerProxy.get();
     return self;
 }
 
