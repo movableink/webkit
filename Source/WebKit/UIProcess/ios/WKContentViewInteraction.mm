@@ -14976,6 +14976,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!_webView)
         return;
 
+    _page->willBeginContextMenuInteraction();
     _isDisplayingContextMenuWithAnimation = YES;
     [animator addCompletion:[weakSelf = WeakObjCPtr<WKContentView>(self)] {
         if (auto strongSelf = weakSelf.get()) {
@@ -15117,6 +15118,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!_webView)
         return;
 
+    _page->didEndContextMenuInteraction();
     // FIXME: This delegate is being called more than once by UIKit. <rdar://problem/51550291>
     // This conditional avoids the WKUIDelegate being called twice too.
     if (_contextMenuElementInfo) {

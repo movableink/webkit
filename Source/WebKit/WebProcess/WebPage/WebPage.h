@@ -1949,6 +1949,12 @@ public:
 
     void didProgrammaticallyClearTextFormControl(const WebCore::HTMLTextFormControlElement&);
 
+#if USE(UICONTEXTMENU)
+    void willBeginContextMenuInteraction();
+    void didEndContextMenuInteraction();
+    bool hasActiveContextMenuInteraction() const { return m_hasActiveContextMenuInteraction; }
+#endif
+
 private:
     WebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
 
@@ -2850,6 +2856,10 @@ private:
     OptionSet<TextInteractionSource> m_activeTextInteractionSources;
     std::optional<WebCore::FloatPoint> m_lastTouchLocationBeforeTap;
 #endif // PLATFORM(IOS_FAMILY)
+
+#if USE(UICONTEXTMENU)
+    bool m_hasActiveContextMenuInteraction { false };
+#endif
 
     WebCore::Timer m_layerVolatilityTimer;
     Seconds m_layerVolatilityTimerInterval;

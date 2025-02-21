@@ -1716,6 +1716,11 @@ public:
     void handleContextMenuKeyEvent();
 #endif
 
+#if USE(UICONTEXTMENU)
+    void willBeginContextMenuInteraction();
+    void didEndContextMenuInteraction();
+#endif
+
 #if ENABLE(CONTEXT_MENU_EVENT)
     void dispatchAfterCurrentContextMenuEvent(CompletionHandler<void(bool)>&&);
 #endif

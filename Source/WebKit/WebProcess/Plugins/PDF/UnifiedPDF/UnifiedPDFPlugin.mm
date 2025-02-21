@@ -1988,6 +1988,10 @@ bool UnifiedPDFPlugin::handleMouseEvent(const WebMouseEvent& event)
                 bool shouldFollowLinkAnnotation = [frame = m_frame] {
                     if (!frame || !frame->coreLocalFrame())
                         return true;
+#if USE(UICONTEXTMENU)
+                    if (RefPtr webPage = frame->page(); webPage->hasActiveContextMenuInteraction())
+                        return false;
+#endif
                     auto immediateActionStage = frame->protectedCoreLocalFrame()->checkedEventHandler()->immediateActionStage();
                     return !immediateActionBeganOrWasCompleted(immediateActionStage);
                 }();

@@ -6132,6 +6132,20 @@ void WebPage::didDispatchClickEvent(const PlatformMouseEvent& event, Node& node)
 
 #endif // ENABLE(IOS_TOUCH_EVENTS)
 
+#if USE(UICONTEXTMENU)
+
+void WebPage::willBeginContextMenuInteraction()
+{
+    m_hasActiveContextMenuInteraction = true;
+}
+
+void WebPage::didEndContextMenuInteraction()
+{
+    m_hasActiveContextMenuInteraction = false;
+}
+
+#endif // USE(UICONTEXTMENU)
+
 } // namespace WebKit
 
 #undef WEBPAGE_RELEASE_LOG

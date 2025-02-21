@@ -869,4 +869,9 @@ messages -> WebPage WantsAsyncDispatchMessage {
 #if HAVE(AUDIT_TOKEN)
     SetPresentingApplicationAuditTokenAndBundleIdentifier(struct WebKit::CoreIPCAuditToken auditToken, String bundleIdentifier)
 #endif
+
+#if USE(UICONTEXTMENU)
+    WillBeginContextMenuInteraction()
+    DidEndContextMenuInteraction()
+#endif
 }

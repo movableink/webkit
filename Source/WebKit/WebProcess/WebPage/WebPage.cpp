@@ -7908,6 +7908,10 @@ void WebPage::didCommitLoad(WebFrame* frame)
     m_elementsToExcludeFromRemoveBackground.clear();
 #endif
 
+#if USE(UICONTEXTMENU)
+    m_hasActiveContextMenuInteraction = false;
+#endif
+
     flushDeferredDidReceiveMouseEvent();
 }
 

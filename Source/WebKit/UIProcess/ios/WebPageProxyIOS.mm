@@ -1795,6 +1795,26 @@ RefPtr<ModelPresentationManagerProxy> WebPageProxy::modelPresentationManagerProx
 }
 #endif
 
+#if USE(UICONTEXTMENU)
+
+void WebPageProxy::willBeginContextMenuInteraction()
+{
+    if (!hasRunningProcess())
+        return;
+
+    legacyMainFrameProcess().send(Messages::WebPage::WillBeginContextMenuInteraction(), webPageIDInMainFrameProcess());
+}
+
+void WebPageProxy::didEndContextMenuInteraction()
+{
+    if (!hasRunningProcess())
+        return;
+
+    legacyMainFrameProcess().send(Messages::WebPage::DidEndContextMenuInteraction(), webPageIDInMainFrameProcess());
+}
+
+#endif // USE(UICONTEXTMENU)
+
 } // namespace WebKit
 
 #undef WEBPAGEPROXY_RELEASE_LOG
