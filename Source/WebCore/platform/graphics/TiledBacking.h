@@ -85,7 +85,7 @@ public:
 
     // The client will not receive `willRepaintTile()` for tiles needing display as part of a revalidation.
     virtual void willRevalidateTiles(TiledBacking&, TileGridIdentifier, TileRevalidationType) = 0;
-    virtual void didRevalidateTiles(TiledBacking&, TileGridIdentifier, TileRevalidationType, const UncheckedKeyHashSet<TileIndex>& tilesNeedingDisplay) = 0;
+    virtual void didRevalidateTiles(TiledBacking&, TileGridIdentifier, TileRevalidationType, const HashSet<TileIndex>& tilesNeedingDisplay) = 0;
 
     virtual void didAddGrid(TiledBacking&, TileGridIdentifier) = 0;
     virtual void willRemoveGrid(TiledBacking&, TileGridIdentifier) = 0;

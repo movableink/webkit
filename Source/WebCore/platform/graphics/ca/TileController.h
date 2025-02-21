@@ -137,7 +137,7 @@ public:
     IntRect boundsAtLastRevalidate() const { return m_boundsAtLastRevalidate; }
     IntRect boundsAtLastRevalidateWithoutMargin() const;
     void willRevalidateTiles(TileGrid&, TileRevalidationType);
-    void didRevalidateTiles(TileGrid&, TileRevalidationType, const UncheckedKeyHashSet<TileIndex>& tilesNeedingDisplay);
+    void didRevalidateTiles(TileGrid&, TileRevalidationType, const HashSet<TileIndex>& tilesNeedingDisplay);
 
     bool shouldAggressivelyRetainTiles() const;
     bool shouldTemporarilyRetainTileCohorts() const;

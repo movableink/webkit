@@ -576,7 +576,7 @@ void MemoryCache::removeResourcesWithOrigin(const ClientOrigin& origin)
     removeResourcesWithOrigin(origin.clientOrigin.securityOrigin(), cachePartition);
 }
 
-void MemoryCache::removeResourcesWithOrigins(PAL::SessionID sessionID, const UncheckedKeyHashSet<RefPtr<SecurityOrigin>>& origins)
+void MemoryCache::removeResourcesWithOrigins(PAL::SessionID sessionID, const HashSet<RefPtr<SecurityOrigin>>& origins)
 {
     RELEASE_ASSERT(isMainThread());
     auto* resourceMap = sessionResourceMap(sessionID);

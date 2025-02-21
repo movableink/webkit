@@ -57,7 +57,7 @@ struct CommitTreeState {
     // We can't use orphanNodes for this, because orphanNodes won't contain descendants of removed nodes.
     UncheckedKeyHashSet<ScrollingNodeID> unvisitedNodes { };
     // Nodes with non-empty synchronousScrollingReasons.
-    UncheckedKeyHashSet<ScrollingNodeID> synchronousScrollingNodes { };
+    HashSet<ScrollingNodeID> synchronousScrollingNodes { };
     // orphanNodes keeps child nodes alive while we rebuild child lists.
     OrphanScrollingNodeMap orphanNodes { };
     // Hosted subtrees needing attaching to scrolling tree after main commit has finished

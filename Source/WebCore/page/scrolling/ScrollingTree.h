@@ -284,7 +284,7 @@ protected:
 
 private:
     bool updateTreeFromStateNodeRecursive(const ScrollingStateNode*, struct CommitTreeState&) WTF_REQUIRES_LOCK(m_treeLock);
-    virtual void propagateSynchronousScrollingReasons(const UncheckedKeyHashSet<ScrollingNodeID>&) WTF_REQUIRES_LOCK(m_treeLock) { }
+    virtual void propagateSynchronousScrollingReasons(const HashSet<ScrollingNodeID>&) WTF_REQUIRES_LOCK(m_treeLock) { }
 
     void applyLayerPositionsRecursive(ScrollingTreeNode&) WTF_REQUIRES_LOCK(m_treeLock);
     void notifyRelatedNodesRecursive(ScrollingTreeNode&);
