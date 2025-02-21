@@ -16204,6 +16204,23 @@ bool WebPageProxy::canStartNavigationSwipeAtLastInteractionLocation() const
     return !client || client->canStartNavigationSwipeAtLastInteractionLocation();
 }
 
+#if ENABLE(PDF_PLUGIN)
+void WebPageProxy::pluginDidInstallPDFDocument()
+{
+    resetViewportConfigurationForPDFPluginIfNeeded();
+}
+
+void WebPageProxy::resetViewportConfigurationForPDFPluginIfNeeded()
+{
+#if PLATFORM(IOS_FAMILY)
+    if (mainFramePluginOverridesViewScale()) {
+        if (layoutSizeScaleFactorFromClient() != 1)
+            setViewportConfigurationViewLayoutSize(viewLayoutSize(), 1, minimumEffectiveDeviceWidth());
+    }
+#endif
+}
+#endif
+
 } // namespace WebKit
 
 #undef WEBPAGEPROXY_RELEASE_LOG

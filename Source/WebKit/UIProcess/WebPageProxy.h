@@ -1787,9 +1787,18 @@ public:
     void saveDataToFileInDownloadsFolder(String&& suggestedFilename, String&& mimeType, URL&& originatingURL, API::Data&);
     void savePDFToFileInDownloadsFolder(String&& suggestedFilename, URL&& originatingURL, std::span<const uint8_t>);
 
-#if ENABLE(PDF_PLUGIN) && PLATFORM(MAC)
+#if ENABLE(PDF_PLUGIN)
+    void pluginDidInstallPDFDocument();
+    void resetViewportConfigurationForPDFPluginIfNeeded();
+#if PLATFORM(MAC)
     void savePDFToTemporaryFolderAndOpenWithNativeApplication(const String& suggestedFilename, FrameInfoData&&, std::span<const uint8_t>, const String& pdfUUID);
     void showPDFContextMenu(const PDFContextMenu&, PDFPluginIdentifier, CompletionHandler<void(std::optional<int32_t>&&)>&&);
+
+    void pdfZoomIn(PDFPluginIdentifier);
+    void pdfZoomOut(PDFPluginIdentifier);
+    void pdfSaveToPDF(PDFPluginIdentifier);
+    void pdfOpenWithPreview(PDFPluginIdentifier);
+#endif
 #endif
 
     WebCore::IntRect visibleScrollerThumbRect() const;
@@ -2317,13 +2326,6 @@ public:
     void createPDFHUD(PDFPluginIdentifier, const WebCore::IntRect&);
     void updatePDFHUDLocation(PDFPluginIdentifier, const WebCore::IntRect&);
     void removePDFHUD(PDFPluginIdentifier);
-#endif
-
-#if ENABLE(PDF_PLUGIN) && PLATFORM(MAC)
-    void pdfZoomIn(PDFPluginIdentifier);
-    void pdfZoomOut(PDFPluginIdentifier);
-    void pdfSaveToPDF(PDFPluginIdentifier);
-    void pdfOpenWithPreview(PDFPluginIdentifier);
 #endif
 
     Seconds mediaCaptureReportingDelay() const { return m_mediaCaptureReportingDelay; }
