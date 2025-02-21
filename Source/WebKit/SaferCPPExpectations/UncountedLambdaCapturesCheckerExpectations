@@ -42,7 +42,6 @@ WebProcess/WebPage/EventDispatcher.cpp
 WebProcess/WebPage/ViewUpdateDispatcher.cpp
 WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
-WebProcess/WebProcess.cpp
 WebProcess/WebStorage/StorageAreaMap.cpp
 WebProcess/cocoa/VideoPresentationManager.mm
 WebProcess/cocoa/WebProcessCocoa.mm
