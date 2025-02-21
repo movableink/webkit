@@ -27,8 +27,6 @@
 
 #include <wtf/WeakPtr.h>
 
-#include <wtf/WeakPtr.h>
-
 namespace WebCore {
 
 class AuthenticationChallenge;
