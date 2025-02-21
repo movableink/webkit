@@ -131,6 +131,7 @@ enum class SDKAlignedBehavior {
     BlobFileAccessEnforcement,
     DevolvableWidgets,
     SetSelectionRangeCachesSelectionIfNotFocusedOrSelected,
+    DispatchFocusEventBeforeNotifyingClient,
 
     NumberOfBehaviors
 };
