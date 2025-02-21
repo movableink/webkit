@@ -63,10 +63,10 @@ void ResourceMonitor::setEligibility(Eligibility eligibility)
     m_eligibility = eligibility;
     RESOURCEMONITOR_RELEASE_LOG("The frame is %" PUBLIC_LOG_STRING ".", (eligibility == Eligibility::Eligible ? "eligible" : "not eligible"));
 
-    if (RefPtr parentMonitor = parentResourceMonitorIfExists())
-        parentMonitor->setEligibility(eligibility);
-    else
-        checkNetworkUsageExcessIfNecessary();
+    if (isEligible()) {
+        if (RefPtr resourceMonitor = parentResourceMonitorIfExists(); !resourceMonitor || !resourceMonitor->isEligible())
+            checkNetworkUsageExcessIfNecessary();
+    }
 }
 
 void ResourceMonitor::setDocumentURL(URL&& url)
@@ -117,16 +117,17 @@ void ResourceMonitor::addNetworkUsage(size_t bytes)
 
     m_networkUsage += bytes;
 
-    if (RefPtr parentMonitor = parentResourceMonitorIfExists())
+    if (RefPtr parentMonitor = parentResourceMonitorIfExists(); parentMonitor)
         parentMonitor->addNetworkUsage(bytes);
-    else
+    else if (isEligible())
         checkNetworkUsageExcessIfNecessary();
 }
 
 void ResourceMonitor::checkNetworkUsageExcessIfNecessary()
 {
-    ASSERT(!parentResourceMonitorIfExists());
-    if (m_eligibility != Eligibility::Eligible || m_networkUsageExceed)
+    ASSERT(!parentResourceMonitorIfExists() || !parentResourceMonitorIfExists()->isEligible());
+    ASSERT(isEligible());
+    if (m_networkUsageExceed)
         return;
 
     if (m_networkUsage.hasOverflowed() || ResourceMonitorChecker::singleton().checkNetworkUsageExceedingThreshold(m_networkUsage)) {

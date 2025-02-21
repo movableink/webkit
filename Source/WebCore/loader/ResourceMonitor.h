@@ -43,6 +43,7 @@ public:
 
     Eligibility eligibility() const { return m_eligibility; }
     void setEligibility(Eligibility);
+    bool isEligible() const { return eligibility() == Eligibility::Eligible; }
 
     void setDocumentURL(URL&&);
     void didReceiveResponse(const URL&, OptionSet<ContentExtensions::ResourceType>);
