@@ -30,8 +30,9 @@
 #include "StoredCredentialsPolicy.h"
 #include <wtf/Box.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
 #if PLATFORM(COCOA)
@@ -78,7 +79,7 @@ class FragmentedSharedBuffer;
 class SynchronousLoaderMessageQueue;
 class Timer;
 
-class ResourceHandle : public RefCounted<ResourceHandle>, public AuthenticationClient {
+class ResourceHandle : public RefCountedAndCanMakeWeakPtr<ResourceHandle>, public AuthenticationClient {
 public:
     WEBCORE_EXPORT static RefPtr<ResourceHandle> create(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff, ContentEncodingSniffingPolicy, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation);
     WEBCORE_EXPORT static void loadResourceSynchronously(NetworkingContext*, const ResourceRequest&, StoredCredentialsPolicy, SecurityOrigin*, ResourceError&, ResourceResponse&, Vector<uint8_t>& data);

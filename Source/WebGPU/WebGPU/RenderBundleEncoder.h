@@ -60,7 +60,7 @@ struct WGPURenderBundleEncoderImpl {
 @property (readonly, nonatomic) float depthBiasSlopeScale;
 @property (readonly, nonatomic) float depthBiasClamp;
 @property (readonly, nonatomic) id<MTLBuffer> fragmentDynamicOffsetsBuffer;
-@property (readonly, nonatomic) const WebGPU::RenderPipeline* pipeline;
+@property (readonly, nonatomic) WeakPtr<WebGPU::RenderPipeline> pipeline;
 
 - (Vector<WebGPU::BindableResources>*)resources;
 - (WebGPU::RenderBundle::MinVertexCountsContainer*)minVertexCountForDrawCommand;

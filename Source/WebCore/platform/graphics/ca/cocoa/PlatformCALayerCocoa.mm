@@ -112,7 +112,7 @@ static MonotonicTime mediaTimeToCurrentTime(CFTimeInterval t)
 
 // Delegate for animationDidStart callback
 @interface WebAnimationDelegate : NSObject {
-    WebCore::PlatformCALayer* m_owner;
+    ThreadSafeWeakPtr<WebCore::PlatformCALayer> m_owner;
 }
 
 - (void)animationDidStart:(CAAnimation *)anim;
@@ -128,7 +128,8 @@ static MonotonicTime mediaTimeToCurrentTime(CFTimeInterval t)
 #if PLATFORM(IOS_FAMILY)
     WebThreadLock();
 #endif
-    if (!m_owner)
+    RefPtr owner = m_owner.get();
+    if (!owner)
         return;
 
     MonotonicTime startTime;
@@ -139,7 +140,7 @@ static MonotonicTime mediaTimeToCurrentTime(CFTimeInterval t)
     } else
         startTime = mediaTimeToCurrentTime([animation beginTime]);
 
-    CALayer *layer = m_owner->platformLayer();
+    CALayer *layer = owner->platformLayer();
 
     String animationKey;
     for (NSString *key in [layer animationKeys]) {
@@ -150,7 +151,7 @@ static MonotonicTime mediaTimeToCurrentTime(CFTimeInterval t)
     }
 
     if (!animationKey.isEmpty())
-        m_owner->animationStarted(animationKey, startTime);
+        owner->animationStarted(animationKey, startTime);
 }
 
 - (void)animationDidStop:(CAAnimation *)animation finished:(BOOL)finished
@@ -160,11 +161,11 @@ static MonotonicTime mediaTimeToCurrentTime(CFTimeInterval t)
     WebThreadLock();
 #endif
     UNUSED_PARAM(finished);
-
-    if (!m_owner)
+    RefPtr owner = m_owner.get();
+    if (!owner)
         return;
     
-    CALayer *layer = m_owner->platformLayer();
+    CALayer *layer = owner->platformLayer();
 
     String animationKey;
     for (NSString *key in [layer animationKeys]) {
@@ -175,7 +176,7 @@ static MonotonicTime mediaTimeToCurrentTime(CFTimeInterval t)
     }
 
     if (!animationKey.isEmpty())
-        m_owner->animationEnded(animationKey);
+        owner->animationEnded(animationKey);
 }
 
 - (void)setOwner:(WebCore::PlatformCALayer*)owner

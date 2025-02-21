@@ -84,6 +84,7 @@ platform/mediastream/AudioMediaStreamTrackRenderer.h
 platform/mediastream/MediaStreamPrivate.h
 platform/mediastream/mac/CoreAudioCaptureSource.h
 platform/mock/ScrollbarsControllerMock.h
+platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.h
 plugins/PluginData.h
 rendering/RenderQuote.cpp
 rendering/RenderVTTCue.h

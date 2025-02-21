@@ -319,12 +319,13 @@ bool RenderBundleEncoder::executePreDrawCommands(bool needsValidationLayerWorkar
 
     auto vertexDynamicOffset = m_vertexDynamicOffset;
     auto fragmentDynamicOffset = m_fragmentDynamicOffset;
-    if (!m_pipeline) {
+    RefPtr pipeline = m_pipeline.get();
+    if (!pipeline) {
         makeInvalid(@"Pipeline was not set prior to draw command");
         return false;
     }
 
-    auto pipelineLayout = m_pipeline->protectedPipelineLayout();
+    auto pipelineLayout = pipeline->protectedPipelineLayout();
     auto vertexDynamicOffsetSum = checkedSum<uint64_t>(m_vertexDynamicOffset, sizeof(uint32_t) * pipelineLayout->sizeOfVertexDynamicOffsets());
     if (vertexDynamicOffsetSum.hasOverflowed()) {
         makeInvalid(@"Invalid vertexDynamicOffset");
@@ -343,7 +344,6 @@ bool RenderBundleEncoder::executePreDrawCommands(bool needsValidationLayerWorkar
     if (!icbCommand)
         return true;
 
-    auto pipeline = m_pipeline;
     if (needsValidationLayerWorkaround) {
         pipeline = pipeline->recomputeLastStrideAsStride();
         m_currentPipelineState = pipeline->renderPipelineState();
@@ -526,10 +526,11 @@ uint32_t RenderBundleEncoder::maxBindGroupIndex() const
 
 NSString* RenderBundleEncoder::errorValidatingDraw() const
 {
-    if (!m_pipeline)
+    RefPtr pipeline = m_pipeline.get();
+    if (!pipeline)
         return @"pipeline is not set";
 
-    auto& requiredBufferIndices = m_pipeline->requiredBufferIndices();
+    auto& requiredBufferIndices = pipeline->requiredBufferIndices();
     for (auto& [bufferIndex, _] : requiredBufferIndices) {
         if (!m_utilizedBufferIndices.contains(bufferIndex))
             return [NSString stringWithFormat:@"Buffer index[%u] is missing", bufferIndex];
@@ -544,15 +545,17 @@ NSString* RenderBundleEncoder::errorValidatingDraw() const
 
 NSString* RenderBundleEncoder::errorValidatingDrawIndexed() const
 {
-    if (!m_pipeline->requiredBufferIndices().size())
+    RefPtr pipeline = m_pipeline.get();
+    RELEASE_ASSERT(pipeline);
+    if (!pipeline->requiredBufferIndices().size())
         return nil;
 
     if (!m_indexBuffer)
         return @"Index buffer is not set";
 
-    auto topology = m_pipeline->primitiveTopology();
+    auto topology = pipeline->primitiveTopology();
     if (topology == WGPUPrimitiveTopology_LineStrip || topology == WGPUPrimitiveTopology_TriangleStrip) {
-        if (m_indexType != m_pipeline->stripIndexFormat())
+        if (m_indexType != pipeline->stripIndexFormat())
             return @"Primitive topology mismiatch with render pipeline";
     }
 
@@ -580,7 +583,8 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::finalizeRenderCo
 
 bool RenderBundleEncoder::runIndexBufferValidation(uint32_t firstInstance, uint32_t instanceCount)
 {
-    if (!m_pipeline || !m_indexBuffer) {
+    RefPtr pipeline = m_pipeline.get();
+    if (!pipeline || !m_indexBuffer) {
         makeInvalid(@"Missing pipeline before draw command");
         return false;
     }
@@ -593,7 +597,7 @@ bool RenderBundleEncoder::runIndexBufferValidation(uint32_t firstInstance, uint3
     if (!strideCount)
         return true;
 
-    auto& requiredBufferIndices = m_pipeline->requiredBufferIndices();
+    auto& requiredBufferIndices = pipeline->requiredBufferIndices();
     for (auto& [bufferIndex, bufferData] : requiredBufferIndices) {
         RELEASE_ASSERT(bufferIndex < m_vertexBuffers.size());
         auto& vertexBuffer = m_vertexBuffers[bufferIndex];
@@ -620,7 +624,8 @@ bool RenderBundleEncoder::runIndexBufferValidation(uint32_t firstInstance, uint3
 
 bool RenderBundleEncoder::runVertexBufferValidation(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
-    if (!m_pipeline) {
+    RefPtr pipeline = m_pipeline.get();
+    if (!pipeline) {
         makeInvalid(@"Missing pipeline before draw command");
         return false;
     }
@@ -630,7 +635,7 @@ bool RenderBundleEncoder::runVertexBufferValidation(uint32_t vertexCount, uint32
         return false;
     }
 
-    auto& requiredBufferIndices = m_pipeline->requiredBufferIndices();
+    auto& requiredBufferIndices = pipeline->requiredBufferIndices();
     for (auto& [bufferIndex, bufferData] : requiredBufferIndices) {
         Checked<uint64_t, WTF::RecordOverflow> strideCount = 0;
         switch (bufferData.stepMode) {
@@ -673,7 +678,8 @@ bool RenderBundleEncoder::runVertexBufferValidation(uint32_t vertexCount, uint32
 
 std::pair<uint32_t, uint32_t> RenderBundleEncoder::computeMininumVertexInstanceCount(bool& needsValidationLayerWorkaround) const
 {
-    return RenderPassEncoder::computeMininumVertexInstanceCount(m_pipeline.get(), needsValidationLayerWorkaround, ^(uint32_t bufferIndex) {
+    RefPtr pipeline = m_pipeline.get();
+    return RenderPassEncoder::computeMininumVertexInstanceCount(pipeline.get(), needsValidationLayerWorkaround, ^(uint32_t bufferIndex) {
         return bufferIndex < m_vertexBuffers.size() ? m_vertexBuffers[bufferIndex].size : 0;
     });
 }

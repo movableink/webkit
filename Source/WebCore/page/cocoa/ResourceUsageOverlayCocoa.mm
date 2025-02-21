@@ -47,7 +47,7 @@
 using WebCore::ResourceUsageOverlay;
 
 @interface WebResourceUsageOverlayLayer : CALayer {
-    ResourceUsageOverlay* m_overlay;
+    WeakPtr<ResourceUsageOverlay> m_overlay;
 }
 @end
 
@@ -64,7 +64,8 @@ using WebCore::ResourceUsageOverlay;
 
 - (void)drawInContext:(CGContextRef)context
 {
-    m_overlay->platformDraw(context);
+    if (RefPtr overlay = m_overlay.get())
+        overlay->platformDraw(context);
 }
 
 @end
@@ -460,6 +461,7 @@ void ResourceUsageOverlay::platformDraw(CGContextRef context)
     CGContextSetShouldAntialias(context, false);
     CGContextSetShouldSmoothFonts(context, false);
 
+    RefPtr overlay = m_overlay.get();
     CGRect viewBounds = m_overlay->bounds();
     CGContextClearRect(context, viewBounds);
 

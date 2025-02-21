@@ -33,8 +33,8 @@
 #include "PlatformImage.h"
 #include <wtf/Seconds.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/text/WTFString.h>
-#include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
@@ -46,7 +46,7 @@ struct ImageDecoderFrameInfo {
     Seconds duration;
 };
 
-class ImageDecoder : public ThreadSafeRefCounted<ImageDecoder> {
+class ImageDecoder : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ImageDecoder> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(ImageDecoder, WEBCORE_EXPORT);
 public:
     static RefPtr<ImageDecoder> create(FragmentedSharedBuffer&, const String& mimeType, AlphaOption, GammaAndColorProfileOption);

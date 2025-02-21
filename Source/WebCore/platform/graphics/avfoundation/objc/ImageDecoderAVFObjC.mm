@@ -65,7 +65,7 @@
 #pragma mark -
 
 @interface WebCoreSharedBufferResourceLoaderDelegate : NSObject<AVAssetResourceLoaderDelegate> {
-    WebCore::ImageDecoderAVFObjC* _parent;
+    ThreadSafeWeakPtr<WebCore::ImageDecoderAVFObjC> _parent;
     long long _expectedContentSize;
     RetainPtr<NSData> _data;
     bool _complete;
@@ -157,7 +157,9 @@
 - (void)fulfillRequest:(AVAssetResourceLoadingRequest *)request
 {
     if (auto infoRequest = request.contentInformationRequest) {
-        infoRequest.contentType = _parent->uti();
+        RefPtr parent = _parent.get();
+        RELEASE_ASSERT(parent);
+        infoRequest.contentType = parent->uti();
         infoRequest.byteRangeAccessSupported = YES;
         infoRequest.contentLength = _complete ? _data.get().length : _expectedContentSize;
     }

@@ -193,7 +193,7 @@ using WebCore::LogOverlayScrollbars;
 #endif
 
 @interface WebScrollbarPartAnimation : NSObject {
-    WebCore::Scrollbar* _scrollbar;
+    SingleThreadWeakPtr<WebCore::Scrollbar> _scrollbar;
     RetainPtr<NSScrollerImp> _scrollerImp;
     FeatureToAnimate _featureToAnimate;
     CGFloat _startValue;
@@ -234,9 +234,10 @@ using WebCore::LogOverlayScrollbars;
 
 - (void)startAnimation
 {
-    ASSERT(_scrollbar);
+    RefPtr scrollbar = _scrollbar.get();
+    RELEASE_ASSERT(scrollbar);
 
-    _scrollerImp = scrollerImpForScrollbar(*_scrollbar);
+    _scrollerImp = scrollerImpForScrollbar(*scrollbar);
 
     LOG_WITH_STREAM(OverlayScrollbars, stream << "-[WebScrollbarPartAnimation " << self << "startAnimation] for " << _featureToAnimate);
 
@@ -268,7 +269,8 @@ using WebCore::LogOverlayScrollbars;
             t = elapsed / _duration;
         progress = _timingFunction->transformProgress(t, _duration);
     }
-    ASSERT(_scrollbar);
+    RefPtr scrollbar = _scrollbar.get();
+    RELEASE_ASSERT(scrollbar);
 
     LOG_WITH_STREAM(OverlayScrollbars, stream << "-[" << self << " setCurrentProgress: " << progress << "] for " << _featureToAnimate);
 
@@ -293,8 +295,8 @@ using WebCore::LogOverlayScrollbars;
         break;
     }
 
-    if (_scrollbar && !_scrollbar->supportsUpdateOnSecondaryThread())
-        _scrollbar->invalidate();
+    if (scrollbar && !scrollbar->supportsUpdateOnSecondaryThread())
+        scrollbar->invalidate();
 }
 
 - (void)invalidate

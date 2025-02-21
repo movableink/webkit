@@ -317,9 +317,10 @@ void SourceBufferParserAVFObjC::didParseStreamDataAsAsset(AVAsset* asset)
                 segment.audioTracks.append(WTFMove(info));
             } else if ([mediaType isEqualToString:AVMediaTypeText] && m_configuration.textTracksEnabled) {
                 SourceBufferPrivateClient::InitializationSegment::TextTrackInformation info;
-                info.description = MediaDescriptionAVFObjC::create(track);
-                if (info.description->codec().toString() != "wvtt"_s) {
-                    ALWAYS_LOG_IF_POSSIBLE(identifier, "Ignoring text track of type ", info.description->codec());
+                Ref description = MediaDescriptionAVFObjC::create(track);
+                info.description = description.copyRef();
+                if (description->codec().toString() != "wvtt"_s) {
+                    ALWAYS_LOG_IF_POSSIBLE(identifier, "Ignoring text track of type ", description->codec());
                     break;
                 }
                 info.track = TextTrackPrivateMediaSourceAVFObjC::create(track, InbandTextTrackPrivate::CueFormat::WebVTT);

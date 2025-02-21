@@ -50,7 +50,7 @@
 
 - (WebKit::WebContextMenuProxyMac*)menuProxy
 {
-    return _menuProxy;
+    return _menuProxy.get();
 }
 
 - (void)setMenuProxy:(WebKit::WebContextMenuProxyMac*)menuProxy
@@ -110,7 +110,8 @@
 
 - (void)sharingService:(NSSharingService *)sharingService willShareItems:(NSArray *)items
 {
-    _menuProxy->clearServicesMenu();
+    if (RefPtr menuProxy = _menuProxy.get())
+        menuProxy->clearServicesMenu();
 }
 
 - (void)sharingService:(NSSharingService *)sharingService didShareItems:(NSArray *)items
@@ -148,7 +149,8 @@
         NSItemProvider *itemProvider = (NSItemProvider *)item;
         
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        WeakPtr weakPage = _menuProxy->page();
+        RefPtr menuProxy = _menuProxy.get();
+        WeakPtr weakPage = menuProxy ? menuProxy->page() : nullptr;
         NSString *itemUTI = itemProvider.registeredTypeIdentifiers.firstObject;
         [itemProvider loadDataRepresentationForTypeIdentifier:itemUTI completionHandler:[weakPage, attachmentID = _attachmentID, itemUTI](NSData *data, NSError *error) {
             RefPtr webPage = weakPage.get();
@@ -175,17 +177,21 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
     // FIXME: We should adopt replaceSelectionWithAttributedString instead of bouncing through the (fake) pasteboard.
-    _menuProxy->page()->replaceSelectionWithPasteboardData(types, dataReference);
+    if (RefPtr menuProxy = _menuProxy.get())
+        menuProxy->page()->replaceSelectionWithPasteboardData(types, dataReference);
 }
 
 - (NSWindow *)sharingService:(NSSharingService *)sharingService sourceWindowForShareItems:(NSArray *)items sharingContentScope:(NSSharingContentScope *)sharingContentScope
 {
-    return _menuProxy->window();
+    if (RefPtr menuProxy = _menuProxy.get())
+        return _menuProxy->window();
+    return nil;
 }
 
 - (void)removeBackground
 {
-    _menuProxy->removeBackgroundFromControlledImage();
+    if (RefPtr menuProxy = _menuProxy.get())
+        menuProxy->removeBackgroundFromControlledImage();
 }
 
 @end

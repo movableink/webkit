@@ -28,7 +28,7 @@
 #include "FloatRoundedRect.h"
 #include "GraphicsLayer.h"
 #include <wtf/RetainPtr.h>
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/Vector.h>
 
@@ -95,7 +95,7 @@ enum class PlatformCALayerLayerType : uint8_t {
         LayerTypeHost,
 };
 
-class WEBCORE_EXPORT PlatformCALayer : public ThreadSafeRefCounted<PlatformCALayer, WTF::DestructionThread::Main> {
+class WEBCORE_EXPORT PlatformCALayer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PlatformCALayer, WTF::DestructionThread::Main> {
     friend class PlatformCALayerCocoa;
 public:
     static CFTimeInterval currentTimeToMediaTime(MonotonicTime);
