@@ -244,10 +244,12 @@ bool Styleable::hasRunningAcceleratedAnimations() const
             return true;
     }
 
-    for (RefPtr animation : WebAnimation::instances()) {
-        if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
-            if (keyframeEffect->isRunningAccelerated() && keyframeEffect->targetStyleable() == *this)
-                return true;
+    if (auto* animations = this->animations()) {
+        for (const auto& animation : *animations) {
+            if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
+                if (keyframeEffect->isRunningAccelerated())
+                    return true;
+            }
         }
     }
 
