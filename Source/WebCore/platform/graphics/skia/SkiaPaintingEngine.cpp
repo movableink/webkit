@@ -261,7 +261,8 @@ unsigned SkiaPaintingEngine::numberOfGPUPaintingThreads()
         if (!ProcessCapabilities::canUseAcceleratedBuffers())
             return;
 
-        numberOfThreads = 1; // By default, use 1 GPU worker thread, if GPU painting is active.
+        // By default, use 2 GPU worker threads if there are four or more CPU cores, otherwise use 1 thread only.
+        numberOfThreads = WTF::numberOfProcessorCores() >= 4 ? 2 : 1;
 
         if (const char* envString = getenv("WEBKIT_SKIA_GPU_PAINTING_THREADS")) {
             auto newValue = parseInteger<unsigned>(StringView::fromLatin1(envString));
