@@ -500,8 +500,9 @@ bool MediaPlayerPrivateGStreamer::paused() const
     }
 
     if (m_playbackRatePausedState == PlaybackRatePausedState::RatePaused
-        || m_playbackRatePausedState == PlaybackRatePausedState::ShouldMoveToPlaying) {
-        GST_DEBUG_OBJECT(pipeline(), "Playback rate is 0, simulating PAUSED state");
+        || m_playbackRatePausedState == PlaybackRatePausedState::ShouldMoveToPlaying
+        || m_playbackRatePausedState == PlaybackRatePausedState::BufferingPaused) {
+        GST_DEBUG_OBJECT(pipeline(), "Playback rate is 0 or paused for buffering, simulating PAUSED state");
         return false;
     }
 
