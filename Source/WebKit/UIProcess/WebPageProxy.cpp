@@ -2582,7 +2582,7 @@ RefPtr<API::Navigation> WebPageProxy::goToBackForwardItem(WebBackForwardListFram
 
     Ref frameState = item->mainFrameState();
     if (protectedPreferences()->siteIsolationEnabled()) {
-        if (RefPtr frame = WebFrameProxy::webFrame(frameItem.frameID())) {
+        if (RefPtr frame = WebFrameProxy::webFrame(frameItem.frameID()); frame && frame->page() == this) {
             process = frame->process();
             frameState = frameItem.copyFrameStateWithChildren();
         }
