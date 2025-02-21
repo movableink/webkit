@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005, 2006, 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020 Google Inc.  All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -918,7 +919,9 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
     TransformationMatrix mat;
 
     // Optimize cases where the axis is along a major axis
-    if (x == 1.0 && y == 0.0 && z == 0.0) {
+    // Since we've already normalized the vector we don't need to check that the
+    // other two dimensions are zero
+    if (x == 1.0) {
         mat.m_matrix[0][0] = 1.0;
         mat.m_matrix[0][1] = 0.0;
         mat.m_matrix[0][2] = 0.0;
@@ -931,7 +934,7 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
         mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
         mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
         mat.m_matrix[3][3] = 1.0;
-    } else if (x == 0.0 && y == 1.0 && z == 0.0) {
+    } else if (y == 1.0) {
         mat.m_matrix[0][0] = cosTheta;
         mat.m_matrix[0][1] = 0.0;
         mat.m_matrix[0][2] = -sinTheta;
@@ -944,7 +947,7 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
         mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
         mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
         mat.m_matrix[3][3] = 1.0;
-    } else if (x == 0.0 && y == 0.0 && z == 1.0) {
+    } else if (z == 1.0) {
         mat.m_matrix[0][0] = cosTheta;
         mat.m_matrix[0][1] = sinTheta;
         mat.m_matrix[0][2] = 0.0;
