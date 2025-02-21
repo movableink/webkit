@@ -10494,7 +10494,6 @@
         "web-platform-tests/scroll-animations/css/animation-update-ref.html",
         "web-platform-tests/scroll-animations/css/deferred-timeline-composited-ref.html",
         "web-platform-tests/scroll-animations/css/printing/animation-timeline-none-with-progress-print.tentative.html",
-        "web-platform-tests/scroll-animations/css/printing/animation-timeline-none-with-progress-ref.html",
         "web-platform-tests/scroll-animations/css/printing/scroll-timeline-default-iframe-print.html",
         "web-platform-tests/scroll-animations/css/printing/scroll-timeline-default-print-ref.html",
         "web-platform-tests/scroll-animations/css/printing/scroll-timeline-default-print.tentative.html",
