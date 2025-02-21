@@ -45,13 +45,16 @@ Vector<std::pair<CSSValueID, double>> consumeKeyframeKeyList(CSSParserTokenRange
     // <keyframe-selector> = from | to | <percentage [0,100]> | <timeline-range-name> <percentage>
     // https://drafts.csswg.org/css-animations-1/#typedef-keyframe-selector
 
-    auto consumeAndConvertPercentage = [&](CSSParserTokenRange& range) -> std::optional<double> {
+    enum class RestrictedToZeroToHundredRange : bool { No, Yes };
+    auto consumeAndConvertPercentage = [&](CSSParserTokenRange& range, RestrictedToZeroToHundredRange restricted) -> std::optional<double> {
         // FIXME: We use resolveAsPercentageDeprecated() to deal with calc() and % values.
         // We will eventually want to return a CSS value that can be kept as-is on a
         // BlendingKeyframe so that resolution happens when we have the necessary context
         // when the keyframes are associated with a target element.
-        if (auto percentageValue = consumePercentage(range, context, ValueRange::NonNegative)) {
+        if (auto percentageValue = consumePercentage(range, context, ValueRange::All)) {
             auto resolvedPercentage = percentageValue->resolveAsPercentageDeprecated();
+            if (restricted == RestrictedToZeroToHundredRange::No)
+                return resolvedPercentage / 100;
             if (resolvedPercentage >= 0 && resolvedPercentage <= 100)
                 return resolvedPercentage / 100;
         }
@@ -63,7 +66,7 @@ Vector<std::pair<CSSValueID, double>> consumeKeyframeKeyList(CSSParserTokenRange
             // "normal" will be considered valid by isAnimationRangeKeyword() but is not valid for a @keyframes rule.
             if (id == CSSValueNormal)
                 return { };
-            if (auto convertedPercentage = consumeAndConvertPercentage(range))
+            if (auto convertedPercentage = consumeAndConvertPercentage(range, RestrictedToZeroToHundredRange::No))
                 return { { id, *convertedPercentage } };
         }
         return { };
@@ -83,7 +86,7 @@ Vector<std::pair<CSSValueID, double>> consumeKeyframeKeyList(CSSParserTokenRange
                 result.append(*pair);
             else
                 return { }; // Parser error, invalid value in keyframe selector
-        } else if (auto convertedPercentage = consumeAndConvertPercentage(range))
+        } else if (auto convertedPercentage = consumeAndConvertPercentage(range, RestrictedToZeroToHundredRange::Yes))
             result.append({ CSSValueNormal, *convertedPercentage });
         else
             return { }; // Parser error, invalid value in keyframe selector

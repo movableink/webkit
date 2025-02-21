@@ -101,11 +101,11 @@ struct StyleRuleKeyframeKeyHash {
     static const bool safeToCompareToEmptyOrDeleted = true;
 };
 template<> struct HashTraits<WebCore::StyleRuleKeyframe::Key> : GenericHashTraits<WebCore::StyleRuleKeyframe::Key> {
-    static WebCore::StyleRuleKeyframe::Key emptyValue() { return { WebCore::CSSValueNormal, -1 }; }
-    static bool isEmptyValue(const WebCore::StyleRuleKeyframe::Key& value) { return value.offset == -1; }
+    static WebCore::StyleRuleKeyframe::Key emptyValue() { return { WebCore::CSSValueDefault, 0 }; }
+    static bool isEmptyValue(const WebCore::StyleRuleKeyframe::Key& value) { return value.rangeName == WebCore::CSSValueDefault; }
 
-    static void constructDeletedValue(WebCore::StyleRuleKeyframe::Key& slot) { slot.offset = -2; }
-    static bool isDeletedValue(const WebCore::StyleRuleKeyframe::Key& slot) { return slot.offset == -2; }
+    static void constructDeletedValue(WebCore::StyleRuleKeyframe::Key& slot) { slot.rangeName = WebCore::CSSValueNone; }
+    static bool isDeletedValue(const WebCore::StyleRuleKeyframe::Key& slot) { return slot.rangeName == WebCore::CSSValueNone; }
 };
 template<> struct DefaultHash<WebCore::StyleRuleKeyframe::Key> : StyleRuleKeyframeKeyHash { };
 
