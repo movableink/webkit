@@ -123,7 +123,7 @@ RefPtr<GraphicsLayer> PDFPresentationController::makePageContainerLayer(PDFDocum
     pageBackgroundLayer->setBackgroundColor(Color::white);
 
     pageBackgroundLayer->setDrawsContent(true);
-    pageBackgroundLayer->setAcceleratesDrawing(true);
+    pageBackgroundLayer->setAcceleratesDrawing(!shouldUseInProcessBackingStore());
     pageBackgroundLayer->setShouldUpdateRootRelativeScaleFactor(false);
     pageBackgroundLayer->setAllowsTiling(false);
     pageBackgroundLayer->setNeedsDisplay(); // We only need to paint this layer once when page backgrounds change.
@@ -273,6 +273,11 @@ FloatPoint PDFPresentationController::anchorPointInDocumentSpace(AnchorPoint anc
         return { };
     }();
     return m_plugin->convertDown(UnifiedPDFPlugin::CoordinateSpace::Plugin, UnifiedPDFPlugin::CoordinateSpace::PDFDocumentLayout, anchorPointInPluginSpace);
+}
+
+bool PDFPresentationController::shouldUseInProcessBackingStore() const
+{
+    return m_plugin->shouldUseInProcessBackingStore();
 }
 
 } // namespace WebKit

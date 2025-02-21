@@ -1453,7 +1453,7 @@ bool UnifiedPDFPlugin::updateOverflowControlsLayers(bool needsHorizontalScrollba
             layer->setAllowsBackingStoreDetaching(false);
             layer->setAllowsTiling(false);
             layer->setDrawsContent(true);
-            layer->setAcceleratesDrawing(true);
+            layer->setAcceleratesDrawing(!shouldUseInProcessBackingStore());
 
 #if ENABLE(SCROLLING_THREAD)
             layer->setScrollingNodeID(m_scrollingNodeID);
@@ -1507,7 +1507,7 @@ void UnifiedPDFPlugin::positionOverflowControlsLayers()
         layer->setPosition(cornerRect.location());
         layer->setSize(cornerRect.size());
         layer->setDrawsContent(!cornerRect.isEmpty());
-        layer->setAcceleratesDrawing(true);
+        layer->setAcceleratesDrawing(!shouldUseInProcessBackingStore());
     }
 }
 
@@ -4471,6 +4471,23 @@ FloatRect UnifiedPDFPlugin::absoluteBoundingRectForSmartMagnificationAtPoint(Flo
     FloatRect pageColumnFrame = [page columnFrameAtPoint:pagePoint];
 
     return pageToRootView(pageColumnFrame, pageIndex);
+}
+
+bool UnifiedPDFPlugin::shouldUseInProcessBackingStore() const
+{
+    // FIXME: We should allow GPUP-owned backing store on platforms that have
+    // memory limits only once we figure out why there are spikes of unattributed
+    // memory when zooming (see bug 287478).
+#if PLATFORM(IOS_FAMILY)
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UnifiedPDFPlugin::layerNeedsPlatformContext(const GraphicsLayer* layer) const
+{
+    return !shouldUseInProcessBackingStore() && (layer == layerForHorizontalScrollbar() || layer == layerForVerticalScrollbar() || layer == layerForScrollCorner());
 }
 
 TextStream& operator<<(TextStream& ts, RepaintRequirement requirement)

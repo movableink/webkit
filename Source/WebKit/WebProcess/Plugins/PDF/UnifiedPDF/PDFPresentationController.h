@@ -140,6 +140,8 @@ protected:
     RefPtr<AsyncPDFRenderer> asyncRendererIfExists() const;
     void clearAsyncRenderer();
 
+    bool shouldUseInProcessBackingStore() const;
+
     Ref<UnifiedPDFPlugin> m_plugin;
     RefPtr<AsyncPDFRenderer> m_asyncRenderer;
 };
