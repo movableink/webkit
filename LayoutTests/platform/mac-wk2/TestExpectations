@@ -690,8 +690,6 @@ webkit.org/b/123431 http/tests/local/link-stylesheet-load-order.html [ Failure ]
 
 webkit.org/b/140607 http/tests/navigation/navigation-interrupted-by-fragment.html [ Pass Timeout ]
 
-webkit.org/b/141322 [ Debug ] fast/images/destroyed-image-load-event.html [ Pass Timeout ]
-
 webkit.org/b/141085 http/tests/media/video-query-url.html [ Pass Timeout ]
 
 ### END OF (6) New WebKit2-only failures in Yosemite
