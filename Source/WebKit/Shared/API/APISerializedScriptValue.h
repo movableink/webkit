@@ -93,7 +93,7 @@ private:
     {
     }
 
-    Ref<WebCore::SerializedScriptValue> m_serializedScriptValue;
+    const Ref<WebCore::SerializedScriptValue> m_serializedScriptValue;
 };
     
 }

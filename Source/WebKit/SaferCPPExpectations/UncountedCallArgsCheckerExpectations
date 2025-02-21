@@ -26,7 +26,6 @@ NetworkProcess/storage/BackgroundFetchStoreManager.cpp
 NetworkProcess/storage/IDBStorageRegistry.cpp
 Platform/IPC/ArgumentCoders.h
 Shared/API/APIArray.h
-Shared/API/APISerializedScriptValue.h
 Shared/API/c/WKArray.cpp
 Shared/API/c/WKContextMenuItem.cpp
 Shared/API/c/WKData.cpp
