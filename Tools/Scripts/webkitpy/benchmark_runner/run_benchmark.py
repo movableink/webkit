@@ -19,8 +19,6 @@ benchmark_runner_subclasses = {
     WebServerBenchmarkRunner.name: WebServerBenchmarkRunner,
 }
 
-WEBKIT_PGO_DIR = '/private/tmp/WebKitPGO'
-
 def default_platform():
     if sys.platform.startswith('linux'):
         return 'linux'
@@ -90,9 +88,6 @@ def parse_args(parser=None):
     if (args.generate_pgo_profiles or args.trace_type) and not args.diagnose_dir:
         raise Exception('Collecting profiles requires a diagnostic directory (--diagnose-directory) to be set.')
 
-    if args.generate_pgo_profiles and args.platform != 'osx':
-        raise Exception('PGO Profile generation is currently only supported on macOS.')
-
     return args
 
 
@@ -102,7 +97,7 @@ def run_benchmark_plan(args, plan):
                                     args.local_copy, args.count, args.timeout, args.build_dir, args.output_file,
                                     args.platform, args.browser, args.browser_path, args.subtests, args.scale_unit,
                                     args.show_iteration_values, args.device_id, args.diagnose_dir,
-                                    WEBKIT_PGO_DIR if args.generate_pgo_profiles else None,
+                                    args.generate_pgo_profiles,
                                     args.diagnose_dir if args.trace_type else None,
                                     args.trace_type, args.profiling_interval,
                                     args.browser_args, args.http_server_type)
