@@ -56,6 +56,7 @@ public:
 
     AVMediaSelectionOption *avMediaSelectionOption() const { return m_mediaSelectionOption.get(); }
     AVAssetTrack *assetTrack() const;
+    AVPlayerItem *playerItem() const;
 
 private:
     friend class MediaSelectionGroupAVFObjC;
@@ -81,6 +82,7 @@ public:
     typename OptionContainer::ValuesIteratorRange options() { return m_options.values(); }
 
     AVMediaSelectionGroup *avMediaSelectionGroup() const { return m_mediaSelectionGroup.get(); }
+    AVPlayerItem *playerItem() const { return m_playerItem.get(); }
 
 private:
     MediaSelectionGroupAVFObjC(AVPlayerItem*, AVMediaSelectionGroup*, const Vector<String>& characteristics);

@@ -249,7 +249,7 @@ std::optional<VideoMetadata> videoMetadataFromFormatDescription(CMFormatDescript
             return false;
         auto projectionKind = dynamic_cf_cast<CFStringRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::kCMFormatDescriptionExtension_ProjectionKind));
 
-        return projectionKind && (CFStringCompare(projectionKind, PAL::kCMFormatDescriptionProjectionKind_Equirectangular, 0) == kCFCompareEqualTo || CFStringCompare(projectionKind, PAL::kCMFormatDescriptionProjectionKind_HalfEquirectangular, 0) == kCFCompareEqualTo || (PAL::canLoad_CoreMedia_kCMFormatDescriptionProjectionKind_ParametricImmersive() && CFStringCompare(projectionKind, PAL::kCMFormatDescriptionProjectionKind_ParametricImmersive, 0) == kCFCompareEqualTo));
+        return projectionKind && (CFStringCompare(projectionKind, PAL::kCMFormatDescriptionProjectionKind_Equirectangular, 0) == kCFCompareEqualTo || CFStringCompare(projectionKind, PAL::kCMFormatDescriptionProjectionKind_HalfEquirectangular, 0) == kCFCompareEqualTo || (PAL::canLoad_CoreMedia_kCMFormatDescriptionProjectionKind_ParametricImmersive() && CFStringCompare(projectionKind, PAL::kCMFormatDescriptionProjectionKind_ParametricImmersive, 0) == kCFCompareEqualTo) || CFStringCompare(projectionKind, CFSTR("Fisheye"), 0) == kCFCompareEqualTo);
     };
     if (auto isImmersive = checkForImmersiveData())
         return isImmersive;

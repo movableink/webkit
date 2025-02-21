@@ -84,9 +84,27 @@ int MediaSelectionOptionAVFObjC::index() const
 
 AVAssetTrack* MediaSelectionOptionAVFObjC::assetTrack() const
 {
-    if ([m_mediaSelectionOption respondsToSelector:@selector(track)])
+    if ([m_mediaSelectionOption respondsToSelector:@selector(track)] && [m_mediaSelectionOption track])
         return [m_mediaSelectionOption track];
+    if (selected()) {
+        for (AVPlayerItemTrack* track in [playerItem() tracks]) {
+            if (!track.enabled)
+                continue;
+            if (!track.assetTrack)
+                continue;
+            if ([track.assetTrack mediaType] == [m_mediaSelectionOption mediaType] && [track.assetTrack isPlayable] == [m_mediaSelectionOption isPlayable])
+                return track.assetTrack;
+        }
+    }
+
     return nil;
+}
+
+AVPlayerItem *MediaSelectionOptionAVFObjC::playerItem() const
+{
+    if (!m_group)
+        return nil;
+    return m_group->playerItem();
 }
 
 Ref<MediaSelectionGroupAVFObjC> MediaSelectionGroupAVFObjC::create(AVPlayerItem *item, AVMediaSelectionGroup *group, const Vector<String>& characteristics)
