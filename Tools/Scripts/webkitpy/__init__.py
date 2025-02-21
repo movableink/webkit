@@ -70,7 +70,7 @@ if sys.version_info < (3, 11):
     AutoInstall.register(Package('exceptiongroup', Version(1, 1, 0), wheel=True))
 
 AutoInstall.register(Package('importlib_metadata', Version(4, 8, 1)))
-AutoInstall.register(Package('typing_extensions', Version(4, 8, 0), wheel=True))
+AutoInstall.register(Package('typing_extensions', Version(4, 12, 2), wheel=True))
 AutoInstall.register(Package('atomicwrites', Version(1, 1, 5)))
 AutoInstall.register(Package('attr', Version(21, 3, 0), pypi_name='attrs'))
 AutoInstall.register(Package('bs4', Version(4, 12, 0), pypi_name='beautifulsoup4'))
