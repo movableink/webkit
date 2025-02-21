@@ -234,6 +234,7 @@ struct PatternTerm {
             unsigned lastSubpatternId;
             bool isCopy : 1;
             bool isTerminal : 1;
+            bool isStringList : 1;
         } parentheses;
         struct {
             bool bolAnchor : 1;
@@ -278,6 +279,7 @@ struct PatternTerm {
         parentheses.subpatternId = subpatternId;
         parentheses.isCopy = false;
         parentheses.isTerminal = false;
+        parentheses.isStringList = false;
         quantityType = QuantifierType::FixedCount;
         quantityMinCount = quantityMaxCount = 1;
     }
@@ -426,6 +428,7 @@ public:
         , m_hasFixedSize(false)
         , m_startsWithBOL(false)
         , m_containsBOL(false)
+        , m_isLastAlternative(false)
     {
     }
 
@@ -491,6 +494,7 @@ public:
     bool m_hasFixedSize : 1;
     bool m_startsWithBOL : 1;
     bool m_containsBOL : 1;
+    bool m_isLastAlternative : 1;
 };
 
 struct PatternDisjunction {
