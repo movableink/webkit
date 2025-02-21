@@ -81,7 +81,7 @@ public:
     void dispatchPendingEvents();
 
     enum class ExitMode : bool { Resize, NoResize };
-    void finishExitFullscreen(Document&, ExitMode);
+    void finishExitFullscreen(Frame&, ExitMode);
 
     void exitRemovedFullscreenElement(Element&);
 
