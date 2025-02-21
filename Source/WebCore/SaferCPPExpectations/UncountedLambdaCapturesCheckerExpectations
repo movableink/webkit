@@ -139,7 +139,6 @@ platform/encryptedmedia/clearkey/CDMClearKey.cpp
 platform/graphics/avfoundation/InbandTextTrackPrivateAVF.cpp
 platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.mm
 platform/graphics/avfoundation/objc/InbandChapterTrackPrivateAVFObjC.mm
-platform/graphics/avfoundation/objc/LocalSampleBufferDisplayLayer.mm
 platform/graphics/avfoundation/objc/MediaSampleAVFObjC.mm
 platform/graphics/cocoa/VideoMediaSampleRenderer.mm
 platform/graphics/filters/FilterOperation.cpp

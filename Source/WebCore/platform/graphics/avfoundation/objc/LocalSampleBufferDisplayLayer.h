@@ -105,7 +105,7 @@ private:
     RetainPtr<PlatformLayer> m_rootLayer;
     RenderPolicy m_renderPolicy { RenderPolicy::TimingInfo };
 
-    Ref<WorkQueue> m_processingQueue;
+    const Ref<WorkQueue> m_processingQueue;
 
     // Only accessed through m_processingQueue or if m_processingQueue is null.
     using PendingSampleQueue = Deque<Ref<VideoFrame>>;
