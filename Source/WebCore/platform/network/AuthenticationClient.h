@@ -26,12 +26,14 @@
 #ifndef AuthenticationClient_h
 #define AuthenticationClient_h
 
+#include <wtf/WeakPtr.h>
+
 namespace WebCore {
 
 class AuthenticationChallenge;
 class Credential;
 
-class AuthenticationClient {
+class AuthenticationClient : public CanMakeWeakPtr<AuthenticationClient> {
 public:
     virtual void receivedCredential(const AuthenticationChallenge&, const Credential&) = 0;
     virtual void receivedRequestToContinueWithoutCredential(const AuthenticationChallenge&) = 0;
