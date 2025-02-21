@@ -62,7 +62,7 @@
 
 <!-- too many nests should be rejected to avoid stack overflow -->
 <div style="width: 100px; width: calc(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((200px)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));">too many nests</div>
- 
+
 <!-- invalid formulas -->
 <div style="width: 100px; width: calc(200px*);">end with operator</div>
 <div style="width: 100px; width: calc(+ +200px);">start with operator</div>
@@ -75,8 +75,15 @@
 <div style="width: 100px; width: calc(100px @ 2);">invalid operator '@'</div>
 <div style="width: 100px; width: calc(1 flim 2);">invalid operator 'flim'</div>
 <div style="width: 100px; width: calc(1 flim (2));">invalid operator 'flim' with parens</div>
- 
- 
+
+<!-- Test cases for operator precedence -->
+<div style="width: 100px; width: calc((500px - 2 * 40px - 2 * 30px - 60px) / 3);">Operator Precedence Case 1</div>
+<div style="width: 100px; width: calc((500px - 40px - 60px - 40px - 60px) / 3);">Operator Precedence Case 2</div>
+<div style="width: 100px; width: calc((250px + 40px + 30px + 40px - 60px) / 3);">Operator Precedence Case 3</div>
+<div style="width: 100px; width: calc((500px - 2 / 2 * 40px - 2 * 30px) / 4);">Operator Precedence Case 4</div>
+<div style="width: 100px; width: calc((500px - 2 * 2 / 2 * 40px - 2 * 30px - 60px) / 3);">Operator Precedence Case 5</div>
+<div style="width: 100px; width: calc((500px - 2 * 2 * 20px - 2 * 30px - 60px) / 3);">Operator Precedence Case 6</div>
+<div style="width: 100px; width: calc((500px - 320px / 2 / 2 - 2 * 30px - 60px) / 3);">Operator Precedence Case 7</div>
 </div>
 
 <script>
