@@ -200,6 +200,9 @@ Color ColorInputType::valueAsColor() const
     ASSERT(element());
     auto color = parseColorValue(element()->value(), *element());
     ASSERT(!!color);
+    // FIXME: This is a speculative fix for rdar://144872437.
+    if (!color)
+        return Color::black;
     return *color;
 }
 
