@@ -838,9 +838,13 @@ void PageClientImpl::exitFullScreen(CompletionHandler<void()>&& completionHandle
     [m_impl->fullScreenWindowController() exitFullScreen:WTFMove(completionHandler)];
 }
 
-void PageClientImpl::beganEnterFullScreen(const IntRect& initialFrame, const IntRect& finalFrame)
+void PageClientImpl::beganEnterFullScreen(const IntRect& initialFrame, const IntRect& finalFrame, CompletionHandler<void(bool)>&& completionHandler)
 {
-    [m_impl->fullScreenWindowController() beganEnterFullScreenWithInitialFrame:initialFrame finalFrame:finalFrame];
+    if (m_impl->fullScreenWindowController())
+        [m_impl->fullScreenWindowController() beganEnterFullScreenWithInitialFrame:initialFrame finalFrame:finalFrame completionHandler:WTFMove(completionHandler)];
+    else
+        completionHandler(false);
+
     m_impl->updateSupportsArbitraryLayoutModes();
 }
 

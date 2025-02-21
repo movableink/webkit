@@ -187,10 +187,12 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 #pragma mark -
 #pragma mark Exposed Interface
 
-- (void)enterFullScreen:(NSScreen *)screen completionHandler:(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&)completionHandler
+- (void)enterFullScreen:(NSScreen *)screen willEnterFullscreen:(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&)willEnterFullscreen didEnterFullscreen:(CompletionHandler<void(bool)>&&)didEnterFullscreen
 {
-    if (_isFullScreen)
-        return completionHandler({ });
+    if (_isFullScreen) {
+        willEnterFullscreen({ });
+        return didEnterFullscreen(false);
+    }
     _isFullScreen = YES;
     
     [self _updateMenuAndDockForFullScreen];   
@@ -239,7 +241,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     _savedScale = [_webView _viewScaleFactor];
     [_webView _scaleWebView:1 atOrigin:NSMakePoint(0, 0)];
-    completionHandler([self _manager]->willEnterFullscreen(*_element, WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard));
+    _didEnterFullscreen = WTFMove(didEnterFullscreen);
+    willEnterFullscreen([self _manager]->willEnterFullscreen(*_element, WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard));
     [self _manager]->setAnimatingFullscreen(true);
     [self _document]->updateLayout();
 
@@ -270,8 +273,9 @@ static void setClipRectForWindow(NSWindow *window, NSRect clipRect)
     
     if (completed) {
         [self _manager]->setAnimatingFullscreen(false);
-        [self _manager]->didEnterFullscreen();
-        
+        if (_didEnterFullscreen)
+            _didEnterFullscreen(true);
+
         NSRect windowBounds = [[self window] frame];
         windowBounds.origin = NSZeroPoint;
         setClipRectForWindow(self.window, windowBounds);

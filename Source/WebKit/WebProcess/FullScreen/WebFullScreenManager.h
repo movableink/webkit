@@ -66,14 +66,13 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
 
     bool supportsFullScreenForElement(const WebCore::Element&, bool withKeyboard);
-    void enterFullScreenForElement(WebCore::Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(WebCore::ExceptionOr<void>)>&&);
+    void enterFullScreenForElement(WebCore::Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(WebCore::ExceptionOr<void>)>&&, CompletionHandler<bool(bool)>&&);
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     void updateImageSource(WebCore::Element&);
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
     void exitFullScreenForElement(WebCore::Element*, CompletionHandler<void()>&&);
 
-    void willEnterFullScreen(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard);
-    void didEnterFullScreen();
+    void didEnterFullScreen(CompletionHandler<bool(bool)>&&);
     void willExitFullScreen(CompletionHandler<void()>&&);
     void didExitFullScreen(CompletionHandler<void()>&&);
 
@@ -88,6 +87,7 @@ protected:
 
     void setPIPStandbyElement(WebCore::HTMLVideoElement*);
 
+    void willEnterFullScreen(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&, CompletionHandler<bool(bool)>&&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard);
     void setAnimatingFullScreen(bool);
     void requestRestoreFullScreen(CompletionHandler<void(bool)>&&);
     void requestExitFullScreen();

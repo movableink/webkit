@@ -109,16 +109,16 @@ template<typename M> void WebFullScreenManagerProxy::sendToWebProcess(M&& messag
     fullScreenProcess->send(std::forward<M>(message), page->webPageIDInProcess(*fullScreenProcess));
 }
 
-void WebFullScreenManagerProxy::didEnterFullScreen()
+void WebFullScreenManagerProxy::didEnterFullScreen(CompletionHandler<void(bool)>&& completionHandler)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
     RefPtr page = m_page.get();
     if (!page)
-        return;
+        return completionHandler(false);
 
     m_fullscreenState = FullscreenState::InFullscreen;
     page->fullscreenClient().didEnterFullscreen(page.get());
-    sendToWebProcess(Messages::WebFullScreenManager::DidEnterFullScreen());
+    completionHandler(true);
 
     if (page->isControlledByAutomation()) {
         if (RefPtr automationSession = page->configuration().processPool().automationSession())
@@ -283,15 +283,22 @@ void WebFullScreenManagerProxy::prepareQuickLookImageURL(CompletionHandler<void(
 }
 #endif
 
-void WebFullScreenManagerProxy::beganEnterFullScreen(const IntRect& initialFrame, const IntRect& finalFrame)
+void WebFullScreenManagerProxy::beganEnterFullScreen(const IntRect& initialFrame, const IntRect& finalFrame, CompletionHandler<void(bool)>&& completionHandler)
 {
     RefPtr page = m_page.get();
     if (!page)
-        return;
+        return completionHandler(false);
 
-    page->callAfterNextPresentationUpdate([weakThis = WeakPtr { *this }, initialFrame = initialFrame, finalFrame = finalFrame] {
+    page->callAfterNextPresentationUpdate([weakThis = WeakPtr { *this }, initialFrame, finalFrame, completionHandler = WTFMove(completionHandler)] mutable {
         if (CheckedPtr client = weakThis ? weakThis->m_client : nullptr)
-            client->beganEnterFullScreen(initialFrame, finalFrame);
+            client->beganEnterFullScreen(initialFrame, finalFrame, [weakThis = WTFMove(weakThis), completionHandler = WTFMove(completionHandler)] (bool success) mutable {
+                if (weakThis && success)
+                    weakThis->didEnterFullScreen(WTFMove(completionHandler));
+                else
+                    completionHandler(false);
+            });
+        else
+            completionHandler(false);
     });
 }
 

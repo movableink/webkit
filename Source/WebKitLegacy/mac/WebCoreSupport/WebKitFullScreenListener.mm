@@ -36,26 +36,27 @@ using namespace WebCore;
 
 @implementation WebKitFullScreenListener
 
-- (id)initWithElement:(Element*)element completionHandler:(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&)completionHandler
+- (id)initWithElement:(WebCore::Element*)element initialCompletionHandler:(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&)initialCompletionHandler finalCompletionHandler:(CompletionHandler<void(bool)>&&)finalCompletionHandler
 {
     if (!(self = [super init]))
         return nil;
 
     _element = element;
-    _completionHandler = WTFMove(completionHandler);
+    _initialCompletionHandler = WTFMove(initialCompletionHandler);
+    _finalCompletionHandler = WTFMove(finalCompletionHandler);
     return self;
 }
 
 - (void)webkitWillEnterFullScreen
 {
-    if (_element && _completionHandler)
-        _completionHandler(_element->document().fullscreenManager().willEnterFullscreen(*_element, WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard));
+    if (_element && _initialCompletionHandler)
+        _initialCompletionHandler(_element->document().fullscreenManager().willEnterFullscreen(*_element, WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard));
 }
 
 - (void)webkitDidEnterFullScreen
 {
-    if (_element)
-        _element->document().fullscreenManager().didEnterFullscreen();
+    if (_finalCompletionHandler)
+        _finalCompletionHandler(true);
 }
 
 - (void)webkitWillExitFullScreen
@@ -66,8 +67,8 @@ using namespace WebCore;
 
 - (void)webkitDidExitFullScreen
 {
-    if (_completionHandler)
-        _completionHandler({ });
+    if (_initialCompletionHandler)
+        _initialCompletionHandler({ });
 }
 
 @end

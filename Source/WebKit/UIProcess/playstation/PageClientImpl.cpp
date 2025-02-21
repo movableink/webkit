@@ -271,9 +271,9 @@ void PageClientImpl::exitFullScreen(CompletionHandler<void()>&& completionHandle
     m_view.exitFullScreen(WTFMove(completionHandler));
 }
 
-void PageClientImpl::beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame)
+void PageClientImpl::beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void(bool)>&& completionHandler)
 {
-    m_view.beganEnterFullScreen(initialFrame, finalFrame);
+    m_view.beganEnterFullScreen(initialFrame, finalFrame, WTFMove(completionHandler));
 }
 
 void PageClientImpl::beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame, CompletionHandler<void()>&& completionHandler)

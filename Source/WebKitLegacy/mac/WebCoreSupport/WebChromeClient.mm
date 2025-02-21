@@ -1044,16 +1044,20 @@ bool WebChromeClient::supportsFullScreenForElement(const Element& element, bool 
 }
 
 // FIXME: Remove this when rdar://144645925 is resolved.
-void WebChromeClient::enterFullScreenForElement(Element& element, HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
+void WebChromeClient::enterFullScreenForElement(Element& element, HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreen, CompletionHandler<bool(bool)>&& didEnterFullscreen)
 {
     SEL selector = @selector(webView:enterFullScreenForElement:listener:);
     if ([[m_webView UIDelegate] respondsToSelector:selector]) {
-        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:&element completionHandler:WTFMove(completionHandler)]);
+        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:&element initialCompletionHandler:WTFMove(willEnterFullscreen) finalCompletionHandler:[didEnterFullscreen = WTFMove(didEnterFullscreen)] (bool result) mutable {
+            didEnterFullscreen(result);
+        }]);
         CallUIDelegate(m_webView, selector, kit(&element), listener.get());
     }
 #if !PLATFORM(IOS_FAMILY)
     else
-        [m_webView _enterFullScreenForElement:&element completionHandler:WTFMove(completionHandler)];
+        [m_webView _enterFullScreenForElement:&element willEnterFullscreen:WTFMove(willEnterFullscreen) didEnterFullscreen:[didEnterFullscreen = WTFMove(didEnterFullscreen)] (bool result) mutable {
+            didEnterFullscreen(result);
+        }];
 #endif
 }
 
@@ -1061,9 +1065,9 @@ void WebChromeClient::exitFullScreenForElement(Element* element, CompletionHandl
 {
     SEL selector = @selector(webView:exitFullScreenForElement:listener:);
     if ([[m_webView UIDelegate] respondsToSelector:selector]) {
-        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:element completionHandler:[completionHandler = WTFMove(completionHandler)] (auto) mutable {
+        auto listener = adoptNS([[WebKitFullScreenListener alloc] initWithElement:element initialCompletionHandler:[completionHandler = WTFMove(completionHandler)] (auto) mutable {
             completionHandler();
-        }]);
+        } finalCompletionHandler:nullptr]);
         CallUIDelegate(m_webView, selector, kit(element), listener.get());
     }
 #if !PLATFORM(IOS_FAMILY)

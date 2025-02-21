@@ -253,10 +253,8 @@ ViewLegacy::ViewLegacy(struct wpe_view_backend* backend, const API::PageConfigur
 #if ENABLE(FULLSCREEN_API) && WPE_CHECK_VERSION(1, 11, 1)
     static struct wpe_view_backend_fullscreen_client s_fullscreenClient = {
         // did_enter_fullscreen
-        [](void* data)
+        [](void*)
         {
-            auto& view = *reinterpret_cast<ViewLegacy*>(data);
-            view.page().fullScreenManager()->didEnterFullScreen();
         },
         // did_exit_fullscreen
         [](void*)

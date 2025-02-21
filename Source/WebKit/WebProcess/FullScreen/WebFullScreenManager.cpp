@@ -251,7 +251,7 @@ FullScreenMediaDetails WebFullScreenManager::getImageMediaDetails(CheckedPtr<Ren
 }
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
 
-void WebFullScreenManager::enterFullScreenForElement(WebCore::Element& element, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode, CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
+void WebFullScreenManager::enterFullScreenForElement(WebCore::Element& element, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullScreenCallback, CompletionHandler<bool(bool)>&& didEnterFullScreenCallback)
 {
     ALWAYS_LOG(LOGIDENTIFIER, "<", element.tagName(), " id=\"", element.getIdAttribute(), "\">");
 
@@ -259,8 +259,11 @@ void WebFullScreenManager::enterFullScreenForElement(WebCore::Element& element, 
 
     FullScreenMediaDetails mediaDetails;
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
-    if (m_page->videoPresentationManager().videoElementInPictureInPicture() && m_element->document().quirks().blocksEnteringStandardFullscreenFromPictureInPictureQuirk())
-        return completionHandler(Exception { ExceptionCode::NotAllowedError });
+    if (m_page->videoPresentationManager().videoElementInPictureInPicture() && m_element->document().quirks().blocksEnteringStandardFullscreenFromPictureInPictureQuirk()) {
+        willEnterFullScreenCallback(Exception { ExceptionCode::NotAllowedError });
+        didEnterFullScreenCallback(false);
+        return;
+    }
 
     if (auto* currentPlaybackControlsElement = m_page->playbackSessionManager().currentPlaybackControlsElement())
         currentPlaybackControlsElement->prepareForVideoFullscreenStandby();
@@ -301,16 +304,22 @@ void WebFullScreenManager::enterFullScreenForElement(WebCore::Element& element, 
     m_page->prepareToEnterElementFullScreen();
 
     if (mode == WebCore::HTMLMediaElementEnums::VideoFullscreenModeInWindow) {
-        willEnterFullScreen(WTFMove(completionHandler), mode);
-        didEnterFullScreen();
+        willEnterFullScreen(WTFMove(willEnterFullScreenCallback), WTFMove(didEnterFullScreenCallback), mode);
         m_inWindowFullScreenMode = true;
     } else {
-        m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::EnterFullScreen(m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), WTFMove(mediaDetails)), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (bool success) mutable {
+        m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::EnterFullScreen(m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), WTFMove(mediaDetails)), [
+            this,
+            protectedThis = Ref { *this },
+            willEnterFullScreenCallback = WTFMove(willEnterFullScreenCallback),
+            didEnterFullScreenCallback = WTFMove(didEnterFullScreenCallback)
+        ] (bool success) mutable {
             if (success) {
                 m_scrollPosition = m_page->corePage()->mainFrame().virtualView()->scrollPosition();
-                willEnterFullScreen(WTFMove(completionHandler));
-            } else
-                completionHandler(Exception { ExceptionCode::InvalidStateError });
+                willEnterFullScreen(WTFMove(willEnterFullScreenCallback), WTFMove(didEnterFullScreenCallback));
+                return;
+            }
+            willEnterFullScreenCallback(Exception { ExceptionCode::InvalidStateError });
+            didEnterFullScreenCallback(false);
         });
     }
 #endif
@@ -352,10 +361,13 @@ void WebFullScreenManager::exitFullScreenForElement(WebCore::Element* element, C
 #endif
 }
 
-void WebFullScreenManager::willEnterFullScreen(CompletionHandler<void(ExceptionOr<void>)>&& completionHandler, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode)
+void WebFullScreenManager::willEnterFullScreen(CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreenCallback, CompletionHandler<bool(bool)>&& didEnterFullscreenCallback, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
-    if (!m_element)
-        return completionHandler(Exception { ExceptionCode::InvalidStateError });
+    if (!m_element) {
+        willEnterFullscreenCallback(Exception { ExceptionCode::InvalidStateError });
+        didEnterFullscreenCallback(false);
+        return;
+    }
 
     ALWAYS_LOG(LOGIDENTIFIER, "<", m_element->tagName(), " id=\"", m_element->getIdAttribute(), "\">");
 
@@ -364,10 +376,11 @@ void WebFullScreenManager::willEnterFullScreen(CompletionHandler<void(ExceptionO
     auto result = m_element->document().fullscreenManager().willEnterFullscreen(*m_element, mode);
     if (result.hasException())
         close();
-    completionHandler(result);
+    willEnterFullscreenCallback(result);
 
     if (!m_element) {
         close();
+        didEnterFullscreenCallback(false);
         return;
     }
 
@@ -376,17 +389,25 @@ void WebFullScreenManager::willEnterFullScreen(CompletionHandler<void(ExceptionO
 #endif
     m_element->protectedDocument()->updateLayout();
     m_finalFrame = screenRectOfContents(m_element.get());
-    m_page->send(Messages::WebFullScreenManagerProxy::BeganEnterFullScreen(m_initialFrame, m_finalFrame));
+    m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::BeganEnterFullScreen(m_initialFrame, m_finalFrame), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(didEnterFullscreenCallback)] (bool success) mutable {
+        if (!success) {
+            completionHandler(false);
+            return;
+        }
+        didEnterFullScreen(WTFMove(completionHandler));
+    });
 }
 
-void WebFullScreenManager::didEnterFullScreen()
+void WebFullScreenManager::didEnterFullScreen(CompletionHandler<bool(bool)>&& completionHandler)
 {
-    if (!m_element)
+    if (!m_element) {
+        completionHandler(false);
         return;
+    }
 
     ALWAYS_LOG(LOGIDENTIFIER, "<", m_element->tagName(), " id=\"", m_element->getIdAttribute(), "\">");
 
-    if (!m_element->document().fullscreenManager().didEnterFullscreen()) {
+    if (!completionHandler(true)) {
         close();
         return;
     }

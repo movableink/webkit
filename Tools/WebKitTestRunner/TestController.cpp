@@ -483,8 +483,6 @@ void TestController::beganEnterFullScreen(WKPageRef page, WKRect initialFrame, W
             "}\n"_s
         ));
     }
-
-    WKPageDidEnterFullScreen(page);
 }
 
 void TestController::exitFullScreen(WKPageRef page, const void* clientInfo)
