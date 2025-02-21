@@ -36,6 +36,7 @@
 #include <WebCore/GraphicsLayerClient.h>
 #include <WebCore/Page.h>
 #include <WebCore/Timer.h>
+#include <WebCore/ViewportConfiguration.h>
 #include <wtf/OptionSet.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -216,6 +217,8 @@ public:
     double maxScaleFactor() const final;
 
     bool shouldSizeToFitContent() const final;
+
+    static WebCore::ViewportConfiguration::Parameters viewportParameters();
 
 private:
     explicit UnifiedPDFPlugin(WebCore::HTMLPlugInElement&);
@@ -681,7 +684,11 @@ private:
 
     // FIXME: We should rationalize these with the values in ViewGestureController.
     // For now, we'll leave them differing as they do in PDFPlugin.
+#if PLATFORM(IOS_FAMILY)
+    static constexpr double minimumZoomScale = 1;
+#else
     static constexpr double minimumZoomScale = 0.2;
+#endif
     static constexpr double maximumZoomScale = 6.0;
 };
 

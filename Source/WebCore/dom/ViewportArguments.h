@@ -68,7 +68,6 @@ struct ViewportArguments {
         // These are ordered in increasing importance.
         Implicit,
 #if PLATFORM(IOS_FAMILY)
-        PluginDocument,
         ImageDocument,
 #endif
         ViewportMeta,

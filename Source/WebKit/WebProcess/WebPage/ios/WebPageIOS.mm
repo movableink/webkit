@@ -49,6 +49,7 @@
 #import "TapHandlingResult.h"
 #import "TextCheckingControllerProxy.h"
 #import "UIKitSPI.h"
+#import "UnifiedPDFPlugin.h"
 #import "UserData.h"
 #import "ViewGestureGeometryCollector.h"
 #import "VisibleContentRectUpdateInfo.h"
@@ -4560,7 +4561,7 @@ void WebPage::resetViewportDefaultConfiguration(WebFrame* frame, bool hasMobileD
             m_viewportConfiguration.setDefaultConfiguration(ViewportConfiguration::textDocumentParameters());
 #if ENABLE(PDF_PLUGIN)
         else if (m_page->settings().unifiedPDFEnabled() && document->isPluginDocument())
-            m_viewportConfiguration.setDefaultConfiguration(ViewportConfiguration::pluginDocumentParameters());
+            m_viewportConfiguration.setDefaultConfiguration(UnifiedPDFPlugin::viewportParameters());
 #endif
         else
             configureWithParametersForStandardFrame = true;

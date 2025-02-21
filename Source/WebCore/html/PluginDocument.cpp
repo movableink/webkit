@@ -107,11 +107,6 @@ void PluginDocumentParser::createDocumentStructure()
     if (document.frame())
         document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
-#if PLATFORM(IOS_FAMILY)
-    // Should not be able to zoom into standalone plug-in documents.
-    document.processViewport("user-scalable=no"_s, ViewportArguments::Type::PluginDocument);
-#endif
-
     auto body = HTMLBodyElement::create(document);
     rootElement->appendChild(body);
         

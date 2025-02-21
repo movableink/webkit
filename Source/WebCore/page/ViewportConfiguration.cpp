@@ -425,23 +425,6 @@ ViewportConfiguration::Parameters ViewportConfiguration::nativeWebpageParameters
     return parameters;
 }
 
-#if ENABLE(PDF_PLUGIN)
-ViewportConfiguration::Parameters ViewportConfiguration::pluginDocumentParameters()
-{
-    Parameters parameters;
-    parameters.width = ViewportArguments::ValueDeviceWidth;
-    parameters.widthIsSet = true;
-    parameters.allowsShrinkToFit = false;
-    parameters.minimumScale = 1;
-    parameters.maximumScale = 1;
-    parameters.initialScale = 1;
-    parameters.initialScaleIgnoringLayoutScaleFactor = 1;
-    parameters.initialScaleIsSet = true;
-    parameters.shouldHonorMinimumEffectiveDeviceWidthFromClient = false;
-    return parameters;
-}
-#endif
-
 ViewportConfiguration::Parameters ViewportConfiguration::webpageParameters()
 {
     Parameters parameters;

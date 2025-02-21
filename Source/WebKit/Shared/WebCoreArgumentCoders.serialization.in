@@ -2016,7 +2016,6 @@ header: <WebCore/RectEdges.h>
 [Nested] enum class WebCore::ViewportArguments::Type : uint8_t {
     Implicit,
 #if PLATFORM(IOS_FAMILY)
-    PluginDocument,
     ImageDocument,
 #endif
     ViewportMeta
