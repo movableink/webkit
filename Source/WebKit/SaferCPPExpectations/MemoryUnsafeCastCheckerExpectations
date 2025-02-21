@@ -24,8 +24,6 @@ WebProcess/Network/NetworkProcessConnection.cpp
 WebProcess/Network/webrtc/LibWebRTCNetworkManager.cpp
 WebProcess/Plugins/PDF/UnifiedPDF/UnifiedPDFPlugin.mm
 WebProcess/Plugins/PluginView.cpp
-WebProcess/WebCoreSupport/WebLocalFrameLoaderClient.cpp
-WebProcess/WebCoreSupport/WebLocalFrameLoaderClient.h
 WebProcess/WebPage/RemoteLayerTree/GraphicsLayerCARemote.mm
 WebProcess/WebPage/ViewGestureGeometryCollector.cpp
 WebProcess/WebPage/WebFrame.cpp

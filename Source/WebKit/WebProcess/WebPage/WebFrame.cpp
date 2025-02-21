@@ -187,7 +187,7 @@ WebFrame::WebFrame(WebPage& page, WebCore::FrameIdentifier frameID)
 WebLocalFrameLoaderClient* WebFrame::localFrameLoaderClient() const
 {
     if (auto* localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get()))
-        return toWebLocalFrameLoaderClient(localFrame->loader().client());
+        return dynamicDowncast<WebLocalFrameLoaderClient>(localFrame->loader().client());
     return nullptr;
 }
 
@@ -206,7 +206,7 @@ WebRemoteFrameClient* WebFrame::remoteFrameClient() const
 WebFrameLoaderClient* WebFrame::frameLoaderClient() const
 {
     if (auto* localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get()))
-        return toWebLocalFrameLoaderClient(localFrame->loader().client());
+        return dynamicDowncast<WebLocalFrameLoaderClient>(localFrame->loader().client());
     if (auto* remoteFrame = dynamicDowncast<RemoteFrame>(m_coreFrame.get()))
         return static_cast<WebRemoteFrameClient*>(&remoteFrame->client());
     return nullptr;
@@ -240,7 +240,7 @@ RefPtr<WebPage> WebFrame::protectedPage() const
 RefPtr<WebFrame> WebFrame::fromCoreFrame(const Frame& frame)
 {
     if (auto* localFrame = dynamicDowncast<LocalFrame>(frame)) {
-        auto* webLocalFrameLoaderClient = toWebLocalFrameLoaderClient(localFrame->loader().client());
+        auto* webLocalFrameLoaderClient = dynamicDowncast<WebLocalFrameLoaderClient>(localFrame->loader().client());
         if (!webLocalFrameLoaderClient)
             return nullptr;
         return &webLocalFrameLoaderClient->webFrame();
@@ -451,7 +451,7 @@ void WebFrame::createProvisionalFrame(ProvisionalFrameCreationParameters&& param
 void WebFrame::destroyProvisionalFrame()
 {
     if (RefPtr frame = std::exchange(m_provisionalFrame, nullptr)) {
-        if (auto* client = toWebLocalFrameLoaderClient(frame->loader().client()))
+        if (auto* client = dynamicDowncast<WebLocalFrameLoaderClient>(frame->loader().client()))
             client->takeFrameInvalidator().release();
         if (RefPtr parent = frame->tree().parent())
             parent->tree().removeChild(*frame);

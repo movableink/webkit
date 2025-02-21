@@ -6123,7 +6123,7 @@ void WebPage::restoreSelectionInFocusedEditableElement()
 bool WebPage::mainFrameHasCustomContentProvider() const
 {
     if (RefPtr frame = localMainFrame()) {
-        auto* webFrameLoaderClient = toWebLocalFrameLoaderClient(frame->loader().client());
+        auto* webFrameLoaderClient = dynamicDowncast<WebLocalFrameLoaderClient>(frame->loader().client());
         ASSERT(webFrameLoaderClient);
         return webFrameLoaderClient->frameHasCustomContentProvider();
     }
@@ -8464,7 +8464,7 @@ void WebPage::setUseIconLoadingClient(bool useIconLoadingClient)
     RefPtr localMainFrame = dynamicDowncast<WebCore::LocalFrame>(corePage()->mainFrame());
     if (!localMainFrame)
         return;
-    if (auto* client = toWebLocalFrameLoaderClient(localMainFrame->loader().client()))
+    if (auto* client = dynamicDowncast<WebLocalFrameLoaderClient>(localMainFrame->loader().client()))
         client->setUseIconLoadingClient(useIconLoadingClient);
 }
 

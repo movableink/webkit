@@ -263,7 +263,7 @@ private:
 } // namespace WebKit
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::PluginView) \
-    static bool isType(const WebCore::PluginViewBase& view) { return view.isPluginView(); } \
+    static bool isType(const WebCore::Widget& widget) { return widget.isPluginView(); } \
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

@@ -1076,6 +1076,11 @@ PluginData& Page::pluginData()
     return *m_pluginData;
 }
 
+Ref<PluginData> Page::protectedPluginData()
+{
+    return pluginData();
+}
+
 void Page::clearPluginData()
 {
     m_pluginData = nullptr;
