@@ -405,7 +405,7 @@ void RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayRefreshCallbacks()
         return;
 
     if (!m_displayID) {
-        WTFLogAlways("RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayLink(): page has no displayID");
+        RELEASE_LOG(DisplayLink, "RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayLink(): page has no displayID");
         return;
     }
 
@@ -437,7 +437,7 @@ void RemoteLayerTreeDrawingAreaProxyMac::setPreferredFramesPerSecond(IPC::Connec
     m_clientPreferredFramesPerSecond = preferredFramesPerSecond;
 
     if (!m_displayID) {
-        WTFLogAlways("RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayLink(): page has no displayID");
+        RELEASE_LOG(DisplayLink, "RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayLink(): page has no displayID");
         return;
     }
 
