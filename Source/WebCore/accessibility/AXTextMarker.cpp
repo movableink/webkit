@@ -356,13 +356,69 @@ std::optional<AXTextMarkerRange> AXTextMarkerRange::intersectionWith(const AXTex
     }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
-    // FIXME: We should not hit the main-thread here with ENABLE(AX_THREAD_TEXT_APIS).
-    // Until we implement this properly off the main-thread, pass the DOM offset version of this marker to the main-thread.
     if (AXObjectCache::useAXThreadTextApis()) {
-        return Accessibility::retrieveValueFromMainThread<std::optional<AXTextMarkerRange>>([thisRange = convertToDomOffsetRange(), otherRange = other.convertToDomOffsetRange()] () -> std::optional<AXTextMarkerRange> {
-            auto intersection = WebCore::intersection(thisRange, otherRange);
-            return intersection.isNull() ? std::nullopt : std::optional(intersection);
-        });
+        if (!*this || !other)
+            return { };
+
+        bool thisRangeComesBeforeOther = true;
+        auto canFindIntersectionPoint = [&] (const auto& firstRange, const auto& secondRange) -> bool {
+            RefPtr current = firstRange.m_end.object();
+            while (current) {
+                if (current->objectID() == secondRange.m_end.objectID())
+                    return true;
+
+                if (current->objectID() == secondRange.m_start.objectID()) {
+                    if (firstRange.m_end.objectID() == secondRange.m_start.objectID()) {
+                        // If these are the same, we still have an intersection.
+                        return true;
+                    }
+                    // Otherwise, we found the start of the other range after exiting out of the origin object,
+                    // meaning the ranges don't intersect, e.g.:
+                    // fo|o b|ar ^baz^
+                    return false;
+                }
+                current = current->nextInPreOrder();
+            }
+            return false;
+        };
+
+        // Start by assuming |other.end| follows |this.end|, and try to find it.
+        // Take this example, where "|" denotes the range of |this|, and "^" denotes |other|.
+        // fo|o ba^r b|az^
+        // Starting from the second |, we would find the ^ after "z". This tells us the intersection is between
+        // the second | and the first ^.
+        thisRangeComesBeforeOther = canFindIntersectionPoint(*this, other);
+
+        if (!thisRangeComesBeforeOther) {
+            // We couldn't find the other range when starting from |this.end|. The ranges may intersect the
+            // opposite way so try to find |this.end| starting from |other.end|.
+            if (!canFindIntersectionPoint(other, *this))
+                return { };
+        }
+
+        AXTextMarker intersectionStart;
+        auto intersectionEnd = thisRangeComesBeforeOther ? m_end : other.m_end;
+        RefPtr current = intersectionEnd.object();
+        // The ranges intersect. Now search backwards to find the intersection point.
+        while (current) {
+            auto axID = current->objectID();
+            if (axID == m_start.objectID()) {
+                intersectionStart = m_start;
+                break;
+            }
+            if (axID == other.m_start.objectID()) {
+                intersectionStart = other.m_start;
+                break;
+            }
+            current = current->previousInPreOrder();
+        }
+
+        if (!current)
+            return { };
+
+        if (!downcast<AXIsolatedObject>(current)->textRuns())
+            intersectionStart = { *current, /* offset */ 0 };
+        return { { WTFMove(intersectionStart), WTFMove(intersectionEnd) } };
     }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 
