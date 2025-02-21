@@ -309,6 +309,11 @@ WebSWClientConnection& NetworkProcessConnection::serviceWorkerConnection()
     return *m_swConnection;
 }
 
+Ref<WebSWClientConnection> NetworkProcessConnection::protectedServiceWorkerConnection()
+{
+    return serviceWorkerConnection();
+}
+
 WebSharedWorkerObjectConnection& NetworkProcessConnection::sharedWorkerConnection()
 {
     if (!m_sharedWorkerConnection)

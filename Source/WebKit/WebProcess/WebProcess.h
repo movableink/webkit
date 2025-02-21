@@ -264,6 +264,7 @@ public:
 
     void networkProcessConnectionClosed(NetworkProcessConnection*);
     NetworkProcessConnection* existingNetworkProcessConnection() { return m_networkProcessConnection.get(); }
+    RefPtr<NetworkProcessConnection> protectedNetworkProcessConnection();
     WebLoaderStrategy& webLoaderStrategy();
     WebFileSystemStorageConnection& fileSystemStorageConnection();
 
@@ -783,7 +784,7 @@ private:
     RefPtr<ModelProcessConnection> m_modelProcessConnection;
 #endif
 
-    Ref<WebCacheStorageProvider> m_cacheStorageProvider;
+    const Ref<WebCacheStorageProvider> m_cacheStorageProvider;
     Ref<WebBadgeClient> m_badgeClient;
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)
     Ref<RemoteMediaPlayerManager> m_remoteMediaPlayerManager;
@@ -791,7 +792,7 @@ private:
 #if ENABLE(GPU_PROCESS) && HAVE(AVASSETREADER)
     Ref<RemoteImageDecoderAVFManager> m_remoteImageDecoderAVFManager;
 #endif
-    Ref<WebBroadcastChannelRegistry> m_broadcastChannelRegistry;
+    const Ref<WebBroadcastChannelRegistry> m_broadcastChannelRegistry;
     const Ref<WebCookieJar> m_cookieJar;
     WebSocketChannelManager m_webSocketChannelManager;
 
