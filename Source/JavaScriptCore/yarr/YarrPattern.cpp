@@ -1417,17 +1417,14 @@ public:
 
         PatternTerm& lastTerm = m_alternative->lastTerm();
 
-        unsigned numBOLAnchoredAlts = 0;
         unsigned numParenAlternatives = parenthesesDisjunction->m_alternatives.size();
-        ASSERT(numParenAlternatives);
+        unsigned numBOLAnchoredAlts = 0;
 
         for (unsigned i = 0; i < numParenAlternatives; i++) {
             // Bubble up BOL flags
             if (parenthesesDisjunction->m_alternatives[i]->m_startsWithBOL)
                 numBOLAnchoredAlts++;
         }
-
-        parenthesesDisjunction->m_alternatives.last()->m_isLastAlternative = true;
 
         if (numBOLAnchoredAlts) {
             m_alternative->m_containsBOL = true;
@@ -1860,12 +1857,6 @@ public:
     //     alternatives of the main body disjunction).
     //   * where the parens are non-capturing, and quantified unbounded greedy (*).
     //   * where the parens do not contain any capturing subpatterns.
-    //   * Where the parens contains a BOL anchored non-captured subpattern with a single
-    //     alternative of fixed strings, e.g. /^(?:foo|bar|baz).
-    //     In such a case we can simplify matching a little more by stopping at the first
-    //     matched string alternative, without jumping to backtracking doe to fixup offests.
-    //     Instead we fixup the offsets, if needed, at the top of the next alternative's
-    //     matching JIT code.
     void checkForTerminalParentheses()
     {
         // This check is much too crude; should be just checking whether the candidate
@@ -1874,49 +1865,8 @@ public:
             return;
 
         Vector<std::unique_ptr<PatternAlternative>>& alternatives = m_pattern.m_body->m_alternatives;
-        alternatives.last()->m_isLastAlternative = true;
-
-        if (alternatives.size() == 1 && alternatives[0]->m_startsWithBOL) {
-            Vector<PatternTerm>& terms = alternatives[0]->m_terms;
-
-            bool isStringList = false;
-
-            if (terms.size() >= 2
-                && terms[0].type == PatternTerm::Type::AssertionBOL
-                && terms[1].type == PatternTerm::Type::ParenthesesSubpattern
-                && terms[1].quantityType == QuantifierType::FixedCount
-                && terms[1].quantityMaxCount == 1
-                && (terms.size() == 2
-                    || (terms.size() == 3 && terms[2].type == PatternTerm::Type::AssertionEOL))) {
-                // We start assuming this is a string list and then prove the negative.
-                isStringList = true;
-
-                PatternTerm& term = terms[1];
-
-                PatternDisjunction* nestedDisjunction = term.parentheses.disjunction;
-                for (unsigned alt = 0; isStringList && alt < nestedDisjunction->m_alternatives.size(); ++alt) {
-                    Vector<PatternTerm>& innerTerms = nestedDisjunction->m_alternatives[alt]->m_terms;
-
-                    for (size_t termIndex = 0; termIndex < innerTerms.size(); ++termIndex) {
-                        PatternTerm& innerTerm = innerTerms[termIndex];
-                        if (innerTerm.type != PatternTerm::Type::PatternCharacter
-                            || term.quantityType != QuantifierType::FixedCount
-                            || term.quantityMaxCount != 1) {
-                            isStringList = false;
-                            break;
-                        }
-                    }
-                }
-
-                term.parentheses.isStringList = isStringList;
-            }
-
-            if (isStringList)
-                return;
-        }
-
-        for (auto& alternative : alternatives) {
-            auto& terms = alternative->m_terms;
+        for (size_t i = 0; i < alternatives.size(); ++i) {
+            Vector<PatternTerm>& terms = alternatives[i]->m_terms;
             if (terms.size()) {
                 PatternTerm& term = terms.last();
                 if (term.type == PatternTerm::Type::ParenthesesSubpattern
@@ -2490,8 +2440,6 @@ void PatternAlternative::dump(PrintStream& out, YarrPattern* thisPattern, unsign
         out.print(",starts with ^");
     if (m_containsBOL)
         out.print(",contains ^");
-    if (m_isLastAlternative)
-        out.print(", last alternative");
     out.print("\n");
 
     for (size_t i = 0; i < m_terms.size(); ++i)
@@ -2614,9 +2562,6 @@ void PatternTerm::dump(PrintStream& out, YarrPattern* thisPattern, unsigned nest
 
         if (parentheses.isTerminal)
             out.print(",terminal");
-
-        if (parentheses.isStringList)
-            out.print(",string-list");
 
         out.println(",frame location ", frameLocation);
 
