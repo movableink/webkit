@@ -41,7 +41,7 @@ namespace WebKit {
 
 class RemoteAudioSourceProvider;
 
-class RemoteAudioSourceProviderManager : public IPC::WorkQueueMessageReceiver {
+class RemoteAudioSourceProviderManager : public IPC::WorkQueueMessageReceiver<WTF::DestructionThread::Any> {
 public:
     static Ref<RemoteAudioSourceProviderManager> create() { return adoptRef(*new RemoteAudioSourceProviderManager()); }
     ~RemoteAudioSourceProviderManager();

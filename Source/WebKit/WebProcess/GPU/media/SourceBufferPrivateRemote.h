@@ -70,7 +70,7 @@ public:
 
     static WorkQueue& queue();
 
-    class MessageReceiver : public IPC::WorkQueueMessageReceiver {
+    class MessageReceiver : public IPC::WorkQueueMessageReceiver<WTF::DestructionThread::Any> {
     public:
         static Ref<MessageReceiver> create(SourceBufferPrivateRemote& parent)
         {

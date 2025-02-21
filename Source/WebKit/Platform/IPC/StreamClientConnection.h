@@ -95,7 +95,7 @@ public:
     template<typename>
     Error waitForAsyncReplyAndDispatchImmediately(AsyncReplyID);
 
-    void addWorkQueueMessageReceiver(ReceiverName, WorkQueue&, WorkQueueMessageReceiver&, uint64_t destinationID = 0);
+    void addWorkQueueMessageReceiver(ReceiverName, WorkQueue&, WorkQueueMessageReceiverBase&, uint64_t destinationID = 0);
     void removeWorkQueueMessageReceiver(ReceiverName, uint64_t destinationID = 0);
 
     StreamClientConnectionBuffer& bufferForTesting();

@@ -57,7 +57,7 @@ private:
 class WorkQueueMessageReceiverQueue final : public MessageReceiveQueue {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(WorkQueueMessageReceiverQueue);
 public:
-    WorkQueueMessageReceiverQueue(WorkQueue& queue, WorkQueueMessageReceiver& receiver)
+    WorkQueueMessageReceiverQueue(WorkQueue& queue, WorkQueueMessageReceiverBase& receiver)
         : m_queue(queue)
         , m_receiver(receiver)
     {
@@ -72,7 +72,7 @@ public:
     }
 private:
     Ref<WorkQueue> m_queue;
-    Ref<WorkQueueMessageReceiver> m_receiver;
+    Ref<WorkQueueMessageReceiverBase> m_receiver;
 };
 
 } // namespace IPC

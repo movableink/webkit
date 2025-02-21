@@ -185,7 +185,7 @@ template<typename AsyncReplyResult> struct AsyncReplyError {
 class Decoder;
 class MachMessage;
 class UnixMessage;
-class WorkQueueMessageReceiver;
+class WorkQueueMessageReceiverBase;
 
 struct AsyncReplyIDType;
 using AsyncReplyID = AtomicObjectIdentifier<AsyncReplyIDType>;
@@ -356,7 +356,7 @@ public:
     // Adds a message receive queue that dispatches through WorkQueue to WorkQueueMessageReceiver.
     // Keeps the WorkQueue and the WorkQueueMessageReceiver alive. Dispatched tasks keep WorkQueueMessageReceiver alive.
     // destinationID == 0 matches all ids.
-    void addWorkQueueMessageReceiver(ReceiverName, WorkQueue&, WorkQueueMessageReceiver&, uint64_t destinationID = 0);
+    void addWorkQueueMessageReceiver(ReceiverName, WorkQueue&, WorkQueueMessageReceiverBase&, uint64_t destinationID = 0);
     void removeWorkQueueMessageReceiver(ReceiverName, uint64_t destinationID = 0);
 
     // Adds a message receive queue that dispatches through FunctionDispatcher.

@@ -68,7 +68,7 @@ namespace WebKit {
 
 class RemoteVideoFrameObjectHeapProxy;
 
-class LibWebRTCCodecs : public IPC::WorkQueueMessageReceiver, public GPUProcessConnection::Client {
+class LibWebRTCCodecs : public IPC::WorkQueueMessageReceiver<WTF::DestructionThread::Any>, public GPUProcessConnection::Client {
     WTF_MAKE_TZONE_ALLOCATED(LibWebRTCCodecs);
 public:
     static Ref<LibWebRTCCodecs> create();
@@ -188,10 +188,10 @@ public:
 #endif
     bool hasAV1HardwareDecoder() const { return m_hasAV1HardwareDecoder; }
 
-    void ref() const final { return IPC::WorkQueueMessageReceiver::ref(); }
-    void deref() const final { return IPC::WorkQueueMessageReceiver::deref(); }
-    ThreadSafeWeakPtrControlBlock& controlBlock() const final { return IPC::WorkQueueMessageReceiver::controlBlock(); }
-    size_t weakRefCount() const final { return IPC::WorkQueueMessageReceiver::weakRefCount(); }
+    void ref() const final { return IPC::WorkQueueMessageReceiver<WTF::DestructionThread::Any>::ref(); }
+    void deref() const final { return IPC::WorkQueueMessageReceiver<WTF::DestructionThread::Any>::deref(); }
+    ThreadSafeWeakPtrControlBlock& controlBlock() const final { return IPC::WorkQueueMessageReceiver<WTF::DestructionThread::Any>::controlBlock(); }
+    size_t weakRefCount() const final { return IPC::WorkQueueMessageReceiver<WTF::DestructionThread::Any>::weakRefCount(); }
 
     WorkQueue& workQueue() const { return m_queue; }
 

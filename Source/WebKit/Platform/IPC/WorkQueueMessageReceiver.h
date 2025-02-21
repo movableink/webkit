@@ -26,14 +26,20 @@
 #pragma once
 
 #include "MessageReceiver.h"
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace IPC {
 
-class WorkQueueMessageReceiver : public MessageReceiver, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WorkQueueMessageReceiver> {
+class WorkQueueMessageReceiverBase : public MessageReceiver {
+protected:
+    WorkQueueMessageReceiverBase() = default;
+};
+
+template<WTF::DestructionThread destructionThread>
+class WorkQueueMessageReceiver : public WorkQueueMessageReceiverBase, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WorkQueueMessageReceiver<destructionThread>, destructionThread> {
 public:
-    void ref() const override { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
-    void deref() const override { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
+    void ref() const override { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WorkQueueMessageReceiver<destructionThread>, destructionThread>::ref(); }
+    void deref() const override { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WorkQueueMessageReceiver<destructionThread>, destructionThread>::deref(); }
 };
 
 }
