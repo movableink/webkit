@@ -128,7 +128,7 @@ static void launchWithExtensionKitFallback(ProcessLauncher& processLauncher, Pro
 
 bool ProcessLauncher::hasExtensionsInAppBundle()
 {
-#if PLATFORM(IOS_SIMULATOR)
+#if PLATFORM(IOS)
     static bool hasExtensions = false;
     static dispatch_once_t flag;
     dispatch_once(&flag, ^{
