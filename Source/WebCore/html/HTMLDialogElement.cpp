@@ -31,6 +31,7 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FocusOptions.h"
+#include "HTMLButtonElement.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "Logging.h"
@@ -197,7 +198,7 @@ bool HTMLDialogElement::isValidCommandType(const CommandType command)
     return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close;
 }
 
-bool HTMLDialogElement::handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType& command)
+bool HTMLDialogElement::handleCommandInternal(const HTMLButtonElement& invoker, const CommandType& command)
 {
     if (HTMLElement::handleCommandInternal(invoker, command))
         return true;
@@ -207,7 +208,7 @@ bool HTMLDialogElement::handleCommandInternal(const HTMLFormControlElement& invo
 
     if (isOpen()) {
         if (command == CommandType::Close) {
-            close(nullString());
+            close(invoker.value().string());
             return true;
         }
     } else {

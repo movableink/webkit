@@ -13,25 +13,25 @@ PASS invoking (with command attribute as sHoW-mOdAl) closed dialog opens as moda
 PASS invoking (with command attribute as sHoW-mOdAl) closed dialog with preventDefault is noop
 PASS invoking (with command attribute as sHoW-mOdAl) while changing command still opens as modal
 PASS invoking to close (with command property as close) open dialog closes
-FAIL invoking to close (with command property as close) open dialog closes and sets returnValue assert_equals: expected "foo" but got ""
+PASS invoking to close (with command property as close) open dialog closes and sets returnValue
 PASS invoking to close (with command property as close) open dialog with preventDefault is no-op
 PASS invoking to close (with command property as close) open modal dialog with preventDefault is no-op
 PASS invoking to close (with command property as close) open dialog while changing command still closes
 PASS invoking to close (with command property as close) open modal dialog while changing command still closes
 PASS invoking to close (with command attribute as close) open dialog closes
-FAIL invoking to close (with command attribute as close) open dialog closes and sets returnValue assert_equals: expected "foo" but got ""
+PASS invoking to close (with command attribute as close) open dialog closes and sets returnValue
 PASS invoking to close (with command attribute as close) open dialog with preventDefault is no-op
 PASS invoking to close (with command attribute as close) open modal dialog with preventDefault is no-op
 PASS invoking to close (with command attribute as close) open dialog while changing command still closes
 PASS invoking to close (with command attribute as close) open modal dialog while changing command still closes
 PASS invoking to close (with command property as cLoSe) open dialog closes
-FAIL invoking to close (with command property as cLoSe) open dialog closes and sets returnValue assert_equals: expected "foo" but got ""
+PASS invoking to close (with command property as cLoSe) open dialog closes and sets returnValue
 PASS invoking to close (with command property as cLoSe) open dialog with preventDefault is no-op
 PASS invoking to close (with command property as cLoSe) open modal dialog with preventDefault is no-op
 PASS invoking to close (with command property as cLoSe) open dialog while changing command still closes
 PASS invoking to close (with command property as cLoSe) open modal dialog while changing command still closes
 PASS invoking to close (with command attribute as cLoSe) open dialog closes
-FAIL invoking to close (with command attribute as cLoSe) open dialog closes and sets returnValue assert_equals: expected "foo" but got ""
+PASS invoking to close (with command attribute as cLoSe) open dialog closes and sets returnValue
 PASS invoking to close (with command attribute as cLoSe) open dialog with preventDefault is no-op
 PASS invoking to close (with command attribute as cLoSe) open modal dialog with preventDefault is no-op
 PASS invoking to close (with command attribute as cLoSe) open dialog while changing command still closes

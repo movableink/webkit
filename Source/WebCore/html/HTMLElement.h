@@ -37,7 +37,7 @@ namespace WebCore {
 class ElementInternals;
 class FormListedElement;
 class FormAssociatedElement;
-class HTMLFormControlElement;
+class HTMLButtonElement;
 class HTMLFormElement;
 class VisibleSelection;
 
@@ -169,7 +169,7 @@ public:
     void popoverAttributeChanged(const AtomString& value);
 
     bool isValidCommandType(const CommandType) override;
-    bool handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType&) override;
+    bool handleCommandInternal(const HTMLButtonElement& invoker, const CommandType&) override;
 
 #if PLATFORM(IOS_FAMILY)
     static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);

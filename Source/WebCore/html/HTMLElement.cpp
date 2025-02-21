@@ -1296,7 +1296,7 @@ bool HTMLElement::isValidCommandType(const CommandType command)
     return Element::isValidCommandType(command) || command == CommandType::TogglePopover || command == CommandType::ShowPopover || command == CommandType::HidePopover;
 }
 
-bool HTMLElement::handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType& command)
+bool HTMLElement::handleCommandInternal(const HTMLButtonElement& invoker, const CommandType& command)
 {
     if (popoverState() == PopoverState::None)
         return false;

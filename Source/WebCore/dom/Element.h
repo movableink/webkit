@@ -64,9 +64,9 @@ class ElementData;
 class ElementRareData;
 class FormAssociatedCustomElement;
 class FormListedElement;
+class HTMLButtonElement;
 class HTMLDocument;
 class HTMLElement;
-class HTMLFormControlElement;
 class IntSize;
 class JSCustomElementInterface;
 class KeyframeEffectStack;
@@ -677,7 +677,7 @@ public:
     bool isPopoverShowing() const;
 
     virtual bool isValidCommandType(const CommandType) { return false; }
-    virtual bool handleCommandInternal(const HTMLFormControlElement&, const CommandType&) { return false; }
+    virtual bool handleCommandInternal(const HTMLButtonElement&, const CommandType&) { return false; }
 
     ExceptionOr<void> setPointerCapture(int32_t);
     ExceptionOr<void> releasePointerCapture(int32_t);
