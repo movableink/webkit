@@ -116,7 +116,7 @@ void initialize()
             IPInt::initialize();
 #endif
         LLInt::initialize();
-        DisallowGC::initialize();
+        AssertNoGC::initialize();
 
         initializeSuperSampler();
         Thread& thread = Thread::current();

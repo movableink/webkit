@@ -319,7 +319,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
 
 String JSBoundFunction::nameStringWithoutGCSlow(VM& vm)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     unsigned nestingCount = 0;
     JSObject* cursor = m_targetFunction.get();
     String terminal;

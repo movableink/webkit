@@ -3785,7 +3785,7 @@ bool JSObject::ensureLengthSlow(VM& vm, unsigned length)
     unsigned propertyCapacity = structure->outOfLineCapacity();
     
     GCDeferralContext deferralContext(vm);
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     unsigned availableOldLength =
         Butterfly::availableContiguousVectorLength(propertyCapacity, oldVectorLength);
     Butterfly* newButterfly = nullptr;

@@ -64,7 +64,7 @@ public:
     {
         // If functor invokes GC, GC can prune WeakGCMap, and manipulate UncheckedKeyHashMap while we are touching it in ensure function.
         // The functor must not invoke GC.
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
         AddResult result = m_map.ensure(key, std::forward<Functor>(functor));
         ValueArg* value = result.iterator->value.get();
         if (!result.isNewEntry && !value) {

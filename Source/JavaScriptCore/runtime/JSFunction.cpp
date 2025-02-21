@@ -226,7 +226,7 @@ String JSFunction::name(VM& vm)
 
 String JSFunction::nameWithoutGC(VM& vm)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     if (isHostFunction()) {
         if (this->inherits<JSBoundFunction>())
             return jsCast<JSBoundFunction*>(this)->nameStringWithoutGC(vm);

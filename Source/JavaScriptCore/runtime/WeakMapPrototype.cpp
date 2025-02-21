@@ -150,7 +150,7 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapGetOrInsert, (JSGlobalObject* globalObj
     JSValue value;
 
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
 
         auto [index, exists] = map->findBucketIndex(keyCell, hash);
         if (exists)
@@ -189,7 +189,7 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapGetOrInsertComputed, (JSGlobalObject* g
     JSValue value;
 
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
 
         auto [index, exists] = map->findBucketIndex(keyCell, hash);
         if (exists)

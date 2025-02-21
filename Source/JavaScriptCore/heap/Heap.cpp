@@ -2788,7 +2788,7 @@ void Heap::reportExternalMemoryVisited(size_t size)
 
 void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
 {
-    ASSERT(deferralContext || isDeferred() || !DisallowGC::isInEffectOnCurrentThread());
+    ASSERT(deferralContext || isDeferred() || !AssertNoGC::isInEffectOnCurrentThread());
     if constexpr (validateDFGDoesGC)
         vm().verifyCanGC();
 

@@ -1176,7 +1176,7 @@ bool JSArray::shiftCountWithArrayStorage(VM& vm, unsigned startIndex, unsigned c
     if (startIndex >= vectorLength)
         return true;
     
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     Locker locker { cellLock() };
     
     if (startIndex + count > vectorLength)
