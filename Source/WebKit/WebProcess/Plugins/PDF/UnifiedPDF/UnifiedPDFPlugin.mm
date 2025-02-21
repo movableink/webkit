@@ -1988,7 +1988,7 @@ bool UnifiedPDFPlugin::handleMouseEvent(const WebMouseEvent& event)
                     if (!frame || !frame->coreLocalFrame())
                         return true;
 #if USE(UICONTEXTMENU)
-                    if (RefPtr webPage = frame->page(); webPage->hasActiveContextMenuInteraction())
+                    if (RefPtr webPage = frame->page(); webPage && webPage->hasActiveContextMenuInteraction())
                         return false;
 #endif
                     auto immediateActionStage = frame->protectedCoreLocalFrame()->checkedEventHandler()->immediateActionStage();
