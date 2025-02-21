@@ -23,8 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AuthenticationClient_h
-#define AuthenticationClient_h
+#pragma once
+
+#include <wtf/WeakPtr.h>
 
 #include <wtf/WeakPtr.h>
 
@@ -52,6 +53,4 @@ private:
     virtual void derefAuthenticationClient() = 0;
 };
 
-}
-
-#endif
+} // namespace WebCore
