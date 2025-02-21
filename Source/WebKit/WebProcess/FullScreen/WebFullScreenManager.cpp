@@ -361,11 +361,10 @@ void WebFullScreenManager::willEnterFullScreen(CompletionHandler<void(ExceptionO
 
     m_page->isInFullscreenChanged(WebPage::IsInFullscreenMode::Yes);
 
-    m_element->document().fullscreenManager().willEnterFullscreen(*m_element, mode, [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (auto result) mutable {
-        if (result.hasException())
-            close();
-        completionHandler(WTFMove(result));
-    });
+    auto result = m_element->document().fullscreenManager().willEnterFullscreen(*m_element, mode);
+    if (result.hasException())
+        close();
+    completionHandler(result);
 
     if (!m_element) {
         close();

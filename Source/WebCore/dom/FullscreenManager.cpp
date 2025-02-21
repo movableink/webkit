@@ -427,7 +427,7 @@ bool FullscreenManager::isFullscreenEnabled() const
     return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Fullscreen, protectedDocument());
 }
 
-void FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEnums::VideoFullscreenMode mode, CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
+ExceptionOr<void> FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
 #if !ENABLE(VIDEO)
     UNUSED_PARAM(mode);
@@ -435,20 +435,20 @@ void FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
 
     if (backForwardCacheState() != Document::NotInBackForwardCache) {
         ERROR_LOG(LOGIDENTIFIER, "Document in the BackForwardCache; bailing");
-        return completionHandler(Exception { ExceptionCode::TypeError });
+        return Exception { ExceptionCode::TypeError };
     }
 
     // Protect against being called after the document has been removed from the page.
     RefPtr protectedPage = page();
     if (!protectedPage) {
         ERROR_LOG(LOGIDENTIFIER, "Document no longer in page; bailing");
-        return completionHandler(Exception { ExceptionCode::TypeError });
+        return Exception { ExceptionCode::TypeError };
     }
 
     // The element is an open popover.
     if (element.isPopoverShowing()) {
         ERROR_LOG(LOGIDENTIFIER, "Element to fullscreen is an open popover; bailing.");
-        return completionHandler(Exception { ExceptionCode::TypeError, "Cannot request fullscreen on an open popover."_s });
+        return Exception { ExceptionCode::TypeError, "Cannot request fullscreen on an open popover."_s };
     }
 
     // If pending fullscreen element is unset or another element's was requested,
@@ -459,7 +459,7 @@ void FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
             if (weakThis)
                 weakThis->didExitFullscreen([] (auto) { });
         });
-        return completionHandler(Exception { ExceptionCode::TypeError, "Element requested for fullscreen has changed."_s });
+        return Exception { ExceptionCode::TypeError, "Element requested for fullscreen has changed."_s };
     }
 
     INFO_LOG(LOGIDENTIFIER);
@@ -507,7 +507,7 @@ void FullscreenManager::willEnterFullscreen(Element& element, HTMLMediaElementEn
     if (auto* iframe = dynamicDowncast<HTMLIFrameElement>(element))
         iframe->setIFrameFullscreenFlag(true);
 
-    completionHandler({ });
+    return { };
 }
 
 bool FullscreenManager::didEnterFullscreen()

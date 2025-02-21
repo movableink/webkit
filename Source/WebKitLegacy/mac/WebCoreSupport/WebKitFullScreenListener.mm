@@ -49,7 +49,7 @@ using namespace WebCore;
 - (void)webkitWillEnterFullScreen
 {
     if (_element && _completionHandler)
-        _element->document().fullscreenManager().willEnterFullscreen(*_element, WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard, WTFMove(_completionHandler));
+        _completionHandler(_element->document().fullscreenManager().willEnterFullscreen(*_element, WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard));
 }
 
 - (void)webkitDidEnterFullScreen
