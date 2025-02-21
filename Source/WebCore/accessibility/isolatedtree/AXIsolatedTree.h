@@ -406,9 +406,9 @@ public:
     void addUnconnectedNode(Ref<AccessibilityObject>);
     bool isUnconnectedNode(std::optional<AXID> axID) const { return axID && m_unconnectedNodes.contains(*axID); }
     // Removes the corresponding isolated object and all descendants from the m_nodeMap and queues their removal from the tree.
-    void removeNode(const AccessibilityObject&);
+    void removeNode(AXID, std::optional<AXID> /* parentID */);
     // Removes the given node and all its descendants from m_nodeMap.
-    void removeSubtreeFromNodeMap(std::optional<AXID>, AccessibilityObject*);
+    void removeSubtreeFromNodeMap(std::optional<AXID>, std::optional<AXID> /* parentID */);
 
     void objectBecameIgnored(const AccessibilityObject& object)
     {
@@ -483,6 +483,7 @@ public:
     void setSelectedTextMarkerRange(AXTextMarkerRange&&);
 
     void queueNodeUpdate(AXID, const NodeUpdateOptions&);
+    void queueNodeRemoval(const AccessibilityObject&);
     void processQueuedNodeUpdates();
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
@@ -605,6 +606,8 @@ private:
     ListHashSet<AXID> m_needsUpdateChildren;
     ListHashSet<AXID> m_needsUpdateNode;
     UncheckedKeyHashMap<AXID, AXPropertySet> m_needsPropertyUpdates;
+    // The key is the ID of the node being removed. The value is the ID of the parent in the core tree (if it exists).
+    UncheckedKeyHashMap<AXID, std::optional<AXID>> m_needsNodeRemoval;
 };
 
 inline AXObjectCache* AXIsolatedTree::axObjectCache() const

@@ -1141,7 +1141,7 @@ void AXObjectCache::remove(std::optional<AXID> axID)
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     if (auto tree = AXIsolatedTree::treeForPageID(m_pageID))
-        tree->removeNode(*object);
+        tree->queueNodeRemoval(*object);
 #endif
 
     removeAllRelations(*axID);
