@@ -240,6 +240,7 @@ protected:
     virtual void setAllowsPictureInPicturePlayback(bool) = 0;
     virtual bool isExternalPlaybackActive() const = 0;
     virtual bool willRenderToLayer() const = 0;
+    virtual void transferVideoViewToFullscreen() { }
     WEBCORE_EXPORT virtual void returnVideoView();
 
 #if PLATFORM(WATCHOS)

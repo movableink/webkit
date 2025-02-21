@@ -678,8 +678,12 @@ void VideoPresentationInterfaceIOS::willStartPictureInPicture()
     m_enteringPictureInPicture = true;
 
     if (m_standby && !m_currentMode.hasVideo()) {
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
         [m_window setHidden:NO];
         playerViewController().view.hidden = NO;
+        transferVideoViewToFullscreen();
+        [CATransaction commit];
     }
 
     if (auto model = videoPresentationModel()) {
