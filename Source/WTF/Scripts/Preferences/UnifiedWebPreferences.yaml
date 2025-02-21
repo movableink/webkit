@@ -8713,13 +8713,13 @@ WebGPUHDREnabled:
   humanReadableDescription: "WebGPU High Dynamic Range through canvas configuration tone mapping mode"
   defaultValue:
     WebKitLegacy:
-      "ENABLE(WEBGPU_BY_DEFAULT) && ENABLE(WEBGPU_HDR_BY_DEFAULT)": true
+      "ENABLE(WEBGPU_BY_DEFAULT) && HAVE(SUPPORT_HDR_DISPLAY)": true
       default: false
     WebKit:
-      "ENABLE(WEBGPU_BY_DEFAULT) && ENABLE(WEBGPU_HDR_BY_DEFAULT)": true
+      "ENABLE(WEBGPU_BY_DEFAULT) && HAVE(SUPPORT_HDR_DISPLAY)": true
       default: false
     WebCore:
-      "ENABLE(WEBGPU_BY_DEFAULT) && ENABLE(WEBGPU_HDR_BY_DEFAULT)": true
+      "ENABLE(WEBGPU_BY_DEFAULT) && HAVE(SUPPORT_HDR_DISPLAY)": true
       default: false
   disableInLockdownMode: true
   sharedPreferenceForWebProcess: true

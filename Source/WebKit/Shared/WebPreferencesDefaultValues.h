@@ -40,7 +40,7 @@
 #define Webgpu_feature_status Preview
 #endif
 
-#if defined(ENABLE_WEBGPU_BY_DEFAULT) && ENABLE_WEBGPU_BY_DEFAULT && defined(ENABLE_WEBGPU_HDR_BY_DEFAULT) && ENABLE_WEBGPU_HDR_BY_DEFAULT
+#if defined(ENABLE_WEBGPU_BY_DEFAULT) && ENABLE_WEBGPU_BY_DEFAULT && defined(HAVE_SUPPORT_HDR_DISPLAY) && HAVE_SUPPORT_HDR_DISPLAY
 #define Webgpuhdr_feature_status Stable
 #else
 #define Webgpuhdr_feature_status Preview
