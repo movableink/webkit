@@ -122,15 +122,14 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
             orientation = currentFrameOrientation();
 
         auto headroom = options.headroom();
-        if (headroom == Headroom::FromImage)
-            headroom = currentFrameHeadroom();
+        if (headroom == Headroom::FromImage && headroomForTesting().value_or(Headroom::None) > Headroom::None)
+            fillWithSolidColor(context, destinationRect, Color::gold, options.compositeOperator());
+        else {
+            if (headroom == Headroom::FromImage)
+                headroom = currentFrameHeadroom();
 
-        constexpr static auto goldenColor = SRGBA<uint8_t> { 255, 215, 0 };
-
-        if (headroomForTesting().value_or(Headroom::None) > Headroom::None)
-            fillWithSolidColor(context, destinationRect, goldenColor, options.compositeOperator());
-        else
             context.drawNativeImage(*nativeImage, destinationRect, adjustedSourceRect, { options, orientation, headroom });
+        }
     }
 
     if (auto observer = imageObserver())

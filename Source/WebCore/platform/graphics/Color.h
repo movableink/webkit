@@ -191,6 +191,7 @@ public:
     static constexpr auto darkGreen = SRGBA<uint8_t> { 0, 128, 0 };
     static constexpr auto orange = SRGBA<uint8_t> { 255, 128, 0 };
     static constexpr auto purple = SRGBA<uint8_t> { 128, 0, 255 };
+    static constexpr auto gold = SRGBA<uint8_t> { 255, 215, 0 };
 
     static bool isBlackColor(const Color&);
     static bool isWhiteColor(const Color&);

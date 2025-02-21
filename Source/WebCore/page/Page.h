@@ -664,7 +664,7 @@ public:
     Document* outermostFullscreenDocument() const;
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    bool canDrawHDRContents() const;
+    bool canDrawHDRContent() const;
 #endif
 
     bool shouldSuppressScrollbarAnimations() const { return m_suppressScrollbarAnimations; }

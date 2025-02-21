@@ -376,7 +376,12 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
     auto oldHeadroom = CGContextGetEDRTargetHeadroom(context);
-    if (auto headroom = options.headroom(); headroom > 1)
+
+    auto headroom = options.headroom();
+    if (headroom == Headroom::FromImage)
+        headroom = nativeImage.headroom();
+
+    if (headroom > Headroom::None)
         CGContextSetEDRTargetHeadroom(context, headroom);
 #endif
 

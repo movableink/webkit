@@ -4231,7 +4231,7 @@ void Page::setFullscreenAutoHideDuration(Seconds duration)
 }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-bool Page::canDrawHDRContents() const
+bool Page::canDrawHDRContent() const
 {
     if (!(m_settings->supportHDRDisplayEnabled() || m_settings->canvasPixelFormatEnabled()))
         return false;

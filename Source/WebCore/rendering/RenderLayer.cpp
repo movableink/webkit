@@ -406,7 +406,7 @@ RenderLayer::~RenderLayer()
 RenderLayer::PaintedContentRequest::PaintedContentRequest(const RenderLayer& owningLayer)
 {
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (owningLayer.page().canDrawHDRContents())
+    if (owningLayer.page().canDrawHDRContent())
         makePaintedHDRContentUnknown();
 #else
     UNUSED_PARAM(owningLayer);
