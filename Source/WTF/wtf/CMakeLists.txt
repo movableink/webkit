@@ -6,6 +6,7 @@ set(WTF_PUBLIC_HEADERS
     AccessibleAddress.h
     AggregateLogger.h
     Algorithms.h
+    AlignedStorage.h
     AnsiColors.h
     ApproximateTime.h
     ArgumentCoder.h

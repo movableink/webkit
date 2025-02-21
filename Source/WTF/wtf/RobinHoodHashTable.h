@@ -51,6 +51,7 @@
 
 #pragma once
 
+#include <wtf/AlignedStorage.h>
 #include <wtf/HashTable.h>
 #include <wtf/text/StringHash.h>
 
@@ -325,11 +326,8 @@ void RobinHoodHashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits,
     if (!HashFunctions::safeToCompareToEmptyOrDeleted)
         return;
     ASSERT(!HashTranslator::equal(KeyTraits::emptyValue(), key));
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    typename std::aligned_storage<sizeof(ValueType), std::alignment_of<ValueType>::value>::type deletedValueBuffer;
-    ALLOW_DEPRECATED_DECLARATIONS_END
-    ValueType* deletedValuePtr = reinterpret_cast_ptr<ValueType*>(&deletedValueBuffer);
-    ValueType& deletedValue = *deletedValuePtr;
+    AlignedStorage<ValueType> deletedValueBuffer;
+    auto& deletedValue = *deletedValueBuffer;
     Traits::constructDeletedValue(deletedValue);
     ASSERT(!HashTranslator::equal(Extractor::extract(deletedValue), key));
 }

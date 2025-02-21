@@ -93,6 +93,7 @@
 		4655743627F5FC4A002D5522 /* ASCIILiteralCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4655743527F5FC4A002D5522 /* ASCIILiteralCocoa.mm */; };
 		465F34932CD824AF000963B1 /* ObjCRuntimeExtras.mm in Sources */ = {isa = PBXBuildFile; fileRef = 465F34922CD824AF000963B1 /* ObjCRuntimeExtras.mm */; };
 		466D69112BA4E433005D43F4 /* SpanCocoa.h in Headers */ = {isa = PBXBuildFile; fileRef = 466D69102BA4E433005D43F4 /* SpanCocoa.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		466E7A7A2D66E57E0096FDA4 /* AlignedStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = 466E7A792D66E57E0096FDA4 /* AlignedStorage.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		467DCD532CD4689A0040C644 /* UnicodeExtras.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 467DCD522CD4689A0040C644 /* UnicodeExtras.cpp */; };
 		468EAFD42D5B1E37005069CF /* SocketPOSIX.h in Headers */ = {isa = PBXBuildFile; fileRef = 468EAFD32D5B1E37005069CF /* SocketPOSIX.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46B0FB5D2D24BFBA0012184C /* ParsingUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 46B0FB5C2D24BFBA0012184C /* ParsingUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1247,6 +1248,7 @@
 		4655743527F5FC4A002D5522 /* ASCIILiteralCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ASCIILiteralCocoa.mm; sourceTree = "<group>"; };
 		465F34922CD824AF000963B1 /* ObjCRuntimeExtras.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ObjCRuntimeExtras.mm; sourceTree = "<group>"; };
 		466D69102BA4E433005D43F4 /* SpanCocoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SpanCocoa.h; sourceTree = "<group>"; };
+		466E7A792D66E57E0096FDA4 /* AlignedStorage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AlignedStorage.h; sourceTree = "<group>"; };
 		467DCD522CD4689A0040C644 /* UnicodeExtras.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnicodeExtras.cpp; sourceTree = "<group>"; };
 		468EAFD32D5B1E37005069CF /* SocketPOSIX.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SocketPOSIX.h; sourceTree = "<group>"; };
 		46B0FB5C2D24BFBA0012184C /* ParsingUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ParsingUtilities.h; sourceTree = "<group>"; };
@@ -2161,6 +2163,7 @@
 				E3B8E6012961EA7600A8AEE3 /* AccessibleAddress.h */,
 				CDCC9BC422382FCE00FFB51C /* AggregateLogger.h */,
 				CD6D9FCD1EEF3AD4008B0671 /* Algorithms.h */,
+				466E7A792D66E57E0096FDA4 /* AlignedStorage.h */,
 				CE1132832370634900A8C83B /* AnsiColors.h */,
 				E37E96522702AD0700E1C36A /* ApproximateTime.cpp */,
 				E37E96532702AD0700E1C36A /* ApproximateTime.h */,
@@ -3245,6 +3248,7 @@
 				E383AAC92B6C730B00058E60 /* AdaptiveStringSearcher.h in Headers */,
 				DD3DC8FA27A4BF8E007E5B61 /* AggregateLogger.h in Headers */,
 				DD3DC96027A4BF8E007E5B61 /* Algorithms.h in Headers */,
+				466E7A7A2D66E57E0096FDA4 /* AlignedStorage.h in Headers */,
 				DD3DC99627A4BF8E007E5B61 /* AnsiColors.h in Headers */,
 				DD3DC92527A4BF8E007E5B61 /* ApproximateTime.h in Headers */,
 				5CB8CB6D28C16CB700539906 /* ArgumentCoder.h in Headers */,

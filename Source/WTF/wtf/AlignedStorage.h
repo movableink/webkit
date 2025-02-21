@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,27 +23,36 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WKWebExtensionContextPrivate.h"
+#pragma once
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#include <cstddef>
+#include <wtf/StdLibExtras.h>
 
-#import "WKObject.h"
-#import "WebExtensionContext.h"
-#import <wtf/AlignedStorage.h>
+namespace WTF {
 
-namespace WebKit {
-template<> struct WrapperTraits<WebExtensionContext> {
-    using WrapperClass = WKWebExtensionContext;
+template<typename T>
+class AlignedStorage {
+public:
+    AlignedStorage() = default;
+    AlignedStorage(AlignedStorage&&) = delete;
+    AlignedStorage(const AlignedStorage&) = delete;
+    AlignedStorage& operator=(AlignedStorage&&) = delete;
+    AlignedStorage& operator=(const AlignedStorage&) = delete;
+
+    T* get() { SUPPRESS_MEMORY_UNSAFE_CAST return reinterpret_cast_ptr<T*>(&m_storage); }
+    const T* get() const { SUPPRESS_MEMORY_UNSAFE_CAST return reinterpret_cast_ptr<const T*>(&m_storage); }
+
+    T& operator*() { return *get(); }
+    T* operator->() { return get(); }
+    const T& operator*() const { return *get(); }
+    const T* operator->() const { return get(); }
+
+private:
+    struct alignas(T) Storage {
+        std::byte data[sizeof(T)];
+    } m_storage;
 };
-}
 
-@interface WKWebExtensionContext () <WKObject> {
-@package
-    AlignedStorage<WebKit::WebExtensionContext> _webExtensionContext;
-}
+} // namespace WTF
 
-@property (nonatomic, readonly) WebKit::WebExtensionContext& _webExtensionContext;
-
-@end
-
-#endif // ENABLE(WK_WEB_EXTENSIONS)
+using WTF::AlignedStorage;

@@ -28,11 +28,12 @@
 
 #import "WKNSArray.h"
 #import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/AlignedStorage.h>
 
 using namespace WebKit;
 
 @implementation WKNSDictionary {
-    API::ObjectStorage<API::Dictionary> _dictionary;
+    AlignedStorage<API::Dictionary> _dictionary;
 }
 
 - (void)dealloc
