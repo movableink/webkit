@@ -102,7 +102,7 @@ static String previousWordsFromPositionInSameBlock(unsigned numberOfWords, Visib
     RefPtr endNode = startPosition.deepEquivalent().containerNode();
     range->setEnd(endNode.releaseNonNull(), startPosition.deepEquivalent().computeOffsetInContainerNode());
 
-    return range->toString().trim(isHTMLSpaceButNotLineBreak);
+    return range->toString().trim(isHTMLSpaceButNotLineBreak).simplifyWhiteSpace(isASCIIWhitespace);
 }
 
 static String nextWordsFromPositionInSameBlock(unsigned numberOfWords, VisiblePosition& startPosition)
@@ -125,7 +125,7 @@ static String nextWordsFromPositionInSameBlock(unsigned numberOfWords, VisiblePo
     RefPtr endNode = nextPosition.deepEquivalent().containerNode();
     range->setEnd(endNode.releaseNonNull(), nextPosition.deepEquivalent().computeOffsetInContainerNode());
 
-    return range->toString().trim(isHTMLSpaceButNotLineBreak);
+    return range->toString().trim(isHTMLSpaceButNotLineBreak).simplifyWhiteSpace(isASCIIWhitespace);
 }
 
 // https://wicg.github.io/scroll-to-text-fragment/#generating-text-fragment-directives
@@ -137,7 +137,7 @@ void FragmentDirectiveGenerator::generateFragmentDirective(const SimpleRange& te
     document->updateLayoutIgnorePendingStylesheets();
 
     auto url = document->url();
-    auto textFromRange = createLiveRange(textFragmentRange)->toString();
+    auto textFromRange = createLiveRange(textFragmentRange)->toString().simplifyWhiteSpace(isASCIIWhitespace);
 
     VisiblePosition visibleStartPosition = VisiblePosition(Position(textFragmentRange.protectedStartContainer(), textFragmentRange.startOffset(), Position::PositionIsOffsetInAnchor));
     VisiblePosition visibleEndPosition = VisiblePosition(Position(textFragmentRange.protectedEndContainer(), textFragmentRange.endOffset(), Position::PositionIsOffsetInAnchor));
