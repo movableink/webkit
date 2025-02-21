@@ -90,7 +90,6 @@ Modules/webdatabase/DatabaseManager.cpp
 Modules/webdatabase/SQLCallbackWrapper.h
 Modules/webdatabase/SQLStatement.cpp
 Modules/websockets/WebSocket.cpp
-Modules/websockets/WorkerThreadableWebSocketChannel.cpp
 Modules/webtransport/WebTransport.cpp
 StyleBuilderGenerated.cpp
 accessibility/AXCoreObject.cpp
