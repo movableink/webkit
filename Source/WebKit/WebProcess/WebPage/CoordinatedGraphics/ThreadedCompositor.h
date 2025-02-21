@@ -79,6 +79,7 @@ public:
     void preferredBufferFormatsDidChange();
 #endif
 
+    void setSize(const WebCore::IntSize&, float);
     uint32_t requestComposition();
     void scheduleUpdate();
     RunLoop* runLoop();
@@ -131,7 +132,6 @@ private:
         Lock lock;
         WebCore::IntSize viewportSize;
         float deviceScaleFactor { 1 };
-        uint32_t compositionRequestID { 0 };
 
 #if !HAVE(DISPLAY_LINK)
         bool clientRendersNextFrame { false };
@@ -146,6 +146,7 @@ private:
     std::unique_ptr<WebCore::TextureMapperDamageVisualizer> m_damageVisualizer;
 #endif
 
+    std::atomic<uint32_t> m_compositionRequestID { 0 };
 #if HAVE(DISPLAY_LINK)
     std::atomic<uint32_t> m_compositionResponseID { 0 };
     RunLoop::Timer m_didRenderFrameTimer;

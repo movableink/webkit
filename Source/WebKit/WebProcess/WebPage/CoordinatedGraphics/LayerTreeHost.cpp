@@ -197,6 +197,7 @@ void LayerTreeHost::flushLayers()
     page->finalizeRenderingUpdate(flags);
 
     if (m_pendingResize) {
+        m_compositor->setSize(page->size(), page->deviceScaleFactor());
         auto& rootLayer = m_sceneState->rootLayer();
         Locker locker { rootLayer.lock() };
         rootLayer.setSize(page->size());
@@ -345,7 +346,7 @@ void LayerTreeHost::ensureDrawing()
 }
 #endif
 
-void LayerTreeHost::sizeDidChange(const IntSize& size)
+void LayerTreeHost::sizeDidChange()
 {
     m_pendingResize = true;
     if (m_isWaitingForRenderer)

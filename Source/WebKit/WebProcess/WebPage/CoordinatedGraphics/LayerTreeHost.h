@@ -102,7 +102,7 @@ public:
 
     void forceRepaint();
     void forceRepaintAsync(CompletionHandler<void()>&&);
-    void sizeDidChange(const WebCore::IntSize&);
+    void sizeDidChange();
 
     void pauseRendering();
     void resumeRendering();

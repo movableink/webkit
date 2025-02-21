@@ -221,11 +221,12 @@ void LayerTreeHost::forceRepaintAsync(CompletionHandler<void()>&& completionHand
     completionHandler();
 }
 
-void LayerTreeHost::sizeDidChange(const WebCore::IntSize& newSize)
+void LayerTreeHost::sizeDidChange()
 {
     if (!enabled())
         return;
 
+    const auto& newSize = m_webPage.size();
     if (m_rootLayer->size() == newSize)
         return;
     m_rootLayer->setSize(newSize);
