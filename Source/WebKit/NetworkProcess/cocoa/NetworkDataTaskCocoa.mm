@@ -194,6 +194,11 @@ NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataT
 {
     auto request = parameters.request;
     auto url = request.url();
+    if (url.isNull()) {
+        scheduleFailure(FailureType::InvalidURL);
+        return;
+    }
+
     if (m_storedCredentialsPolicy == WebCore::StoredCredentialsPolicy::Use && url.protocolIsInHTTPFamily()) {
         m_user = url.user();
         m_password = url.password();
