@@ -360,10 +360,10 @@
 		7A7B0E7F1EAFE4C3006AB8AE /* LimitTitleSize.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7A7B0E7E1EAFE454006AB8AE /* LimitTitleSize.mm */; };
 		7A89BB682331643A0042CB1E /* BundleFormDelegatePlugIn.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7A89BB662331635D0042CB1E /* BundleFormDelegatePlugIn.mm */; };
 		7A909A7D1D877480007E10F8 /* AffineTransform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A909A6F1D877475007E10F8 /* AffineTransform.cpp */; };
-		7A909A801D877480007E10F9 /* PlatformDynamicRangeLimitTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A909A721D877475007E10F9 /* PlatformDynamicRangeLimitTests.cpp */; };
 		7A909A7E1D877480007E10F8 /* FloatPointTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A909A701D877475007E10F8 /* FloatPointTests.cpp */; };
 		7A909A7F1D877480007E10F8 /* FloatRectTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A909A711D877475007E10F8 /* FloatRectTests.cpp */; };
 		7A909A801D877480007E10F8 /* FloatSizeTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A909A721D877475007E10F8 /* FloatSizeTests.cpp */; };
+		7A909A801D877480007E10F9 /* PlatformDynamicRangeLimitTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A909A721D877475007E10F9 /* PlatformDynamicRangeLimitTests.cpp */; };
 		7A909A811D877480007E10F8 /* IntPointTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A909A731D877475007E10F8 /* IntPointTests.cpp */; };
 		7A909A821D877480007E10F8 /* IntRectTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A909A741D877475007E10F8 /* IntRectTests.cpp */; };
 		7A909A831D877480007E10F8 /* IntSizeTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A909A751D877475007E10F8 /* IntSizeTests.cpp */; };
@@ -2990,6 +2990,7 @@
 		6354F4D01F7C3AB500D89DF3 /* ApplicationManifestParser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ApplicationManifestParser.cpp; sourceTree = "<group>"; };
 		6356FB211EC4E0BA0044BF18 /* VisibleContentRect.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = VisibleContentRect.mm; sourceTree = "<group>"; };
 		636353A61E9861940009F8AF /* GeolocationGetCurrentPositionResult.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = GeolocationGetCurrentPositionResult.html; sourceTree = "<group>"; };
+		636FA56E2D67F86400F73CB2 /* ShouldOpenAppLinks.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ShouldOpenAppLinks.mm; sourceTree = "<group>"; };
 		637281A621AE1386009E0DE6 /* DownloadProgress.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = DownloadProgress.mm; sourceTree = "<group>"; };
 		63A33C552A339ED500EF94B8 /* WKWebViewInspection.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WKWebViewInspection.mm; sourceTree = "<group>"; };
 		63A61B8A1FAD204D00F06885 /* display-mode.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "display-mode.html"; sourceTree = "<group>"; };
@@ -3039,10 +3040,10 @@
 		7A89BB662331635D0042CB1E /* BundleFormDelegatePlugIn.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = BundleFormDelegatePlugIn.mm; sourceTree = "<group>"; };
 		7A89BB69233165650042CB1E /* BundleFormDelegateProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BundleFormDelegateProtocol.h; sourceTree = "<group>"; };
 		7A909A6F1D877475007E10F8 /* AffineTransform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AffineTransform.cpp; sourceTree = "<group>"; };
-		7A909A721D877475007E10F9 /* PlatformDynamicRangeLimitTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformDynamicRangeLimitTests.cpp; sourceTree = "<group>"; };
 		7A909A701D877475007E10F8 /* FloatPointTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FloatPointTests.cpp; sourceTree = "<group>"; };
 		7A909A711D877475007E10F8 /* FloatRectTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FloatRectTests.cpp; sourceTree = "<group>"; };
 		7A909A721D877475007E10F8 /* FloatSizeTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FloatSizeTests.cpp; sourceTree = "<group>"; };
+		7A909A721D877475007E10F9 /* PlatformDynamicRangeLimitTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformDynamicRangeLimitTests.cpp; sourceTree = "<group>"; };
 		7A909A731D877475007E10F8 /* IntPointTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IntPointTests.cpp; sourceTree = "<group>"; };
 		7A909A741D877475007E10F8 /* IntRectTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IntRectTests.cpp; sourceTree = "<group>"; };
 		7A909A751D877475007E10F8 /* IntSizeTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IntSizeTests.cpp; sourceTree = "<group>"; };
@@ -4553,6 +4554,7 @@
 				460C2FC827039D7D0047EF11 /* ServiceWorkerPageProtocol.h */,
 				46A46A192575645600A1B118 /* SessionStorage.mm */,
 				5CCB10DF2134579D00AC5AF0 /* ShouldGoToBackForwardListItem.mm */,
+				636FA56E2D67F86400F73CB2 /* ShouldOpenAppLinks.mm */,
 				37BCA61B1B596BA9002012CA /* ShouldOpenExternalURLsInNewWindowActions.mm */,
 				2D9A53AE1B31FA8D0074D5AA /* ShrinkToFit.mm */,
 				F4C3F29A2C447EB50029A47D /* SimulateClickOverText.mm */,
