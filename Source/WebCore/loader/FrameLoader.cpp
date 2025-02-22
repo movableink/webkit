@@ -1673,7 +1673,7 @@ SubstituteData FrameLoader::defaultSubstituteDataForURL(const URL& url)
 
 void FrameLoader::load(FrameLoadRequest&& request)
 {
-    FRAMELOADER_RELEASE_LOG(ResourceLoading, "load (FrameLoadRequest): frame load started");
+    FRAMELOADER_RELEASE_LOG_FORWARDABLE(FRAMELOADER_LOAD_FRAMELOADREQUEST);
 
     m_errorOccurredInLoading = false;
 
@@ -1758,7 +1758,7 @@ void FrameLoader::loadWithNavigationAction(const ResourceRequest& request, Navig
 
 void FrameLoader::load(DocumentLoader& newDocumentLoader, const SecurityOrigin* requesterOrigin)
 {
-    FRAMELOADER_RELEASE_LOG(ResourceLoading, "load (DocumentLoader): frame load started");
+    FRAMELOADER_RELEASE_LOG_FORWARDABLE(FRAMELOADER_LOAD_DOCUMENTLOADER);
 
     m_errorOccurredInLoading = false;
 

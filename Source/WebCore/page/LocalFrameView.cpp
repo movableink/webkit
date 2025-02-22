@@ -146,7 +146,7 @@
 
 #define PAGE_ID (m_frame->pageID() ? m_frame->pageID()->toUInt64() : 0)
 #define FRAME_ID m_frame->frameID().object().toUInt64()
-#define FRAMEVIEW_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] LocalFrameView::" fmt, this, PAGE_ID, FRAME_ID, m_frame->isMainFrame(), ##__VA_ARGS__)
+#define FRAMEVIEW_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG_FORWARDABLE(channel, fmt, PAGE_ID, FRAME_ID, m_frame->isMainFrame(), ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -3914,7 +3914,7 @@ void LocalFrameView::scheduleResizeEventIfNeeded()
     RefPtr document = m_frame->document();
     if (document->quirks().shouldSilenceWindowResizeEventsDuringApplicationSnapshotting()) {
         document->addConsoleMessage(MessageSource::Other, MessageLevel::Info, "Window resize events silenced due to: http://webkit.org/b/258597"_s);
-        FRAMEVIEW_RELEASE_LOG(Events, "scheduleResizeEventIfNeeded: Not firing resize events because they are temporarily disabled for this page");
+        FRAMEVIEW_RELEASE_LOG(Events, LOCALFRAMEVIEW_FIRING_RESIZE_EVENTS_DISABLED_FOR_PAGE);
         return;
     }
 
@@ -4792,7 +4792,7 @@ void LocalFrameView::paintContents(GraphicsContext& context, const IntRect& dirt
 
     ASSERT(!needsLayout());
     if (needsLayout()) {
-        FRAMEVIEW_RELEASE_LOG(Layout, "paintContents: Not painting because render tree needs layout");
+        FRAMEVIEW_RELEASE_LOG(Layout, LOCALFRAMEVIEW_NOT_PAINTING_LAYOUT_NEEDED);
         return;
     }
 
@@ -5713,7 +5713,7 @@ void LocalFrameView::fireLayoutRelatedMilestonesIfNeeded()
 
     if (milestonesAchieved && m_frame->isMainFrame()) {
         if (milestonesAchieved.contains(LayoutMilestone::DidFirstVisuallyNonEmptyLayout))
-            FRAMEVIEW_RELEASE_LOG(Layout, "fireLayoutRelatedMilestonesIfNeeded: Firing first visually non-empty layout milestone on the main frame");
+            FRAMEVIEW_RELEASE_LOG(Layout, LOCALFRAMEVIEW_FIRING_FIRST_VISUALLY_NON_EMPTY_LAYOUT_MILESTONE);
         m_frame->loader().didReachLayoutMilestone(milestonesAchieved);
     }
 }
