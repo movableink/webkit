@@ -634,7 +634,7 @@ public:
     WEBCORE_EXPORT void availableContentSizeChanged(AvailableSizeChangeReason) final;
 
     void updateTiledBackingAdaptiveSizing();
-    OptionSet<TiledBackingScrollability> computeScrollability() const;
+    WEBCORE_EXPORT OptionSet<TiledBackingScrollability> computeScrollability() const;
 
     void addPaintPendingMilestones(OptionSet<LayoutMilestone>);
     void firePaintRelatedMilestonesIfNeeded();

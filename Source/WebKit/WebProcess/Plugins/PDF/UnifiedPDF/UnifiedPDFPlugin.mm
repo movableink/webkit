@@ -1589,6 +1589,12 @@ bool UnifiedPDFPlugin::shouldCachePagePreviews() const
 
 OptionSet<TiledBackingScrollability> UnifiedPDFPlugin::computeScrollability() const
 {
+    if (shouldSizeToFitContent()) {
+        RefPtr frameView = m_frame->coreLocalFrame()->view();
+        if (frameView)
+            return frameView->computeScrollability();
+    }
+
     OptionSet<TiledBacking::Scrollability> scrollability = TiledBacking::Scrollability::NotScrollable;
     if (allowsHorizontalScrolling())
         scrollability.add(TiledBacking::Scrollability::HorizontallyScrollable);
