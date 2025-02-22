@@ -304,7 +304,6 @@ dom/RadioButtonGroups.cpp
 dom/Range.cpp
 dom/RejectedPromiseTracker.cpp
 dom/ScriptExecutionContext.cpp
-dom/ScriptedAnimationController.cpp
 dom/SelectorQuery.cpp
 dom/ShadowRoot.cpp
 dom/SimpleRange.cpp

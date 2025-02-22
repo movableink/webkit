@@ -594,7 +594,6 @@ dom/RejectedPromiseTracker.cpp
 dom/ScriptExecutionContext.cpp
 dom/ScriptExecutionContext.h
 dom/ScriptRunner.cpp
-dom/ScriptedAnimationController.cpp
 dom/SecurityContext.cpp
 dom/SelectorQuery.cpp
 dom/ShadowRoot.cpp
