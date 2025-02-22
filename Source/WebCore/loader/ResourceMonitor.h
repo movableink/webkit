@@ -40,6 +40,7 @@ public:
     using Eligibility = ResourceMonitorEligibility;
 
     static Ref<ResourceMonitor> create(LocalFrame&);
+    WEBCORE_EXPORT ~ResourceMonitor();
 
     Eligibility eligibility() const { return m_eligibility; }
     void setEligibility(Eligibility);
@@ -47,6 +48,8 @@ public:
 
     void setDocumentURL(URL&&);
     WEBCORE_EXPORT void addNetworkUsage(size_t);
+
+    void updateNetworkUsageThreshold(size_t);
 
 private:
     explicit ResourceMonitor(LocalFrame&);
@@ -58,9 +61,10 @@ private:
 
     WeakPtr<LocalFrame> m_frame;
     URL m_frameURL;
+    size_t m_networkUsageThreshold;
+    CheckedSize m_networkUsage;
     Eligibility m_eligibility { Eligibility::Unsure };
     bool m_networkUsageExceed { false };
-    CheckedSize m_networkUsage;
 };
 
 } // namespace WebCore

@@ -50,9 +50,17 @@ Ref<ResourceMonitor> ResourceMonitor::create(LocalFrame& frame)
 
 ResourceMonitor::ResourceMonitor(LocalFrame& frame)
     : m_frame(frame)
+    , m_networkUsageThreshold { ResourceMonitorChecker::singleton().networkUsageThresholdWithNoise() }
 {
+    ResourceMonitorChecker::singleton().registerResourceMonitor(*this);
+
     if (RefPtr parentMonitor = parentResourceMonitorIfExists())
         m_eligibility = parentMonitor->eligibility();
+}
+
+ResourceMonitor::~ResourceMonitor()
+{
+    ResourceMonitorChecker::singleton().unregisterResourceMonitor(*this);
 }
 
 void ResourceMonitor::setEligibility(Eligibility eligibility)
@@ -140,8 +148,22 @@ void ResourceMonitor::addNetworkUsage(size_t bytes)
 
     m_networkUsage += bytes;
 
-    if (RefPtr parentMonitor = parentResourceMonitorIfExists(); parentMonitor)
+    if (RefPtr parentMonitor = parentResourceMonitorIfExists())
         parentMonitor->addNetworkUsage(bytes);
+    else if (isEligible())
+        checkNetworkUsageExcessIfNecessary();
+}
+
+void ResourceMonitor::updateNetworkUsageThreshold(size_t threshold)
+{
+    if (m_networkUsageThreshold == threshold)
+        return;
+
+    RESOURCEMONITOR_RELEASE_LOG("Update network usage threshold: threshold=%zu", threshold);
+    m_networkUsageThreshold = threshold;
+
+    if (RefPtr parentMonitor = parentResourceMonitorIfExists())
+        parentMonitor->updateNetworkUsageThreshold(threshold);
     else if (isEligible())
         checkNetworkUsageExcessIfNecessary();
 }
@@ -153,7 +175,7 @@ void ResourceMonitor::checkNetworkUsageExcessIfNecessary()
     if (m_networkUsageExceed)
         return;
 
-    if (m_networkUsage.hasOverflowed() || ResourceMonitorChecker::singleton().checkNetworkUsageExceedingThreshold(m_networkUsage)) {
+    if (m_networkUsage.hasOverflowed() || m_networkUsage > m_networkUsageThreshold) {
         m_networkUsageExceed = true;
 
         RefPtr frame = m_frame.get();
