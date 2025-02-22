@@ -129,10 +129,10 @@ static String computeMediaKeyFile(const String& mediaKeyDirectory)
     return FileSystem::pathByAppendingComponent(mediaKeyDirectory, "SecureStop.plist"_s);
 }
 
-WorkQueue& WebsiteDataStore::websiteDataStoreIOQueue()
+WorkQueue& WebsiteDataStore::websiteDataStoreIOQueueSingleton()
 {
-    static auto& queue = WorkQueue::create("com.apple.WebKit.WebsiteDataStoreIO"_s).leakRef();
-    return queue;
+    static MainThreadNeverDestroyed<Ref<WorkQueue>> queue = WorkQueue::create("com.apple.WebKit.WebsiteDataStoreIO"_s);
+    return queue.get();
 }
 
 void WebsiteDataStore::forEachWebsiteDataStore(NOESCAPE Function<void(WebsiteDataStore&)>&& function)
@@ -304,7 +304,7 @@ WebsiteDataStore* WebsiteDataStore::existingDataStoreForSessionID(PAL::SessionID
 #if HAVE(APP_SSO)
 SOAuthorizationCoordinator& WebsiteDataStore::soAuthorizationCoordinator(const WebPageProxy& pageProxy)
 {
-    RELEASE_ASSERT(pageProxy.preferences().isExtensibleSSOEnabled());
+    RELEASE_ASSERT(pageProxy.protectedPreferences()->isExtensibleSSOEnabled());
     if (!m_soAuthorizationCoordinator)
         m_soAuthorizationCoordinator = WTF::makeUnique<SOAuthorizationCoordinator>();
 
@@ -2564,7 +2564,7 @@ void WebsiteDataStore::forwardManagedDomainsToITPIfInitialized(CompletionHandler
         store->setManagedDomainsForITP(domains, [callbackAggregator] { });
     };
 
-    propagateManagedDomains(globalDefaultDataStore().get(), *managedDomains);
+    propagateManagedDomains(protectedDefaultDataStore().get(), *managedDomains);
 
     for (auto& store : allDataStores().values())
         propagateManagedDomains(Ref { store.get() }.ptr(), *managedDomains);
@@ -2608,23 +2608,23 @@ bool WebsiteDataStore::showPersistentNotification(IPC::Connection* connection, c
     if (m_client->showNotification(notificationData))
         return true;
 
-    return WebNotificationManagerProxy::sharedServiceWorkerManager().showPersistent(*this, connection, notificationData, nullptr);
+    return WebNotificationManagerProxy::serviceWorkerManagerSingleton().showPersistent(*this, connection, notificationData, nullptr);
 }
 
 void WebsiteDataStore::cancelServiceWorkerNotification(const WTF::UUID& notificationID)
 {
-    WebNotificationManagerProxy::sharedServiceWorkerManager().cancel(nullptr, notificationID);
+    WebNotificationManagerProxy::serviceWorkerManagerSingleton().cancel(nullptr, notificationID);
 }
 
 void WebsiteDataStore::clearServiceWorkerNotification(const WTF::UUID& notificationID)
 {
     Vector<WTF::UUID> notifications = { notificationID };
-    WebNotificationManagerProxy::sharedServiceWorkerManager().clearNotifications(nullptr, notifications);
+    WebNotificationManagerProxy::serviceWorkerManagerSingleton().clearNotifications(nullptr, notifications);
 }
 
 void WebsiteDataStore::didDestroyServiceWorkerNotification(const WTF::UUID& notificationID)
 {
-    WebNotificationManagerProxy::sharedServiceWorkerManager().didDestroyNotification(nullptr, notificationID);
+    WebNotificationManagerProxy::serviceWorkerManagerSingleton().didDestroyNotification(nullptr, notificationID);
 }
 
 void WebsiteDataStore::openWindowFromServiceWorker(const String& urlString, const WebCore::SecurityOriginData& serviceWorkerOrigin, CompletionHandler<void(std::optional<WebCore::PageIdentifier>)>&& callback)
@@ -2635,7 +2635,7 @@ void WebsiteDataStore::openWindowFromServiceWorker(const String& urlString, cons
             return;
         }
 
-        if (!newPage->pageLoadState().isLoading()) {
+        if (!newPage->protectedPageLoadState()->isLoading()) {
             RELEASE_LOG(Loading, "The WKWebView provided in response to a ServiceWorker openWindow request was not in the loading state");
             callback(std::nullopt);
             return;
@@ -2787,8 +2787,8 @@ void WebsiteDataStore::updateServiceWorkerInspectability()
     bool wasInspectable = m_inspectionForServiceWorkersAllowed;
     m_inspectionForServiceWorkersAllowed = [&] {
 #if ENABLE(REMOTE_INSPECTOR)
-        for (auto& page : m_pages) {
-            if (page.inspectable())
+        for (Ref page : m_pages) {
+            if (page->inspectable())
                 return true;
         }
 #endif // ENABLE(REMOTE_INSPECTOR)
@@ -2894,7 +2894,7 @@ bool WebsiteDataStore::builtInNotificationsEnabled() const
         return defaultBuiltInNotificationsEnabled();
 
     for (Ref page : m_pages) {
-        if (page->preferences().builtInNotificationsEnabled())
+        if (page->protectedPreferences()->builtInNotificationsEnabled())
             return true;
     }
     return false;

@@ -532,7 +532,7 @@ private:
     void removeRecentSearches(WallTime, CompletionHandler<void()>&&);
 
     WebsiteDataStore();
-    static WorkQueue& websiteDataStoreIOQueue();
+    static WorkQueue& websiteDataStoreIOQueueSingleton();
 
     Ref<WorkQueue> protectedQueue() const;
 
@@ -586,7 +586,7 @@ private:
     bool m_hasDispatchedResolveDirectories { false };
     std::optional<WebsiteDataStoreConfiguration::Directories> m_resolvedDirectories WTF_GUARDED_BY_LOCK(m_resolveDirectoriesLock);
     FileSystem::Salt m_mediaKeysStorageSalt WTF_GUARDED_BY_LOCK(m_resolveDirectoriesLock);
-    Ref<const WebsiteDataStoreConfiguration> m_configuration;
+    const Ref<const WebsiteDataStoreConfiguration> m_configuration;
     bool m_hasResolvedDirectories { false };
     RefPtr<DeviceIdHashSaltStorage> m_deviceIdHashSaltStorage;
 #if ENABLE(ENCRYPTED_MEDIA)
@@ -604,7 +604,7 @@ private:
     TrackingPreventionEnabled m_trackingPreventionEnabled { TrackingPreventionEnabled::Default };
     Function<void(const String&)> m_statisticsTestingCallback;
 
-    Ref<WorkQueue> m_queue;
+    const Ref<WorkQueue> m_queue;
 
 #if PLATFORM(COCOA)
     Vector<uint8_t> m_uiProcessCookieStorageIdentifier;

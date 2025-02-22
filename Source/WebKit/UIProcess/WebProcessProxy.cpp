@@ -2809,7 +2809,7 @@ void WebProcessProxy::getNotifications(const URL& registrationURL, const String&
         return;
     }
 
-    WebNotificationManagerProxy::protectedSharedServiceWorkerManager()->getNotifications(registrationURL, tag, sessionID(), WTFMove(callback));
+    WebNotificationManagerProxy::serviceWorkerManagerSingleton().getNotifications(registrationURL, tag, sessionID(), WTFMove(callback));
 }
 
 void WebProcessProxy::getWebCryptoMasterKey(CompletionHandler<void(std::optional<Vector<uint8_t>>&&)>&& completionHandler)

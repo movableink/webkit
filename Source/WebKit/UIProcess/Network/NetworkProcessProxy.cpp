@@ -1800,7 +1800,7 @@ void NetworkProcessProxy::processPushMessage(PAL::SessionID sessionID, const Web
         permission = PushPermissionState::Prompt;
         auto permissions = dataStore->client().notificationPermissions();
         if (permissions.isEmpty())
-            permissions = WebNotificationManagerProxy::protectedSharedServiceWorkerManager()->notificationPermissions();
+            permissions = WebNotificationManagerProxy::serviceWorkerManagerSingleton().notificationPermissions();
 
         auto origin = SecurityOriginData::fromURL(pushMessage.registrationURL).toString();
         if (auto it = permissions.find(origin); it != permissions.end())

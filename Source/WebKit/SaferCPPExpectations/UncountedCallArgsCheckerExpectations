@@ -212,10 +212,7 @@ UIProcess/WebPreferences.h
 UIProcess/WebProcessActivityState.cpp
 UIProcess/WebURLSchemeHandler.cpp
 UIProcess/WebURLSchemeTask.cpp
-UIProcess/WebsiteData/Cocoa/WebsiteDataStoreCocoa.mm
 UIProcess/WebsiteData/WebDeviceOrientationAndMotionAccessController.cpp
-UIProcess/WebsiteData/WebsiteDataStore.cpp
-UIProcess/WebsiteData/WebsiteDataStoreClient.h
 UIProcess/mac/CorrectionPanel.mm
 UIProcess/mac/DisplayCaptureSessionManager.mm
 UIProcess/mac/UserMediaPermissionRequestProxyMac.mm

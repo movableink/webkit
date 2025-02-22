@@ -1058,7 +1058,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 + (WKNotificationManagerRef)_sharedServiceWorkerNotificationManager
 {
     LOG(Push, "Accessing _sharedServiceWorkerNotificationManager");
-    return WebKit::toAPI(&WebKit::WebNotificationManagerProxy::sharedServiceWorkerManager());
+    return WebKit::toAPI(&WebKit::WebNotificationManagerProxy::serviceWorkerManagerSingleton());
 }
 
 - (void)_allowTLSCertificateChain:(NSArray *)certificateChain forHost:(NSString *)host

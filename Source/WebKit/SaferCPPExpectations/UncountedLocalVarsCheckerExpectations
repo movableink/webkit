@@ -38,8 +38,6 @@ UIProcess/WebAuthentication/AuthenticatorManager.cpp
 UIProcess/WebAuthentication/Cocoa/NfcService.mm
 UIProcess/WebPreferences.cpp
 UIProcess/WebProcessCache.cpp
-UIProcess/WebsiteData/Cocoa/WebsiteDataStoreCocoa.mm
-UIProcess/WebsiteData/WebsiteDataStore.cpp
 UIProcess/mac/DisplayCaptureSessionManager.mm
 UIProcess/mac/WKImmediateActionController.mm
 UIProcess/mac/WebContextMenuProxyMac.mm
