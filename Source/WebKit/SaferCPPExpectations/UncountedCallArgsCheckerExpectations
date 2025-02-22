@@ -196,7 +196,6 @@ UIProcess/RemotePageProxy.cpp
 UIProcess/SpeechRecognitionPermissionManager.cpp
 UIProcess/SuspendedPageProxy.cpp
 UIProcess/UserMediaPermissionRequestManagerProxy.cpp
-UIProcess/ViewSnapshotStore.cpp
 UIProcess/WebAuthentication/AuthenticatorManager.cpp
 UIProcess/WebAuthentication/Cocoa/LocalService.mm
 UIProcess/WebAuthentication/Cocoa/NfcService.mm
