@@ -2756,7 +2756,7 @@ void Document::resolveStyle(ResolveStyleType type)
                 updateRenderTree(WTFMove(styleUpdate));
 
                 if (frameView->layoutContext().needsLayout())
-                    frameView->layoutContext().layout();
+                    frameView->layoutContext().interleavedLayout();
             }
 
             styleUpdate = resolver.resolve();

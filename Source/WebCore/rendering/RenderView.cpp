@@ -1100,6 +1100,16 @@ void RenderView::unregisterAnchor(const RenderBoxModelObject& renderer)
     m_anchors.remove(renderer);
 }
 
+void RenderView::registerPositionTryBox(const RenderBox& box)
+{
+    m_positionTryBoxes.add(box);
+}
+
+void RenderView::unregisterPositionTryBox(const RenderBox& box)
+{
+    m_positionTryBoxes.remove(box);
+}
+
 void RenderView::addCounterNeedingUpdate(RenderCounter& renderer)
 {
     m_countersNeedingUpdate.add(renderer);

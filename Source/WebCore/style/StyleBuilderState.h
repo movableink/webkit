@@ -28,6 +28,7 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSToStyleMap.h"
 #include "CascadeLevel.h"
+#include "PositionTryFallback.h"
 #include "PropertyCascade.h"
 #include "RuleSet.h"
 #include "SelectorChecker.h"
@@ -66,6 +67,7 @@ struct BuilderContext {
     const RenderStyle& parentStyle;
     const RenderStyle* rootElementStyle = nullptr;
     RefPtr<const Element> element = nullptr;
+    std::optional<PositionTryFallback> positionTryFallback { };
 };
 
 class BuilderState {
@@ -129,6 +131,8 @@ public:
     void setCurrentPropertyInvalidAtComputedValueTime();
 
     Ref<Calculation::RandomKeyMap> randomKeyMap(bool perElement) const;
+
+    const std::optional<PositionTryFallback>& positionTryFallback() const { return m_context.positionTryFallback; }
 
 private:
     // See the comment in maybeUpdateFontForLetterSpacing() about why this needs to be a friend.

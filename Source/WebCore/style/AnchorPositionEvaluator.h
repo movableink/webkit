@@ -28,6 +28,7 @@
 #include "EventTarget.h"
 #include "LayoutUnit.h"
 #include "ScopedName.h"
+#include "WritingMode.h"
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashMap.h>
@@ -40,8 +41,10 @@ class Document;
 class Element;
 class LayoutRect;
 class RenderBlock;
+class RenderBox;
 class RenderBoxModelObject;
 class RenderStyle;
+struct PositionTryFallback;
 
 enum CSSPropertyID : uint16_t;
 
@@ -116,6 +119,9 @@ public:
     static AnchorToAnchorPositionedMap makeAnchorPositionedForAnchorMap(Document&);
 
     static bool isLayoutTimeAnchorPositioned(const RenderStyle&);
+    static CSSPropertyID resolvePositionTryFallbackProperty(CSSPropertyID, WritingMode, const PositionTryFallback&);
+
+    static bool overflowsContainingBlock(const RenderBox& anchoredBox);
 
 private:
     static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);

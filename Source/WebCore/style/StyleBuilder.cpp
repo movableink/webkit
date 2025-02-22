@@ -295,6 +295,9 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
         return applyProperty(newId, valueToApply.get(), linkMatchMask, cascadeLevel);
     }
 
+    if (m_state.positionTryFallback())
+        id = AnchorPositionEvaluator::resolvePositionTryFallbackProperty(id, style.writingMode(), *m_state.positionTryFallback());
+
     auto valueID = WebCore::valueID(valueToApply.get());
 
     const CSSCustomPropertyValue* customPropertyValue = nullptr;

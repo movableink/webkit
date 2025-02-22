@@ -32,6 +32,7 @@
 #include "DocumentInlines.h"
 #include "Element.h"
 #include "Node.h"
+#include "RenderBoxInlines.h"
 #include "RenderBlock.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderFragmentedFlow.h"
@@ -276,14 +277,40 @@ LayoutRect AnchorPositionEvaluator::computeAnchorRectRelativeToContainingBlock(C
 // align the edge of the positioned elements' inset-modified containing block corresponding to the
 // property the function appears in with the specified border edge of the target anchor element..."
 // See: https://drafts.csswg.org/css-anchor-position-1/#anchor-pos
-static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<const RenderBoxModelObject> anchorBox, CheckedRef<const RenderElement> anchorPositionedRenderer, AnchorPositionEvaluator::Side anchorSide)
+static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<const RenderBoxModelObject> anchorBox, CheckedRef<const RenderElement> anchorPositionedRenderer, AnchorPositionEvaluator::Side anchorSide, const std::optional<PositionTryFallback>& positionTryFallback)
 {
     CheckedPtr containingBlock = anchorPositionedRenderer->containingBlock();
     ASSERT(containingBlock);
 
-    auto insetPropertySide = mapInsetPropertyToPhysicalSide(insetPropertyID, anchorPositionedRenderer->writingMode());
+    auto writingMode = anchorPositionedRenderer->writingMode();
+    auto insetPropertySide = mapInsetPropertyToPhysicalSide(insetPropertyID, writingMode);
     auto anchorSideID = std::holds_alternative<CSSValueID>(anchorSide) ? std::get<CSSValueID>(anchorSide) : CSSValueInvalid;
     auto anchorRect = AnchorPositionEvaluator::computeAnchorRectRelativeToContainingBlock(anchorBox, *containingBlock);
+
+    bool shouldFlipForPositionTryFallback = [&] {
+        if (!positionTryFallback)
+            return false;
+
+        auto shouldFlipForAxis = [&](LogicalBoxAxis logicalAxis) {
+            auto axis = mapAxisLogicalToPhysical(writingMode, logicalAxis);
+            if (axis == BoxAxis::Horizontal) {
+                if (insetPropertySide == BoxSide::Left || insetPropertySide == BoxSide::Right)
+                    return true;
+            } else if (insetPropertySide == BoxSide::Top || insetPropertySide == BoxSide::Bottom)
+                return true;
+            return false;
+        };
+
+        if (positionTryFallback->tactics.contains(PositionTryFallback::Tactic::FlipInline)) {
+            if (shouldFlipForAxis(LogicalBoxAxis::Inline))
+                return true;
+        }
+        if (positionTryFallback->tactics.contains(PositionTryFallback::Tactic::FlipBlock)) {
+            if (shouldFlipForAxis(LogicalBoxAxis::Block))
+                return true;
+        }
+        return false;
+    }();
 
     // Explicitly deal with the center/percentage value here.
     // "Refers to a position a corresponding percentage between the start and end sides, with
@@ -297,8 +324,11 @@ static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<co
         if (startSide == BoxSide::Bottom || startSide == BoxSide::Right)
             percentage = 1 - percentage;
 
+        if (shouldFlipForPositionTryFallback)
+            percentage = 1 - percentage;
+
         LayoutUnit insetValue;
-        auto insetPropertyAxis = mapInsetPropertyToPhysicalAxis(insetPropertyID, anchorPositionedRenderer->writingMode());
+        auto insetPropertyAxis = mapInsetPropertyToPhysicalAxis(insetPropertyID, writingMode);
         if (insetPropertyAxis == BoxAxis::Vertical) {
             insetValue = anchorRect.location().y() + anchorRect.height() * percentage;
             if (insetPropertySide == BoxSide::Bottom)
@@ -348,6 +378,11 @@ static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<co
         ASSERT_NOT_REACHED();
         boxSide = BoxSide::Top;
         break;
+    }
+
+    if (shouldFlipForPositionTryFallback) {
+        boxSide = flipBoxSide(boxSide);
+        insetPropertySide = flipBoxSide(insetPropertySide);
     }
 
     // Compute inset from the containing block
@@ -498,7 +533,7 @@ std::optional<double> AnchorPositionEvaluator::evaluate(const BuilderState& buil
 
     // Proceed with computing the inset value for the specified inset property.
     CheckedRef anchorBox = downcast<RenderBoxModelObject>(*anchorRenderer);
-    return computeInsetValue(propertyID, anchorBox, *anchorPositionedRenderer, side);
+    return computeInsetValue(propertyID, anchorBox, *anchorPositionedRenderer, side, builderState.positionTryFallback());
 }
 
 // Returns the default anchor size dimension to use when it is not specified in
@@ -858,6 +893,66 @@ bool AnchorPositionEvaluator::isLayoutTimeAnchorPositioned(const RenderStyle& st
     return style.justifySelf().position() == ItemPosition::AnchorCenter || style.alignSelf().position() == ItemPosition::AnchorCenter;
 }
 
+static CSSPropertyID flipHorizontal(CSSPropertyID propertyID)
+{
+    switch (propertyID) {
+    case CSSPropertyLeft:
+        return CSSPropertyRight;
+    case CSSPropertyRight:
+        return CSSPropertyLeft;
+    case CSSPropertyMarginLeft:
+        return CSSPropertyMarginRight;
+    case CSSPropertyMarginRight:
+        return CSSPropertyMarginLeft;
+    default:
+        return propertyID;
+    }
+}
+
+static CSSPropertyID flipVertical(CSSPropertyID propertyID)
+{
+    switch (propertyID) {
+    case CSSPropertyTop:
+        return CSSPropertyBottom;
+    case CSSPropertyBottom:
+        return CSSPropertyTop;
+    case CSSPropertyMarginTop:
+        return CSSPropertyMarginBottom;
+    case CSSPropertyMarginBottom:
+        return CSSPropertyMarginTop;
+    default:
+        return propertyID;
+    }
+}
+
+CSSPropertyID AnchorPositionEvaluator::resolvePositionTryFallbackProperty(CSSPropertyID propertyID, WritingMode writingMode, const PositionTryFallback& fallback)
+{
+    ASSERT(!CSSProperty::isDirectionAwareProperty(propertyID));
+
+    for (auto tactic : fallback.tactics) {
+        switch (tactic) {
+        case PositionTryFallback::Tactic::FlipInline:
+            propertyID = writingMode.isHorizontal() ? flipHorizontal(propertyID) : flipVertical(propertyID);
+            break;
+        case PositionTryFallback::Tactic::FlipBlock:
+            propertyID = writingMode.isHorizontal() ? flipVertical(propertyID) : flipHorizontal(propertyID);
+            break;
+        case PositionTryFallback::Tactic::FlipStart:
+            break;
+        }
+    }
+    return propertyID;
+}
+
+bool AnchorPositionEvaluator::overflowsContainingBlock(const RenderBox& anchoredBox)
+{
+    auto containingBlockRect = anchoredBox.containingBlock()->contentBoxRect();
+
+    auto marginRect = anchoredBox.marginBoxRect();
+    marginRect.moveBy(anchoredBox.location());
+
+    return !containingBlockRect.contains(marginRect);
+}
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, PositionTryOrder order)
 {

@@ -216,6 +216,7 @@ private:
 
     bool invalidateForContainerDependencies(LayoutDependencyUpdateContext&);
     bool invalidateForAnchorDependencies(LayoutDependencyUpdateContext&);
+    bool invalidateForPositionTryFallbacks(LayoutDependencyUpdateContext&);
 
     CheckedRef<Document> m_document;
     ShadowRoot* m_shadowRoot { nullptr };

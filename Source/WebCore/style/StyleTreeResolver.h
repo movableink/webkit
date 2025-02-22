@@ -43,6 +43,7 @@ class Element;
 class Node;
 class RenderStyle;
 class ShadowRoot;
+struct PositionTryFallback;
 
 namespace Style {
 
@@ -84,7 +85,7 @@ private:
     ElementUpdate createAnimatedElementUpdate(ResolvedStyle&&, const Styleable&, Change, const ResolutionContext&, IsInDisplayNoneTree = IsInDisplayNoneTree::No);
     std::unique_ptr<RenderStyle> resolveStartingStyle(const ResolvedStyle&, const Styleable&, const ResolutionContext&) const;
     std::unique_ptr<RenderStyle> resolveAfterChangeStyleForNonAnimated(const ResolvedStyle&, const Styleable&, const ResolutionContext&) const;
-    std::unique_ptr<RenderStyle> resolveAgainWithParentStyle(const ResolvedStyle&, const Styleable&, const RenderStyle& parentStyle,  OptionSet<PropertyCascade::PropertyType>, const ResolutionContext&) const;
+    std::unique_ptr<RenderStyle> resolveAgainInDifferentContext(const ResolvedStyle&, const Styleable&, const RenderStyle& parentStyle,  OptionSet<PropertyCascade::PropertyType>, const std::optional<PositionTryFallback>&, const ResolutionContext&) const;
     const RenderStyle& parentAfterChangeStyle(const Styleable&, const ResolutionContext&) const;
 
     UncheckedKeyHashSet<AnimatableCSSProperty> applyCascadeAfterAnimation(RenderStyle&, const UncheckedKeyHashSet<AnimatableCSSProperty>&, bool isTransition, const MatchResult&, const Element&, const ResolutionContext&);
@@ -148,6 +149,10 @@ private:
 
     AnchorPositionedElementAction updateAnchorPositioningState(Element&, const RenderStyle*);
 
+    void generatePositionOptionsIfNeeded(const ResolvedStyle&, const Styleable&, const ResolutionContext&);
+    std::unique_ptr<RenderStyle> generatePositionOption(const PositionTryFallback&, const ResolvedStyle&, const Styleable&, const ResolutionContext&);
+    std::optional<ResolvedStyle> tryChoosePositionOption(const Styleable&, const RenderStyle* existingStyle);
+
     struct QueryContainerState {
         Change change { Change::None };
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
@@ -163,6 +168,14 @@ private:
     UncheckedKeyHashMap<Ref<Element>, std::optional<QueryContainerState>> m_queryContainerStates;
     bool m_hasUnresolvedQueryContainers { false };
     bool m_hasUnresolvedAnchorPositionedElements { false };
+
+    struct PositionOptions {
+        std::unique_ptr<RenderStyle> originalStyle;
+        Vector<std::unique_ptr<RenderStyle>> optionStyles { };
+        size_t index { 0 };
+        bool chosen { false };
+    };
+    HashMap<Ref<Element>, PositionOptions> m_positionOptions;
 
     std::unique_ptr<Update> m_update;
 };
