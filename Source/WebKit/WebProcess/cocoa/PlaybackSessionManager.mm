@@ -594,6 +594,11 @@ void PlaybackSessionManager::enterFullscreen(PlaybackSessionContextIdentifier co
     ensureModel(contextId)->enterFullscreen();
 }
 
+void PlaybackSessionManager::setPlayerIdentifierForVideoElement(PlaybackSessionContextIdentifier contextId)
+{
+    ensureModel(contextId)->setPlayerIdentifierForVideoElement();
+}
+
 void PlaybackSessionManager::exitFullscreen(PlaybackSessionContextIdentifier contextId)
 {
     ensureModel(contextId)->exitFullscreen();

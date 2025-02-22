@@ -86,6 +86,7 @@
 #import <WebCore/TextAlternativeWithRange.h>
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/ValidationBubble.h>
+#import <WebCore/VideoPresentationInterfaceIOS.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/spi/ios/BrowserEngineKitSPI.h>
@@ -632,6 +633,40 @@ void WebPageProxy::removeMediaUsageManagerSession(WebCore::MediaSessionIdentifie
 }
 #endif
 
+#if PLATFORM(VISION)
+void WebPageProxy::enterExternalPlaybackForNowPlayingMediaSession(CompletionHandler<void(bool, UIViewController *)>&& completionHandler)
+{
+    if (!m_videoPresentationManager) {
+        completionHandler(false, nil);
+        return;
+    }
+
+    RefPtr videoPresentationInterface = m_videoPresentationManager->controlsManagerInterface();
+    if (!videoPresentationInterface) {
+        completionHandler(false, nil);
+        return;
+    }
+
+    videoPresentationInterface->enterExternalPlayback(WTFMove(completionHandler));
+}
+
+void WebPageProxy::exitExternalPlayback(CompletionHandler<void(bool)>&& completionHandler)
+{
+    if (!m_videoPresentationManager) {
+        completionHandler(false);
+        return;
+    }
+
+    RefPtr videoPresentationInterface = m_videoPresentationManager->controlsManagerInterface();
+    if (!videoPresentationInterface) {
+        completionHandler(false);
+        return;
+    }
+
+    videoPresentationInterface->exitExternalPlayback(WTFMove(completionHandler));
+}
+#endif
+
 #if ENABLE(VIDEO_PRESENTATION_MODE)
 
 void WebPageProxy::didChangePlaybackRate(PlaybackSessionContextIdentifier identifier)
@@ -695,7 +730,6 @@ void WebPageProxy::fullscreenVideoTextRecognitionTimerFired()
 #endif
     });
 }
-
 #endif // ENABLE(VIDEO_PRESENTATION_MODE)
 
 #if HAVE(QUICKLOOK_THUMBNAILING)

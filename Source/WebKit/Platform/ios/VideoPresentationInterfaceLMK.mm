@@ -156,6 +156,57 @@ void VideoPresentationInterfaceLMK::dismissFullscreen(bool animated, Function<vo
     }).get()];
 }
 
+void VideoPresentationInterfaceLMK::enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&& completionHandler)
+{
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+
+    if (linearMediaPlayer().presentationState != WKSLinearMediaPresentationStateInline) {
+        completionHandler(false, nil);
+        return;
+    }
+    setupPlayerViewController();
+
+    playbackSessionInterface().startObservingNowPlayingMetadata();
+    [linearMediaPlayer() enterExternalPresentationWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (BOOL success, NSError *error) mutable {
+        if (auto* playbackSessionModel = this->playbackSessionModel()) {
+            playbackSessionModel->setSpatialTrackingLabel(m_spatialTrackingLabel);
+            playbackSessionModel->setSoundStageSize(WebCore::AudioSessionSoundStageSize::Large);
+        }
+        completionHandler(success, m_playerViewController.get());
+    }).get()];
+}
+
+void VideoPresentationInterfaceLMK::exitExternalPlayback(CompletionHandler<void(bool)>&& completionHandler)
+{
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+
+    if (linearMediaPlayer().presentationState != WKSLinearMediaPresentationStateExternal) {
+        completionHandler(false);
+        return;
+    }
+
+    playbackSessionInterface().stopObservingNowPlayingMetadata();
+    [linearMediaPlayer() exitExternalPresentationWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (BOOL success, NSError *error) mutable {
+        if (auto* playbackSessionModel = this->playbackSessionModel()) {
+            playbackSessionModel->setSpatialTrackingLabel(nullString());
+            playbackSessionModel->setSoundStageSize(WebCore::AudioSessionSoundStageSize::Automatic);
+        }
+        invalidatePlayerViewController();
+        completionHandler(success);
+    }).get()];
+}
+
+bool VideoPresentationInterfaceLMK::cleanupExternalPlayback()
+{
+    if (linearMediaPlayer().presentationState != WKSLinearMediaPresentationStateExternal)
+        return false;
+
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+
+    exitExternalPlayback([](bool) { });
+    return true;
+}
+
 UIViewController *VideoPresentationInterfaceLMK::playerViewController() const
 {
     return m_playerViewController.get();

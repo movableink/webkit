@@ -191,6 +191,7 @@ private:
     void handleControlledElementIDRequest(PlaybackSessionContextIdentifier);
     void togglePictureInPicture(PlaybackSessionContextIdentifier);
     void enterFullscreen(PlaybackSessionContextIdentifier);
+    void setPlayerIdentifierForVideoElement(PlaybackSessionContextIdentifier);
     void exitFullscreen(PlaybackSessionContextIdentifier);
     void enterInWindow(PlaybackSessionContextIdentifier);
     void exitInWindow(PlaybackSessionContextIdentifier);

@@ -1264,6 +1264,11 @@ void WebChromeClient::enterVideoFullscreenForVideoElement(HTMLVideoElement& vide
     protectedPage()->videoPresentationManager().enterVideoFullscreenForVideoElement(videoElement, mode, standby);
 }
 
+void WebChromeClient::setPlayerIdentifierForVideoElement(HTMLVideoElement& videoElement)
+{
+    protectedPage()->videoPresentationManager().setPlayerIdentifierForVideoElement(videoElement);
+}
+
 void WebChromeClient::exitVideoFullscreenForVideoElement(HTMLVideoElement& videoElement, CompletionHandler<void(bool)>&& completionHandler)
 {
     protectedPage()->videoPresentationManager().exitVideoFullscreenForVideoElement(videoElement, WTFMove(completionHandler));

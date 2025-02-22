@@ -65,6 +65,8 @@ private:
     void setupPlayerViewController() final;
     void invalidatePlayerViewController() final;
     UIViewController *playerViewController() const final;
+    void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)> &&) final;
+    void exitExternalPlayback(CompletionHandler<void(bool)>&&) final;
     void tryToStartPictureInPicture() final { }
     void stopPictureInPicture() final { }
     void presentFullscreen(bool animated, Function<void(BOOL, NSError *)>&&) final;
@@ -73,6 +75,7 @@ private:
     void setContentDimensions(const WebCore::FloatSize&) final;
     void setAllowsPictureInPicturePlayback(bool) final { }
     bool isExternalPlaybackActive() const final { return false; }
+    bool cleanupExternalPlayback() final;
     bool willRenderToLayer() const final { return false; }
     AVPlayerViewController *avPlayerViewController() const final { return nullptr; }
     CALayer *captionsLayer() final;

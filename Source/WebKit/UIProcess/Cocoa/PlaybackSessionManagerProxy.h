@@ -131,6 +131,7 @@ private:
     void enterInWindowFullscreen() final;
     void exitInWindowFullscreen() final;
     void enterFullscreen() final;
+    void setPlayerIdentifierForVideoElement() final;
     void exitFullscreen() final;
     void toggleMuted() final;
     void setMuted(bool) final;
@@ -320,6 +321,7 @@ private:
     void selectLegibleMediaOption(PlaybackSessionContextIdentifier, uint64_t index);
     void togglePictureInPicture(PlaybackSessionContextIdentifier);
     void enterFullscreen(PlaybackSessionContextIdentifier);
+    void setPlayerIdentifierForVideoElement(PlaybackSessionContextIdentifier);
     void exitFullscreen(PlaybackSessionContextIdentifier);
     void enterInWindow(PlaybackSessionContextIdentifier);
     void exitInWindow(PlaybackSessionContextIdentifier);

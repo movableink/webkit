@@ -472,6 +472,7 @@ public:
 #endif
 
 #if ENABLE(VIDEO)
+    virtual void setPlayerIdentifierForVideoElement(HTMLVideoElement&) { }
     virtual void enterVideoFullscreenForVideoElement(HTMLVideoElement&, HTMLMediaElementEnums::VideoFullscreenMode, bool standby) { UNUSED_PARAM(standby); }
     virtual void setUpPlaybackControlsManager(HTMLMediaElement&) { }
     virtual void clearPlaybackControlsManager() { }

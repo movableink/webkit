@@ -324,6 +324,20 @@ void VideoPresentationManager::willRemoveLayerForID(PlaybackSessionContextIdenti
     removeClientForContext(contextId);
 }
 
+void VideoPresentationManager::setPlayerIdentifierForVideoElement(HTMLVideoElement& videoElement)
+{
+    RefPtr player = videoElement.player();
+    if (!player)
+        return;
+
+    auto identifier = player->identifier();
+    if (!identifier)
+        return;
+
+    auto contextId = m_playbackSessionManager->contextIdForMediaElement(videoElement);
+    setPlayerIdentifier(contextId, identifier);
+}
+
 void VideoPresentationManager::swapFullscreenModes(WebCore::HTMLVideoElement& firstElement, WebCore::HTMLVideoElement& secondElement)
 {
     auto firstContextId = m_playbackSessionManager->contextIdForMediaElement(firstElement);

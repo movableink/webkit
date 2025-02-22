@@ -90,6 +90,7 @@ public:
     virtual void togglePictureInPicture() = 0;
     virtual void enterInWindowFullscreen() = 0;
     virtual void exitInWindowFullscreen() = 0;
+    virtual void setPlayerIdentifierForVideoElement() = 0;
     virtual void enterFullscreen() = 0;
     virtual void exitFullscreen() = 0;
     virtual void toggleMuted() = 0;

@@ -256,6 +256,13 @@ void PlaybackSessionModelContext::enterFullscreen()
         manager->enterFullscreen(m_contextId);
 }
 
+void PlaybackSessionModelContext::setPlayerIdentifierForVideoElement()
+{
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+    if (RefPtr manager = m_manager.get())
+        manager->setPlayerIdentifierForVideoElement(m_contextId);
+}
+
 void PlaybackSessionModelContext::exitFullscreen()
 {
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
@@ -913,6 +920,12 @@ void PlaybackSessionManagerProxy::enterFullscreen(PlaybackSessionContextIdentifi
 {
     if (RefPtr page = m_page.get())
         page->protectedLegacyMainFrameProcess()->send(Messages::PlaybackSessionManager::EnterFullscreen(contextId), page->webPageIDInMainFrameProcess());
+}
+
+void PlaybackSessionManagerProxy::setPlayerIdentifierForVideoElement(PlaybackSessionContextIdentifier contextId)
+{
+    if (RefPtr page = m_page.get())
+        page->protectedLegacyMainFrameProcess()->send(Messages::PlaybackSessionManager::SetPlayerIdentifierForVideoElement(contextId), page->webPageIDInMainFrameProcess());
 }
 
 void PlaybackSessionManagerProxy::exitFullscreen(PlaybackSessionContextIdentifier contextId)

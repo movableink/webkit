@@ -398,6 +398,7 @@ OBJC_CLASS WKQLThumbnailLoadOperation;
 OBJC_CLASS WKQuickLookPreviewController;
 OBJC_CLASS WKWebView;
 OBJC_CLASS _WKRemoteObjectRegistry;
+OBJC_CLASS UIViewController;
 
 struct WKPageInjectedBundleClientBase;
 struct wpe_view_backend;
@@ -2295,7 +2296,13 @@ public:
     void removeMediaUsageManagerSession(WebCore::MediaSessionIdentifier);
 #endif
 
+#if PLATFORM(VISION)
+    void enterExternalPlaybackForNowPlayingMediaSession(CompletionHandler<void(bool, UIViewController *)>&&);
+    void exitExternalPlayback(CompletionHandler<void(bool)>&&);
+#endif
+
 #if ENABLE(VIDEO_PRESENTATION_MODE)
+    void setPlayerIdentifierForVideoElement();
     bool canEnterFullscreen();
     void enterFullscreen();
 

@@ -121,6 +121,7 @@ VideoPresentationInterfaceIOS::VideoPresentationInterfaceIOS(PlaybackSessionInte
     : m_watchdogTimer(RunLoop::main(), this, &VideoPresentationInterfaceIOS::watchdogTimerFired)
     , m_playbackSessionInterface(playbackSessionInterface)
 {
+    m_playbackSessionInterface->setVideoPresentationInterface(this);
 }
 
 VideoPresentationInterfaceIOS::~VideoPresentationInterfaceIOS()
@@ -369,6 +370,16 @@ void VideoPresentationInterfaceIOS::externalPlaybackChanged(bool enabled, Playba
     [playerLayerView() setHidden:enabled];
 }
 
+void VideoPresentationInterfaceIOS::enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&& completionHandler)
+{
+    completionHandler(false, nil);
+}
+
+void VideoPresentationInterfaceIOS::exitExternalPlayback(CompletionHandler<void(bool)>&& completionHandler)
+{
+    completionHandler(false);
+}
+
 void VideoPresentationInterfaceIOS::setInlineRect(const FloatRect& inlineRect, bool visible)
 {
     m_inlineRect = inlineRect;
@@ -583,6 +594,12 @@ void VideoPresentationInterfaceIOS::exitFullscreenHandler(BOOL success, NSError*
 void VideoPresentationInterfaceIOS::cleanupFullscreen()
 {
     LOG(Fullscreen, "VideoPresentationInterfaceIOS::cleanupFullscreen(%p)", this);
+
+    if (this->cleanupExternalPlayback()) {
+        ASSERT(m_currentMode == HTMLMediaElementEnums::VideoFullscreenModeNone);
+        return;
+    }
+
     m_shouldIgnoreAVKitCallbackAboutExitFullscreenReason = false;
 
     m_cleanupNeedsReturnVideoContentLayer = true;

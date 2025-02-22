@@ -47,6 +47,7 @@
 #import "WKBackForwardListItemInternal.h"
 #import "WKContentViewInteraction.h"
 #import "WKDataDetectorTypesInternal.h"
+#import "WKErrorInternal.h"
 #import "WKPasswordView.h"
 #import "WKProcessPoolPrivate.h"
 #import "WKScrollView.h"
@@ -4941,6 +4942,34 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 - (void)_setDefaultSTSLabel:(NSString *)defaultSTSLabel
 {
     _page->setDefaultSpatialTrackingLabel(defaultSTSLabel);
+}
+
+- (void)_enterExternalPlaybackForNowPlayingMediaSessionWithCompletionHandler:(void(^)(UIViewController *, NSError *))completionHandler
+{
+    if (!_page) {
+        completionHandler(nil, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+        return;
+    }
+
+    _page->setPlayerIdentifierForVideoElement();
+    _page->enterExternalPlaybackForNowPlayingMediaSession([handler = makeBlockPtr(completionHandler)](bool entered, UIViewController *viewController) {
+        if (entered)
+            handler(viewController, nil);
+        else
+            handler(nil, createNSError(WKErrorUnknown).get());
+    });
+}
+
+- (void)_exitExternalPlaybackWithCompletionHandler:(void (^)(NSError *error))completionHandler
+{
+    if (!_page) {
+        completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+        return;
+    }
+
+    _page->exitExternalPlayback([handler = makeBlockPtr(completionHandler)](bool success) {
+        handler(success ? nil : createNSError(WKErrorUnknown).get());
+    });
 }
 @end
 #endif

@@ -175,6 +175,7 @@ private:
     void enterInWindowFullscreen() override { }
     void exitInWindowFullscreen() override { }
     void enterFullscreen() override { }
+    void setPlayerIdentifierForVideoElement() final { }
     void toggleMuted() override;
     void setMuted(bool) final;
     void setVolume(double) final;

@@ -44,6 +44,7 @@ messages -> PlaybackSessionManager {
     HandleControlledElementIDRequest(WebKit::PlaybackSessionContextIdentifier contextId)
     TogglePictureInPicture(WebKit::PlaybackSessionContextIdentifier contextId)
     EnterFullscreen(WebKit::PlaybackSessionContextIdentifier contextId)
+    SetPlayerIdentifierForVideoElement(WebKit::PlaybackSessionContextIdentifier contextId)
     ExitFullscreen(WebKit::PlaybackSessionContextIdentifier contextId)
     EnterInWindow(WebKit::PlaybackSessionContextIdentifier contextId)
     ExitInWindow(WebKit::PlaybackSessionContextIdentifier contextId)
