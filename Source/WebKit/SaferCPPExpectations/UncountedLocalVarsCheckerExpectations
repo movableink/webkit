@@ -36,8 +36,6 @@ UIProcess/Notifications/WebNotificationManagerProxy.cpp
 UIProcess/UserMediaPermissionRequestManagerProxy.cpp
 UIProcess/WebAuthentication/AuthenticatorManager.cpp
 UIProcess/WebAuthentication/Cocoa/NfcService.mm
-UIProcess/WebBackForwardCache.cpp
-UIProcess/WebBackForwardCacheEntry.cpp
 UIProcess/WebPreferences.cpp
 UIProcess/WebProcessCache.cpp
 UIProcess/WebsiteData/Cocoa/WebsiteDataStoreCocoa.mm
