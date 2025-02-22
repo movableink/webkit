@@ -73,7 +73,7 @@ public:
     FrameIdentifier frameID() const { return m_frameID; }
     inline Page* page() const; // Defined in Page.h.
     inline RefPtr<Page> protectedPage() const; // Defined in Page.h.
-    WEBCORE_EXPORT std::optional<PageIdentifier> pageID() const;
+    inline std::optional<PageIdentifier> pageID() const; // Defined in Page.h.
     Settings& settings() const { return m_settings.get(); }
     Frame& mainFrame() { return *m_mainFrame; }
     const Frame& mainFrame() const { return *m_mainFrame; }

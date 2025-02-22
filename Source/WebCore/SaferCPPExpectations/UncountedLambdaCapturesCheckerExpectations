@@ -112,7 +112,6 @@ html/track/TrackListBase.cpp
 html/track/VTTCue.cpp
 inspector/InspectorOverlay.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
-loader/DocumentLoader.cpp
 loader/FrameLoader.cpp
 loader/NetscapePlugInStreamLoader.cpp
 loader/ResourceLoader.cpp

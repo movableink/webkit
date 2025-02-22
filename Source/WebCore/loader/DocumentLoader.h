@@ -298,7 +298,7 @@ public:
     WEBCORE_EXPORT void frameDestroyed() final;
 
     // Return the ArchiveResource for the URL only when loading an Archive
-    WEBCORE_EXPORT ArchiveResource* archiveResourceForURL(const URL&) const;
+    WEBCORE_EXPORT RefPtr<ArchiveResource> archiveResourceForURL(const URL&) const;
 
     WEBCORE_EXPORT RefPtr<ArchiveResource> mainResource() const;
 
@@ -631,7 +631,7 @@ private:
     bool disallowWebArchive() const;
     bool disallowDataRequest() const;
 
-    Ref<CachedResourceLoader> m_cachedResourceLoader;
+    const Ref<CachedResourceLoader> m_cachedResourceLoader;
 
     CachedResourceHandle<CachedRawResource> m_mainResource;
     ResourceLoaderMap m_subresourceLoaders;

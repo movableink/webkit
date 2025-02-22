@@ -139,13 +139,6 @@ Frame::~Frame()
 #endif
 }
 
-std::optional<PageIdentifier> Frame::pageID() const
-{
-    if (auto* page = this->page())
-        return page->identifier();
-    return std::nullopt;
-}
-
 void Frame::resetWindowProxy()
 {
     m_windowProxy = WindowProxy::create(*this);

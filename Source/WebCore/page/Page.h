@@ -1766,6 +1766,13 @@ inline Page* Frame::page() const
     return m_page.get();
 }
 
+inline std::optional<PageIdentifier> Frame::pageID() const
+{
+    if (auto* page = this->page())
+        return page->identifier();
+    return std::nullopt;
+}
+
 inline RefPtr<Page> Frame::protectedPage() const
 {
     return m_page.get();

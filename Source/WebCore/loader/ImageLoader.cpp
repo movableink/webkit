@@ -22,6 +22,7 @@
 #include "config.h"
 #include "ImageLoader.h"
 
+#include "ArchiveResource.h"
 #include "BitmapImage.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"

@@ -485,7 +485,6 @@ layout/formattingContexts/inline/InlineLineBoxBuilder.cpp
 layout/integration/inline/LayoutIntegrationLineLayout.cpp
 layout/layouttree/LayoutTreeBuilder.cpp
 loader/ApplicationManifestLoader.cpp
-loader/DocumentLoader.cpp
 loader/FrameLoader.cpp
 loader/NavigationAction.cpp
 loader/NavigationScheduler.cpp

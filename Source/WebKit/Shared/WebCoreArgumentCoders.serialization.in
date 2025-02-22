@@ -5341,7 +5341,7 @@ struct WebCore::PolicyContainer {
 [Nested] enum class WebCore::SubstituteData::SessionHistoryVisibility : bool
 
 class WebCore::SubstituteData {
-    RefPtr<WebCore::FragmentedSharedBuffer> content();
+    RefPtr<WebCore::FragmentedSharedBuffer> protectedContent();
     URL failingURL();
     WebCore::ResourceResponse response();
     WebCore::SubstituteData::SessionHistoryVisibility shouldRevealToSessionHistory();
