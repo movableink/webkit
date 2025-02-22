@@ -116,7 +116,7 @@ void ContentFilterUnblockHandler::wrapWithDecisionHandler(const DecisionHandlerF
 bool ContentFilterUnblockHandler::needsUIProcess() const
 {
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
-    return m_webFilterEvaluator;
+    return !!m_webFilterEvaluator;
 #else
     return false;
 #endif

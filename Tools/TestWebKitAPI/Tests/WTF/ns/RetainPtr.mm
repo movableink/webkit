@@ -248,42 +248,63 @@ TEST(RETAIN_PTR_TEST_NAME, MoveAssignmentFromSimilarNSTypeReversed)
 TEST(RETAIN_PTR_TEST_NAME, OptionalRetainPtrNS)
 {
     // Test assignment from adoptNS().
-    std::optional<RetainPtr<NSObject>> optionalObject1 = adoptNS([NSObject new]);
-    auto optionalObjectPtr1 = reinterpret_cast<uintptr_t>(optionalObject1.value().get());
+    std::optional<RetainPtr<NSObject>> optionalObject1;
+
+    uintptr_t optionalObjectPtr1 = 0;
+    AUTORELEASEPOOL_FOR_ARC_DEBUG {
+        optionalObject1 = adoptNS([NSObject new]);
+        optionalObjectPtr1 = reinterpret_cast<uintptr_t>(optionalObject1.value().get());
+    }
     EXPECT_EQ(1L, CFGetRetainCount((CFTypeRef)optionalObjectPtr1));
-    RetainPtr<NSObject> object1 = optionalObject1.value();
-    EXPECT_EQ(optionalObject1.value(), object1);
+
+    RetainPtr<NSObject> object1;
+    AUTORELEASEPOOL_FOR_ARC_DEBUG {
+        object1 = optionalObject1.value();
+        EXPECT_EQ(optionalObject1.value(), object1);
+    }
 
     // Test assignment from retainPtr().
     std::optional<RetainPtr<NSObject>> optionalObject2;
     @autoreleasepool {
         optionalObject2 = retainPtr([[NSObject new] autorelease]);
     }
-    auto optionalObjectPtr2 = reinterpret_cast<uintptr_t>(optionalObject2.value().get());
+
+    uintptr_t optionalObjectPtr2 = 0;
+    AUTORELEASEPOOL_FOR_ARC_DEBUG {
+        optionalObjectPtr2 = reinterpret_cast<uintptr_t>(optionalObject2.value().get());
+    }
     EXPECT_EQ(1L, CFGetRetainCount((CFTypeRef)optionalObjectPtr2));
-    RetainPtr<NSObject> object2 = optionalObject2.value();
-    auto objectPtr2 = reinterpret_cast<uintptr_t>(object2.get());
-    EXPECT_EQ(optionalObject2.value(), object2);
 
-    EXPECT_NE(object1, object2);
+    RetainPtr<NSObject> object2;
+    uintptr_t objectPtr2 = 0;
+    AUTORELEASEPOOL_FOR_ARC_DEBUG {
+        object2 = optionalObject2.value();
+        objectPtr2 = reinterpret_cast<uintptr_t>(object2.get());
 
-    // Test assignment from std::optional<RetainPtr<NSObject>>.
-    optionalObject1 = optionalObject2;
-    EXPECT_TRUE(optionalObject1.value());
-    EXPECT_TRUE(optionalObject1.value().get());
-    EXPECT_EQ(optionalObject1.value(), object2);
-    EXPECT_TRUE(optionalObject2.value());
-    EXPECT_TRUE(optionalObject2.value().get());
-    EXPECT_EQ(optionalObject2.value(), object2);
+        EXPECT_EQ(optionalObject2.value(), object2);
 
-    // Reset after assignment test.
-    optionalObject1 = object1;
-    EXPECT_EQ(optionalObject1.value(), object1);
-    EXPECT_EQ(optionalObject2.value(), object2);
+        EXPECT_NE(object1, object2);
+
+        // Test assignment from std::optional<RetainPtr<NSObject>>.
+        optionalObject1 = optionalObject2;
+        EXPECT_TRUE(optionalObject1.value());
+        EXPECT_TRUE(optionalObject1.value().get());
+        EXPECT_EQ(optionalObject1.value(), object2);
+        EXPECT_TRUE(optionalObject2.value());
+        EXPECT_TRUE(optionalObject2.value().get());
+        EXPECT_EQ(optionalObject2.value(), object2);
+
+        // Reset after assignment test.
+        optionalObject1 = object1;
+        EXPECT_EQ(optionalObject1.value(), object1);
+        EXPECT_EQ(optionalObject2.value(), object2);
+    }
 
     // Test move from std::optional<RetainPtr<NSObject>>.
     EXPECT_EQ(2L, CFGetRetainCount((CFTypeRef)objectPtr2));
-    optionalObject1 = WTFMove(optionalObject2);
+    AUTORELEASEPOOL_FOR_ARC_DEBUG {
+        optionalObject1 = WTFMove(optionalObject2);
+    }
     EXPECT_EQ(2L, CFGetRetainCount((CFTypeRef)objectPtr2));
     EXPECT_TRUE(optionalObject1.value());
     EXPECT_TRUE(optionalObject1.value().get());
@@ -322,5 +343,27 @@ TEST(RETAIN_PTR_TEST_NAME, RetainPtrNS)
     }
     EXPECT_EQ(1L, CFGetRetainCount((CFTypeRef)objectPtr3));
 }
+
+/* This test is disabled for now because it fails (!!).
+TEST(RETAIN_PTR_TEST_NAME, LeakRef)
+{
+    RetainPtr<NSObject> foo;
+    uintptr_t fooPtr;
+    AUTORELEASEPOOL_FOR_ARC_DEBUG {
+        foo = adoptNS([[NSObject alloc] init]);
+        fooPtr = reinterpret_cast<uintptr_t>(foo.get());
+    }
+    EXPECT_EQ(1, CFGetRetainCount((CFTypeRef)fooPtr));
+
+    NSObject *object;
+    AUTORELEASEPOOL_FOR_ARC_DEBUG {
+        object = foo.leakRef();
+    }
+    EXPECT_EQ(nullptr, foo.get());
+    EXPECT_EQ(1, CFGetRetainCount((CFTypeRef)object));
+
+    (void)adoptNS(object);
+}
+*/
 
 } // namespace TestWebKitAPI

@@ -3537,7 +3537,7 @@ IGNORE_WARNINGS_END
 
 - (void)addCaretChangeListener:(id <WebCaretChangeListener>)listener
 {
-    if (_private->_caretChangeListeners == nil) {
+    if (!_private->_caretChangeListeners) {
         _private->_caretChangeListeners = adoptNS([[NSMutableSet alloc] init]);
     }
 
@@ -3591,7 +3591,7 @@ IGNORE_WARNINGS_END
     if (!dataSource)
         dataSource = [frame dataSource];
     auto unreachableURL = retainPtr([dataSource unreachableURL]);
-    auto url = unreachableURL != nil ? unreachableURL : retainPtr([[dataSource request] URL]);
+    auto url = !!unreachableURL ? unreachableURL : retainPtr([[dataSource request] URL]);
     return url.autorelease();
 }
 #endif // PLATFORM(IOS_FAMILY)

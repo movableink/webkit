@@ -1221,7 +1221,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RetainPtr<NSAttributedString> attributedString;
     if ([types containsObject:WebCore::legacyRTFDPasteboardType()])
         attributedString = adoptNS([[NSAttributedString alloc] initWithRTFD:[pasteboard dataForType:WebCore::legacyRTFDPasteboardType()] documentAttributes:NULL]);
-    if (attributedString == nil && [types containsObject:WebCore::legacyRTFPasteboardType()])
+    if (!attributedString && [types containsObject:WebCore::legacyRTFPasteboardType()])
         attributedString = adoptNS([[NSAttributedString alloc] initWithRTF:[pasteboard dataForType:WebCore::legacyRTFPasteboardType()] documentAttributes:NULL]);
     if (attributedString)
         return adoptNS([[attributedString string] copy]).autorelease();
@@ -4389,7 +4389,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         wrapper = [[self _dataSource] _fileWrapperForURL:draggingElementURL];
     }
     
-    if (wrapper == nil) {
+    if (!wrapper) {
         LOG_ERROR("Failed to create image file.");
         return nil;
     }
@@ -5092,7 +5092,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return nil;
     // NSTextView does something more efficient by parsing the attributes only, but that's not available in API.
     auto string = adoptNS([[NSAttributedString alloc] initWithRTF:data documentAttributes:NULL]);
-    if (string == nil || [string length] == 0)
+    if (!string || [string length] == 0)
         return nil;
     return [string fontAttributesInRange:NSMakeRange(0, 1)];
 }

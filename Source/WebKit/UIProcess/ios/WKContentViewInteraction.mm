@@ -8950,7 +8950,7 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
     if (_presentedQuickboardController)
         return YES;
 #endif // HAVE(QUICKBOARD_CONTROLLER)
-    return _presentedFullScreenInputViewController;
+    return !!_presentedFullScreenInputViewController;
 }
 
 - (void)dismissAllInputViewControllers:(BOOL)animated

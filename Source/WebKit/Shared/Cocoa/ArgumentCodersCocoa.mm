@@ -428,7 +428,7 @@ NSType typeFromObject(id object)
 
 static inline bool isSerializableFont(CTFontRef font)
 {
-    return adoptCF(CTFontCopyAttribute(font, kCTFontURLAttribute));
+    return !!adoptCF(CTFontCopyAttribute(font, kCTFontURLAttribute));
 }
 
 bool isSerializableValue(id value)

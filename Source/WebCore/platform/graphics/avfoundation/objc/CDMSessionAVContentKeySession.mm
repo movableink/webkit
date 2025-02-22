@@ -323,7 +323,11 @@ bool CDMSessionAVContentKeySession::update(Uint8Array* key, RefPtr<Uint8Array>& 
 
         errorCode = MediaPlayer::NoError;
         systemCode = 0;
-        RetainPtr nsIdentifier = m_identifier ? RetainPtr<id>(toNSData(m_identifier->span())) : retainPtr(contentKeyRequest.get().identifier);
+        RetainPtr<id> nsIdentifier;
+        if (m_identifier)
+            nsIdentifier = toNSData(m_identifier->span());
+        else
+            nsIdentifier = contentKeyRequest.get().identifier;
 
         RetainPtr<NSError> error;
         RetainPtr<NSData> requestData;
@@ -438,7 +442,7 @@ RefPtr<Uint8Array> CDMSessionAVContentKeySession::generateKeyReleaseMessage(unsi
 bool CDMSessionAVContentKeySession::hasContentKeyRequest() const
 {
     Locker holder { m_keyRequestLock };
-    return m_keyRequest;
+    return !!m_keyRequest;
 }
 
 RetainPtr<AVContentKeyRequest> CDMSessionAVContentKeySession::contentKeyRequest() const

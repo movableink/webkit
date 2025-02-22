@@ -80,7 +80,7 @@ public:
 
     void didProvideContentKeyRequest(AVContentKeyRequest *);
 
-    bool hasContentKeySession() const { return m_contentKeySession; }
+    bool hasContentKeySession() const { return !!m_contentKeySession; }
     AVContentKeySession* contentKeySession();
 
     bool hasContentKeyRequest() const;

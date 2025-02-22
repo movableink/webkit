@@ -2724,7 +2724,7 @@ bool UnifiedPDFPlugin::isEditingCommandEnabled(const String& commandName)
         return true;
 
     if (equalLettersIgnoringASCIICase(commandName, "copy"_s) || equalLettersIgnoringASCIICase(commandName, "takefindstringfromselection"_s))
-        return m_currentSelection;
+        return !!m_currentSelection;
 
     return false;
 }

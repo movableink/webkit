@@ -329,7 +329,7 @@ void WebThreadAdoptAndRelease(id obj)
 
     Locker locker { webThreadReleaseLock };
 
-    if (webThreadReleaseObjArray() == nil)
+    if (!webThreadReleaseObjArray())
         webThreadReleaseObjArray() = adoptCF(CFArrayCreateMutable(kCFAllocatorSystemDefault, 0, nullptr));
     CFArrayAppendValue(webThreadReleaseObjArray().get(), obj);
     CFRunLoopSourceSignal(webThreadReleaseSource().get());
