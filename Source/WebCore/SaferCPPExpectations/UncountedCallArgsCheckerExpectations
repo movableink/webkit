@@ -1078,7 +1078,6 @@ platform/graphics/cocoa/FontCacheCoreText.cpp
 platform/graphics/cocoa/ImageAdapterCocoa.mm
 platform/graphics/cocoa/SourceBufferParser.cpp
 platform/graphics/cocoa/VideoMediaSampleRenderer.mm
-platform/graphics/cocoa/WebMAudioUtilitiesCocoa.mm
 platform/graphics/cocoa/WebProcessGraphicsContextGLCocoa.mm
 platform/graphics/controls/ApplePayButtonPart.cpp
 platform/graphics/controls/ButtonPart.h
