@@ -2925,15 +2925,6 @@ void NetworkProcess::connectionToWebProcessClosed(IPC::Connection& connection, P
         session->protectedStorageManager()->stopReceivingMessageFromConnection(connection);
 }
 
-std::optional<WebCore::ProcessIdentifier> NetworkProcess::webProcessIdentifierForConnection(IPC::Connection& connection) const
-{
-    for (auto& [processIdentifier, webConnection] : m_webProcessConnections) {
-        if (&webConnection->connection() == &connection)
-            return processIdentifier;
-    }
-    return std::nullopt;
-}
-
 NetworkConnectionToWebProcess* NetworkProcess::webProcessConnection(ProcessIdentifier identifier) const
 {
     return m_webProcessConnections.get(identifier);
