@@ -5,7 +5,6 @@ Platform/cocoa/WebPrivacyHelpers.mm
 UIProcess/Automation/SimulatedInputDispatcher.cpp
 UIProcess/Automation/WebAutomationSession.cpp
 UIProcess/Cocoa/SOAuthorization/SOAuthorizationSession.mm
-UIProcess/DeviceIdHashSaltStorage.cpp
 UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm
 UIProcess/SpeechRecognitionPermissionManager.cpp
 UIProcess/UserMediaPermissionRequestManagerProxy.cpp

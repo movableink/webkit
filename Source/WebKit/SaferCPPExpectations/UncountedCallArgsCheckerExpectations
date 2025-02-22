@@ -175,7 +175,6 @@ UIProcess/Cocoa/SOAuthorization/SOAuthorizationSession.mm
 UIProcess/Cocoa/SOAuthorization/WKSOAuthorizationDelegate.mm
 UIProcess/Cocoa/UserMediaPermissionRequestManagerProxy.mm
 UIProcess/Cocoa/WKEditCommand.mm
-UIProcess/DeviceIdHashSaltStorage.cpp
 UIProcess/Extensions/Cocoa/WebExtensionActionCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionCommandCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm
