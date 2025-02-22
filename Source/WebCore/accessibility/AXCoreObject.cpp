@@ -215,6 +215,13 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::tabChildren()
 }
 
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
+static bool isValidChildForTable(AXCoreObject& object)
+{
+    auto role = object.roleValue();
+    // Tables can only have these roles as exposed-to-AT children.
+    return role == AccessibilityRole::Row || role == AccessibilityRole::Column || role == AccessibilityRole::TableHeaderContainer || role == AccessibilityRole::Caption;
+}
+
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::unignoredChildren(bool updateChildrenIfNeeded)
 {
     if (onlyAddsUnignoredChildren())
@@ -227,12 +234,7 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::unignoredChildren(bool u
     const auto& children = childrenIncludingIgnored(updateChildrenIfNeeded);
     RefPtr descendant = children.size() ? children[0].ptr() : nullptr;
     while (descendant && descendant != this) {
-        bool childIsValid = true;
-        if (isExposedTable) {
-            auto role = descendant->roleValue();
-            // Tables can only have these roles as exposed-to-AT children.
-            childIsValid = role == AccessibilityRole::Row || role == AccessibilityRole::Column || role == AccessibilityRole::TableHeaderContainer || role == AccessibilityRole::Caption;
-        }
+        bool childIsValid = !isExposedTable || isValidChildForTable(*descendant);
         if (!childIsValid || descendant->isIgnored()) {
             descendant = descendant->nextInPreOrder(updateChildrenIfNeeded, /* stayWithin */ this);
             continue;
@@ -247,6 +249,23 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::unignoredChildren(bool u
         }
     }
     return unignoredChildren;
+}
+
+AXCoreObject* AXCoreObject::firstUnignoredChild()
+{
+    const auto& children = childrenIncludingIgnored(/* updateChildrenIfNeeded */ true);
+    RefPtr descendant = children.size() ? children[0].ptr() : nullptr;
+    if (onlyAddsUnignoredChildren())
+        return descendant.get();
+
+    bool isExposedTable = isTable() && isExposable();
+    while (descendant && descendant != this) {
+        bool childIsValid = !isExposedTable || isValidChildForTable(*descendant);
+        if (childIsValid && !descendant->isIgnored())
+            return descendant.get();
+        descendant = descendant->nextInPreOrder(/* updateChildrenIfNeeded */ true, /* stayWithin */ this);
+    }
+    return nullptr;
 }
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 

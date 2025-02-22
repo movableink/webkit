@@ -263,6 +263,39 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
 
     return string;
 }
+
+NSArray *renderWidgetChildren(const AXCoreObject& object)
+{
+    if (LIKELY(!object.isWidget()))
+        return nil;
+
+    id child = Accessibility::retrieveAutoreleasedValueFromMainThread<id>([object = Ref { object }] () -> RetainPtr<id> {
+        RefPtr widget = object->widget();
+        return widget ? widget->accessibilityObject() : nil;
+    });
+
+    if (child)
+        return @[child];
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    return [object.platformWidget() accessibilityAttributeValue:NSAccessibilityChildrenAttribute];
+ALLOW_DEPRECATED_DECLARATIONS_END
+}
+
+bool AXCoreObject::isEmptyGroup()
+{
+#if ENABLE(MODEL_ELEMENT)
+    if (UNLIKELY(isModel()))
+        return false;
+#endif
+
+    if (UNLIKELY(isRemoteFrame()))
+        return false;
+
+    return [rolePlatformString() isEqual:NSAccessibilityGroupRole]
+        && !firstUnignoredChild()
+        && ![renderWidgetChildren(*this) count];
+}
+
 #endif // PLATFORM(MAC)
 
 } // namespace WebCore

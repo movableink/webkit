@@ -1106,6 +1106,9 @@ static NSString *roleString(AXCoreObject& backingObject)
 
 static NSString *subroleString(AXCoreObject& backingObject)
 {
+    if (backingObject.isEmptyGroup())
+        return NSAccessibilityEmptyGroupSubrole;
+
     String subrole = backingObject.subrolePlatformString();
     if (!subrole.isEmpty())
         return subrole;

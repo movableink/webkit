@@ -205,43 +205,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return Accessibility::roleToPlatformString(role);
 }
 
-static bool isEmptyGroup(AccessibilityObject& object)
-{
-#if ENABLE(MODEL_ELEMENT)
-    if (object.isModel())
-        return false;
-#endif
-
-    if (object.isRemoteFrame())
-        return false;
-
-    return [object.rolePlatformString() isEqual:NSAccessibilityGroupRole]
-        && object.unignoredChildren().isEmpty()
-        && ![renderWidgetChildren(object) count];
-}
-
-NSArray *renderWidgetChildren(const AXCoreObject& object)
-{
-    if (!object.isWidget())
-        return nil;
-
-    id child = Accessibility::retrieveAutoreleasedValueFromMainThread<id>([object = Ref { object }] () -> RetainPtr<id> {
-        auto* widget = object->widget();
-        return widget ? widget->accessibilityObject() : nil;
-    });
-
-    if (child)
-        return @[child];
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    return [object.platformWidget() accessibilityAttributeValue:NSAccessibilityChildrenAttribute];
-ALLOW_DEPRECATED_DECLARATIONS_END
-}
-
 String AccessibilityObject::subrolePlatformString() const
 {
-    if (isEmptyGroup(*const_cast<AccessibilityObject*>(this)))
-        return NSAccessibilityEmptyGroupSubrole;
-
     if (isSecureField())
         return NSAccessibilitySecureTextFieldSubrole;
     if (isSearchField())
