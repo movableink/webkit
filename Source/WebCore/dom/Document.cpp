@@ -1591,19 +1591,16 @@ Ref<CSSStyleDeclaration> Document::createCSSStyleDeclaration()
     return propertySet->ensureCSSStyleDeclaration();
 }
 
-ExceptionOr<Ref<Node>> Document::importNode(Node& nodeToImport, std::optional<std::variant<bool, ImportNodeOptions>>&& argument)
+ExceptionOr<Ref<Node>> Document::importNode(Node& nodeToImport, std::variant<bool, ImportNodeOptions>&& argument)
 {
-    bool deep = false;
+    bool subtree = false;
     RefPtr<CustomElementRegistry> registry;
-    if (argument) {
-        auto argumentValue = argument.value();
-        if (std::holds_alternative<ImportNodeOptions>(argumentValue)) {
-            auto options = std::get<ImportNodeOptions>(argumentValue);
-            deep = options.deep;
-            registry = WTFMove(options.customElements);
-        } else if (std::get<bool>(argumentValue))
-            deep = true;
-    }
+    if (std::holds_alternative<ImportNodeOptions>(argument)) {
+        auto options = std::get<ImportNodeOptions>(argument);
+        subtree = !options.selfOnly;
+        registry = WTFMove(options.customElements);
+    } else if (std::get<bool>(argument))
+        subtree = true;
     if (!registry)
         registry = customElementRegistry();
     switch (nodeToImport.nodeType()) {
@@ -1616,7 +1613,7 @@ ExceptionOr<Ref<Node>> Document::importNode(Node& nodeToImport, std::optional<st
     case Node::CDATA_SECTION_NODE:
     case Node::PROCESSING_INSTRUCTION_NODE:
     case Node::COMMENT_NODE:
-        return nodeToImport.cloneNodeInternal(*this, deep ? Node::CloningOperation::Everything : Node::CloningOperation::OnlySelf, registry.get());
+        return nodeToImport.cloneNodeInternal(*this, subtree ? Node::CloningOperation::Everything : Node::CloningOperation::OnlySelf, registry.get());
 
     case Node::ATTRIBUTE_NODE: {
         auto& attribute = uncheckedDowncast<Attr>(nodeToImport);

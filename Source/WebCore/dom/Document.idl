@@ -68,7 +68,7 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     [NewObject] Comment createComment(DOMString data);
     [NewObject] ProcessingInstruction createProcessingInstruction(DOMString target, DOMString data);
 
-    [CEReactions=Needed, NewObject] Node importNode(Node node, optional (boolean or ImportNodeOptions) options);
+    [CEReactions=Needed, NewObject] Node importNode(Node node, optional (boolean or ImportNodeOptions) options = false);
     [CEReactions=Needed] Node adoptNode(Node node);
 
     [NewObject] Attr createAttribute([AtomString] DOMString localName);

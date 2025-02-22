@@ -514,7 +514,7 @@ public:
     WEBCORE_EXPORT ExceptionOr<Ref<ProcessingInstruction>> createProcessingInstruction(String&& target, String&& data);
     WEBCORE_EXPORT ExceptionOr<Ref<Attr>> createAttribute(const AtomString& name);
     WEBCORE_EXPORT ExceptionOr<Ref<Attr>> createAttributeNS(const AtomString& namespaceURI, const AtomString& qualifiedName, bool shouldIgnoreNamespaceChecks = false);
-    WEBCORE_EXPORT ExceptionOr<Ref<Node>> importNode(Node& nodeToImport, std::optional<std::variant<bool, ImportNodeOptions>>&&);
+    WEBCORE_EXPORT ExceptionOr<Ref<Node>> importNode(Node& nodeToImport, std::variant<bool, ImportNodeOptions>&&);
     WEBCORE_EXPORT ExceptionOr<Ref<Element>> createElementNS(const AtomString& namespaceURI, const AtomString& qualifiedName);
 
     WEBCORE_EXPORT Ref<Element> createElement(const QualifiedName&, bool createdByParser, CustomElementRegistry* = nullptr);
