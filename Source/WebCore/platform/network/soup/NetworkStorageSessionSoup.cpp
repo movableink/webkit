@@ -136,6 +136,11 @@ void NetworkStorageSession::setCookieStorage(GRefPtr<SoupCookieJar>&& jar)
     soup_cookie_jar_set_accept_policy(jar.get(), soup_cookie_jar_get_accept_policy(m_cookieStorage.get()));
     m_cookieStorage = WTFMove(jar);
     g_signal_connect_swapped(m_cookieStorage.get(), "changed", G_CALLBACK(cookiesDidChange), this);
+
+    for (auto& [host, observers] : m_cookieChangeObservers) {
+        for (auto& observer : observers)
+            observer.allCookiesDeleted();
+    }
 }
 
 void NetworkStorageSession::setCookieObserverHandler(Function<void ()>&& handler)
@@ -561,6 +566,12 @@ void NetworkStorageSession::deleteAllCookies(CompletionHandler<void()>&& complet
         auto* cookie = static_cast<SoupCookie*>(item->data);
         soup_cookie_jar_delete_cookie(cookieJar, cookie);
     }
+
+    for (auto& [host, observers] : m_cookieChangeObservers) {
+        for (auto& observer : observers)
+            observer.allCookiesDeleted();
+    }
+
     completionHandler();
 }
 
