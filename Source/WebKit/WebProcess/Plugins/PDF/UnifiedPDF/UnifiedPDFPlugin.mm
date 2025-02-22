@@ -4485,14 +4485,7 @@ FloatRect UnifiedPDFPlugin::absoluteBoundingRectForSmartMagnificationAtPoint(Flo
 
 bool UnifiedPDFPlugin::shouldUseInProcessBackingStore() const
 {
-    // FIXME: We should allow GPUP-owned backing store on platforms that have
-    // memory limits only once we figure out why there are spikes of unattributed
-    // memory when zooming (see bug 287478).
-#if PLATFORM(IOS_FAMILY)
-    return true;
-#else
     return false;
-#endif
 }
 
 bool UnifiedPDFPlugin::layerNeedsPlatformContext(const GraphicsLayer* layer) const
