@@ -596,7 +596,6 @@ void VideoPresentationInterfaceIOS::cleanupFullscreen()
     LOG(Fullscreen, "VideoPresentationInterfaceIOS::cleanupFullscreen(%p)", this);
 
     if (this->cleanupExternalPlayback()) {
-        ASSERT(m_currentMode == HTMLMediaElementEnums::VideoFullscreenModeNone);
         return;
     }
 
