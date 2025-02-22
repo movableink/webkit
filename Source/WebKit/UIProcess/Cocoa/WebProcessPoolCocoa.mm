@@ -985,7 +985,6 @@ void WebProcessPool::unregisterNotificationObservers()
     [[NSWorkspace.sharedWorkspace notificationCenter] removeObserver:m_accessibilityDisplayOptionsNotificationObserver.get()];
     [[NSNotificationCenter defaultCenter] removeObserver:m_scrollerStyleNotificationObserver.get()];
     [[NSNotificationCenter defaultCenter] removeObserver:m_deactivationObserver.get()];
-    [[NSNotificationCenter defaultCenter] removeObserver:m_finishedMobileAssetFontDownloadObserver.get()];
     removeCFNotificationObserver(AppleColorPreferencesChangedNotification, CFNotificationCenterGetDistributedCenter());
     for (auto token : m_openDirectoryNotifyTokens)
         notify_cancel(token);
@@ -1011,7 +1010,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [[NSNotificationCenter defaultCenter] removeObserver:m_activationObserver.get()];
 
     m_powerSourceNotifier = nullptr;
-    
+
+    [[NSNotificationCenter defaultCenter] removeObserver:m_finishedMobileAssetFontDownloadObserver.get()];
+
 #if PLATFORM(COCOA)
     removeCFNotificationObserver((__bridge CFStringRef)WKLockdownModeContainerConfigurationChangedNotification);
 #endif
