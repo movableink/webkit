@@ -33,13 +33,13 @@ namespace JSC {
 // This is a mixin for the two kinds of Arguments-class objects that arise when you say
 // "arguments" inside a function. This class doesn't show up in the JSCell inheritance hierarchy.
 template<typename Type>
-class GenericArguments : public JSNonFinalObject {
+class GenericArgumentsImpl : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesPut | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero;
 
 protected:
-    GenericArguments(VM& vm, Structure* structure)
+    GenericArgumentsImpl(VM& vm, Structure* structure)
         : Base(vm, structure)
     {
     }
@@ -53,7 +53,7 @@ protected:
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
-    
+
     void initModifiedArgumentsDescriptor(JSGlobalObject*, unsigned length);
     void initModifiedArgumentsDescriptorIfNecessary(JSGlobalObject*, unsigned length);
     void setModifiedArgumentDescriptor(JSGlobalObject*, unsigned index, unsigned length);

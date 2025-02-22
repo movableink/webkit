@@ -1019,7 +1019,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/FunctionRareData.h
     runtime/FuzzerAgent.h
     runtime/Gate.h
-    runtime/GenericArguments.h
+    runtime/GenericArgumentsImpl.h
     runtime/GenericOffset.h
     runtime/GenericTypedArrayView.h
     runtime/GenericTypedArrayViewInlines.h
