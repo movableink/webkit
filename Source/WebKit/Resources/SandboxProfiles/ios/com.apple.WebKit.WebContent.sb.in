@@ -113,7 +113,9 @@
 
 (define-once (accessibility-support)
     (allow mach-register
-        (local-name "com.apple.iphone.axserver"))
+        (require-all
+            (extension "com.apple.webkit.mach-bootstrap")
+            (local-name "com.apple.iphone.axserver")))
     (mobile-preferences-read "com.apple.Accessibility")
     
     ;; <rdar://problem/10809394>
