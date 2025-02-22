@@ -110,14 +110,11 @@ private:
     Document* mainFrameDocument() { return document().mainFrameDocument(); }
     RefPtr<Document> protectedMainFrameDocument() { return mainFrameDocument(); }
 
-    RefPtr<Element> fullscreenOrPendingElement() const { return m_fullscreenElement ? m_fullscreenElement : m_pendingFullscreenElement; }
-
     bool didEnterFullscreen();
     void addElementToChangeEventQueue(Node& target) { m_fullscreenChangeEventTargetQueue.append(GCReachableRef(target)); }
 
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 
-    RefPtr<Element> m_pendingFullscreenElement;
     RefPtr<Element> m_fullscreenElement;
 
     Deque<GCReachableRef<Node>> m_fullscreenChangeEventTargetQueue;
