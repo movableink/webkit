@@ -318,7 +318,7 @@ RefPtr<Page> WebChromeClient::createWindow(LocalFrame& frame, const String& open
 {
 #if ENABLE(FULLSCREEN_API)
     if (RefPtr document = frame.document())
-        document->fullscreenManager().cancelFullscreen();
+        document->fullscreenManager().fullyExitFullscreen();
 #endif
 
     auto& webProcess = WebProcess::singleton();

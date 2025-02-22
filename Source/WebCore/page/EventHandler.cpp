@@ -3903,7 +3903,7 @@ bool EventHandler::internalKeyEvent(const PlatformKeyboardEvent& initialKeyEvent
     RefPtr document = frame->document();
     if (CheckedPtr fullscreenManager = document->fullscreenManagerIfExists(); fullscreenManager && fullscreenManager->isFullscreen()) {
         if (initialKeyEvent.type() == PlatformEvent::Type::KeyDown && initialKeyEvent.windowsVirtualKeyCode() == VK_ESCAPE) {
-            fullscreenManager->cancelFullscreen();
+            fullscreenManager->fullyExitFullscreen();
             return true;
         }
 

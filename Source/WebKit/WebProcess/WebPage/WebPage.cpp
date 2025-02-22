@@ -7430,7 +7430,7 @@ void WebPage::elementDidFocus(Element& element, const FocusOptions& options)
 
 #if ENABLE(FULLSCREEN_API)
         if (element.document().fullscreenManager().isFullscreen())
-            element.document().fullscreenManager().cancelFullscreen();
+            element.document().fullscreenManager().fullyExitFullscreen();
 #endif
         if (isChangingFocusedElement && (m_userIsInteracting || m_keyboardIsAttached))
             m_sendAutocorrectionContextAfterFocusingElement = true;

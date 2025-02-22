@@ -262,7 +262,7 @@ RefPtr<Page> WebChromeClient::createWindow(LocalFrame& frame, const String& open
     if (RefPtr document = frame.document()) {
         if (CheckedPtr fullscreenManager = document->fullscreenManagerIfExists()) {
             if (fullscreenManager->fullscreenElement())
-                fullscreenManager->cancelFullscreen();
+                fullscreenManager->fullyExitFullscreen();
         }
     }
 #endif

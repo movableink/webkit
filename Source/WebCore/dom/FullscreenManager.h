@@ -63,11 +63,11 @@ public:
     RefPtr<Element> protectedFullscreenElement() const { return fullscreenElement(); }
     WEBCORE_EXPORT bool isFullscreenEnabled() const;
     WEBCORE_EXPORT void exitFullscreen(CompletionHandler<void(ExceptionOr<void>)>&&);
+    WEBCORE_EXPORT void fullyExitFullscreen();
 
-    // Mozilla versions.
+    // Legacy Mozilla API.
     bool isFullscreen() const { return fullscreenElement(); }
     bool isFullscreenKeyboardInputAllowed() const { return fullscreenElement() && m_areKeysEnabledInFullscreen; }
-    WEBCORE_EXPORT void cancelFullscreen();
 
     enum FullscreenCheckType {
         EnforceIFrameAllowFullscreenRequirement,

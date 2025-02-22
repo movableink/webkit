@@ -565,15 +565,15 @@ void FullscreenManager::exitRemovedFullscreenElement(Element& element)
         clearFullscreenFlags(element);
 }
 
-// MARK: - Cancel fullscreen.
-// The Mozilla "cancelFullscreen()" API behaves like the "fully exit fullscreen" algorithm:
+// MARK: - Fully exit fullscreen.
+// Removes all fullscreen elements from the top layer for all documents.
 // https://fullscreen.spec.whatwg.org/#fully-exit-fullscreen
 
-void FullscreenManager::cancelFullscreen()
+void FullscreenManager::fullyExitFullscreen()
 {
     RefPtr mainFrameDocument = this->mainFrameDocument();
     if (!mainFrameDocument)
-        LOG_ONCE(SiteIsolation, "Unable to fully perform FullscreenManager::cancelFullscreen() without access to the main frame document ");
+        LOG_ONCE(SiteIsolation, "Unable to fully perform FullscreenManager::fullyExitFullscreen() without access to the main frame document ");
 
     if (!mainFrameDocument || !mainFrameDocument->fullscreenManager().fullscreenElement()) {
         INFO_LOG(LOGIDENTIFIER, "No element to unfullscreen.");

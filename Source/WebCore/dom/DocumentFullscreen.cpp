@@ -63,7 +63,7 @@ Element* DocumentFullscreen::webkitCurrentFullScreenElement(Document& document)
 
 void DocumentFullscreen::webkitCancelFullScreen(Document& document)
 {
-    document.fullscreenManager().cancelFullscreen();
+    document.fullscreenManager().fullyExitFullscreen();
 }
 
 // https://fullscreen.spec.whatwg.org/#exit-fullscreen

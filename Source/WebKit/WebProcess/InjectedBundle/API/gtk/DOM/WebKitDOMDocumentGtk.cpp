@@ -1314,7 +1314,7 @@ void webkit_dom_document_webkit_cancel_fullscreen(WebKitDOMDocument* self)
     g_return_if_fail(WEBKIT_DOM_IS_DOCUMENT(self));
 #if ENABLE(FULLSCREEN_API)
     WebCore::Document* item = WebKit::core(self);
-    item->fullscreenManager().cancelFullscreen();
+    item->fullscreenManager().fullyExitFullscreen();
 #endif
 }
 

@@ -302,7 +302,7 @@ static void setClipRectForWindow(NSWindow *window, NSRect clipRect)
 {
     if (!_element)
         return;
-    _element->document().fullscreenManager().cancelFullscreen();
+    _element->document().fullscreenManager().fullyExitFullscreen();
 }
 
 - (void)exitFullScreen:(CompletionHandler<void()>&&)completionHandler

@@ -587,7 +587,7 @@ void WebFullScreenManager::requestExitFullScreen()
     }
 
     ALWAYS_LOG(LOGIDENTIFIER);
-    m_element->document().fullscreenManager().cancelFullscreen();
+    m_element->document().fullscreenManager().fullyExitFullscreen();
 }
 
 void WebFullScreenManager::close()
