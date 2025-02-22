@@ -47,7 +47,7 @@ class FullscreenManager final : public CanMakeWeakPtr<FullscreenManager>, public
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FullscreenManager);
 public:
     FullscreenManager(Document&);
-    ~FullscreenManager();
+    ~FullscreenManager() = default;
 
     Document& document() { return m_document.get(); }
     const Document& document() const { return m_document.get(); }
@@ -126,6 +126,22 @@ private:
 #if !RELEASE_LOG_DISABLED
     const uint64_t m_logIdentifier;
 #endif
+
+    class CompletionHandlerScope final {
+    public:
+        CompletionHandlerScope(CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
+            : m_completionHandler(WTFMove(completionHandler)) { }
+        CompletionHandlerScope(CompletionHandlerScope&&) = default;
+        CompletionHandlerScope& operator=(CompletionHandlerScope&&) = default;
+        ~CompletionHandlerScope()
+        {
+            if (m_completionHandler)
+                m_completionHandler({ });
+        }
+        CompletionHandler<void(ExceptionOr<void>)> release() { return WTFMove(m_completionHandler); }
+    private:
+        CompletionHandler<void(ExceptionOr<void>)> m_completionHandler;
+    };
 };
 
 }
