@@ -1415,13 +1415,14 @@ void WebLocalFrameLoaderClient::restoreViewState()
     double scaleFactor = m_localFrame->loader().history().protectedCurrentItem()->pageScaleFactor();
 
     // A scale factor of 0 means the history item has the default scale factor, thus we do not need to update it.
-    if (scaleFactor)
-        m_frame->page()->send(Messages::WebPageProxy::PageScaleFactorDidChange(scaleFactor));
+    RefPtr page = m_frame->page();
+    if (page && scaleFactor)
+        page->send(Messages::WebPageProxy::PageScaleFactorDidChange(scaleFactor));
 
     // FIXME: This should not be necessary. WebCore should be correctly invalidating
     // the view on restores from the back/forward cache.
-    if (m_frame->page() && m_frame.ptr() == &m_frame->page()->mainWebFrame())
-        m_frame->page()->protectedDrawingArea()->setNeedsDisplay();
+    if (page && m_frame.ptr() == &page->mainWebFrame())
+        page->protectedDrawingArea()->setNeedsDisplay();
 #endif
 }
 
@@ -1665,7 +1666,7 @@ ObjectContentType WebLocalFrameLoaderClient::objectContentType(const URL& url, c
         if (mimeType.isEmpty()) {
             // Check if there's a plug-in around that can handle the extension.
             if (RefPtr webPage = m_frame->page()) {
-                if (pluginSupportsExtension(webPage->protectedCorePage()->pluginData(), extension))
+                if (pluginSupportsExtension(webPage->protectedCorePage()->protectedPluginData(), extension))
                     return ObjectContentType::PlugIn;
             }
             return ObjectContentType::Frame;
@@ -1682,7 +1683,7 @@ ObjectContentType WebLocalFrameLoaderClient::objectContentType(const URL& url, c
 
     if (RefPtr webPage = m_frame->page()) {
         auto allowedPluginTypes = PluginData::OnlyApplicationPlugins;
-        if (webPage->corePage()->protectedPluginData()->supportsMimeType(mimeType, allowedPluginTypes))
+        if (webPage->protectedCorePage()->protectedPluginData()->supportsMimeType(mimeType, allowedPluginTypes))
             return ObjectContentType::PlugIn;
     }
 
