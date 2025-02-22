@@ -434,7 +434,6 @@ html/canvas/WebGLProvokingVertex.cpp
 html/canvas/WebGLRenderingContextBase.cpp
 html/canvas/WebGLUtilities.h
 html/parser/HTMLConstructionSite.cpp
-html/parser/HTMLDocumentParser.cpp
 html/shadow/DateTimeEditElement.cpp
 html/shadow/MediaControlTextTrackContainerElement.cpp
 html/shadow/SliderThumbElement.cpp
