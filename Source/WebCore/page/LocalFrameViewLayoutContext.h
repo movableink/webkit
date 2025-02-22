@@ -209,6 +209,7 @@ private:
     Ref<LocalFrameView> protectedView() const;
     RenderView* renderView() const;
     Document* document() const;
+    RefPtr<Document> protectedDocument() const;
 
     SingleThreadWeakRef<LocalFrameView> m_frameView;
     Timer m_layoutTimer;

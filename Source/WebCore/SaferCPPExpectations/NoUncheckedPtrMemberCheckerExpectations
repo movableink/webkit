@@ -1,7 +1,6 @@
 Modules/websockets/WorkerThreadableWebSocketChannel.h
 html/parser/HTMLTreeBuilder.h
 loader/WorkerThreadableLoader.h
-page/LocalFrameViewLayoutContext.cpp
 page/scrolling/ScrollAnchoringController.h
 platform/ScrollAnimator.h
 platform/Scrollbar.h

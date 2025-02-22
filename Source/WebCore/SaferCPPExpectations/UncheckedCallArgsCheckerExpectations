@@ -41,7 +41,6 @@ page/EventHandler.cpp
 page/FrameSnapshotting.cpp
 page/IntersectionObserver.cpp
 page/LocalFrameView.cpp
-page/LocalFrameViewLayoutContext.cpp
 page/NavigateEvent.cpp
 page/PageColorSampler.cpp
 page/PageConsoleClient.cpp
