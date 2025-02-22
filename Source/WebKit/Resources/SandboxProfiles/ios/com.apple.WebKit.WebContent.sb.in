@@ -1120,6 +1120,7 @@
 
 (deny syscall-unix (with no-report) (syscall-number
     SYS_connect
+    SYS_persona
 #if !PLATFORM(WATCHOS)
     SYS_sigreturn
 #endif
