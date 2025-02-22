@@ -56,7 +56,6 @@ Shared/APIWebArchiveResource.mm
 Shared/BlobDataFileReferenceWithSandboxExtension.cpp
 Shared/Cocoa/APIObject.mm
 Shared/Cocoa/WKNSData.mm
-Shared/Cocoa/WKNSDictionary.mm
 Shared/Cocoa/WKNSString.mm
 Shared/Cocoa/WKNSURL.mm
 Shared/ContextMenuContextData.cpp
