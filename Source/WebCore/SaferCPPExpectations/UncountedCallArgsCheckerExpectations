@@ -306,7 +306,6 @@ bindings/js/CachedModuleScriptLoader.cpp
 bindings/js/CommonVM.cpp
 bindings/js/DOMPromiseProxy.h
 bindings/js/DOMWrapperWorld.cpp
-bindings/js/IDBBindingUtilities.cpp
 bindings/js/JSAudioBufferCustom.cpp
 bindings/js/JSAudioBufferSourceNodeCustom.cpp
 bindings/js/JSAudioWorkletGlobalScopeCustom.cpp

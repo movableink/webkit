@@ -11,7 +11,6 @@ Modules/webdatabase/DatabaseTask.h
 Modules/webdatabase/SQLTransactionBackend.h
 accessibility/AXCoreObject.h
 accessibility/AXSearchManager.h
-bindings/js/IDBBindingUtilities.cpp
 bindings/js/JSEventTargetCustom.h
 bindings/js/JSLazyEventListener.cpp
 css/CSSFontFaceSource.h
