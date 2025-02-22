@@ -1668,7 +1668,7 @@ void RenderLayerCompositor::collectViewTransitionNewContentLayers(RenderLayer& l
 
     auto& modelObject = downcast<RenderLayerModelObject>(*capturedRenderer);
     if (RenderLayerBacking* backing = modelObject.layer()->backing())
-        childList.append(*backing->childForSuperlayersExcludingViewTransitions());
+        childList.append(Ref { *backing->childForSuperlayersExcludingViewTransitions() });
 }
 
 void RenderLayerCompositor::updateBackingAndHierarchy(RenderLayer& layer, Vector<Ref<GraphicsLayer>>& childLayersOfEnclosingLayer, UpdateBackingTraversalState& traversalState, ScrollingTreeState& scrollingTreeState, OptionSet<UpdateLevel> updateLevel)
