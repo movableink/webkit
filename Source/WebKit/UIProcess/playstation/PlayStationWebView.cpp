@@ -118,7 +118,7 @@ void PlayStationWebView::setViewNeedsDisplay(const WebCore::Region& region)
 void PlayStationWebView::willEnterFullScreen(CompletionHandler<void(bool)>&& completionHandler)
 {
     m_isFullScreen = true;
-    m_page->fullScreenManager()->willEnterFullScreen(WTFMove(completionHandler));
+    completionHandler(true);
 }
 
 void PlayStationWebView::requestExitFullScreen()

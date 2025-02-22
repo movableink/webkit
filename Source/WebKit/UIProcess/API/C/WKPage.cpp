@@ -1212,11 +1212,7 @@ void WKPageSetFullScreenClientForTesting(WKPageRef pageRef, const WKPageFullScre
         void closeFullScreenManager() override { }
         bool isFullScreen() override { return false; }
 
-        void enterFullScreen(
-#if PLATFORM(IOS_FAMILY)
-            WebCore::FloatSize,
-#endif
-            CompletionHandler<void(bool)>&& completionHandler) override
+        void enterFullScreen(WebCore::FloatSize, CompletionHandler<void(bool)>&& completionHandler) override
         {
             if (!m_client.willEnterFullScreen)
                 return completionHandler(false);

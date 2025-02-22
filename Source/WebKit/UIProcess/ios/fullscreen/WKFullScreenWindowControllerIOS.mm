@@ -940,7 +940,7 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
         _fullScreenState = WebKit::WaitingToEnterFullScreen;
 
         OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER, "(QL) presentation updated");
-        manager->willEnterFullScreen(WTFMove(completionHandler));
+        completionHandler(true);
 
         manager->prepareQuickLookImageURL([strongSelf = retainPtr(self), self, window = retainPtr([webView window]), completionHandler = WTFMove(completionHandler), logIdentifier = OBJC_LOGIDENTIFIER] (URL&& url) mutable {
             UIWindowScene *scene = [window windowScene];
@@ -949,14 +949,8 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
             [_previewWindowController presentWindow];
             _fullScreenState = WebKit::InFullScreen;
 
-            if (auto* manager = [strongSelf _manager]) {
-                OBJC_ALWAYS_LOG(logIdentifier, "(QL) presentation completed");
-                return completionHandler(true);
-            }
-
-            OBJC_ERROR_LOG(logIdentifier, "(QL) presentation completed, but manager missing");
-            [strongSelf _exitFullscreenImmediately];
-            ASSERT_NOT_REACHED();
+            OBJC_ALWAYS_LOG(logIdentifier, "(QL) presentation completed");
+            return completionHandler(true);
         });
         return;
     }
@@ -1098,17 +1092,9 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
             }
 
             [self._webView _doAfterNextVisibleContentRectAndPresentationUpdate:makeBlockPtr([self, protectedSelf, logIdentifier, completionHandler = WTFMove(completionHandler)] mutable {
-                if (auto* manager = [protectedSelf _manager]) {
-                    OBJC_ALWAYS_LOG(logIdentifier, "presentation updated");
-                    WebKit::WKWebViewState().applyTo(self._webView);
-                    manager->willEnterFullScreen(WTFMove(completionHandler));
-                    return;
-                }
-
-                ASSERT_NOT_REACHED();
-                OBJC_ERROR_LOG(logIdentifier, "presentation updated, but manager missing");
-                [protectedSelf _exitFullscreenImmediately];
-                completionHandler(false);
+                OBJC_ALWAYS_LOG(logIdentifier, "presentation updated");
+                WebKit::WKWebViewState().applyTo(self._webView);
+                return completionHandler(true);
             }).get()];
         });
 

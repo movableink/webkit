@@ -77,7 +77,7 @@ typedef enum FullScreenState : NSInteger FullScreenState;
 
 - (BOOL)isFullScreen;
 
-- (void)enterFullScreen:(NSScreen *)screen completionHandler:(CompletionHandler<void(bool)>&&)completionHandler;
+- (void)enterFullScreen:(CompletionHandler<void(bool)>&&)completionHandler;
 - (void)exitFullScreen:(CompletionHandler<void()>&&)completionHandler;
 - (void)exitFullScreenImmediately;
 - (void)requestExitFullScreen;

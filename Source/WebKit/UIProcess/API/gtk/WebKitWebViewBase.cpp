@@ -2624,10 +2624,7 @@ void webkitWebViewBaseWillEnterFullScreen(WebKitWebViewBase* webkitWebViewBase, 
 {
     WebKitWebViewBasePrivate* priv = webkitWebViewBase->priv;
     ASSERT(priv->fullScreenState == WebFullScreenManagerProxy::FullscreenState::NotInFullscreen);
-    if (auto* fullScreenManagerProxy = priv->pageProxy->fullScreenManager())
-        fullScreenManagerProxy->willEnterFullScreen(WTFMove(completionHandler));
-    else
-        completionHandler(false);
+    completionHandler(true);
     priv->fullScreenState = WebFullScreenManagerProxy::FullscreenState::EnteringFullscreen;
 }
 
