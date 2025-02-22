@@ -923,12 +923,7 @@ TEST(WKWebExtensionAPIRuntime, ConnectFromContentScript)
     [manager run];
 }
 
-// FIXME when rdar://135213974 is resolved.
-#if PLATFORM(IOS)
-TEST(WKWebExtensionAPIRuntime, DISABLED_ConnectFromContentScriptWithImmediateMessage)
-#else
 TEST(WKWebExtensionAPIRuntime, ConnectFromContentScriptWithImmediateMessage)
-#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -940,21 +935,21 @@ TEST(WKWebExtensionAPIRuntime, ConnectFromContentScriptWithImmediateMessage)
         @"  browser.test.assertEq(port.error, null, 'Port error should be null')",
 
         @"  port.postMessage('Hello from Background')",
-        @"})"
+        @"})",
+
+        @"browser.test.sendMessage('Load Tab')"
     ]);
 
     auto *contentScript = Util::constructScript(@[
-        @"setTimeout(() => {",
-        @"  const port = browser.runtime.connect({ name: 'testPort' })",
-        @"  browser.test.assertEq(typeof port, 'object', 'Port should be an object')",
-        @"  browser.test.assertEq(port.name, 'testPort', 'Port name should be testPort')",
+        @"const port = browser.runtime.connect({ name: 'testPort' })",
+        @"browser.test.assertEq(typeof port, 'object', 'Port should be an object')",
+        @"browser.test.assertEq(port.name, 'testPort', 'Port name should be testPort')",
 
-        @"  port.onMessage.addListener((message) => {",
-        @"    browser.test.assertEq(message, 'Hello from Background', 'Should receive the correct message content from the background script')",
+        @"port.onMessage.addListener((message) => {",
+        @"  browser.test.assertEq(message, 'Hello from Background', 'Should receive the correct message content from the background script')",
 
-        @"    browser.test.notifyPass()",
-        @"  })",
-        @"}, 1000)"
+        @"  browser.test.notifyPass()",
+        @"})",
     ]);
 
     auto *resources = @{
@@ -966,6 +961,9 @@ TEST(WKWebExtensionAPIRuntime, ConnectFromContentScriptWithImmediateMessage)
 
     auto *urlRequest = server.requestWithLocalhost();
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+
+    [manager runUntilTestMessage:@"Load Tab"];
+
     [manager.get().defaultTab.webView loadRequest:urlRequest];
 
     [manager run];
