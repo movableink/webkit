@@ -85,6 +85,22 @@ Element* FullscreenManager::fullscreenElement() const
     return nullptr;
 }
 
+class CompletionHandlerScope final {
+public:
+    CompletionHandlerScope(CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
+        : m_completionHandler(WTFMove(completionHandler)) { }
+    CompletionHandlerScope(CompletionHandlerScope&&) = default;
+    CompletionHandlerScope& operator=(CompletionHandlerScope&&) = default;
+    ~CompletionHandlerScope()
+    {
+        if (m_completionHandler)
+            m_completionHandler({ });
+    }
+    CompletionHandler<void(ExceptionOr<void>)> release() { return WTFMove(m_completionHandler); }
+private:
+    CompletionHandler<void(ExceptionOr<void>)> m_completionHandler;
+};
+
 // https://fullscreen.spec.whatwg.org/#dom-element-requestfullscreen
 void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, FullscreenCheckType checkType, CompletionHandler<void(ExceptionOr<void>)>&& completionHandler, HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
@@ -165,7 +181,8 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, Full
 
     INFO_LOG(identifier);
 
-    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, element = WTFMove(element), completionHandler = WTFMove(completionHandler), hasKeyboardAccess, fullscreenElementReadyCheck, handleError, identifier, mode] () mutable {
+    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, element = WTFMove(element), scope = CompletionHandlerScope(WTFMove(completionHandler)), hasKeyboardAccess, fullscreenElementReadyCheck, handleError, identifier, mode] () mutable {
+        auto completionHandler = scope.release();
         CheckedPtr checkedThis = weakThis.get();
         if (!checkedThis)
             return completionHandler(Exception { ExceptionCode::TypeError });
@@ -204,7 +221,8 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, Full
         // 5. Return, and run the remaining steps asynchronously.
         // 6. Optionally, perform some animation.
         m_areKeysEnabledInFullscreen = hasKeyboardAccess;
-        document->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WTFMove(weakThis), element = WTFMove(element), completionHandler = WTFMove(completionHandler), handleError = WTFMove(handleError), identifier, mode] () mutable {
+        document->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WTFMove(weakThis), element = WTFMove(element), scope = CompletionHandlerScope(WTFMove(completionHandler)), handleError = WTFMove(handleError), identifier, mode] () mutable {
+            auto completionHandler = scope.release();
             CheckedPtr checkedThis = weakThis.get();
             if (!checkedThis)
                 return completionHandler(Exception { ExceptionCode::TypeError });
@@ -332,7 +350,8 @@ void FullscreenManager::exitFullscreen(CompletionHandler<void(ExceptionOr<void>)
     m_pendingExitFullscreen = true;
 
     // Return promise, and run the remaining steps in parallel.
-    exitingDocument->eventLoop().queueTask(TaskSource::MediaElement, [this, completionHandler = WTFMove(completionHandler), weakThis = WeakPtr { *this }, mode, identifier = LOGIDENTIFIER] () mutable {
+    exitingDocument->eventLoop().queueTask(TaskSource::MediaElement, [this, scope = CompletionHandlerScope(WTFMove(completionHandler)), weakThis = WeakPtr { *this }, mode, identifier = LOGIDENTIFIER] () mutable {
+        auto completionHandler = scope.release();
         CheckedPtr checkedThis = weakThis.get();
         if (!checkedThis)
             return completionHandler({ });
