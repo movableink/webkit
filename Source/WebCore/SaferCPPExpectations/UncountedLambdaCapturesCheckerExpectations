@@ -69,7 +69,6 @@ accessibility/mac/WebAccessibilityObjectWrapperMac.mm
 animation/BlendingKeyframes.cpp
 animation/KeyframeEffect.cpp
 bindings/js/JSDOMPromiseDeferred.cpp
-bindings/js/SerializedScriptValue.cpp
 contentextensions/ContentExtensionsBackend.cpp
 crypto/SubtleCrypto.cpp
 css/CSSFontFace.cpp

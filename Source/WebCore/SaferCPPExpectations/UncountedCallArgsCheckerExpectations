@@ -332,7 +332,6 @@ bindings/js/JSDOMIterator.h
 bindings/js/JSDOMMapLike.h
 bindings/js/JSDOMPromiseDeferred.cpp
 bindings/js/JSDOMPromiseDeferred.h
-bindings/js/JSDOMQuadCustom.cpp
 bindings/js/JSDOMSetLike.h
 bindings/js/JSDOMWindowBase.cpp
 bindings/js/JSDOMWindowCustom.cpp
@@ -402,7 +401,6 @@ bindings/js/ScriptBufferSourceProvider.h
 bindings/js/ScriptCachedFrameData.cpp
 bindings/js/ScriptModuleLoader.cpp
 bindings/js/ScriptSourceCode.h
-bindings/js/SerializedScriptValue.cpp
 bindings/js/WebAssemblyScriptBufferSourceProvider.h
 bindings/js/WebCoreJSClientData.cpp
 bindings/js/WebCoreTypedArrayController.cpp

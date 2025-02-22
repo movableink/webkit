@@ -203,7 +203,6 @@ bindings/js/JSWorkerGlobalScopeCustom.cpp
 bindings/js/JSXMLHttpRequestCustom.cpp
 bindings/js/ScriptCachedFrameData.cpp
 bindings/js/ScriptModuleLoader.cpp
-bindings/js/SerializedScriptValue.cpp
 bindings/js/WebCoreJSClientData.cpp
 bindings/js/WindowProxy.cpp
 bridge/objc/WebScriptObject.mm
