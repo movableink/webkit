@@ -862,10 +862,6 @@ void Document::removedLastRef()
         m_focusNavigationStartingNode = nullptr;
         m_userActionElements.clear();
         m_asyncNodeDeletionQueue.deleteNodesNow();
-#if ENABLE(FULLSCREEN_API)
-        if (CheckedPtr fullscreenManager = m_fullscreenManager.get())
-            m_fullscreenManager->clear();
-#endif
         m_associatedFormControls.clear();
         m_pendingRenderTreeUpdate = { };
 

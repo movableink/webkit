@@ -486,8 +486,6 @@ ExceptionOr<void> FullscreenManager::willEnterFullscreen(Element& element, HTMLM
 #endif
         element.willBecomeFullscreenElement();
 
-    m_fullscreenElement = &element;
-
     Vector<Ref<Element>> ancestors { { element } };
     for (RefPtr<Frame> frame = element.document().frame(); frame; frame = frame->tree().parent()) {
         if (RefPtr ownerElement = frame->ownerElement())
@@ -541,9 +539,9 @@ bool FullscreenManager::didEnterFullscreen()
 
 bool FullscreenManager::willExitFullscreen()
 {
-    auto fullscreenElement = m_fullscreenElement;
+    RefPtr fullscreenElement = this->fullscreenElement();
     if (!fullscreenElement) {
-        ERROR_LOG(LOGIDENTIFIER, "No fullscreenElement, bailing");
+        ERROR_LOG(LOGIDENTIFIER, "No fullscreenElement; bailing");
         return false;
     }
 
@@ -566,15 +564,16 @@ void FullscreenManager::didExitFullscreen(CompletionHandler<void(ExceptionOr<voi
     }
     INFO_LOG(LOGIDENTIFIER);
 
+    // Get `fullscreenElement()` before `finishExitFullscreen` clears it.
+    RefPtr exitedFullscreenElement = fullscreenElement();
     if (RefPtr frame = document().frame())
         finishExitFullscreen(frame->mainFrame(), ExitMode::Resize);
 
-    if (auto fullscreenElement = m_fullscreenElement)
-        fullscreenElement->didStopBeingFullscreenElement();
+    if (exitedFullscreenElement)
+        exitedFullscreenElement->didStopBeingFullscreenElement();
 
     m_areKeysEnabledInFullscreen = false;
 
-    m_fullscreenElement = nullptr;
     m_pendingExitFullscreen = false;
 
     completionHandler({ });
@@ -666,11 +665,6 @@ void FullscreenManager::setAnimatingFullscreen(bool flag)
     if (RefPtr fullscreenElement = this->fullscreenElement())
         emplace(styleInvalidation, *fullscreenElement, { { CSSSelector::PseudoClass::InternalAnimatingFullscreenTransition, flag } });
     m_isAnimatingFullscreen = flag;
-}
-
-void FullscreenManager::clear()
-{
-    m_fullscreenElement = nullptr;
 }
 
 void FullscreenManager::emptyEventQueue()
