@@ -179,6 +179,11 @@ void SuspendedPageProxy::didDestroyNavigation(WebCore::NavigationIdentifier navi
         page->didDestroyNavigationShared(m_process.copyRef(), navigationID);
 }
 
+Ref<WebBackForwardCache> SuspendedPageProxy::protectedBackForwardCache() const
+{
+    return backForwardCache();
+}
+
 WebBackForwardCache& SuspendedPageProxy::backForwardCache() const
 {
     return process().processPool().backForwardCache();
@@ -279,7 +284,7 @@ void SuspendedPageProxy::didProcessRequestToSuspend(SuspensionState newSuspensio
 void SuspendedPageProxy::suspensionTimedOut()
 {
     RELEASE_LOG_ERROR(ProcessSwapping, "%p - SuspendedPageProxy::suspensionTimedOut() destroying the suspended page because it failed to suspend in time", this);
-    backForwardCache().removeEntry(*this); // Will destroy |this|.
+    protectedBackForwardCache()->removeEntry(*this); // Will destroy |this|.
 }
 
 WebPageProxy* SuspendedPageProxy::page() const
