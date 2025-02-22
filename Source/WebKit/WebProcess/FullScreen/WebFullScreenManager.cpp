@@ -251,11 +251,13 @@ FullScreenMediaDetails WebFullScreenManager::getImageMediaDetails(CheckedPtr<Ren
 }
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
 
-void WebFullScreenManager::enterFullScreenForElement(WebCore::Element& element, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullScreenCallback, CompletionHandler<bool(bool)>&& didEnterFullScreenCallback)
+void WebFullScreenManager::enterFullScreenForElement(Element& element, HTMLMediaElementEnums::VideoFullscreenMode mode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullScreenCallback, CompletionHandler<bool(bool)>&& didEnterFullScreenCallback)
 {
     ALWAYS_LOG(LOGIDENTIFIER, "<", element.tagName(), " id=\"", element.getIdAttribute(), "\">");
 
     setElement(element);
+
+    auto frameID = element.document().frame()->frameID();
 
     FullScreenMediaDetails mediaDetails;
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
@@ -303,11 +305,11 @@ void WebFullScreenManager::enterFullScreenForElement(WebCore::Element& element, 
 
     m_page->prepareToEnterElementFullScreen();
 
-    if (mode == WebCore::HTMLMediaElementEnums::VideoFullscreenModeInWindow) {
+    if (mode == HTMLMediaElementEnums::VideoFullscreenModeInWindow) {
         willEnterFullScreen(WTFMove(willEnterFullScreenCallback), WTFMove(didEnterFullScreenCallback), mode);
         m_inWindowFullScreenMode = true;
     } else {
-        m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::EnterFullScreen(m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), WTFMove(mediaDetails)), [
+        m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::EnterFullScreen(frameID, m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), WTFMove(mediaDetails)), [
             this,
             protectedThis = Ref { *this },
             willEnterFullScreenCallback = WTFMove(willEnterFullScreenCallback),
@@ -468,7 +470,7 @@ void WebFullScreenManager::updateMainVideoElement()
 
 void WebFullScreenManager::willExitFullScreen(CompletionHandler<void()>&& completionHandler)
 {
-    if (!m_element)
+    if (!m_element || !m_element->document().frame())
         return completionHandler();
     ALWAYS_LOG(LOGIDENTIFIER, "<", m_element->tagName(), " id=\"", m_element->getIdAttribute(), "\">");
 
@@ -486,7 +488,7 @@ void WebFullScreenManager::willExitFullScreen(CompletionHandler<void()>&& comple
 #endif
     // FIXME: The order of these frames is switched, but that is kept for historical reasons.
     // It should probably be fixed to be consistent at some point.
-    m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::BeganExitFullScreen(m_finalFrame, m_initialFrame), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] mutable {
+    m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::BeganExitFullScreen(m_element->document().frame()->frameID(), m_finalFrame, m_initialFrame), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] mutable {
         didExitFullScreen(WTFMove(completionHandler));
     });
 }
@@ -718,6 +720,36 @@ WTFLogChannel& WebFullScreenManager::logChannel() const
     return WebKit2LogFullscreen;
 }
 #endif
+
+void WebFullScreenManager::enterFullScreenForOwnerElements(WebCore::FrameIdentifier frameID, CompletionHandler<void()>&& completionHandler)
+{
+    RefPtr webFrame = WebFrame::webFrame(frameID);
+    if (!webFrame)
+        return completionHandler();
+    RefPtr coreFrame = webFrame->coreFrame();
+    if (!coreFrame)
+        return completionHandler();
+
+    Vector<Ref<Element>> elements;
+    for (RefPtr frame = coreFrame; frame; frame = frame->tree().parent()) {
+        if (RefPtr element = frame->ownerElement())
+            elements.append(element.releaseNonNull());
+    }
+    for (auto element : makeReversedRange(elements))
+        FullscreenManager::elementEnterFullscreen(element);
+
+    completionHandler();
+}
+
+void WebFullScreenManager::exitFullScreenInMainFrame(CompletionHandler<void()>&& completionHandler)
+{
+    RefPtr mainFrame = m_page->mainFrame();
+    if (!mainFrame)
+        return completionHandler();
+
+    FullscreenManager::finishExitFullscreen(*mainFrame, FullscreenManager::ExitMode::Resize);
+    completionHandler();
+}
 
 } // namespace WebKit
 

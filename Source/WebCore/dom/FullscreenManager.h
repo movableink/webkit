@@ -78,10 +78,12 @@ public:
     WEBCORE_EXPORT bool willExitFullscreen();
     WEBCORE_EXPORT void didExitFullscreen(CompletionHandler<void(ExceptionOr<void>)>&&);
 
+    WEBCORE_EXPORT static void elementEnterFullscreen(Element&);
+
     void dispatchPendingEvents();
 
     enum class ExitMode : bool { Resize, NoResize };
-    void finishExitFullscreen(Frame&, ExitMode);
+    WEBCORE_EXPORT static void finishExitFullscreen(Frame&, ExitMode);
 
     void exitRemovedFullscreenElement(Element&);
 
@@ -96,7 +98,6 @@ protected:
     enum class EventType : bool { Change, Error };
     void dispatchFullscreenChangeOrErrorEvent(Deque<GCReachableRef<Node>>&, EventType, bool shouldNotifyMediaElement);
     void dispatchEventForNode(Node&, EventType);
-    void queueFullscreenChangeEventForDocument(Document&);
 
 private:
 #if !RELEASE_LOG_DISABLED
@@ -110,6 +111,7 @@ private:
     RefPtr<Document> protectedMainFrameDocument() { return mainFrameDocument(); }
 
     bool didEnterFullscreen();
+    static void queueFullscreenChangeEventForDocument(Document&);
     void addElementToChangeEventQueue(Node& target) { m_fullscreenChangeEventTargetQueue.append(GCReachableRef(target)); }
 
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;

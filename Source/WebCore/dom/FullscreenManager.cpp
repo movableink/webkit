@@ -492,31 +492,35 @@ ExceptionOr<void> FullscreenManager::willEnterFullscreen(Element& element, HTMLM
             ancestors.append(ownerElement.releaseNonNull());
     }
 
-    for (auto ancestor : makeReversedRange(ancestors)) {
-        auto hideUntil = ancestor->topmostPopoverAncestor(Element::TopLayerElementType::Other);
-        ancestor->document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
-
-        auto containingBlockBeforeStyleResolution = SingleThreadWeakPtr<RenderBlock> { };
-        if (auto* renderer = ancestor->renderer())
-            containingBlockBeforeStyleResolution = renderer->containingBlock();
-
-        ancestor->setFullscreenFlag(true);
-        ancestor->document().resolveStyle(Document::ResolveStyleType::Rebuild);
-
-        // Remove before adding, so we always add at the end of the top layer.
-        if (ancestor->isInTopLayer())
-            ancestor->removeFromTopLayer();
-        ancestor->addToTopLayer();
-
-        queueFullscreenChangeEventForDocument(ancestor->document());
-
-        RenderElement::markRendererDirtyAfterTopLayerChange(ancestor->checkedRenderer().get(), containingBlockBeforeStyleResolution.get());
-    }
+    for (auto ancestor : makeReversedRange(ancestors))
+        elementEnterFullscreen(ancestor);
 
     if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(element))
         iframe->setIFrameFullscreenFlag(true);
 
     return { };
+}
+
+void FullscreenManager::elementEnterFullscreen(Element& element)
+{
+    auto hideUntil = element.topmostPopoverAncestor(Element::TopLayerElementType::Other);
+    element.document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
+
+    auto containingBlockBeforeStyleResolution = SingleThreadWeakPtr<RenderBlock> { };
+    if (CheckedPtr renderer = element.renderer())
+        containingBlockBeforeStyleResolution = renderer->containingBlock();
+
+    element.setFullscreenFlag(true);
+    element.document().resolveStyle(Document::ResolveStyleType::Rebuild);
+
+    // Remove before adding, so we always add at the end of the top layer.
+    if (element.isInTopLayer())
+        element.removeFromTopLayer();
+    element.addToTopLayer();
+
+    queueFullscreenChangeEventForDocument(element.document());
+
+    RenderElement::markRendererDirtyAfterTopLayerChange(element.checkedRenderer().get(), containingBlockBeforeStyleResolution.get());
 }
 
 bool FullscreenManager::didEnterFullscreen()

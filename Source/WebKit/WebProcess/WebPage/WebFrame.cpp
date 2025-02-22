@@ -1429,4 +1429,9 @@ String WebFrame::frameTextForTesting(bool includeSubframes)
     return builder.toString();
 }
 
+WebFrame* WebFrame::webFrame(std::optional<WebCore::FrameIdentifier> frameID)
+{
+    return WebProcess::singleton().webFrame(frameID);
+}
+
 } // namespace WebKit

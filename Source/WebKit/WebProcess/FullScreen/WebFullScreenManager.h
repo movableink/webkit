@@ -76,6 +76,9 @@ public:
     void willExitFullScreen(CompletionHandler<void()>&&);
     void didExitFullScreen(CompletionHandler<void()>&&);
 
+    void enterFullScreenForOwnerElements(WebCore::FrameIdentifier, CompletionHandler<void()>&&);
+    void exitFullScreenInMainFrame(CompletionHandler<void()>&&);
+
     WebCore::Element* element();
 
     void videoControlsManagerDidChange();
