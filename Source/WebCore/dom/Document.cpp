@@ -413,7 +413,7 @@
 #include "HTMLVideoElement.h"
 #endif
 
-#define DOCUMENT_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] Document::" fmt, this, pageID() ? pageID()->toUInt64() : 0, frameID() ? frameID()->object().toUInt64() : 0, this == &topDocument(), ##__VA_ARGS__)
+#define DOCUMENT_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] Document::" fmt, this, pageID() ? pageID()->toUInt64() : 0, frameID() ? frameID()->object().toUInt64() : 0, this->isTopDocument(), ##__VA_ARGS__)
 #define DOCUMENT_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", isMainFrame=%d] Document::" fmt, this, pageID() ? pageID()->toUInt64() : 0, frameID() ? frameID()->object().toUInt64() : 0, this->isTopDocument(), ##__VA_ARGS__)
 
 namespace WebCore {
@@ -11331,8 +11331,10 @@ ResourceMonitor& Document::resourceMonitor()
 {
     ASSERT(!frame()->isMainFrame());
 
-    if (!m_resourceMonitor)
+    if (!m_resourceMonitor) {
         m_resourceMonitor = ResourceMonitor::create(*frame());
+        DOCUMENT_RELEASE_LOG(ResourceMonitoring, "ResourceMonitor is created for the document.");
+    }
     return *m_resourceMonitor.get();
 }
 

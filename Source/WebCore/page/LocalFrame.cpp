@@ -1463,9 +1463,9 @@ void LocalFrame::showResourceMonitoringError()
     if (RefPtr page = protectedPage())
         mainFrameURL = page->mainFrameURL();
 
-    FRAME_RELEASE_LOG(ResourceLoading, "Detected excessive network usage in frame at %" SENSITIVE_LOG_STRING " and main frame at %" SENSITIVE_LOG_STRING ": unloading", url.isValid() ? url.string().utf8().data() : "invalid", mainFrameURL.isValid() ? mainFrameURL.string().utf8().data() : "invalid");
+    FRAME_RELEASE_LOG(ResourceMonitoring, "Detected excessive network usage in frame at %" SENSITIVE_LOG_STRING " and main frame at %" SENSITIVE_LOG_STRING ": unloading", url.isValid() ? url.string().utf8().data() : "invalid", mainFrameURL.isValid() ? mainFrameURL.string().utf8().data() : "invalid");
 
-    document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Error, "Frame was unloaded because its network usage exceeded the limit."_s);
+    document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Error, makeString("Frame was unloaded because its network usage exceeded the limit: "_s, ResourceMonitorChecker::networkUsageThreshold, " bytes, url="_s, url.string()));
 
     for (RefPtr<Frame> frame = this; frame; frame = frame->tree().traverseNext()) {
         if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame)) {
@@ -1493,7 +1493,7 @@ void LocalFrame::reportResourceMonitoringWarning()
     if (RefPtr page = protectedPage())
         mainFrameURL = page->mainFrameURL();
 
-    FRAME_RELEASE_LOG(ResourceLoading, "Detected excessive network usage in frame at %" SENSITIVE_LOG_STRING " and main frame at %" SENSITIVE_LOG_STRING ": not unloading due to global limits", url.isValid() ? url.string().utf8().data() : "invalid", mainFrameURL.isValid() ? mainFrameURL.string().utf8().data() : "invalid");
+    FRAME_RELEASE_LOG(ResourceMonitoring, "Detected excessive network usage in frame at %" SENSITIVE_LOG_STRING " and main frame at %" SENSITIVE_LOG_STRING ": not unloading due to global limits", url.isValid() ? url.string().utf8().data() : "invalid", mainFrameURL.isValid() ? mainFrameURL.string().utf8().data() : "invalid");
 
     if (RefPtr document = this->document())
         document->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Warning, "Frame's network usage exceeded the limit."_s);

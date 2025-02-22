@@ -33,7 +33,7 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#define RESOURCEMONITOR_RELEASE_LOG(fmt, ...) RELEASE_LOG(ResourceLoading, "%p - ResourceMonitorChecker::" fmt, this, ##__VA_ARGS__)
+#define RESOURCEMONITOR_RELEASE_LOG(fmt, ...) RELEASE_LOG(ResourceMonitoring, "ResourceMonitorChecker::" fmt, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -95,7 +95,7 @@ ResourceMonitorChecker::Eligibility ResourceMonitorChecker::checkEligibility(con
     ASSERT(m_ruleList);
 
     auto matched = m_ruleList->processContentRuleListsForResourceMonitoring(info.resourceURL, info.mainDocumentURL, info.frameURL, info.type);
-    RESOURCEMONITOR_RELEASE_LOG("The url is %" PUBLIC_LOG_STRING ": %" SENSITIVE_LOG_STRING, (matched ? "eligible" : "not eligible"), info.resourceURL.string().utf8().data());
+    RESOURCEMONITOR_RELEASE_LOG("The url is %" PUBLIC_LOG_STRING ": %" SENSITIVE_LOG_STRING " (%" PUBLIC_LOG_STRING ")", (matched ? "eligible" : "not eligible"), info.resourceURL.string().utf8().data(), ContentExtensions::resourceTypeToString(info.type).characters());
 
     return matched ? Eligibility::Eligible : Eligibility::NotEligible;
 }

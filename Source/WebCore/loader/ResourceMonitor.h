@@ -46,12 +46,13 @@ public:
     bool isEligible() const { return eligibility() == Eligibility::Eligible; }
 
     void setDocumentURL(URL&&);
-    void didReceiveResponse(const URL&, OptionSet<ContentExtensions::ResourceType>);
     WEBCORE_EXPORT void addNetworkUsage(size_t);
 
 private:
     explicit ResourceMonitor(LocalFrame&);
 
+    void didReceiveResponse(const URL&, OptionSet<ContentExtensions::ResourceType>);
+    void continueAfterDidReceiveEligibility(Eligibility, const URL&, OptionSet<ContentExtensions::ResourceType>);
     void checkNetworkUsageExcessIfNecessary();
     ResourceMonitor* parentResourceMonitorIfExists() const;
 
