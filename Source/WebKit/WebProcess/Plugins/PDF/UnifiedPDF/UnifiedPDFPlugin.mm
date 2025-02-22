@@ -4491,7 +4491,7 @@ bool UnifiedPDFPlugin::shouldUseInProcessBackingStore() const
 
 bool UnifiedPDFPlugin::layerNeedsPlatformContext(const GraphicsLayer* layer) const
 {
-    return !shouldUseInProcessBackingStore() && (layer == layerForHorizontalScrollbar() || layer == layerForVerticalScrollbar() || layer == layerForScrollCorner());
+    return shouldUseInProcessBackingStore() && (layer == layerForHorizontalScrollbar() || layer == layerForVerticalScrollbar() || layer == layerForScrollCorner());
 }
 
 ViewportConfiguration::Parameters UnifiedPDFPlugin::viewportParameters()
