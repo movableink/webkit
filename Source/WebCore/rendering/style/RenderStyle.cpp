@@ -1987,6 +1987,8 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyContentVisibility);
         if (first.anchorNames != second.anchorNames)
             changingProperties.m_properties.set(CSSPropertyAnchorName);
+        if (first.anchorScope != second.anchorScope)
+            changingProperties.m_properties.set(CSSPropertyAnchorScope);
         if (first.positionAnchor != second.positionAnchor)
             changingProperties.m_properties.set(CSSPropertyPositionAnchor);
         if (first.positionArea != second.positionArea)

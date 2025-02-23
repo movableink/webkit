@@ -3298,17 +3298,30 @@ static Ref<CSSValue> valueForPositionArea(const std::optional<PositionArea>& pos
     return CSSPropertyParserHelpers::valueForPositionArea(blockOrXAxisKeyword, inlineOrYAxisKeyword).releaseNonNull();
 }
 
-static Ref<CSSValue> valueForNameScopeNames(const Vector<AtomString>& names)
+static Ref<CSSValue> valueForNameScope(const NameScope& scope)
 {
-    if (names.isEmpty())
+    switch (scope.type) {
+    case NameScope::Type::None:
         return CSSPrimitiveValue::create(CSSValueNone);
 
-    CSSValueListBuilder list;
-    for (auto& name : names) {
-        ASSERT(!name.isNull());
-        list.append(CSSPrimitiveValue::createCustomIdent(name));
+    case NameScope::Type::All:
+        return CSSPrimitiveValue::create(CSSValueAll);
+
+    case NameScope::Type::Ident:
+        if (scope.names.isEmpty())
+            return CSSPrimitiveValue::create(CSSValueNone);
+
+        CSSValueListBuilder list;
+        for (auto& name : scope.names) {
+            ASSERT(!name.isNull());
+            list.append(CSSPrimitiveValue::createCustomIdent(name));
+        }
+
+        return CSSValueList::createCommaSeparated(WTFMove(list));
     }
-    return CSSValueList::createCommaSeparated(WTFMove(list));
+
+    ASSERT_NOT_REACHED();
+    return CSSPrimitiveValue::create(CSSValueNone);
 }
 
 static Ref<CSSValue> scrollTimelineShorthandValue(const Vector<Ref<ScrollTimeline>>& timelines)
@@ -4979,6 +4992,8 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
 
     case CSSPropertyAnchorName:
         return valueForAnchorName(style.anchorNames());
+    case CSSPropertyAnchorScope:
+        return valueForNameScope(style.anchorScope());
     case CSSPropertyPositionAnchor:
         if (!style.positionAnchor())
             return CSSPrimitiveValue::create(CSSValueAuto);
@@ -5004,16 +5019,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         return CSSPrimitiveValue::create(CSSValueNormal);
     }
     case CSSPropertyTimelineScope:
-        switch (style.timelineScope().type) {
-        case NameScope::Type::None:
-            return CSSPrimitiveValue::create(CSSValueNone);
-        case NameScope::Type::All:
-            return CSSPrimitiveValue::create(CSSValueAll);
-        case NameScope::Type::Ident:
-            return valueForNameScopeNames(style.timelineScope().names);
-        }
-        ASSERT_NOT_REACHED();
-        return CSSPrimitiveValue::create(CSSValueNone);
+        return valueForNameScope(style.timelineScope());
 
     // Unimplemented CSS 3 properties (including CSS3 shorthand properties).
     case CSSPropertyAll:

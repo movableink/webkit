@@ -2320,6 +2320,10 @@ public:
     inline const Vector<Style::ScopedName>& anchorNames() const;
     inline void setAnchorNames(const Vector<Style::ScopedName>&);
 
+    static inline NameScope initialAnchorScope();
+    inline const NameScope& anchorScope() const;
+    inline void setAnchorScope(const NameScope&);
+
     static inline std::optional<Style::ScopedName> initialPositionAnchor();
     inline const std::optional<Style::ScopedName>& positionAnchor() const;
     inline void setPositionAnchor(const std::optional<Style::ScopedName>&);

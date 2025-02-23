@@ -940,7 +940,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/MediaList.h
     css/MediaQueryParserContext.h
     css/MutableStyleProperties.h
-    css/NameScope.h
     css/Quad.h
     css/Rect.h
     css/RectBase.h
@@ -2615,6 +2614,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/style/GridTrackSize.h
     rendering/style/LineClampValue.h
     rendering/style/ListStyleType.h
+    rendering/style/NameScope.h
     rendering/style/NinePieceImage.h
     rendering/style/OffsetRotation.h
     rendering/style/OutlineValue.h

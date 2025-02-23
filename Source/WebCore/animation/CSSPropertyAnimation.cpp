@@ -4160,6 +4160,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscretePropertyWrapper<Style::ViewTransitionName>(CSSPropertyViewTransitionName, &RenderStyle::viewTransitionName, &RenderStyle::setViewTransitionName),
         new DiscretePropertyWrapper<FieldSizing>(CSSPropertyFieldSizing, &RenderStyle::fieldSizing, &RenderStyle::setFieldSizing),
         new DiscretePropertyWrapper<const Vector<Style::ScopedName>&>(CSSPropertyAnchorName, &RenderStyle::anchorNames, &RenderStyle::setAnchorNames),
+        new DiscretePropertyWrapper<const NameScope&>(CSSPropertyAnchorScope, &RenderStyle::anchorScope, &RenderStyle::setAnchorScope),
         new DiscretePropertyWrapper<const std::optional<Style::ScopedName>&>(CSSPropertyPositionAnchor, &RenderStyle::positionAnchor, &RenderStyle::setPositionAnchor),
         new DiscretePropertyWrapper<std::optional<PositionArea>>(CSSPropertyPositionArea, &RenderStyle::positionArea, &RenderStyle::setPositionArea),
         new DiscretePropertyWrapper<Style::PositionTryOrder>(CSSPropertyPositionTryOrder, &RenderStyle::positionTryOrder, &RenderStyle::setPositionTryOrder),

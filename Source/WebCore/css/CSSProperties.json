@@ -11358,6 +11358,19 @@
                 "url": "https://drafts.csswg.org/css-anchor-position-1/#name"
             }
         },
+        "anchor-scope": {
+            "animation-type": "discrete",
+            "initial": "none",
+            "codegen-properties": {
+                "style-builder-converter": "NameScope",
+                "parser-grammar": "none | all | <dashed-ident>#",
+                "settings-flag": "cssAnchorPositioningEnabled"
+            },
+            "specification": {
+                "category": "css-anchor-position",
+                "url": "https://drafts.csswg.org/css-anchor-position-1/#anchor-scope"
+            }
+       },
         "position-anchor": {
             "animation-type": "discrete",
             "initial": "auto",

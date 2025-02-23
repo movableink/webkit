@@ -8,6 +8,7 @@ PASS align-items
 PASS align-self
 PASS alignment-baseline
 PASS anchor-name
+PASS anchor-scope
 PASS animation-composition
 PASS animation-delay
 PASS animation-direction

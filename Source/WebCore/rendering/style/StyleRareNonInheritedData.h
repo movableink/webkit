@@ -219,6 +219,7 @@ public:
     AtomString pseudoElementNameArgument;
 
     Vector<Style::ScopedName> anchorNames;
+    NameScope anchorScope;
     std::optional<Style::ScopedName> positionAnchor;
     std::optional<PositionArea> positionArea;
     Vector<PositionTryFallback> positionTryFallbacks;

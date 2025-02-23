@@ -25,6 +25,12 @@ const gCSSProperties1 = {
       { type: 'discrete', options: [ [ 'flex-start', 'flex-end' ] ] }
     ]
   },
+  'anchor-scope': {
+    // https://drafts.csswg.org/css-anchor-position-1/#anchor-scope
+    types: [
+      { type: 'discrete', options: [ [ 'none', 'all' ] ] }
+    ]
+  },
   'appearance': {
     // https://drafts.csswg.org/css-ui/#appearance-switching
     types: [
