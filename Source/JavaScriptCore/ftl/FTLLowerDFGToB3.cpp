@@ -287,7 +287,6 @@ public:
         // Stack Overflow Check.
         unsigned exitFrameSize = m_graph.requiredRegisterCountForExit() * sizeof(Register);
         PatchpointValue* stackOverflowHandler = m_out.patchpoint(Void);
-        CallSiteIndex callSiteIndex = callSiteIndexForCodeOrigin(m_ftlState, CodeOrigin(BytecodeIndex(0)));
         stackOverflowHandler->appendSomeRegister(m_callFrame);
         stackOverflowHandler->appendSomeRegister(m_vmValue);
         stackOverflowHandler->clobber(RegisterSetBuilder::macroClobberedGPRs());
@@ -318,26 +317,7 @@ public:
                     // get clobbered.
                     // https://bugs.webkit.org/show_bug.cgi?id=172456
                     jit.emitRestore(params.proc().calleeSaveRegisterAtOffsetList());
-
-                    jit.store32(
-                        MacroAssembler::TrustedImm32(callSiteIndex.bits()),
-                        CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
-                    jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm->topEntryFrame, GPRInfo::argumentGPR0);
-
-                    jit.move(CCallHelpers::TrustedImmPtr(jit.codeBlock()), GPRInfo::argumentGPR0);
-                    jit.prepareCallOperation(*vm);
-                    CCallHelpers::Call throwCall = jit.call(OperationPtrTag);
-
-                    jit.move(CCallHelpers::TrustedImmPtr(vm), GPRInfo::argumentGPR0);
-                    jit.prepareCallOperation(*vm);
-                    CCallHelpers::Call lookupExceptionHandlerCall = jit.call(OperationPtrTag);
-                    jit.jumpToExceptionHandler(*vm);
-
-                    jit.addLinkTask(
-                        [=] (LinkBuffer& linkBuffer) {
-                            linkBuffer.link<OperationPtrTag>(throwCall, operationThrowStackOverflowError);
-                            linkBuffer.link<OperationPtrTag>(lookupExceptionHandlerCall, operationLookupExceptionHandlerFromCallerFrame);
-                    });
+                    jit.jumpThunk(CodeLocationLabel(vm->getCTIStub(CommonJITThunkID::ThrowStackOverflowAtPrologue).retaggedCode<NoPtrTag>()));
                 });
             });
 

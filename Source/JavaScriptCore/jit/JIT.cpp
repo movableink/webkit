@@ -858,12 +858,9 @@ RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffor
 
     stackOverflowWithEntry.link(this);
     emitFunctionPrologue();
-    stackOverflow.link(this);
     m_bytecodeIndex = BytecodeIndex(0);
-    if (maxFrameExtentForSlowPathCall)
-        addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
-    emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, regT0);
-    callThrowOperationWithCallFrameRollback(operationThrowStackOverflowError, regT0);
+    stackOverflow.link(this);
+    jumpThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::ThrowStackOverflowAtPrologue).retaggedCode<NoPtrTag>()));
 
     ASSERT(m_jmpTable.isEmpty());
 

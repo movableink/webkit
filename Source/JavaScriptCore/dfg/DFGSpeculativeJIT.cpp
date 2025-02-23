@@ -157,15 +157,7 @@ void SpeculativeJIT::compile()
     //
     // Generate the stack overflow handling; if the stack check in the entry head fails,
     // we need to call out to a helper function to throw the StackOverflowError.
-    stackOverflow.link(this);
-
-    emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
-
-    if (maxFrameExtentForSlowPathCall)
-        addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
-
-    emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
-    callThrowOperationWithCallFrameRollback(operationThrowStackOverflowError, GPRInfo::argumentGPR0);
+    stackOverflow.linkThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::ThrowStackOverflowAtPrologue).retaggedCode<NoPtrTag>()), this);
 
     // Generate slow path code.
     runSlowPathGenerators(m_pcToCodeOriginMapBuilder);
@@ -268,14 +260,7 @@ void SpeculativeJIT::compileFunction()
     stackOverflowWithEntry.link(this);
     compileEntry();
     stackOverflow.link(this);
-
-    emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
-
-    if (maxFrameExtentForSlowPathCall)
-        addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
-
-    emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
-    callThrowOperationWithCallFrameRollback(operationThrowStackOverflowError, GPRInfo::argumentGPR0);
+    jumpThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::ThrowStackOverflowAtPrologue).retaggedCode<NoPtrTag>()));
 
     // Generate slow path code.
     runSlowPathGenerators(m_pcToCodeOriginMapBuilder);

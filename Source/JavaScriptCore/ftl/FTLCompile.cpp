@@ -172,10 +172,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
             stackOverflowWithEntry.link(&jit);
             jit.emitFunctionPrologue();
-            jit.move(CCallHelpers::TrustedImmPtr(codeBlock), GPRInfo::argumentGPR0);
-            jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
-            jit.callOperation<OperationPtrTag>(operationThrowStackOverflowError);
-            jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()));
+            jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::ThrowStackOverflowAtPrologue).retaggedCode<NoPtrTag>()));
             mainPathJumps.linkTo(mainPathLabel, &jit);
         }
         break;
