@@ -894,7 +894,6 @@ loader/PolicyChecker.cpp
 loader/ResourceLoadNotifier.cpp
 loader/ResourceLoader.cpp
 loader/SubframeLoader.cpp
-loader/SubresourceLoader.cpp
 loader/WorkerThreadableLoader.cpp
 loader/appcache/ApplicationCache.cpp
 loader/appcache/ApplicationCacheGroup.cpp

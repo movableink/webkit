@@ -114,7 +114,6 @@ inspector/agents/page/PageDOMDebuggerAgent.cpp
 loader/FrameLoader.cpp
 loader/NetscapePlugInStreamLoader.cpp
 loader/ResourceLoader.cpp
-loader/SubresourceLoader.cpp
 page/EventSource.cpp
 page/ImageAnalysisQueue.cpp
 page/LocalDOMWindow.cpp
