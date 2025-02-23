@@ -2434,7 +2434,7 @@ void AccessibilityRenderObject::addNodeOnlyChildren()
     WeakPtr cache = axObjectCache();
     if (!cache)
         return;
-    // FIXME: This algorithm does not work correctly when ENABLE(INCLUDE_IGNORED_IN_CORE_TREE) due to use of m_children, as this algorithm is written assuming m_children only every contains unignored objects.
+    // FIXME: This algorithm does not work correctly when ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE) due to use of m_children, as this algorithm is written assuming m_children only every contains unignored objects.
     // Iterate through all of the children, including those that may have already been added, and
     // try to insert the nodes in the correct place in the DOM order.
     unsigned insertionIndex = 0;

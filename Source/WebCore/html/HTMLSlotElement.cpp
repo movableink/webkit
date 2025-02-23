@@ -232,4 +232,10 @@ void HTMLSlotElement::dispatchSlotChangeEvent()
     dispatchEvent(event);
 }
 
+void HTMLSlotElement::updateAccessibilityOnSlotChange() const
+{
+    if (CheckedPtr cache = protectedDocument()->existingAXObjectCache())
+        cache->onSlottedContentChange(*this);
+}
+
 } // namespace WebCore

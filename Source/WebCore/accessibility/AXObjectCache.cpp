@@ -1956,6 +1956,11 @@ void AXObjectCache::onSelectedChanged(Element& element)
     handleTabPanelSelected(nullptr, &element);
 }
 
+void AXObjectCache::onSlottedContentChange(const HTMLSlotElement& slot)
+{
+    childrenChanged(get(const_cast<HTMLSlotElement&>(slot)));
+}
+
 void AXObjectCache::onStyleChange(Element& element, Style::Change change, const RenderStyle* oldStyle, const RenderStyle* newStyle)
 {
     if (change == Style::Change::None || !oldStyle || !newStyle)
@@ -2868,8 +2873,17 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
     else if (attrName == aria_haspopupAttr)
         postNotification(element, AXNotification::HasPopupChanged);
     else if (attrName == aria_hiddenAttr) {
+#if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
+        if (RefPtr axObject = getOrCreate(*element)) {
+            Accessibility::enumerateDescendantsIncludingIgnored<AXCoreObject>(*axObject, /* includeSelf */ true, [] (auto& descendant) {
+                downcast<AccessibilityObject>(descendant).recomputeIsIgnored();
+            });
+        }
+#else
         if (RefPtr parent = get(element->parentNode()))
             childrenChanged(parent.get());
+#endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
+
 
         if (m_currentModalElement && m_currentModalElement->isDescendantOf(element))
             deferModalChange(*m_currentModalElement);
