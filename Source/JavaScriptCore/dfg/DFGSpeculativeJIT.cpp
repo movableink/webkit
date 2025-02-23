@@ -3090,12 +3090,17 @@ void SpeculativeJIT::compileValueRep(Node* node)
         // anymore. Unfortunately, this would be unsound. If it's a GetLocal or if the value was
         // subject to a prior SetLocal, filtering the value would imply that the corresponding
         // local was purified.
-        if (m_state.forNode(node->child1()).couldBeType(SpecDoubleImpureNaN))
-            purifyNaN(valueFPR);
+        if (m_state.forNode(node->child1()).couldBeType(SpecDoubleImpureNaN)) {
+            FPRTemporary temp(this);
+            FPRReg tempFPR = temp.fpr();
 
-        boxDouble(valueFPR, resultRegs);
-        
-        jsValueResult(resultRegs, node);
+            purifyNaN(valueFPR, tempFPR);
+            boxDouble(tempFPR, resultRegs);
+            jsValueResult(resultRegs, node);
+        } else {
+            boxDouble(valueFPR, resultRegs);
+            jsValueResult(resultRegs, node);
+        }
         return;
     }
         
@@ -3697,7 +3702,7 @@ void SpeculativeJIT::compileGetByValOnFloatTypedArray(Node* node, TypedArrayType
     }
     
     if (format == DataFormatJS) {
-        purifyNaN(resultReg);
+        purifyNaN(resultReg, resultReg);
         boxDouble(resultReg, resultRegs);
         if (jump.isSet())
             jump.link(this);
@@ -6754,8 +6759,7 @@ void SpeculativeJIT::compilePurifyNaN(Node* node)
     FPRReg valueFPR = value.fpr();
     FPRReg resultFPR = result.fpr();
 
-    moveDouble(valueFPR, resultFPR);
-    purifyNaN(resultFPR);
+    purifyNaN(valueFPR, resultFPR);
     doubleResult(resultFPR, node);
 }
 

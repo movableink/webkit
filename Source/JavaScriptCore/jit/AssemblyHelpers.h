@@ -1450,7 +1450,7 @@ public:
     void incrementSuperSamplerCount();
     void decrementSuperSamplerCount();
     
-    void purifyNaN(FPRReg);
+    void purifyNaN(FPRReg, FPRReg);
 
     // These methods convert between doubles, and doubles boxed and JSValues.
 #if USE(JSVALUE64)

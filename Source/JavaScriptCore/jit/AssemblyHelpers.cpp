@@ -82,11 +82,18 @@ void AssemblyHelpers::decrementSuperSamplerCount()
     sub32(TrustedImm32(1), AbsoluteAddress(std::bit_cast<const void*>(&g_superSamplerCount)));
 }
 
-void AssemblyHelpers::purifyNaN(FPRReg fpr)
+void AssemblyHelpers::purifyNaN(FPRReg inputFPR, FPRReg resultFPR)
 {
-    MacroAssembler::Jump notNaN = branchIfNotNaN(fpr);
-    move64ToDouble(TrustedImm64(std::bit_cast<uint64_t>(PNaN)), fpr);
+    ASSERT(inputFPR != fpTempRegister);
+#if CPU(ADDRESS64)
+    move64ToDouble(TrustedImm64(std::bit_cast<uint64_t>(PNaN)), fpTempRegister);
+    moveDoubleConditionallyDouble(DoubleEqualAndOrdered, inputFPR, inputFPR, inputFPR, fpTempRegister, resultFPR);
+#else
+    moveDouble(inputFPR, resultFPR);
+    auto notNaN = branchIfNotNaN(resultFPR);
+    move64ToDouble(TrustedImm64(std::bit_cast<uint64_t>(PNaN)), resultFPR);
     notNaN.link(this);
+#endif
 }
 
 #if ENABLE(SAMPLING_FLAGS)

@@ -2238,7 +2238,7 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
                     CRASH();
                 }
 
-                jit.purifyNaN(m_scratchFPR);
+                jit.purifyNaN(m_scratchFPR, m_scratchFPR);
                 jit.boxDouble(m_scratchFPR, valueRegs);
             }
         }

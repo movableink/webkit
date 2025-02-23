@@ -644,7 +644,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
         case UnboxedDoubleInFPR:
             jit.move(AssemblyHelpers::TrustedImmPtr(scratch + index), GPRInfo::regT1);
             jit.loadDouble(MacroAssembler::Address(GPRInfo::regT1), FPRInfo::fpRegT0);
-            jit.purifyNaN(FPRInfo::fpRegT0);
+            jit.purifyNaN(FPRInfo::fpRegT0, FPRInfo::fpRegT0);
 #if USE(JSVALUE64)
             jit.boxDouble(FPRInfo::fpRegT0, GPRInfo::regT0);
             jit.store64(GPRInfo::regT0, MacroAssembler::Address(GPRInfo::regT1));
@@ -656,7 +656,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
         case DoubleDisplacedInJSStack:
             jit.move(AssemblyHelpers::TrustedImmPtr(scratch + index), GPRInfo::regT1);
             jit.loadDouble(AssemblyHelpers::addressFor(recovery.virtualRegister()), FPRInfo::fpRegT0);
-            jit.purifyNaN(FPRInfo::fpRegT0);
+            jit.purifyNaN(FPRInfo::fpRegT0, FPRInfo::fpRegT0);
 #if USE(JSVALUE64)
             jit.boxDouble(FPRInfo::fpRegT0, GPRInfo::regT0);
             jit.store64(GPRInfo::regT0, MacroAssembler::Address(GPRInfo::regT1));
