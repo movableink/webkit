@@ -2574,12 +2574,12 @@ void AccessibilityRenderObject::addChildren()
     // being part of the accessibility tree.
     RefPtr node = dynamicDowncast<ContainerNode>(this->node());
     auto* element = dynamicDowncast<Element>(node.get());
-    CheckedPtr cache = axObjectCache();
+    WeakPtr cache = axObjectCache();
 
     // ::before and ::after pseudos should be the first and last children of the element
     // that generates them (rather than being siblings to the generating element).
     if (RefPtr beforePseudo = element ? element->beforePseudoElement() : nullptr) {
-        if (RefPtr pseudoObject = cache->getOrCreate(*beforePseudo))
+        if (RefPtr pseudoObject = cache ? cache->getOrCreate(*beforePseudo) : nullptr)
             addChildIfNeeded(*pseudoObject);
     }
 
@@ -2600,7 +2600,7 @@ void AccessibilityRenderObject::addChildren()
     }
 
     if (RefPtr afterPseudo = element ? element->afterPseudoElement() : nullptr) {
-        if (RefPtr pseudoObject = cache->getOrCreate(*afterPseudo))
+        if (RefPtr pseudoObject = cache ? cache->getOrCreate(*afterPseudo) : nullptr)
             addChildIfNeeded(*pseudoObject);
     }
 #else
