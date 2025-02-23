@@ -219,6 +219,7 @@ namespace JSC {
     macro(regExpStringIteratorCreate) \
     macro(iteratorHelperCreate) \
     macro(syncIterator) \
+    macro(includes) \
 
 
 namespace Symbols {

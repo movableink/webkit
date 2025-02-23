@@ -334,6 +334,7 @@ namespace JSC { namespace DFG {
     macro(ArrayPush, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(ArrayPop, NodeResultJS | NodeMustGenerate) \
     macro(ArraySlice, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
+    macro(ArrayIncludes, NodeResultBoolean | NodeHasVarArgs) \
     macro(ArrayIndexOf, NodeResultInt32 | NodeHasVarArgs) \
     macro(ArraySplice, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     \

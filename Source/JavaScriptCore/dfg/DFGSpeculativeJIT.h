@@ -1686,7 +1686,7 @@ public:
     void compileGetRestLength(Node*);
     void compileArraySlice(Node*);
     void compileArraySplice(Node*);
-    void compileArrayIndexOf(Node*);
+    void compileArrayIndexOfOrArrayIncludes(Node*);
     void compileArrayPush(Node*);
     void compileNotifyWrite(Node*);
     void compileRegExpExec(Node*);

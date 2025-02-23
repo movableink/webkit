@@ -734,6 +734,91 @@ JSArray* JSArray::fastWith(JSGlobalObject* globalObject, uint32_t index, JSValue
     }
 }
 
+std::optional<bool> JSArray::fastIncludes(JSGlobalObject* globalObject, JSValue searchElement, uint64_t index64, uint64_t length64)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    bool canDoFastPath = this->canDoFastIndexedAccess()
+        && this->getArrayLength() == length64 // The effects in getting `index` could have changed the length of this array.
+        && static_cast<uint32_t>(index64) == index64;
+    if (!canDoFastPath)
+        return std::nullopt;
+
+    uint32_t length = static_cast<uint32_t>(length64);
+    uint32_t index = static_cast<uint32_t>(index64);
+
+    switch (this->indexingType()) {
+    case ArrayWithInt32: {
+        auto& butterfly = *this->butterfly();
+        auto data = butterfly.contiguous().data();
+
+        if (searchElement.isUndefined())
+            return containsHole(data, length64);
+        if (!searchElement.isNumber())
+            return false;
+        JSValue searchInt32;
+        if (searchElement.isInt32())
+            searchInt32 = searchElement;
+        else {
+            double searchNumber = searchElement.asNumber();
+            if (!canBeInt32(searchNumber))
+                return false;
+            searchInt32 = jsNumber(static_cast<int32_t>(searchNumber));
+        }
+        for (; index < length; ++index) {
+            if (searchInt32 == data[index].get())
+                return true;
+        }
+        return false;
+    }
+    case ArrayWithContiguous: {
+        auto& butterfly = *this->butterfly();
+        auto data = butterfly.contiguous().data();
+
+        if (searchElement.isObject()) {
+            auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), JSValue::encode(searchElement), length - index));
+            if (result)
+                return true;
+            return false;
+        }
+
+        bool searchElementIsUndefined = searchElement.isUndefined();
+        for (; index < length; ++index) {
+            JSValue value = data[index].get();
+            if (!value) {
+                if (searchElementIsUndefined)
+                    return true;
+                continue;
+            }
+            bool isEqual = sameValueZero(globalObject, searchElement, value);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (isEqual)
+                return true;
+        }
+        return false;
+    }
+    case ALL_DOUBLE_INDEXING_TYPES: {
+        auto& butterfly = *this->butterfly();
+        auto data = butterfly.contiguousDouble().data();
+
+        if (searchElement.isUndefined())
+            return containsHole(data, length64);
+        if (!searchElement.isNumber())
+            return false;
+
+        double searchNumber = searchElement.asNumber();
+        for (; index < length; ++index) {
+            if (data[index] == searchNumber)
+                return true;
+        }
+        return false;
+    }
+    default:
+        return std::nullopt;
+    }
+}
+
 bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startIndex, IndexingType otherType, std::span<const EncodedJSValue> values)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);

@@ -9476,9 +9476,11 @@ void SpeculativeJIT::compileArraySplice(Node* node)
     jsValueResult(resultRegs, node);
 }
 
-void SpeculativeJIT::compileArrayIndexOf(Node* node)
+void SpeculativeJIT::compileArrayIndexOfOrArrayIncludes(Node* node)
 {
-    ASSERT(node->op() == ArrayIndexOf);
+    ASSERT(node->op() == ArrayIndexOf || node->op() == ArrayIncludes);
+
+    bool isArrayIncludes = node->op() == ArrayIncludes;
 
     StorageOperand storage(this, m_graph.varArgChild(node, node->numChildren() == 3 ? 2 : 3));
     GPRTemporary index(this);
@@ -9514,10 +9516,20 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
             add32(TrustedImm32(1), indexGPR);
             jump().linkTo(loop, this);
 
-            notFound.link(this);
-            move(TrustedImm32(-1), indexGPR);
-            found.link(this);
-            strictInt32Result(indexGPR, node);
+            if (isArrayIncludes) {
+                notFound.link(this);
+                move(TrustedImm32(0), indexGPR);
+                Jump done = jump();
+                found.link(this);
+                move(TrustedImm32(1), indexGPR);
+                done.link(this);
+                unblessedBooleanResult(indexGPR, node);
+            } else {
+                notFound.link(this);
+                move(TrustedImm32(-1), indexGPR);
+                found.link(this);
+                strictInt32Result(indexGPR, node);
+            }
         };
 
         ASSERT(node->arrayMode().type() == Array::Int32);
@@ -9569,10 +9581,20 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
         add32(TrustedImm32(1), indexGPR);
         jump().linkTo(loop, this);
 
-        notFound.link(this);
-        move(TrustedImm32(-1), indexGPR);
-        found.link(this);
-        strictInt32Result(indexGPR, node);
+        if (isArrayIncludes) {
+            notFound.link(this);
+            move(TrustedImm32(0), indexGPR);
+            Jump done = jump();
+            found.link(this);
+            move(TrustedImm32(1), indexGPR);
+            done.link(this);
+            unblessedBooleanResult(indexGPR, node);
+        } else {
+            notFound.link(this);
+            move(TrustedImm32(-1), indexGPR);
+            found.link(this);
+            strictInt32Result(indexGPR, node);
+        }
         return;
     }
 
@@ -9587,9 +9609,13 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
 
         flushRegisters();
 
-        callOperation(operationArrayIndexOfString, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementGPR, indexGPR);
-
-        strictInt32Result(lengthGPR, node);
+        if (isArrayIncludes) {
+            callOperation(operationArrayIncludesString, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementGPR, indexGPR);
+            unblessedBooleanResult(lengthGPR, node);
+        } else {
+            callOperation(operationArrayIndexOfString, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementGPR, indexGPR);
+            strictInt32Result(lengthGPR, node);
+        }
 
         return;
 #else
@@ -9634,10 +9660,18 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
             add32(TrustedImm32(1), indexGPR);
             jump().linkTo(loop, this);
 
-            notFound.link(this);
-            move(TrustedImm32(-1), indexGPR);
-
-            found.link(this);
+            if (isArrayIncludes) {
+                notFound.link(this);
+                move(TrustedImm32(0), indexGPR);
+                Jump done = jump();
+                found.link(this);
+                move(TrustedImm32(1), indexGPR);
+                done.link(this);
+            } else {
+                notFound.link(this);
+                move(TrustedImm32(-1), indexGPR);
+                found.link(this);
+            }
         };
 
         auto emitCompare = [&]() -> JumpList {
@@ -9692,13 +9726,21 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
 
         emitLoop(emitCompare);
 
-        addSlowPathGenerator(slowPathCall(
-            slowCase, this, operationArrayIndexOfString,
-            indexGPR, LinkableConstant::globalObject(*this, node),
-            storageGPR, searchElementGPR, indexGPR
-        ));
-
-        strictInt32Result(indexGPR, node);
+        if (isArrayIncludes) {
+            addSlowPathGenerator(slowPathCall(
+                slowCase, this, operationArrayIncludesString,
+                indexGPR, LinkableConstant::globalObject(*this, node),
+                storageGPR, searchElementGPR, indexGPR
+            ));
+            unblessedBooleanResult(indexGPR, node);
+        } else {
+            addSlowPathGenerator(slowPathCall(
+                slowCase, this, operationArrayIndexOfString,
+                indexGPR, LinkableConstant::globalObject(*this, node),
+                storageGPR, searchElementGPR, indexGPR
+            ));
+            strictInt32Result(indexGPR, node);
+        }
 
         return;
 #endif
@@ -9715,8 +9757,13 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
         ASSERT(node->arrayMode().type() == Array::Contiguous);
 
         flushRegisters();
-        callOperationWithoutExceptionCheck(operationArrayIndexOfNonStringIdentityValueContiguous, lengthGPR, storageGPR, valueRegs, indexGPR);
-        strictInt32Result(lengthGPR, node);
+        if (isArrayIncludes) {
+            callOperationWithoutExceptionCheck(operationArrayIncludesNonStringIdentityValueContiguous, lengthGPR, storageGPR, valueRegs, indexGPR);
+            unblessedBooleanResult(lengthGPR, node);
+        } else {
+            callOperationWithoutExceptionCheck(operationArrayIndexOfNonStringIdentityValueContiguous, lengthGPR, storageGPR, valueRegs, indexGPR);
+            strictInt32Result(lengthGPR, node);
+        }
         return;
     }
 
@@ -9728,18 +9775,27 @@ void SpeculativeJIT::compileArrayIndexOf(Node* node)
         flushRegisters();
         switch (node->arrayMode().type()) {
         case Array::Double:
-            callOperation(operationArrayIndexOfValueDouble, lengthGPR, storageGPR, searchElementRegs, indexGPR);
+            if (isArrayIncludes)
+                callOperation(operationArrayIncludesValueDouble, lengthGPR, storageGPR, searchElementRegs, indexGPR);
+            else
+                callOperation(operationArrayIndexOfValueDouble, lengthGPR, storageGPR, searchElementRegs, indexGPR);
             break;
         case Array::Int32:
         case Array::Contiguous:
-            callOperation(operationArrayIndexOfValueInt32OrContiguous, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementRegs, indexGPR);
+            if (isArrayIncludes)
+                callOperation(operationArrayIncludesValueInt32OrContiguous, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementRegs, indexGPR);
+            else
+                callOperation(operationArrayIndexOfValueInt32OrContiguous, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementRegs, indexGPR);
             break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
             break;
         }
 
-        strictInt32Result(lengthGPR, node);
+        if (isArrayIncludes)
+            unblessedBooleanResult(lengthGPR, node);
+        else
+            strictInt32Result(lengthGPR, node);
         return;
     }
 

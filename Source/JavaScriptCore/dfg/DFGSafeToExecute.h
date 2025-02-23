@@ -350,6 +350,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         return state.forNode(node->child1()).isType(SpecObject);
 
     case ArraySlice:
+    case ArrayIncludes:
     case ArrayIndexOf: {
         // You could plausibly move this code around as long as you proved the
         // incoming array base structure is an original array at the hoisted location.

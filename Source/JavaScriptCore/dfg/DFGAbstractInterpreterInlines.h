@@ -2946,6 +2946,10 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         makeBytecodeTopForNode(node);
         break;
 
+    case ArrayIncludes:
+        setNonCellTypeForNode(node, SpecBoolean);
+        break;
+
     case ArrayIndexOf: {
         setNonCellTypeForNode(node, SpecInt32Only);
         break;

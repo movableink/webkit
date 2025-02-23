@@ -125,6 +125,8 @@ public:
 
     JSArray* fastWith(JSGlobalObject*, uint32_t index, JSValue, uint64_t length);
 
+    std::optional<bool> fastIncludes(JSGlobalObject*, JSValue,  uint64_t fromIndex, uint64_t length);
+
     ALWAYS_INLINE bool definitelyNegativeOneMiss() const;
 
     enum ShiftCountMode {

@@ -2749,6 +2749,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             return CallOptimizationResult::Inlined;
         }
 
+        case ArrayIncludesIntrinsic:
         case ArrayIndexOfIntrinsic: {
             if (argumentCountIncludingThis < 2)
                 return CallOptimizationResult::DidNothing;
@@ -2792,7 +2793,9 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                         addVarArgChild(get(virtualRegisterForArgumentIncludingThis(2, registerOffset))); // Start index.
                     addVarArgChild(nullptr);
 
-                    Node* node = addToGraph(Node::VarArg, ArrayIndexOf, OpInfo(arrayMode.asWord()), OpInfo());
+                    Node* node = intrinsic == ArrayIncludesIntrinsic
+                        ? addToGraph(Node::VarArg, ArrayIncludes, OpInfo(arrayMode.asWord()), OpInfo())
+                        : addToGraph(Node::VarArg, ArrayIndexOf, OpInfo(arrayMode.asWord()), OpInfo());
                     setResult(node);
                     return CallOptimizationResult::Inlined;
                 }

@@ -3706,6 +3706,131 @@ JSC_DEFINE_JIT_OPERATION(operationToLengthUntyped, EncodedJSValue, (JSGlobalObje
     OPERATION_RETURN(scope, JSValue::encode(jsNumber(value.toLength(globalObject))));
 }
 
+static ALWAYS_INLINE UCPUStrictInt32 arrayIncludesString(JSGlobalObject* globalObject, Butterfly* butterfly, JSString* searchElement, int32_t index)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    int32_t length = butterfly->publicLength();
+    auto data = butterfly->contiguous().data();
+    for (; index < length; ++index) {
+        JSValue value = data[index].get();
+        if (!value || !value.isString())
+            continue;
+        auto* string = asString(value);
+        if (string == searchElement)
+            return toUCPUStrictInt32(1);
+        if (string->equalInline(globalObject, searchElement)) {
+            scope.assertNoExceptionExceptTermination();
+            return toUCPUStrictInt32(1);
+        }
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+    return toUCPUStrictInt32(0);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationArrayIncludesString, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, JSString* searchElement, int32_t index))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    OPERATION_RETURN(scope, arrayIncludesString(globalObject, butterfly, searchElement, index));
+}
+
+JSC_DEFINE_JIT_OPERATION(operationArrayIncludesValueInt32OrContiguous, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue searchElement = JSValue::decode(encodedValue);
+
+    if (searchElement.isString())
+        OPERATION_RETURN(scope, arrayIncludesString(globalObject, butterfly, asString(searchElement), index));
+
+    int32_t length = butterfly->publicLength();
+    auto data = butterfly->contiguous().data();
+
+    if (index >= length)
+        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+
+    if (searchElement.isObject()) {
+        auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedValue, length - index));
+        if (result)
+            OPERATION_RETURN(scope, toUCPUStrictInt32(1));
+        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+    }
+
+    if (searchElement.isInt32()) {
+        for (; index < length; ++index) {
+            JSValue value = data[index].get();
+            if (!value || !value.isInt32())
+                continue;
+            if (searchElement.asInt32() == value.asInt32())
+                OPERATION_RETURN(scope, toUCPUStrictInt32(1));
+        }
+        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+    }
+
+    bool searchElementIsUndefined = searchElement.isUndefined();
+    for (; index < length; ++index) {
+        JSValue value = data[index].get();
+        if (!value) {
+            if (searchElementIsUndefined)
+                OPERATION_RETURN(scope, 1);
+            continue;
+        }
+        bool isEqual = sameValueZero(globalObject, searchElement, value);
+        OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+        if (isEqual)
+            OPERATION_RETURN(scope, toUCPUStrictInt32(1));
+    }
+    OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+}
+
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArrayIncludesValueDouble, UCPUStrictInt32, (Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
+{
+    // We do not cause any exceptions, thus we do not need FrameTracers.
+    JSValue searchElement = JSValue::decode(encodedValue);
+    const double* data = butterfly->contiguousDouble().data();
+    int32_t length = butterfly->publicLength();
+
+    if (searchElement.isUndefined() && containsHole(data, length))
+        return toUCPUStrictInt32(1);
+    if (!searchElement.isNumber())
+        return toUCPUStrictInt32(0);
+
+    double number = searchElement.asNumber();
+    for (; index < length; ++index) {
+        // This comparison ignores NaN.
+        if (data[index] == number)
+            return toUCPUStrictInt32(1);
+    }
+    return toUCPUStrictInt32(0);
+}
+
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArrayIncludesNonStringIdentityValueContiguous, UCPUStrictInt32, (Butterfly* butterfly, EncodedJSValue searchElement, int32_t index))
+{
+    // We do not cause any exceptions, thus we do not need FrameTracers.
+    int32_t length = butterfly->publicLength();
+    auto data = butterfly->contiguous().data();
+
+    if (index >= length)
+        return toUCPUStrictInt32(0);
+
+    auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), searchElement, length - index));
+    if (result)
+        return toUCPUStrictInt32(1);
+
+    JSValue searchElementValue = JSValue::decode(searchElement);
+    if (searchElementValue.isUndefined() && containsHole(data, length))
+        return toUCPUStrictInt32(1);
+    return toUCPUStrictInt32(0);
+}
+
 static ALWAYS_INLINE UCPUStrictInt32 arrayIndexOfString(JSGlobalObject* globalObject, Butterfly* butterfly, JSString* searchElement, int32_t index)
 {
     VM& vm = globalObject->vm();

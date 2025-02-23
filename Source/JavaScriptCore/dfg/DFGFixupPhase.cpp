@@ -1623,8 +1623,9 @@ private:
             break;
         }
 
+        case ArrayIncludes:
         case ArrayIndexOf:
-            fixupArrayIndexOf(node);
+            fixupArrayIndexOfOrArrayIncludes(node);
             break;
             
         case RegExpExec:
@@ -4791,12 +4792,19 @@ private:
         fixup(node->child3(), 1);
     }
 
-    void fixupArrayIndexOf(Node* node)
+    void fixupArrayIndexOfOrArrayIncludes(Node* node)
     {
+        ASSERT(node->op() == ArrayIndexOf || node->op() == ArrayIncludes);
+
+        bool isArrayIncludes = node->op() == ArrayIncludes;
+
         Edge& array = m_graph.varArgChild(node, 0);
         Edge& storage = m_graph.varArgChild(node, node->numChildren() == 3 ? 2 : 3);
         blessArrayOperation(array, Edge(), storage);
-        ASSERT_WITH_MESSAGE(storage.node(), "blessArrayOperation for ArrayIndexOf must set Butterfly for storage edge.");
+        if (isArrayIncludes)
+            ASSERT_WITH_MESSAGE(storage.node(), "blessArrayOperation for ArrayIncludes must set Butterfly for storage edge.");
+        else
+            ASSERT_WITH_MESSAGE(storage.node(), "blessArrayOperation for ArrayIndexOf must set Butterfly for storage edge.");
 
         Edge& searchElement = m_graph.varArgChild(node, 1);
 
@@ -4813,15 +4821,21 @@ private:
             if (searchElement->shouldSpeculateCell()) {
                 fixEdge<CellUse>(searchElement);
                 m_insertionSet.insertCheck(m_graph, m_indexInBlock, node);
-                m_graph.convertToConstant(node, jsNumber(-1));
+                if (isArrayIncludes)
+                    m_graph.convertToConstant(node, jsBoolean(false));
+                else
+                    m_graph.convertToConstant(node, jsNumber(-1));
                 observeUseKindOnNode<CellUse>(searchElementNode);
                 return;
             }
 
-            if (searchElement->shouldSpeculateOther()) {
+            if (searchElement->shouldSpeculateOther() && !isArrayIncludes) {
                 fixEdge<OtherUse>(searchElement);
                 m_insertionSet.insertCheck(m_graph, m_indexInBlock, node);
-                m_graph.convertToConstant(node, jsNumber(-1));
+                if (isArrayIncludes)
+                    m_graph.convertToConstant(node, jsBoolean(false));
+                else
+                    m_graph.convertToConstant(node, jsNumber(-1));
                 observeUseKindOnNode<OtherUse>(searchElementNode);
                 return;
             }
@@ -4829,7 +4843,10 @@ private:
             if (searchElement->shouldSpeculateBoolean()) {
                 fixEdge<BooleanUse>(searchElement);
                 m_insertionSet.insertCheck(m_graph, m_indexInBlock, node);
-                m_graph.convertToConstant(node, jsNumber(-1));
+                if (isArrayIncludes)
+                    m_graph.convertToConstant(node, jsBoolean(false));
+                else
+                    m_graph.convertToConstant(node, jsNumber(-1));
                 observeUseKindOnNode<BooleanUse>(searchElementNode);
                 return;
             }

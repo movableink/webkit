@@ -1144,6 +1144,11 @@ private:
             break;
         }
 
+        case ArrayIncludes: {
+            setPrediction(SpecBoolean);
+            break;
+        }
+
         case GetTypedArrayByteOffset:
         case GetArrayLength:
         case GetUndetachedTypeArrayLength:

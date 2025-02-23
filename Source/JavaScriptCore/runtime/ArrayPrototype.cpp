@@ -68,6 +68,7 @@ static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncFill);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToReversed);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToSorted);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncWith);
+static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncIncludes);
 
 // ------------------------------ ArrayPrototype ----------------------------
 
@@ -125,7 +126,7 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().findLastPublicName(), arrayPrototypeFindLastCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().findIndexPublicName(), arrayPrototypeFindIndexCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().findLastIndexPublicName(), arrayPrototypeFindLastIndexCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().includesPublicName(), arrayPrototypeIncludesCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->includes, arrayProtoFuncIncludes, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, ArrayIncludesIntrinsic);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().copyWithinPublicName(), arrayPrototypeCopyWithinCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().atPublicName(), arrayPrototypeAtCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toReversed, arrayProtoFuncToReversed, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
@@ -134,7 +135,7 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->with, arrayProtoFuncWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().entriesPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().entriesPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().forEachPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().forEachPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
-    putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().includesPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().includesPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
+    putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().includesPrivateName(), getDirect(vm, vm.propertyNames->includes), static_cast<unsigned>(PropertyAttribute::ReadOnly));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().indexOfPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().indexOfPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().keysPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().keysPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().mapPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().mapPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
@@ -154,7 +155,7 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
         &vm.propertyNames->builtinNames().findLastIndexPublicName(),
         &vm.propertyNames->builtinNames().flatPublicName(),
         &vm.propertyNames->builtinNames().flatMapPublicName(),
-        &vm.propertyNames->builtinNames().includesPublicName(),
+        &vm.propertyNames->includes,
         &vm.propertyNames->builtinNames().keysPublicName(),
         &vm.propertyNames->toReversed,
         &vm.propertyNames->toSorted,
@@ -2124,6 +2125,50 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncWith, (JSGlobalObject* globalObject, Call
     }
 
     return JSValue::encode(result);
+}
+
+JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIncludes, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (UNLIKELY(thisValue.isUndefinedOrNull()))
+        return throwVMTypeError(globalObject, scope, "Array.prototype.includes requires that |this| not be null or undefined"_s);
+    auto* thisObject = thisValue.toObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t length = toLength(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (!length)
+        return JSValue::encode(jsBoolean(false));
+
+    uint64_t index = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(1), length, 0);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    ASSERT(index <= length);
+    if (index == length)
+        return JSValue::encode(jsBoolean(false));
+
+    JSValue searchElement = callFrame->argument(0);
+
+    if (LIKELY(isJSArray(thisObject))) {
+        JSArray* thisArray = jsCast<JSArray*>(thisObject);
+        if (auto fastResult = thisArray->fastIncludes(globalObject, searchElement, index, length))
+            return JSValue::encode(jsBoolean(fastResult.value()));
+    }
+
+    for (; index < length; ++index) {
+        auto currentElement = thisObject->getIndex(globalObject, index);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (sameValueZero(globalObject, searchElement, currentElement))
+            return JSValue::encode(jsBoolean(true));
+    }
+
+    return JSValue::encode(jsBoolean(false));
 }
 
 } // namespace JSC

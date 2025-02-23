@@ -273,40 +273,6 @@ function findLastIndex(callback /*, thisArg */)
     return -1;
 }
 
-function includes(searchElement /*, fromIndex*/)
-{
-    "use strict";
-
-    var array = @toObject(this, "Array.prototype.includes requires that |this| not be null or undefined");
-    var length = @toLength(array.length);
-
-    if (length === 0)
-        return false;
-
-    var fromIndex = 0;
-    var from = @argument(1);
-    if (from !== @undefined)
-        fromIndex = @toIntegerOrInfinity(from);
-
-    var index;
-    if (fromIndex >= 0)
-        index = fromIndex;
-    else
-        index = length + fromIndex;
-
-    if (index < 0)
-        index = 0;
-
-    var currentElement;
-    for (; index < length; ++index) {
-        currentElement = array[index];
-        // Use SameValueZero comparison, rather than just StrictEquals.
-        if (searchElement === currentElement || (searchElement !== searchElement && currentElement !== currentElement))
-            return true;
-    }
-    return false;
-}
-
 @linkTimeConstant
 function maxWithPositives(a, b)
 {

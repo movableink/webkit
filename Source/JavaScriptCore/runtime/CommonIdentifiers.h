@@ -161,6 +161,7 @@
     macro(id) \
     macro(ignoreCase) \
     macro(ignorePunctuation) \
+    macro(includes) \
     macro(index) \
     macro(indices) \
     macro(inferredName) \

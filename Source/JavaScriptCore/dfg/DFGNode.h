@@ -2231,6 +2231,7 @@ public:
         case GetTypedArrayLengthAsInt52:
         case HasIndexedProperty:
         case EnumeratorNextUpdateIndexAndMode:
+        case ArrayIncludes:
         case ArrayIndexOf:
             return true;
         default:
@@ -2576,6 +2577,7 @@ public:
         case ArrayifyToStructure:
         case ArrayPush:
         case ArrayPop:
+        case ArrayIncludes:
         case ArrayIndexOf:
         case HasIndexedProperty:
         case AtomicsAdd:
