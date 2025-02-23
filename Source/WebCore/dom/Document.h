@@ -766,7 +766,7 @@ public:
     bool hasLivingRenderTree() const { return renderView() && !renderTreeBeingDestroyed(); }
     void updateRenderTree(std::unique_ptr<Style::Update> styleUpdate);
 
-    bool updateLayoutIfDimensionsOutOfDate(Element&, OptionSet<DimensionsCheck> = { DimensionsCheck::Width, DimensionsCheck::Height });
+    bool updateLayoutIfDimensionsOutOfDate(Element&, OptionSet<DimensionsCheck> = { DimensionsCheck::Width, DimensionsCheck::Height }, OptionSet<LayoutOptions> = { });
 
     inline AXObjectCache* existingAXObjectCache() const;
     WEBCORE_EXPORT AXObjectCache* axObjectCache() const;
