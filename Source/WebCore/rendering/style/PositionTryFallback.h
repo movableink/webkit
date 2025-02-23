@@ -25,12 +25,15 @@
 
 #pragma once
 
+#include "ScopedName.h"
 #include <wtf/text/AtomString.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
 struct PositionTryFallback {
+    std::optional<Style::ScopedName> positionTryRuleName;
+
     enum class Tactic : uint8_t {
         FlipBlock,
         FlipInline,

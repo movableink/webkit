@@ -1358,14 +1358,16 @@ std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleab
 {
     // https://drafts.csswg.org/css-anchor-position-1/#fallback-apply
 
-    if (!existingStyle)
-        return { };
-
     auto optionIt = m_positionOptions.find(styleable.element);
     if (optionIt == m_positionOptions.end())
         return { };
 
     auto& options = optionIt->value;
+
+    if (!existingStyle) {
+        options.chosen = true;
+        return ResolvedStyle { RenderStyle::clonePtr(*options.originalStyle) };
+    }
 
     auto renderer = dynamicDowncast<RenderBox>(styleable.element.renderer());
     if (!renderer) {

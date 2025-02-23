@@ -2718,16 +2718,21 @@ inline NameScope BuilderConverter::convertNameScope(BuilderState& builderState, 
     }) };
 }
 
-inline Vector<PositionTryFallback> BuilderConverter::convertPositionTryFallbacks(BuilderState&, const CSSValue& value)
+inline Vector<PositionTryFallback> BuilderConverter::convertPositionTryFallbacks(BuilderState& builderState, const CSSValue& value)
 {
     auto fallbackForValueList = [&](const CSSValueList& valueList) -> std::optional<PositionTryFallback> {
         if (valueList.separator() != CSSValueList::SpaceSeparator)
             return { };
 
-        auto tactics = WTF::map(valueList, [&](auto& item) {
-            return fromCSSValueID<PositionTryFallback::Tactic>(item.valueID());
-        });
-        return PositionTryFallback { .tactics = WTFMove(tactics) };
+        auto fallback = PositionTryFallback { };
+
+        for (auto& item : valueList) {
+            if (item.isCustomIdent())
+                fallback.positionTryRuleName = Style::ScopedName { AtomString { item.customIdent() }, builderState.styleScopeOrdinal() };
+            else
+                fallback.tactics.append(fromCSSValueID<PositionTryFallback::Tactic>(item.valueID()));
+        }
+        return fallback;
     };
 
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {

@@ -1076,6 +1076,13 @@ static Ref<CSSValue> computedRotate(RenderObject* renderer, const RenderStyle& s
         CSSPrimitiveValue::create(rotate->y()), CSSPrimitiveValue::create(rotate->z()), WTFMove(angle));
 }
 
+static Ref<CSSPrimitiveValue> valueForScopedName(const Style::ScopedName& scopedName)
+{
+    if (scopedName.isIdentifier)
+        return CSSPrimitiveValue::createCustomIdent(scopedName.name);
+    return CSSPrimitiveValue::create(scopedName.name);
+}
+
 static Ref<CSSValue> valueForBoxShadow(const ShadowData* shadow, const RenderStyle& style)
 {
     if (!shadow)
@@ -1113,10 +1120,12 @@ static Ref<CSSValue> valueForPositionTryFallbacks(const Vector<PositionTryFallba
 
     CSSValueListBuilder list;
     for (auto& fallback : fallbacks) {
-        CSSValueListBuilder tacticsList;
+        CSSValueListBuilder singleFallbackList;
+        if (fallback.positionTryRuleName)
+            singleFallbackList.append(valueForScopedName(*fallback.positionTryRuleName));
         for (auto& tactic : fallback.tactics)
-            tacticsList.append(createConvertingToCSSValueID(tactic));
-        list.append(CSSValueList::createSpaceSeparated(tacticsList));
+            singleFallbackList.append(createConvertingToCSSValueID(tactic));
+        list.append(CSSValueList::createSpaceSeparated(singleFallbackList));
     }
 
     return CSSValueList::createCommaSeparated(WTFMove(list));
@@ -1623,13 +1632,6 @@ static Ref<CSSPrimitiveValue> valueForAnimationPlayState(AnimationPlayState play
         return CSSPrimitiveValue::create(CSSValuePaused);
     }
     RELEASE_ASSERT_NOT_REACHED();
-}
-
-static Ref<CSSPrimitiveValue> valueForScopedName(const Style::ScopedName& scopedName)
-{
-    if (scopedName.isIdentifier)
-        return CSSPrimitiveValue::createCustomIdent(scopedName.name);
-    return CSSPrimitiveValue::create(scopedName.name);
 }
 
 static Ref<CSSValue> valueForAnimationTimeline(const RenderStyle& style, const Animation::Timeline& timeline)
