@@ -2413,10 +2413,10 @@ class GenerationContext:
         to.newline()
 
     def generate_property_id_bit_set(self, *, to, name, iterable, mapping_to_property=lambda p: p):
-        to.write(f"const WTF::BitSet<numCSSProperties> {name} = ([]() -> WTF::BitSet<numCSSProperties> {{")
+        to.write(f"const WTF::BitSet<cssPropertyIDEnumValueCount> {name} = ([]() -> WTF::BitSet<cssPropertyIDEnumValueCount> {{")
 
         with to.indent():
-            to.write(f"WTF::BitSet<numCSSProperties> result;")
+            to.write(f"WTF::BitSet<cssPropertyIDEnumValueCount> result;")
 
             for item in iterable:
                 to.write(f"result.set({mapping_to_property(item).id});")
@@ -2494,7 +2494,7 @@ class GenerateCSSPropertyNames:
         )
 
         to.write_block("""\
-            static_assert(numCSSProperties + 1 <= std::numeric_limits<uint16_t>::max(), "CSSPropertyID should fit into uint16_t.");
+            static_assert(cssPropertyIDEnumValueCount <= (std::numeric_limits<uint16_t>::max() + 1), "CSSPropertyID should fit into uint16_t.");
             """)
 
         all_computed_property_ids = (f"{property.id}," for property in self.properties_and_descriptors.style_properties.all_computed)
@@ -2693,7 +2693,7 @@ class GenerateCSSPropertyNames:
     def _generate_is_inherited_property(self, *, to):
         all_inherited_and_ids = (f'{"true " if hasattr(property, "inherited") and property.inherited else "false"}, // {property.id}' for property in self.properties_and_descriptors.all_unique)
 
-        to.write(f"constexpr bool isInheritedPropertyTable[numCSSProperties + {GenerationContext.number_of_predefined_properties}] = {{")
+        to.write(f"constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {{")
         with to.indent():
             to.write(f"false, // CSSPropertyID::CSSPropertyInvalid")
             to.write(f"true , // CSSPropertyID::CSSPropertyCustom")
@@ -2703,7 +2703,7 @@ class GenerateCSSPropertyNames:
         to.write_block("""
             bool CSSProperty::isInheritedProperty(CSSPropertyID id)
             {
-                ASSERT(id < firstCSSProperty + numCSSProperties);
+                ASSERT(id < cssPropertyIDEnumValueCount);
                 ASSERT(id != CSSPropertyID::CSSPropertyInvalid);
                 return isInheritedPropertyTable[id];
             }
@@ -3014,8 +3014,18 @@ class GenerateCSSPropertyNames:
         to.write(f"}};")
         to.newline()
 
+        to.write(f"// Enum value of the first \"real\" CSS property, which excludes")
+        to.write(f"// CSSPropertyInvalid and CSSPropertyCustom.")
         to.write(f"constexpr uint16_t firstCSSProperty = {first};")
+
+        to.write(f"// Total number of enum values in the CSSPropertyID enum. If making an array")
+        to.write(f"// that can be indexed into using the enum value, use this as the size.")
+        to.write(f"constexpr uint16_t cssPropertyIDEnumValueCount = {count};")
+
+        to.write(f"// Number of \"real\" CSS properties. This differs from cssPropertyIDEnumValueCount,")
+        to.write(f"// as this doesn't consider CSSPropertyInvalid and CSSPropertyCustom.")
         to.write(f"constexpr uint16_t numCSSProperties = {num};")
+
         to.write(f"constexpr unsigned maxCSSPropertyNameLength = {max_length};")
         to.write(f"constexpr auto firstTopPriorityProperty = {first_top_priority_property.id};")
         to.write(f"constexpr auto lastTopPriorityProperty = {last_top_priority_property.id};")

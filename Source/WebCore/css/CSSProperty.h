@@ -117,8 +117,8 @@ public:
         return colorProperties.get(propertyId);
     }
 
-    static const WEBCORE_EXPORT WTF::BitSet<numCSSProperties> colorProperties;
-    static const WEBCORE_EXPORT WTF::BitSet<numCSSProperties> physicalProperties;
+    static const WEBCORE_EXPORT WTF::BitSet<cssPropertyIDEnumValueCount> colorProperties;
+    static const WEBCORE_EXPORT WTF::BitSet<cssPropertyIDEnumValueCount> physicalProperties;
 
     bool operator==(const CSSProperty& other) const
     {

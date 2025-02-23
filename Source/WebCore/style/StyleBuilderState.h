@@ -161,8 +161,8 @@ private:
     UncheckedKeyHashSet<AtomString> m_appliedCustomProperties;
     UncheckedKeyHashSet<AtomString> m_inProgressCustomProperties;
     UncheckedKeyHashSet<AtomString> m_inCycleCustomProperties;
-    WTF::BitSet<numCSSProperties> m_inProgressProperties;
-    WTF::BitSet<numCSSProperties> m_invalidAtComputedValueTimeProperties;
+    WTF::BitSet<cssPropertyIDEnumValueCount> m_inProgressProperties;
+    WTF::BitSet<cssPropertyIDEnumValueCount> m_invalidAtComputedValueTimeProperties;
 
     const PropertyCascade::Property* m_currentProperty { nullptr };
     SelectorChecker::LinkMatchMask m_linkMatch { };
