@@ -42,7 +42,7 @@ final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
     weak var owner: WebPage? = nil
 
     private let downloadProgressContinuation: AsyncStream<WebPage.DownloadEvent>.Continuation
-    private let navigationDecider: any WebPage.NavigationDeciding
+    private var navigationDecider: any WebPage.NavigationDeciding
 
     // MARK: Navigation progress reporting
 
