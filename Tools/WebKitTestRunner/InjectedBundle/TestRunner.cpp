@@ -1671,9 +1671,10 @@ void TestRunner::setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool
     }));
 }
 
-void TestRunner::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
+void TestRunner::triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
 {
     postSynchronousMessage("TriggerMockCaptureConfigurationChange", createWKDictionary({
+        { "camera", adoptWK(WKBooleanCreate(forCamera)) },
         { "microphone", adoptWK(WKBooleanCreate(forMicrophone)) },
         { "display", adoptWK(WKBooleanCreate(forDisplay)) },
     }));

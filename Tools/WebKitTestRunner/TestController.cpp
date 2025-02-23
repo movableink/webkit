@@ -4315,9 +4315,9 @@ void TestController::setMockCaptureDevicesInterrupted(bool isCameraInterrupted, 
     WKPageSetMockCaptureDevicesInterrupted(m_mainWebView->page(), isCameraInterrupted, isMicrophoneInterrupted);
 }
 
-void TestController::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
+void TestController::triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
 {
-    WKPageTriggerMockCaptureConfigurationChange(m_mainWebView->page(), forMicrophone, forDisplay);
+    WKPageTriggerMockCaptureConfigurationChange(m_mainWebView->page(), forCamera, forMicrophone, forDisplay);
 }
 
 void TestController::setCaptureState(bool cameraState, bool microphoneState, bool displayState)

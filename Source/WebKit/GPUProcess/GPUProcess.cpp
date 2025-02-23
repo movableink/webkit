@@ -468,9 +468,9 @@ void GPUProcess::setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool
     WebCore::MockRealtimeMediaSourceCenter::setMockCaptureDevicesInterrupted(isCameraInterrupted, isMicrophoneInterrupted);
 }
 
-void GPUProcess::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
+void GPUProcess::triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
 {
-    WebCore::MockRealtimeMediaSourceCenter::singleton().triggerMockCaptureConfigurationChange(forMicrophone, forDisplay);
+    WebCore::MockRealtimeMediaSourceCenter::singleton().triggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay);
 }
 
 void GPUProcess::setShouldListenToVoiceActivity(bool shouldListen)

@@ -925,9 +925,10 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
 
     if (WKStringIsEqualToUTF8CString(messageName, "TriggerMockCaptureConfigurationChange")) {
         auto messageBodyDictionary = dictionaryValue(messageBody);
+        bool forCamera = booleanValue(messageBodyDictionary, "camera");
         bool forMicrophone = booleanValue(messageBodyDictionary, "microphone");
         bool forDisplay = booleanValue(messageBodyDictionary, "display");
-        TestController::singleton().triggerMockCaptureConfigurationChange(forMicrophone, forDisplay);
+        TestController::singleton().triggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay);
         return nullptr;
     }
 

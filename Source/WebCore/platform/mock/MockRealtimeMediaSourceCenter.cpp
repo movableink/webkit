@@ -433,8 +433,11 @@ void MockRealtimeMediaSourceCenter::setMockCaptureDevicesInterrupted(bool isCame
     MockRealtimeAudioSource::setIsInterrupted(isMicrophoneInterrupted);
 }
 
-void MockRealtimeMediaSourceCenter::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
+void MockRealtimeMediaSourceCenter::triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
 {
+    if (forCamera)
+        MockRealtimeVideoSource::triggerCameraConfigurationChange();
+
 #if PLATFORM(COCOA)
     if (forMicrophone) {
         auto devices = audioCaptureDeviceManager().captureDevices();

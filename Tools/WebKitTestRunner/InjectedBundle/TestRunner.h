@@ -516,7 +516,7 @@ public:
     void setMockCameraOrientation(unsigned, JSStringRef persistentId);
     bool isMockRealtimeMediaSourceCenterEnabled();
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
-    void triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay);
+    void triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay);
     void setCaptureState(bool cameraState, bool microphoneState, bool displayState);
 
     bool hasAppBoundSession();

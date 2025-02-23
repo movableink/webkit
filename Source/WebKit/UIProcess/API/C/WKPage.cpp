@@ -3373,11 +3373,11 @@ void WKPageSetMockCaptureDevicesInterrupted(WKPageRef pageRef, bool isCameraInte
 #endif
 }
 
-void WKPageTriggerMockCaptureConfigurationChange(WKPageRef pageRef, bool forMicrophone, bool forDisplay)
+void WKPageTriggerMockCaptureConfigurationChange(WKPageRef pageRef, bool forCamera, bool forMicrophone, bool forDisplay)
 {
     CRASH_IF_SUSPENDED;
 #if ENABLE(MEDIA_STREAM)
-    MockRealtimeMediaSourceCenter::singleton().triggerMockCaptureConfigurationChange(forMicrophone, forDisplay);
+    MockRealtimeMediaSourceCenter::singleton().triggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay);
 
 #if ENABLE(GPU_PROCESS)
     auto preferences = toImpl(pageRef)->protectedPreferences();
@@ -3385,7 +3385,7 @@ void WKPageTriggerMockCaptureConfigurationChange(WKPageRef pageRef, bool forMicr
         return;
 
     auto& gpuProcess = toImpl(pageRef)->configuration().processPool().ensureGPUProcess();
-    gpuProcess.triggerMockCaptureConfigurationChange(forMicrophone, forDisplay);
+    gpuProcess.triggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay);
 #endif // ENABLE(GPU_PROCESS)
 
 #endif // ENABLE(MEDIA_STREAM)

@@ -408,7 +408,7 @@ interface TestRunner {
     undefined setMockCameraOrientation(unsigned long orientation, DOMString persistentId);
     boolean isMockRealtimeMediaSourceCenterEnabled();
     undefined setMockCaptureDevicesInterrupted(boolean isCameraInterrupted, boolean isMicrophoneInterrupted);
-    undefined triggerMockCaptureConfigurationChange(boolean forMicrophone, boolean forDisplay);
+    undefined triggerMockCaptureConfigurationChange(boolean forCamera, boolean forMicrophone, boolean forDisplay);
 
     undefined setCaptureState(boolean cameraState, boolean microphoneState, boolean displayState);
 
