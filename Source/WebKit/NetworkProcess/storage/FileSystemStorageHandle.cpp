@@ -355,6 +355,11 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::executeCommandFor
     return error;
 }
 
+Vector<WebCore::FileSystemWritableFileStreamIdentifier> FileSystemStorageHandle::writables() const
+{
+    return copyToVector(m_activeWritableFiles.keys());
+}
+
 Expected<Vector<String>, FileSystemStorageError> FileSystemStorageHandle::getHandleNames()
 {
     if (m_type != Type::Directory)

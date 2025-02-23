@@ -77,6 +77,7 @@ public:
     Expected<WebCore::FileSystemWritableFileStreamIdentifier, FileSystemStorageError> createWritable(bool keepExistingData);
     std::optional<FileSystemStorageError> closeWritable(WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCloseReason);
     std::optional<FileSystemStorageError> executeCommandForWritable(WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError);
+    Vector<WebCore::FileSystemWritableFileStreamIdentifier> writables() const;
 
 private:
     FileSystemStorageHandle(FileSystemStorageManager&, Type, String&& path, String&& name);

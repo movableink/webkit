@@ -76,6 +76,8 @@ interface TestRunner {
     undefined dumpResourceLoadStatistics();
     undefined dumpPrivateClickMeasurement();
 
+    undefined clearStorage();
+
     undefined clearDOMCaches();
     undefined clearDOMCache(DOMString origin);
     boolean hasDOMCache(DOMString origin);

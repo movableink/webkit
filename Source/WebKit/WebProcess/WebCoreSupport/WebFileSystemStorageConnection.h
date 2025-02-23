@@ -97,11 +97,15 @@ private:
     void registerSyncAccessHandle(WebCore::FileSystemSyncAccessHandleIdentifier, WebCore::ScriptExecutionContextIdentifier) final;
     void unregisterSyncAccessHandle(WebCore::FileSystemSyncAccessHandleIdentifier) final;
     void invalidateAccessHandle(WebCore::FileSystemSyncAccessHandleIdentifier) final;
-    void createWritable(WebCore::FileSystemHandleIdentifier, bool keepExistingData, StreamCallback&&) final;
+    void createWritable(WebCore::ScriptExecutionContextIdentifier, WebCore::FileSystemHandleIdentifier, bool keepExistingData, StreamCallback&&) final;
     void closeWritable(WebCore::FileSystemHandleIdentifier, WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCloseReason, VoidCallback&&) final;
     void executeCommandForWritable(WebCore::FileSystemHandleIdentifier, WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError, VoidCallback&&) final;
 
+    void invalidateWritable(WebCore::FileSystemWritableFileStreamIdentifier);
+    void errorWritable(WebCore::ScriptExecutionContextIdentifier, WebCore::FileSystemWritableFileStreamIdentifier);
+
     HashMap<WebCore::FileSystemSyncAccessHandleIdentifier, WebCore::ScriptExecutionContextIdentifier> m_syncAccessHandles;
+    HashMap<WebCore::FileSystemWritableFileStreamIdentifier, WebCore::ScriptExecutionContextIdentifier> m_writableIdentifiers;
     RefPtr<IPC::Connection> m_connection;
 };
 

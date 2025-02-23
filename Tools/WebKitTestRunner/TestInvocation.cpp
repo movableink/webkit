@@ -1218,6 +1218,11 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
         return result;
     }
 
+    if (WKStringIsEqualToUTF8CString(messageName, "ClearStorage")) {
+        TestController::singleton().clearStorage();
+        return nullptr;
+    }
+
     if (WKStringIsEqualToUTF8CString(messageName, "ClearDOMCache")) {
         auto origin = stringValue(messageBody);
         TestController::singleton().clearDOMCache(origin);

@@ -1820,6 +1820,11 @@ void TestRunner::clearDOMCache(JSStringRef origin)
     postSynchronousMessage("ClearDOMCache", toWK(origin));
 }
 
+void TestRunner::clearStorage()
+{
+    postSynchronousMessage("ClearStorage");
+}
+
 void TestRunner::clearDOMCaches()
 {
     postSynchronousMessage("ClearDOMCaches");

@@ -194,6 +194,8 @@ public:
     JSRetainPtr<JSStringRef> pathToLocalResource(JSStringRef);
     void syncLocalStorage();
 
+    void clearStorage();
+
     void clearDOMCache(JSStringRef origin);
     void clearDOMCaches();
     bool hasDOMCache(JSStringRef origin);
