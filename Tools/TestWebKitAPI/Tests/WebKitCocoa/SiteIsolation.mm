@@ -4000,6 +4000,86 @@ TEST(SiteIsolation, PlayAudioInRemoteFrameThenRemove)
     expectPlayingAudio(webView.get(), false, "Should not be playing audio after removing iframe"_s);
 }
 
+TEST(SiteIsolation, MutesAndSetsAudioInMultipleFrames)
+{
+    auto mainFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"
+        "<iframe src='https://webkit.org/subframe'></iframe>"_s;
+    auto subFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"_s;
+
+    RetainPtr<NSData> videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
+    HTTPResponse videoResponse { videoData.get() };
+    videoResponse.headerFields.set("Content-Type"_s, "video/mp4"_s);
+
+    HTTPServer server({
+        { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, subFrameHTML } },
+        { "/video-with-audio.mp4"_s, { videoData.get() } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    WKWebViewConfiguration *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+    [storeConfiguration setHTTPSProxy:[NSURL URLWithString:[NSString stringWithFormat:@"https://127.0.0.1:%d/", server.port()]]];
+    [configuration setWebsiteDataStore:adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]).get()];
+    enableSiteIsolation(configuration);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration);
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", nil);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in main frame"_s);
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", [webView firstChildFrame]);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in remote frame"_s);
+
+    auto expectMuted = [&](bool expectedMuted, WKFrameInfo *frame, ASCIILiteral reason) {
+        bool success = TestWebKitAPI::Util::waitFor([&]() {
+            id actuallyMuted = [webView objectByEvaluatingJavaScript:@"window.internals.isEffectivelyMuted(document.getElementsByTagName('video')[0])" inFrame:frame];
+            return [actuallyMuted boolValue] == expectedMuted;
+        });
+        EXPECT_TRUE(success) << reason.characters();
+    };
+
+    auto expectMediaVolume = [&](float expectedMediaVolume, WKFrameInfo *frame, ASCIILiteral reason) {
+        bool success = TestWebKitAPI::Util::waitFor([&]() {
+            id actualMediaVolume = [webView objectByEvaluatingJavaScript:@"window.internals.pageMediaVolume()" inFrame:frame];
+            return [actualMediaVolume floatValue] == expectedMediaVolume;
+        });
+        EXPECT_TRUE(success) << reason.characters();
+    };
+
+    expectMuted(false, nil, "Should not be muted in main frame"_s);
+    expectMuted(false, [webView firstChildFrame], "Should not be muted in remote frame"_s);
+
+    [webView _setPageMuted:_WKMediaAudioMuted];
+    [webView _setMediaVolumeForTesting:0.125f];
+
+    expectMuted(true, nil, "Should be muted in main frame"_s);
+    expectMediaVolume(0.125f, nil, "Should set volume in main frame"_s);
+    expectMuted(true, [webView firstChildFrame], "Should be muted in remote frame"_s);
+    expectMediaVolume(0.125f, nil, "Should set volume in remote frame"_s);
+
+    auto addFrameToBody = @""
+        "return new Promise((resolve, reject) => {"
+        "    let frame = document.createElement('iframe');"
+        "    frame.onload = () => resolve(true);"
+        "    frame.setAttribute('src', 'https://webkit.org/subframe');"
+        "    document.body.appendChild(frame);"
+        "})";
+    __block RetainPtr<NSError> error;
+    __block bool done = false;
+    [webView callAsyncJavaScript:addFrameToBody arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *callError) {
+        error = callError;
+        done = true;
+    }];
+    Util::run(&done);
+    EXPECT_FALSE(!!error) << "Failed to add iframe: " << [error description].UTF8String;
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", [webView secondChildFrame]);
+    expectMuted(true, [webView secondChildFrame], "Should be muted in newly created remote frame"_s);
+    expectMediaVolume(0.125f, [webView secondChildFrame], "Should initialize newly created remote frame with previously set media volume"_s);
+}
+
 TEST(SiteIsolation, FrameServerTrust)
 {
     HTTPServer plaintextServer({

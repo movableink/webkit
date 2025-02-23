@@ -1087,6 +1087,8 @@ enum ContentsFormat {
     [Conditional=VIDEO] undefined setMediaControlsHidePlaybackRates(HTMLMediaElement element, boolean hidePlaybackRates);
 
     DOMString userVisibleString(DOMURL url);
+
+    float pageMediaVolume();
     undefined setPageMediaVolume(float volume);
 
     undefined setShowAllPlugins(boolean showAll);

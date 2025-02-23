@@ -916,6 +916,11 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 #endif
 }
 
+- (void)_setMediaVolumeForTesting:(float)mediaVolume
+{
+    _page->setMediaVolume(mediaVolume);
+}
+
 @end
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
