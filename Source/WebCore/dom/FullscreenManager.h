@@ -90,14 +90,10 @@ public:
     WEBCORE_EXPORT bool isAnimatingFullscreen() const;
     WEBCORE_EXPORT void setAnimatingFullscreen(bool);
 
-    void emptyEventQueue();
-
 protected:
     friend class Document;
 
-    enum class EventType : bool { Change, Error };
-    void dispatchFullscreenChangeOrErrorEvent(Deque<GCReachableRef<Node>>&, EventType, bool shouldNotifyMediaElement);
-    void dispatchEventForNode(Node&, EventType);
+    void clearPendingEvents() { m_pendingEvents.clear(); }
 
 private:
 #if !RELEASE_LOG_DISABLED
@@ -111,13 +107,14 @@ private:
     RefPtr<Document> protectedMainFrameDocument() { return mainFrameDocument(); }
 
     bool didEnterFullscreen();
+
+    enum class EventType : bool { Change, Error };
     static void queueFullscreenChangeEventForDocument(Document&);
-    void addElementToChangeEventQueue(Node& target) { m_fullscreenChangeEventTargetQueue.append(GCReachableRef(target)); }
+    void queueFullscreenChangeEventForElement(Element& target) { m_pendingEvents.append({ EventType::Change, GCReachableRef(target) }); }
 
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 
-    Deque<GCReachableRef<Node>> m_fullscreenChangeEventTargetQueue;
-    Deque<GCReachableRef<Node>> m_fullscreenErrorEventTargetQueue;
+    Deque<std::pair<EventType, GCReachableRef<Element>>> m_pendingEvents;
 
     bool m_areKeysEnabledInFullscreen { false };
     bool m_isAnimatingFullscreen { false };

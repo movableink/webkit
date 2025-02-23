@@ -111,7 +111,7 @@ void FullscreenManager::requestFullscreenForElement(Ref<Element>&& element, Full
             return completionHandler(Exception { ExceptionCode::TypeError, message });
         ERROR_LOG(identifier, message);
         if (emitErrorEvent == EmitErrorEvent::Yes) {
-            m_fullscreenErrorEventTargetQueue.append(WTFMove(element));
+            m_pendingEvents.append(std::pair { EventType::Error, WTFMove(element) });
             protectedDocument()->scheduleRenderingUpdate(RenderingUpdateStep::Fullscreen);
         }
         completionHandler(Exception { ExceptionCode::TypeError, message });
@@ -619,55 +619,45 @@ void FullscreenManager::dispatchPendingEvents()
     // document will be detached and GC'd. We protect it here to make sure we
     // can finish the function successfully.
     Ref<Document> protectedDocument(document());
-    Deque<GCReachableRef<Node>> changeQueue;
-    m_fullscreenChangeEventTargetQueue.swap(changeQueue);
-    Deque<GCReachableRef<Node>> errorQueue;
-    m_fullscreenErrorEventTargetQueue.swap(errorQueue);
 
-    dispatchFullscreenChangeOrErrorEvent(changeQueue, EventType::Change, /* shouldNotifyMediaElement */ true);
-    dispatchFullscreenChangeOrErrorEvent(errorQueue, EventType::Error, /* shouldNotifyMediaElement */ false);
-}
+    // Steps 1-2:
+    auto pendingEvents = std::exchange(m_pendingEvents, { });
 
-void FullscreenManager::dispatchEventForNode(Node& node, EventType eventType)
-{
-    switch (eventType) {
-    case EventType::Change: {
-        node.dispatchEvent(Event::create(eventNames().fullscreenchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
-        bool shouldEmitUnprefixed = !(node.hasEventListeners(eventNames().webkitfullscreenchangeEvent) && node.hasEventListeners(eventNames().fullscreenchangeEvent)) && !(node.document().hasEventListeners(eventNames().webkitfullscreenchangeEvent) && node.document().hasEventListeners(eventNames().fullscreenchangeEvent));
-        if (shouldEmitUnprefixed)
-            node.dispatchEvent(Event::create(eventNames().webkitfullscreenchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
-        break;
-    }
-    case EventType::Error:
-        node.dispatchEvent(Event::create(eventNames().fullscreenerrorEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
-        node.dispatchEvent(Event::create(eventNames().webkitfullscreenerrorEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
-        break;
-    }
-}
-
-void FullscreenManager::dispatchFullscreenChangeOrErrorEvent(Deque<GCReachableRef<Node>>& queue, EventType eventType, bool shouldNotifyMediaElement)
-{
-    // Step 3 of https://fullscreen.spec.whatwg.org/#run-the-fullscreen-steps
-    while (!queue.isEmpty()) {
-        auto node = queue.takeFirst();
+    // Step 3:
+    while (!pendingEvents.isEmpty()) {
+        auto [eventType, element] = pendingEvents.takeFirst();
 
         // Gaining or losing fullscreen state may change viewport arguments
-        node->protectedDocument()->updateViewportArguments();
+        element->protectedDocument()->updateViewportArguments();
+        if (&element->document() != &document())
+            protectedDocument->updateViewportArguments();
 
 #if ENABLE(VIDEO)
-        if (shouldNotifyMediaElement) {
-            if (RefPtr mediaElement = dynamicDowncast<HTMLMediaElement>(node.get()))
+        if (eventType == EventType::Change) {
+            if (RefPtr mediaElement = dynamicDowncast<HTMLMediaElement>(element.get()))
                 mediaElement->enteredOrExitedFullscreen();
         }
-#else
-        UNUSED_PARAM(shouldNotifyMediaElement);
 #endif
-        // If the element was removed from our tree, also message the documentElement. Since we may
-        // have a document hierarchy, check that node isn't in another document.
-        if (!node->isConnected() || &node->document() != &document())
-            queue.append(document());
-        else
-            dispatchEventForNode(node.get(), eventType);
+        // Let target be element if element is connected and its node document is document, and otherwise let target be document.
+        Ref target = [&]() -> Node& {
+            if (element->isConnected() && &element->document() == &document())
+                return element;
+            return document();
+        }();
+
+        switch (eventType) {
+        case EventType::Change: {
+            target->dispatchEvent(Event::create(eventNames().fullscreenchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
+            bool shouldEmitUnprefixed = !(target->hasEventListeners(eventNames().webkitfullscreenchangeEvent) && target->hasEventListeners(eventNames().fullscreenchangeEvent)) && !(target->document().hasEventListeners(eventNames().webkitfullscreenchangeEvent) && target->document().hasEventListeners(eventNames().fullscreenchangeEvent));
+            if (shouldEmitUnprefixed)
+                target->dispatchEvent(Event::create(eventNames().webkitfullscreenchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
+            break;
+        }
+        case EventType::Error:
+            target->dispatchEvent(Event::create(eventNames().fullscreenerrorEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
+            target->dispatchEvent(Event::create(eventNames().webkitfullscreenerrorEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
+            break;
+        }
     }
 }
 
@@ -678,14 +668,8 @@ void FullscreenManager::queueFullscreenChangeEventForDocument(Document& document
         ASSERT_NOT_REACHED();
         return;
     }
-    document.fullscreenManager().addElementToChangeEventQueue(*target);
+    document.fullscreenManager().queueFullscreenChangeEventForElement(*target);
     document.scheduleRenderingUpdate(RenderingUpdateStep::Fullscreen);
-}
-
-void FullscreenManager::emptyEventQueue()
-{
-    m_fullscreenChangeEventTargetQueue.clear();
-    m_fullscreenErrorEventTargetQueue.clear();
 }
 
 // MARK: - Fullscreen animation pseudo-class.

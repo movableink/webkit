@@ -913,7 +913,7 @@ void Document::commonTeardown()
 
 #if ENABLE(FULLSCREEN_API)
     if (CheckedPtr fullscreenManager = m_fullscreenManager.get())
-        fullscreenManager->emptyEventQueue();
+        fullscreenManager->clearPendingEvents();
 #endif
 
     if (CheckedPtr svgExtensions = svgExtensionsIfExists())
