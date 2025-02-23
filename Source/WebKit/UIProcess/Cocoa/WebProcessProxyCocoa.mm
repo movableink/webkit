@@ -55,6 +55,7 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 #import "WebInspectorUtilities.h"
+#import <JavaScriptCore/RemoteInspector.h>
 #import <JavaScriptCore/RemoteInspectorConstants.h>
 #endif
 
@@ -69,6 +70,9 @@
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
 #import "TCCSoftLink.h"
 #endif
+
+#define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, connection())
+#define MESSAGE_CHECK_URL(url) MESSAGE_CHECK_BASE(checkURLReceivedFromWebProcess(url), connection())
 
 namespace WebKit {
 
@@ -268,5 +272,40 @@ void WebProcessProxy::setupLogStream(uint32_t pid, IPC::StreamServerConnectionHa
 }
 #endif // ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
 
+#if ENABLE(REMOTE_INSPECTOR)
+void WebProcessProxy::createServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier identifier, URL&& url)
+{
+    MESSAGE_CHECK_URL(url);
+    RELEASE_LOG(Inspector, "WebProcessProxy::createServiceWorkerDebuggable");
+    if (!shouldEnableRemoteInspector())
+        return;
+    Ref serviceWorkerDebuggableProxy = ServiceWorkerDebuggableProxy::create(url.string(), identifier, *this);
+    serviceWorkerDebuggableProxy->setInspectable(true);
+    serviceWorkerDebuggableProxy->init();
+    m_serviceWorkerDebuggableProxies.add(identifier, serviceWorkerDebuggableProxy);
 }
 
+void WebProcessProxy::deleteServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier identifier)
+{
+    RELEASE_LOG(Inspector, "WebProcessProxy::deleteServiceWorkerDebuggable");
+    if (!shouldEnableRemoteInspector())
+        return;
+    m_serviceWorkerDebuggableProxies.remove(identifier);
+}
+
+void WebProcessProxy::sendMessageToInspector(WebCore::ServiceWorkerIdentifier identifier, String&& message)
+{
+    RELEASE_LOG(Inspector, "WebProcessProxy::sendMessageToInspector");
+    if (!shouldEnableRemoteInspector())
+        return;
+    if (RefPtr serviceWorkerDebuggableProxy = m_serviceWorkerDebuggableProxies.get(identifier)) {
+        auto targetID = serviceWorkerDebuggableProxy->targetIdentifier();
+        Inspector::RemoteInspector::singleton().sendMessageToRemote(targetID, WTFMove(message));
+    }
+}
+#endif
+
+}
+
+#undef MESSAGE_CHECK_URL
+#undef MESSAGE_CHECK

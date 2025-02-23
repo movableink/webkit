@@ -79,6 +79,10 @@
 #include "LogStreamIdentifier.h"
 #endif
 
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+#include "ServiceWorkerDebuggableProxy.h"
+#endif
+
 namespace API {
 class Navigation;
 class PageConfiguration;
@@ -672,6 +676,12 @@ private:
     void setupLogStream(uint32_t pid, IPC::StreamServerConnectionHandle&&, LogStreamIdentifier, CompletionHandler<void(IPC::Semaphore& streamWakeUpSemaphore, IPC::Semaphore& streamClientWaitSemaphore)>&&);
 #endif
 
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+    void createServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier, URL&&);
+    void deleteServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier);
+    void sendMessageToInspector(WebCore::ServiceWorkerIdentifier, String&& message);
+#endif
+
     enum class IsWeak : bool { No, Yes };
     template<typename T> class WeakOrStrongPtr {
     public:
@@ -844,7 +854,9 @@ private:
     bool m_resourceMonitorRuleListRequestedBySomePage { false };
     RefPtr<WebCompiledContentRuleList> m_resourceMonitorRuleList;
 #endif
-
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+    HashMap<WebCore::ServiceWorkerIdentifier, Ref<ServiceWorkerDebuggableProxy>> m_serviceWorkerDebuggableProxies;
+#endif
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const WebProcessProxy&);

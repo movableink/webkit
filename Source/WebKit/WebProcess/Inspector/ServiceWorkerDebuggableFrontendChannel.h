@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,39 +25,30 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
-#include <wtf/Noncopyable.h>
+#include <JavaScriptCore/InspectorFrontendChannel.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/ThreadSafeWeakPtr.h>
+#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/WeakRef.h>
+#include <wtf/text/WTFString.h>
 
-// All of these methods should be called on the Main Thread.
-// Used to send messages to the WorkerInspector on the WorkerThread.
+namespace WebKit {
 
-namespace Inspector {
-class FrontendChannel;
-}
-
-namespace WebCore {
-
-class ServiceWorkerThreadProxy;
-
-class ServiceWorkerInspectorProxy {
-    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerInspectorProxy);
-    WTF_MAKE_NONCOPYABLE(ServiceWorkerInspectorProxy);
+class ServiceWorkerDebuggableFrontendChannel final : public ThreadSafeRefCounted<ServiceWorkerDebuggableFrontendChannel>, public Inspector::FrontendChannel {
+    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerDebuggableFrontendChannel);
+    WTF_MAKE_NONCOPYABLE(ServiceWorkerDebuggableFrontendChannel);
 public:
-    explicit ServiceWorkerInspectorProxy(ServiceWorkerThreadProxy&);
-    ~ServiceWorkerInspectorProxy();
-
-    void serviceWorkerTerminated();
-
-    WEBCORE_EXPORT void connectToWorker(Inspector::FrontendChannel&);
-    WEBCORE_EXPORT void disconnectFromWorker(Inspector::FrontendChannel&);
-    WEBCORE_EXPORT void sendMessageToWorker(String&&);
-    void sendMessageFromWorkerToFrontend(String&&);
+    static Ref<ServiceWorkerDebuggableFrontendChannel> create(WebCore::ServiceWorkerIdentifier);
+    virtual ~ServiceWorkerDebuggableFrontendChannel() = default;
 
 private:
-    ThreadSafeWeakPtr<ServiceWorkerThreadProxy> m_serviceWorkerThreadProxy;
-    Inspector::FrontendChannel* m_channel { nullptr };
+    explicit ServiceWorkerDebuggableFrontendChannel(WebCore::ServiceWorkerIdentifier);
+
+    ConnectionType connectionType() const final { return Inspector::FrontendChannel::ConnectionType::Remote; }
+    void sendMessageToFrontend(const String& message) final;
+
+    WebCore::ServiceWorkerIdentifier m_identifier;
 };
 
-} // namespace WebCore
+} // namespace WebKit

@@ -2379,6 +2379,10 @@
 		E3C6727329D4A3AD00AD4452 /* TextTrackRepresentationCocoa.h in Headers */ = {isa = PBXBuildFile; fileRef = E36A00E129CF4EBA00AC4E8A /* TextTrackRepresentationCocoa.h */; };
 		E3C788F22D035CED00D6C13D /* LogClient.h in Headers */ = {isa = PBXBuildFile; fileRef = E3C788EF2D035CED00D6C13D /* LogClient.h */; };
 		E3CAAA442413279900CED2E2 /* AccessibilitySupportSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = E3CAAA432413278A00CED2E2 /* AccessibilitySupportSPI.h */; };
+		E3D0A9412D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.h in Headers */ = {isa = PBXBuildFile; fileRef = E3D0A93F2D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.h */; };
+		E3D0A9422D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3D0A9402D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.cpp */; };
+		E3E6297E2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = E3E6297C2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.h */; };
+		E3E6297F2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3E6297D2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.cpp */; };
 		E3E84BDA2AE0AAE50091B3C2 /* XPCEndpoint.h in Copy Testing Headers */ = {isa = PBXBuildFile; fileRef = C14D306724B794E700480387 /* XPCEndpoint.h */; };
 		E3E84BDB2AE0AAE50091B3C2 /* XPCEndpointClient.h in Copy Testing Headers */ = {isa = PBXBuildFile; fileRef = C14D306824B794E700480387 /* XPCEndpointClient.h */; };
 		E3E84BEE2AE1AA5A0091B3C2 /* ExtensionKitSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = E3E84BED2AE1AA5A0091B3C2 /* ExtensionKitSPI.h */; };
@@ -8113,7 +8117,11 @@
 		E3C788F02D035CED00D6C13D /* LogClient.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LogClient.cpp; sourceTree = "<group>"; };
 		E3C788FE2D039A4F00D6C13D /* LogMessages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = LogMessages.in; sourceTree = "<group>"; };
 		E3CAAA432413278A00CED2E2 /* AccessibilitySupportSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AccessibilitySupportSPI.h; sourceTree = "<group>"; };
+		E3D0A93F2D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServiceWorkerDebuggableFrontendChannel.h; sourceTree = "<group>"; };
+		E3D0A9402D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ServiceWorkerDebuggableFrontendChannel.cpp; sourceTree = "<group>"; };
 		E3DC5B1A2C9AE09700D73BB3 /* LogStreamIdentifier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LogStreamIdentifier.h; sourceTree = "<group>"; };
+		E3E6297C2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServiceWorkerDebuggableProxy.h; sourceTree = "<group>"; };
+		E3E6297D2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ServiceWorkerDebuggableProxy.cpp; sourceTree = "<group>"; };
 		E3E84BED2AE1AA5A0091B3C2 /* ExtensionKitSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExtensionKitSPI.h; sourceTree = "<group>"; };
 		E3EFB02C2550617C003C2F96 /* WebSystemSoundDelegate.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebSystemSoundDelegate.cpp; sourceTree = "<group>"; };
 		E3EFB02D2550617C003C2F96 /* WebSystemSoundDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebSystemSoundDelegate.h; sourceTree = "<group>"; };
@@ -13624,6 +13632,10 @@
 				A55BA8121BA23E05007CD33D /* RemoteWebInspectorUI.cpp */,
 				A55BA8131BA23E05007CD33D /* RemoteWebInspectorUI.h */,
 				A55BA8141BA23E05007CD33D /* RemoteWebInspectorUI.messages.in */,
+				E3D0A9402D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.cpp */,
+				E3D0A93F2D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.h */,
+				E3E6297D2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.cpp */,
+				E3E6297C2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.h */,
 				1C8E2A1C1277833F00BC7BD0 /* WebInspector.messages.in */,
 				BC111A59112F4FBB00337BAB /* WebInspectorClient.cpp */,
 				BC032D6D10F4378D0058C15A /* WebInspectorClient.h */,
@@ -17166,6 +17178,8 @@
 				E18E6918169B667B009B6670 /* SecItemShimProxyMessages.h in Headers */,
 				570AB8F320AE3BD700B8BE87 /* SecKeyProxyStore.h in Headers */,
 				514D9F5719119D35000063A7 /* ServicesController.h in Headers */,
+				E3D0A9412D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.h in Headers */,
+				E3E6297E2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.h in Headers */,
 				5164658027A9C77400E1F2BA /* ServiceWorkerNotificationHandler.h in Headers */,
 				3A7D62D629D38DD300D57DAC /* ServiceWorkerStorageManager.h in Headers */,
 				1AFDE65A1954A42B00C48FFA /* SessionState.h in Headers */,
@@ -20069,6 +20083,8 @@
 				2DC18FB4218A6E9E0025A88D /* RemoteLayerTreeViews.mm in Sources */,
 				0701789E23BE9CFC005F0FAA /* RemoteMediaPlayerMIMETypeCache.cpp in Sources */,
 				7BCF70DE2615D06E00E4FB70 /* ScopedRenderingResourcesRequestCocoa.mm in Sources */,
+				E3D0A9422D62B1C90094538A /* ServiceWorkerDebuggableFrontendChannel.cpp in Sources */,
+				E3E6297F2D5FA8F200DAE50C /* ServiceWorkerDebuggableProxy.cpp in Sources */,
 				93468E6D2714AF88009983E3 /* SharedFileHandleCocoa.cpp in Sources */,
 				9BF622522C3E8559007F7021 /* SharedPreferencesForWebProcess.cpp in Sources */,
 				575B1BB923CE9C0B0020639A /* SimulatedInputDispatcher.cpp in Sources */,

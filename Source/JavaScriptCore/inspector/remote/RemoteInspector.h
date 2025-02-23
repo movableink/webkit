@@ -136,7 +136,7 @@ public:
     void registerTarget(RemoteControllableTarget*);
     void unregisterTarget(RemoteControllableTarget*);
     void updateTarget(RemoteControllableTarget*);
-    void sendMessageToRemote(TargetID, const String& message);
+    JS_EXPORT_PRIVATE void sendMessageToRemote(TargetID, const String& message);
 
     RemoteInspector::Client* client() const { return m_client; }
     JS_EXPORT_PRIVATE void setClient(RemoteInspector::Client*);

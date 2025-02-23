@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,41 +23,30 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "ServiceWorkerDebuggableFrontendChannel.h"
 
-#include <wtf/Forward.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/TZoneMalloc.h>
-#include <wtf/ThreadSafeWeakPtr.h>
+#include "MessageSenderInlines.h"
+#include "WebProcess.h"
+#include "WebProcessProxyMessages.h"
 
-// All of these methods should be called on the Main Thread.
-// Used to send messages to the WorkerInspector on the WorkerThread.
+namespace WebKit {
 
-namespace Inspector {
-class FrontendChannel;
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ServiceWorkerDebuggableFrontendChannel);
+
+Ref<ServiceWorkerDebuggableFrontendChannel> ServiceWorkerDebuggableFrontendChannel::create(WebCore::ServiceWorkerIdentifier identifier)
+{
+    return adoptRef(*new ServiceWorkerDebuggableFrontendChannel(identifier));
 }
 
-namespace WebCore {
+ServiceWorkerDebuggableFrontendChannel::ServiceWorkerDebuggableFrontendChannel(WebCore::ServiceWorkerIdentifier identifier)
+    : m_identifier(identifier)
+{
+}
 
-class ServiceWorkerThreadProxy;
+void ServiceWorkerDebuggableFrontendChannel::sendMessageToFrontend(const String& message)
+{
+    WebProcess::singleton().send(Messages::WebProcessProxy::SendMessageToInspector(m_identifier, message));
+}
 
-class ServiceWorkerInspectorProxy {
-    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerInspectorProxy);
-    WTF_MAKE_NONCOPYABLE(ServiceWorkerInspectorProxy);
-public:
-    explicit ServiceWorkerInspectorProxy(ServiceWorkerThreadProxy&);
-    ~ServiceWorkerInspectorProxy();
-
-    void serviceWorkerTerminated();
-
-    WEBCORE_EXPORT void connectToWorker(Inspector::FrontendChannel&);
-    WEBCORE_EXPORT void disconnectFromWorker(Inspector::FrontendChannel&);
-    WEBCORE_EXPORT void sendMessageToWorker(String&&);
-    void sendMessageFromWorkerToFrontend(String&&);
-
-private:
-    ThreadSafeWeakPtr<ServiceWorkerThreadProxy> m_serviceWorkerThreadProxy;
-    Inspector::FrontendChannel* m_channel { nullptr };
-};
-
-} // namespace WebCore
+} // namespace WebKit

@@ -632,7 +632,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
     setEnabledServices(parameters.hasImageServices, parameters.hasSelectionServices, parameters.hasRichContentServices);
 #endif
 
-#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA) && !ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
     if (std::optional<audit_token_t> auditToken = protectedParentProcessConnection()->getAuditToken()) {
         RetainPtr<CFDataRef> auditData = adoptCF(CFDataCreate(nullptr, (const UInt8*)&*auditToken, sizeof(*auditToken)));
         Inspector::RemoteInspector::singleton().setParentProcessInformation(legacyPresentingApplicationPID(), auditData);

@@ -58,6 +58,7 @@ struct ServiceWorkerContextData;
 namespace WebKit {
 
 class RemoteWorkerFrameLoaderClient;
+class ServiceWorkerDebuggableFrontendChannel;
 class WebServiceWorkerFetchTaskClient;
 class WebUserContentController;
 struct RemoteWorkerInitializationData;
@@ -134,6 +135,12 @@ private:
     void setRegistrationLastUpdateTime(WebCore::ServiceWorkerRegistrationIdentifier, WallTime);
     void setRegistrationUpdateViaCache(WebCore::ServiceWorkerRegistrationIdentifier, WebCore::ServiceWorkerUpdateViaCache);
 
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+    void connectToInspector(WebCore::ServiceWorkerIdentifier);
+    void disconnectFromInspector(WebCore::ServiceWorkerIdentifier);
+    void dispatchMessageFromInspector(WebCore::ServiceWorkerIdentifier, String&&);
+#endif
+
     Ref<IPC::Connection> m_connectionToNetworkProcess;
     const WebCore::Site m_site;
     std::optional<WebCore::ScriptExecutionContextIdentifier> m_serviceWorkerPageIdentifier;
@@ -150,6 +157,9 @@ private:
 
     using FetchKey = std::pair<WebCore::SWServerConnectionIdentifier, WebCore::FetchIdentifier>;
     HashMap<FetchKey, Ref<WebServiceWorkerFetchTaskClient>> m_ongoingNavigationFetchTasks WTF_GUARDED_BY_CAPABILITY(m_queue.get());
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+    HashMap<WebCore::ServiceWorkerIdentifier, Ref<ServiceWorkerDebuggableFrontendChannel>> m_channels;
+#endif
 };
 
 } // namespace WebKit
