@@ -1213,8 +1213,6 @@ rendering/RenderTheme.cpp
 rendering/RenderTreeAsText.cpp
 rendering/RenderVTTCue.cpp
 rendering/RenderVideo.cpp
-rendering/RenderView.cpp
-rendering/RenderViewTransitionCapture.cpp
 rendering/RenderWidget.cpp
 rendering/TextBoxPainter.cpp
 rendering/TextPaintStyle.cpp

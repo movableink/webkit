@@ -84,7 +84,6 @@ rendering/RenderScrollbar.cpp
 rendering/RenderScrollbarPart.cpp
 rendering/RenderSearchField.cpp
 rendering/RenderTreeAsText.cpp
-rendering/RenderView.cpp
 rendering/RenderWidget.cpp
 rendering/svg/RenderSVGRoot.cpp
 rendering/svg/SVGPaintServerHandling.h

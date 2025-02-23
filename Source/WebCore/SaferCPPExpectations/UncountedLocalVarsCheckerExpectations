@@ -664,7 +664,6 @@ rendering/RenderTextControlSingleLine.cpp
 rendering/RenderTextControlSingleLine.h
 rendering/RenderTheme.cpp
 rendering/RenderTreeAsText.cpp
-rendering/RenderView.cpp
 rendering/RenderWidget.cpp
 rendering/TextBoxPainter.cpp
 rendering/TextPaintStyle.cpp

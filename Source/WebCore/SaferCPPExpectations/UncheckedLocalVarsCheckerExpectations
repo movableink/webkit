@@ -69,7 +69,6 @@ rendering/RenderObject.cpp
 rendering/RenderReplaced.cpp
 rendering/RenderTextControlSingleLine.cpp
 rendering/RenderTreeAsText.cpp
-rendering/RenderView.cpp
 rendering/RenderWidget.cpp
 style/StyleResolver.cpp
 testing/Internals.cpp
