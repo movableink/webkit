@@ -686,30 +686,16 @@ const AXCoreObject::AccessibilityChildrenVector& AXIsolatedObject::children(bool
 #elif USE(ATSPI)
     ASSERT(!isMainThread());
 #endif
-    RefPtr<AXIsolatedObject> protectedThis;
-    if (updateChildrenIfNeeded) {
-        // updateBackingStore can delete `this`, so protect it until the end of this function.
-        protectedThis = this;
-        updateBackingStore();
-
-        if (m_childrenDirty) {
-            m_children = WTF::compactMap(m_childrenIDs, [&](auto& childID) -> std::optional<Ref<AXCoreObject>> {
-                if (RefPtr child = tree()->objectForID(childID))
-                    return child.releaseNonNull();
-                return std::nullopt;
-            });
-            m_childrenDirty = false;
-        }
+    if (updateChildrenIfNeeded && m_childrenDirty) {
+        m_children = WTF::compactMap(m_childrenIDs, [&](auto& childID) -> std::optional<Ref<AXCoreObject>> {
+            if (RefPtr child = tree()->objectForID(childID))
+                return child.releaseNonNull();
+            return std::nullopt;
+        });
+        m_childrenDirty = false;
         ASSERT(m_children.size() == m_childrenIDs.size());
     }
     return m_children;
-}
-
-void AXIsolatedObject::updateChildrenIfNecessary()
-{
-    // FIXME: this is a no-op for isolated objects and should be removed from
-    // the public interface. It is used in the mac implementation of
-    // [WebAccessibilityObjectWrapper accessibilityHitTest].
 }
 
 void AXIsolatedObject::setSelectedChildren(const AccessibilityChildrenVector& selectedChildren)

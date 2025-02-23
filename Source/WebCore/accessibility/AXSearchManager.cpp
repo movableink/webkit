@@ -198,7 +198,7 @@ bool AXSearchManager::matchWithResultsLimit(Ref<AXCoreObject> object, const Acce
 static void appendAccessibilityObject(Ref<AXCoreObject> object, AccessibilityObject::AccessibilityChildrenVector& results)
 {
     if (LIKELY(!object->isAttachment()))
-        results.append(object);
+        results.append(WTFMove(object));
     else {
         // Find the next descendant of this attachment object so search can continue through frames.
         Widget* widget = object->widgetForAttachmentView();
@@ -250,7 +250,12 @@ static void appendChildrenToArray(Ref<AXCoreObject> object, bool isForward, RefP
         startObject = newStartObject;
     }
 
-    size_t searchPosition = startObject ? searchChildren.find(Ref { *startObject }) : notFound;
+    size_t searchPosition = notFound;
+    if (startObject) {
+        searchPosition = searchChildren.findIf([&] (const Ref<AXCoreObject>& object) {
+            return startObject == object.ptr();
+        });
+    }
 
     if (searchPosition != notFound) {
         if (isForward)

@@ -2055,7 +2055,8 @@ id parameterizedAttributeValueForTesting(const RefPtr<AXCoreObject>& backingObje
     if (!backingObject)
         return nil;
 
-    backingObject->updateChildrenIfNecessary();
+    if (auto* axObject = dynamicDowncast<AccessibilityObject>(backingObject.get()))
+        axObject->updateChildrenIfNecessary();
     auto* axObject = backingObject->accessibilityHitTest(IntPoint(point));
 
     id hit = nil;

@@ -1282,7 +1282,6 @@ public:
     // is the default, we should rename this function to childrenIDsIncludingIgnored, as that is what all
     // callers will expect at the time this comment was written.
     Vector<AXID> childrenIDs(bool updateChildrenIfNeeded = true);
-    virtual void updateChildrenIfNecessary() = 0;
     AXCoreObject* nextInPreOrder(bool updateChildrenIfNeeded = true, AXCoreObject* stayWithin = nullptr);
     AXCoreObject* nextSiblingIncludingIgnored(bool updateChildrenIfNeeded) const;
     AXCoreObject* nextUnignoredSibling(bool updateChildrenIfNeeded, AXCoreObject* unignoredParent = nullptr) const;

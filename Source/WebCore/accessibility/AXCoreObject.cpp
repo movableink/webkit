@@ -271,9 +271,6 @@ AXCoreObject* AXCoreObject::firstUnignoredChild()
 
 AXCoreObject* AXCoreObject::nextInPreOrder(bool updateChildrenIfNeeded, AXCoreObject* stayWithin)
 {
-    if (updateChildrenIfNeeded)
-        updateChildrenIfNecessary();
-
     const auto& children = childrenIncludingIgnored(updateChildrenIfNeeded);
     if (!children.isEmpty()) {
         auto role = roleValue();
@@ -299,9 +296,6 @@ AXCoreObject* AXCoreObject::nextInPreOrder(bool updateChildrenIfNeeded, AXCoreOb
 
 AXCoreObject* AXCoreObject::previousInPreOrder(bool updateChildrenIfNeeded, AXCoreObject* stayWithin)
 {
-    if (updateChildrenIfNeeded)
-        updateChildrenIfNecessary();
-
     if (stayWithin == this)
         return nullptr;
 
@@ -337,7 +331,9 @@ AXCoreObject* AXCoreObject::nextSiblingIncludingIgnored(bool updateChildrenIfNee
         return nullptr;
 
     const auto& siblings = parent->childrenIncludingIgnored(updateChildrenIfNeeded);
-    size_t indexOfThis = siblings.find(Ref { *this });
+    size_t indexOfThis = siblings.findIf([this] (const Ref<AXCoreObject>& object) {
+        return object.ptr() == this;
+    });
     if (indexOfThis == notFound)
         return nullptr;
 
@@ -351,7 +347,9 @@ AXCoreObject* AXCoreObject::previousSiblingIncludingIgnored(bool updateChildrenI
         return nullptr;
 
     const auto& siblings = parent->childrenIncludingIgnored(updateChildrenIfNeeded);
-    size_t indexOfThis = siblings.find(Ref { *this });
+    size_t indexOfThis = siblings.findIf([this] (const Ref<AXCoreObject>& object) {
+        return object.ptr() == this;
+    });
     if (indexOfThis == notFound)
         return nullptr;
 
@@ -368,7 +366,9 @@ AXCoreObject* AXCoreObject::nextUnignoredSibling(bool updateChildrenIfNeeded, AX
     if (!parent)
         return nullptr;
     const auto& siblings = parent->unignoredChildren(updateChildrenIfNeeded);
-    size_t indexOfThis = siblings.find(Ref { *this });
+    size_t indexOfThis = siblings.findIf([this] (const Ref<AXCoreObject>& object) {
+        return object.ptr() == this;
+    });
     if (indexOfThis == notFound)
         return nullptr;
 

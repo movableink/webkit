@@ -542,7 +542,7 @@ public:
             addChild(*object, descend);
     }
     virtual bool canHaveChildren() const { return true; }
-    void updateChildrenIfNecessary() override;
+    virtual void updateChildrenIfNecessary();
     virtual void setNeedsToUpdateChildren() { }
     virtual void setNeedsToUpdateSubtree() { }
     virtual void clearChildren();

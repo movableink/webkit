@@ -967,30 +967,35 @@ AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreak
     // - ignoreBRs: In most cases, we want to skip <br> tags when not in an editable context. This is not true,
     //   for example, when computing text marker indexes.
 
-    if (!isValid())
-        return { };
-    if (!isInTextRun())
-        return toTextRunMarker().findMarker(direction, coalesceObjectBreaks, ignoreBRs, stopAtID);
-
     RefPtr object = isolatedObject();
+    if (!object) {
+        // Equivalent to checking AXTextMarker::isValid, but "inlined" because this function is super hot.
+        return { };
+    }
+    const auto* runs = object->textRuns();
+    if (!runs || !runs->size()) {
+        // Equivalent to checking AXTextMarker::isInTextRun, but "inlined" because this function is super hot.
+        return toTextRunMarker().findMarker(direction, coalesceObjectBreaks, ignoreBRs, stopAtID);
+    }
 
     // If the BR isn't in an editable ancestor, we shouldn't be including it (in most cases of findMarker).
     bool shouldSkipBR = ignoreBRs == IgnoreBRs::Yes && object && object->roleValue() == AccessibilityRole::LineBreak && !object->editableAncestor();
-    bool isWithinRunBounds = ((direction == AXDirection::Next && offset() < runs()->totalLength()) || (direction == AXDirection::Previous && offset()));
+    bool isWithinRunBounds = ((direction == AXDirection::Next && offset() < runs->totalLength()) || (direction == AXDirection::Previous && offset()));
     if (!shouldSkipBR && isWithinRunBounds) {
-        if (runs()->containsOnlyASCII) {
+        if (runs->containsOnlyASCII) {
             // In the common case where the text-runs only contain ASCII, all we need to do is the move the offset by 1,
             // which is more efficient than turning the runs into a string and creating a CachedTextBreakIterator.
             return AXTextMarker { treeID(), objectID(), direction == AXDirection::Next ? offset() + 1 : offset() - 1 };
         }
 
-        CachedTextBreakIterator iterator(runs()->toString(), { }, TextBreakIterator::CaretMode { }, nullAtom());
+        CachedTextBreakIterator iterator(runs->toString(), { }, TextBreakIterator::CaretMode { }, nullAtom());
         unsigned newOffset = direction == AXDirection::Next ? iterator.following(offset()).value_or(offset() + 1) : iterator.preceding(offset()).value_or(offset() - 1);
         return AXTextMarker { treeID(), objectID(), newOffset };
     }
 
     // offset() pointed to the last character in the given object's runs, so let's traverse to find the next object with runs.
-    if (RefPtr object = findObjectWithRuns(*isolatedObject(), direction, stopAtID)) {
+    object = findObjectWithRuns(*object, direction, stopAtID);
+    if (object) {
         RELEASE_ASSERT(direction == AXDirection::Next ? object->textRuns()->runLength(0) : object->textRuns()->lastRunLength());
 
         // The startingOffset is used to advance one position farther when we are coalescing object breaks and skipping positions.
@@ -1000,7 +1005,6 @@ AXTextMarker AXTextMarker::findMarker(AXDirection direction, CoalesceObjectBreak
 
         return AXTextMarker { *object, direction == AXDirection::Next ? startingOffset : object->textRuns()->lastRunLength() - startingOffset };
     }
-
     return { };
 }
 

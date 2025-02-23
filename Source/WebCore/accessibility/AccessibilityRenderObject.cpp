@@ -2450,8 +2450,12 @@ void AccessibilityRenderObject::addNodeOnlyChildren()
                     childObject = nullptr;
             }
 
-            if (childObject)
-                insertionIndex = m_children.find(Ref { *childObject }) + 1;
+            if (childObject) {
+                insertionIndex = m_children.findIf([&childObject] (const Ref<AXCoreObject>& child) {
+                    return child.ptr() == childObject;
+                });
+                ++insertionIndex;
+            }
             continue;
         }
 
