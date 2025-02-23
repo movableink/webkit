@@ -62,7 +62,6 @@ private:
     void paint(PaintInfo&, const LayoutPoint&) final;
 
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
-    void layout() final;
 
     void computePreferredLogicalWidths() final;
 

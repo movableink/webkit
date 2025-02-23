@@ -263,18 +263,8 @@ void RenderListItem::styleDidChange(StyleDifference diff, const RenderStyle* old
 {
     RenderBlockFlow::styleDidChange(diff, oldStyle);
 
-    if (!oldStyle || oldStyle->counterDirectives().map.get("list-item"_s) == style().counterDirectives().map.get("list-item"_s))
-        return;
-
-    counterDirectivesChanged();
-}
-
-void RenderListItem::layout()
-{
-    StackStats::LayoutCheckPoint layoutCheckPoint;
-    ASSERT(needsLayout());
-
-    RenderBlockFlow::layout();
+    if (diff == StyleDifference::Layout && oldStyle && oldStyle->counterDirectives().map.get("list-item"_s) != style().counterDirectives().map.get("list-item"_s))
+        counterDirectivesChanged();
 }
 
 void RenderListItem::computePreferredLogicalWidths()
