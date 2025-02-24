@@ -240,12 +240,12 @@ private:
 
 WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename T>, Lexer<T>);
 
-JS_EXPORT_PRIVATE extern const uint8_t whiteSpaceTable[256];
+JS_EXPORT_PRIVATE extern const WTF::BitSet<256> whiteSpaceTable;
 
 template <>
 ALWAYS_INLINE bool Lexer<LChar>::isWhiteSpace(LChar ch)
 {
-    return whiteSpaceTable[ch];
+    return whiteSpaceTable.get(ch);
 }
 
 template <>
