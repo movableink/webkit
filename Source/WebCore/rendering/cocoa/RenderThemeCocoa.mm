@@ -43,6 +43,7 @@
 #import "RenderProgress.h"
 #import "RenderSlider.h"
 #import "RenderText.h"
+#import "Theme.h"
 #import "TypedElementDescendantIteratorInlines.h"
 #import "UserAgentScripts.h"
 #import "UserAgentStyleSheets.h"

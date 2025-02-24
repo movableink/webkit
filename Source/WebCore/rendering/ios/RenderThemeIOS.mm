@@ -773,8 +773,8 @@ bool RenderThemeIOS::paintSwitchTrack(const RenderObject& renderer, const PaintI
 bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (paintProgressBarForCatalyst(renderer, paintInfo, rect))
-        return false;
+    if (renderer.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintProgressBar(renderer, paintInfo, rect);
 #endif
 
     auto* renderProgress = dynamicDowncast<RenderProgress>(renderer);
