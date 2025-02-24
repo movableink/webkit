@@ -159,9 +159,8 @@ void ResourceMonitorChecker::setNetworkUsageThreshold(size_t threshold, double r
     m_networkUsageThreshold = threshold;
     m_networkUsageThresholdRandomness = randomness;
 
-    m_resourceMonitors.forEach([this](auto& resourceMonitor) {
-        resourceMonitor.updateNetworkUsageThreshold(networkUsageThresholdWithNoise());
-    });
+    for (auto& resourceMonitor : copyToVectorOf<Ref<ResourceMonitor>>(m_resourceMonitors))
+        resourceMonitor->updateNetworkUsageThreshold(networkUsageThresholdWithNoise());
 }
 
 } // namespace WebCore

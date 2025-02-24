@@ -41,7 +41,7 @@ namespace WebCore {
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#define RESOURCEMONITOR_RELEASE_LOG(fmt, ...) RELEASE_LOG(ResourceMonitoring, "ResourceMonitor(frame %" PRIu64 ")::" fmt, m_frame->frameID().object().toUInt64(), ##__VA_ARGS__)
+#define RESOURCEMONITOR_RELEASE_LOG(fmt, ...) RELEASE_LOG_IF(m_frame, ResourceMonitoring, "ResourceMonitor(frame %" PRIu64 ")::" fmt, m_frame->frameID().object().toUInt64(), ##__VA_ARGS__)
 
 Ref<ResourceMonitor> ResourceMonitor::create(LocalFrame& frame)
 {
