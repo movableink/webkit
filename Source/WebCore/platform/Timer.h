@@ -158,7 +158,7 @@ public:
     template<typename TimerFiredClass, typename TimerFiredBaseClass>
     requires (WTF::HasRefPtrMemberFunctions<TimerFiredClass>::value)
     Timer(TimerFiredClass& object, void (TimerFiredBaseClass::*function)())
-        : m_function([objectPtr = &object, function] {
+        : m_function([objectPtr = &object, function] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE {
             Ref protectedObject { *objectPtr };
             (objectPtr->*function)();
         })
