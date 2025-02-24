@@ -3767,9 +3767,9 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIncludesValueInt32OrContiguous, UCPUStric
     if (searchElement.isInt32()) {
         for (; index < length; ++index) {
             JSValue value = data[index].get();
-            if (!value || !value.isInt32())
+            if (!value || !value.isNumber())
                 continue;
-            if (searchElement.asInt32() == value.asInt32())
+            if (searchElement.asInt32() == value.asNumber())
                 OPERATION_RETURN(scope, toUCPUStrictInt32(1));
         }
         OPERATION_RETURN(scope, toUCPUStrictInt32(0));
