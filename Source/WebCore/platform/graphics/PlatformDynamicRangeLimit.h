@@ -59,7 +59,8 @@ private:
 
     constexpr PlatformDynamicRangeLimit(float value) : m_value(std::clamp(value, 0.0f, 1.0f)) { }
 
-    constexpr PlatformDynamicRangeLimit(float standardPercent, float constrainedHighPercent, float noLimitPercent) : m_value(normalizedAverage(standardPercent, constrainedHighPercent, noLimitPercent)) { }
+    PlatformDynamicRangeLimit(float standardPercent, float constrainedHighPercent, float noLimitPercent)
+        : m_value(normalizedAverage(standardPercent, constrainedHighPercent, noLimitPercent)) { }
 
     static float normalizedAverage(float standardPercent, float constrainedHighPercent, float noLimitPercent);
 
