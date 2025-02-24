@@ -29,6 +29,7 @@
 #include "NetworkDataTask.h"
 #include "NetworkLoadParameters.h"
 #include "NetworkSession.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
@@ -120,7 +121,7 @@ private:
 
     void notifyDidReceiveResponse(WebCore::ResourceResponse&&, NegotiatedLegacyTLS, PrivateRelayed, ResponseCompletionHandler&&);
 
-    std::reference_wrapper<NetworkLoadClient> m_client;
+    CheckedRef<NetworkLoadClient> m_client;
     const Ref<NetworkProcess> m_networkProcess;
     const NetworkLoadParameters m_parameters;
     RefPtr<NetworkDataTask> m_task;

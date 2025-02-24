@@ -50,6 +50,7 @@ namespace NetworkCache {
 
 class SpeculativeLoad final : public NetworkLoadClient {
     WTF_MAKE_TZONE_ALLOCATED(SpeculativeLoad);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SpeculativeLoad);
 public:
     using RevalidationCompletionHandler = CompletionHandler<void(std::unique_ptr<NetworkCache::Entry>)>;
     SpeculativeLoad(Cache&, const GlobalFrameID&, const WebCore::ResourceRequest&, std::unique_ptr<NetworkCache::Entry>, std::optional<NavigatingToAppBoundDomain>, bool allowPrivacyProxy, OptionSet<WebCore::AdvancedPrivacyProtections>, RevalidationCompletionHandler&&);

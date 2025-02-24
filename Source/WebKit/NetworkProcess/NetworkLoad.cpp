@@ -135,12 +135,12 @@ void NetworkLoad::reprioritizeRequest(ResourceLoadPriority priority)
 
 bool NetworkLoad::shouldCaptureExtraNetworkLoadMetrics() const
 {
-    return m_client.get().shouldCaptureExtraNetworkLoadMetrics();
+    return m_client->shouldCaptureExtraNetworkLoadMetrics();
 }
 
 bool NetworkLoad::isAllowedToAskUserForCredentials() const
 {
-    return m_client.get().isAllowedToAskUserForCredentials();
+    return m_client->isAllowedToAskUserForCredentials();
 }
 
 void NetworkLoad::convertTaskToDownload(PendingDownload& pendingDownload, const ResourceRequest& updatedRequest, const ResourceResponse& response, ResponseCompletionHandler&& completionHandler)
@@ -198,7 +198,7 @@ void NetworkLoad::willPerformHTTPRedirection(ResourceResponse&& redirectResponse
     request.setRequester(oldRequest.requester());
 
     m_currentRequest = request;
-    m_client.get().willSendRedirectedRequest(WTFMove(oldRequest), WTFMove(request), WTFMove(redirectResponse), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (ResourceRequest&& newRequest) mutable {
+    m_client->willSendRedirectedRequest(WTFMove(oldRequest), WTFMove(request), WTFMove(redirectResponse), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (ResourceRequest&& newRequest) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return completionHandler({ });
@@ -215,13 +215,13 @@ void NetworkLoad::willPerformHTTPRedirection(ResourceResponse&& redirectResponse
 
 void NetworkLoad::didReceiveChallenge(AuthenticationChallenge&& challenge, NegotiatedLegacyTLS negotiatedLegacyTLS, ChallengeCompletionHandler&& completionHandler)
 {
-    m_client.get().didReceiveChallenge(challenge);
+    m_client->didReceiveChallenge(challenge);
 
     auto scheme = challenge.protectionSpace().authenticationScheme();
     bool isTLSHandshake = scheme == ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested
         || scheme == ProtectionSpace::AuthenticationScheme::ClientCertificateRequested;
     if (!isAllowedToAskUserForCredentials() && !isTLSHandshake && !challenge.protectionSpace().isProxy()) {
-        m_client.get().didBlockAuthenticationChallenge();
+        m_client->didBlockAuthenticationChallenge();
         completionHandler(AuthenticationChallengeDisposition::UseCredential, { });
         return;
     }
@@ -234,7 +234,7 @@ void NetworkLoad::didReceiveChallenge(AuthenticationChallenge&& challenge, Negot
 
 void NetworkLoad::didReceiveInformationalResponse(ResourceResponse&& response)
 {
-    m_client.get().didReceiveInformationalResponse(WTFMove(response));
+    m_client->didReceiveInformationalResponse(WTFMove(response));
 }
 
 void NetworkLoad::didReceiveResponse(ResourceResponse&& response, NegotiatedLegacyTLS negotiatedLegacyTLS, PrivateRelayed privateRelayed, ResponseCompletionHandler&& completionHandler)
@@ -268,13 +268,13 @@ void NetworkLoad::notifyDidReceiveResponse(ResourceResponse&& response, Negotiat
         response.includeCertificateInfo(auditToken);
     }
 
-    m_client.get().didReceiveResponse(WTFMove(response), privateRelayed, WTFMove(completionHandler));
+    m_client->didReceiveResponse(WTFMove(response), privateRelayed, WTFMove(completionHandler));
 }
 
 void NetworkLoad::didReceiveData(const WebCore::SharedBuffer& buffer)
 {
     // FIXME: This should be the encoded data length, not the decoded data length.
-    m_client.get().didReceiveBuffer(buffer, buffer.size());
+    m_client->didReceiveBuffer(buffer, buffer.size());
 }
 
 void NetworkLoad::didCompleteWithError(const ResourceError& error, const WebCore::NetworkLoadMetrics& networkLoadMetrics)
@@ -283,34 +283,34 @@ void NetworkLoad::didCompleteWithError(const ResourceError& error, const WebCore
         scheduler->unschedule(*this, &networkLoadMetrics);
 
     if (error.isNull())
-        m_client.get().didFinishLoading(networkLoadMetrics);
+        m_client->didFinishLoading(networkLoadMetrics);
     else
-        m_client.get().didFailLoading(error);
+        m_client->didFailLoading(error);
 }
 
 void NetworkLoad::didSendData(uint64_t totalBytesSent, uint64_t totalBytesExpectedToSend)
 {
-    m_client.get().didSendData(totalBytesSent, totalBytesExpectedToSend);
+    m_client->didSendData(totalBytesSent, totalBytesExpectedToSend);
 }
 
 void NetworkLoad::wasBlocked()
 {
-    m_client.get().didFailLoading(blockedError(m_currentRequest));
+    m_client->didFailLoading(blockedError(m_currentRequest));
 }
 
 void NetworkLoad::cannotShowURL()
 {
-    m_client.get().didFailLoading(cannotShowURLError(m_currentRequest));
+    m_client->didFailLoading(cannotShowURLError(m_currentRequest));
 }
 
 void NetworkLoad::wasBlockedByRestrictions()
 {
-    m_client.get().didFailLoading(wasBlockedByRestrictionsError(m_currentRequest));
+    m_client->didFailLoading(wasBlockedByRestrictionsError(m_currentRequest));
 }
 
 void NetworkLoad::wasBlockedByDisabledFTP()
 {
-    m_client.get().didFailLoading(ftpDisabledError(m_currentRequest));
+    m_client->didFailLoading(ftpDisabledError(m_currentRequest));
 }
 
 void NetworkLoad::didNegotiateModernTLS(const URL& url)

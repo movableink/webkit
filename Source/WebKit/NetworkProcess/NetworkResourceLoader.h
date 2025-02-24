@@ -87,6 +87,8 @@ class NetworkResourceLoader final
     , public CanMakeWeakPtr<NetworkResourceLoader>
 #endif
     , public WebCore::ReportingClient {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(NetworkResourceLoader);
 public:
 #if ENABLE(CONTENT_FILTERING)
     void ref() const final { RefCounted::ref(); }
