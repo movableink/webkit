@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Igalia S.L.
+ * Copyright (C) 2024 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,25 +23,37 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "WebExtensionUtilities.h"
 
-#include "WebKitNavigationAction.h"
-#include "WebMouseEvent.h"
-#include <WebCore/FrameLoaderTypes.h>
-
-unsigned toPlatformModifiers(OptionSet<WebKit::WebEventModifier>);
-WebKitNavigationType toWebKitNavigationType(WebCore::NavigationType);
-unsigned toWebKitMouseButton(WebKit::WebMouseEventButton);
-unsigned toWebKitError(unsigned webCoreError);
 #if ENABLE(WK_WEB_EXTENSIONS)
-unsigned toWebKitWebExtensionError(unsigned apiError);
-unsigned toWebKitWebExtensionMatchPatternError(unsigned apiError);
-#endif
-unsigned toWebCoreError(unsigned webKitError);
 
-enum SnapshotRegion {
-    SnapshotRegionVisible,
-    SnapshotRegionFullDocument
-};
+#include <gtk/gtk.h>
+#include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/GUniquePtr.h>
 
-static constexpr auto networkCacheSubdirectory = "WebKitCache"_s;
+namespace TestWebKitAPI {
+namespace Util {
+
+GRefPtr<GBytes> makePNGData(int width, int height, int color)
+{
+    GRefPtr<GdkPixbuf> pixbuf = adoptGRef(gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, width, height));
+
+    if (!pixbuf)
+        return { };
+
+    gdk_pixbuf_fill(pixbuf.get(), color);
+
+    GUniqueOutPtr<GError> error;
+    gchar* buffer;
+    gsize bufferSize;
+    if (!gdk_pixbuf_save_to_buffer(pixbuf.get(), &buffer, &bufferSize, "png", &error.outPtr(), nullptr))
+        return { };
+
+    return adoptGRef(g_bytes_new_take(buffer, bufferSize));
+}
+
+} // namespace Util
+} // namespace TestWebKitAPI
+
+#endif // ENABLE(WK_WEB_EXTENSIONS)

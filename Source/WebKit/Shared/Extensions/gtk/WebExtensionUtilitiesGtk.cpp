@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Igalia S.L.
+ * Copyright (C) 2024 Igalia, S.L. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,25 +23,38 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "WebExtensionUtilities.h"
 
-#include "WebKitNavigationAction.h"
-#include "WebMouseEvent.h"
-#include <WebCore/FrameLoaderTypes.h>
+#include <gdk/gdk.h>
 
-unsigned toPlatformModifiers(OptionSet<WebKit::WebEventModifier>);
-WebKitNavigationType toWebKitNavigationType(WebCore::NavigationType);
-unsigned toWebKitMouseButton(WebKit::WebMouseEventButton);
-unsigned toWebKitError(unsigned webCoreError);
 #if ENABLE(WK_WEB_EXTENSIONS)
-unsigned toWebKitWebExtensionError(unsigned apiError);
-unsigned toWebKitWebExtensionMatchPatternError(unsigned apiError);
+
+namespace WebKit {
+
+Vector<double> availableScreenScales()
+{
+    Vector<double> screenScales;
+
+    auto* display = gdk_display_get_default();
+
+#if USE(GTK4)
+    auto* monitors = gdk_display_get_monitors(display);
+    unsigned currentMonitor = 0;
+    while (auto* item = g_list_model_get_item(monitors, currentMonitor++)) {
+        auto* monitor = GDK_MONITOR(item);
+        ASSERT(GDK_IS_MONITOR(monitor));
+        screenScales.append(gdk_monitor_get_scale_factor(monitor));
+    }
 #endif
-unsigned toWebCoreError(unsigned webKitError);
 
-enum SnapshotRegion {
-    SnapshotRegionVisible,
-    SnapshotRegionFullDocument
-};
+    if (!screenScales.isEmpty())
+        return screenScales;
 
-static constexpr auto networkCacheSubdirectory = "WebKitCache"_s;
+    // Assume 1x if we got no results. This can happen on headless devices (bots).
+    return { 1.0 };
+}
+
+} // namespace WebKit
+
+#endif // ENABLE(WK_WEB_EXTENSIONS)
