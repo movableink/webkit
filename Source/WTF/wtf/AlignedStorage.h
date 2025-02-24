@@ -30,7 +30,7 @@
 
 namespace WTF {
 
-template<typename T>
+template<typename T, size_t alignment = std::alignment_of_v<T>>
 class AlignedStorage {
 public:
     AlignedStorage() = default;
@@ -48,7 +48,7 @@ public:
     const T* operator->() const { return get(); }
 
 private:
-    struct alignas(T) Storage {
+    struct alignas(alignment) Storage {
         std::byte data[sizeof(T)];
     } m_storage;
 };
