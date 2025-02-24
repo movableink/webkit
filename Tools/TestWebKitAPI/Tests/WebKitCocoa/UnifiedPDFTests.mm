@@ -521,6 +521,7 @@ UNIFIED_PDF_TEST(MouseDidMoveOverPDF)
     TestWebKitAPI::Util::run(&done);
 }
 
+#if ENABLE(IOS_TOUCH_EVENTS)
 UNIFIED_PDF_TEST(SelectionClearsOnAnchorLinkTap)
 {
     RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
@@ -542,6 +543,7 @@ UNIFIED_PDF_TEST(SelectionClearsOnAnchorLinkTap)
     [webView waitForNextPresentationUpdate];
     EXPECT_WK_STREQ("", [contentView selectedText]);
 }
+#endif
 
 #endif
 
