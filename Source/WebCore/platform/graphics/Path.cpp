@@ -333,6 +333,7 @@ void Path::addPath(const Path& path, const AffineTransform& transform)
     if (path.isEmpty() || !transform.isInvertible())
         return;
 
+    // FIXME: This should inspect the incoming path and add just the segments if possible.
     ensurePlatformPathImpl().addPath(const_cast<Path&>(path).ensurePlatformPathImpl(), transform);
 }
 
