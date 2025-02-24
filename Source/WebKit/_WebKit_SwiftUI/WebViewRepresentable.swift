@@ -52,10 +52,16 @@ struct WebViewRepresentable {
         webView.allowsBackForwardNavigationGestures = environment.webViewAllowsBackForwardNavigationGestures.value != .disabled
         webView.allowsLinkPreview = environment.webViewAllowsLinkPreview.value != .disabled
 
+        let isOpaque = environment.webViewContentBackground != .hidden
+
 #if os(macOS)
-        webView._drawsBackground = environment.webViewContentBackground != .hidden
+        if webView._drawsBackground != isOpaque {
+            webView._drawsBackground = isOpaque
+        }
 #else
-        webView.isOpaque = environment.webViewContentBackground != .hidden
+        if webView.isOpaque != isOpaque {
+            webView.isOpaque = isOpaque
+        }
 #endif
 
         if EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .always || EquatableScrollBounceBehavior(environment.verticalScrollBounceBehavior) == .automatic {

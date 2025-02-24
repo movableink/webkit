@@ -1195,6 +1195,9 @@ bool RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
         m_renderView.setNeedsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly(false);
     }
 
+    if (m_scrolledContentsLayer)
+        updateOverflowControlsLayers();
+
     return true;
 }
 
