@@ -6046,6 +6046,13 @@
    },
    {
       "emails" : [
+         "mbrodesser@igalia.com"
+      ],
+      "github" : "mbrodesser-Igalia",
+      "name" : "Mirko Brodesser"
+   },
+   {
+      "emails" : [
          "bazzimoe3@gmail.com"
       ],
       "expertise" : "Web Extensions, WebKit API (Mac)",
