@@ -25,7 +25,6 @@
 
 public import SwiftUI
 @_spi(Private) @_spi(CrossImportOverlay) import WebKit
-internal import WebKit_Internal
 
 #if canImport(UIKit)
 typealias PlatformView = UIView
@@ -155,6 +154,11 @@ class CocoaWebViewAdapter: PlatformView, PlatformTextSearching {
     }
 #endif
 
+    // MARK: Scroll Geometry
+
+    var onScrollGeometryChange: OnScrollGeometryChangeContext?
+    private var currentScrollGeometry = ScrollGeometry(contentOffset: .zero, contentSize: .zero, contentInsets: .init(), containerSize: .zero)
+
     // MARK: Constraints
 
     private var webViewConstraints: [NSLayoutConstraint] = []
@@ -248,6 +252,29 @@ extension CocoaWebViewAdapter: WebPageWebView.Delegate {
         findContext?.canReplace ?? false
     }
 #endif
+
+    func geometryDidChange(_ geometry: WKScrollGeometryAdapter) {
+        let newScrollGeometry = ScrollGeometry(geometry)
+
+        defer {
+            self.currentScrollGeometry = newScrollGeometry
+        }
+
+        let oldScrollGeometry = self.currentScrollGeometry
+
+        guard let onScrollGeometryChange = self.onScrollGeometryChange else {
+            return
+        }
+
+        let transformedNew = onScrollGeometryChange.transform(newScrollGeometry)
+        let transformedOld = onScrollGeometryChange.transform(oldScrollGeometry)
+
+        guard transformedOld != transformedNew else {
+            return
+        }
+
+        onScrollGeometryChange.action(transformedOld, transformedNew)
+    }
 }
 
 #endif

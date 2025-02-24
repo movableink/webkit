@@ -81,6 +81,7 @@
 #import "WKPDFView.h"
 #import "WKPreferencesInternal.h"
 #import "WKProcessPoolInternal.h"
+#import "WKScrollGeometry.h"
 #import "WKSecurityOriginInternal.h"
 #import "WKSharedAPICast.h"
 #import "WKSnapshotConfigurationPrivate.h"
@@ -88,7 +89,7 @@
 #import "WKTextExtractionItem.h"
 #import "WKTextExtractionUtilities.h"
 #import "WKUIDelegate.h"
-#import "WKUIDelegatePrivate.h"
+#import "WKUIDelegateInternal.h"
 #import "WKUserContentControllerInternal.h"
 #import "WKWebViewConfigurationInternal.h"
 #import "WKWebViewContentProvider.h"
@@ -2951,6 +2952,30 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 - (WebCore::CocoaColor *)_sampledRightFixedPositionContentColor
 {
     return [self _sampledRightFixedPositionContentColor:_fixedContainerEdges];
+}
+
+- (void)_updateScrollGeometryWithContentOffset:(CGPoint)contentOffset contentSize:(CGSize)contentSize
+{
+    CGSize containerSize = self.frame.size;
+    auto contentInsets = _page->obscuredContentInsets();
+#if PLATFORM(IOS_FAMILY)
+    UIEdgeInsets cocoaInsets = UIEdgeInsetsMake(contentInsets.top(), contentInsets.left(), contentInsets.bottom(), contentInsets.right());
+#else
+    NSEdgeInsets cocoaInsets = NSEdgeInsetsMake(contentInsets.top(), contentInsets.left(), contentInsets.bottom(), contentInsets.right());
+#endif
+
+    RetainPtr oldScrollGeometry = _currentScrollGeometry;
+    RetainPtr newScrollGeometry = adoptNS([[WKScrollGeometry alloc] initWithContainerSize:containerSize contentInsets:cocoaInsets contentOffset:contentOffset contentSize:contentSize]);
+
+    if (oldScrollGeometry && [oldScrollGeometry isEqual:newScrollGeometry.get()])
+        return;
+
+    id<WKUIDelegateInternal> uiDelegate = (id<WKUIDelegateInternal>)self.UIDelegate;
+    if (![uiDelegate respondsToSelector:@selector(_webView:geometryDidChange:)])
+        return;
+
+    _currentScrollGeometry = newScrollGeometry;
+    [uiDelegate _webView:self geometryDidChange:newScrollGeometry.get()];
 }
 
 - (void)_updateFixedContainerEdges:(const WebCore::FixedContainerEdges&)edges

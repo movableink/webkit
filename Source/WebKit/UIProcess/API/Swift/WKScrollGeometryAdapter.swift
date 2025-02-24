@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Apple Inc. All rights reserved.
+// Copyright (C) 2025 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -23,28 +23,33 @@
 
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
-import Foundation
+public import Foundation
+internal import WebKit_Internal
 
-@MainActor
-func onNextMainRunLoop(do body: @escaping @MainActor () -> Void) {
-    RunLoop.main.perform(inModes: [.common]) {
-        MainActor.assumeIsolated {
-            body()
-        }
-    }
-}
+@_spi(CrossImportOverlay)
+public struct WKScrollGeometryAdapter {
+    @_spi(CrossImportOverlay)
+    public let containerSize: CGSize
 
-struct AnyEquatable: Equatable {
-    let value: Any
-    private let equals: (Any) -> Bool
+#if canImport(UIKit)
+    @_spi(CrossImportOverlay)
+    public let contentInsets: UIEdgeInsets
+#else
+    @_spi(CrossImportOverlay)
+    public let contentInsets: NSEdgeInsets
+#endif
 
-    init<E: Equatable>(_ value: E) {
-        self.value = value
-        self.equals = { ($0 as! E) == value }
-    }
+    @_spi(CrossImportOverlay)
+    public let contentOffset: CGPoint
 
-    static func == (lhs: AnyEquatable, rhs: AnyEquatable) -> Bool {
-        lhs.equals(rhs.value)
+    @_spi(CrossImportOverlay)
+    public let contentSize: CGSize
+
+    init(_ geometry: WKScrollGeometry) {
+        self.containerSize = geometry.containerSize
+        self.contentInsets = geometry.contentInsets
+        self.contentOffset = geometry.contentOffset
+        self.contentSize = geometry.contentSize
     }
 }
 

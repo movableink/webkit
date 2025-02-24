@@ -26,6 +26,7 @@
 import Foundation
 import Observation
 internal import WebKit_Private
+internal import WebKit_Internal
 
 @MainActor
 @_spi(CrossImportOverlay)
@@ -52,6 +53,10 @@ public final class WebPageWebView: WKWebView {
         return super.supportsTextReplacement() && delegate.supportsTextReplacement()
     }
 #endif
+
+    func geometryDidChange(_ geometry: WKScrollGeometryAdapter) {
+        delegate?.geometryDidChange(geometry)
+    }
 }
 
 extension WebPageWebView {
@@ -65,6 +70,8 @@ extension WebPageWebView {
 
         func supportsTextReplacement() -> Bool
 #endif
+
+        func geometryDidChange(_ geometry: WKScrollGeometryAdapter)
     }
 }
 

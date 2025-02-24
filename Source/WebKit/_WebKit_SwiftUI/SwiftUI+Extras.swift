@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Apple Inc. All rights reserved.
+// Copyright (C) 2025 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -21,31 +21,23 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
+public import SwiftUI
+@_spi(CrossImportOverlay) public import WebKit
 
-import Foundation
-
-@MainActor
-func onNextMainRunLoop(do body: @escaping @MainActor () -> Void) {
-    RunLoop.main.perform(inModes: [.common]) {
-        MainActor.assumeIsolated {
-            body()
-        }
+extension EdgeInsets {
+#if canImport(UIKit)
+    init(_ edgeInsets: UIEdgeInsets) {
+        self = EdgeInsets(top: edgeInsets.top, leading: edgeInsets.left, bottom: edgeInsets.bottom, trailing: edgeInsets.right)
     }
-}
-
-struct AnyEquatable: Equatable {
-    let value: Any
-    private let equals: (Any) -> Bool
-
-    init<E: Equatable>(_ value: E) {
-        self.value = value
-        self.equals = { ($0 as! E) == value }
+#else
+    init(_ edgeInsets: NSEdgeInsets) {
+        self = EdgeInsets(top: edgeInsets.top, leading: edgeInsets.left, bottom: edgeInsets.bottom, trailing: edgeInsets.right)
     }
-
-    static func == (lhs: AnyEquatable, rhs: AnyEquatable) -> Bool {
-        lhs.equals(rhs.value)
-    }
-}
-
 #endif
+}
+
+extension ScrollGeometry {
+    init(_ geometry: WKScrollGeometryAdapter) {
+        self = ScrollGeometry(contentOffset: geometry.contentOffset, contentSize: geometry.contentSize, contentInsets: EdgeInsets(geometry.contentInsets), containerSize: geometry.containerSize)
+    }
+}

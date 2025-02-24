@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Apple Inc. All rights reserved.
+// Copyright (C) 2025 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -21,31 +21,22 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
+internal import SwiftUI
+@_spi(Private) @_spi(CrossImportOverlay) internal import WebKit
 
-import Foundation
-
-@MainActor
-func onNextMainRunLoop(do body: @escaping @MainActor () -> Void) {
-    RunLoop.main.perform(inModes: [.common]) {
-        MainActor.assumeIsolated {
-            body()
-        }
-    }
-}
-
-struct AnyEquatable: Equatable {
-    let value: Any
-    private let equals: (Any) -> Bool
-
-    init<E: Equatable>(_ value: E) {
-        self.value = value
-        self.equals = { ($0 as! E) == value }
-    }
-
-    static func == (lhs: AnyEquatable, rhs: AnyEquatable) -> Bool {
-        lhs.equals(rhs.value)
-    }
-}
-
+struct ContextMenuContext {
+#if os(macOS)
+    let menu: (WebPage.ElementInfo) -> NSMenu
 #endif
+}
+
+struct OnScrollGeometryChangeContext {
+    let transform: (ScrollGeometry) -> AnyEquatable
+    let action: (AnyEquatable, AnyEquatable) -> Void
+}
+
+struct FindContext {
+    var isPresented: Binding<Bool>?
+    var canFind = true
+    var canReplace = true
+}

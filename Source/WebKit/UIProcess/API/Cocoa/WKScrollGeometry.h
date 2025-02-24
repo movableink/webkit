@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,13 +23,32 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// Add project-level Objective-C header files here to be able to access them from within Swift sources.
+#import <Foundation/Foundation.h>
+#import <WebKit/WKFoundation.h>
 
-#import <wtf/Platform.h>
+#if PLATFORM(IOS_FAMILY)
+#import <UIKit/UIKit.h>
+#endif
 
-#import "WKMaterialHostingSupport.h"
-#import "WKPreferencesInternal.h"
-#import "WKScrollGeometry.h"
-#import "WKUIDelegateInternal.h"
-#import "WKWebViewConfigurationInternal.h"
-#import "WKWebViewInternal.h"
+NS_SWIFT_SENDABLE
+@interface WKScrollGeometry : NSObject
+
+@property (nonatomic, readonly) CGSize containerSize;
+
+#if PLATFORM(IOS_FAMILY)
+@property (nonatomic, readonly) UIEdgeInsets contentInsets;
+#else
+@property (nonatomic, readonly) NSEdgeInsets contentInsets;
+#endif
+
+@property (nonatomic, readonly) CGPoint contentOffset;
+
+@property (nonatomic, readonly) CGSize contentSize;
+
+#if PLATFORM(IOS_FAMILY)
+- (instancetype)initWithContainerSize:(CGSize)containerSize contentInsets:(UIEdgeInsets)contentInsets contentOffset:(CGPoint)contentOffset contentSize:(CGSize)contentSize;
+#else
+- (instancetype)initWithContainerSize:(CGSize)containerSize contentInsets:(NSEdgeInsets)contentInsets contentOffset:(CGPoint)contentOffset contentSize:(CGSize)contentSize;
+#endif
+
+@end

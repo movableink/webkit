@@ -23,7 +23,6 @@
 
 internal import SwiftUI
 @_spi(Private) @_spi(CrossImportOverlay) import WebKit
-internal import WebKit_Internal
 
 @MainActor
 struct WebViewRepresentable {
@@ -82,6 +81,8 @@ struct WebViewRepresentable {
 
         webView.configuration.preferences.isTextInteractionEnabled = environment.webViewTextSelection
         webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewAllowsElementFullscreen
+
+        platformView.onScrollGeometryChange = environment.webViewOnScrollGeometryChange
 
         context.coordinator.update(platformView, configuration: self, environment: environment)
 

@@ -132,6 +132,7 @@ class ViewGestureController;
 
 @class WKContentView;
 @class WKPasswordView;
+@class WKScrollGeometry;
 @class WKScrollView;
 @class WKTextExtractionItem;
 @class WKTextExtractionRequest;
@@ -426,6 +427,8 @@ struct PerWebProcessState {
 #endif
 
     WebCore::FixedContainerEdges _fixedContainerEdges;
+
+    RetainPtr<WKScrollGeometry> _currentScrollGeometry;
 }
 
 - (BOOL)_isValid;
@@ -515,6 +518,7 @@ struct PerWebProcessState {
 #endif
 
 - (void)_updateFixedContainerEdges:(const WebCore::FixedContainerEdges&)edges;
+- (void)_updateScrollGeometryWithContentOffset:(CGPoint)contentOffset contentSize:(CGSize)contentSize;
 
 - (WKPageRef)_pageForTesting;
 - (NakedPtr<WebKit::WebPageProxy>)_page;

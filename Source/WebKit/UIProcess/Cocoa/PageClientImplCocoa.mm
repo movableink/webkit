@@ -26,6 +26,7 @@
 #import "config.h"
 #import "PageClientImplCocoa.h"
 
+#import "APIUIClient.h"
 #import "RemoteLayerTreeTransaction.h"
 #import "WKTextAnimationType.h"
 #import "WKWebViewInternal.h"
@@ -440,6 +441,7 @@ void PageClientImplCocoa::setFullScreenClientForTesting(std::unique_ptr<WebFullS
 void PageClientImplCocoa::didCommitLayerTree(const RemoteLayerTreeTransaction& transaction)
 {
     [webView() _updateFixedContainerEdges:transaction.fixedContainerEdges()];
+    [webView() _updateScrollGeometryWithContentOffset:transaction.scrollPosition() contentSize:transaction.contentsSize()];
 }
 
 } // namespace WebKit

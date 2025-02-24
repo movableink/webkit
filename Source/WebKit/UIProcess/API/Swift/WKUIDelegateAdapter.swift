@@ -25,6 +25,7 @@
 
 import Foundation
 internal import WebKit_Private
+internal import WebKit_Internal
 
 #if os(macOS) && !targetEnvironment(macCatalyst)
 @_spiOnly import WebKit_Private._WKContextMenuElementInfo
@@ -35,7 +36,7 @@ private struct DefaultDialogPresenting: DialogPresenting {
 }
 
 @MainActor
-final class WKUIDelegateAdapter: NSObject, WKUIDelegate {
+final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
     init(dialogPresenter: (any DialogPresenting)?) {
         self.dialogPresenter = dialogPresenter ?? DefaultDialogPresenting()
     }
@@ -112,6 +113,11 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegate {
         return menuBuilder(info)
     }
 #endif
+
+    @objc(_webView:geometryDidChange:)
+    func _webView(_ webView: WKWebView!, geometryDidChange geometry: WKScrollGeometry) {
+        owner?.backingWebView.geometryDidChange(WKScrollGeometryAdapter(geometry))
+    }
 }
 
 #endif
