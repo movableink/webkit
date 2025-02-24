@@ -1124,14 +1124,14 @@ String Editor::selectionStartCSSPropertyValue(CSSPropertyID propertyID)
     return selectionStyle->style()->getPropertyValue(propertyID);
 }
 
-static void notifyTextFromControls(Element* startRoot, Element* endRoot)
+static void notifyTextFromControls(Element* startRoot, Element* endRoot, bool wasUserEdit = true)
 {
     RefPtr startingTextControl { enclosingTextFormControl(firstPositionInOrBeforeNode(startRoot)) };
     RefPtr endingTextControl { enclosingTextFormControl(firstPositionInOrBeforeNode(endRoot)) };
     if (startingTextControl)
-        startingTextControl->didEditInnerTextValue();
+        startingTextControl->didEditInnerTextValue(wasUserEdit);
     if (endingTextControl && startingTextControl != endingTextControl)
-        endingTextControl->didEditInnerTextValue();
+        endingTextControl->didEditInnerTextValue(wasUserEdit);
 }
 
 static inline bool shouldRemoveAutocorrectionIndicator(bool shouldConsiderApplyingAutocorrection, bool autocorrectionWasApplied, bool isAutocompletion)
@@ -1246,7 +1246,11 @@ void Editor::appliedEditing(CompositeEditCommand& command)
     Ref composition = *command.composition();
     VisibleSelection newSelection(command.endingSelection());
 
-    notifyTextFromControls(composition->startingRootEditableElement(), composition->endingRootEditableElement());
+    bool wasUserEdit = [&command] {
+        RefPtr typingCommand = dynamicDowncast<TypingCommand>(command);
+        return !typingCommand || !typingCommand->triggeringEventWasCreatedFromBindings();
+    }();
+    notifyTextFromControls(composition->startingRootEditableElement(), composition->endingRootEditableElement(), wasUserEdit);
 
     if (command.isTopLevelCommand()) {
         // Don't clear the typing style with this selection change. We do those things elsewhere if necessary.
@@ -1454,7 +1458,8 @@ bool Editor::insertTextWithoutSendingTextEvent(const String& text, bool selectIn
                     options.add(TypingCommand::Option::IsAutocompletion);
                 if (shouldRemoveAutocorrectionIndicator(shouldConsiderApplyingAutocorrection, autocorrectionWasApplied, options.contains(TypingCommand::Option::IsAutocompletion)))
                     options.remove(TypingCommand::Option::RetainAutocorrectionIndicator);
-                TypingCommand::insertText(document.copyRef(), text, selection, options, triggeringEvent && triggeringEvent->isComposition() ? TypingCommand::TextCompositionType::Final : TypingCommand::TextCompositionType::None);
+                auto compositionType = triggeringEvent && triggeringEvent->isComposition() ? TypingCommand::TextCompositionType::Final : TypingCommand::TextCompositionType::None;
+                TypingCommand::insertText(document.copyRef(), text, triggeringEvent, selection, options, compositionType);
             }
 
             // Reveal the current selection. Note that focus may have changed after insertion.
@@ -2412,6 +2417,7 @@ void Editor::setComposition(const String& text, const Vector<CompositionUnderlin
     client()->startDelayingAndCoalescingContentChangeNotifications();
 #endif
 
+    RefPtr<CompositionEvent> event;
     RefPtr target { document->focusedElement() };
     if (target) {
         // Dispatch an appropriate composition event to the focused node.
@@ -2429,7 +2435,6 @@ void Editor::setComposition(const String& text, const Vector<CompositionUnderlin
         // 3. Canceling the ongoing composition.
         //    Send a compositionend event when function deletes the existing composition node, i.e.
         //    m_compositionNode != 0 && test.isEmpty().
-        RefPtr<CompositionEvent> event;
         if (!m_compositionNode) {
             // We should send a compositionstart event only when the given text is not empty because this
             // function doesn't create a composition node when the text is empty.
@@ -2465,7 +2470,7 @@ void Editor::setComposition(const String& text, const Vector<CompositionUnderlin
     m_customCompositionAnnotations.clear();
 
     if (!text.isEmpty()) {
-        TypingCommand::insertText(document.copyRef(), text, OptionSet { TypingCommand::Option::SelectInsertedText, TypingCommand::Option::PreventSpellChecking }, TypingCommand::TextCompositionType::Pending);
+        TypingCommand::insertText(document.copyRef(), text, event.get(), OptionSet { TypingCommand::Option::SelectInsertedText, TypingCommand::Option::PreventSpellChecking }, TypingCommand::TextCompositionType::Pending);
 
         // Find out what node has the composition now.
         Position base = document->selection().selection().base().downstream();

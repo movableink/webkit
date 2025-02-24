@@ -145,14 +145,14 @@ void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedE
     HTMLFormControlElement::dispatchBlurEvent(WTFMove(newFocusedElement));
 }
 
-void HTMLTextFormControlElement::didEditInnerTextValue()
+void HTMLTextFormControlElement::didEditInnerTextValue(bool wasUserEdit)
 {
     if (!renderer() || !isTextField())
         return;
 
     LOG(Editing, "HTMLTextFormControlElement %p didEditInnerTextValue", this);
 
-    m_lastChangeWasUserEdit = true;
+    m_lastChangeWasUserEdit = wasUserEdit;
     subtreeHasChanged();
 }
 
