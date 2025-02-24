@@ -347,7 +347,7 @@ public:
     JS_EXPORT_PRIVATE void setGarbageCollectionTimerEnabled(bool);
     JS_EXPORT_PRIVATE void scheduleOpportunisticFullCollection();
 
-    JS_EXPORT_PRIVATE IncrementalSweeper& sweeper();
+    IncrementalSweeper& sweeper() { return m_sweeper.get(); }
 
     void addObserver(HeapObserver* observer) { m_observers.append(observer); }
     void removeObserver(HeapObserver* observer) { m_observers.removeFirst(observer); }
@@ -877,7 +877,7 @@ private:
     
     RefPtr<GCActivityCallback> m_fullActivityCallback;
     RefPtr<GCActivityCallback> m_edenActivityCallback;
-    Ref<IncrementalSweeper> m_sweeper;
+    const Ref<IncrementalSweeper> m_sweeper;
     Ref<StopIfNecessaryTimer> m_stopIfNecessaryTimer;
 
     Vector<HeapObserver*> m_observers;

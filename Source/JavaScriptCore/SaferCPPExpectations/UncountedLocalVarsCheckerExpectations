@@ -118,7 +118,6 @@ runtime/StructureInlines.h
 runtime/SymbolConstructor.cpp
 runtime/SymbolTable.h
 runtime/TypeSet.cpp
-runtime/VM.cpp
 runtime/VMEntryScope.cpp
 runtime/VMTraps.cpp
 runtime/WaiterListManager.h

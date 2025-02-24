@@ -133,7 +133,6 @@ runtime/Symbol.cpp
 runtime/SymbolConstructor.cpp
 runtime/SymbolTable.cpp
 runtime/SyntheticModuleRecord.cpp
-runtime/VM.cpp
 runtime/WeakMapImpl.cpp
 runtime/WriteBarrier.h
 tools/CellProfile.h

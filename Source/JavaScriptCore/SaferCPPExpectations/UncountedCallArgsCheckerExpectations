@@ -171,8 +171,6 @@ runtime/TemporalObject.cpp
 runtime/TypeProfiler.cpp
 runtime/TypeProfilerLog.cpp
 runtime/TypeSet.cpp
-runtime/VM.cpp
-runtime/VM.h
 runtime/VMTraps.cpp
 runtime/WaiterListManager.cpp
 runtime/Watchdog.cpp

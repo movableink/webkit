@@ -2565,11 +2565,6 @@ RefPtr<GCActivityCallback> Heap::protectedEdenActivityCallback()
     return m_edenActivityCallback;
 }
 
-IncrementalSweeper& Heap::sweeper()
-{
-    return m_sweeper.get();
-}
-
 void Heap::setGarbageCollectionTimerEnabled(bool enable)
 {
     if (m_fullActivityCallback)

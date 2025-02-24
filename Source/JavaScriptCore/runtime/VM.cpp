@@ -220,7 +220,7 @@ static bool vmCreationShouldCrash = false;
 VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     : topCallFrame(CallFrame::noCaller())
     , m_identifier(VMIdentifier::generate())
-    , m_apiLock(adoptRef(new JSLock(this)))
+    , m_apiLock(adoptRef(*new JSLock(this)))
     , m_runLoop(runLoop ? *runLoop : WTF::RunLoop::current())
     , m_random(Options::seedOfVMRandomForFuzzer() ? Options::seedOfVMRandomForFuzzer() : cryptographicallyRandomNumber<uint32_t>())
     , m_heapRandom(Options::seedOfVMRandomForFuzzer() ? Options::seedOfVMRandomForFuzzer() : cryptographicallyRandomNumber<uint32_t>())
@@ -278,7 +278,7 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     setLastStackTop(Thread::current());
     stringSplitIndice.reserveInitialCapacity(256);
 
-    JSRunLoopTimer::Manager::shared().registerVM(*this);
+    JSRunLoopTimer::Manager::singleton().registerVM(*this);
 
     // Need to be careful to keep everything consistent here
     JSLockHolder lock(this);
@@ -410,8 +410,8 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         setShouldBuildPCToCodeOriginMapping();
 
     if (Options::watchdog()) {
-        Watchdog& watchdog = ensureWatchdog();
-        watchdog.setTimeLimit(Seconds::fromMilliseconds(Options::watchdog()));
+        Ref watchdog = ensureWatchdog();
+        watchdog->setTimeLimit(Seconds::fromMilliseconds(Options::watchdog()));
     }
 
     if (Options::useTracePoints())
@@ -465,7 +465,7 @@ VM::~VM()
     if (Wasm::Worklist* worklist = Wasm::existingWorklistOrNull())
         worklist->stopAllPlansForContext(*this);
 #endif
-    if (auto* watchdog = this->watchdog(); UNLIKELY(watchdog))
+    if (RefPtr watchdog = this->watchdog(); UNLIKELY(watchdog))
         watchdog->willDestroyVM(this);
     m_traps.willDestroyVM();
     m_isInService = false;
@@ -499,7 +499,7 @@ VM::~VM()
     smallStrings.setIsInitialized(false);
     heap.lastChanceToFinalize();
 
-    JSRunLoopTimer::Manager::shared().unregisterVM(*this);
+    JSRunLoopTimer::Manager::singleton().unregisterVM(*this);
 
     VMInspector::singleton().remove(this);
 
@@ -582,7 +582,7 @@ RefPtr<VM> VM::tryCreate(HeapType heapType, WTF::RunLoop* runLoop)
 SamplingProfiler& VM::ensureSamplingProfiler(Ref<Stopwatch>&& stopwatch)
 {
     if (!m_samplingProfiler) {
-        m_samplingProfiler = adoptRef(new SamplingProfiler(*this, WTFMove(stopwatch)));
+        lazyInitialize(m_samplingProfiler, adoptRef(*new SamplingProfiler(*this, WTFMove(stopwatch))));
         requestEntryScopeService(EntryScopeService::SamplingProfiler);
     }
     return *m_samplingProfiler;
@@ -590,7 +590,7 @@ SamplingProfiler& VM::ensureSamplingProfiler(Ref<Stopwatch>&& stopwatch)
 
 void VM::enableSamplingProfiler()
 {
-    SamplingProfiler* profiler = samplingProfiler();
+    RefPtr profiler = samplingProfiler();
     if (!profiler)
         profiler = &ensureSamplingProfiler(Stopwatch::create());
     profiler->start();
@@ -598,7 +598,7 @@ void VM::enableSamplingProfiler()
 
 void VM::disableSamplingProfiler()
 {
-    SamplingProfiler* profiler = samplingProfiler();
+    RefPtr profiler = samplingProfiler();
     if (!profiler)
         profiler = &ensureSamplingProfiler(Stopwatch::create());
     {
@@ -609,10 +609,8 @@ void VM::disableSamplingProfiler()
 
 RefPtr<JSON::Value> VM::takeSamplingProfilerSamplesAsJSON()
 {
-    SamplingProfiler* profiler = samplingProfiler();
-    if (!profiler)
-        return nullptr;
-    return profiler->stackTracesAsJSON();
+    RefPtr profiler = samplingProfiler();
+    return profiler ? RefPtr { profiler->stackTracesAsJSON() } : nullptr;
 }
 
 #endif // ENABLE(SAMPLING_PROFILER)
@@ -714,33 +712,33 @@ static Ref<NativeJITCode> jitCodeForCallTrampoline(Intrinsic intrinsic)
     switch (intrinsic) {
 #if ENABLE(WEBASSEMBLY)
     case WasmFunctionIntrinsic: {
-        static NativeJITCode* result;
+        static LazyNeverDestroyed<Ref<NativeJITCode>> result;
         static std::once_flag onceKey;
         std::call_once(onceKey, [&] {
-            result = new NativeJITCode(LLInt::getCodeRef<JSEntryPtrTag>(js_to_wasm_wrapper_entry), JITType::HostCallThunk, intrinsic);
+            result.construct(adoptRef(*new NativeJITCode(LLInt::getCodeRef<JSEntryPtrTag>(js_to_wasm_wrapper_entry), JITType::HostCallThunk, intrinsic)));
         });
-        return *result;
+        return result.get();
     }
 #endif
     default: {
-        static NativeJITCode* result;
+        static LazyNeverDestroyed<Ref<NativeJITCode>> result;
         static std::once_flag onceKey;
         std::call_once(onceKey, [&] {
-            result = new NativeJITCode(LLInt::getCodeRef<JSEntryPtrTag>(llint_native_call_trampoline), JITType::HostCallThunk, NoIntrinsic);
+            result.construct(adoptRef(*new NativeJITCode(LLInt::getCodeRef<JSEntryPtrTag>(llint_native_call_trampoline), JITType::HostCallThunk, NoIntrinsic)));
         });
-        return *result;
+        return result.get();
     }
     }
 }
 
 static Ref<NativeJITCode> jitCodeForConstructTrampoline()
 {
-    static NativeJITCode* result;
+    static LazyNeverDestroyed<Ref<NativeJITCode>> result;
     static std::once_flag onceKey;
     std::call_once(onceKey, [&] {
-        result = new NativeJITCode(LLInt::getCodeRef<JSEntryPtrTag>(llint_native_construct_trampoline), JITType::HostCallThunk, NoIntrinsic);
+        result.construct(adoptRef(*new NativeJITCode(LLInt::getCodeRef<JSEntryPtrTag>(llint_native_construct_trampoline), JITType::HostCallThunk, NoIntrinsic)));
     });
-    return *result;
+    return result.get();
 }
 
 NativeExecutable* VM::getHostFunction(NativeFunction function, ImplementationVisibility implementationVisibility, Intrinsic intrinsic, NativeFunction constructor, const DOMJIT::Signature* signature, const String& name)
@@ -1074,7 +1072,7 @@ void VM::updateStackLimits()
         if (heap.m_webAssemblyInstanceSpace) {
             heap.m_webAssemblyInstanceSpace->forEachLiveCell([&] (HeapCell* cell, HeapCell::Kind kind) {
                 ASSERT_UNUSED(kind, kind == HeapCell::JSCell);
-                static_cast<JSWebAssemblyInstance*>(cell)->updateSoftStackLimit(m_softStackLimit);
+                SUPPRESS_MEMORY_UNSAFE_CAST static_cast<JSWebAssemblyInstance*>(cell)->updateSoftStackLimit(m_softStackLimit);
             });
         }
 #endif
@@ -1371,8 +1369,8 @@ void VM::drainMicrotasks()
 
 void sanitizeStackForVM(VM& vm)
 {
-    auto& thread = Thread::current();
-    auto& stack = thread.stack();
+    Ref thread = Thread::current();
+    auto& stack = thread->stack();
     if (!vm.currentThreadIsHoldingAPILock())
         return; // vm.lastStackTop() may not be set up correctly if JSLock is not held.
 
@@ -1533,12 +1531,12 @@ void VM::executeEntryScopeServicesOnEntry()
     // observe time zone changes.
     dateCache.resetIfNecessary();
 
-    auto* watchdog = this->watchdog();
+    RefPtr watchdog = this->watchdog();
     if (UNLIKELY(watchdog))
         watchdog->enteredVM();
 
 #if ENABLE(SAMPLING_PROFILER)
-    auto* samplingProfiler = this->samplingProfiler();
+    RefPtr samplingProfiler = this->samplingProfiler();
     if (UNLIKELY(samplingProfiler))
         samplingProfiler->noticeVMEntry();
 #endif
@@ -1552,7 +1550,7 @@ void VM::executeEntryScopeServicesOnExit()
     if (UNLIKELY(Options::useTracePoints()))
         tracePoint(VMEntryScopeEnd);
 
-    auto* watchdog = this->watchdog();
+    RefPtr watchdog = this->watchdog();
     if (UNLIKELY(watchdog))
         watchdog->exitedVM();
 
