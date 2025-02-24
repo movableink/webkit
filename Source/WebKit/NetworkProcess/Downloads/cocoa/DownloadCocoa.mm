@@ -60,7 +60,15 @@ void Download::resume(std::span<const uint8_t> resumeData, const String& path, S
     // FIXME: Use nsData instead of updatedData once we've migrated from _WKDownload to WKDownload
     // because there's no reason to set the local path we got from the data back into the data.
     m_downloadTask = [cocoaSession.sessionWrapperForDownloadResume().session downloadTaskWithResumeData:updatedData];
+    if (!m_downloadTask) {
+        RELEASE_LOG_ERROR(Network, "Could not create download task from resume data");
+        return;
+    }
     auto taskIdentifier = [m_downloadTask taskIdentifier];
+    if (!taskIdentifier) {
+        RELEASE_LOG_ERROR(Network, "Could not resume download, since task identifier is 0");
+        return;
+    }
     ASSERT(!cocoaSession.sessionWrapperForDownloadResume().downloadMap.contains(taskIdentifier));
     cocoaSession.sessionWrapperForDownloadResume().downloadMap.add(taskIdentifier, m_downloadID);
     m_downloadTask.get()._pathToDownloadTaskFile = path;
