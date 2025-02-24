@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005-2025 Apple Inc.  All rights reserved.
- * Copyright (C) 2020 Google Inc.  All rights reserved.
+ * Copyright (C) 2016-2020 Google Inc.  All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -220,10 +220,11 @@ static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationM
         return false;
 
     // Scale the adjoint matrix to get the inverse
+    double inverseDeterminant = 1 / determinant;
 
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            result[i][j] = result[i][j] / determinant;
+            result[i][j] = result[i][j] * inverseDeterminant;
 
     return true;
 }
