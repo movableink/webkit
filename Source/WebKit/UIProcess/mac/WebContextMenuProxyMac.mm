@@ -513,6 +513,9 @@ RetainPtr<NSMenuItem> WebContextMenuProxyMac::createShareMenuItem(ShareMenuItemT
     RetainPtr sharingServicePicker = adoptNS([[NSSharingServicePicker alloc] initWithItems:items.get()]);
     RetainPtr shareMenuItem = [sharingServicePicker standardShareMenuItem];
 
+    if (!shareMenuItem)
+        return nil;
+
 #if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
     RetainPtr<NSImage> actionImage;
     bool shouldSetMenuItemImage = page()->preferences().contextMenuImagesForInternalClientsEnabled() && [shareMenuItem respondsToSelector:@selector(_setActionImage:)];
