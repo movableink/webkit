@@ -3889,6 +3889,17 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32OrContiguous, UCPUStrict
         OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
     }
 
+    if (searchElement.isInt32()) {
+        for (; index < length; ++index) {
+            JSValue value = data[index].get();
+            if (!value || !value.isNumber())
+                continue;
+            if (searchElement.asInt32() == value.asNumber())
+                OPERATION_RETURN(scope, toUCPUStrictInt32(index));
+        }
+        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+    }
+
     for (; index < length; ++index) {
         JSValue value = data[index].get();
         if (!value)
