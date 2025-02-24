@@ -2594,28 +2594,19 @@ imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/b
 imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-unicode.html?wss [ Pass Failure ]
 
 #webkit.org/b/248537 Batch mark expectations for Ventura test failures
-[ Ventura+ arm64 ] svg/transforms/transformed-text-fill-pattern.html [ ImageOnlyFailure ]
-[ Ventura+ ] media/accessibility-describes-video.html [ Crash ]
-[ Ventura+ ] media/modern-media-controls/pip-support/pip-support-click.html [ Pass Crash ]
-[ Ventura+ ] media/audio-playback-restriction-removed-track-enabled.html  [ Crash ]
-[ Ventura+ ] media/modern-media-controls/media-controller/media-controller-auto-hide-rewind-with-mouse-enter.html  [ Crash ]
-[ Ventura+ ] media/modern-media-controls/media-controls/media-controls-display-above-captions.html  [ Crash ]
-[ Ventura+ ] media/track/track-delete-during-setup.html  [ Crash ]
-[ Ventura+ ] media/track/track-in-band-cues-added-once.html  [ Crash ]
-[ Ventura+ ] media/track/track-in-band.html  [ Crash ]
-[ Ventura+ ] media/track/track-long-captions-file.html  [ Crash ]
-imported/w3c/web-platform-tests/secure-contexts/basic-popup-and-iframe-tests.html [ Pass Failure ]
-[ Ventura+ ] http/wpt/webaudio/audioworklet-addModule-cors.sub.https.html
+[ arm64 ] svg/transforms/transformed-text-fill-pattern.html [ ImageOnlyFailure ]
+media/modern-media-controls/media-controller/media-controller-auto-hide-rewind-with-mouse-enter.html [ Pass Crash ]
+media/track/track-in-band-cues-added-once.html [ Pass Crash ]
+[ Debug ] media/track/track-long-captions-file.html [ Pass Crash ]
+imported/w3c/web-platform-tests/secure-contexts/basic-popup-and-iframe-tests.html [ Failure ]
 http/wpt/fetch/fetch-metadata-websocket.html [ Failure ]
 http/tests/security/contentSecurityPolicy/1.1/securitypolicyviolation-block-image-https.html [ Pass Failure ]
-http/tests/media/hls/hls-webvtt-seek-backwards.html [ Timeout Crash ]
-[ Ventura+ ] http/tests/media/hls/hls-webvtt-default.html [ Crash ]
-[ Ventura+ ] http/tests/inspector/network/resource-timing.html [ Failure ]
+http/tests/media/hls/hls-webvtt-seek-backwards.html [ Timeout Failure ]
+http/tests/inspector/network/resource-timing.html [ Pass Failure ]
 http/tests/inspector/network/resource-security-certificate.html [ Pass Failure ]
-[ Ventura+ ] http/tests/inspector/network/getSerializedCertificate.html [ Failure ]
-[ Ventura+ arm64 ] fast/writing-mode/english-bt-text-with-spelling-marker.html [ ImageOnlyFailure ]
+http/tests/inspector/network/getSerializedCertificate.html [ Pass Failure ]
 css3/scroll-snap/scroll-padding-mainframe-paging.html [ Failure ]
-[ Ventura+ ] compositing/fixed-with-main-thread-scrolling.html [ ImageOnlyFailure ]
+compositing/fixed-with-main-thread-scrolling.html [ ImageOnlyFailure ]
 
 # https://bugs.webkit.org/show_bug.cgi?id=249544
 # Generic Permissions API is not supported in WK1
@@ -2700,8 +2691,7 @@ webkit.org/b/259546 [ Debug ] media/modern-media-controls/tracks-support/text-tr
 webkit.org/b/260070 fast/selectors/style-invalidation-hover-change-descendants.html [ Pass Failure ]
 webkit.org/b/260070 fast/selectors/style-invalidation-hover-change-siblings.html [ Failure ]
 
-webkit.org/b/260107 [ Debug ] http/wpt/workers/modules/dedicated-worker-import-csp.html [ Skip ]
-webkit.org/b/260111 [ Ventura+ Release ] http/wpt/workers/modules/dedicated-worker-import-csp.html [ Pass Failure ]
+webkit.org/b/264258 http/wpt/workers/modules/dedicated-worker-import-csp.html [ Pass Failure ]
 
 webkit.org/b/260280 fullscreen/fullscreen-no-scrollbars-on-ancestor-root.html [ ImageOnlyFailure ]
 
@@ -2711,8 +2701,6 @@ imported/w3c/web-platform-tests/css/selectors/invalidation/nth-child-in-shadow-r
 imported/w3c/web-platform-tests/css/css-backgrounds/background-clip-content-box-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/selectors/invalidation/nth-last-child-in-shadow-root.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-085.html [ ImageOnlyFailure ]
-
-webkit.org/b/260888 [ Ventura+ ] media/track/track-user-stylesheet-override.html [ Crash ]
 
 webkit.org/b/261312 inspector/timeline/timeline-event-CancelAnimationFrame.html [ Pass Failure ]
 webkit.org/b/261312 inspector/timeline/timeline-event-performance-mark.html [ Pass Failure ]
@@ -2772,13 +2760,12 @@ http/tests/media/fairplay/legacy-fairplay-hls.html [ Pass Failure ]
 
 # webkit.org/b/261308 Batch mark expectations for flaky imported/w3c/web-platform-tests
 imported/w3c/web-platform-tests/cookies/path/default.html [ Pass Failure ]
-imported/w3c/web-platform-tests/css/motion/offset-path-shape-polygon-002.html [ Pass ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/motion/offset-path-shape-polygon-003.html [ Pass ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-masking/clip-path/animations/clip-path-animation-custom-timing-function.html [ Pass ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/motion/offset-path-shape-polygon-002.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/motion/offset-path-shape-polygon-003.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-masking/clip-path/animations/clip-path-animation-custom-timing-function.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/canvas/offscreen/manual/the-offscreen-canvas/offscreencanvas.transfer.to.imagebitmap.w.html [ Pass Failure ]
-[ Ventura+ ] imported/w3c/web-platform-tests/css/css-backgrounds/background-size-percentage-root.html [ Pass ImageOnlyFailure ]
 
-webkit.org/b/261427 [ Ventura+ ] media/track/track-in-band-mode.html [ Pass Crash ]
+webkit.org/b/261427 media/track/track-in-band-mode.html [ Pass Crash ]
 
 webkit.org/b/261618 [ Debug ] imported/w3c/web-platform-tests/preload/link-header-preload-non-html.html [ Pass Crash ]
 
@@ -2840,10 +2827,6 @@ fast/dom/no-scroll-when-command-click-fragment-URL.html [ Skip ]
 # Deletes nodes asynchronously using OpportunisticTaskScheduler, which is disabled on WK1
 intersection-observer/root-element-deleted.html [ Skip ]
 
-# webkit.org/b/267799 [ Ventura wk1 ] 2 tests in media/track are constant crash
-[ Ventura ] media/track/track-in-band-layout.html [ Crash ]
-[ Ventura ] media/track/track-paint-on-captions.html [ Crash ]
-
 # webkit.org/b/273522 2 backdrop-filter tests in imported/w3c/web-platform-tests/css/filter-effects are constant failures
 [ Sonoma+ ] imported/w3c/web-platform-tests/css/filter-effects/backdrop-filters-grayscale-001.html [ ImageOnlyFailure ]
 [ Sonoma+ ] imported/w3c/web-platform-tests/css/filter-effects/backdrop-filters-sepia.html [ ImageOnlyFailure ]
@@ -2863,8 +2846,6 @@ webkit.org/b/270310 [ Sonoma+ ] imported/w3c/web-platform-tests/html/semantics/i
 [ Sonoma+ ] imported/w3c/web-platform-tests/css/css-transforms/ttwf-css-3d-polygon-cycle.html [ ImageOnlyFailure ]
 
 webkit.org/b/270385 [ Sonoma+ ] fast/images/jpegxl-with-color-profile.html [ ImageOnlyFailure ]
-
-webkit.org/b/259485 [ Ventura ] http/tests/media/hls/track-in-band-multiple-cues.html [ Skip ]
 
 # webkit.org/b/270199 [ MacOS WK1 Debug ] fast/frames/lots-of-iframes.html and fast/frames/lots-of-objects.html are consistent/flaky timeouts
 [ Debug ] fast/frames/lots-of-iframes.html [ Pass Timeout ]
@@ -2897,9 +2878,9 @@ imported/w3c/web-platform-tests/css/css-typed-om/the-stylepropertymap/properties
 [ Sonoma+ ] imported/w3c/web-platform-tests/worklets/paint-worklet-credentials.https.html [ Pass Failure ]
 
 # webkit.org/b/272115 REGRESSION (274826@main): [ Sonoma WK1 ] 2X imported/w3c/web-platform-tests/mixed-content/tentative/autoupgrades tests are flaky failures
-[ Ventura+ ] imported/w3c/web-platform-tests/mixed-content/tentative/autoupgrades/image-upgrade.https.sub.html [ Pass Failure ]
-[ Ventura+ ] imported/w3c/web-platform-tests/mixed-content/tentative/autoupgrades/audio-upgrade.https.sub.html [ Pass Failure ]
-[ Ventura+ ] imported/w3c/web-platform-tests/mixed-content/tentative/autoupgrades/mixed-content-cors.https.sub.html [ Pass Failure ]
+imported/w3c/web-platform-tests/mixed-content/tentative/autoupgrades/image-upgrade.https.sub.html [ Failure ]
+imported/w3c/web-platform-tests/mixed-content/tentative/autoupgrades/audio-upgrade.https.sub.html [ Failure ]
+imported/w3c/web-platform-tests/mixed-content/tentative/autoupgrades/mixed-content-cors.https.sub.html [ Failure ]
 
 # webkit.org/b/272081 [web-animations] update WPT import for web-animations
 [ Sonoma ] imported/w3c/web-platform-tests/css/filter-effects/css-filters-animation-drop-shadow.html [ ImageOnlyFailure ]
@@ -2910,46 +2891,34 @@ imported/w3c/web-platform-tests/css/css-typed-om/the-stylepropertymap/properties
 [ Sonoma+ ] imported/w3c/web-platform-tests/web-animations/animation-model/side-effects-of-animations-in-effect.html [ ImageOnlyFailure ]
 
 # webkit.org/b/272926 [ Ventura wk1 ] 8 tests in imported/w3c/web-platform-tests/workers are flaky failures
-[ Ventura ] imported/w3c/web-platform-tests/worklets/animation-worklet-credentials.https.html [ Pass Failure ]
-[ Ventura ] imported/w3c/web-platform-tests/worklets/audio-worklet-credentials.https.html [ Pass Failure ]
-[ Ventura ] imported/w3c/web-platform-tests/worklets/audio-worklet-csp.https.html [ Pass Failure ] 
-[ Ventura ] imported/w3c/web-platform-tests/worklets/audio-worklet-import.https.html [ Pass Failure ]
-[ Ventura ] imported/w3c/web-platform-tests/worklets/audio-worklet-referrer.https.html [ Pass Failure ] 
-[ Ventura ] imported/w3c/web-platform-tests/worklets/layout-worklet-credentials.https.html [ Pass Failure ]
-[ Ventura ] imported/w3c/web-platform-tests/worklets/paint-worklet-credentials.https.html [ Pass Failure ]
-[ Ventura+ ] imported/w3c/web-platform-tests/workers/modules/dedicated-worker-import-referrer.html [ Pass Failure ]
+imported/w3c/web-platform-tests/workers/modules/dedicated-worker-import-referrer.html [ Pass Failure ]
 
-webkit.org/b/272939 [ Ventura+ ] imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/module/referrer-strict-policies.sub.html [ Pass Failure ]
+webkit.org/b/272939 imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/module/referrer-strict-policies.sub.html [ Pass Failure ]
 
 webkit.org/b/273279 fonts/font-fallback-prefers-pictographs.html [ Skip ]
 
 # rdar://127055453 ([ EWS MacOS WK1 ] http/tests/media/hls/hls-webvtt-style.html is a flaky timeout (273251))
 http/tests/media/hls/hls-webvtt-style.html [ Pass Timeout ]
 
-# rdar://127302101 ([ Ventura WK1 Debug ] 2x imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/track/track-element/track-mode are constant crashes (273501))
-[ Ventura Debug ] imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/track/track-element/track-mode-disabled.html [ Skip ]
-[ Ventura Debug ] imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/track/track-element/track-mode.html [ Skip ]
-
 # Test relies on GPUP.
 fast/canvas/image-buffer-resource-limits.html [ Skip ]
 
-webkit.org/b/273577 [ Ventura ] http/tests/media/hls/track-webvtt-multitracks.html [ Skip ]
-
 # rdar://65188503
- platform/mac/media/media-source/is-type-supported-vp9-codec-check.html [ Skip ]
-
-# rdar://65188503
+platform/mac/media/media-source/is-type-supported-vp9-codec-check.html [ Skip ]
 platform/mac/media/mediacapabilities/vp9-decodingInfo-sw.html [ Skip ]
 
 # webkit.org/b/235733 Skip 2 editing/execCommand tests for making subsequent tests fail on wk1 Apple Silicon macs.
-[ release ] editing/execCommand/insert-newline-in-quoted-content-crash.html [ Skip ]
-[ release ] editing/execCommand/paste-as-quotation-disconnected-paragraph-ancestor-crash.html [ Skip ]
+[ Release ] editing/execCommand/insert-newline-in-quoted-content-crash.html [ Skip ]
+[ Release ] editing/execCommand/paste-as-quotation-disconnected-paragraph-ancestor-crash.html [ Skip ]
 
 webkit.org/b/260883 inspector/timeline/timeline-recording.html [ Skip ]
 
 webkit.org/b/274409 imported/w3c/web-platform-tests/content-security-policy/reporting-api/reporting-api-works-on-frame-src.https.sub.html [ Pass Failure ]
 
 webkit.org/b/276145 http/tests/security/block-popup-to-all-zero-address.html [ Skip ]
+
+# webkit.org/b/255427 [ Ventura ] 4/13 batch mark expectations and branch bugs
+[ x86_64 ] fast/shrink-wrap/rect-shrink-wrap.html [ Pass ImageOnlyFailure ]
 
 # rdar://124363343 ([ Sequoia+ ] Multiple WebKit tests failing after explicit "SameSite" attribute change)
 http/tests/xmlhttprequest/cross-origin-authorization.html [ Failure ]
@@ -3014,17 +2983,17 @@ webkit.org/b/284068 [ Sequoia+ ] http/tests/download/anchor-download-redirect-cr
 webkit.org/b/284200 [ Sequoia+ ] http/tests/websocket/tests/hybi/websocket-allowed-setting-cookie-as-third-party.https.html [ Failure ]
 webkit.org/b/284200 [ Sequoia+ ] http/tests/websocket/tests/hybi/websocket-cookie-overwrite-behavior.https.html [ Failure ]
 
-webkit.org/b/284486 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-grid/subgrid/alignment-in-subgridded-axes-001.html [ Pass Failure ]
-webkit.org/b/284486 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid-baseline-005.html [ Pass Failure ]
-webkit.org/b/284486 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid-baseline-006.html [ Pass Failure ]
-webkit.org/b/284486 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid-baseline-007.html [ Pass Failure ]
+webkit.org/b/284486 imported/w3c/web-platform-tests/css/css-grid/subgrid/alignment-in-subgridded-axes-001.html [ Pass Failure ]
+webkit.org/b/284486 imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid-baseline-005.html [ Pass Failure ]
+webkit.org/b/284486 imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid-baseline-006.html [ Pass Failure ]
+webkit.org/b/284486 imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid-baseline-007.html [ Pass Failure ]
 
-webkit.org/b/284898 [ Ventura+ ] fonts/font-weight-invalid-crash.html [ Pass Failure ]
-webkit.org/b/284898 [ Ventura+ ] fonts/ligature.html [ Pass Failure ImageOnlyFailure ]
+webkit.org/b/284898 fonts/font-weight-invalid-crash.html [ Pass Failure ]
+webkit.org/b/284898 fonts/ligature.html [ Pass Failure ImageOnlyFailure ]
 
-webkit.org/b/284954 [ Ventura+ ] imported/w3c/web-platform-tests/css/css-box/margin-trim/computed-margin-values/block-container-block-start-child-with-border.html [ Pass Failure ]
+webkit.org/b/284954 imported/w3c/web-platform-tests/css/css-box/margin-trim/computed-margin-values/block-container-block-start-child-with-border.html [ Pass Failure ]
 
-webkit.org/b/285089 [ Ventura+ Debug ] imported/w3c/web-platform-tests/editing/crashtests/replace-document-root-and-refocus-window.html [ Skip ]
+webkit.org/b/285089 [ Debug ] imported/w3c/web-platform-tests/editing/crashtests/replace-document-root-and-refocus-window.html [ Skip ]
 
 webkit.org/b/286159 [ Debug ] fast/canvas/webgl/tex-image-and-sub-image-2d-with-video-rgba4444.html [ Pass Failure ]
 
@@ -3036,7 +3005,7 @@ webkit.org/b/286392 imported/w3c/web-platform-tests/css/css-grid/subgrid/subgrid
 
 webkit.org/b/286602 media/media-source/media-detachablemse-append.html [ Pass Failure ]
 
-webkit.org/b/255555 [ Ventura+ ] imported/w3c/web-platform-tests/xhr/request-content-length.any.worker.html [ Pass Failure ]
+webkit.org/b/255555 imported/w3c/web-platform-tests/xhr/request-content-length.any.worker.html [ Pass Failure ]
 
 webkit.org/b/287713 printing/background-clip-text.html [ Failure ]
 
