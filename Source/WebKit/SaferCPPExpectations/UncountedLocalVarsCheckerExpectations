@@ -104,7 +104,6 @@ WebProcess/WebPage/WebURLSchemeTaskProxy.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/WebPage/mac/WKAccessibilityWebPageObjectBase.mm
 WebProcess/WebPage/mac/WKAccessibilityWebPageObjectMac.mm
-WebProcess/WebProcess.cpp
 WebProcess/WebSleepDisablerClient.cpp
 WebProcess/WebStorage/StorageAreaMap.cpp
 WebProcess/cocoa/TextTrackRepresentationCocoa.mm

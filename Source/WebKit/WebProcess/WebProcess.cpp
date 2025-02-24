@@ -290,8 +290,8 @@ static void crashAfter10Seconds(IPC::Connection*)
 
 WebProcess& WebProcess::singleton()
 {
-    static WebProcess& process = *new WebProcess;
-    return process;
+    static NeverDestroyed<Ref<WebProcess>> process = adoptRef(*new WebProcess);
+    return process.get().get();
 }
 
 WebProcess::WebProcess()
@@ -407,12 +407,12 @@ void WebProcess::initializeConnection(IPC::Connection* connection)
     connection->setShouldExitOnSyncMessageSendFailure(true);
 #endif
 
-    m_eventDispatcher.initializeConnection(*connection);
+    protectedEventDispatcher()->initializeConnection(*connection);
 #if PLATFORM(IOS_FAMILY)
     m_viewUpdateDispatcher.initializeConnection(*connection);
 #endif // PLATFORM(IOS_FAMILY)
 
-    m_webInspectorInterruptDispatcher.initializeConnection(*connection);
+    protectedWebInspectorInterruptDispatcher()->initializeConnection(*connection);
 
     for (auto& supplement : m_supplements.values())
         supplement->initializeConnection(connection);
@@ -2158,13 +2158,13 @@ void WebProcess::grantUserMediaDeviceSandboxExtensions(MediaDeviceSandboxExtensi
 {
     for (size_t i = 0; i < extensions.size(); i++) {
         const auto& extension = extensions[i];
-        extension.second->consume();
+        RefPtr { extension.second }->consume();
         WEBPROCESS_RELEASE_LOG(WebRTC, "grantUserMediaDeviceSandboxExtensions: granted extension %s", extension.first.utf8().data());
         m_mediaCaptureSandboxExtensions.add(extension.first, extension.second.copyRef());
     }
     m_machBootstrapExtension = extensions.machBootstrapExtension();
-    if (m_machBootstrapExtension)
-        m_machBootstrapExtension->consume();
+    if (RefPtr machBootstrapExtension = m_machBootstrapExtension)
+        machBootstrapExtension->consume();
 }
 
 static inline void checkDocumentsCaptureStateConsistency(const Vector<String>& extensionIDs)
@@ -2251,7 +2251,7 @@ void WebProcess::setClientBadge(WebPageProxyIdentifier pageIdentifier, const Web
 void WebProcess::displayDidRefresh(uint32_t displayID, const DisplayUpdate& displayUpdate)
 {
     ASSERT(RunLoop::isMain());
-    m_eventDispatcher.notifyScrollingTreesDisplayDidRefresh(displayID);
+    protectedEventDispatcher()->notifyScrollingTreesDisplayDidRefresh(displayID);
     DisplayRefreshMonitorManager::sharedManager().displayDidRefresh(displayID, displayUpdate);
 }
 #endif

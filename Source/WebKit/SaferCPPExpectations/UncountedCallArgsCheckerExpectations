@@ -388,7 +388,6 @@ WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/WebPage/mac/TiledCoreAnimationScrollingCoordinator.mm
 WebProcess/WebPage/mac/WKAccessibilityWebPageObjectBase.mm
 WebProcess/WebPage/mac/WKAccessibilityWebPageObjectMac.mm
-WebProcess/WebProcess.cpp
 WebProcess/WebStorage/StorageAreaMap.cpp
 WebProcess/WebSystemSoundDelegate.cpp
 WebProcess/cocoa/AudioSessionRoutingArbitrator.cpp
