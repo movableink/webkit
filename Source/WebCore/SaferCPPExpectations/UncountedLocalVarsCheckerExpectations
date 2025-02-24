@@ -601,7 +601,6 @@ platform/graphics/ca/TileGrid.cpp
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/cocoa/controls/ApplePayButtonCocoa.mm
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
-platform/graphics/coretext/GlyphPageCoreText.cpp
 platform/graphics/displaylists/DisplayListItem.cpp
 platform/graphics/displaylists/DisplayListItems.cpp
 platform/graphics/displaylists/DisplayListRecorder.cpp

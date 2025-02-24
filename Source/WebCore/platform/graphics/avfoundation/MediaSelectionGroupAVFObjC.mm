@@ -58,13 +58,14 @@ MediaSelectionOptionAVFObjC::MediaSelectionOptionAVFObjC(MediaSelectionGroupAVFO
 
 void MediaSelectionOptionAVFObjC::setSelected(bool selected)
 {
-    if (!m_group)
+    RefPtr group = m_group.get();
+    if (!group)
         return;
 
     if (selected == this->selected())
         return;
 
-    m_group->setSelectedOption(selected ? this : nullptr);
+    group->setSelectedOption(selected ? this : nullptr);
 }
 
 bool MediaSelectionOptionAVFObjC::selected() const

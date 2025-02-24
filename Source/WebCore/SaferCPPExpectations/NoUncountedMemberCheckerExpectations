@@ -71,7 +71,6 @@ platform/graphics/ComplexTextController.h
 platform/graphics/DrawGlyphsRecorder.h
 platform/graphics/GraphicsLayer.h
 platform/graphics/avfoundation/AudioSourceProviderAVFObjC.mm
-platform/graphics/avfoundation/MediaSelectionGroupAVFObjC.h
 platform/graphics/avfoundation/objc/MediaSourcePrivateAVFObjC.h
 platform/graphics/avfoundation/objc/WebCoreAVFResourceLoader.mm
 platform/graphics/ca/TileController.h

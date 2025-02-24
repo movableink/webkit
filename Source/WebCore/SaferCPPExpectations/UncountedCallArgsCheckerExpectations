@@ -992,7 +992,6 @@ page/scrolling/AsyncScrollingCoordinator.cpp
 page/scrolling/ScrollAnchoringController.cpp
 page/scrolling/ScrollSnapOffsetsInfo.cpp
 page/scrolling/ScrollingCoordinator.cpp
-page/scrolling/ScrollingStateTree.cpp
 page/scrolling/ScrollingThread.cpp
 page/scrolling/ScrollingTreeGestureState.cpp
 page/scrolling/ScrollingTreeScrollingNodeDelegate.h
@@ -1051,7 +1050,6 @@ platform/graphics/TransparencyLayerContextSwitcher.cpp
 platform/graphics/WidthIterator.cpp
 platform/graphics/avfoundation/AudioSourceProviderAVFObjC.mm
 platform/graphics/avfoundation/InbandMetadataTextTrackPrivateAVF.cpp
-platform/graphics/avfoundation/MediaSelectionGroupAVFObjC.mm
 platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.h
 platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.mm
 platform/graphics/avfoundation/objc/CDMSessionAVContentKeySession.mm
