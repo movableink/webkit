@@ -473,7 +473,12 @@ UNIFIED_PDF_TEST(PrintPDFUsingPrintInteractionController)
     EXPECT_EQ(pdf->pageCount(), 16UL);
 }
 
+// FIXME: <webkit.org/b/288401> [ iOS Debug ] TestWebKitAPI.UnifiedPDF.ShouldNotRespectSetViewScale(api-test) is a constant timeout
+#if !defined(NDEBUG)
+UNIFIED_PDF_TEST(DISABLED_ShouldNotRespectSetViewScale)
+#else
 UNIFIED_PDF_TEST(ShouldNotRespectSetViewScale)
+#endif
 {
     RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
 
