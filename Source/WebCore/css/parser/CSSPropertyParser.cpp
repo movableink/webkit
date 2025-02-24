@@ -3156,6 +3156,8 @@ bool CSSPropertyParser::parseShorthand(CSSPropertyID property, bool important)
             addProperty(longhand, CSSPropertyBorder, nullptr, important);
         return true;
     }
+    case CSSPropertyCornerShape:
+        return consume4ValueShorthand(cornerShapeShorthand(), important);
     case CSSPropertyBorderImage:
     case CSSPropertyWebkitBorderImage:
     case CSSPropertyWebkitMaskBoxImage:

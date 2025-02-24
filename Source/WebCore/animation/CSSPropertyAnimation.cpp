@@ -3910,6 +3910,12 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderTopRightRadius, &RenderStyle::borderTopRightRadius, &RenderStyle::setBorderTopRightRadius),
         new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderBottomLeftRadius, &RenderStyle::borderBottomLeftRadius, &RenderStyle::setBorderBottomLeftRadius),
         new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderBottomRightRadius, &RenderStyle::borderBottomRightRadius, &RenderStyle::setBorderBottomRightRadius),
+
+        new DiscretePropertyWrapper(CSSPropertyCornerTopLeftShape, &RenderStyle::cornerTopLeftShape, &RenderStyle::setCornerTopLeftShape),
+        new DiscretePropertyWrapper(CSSPropertyCornerTopRightShape, &RenderStyle::cornerTopRightShape, &RenderStyle::setCornerTopRightShape),
+        new DiscretePropertyWrapper(CSSPropertyCornerBottomLeftShape, &RenderStyle::cornerBottomLeftShape, &RenderStyle::setCornerBottomLeftShape),
+        new DiscretePropertyWrapper(CSSPropertyCornerBottomRightShape, &RenderStyle::cornerBottomRightShape, &RenderStyle::setCornerBottomRightShape),
+
         new VisibilityWrapper,
         new NonNormalizedDiscretePropertyWrapper<DisplayType>(CSSPropertyDisplay, &RenderStyle::display, &RenderStyle::setDisplay),
 
@@ -4198,6 +4204,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         CSSPropertyBorderSpacing,
         CSSPropertyBlockStep,
         CSSPropertyColumns,
+        CSSPropertyCornerShape,
         CSSPropertyFlex,
         CSSPropertyFlexFlow,
         CSSPropertyGap,

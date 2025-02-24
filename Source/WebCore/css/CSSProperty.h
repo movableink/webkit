@@ -94,6 +94,7 @@ public:
     static bool isBorderStyleProperty(CSSPropertyID);
     static bool isBorderWidthProperty(CSSPropertyID);
     static bool isContainIntrinsicSizeProperty(CSSPropertyID);
+    static bool isCornerShapeProperty(CSSPropertyID);
     static bool isInsetProperty(CSSPropertyID);
     static bool isMarginProperty(CSSPropertyID);
     static bool isMaxSizeProperty(CSSPropertyID);

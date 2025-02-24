@@ -4851,6 +4851,16 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return style.hasAutoColumnCount() ? CSSPrimitiveValue::create(CSSValueAuto) : CSSPrimitiveValue::create(style.columnCount());
         return getCSSPropertyValuesForShorthandProperties(columnsShorthand());
     }
+    case CSSPropertyCornerShape:
+        return getCSSPropertyValuesFor4SidesShorthand(cornerShapeShorthand());
+    case CSSPropertyCornerTopLeftShape:
+        return createConvertingToCSSValueID(style.cornerTopLeftShape());
+    case CSSPropertyCornerTopRightShape:
+        return createConvertingToCSSValueID(style.cornerTopRightShape());
+    case CSSPropertyCornerBottomRightShape:
+        return createConvertingToCSSValueID(style.cornerBottomRightShape());
+    case CSSPropertyCornerBottomLeftShape:
+        return createConvertingToCSSValueID(style.cornerBottomLeftShape());
     case CSSPropertyInset:
         return getCSSPropertyValuesFor4SidesShorthand(insetShorthand());
     case CSSPropertyInsetBlock:
@@ -5044,6 +5054,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyBorderInlineStartWidth:
     case CSSPropertyBorderStartEndRadius:
     case CSSPropertyBorderStartStartRadius:
+    case CSSPropertyCornerEndEndShape:
+    case CSSPropertyCornerEndStartShape:
+    case CSSPropertyCornerStartEndShape:
+    case CSSPropertyCornerStartStartShape:
     case CSSPropertyInsetBlockEnd:
     case CSSPropertyInsetBlockStart:
     case CSSPropertyInsetInlineEnd:

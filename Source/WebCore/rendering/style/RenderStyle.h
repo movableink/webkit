@@ -146,6 +146,7 @@ enum class Containment : uint8_t;
 enum class ContentDistribution : uint8_t;
 enum class ContentPosition : uint8_t;
 enum class ContentVisibility : uint8_t;
+enum class CornerShape : uint8_t;
 enum class CursorType : uint8_t;
 enum class CursorVisibility : bool;
 enum class DisplayType : uint8_t;
@@ -547,6 +548,16 @@ public:
     float borderEndWidth() const { return borderEndWidth(writingMode()); }
 
     inline bool borderIsEquivalentForPainting(const RenderStyle&) const;
+
+    inline CornerShape cornerBottomLeftShape() const;
+    inline CornerShape cornerBottomRightShape() const;
+    inline CornerShape cornerTopLeftShape() const;
+    inline CornerShape cornerTopRightShape() const;
+
+    void setCornerBottomLeftShape(CornerShape);
+    void setCornerBottomRightShape(CornerShape);
+    void setCornerTopLeftShape(CornerShape);
+    void setCornerTopRightShape(CornerShape);
 
     float outlineSize() const { return std::max<float>(0, outlineWidth() + outlineOffset()); }
     float outlineWidth() const;
@@ -1934,6 +1945,7 @@ public:
     static constexpr BorderStyle initialBorderStyle();
     static constexpr OutlineIsAuto initialOutlineStyleIsAuto();
     static inline LengthSize initialBorderRadius();
+    static constexpr CornerShape initialCornerShape();
     static constexpr CaptionSide initialCaptionSide();
     static constexpr ColumnAxis initialColumnAxis();
     static constexpr ColumnProgression initialColumnProgression();

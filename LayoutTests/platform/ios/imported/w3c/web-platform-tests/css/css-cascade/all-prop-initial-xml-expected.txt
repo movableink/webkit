@@ -115,6 +115,14 @@ PASS container-type
 PASS content
 PASS content-visibility
 PASS continue
+PASS corner-bottom-left-shape
+PASS corner-bottom-right-shape
+PASS corner-end-end-shape
+PASS corner-end-start-shape
+PASS corner-start-end-shape
+PASS corner-start-start-shape
+PASS corner-top-left-shape
+PASS corner-top-right-shape
 PASS counter-increment
 PASS counter-reset
 PASS counter-set

@@ -396,6 +396,18 @@ TextStream& operator<<(TextStream& ts, ContentVisibility contentVisibility)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, CornerShape shape)
+{
+    switch (shape) {
+    case CornerShape::Round: ts << "round"; break;
+    case CornerShape::Scoop: ts << "scoop"; break;
+    case CornerShape::Bevel: ts << "bevel"; break;
+    case CornerShape::Notch: ts << "notch"; break;
+    case CornerShape::Straight: ts << "straight"; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, CursorType cursor)
 {
     switch (cursor) {

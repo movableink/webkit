@@ -361,6 +361,11 @@ inline void RenderStyle::setVisitedLinkTextStrokeColor(const Style::Color& value
 inline void RenderStyle::setWidth(Length&& length) { SET_NESTED(m_nonInheritedData, boxData, m_width, WTFMove(length)); }
 inline void RenderStyle::setWordBreak(WordBreak rule) { SET(m_rareInheritedData, wordBreak, static_cast<unsigned>(rule)); }
 
+inline void RenderStyle::setCornerBottomLeftShape(CornerShape shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_bottomLeftCornerShape, shape); }
+inline void RenderStyle::setCornerBottomRightShape(CornerShape shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_bottomRightCornerShape, shape); }
+inline void RenderStyle::setCornerTopLeftShape(CornerShape shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_topLeftCornerShape, shape); }
+inline void RenderStyle::setCornerTopRightShape(CornerShape shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_topRightCornerShape, shape); }
+
 inline void RenderStyle::setNativeAppearanceDisabled(bool value) { SET_NESTED(m_nonInheritedData, rareData, nativeAppearanceDisabled, value); }
 
 #if ENABLE(APPLE_PAY)

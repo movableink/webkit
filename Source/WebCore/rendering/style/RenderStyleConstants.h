@@ -242,6 +242,14 @@ enum class BorderPrecedence : uint8_t {
     Cell
 };
 
+enum class CornerShape : uint8_t {
+    Round,
+    Scoop,
+    Bevel,
+    Notch,
+    Straight,
+};
+
 enum class OutlineIsAuto : bool {
     Off,
     On
@@ -1264,6 +1272,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, ColumnSpan);
 WTF::TextStream& operator<<(WTF::TextStream&, ContentDistribution);
 WTF::TextStream& operator<<(WTF::TextStream&, ContentPosition);
 WTF::TextStream& operator<<(WTF::TextStream&, ContentVisibility);
+WTF::TextStream& operator<<(WTF::TextStream&, CornerShape);
 WTF::TextStream& operator<<(WTF::TextStream&, CursorType);
 #if ENABLE(CURSOR_VISIBILITY)
 WTF::TextStream& operator<<(WTF::TextStream&, CursorVisibility);

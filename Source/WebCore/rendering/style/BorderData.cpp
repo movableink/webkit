@@ -72,6 +72,15 @@ void BorderData::dump(TextStream& ts, DumpStyleValues behavior) const
     if (behavior == DumpStyleValues::All || bottom() != BorderValue())
         ts.dumpProperty("bottom", bottom());
 
+    if (behavior == DumpStyleValues::All || topLeftCornerShape() != CornerShape::Round)
+        ts.dumpProperty("top-left corner shape", topLeftCornerShape());
+    if (behavior == DumpStyleValues::All || topRightCornerShape() != CornerShape::Round)
+        ts.dumpProperty("top-right corner shape", topRightCornerShape());
+    if (behavior == DumpStyleValues::All || bottomLeftCornerShape() != CornerShape::Round)
+        ts.dumpProperty("bottom-left corner shape", bottomLeftCornerShape());
+    if (behavior == DumpStyleValues::All || bottomRightCornerShape() != CornerShape::Round)
+        ts.dumpProperty("bottom-right corner shape", bottomRightCornerShape());
+
     ts.dumpProperty("image", image());
 
     if (behavior == DumpStyleValues::All || !topLeftRadius().isZero())

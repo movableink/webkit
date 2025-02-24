@@ -1747,6 +1747,15 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
                 changingProperties.m_properties.set(CSSPropertyBorderBottomLeftRadius);
             if (first.border.bottomRightRadius() != second.border.bottomRightRadius())
                 changingProperties.m_properties.set(CSSPropertyBorderBottomRightRadius);
+
+            if (first.border.topLeftCornerShape() != second.border.topLeftCornerShape())
+                changingProperties.m_properties.set(CSSPropertyCornerTopLeftShape);
+            if (first.border.topRightCornerShape() != second.border.topRightCornerShape())
+                changingProperties.m_properties.set(CSSPropertyCornerTopRightShape);
+            if (first.border.bottomLeftCornerShape() != second.border.bottomLeftCornerShape())
+                changingProperties.m_properties.set(CSSPropertyCornerBottomLeftShape);
+            if (first.border.bottomRightCornerShape() != second.border.bottomRightCornerShape())
+                changingProperties.m_properties.set(CSSPropertyCornerBottomRightShape);
         }
 
         // Non animated styles are followings.

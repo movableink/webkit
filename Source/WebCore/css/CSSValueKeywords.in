@@ -949,6 +949,15 @@ padding-box
 -webkit-text
 
 //
+// Corner-shape
+//
+// round
+scoop
+// bevel
+notch
+straight
+
+//
 // CSS_PROP_MASK_CLIP
 //
 // Same as background-clip above, except with some extra values.

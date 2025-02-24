@@ -119,6 +119,11 @@ public:
     const BorderValue& top() const { return m_top; }
     const BorderValue& bottom() const { return m_bottom; }
 
+    CornerShape topLeftCornerShape() const { return m_topLeftCornerShape; }
+    CornerShape topRightCornerShape() const { return m_topRightCornerShape; }
+    CornerShape bottomLeftCornerShape() const { return m_bottomLeftCornerShape; }
+    CornerShape bottomRightCornerShape() const { return m_bottomRightCornerShape; }
+
     const NinePieceImage& image() const { return m_image; }
 
     const LengthSize& topLeftRadius() const { return m_radii.topLeft; }
@@ -133,6 +138,11 @@ private:
     BorderValue m_right;
     BorderValue m_top;
     BorderValue m_bottom;
+
+    CornerShape m_topLeftCornerShape : 3 { CornerShape::Round };
+    CornerShape m_topRightCornerShape : 3 { CornerShape::Round };
+    CornerShape m_bottomLeftCornerShape : 3 { CornerShape::Round };
+    CornerShape m_bottomRightCornerShape : 3 { CornerShape::Round };
 
     NinePieceImage m_image;
 
