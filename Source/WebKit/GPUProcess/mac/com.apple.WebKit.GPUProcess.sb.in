@@ -1076,8 +1076,17 @@
 (allow mach-lookup
     (global-name "com.apple.relatived.tempest"))
 
-(allow IOKIT_OPEN_USER_CLIENT
-    (iokit-user-client-class "AppleAVDUserClient"))
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+        (iokit-user-client-class "AppleAVDUserClient")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "AppleAVDUserClient")))
 
 (when (equal? (param "CPU") "arm64")
     (allow IOKIT_OPEN_USER_CLIENT
