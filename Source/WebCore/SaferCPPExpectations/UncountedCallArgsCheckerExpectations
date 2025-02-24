@@ -947,7 +947,6 @@ page/NavigationHistoryEntry.cpp
 page/NavigationTransition.cpp
 page/Navigator.cpp
 page/NavigatorLoginStatus.cpp
-page/OpportunisticTaskScheduler.cpp
 page/PageConsoleClient.cpp
 page/PageOverlay.cpp
 page/PageOverlayController.cpp

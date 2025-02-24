@@ -60,7 +60,6 @@ ftl/FTLOSRExitHandle.cpp
 ftl/FTLOperations.cpp
 ftl/FTLPatchpointExceptionHandle.cpp
 heap/ConservativeRoots.cpp
-heap/Heap.cpp
 heap/HeapHelperPool.cpp
 heap/JITStubRoutineSet.cpp
 heap/MachineStackMarker.cpp

@@ -5,7 +5,6 @@ API/JSCallbackObjectFunctions.h
 API/JSClassRef.cpp
 API/JSContext.mm
 API/JSContextRef.cpp
-API/JSLockRef.cpp
 API/JSObjectRef.cpp
 API/JSRetainPtr.h
 API/JSScript.mm
@@ -75,7 +74,6 @@ heap/GCIncomingRefCountedSetInlines.h
 heap/Heap.cpp
 heap/IsoCellSetInlines.h
 heap/JITStubRoutineSet.cpp
-heap/MarkedSpace.cpp
 heap/MarkingConstraintSolver.cpp
 heap/ParallelSourceAdapter.h
 heap/SlotVisitor.cpp
@@ -145,11 +143,9 @@ runtime/JSArrayBuffer.cpp
 runtime/JSArrayBufferView.cpp
 runtime/JSCustomGetterFunction.cpp
 runtime/JSCustomSetterFunction.cpp
-runtime/JSFinalizationRegistry.cpp
 runtime/JSGenericTypedArrayViewInlines.h
 runtime/JSGenericTypedArrayViewPrototypeFunctions.h
 runtime/JSGlobalObject.cpp
-runtime/JSLock.cpp
 runtime/JSModuleEnvironment.cpp
 runtime/JSObject.cpp
 runtime/JSObjectInlines.h
