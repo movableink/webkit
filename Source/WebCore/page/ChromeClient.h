@@ -94,6 +94,7 @@ class Element;
 class FileChooser;
 class FileIconLoader;
 class FloatRect;
+class FrameDamageHistory;
 class Geolocation;
 class GraphicsLayer;
 class GraphicsLayerFactory;
@@ -734,6 +735,12 @@ public:
     virtual void didDispatchClickEvent(const PlatformMouseEvent&, Node&) { }
 
     virtual void didProgrammaticallyClearTextFormControl(const HTMLTextFormControlElement&) { }
+
+#if ENABLE(DAMAGE_TRACKING)
+    virtual void resetDamageHistoryForTesting() { }
+
+    virtual WebCore::FrameDamageHistory* damageHistoryForTesting() const { return nullptr; }
+#endif
 
     WEBCORE_EXPORT virtual ~ChromeClient();
 

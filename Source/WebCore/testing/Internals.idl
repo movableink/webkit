@@ -479,6 +479,23 @@ enum ContentsFormat {
 #endif
 };
 
+[Conditional=DAMAGE_TRACKING] enum DamagePropagation {
+    "None",
+    "Region",
+    "Unified"
+};
+
+[
+    Conditional=DAMAGE_TRACKING,
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary FrameDamage {
+    unsigned long sequenceId;
+    boolean isValid = false;
+    DOMRectReadOnly bounds;
+    sequence<DOMRectReadOnly> rects;
+};
+
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     LegacyNoInterfaceObject,
@@ -749,6 +766,9 @@ enum ContentsFormat {
     boolean testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
 
     undefined setResourceCachingDisabledByWebInspector(boolean disabled);
+
+    [Conditional=DAMAGE_TRACKING] DamagePropagation? getCurrentDamagePropagation();
+    [Conditional=DAMAGE_TRACKING] sequence<FrameDamage> getFrameDamageHistory();
 
     // Flags for layerTreeAsText.
     const unsigned short LAYER_TREE_INCLUDES_VISIBLE_RECTS = 1;

@@ -167,6 +167,11 @@
 #include <WebCore/ScrollbarsControllerMock.h>
 #endif
 
+#if ENABLE(DAMAGE_TRACKING)
+#include "LayerTreeHost.h"
+#include <WebCore/Damage.h>
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 using namespace HTMLNames;
@@ -1998,5 +2003,29 @@ void WebChromeClient::didProgrammaticallyClearTextFormControl(const HTMLTextForm
 {
     protectedPage()->didProgrammaticallyClearTextFormControl(element);
 }
+
+#if ENABLE(DAMAGE_TRACKING)
+void WebChromeClient::resetDamageHistoryForTesting()
+{
+    const auto* drawingArea = page().drawingArea();
+    if (!drawingArea)
+        return;
+
+    if (auto* frameDamageForTesting = drawingArea->frameDamageForTesting())
+        frameDamageForTesting->resetFrameDamageHistory();
+}
+
+WebCore::FrameDamageHistory* WebChromeClient::damageHistoryForTesting() const
+{
+    const auto* drawingArea = page().drawingArea();
+    if (!drawingArea)
+        return nullptr;
+
+    if (const auto* frameDamageForTesting = drawingArea->frameDamageForTesting())
+        return frameDamageForTesting->frameDamageHistory();
+
+    return nullptr;
+}
+#endif
 
 } // namespace WebKit

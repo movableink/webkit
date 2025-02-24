@@ -703,6 +703,10 @@ void Internals::resetToConsistentState(Page& page)
     AudioSession::sharedSession().tryToSetActive(false);
     AudioSession::sharedSession().endInterruptionForTesting();
 #endif
+
+#if ENABLE(DAMAGE_TRACKING)
+    page.chrome().client().resetDamageHistoryForTesting();
+#endif
 }
 
 Internals::Internals(Document& document)
@@ -752,6 +756,10 @@ Internals::Internals(Document& document)
 #endif
 
     Scrollbar::setShouldUseFixedPixelsPerLineStepForTesting(true);
+
+#if ENABLE(DAMAGE_TRACKING)
+    document.page()->chrome().client().resetDamageHistoryForTesting();
+#endif
 }
 
 Document* Internals::contextDocument() const
@@ -7811,6 +7819,56 @@ void Internals::setShouldSkipResourceMonitorThrottling(bool flag)
 {
     if (RefPtr document = contextDocument())
         document->setShouldSkipResourceMonitorThrottling(flag);
+}
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+std::optional<Internals::DamagePropagation> Internals::getCurrentDamagePropagation() const
+{
+    RefPtr document = contextDocument();
+    if (!document || !document->page())
+        return std::nullopt;
+
+    auto damagePropagation = ([](const Settings& settings) {
+        if (!settings.propagateDamagingInformation())
+            return Damage::Propagation::None;
+        if (settings.unifyDamagedRegions())
+            return Damage::Propagation::Unified;
+        return Damage::Propagation::Region;
+    })(document->page()->settings());
+
+    return damagePropagation;
+}
+
+ExceptionOr<Vector<Internals::FrameDamage>> Internals::getFrameDamageHistory() const
+{
+    RefPtr document = contextDocument();
+    if (!document || !document->page())
+        return Exception { ExceptionCode::NotSupportedError };
+
+    const auto* damageForTesting = document->page()->chrome().client().damageHistoryForTesting();
+    if (!damageForTesting)
+        return Exception { ExceptionCode::NotSupportedError };
+
+    Vector<Internals::FrameDamage> damageDetails;
+    size_t sequenceId = 0;
+    for (const auto& [isValid, region] : damageForTesting->damageInformation()) {
+        FrameDamage details;
+        details.sequenceId = sequenceId++;
+
+        details.isValid = isValid;
+
+        const auto& regionBounds = region.bounds();
+        details.bounds = DOMRectReadOnly::create(regionBounds.x(), regionBounds.y(), regionBounds.width(), regionBounds.height());
+
+        const auto& regionRects = region.rects();
+        details.rects = regionRects.map([](const IntRect& rect) -> Ref<DOMRectReadOnly> {
+            return DOMRectReadOnly::create(rect.x(), rect.y(), rect.width(), rect.height());
+        });
+        damageDetails.append(WTFMove(details));
+    }
+
+    return damageDetails;
 }
 #endif
 

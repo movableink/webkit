@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" href="./common.css">
+    <style>
+      .simpleRect {
+          position: fixed;
+          width: 25px;
+          height: 25px;
+          background-color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="./common.js"></script>
+    <script>
+      setupTestCase({disableConsoleLog: true});
+
+      processAnimationFrameSequence([
+          () => {}, // Skip one RAF callback to make sure initial painting is done.
+          () => {
+              spawnNewElementWithClass("div", "simpleRect");
+          },
+          // FIXME: Check if we need to skip one RAF callback.
+          () => {
+              var damage = latestFrameDamage();
+              assertValid(damage);
+              assertRectsEq(damage.rects, [[0, 0, 25, 25]]);
+          },
+      ], 0);
+    </script>
+  </body>
+</html>

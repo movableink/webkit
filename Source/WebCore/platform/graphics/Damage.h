@@ -120,6 +120,18 @@ private:
     friend bool operator==(const Damage&, const Damage&) = default;
 };
 
+class FrameDamageHistory {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FrameDamageHistory);
+public:
+    using SimplifiedDamage = std::pair<bool, Region>;
+
+    const Vector<SimplifiedDamage>& damageInformation() const { return m_damageInfo; }
+    void addDamage(const SimplifiedDamage& damage) { m_damageInfo.append(damage); }
+
+private:
+    Vector<SimplifiedDamage> m_damageInfo;
+};
+
 static inline WTF::TextStream& operator<<(WTF::TextStream& ts, const Damage& damage)
 {
     if (damage.isInvalid())
