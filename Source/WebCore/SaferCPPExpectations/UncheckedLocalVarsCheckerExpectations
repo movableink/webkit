@@ -57,7 +57,6 @@ platform/mac/VideoPresentationInterfaceMac.mm
 platform/mac/WebPlaybackControlsManager.mm
 rendering/AccessibilityRegionContext.cpp
 rendering/BackgroundPainter.cpp
-rendering/RenderBlock.cpp
 rendering/RenderBox.cpp
 rendering/RenderBoxModelObject.cpp
 rendering/RenderLayer.cpp

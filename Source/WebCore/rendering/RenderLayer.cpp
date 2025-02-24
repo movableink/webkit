@@ -6291,6 +6291,11 @@ RenderLayerScrollableArea* RenderLayer::scrollableArea() const
     return m_scrollableArea.get();
 }
 
+CheckedPtr<RenderLayerScrollableArea> RenderLayer::checkedScrollableArea() const
+{
+    return scrollableArea();
+}
+
 #if ENABLE(ASYNC_SCROLLING) && !LOG_DISABLED
 static TextStream& operator<<(TextStream& ts, RenderLayer::EventRegionInvalidationReason reason)
 {

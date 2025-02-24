@@ -87,6 +87,7 @@ public:
     Element* element() const { return downcast<Element>(RenderObject::node()); }
     RefPtr<Element> protectedElement() const { return element(); }
     Element* nonPseudoElement() const { return downcast<Element>(RenderObject::nonPseudoNode()); }
+    RefPtr<Element> protectedNonPseudoElement() const { return nonPseudoElement(); }
     Element* generatingElement() const;
 
     RenderObject* firstChild() const { return m_firstChild.get(); }

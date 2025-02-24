@@ -636,7 +636,6 @@ rendering/MarkedText.cpp
 rendering/MotionPath.cpp
 rendering/ReferencedSVGResources.cpp
 rendering/RenderAttachment.cpp
-rendering/RenderBlock.cpp
 rendering/RenderBox.cpp
 rendering/RenderCounter.cpp
 rendering/RenderElement.cpp
