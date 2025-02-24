@@ -199,9 +199,8 @@ public:
     TraversalResult traverseNext(CanWrap) const;
     TraversalResult traversePrevious(CanWrap);
 
-    void setPendingChildBackForwardItem(WebBackForwardListFrameItem*);
-    bool hasPendingChildBackForwardItem() const { return !!m_pendingChildBackForwardItem; };
-    WebBackForwardListFrameItem* takePendingChildBackForwardItem();
+    void setIsPendingInitialHistoryItem(bool isPending) { m_isPendingInitialHistoryItem = isPending; }
+    bool isPendingInitialHistoryItem() const { return m_isPendingInitialHistoryItem; }
 
     WebCore::LayerHostingContextIdentifier layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
     void setRemoteFrameSize(WebCore::IntSize size) { m_remoteFrameSize = size; }
@@ -247,7 +246,7 @@ private:
 #endif
     CompletionHandler<void(std::optional<WebCore::PageIdentifier>, std::optional<WebCore::FrameIdentifier>)> m_navigateCallback;
     const WebCore::LayerHostingContextIdentifier m_layerHostingContextIdentifier;
-    WeakPtr<WebBackForwardListFrameItem> m_pendingChildBackForwardItem;
+    bool m_isPendingInitialHistoryItem { false };
     std::optional<WebCore::IntSize> m_remoteFrameSize;
     WebCore::SandboxFlags m_effectiveSandboxFlags;
     WebCore::ScrollbarMode m_scrollingMode;

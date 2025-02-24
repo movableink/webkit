@@ -689,16 +689,6 @@ bool WebFrameProxy::isMainFrame() const
     return m_frameLoadState.isMainFrame() == IsMainFrame::Yes;
 }
 
-void WebFrameProxy::setPendingChildBackForwardItem(WebBackForwardListFrameItem* pendingChildBackForwardItem)
-{
-    m_pendingChildBackForwardItem = pendingChildBackForwardItem;
-}
-
-WebBackForwardListFrameItem* WebFrameProxy::takePendingChildBackForwardItem()
-{
-    return std::exchange(m_pendingChildBackForwardItem, nullptr).get();
-}
-
 void WebFrameProxy::updateScrollingMode(WebCore::ScrollbarMode scrollingMode)
 {
     m_scrollingMode = scrollingMode;

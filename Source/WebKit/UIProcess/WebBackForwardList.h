@@ -56,6 +56,7 @@ public:
     WebBackForwardListItem* itemForID(WebCore::BackForwardItemIdentifier);
 
     void addItem(Ref<WebBackForwardListItem>&&);
+    void addChildItem(WebCore::FrameIdentifier, Ref<FrameState>&&);
     void goToItem(WebBackForwardListItem&);
     void removeAllItems();
     void clear();

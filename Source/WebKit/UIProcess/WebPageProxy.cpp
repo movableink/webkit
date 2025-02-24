@@ -5141,10 +5141,8 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
 
         RefPtr provisionalPage = m_provisionalPage;
         Ref processNavigatingFrom = frame.isMainFrame() && provisionalPage ? provisionalPage->process() : frame.process();
-        if (RefPtr parentFrame = frame.parentFrame(); parentFrame && parentFrame->process() == processNavigatingFrom) {
-            if (RefPtr currentItem = m_backForwardList->currentItem())
-                frame.setPendingChildBackForwardItem(currentItem->protectedNavigatedFrameItem()->protectedChildItemForFrameID(parentFrame->frameID()).get());
-        }
+        if (RefPtr parentFrame = frame.parentFrame(); parentFrame && parentFrame->process() == processNavigatingFrom)
+            frame.setIsPendingInitialHistoryItem(true);
 
         frame.prepareForProvisionalLoadInProcess(newProcess, navigation, m_browsingContextGroup, [
             loadParameters = WTFMove(loadParameters),
@@ -9623,8 +9621,12 @@ void WebPageProxy::backForwardAddItemShared(IPC::Connection& connection, Ref<Fra
 #endif
 
     if (RefPtr targetFrame = WebFrameProxy::webFrame(navigatedFrameState->frameID)) {
-        if (RefPtr pendingChildBackForwardItem = targetFrame->takePendingChildBackForwardItem())
-            return pendingChildBackForwardItem->setChild(WTFMove(navigatedFrameState));
+        if (targetFrame->isPendingInitialHistoryItem()) {
+            targetFrame->setIsPendingInitialHistoryItem(false);
+            if (RefPtr parent = targetFrame->parentFrame())
+                m_backForwardList->addChildItem(parent->frameID(), WTFMove(navigatedFrameState));
+            return;
+        }
     } else
         return;
 

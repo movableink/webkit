@@ -190,6 +190,19 @@ void WebBackForwardList::addItem(Ref<WebBackForwardListItem>&& newItem)
     page->didChangeBackForwardList(newItemPtr, WTFMove(removedItems));
 }
 
+void WebBackForwardList::addChildItem(FrameIdentifier parentFrameID, Ref<FrameState>&& frameState)
+{
+    RefPtr currentItem = this->currentItem();
+    if (!currentItem)
+        return;
+
+    RefPtr parentItem = currentItem->protectedMainFrameItem()->childItemForFrameID(parentFrameID);
+    if (!parentItem)
+        return;
+
+    parentItem->setChild(WTFMove(frameState));
+}
+
 void WebBackForwardList::goToItem(WebBackForwardListItem& item)
 {
     if (m_provisionalIndex)
