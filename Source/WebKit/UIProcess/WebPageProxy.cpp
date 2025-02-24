@@ -10083,10 +10083,8 @@ void WebPageProxy::didShowContextMenu()
 
 void WebPageProxy::didDismissContextMenu()
 {
-    RunLoop::protectedMain()->dispatch([weakPage = WeakPtr { *this }] {
-        if (RefPtr page = weakPage.get())
-            page->send(Messages::WebPage::DidDismissContextMenu());
-    });
+    send(Messages::WebPage::DidDismissContextMenu());
+
     if (RefPtr pageClient = this->pageClient())
         pageClient->didDismissContextMenu();
 }
