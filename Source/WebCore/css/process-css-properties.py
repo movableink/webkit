@@ -1595,7 +1595,6 @@ class ReferenceTerm:
             return all_rules.rules_by_name[name_for_lookup].grammar.root_term.perform_fixups(all_rules)
         return self
 
-
     def perform_fixups_for_values_references(self, values):
         # NOTE: The actual name in the grammar is "<<values>>", which we store as is_internal + 'values'.
         if self.is_internal and self.name.name == "values":
@@ -1609,6 +1608,10 @@ class ReferenceTerm:
     @property
     def supported_keywords(self):
         return set()
+
+    @property
+    def has_non_builtin_reference_terms(self):
+        return not self.is_builtin
 
 
 # LiteralTerm represents a direct match of a literal character or string. The
@@ -1641,6 +1644,10 @@ class LiteralTerm:
     @property
     def supported_keywords(self):
         return set()
+
+    @property
+    def has_non_builtin_reference_terms(self):
+        return False
 
 
 # KeywordTerm represents a direct keyword match. The syntax in the CSS specifications
@@ -1676,6 +1683,10 @@ class KeywordTerm:
     @property
     def supported_keywords(self):
         return {self.value.name}
+
+    @property
+    def has_non_builtin_reference_terms(self):
+        return False
 
     @property
     def requires_context(self):
@@ -1773,6 +1784,10 @@ class MatchOneTerm:
             result.update(term.supported_keywords)
         return result
 
+    @property
+    def has_non_builtin_reference_terms(self):
+        return any(term.has_non_builtin_reference_terms for term in self.terms)
+
 
 # GroupTerm represents matching a list of provided terms with
 # options for whether the matches are ordered and whether all
@@ -1838,6 +1853,10 @@ class GroupTerm:
             result.update(subterm.supported_keywords)
         return result
 
+    @property
+    def has_non_builtin_reference_terms(self):
+        return any(term.has_non_builtin_reference_terms for term in self.subterms)
+
 
 # OptionalTerm represents matching a term that is allowed to
 # be ommited. The syntax in the CSS specifications uses a
@@ -1878,6 +1897,10 @@ class OptionalTerm:
     @property
     def supported_keywords(self):
         return self.subterm.supported_keywords
+
+    @property
+    def has_non_builtin_reference_terms(self):
+        return self.subterm.has_non_builtin_reference_terms
 
 
 # UnboundedRepetitionTerm represents matching a list of terms
@@ -1949,6 +1972,10 @@ class UnboundedRepetitionTerm:
     def supported_keywords(self):
         return self.repeated_term.supported_keywords
 
+    @property
+    def has_non_builtin_reference_terms(self):
+        return self.repeated_term.has_non_builtin_reference_terms
+
 
 # BoundedRepetitionTerm represents matching a list of terms
 # separated by either spaces or commas where the list of terms
@@ -2003,6 +2030,10 @@ class BoundedRepetitionTerm:
     def supported_keywords(self):
         return self.repeated_term.supported_keywords
 
+    @property
+    def has_non_builtin_reference_terms(self):
+        return self.repeated_term.has_non_builtin_reference_terms
+
 
 # FixedSizeRepetitionTerm represents matching a list of terms
 # separated by either spaces or commas where the list of terms
@@ -2056,6 +2087,10 @@ class FixedSizeRepetitionTerm:
     def supported_keywords(self):
         return self.repeated_term.supported_keywords
 
+    @property
+    def has_non_builtin_reference_terms(self):
+        return self.repeated_term.has_non_builtin_reference_terms
+
 
 # FunctionTerm represents matching a use of the CSS function call syntax
 # which provides a way for specifications to differentiate groups by
@@ -2092,6 +2127,10 @@ class FunctionTerm:
     def supported_keywords(self):
         return self.parameter_group_term.supported_keywords
 
+    @property
+    def has_non_builtin_reference_terms(self):
+        return self.parameter_group_term.has_non_builtin_reference_terms
+
 
 # Container for the name and root term for a grammar. Used for both shared rules and property specific grammars.
 class Grammar:
@@ -2118,6 +2157,10 @@ class Grammar:
         self.root_term = self.root_term.perform_fixups_for_values_references(values)
 
     def check_against_values(self, values):
+        if self.has_non_builtin_reference_terms:
+            # If the grammar has any  non-builtin references, the grammar is incomplete and this check cannot be performed.
+            return
+
         keywords_supported_by_grammar = self.supported_keywords
         keywords_listed_as_values = frozenset(value.name for value in values)
 
@@ -2162,6 +2205,10 @@ class Grammar:
     @property
     def supported_keywords(self):
         return self.root_term.supported_keywords
+
+    @property
+    def has_non_builtin_reference_terms(self):
+        return self.root_term.has_non_builtin_reference_terms
 
 
 # A shared grammar rule and metadata describing it. Part of the set of rules tracked by SharedGrammarRules.

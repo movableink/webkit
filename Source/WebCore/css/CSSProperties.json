@@ -2224,6 +2224,10 @@
                     "status": "unimplemented"
                 },
                 {
+                    "value": "intrinsic",
+                    "status": "non-standard"
+                },
+                {
                     "value": "min-intrinsic",
                     "status": "non-standard"
                 },
@@ -4242,6 +4246,10 @@
                     "status": "unimplemented"
                 },
                 {
+                    "value": "intrinsic",
+                    "status": "non-standard"
+                },
+                {
                     "value": "min-intrinsic",
                     "status": "non-standard"
                 },
@@ -4351,6 +4359,10 @@
                 {
                     "value": "contain",
                     "status": "unimplemented"
+                },
+                {
+                    "value": "intrinsic",
+                    "status": "non-standard"
                 },
                 {
                     "value": "min-intrinsic",
@@ -5532,6 +5544,10 @@
                     "status": "unimplemented"
                 },
                 {
+                    "value": "intrinsic",
+                    "status": "non-standard"
+                },
+                {
                     "value": "min-intrinsic",
                     "status": "non-standard"
                 },
@@ -5585,6 +5601,10 @@
                     "status": "unimplemented"
                 },
                 {
+                    "value": "intrinsic",
+                    "status": "non-standard"
+                },
+                {
                     "value": "min-intrinsic",
                     "status": "non-standard"
                 },
@@ -5634,6 +5654,10 @@
                 {
                     "value": "contain",
                     "status": "unimplemented"
+                },
+                {
+                    "value": "intrinsic",
+                    "status": "non-standard"
                 },
                 {
                     "value": "min-intrinsic",
@@ -5707,6 +5731,10 @@
                     "status": "unimplemented"
                 },
                 {
+                    "value": "intrinsic",
+                    "status": "non-standard"
+                },
+                {
                     "value": "min-intrinsic",
                     "status": "non-standard"
                 },
@@ -5756,6 +5784,10 @@
                 {
                     "value": "contain",
                     "status": "unimplemented"
+                },
+                {
+                    "value": "intrinsic",
+                    "status": "non-standard"
                 },
                 {
                     "value": "min-intrinsic",
@@ -5811,6 +5843,10 @@
                     "status": "unimplemented"
                 },
                 {
+                    "value": "intrinsic",
+                    "status": "non-standard"
+                },
+                {
                     "value": "min-intrinsic",
                     "status": "non-standard"
                 },
@@ -5860,6 +5896,10 @@
                 {
                     "value": "contain",
                     "status": "unimplemented"
+                },
+                {
+                    "value": "intrinsic",
+                    "status": "non-standard"
                 },
                 {
                     "value": "min-intrinsic",
@@ -5913,6 +5953,10 @@
                 {
                     "value": "contain",
                     "status": "unimplemented"
+                },
+                {
+                    "value": "intrinsic",
+                    "status": "non-standard"
                 },
                 {
                     "value": "min-intrinsic",
@@ -7762,6 +7806,10 @@
                     "status": "unimplemented"
                 },
                 {
+                    "value": "intrinsic",
+                    "status": "non-standard"
+                },
+                {
                     "value": "min-intrinsic",
                     "status": "non-standard"
                 },
@@ -8945,6 +8993,10 @@
                 {
                     "value": "contain",
                     "status": "unimplemented"
+                },
+                {
+                    "value": "intrinsic",
+                    "status": "non-standard"
                 },
                 {
                     "value": "min-intrinsic",
@@ -11328,7 +11380,15 @@
             "animation-type": "discrete",
             "initial": "none",
             "values": [
-                "none"
+                "none",
+                {
+                    "value": "auto",
+                    "status": "non-standard"
+                },
+                {
+                    "value": "match-element",
+                    "status": "non-standard"
+                }
             ],
             "codegen-properties": {
                 "style-builder-converter": "ViewTransitionName",
