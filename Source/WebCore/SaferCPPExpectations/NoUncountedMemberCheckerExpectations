@@ -90,7 +90,6 @@ rendering/TextBoxPainter.h
 rendering/style/StyleGeneratedImage.cpp
 rendering/svg/SVGTextLayoutAttributesBuilder.h
 rendering/updating/RenderTreeUpdater.h
-style/ChildChangeInvalidation.h
 style/ClassChangeInvalidation.cpp
 style/ElementRuleCollector.cpp
 style/PseudoClassChangeInvalidation.h
