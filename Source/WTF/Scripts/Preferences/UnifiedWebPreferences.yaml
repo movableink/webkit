@@ -2902,7 +2902,7 @@ ExposeSpeakersEnabled:
   condition: ENABLE(MEDIA_STREAM)
   defaultValue:
     WebKit:
-      "PLATFORM(MAC)": true
+      "PLATFORM(COCOA)": true
       default: false
     WebCore:
       default: false
@@ -2916,7 +2916,7 @@ ExposeSpeakersWithoutMicrophoneEnabled:
   condition: ENABLE(MEDIA_STREAM)
   defaultValue:
     WebKit:
-      "PLATFORM(MAC)": true
+      "PLATFORM(COCOA)": true
       default: false
     WebCore:
       default: false
@@ -5777,7 +5777,7 @@ PerElementSpeakerSelectionEnabled:
   condition: ENABLE(MEDIA_STREAM)
   defaultValue:
     WebKit:
-      "PLATFORM(MAC)": true
+      "PLATFORM(COCOA)": true
       default: false
     WebCore:
       default: false
