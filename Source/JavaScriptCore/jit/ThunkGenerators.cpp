@@ -59,22 +59,6 @@ MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionGenerator(VM& vm)
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "handleException"_s, "handleException");
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionWithCallFrameRollbackGenerator(VM& vm)
-{
-    CCallHelpers jit;
-
-    jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame, GPRInfo::argumentGPR0);
-
-    jit.move(CCallHelpers::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
-    jit.prepareCallOperation(vm);
-    CCallHelpers::Call operation = jit.call(OperationPtrTag);
-    jit.jumpToExceptionHandler(vm);
-
-    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::ExtraCTIThunk);
-    patchBuffer.link<OperationPtrTag>(operation, operationLookupExceptionHandlerFromCallerFrame);
-    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "handleExceptionWithCallFrameRollback"_s, "handleExceptionWithCallFrameRollback");
-}
-
 MacroAssemblerCodeRef<JITThunkPtrTag> popThunkStackPreservesAndHandleExceptionGenerator(VM& vm)
 {
     CCallHelpers jit;
@@ -198,7 +182,13 @@ MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowAtPrologueGenerator(VM& 
     jit.emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
     jit.prepareCallOperation(vm);
     jit.callOperation<OperationPtrTag>(operationThrowStackOverflowError);
-    jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()));
+
+    jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame, GPRInfo::argumentGPR0);
+
+    jit.move(CCallHelpers::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
+    jit.prepareCallOperation(vm);
+    jit.callOperation<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame);
+    jit.jumpToExceptionHandler(vm);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Thunk);
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "throwStackOverflow"_s, "throwStackOverflow");

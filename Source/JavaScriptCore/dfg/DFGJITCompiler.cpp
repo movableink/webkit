@@ -372,11 +372,6 @@ void JITCompiler::disassemble(LinkBuffer& linkBuffer)
         m_disassembler->reportToProfiler(m_graph.m_plan.compilation(), linkBuffer);
 }
 
-void JITCompiler::exceptionJumpWithCallFrameRollback()
-{
-    jumpThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()));
-}
-
 #if USE(JSVALUE32_64)
 void* JITCompiler::addressOfDoubleConstant(Node* node)
 {

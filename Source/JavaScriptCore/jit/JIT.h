@@ -246,7 +246,6 @@ namespace JSC {
 
         void exceptionCheck(Jump jumpToHandler);
         void exceptionCheck();
-        void exceptionChecksWithCallFrameRollback(Jump jumpToHandler);
 
         void advanceToNextCheckpoint();
         void emitJumpSlowToHotForCheckpoint(Jump);
@@ -777,16 +776,6 @@ namespace JSC {
             setupArguments<OperationType>(args...);
             updateTopCallFrame();
             return appendCall(operation);
-        }
-
-        template<typename OperationType, typename... Args>
-        MacroAssembler::Call callThrowOperationWithCallFrameRollback(OperationType operation, Args... args)
-        {
-            setupArguments<OperationType>(args...);
-            updateTopCallFrame(); // The callee is responsible for setting topCallFrame to their caller
-            MacroAssembler::Call call = appendCall(operation);
-            exceptionChecksWithCallFrameRollback(jump());
-            return call;
         }
 
         enum class ProfilingPolicy {

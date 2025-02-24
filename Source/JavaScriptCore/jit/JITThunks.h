@@ -54,7 +54,6 @@ class NativeExecutable;
 // List up super common stubs so that we initialize them eagerly.
 #define JSC_FOR_EACH_COMMON_THUNK(macro) \
     macro(HandleException, handleExceptionGenerator) \
-    macro(HandleExceptionWithCallFrameRollback, handleExceptionWithCallFrameRollbackGenerator) \
     macro(CheckException, checkExceptionGenerator) \
     macro(NativeCall, nativeCallGenerator) \
     macro(NativeConstruct, nativeConstructGenerator) \

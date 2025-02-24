@@ -1091,11 +1091,6 @@ void JIT::exceptionCheck()
     exceptionCheck(emitExceptionCheck(vm()));
 }
 
-void JIT::exceptionChecksWithCallFrameRollback(Jump jumpToHandler)
-{
-    jumpToHandler.linkThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()), this);
-}
-
 } // namespace JSC
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
