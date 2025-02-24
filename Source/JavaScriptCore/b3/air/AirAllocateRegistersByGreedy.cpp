@@ -186,7 +186,7 @@ public:
         return m_intervals;
     }
 
-    size_t size()
+    size_t size() const
     {
         return m_size;
     }
@@ -476,6 +476,11 @@ public:
         }
     }
 
+    bool isEmpty() const
+    {
+        return m_allocations.empty();
+    }
+
     void dump(PrintStream& out) const
     {
         CommaPrinter comma;
@@ -591,6 +596,8 @@ public:
         finalizeGroups<GP>();
         finalizeGroups<FP>();
 
+        dataLogLnIf(verbose(), "State before greedy register allocation:\n", *this);
+
         allocateRegisters<GP>();
         allocateRegisters<FP>();
 
@@ -603,8 +610,37 @@ public:
         fixSpillsAfterTerminals(m_code);
     }
 
+    void dump(PrintStream& out) const
+    {
+        out.println("RegRanges:");
+        dumpRegRanges<GP>(out);
+        dumpRegRanges<FP>(out);
+        out.println("LiveRanges:");
+        auto dumpRegTmpData = [&](Reg r) {
+            const TmpData& tmpData = m_map[Tmp(r)];
+            if (tmpData.liveRange.size())
+                out.println("    ", r, ": ", m_map[Tmp(r)]);
+        };
+        for (Reg r : m_allowedRegistersInPriorityOrder[GP])
+            dumpRegTmpData(r);
+        for (Reg r : m_allowedRegistersInPriorityOrder[FP])
+            dumpRegTmpData(r);
+        m_code.forEachTmp([&](Tmp tmp) {
+            out.println("    ", tmp, ": ", m_map[tmp]);
+        });
+    }
+
 private:
     static constexpr Point pointsPerInst = 2;
+
+    template<Bank bank>
+    void dumpRegRanges(PrintStream& out) const
+    {
+        for (Reg r : m_allowedRegistersInPriorityOrder[bank]) {
+            if (!m_regRanges[r].isEmpty())
+                out.println("    ", r, ": ", m_regRanges[r]);
+        }
+    }
 
     void buildRegisterSets()
     {
@@ -1003,21 +1039,6 @@ private:
             ASSERT(!activeIntervals[tmp]);
         });
 #endif
-        if (verbose()) {
-            dataLog("Intervals:\n");
-            auto dumpRegTmpData = [&](Reg r) {
-                TmpData& tmpData = m_map[Tmp(r)];
-                if (tmpData.liveRange.size())
-                    dataLog("    ", r, ": ", m_map[Tmp(r)], "\n");
-            };
-            for (Reg r : m_allowedRegistersInPriorityOrder[GP])
-                dumpRegTmpData(r);
-            for (Reg r : m_allowedRegistersInPriorityOrder[FP])
-                dumpRegTmpData(r);
-            m_code.forEachTmp([&](Tmp tmp) {
-                dataLog("    ", tmp, ": ", m_map[tmp], "\n");
-            });
-        }
     }
 
     template<typename Func>
@@ -1208,12 +1229,6 @@ private:
         return tmp;
     }
 
-    void dumpRegRanges(Bank bank)
-    {
-        for (Reg r : m_allowedRegistersInPriorityOrder[bank])
-            dataLogLn("   regRanges[", r, "]: ", m_regRanges[r]);
-    }
-
     void setStageAndEnqueue(Tmp tmp, TmpData& tmpData, Stage stage)
     {
         ASSERT(!tmp.isReg());
@@ -1259,8 +1274,10 @@ private:
                 ASSERT(tmp && tmp.bank() == bank);
                 TmpData& tmpData = m_map[tmp];
                 if (verbose()) {
-                    dataLogLn("Pop: ", entry, " tmp: ", tmpData);
-                    dumpRegRanges(bank);
+                    StringPrintStream out;
+                    out.println("Pop: ", entry, " tmp: ", tmpData);
+                    dumpRegRanges<bank>(out);
+                    dataLog(out.toCString());
                 }
                 if (tmpData.stage == Stage::Replaced)
                     continue; // Tmp no longer relevant
@@ -1881,16 +1898,7 @@ private:
     void assignRegisters()
     {
         CompilerTimingScope timingScope("Air"_s, "GreedyRegAlloc::assignRegisters"_s);
-
-        if (verbose()) {
-            dataLog("About to assign registers. State of all tmps:\n");
-            m_code.forEachTmp(
-                [&] (Tmp tmp) {
-                    dataLog("    ", tmp, ": ", m_map[tmp], "\n");
-                });
-            dataLog("IR:\n");
-            dataLog(m_code);
-        }
+        dataLogLnIf(verbose(), "Greedy register allocator about to assign registers:\n", *this, "IR:\n", m_code);
 
         for (BasicBlock* block : m_code) {
             for (Inst& inst : *block) {
