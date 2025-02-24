@@ -36,7 +36,6 @@ WebProcess/Plugins/PDF/PDFPluginBase.mm
 WebProcess/Plugins/PDF/UnifiedPDF/UnifiedPDFPlugin.mm
 WebProcess/Storage/WebSWClientConnection.cpp
 WebProcess/WebCoreSupport/WebSpeechSynthesisClient.cpp
-WebProcess/WebPage/EventDispatcher.cpp
 WebProcess/WebPage/ViewUpdateDispatcher.cpp
 WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
