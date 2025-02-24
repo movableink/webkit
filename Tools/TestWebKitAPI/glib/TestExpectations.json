@@ -507,5 +507,12 @@
                 "expected": {"gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/284812"}}
             }
         }
+    },
+    "TestInspector": {
+        "subtests": {
+            "/webkit/WebKitWebInspector/manual-attach-detach": {
+                "expected": {"gtk": { "status": ["FAIL"], "bug": "webkit.org/b/288385"}}
+            }
+        }
     }
 }
