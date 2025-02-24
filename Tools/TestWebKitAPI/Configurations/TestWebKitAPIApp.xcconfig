@@ -24,7 +24,7 @@
 #include "TestWebKitAPIBase.xcconfig"
 
 PRODUCT_NAME = TestWebKitAPI;
-PRODUCT_BUNDLE_IDENTIFIER = com.apple.WebKit.TestWebKitAPIApp;
+PRODUCT_BUNDLE_IDENTIFIER = org.webkit.$(PRODUCT_NAME:rfc1034identifier);
 
 EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*] = ios/app/*;
 EXCLUDED_SOURCE_FILE_NAMES[sdk=embedded*] = mac/app/*;
