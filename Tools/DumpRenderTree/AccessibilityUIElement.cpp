@@ -1185,7 +1185,7 @@ static JSValueRef getIsGrabbedCallback(JSContextRef context, JSObjectRef thisObj
 static JSValueRef getIsValidCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
     AccessibilityUIElement* uiElement = toAXElement(thisObject);
-    if (!uiElement->hasPlatformUIElement())
+    if (!uiElement->platformUIElement())
         return JSValueMakeBoolean(context, false);
     
     // There might be other platform logic that one could check here...
@@ -1720,6 +1720,15 @@ void AccessibilityUIElement::setValue(JSStringRef) { }
 void AccessibilityUIElement::uiElementArrayAttributeValue(JSStringRef, Vector<AccessibilityUIElement>&) const { }
 #endif
 
+#if !PLATFORM(WIN)
+bool AccessibilityUIElement::isEqual(AccessibilityUIElement* otherElement)
+{
+    if (!otherElement)
+        return false;
+    return platformUIElement() == otherElement->platformUIElement();
+}
+#endif
+
 #if !PLATFORM(MAC)
 void AccessibilityUIElement::setBoolAttributeValue(JSStringRef, bool) { }
 bool AccessibilityUIElement::isOnScreen() const { return true; }
@@ -1941,7 +1950,7 @@ static void finalize(JSObjectRef thisObject)
 
 JSObjectRef AccessibilityUIElement::makeJSAccessibilityUIElement(JSContextRef context, const AccessibilityUIElement& element)
 {
-    if (!element.hasPlatformUIElement())
+    if (!element.platformUIElement())
         return nullptr;
 
     return JSObjectMake(context, AccessibilityUIElement::getJSClass(), new AccessibilityUIElement(element));

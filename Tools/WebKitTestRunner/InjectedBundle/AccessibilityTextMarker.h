@@ -69,18 +69,4 @@ private:
 inline bool AccessibilityTextMarker::isEqual(AccessibilityTextMarker*) { return false; }
 #endif
 
-#if PLATFORM(COCOA)
-#ifdef __OBJC__
-inline PlatformTextMarker AccessibilityTextMarker::platformTextMarker() const
-{
-    return m_textMarker.get();
-}
-#endif
-#else
-inline PlatformTextMarker AccessibilityTextMarker::platformTextMarker() const
-{
-    return m_textMarker;
-}
-#endif
-
 } // namespace WTR
