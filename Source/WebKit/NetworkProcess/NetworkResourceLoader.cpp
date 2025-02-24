@@ -583,7 +583,8 @@ void NetworkResourceLoader::cleanup(LoadResult result)
 
     invalidateSandboxExtensions();
 
-    m_networkLoad = nullptr;
+    if (RefPtr networkLoad = std::exchange(m_networkLoad, nullptr))
+        networkLoad->clearClient();
 
     // This will cause NetworkResourceLoader to be destroyed and therefore we do it last.
     connection->didCleanupResourceLoader(*this);
@@ -1256,7 +1257,8 @@ void NetworkResourceLoader::willSendRedirectedRequestInternal(ResourceRequest&& 
 
 #if ENABLE(CONTENT_FILTERING)
     if (m_contentFilter && !m_contentFilter->continueAfterWillSendRequest(redirectRequest, redirectResponse)) {
-        m_networkLoad = nullptr;
+        if (RefPtr networkLoad = std::exchange(m_networkLoad, nullptr))
+            networkLoad->clearClient();
         return completionHandler({ });
     }
 #endif
@@ -1425,6 +1427,7 @@ void NetworkResourceLoader::restartNetworkLoad(WebCore::ResourceRequest&& newReq
     if (RefPtr networkLoad = m_networkLoad) {
         LOADER_RELEASE_LOG("restartNetworkLoad: Cancelling existing network load so we can restart the load.");
         networkLoad->cancel();
+        networkLoad->clearClient();
         m_networkLoad = nullptr;
     }
 
@@ -1459,7 +1462,8 @@ void NetworkResourceLoader::continueWillSendRequest(ResourceRequest&& newRequest
         setWorkerStart({ });
         if (auto serviceWorkerFetchTask = protectedConnectionToWebProcess()->createFetchTask(*this, newRequest)) {
             LOADER_RELEASE_LOG("continueWillSendRequest: Created a ServiceWorkerFetchTask to handle the redirect (fetchIdentifier=%" PRIu64 ")", serviceWorkerFetchTask->fetchIdentifier().toUInt64());
-            m_networkLoad = nullptr;
+            if (RefPtr networkLoad = std::exchange(m_networkLoad, nullptr))
+                networkLoad->clearClient();
             m_serviceWorkerFetchTask = WTFMove(serviceWorkerFetchTask);
             return completionHandler({ });
         }

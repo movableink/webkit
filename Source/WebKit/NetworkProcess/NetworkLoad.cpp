@@ -135,12 +135,12 @@ void NetworkLoad::reprioritizeRequest(ResourceLoadPriority priority)
 
 bool NetworkLoad::shouldCaptureExtraNetworkLoadMetrics() const
 {
-    return m_client->shouldCaptureExtraNetworkLoadMetrics();
+    return m_client && m_client->shouldCaptureExtraNetworkLoadMetrics();
 }
 
 bool NetworkLoad::isAllowedToAskUserForCredentials() const
 {
-    return m_client->isAllowedToAskUserForCredentials();
+    return m_client && m_client->isAllowedToAskUserForCredentials();
 }
 
 void NetworkLoad::convertTaskToDownload(PendingDownload& pendingDownload, const ResourceRequest& updatedRequest, const ResourceResponse& response, ResponseCompletionHandler&& completionHandler)
@@ -149,7 +149,7 @@ void NetworkLoad::convertTaskToDownload(PendingDownload& pendingDownload, const 
     if (!task)
         return completionHandler(PolicyAction::Ignore);
 
-    m_client = pendingDownload;
+    m_client = &pendingDownload;
     m_currentRequest = updatedRequest;
     task->setPendingDownload(pendingDownload);
     
@@ -192,6 +192,9 @@ void NetworkLoad::willPerformHTTPRedirection(ResourceResponse&& redirectResponse
         return;
     }
 
+    if (!m_client)
+        return completionHandler({ });
+
     redirectResponse.setSource(ResourceResponse::Source::Network);
 
     auto oldRequest = WTFMove(m_currentRequest);
@@ -215,6 +218,11 @@ void NetworkLoad::willPerformHTTPRedirection(ResourceResponse&& redirectResponse
 
 void NetworkLoad::didReceiveChallenge(AuthenticationChallenge&& challenge, NegotiatedLegacyTLS negotiatedLegacyTLS, ChallengeCompletionHandler&& completionHandler)
 {
+    if (!m_client) {
+        completionHandler(AuthenticationChallengeDisposition::Cancel, { });
+        return;
+    }
+
     m_client->didReceiveChallenge(challenge);
 
     auto scheme = challenge.protectionSpace().authenticationScheme();
@@ -234,7 +242,8 @@ void NetworkLoad::didReceiveChallenge(AuthenticationChallenge&& challenge, Negot
 
 void NetworkLoad::didReceiveInformationalResponse(ResourceResponse&& response)
 {
-    m_client->didReceiveInformationalResponse(WTFMove(response));
+    if (m_client)
+        m_client->didReceiveInformationalResponse(WTFMove(response));
 }
 
 void NetworkLoad::didReceiveResponse(ResourceResponse&& response, NegotiatedLegacyTLS negotiatedLegacyTLS, PrivateRelayed privateRelayed, ResponseCompletionHandler&& completionHandler)
@@ -256,6 +265,9 @@ void NetworkLoad::notifyDidReceiveResponse(ResourceResponse&& response, Negotiat
 {
     ASSERT(RunLoop::isMain());
 
+    if (!m_client)
+        return completionHandler(WebCore::PolicyAction::Ignore);
+
     if (m_parameters.needsCertificateInfo) {
         std::span<const std::byte> auditToken;
 
@@ -274,13 +286,17 @@ void NetworkLoad::notifyDidReceiveResponse(ResourceResponse&& response, Negotiat
 void NetworkLoad::didReceiveData(const WebCore::SharedBuffer& buffer)
 {
     // FIXME: This should be the encoded data length, not the decoded data length.
-    m_client->didReceiveBuffer(buffer, buffer.size());
+    if (m_client)
+        m_client->didReceiveBuffer(buffer, buffer.size());
 }
 
 void NetworkLoad::didCompleteWithError(const ResourceError& error, const WebCore::NetworkLoadMetrics& networkLoadMetrics)
 {
     if (RefPtr scheduler = std::exchange(m_scheduler, nullptr).get())
         scheduler->unschedule(*this, &networkLoadMetrics);
+
+    if (!m_client)
+        return;
 
     if (error.isNull())
         m_client->didFinishLoading(networkLoadMetrics);
@@ -290,27 +306,32 @@ void NetworkLoad::didCompleteWithError(const ResourceError& error, const WebCore
 
 void NetworkLoad::didSendData(uint64_t totalBytesSent, uint64_t totalBytesExpectedToSend)
 {
-    m_client->didSendData(totalBytesSent, totalBytesExpectedToSend);
+    if (m_client)
+        m_client->didSendData(totalBytesSent, totalBytesExpectedToSend);
 }
 
 void NetworkLoad::wasBlocked()
 {
-    m_client->didFailLoading(blockedError(m_currentRequest));
+    if (m_client)
+        m_client->didFailLoading(blockedError(m_currentRequest));
 }
 
 void NetworkLoad::cannotShowURL()
 {
-    m_client->didFailLoading(cannotShowURLError(m_currentRequest));
+    if (m_client)
+        m_client->didFailLoading(cannotShowURLError(m_currentRequest));
 }
 
 void NetworkLoad::wasBlockedByRestrictions()
 {
-    m_client->didFailLoading(wasBlockedByRestrictionsError(m_currentRequest));
+    if (m_client)
+        m_client->didFailLoading(wasBlockedByRestrictionsError(m_currentRequest));
 }
 
 void NetworkLoad::wasBlockedByDisabledFTP()
 {
-    m_client->didFailLoading(ftpDisabledError(m_currentRequest));
+    if (m_client)
+        m_client->didFailLoading(ftpDisabledError(m_currentRequest));
 }
 
 void NetworkLoad::didNegotiateModernTLS(const URL& url)
