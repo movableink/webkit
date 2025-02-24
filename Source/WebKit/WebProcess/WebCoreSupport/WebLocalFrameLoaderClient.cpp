@@ -499,6 +499,7 @@ void WebLocalFrameLoaderClient::didSameDocumentNavigationForFrameViaJS(SameDocum
         false, /* openedByDOMWithOpener */
         !!localFrame->opener(), /* hasOpener */
         localFrame->loader().isHTTPFallbackInProgress(),
+        false, /* isInitialFrameSrcLoad */
         { }, /* openedMainFrameName */
         { }, /* requesterOrigin */
         { }, /* requesterTopOrigin */
@@ -983,6 +984,7 @@ void WebLocalFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const Nav
         false, /* openedByDOMWithOpener */
         navigationAction.newFrameOpenerPolicy() == NewFrameOpenerPolicy::Allow, /* hasOpener */
         localFrame->loader().isHTTPFallbackInProgress(),
+        navigationAction.isInitialFrameSrcLoad(),
         { }, /* openedMainFrameName */
         { }, /* requesterOrigin */
         { }, /* requesterTopOrigin */

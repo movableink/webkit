@@ -132,6 +132,7 @@ public:
     bool treatAsSameOriginNavigation() const { return m_lastNavigationAction.treatAsSameOriginNavigation; }
     bool hasOpenedFrames() const { return m_lastNavigationAction.hasOpenedFrames; }
     bool openedByDOMWithOpener() const { return m_lastNavigationAction.openedByDOMWithOpener; }
+    bool isInitialFrameSrcLoad() const { return m_lastNavigationAction.isInitialFrameSrcLoad; }
     const WebCore::SecurityOriginData& requesterOrigin() const { return m_lastNavigationAction.requesterOrigin; }
 
     void setUserContentExtensionsEnabled(bool enabled) { m_userContentExtensionsEnabled = enabled; }

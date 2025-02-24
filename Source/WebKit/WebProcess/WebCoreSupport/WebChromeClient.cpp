@@ -350,6 +350,7 @@ RefPtr<Page> WebChromeClient::createWindow(LocalFrame& frame, const String& open
         false, /* openedByDOMWithOpener */
         navigationAction.newFrameOpenerPolicy() == NewFrameOpenerPolicy::Allow, /* hasOpener */
         frame.loader().isHTTPFallbackInProgress(),
+        navigationAction.isInitialFrameSrcLoad(),
         openedMainFrameName,
         { }, /* requesterOrigin */
         { }, /* requesterTopOrigin */
