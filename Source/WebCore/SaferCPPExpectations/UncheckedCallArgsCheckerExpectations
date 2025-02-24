@@ -1,7 +1,6 @@
 Modules/cookie-store/CookieStore.cpp
 Modules/mediarecorder/MediaRecorder.cpp
 Modules/websockets/WorkerThreadableWebSocketChannel.cpp
-accessibility/AXObjectCache.cpp
 accessibility/AccessibilityListBox.cpp
 accessibility/AccessibilityObject.cpp
 accessibility/AccessibilityRenderObject.cpp

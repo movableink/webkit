@@ -4316,6 +4316,17 @@ bool AXObjectCache::elementIsTextControl(const Element& element)
     return axObject && axObject->isTextControl();
 }
 
+static bool documentNeedsLayoutOrStyleRecalc(Document& document)
+{
+    auto* frameView = document.view();
+    if (frameView) {
+        if (frameView->needsLayout() || frameView->layoutContext().isLayoutPending())
+            return true;
+    }
+
+    return document.hasPendingStyleRecalc();
+}
+
 void AXObjectCache::performDeferredCacheUpdate(ForceLayout forceLayout)
 {
     AXTRACE(makeString("AXObjectCache::performDeferredCacheUpdate 0x"_s, hex(reinterpret_cast<uintptr_t>(this))));
@@ -4335,7 +4346,7 @@ void AXObjectCache::performDeferredCacheUpdate(ForceLayout forceLayout)
     if (!document->view())
         return;
 
-    if (document->view()->needsLayout()) {
+    if (documentNeedsLayoutOrStyleRecalc(*document)) {
         // Layout became dirty while waiting to performDeferredCacheUpdate, and we require clean layout
         // to update the accessibility tree correctly in this function.
         if ((m_cacheUpdateDeferredCount >= 3 || forceLayout == ForceLayout::Yes) && !Accessibility::inRenderTreeOrStyleUpdate(*document)) {
@@ -4355,7 +4366,7 @@ void AXObjectCache::performDeferredCacheUpdate(ForceLayout forceLayout)
         for (; frame; frame = frame->tree().traverseNext()) {
             auto* localFrame = dynamicDowncast<LocalFrame>(frame.get());
             RefPtr subDocument = localFrame ? localFrame->document() : nullptr;
-            if (subDocument && subDocument->view() && subDocument->view()->needsLayout())
+            if (subDocument && documentNeedsLayoutOrStyleRecalc(*subDocument))
                 subDocument->updateLayoutIgnorePendingStylesheets();
         }
     }
