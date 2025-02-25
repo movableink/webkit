@@ -810,3 +810,5 @@ webkit.org/b/286450 imported/w3c/web-platform-tests/webcodecs/audio-encoder.http
 webkit.org/b/287126 fast/forms/datalist/datalist-hide-using-escape-key.html [ Pass Timeout Failure ]
 
 webkit.org/b/287724 imported/w3c/web-platform-tests/feature-policy/reporting/picture-in-picture-reporting.html [ Pass Failure ]
+
+webkit.org/b/288422 imported/w3c/web-platform-tests/navigation-api/navigate-event/navigate-destination-dynamic-index.html [ Failure ]
