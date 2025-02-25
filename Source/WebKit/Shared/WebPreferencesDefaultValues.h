@@ -168,6 +168,10 @@ bool defaultCookieStoreAPIEnabled();
 bool defaultContentInsetBackgroundFillEnabled();
 #endif
 
+#if ENABLE(SCREEN_TIME)
+bool defaultScreenTimeEnabled();
+#endif
+
 #if ENABLE(CONTENT_EXTENSIONS)
 bool defaultIFrameResourceMonitoringEnabled();
 #endif

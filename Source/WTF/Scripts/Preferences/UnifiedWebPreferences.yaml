@@ -6465,7 +6465,7 @@ ScreenTimeEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      default: false
+      default: defaultScreenTimeEnabled()
     WebCore:
       default: false
 
