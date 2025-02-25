@@ -3,8 +3,8 @@ PASS --pf
 PASS --pf flip-block
 PASS --pf flip-inline
 PASS --pf flip-block flip-inline
-FAIL --pf flip-start assert_equals: offsetLeft expected 25 but got 45
-FAIL --pf flip-block flip-start assert_equals: offsetLeft expected 335 but got 45
-FAIL --pf flip-inline flip-start assert_equals: offsetLeft expected 25 but got 325
-FAIL --pf flip-block flip-inline flip-start assert_equals: offsetLeft expected 335 but got 325
+PASS --pf flip-start
+PASS --pf flip-block flip-start
+PASS --pf flip-inline flip-start
+PASS --pf flip-block flip-inline flip-start
 

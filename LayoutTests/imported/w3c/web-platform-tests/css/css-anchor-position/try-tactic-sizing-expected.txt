@@ -1,5 +1,5 @@
 
 PASS flip-block does not affect sizing
 PASS flip-inline does not affect sizing
-FAIL flip-start affects sizing assert_equals: expected "40px" but got "30px"
+PASS flip-start affects sizing
 

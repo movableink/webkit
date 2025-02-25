@@ -113,6 +113,63 @@ static BoxSide flipBoxSide(BoxSide side)
     }
 }
 
+static std::pair<BoxSide, bool> swapSideForTryTactics(BoxSide side, const Vector<PositionTryFallback::Tactic>& tactics, WritingMode writingMode)
+{
+    bool swappedOpposing = false;
+
+    auto logicalSide = mapSidePhysicalToLogical(writingMode, side);
+    for (auto tactic : tactics) {
+        switch (tactic) {
+        case PositionTryFallback::Tactic::FlipInline:
+            switch (logicalSide) {
+            case LogicalBoxSide::InlineStart:
+                swappedOpposing = true;
+                logicalSide = LogicalBoxSide::InlineEnd;
+                break;
+            case LogicalBoxSide::InlineEnd:
+                swappedOpposing = true;
+                logicalSide = LogicalBoxSide::InlineStart;
+                break;
+            default:
+                break;
+            }
+            break;
+        case PositionTryFallback::Tactic::FlipBlock:
+            switch (logicalSide) {
+            case LogicalBoxSide::BlockStart:
+                swappedOpposing = true;
+                logicalSide = LogicalBoxSide::BlockEnd;
+                break;
+            case LogicalBoxSide::BlockEnd:
+                swappedOpposing = true;
+                logicalSide = LogicalBoxSide::BlockStart;
+                break;
+            default:
+                break;
+            }
+            break;
+        case PositionTryFallback::Tactic::FlipStart:
+            switch (logicalSide) {
+            case LogicalBoxSide::InlineStart:
+                logicalSide = LogicalBoxSide::BlockStart;
+                break;
+            case LogicalBoxSide::InlineEnd:
+                logicalSide = LogicalBoxSide::BlockEnd;
+                break;
+            case LogicalBoxSide::BlockStart:
+                logicalSide = LogicalBoxSide::InlineStart;
+                break;
+            case LogicalBoxSide::BlockEnd:
+                logicalSide = LogicalBoxSide::InlineEnd;
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    return { mapSideLogicalToPhysical(writingMode, logicalSide), swappedOpposing };
+}
+
 // Physical sides (left/right/top/bottom) can only be used in certain inset properties. "For example,
 // left is usable in left, right, or the logical inset properties that refer to the horizontal axis."
 // See: https://drafts.csswg.org/css-anchor-position-1/#typedef-anchor-side
@@ -282,35 +339,10 @@ static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<co
     CheckedPtr containingBlock = anchorPositionedRenderer->containingBlock();
     ASSERT(containingBlock);
 
-    auto writingMode = anchorPositionedRenderer->writingMode();
+    auto writingMode = containingBlock->writingMode();
     auto insetPropertySide = mapInsetPropertyToPhysicalSide(insetPropertyID, writingMode);
     auto anchorSideID = std::holds_alternative<CSSValueID>(anchorSide) ? std::get<CSSValueID>(anchorSide) : CSSValueInvalid;
     auto anchorRect = AnchorPositionEvaluator::computeAnchorRectRelativeToContainingBlock(anchorBox, *containingBlock);
-
-    bool shouldFlipForPositionTryFallback = [&] {
-        if (!positionTryFallback)
-            return false;
-
-        auto shouldFlipForAxis = [&](LogicalBoxAxis logicalAxis) {
-            auto axis = mapAxisLogicalToPhysical(writingMode, logicalAxis);
-            if (axis == BoxAxis::Horizontal) {
-                if (insetPropertySide == BoxSide::Left || insetPropertySide == BoxSide::Right)
-                    return true;
-            } else if (insetPropertySide == BoxSide::Top || insetPropertySide == BoxSide::Bottom)
-                return true;
-            return false;
-        };
-
-        if (positionTryFallback->tactics.contains(PositionTryFallback::Tactic::FlipInline)) {
-            if (shouldFlipForAxis(LogicalBoxAxis::Inline))
-                return true;
-        }
-        if (positionTryFallback->tactics.contains(PositionTryFallback::Tactic::FlipBlock)) {
-            if (shouldFlipForAxis(LogicalBoxAxis::Block))
-                return true;
-        }
-        return false;
-    }();
 
     // Explicitly deal with the center/percentage value here.
     // "Refers to a position a corresponding percentage between the start and end sides, with
@@ -318,27 +350,37 @@ static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<co
     if (anchorSideID == CSSValueCenter || anchorSideID == CSSValueInvalid) {
         double percentage = anchorSideID == CSSValueCenter ? 0.5 : std::get<double>(anchorSide);
 
-        // We assume that the "start" side always is either the top or left side of the anchor element.
-        // However, if that is not the case, we should take the complement of the percentage.
-        auto startSide = computeStartEndBoxSide(insetPropertyID, anchorPositionedRenderer, true, true);
-        if (startSide == BoxSide::Bottom || startSide == BoxSide::Right)
+        auto reversePercentageForWritingMode = [&] {
+            switch (insetPropertySide) {
+            case BoxSide::Top:
+            case BoxSide::Bottom:
+                return !writingMode.isAnyTopToBottom();
+            case BoxSide::Left:
+            case BoxSide::Right:
+                return !writingMode.isAnyLeftToRight();
+            }
+            return false;
+        };
+        if (reversePercentageForWritingMode())
             percentage = 1 - percentage;
 
-        if (shouldFlipForPositionTryFallback)
-            percentage = 1 - percentage;
-
-        LayoutUnit insetValue;
-        auto insetPropertyAxis = mapInsetPropertyToPhysicalAxis(insetPropertyID, writingMode);
-        if (insetPropertyAxis == BoxAxis::Vertical) {
-            insetValue = anchorRect.location().y() + anchorRect.height() * percentage;
-            if (insetPropertySide == BoxSide::Bottom)
-                insetValue = containingBlock->height() - insetValue;
-        } else {
-            insetValue = anchorRect.location().x() + anchorRect.width() * percentage;
-            if (insetPropertySide == BoxSide::Right)
-                insetValue = containingBlock->width() - insetValue;
+        if (positionTryFallback) {
+            auto [swappedSide, directionsOpposing] = swapSideForTryTactics(insetPropertySide, positionTryFallback->tactics, writingMode);
+            insetPropertySide = swappedSide;
+            // "If a <percentage> is used, and directions are opposing, change it to 100% minus the original percentage."
+            if (directionsOpposing)
+                percentage = 1 - percentage;
         }
-        return removeBorderForInsetValue(insetValue, insetPropertySide, *containingBlock);
+
+        auto insetValue = [&] {
+            if (insetPropertySide == BoxSide::Top || insetPropertySide == BoxSide::Bottom) {
+                auto offset = anchorRect.location().y() + LayoutUnit { anchorRect.height() * percentage };
+                return insetPropertySide == BoxSide::Top ? offset : containingBlock->height() - offset;
+            }
+            auto offset = anchorRect.location().x() + LayoutUnit { anchorRect.width() * percentage };
+            return insetPropertySide == BoxSide::Left ? offset : containingBlock->width() - offset;
+        };
+        return removeBorderForInsetValue(insetValue(), insetPropertySide, *containingBlock);
     }
 
     // Normalize the anchor side to a physical side
@@ -380,9 +422,9 @@ static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<co
         break;
     }
 
-    if (shouldFlipForPositionTryFallback) {
-        boxSide = flipBoxSide(boxSide);
-        insetPropertySide = flipBoxSide(insetPropertySide);
+    if (positionTryFallback) {
+        boxSide = swapSideForTryTactics(boxSide, positionTryFallback->tactics, writingMode).first;
+        insetPropertySide = swapSideForTryTactics(insetPropertySide, positionTryFallback->tactics, writingMode).first;
     }
 
     // Compute inset from the containing block
@@ -645,6 +687,15 @@ std::optional<double> AnchorPositionEvaluator::evaluateSize(const BuilderState& 
 
     auto resolvedDimension = dimension.value_or(defaultDimensionForPropertyID(propertyID));
     auto physicalDimension = anchorSizeDimensionToPhysicalDimension(resolvedDimension, anchorPositionedRenderer->style(), anchorPositionedContainerRenderer->style());
+
+    if (builderState.positionTryFallback()) {
+        // "For sizing properties, change the specified axis in anchor-size() functions to maintain the same relative relationship to the new direction that they had to the old."
+        if (CSSProperty::isSizingProperty(propertyID)) {
+            auto swapDimensions = builderState.positionTryFallback()->tactics.contains(PositionTryFallback::Tactic::FlipStart);
+            if (swapDimensions)
+                physicalDimension = oppositeAxis(physicalDimension);
+        }
+    }
 
     // Return the dimension information from the anchor element.
     CheckedPtr anchorRenderer = anchorElement->renderer();
@@ -925,6 +976,47 @@ static CSSPropertyID flipVertical(CSSPropertyID propertyID)
     }
 }
 
+static CSSPropertyID flipStart(CSSPropertyID propertyID, WritingMode writingMode)
+{
+    auto logicalProperty = CSSProperty::unresolvePhysicalProperty(propertyID, writingMode);
+
+    auto flippedLogical = [&] {
+        switch (logicalProperty) {
+        case CSSPropertyInsetBlockStart:
+            return CSSPropertyInsetInlineStart;
+        case CSSPropertyInsetBlockEnd:
+            return CSSPropertyInsetInlineEnd;
+        case CSSPropertyBlockSize:
+            return CSSPropertyInlineSize;
+        case CSSPropertyMinBlockSize:
+            return CSSPropertyMinInlineSize;
+        case CSSPropertyMaxBlockSize:
+            return CSSPropertyMaxInlineSize;
+        case CSSPropertyInsetInlineStart:
+            return CSSPropertyInsetBlockStart;
+        case CSSPropertyInsetInlineEnd:
+            return CSSPropertyInsetBlockEnd;
+        case CSSPropertyInlineSize:
+            return CSSPropertyBlockSize;
+        case CSSPropertyMinInlineSize:
+            return CSSPropertyMinBlockSize;
+        case CSSPropertyMaxInlineSize:
+            return CSSPropertyMaxBlockSize;
+        case CSSPropertyMarginBlockStart:
+            return CSSPropertyMarginInlineStart;
+        case CSSPropertyMarginBlockEnd:
+            return CSSPropertyMarginInlineEnd;
+        case CSSPropertyMarginInlineStart:
+            return CSSPropertyMarginBlockStart;
+        case CSSPropertyMarginInlineEnd:
+            return CSSPropertyMarginBlockEnd;
+        default:
+            return propertyID;
+        }
+    };
+    return CSSProperty::resolveDirectionAwareProperty(flippedLogical(), writingMode);
+}
+
 CSSPropertyID AnchorPositionEvaluator::resolvePositionTryFallbackProperty(CSSPropertyID propertyID, WritingMode writingMode, const BuilderPositionTryFallback& fallback)
 {
     ASSERT(!CSSProperty::isDirectionAwareProperty(propertyID));
@@ -938,6 +1030,7 @@ CSSPropertyID AnchorPositionEvaluator::resolvePositionTryFallbackProperty(CSSPro
             propertyID = writingMode.isHorizontal() ? flipVertical(propertyID) : flipHorizontal(propertyID);
             break;
         case PositionTryFallback::Tactic::FlipStart:
+            propertyID = flipStart(propertyID, writingMode);
             break;
         }
     }

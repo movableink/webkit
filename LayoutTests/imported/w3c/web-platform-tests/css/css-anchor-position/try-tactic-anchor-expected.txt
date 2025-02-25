@@ -4,45 +4,45 @@ PASS flip-block, right:anchor(left), right:anchor(left)
 PASS flip-inline, bottom:anchor(top), bottom:anchor(top)
 PASS flip-inline, right:anchor(left), left:anchor(right)
 PASS flip-inline, left:anchor(right), right:anchor(left)
-FAIL flip-start, right:anchor(left), bottom:anchor(top) assert_equals: offsetLeft expected 0 but got 110
-FAIL flip-start, bottom:anchor(top), right:anchor(left) assert_equals: offsetLeft expected 110 but got 0
-FAIL flip-inline flip-start, right:anchor(left), top:anchor(bottom) assert_equals: offsetLeft expected 0 but got 210
-FAIL flip-start flip-inline, top:anchor(bottom), right:anchor(left) assert_equals: offsetLeft expected 110 but got 0
-FAIL flip-start flip-block, left:anchor(right), bottom:anchor(top) assert_equals: offsetLeft expected 0 but got 210
-FAIL flip-block flip-start, bottom:anchor(top), left:anchor(right) assert_equals: offsetLeft expected 210 but got 0
-FAIL flip-start, left:anchor(right), top:anchor(bottom) assert_equals: offsetLeft expected 0 but got 210
-FAIL flip-start, top:anchor(bottom), left:anchor(right) assert_equals: offsetLeft expected 210 but got 0
+PASS flip-start, right:anchor(left), bottom:anchor(top)
+PASS flip-start, bottom:anchor(top), right:anchor(left)
+PASS flip-inline flip-start, right:anchor(left), top:anchor(bottom)
+PASS flip-start flip-inline, top:anchor(bottom), right:anchor(left)
+PASS flip-start flip-block, left:anchor(right), bottom:anchor(top)
+PASS flip-block flip-start, bottom:anchor(top), left:anchor(right)
+PASS flip-start, left:anchor(right), top:anchor(bottom)
+PASS flip-start, top:anchor(bottom), left:anchor(right)
 PASS flip-block, bottom:anchor(top), top:anchor(bottom)
 PASS flip-block, top:anchor(bottom), bottom:anchor(top)
 PASS flip-inline, right:anchor(start), left:anchor(right)
 PASS flip-inline, left:anchor(end), right:anchor(left)
-FAIL flip-start, right:anchor(start), bottom:anchor(top) assert_equals: offsetLeft expected 0 but got 110
-FAIL flip-start, bottom:anchor(start), right:anchor(left) assert_equals: offsetLeft expected 110 but got 0
-FAIL flip-inline flip-start, right:anchor(start), top:anchor(bottom) assert_equals: offsetLeft expected 0 but got 210
-FAIL flip-start flip-inline, top:anchor(end), right:anchor(left) assert_equals: offsetLeft expected 110 but got 0
-FAIL flip-start flip-block, left:anchor(end), bottom:anchor(top) assert_equals: offsetLeft expected 0 but got 210
-FAIL flip-block flip-start, bottom:anchor(start), left:anchor(right) assert_equals: offsetLeft expected 210 but got 0
-FAIL flip-start, left:anchor(end), top:anchor(bottom) assert_equals: offsetLeft expected 0 but got 210
-FAIL flip-start, top:anchor(end), left:anchor(right) assert_equals: offsetLeft expected 210 but got 0
+PASS flip-start, right:anchor(start), bottom:anchor(top)
+PASS flip-start, bottom:anchor(start), right:anchor(left)
+PASS flip-inline flip-start, right:anchor(start), top:anchor(bottom)
+PASS flip-start flip-inline, top:anchor(end), right:anchor(left)
+PASS flip-start flip-block, left:anchor(end), bottom:anchor(top)
+PASS flip-block flip-start, bottom:anchor(start), left:anchor(right)
+PASS flip-start, left:anchor(end), top:anchor(bottom)
+PASS flip-start, top:anchor(end), left:anchor(right)
 PASS flip-block, bottom:anchor(start), top:anchor(bottom)
 PASS flip-block, top:anchor(end), bottom:anchor(top)
 PASS flip-inline, right:anchor(self-start), left:anchor(right)
 PASS flip-inline, left:anchor(self-end), right:anchor(left)
-FAIL flip-start, right:anchor(self-start), bottom:anchor(top) assert_equals: offsetLeft expected 0 but got 110
-FAIL flip-start, bottom:anchor(self-start), right:anchor(left) assert_equals: offsetLeft expected 110 but got 0
-FAIL flip-inline flip-start, right:anchor(self-start), top:anchor(bottom) assert_equals: offsetLeft expected 0 but got 210
-FAIL flip-start flip-inline, top:anchor(self-end), right:anchor(left) assert_equals: offsetLeft expected 110 but got 0
-FAIL flip-start flip-block, left:anchor(self-end), bottom:anchor(top) assert_equals: offsetLeft expected 0 but got 210
-FAIL flip-block flip-start, bottom:anchor(self-start), left:anchor(right) assert_equals: offsetLeft expected 210 but got 0
-FAIL flip-start, left:anchor(self-end), top:anchor(bottom) assert_equals: offsetLeft expected 0 but got 210
-FAIL flip-start, top:anchor(self-end), left:anchor(right) assert_equals: offsetLeft expected 210 but got 0
+PASS flip-start, right:anchor(self-start), bottom:anchor(top)
+PASS flip-start, bottom:anchor(self-start), right:anchor(left)
+PASS flip-inline flip-start, right:anchor(self-start), top:anchor(bottom)
+PASS flip-start flip-inline, top:anchor(self-end), right:anchor(left)
+PASS flip-start flip-block, left:anchor(self-end), bottom:anchor(top)
+PASS flip-block flip-start, bottom:anchor(self-start), left:anchor(right)
+PASS flip-start, left:anchor(self-end), top:anchor(bottom)
+PASS flip-start, top:anchor(self-end), left:anchor(right)
 PASS flip-block, bottom:anchor(self-start), top:anchor(bottom)
 PASS flip-block, top:anchor(self-end), bottom:anchor(top)
 PASS CSS Anchor Positioning: try-tactic, anchor()
 PASS flip-inline
 PASS flip-block
-FAIL flip-start assert_equals: offsetWidth expected 60 but got 80
-FAIL flip-inline flip-start assert_equals: offsetWidth expected 60 but got 80
-FAIL flip-start flip-block assert_equals: offsetWidth expected 60 but got 80
+PASS flip-start
+PASS flip-inline flip-start
+PASS flip-start flip-block
 PASS Can transform a value post-var-substitution
 

@@ -2,6 +2,6 @@
 PASS  horizontal-tb ltr
 PASS flip-inline horizontal-tb ltr
 PASS flip-inline vertical-lr ltr
-FAIL flip-start horizontal-tb ltr assert_equals: offsetLeft expected 20 but got 10
-FAIL flip-start horizontal-tb rtl assert_equals: offsetLeft expected 340 but got 10
+PASS flip-start horizontal-tb ltr
+PASS flip-start horizontal-tb rtl
 
