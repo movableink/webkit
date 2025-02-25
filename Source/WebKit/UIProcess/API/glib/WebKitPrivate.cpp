@@ -31,7 +31,6 @@
 #endif
 
 #if ENABLE(WK_WEB_EXTENSIONS)
-#include "WebExtension.h"
 #include "WebExtensionMatchPattern.h"
 #endif
 
@@ -156,34 +155,6 @@ unsigned toWebKitError(unsigned webCoreError)
 }
 
 #if ENABLE(WK_WEB_EXTENSIONS)
-unsigned toWebKitWebExtensionError(unsigned apiError)
-{
-    auto error = static_cast<WebKit::WebExtension::APIError>(apiError);
-
-    switch (error) {
-    case WebKit::WebExtension::APIError::ResourceNotFound:
-        return WEBKIT_WEB_EXTENSION_ERROR_RESOURCE_NOT_FOUND;
-    case WebKit::WebExtension::APIError::InvalidResourceCodeSignature:
-        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_RESOURCE_CODE_SIGNATURE;
-    case WebKit::WebExtension::APIError::InvalidManifest:
-        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_MANIFEST;
-    case WebKit::WebExtension::APIError::UnsupportedManifestVersion:
-        return WEBKIT_WEB_EXTENSION_ERROR_UNSUPPORTED_MANIFEST_VERSION;
-    case WebKit::WebExtension::APIError::InvalidManifestEntry:
-        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_MANIFEST_ENTRY;
-    case WebKit::WebExtension::APIError::InvalidDeclarativeNetRequestEntry:
-        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_DECLARATIVE_NET_REQUEST_ENTRY;
-    case WebKit::WebExtension::APIError::InvalidBackgroundPersistence:
-        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_BACKGROUND_PERSISTENCE;
-    case WebKit::WebExtension::APIError::InvalidArchive:
-        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_ARCHIVE;
-    case WebKit::WebExtension::APIError::Unknown:
-        return WEBKIT_WEB_EXTENSION_ERROR_UNKNOWN;
-    }
-
-    return WEBKIT_WEB_EXTENSION_ERROR_UNKNOWN;
-}
-
 unsigned toWebKitWebExtensionMatchPatternError(unsigned apiError)
 {
     auto error = static_cast<WebKit::WebExtensionMatchPattern::Error>(apiError);

@@ -34,7 +34,6 @@ WebKitNavigationType toWebKitNavigationType(WebCore::NavigationType);
 unsigned toWebKitMouseButton(WebKit::WebMouseEventButton);
 unsigned toWebKitError(unsigned webCoreError);
 #if ENABLE(WK_WEB_EXTENSIONS)
-unsigned toWebKitWebExtensionError(unsigned apiError);
 unsigned toWebKitWebExtensionMatchPatternError(unsigned apiError);
 #endif
 unsigned toWebCoreError(unsigned webKitError);

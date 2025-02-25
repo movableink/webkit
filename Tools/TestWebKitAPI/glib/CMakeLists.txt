@@ -1,7 +1,6 @@
 set(WebKitGLibAPITests_SOURCES
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/LoadTrackingTest.cpp
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/TestMain.cpp
-    ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/WebExtensionUtilities.cpp
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/WebViewTest.cpp
 )
@@ -209,7 +208,6 @@ ADD_WK2_TEST(TestGeolocationManager ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/
 ADD_WK2_TEST(TestInputMethodContext ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestInputMethodContext.cpp)
 
 if (ENABLE_WK_WEB_EXTENSIONS)
-    ADD_WK2_TEST(TestWebKitWebExtension ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebExtension.cpp)
     ADD_WK2_TEST(TestWebKitWebExtensionMatchPattern ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebExtensionMatchPattern.cpp)
 endif ()
 

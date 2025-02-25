@@ -113,27 +113,11 @@ GQuark webkit_snapshot_error_quark()
 }
 
 /**
- * webkit_web_extension_error_quark:
- *
- * Gets the quark for the domain of Web Extension errors.
- *
- * Returns: web extension error domain.
- * 
- * Since: 2.48
- */
-GQuark webkit_web_extension_error_quark()
-{
-    return g_quark_from_static_string("WebKitWebExtensionError");
-}
-
-/**
  * webkit_web_extension_match_pattern_error_quark:
  *
  * Gets the quark for the domain of Web Extension Match Pattern errors.
  *
  * Returns: web extension match pattern error domain.
- * 
- * Since: 2.48
  */
 GQuark webkit_web_extension_match_pattern_error_quark()
 {
