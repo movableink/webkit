@@ -25,3 +25,4 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/Element-innerHTML.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/ShadowRoot-init-customElements.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/ShadowRoot-innerHTML.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/template.tentative.window.js
