@@ -744,8 +744,19 @@
     (allow IOKIT_OPEN_USER_CLIENT
         (iokit-user-client-class "AppleUpstreamUserClient")))
 
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "RootDomainUserClient")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "RootDomainUserClient")))
+
 (allow IOKIT_OPEN_USER_CLIENT
-    (iokit-user-client-class "RootDomainUserClient")
     (iokit-user-client-class "IOAudioControlUserClient")
     (iokit-user-client-class "IOAudioEngineUserClient")
     ;; Following is needed due to <rdar://problem/10427451> && <rdar://problem/10808817>
