@@ -958,6 +958,8 @@ bool AXCoreObject::supportsActiveDescendant() const
     case AccessibilityRole::Grid:
     case AccessibilityRole::List:
     case AccessibilityRole::ListBox:
+    case AccessibilityRole::TextArea:
+    case AccessibilityRole::TextField:
     case AccessibilityRole::Tree:
     case AccessibilityRole::TreeGrid:
         return true;
