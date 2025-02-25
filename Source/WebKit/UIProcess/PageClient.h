@@ -817,7 +817,6 @@ public:
     virtual void scheduleVisibleContentRectUpdate() { }
 
 #if ENABLE(SCREEN_TIME)
-    virtual void installScreenTimeWebpageController() { }
     virtual void didChangeScreenTimeWebpageControllerURL() { };
     virtual void setURLIsPictureInPictureForScreenTime(bool) { };
     virtual void setURLIsPlayingVideoForScreenTime(bool) { };

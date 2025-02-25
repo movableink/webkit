@@ -1983,10 +1983,6 @@ void WebPageProxy::prepareToLoadWebPage(WebProcessProxy& process, LoadParameters
     if (NetworkIssueReporter::isEnabled())
         m_networkIssueReporter = makeUnique<NetworkIssueReporter>();
 #endif
-
-#if ENABLE(SCREEN_TIME)
-    m_pageClient->installScreenTimeWebpageController();
-#endif
 }
 
 #if !PLATFORM(COCOA)
@@ -9286,7 +9282,7 @@ void WebPageProxy::hasVideoInPictureInPictureDidChange(bool value)
 {
     uiClient().hasVideoInPictureInPictureDidChange(this, value);
 #if ENABLE(SCREEN_TIME)
-    m_pageClient->setURLIsPictureInPictureForScreenTime(value);
+    protectedPageClient()->setURLIsPictureInPictureForScreenTime(value);
 #endif
 }
 
@@ -13639,7 +13635,7 @@ void WebPageProxy::updatePlayingMediaDidChange(CanDelayNotification canDelayNoti
 
 #if ENABLE(SCREEN_TIME)
     if (oldState.contains(MediaProducerMediaState::IsPlayingVideo) != newState.contains(MediaProducerMediaState::IsPlayingVideo))
-        m_pageClient->setURLIsPlayingVideoForScreenTime(newState.contains(MediaProducerMediaState::IsPlayingVideo));
+        protectedPageClient()->setURLIsPlayingVideoForScreenTime(newState.contains(MediaProducerMediaState::IsPlayingVideo));
 #endif
 }
 

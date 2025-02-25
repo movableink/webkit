@@ -325,11 +325,6 @@ void PageClientImplCocoa::removeTextAnimationForAnimationID(const WTF::UUID& uui
 #endif
 
 #if ENABLE(SCREEN_TIME)
-void PageClientImplCocoa::installScreenTimeWebpageController()
-{
-    [m_webView _installScreenTimeWebpageController];
-}
-
 void PageClientImplCocoa::didChangeScreenTimeWebpageControllerURL()
 {
     updateScreenTimeWebpageControllerURL(webView().get());
@@ -340,9 +335,10 @@ void PageClientImplCocoa::updateScreenTimeWebpageControllerURL(WKWebView *webVie
     if (!PAL::isScreenTimeFrameworkAvailable())
         return;
 
+    if (![webView _screenTimeWebpageController])
+        [webView _installScreenTimeWebpageController];
+
     RetainPtr screenTimeWebpageController = [webView _screenTimeWebpageController];
-    if (!screenTimeWebpageController)
-        return;
 
     RefPtr pageProxy = [webView _page].get();
     if (pageProxy && !pageProxy->preferences().screenTimeEnabled()) {

@@ -173,6 +173,8 @@ static RetainPtr<TestWKWebView> testShowsSystemScreenTimeBlockingView(bool shows
     RetainPtr webView = webViewForScreenTimeTests(configuration.get());
     [webView synchronouslyLoadHTMLString:@""];
 
+    [webView waitForNextPresentationUpdate];
+
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:YES];
 
@@ -192,6 +194,8 @@ TEST(ScreenTime, IsBlockedByScreenTimeTrue)
     RetainPtr webView = webViewForScreenTimeTests();
     [webView synchronouslyLoadHTMLString:@""];
 
+    [webView waitForNextPresentationUpdate];
+
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:YES];
 
@@ -201,11 +205,12 @@ TEST(ScreenTime, IsBlockedByScreenTimeTrue)
 TEST(ScreenTime, IsBlockedByScreenTimeFalse)
 {
     RetainPtr webView = webViewForScreenTimeTests();
+    [webView synchronouslyLoadHTMLString:@""];
+
+    [webView waitForNextPresentationUpdate];
 
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:NO];
-
-    [webView synchronouslyLoadHTMLString:@""];
 
     EXPECT_FALSE([webView _isBlockedByScreenTime]);
 }
@@ -213,12 +218,13 @@ TEST(ScreenTime, IsBlockedByScreenTimeFalse)
 TEST(ScreenTime, IsBlockedByScreenTimeMultiple)
 {
     RetainPtr webView = webViewForScreenTimeTests();
+    [webView synchronouslyLoadHTMLString:@""];
 
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:YES];
     [controller setURLIsBlocked:NO];
 
-    [webView synchronouslyLoadHTMLString:@""];
+    [webView waitForNextPresentationUpdate];
 
     EXPECT_FALSE([webView _isBlockedByScreenTime]);
 }
@@ -229,6 +235,8 @@ TEST(ScreenTime, IsBlockedByScreenTimeKVO)
     auto observer = adoptNS([[BlockedStateObserver alloc] initWithWebView:webView.get()]);
 
     [webView synchronouslyLoadHTMLString:@""];
+
+    [webView waitForNextPresentationUpdate];
 
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:YES];
@@ -285,7 +293,7 @@ TEST(ScreenTime, IdentifierString)
         return;
 
     __block bool done = false;
-    __block NSString * identifier = @"";
+    __block RetainPtr identifier = @"";
 
     InstanceMethodSwizzler swizzler {
         PAL::getSTWebpageControllerClass(),
@@ -309,7 +317,7 @@ TEST(ScreenTime, IdentifierString)
 
     RetainPtr uuidString = [uuid UUIDString];
 
-    EXPECT_WK_STREQ(identifier, uuidString.get());
+    EXPECT_WK_STREQ(identifier.get(), uuidString.get());
 }
 
 TEST(ScreenTime, PersistentSession)
@@ -526,6 +534,8 @@ TEST(ScreenTime, OffscreenSystemScreenTimeBlockingView)
     RetainPtr webView = webViewForScreenTimeTests();
     [webView synchronouslyLoadHTMLString:@""];
 
+    [webView waitForNextPresentationUpdate];
+
     EXPECT_FALSE([[[webView _screenTimeWebpageController] view] isHidden]);
 
     [webView removeFromTestWindow];
@@ -547,6 +557,8 @@ TEST(ScreenTime, OffscreenBlurredScreenTimeBlockingView)
     RetainPtr webView = webViewForScreenTimeTests(configuration.get());
     [webView synchronouslyLoadHTMLString:@""];
 
+    [webView waitForNextPresentationUpdate];
+
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:YES];
 
@@ -555,10 +567,14 @@ TEST(ScreenTime, OffscreenBlurredScreenTimeBlockingView)
     [webView removeFromTestWindow];
 
     [webView waitUntilActivityStateUpdateDone];
+    [webView waitForNextPresentationUpdate];
 
     EXPECT_TRUE([[webView _screenTimeBlurredSnapshot] isHidden]);
 
     [webView addToTestWindow];
+
+    [webView waitUntilActivityStateUpdateDone];
+    [webView waitForNextPresentationUpdate];
 
     EXPECT_TRUE(blurredViewIsPresent(webView.get()));
 
@@ -580,11 +596,12 @@ TEST(ScreenTime, DoNotDonateURLsInOffscreenWebView)
     };
 
     RetainPtr webView = webViewForScreenTimeTests();
+    [webView synchronouslyLoadHTMLString:@""];
+
+    [webView waitForNextPresentationUpdate];
 
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:YES];
-
-    [webView synchronouslyLoadHTMLString:@""];
 
     TestWebKitAPI::Util::run(&done);
 
@@ -607,6 +624,28 @@ TEST(ScreenTime, DoNotDonateURLsInOffscreenWebView)
     TestWebKitAPI::Util::run(&done);
 
     EXPECT_FALSE(suppressUsageRecording);
+}
+
+TEST(ScreenTime, ScreenTimeControllerInstalledAfterRestoreFromSessionState)
+{
+    RetainPtr webView1 = webViewForScreenTimeTests();
+
+    [webView1 loadTestPageNamed:@"simple"];
+    [webView1 _test_waitForDidFinishNavigation];
+
+    RetainPtr sessionState = [webView1 _sessionState];
+    [webView1 _close];
+
+    RetainPtr webView2 = webViewForScreenTimeTests();
+
+    EXPECT_FALSE(!![webView2 _screenTimeWebpageController]);
+
+    [webView2 _restoreSessionState:sessionState.get() andNavigate:YES];
+    [webView2 _test_waitForDidFinishNavigation];
+
+    [webView2 waitForNextPresentationUpdate];
+
+    EXPECT_TRUE(!![webView2 _screenTimeWebpageController]);
 }
 
 #endif
