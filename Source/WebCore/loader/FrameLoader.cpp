@@ -3990,7 +3990,7 @@ void FrameLoader::continueLoadAfterNavigationPolicy(const ResourceRequest& reque
     FrameLoadType type = policyChecker().loadType();
 
     {
-        SetForScope<bool> doNotAbortNavigationAPI { m_doNotAbortNavigationAPI, m_policyDocumentLoader->triggeringAction().isFromNavigationAPI() };
+        SetForScope<bool> doNotAbortNavigationAPI { m_doNotAbortNavigationAPI, m_policyDocumentLoader && m_policyDocumentLoader->triggeringAction().isFromNavigationAPI() };
 
         // A new navigation is in progress, so don't clear the history's provisional item.
         stopAllLoaders(ClearProvisionalItem::No);
