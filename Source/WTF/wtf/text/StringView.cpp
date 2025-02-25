@@ -479,8 +479,10 @@ template<typename CharacterType> static String makeStringBySimplifyingNewLinesSl
                 ++i;
         }
     }
-    if (resultLength < length)
-        result = StringImpl::createSubstringSharingImpl(Ref { *result.impl() }, 0, resultLength);
+    if (resultLength < length) {
+        // FIXME: This is a static analysis false positive (rdar://145488827).
+        SUPPRESS_UNCOUNTED_ARG result = StringImpl::createSubstringSharingImpl(Ref { *result.impl() }, 0, resultLength);
+    }
     return result;
 }
 
