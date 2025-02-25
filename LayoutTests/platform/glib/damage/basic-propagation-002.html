@@ -22,8 +22,7 @@
     <script>
       setupTestCase({disableConsoleLog: true});
 
-      processAnimationFrameSequence([
-          () => {}, // Skip one RAF callback to make sure initial painting is done.
+      processAnimationFrameSequence({skipFirstFrameToEnsureInitialPaintingDone: true}, [
           () => {
               // Spawn parent rect with children.
               var parent = spawnNewElementWithClass("div", "parentRect");

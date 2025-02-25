@@ -2,28 +2,31 @@
 <html lang="en">
   <head>
     <link rel="stylesheet" href="./common.css">
-    <style>
-      .simpleRect {
-          position: fixed;
-          width: 25px;
-          height: 25px;
-          background-color: black;
-      }
-    </style>
   </head>
   <body>
+    <canvas width="50" height="50" style="position: fixed;" />
     <script src="./common.js"></script>
     <script>
       setupTestCase({disableConsoleLog: true});
 
+      var canvas = document.getElementsByTagName("canvas")[0];
+      var ctx = canvas.getContext("2d");
+
       processAnimationFrameSequence({skipFirstFrameToEnsureInitialPaintingDone: true}, [
           () => {
-              spawnNewElementWithClass("div", "simpleRect");
+              // Fill the whole canvas.
+              ctx.fillStyle = "green";
+              ctx.fillRect(0, 0, 50, 50);
+          },
+          () => {
+              // Upsize.
+              canvas.width = 55;
+              canvas.height = 55;
           },
           () => {
               var damage = latestFrameDamage();
               assertValid(damage);
-              assertRectsEq(damage.rects, [[0, 0, 25, 25]]);
+              assertRectsEq(damage.rects, [[0, 0, 55, 55]]);
           },
       ], 0);
     </script>

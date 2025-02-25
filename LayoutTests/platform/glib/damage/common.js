@@ -7,6 +7,14 @@ function failTest(errorMessage) {
     }
 }
 
+function passTest() {
+    if (window.testRunner) {
+        document.body.innerText = "PASS";
+        testRunner.notifyDone();
+    } else
+        console.log("PASS");
+}
+
 function setupTestCase(options = {}) {
     if (window.testRunner) {
         testRunner.waitUntilDone();
@@ -40,10 +48,18 @@ function assert(condition, failureMessage) {
     return true;
 }
 
+function assertEq(actual, expected, failureMessage) {
+    return assert(actual == expected, `${failureMessage}, expected: ${expected} but got: ${actual}`);
+}
+
+function assertGt(actual, threshold, failureMessage) {
+    return assert(actual > threshold, `${failureMessage}, ${actual} is not greater than ${threshold}`);
+}
+
 function assertValid(damage) {
     if (!assert(damage, "damage is empty"))
-        return;
-    assert(damage.isValid, "damage is invalid");
+        return false;
+    return assert(damage.isValid, "damage is invalid");
 }
 
 function assertRectsEq(damageRects, expectedRects) {
@@ -58,19 +74,26 @@ function assertRectsEq(damageRects, expectedRects) {
     expectedRects.sort(rectCompareFunction);
     const damageRectsStr = JSON.stringify(damageRects);
     const expectedRectsStr =  JSON.stringify(expectedRects);
-    assert(
+    return assert(
         damageRectsStr == expectedRectsStr,
         `damage rects mismatch, expected: ${expectedRectsStr} but got: ${damageRectsStr}`
     );
 }
 
-function processAnimationFrameSequence(callbackSequence, callbackIndex) {
+function assertContains(containerRect, allegedContainee) {
+    const containerRectStr = JSON.stringify(containerRect);
+    const allegedContaineeStr =  JSON.stringify(allegedContainee);
+    return assert(
+        contains(containerRect, allegedContainee),
+        `${containerRectStr} does not contain ${allegedContaineeStr}`
+    );
+}
+
+function processAnimationFrameSequence(options, callbackSequence, callbackIndex) {
+    if (options.skipFirstFrameToEnsureInitialPaintingDone)
+        callbackSequence.unshift(() => {});
     if (callbackSequence.length <= callbackIndex) {
-        if (window.testRunner) {
-            document.body.innerText = "PASS";
-            testRunner.notifyDone();
-        } else
-            console.log("PASS");
+        passTest();
         return;
     }
     requestAnimationFrame(() => {
@@ -80,7 +103,7 @@ function processAnimationFrameSequence(callbackSequence, callbackIndex) {
             failTest(`FAIL: ${failure}`);
             return;
         }
-        processAnimationFrameSequence(callbackSequence, callbackIndex + 1);
+        processAnimationFrameSequence({}, callbackSequence, callbackIndex + 1);
     });
 }
 
@@ -100,6 +123,12 @@ function log(entity) {
     console.log(JSON.stringify(entity));
 }
 
+function createNewElement(elementName, lambda = (el) => {}) {
+    var newElement = document.createElement(elementName);
+    lambda(newElement);
+    return newElement;
+}
+
 function createNewElementWithClass(elementName, className, lambda = (el) => {}) {
     var newElement = document.createElement(elementName);
     newElement.className = className;
@@ -107,10 +136,25 @@ function createNewElementWithClass(elementName, className, lambda = (el) => {}) 
     return newElement;
 }
 
+function spawnNewElement(elementName, lambda = (el) => {}) {
+    var newElement = createNewElement(elementName, lambda);
+    document.body.appendChild(newElement);
+    return newElement;
+}
+
 function spawnNewElementWithClass(elementName, className, lambda = (el) => {}) {
     var newElement = createNewElementWithClass(elementName, className, lambda);
     document.body.appendChild(newElement);
     return newElement;
+}
+
+function contains(containerRect, allegedContainee) {
+    return (
+        containerRect[0] <= allegedContainee[0]
+        && containerRect[1] <= allegedContainee[1]
+            && ((containerRect[0] + containerRect[2]) >= (allegedContainee[0] + allegedContainee[2]))
+            && ((containerRect[1] + containerRect[3]) >= (allegedContainee[1] + allegedContainee[3]))
+    );
 }
 
 function _simplifyDamages(damages) {
