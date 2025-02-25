@@ -1827,8 +1827,10 @@ void RenderThemeIOS::paintSliderTicks(const RenderObject& box, const PaintInfo& 
 void RenderThemeIOS::paintColorWellDecorations(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (paintColorWellDecorationsForCatalyst(renderer, paintInfo, rect))
+    if (renderer.settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::paintColorWellDecorations(renderer, paintInfo, rect);
         return;
+    }
 #else
     UNUSED_PARAM(renderer);
 #endif
