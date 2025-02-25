@@ -2036,7 +2036,6 @@ http/wpt/cross-origin-resource-policy [ Skip ]
 http/wpt/crypto [ Skip ]
 http/wpt/entries-api [ Skip ]
 http/wpt/geometry [ Skip ]
-http/wpt/identity [ Skip ]
 
 http/wpt/loading/redirect-headers.html [ Skip ] # Failure
 
@@ -2073,7 +2072,6 @@ imported/w3c/web-platform-tests/console [ Skip ]
 imported/w3c/web-platform-tests/content-security-policy [ Skip ]
 imported/w3c/web-platform-tests/cors [ Skip ]
 imported/w3c/web-platform-tests/credential-management [ Skip ]
-imported/w3c/web-platform-tests/digital-credentials [ Skip ]
 imported/w3c/web-platform-tests/webauthn [ Skip ]
 
 imported/w3c/web-platform-tests/css/compositing [ Skip ]
