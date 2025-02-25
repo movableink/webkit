@@ -165,6 +165,11 @@ BorderShape::BorderShape(const LayoutRect& borderRect, const RectEdges<LayoutUni
     ASSERT(m_borderRect.isRenderable());
 }
 
+BorderShape BorderShape::shapeWithBorderWidths(const RectEdges<LayoutUnit>& borderWidths) const
+{
+    return BorderShape(m_borderRect.rect(), borderWidths, m_borderRect.radii());
+}
+
 RoundedRect BorderShape::deprecatedRoundedRect() const
 {
     return m_borderRect;

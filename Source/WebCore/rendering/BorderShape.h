@@ -59,6 +59,8 @@ public:
 
     BorderShape(const BorderShape&) = default;
 
+    BorderShape shapeWithBorderWidths(const RectEdges<LayoutUnit>&) const;
+
     LayoutRect borderRect() const { return m_borderRect.rect(); }
     // Takes `closedEdges` into account.
     const RectEdges<LayoutUnit>& borderWidths() const { return m_borderWidths; }

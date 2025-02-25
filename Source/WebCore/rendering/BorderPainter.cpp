@@ -451,47 +451,25 @@ void BorderPainter::paintSides(const BorderShape& borderShape, const Sides& side
         ASSERT(numEdgesVisible == 4);
         ASSERT(allEdgesShareColor);
         ASSERT(haveAllDoubleEdges);
-        ASSERT(haveAlphaColor);
-        ASSERT(sides.outerEdgeIsRectangular && sides.innerEdgeIsRectangular);
+        ASSERT(!sides.outerEdgeIsRectangular || haveAlphaColor);
 
-        Path path;
-        auto pixelSnappedOuterBorder = borderShape.snappedOuterRect(deviceScaleFactor);
-        path.addRect(pixelSnappedOuterBorder);
+        auto path = borderShape.pathForOuterShape(deviceScaleFactor);
 
-        auto innerThirdRect = borderShape.borderRect();
-        auto outerThirdRect = borderShape.borderRect();
-        for (auto side : allBoxSides) {
-            LayoutUnit outerWidth;
-            LayoutUnit innerWidth;
-            sides.edges.at(side).getDoubleBorderStripeWidths(outerWidth, innerWidth);
-            switch (side) {
-            case BoxSide::Top:
-                innerThirdRect.shiftYEdgeTo(innerThirdRect.y() + innerWidth);
-                outerThirdRect.shiftYEdgeTo(outerThirdRect.y() + outerWidth);
-                break;
-            case BoxSide::Right:
-                innerThirdRect.setWidth(innerThirdRect.width() - innerWidth);
-                outerThirdRect.setWidth(outerThirdRect.width() - outerWidth);
-                break;
-            case BoxSide::Bottom:
-                innerThirdRect.setHeight(innerThirdRect.height() - innerWidth);
-                outerThirdRect.setHeight(outerThirdRect.height() - outerWidth);
-                break;
-            case BoxSide::Left:
-                innerThirdRect.shiftXEdgeTo(innerThirdRect.x() + innerWidth);
-                outerThirdRect.shiftXEdgeTo(outerThirdRect.x() + outerWidth);
-                break;
-            }
-        }
+        RectEdges<LayoutUnit> outerThirdInsets;
+        RectEdges<LayoutUnit> innerThirdInsets;
 
-        auto pixelSnappedOuterThird = snapRectToDevicePixels(outerThirdRect, deviceScaleFactor);
-        path.addRect(pixelSnappedOuterThird);
+        sides.edges.at(BoxSide::Top).getDoubleBorderStripeWidths(outerThirdInsets.top(), innerThirdInsets.top());
+        sides.edges.at(BoxSide::Right).getDoubleBorderStripeWidths(outerThirdInsets.right(), innerThirdInsets.right());
+        sides.edges.at(BoxSide::Bottom).getDoubleBorderStripeWidths(outerThirdInsets.bottom(), innerThirdInsets.bottom());
+        sides.edges.at(BoxSide::Left).getDoubleBorderStripeWidths(outerThirdInsets.left(), innerThirdInsets.left());
 
-        auto pixelSnappedInnerThird = snapRectToDevicePixels(innerThirdRect, deviceScaleFactor);
-        path.addRect(pixelSnappedInnerThird);
+        auto outerThirdShape = borderShape.shapeWithBorderWidths(outerThirdInsets);
+        outerThirdShape.addInnerShapeToPath(path, deviceScaleFactor);
 
-        auto pixelSnappedInnerBorder = borderShape.snappedInnerRect(deviceScaleFactor);
-        path.addRect(pixelSnappedInnerBorder);
+        auto innerThirdShape = borderShape.shapeWithBorderWidths(innerThirdInsets);
+        innerThirdShape.addInnerShapeToPath(path, deviceScaleFactor);
+
+        borderShape.addInnerShapeToPath(path, deviceScaleFactor);
 
         graphicsContext.setFillRule(WindRule::EvenOdd);
         graphicsContext.setFillColor(sides.edges.at(*firstVisibleSide).color());
@@ -506,7 +484,7 @@ void BorderPainter::paintSides(const BorderShape& borderShape, const Sides& side
                 return;
             }
 
-            if (haveAllDoubleEdges && sides.outerEdgeIsRectangular && sides.innerEdgeIsRectangular) {
+            if (haveAllDoubleEdges) {
                 drawUniformDoubleBorders();
                 return;
             }
