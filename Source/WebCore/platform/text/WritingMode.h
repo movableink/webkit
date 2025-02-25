@@ -56,6 +56,8 @@ enum class StyleWritingMode : uint8_t;
 enum class TextDirection : bool;
 enum class TextOrientation : uint8_t;
 enum class FlowDirection : uint8_t;
+enum class BoxAxis : uint8_t;
+enum class LogicalBoxAxis : uint8_t;
 
 class WritingMode final {
 public:
@@ -108,6 +110,12 @@ public:
     constexpr FlowDirection blockDirection() const;
     constexpr TextDirection bidiDirection() const;
     constexpr FlowDirection inlineDirection() const;
+
+    // Axes as enums. Prefer booleans if doing boolean checks.
+    constexpr BoxAxis blockAxis() const;
+    constexpr BoxAxis inlineAxis() const;
+    constexpr LogicalBoxAxis horizontalAxis() const;
+    constexpr LogicalBoxAxis verticalAxis() const;
 
     // Computed values. May differ from used values above.
     constexpr StyleWritingMode computedWritingMode() const;

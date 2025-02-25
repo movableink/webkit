@@ -121,6 +121,26 @@ constexpr LogicalBoxCorner mapCornerPhysicalToLogical(const WritingMode, const B
 
 /** Implementation Below **********************************************/
 
+constexpr BoxAxis WritingMode::inlineAxis() const
+{
+    return isHorizontal() ? BoxAxis::Horizontal : BoxAxis::Vertical;
+}
+
+constexpr BoxAxis WritingMode::blockAxis() const
+{
+    return isHorizontal() ? BoxAxis::Vertical : BoxAxis::Horizontal;
+}
+
+constexpr LogicalBoxAxis WritingMode::horizontalAxis() const
+{
+    return isHorizontal() ? LogicalBoxAxis::Inline : LogicalBoxAxis::Block;
+}
+
+constexpr LogicalBoxAxis WritingMode::verticalAxis() const
+{
+    return isHorizontal() ? LogicalBoxAxis::Block : LogicalBoxAxis::Inline;
+}
+
 constexpr BoxAxis mapAxisLogicalToPhysical(const WritingMode writingMode, const LogicalBoxAxis logicalAxis)
 {
     bool isBlock = logicalAxis == LogicalBoxAxis::Block;

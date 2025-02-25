@@ -73,6 +73,32 @@ PositionArea::PositionArea(PositionAreaSpan blockOrXAxis, PositionAreaSpan inlin
     ASSERT(axisIsInlineOrY(m_inlineOrYAxis.axis()));
 }
 
+PositionAreaTrack PositionArea::coordMatchedTrackForAxis(BoxAxis physicalAxis, WritingMode containerWritingMode, WritingMode selfWritingMode) const
+{
+    bool useSelfWritingMode = m_blockOrXAxis.self() == PositionAreaSelf::Yes;
+    auto writingMode = useSelfWritingMode ? selfWritingMode : containerWritingMode;
+    auto relevantSpan = physicalAxis == mapPositionAreaAxisToPhysicalAxis(m_blockOrXAxis.axis(), writingMode)
+        ? m_blockOrXAxis : m_inlineOrYAxis;
+    auto positionAxis = relevantSpan.axis();
+    auto track = relevantSpan.track();
+
+    bool shouldFlip = false;
+    if (LogicalBoxAxis::Inline == mapAxisPhysicalToLogical(containerWritingMode, physicalAxis)) {
+        if (isPositionAreaDirectionLogical(positionAxis)) {
+            shouldFlip = containerWritingMode.isInlineFlipped();
+            if (useSelfWritingMode && !containerWritingMode.isInlineMatchingAny(selfWritingMode))
+                shouldFlip = !shouldFlip;
+        }
+    } else {
+        shouldFlip = !isPositionAreaDirectionLogical(positionAxis)
+            && containerWritingMode.isBlockFlipped();
+        if (useSelfWritingMode && !containerWritingMode.isBlockMatchingAny(selfWritingMode))
+            shouldFlip = !shouldFlip;
+    }
+
+    return shouldFlip ? flipPositionAreaTrack(track) : track;
+}
+
 WTF::TextStream& operator<<(WTF::TextStream& ts, const PositionAreaSpan& span)
 {
     ts << "{ axis: ";
