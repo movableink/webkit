@@ -86,10 +86,6 @@ public final class WKSRKEntity: NSObject {
             entity.name = newValue
         }
     }
-    
-    @objc(interactionPivotPoint) public var interactionPivotPoint: simd_float3 {
-        entity.visualBounds(relativeTo: nil).center
-    }
 
     @objc(boundingBoxExtents) public var boundingBoxExtents: simd_float3 {
         guard let boundingBox = self.boundingBox else { return SIMD3<Float>(0, 0, 0) }
@@ -271,9 +267,9 @@ public final class WKSRKEntity: NSObject {
         delegate?.entityAnimationPlaybackStateDidUpdate?(self)
     }
 
-    @objc(setParentCoreEntity:preservingWorldTransform:) public func setParent(_ coreEntity: REEntityRef, preservingWorldTransform: Bool) {
+    @objc(setParentCoreEntity:) public func setParent(_ coreEntity: REEntityRef) {
         let parentEntity = Entity.__fromCore(__EntityRef.__fromCore(coreEntity))
-        entity.setParent(parentEntity, preservingWorldTransform: preservingWorldTransform)
+        entity.setParent(parentEntity)
     }
 }
 

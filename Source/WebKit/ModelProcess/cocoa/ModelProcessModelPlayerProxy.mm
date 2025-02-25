@@ -35,7 +35,6 @@
 #import "ModelProcessModelPlayerMessages.h"
 #import "RealityKitBridging.h"
 #import "WKModelProcessModelLayer.h"
-#import "WKStageMode.h"
 #import <RealitySystemSupport/RealitySystemSupport.h>
 #import <SurfBoardServices/SurfBoardServices.h>
 #import <WebCore/Color.h>
@@ -217,8 +216,6 @@ ModelProcessModelPlayerProxy::~ModelProcessModelPlayerProxy()
 
     if (m_hostingEntity.get())
         REEntityRemoveFromSceneOrParent(m_hostingEntity.get());
-
-    [m_stageModeInteractionDriver removeInteractionContainerFromSceneOrParent];
 
     RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayerProxy deallocated id=%" PRIu64, this, m_id.toUInt64());
 }
@@ -453,20 +450,20 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
         REEntitySetName(m_model->rootEntity(), "WebKit:ModelRootEntity");
 
     if (canLoadWithRealityKit)
-        [m_model->rootRKEntity() setParentCoreEntity:clientComponentEntity preservingWorldTransform:NO];
+        [m_model->rootRKEntity() setParentCoreEntity:clientComponentEntity];
     else {
         REEntitySetParent(m_model->rootEntity(), clientComponentEntity);
+        REEntitySubtreeAddNetworkComponentRecursive(m_model->rootEntity());
     }
 
-    m_stageModeInteractionDriver = adoptNS([[WKStageModeInteractionDriver alloc] initWithModel:m_modelRKEntity.get() container:clientComponentEntity]);
-    applyStageModeOperationToDriver();
-
+    RENetworkMarkEntityMetadataDirty(clientComponentEntity);
     if (!canLoadWithRealityKit)
         RENetworkMarkEntityMetadataDirty(m_model->rootEntity());
 
     computeTransform();
     updateTransform();
-    [m_stageModeInteractionDriver setContainerTransformInPortal];
+
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287820
 
     updateOpacity();
     startAnimating();
@@ -677,19 +674,17 @@ void ModelProcessModelPlayerProxy::setEnvironmentMap(Ref<WebCore::SharedBuffer>&
 
 void ModelProcessModelPlayerProxy::beginStageModeTransform(const WebCore::TransformationMatrix& transform)
 {
-    simd_float4x4 transformMatrix = simd_float4x4(transform);
-    [m_stageModeInteractionDriver interactionDidBegin:transformMatrix];
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287820
 }
 
 void ModelProcessModelPlayerProxy::updateStageModeTransform(const WebCore::TransformationMatrix& transform)
 {
-    simd_float4x4 transformMatrix = simd_float4x4(transform);
-    [m_stageModeInteractionDriver interactionDidUpdate:transformMatrix];
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287820
 }
 
 void ModelProcessModelPlayerProxy::endStageModeInteraction()
 {
-    [m_stageModeInteractionDriver interactionDidEnd];
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287820
 }
 
 void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()
@@ -724,22 +719,6 @@ void ModelProcessModelPlayerProxy::setStageMode(WebCore::StageModeOperation stag
         return;
 
     m_stageModeOperation = stagemodeOp;
-    applyStageModeOperationToDriver();
-}
-
-void ModelProcessModelPlayerProxy::applyStageModeOperationToDriver()
-{
-    switch (m_stageModeOperation) {
-    case WebCore::StageModeOperation::Orbit: {
-        [m_stageModeInteractionDriver operationDidUpdate:WKStageModeOperationOrbit];
-        break;
-    }
-
-    case WebCore::StageModeOperation::None: {
-        [m_stageModeInteractionDriver operationDidUpdate:WKStageModeOperationNone];
-        break;
-    }
-    }
 }
 
 } // namespace WebKit
