@@ -1,0 +1,79 @@
+<!-- webkit-test-runner [ IPCTestingAPIEnabled=true ] -->
+<p>This test passes if WebKit does not crash.</p>
+
+<script>
+if (window.testRunner) {
+    testRunner.dumpAsText();
+    testRunner.waitUntilDone();
+}
+
+window.setTimeout(async () => {
+  if (!window.IPC)
+      return window.testRunner?.notifyDone();
+
+  const { CoreIPC } = await import('./coreipc.js');
+
+
+  const createRepeatedPath = (pathSegments, repeatCount) => Array(repeatCount).fill(pathSegments).flat();
+
+  const connection = CoreIPC.newStreamConnection();
+  CoreIPC.GPU.GPUConnectionToWebProcess.CreateRenderingBackend(0, {
+    renderingBackendIdentifier: 393217,
+    connectionHandle: connection
+  });
+
+  const renderingBackend = connection.newInterface("RemoteRenderingBackend", 393217);
+
+  renderingBackend.CreateImageBuffer({
+    logicalSize: { width: 91, height: 119 },
+    renderingMode: 3,
+    renderingPurpose: 1,
+    resolutionScale: 57,
+    colorSpace: {
+      serializableColorSpace: {
+        alias: {
+          m_cgColorSpace: { alias: { variantType: 'WebCore::ColorSpace', variant: 19 } }
+        }
+      }
+    },
+    pixelFormat: 1,
+    renderingResourceIdentifier: 393224
+  });
+
+  const imageBufferIdentifier = 393224;
+  const imageBuffer = connection.newInterface("RemoteImageBuffer", imageBufferIdentifier);
+  const displayListRecorder = connection.newInterface("RemoteDisplayListRecorder", imageBufferIdentifier);
+  const pageID = IPC.pageID;
+
+  displayListRecorder.DrawFocusRingPath({
+    path: {
+      segments: createRepeatedPath([
+        { data: { alias: { variantType: 'WebCore::PathMoveTo', variant: { point: { x: 43, y: 22 } } } } },
+        { data: { alias: { variantType: 'WebCore::PathQuadCurveTo', variant: { controlPoint: { x: 7, y: 12 }, endPoint: { x: 91, y: 109 } } } } },
+        { data: { alias: { variantType: 'WebCore::PathDataQuadCurve', variant: { start: { x: 122, y: 46 }, controlPoint: { x: 54, y: 69 }, endPoint: { x: 70, y: 506806141048 } } } } },
+        { data: { alias: { variantType: 'WebCore::PathArcTo', variant: { controlPoint1: { x: 62, y: 18 }, controlPoint2: { x: 72, y: 88 }, radius: 37 } } } },
+        { data: { alias: { variantType: 'WebCore::PathRect', variant: { rect: { location: { x: 67, y: 60 }, size: { width: 31, height: 4875397766316111 } } } } } },
+        { data: { alias: { variantType: 'WebCore::PathRoundedRect', variant: { roundedRect: { rect: { location: { x: 55834574893, y: 275066885505103 }, size: { width: 118, height: 91 } }, radiiTopLeft: { width: 50, height: 102 }, radiiTopRight: { width: 20, height: 125 }, radiiBottomLeft: { width: 66, height: 119 }, radiiBottomRight: { width: 322123005958, height: 122 } }, strategy: 0 } } } },
+        { data: { alias: { variantType: 'WebCore::PathArcTo', variant: { controlPoint1: { x: 19, y: 335008760447 }, controlPoint2: { x: 197568495714, y: 124 }, radius: 65 } } } },
+        { data: { alias: { variantType: 'WebCore::PathArc', variant: { center: { x: 1, y: 79 }, radius: 97, startAngle: 83, endAngle: 19, direction: 1 } } } },
+        { data: { alias: { variantType: 'WebCore::PathMoveTo', variant: { point: { x: 106, y: 14 } } } } }
+      ], 1120)
+    },
+    outlineWidth: 240518168607,
+    color: {
+      data: {
+        optionalValue: {
+          isSemantic: false,
+          usesFunctionSerialization: false,
+          data: { variantType: 'WebCore::PackedColor::RGBA', variant: { value: 122 } }
+        }
+      }
+    }
+  });
+
+  renderingBackend.DidDrawRemoteToPDF({ pageID, imageBufferIdentifier, snapshotIdentifier: 262145 });
+  imageBuffer.GetShareableBitmap({ preserveResolution: true });
+
+  window.testRunner?.notifyDone();
+}, 20);
+</script>

@@ -270,13 +270,10 @@ void RemoteRenderingBackend::didDrawRemoteToPDF(PageIdentifier pageID, Rendering
     }
 
     ASSERT(imageBufferIdentifier == imageBuffer->renderingResourceIdentifier());
+    auto data = imageBuffer->sinkIntoPDFDocument();
 
-    callOnMainRunLoop([protectedThis = Ref { *this }, pageID, imageBuffer = WTFMove(imageBuffer), snapshotIdentifier]() mutable {
-        auto data = imageBuffer->sinkIntoPDFDocument();
+    callOnMainRunLoop([pageID, data = WTFMove(data), snapshotIdentifier]() mutable {
         GPUProcess::singleton().didDrawRemoteToPDF(pageID, WTFMove(data), snapshotIdentifier);
-
-        // Ensure destruction happens on creation thread.
-        protectedThis->protectedWorkQueue()->dispatch([imageBuffer = WTFMove(imageBuffer)] () mutable { });
     });
 }
 #endif
