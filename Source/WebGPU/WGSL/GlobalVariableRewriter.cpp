@@ -232,6 +232,8 @@ void RewriteGlobalVariables::visitCallee(const CallGraph::Callee& callee)
 
             for (auto& length : it->value) {
                 auto lengthName = makeString("__"_s, length, "_ArrayLength"_s);
+                if (m_reads.contains(lengthName))
+                    continue;
                 m_shaderModule.append(callee.target->parameters(), m_shaderModule.astBuilder().construct<AST::Parameter>(
                     SourceSpan::empty(),
                     AST::Identifier::make(lengthName),
@@ -280,6 +282,8 @@ void RewriteGlobalVariables::visitCallee(const CallGraph::Callee& callee)
                     result.iterator->value.add(identifier);
 
                     auto lengthName = makeString("__"_s, identifier, "_ArrayLength"_s);
+                    if (m_reads.contains(lengthName))
+                        continue;
                     auto& length = m_shaderModule.astBuilder().construct<AST::IdentifierExpression>(
                         SourceSpan::empty(),
                         AST::Identifier::make(lengthName)
