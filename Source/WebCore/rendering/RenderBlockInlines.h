@@ -20,6 +20,7 @@
 #pragma once
 
 #include "RenderBlock.h"
+#include "RenderBoxInlines.h"
 #include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 

@@ -53,7 +53,7 @@ void WebFileSystemStorageConnection::errorWritable(WebCore::ScriptExecutionConte
         return;
 
     WebCore::ScriptExecutionContext::postTaskTo(contextIdentifier, [writableIdentifier, protectedThis = Ref { *this }](auto& context) mutable {
-        RefPtr globalScope = dynamicDowncast<WorkerGlobalScope>(context);
+        RefPtr globalScope = dynamicDowncast<WebCore::WorkerGlobalScope>(context);
         RefPtr connection = globalScope ? globalScope->fileSystemStorageConnection() : nullptr;
         if (connection)
             connection->errorFileSystemWritable(writableIdentifier);

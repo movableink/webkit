@@ -23,10 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #include "config.h"
 #include "FileSystemStorageConnection.h"
+
+#include "FileSystemWritableFileStream.h"
 
 namespace WebCore {
 

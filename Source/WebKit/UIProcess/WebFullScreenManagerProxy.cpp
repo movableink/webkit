@@ -33,6 +33,7 @@
 #include "MessageSenderInlines.h"
 #include "RemotePageFullscreenManagerProxy.h"
 #include "WebAutomationSession.h"
+#include "WebFrameProxy.h"
 #include "WebFullScreenManagerMessages.h"
 #include "WebFullScreenManagerProxyMessages.h"
 #include "WebPageProxy.h"
@@ -41,6 +42,7 @@
 #include <WebCore/IntRect.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/ScreenOrientationType.h>
+#include <wtf/CallbackAggregator.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>

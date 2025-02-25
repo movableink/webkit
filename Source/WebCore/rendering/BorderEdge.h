@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Color.h"
+#include "LayoutSize.h"
 #include "LayoutUnit.h"
 #include "RectEdges.h"
 #include "RenderObjectEnums.h"
