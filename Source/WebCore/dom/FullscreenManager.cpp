@@ -283,10 +283,11 @@ ExceptionOr<void> FullscreenManager::willEnterFullscreen(Element& element, HTMLM
             ancestors.append(ownerElement.releaseNonNull());
     }
 
+    bool elementWasFullscreen = &element == element.document().fullscreenManager().fullscreenElement();
     for (auto ancestor : makeReversedRange(ancestors))
         elementEnterFullscreen(ancestor);
 
-    if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(element))
+    if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(element); iframe && !elementWasFullscreen)
         iframe->setIFrameFullscreenFlag(true);
 
     return { };
@@ -294,6 +295,9 @@ ExceptionOr<void> FullscreenManager::willEnterFullscreen(Element& element, HTMLM
 
 void FullscreenManager::elementEnterFullscreen(Element& element)
 {
+    if (&element == element.document().fullscreenManager().fullscreenElement())
+        return;
+
     auto hideUntil = element.topmostPopoverAncestor(Element::TopLayerElementType::Other);
     element.document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
 
