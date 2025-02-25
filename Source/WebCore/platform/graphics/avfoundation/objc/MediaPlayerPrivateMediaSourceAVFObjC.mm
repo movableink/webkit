@@ -75,12 +75,6 @@
 @property (assign, nonatomic) BOOL preventsAutomaticBackgroundingDuringVideoPlayback;
 @end
 
-#if ENABLE(LINEAR_MEDIA_PLAYER)
-@interface AVSampleBufferVideoRenderer (Staging_127455709)
-- (void)removeAllVideoTargets;
-@end
-#endif
-
 namespace WebCore {
 
 String convertEnumerationToString(MediaPlayerPrivateMediaSourceAVFObjC::SeekState enumerationValue)
@@ -963,8 +957,6 @@ void MediaPlayerPrivateMediaSourceAVFObjC::destroyVideoRenderer()
     CMTime currentTime = PAL::CMTimebaseGetTime([m_synchronizer timebase]);
     [m_synchronizer removeRenderer:renderer.get() atTime:currentTime completionHandler:nil];
 
-    if ([renderer respondsToSelector:@selector(removeAllVideoTargets)])
-        [renderer removeAllVideoTargets];
     m_sampleBufferVideoRenderer = nullptr;
 #endif // ENABLE(LINEAR_MEDIA_PLAYER)
 }
