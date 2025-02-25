@@ -4318,8 +4318,7 @@ bool AXObjectCache::elementIsTextControl(const Element& element)
 
 static bool documentNeedsLayoutOrStyleRecalc(Document& document)
 {
-    auto* frameView = document.view();
-    if (frameView) {
+    if (RefPtr frameView = document.view()) {
         if (frameView->needsLayout() || frameView->layoutContext().isLayoutPending())
             return true;
     }
