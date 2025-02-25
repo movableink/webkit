@@ -141,6 +141,7 @@ protected:
     void clearAsyncRenderer();
 
     bool shouldUseInProcessBackingStore() const;
+    bool shouldAddPageBackgroundLayerShadow() const;
 
     Ref<UnifiedPDFPlugin> m_plugin;
     RefPtr<AsyncPDFRenderer> m_asyncRenderer;
