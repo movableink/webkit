@@ -471,6 +471,10 @@ private:
     void setSpatialTrackingLabel(const String&) final;
 #endif
 
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    void prefersSpatialAudioExperienceChanged() final;
+#endif
+
     void isInFullscreenOrPictureInPictureChanged(bool) final;
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
@@ -486,6 +490,10 @@ private:
     Ref<RemoteVideoFrameObjectHeapProxy> protectedVideoFrameObjectHeapProxy() const { return videoFrameObjectHeapProxy(); }
 
     Ref<RemoteMediaPlayerManager> protectedManager() const;
+
+#if PLATFORM(IOS_FAMILY)
+    void sceneIdentifierDidChange() final;
+#endif
 
     ThreadSafeWeakPtr<WebCore::MediaPlayer> m_player;
 #if PLATFORM(COCOA)

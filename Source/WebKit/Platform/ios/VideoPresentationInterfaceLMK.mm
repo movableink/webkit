@@ -230,13 +230,16 @@ CALayer *VideoPresentationInterfaceLMK::captionsLayer()
     m_captionsLayer = adoptNS([[WKLinearMediaKitCaptionsLayer alloc] initWithParent:*this]);
     [m_captionsLayer setName:@"Captions Layer"];
 
-#if HAVE(SPATIAL_TRACKING_LABEL)
     m_spatialTrackingLayer = adoptNS([[CALayer alloc] init]);
     [m_spatialTrackingLayer setSeparatedState:kCALayerSeparatedStateTracked];
-    m_spatialTrackingLabel = makeString("VideoPresentationInterfaceLMK Label: "_s, createVersion4UUIDString());
-    [m_spatialTrackingLayer setValue:(NSString *)m_spatialTrackingLabel forKeyPath:@"separatedOptions.STSLabel"];
-    [m_captionsLayer addSublayer:m_spatialTrackingLayer.get()];
+    m_spatialTrackingLabel = makeString(createVersion4UUIDString());
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    if (prefersSpatialAudioExperience())
+        [m_spatialTrackingLayer setValue:(NSString *)m_spatialTrackingLabel forKeyPath:@"separatedOptions.AudioTether"];
+    else
 #endif
+        [m_spatialTrackingLayer setValue:(NSString *)m_spatialTrackingLabel forKeyPath:@"separatedOptions.STSLabel"];
+    [m_captionsLayer addSublayer:m_spatialTrackingLayer.get()];
 
     return m_captionsLayer.get();
 }

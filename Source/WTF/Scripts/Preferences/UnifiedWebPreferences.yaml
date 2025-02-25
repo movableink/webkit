@@ -5930,6 +5930,22 @@ PreferSandboxedMediaParsing:
     WebKit:
       default: true
 
+PreferSpatialAudioExperience:
+  type: bool
+  status: internal
+  category: media
+  condition: HAVE(SPATIAL_AUDIO_EXPERIENCE)
+  humanReadableName: "Prefer Spatial Audio Experience over Spatial Tracking Labels"
+  humanReadableDescription: "Prefer Spatial Audio Experience over Spatial Tracking Labels"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+  defaultsOverridable: true
+
 PrivateClickMeasurementDebugModeEnabled:
   type: bool
   status: developer

@@ -165,6 +165,10 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     void setVideoTarget(const PlatformVideoTarget&) final;
 #endif
 
+#if PLATFORM(IOS_FAMILY)
+    void sceneIdentifierDidChange() final;
+#endif
+
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     ASCIILiteral logClassName() const override { return "MediaPlayerPrivateMediaSourceAVFObjC"_s; }

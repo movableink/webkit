@@ -1809,6 +1809,15 @@ void MediaPlayerPrivateRemote::setSpatialTrackingLabel(const String& spatialTrac
 }
 #endif
 
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+void MediaPlayerPrivateRemote::prefersSpatialAudioExperienceChanged()
+{
+    if (RefPtr player = m_player.get())
+        protectedConnection()->send(Messages::RemoteMediaPlayerProxy::SetPrefersSpatialAudioExperience(player->prefersSpatialAudioExperience()), m_id);
+}
+#endif
+
 void MediaPlayerPrivateRemote::isInFullscreenOrPictureInPictureChanged(bool isInFullscreenOrPictureInPicture)
 {
     protectedConnection()->send(Messages::RemoteMediaPlayerProxy::IsInFullscreenOrPictureInPictureChanged(isInFullscreenOrPictureInPicture), m_id);
@@ -1856,6 +1865,14 @@ Ref<RemoteMediaPlayerManager> MediaPlayerPrivateRemote::protectedManager() const
 {
     return m_manager.get().releaseNonNull();
 }
+
+#if PLATFORM(IOS_FAMILY)
+void MediaPlayerPrivateRemote::sceneIdentifierDidChange()
+{
+    if (RefPtr player = m_player.get())
+        protectedConnection()->send(Messages::RemoteMediaPlayerProxy::SetSceneIdentifier(player->sceneIdentifier()), m_id);
+}
+#endif
 
 } // namespace WebKit
 

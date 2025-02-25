@@ -286,6 +286,11 @@ private:
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     void setVideoTarget(const PlatformVideoTarget&) final;
 #endif
+
+#if PLATFORM(IOS_FAMILY)
+    void sceneIdentifierDidChange() final;
+#endif
+
     void isInFullscreenOrPictureInPictureChanged(bool) final;
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)

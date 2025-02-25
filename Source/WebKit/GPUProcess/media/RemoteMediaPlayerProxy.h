@@ -138,6 +138,7 @@ public:
 #if PLATFORM(IOS_FAMILY)
     void accessLog(CompletionHandler<void(String)>&&);
     void errorLog(CompletionHandler<void(String)>&&);
+    void setSceneIdentifier(String&&);
 #endif
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
@@ -381,6 +382,9 @@ private:
 #if HAVE(SPATIAL_TRACKING_LABEL)
     void setDefaultSpatialTrackingLabel(const String&);
     void setSpatialTrackingLabel(const String&);
+#endif
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    void setPrefersSpatialAudioExperience(bool);
 #endif
 
     void isInFullscreenOrPictureInPictureChanged(bool);

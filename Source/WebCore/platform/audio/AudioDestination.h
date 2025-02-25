@@ -76,6 +76,10 @@ public:
 
     void callRenderCallback(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition);
 
+#if PLATFORM(IOS_FAMILY)
+    void setSceneIdentifier(const String&) { }
+#endif
+
 protected:
     explicit AudioDestination(AudioIOCallback&, float sampleRate);
 

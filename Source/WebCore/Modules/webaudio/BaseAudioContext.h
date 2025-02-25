@@ -108,6 +108,9 @@ public:
     virtual bool isOfflineContext() const = 0;
     virtual AudioDestinationNode& destination() = 0;
     virtual const AudioDestinationNode& destination() const = 0;
+#if PLATFORM(IOS_FAMILY)
+    virtual const String& sceneIdentifier() const { return nullString(); }
+#endif
 
     size_t currentSampleFrame() const { return destination().currentSampleFrame(); }
     double currentTime() const { return destination().currentTime(); }

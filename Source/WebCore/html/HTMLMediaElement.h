@@ -1031,6 +1031,9 @@ private:
 
     void visibilityAdjustmentStateDidChange() final;
     void pageMutedStateDidChange() override;
+#if PLATFORM(IOS_FAMILY)
+    void sceneIdentifierDidChange() final;
+#endif
 
 #if USE(AUDIO_SESSION) && PLATFORM(MAC)
     void hardwareMutedStateDidChange(const AudioSession&) final;

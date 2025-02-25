@@ -5600,6 +5600,14 @@ void Document::visibilityAdjustmentStateDidChange()
         audioProducer.visibilityAdjustmentStateDidChange();
 }
 
+#if PLATFORM(IOS_FAMILY)
+void Document::sceneIdentifierDidChange()
+{
+    for (auto& audioProducer : m_audioProducers)
+        audioProducer.sceneIdentifierDidChange();
+}
+#endif
+
 #if ENABLE(MEDIA_STREAM) && ENABLE(MEDIA_SESSION)
 static bool hasRealtimeMediaSource(const UncheckedKeyHashSet<Ref<RealtimeMediaSource>>& sources, NOESCAPE const Function<bool(const RealtimeMediaSource&)>& filterSource)
 {

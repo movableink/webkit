@@ -975,6 +975,14 @@ bool MediaPlayer::canShowWhileLocked() const
 {
     return client().canShowWhileLocked();
 }
+
+void MediaPlayer::setSceneIdentifier(const String& identifier)
+{
+    if (m_sceneIdentifier == identifier)
+        return;
+    m_sceneIdentifier = identifier;
+    m_private->sceneIdentifierDidChange();
+}
 #endif
 
 void MediaPlayer::videoLayerSizeDidChange(const FloatSize& size)
@@ -2007,6 +2015,16 @@ void MediaPlayer::setSpatialTrackingLabel(const String& spatialTrackingLabel)
         return;
     m_spatialTrackingLabel = spatialTrackingLabel;
     m_private->setSpatialTrackingLabel(spatialTrackingLabel);
+}
+#endif
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+void MediaPlayer::setPrefersSpatialAudioExperience(bool value)
+{
+    if (m_prefersSpatialAudioExperience == value)
+        return;
+    m_prefersSpatialAudioExperience = value;
+    m_private->prefersSpatialAudioExperienceChanged();
 }
 #endif
 

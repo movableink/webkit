@@ -1653,6 +1653,9 @@ public:
 #endif
     void pageMutedStateDidChange();
     void visibilityAdjustmentStateDidChange();
+#if PLATFORM(IOS_FAMILY)
+    void sceneIdentifierDidChange();
+#endif
 
     bool hasEverHadSelectionInsideTextFormControl() const { return m_hasEverHadSelectionInsideTextFormControl; }
     void setHasEverHadSelectionInsideTextFormControl() { m_hasEverHadSelectionInsideTextFormControl = true; }

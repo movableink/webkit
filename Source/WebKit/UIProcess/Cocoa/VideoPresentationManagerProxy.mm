@@ -652,6 +652,10 @@ VideoPresentationManagerProxy::ModelInterfaceTuple VideoPresentationManagerProxy
     Ref playbackSessionInterface = playbackSessionManagerProxy->ensureInterface(contextId);
     Ref interface = videoPresentationInterface(page.get(), playbackSessionInterface.get());
 
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    interface->setPrefersSpatialAudioExperience(page->preferences().preferSpatialAudioExperience());
+#endif
+
     playbackSessionManagerProxy->addClientForContext(contextId);
 
     interface->setVideoPresentationModel(model.ptr());

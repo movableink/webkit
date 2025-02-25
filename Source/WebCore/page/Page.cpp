@@ -5184,7 +5184,7 @@ CheckedRef<ElementTargetingController> Page::checkedElementTargetingController()
     return m_elementTargetingController.get();
 }
 
-String Page::sceneIdentifier() const
+const String& Page::sceneIdentifier() const
 {
 #if PLATFORM(IOS_FAMILY)
     return m_sceneIdentifier;
@@ -5196,7 +5196,13 @@ String Page::sceneIdentifier() const
 #if PLATFORM(IOS_FAMILY)
 void Page::setSceneIdentifier(String&& sceneIdentifier)
 {
+    if (m_sceneIdentifier == sceneIdentifier)
+        return;
     m_sceneIdentifier = WTFMove(sceneIdentifier);
+
+    forEachDocument([&] (Document& document) {
+        document.sceneIdentifierDidChange();
+    });
 }
 #endif
 

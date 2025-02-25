@@ -361,10 +361,18 @@ public:
     virtual void setSpatialTrackingLabel(const String&) { }
 #endif
 
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    virtual void prefersSpatialAudioExperienceChanged() { }
+#endif
+
     virtual void isInFullscreenOrPictureInPictureChanged(bool) { }
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     virtual bool supportsLinearMediaPlayer() const { return false; }
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    virtual void sceneIdentifierDidChange() { }
 #endif
 
 protected:

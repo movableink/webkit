@@ -416,6 +416,11 @@ void RemoteMediaPlayerProxy::errorLog(CompletionHandler<void(String)>&& completi
 {
     completionHandler(protectedPlayer()->errorLog());
 }
+
+void RemoteMediaPlayerProxy::setSceneIdentifier(String&& identifier)
+{
+    protectedPlayer()->setSceneIdentifier(identifier);
+}
 #endif
 
 void RemoteMediaPlayerProxy::mediaPlayerNetworkStateChanged()
@@ -1292,6 +1297,14 @@ void RemoteMediaPlayerProxy::setDefaultSpatialTrackingLabel(const String& defaul
 void RemoteMediaPlayerProxy::setSpatialTrackingLabel(const String& spatialTrackingLabel)
 {
     protectedPlayer()->setSpatialTrackingLabel(spatialTrackingLabel);
+}
+
+#endif
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+void RemoteMediaPlayerProxy::setPrefersSpatialAudioExperience(bool value)
+{
+    protectedPlayer()->setPrefersSpatialAudioExperience(value);
 }
 #endif
 

@@ -9282,6 +9282,16 @@ void HTMLMediaElement::visibilityAdjustmentStateDidChange()
     player->setMuted(muted);
 }
 
+#if PLATFORM(IOS_FAMILY)
+void HTMLMediaElement::sceneIdentifierDidChange()
+{
+    if (RefPtr page = document().page()) {
+        if (RefPtr player = m_player)
+            player->setSceneIdentifier(page->sceneIdentifier());
+    }
+}
+#endif
+
 void HTMLMediaElement::pageMutedStateDidChange()
 {
     if (RefPtr page = document().page()) {

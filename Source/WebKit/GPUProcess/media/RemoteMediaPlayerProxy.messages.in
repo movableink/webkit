@@ -121,6 +121,7 @@ messages -> RemoteMediaPlayerProxy {
 #if PLATFORM(IOS_FAMILY)
     ErrorLog() -> (String errorLog) Synchronous
     AccessLog() -> (String accessLog) Synchronous
+    SetSceneIdentifier(String sceneIdentifier)
 #endif
 
 #if ENABLE(WEB_AUDIO)
@@ -151,6 +152,10 @@ messages -> RemoteMediaPlayerProxy {
 #if HAVE(SPATIAL_TRACKING_LABEL)
     SetDefaultSpatialTrackingLabel(String defaultSpatialTrackingLabel);
     SetSpatialTrackingLabel(String spatialTrackingLabel);
+#endif
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    SetPrefersSpatialAudioExperience(bool value)
 #endif
 
     AudioOutputDeviceChanged(String deviceId)

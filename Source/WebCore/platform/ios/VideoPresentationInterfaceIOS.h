@@ -175,6 +175,11 @@ public:
 
     virtual void swapFullscreenModesWith(VideoPresentationInterfaceIOS&) { }
 
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    void setPrefersSpatialAudioExperience(bool value) { m_prefersSpatialAudioExperience = value; }
+    bool prefersSpatialAudioExperience() const { return m_prefersSpatialAudioExperience; }
+#endif
+
 #if !RELEASE_LOG_DISABLED
     WEBCORE_EXPORT uint64_t logIdentifier() const;
     WEBCORE_EXPORT const Logger* loggerPtr() const;
@@ -260,6 +265,10 @@ private:
     bool m_finalizeSetupNeedsReturnVideoContentLayer { false };
     Ref<PlaybackSessionInterfaceIOS> m_playbackSessionInterface;
     RetainPtr<UIView> m_pipPlacard;
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    bool m_prefersSpatialAudioExperience { false };
+#endif
 };
 
 } // namespace WebCore
