@@ -1405,6 +1405,14 @@ std::optional<float> PDFDiscretePresentationController::customContentsScale(cons
     return { };
 }
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+bool PDFDiscretePresentationController::layerAllowsDynamicContentScaling(const GraphicsLayer*) const
+{
+    // Provide DCS structures explicitly.
+    return false;
+}
+#endif
+
 void PDFDiscretePresentationController::tiledBackingUsageChanged(const GraphicsLayer* layer, bool usingTiledBacking)
 {
     if (usingTiledBacking)

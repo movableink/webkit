@@ -151,8 +151,10 @@ std::optional<RemoteImageBufferSetIdentifier> RemoteLayerWithRemoteRenderingBack
 }
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-std::optional<ImageBufferBackendHandle> RemoteLayerWithRemoteRenderingBackingStore::displayListHandle() const
+std::optional<DynamicContentScalingDisplayList> RemoteLayerWithRemoteRenderingBackingStore::displayListHandle() const
 {
+    if (auto list = m_layer->owner()->platformCALayerDynamicContentScalingDisplayList(m_layer.ptr()))
+        return list;
     return m_bufferSet ? m_bufferSet->dynamicContentScalingDisplayList() : std::nullopt;
 }
 #endif

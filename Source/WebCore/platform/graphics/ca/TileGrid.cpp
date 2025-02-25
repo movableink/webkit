@@ -814,6 +814,17 @@ bool TileGrid::platformCALayerNeedsPlatformContext(const PlatformCALayer* layer)
     return false;
 }
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+std::optional<DynamicContentScalingDisplayList> TileGrid::platformCALayerDynamicContentScalingDisplayList(const PlatformCALayer* layer) const
+{
+    for (auto& [tileIndex, tileInfo] : m_tiles) {
+        if (tileInfo.layer == layer)
+            return m_controller->dynamicContentScalingDisplayListForTile(*this, tileIndex);
+    }
+    return std::nullopt;
+}
+#endif
+
 bool TileGrid::platformCALayerContentsOpaque() const
 {
     return m_controller->tilesAreOpaque();

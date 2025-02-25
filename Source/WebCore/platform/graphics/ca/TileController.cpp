@@ -897,6 +897,16 @@ void TileController::logFilledVisibleFreshTile(unsigned blankPixelCount)
         owningGraphicsLayer()->platformCALayerLogFilledVisibleFreshTile(blankPixelCount);
 }
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+std::optional<DynamicContentScalingDisplayList> TileController::dynamicContentScalingDisplayListForTile(const TileGrid& tileGrid, TileIndex index)
+{
+    if (!m_client)
+        return std::nullopt;
+    return m_client->dynamicContentScalingDisplayListForTile(*this, tileGrid.identifier(), index);
+}
+#endif
+
+
 } // namespace WebCore
 
 #endif // USE(CG)

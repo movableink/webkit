@@ -33,6 +33,10 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/WeakPtr.h>
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+#include "DynamicContentScalingDisplayList.h"
+#endif
+
 namespace WebCore {
 class TiledBackingClient;
 }
@@ -94,6 +98,10 @@ public:
 
     virtual void willRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
     virtual void didRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    virtual std::optional<DynamicContentScalingDisplayList> dynamicContentScalingDisplayListForTile(TiledBacking&, TileGridIdentifier, TileIndex) = 0;
+#endif
 };
 
 

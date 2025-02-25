@@ -564,7 +564,7 @@ void RemoteLayerBackingStoreProperties::applyBackingStoreToLayer(CALayer *layer,
             [layer setValue:@(layer.contentsScale) forKeyPath:WKDynamicContentScalingBifurcationScaleKey];
         } else
             layer.opaque = m_isOpaque;
-        [(WKCompositingLayer *)layer _setWKContents:contents.get() withDisplayList:WTFMove(std::get<DynamicContentScalingDisplayList>(*m_displayListBufferHandle)) replayForTesting:replayDynamicContentScalingDisplayListsIntoBackingStore];
+        [(WKCompositingLayer *)layer _setWKContents:contents.get() withDisplayList:WTFMove(*m_displayListBufferHandle) replayForTesting:replayDynamicContentScalingDisplayListsIntoBackingStore];
         return;
     } else
         [layer _web_clearDynamicContentScalingDisplayListIfNeeded];

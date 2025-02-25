@@ -392,6 +392,14 @@ bool PDFScrollingPresentationController::layerNeedsPlatformContext(const Graphic
     return shouldUseInProcessBackingStore() && (layer == m_contentsLayer || pageIndexForPageBackgroundLayer(layer));
 }
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+bool PDFScrollingPresentationController::layerAllowsDynamicContentScaling(const GraphicsLayer*) const
+{
+    // Provide DCS structures explicitly.
+    return false;
+}
+#endif
+
 void PDFScrollingPresentationController::tiledBackingUsageChanged(const GraphicsLayer* layer, bool usingTiledBacking)
 {
     if (usingTiledBacking)

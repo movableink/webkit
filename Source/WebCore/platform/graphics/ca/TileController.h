@@ -40,6 +40,10 @@
 #include <wtf/Seconds.h>
 #include <wtf/TZoneMalloc.h>
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+#include "DynamicContentScalingDisplayList.h"
+#endif
+
 namespace WebCore {
 
 class FloatRect;
@@ -151,6 +155,10 @@ public:
     WEBCORE_EXPORT Vector<RefPtr<PlatformCALayer>> containerLayers();
     
     void logFilledVisibleFreshTile(unsigned blankPixelCount);
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    std::optional<DynamicContentScalingDisplayList> dynamicContentScalingDisplayListForTile(const TileGrid&, TileIndex);
+#endif
 
 private:
     TileGrid& tileGrid() { return *m_tileGrid; }
