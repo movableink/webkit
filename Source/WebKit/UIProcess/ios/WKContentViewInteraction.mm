@@ -14352,6 +14352,29 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
 #endif
 }
 
+#if ENABLE(MODEL_PROCESS)
+- (void)_simulateModelInteractionPanGestureBeginAtPoint:(CGPoint)hitPoint
+{
+    [self panGestureDidBeginAtPoint:hitPoint];
+}
+
+- (void)_simulateModelInteractionPanGestureUpdateAtPoint:(CGPoint)hitPoint
+{
+    [self panGestureDidUpdateWithPoint:hitPoint];
+}
+
+- (NSDictionary *)_stageModeInfoForTesting
+{
+    if (_stageModeSession) {
+        return @{
+            @"awaitingResult" : @(_stageModeSession->isPreparingForInteraction),
+            @"hitTestSuccessful" : @(_stageModeSession->elementID),
+        };
+    } else
+        return @{ };
+}
+#endif
+
 - (UITapGestureRecognizer *)singleTapGestureRecognizer
 {
     return _singleTapGestureRecognizer.get();

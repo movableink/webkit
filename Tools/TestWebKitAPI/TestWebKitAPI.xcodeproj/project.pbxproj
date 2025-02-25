@@ -1294,6 +1294,7 @@
 		EB9AD8C727646E7400D893A4 /* PushDatabase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EB9AD8C627646E7300D893A4 /* PushDatabase.cpp */; };
 		EBA75C49275ED7C700D6D31C /* PushMessageCrypto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EBA75C48275ED7BE00D6D31C /* PushMessageCrypto.cpp */; };
 		ECA680CE1E68CC0900731D20 /* StringUtilities.mm in Sources */ = {isa = PBXBuildFile; fileRef = ECA680CD1E68CC0900731D20 /* StringUtilities.mm */; };
+		EEA52EAB2D69203B00D578B5 /* stagemode-model-page.html in Copy Resources */ = {isa = PBXBuildFile; fileRef = EEA52EA32D69202E00D578B5 /* stagemode-model-page.html */; };
 		F4010B8024DA24AC00A876E2 /* NavigationSwipeTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4010B7F24DA24AC00A876E2 /* NavigationSwipeTests.mm */; };
 		F4010B8324DA267F00A876E2 /* PoseAsClass.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4010B8124DA267F00A876E2 /* PoseAsClass.mm */; };
 		F402F56C23ECC2FB00865549 /* UIWKInteractionViewProtocol.mm in Sources */ = {isa = PBXBuildFile; fileRef = F402F56B23ECC2FB00865549 /* UIWKInteractionViewProtocol.mm */; };
@@ -2008,6 +2009,7 @@
 				A17C47FC2C98E5C20023F3C7 /* SpaceOnly.otf in Copy Resources */,
 				A17C47FD2C98E5C20023F3C7 /* speechrecognition-basic.html in Copy Resources */,
 				A17C47FE2C98E5C20023F3C7 /* speechrecognition-user-permission-persistence.html in Copy Resources */,
+				EEA52EAB2D69203B00D578B5 /* stagemode-model-page.html in Copy Resources */,
 				A17C47FF2C98E5C20023F3C7 /* start-offset.ts in Copy Resources */,
 				A17C46872C98E4D20023F3C7 /* StopLoadingFromDidReceiveResponse.html in Copy Resources */,
 				A17C48002C98E5C20023F3C7 /* StoreBlobToBeDeleted.html in Copy Resources */,
@@ -3731,6 +3733,7 @@
 		EBCD30F72B7C075F00268DA5 /* MemoryFootprintThreshold.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = MemoryFootprintThreshold.mm; sourceTree = "<group>"; };
 		EC79F168BE454E579E417B05 /* Markable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Markable.cpp; sourceTree = "<group>"; };
 		ECA680CD1E68CC0900731D20 /* StringUtilities.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StringUtilities.mm; sourceTree = "<group>"; };
+		EEA52EA32D69202E00D578B5 /* stagemode-model-page.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "stagemode-model-page.html"; sourceTree = "<group>"; };
 		F3CEF6B82808F2D3001E23A5 /* TimeZoneOverride.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = TimeZoneOverride.mm; sourceTree = "<group>"; };
 		F3FC3EE213678B7300126A65 /* libgtest.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libgtest.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4010B7F24DA24AC00A876E2 /* NavigationSwipeTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = NavigationSwipeTests.mm; sourceTree = "<group>"; };
@@ -5974,6 +5977,7 @@
 				51E780361919AFF8001829A2 /* simple2.html */,
 				51E780371919AFF8001829A2 /* simple3.html */,
 				C02B7882126615410026BF0F /* spacebar-scrolling.html */,
+				EEA52EA32D69202E00D578B5 /* stagemode-model-page.html */,
 				51C234C72970E11400E35C4B /* test-mse-audio.webm */,
 				CD59F53319E910BC00CF1835 /* test-mse.mp4 */,
 				51BB6B7E296E8FFD0059B107 /* test-mse.webm */,
