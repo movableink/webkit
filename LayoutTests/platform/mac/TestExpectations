@@ -2407,3 +2407,5 @@ imported/w3c/web-platform-tests/editing/other/insertparagraph-in-child-of-html.t
 webkit.org/b/288133 imported/w3c/web-platform-tests/scroll-to-text-fragment/find-range-from-text-directive.html [ Pass Failure ]
 
 webkit.org/b/287990 [ Sonoma+ ] fast/canvas/webgl/drawingbuffer-test.html [ Pass Failure ]
+
+webkit.org/b/288507 [ Debug x86_64 ] media/media-source/remoteplayback-availability-callback-does-not-leak.html [ Timeout ]
