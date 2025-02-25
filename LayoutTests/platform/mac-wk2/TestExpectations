@@ -1967,3 +1967,6 @@ webkit.org/b/288404 [ Sonoma+ Release ] fast/text/canvas-color-fonts/stroke-grad
 webkit.org/b/287012 [ Sonoma+ Debug ] http/tests/pdf/linearized-pdf-in-iframe.html [ Pass Crash ]
 
 webkit.org/b/288411 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/webrtc/simulcast/getStats.https.html [ Failure ]
+
+webkit.org/b/288493 [ Sequoia+ Debug ] http/tests/media/fairplay/legacy-fairplay-mse-muxed-nowait.html [ Crash ]
+
