@@ -90,7 +90,7 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
 ResourceLoader::ResourceLoader(LocalFrame& frame, ResourceLoaderOptions options)
     : m_frame { &frame }
     , m_documentLoader { frame.loader().activeDocumentLoader() }
-    , m_defersLoading { options.defersLoadingPolicy == DefersLoadingPolicy::AllowDefersLoading && frame.page()->defersLoading() }
+    , m_defersLoading { options.defersLoadingPolicy == DefersLoadingPolicy::AllowDefersLoading && frame.page() && frame.page()->defersLoading() }
     , m_options { options }
 {
 }
