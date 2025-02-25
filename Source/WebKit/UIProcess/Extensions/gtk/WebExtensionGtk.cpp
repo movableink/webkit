@@ -117,8 +117,9 @@ RefPtr<API::Data> WebExtension::resourceDataForPath(const String& originalPath, 
 }
 
 void WebExtension::recordError(Ref<API::Error> error)
+
 {
-    RELEASE_LOG_ERROR(Extensions, "Error recorded: %s", error->platformError());
+    RELEASE_LOG_ERROR(Extensions, "Error recorded: %s", error->platformError().sanitizedDescription().utf8().data());
 
     // Only the first occurrence of each error is recorded in the array. This prevents duplicate errors,
     // such as repeated "resource not found" errors, from being included multiple times.
@@ -179,7 +180,7 @@ RefPtr<WebCore::Icon> WebExtension::iconForPath(const String& path, RefPtr<API::
     return WebCore::Icon::create(WTFMove(image));
 }
 
-RefPtr<WebCore::Icon> WebExtension::bestIcon(RefPtr<JSON::Object> icons, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>& reportError)
+RefPtr<WebCore::Icon> WebExtension::bestIcon(RefPtr<JSON::Object> icons, WebCore::FloatSize idealSize, NOESCAPE const Function<void(Ref<API::Error>)>& reportError)
 {
     if (!icons)
         return nullptr;
