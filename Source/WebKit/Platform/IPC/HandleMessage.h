@@ -130,7 +130,8 @@ void callMemberFunction(T* object, MF U::* function, ArgsTuple&& tuple)
 {
     std::apply(
         [&](auto&&... args) {
-            (object->*function)(std::forward<decltype(args)>(args)...);
+            // Use of object without protection is safe here since std::apply() runs synchronously.
+            SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE (object->*function)(std::forward<decltype(args)>(args)...);
         }, std::forward<ArgsTuple>(tuple));
 }
 
@@ -141,7 +142,8 @@ void callMemberFunction(T* object, MF U::* function, ArgsTuple&& tuple, Completi
 {
     std::apply(
         [&](auto&&... args) {
-            (object->*function)(std::forward<decltype(args)>(args)..., WTFMove(completionHandler));
+            // Use of object without protection is safe here since std::apply() runs synchronously.
+            SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE (object->*function)(std::forward<decltype(args)>(args)..., WTFMove(completionHandler));
         }, std::forward<ArgsTuple>(tuple));
 }
 
@@ -152,7 +154,8 @@ void callMemberFunction(T* object, MF U::* function, Connection& connection, Arg
 {
     std::apply(
         [&](auto&&... args) {
-            (object->*function)(connection, std::forward<decltype(args)>(args)..., WTFMove(completionHandler));
+            // Use of object without protection is safe here since std::apply() runs synchronously.
+            SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE (object->*function)(connection, std::forward<decltype(args)>(args)..., WTFMove(completionHandler));
         }, std::forward<ArgsTuple>(tuple));
 }
 
@@ -163,7 +166,8 @@ void callMemberFunction(T* object, MF U::* function, Connection& connection, Arg
 {
     std::apply(
         [&](auto&&... args) {
-            (object->*function)(connection, std::forward<decltype(args)>(args)...);
+            // Use of object without protection is safe here since std::apply() runs synchronously.
+            SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE (object->*function)(connection, std::forward<decltype(args)>(args)...);
         }, std::forward<ArgsTuple>(tuple));
 }
 

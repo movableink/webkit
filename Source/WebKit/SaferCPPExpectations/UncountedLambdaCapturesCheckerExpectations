@@ -1,5 +1,4 @@
 NetworkProcess/cache/NetworkCacheStorage.cpp
-Platform/IPC/HandleMessage.h
 Platform/cocoa/WebPrivacyHelpers.mm
 UIProcess/Automation/SimulatedInputDispatcher.cpp
 UIProcess/Automation/WebAutomationSession.cpp
