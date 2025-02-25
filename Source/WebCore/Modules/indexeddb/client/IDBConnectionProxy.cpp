@@ -318,6 +318,25 @@ void IDBConnectionProxy::didFireVersionChangeEvent(IDBDatabaseConnectionIdentifi
     callConnectionOnMainThread(&IDBConnectionToServer::didFireVersionChangeEvent, databaseConnectionIdentifier, requestIdentifier, connectionClosed);
 }
 
+void IDBConnectionProxy::generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const std::optional<IDBKeyPath>& keyPath, const IDBKeyData& key, const IDBValue& value, std::optional<int64_t> recordID)
+{
+    Locker locker { m_transactionOperationLock };
+    RefPtr operation = m_activeOperations.get(requestIdentifier);
+    if (!operation)
+        return;
+
+    auto contextIdentifier = operation->scriptExecutionContextIdentifier();
+    if (!contextIdentifier)
+        return;
+
+    ScriptExecutionContext::ensureOnContextThreadForCrossThreadTask(*contextIdentifier, createCrossThreadTask(operation->transaction(),  &IDBTransaction::generateIndexKeyForRecord, requestIdentifier, indexInfo, keyPath, key, value, recordID));
+}
+
+void IDBConnectionProxy::didGenerateIndexKeyForRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& indexKey, std::optional<int64_t> recordID)
+{
+    callConnectionOnMainThread(&IDBConnectionToServer::didGenerateIndexKeyForRecord, transactionIdentifier, requestIdentifier, indexInfo, key, indexKey, recordID);
+}
+
 void IDBConnectionProxy::notifyOpenDBRequestBlocked(const IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion)
 {
     ASSERT(isMainThread());

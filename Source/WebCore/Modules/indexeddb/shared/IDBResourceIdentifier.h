@@ -61,9 +61,7 @@ public:
 
     WEBCORE_EXPORT IDBResourceIdentifier isolatedCopy() const;
 
-#if !LOG_DISABLED
     String loggingString() const;
-#endif
 
     WEBCORE_EXPORT IDBResourceIdentifier();
 private:

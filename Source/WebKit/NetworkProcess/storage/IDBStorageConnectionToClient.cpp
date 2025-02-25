@@ -159,6 +159,11 @@ void IDBStorageConnectionToClient::fireVersionChangeEvent(WebCore::IDBServer::Un
     IPC::Connection::send(m_connection, Messages::WebIDBConnectionToServer::FireVersionChangeEvent(connection.identifier(), requestIdentifier, requestedVersion), 0);
 }
 
+void IDBStorageConnectionToClient::generateIndexKeyForRecord(const WebCore::IDBResourceIdentifier& requestIdentifier, const WebCore::IDBIndexInfo& indexInfo, const std::optional<WebCore::IDBKeyPath>& keyPath, const WebCore::IDBKeyData& key, const WebCore::IDBValue& value, std::optional<int64_t> recordID)
+{
+    IPC::Connection::send(m_connection, Messages::WebIDBConnectionToServer::GenerateIndexKeyForRecord(requestIdentifier, indexInfo, keyPath, key, value, recordID), 0);
+}
+
 void IDBStorageConnectionToClient::didCloseFromServer(WebCore::IDBServer::UniqueIDBDatabaseConnection& connection, const WebCore::IDBError& error)
 {
     IPC::Connection::send(m_connection, Messages::WebIDBConnectionToServer::DidCloseFromServer(connection.identifier(), error), 0);

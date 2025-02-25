@@ -82,6 +82,16 @@ void MemoryBackingStoreTransaction::addNewIndex(MemoryIndex& index)
     addExistingIndex(index);
 }
 
+void MemoryBackingStoreTransaction::removeNewIndex(MemoryIndex& index)
+{
+    LOG(IndexedDB, "MemoryBackingStoreTransaction::removeNewIndex()");
+
+    ASSERT(isVersionChange());
+
+    m_versionChangeAddedIndexes.remove(&index);
+    m_indexes.remove(&index);
+}
+
 void MemoryBackingStoreTransaction::addExistingIndex(MemoryIndex& index)
 {
     LOG(IndexedDB, "MemoryBackingStoreTransaction::addExistingIndex");

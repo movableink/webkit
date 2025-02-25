@@ -66,8 +66,11 @@ public:
     void writeTransactionFinished(MemoryBackingStoreTransaction&);
     MemoryBackingStoreTransaction* writeTransaction();
 
-    IDBError createIndex(MemoryBackingStoreTransaction&, const IDBIndexInfo&);
+    IDBError addIndex(MemoryBackingStoreTransaction&, const IDBIndexInfo&);
+    void revertAddIndex(MemoryBackingStoreTransaction&, IDBIndexIdentifier);
+    IDBError updateIndexRecordsWithIndexKey(MemoryBackingStoreTransaction&, const IDBIndexInfo&, const IDBKeyData&, const IndexKey&);
     IDBError deleteIndex(MemoryBackingStoreTransaction&, IDBIndexIdentifier);
+    void forEachRecord(Function<void(const IDBKeyData&, const IDBValue&)>&&);
     void deleteAllIndexes(MemoryBackingStoreTransaction&);
     void registerIndex(Ref<MemoryIndex>&&);
 

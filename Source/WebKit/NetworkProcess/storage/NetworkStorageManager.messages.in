@@ -67,6 +67,7 @@
     DatabaseConnectionClosed(WebCore::IDBDatabaseConnectionIdentifier databaseConnectionIdentifier)
     AbortOpenAndUpgradeNeeded(WebCore::IDBDatabaseConnectionIdentifier databaseConnectionIdentifier, std::optional<WebCore::IDBResourceIdentifier> transactionIdentifier)
     DidFireVersionChangeEvent(WebCore::IDBDatabaseConnectionIdentifier databaseConnectionIdentifier, WebCore::IDBResourceIdentifier requestIdentifier, WebCore::IndexedDB::ConnectionClosedOnBehalfOfServer connectionClosedOnBehalfOfServer)
+    DidGenerateIndexKeyForRecord(WebCore::IDBResourceIdentifier transactionIdentifier, WebCore::IDBResourceIdentifier requestIdentifier, WebCore::IDBIndexInfo indexInfo, WebCore::IDBKeyData key, WebCore::IndexKey indexKey, std::optional<int64_t> recordID)
     DidFinishHandlingVersionChangeTransaction(WebCore::IDBDatabaseConnectionIdentifier databaseConnectionIdentifier, WebCore::IDBResourceIdentifier transactionIdentifier)
     AbortTransaction(WebCore::IDBResourceIdentifier transactionIdentifier)
     CommitTransaction(WebCore::IDBResourceIdentifier transactionIdentifier, uint64_t handledRequestResultsCount)

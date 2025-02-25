@@ -1765,6 +1765,12 @@ void NetworkStorageManager::didFireVersionChangeEvent(WebCore::IDBDatabaseConnec
         connection->didFireVersionChangeEvent(requestIdentifier, connectionClosed);
 }
 
+void NetworkStorageManager::didGenerateIndexKeyForRecord(const WebCore::IDBResourceIdentifier& transactionIdentifier, const WebCore::IDBResourceIdentifier& requestIdentifier, const WebCore::IDBIndexInfo& indexInfo, const WebCore::IDBKeyData& key, const WebCore::IndexKey& indexKey, std::optional<int64_t> recordID)
+{
+    if (RefPtr transaction = m_idbStorageRegistry->transaction(transactionIdentifier))
+        transaction->didGenerateIndexKeyForRecord(requestIdentifier, indexInfo, key, indexKey, recordID);
+}
+
 void NetworkStorageManager::abortTransaction(const WebCore::IDBResourceIdentifier& transactionIdentifier)
 {
     if (RefPtr transaction = m_idbStorageRegistry->transaction(transactionIdentifier))
@@ -1821,8 +1827,9 @@ void NetworkStorageManager::clearObjectStore(const WebCore::IDBRequestData& requ
         transaction->clearObjectStore(requestData, objectStoreIdentifier);
 }
 
-void NetworkStorageManager::createIndex(const WebCore::IDBRequestData& requestData, const WebCore::IDBIndexInfo& indexInfo)
+void NetworkStorageManager::createIndex(IPC::Connection& connection, const WebCore::IDBRequestData& requestData, const WebCore::IDBIndexInfo& indexInfo)
 {
+    MESSAGE_CHECK(!requestData.requestIdentifier().isEmpty(), connection);
     if (RefPtr transaction = idbTransaction(requestData))
         transaction->createIndex(requestData, indexInfo);
 }

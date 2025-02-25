@@ -84,26 +84,54 @@ MemoryBackingStoreTransaction* MemoryObjectStore::writeTransaction()
     return m_writeTransaction.get();
 }
 
-IDBError MemoryObjectStore::createIndex(MemoryBackingStoreTransaction& transaction, const IDBIndexInfo& info)
+IDBError MemoryObjectStore::addIndex(MemoryBackingStoreTransaction& transaction, const IDBIndexInfo& indexInfo)
 {
-    LOG(IndexedDB, "MemoryObjectStore::createIndex");
-
     if (!m_writeTransaction || !m_writeTransaction->isVersionChange() || m_writeTransaction != &transaction)
-        return IDBError(ExceptionCode::ConstraintError);
+        return IDBError { ExceptionCode::ConstraintError, "Transaction state is invalid."_s };
 
-    ASSERT(!m_indexesByIdentifier.contains(info.identifier()));
-    auto index = MemoryIndex::create(info, *this);
+    if (m_indexesByIdentifier.contains(indexInfo.identifier()))
+        return IDBError { ExceptionCode::ConstraintError, "Index identifier already exists"_s };
 
-    // If there was an error populating the new index, then the current records in the object store violate its contraints
-    auto error = populateIndexWithExistingRecords(index.get());
-    if (!error.isNull())
-        return error;
-
-    m_info.addExistingIndex(info);
+    auto index = MemoryIndex::create(indexInfo, *this);
+    m_info.addExistingIndex(indexInfo);
     transaction.addNewIndex(index.get());
     registerIndex(WTFMove(index));
 
     return IDBError { };
+}
+
+void MemoryObjectStore::revertAddIndex(MemoryBackingStoreTransaction& transaction, IDBIndexIdentifier indexIdentifier)
+{
+    if (!m_writeTransaction || !m_writeTransaction->isVersionChange() || m_writeTransaction != &transaction)
+        return;
+
+    m_info.deleteIndex(indexIdentifier);
+    if (RefPtr index = takeIndexByIdentifier(indexIdentifier))
+        transaction.removeNewIndex(*index);
+}
+
+IDBError MemoryObjectStore::updateIndexRecordsWithIndexKey(MemoryBackingStoreTransaction& transaction, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& indexKey)
+{
+    if (!m_writeTransaction || !m_writeTransaction->isVersionChange() || m_writeTransaction != &transaction)
+        return IDBError { ExceptionCode::ConstraintError, "Transaction state is invalid."_s };
+
+    auto* index = m_indexesByIdentifier.get(indexInfo.identifier());
+    if (!index)
+        return IDBError { ExceptionCode::ConstraintError, "Index does not exist."_s };
+
+    if (indexKey.isNull())
+        return IDBError { };
+
+    return index->putIndexKey(key, indexKey);
+}
+
+void MemoryObjectStore::forEachRecord(Function<void(const IDBKeyData& key, const IDBValue& value)>&& apply)
+{
+    if (!m_keyValueStore)
+        return;
+
+    for (auto& [key, value] : *m_keyValueStore)
+        apply(key, value);
 }
 
 void MemoryObjectStore::maybeRestoreDeletedIndex(Ref<MemoryIndex>&& index)

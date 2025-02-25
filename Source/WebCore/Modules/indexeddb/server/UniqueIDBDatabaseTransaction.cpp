@@ -245,30 +245,6 @@ void UniqueIDBDatabaseTransaction::clearObjectStore(const IDBRequestData& reques
     });
 }
 
-void UniqueIDBDatabaseTransaction::createIndex(const IDBRequestData& requestData, const IDBIndexInfo& info)
-{
-    LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createIndex");
-
-    ASSERT(isVersionChange());
-    ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
-    
-    auto* database = this->database();
-    if (!database)
-        return;
-
-    database->createIndex(*this, info, [this, weakThis = WeakPtr { *this }, requestData](auto& error) {
-        LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createIndex (callback)");
-
-        if (!weakThis || !m_databaseConnection)
-            return;
-
-        if (error.isNull())
-            m_databaseConnection->didCreateIndex(IDBResultData::createIndexSuccess(requestData.requestIdentifier()));
-        else
-            m_databaseConnection->didCreateIndex(IDBResultData::error(requestData.requestIdentifier(), error));
-    });
-}
-
 void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData, IDBObjectStoreIdentifier objectStoreIdentifier, const String& indexName)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteIndex");
@@ -526,6 +502,68 @@ void UniqueIDBDatabaseTransaction::didActivateInBackingStore(const IDBError& err
 
     if (m_databaseConnection)
         m_databaseConnection->connectionToClient().didStartTransaction(m_transactionInfo.identifier(), error);
+}
+
+void UniqueIDBDatabaseTransaction::createIndex(const IDBRequestData& requestData, const IDBIndexInfo& indexInfo)
+{
+    LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createIndex");
+
+    ASSERT(isVersionChange());
+    ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
+
+    auto* database = this->database();
+    if (!database)
+        return;
+
+    ASSERT(!requestData.requestIdentifier().isEmpty());
+    if (!m_createIndexRequestIdentifier.isEmpty()) {
+        RELEASE_LOG_ERROR(IndexedDB, "%p - UniqueIDBDatabaseTransaction::createIndexAsync: ignored create index request since there is one in progress", this);
+        return;
+    }
+
+    m_createIndexRequestIdentifier = requestData.requestIdentifier();
+    database->createIndexAsync(*this, indexInfo);
+}
+
+void UniqueIDBDatabaseTransaction::didCreateIndexAsync(const IDBError& error)
+{
+    auto requestIdentifier = std::exchange(m_createIndexRequestIdentifier, { });
+    if (requestIdentifier.isEmpty())
+        return;
+
+    RefPtr databaseConnection = m_databaseConnection.get();
+    if (!databaseConnection)
+        return;
+
+    auto result = error.isNull() ? IDBResultData::createIndexSuccess(requestIdentifier) : IDBResultData::error(requestIdentifier, error);
+    databaseConnection->didCreateIndex(result);
+}
+
+bool UniqueIDBDatabaseTransaction::generateIndexKeyForRecord(const IDBIndexInfo& indexInfo, const std::optional<IDBKeyPath>& keyPath, const IDBKeyData& key, const IDBValue& value, std::optional<int64_t> recordID)
+{
+    RefPtr databaseConnection = m_databaseConnection.get();
+    if (!databaseConnection || m_createIndexRequestIdentifier.isEmpty())
+        return false;
+
+    ++m_pendingGenerateIndexKeyRequests;
+    Ref connectionToClient = databaseConnection->connectionToClient();
+    connectionToClient->generateIndexKeyForRecord(m_createIndexRequestIdentifier, indexInfo, keyPath, key, value, recordID);
+    return true;
+}
+
+void UniqueIDBDatabaseTransaction::didGenerateIndexKeyForRecord(IDBResourceIdentifier requestIdentifier, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& value, std::optional<int64_t> recordID)
+{
+    ASSERT(isVersionChange());
+
+    if (m_createIndexRequestIdentifier != requestIdentifier)
+        return;
+
+    --m_pendingGenerateIndexKeyRequests;
+    auto* database = this->database();
+    if (!database)
+        return;
+
+    database->didGenerateIndexKeyForRecord(*this, indexInfo, key, value, recordID);
 }
 
 } // namespace IDBServer

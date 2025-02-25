@@ -222,32 +222,6 @@ IDBError MemoryIDBBackingStore::clearObjectStore(const IDBResourceIdentifier& tr
     return IDBError { };
 }
 
-IDBError MemoryIDBBackingStore::createIndex(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo& info)
-{
-    LOG(IndexedDB, "MemoryIDBBackingStore::createIndex");
-
-    ASSERT(m_databaseInfo);
-    auto* objectStoreInfo = m_databaseInfo->infoForExistingObjectStore(info.objectStoreIdentifier());
-    if (!objectStoreInfo)
-        return IDBError { ExceptionCode::ConstraintError };
-
-    auto rawTransaction = m_transactions.get(transactionIdentifier);
-    ASSERT(rawTransaction);
-    ASSERT(rawTransaction->isVersionChange());
-
-    auto* objectStore = m_objectStoresByIdentifier.get(info.objectStoreIdentifier());
-    if (!objectStore)
-        return IDBError { ExceptionCode::ConstraintError };
-
-    auto error = objectStore->createIndex(*rawTransaction, info);
-    if (error.isNull()) {
-        objectStoreInfo->addExistingIndex(info);
-        m_databaseInfo->setMaxIndexID(info.identifier().toRawValue());
-    }
-
-    return error;
-}
-
 IDBError MemoryIDBBackingStore::deleteIndex(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreIdentifier, IDBIndexIdentifier indexIdentifier)
 {
     LOG(IndexedDB, "MemoryIDBBackingStore::deleteIndex");
@@ -625,6 +599,96 @@ void MemoryIDBBackingStore::deleteBackingStore()
 
 void MemoryIDBBackingStore::close()
 {
+}
+
+IDBError MemoryIDBBackingStore::addIndex(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo& indexInfo)
+{
+    LOG(IndexedDB, "MemoryIDBBackingStore::createIndex");
+
+    if (!m_databaseInfo)
+        return IDBError { ExceptionCode::UnknownError, "Database info is invalid."_s };
+
+    auto* objectStoreInfo = m_databaseInfo->infoForExistingObjectStore(indexInfo.objectStoreIdentifier());
+    if (!objectStoreInfo)
+        return IDBError { ExceptionCode::ConstraintError, "Object store does not exist in database info."_s };
+
+    auto* transaction = m_transactions.get(transactionIdentifier);
+    if (!transaction || !transaction->isVersionChange())
+        return IDBError { ExceptionCode::UnknownError, "Transaction is not in version change mode."_s };
+
+    auto* objectStore = m_objectStoresByIdentifier.get(indexInfo.objectStoreIdentifier());
+    if (!objectStore)
+        return IDBError { ExceptionCode::ConstraintError, "Object store does not exist in backing store."_s };
+
+    auto error = objectStore->addIndex(*transaction, indexInfo);
+    if (error.isNull()) {
+        objectStoreInfo->addExistingIndex(indexInfo);
+        m_databaseInfo->setMaxIndexID(indexInfo.identifier().toRawValue());
+    }
+
+    return error;
+}
+
+void MemoryIDBBackingStore::revertAddIndex(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreIdentifier, IDBIndexIdentifier indexIdentifier)
+{
+    LOG(IndexedDB, "MemoryIDBBackingStore::revertAddIndex");
+
+    ASSERT(m_databaseInfo);
+    auto* objectStoreInfo = m_databaseInfo->infoForExistingObjectStore(objectStoreIdentifier);
+    if (!objectStoreInfo)
+        return;
+
+    auto* indexInfo = objectStoreInfo->infoForExistingIndex(indexIdentifier);
+    if (!indexInfo)
+        return;
+
+    auto* rawTransaction = m_transactions.get(transactionIdentifier);
+    if (!rawTransaction || !rawTransaction->isVersionChange())
+        return;
+
+    auto* objectStore = m_objectStoresByIdentifier.get(objectStoreIdentifier);
+    if (objectStore)
+        objectStoreInfo->deleteIndex(indexIdentifier);
+
+    objectStore->revertAddIndex(*rawTransaction, indexIdentifier);
+}
+
+IDBError MemoryIDBBackingStore::updateIndexRecordsWithIndexKey(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& indexKey, std::optional<int64_t> recordID)
+{
+    UNUSED_PARAM(recordID);
+    auto* transaction = m_transactions.get(transactionIdentifier);
+    if (!transaction || !transaction->isVersionChange())
+        return IDBError { ExceptionCode::UnknownError, "Transaction is not in version change mode."_s };
+
+    auto* objectStore = m_objectStoresByIdentifier.get(indexInfo.objectStoreIdentifier());
+    if (!objectStore)
+        return IDBError { ExceptionCode::ConstraintError, "Object store does not exist in backing store."_s };
+
+    if (indexKey.isNull())
+        return IDBError { };
+
+    return objectStore->updateIndexRecordsWithIndexKey(*transaction, indexInfo, key, indexKey);
+}
+
+void MemoryIDBBackingStore::forEachObjectStoreRecord(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreIdentifier, Function<void(RecordOrError&&)>&& apply)
+{
+    auto* transaction = m_transactions.get(transactionIdentifier);
+    if (!transaction) {
+        IDBError error { ExceptionCode::UnknownError, "Transaction is not active."_s };
+        apply(makeUnexpected(WTFMove(error)));
+        return;
+    }
+
+    auto* objectStore = m_objectStoresByIdentifier.get(objectStoreIdentifier);
+    if (!objectStore) {
+        IDBError error { ExceptionCode::ConstraintError, "Object store does not exist in backing store."_s };
+        apply(makeUnexpected(WTFMove(error)));
+        return;
+    }
+
+    objectStore->forEachRecord([&](auto key, auto value) {
+        apply(ObjectStoreRecord { key, value, std::nullopt });
+    });
 }
 
 } // namespace IDBServer

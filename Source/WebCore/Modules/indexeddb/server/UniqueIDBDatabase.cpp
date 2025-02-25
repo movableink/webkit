@@ -717,43 +717,93 @@ void UniqueIDBDatabase::clearObjectStore(UniqueIDBDatabaseTransaction& transacti
     callback(error);
 }
 
-void UniqueIDBDatabase::createIndex(UniqueIDBDatabaseTransaction& transaction, const IDBIndexInfo& info, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::createIndexAsync(UniqueIDBDatabaseTransaction& transaction, const IDBIndexInfo& indexInfo)
 {
     ASSERT(!isMainThread());
-    LOG(IndexedDB, "UniqueIDBDatabase::createIndex");
 
-    if (spaceCheckResult == SpaceCheckResult::Unknown) {
-        if (!m_manager)
-            return callback(IDBError { ExceptionCode::InvalidStateError });
+    if (!m_manager)
+        transaction.didCreateIndexAsync(IDBError { ExceptionCode::InvalidStateError });
 
-        auto taskSize = defaultWriteOperationCost + estimateSize(info);
-        m_manager->requestSpace(m_identifier.origin(), taskSize, [this, weakThis = WeakPtr { *this }, weakTransaction = WeakPtr { transaction }, info, callback = WTFMove(callback)](bool granted) mutable {
-            if (!weakThis || !weakTransaction)
-                return callback(IDBError { ExceptionCode::InvalidStateError, "Database or transaction is closed"_s });
+    auto taskSize = defaultWriteOperationCost + estimateSize(indexInfo);
+    m_manager->requestSpace(m_identifier.origin(), taskSize, [this, weakThis = WeakPtr { *this }, weakTransaction = WeakPtr { transaction }, indexInfo](bool granted) mutable {
+        RefPtr protectedTransaction = weakTransaction.get();
+        if (!protectedTransaction)
+            return;
 
-            createIndex(*weakTransaction, info, WTFMove(callback), granted ? SpaceCheckResult::Pass : SpaceCheckResult::Fail);
-        });
-        return;
-    }
+        if (!weakThis)
+            return protectedTransaction->didCreateIndexAsync(IDBError { ExceptionCode::InvalidStateError, "Database is closed."_s });
 
-    if (spaceCheckResult != SpaceCheckResult::Pass) {
-        callback(IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("CreateIndex"_s) });
-        return;
-    }
+        createIndexAsyncAfterQuotaCheck(*protectedTransaction, indexInfo, granted ? SpaceCheckResult::Pass : SpaceCheckResult::Fail);
+    });
+}
+
+void UniqueIDBDatabase::createIndexAsyncAfterQuotaCheck(UniqueIDBDatabaseTransaction& transaction, const IDBIndexInfo& indexInfo, SpaceCheckResult spaceCheckResult)
+{
+    Ref protectedTransaction = transaction;
+    if (spaceCheckResult != SpaceCheckResult::Pass)
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("CreateIndex"_s) });
 
     if (!m_backingStore)
-        return callback(IDBError { ExceptionCode::InvalidStateError, "Backing store is closed"_s });
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::InvalidStateError, "Backing store is closed."_s });
 
-    auto error = m_backingStore->createIndex(transaction.info().identifier(), info);
-    if (error.isNull()) {
-        ASSERT(m_databaseInfo);
-        auto* objectStoreInfo = m_databaseInfo->infoForExistingObjectStore(info.objectStoreIdentifier());
-        ASSERT(objectStoreInfo);
-        objectStoreInfo->addExistingIndex(info);
-        m_databaseInfo->setMaxIndexID(info.identifier().toRawValue());
-    }
+    if (!m_databaseInfo)
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::InvalidStateError, "Database info is invalid."_s });
 
-    callback(error);
+    auto transactionIdentifier = transaction.info().identifier();
+    auto createIndexError = m_backingStore->addIndex(transactionIdentifier, indexInfo);
+    if (!createIndexError.isNull())
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, createIndexError);
+
+    auto* objectStoreInfo = m_databaseInfo->infoForExistingObjectStore(indexInfo.objectStoreIdentifier());
+    if (!objectStoreInfo)
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::InvalidStateError, "Object store does not exist."_s });
+
+    objectStoreInfo->addExistingIndex(indexInfo);
+    m_databaseInfo->setMaxIndexID(indexInfo.identifier().toRawValue());
+
+    bool needsToWaitGenerateIndexKey = false;
+    m_backingStore->forEachObjectStoreRecord(transaction.info().identifier(), indexInfo.objectStoreIdentifier(), [&, protectedTransaction](auto&& recordOrError) mutable {
+        if (!createIndexError.isNull())
+            return;
+
+        if (!recordOrError) {
+            createIndexError = WTFMove(recordOrError.error());
+            return;
+        }
+
+        auto record = recordOrError.value();
+        if (!protectedTransaction->generateIndexKeyForRecord(indexInfo, objectStoreInfo->keyPath(), record.key, record.value, record.recordID)) {
+            createIndexError = IDBError { ExceptionCode::UnknownError, "Failed to generate index key for record."_s };
+            return;
+        }
+        needsToWaitGenerateIndexKey = true;
+    });
+
+    if (!createIndexError.isNull() || !needsToWaitGenerateIndexKey)
+        transaction.didCreateIndexAsync(createIndexError);
+}
+
+void UniqueIDBDatabase::didGenerateIndexKeyForRecord(UniqueIDBDatabaseTransaction& transaction, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& indexKey, std::optional<int64_t> recordID)
+{
+    Ref protectedTransaction = transaction;
+    if (!m_backingStore)
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::InvalidStateError, "Backing store is closed."_s });
+
+    auto error = m_backingStore->updateIndexRecordsWithIndexKey(transaction.info().identifier(), indexInfo, key, indexKey, recordID);
+    if (!error.isNull())
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, error);
+
+    if (!transaction.pendingGenerateIndexKeyRequests())
+        didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { });
+}
+
+void UniqueIDBDatabase::didCreateIndexAsyncForTransaction(UniqueIDBDatabaseTransaction& transaction, const IDBIndexInfo& indexInfo, const IDBError& error)
+{
+    CheckedPtr backingStore = m_backingStore.get();
+    if (backingStore && !error.isNull())
+        backingStore->revertAddIndex(transaction.info().identifier(), indexInfo.objectStoreIdentifier(), indexInfo.identifier());
+
+    transaction.didCreateIndexAsync(error);
 }
 
 void UniqueIDBDatabase::deleteIndex(UniqueIDBDatabaseTransaction& transaction, IDBObjectStoreIdentifier objectStoreIdentifier, const String& indexName, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)

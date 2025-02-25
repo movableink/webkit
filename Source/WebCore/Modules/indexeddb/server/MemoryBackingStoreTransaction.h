@@ -70,6 +70,7 @@ public:
     void indexCleared(MemoryIndex&, std::unique_ptr<IndexValueStore>&&);
 
     void addNewIndex(MemoryIndex&);
+    void removeNewIndex(MemoryIndex&);
     void addExistingIndex(MemoryIndex&);
     void indexDeleted(Ref<MemoryIndex>&&);
 

@@ -77,13 +77,9 @@ IDBResourceIdentifier IDBResourceIdentifier::isolatedCopy() const
     return IDBResourceIdentifier(m_idbConnectionIdentifier, m_resourceNumber);
 }
 
-#if !LOG_DISABLED
-
 String IDBResourceIdentifier::loggingString() const
 {
     return makeString('<', m_idbConnectionIdentifier ? m_idbConnectionIdentifier->toUInt64() : 0, ", "_s, m_resourceNumber, '>');
 }
-
-#endif
 
 } // namespace WebCore
