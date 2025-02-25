@@ -2157,14 +2157,18 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIncludes, (JSGlobalObject* globalObject, 
 
     if (LIKELY(isJSArray(thisObject))) {
         JSArray* thisArray = jsCast<JSArray*>(thisObject);
-        if (auto fastResult = thisArray->fastIncludes(globalObject, searchElement, index, length))
+        auto fastResult = thisArray->fastIncludes(globalObject, searchElement, index, length);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (fastResult)
             return JSValue::encode(jsBoolean(fastResult.value()));
     }
 
     for (; index < length; ++index) {
         auto currentElement = thisObject->getIndex(globalObject, index);
         RETURN_IF_EXCEPTION(scope, { });
-        if (sameValueZero(globalObject, searchElement, currentElement))
+        bool isEqual = sameValueZero(globalObject, searchElement, currentElement);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (isEqual)
             return JSValue::encode(jsBoolean(true));
     }
 
