@@ -277,7 +277,7 @@ LayoutRect AnchorPositionEvaluator::computeAnchorRectRelativeToContainingBlock(C
 // align the edge of the positioned elements' inset-modified containing block corresponding to the
 // property the function appears in with the specified border edge of the target anchor element..."
 // See: https://drafts.csswg.org/css-anchor-position-1/#anchor-pos
-static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<const RenderBoxModelObject> anchorBox, CheckedRef<const RenderElement> anchorPositionedRenderer, AnchorPositionEvaluator::Side anchorSide, const std::optional<PositionTryFallback>& positionTryFallback)
+static LayoutUnit computeInsetValue(CSSPropertyID insetPropertyID, CheckedRef<const RenderBoxModelObject> anchorBox, CheckedRef<const RenderElement> anchorPositionedRenderer, AnchorPositionEvaluator::Side anchorSide, const std::optional<BuilderPositionTryFallback>& positionTryFallback)
 {
     CheckedPtr containingBlock = anchorPositionedRenderer->containingBlock();
     ASSERT(containingBlock);
@@ -925,7 +925,7 @@ static CSSPropertyID flipVertical(CSSPropertyID propertyID)
     }
 }
 
-CSSPropertyID AnchorPositionEvaluator::resolvePositionTryFallbackProperty(CSSPropertyID propertyID, WritingMode writingMode, const PositionTryFallback& fallback)
+CSSPropertyID AnchorPositionEvaluator::resolvePositionTryFallbackProperty(CSSPropertyID propertyID, WritingMode writingMode, const BuilderPositionTryFallback& fallback)
 {
     ASSERT(!CSSProperty::isDirectionAwareProperty(propertyID));
 

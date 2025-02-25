@@ -7597,7 +7597,6 @@ imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-update-007
 imported/w3c/web-platform-tests/css/css-anchor-position/position-area-abs-inline-container.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/position-area-inline-container.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/position-area-scroll-adjust.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-anchor-position/position-anchor-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/position-anchor-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/position-try-switch-from-fixed-anchor.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/position-try-switch-to-fixed-anchor.html [ ImageOnlyFailure ]

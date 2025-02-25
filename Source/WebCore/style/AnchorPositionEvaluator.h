@@ -44,13 +44,13 @@ class RenderBlock;
 class RenderBox;
 class RenderBoxModelObject;
 class RenderStyle;
-struct PositionTryFallback;
 
 enum CSSPropertyID : uint16_t;
 
 namespace Style {
 
 class BuilderState;
+struct BuilderPositionTryFallback;
 
 enum class AnchorPositionResolutionStage : uint8_t {
     FindAnchors,
@@ -119,7 +119,7 @@ public:
     static AnchorToAnchorPositionedMap makeAnchorPositionedForAnchorMap(Document&);
 
     static bool isLayoutTimeAnchorPositioned(const RenderStyle&);
-    static CSSPropertyID resolvePositionTryFallbackProperty(CSSPropertyID, WritingMode, const PositionTryFallback&);
+    static CSSPropertyID resolvePositionTryFallbackProperty(CSSPropertyID, WritingMode, const BuilderPositionTryFallback&);
 
     static bool overflowsContainingBlock(const RenderBox& anchoredBox);
 

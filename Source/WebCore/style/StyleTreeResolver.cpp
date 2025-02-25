@@ -29,6 +29,8 @@
 #include "AXObjectCache.h"
 #include "AnchorPositionEvaluator.h"
 #include "CSSFontSelector.h"
+#include "CSSPositionTryRule.h"
+#include "CSSSerializationContext.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "ComposedTreeIterator.h"
 #include "Document.h"
@@ -838,7 +840,7 @@ std::unique_ptr<RenderStyle> TreeResolver::resolveAfterChangeStyleForNonAnimated
     return resolveAgainInDifferentContext(resolvedStyle, styleable, parentStyle, PropertyCascade::normalProperties(), { }, resolutionContext);
 }
 
-std::unique_ptr<RenderStyle> TreeResolver::resolveAgainInDifferentContext(const ResolvedStyle& resolvedStyle, const Styleable& styleable, const RenderStyle& parentStyle, OptionSet<PropertyCascade::PropertyType> properties, const std::optional<PositionTryFallback>& positionTryFallback, const ResolutionContext& resolutionContext) const
+std::unique_ptr<RenderStyle> TreeResolver::resolveAgainInDifferentContext(const ResolvedStyle& resolvedStyle, const Styleable& styleable, const RenderStyle& parentStyle, OptionSet<PropertyCascade::PropertyType> properties, std::optional<BuilderPositionTryFallback>&& positionTryFallback, const ResolutionContext& resolutionContext) const
 {
     ASSERT(resolvedStyle.matchResult);
 
@@ -853,7 +855,7 @@ std::unique_ptr<RenderStyle> TreeResolver::resolveAgainInDifferentContext(const 
         parentStyle,
         resolutionContext.documentElementStyle,
         &styleable.element,
-        positionTryFallback
+        WTFMove(positionTryFallback)
     };
 
     auto styleBuilder = Builder {
@@ -1327,11 +1329,10 @@ void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolved
     if (!resolvedStyle.style || resolvedStyle.style->positionTryFallbacks().isEmpty())
         return;
 
-    auto* anchorPositionedState = m_document->styleScope().anchorPositionedStates().get(styleable.element);
-    if (anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved)
+    if (m_positionOptions.contains(styleable.element))
         return;
 
-    m_positionOptions.ensure(styleable.element, [&] {
+    auto generatePositionOptions = [&] {
         auto options = PositionOptions { .originalStyle = RenderStyle::clonePtr(*resolvedStyle.style) };
         options.optionStyles.reserveInitialCapacity(resolvedStyle.style->positionTryFallbacks().size());
         for (auto& fallback : resolvedStyle.style->positionTryFallbacks()) {
@@ -1341,7 +1342,16 @@ void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolved
             options.optionStyles.append(WTFMove(optionStyle));
         }
         return options;
-    });
+    };
+
+    auto options = generatePositionOptions();
+
+    // If the fallbacks contain anchor references we need to resolve the anchors first and regenerate the options.
+    auto* anchorPositionedState = m_document->styleScope().anchorPositionedStates().get(styleable.element);
+    if (anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved)
+        return;
+
+    m_positionOptions.add(styleable.element, WTFMove(options));
 }
 
 std::unique_ptr<RenderStyle> TreeResolver::generatePositionOption(const PositionTryFallback& fallback, const ResolvedStyle& resolvedStyle, const Styleable& styleable, const ResolutionContext& resolutionContext)
@@ -1351,7 +1361,25 @@ std::unique_ptr<RenderStyle> TreeResolver::generatePositionOption(const Position
     if (!resolvedStyle.matchResult)
         return { };
 
-    return resolveAgainInDifferentContext(resolvedStyle, styleable, *resolutionContext.parentStyle, PropertyCascade::normalProperties(), fallback, resolutionContext);
+    auto resolveFallbackProperties = [&]() -> RefPtr<const StyleProperties> {
+        if (!fallback.positionTryRuleName)
+            return nullptr;
+        auto* styleScope = Style::Scope::forOrdinal(styleable.element, fallback.positionTryRuleName->scopeOrdinal);
+        if (!styleScope)
+            return nullptr;
+        auto& ruleSet = styleScope->resolver().ruleSets().authorStyle();
+        auto rule = ruleSet.positionTryRuleForName(fallback.positionTryRuleName->name);
+        if (!rule)
+            return nullptr;
+        return rule->protectedProperties();
+    };
+
+    auto builderFallback = BuilderPositionTryFallback {
+        .properties = resolveFallbackProperties(),
+        .tactics = fallback.tactics
+    };
+
+    return resolveAgainInDifferentContext(resolvedStyle, styleable, *resolutionContext.parentStyle, PropertyCascade::normalProperties(), WTFMove(builderFallback), resolutionContext);
 }
 
 std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleable& styleable, const RenderStyle* existingStyle)

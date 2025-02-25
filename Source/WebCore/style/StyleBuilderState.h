@@ -62,12 +62,17 @@ void maybeUpdateFontForLetterSpacing(BuilderState&, CSSValue&);
 
 enum class ApplyValueType : uint8_t { Value, Initial, Inherit };
 
+struct BuilderPositionTryFallback {
+    RefPtr<const StyleProperties> properties;
+    Vector<PositionTryFallback::Tactic> tactics;
+};
+
 struct BuilderContext {
     Ref<const Document> document;
     const RenderStyle& parentStyle;
     const RenderStyle* rootElementStyle = nullptr;
     RefPtr<const Element> element = nullptr;
-    std::optional<PositionTryFallback> positionTryFallback { };
+    std::optional<BuilderPositionTryFallback> positionTryFallback { };
 };
 
 class BuilderState {
@@ -132,7 +137,7 @@ public:
 
     Ref<Calculation::RandomKeyMap> randomKeyMap(bool perElement) const;
 
-    const std::optional<PositionTryFallback>& positionTryFallback() const { return m_context.positionTryFallback; }
+    const std::optional<BuilderPositionTryFallback>& positionTryFallback() const { return m_context.positionTryFallback; }
 
 private:
     // See the comment in maybeUpdateFontForLetterSpacing() about why this needs to be a friend.

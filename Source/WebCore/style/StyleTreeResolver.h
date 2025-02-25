@@ -47,6 +47,7 @@ struct PositionTryFallback;
 
 namespace Style {
 
+struct BuilderPositionTryFallback;
 class Resolver;
 struct MatchResult;
 struct PseudoElementIdentifier;
@@ -85,7 +86,7 @@ private:
     ElementUpdate createAnimatedElementUpdate(ResolvedStyle&&, const Styleable&, Change, const ResolutionContext&, IsInDisplayNoneTree = IsInDisplayNoneTree::No);
     std::unique_ptr<RenderStyle> resolveStartingStyle(const ResolvedStyle&, const Styleable&, const ResolutionContext&) const;
     std::unique_ptr<RenderStyle> resolveAfterChangeStyleForNonAnimated(const ResolvedStyle&, const Styleable&, const ResolutionContext&) const;
-    std::unique_ptr<RenderStyle> resolveAgainInDifferentContext(const ResolvedStyle&, const Styleable&, const RenderStyle& parentStyle,  OptionSet<PropertyCascade::PropertyType>, const std::optional<PositionTryFallback>&, const ResolutionContext&) const;
+    std::unique_ptr<RenderStyle> resolveAgainInDifferentContext(const ResolvedStyle&, const Styleable&, const RenderStyle& parentStyle,  OptionSet<PropertyCascade::PropertyType>, std::optional<BuilderPositionTryFallback>&&, const ResolutionContext&) const;
     const RenderStyle& parentAfterChangeStyle(const Styleable&, const ResolutionContext&) const;
 
     UncheckedKeyHashSet<AnimatableCSSProperty> applyCascadeAfterAnimation(RenderStyle&, const UncheckedKeyHashSet<AnimatableCSSProperty>&, bool isTransition, const MatchResult&, const Element&, const ResolutionContext&);
