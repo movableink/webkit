@@ -76,6 +76,29 @@
 #import <pal/ios/UIKitSoftLink.h>
 #endif
 
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/RenderThemeCocoaAdditionsBefore.mm>
+#else
+
+namespace WebCore {
+
+constexpr auto logicalSwitchHeight = 31.f;
+constexpr auto logicalSwitchWidth = 51.f;
+
+static bool renderThemePaintSwitchThumb(OptionSet<ControlStyle::State>, const RenderObject&, const PaintInfo&, const FloatRect&, const Color&)
+{
+    return true;
+}
+
+static bool renderThemePaintSwitchTrack(OptionSet<ControlStyle::State>, const RenderObject&, const PaintInfo&, const FloatRect&)
+{
+    return true;
+}
+
+}
+
+#endif
+
 @interface WebCoreRenderThemeBundle : NSObject
 @end
 
@@ -751,27 +774,52 @@ void RenderThemeCocoa::adjustSwitchStyle(RenderStyle& style, const Element* elem
         return;
 #endif
 
+#if PLATFORM(MAC)
     RenderTheme::adjustSwitchStyle(style, element);
+#else
+    UNUSED_PARAM(element);
+
+    // FIXME: Deduplicate sizing with the generic code somehow.
+    if (style.width().isAuto() || style.height().isAuto()) {
+        style.setLogicalWidth({ logicalSwitchWidth * style.usedZoom(), LengthType::Fixed });
+        style.setLogicalHeight({ logicalSwitchHeight * style.usedZoom(), LengthType::Fixed });
+    }
+
+    adjustSwitchStyleDisplay(style);
+
+    if (style.outlineStyleIsAuto() == OutlineIsAuto::On)
+        style.setOutlineStyle(BorderStyle::None);
+#endif
 }
 
-bool RenderThemeCocoa::paintSwitchThumb(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+bool RenderThemeCocoa::paintSwitchThumb(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
+#if PLATFORM(MAC)
+    bool useDefaultImplementation = true;
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
-    if (paintSwitchThumbForVectorBasedControls(box, paintInfo, rect))
-        return false;
+    if (renderer.settings().vectorBasedControlsOnMacEnabled())
+        useDefaultImplementation = false;
+#endif
+    if (useDefaultImplementation)
+        return RenderTheme::paintSwitchThumb(renderer, paintInfo, rect);
 #endif
 
-    return RenderTheme::paintSwitchThumb(box, paintInfo, rect);
+    return renderThemePaintSwitchThumb(extractControlStyleStatesForRenderer(renderer), renderer, paintInfo, rect, platformFocusRingColor(renderer.styleColorOptions()));
 }
 
-bool RenderThemeCocoa::paintSwitchTrack(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+bool RenderThemeCocoa::paintSwitchTrack(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
+#if PLATFORM(MAC)
+    bool useDefaultImplementation = true;
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
-    if (paintSwitchTrackForVectorBasedControls(box, paintInfo, rect))
-        return false;
+    if (renderer.settings().vectorBasedControlsOnMacEnabled())
+        useDefaultImplementation = false;
+#endif
+    if (useDefaultImplementation)
+        return RenderTheme::paintSwitchTrack(renderer, paintInfo, rect);
 #endif
 
-    return RenderTheme::paintSwitchTrack(box, paintInfo, rect);
+    return renderThemePaintSwitchTrack(extractControlStyleStatesForRenderer(renderer), renderer, paintInfo, rect);
 }
 
 }

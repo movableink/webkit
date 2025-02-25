@@ -724,52 +724,6 @@ void RenderThemeIOS::adjustSliderThumbSize(RenderStyle& style, const Element* el
 constexpr auto reducedMotionProgressAnimationMinOpacity = 0.3f;
 constexpr auto reducedMotionProgressAnimationMaxOpacity = 0.6f;
 
-#if !USE(APPLE_INTERNAL_SDK)
-constexpr auto logicalSwitchHeight = 31.f;
-constexpr auto logicalSwitchWidth = 51.f;
-
-static bool renderThemePaintSwitchThumb(OptionSet<ControlStyle::State>, const RenderObject&, const PaintInfo&, const FloatRect&, const Color&)
-{
-    return true;
-}
-
-static bool renderThemePaintSwitchTrack(OptionSet<ControlStyle::State>, const RenderObject&, const PaintInfo&, const FloatRect&, const Color&)
-{
-    return true;
-}
-#endif
-
-void RenderThemeIOS::adjustSwitchStyle(RenderStyle& style, const Element* element) const
-{
-#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (adjustSwitchStyleForCatalyst(style, element))
-        return;
-#else
-    UNUSED_PARAM(element);
-#endif
-
-    // FIXME: Deduplicate sizing with the generic code somehow.
-    if (style.width().isAuto() || style.height().isAuto()) {
-        style.setLogicalWidth({ logicalSwitchWidth * style.usedZoom(), LengthType::Fixed });
-        style.setLogicalHeight({ logicalSwitchHeight * style.usedZoom(), LengthType::Fixed });
-    }
-
-    adjustSwitchStyleDisplay(style);
-
-    if (style.outlineStyleIsAuto() == OutlineIsAuto::On)
-        style.setOutlineStyle(BorderStyle::None);
-}
-
-bool RenderThemeIOS::paintSwitchThumb(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
-{
-    return renderThemePaintSwitchThumb(extractControlStyleStatesForRenderer(renderer), renderer, paintInfo, rect, systemFocusRingColor());
-}
-
-bool RenderThemeIOS::paintSwitchTrack(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
-{
-    return renderThemePaintSwitchTrack(extractControlStyleStatesForRenderer(renderer), renderer, paintInfo, rect, systemColor(CSSValueAppleSystemGreen, renderer.styleColorOptions()));
-}
-
 bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
