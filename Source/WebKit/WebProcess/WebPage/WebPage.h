@@ -1164,7 +1164,6 @@ public:
     void didApplyStyle();
     void didScrollSelection();
     void didChangeSelection(WebCore::LocalFrame&);
-    void didChangeOverflowScrollPosition();
     void didChangeContents();
     void discardedComposition(const WebCore::Document&);
     void canceledComposition();
