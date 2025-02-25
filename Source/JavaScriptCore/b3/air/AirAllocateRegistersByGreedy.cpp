@@ -523,7 +523,7 @@ struct TmpData {
     {
         out.print("{stage = ", stage, " liveRange = ", liveRange, ", preferredReg = ", preferredReg,
             ", coalescables = ", listDump(coalescables), ", subGroup0 = ", subGroup0, ", subGroup1 = ", subGroup1,
-            ", spillCost = ", spillCost, ", assigned = ", assigned, ", spilled = ", pointerDump(spillSlot), ", splitMetadataIndex = ", splitMetadataIndex, "}");
+            ", useDefCost = ", useDefCost, ", unspillable = ", unspillable, ", assigned = ", assigned, ", spilled = ", pointerDump(spillSlot), ", splitMetadataIndex = ", splitMetadataIndex, "}");
     }
 
     bool isGroup()
@@ -532,21 +532,26 @@ struct TmpData {
         return !!subGroup0;
     }
 
+    float spillCost()
+    {
+        return unspillable ? unspillableCost : useDefCost;
+    }
+
     void validate()
     {
         ASSERT(!(spillSlot && assigned));
         ASSERT(!!assigned == (stage == Stage::Assigned));
         ASSERT_IMPLIES(spillSlot, stage == Stage::Spilled);
-        ASSERT_IMPLIES(spillSlot, spillCost != unspillableCost);
+        ASSERT_IMPLIES(spillSlot, spillCost() != unspillableCost);
         ASSERT_IMPLIES(spillSlot, !isGroup()); // Should have been split
-        ASSERT_IMPLIES(!spillCost, !liveRange.size());
         ASSERT_IMPLIES(assigned, !parentGroup); // Only top-most should be assigned
         ASSERT_IMPLIES(coalescables.size(), !isGroup()); // Only bottom-most should have coalescables
     }
 
     Stage stage { Stage::New };
     LiveRange liveRange;
-    float spillCost { 0.0f };
+    float useDefCost { 0.0f };
+    bool unspillable { false };
     Reg preferredReg;
     Vector<CoalescableWith> coalescables;
     Tmp parentGroup;
@@ -1133,7 +1138,7 @@ private:
             subGroupData.stage = Stage::Coalesced;
 
             groupData.liveRange = LiveRange::merge(groupData.liveRange, subGroupData.liveRange);
-            groupData.spillCost += subGroupData.spillCost;
+            groupData.useDefCost += subGroupData.useDefCost;
             if (!groupData.preferredReg)
                 groupData.preferredReg = subGroupData.preferredReg;
 
@@ -1184,31 +1189,55 @@ private:
     {
         CompilerTimingScope timingScope("Air"_s, "GreedyRegAlloc::initSpillCosts"_s);
 
+        IndexSet<Tmp::AbsolutelyIndexed<bank>> cannotSpillInPlace;
+        for (BasicBlock* block : m_code) {
+            for (Inst& inst : block->insts()) {
+                inst.forEachArg([&](Arg& arg, Arg::Role, Bank, Width) {
+                    if (arg.isTmp() && arg.tmp().bank() != bank && inst.admitsStack(arg))
+                        return;
+                    // Arg cannot be spilled in-place.
+                    arg.forEachTmpFast([&](Tmp& tmp) {
+                        if (tmp.bank() != bank)
+                            return;
+                        if (!cannotSpillInPlace.contains(tmp)) {
+                            dataLogLnIf(verbose(), tmp, " cannot be spilled in-place: ", inst);
+                            cannotSpillInPlace.add(tmp);
+                        }
+                    });
+                });
+            }
+        }
+
         for (Reg reg : m_allowedRegistersInPriorityOrder[bank])
-            m_map[Tmp(reg)].spillCost = unspillableCost;
+            m_map[Tmp(reg)].unspillable = true;
 
         // FIXME: tmps alive only in one gap should be unspillable.
         m_code.forEachTmp<bank>([&](Tmp tmp) {
             ASSERT(tmp.bank() == bank);
             ASSERT(!tmp.isReg());
+            TmpData& tmpData = m_map[tmp];
+            ASSERT(tmpData.useDefCost == 0.0f);
             auto index = AbsoluteTmpMapper<bank>::absoluteIndex(tmp);
-            float spillCost = m_useCounts.numWarmUsesAndDefs<bank>(index);
+            float useDefCost = m_useCounts.numWarmUsesAndDefs<bank>(index);
             if (bank == GP && m_useCounts.isConstDef<GP>(index))
-                spillCost /= 2; // Can rematerialize rather than spill in many cases.
-            ASSERT(m_map[tmp].spillCost == 0.0f);
-            m_map[tmp].spillCost = spillCost;
+                useDefCost /= 2; // Can rematerialize rather than spill in many cases.
+            tmpData.useDefCost = useDefCost;
+
+            if (cannotSpillInPlace.contains(tmp)
+                && tmpData.liveRange.intervals().size() == 1 && tmpData.liveRange.size() <= pointsPerInst)
+                tmpData.unspillable = true;
         });
         m_code.forEachFastTmp([&](Tmp tmp) {
             if (tmp.bank() != bank)
                 return;
-            m_map[tmp].spillCost = fastTmpSpillCost;
+            m_map[tmp].unspillable = true;
             dataLogLnIf(verbose(), "FastTmp: ", tmp);
         });
     }
 
     // newTmp creates and returns a new tmp that can hold the values of 'from'.
     // Note that all TmpData references invalidated since it may expand/realloc the TmpData map.
-    Tmp newTmp(Tmp from, float spillCost, Interval interval)
+    Tmp newTmp(Tmp from, float useDefCost, Interval interval)
     {
         Tmp tmp = m_code.newTmp(from.bank());
         m_tmpWidth.setWidths(tmp, m_tmpWidth.useWidth(from), m_tmpWidth.defWidth(from));
@@ -1216,14 +1245,15 @@ private:
         m_map.append(tmp, TmpData());
         TmpData& tmpData = m_map[tmp];
         tmpData.liveRange.prepend(interval);
-        tmpData.spillCost = spillCost;
+        tmpData.useDefCost = useDefCost;
         tmpData.validate();
         return tmp;
     }
 
     Tmp addSpillTmpWithInterval(Tmp spilledTmp, Interval interval)
     {
-        Tmp tmp = newTmp(spilledTmp, unspillableCost, interval);
+        Tmp tmp = newTmp(spilledTmp, 0, interval);
+        m_map[tmp].unspillable = true;
         dataLogLnIf(verbose(), "New spill for ", spilledTmp, " tmp: ", tmp, ": ", m_map[tmp]);
         setStageAndEnqueue(tmp, m_map[tmp], Stage::Unspillable);
         return tmp;
@@ -1233,7 +1263,6 @@ private:
     {
         ASSERT(!tmp.isReg());
         ASSERT(stage == Stage::Unspillable || stage == Stage::TryAllocate || stage == Stage::TrySplit || stage == Stage::Spill);
-        ASSERT_IMPLIES(!tmpData.spillCost, !tmpData.liveRange.size());
         ASSERT(!tmpData.parentGroup); // Group member should not be enquened
         ASSERT_IMPLIES(!eagerGroups, !tmpData.isGroup());
         tmpData.validate();
@@ -1412,7 +1441,7 @@ private:
                     if (visited.quickGet(conflictTmpIndex))
                         return IterationStatus::Continue;
                     visited.quickSet(conflictTmpIndex);
-                    auto cost = m_map[conflict.tmp].spillCost;
+                    auto cost = m_map[conflict.tmp].spillCost();
                     if (cost == unspillableCost) {
                         conflictsSpillCost = unspillableCost;
                         return IterationStatus::Done;
@@ -1425,9 +1454,9 @@ private:
                 bestEvictReg = r;
             }
         }
-        if (minSpillCost >= tmpData.spillCost) {
+        if (minSpillCost >= tmpData.spillCost()) {
             // If 'tmp' was unspillable, we better have found at least one suitable register.
-            RELEASE_ASSERT(tmpData.spillCost != unspillableCost);
+            RELEASE_ASSERT(tmpData.spillCost() != unspillableCost);
             return false;
         }
         // It's cheaper to spill all the already-assigned conflicting tmps, so evict them in favor of assigning 'tmp'.
@@ -1455,7 +1484,7 @@ private:
     void evict(Tmp tmp, TmpData& tmpData, Reg reg)
     {
         ASSERT(tmpData.stage == Stage::Assigned);
-        ASSERT(tmpData.spillCost != unspillableCost);
+        ASSERT(tmpData.spillCost() != unspillableCost);
         ASSERT(tmpData.assigned == reg);
         m_regRanges[reg].evict(tmp, tmpData.liveRange);
         tmpData.stage = Stage::New;
@@ -1467,7 +1496,7 @@ private:
     template<Bank bank>
     bool trySplit(Tmp tmp, TmpData& tmpData)
     {
-        ASSERT(tmpData.spillCost != unspillableCost); // Should have evicted.
+        ASSERT(tmpData.spillCost() != unspillableCost); // Should have evicted.
         if (trySplitGroup(tmp, tmpData))
             return true;
         return trySplitAroundClobbers<bank>(tmp, tmpData);
@@ -1545,12 +1574,12 @@ private:
                 bestSplitReg = r;
             }
         }
-        ASSERT(tmpData.spillCost != unspillableCost); // Should have evicted.
+        ASSERT(tmpData.spillCost() != unspillableCost); // Should have evicted.
         if (minSplitCost >= unspillableCost)
             return false; // Other conflicts exist, so splitting is not productive
         // Multiplier of 0 means split around clobbers at every opportunity. The higher the multiplier,
         // the less often the split will be applied (i.e. treats splitting as more costly).
-        if (minSplitCost * Options::airGreedyRegAllocSplitMultiplier() >= tmpData.spillCost)
+        if (minSplitCost * Options::airGreedyRegAllocSplitMultiplier() >= tmpData.spillCost())
             return false; // Better to spill than to split
 
         LiveRange holeRange;
@@ -1591,7 +1620,7 @@ private:
             metadata.gapTmps.append(gapTmp);
             setStageAndEnqueue(gapTmp, m_map[gapTmp], Stage::TryAllocate);
         }
-        dataLogLnIf(verbose(), "Split (clobbers): reg = ", bestSplitReg, " spillCost = ", m_map[tmp].spillCost, " splitCost = ", minSplitCost, " split tmp = ", metadata);
+        dataLogLnIf(verbose(), "Split (clobbers): reg = ", bestSplitReg, " spillCost = ", m_map[tmp].spillCost(), " splitCost = ", minSplitCost, " split tmp = ", metadata);
         m_splitMetadata.append(WTFMove(metadata));
         return true;
     }
@@ -1608,7 +1637,7 @@ private:
 
     void spill(Tmp tmp, TmpData& tmpData)
     {
-        RELEASE_ASSERT(tmpData.spillCost != unspillableCost);
+        RELEASE_ASSERT(tmpData.spillCost() != unspillableCost);
         ASSERT(tmpData.assigned == Reg());
         ASSERT(!tmpData.isGroup()); // Should have been split
         tmpData.stage = Stage::Spilled;
