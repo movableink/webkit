@@ -393,8 +393,9 @@ void ThreadedCompositor::renderLayerTree()
 uint32_t ThreadedCompositor::requestComposition()
 {
     ASSERT(RunLoop::isMain());
+    uint32_t compositionRequestID = ++m_compositionRequestID;
     scheduleUpdate();
-    return ++m_compositionRequestID;
+    return compositionRequestID;
 }
 
 void ThreadedCompositor::scheduleUpdate()
