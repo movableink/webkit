@@ -26,7 +26,6 @@
 
 [
     DispatchedFrom=WebContent,
-    DispatchedTo=UI,
     EnabledBy=ApplePayEnabled
 ]
 messages -> WebPaymentCoordinatorProxy {
