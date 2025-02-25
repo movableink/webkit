@@ -391,8 +391,9 @@ void WebFullScreenManager::willEnterFullScreen(CompletionHandler<void(ExceptionO
 #endif
     m_element->protectedDocument()->updateLayout();
     m_finalFrame = screenRectOfContents(m_element.get());
-    m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::BeganEnterFullScreen(m_initialFrame, m_finalFrame), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(didEnterFullscreenCallback)] (bool success) mutable {
-        if (!success) {
+
+    m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::BeganEnterFullScreen(m_initialFrame, m_finalFrame), [this, protectedThis = Ref { *this }, mode, completionHandler = WTFMove(didEnterFullscreenCallback)] (bool success) mutable {
+        if (!success && mode != WebCore::HTMLMediaElementEnums::VideoFullscreenModeInWindow) {
             completionHandler(false);
             return;
         }
