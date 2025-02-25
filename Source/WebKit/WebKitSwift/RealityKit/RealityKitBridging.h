@@ -50,6 +50,7 @@ typedef struct {
 
 @property (nonatomic, readonly) simd_float3 boundingBoxExtents;
 @property (nonatomic, readonly) simd_float3 boundingBoxCenter;
+@property (nonatomic, readonly) simd_float3 interactionPivotPoint;
 @property (nonatomic) WKEntityTransform transform;
 @property (nonatomic) float opacity;
 @property (nonatomic, readonly) NSTimeInterval duration;
@@ -61,7 +62,7 @@ typedef struct {
 + (bool)isLoadFromDataAvailable;
 + (void)loadFromData:(NSData *)data completionHandler:(void (^)(WKSRKEntity * _Nullable entity))completionHandler;
 - (instancetype)initWithCoreEntity:(REEntityRef)coreEntity;
-- (void)setParentCoreEntity:(REEntityRef)parentCoreEntity;
+- (void)setParentCoreEntity:(REEntityRef)parentCoreEntity preservingWorldTransform:(BOOL)preservingWorldTransform NS_SWIFT_NAME(setParent(_:preservingWorldTransform:));
 - (void)setUpAnimationWithAutoPlay:(BOOL)autoPlay;
 - (void)applyIBLData:(NSData *)data withCompletion:(void (^)(BOOL success))completion;
 - (void)removeIBL;

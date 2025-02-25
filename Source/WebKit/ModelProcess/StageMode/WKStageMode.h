@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,14 +23,29 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// Add project-level Objective-C header files here to be able to access them from within Swift sources.
+#if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
+#import "RealityKitBridging.h"
+#import <CoreRE/REObjects.h>
+#import <Foundation/Foundation.h>
+#import <simd/simd.h>
 
-#import <wtf/Platform.h>
+NS_ASSUME_NONNULL_BEGIN
 
-#import "WKMaterialHostingSupport.h"
-#import "WKPreferencesInternal.h"
-#import "WKScrollGeometry.h"
-#import "WKStageMode.h"
-#import "WKUIDelegateInternal.h"
-#import "WKWebViewConfigurationInternal.h"
-#import "WKWebViewInternal.h"
+typedef NS_ENUM(NSInteger, WKStageModeOperation) {
+    WKStageModeOperationNone = 0,
+    WKStageModeOperationOrbit,
+};
+
+@interface WKStageModeInteractionDriver : NSObject
+- (instancetype)initWithModel:(WKSRKEntity * _Nonnull)model container:(REEntityRef)container NS_SWIFT_NAME(init(with:container:));
+- (void)setContainerTransformInPortal NS_SWIFT_NAME(setContainerTransformInPortal());
+- (void)interactionDidBegin:(simd_float4x4)transform NS_SWIFT_NAME(interactionDidBegin(_:));
+- (void)interactionDidUpdate:(simd_float4x4)transform NS_SWIFT_NAME(interactionDidUpdate(_:));
+- (void)interactionDidEnd NS_SWIFT_NAME(interactionDidEnd());
+- (void)operationDidUpdate:(WKStageModeOperation)operation NS_SWIFT_NAME(operationDidUpdate(_:));
+- (void)removeInteractionContainerFromSceneOrParent;
+@end
+
+NS_ASSUME_NONNULL_END
+
+#endif
