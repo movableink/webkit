@@ -2411,3 +2411,5 @@ webkit.org/b/288507 [ Debug x86_64 ] media/media-source/remoteplayback-availabil
 webkit.org/b/288518 [ Debug ] fast/text/emoji-num-glyphs.html [ Timeout ]
 
 webkit.org/b/288546 imported/w3c/web-platform-tests/fullscreen/api/element-ready-allowed.html [ Pass Failure ]
+
+webkit.org/b/288631 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-after-snap.html [ Failure ]
