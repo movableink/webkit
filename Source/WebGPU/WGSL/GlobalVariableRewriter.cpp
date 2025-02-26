@@ -786,18 +786,15 @@ void RewriteGlobalVariables::packStructResource(AST::Variable& global, const Typ
 void RewriteGlobalVariables::packArrayResource(AST::Variable& global, const Types::Array* arrayType)
 {
     const Type* packedArrayType = packArrayType(arrayType);
-    if (!packedArrayType) {
-        if (arrayType->element->packing() & Packing::Vec3)
-            m_shaderModule.replace(&global.role(), AST::VariableRole::PackedResource);
+    if (!packedArrayType)
         return;
-    }
 
-    const Type* packedStructType = std::get<Types::Array>(*packedArrayType).element;
+    const Type* packedElementType = std::get<Types::Array>(*packedArrayType).element;
     auto& packedType = m_shaderModule.astBuilder().construct<AST::IdentifierExpression>(
         SourceSpan::empty(),
-        AST::Identifier::make(std::get<Types::Struct>(*packedStructType).structure.name().id())
+        AST::Identifier::make("__PackedArray"_s) // This name is not used by the codegen
     );
-    packedType.m_inferredType = packedStructType;
+    packedType.m_inferredType = packedElementType;
 
     auto& arrayTypeName = downcast<AST::ArrayTypeExpression>(*global.maybeTypeName());
     auto& packedArrayTypeName = m_shaderModule.astBuilder().construct<AST::ArrayTypeExpression>(
@@ -838,8 +835,10 @@ const Type* RewriteGlobalVariables::packType(const Type* type)
     if (auto* arrayType = std::get_if<Types::Array>(type))
         return packArrayType(arrayType);
     if (auto* vectorType = std::get_if<Types::Vector>(type)) {
-        if (vectorType->size == 3)
+        if (vectorType->size == 3) {
+            m_shaderModule.setUsesPackedVec3();
             return type;
+        }
     }
     return nullptr;
 }
@@ -880,23 +879,13 @@ const Type* RewriteGlobalVariables::packStructType(const Types::Struct* structTy
 
 const Type* RewriteGlobalVariables::packArrayType(const Types::Array* arrayType)
 {
-    auto* structType = std::get_if<Types::Struct>(arrayType->element);
-    if (!structType) {
-        if (arrayType->element->packing() & Packing::Vec3) {
-            m_shaderModule.setUsesUnpackArray();
-            m_shaderModule.setUsesPackArray();
-            m_shaderModule.setUsesPackedVec3();
-        }
-        return nullptr;
-    }
-
-    const Type* packedStructType = packStructType(structType);
-    if (!packedStructType)
+    auto* packedElementType = packType(arrayType->element);
+    if (!packedElementType)
         return nullptr;
 
     m_shaderModule.setUsesUnpackArray();
     m_shaderModule.setUsesPackArray();
-    return m_shaderModule.types().arrayType(packedStructType, arrayType->size);
+    return m_shaderModule.types().arrayType(packedElementType, arrayType->size);
 }
 
 static size_t getRoundedSize(const AST::Variable& variable)
