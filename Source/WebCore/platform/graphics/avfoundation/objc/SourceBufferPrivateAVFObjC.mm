@@ -663,7 +663,8 @@ void SourceBufferPrivateAVFObjC::setCDMSession(LegacyCDMSession* session)
             [oldSession->contentKeySession() removeContentKeyRecipient:parser];
     }
 
-    m_session = toCDMSessionAVContentKeySession(session);
+    // FIXME: This is a false positive. Remove the suppression once rdar://145631564 is fixed.
+    SUPPRESS_UNCOUNTED_ARG m_session = toCDMSessionAVContentKeySession(session);
 
     if (RefPtr session = m_session.get()) {
         session->addSourceBuffer(this);
