@@ -82,6 +82,7 @@ private:
     Vector<LayoutUnit> m_originalLineConstraints;
     LayoutUnit m_maximumLineWidthConstraint { 0 };
     Vector<bool> m_originalLineEndsWithForcedBreak;
+    InlineLayoutUnit m_inlineItemWidthsMax { 0 };
     Vector<InlineLayoutUnit> m_inlineItemWidths;
     Vector<InlineLayoutUnit> m_firstLineStyleInlineItemWidths;
     size_t m_numberOfLinesInOriginalLayout { 0 };
