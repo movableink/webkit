@@ -12,7 +12,6 @@ NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementPersistentStore.cp
 NetworkProcess/ServiceWorker/ServiceWorkerNavigationPreloader.cpp
 NetworkProcess/ServiceWorker/ServiceWorkerSoftUpdateLoader.cpp
 NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
-NetworkProcess/cache/NetworkCacheEntry.cpp
 NetworkProcess/cache/NetworkCacheSpeculativeLoad.cpp
 NetworkProcess/mac/SecItemShim.cpp
 NetworkProcess/storage/BackgroundFetchStoreImpl.cpp
