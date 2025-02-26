@@ -160,9 +160,9 @@ void CSSAnimation::syncStyleOriginatedTimeline()
     WTF::switchOn(timeline,
         [&] (Animation::TimelineKeyword keyword) {
             setTimeline(keyword == Animation::TimelineKeyword::None ? nullptr : RefPtr { document->existingTimeline() });
-        }, [&] (const AtomString& name) {
+        }, [&] (const AtomString&) {
             CheckedRef styleOriginatedTimelinesController = document->ensureStyleOriginatedTimelinesController();
-            styleOriginatedTimelinesController->setTimelineForName(name, *owningElement(), *this);
+            styleOriginatedTimelinesController->attachAnimation(*this);
         }, [&] (const Animation::AnonymousScrollTimeline& anonymousScrollTimeline) {
             auto scrollTimeline = ScrollTimeline::create(anonymousScrollTimeline.scroller, anonymousScrollTimeline.axis);
             scrollTimeline->setSource(*owningElement());
