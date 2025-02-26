@@ -187,7 +187,7 @@ public:
 #if USE(SKIA)
     // During DisplayList recording a fence is created, so that we can wait until the SkSurface finished rendering
     // before we attempt to access the GPU resource from a secondary thread during replay (in threaded GPU painting mode).
-    void finishAcceleratedRenderingAndCreateFence();
+    bool finishAcceleratedRenderingAndCreateFence();
     void waitForAcceleratedRenderingFenceCompletion();
 
     const GrDirectContext* skiaGrContext() const;

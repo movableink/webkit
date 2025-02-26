@@ -94,7 +94,7 @@ public:
 #if USE(SKIA)
     // During DisplayList recording a fence is created, so that we can wait until the SkImage finished rendering
     // before we attempt to access the GPU resource from a secondary thread during replay (in threaded GPU painting mode).
-    virtual void finishAcceleratedRenderingAndCreateFence() { }
+    virtual bool finishAcceleratedRenderingAndCreateFence() { return false; }
     virtual void waitForAcceleratedRenderingFenceCompletion() { }
 
     virtual const GrDirectContext* skiaGrContext() const { return nullptr; }
@@ -119,7 +119,7 @@ public:
     WEBCORE_EXPORT Headroom headroom() const final;
 
 #if USE(SKIA)
-    void finishAcceleratedRenderingAndCreateFence() final;
+    bool finishAcceleratedRenderingAndCreateFence() final;
     void waitForAcceleratedRenderingFenceCompletion() final;
 
     const GrDirectContext* skiaGrContext() const final;
