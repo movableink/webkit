@@ -333,11 +333,6 @@ void UnifiedPDFPlugin::installPDFDocument()
     }
 
     sizeToFitContentsIfNeeded();
-
-    RefPtr frame = m_frame.get();
-    if (!frame || !frame->page())
-        return;
-    frame->protectedPage()->send(Messages::WebPageProxy::PluginDidInstallPDFDocument());
 }
 
 bool UnifiedPDFPlugin::shouldSizeToFitContent() const

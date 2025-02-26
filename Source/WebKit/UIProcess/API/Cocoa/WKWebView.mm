@@ -5236,13 +5236,6 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 #if PLATFORM(MAC)
     _impl->setViewScale(viewScale);
 #else
-    if (_page->mainFramePluginOverridesViewScale()) {
-#if ENABLE(PDF_PLUGIN)
-        _page->resetViewportConfigurationForPDFPluginIfNeeded();
-#endif
-        return;
-    }
-
     if (_page->layoutSizeScaleFactorFromClient() == viewScale)
         return;
 

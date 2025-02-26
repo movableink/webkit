@@ -7675,13 +7675,6 @@ void WebPageProxy::mainFramePluginHandlesPageScaleGestureDidChange(bool mainFram
     m_pluginMaxZoomFactor = maxScale;
 }
 
-bool WebPageProxy::mainFramePluginOverridesViewScale() const
-{
-    if (m_mainFramePluginHandlesPageScaleGesture)
-        return false;
-    return m_pluginMaxZoomFactor.has_value() || m_pluginMinZoomFactor.has_value();
-}
-
 #if !PLATFORM(COCOA)
 void WebPageProxy::beginSafeBrowsingCheck(const URL&, bool, WebFramePolicyListenerProxy& listener)
 {
@@ -16227,23 +16220,6 @@ bool WebPageProxy::canStartNavigationSwipeAtLastInteractionLocation() const
     RefPtr client = pageClient();
     return !client || client->canStartNavigationSwipeAtLastInteractionLocation();
 }
-
-#if ENABLE(PDF_PLUGIN)
-void WebPageProxy::pluginDidInstallPDFDocument()
-{
-    resetViewportConfigurationForPDFPluginIfNeeded();
-}
-
-void WebPageProxy::resetViewportConfigurationForPDFPluginIfNeeded()
-{
-#if PLATFORM(IOS_FAMILY)
-    if (mainFramePluginOverridesViewScale()) {
-        if (layoutSizeScaleFactorFromClient() != 1)
-            setViewportConfigurationViewLayoutSize(viewLayoutSize(), 1, minimumEffectiveDeviceWidth());
-    }
-#endif
-}
-#endif
 
 } // namespace WebKit
 

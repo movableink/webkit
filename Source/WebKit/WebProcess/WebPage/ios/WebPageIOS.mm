@@ -4250,6 +4250,15 @@ void WebPage::setViewportConfigurationViewLayoutSize(const FloatSize& size, doub
     if (!m_viewportConfiguration.isKnownToLayOutWiderThanViewport())
         m_viewportConfiguration.setMinimumEffectiveDeviceWidthForShrinkToFit(0);
 
+    bool mainFramePluginOverridesViewScale = [&] {
+#if ENABLE(PDF_PLUGIN)
+        RefPtr pluginView = mainFramePlugIn();
+        return pluginView && !pluginView->pluginHandlesPageScaleFactor();
+#else
+        return false;
+#endif
+    }();
+
     m_baseViewportLayoutSizeScaleFactor = [&] {
         if (!m_page->settings().automaticallyAdjustsViewScaleUsingMinimumEffectiveDeviceWidth())
             return 1.0;
@@ -4260,10 +4269,13 @@ void WebPage::setViewportConfigurationViewLayoutSize(const FloatSize& size, doub
         if (minimumEffectiveDeviceWidth >= size.width())
             return 1.0;
 
+        if (mainFramePluginOverridesViewScale)
+            return 1.0;
+
         return size.width() / minimumEffectiveDeviceWidth;
     }();
 
-    double layoutSizeScaleFactor = layoutSizeScaleFactorFromClient * m_baseViewportLayoutSizeScaleFactor;
+    double layoutSizeScaleFactor = mainFramePluginOverridesViewScale ? 1.0 : layoutSizeScaleFactorFromClient * m_baseViewportLayoutSizeScaleFactor;
 
     auto previousLayoutSizeScaleFactor = m_viewportConfiguration.layoutSizeScaleFactor();
     if (!m_viewportConfiguration.setViewLayoutSize(size, layoutSizeScaleFactor, minimumEffectiveDeviceWidth))
