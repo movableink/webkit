@@ -313,12 +313,6 @@ void MediaSession::callActionHandler(const MediaSessionActionDetails& actionDeta
     promise.resolve();
 }
 
-bool MediaSession::hasActionHandler(const MediaSessionAction action) const
-{
-    Locker lock { m_actionHandlersLock };
-    return m_actionHandlers.contains(action);
-}
-
 bool MediaSession::callActionHandler(const MediaSessionActionDetails& actionDetails, TriggerGestureIndicator triggerGestureIndicator)
 {
     RefPtr<MediaSessionActionHandler> handler;

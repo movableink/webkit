@@ -43,9 +43,6 @@
 #import <WebCore/PlaybackSessionInterfaceAVKitLegacy.h>
 #import <WebCore/PlaybackSessionInterfaceMac.h>
 #import <WebCore/PlaybackSessionInterfaceTVOS.h>
-#if HAVE(PIP_SKIP_PREROLL)
-#import <WebCore/VideoPresentationInterfaceMac.h>
-#endif
 #import <wtf/LoggerHelper.h>
 #import <wtf/TZoneMallocInlines.h>
 
@@ -175,15 +172,6 @@ void PlaybackSessionModelContext::endScrubbing()
     m_isScrubbing = false;
     m_playbackStartedTimeNeedsUpdate = isPlaying();
 }
-
-#if HAVE(PIP_SKIP_PREROLL)
-void PlaybackSessionModelContext::skipAd()
-{
-    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
-    if (RefPtr manager = m_manager.get())
-        manager->skipAd(m_contextId);
-}
-#endif
 
 void PlaybackSessionModelContext::seekToTime(double time, double toleranceBefore, double toleranceAfter)
 {
@@ -476,14 +464,6 @@ void PlaybackSessionModelContext::isInWindowFullscreenActiveChanged(bool active)
     for (CheckedRef client : m_clients)
         client->isInWindowFullscreenActiveChanged(active);
 }
-
-#if HAVE(PIP_SKIP_PREROLL)
-void PlaybackSessionModelContext::canSkipAdChanged(bool value)
-{
-    for (CheckedRef client : m_clients)
-        client->canSkipAdChanged(value);
-}
-#endif
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
 void PlaybackSessionModelContext::supportsLinearMediaPlayerChanged(bool supportsLinearMediaPlayer)
@@ -814,25 +794,6 @@ void PlaybackSessionManagerProxy::isInWindowFullscreenActiveChanged(PlaybackSess
     ensureModel(contextId)->isInWindowFullscreenActiveChanged(active);
 }
 
-#if HAVE(PIP_SKIP_PREROLL)
-void PlaybackSessionManagerProxy::canSkipAdChanged(PlaybackSessionContextIdentifier contextId, bool value)
-{
-    RefPtr page = m_page.get();
-    if (!page)
-        return;
-
-    RefPtr videoPresentationManager = page->videoPresentationManager();
-    if (!videoPresentationManager)
-        return;
-
-    RefPtr interface = videoPresentationManager->controlsManagerInterface();
-    if (!interface)
-        return;
-
-    interface->canSkipAdChanged(value);
-}
-#endif
-
 #if ENABLE(LINEAR_MEDIA_PLAYER)
 void PlaybackSessionManagerProxy::supportsLinearMediaPlayerChanged(PlaybackSessionContextIdentifier contextId, bool supportsLinearMediaPlayer)
 {
@@ -1008,14 +969,6 @@ void PlaybackSessionManagerProxy::setPlayingOnSecondScreen(PlaybackSessionContex
     if (RefPtr page = m_page.get())
         page->protectedLegacyMainFrameProcess()->send(Messages::PlaybackSessionManager::SetPlayingOnSecondScreen(contextId, value), page->webPageIDInMainFrameProcess());
 }
-
-#if HAVE(PIP_SKIP_PREROLL)
-void PlaybackSessionManagerProxy::skipAd(PlaybackSessionContextIdentifier contextId)
-{
-    if (RefPtr page = m_page.get())
-        page->protectedLegacyMainFrameProcess()->send(Messages::PlaybackSessionManager::SkipAd(contextId), page->webPageIDInMainFrameProcess());
-}
-#endif
 
 void PlaybackSessionManagerProxy::sendRemoteCommand(PlaybackSessionContextIdentifier contextId, WebCore::PlatformMediaSession::RemoteControlCommandType command, const WebCore::PlatformMediaSession::RemoteCommandArgument& argument)
 {
