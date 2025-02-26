@@ -1978,3 +1978,5 @@ webkit.org/b/288545 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/requestid
 webkit.org/b/288545 [ Sonoma Release ] imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF-dynamic.html [ Pass Failure ]
 
 webkit.org/b/288598 imported/w3c/web-platform-tests/screen-orientation/unlock.html [ Pass Failure ]
+
+webkit.org/b/288603 imported/w3c/web-platform-tests/screen-orientation/hidden_document.html [ Pass Failure ]
