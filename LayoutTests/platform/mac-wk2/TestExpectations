@@ -1976,3 +1976,5 @@ webkit.org/b/288535 [ Sequoia+ X86_64 ] swipe/pushstate-with-manual-scrollrestor
 
 webkit.org/b/288545 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF-dynamic.html [ Failure ]
 webkit.org/b/288545 [ Sonoma Release ] imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF-dynamic.html [ Pass Failure ]
+
+webkit.org/b/288598 imported/w3c/web-platform-tests/screen-orientation/unlock.html [ Pass Failure ]
