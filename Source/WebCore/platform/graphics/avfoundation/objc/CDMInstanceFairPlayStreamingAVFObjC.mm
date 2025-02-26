@@ -58,7 +58,7 @@
 static NSString * const ContentKeyReportGroupKey = @"ContentKeyReportGroup";
 static NSString * const InitializationDataTypeKey = @"InitializationDataType";
 static const NSInteger SecurityLevelError = -42811;
-static const size_t kMaximumDeviceIdentifierSeedSize = 16;
+static const size_t kMaximumDeviceIdentifierSeedSize = 20;
 
 @interface WebCoreFPSContentKeySessionDelegate : NSObject <AVContentKeySessionDelegate>
 @end
