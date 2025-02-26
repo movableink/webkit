@@ -171,7 +171,7 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
         return handleError("Cannot request fullscreen with Escape key as current gesture."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
     // There is a previously-established user preference, security risk, or platform limitation.
-    if (!page() || !page()->isFullscreenManagerEnabled())
+    if (!page() || !page()->isDocumentFullscreenEnabled())
         return handleError("Fullscreen API is disabled."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
     bool hasKeyboardAccess = true;
@@ -275,7 +275,7 @@ ExceptionOr<void> DocumentFullscreen::willEnterFullscreen(Element& element, HTML
     }
 
     INFO_LOG(LOGIDENTIFIER);
-    ASSERT(page()->isFullscreenManagerEnabled());
+    ASSERT(page()->isDocumentFullscreenEnabled());
 
 #if ENABLE(VIDEO)
     if (RefPtr mediaElement = dynamicDowncast<HTMLMediaElement>(element))

@@ -5467,7 +5467,7 @@ void Page::setLastAuthentication(LoginStatus::AuthenticationType authType)
 }
 
 #if ENABLE(FULLSCREEN_API)
-bool Page::isFullscreenManagerEnabled() const
+bool Page::isDocumentFullscreenEnabled() const
 {
     Ref settings = protectedSettings();
     return settings->fullScreenEnabled() || settings->videoFullscreenRequiresElementFullscreen();

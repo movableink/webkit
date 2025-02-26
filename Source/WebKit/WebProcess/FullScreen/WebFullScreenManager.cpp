@@ -161,7 +161,7 @@ void WebFullScreenManager::setPIPStandbyElement(WebCore::HTMLVideoElement* pipSt
 
 bool WebFullScreenManager::supportsFullScreenForElement(const WebCore::Element& element, bool withKeyboard)
 {
-    if (!m_page->corePage()->isFullscreenManagerEnabled())
+    if (!m_page->corePage()->isDocumentFullscreenEnabled())
         return false;
 
 #if PLATFORM(IOS_FAMILY)
