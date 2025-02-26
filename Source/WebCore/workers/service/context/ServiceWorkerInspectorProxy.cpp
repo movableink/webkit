@@ -28,6 +28,7 @@
 
 #include "SWContextManager.h"
 #include "ScriptExecutionContext.h"
+#include "ServiceWorkerDebuggable.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerThreadProxy.h"
 #include "WorkerInspectorController.h"
@@ -35,6 +36,7 @@
 #include <JavaScriptCore/InspectorAgentBase.h>
 #include <JavaScriptCore/InspectorFrontendChannel.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
@@ -69,6 +71,28 @@ void ServiceWorkerInspectorProxy::connectToWorker(FrontendChannel& channel)
         downcast<WorkerGlobalScope>(context).inspectorController().connectFrontend();
     });
 }
+
+#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+
+void ServiceWorkerInspectorProxy::connectToWorker(FrontendChannel& channel, ServiceWorkerDebuggable& debuggable, bool isAutomaticConnection, bool immediatelyPause)
+{
+    m_channel = &channel;
+
+    RefPtr serviceWorkerThreadProxy = m_serviceWorkerThreadProxy.get();
+    SWContextManager::singleton().setAsInspected(serviceWorkerThreadProxy->identifier(), true);
+
+    ThreadSafeWeakPtr weakDebuggable = ThreadSafeWeakPtr { debuggable };
+    serviceWorkerThreadProxy->thread().runLoop().postDebuggerTask(
+        [weakDebuggable, isAutomaticConnection, immediatelyPause](ScriptExecutionContext& context) {
+            Function<void()> handleFrontendInitialized = [weakDebuggable] {
+                if (RefPtr debuggable = weakDebuggable.get())
+                    debuggable->unpauseForInitializedInspector();
+            };
+            downcast<WorkerGlobalScope>(context).inspectorController().connectFrontend(isAutomaticConnection, immediatelyPause, WTFMove(handleFrontendInitialized));
+        });
+}
+
+#endif
 
 void ServiceWorkerInspectorProxy::disconnectFromWorker(FrontendChannel& channel)
 {

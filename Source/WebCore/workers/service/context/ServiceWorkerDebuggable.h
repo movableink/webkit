@@ -53,6 +53,8 @@ public:
     void disconnect(Inspector::FrontendChannel&) final;
     void dispatchMessageFromRemote(String&& message) final;
 
+    bool automaticInspectionAllowed() const final { return true; }
+
 private:
     ServiceWorkerDebuggable(ServiceWorkerThreadProxy&, const ServiceWorkerContextData&);
 

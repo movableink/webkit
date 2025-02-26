@@ -100,6 +100,10 @@ public:
 
     WEBCORE_EXPORT void setInspectable(bool);
 
+#if ENABLE(REMOTE_INSPECTOR) && ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+    ServiceWorkerDebuggable& remoteDebuggable() { return m_remoteDebuggable; }
+#endif
+
     uint32_t checkedPtrCount() const { return CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::checkedPtrCount(); }
     uint32_t checkedPtrCountWithoutThreadCheck() const { return CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::checkedPtrCountWithoutThreadCheck(); }
     void incrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::incrementCheckedPtrCount(); }
@@ -110,6 +114,10 @@ private:
 
     WEBCORE_EXPORT static void networkStateChanged(bool isOnLine);
     bool postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&&, const String& mode);
+
+#if ENABLE(REMOTE_INSPECTOR) && ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+    void threadStartedRunningDebuggerTasks();
+#endif
 
     // WorkerLoaderProxy
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
