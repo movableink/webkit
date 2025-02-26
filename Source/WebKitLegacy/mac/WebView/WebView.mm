@@ -149,6 +149,7 @@
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/DisplayRefreshMonitorManager.h>
 #import <WebCore/Document.h>
+#import <WebCore/DocumentFullscreen.h>
 #import <WebCore/DocumentLoader.h>
 #import <WebCore/DragController.h>
 #import <WebCore/DragData.h>
@@ -169,7 +170,6 @@
 #import <WebCore/FrameLoader.h>
 #import <WebCore/FrameSelection.h>
 #import <WebCore/FrameTree.h>
-#import <WebCore/FullscreenManager.h>
 #import <WebCore/GCController.h>
 #import <WebCore/GameControllerGamepadProvider.h>
 #import <WebCore/GeolocationController.h>
@@ -3346,7 +3346,7 @@ IGNORE_WARNINGS_END
 
 #if ENABLE(FULLSCREEN_API)
     if (RefPtr document = core([frame DOMDocument]); document) {
-        if (CheckedPtr fullscreenManager = document->fullscreenManagerIfExists()) {
+        if (CheckedPtr fullscreenManager = document->fullscreenIfExists()) {
             if (RefPtr element = fullscreenManager->fullscreenElement()) {
                 SEL selector = @selector(webView:closeFullScreenWithListener:);
                 if ([_private->UIDelegate respondsToSelector:selector]) {

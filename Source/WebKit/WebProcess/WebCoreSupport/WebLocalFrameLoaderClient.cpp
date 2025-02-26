@@ -104,7 +104,7 @@
 #include <wtf/RuntimeApplicationChecks.h>
 
 #if ENABLE(FULLSCREEN_API)
-#include <WebCore/FullscreenManager.h>
+#include <WebCore/DocumentFullscreen.h>
 #endif
 
 #if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
@@ -567,12 +567,12 @@ void WebLocalFrameLoaderClient::dispatchDidStartProvisionalLoad()
 
 #if ENABLE(FULLSCREEN_API)
     RefPtr document = m_localFrame->document();
-    if (document && document->fullscreenManager().fullscreenElement()) {
+    if (document && document->fullscreen().fullscreenElement()) {
         Ref fullScreenManager = webPage->fullScreenManager();
         RefPtr element = fullScreenManager->element();
         fullScreenManager->exitFullScreenForElement(element.get(), [element] {
             if (element)
-                element->protectedDocument()->fullscreenManager().didExitFullscreen([](auto) { });
+                element->protectedDocument()->fullscreen().didExitFullscreen([](auto) { });
         });
     }
 #endif

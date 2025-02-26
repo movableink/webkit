@@ -38,6 +38,7 @@
 #include "ContainerNode.h"
 #include "ContentVisibilityDocumentState.h"
 #include "DebugPageOverlays.h"
+#include "DocumentFullscreen.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "DocumentMarkerController.h"
@@ -55,7 +56,6 @@
 #include "FrameLoader.h"
 #include "FrameSelection.h"
 #include "FrameTree.h"
-#include "FullscreenManager.h"
 #include "GraphicsContext.h"
 #include "HTMLBodyElement.h"
 #include "HTMLEmbedElement.h"
@@ -4548,11 +4548,11 @@ Color LocalFrameView::documentBackgroundColor() const
 
 #if ENABLE(FULLSCREEN_API)
     Color fullscreenBackgroundColor = [&] () -> Color {
-        CheckedPtr fullscreenManager = backgroundDocument->fullscreenManagerIfExists();
-        if (!fullscreenManager)
+        CheckedPtr documentFullscreen = backgroundDocument->fullscreenIfExists();
+        if (!documentFullscreen)
             return { };
 
-        RefPtr fullscreenElement = fullscreenManager->fullscreenElement();
+        RefPtr fullscreenElement = documentFullscreen->fullscreenElement();
         if (!fullscreenElement)
             return { };
 

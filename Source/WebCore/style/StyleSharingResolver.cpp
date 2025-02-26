@@ -26,10 +26,10 @@
 #include "config.h"
 #include "StyleSharingResolver.h"
 
+#include "DocumentFullscreen.h"
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "ElementRuleCollector.h"
-#include "FullscreenManager.h"
 #include "HTMLDialogElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"

@@ -369,7 +369,7 @@
 - (DOMElement *)webkitCurrentFullScreenElement
 {
     WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(WebCore::DocumentFullscreen::webkitCurrentFullScreenElement(*IMPL)));
+    return kit(WTF::getPtr(WebCore::DocumentFullscreen::webkitFullscreenElement(*IMPL)));
 }
 
 - (BOOL)webkitFullscreenEnabled

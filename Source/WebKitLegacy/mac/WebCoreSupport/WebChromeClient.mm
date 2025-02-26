@@ -62,11 +62,11 @@
 #import <WebCore/CookieConsentDecisionResult.h>
 #import <WebCore/Cursor.h>
 #import <WebCore/DataListSuggestionPicker.h>
+#import <WebCore/DocumentFullscreen.h>
 #import <WebCore/Element.h>
 #import <WebCore/FileChooser.h>
 #import <WebCore/FileIconLoader.h>
 #import <WebCore/FloatRect.h>
-#import <WebCore/FullscreenManager.h>
 #import <WebCore/GraphicsLayer.h>
 #import <WebCore/HTMLInputElement.h>
 #import <WebCore/HTMLNames.h>
@@ -260,9 +260,9 @@ RefPtr<Page> WebChromeClient::createWindow(LocalFrame& frame, const String& open
 
 #if ENABLE(FULLSCREEN_API)
     if (RefPtr document = frame.document()) {
-        if (CheckedPtr fullscreenManager = document->fullscreenManagerIfExists()) {
-            if (fullscreenManager->fullscreenElement())
-                fullscreenManager->fullyExitFullscreen();
+        if (CheckedPtr documentFullscreen = document->fullscreenIfExists()) {
+            if (documentFullscreen->fullscreenElement())
+                documentFullscreen->fullyExitFullscreen();
         }
     }
 #endif

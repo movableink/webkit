@@ -82,7 +82,7 @@
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-#include "FullscreenManager.h"
+#include "DocumentFullscreen.h"
 #endif
 
 namespace WebCore {
@@ -744,7 +744,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         if (hasInertAttribute(element))
             return true;
 #if ENABLE(FULLSCREEN_API)
-        if (CheckedPtr fullscreenManager = m_document->fullscreenManagerIfExists(); fullscreenManager && fullscreenManager->fullscreenElement() && element == m_document->documentElement())
+        if (CheckedPtr documentFullscreen = m_document->fullscreenIfExists(); documentFullscreen && documentFullscreen->fullscreenElement() && element == m_document->documentElement())
             return true;
 #endif
         return false;
@@ -758,7 +758,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setEffectiveInert(false);
 
 #if ENABLE(FULLSCREEN_API)
-        if (CheckedPtr fullscreenManager = m_document->fullscreenManagerIfExists(); fullscreenManager && m_element == fullscreenManager->fullscreenElement() && !hasInertAttribute(m_element.get()))
+        if (CheckedPtr documentFullscreen = m_document->fullscreenIfExists(); documentFullscreen && m_element == documentFullscreen->fullscreenElement() && !hasInertAttribute(m_element.get()))
             style.setEffectiveInert(false);
 #endif
 
@@ -1025,9 +1025,9 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
         }
     }
 #if ENABLE(FULLSCREEN_API)
-    if (CheckedPtr fullscreenManager = m_document->fullscreenManagerIfExists(); fullscreenManager && m_document->quirks().needsFullscreenObjectFitQuirk()) {
+    if (CheckedPtr documentFullscreen = m_document->fullscreenIfExists(); documentFullscreen && m_document->quirks().needsFullscreenObjectFitQuirk()) {
         static MainThreadNeverDestroyed<const AtomString> playerClassName("top-player-video-element"_s);
-        bool isFullscreen = fullscreenManager->isFullscreen();
+        bool isFullscreen = documentFullscreen->isFullscreen();
         if (is<HTMLVideoElement>(*m_element) && isFullscreen && m_element->hasClassName(playerClassName) && style.objectFit() == ObjectFit::Fill)
             style.setObjectFit(ObjectFit::Contain);
     }

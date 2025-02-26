@@ -280,6 +280,7 @@ dom/ComposedTreeIterator.h
 dom/ContainerNodeAlgorithms.cpp
 dom/Document.cpp
 dom/DocumentFragment.cpp
+dom/DocumentFullscreen.cpp
 dom/DocumentStorageAccess.cpp
 dom/Element.cpp
 dom/ElementAndTextDescendantIterator.h
@@ -289,7 +290,6 @@ dom/ElementTraversal.h
 dom/EventPath.cpp
 dom/FragmentDirectiveGenerator.cpp
 dom/FragmentDirectiveRangeFinder.cpp
-dom/FullscreenManager.cpp
 dom/InlineStyleSheetOwner.cpp
 dom/KeyboardEvent.cpp
 dom/MessagePort.cpp

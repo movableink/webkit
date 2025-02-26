@@ -33,7 +33,7 @@
 #include "CanvasRenderingContext.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "FullscreenManager.h"
+#include "DocumentFullscreen.h"
 #include "GraphicsLayer.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLIFrameElement.h"
@@ -3258,7 +3258,7 @@ bool RenderLayerCompositor::canBeComposited(const RenderLayer& layer) const
 enum class FullScreenDescendant { Yes, No, NotApplicable };
 static FullScreenDescendant isDescendantOfFullScreenLayer(const RenderLayer& layer)
 {
-    CheckedPtr manager = layer.renderer().document().fullscreenManagerIfExists();
+    CheckedPtr manager = layer.renderer().document().fullscreenIfExists();
     if (!manager)
         return FullScreenDescendant::NotApplicable;
 

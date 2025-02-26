@@ -130,6 +130,7 @@ class DeviceOrientationClient;
 class DeviceOrientationController;
 class DocumentFontLoader;
 class DocumentFragment;
+class DocumentFullscreen;
 class DocumentLoader;
 class DocumentMarkerController;
 class DocumentParser;
@@ -148,7 +149,6 @@ class FontFaceSet;
 class FontLoadRequest;
 class FormController;
 class FrameSelection;
-class FullscreenManager;
 class Frame;
 class GPUCanvasContext;
 class GraphicsClient;
@@ -1406,12 +1406,12 @@ public:
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-    FullscreenManager* fullscreenManagerIfExists() { return m_fullscreenManager.get(); }
-    const FullscreenManager* fullscreenManagerIfExists() const { return m_fullscreenManager.get(); }
-    WEBCORE_EXPORT FullscreenManager& fullscreenManager();
-    WEBCORE_EXPORT const FullscreenManager& fullscreenManager() const;
-    CheckedRef<FullscreenManager> checkedFullscreenManager(); // Defined in DocumentInlines.h.
-    CheckedRef<const FullscreenManager> checkedFullscreenManager() const; // Defined in DocumentInlines.h.
+    DocumentFullscreen* fullscreenIfExists() { return m_fullscreen.get(); }
+    const DocumentFullscreen* fullscreenIfExists() const { return m_fullscreen.get(); }
+    WEBCORE_EXPORT DocumentFullscreen& fullscreen();
+    WEBCORE_EXPORT const DocumentFullscreen& fullscreen() const;
+    CheckedRef<DocumentFullscreen> checkedFullscreen(); // Defined in DocumentInlines.h.
+    CheckedRef<const DocumentFullscreen> checkedFullscreen() const; // Defined in DocumentInlines.h.
 #endif
 
 #if ENABLE(POINTER_LOCK)
@@ -2018,7 +2018,7 @@ private:
     VisitedLinkState& ensureVisitedLinkState();
     ScriptRunner& ensureScriptRunner();
     ScriptModuleLoader& ensureModuleLoader();
-    WEBCORE_EXPORT FullscreenManager& ensureFullscreenManager();
+    WEBCORE_EXPORT DocumentFullscreen& ensureFullscreen();
     inline DocumentFontLoader& fontLoader();
     Ref<DocumentFontLoader> protectedFontLoader();
     DocumentFontLoader& ensureFontLoader();
@@ -2324,7 +2324,7 @@ private:
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-    const std::unique_ptr<FullscreenManager> m_fullscreenManager;
+    const std::unique_ptr<DocumentFullscreen> m_fullscreen;
 #endif
 
     WeakHashSet<HTMLImageElement, WeakPtrImplWithEventTargetData> m_dynamicMediaQueryDependentImages;

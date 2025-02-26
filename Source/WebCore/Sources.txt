@@ -1276,7 +1276,6 @@ dom/FragmentDirectiveGenerator.cpp
 dom/FragmentDirectiveRangeFinder.cpp
 dom/FragmentDirectiveParser.cpp
 dom/FragmentDirectiveUtilities.cpp
-dom/FullscreenManager.cpp
 dom/GCReachableRef.cpp
 dom/HashChangeEvent.cpp
 dom/IdTargetObserver.cpp

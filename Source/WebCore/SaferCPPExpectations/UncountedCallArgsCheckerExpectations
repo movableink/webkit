@@ -546,6 +546,8 @@ dom/DataTransferItemList.cpp
 dom/Document.cpp
 dom/DocumentFontLoader.cpp
 dom/DocumentFragment.cpp
+dom/DocumentFullscreen.cpp
+dom/DocumentFullscreen.h
 dom/DocumentInlines.h
 dom/DocumentOrShadowRootFullscreen.cpp
 dom/DocumentStorageAccess.cpp
@@ -558,8 +560,6 @@ dom/EmptyScriptExecutionContext.h
 dom/EventPath.cpp
 dom/ExtensionStyleSheets.cpp
 dom/FragmentDirectiveRangeFinder.cpp
-dom/FullscreenManager.cpp
-dom/FullscreenManager.h
 dom/GCReachableRef.h
 dom/IdleCallbackController.cpp
 dom/IdleDeadline.cpp
