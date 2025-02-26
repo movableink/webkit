@@ -1,7 +1,6 @@
 NetworkProcess/Downloads/Download.cpp
 NetworkProcess/Downloads/DownloadManager.cpp
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
-NetworkProcess/PingLoad.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/C/mac/WKPagePrivateMac.mm
