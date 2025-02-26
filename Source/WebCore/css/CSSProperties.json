@@ -7638,10 +7638,7 @@
                 "auto",
                 "balance",
                 "stable",
-                {
-                    "value": "pretty",
-                    "settings-flag": "cssTextWrapPrettyEnabled"
-                },
+                "pretty",
                 {
                     "value": "avoid-orphans",
                     "status": "unimplemented"
