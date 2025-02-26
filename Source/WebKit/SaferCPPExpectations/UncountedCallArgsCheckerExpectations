@@ -4,9 +4,6 @@ AutomationProtocolObjects.h
 NetworkProcess/Downloads/DownloadManager.cpp
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/Downloads/cocoa/WKDownloadProgress.mm
-NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp
-NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementManager.cpp
-NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementPersistentStore.cpp
 NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
 NetworkProcess/cache/NetworkCacheSpeculativeLoad.cpp
 Platform/IPC/ArgumentCoders.h
