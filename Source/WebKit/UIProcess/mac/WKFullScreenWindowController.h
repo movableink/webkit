@@ -26,6 +26,7 @@
 #if ENABLE(FULLSCREEN_API) && PLATFORM(MAC)
 
 #import <AppKit/AppKit.h>
+#import <WebCore/BoxExtents.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
