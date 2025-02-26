@@ -1116,8 +1116,17 @@ void RenderThemeMac::setSearchFieldSize(RenderStyle& style) const
     setSizeFromFont(style, searchFieldSizes());
 }
 
-void RenderThemeMac::adjustSearchFieldStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSearchFieldStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustSearchFieldStyle(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     // Override border.
     style.resetBorder();
     const short borderWidth = 2 * style.usedZoom();

@@ -220,8 +220,10 @@ void RenderThemeIOS::adjustRadioStyle(RenderStyle& style, const Element* element
 void RenderThemeIOS::adjustTextFieldStyle(RenderStyle& style, const Element* element) const
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (adjustTextFieldStyleForCatalyst(style, element))
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustTextFieldStyle(style, element);
         return;
+    }
 #endif
 
     if (!element)
@@ -314,8 +316,10 @@ void RenderThemeIOS::paintTextFieldDecorations(const RenderBox& box, const Paint
 void RenderThemeIOS::adjustTextAreaStyle(RenderStyle& style, const Element* element) const
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (adjustTextAreaStyleForCatalyst(style, element))
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustTextAreaStyle(style, element);
         return;
+    }
 #endif
 
     if (!element)
@@ -834,11 +838,13 @@ int RenderThemeIOS::sliderTickOffsetFromTrackCenter() const
 void RenderThemeIOS::adjustSearchFieldStyle(RenderStyle& style, const Element* element) const
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (adjustSearchFieldStyleForCatalyst(style, element))
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustSearchFieldStyle(style, element);
         return;
+    }
 #endif
 
-    RenderThemeCocoa::adjustSearchFieldStyle(style, element);
+    RenderTheme::adjustSearchFieldStyle(style, element);
 
     if (!element)
         return;
@@ -851,19 +857,6 @@ void RenderThemeIOS::adjustSearchFieldStyle(RenderStyle& style, const Element* e
         return;
 
     adjustRoundBorderRadius(style, *box);
-}
-
-bool RenderThemeIOS::paintSearchField(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
-{
-#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (paintSearchFieldForCatalyst(renderer, paintInfo, rect))
-        return false;
-#else
-    UNUSED_PARAM(renderer);
-    UNUSED_PARAM(paintInfo);
-    UNUSED_PARAM(rect);
-#endif
-    return true;
 }
 
 void RenderThemeIOS::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)

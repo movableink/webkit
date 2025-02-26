@@ -38,6 +38,7 @@
 #import "HTMLMeterElement.h"
 #import "HTMLOptionElement.h"
 #import "ImageBuffer.h"
+#import "NodeRenderStyle.h"
 #import "Page.h"
 #import "RenderButton.h"
 #import "RenderMenulist.h"
