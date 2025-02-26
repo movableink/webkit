@@ -98,7 +98,7 @@ private:
     uint64_t messageSenderDestinationID() const override;
 
 private:
-    Ref<NetworkLoad> m_networkLoad;
+    const Ref<NetworkLoad> m_networkLoad;
     RefPtr<IPC::Connection> m_parentProcessConnection;
     bool m_isAllowedToAskUserForCredentials;
     bool m_isDownloadCancelled = false;

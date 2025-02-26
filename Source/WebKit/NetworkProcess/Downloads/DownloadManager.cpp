@@ -26,6 +26,7 @@
 #include "config.h"
 #include "DownloadManager.h"
 
+#include "AuthenticationManager.h"
 #include "Download.h"
 #include "DownloadProxyMessages.h"
 #include "MessageSenderInlines.h"
@@ -182,6 +183,11 @@ IPC::Connection* DownloadManager::downloadProxyConnection()
 AuthenticationManager& DownloadManager::downloadsAuthenticationManager()
 {
     return protectedClient()->downloadsAuthenticationManager();
+}
+
+Ref<AuthenticationManager> WebKit::DownloadManager::Client::protectedDownloadsAuthenticationManager()
+{
+    return downloadsAuthenticationManager();
 }
 
 void DownloadManager::applicationDidEnterBackground()
