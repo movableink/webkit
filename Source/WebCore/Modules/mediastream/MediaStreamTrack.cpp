@@ -103,6 +103,7 @@ MediaStreamTrack::MediaStreamTrack(ScriptExecutionContext& context, Ref<MediaStr
 MediaStreamTrack::~MediaStreamTrack()
 {
     m_private->removeObserver(*this);
+    stopTrack();
 
     if (!isCaptureTrack())
         return;
@@ -592,7 +593,7 @@ void MediaStreamTrack::suspend(ReasonForSuspension reason)
 
 bool MediaStreamTrack::virtualHasPendingActivity() const
 {
-    return !m_ended;
+    return !m_ended && hasEventListeners();
 }
 
 #if ENABLE(WEB_AUDIO)

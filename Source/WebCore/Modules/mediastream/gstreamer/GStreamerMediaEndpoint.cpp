@@ -1326,7 +1326,7 @@ MediaStream& GStreamerMediaEndpoint::mediaStreamFromRTCStream(String mediaStream
 {
     auto mediaStream = m_remoteStreamsById.ensure(mediaStreamId, [&] {
         auto& document = downcast<Document>(*m_peerConnectionBackend.connection().scriptExecutionContext());
-        return MediaStream::create(document, MediaStreamPrivate::create(document.logger(), { }, WTFMove(mediaStreamId)));
+        return MediaStream::create(document, MediaStreamPrivate::create(document.logger(), { }, WTFMove(mediaStreamId)), MediaStream::AllowEventTracks::Yes);
     });
     return *mediaStream.iterator->value;
 }

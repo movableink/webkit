@@ -335,7 +335,7 @@ MediaStream& LibWebRTCMediaEndpoint::mediaStreamFromRTCStreamId(const String& id
 {
     auto mediaStream = m_remoteStreamsById.ensure(id, [id, this]() {
         auto& document = downcast<Document>(*protectedPeerConnectionBackend()->connection().scriptExecutionContext());
-        auto stream = MediaStream::create(document, MediaStreamPrivate::create(document.logger(), { }, String(id)));
+        auto stream = MediaStream::create(document, MediaStreamPrivate::create(document.logger(), { }, String(id)), MediaStream::AllowEventTracks::Yes);
         return stream;
     });
     return *mediaStream.iterator->value;
@@ -475,8 +475,10 @@ void LibWebRTCMediaEndpoint::stop()
 
     m_backend->Close();
     m_backend = nullptr;
+
+    for (RefPtr stream : m_remoteStreamsById.values())
+        stream->inactivate();
     m_remoteStreamsById.clear();
-    m_remoteStreamsFromRemoteTrack.clear();
 }
 
 void LibWebRTCMediaEndpoint::OnNegotiationNeededEvent(uint32_t eventId)
