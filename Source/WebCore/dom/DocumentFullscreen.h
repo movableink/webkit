@@ -51,7 +51,7 @@ public:
     // Document+Fullscreen.idl methods.
     static void exitFullscreen(Document&, RefPtr<DeferredPromise>&&);
     static bool fullscreenEnabled(Document&);
-    static bool webkitFullscreenEnabled(Document& document) { return document.fullscreen().isFullscreenEnabled(); }
+    static bool webkitFullscreenEnabled(Document& document) { return document.fullscreen().enabledByPermissionsPolicy(); }
     static Element* webkitFullscreenElement(Document& document) { return document.ancestorElementInThisScope(document.fullscreen().protectedFullscreenElement().get()); };
     WEBCORE_EXPORT static void webkitExitFullscreen(Document&);
     static bool webkitIsFullScreen(Document& document) { return document.fullscreen().isFullscreen(); };
@@ -71,7 +71,7 @@ public:
     // WHATWG Fullscreen API.
     WEBCORE_EXPORT Element* fullscreenElement() const;
     RefPtr<Element> protectedFullscreenElement() const { return fullscreenElement(); }
-    WEBCORE_EXPORT bool isFullscreenEnabled() const;
+    WEBCORE_EXPORT bool enabledByPermissionsPolicy() const;
     WEBCORE_EXPORT void exitFullscreen(CompletionHandler<void(ExceptionOr<void>)>&&);
     WEBCORE_EXPORT void fullyExitFullscreen();
 

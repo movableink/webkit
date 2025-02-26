@@ -1865,7 +1865,7 @@ gboolean webkit_dom_document_get_webkit_fullscreen_enabled(WebKitDOMDocument* se
     g_return_val_if_fail(WEBKIT_DOM_IS_DOCUMENT(self), FALSE);
 #if ENABLE(FULLSCREEN_API)
     WebCore::Document* item = WebKit::core(self);
-    gboolean result = item->fullscreen().isFullscreenEnabled();
+    gboolean result = item->fullscreen().enabledByPermissionsPolicy();
     return result;
 #else
     return FALSE;

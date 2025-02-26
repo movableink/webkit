@@ -79,10 +79,10 @@ bool DocumentFullscreen::fullscreenEnabled(Document& document)
 {
     if (!document.isFullyActive())
         return false;
-    return document.checkedFullscreen()->isFullscreenEnabled();
+    return document.checkedFullscreen()->enabledByPermissionsPolicy();
 }
 
-bool DocumentFullscreen::isFullscreenEnabled() const
+bool DocumentFullscreen::enabledByPermissionsPolicy() const
 {
     // The fullscreenEnabled attribute must return true if the context object and all ancestor
     // browsing context's documents have their fullscreen enabled flag set, or false otherwise.
