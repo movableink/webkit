@@ -436,6 +436,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
 #if USE(GSTREAMER)
     SetOrientationForMediaCapture(uint64_t rotation)
     SetMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted)
+    TriggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
 #endif
 #endif
 

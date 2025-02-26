@@ -89,7 +89,6 @@ void GStreamerCapturer::tearDown(bool disconnectSignals)
     if (!disconnectSignals)
         return;
 
-    m_sink = nullptr;
     m_valve = nullptr;
     m_src = nullptr;
     m_capsfilter = nullptr;
@@ -98,6 +97,30 @@ void GStreamerCapturer::tearDown(bool disconnectSignals)
 
 GStreamerCapturerObserver::~GStreamerCapturerObserver()
 {
+}
+
+void GStreamerCapturer::setDevice(std::optional<GStreamerCaptureDevice>&& device)
+{
+    if (device)
+        GST_DEBUG_OBJECT(m_pipeline.get(), "Setting new capture device: %s", device->label().utf8().data());
+    else
+        GST_DEBUG_OBJECT(m_pipeline.get(), "Clearing capture device");
+    tearDown(true);
+    m_device = WTFMove(device);
+
+    if (UNLIKELY(!m_device))
+        return;
+
+    setupPipeline();
+    start();
+
+#ifndef GST_DISABLE_GST_DEBUG
+    auto totalObservers = m_observers.computeSize();
+    GST_DEBUG_OBJECT(m_pipeline.get(), "Notifying %u observers that the capture device changed", totalObservers);
+#endif
+    forEachObserver([&](auto& observer) {
+        observer.captureDeviceUpdated(*m_device);
+    });
 }
 
 void GStreamerCapturer::addObserver(GStreamerCapturerObserver& observer)
@@ -207,7 +230,8 @@ void GStreamerCapturer::setupPipeline()
     m_valve = makeElement("valve");
     m_capsfilter = makeElement("capsfilter");
     auto queue = gst_element_factory_make("queue", nullptr);
-    m_sink = makeElement("appsink");
+    if (!m_sink)
+        m_sink = makeElement("appsink");
 
     gst_util_set_object_arg(G_OBJECT(m_capsfilter.get()), "caps-change-mode", "delayed");
 

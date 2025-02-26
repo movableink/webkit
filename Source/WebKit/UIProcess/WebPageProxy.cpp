@@ -14985,6 +14985,11 @@ void WebPageProxy::setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bo
 {
     send(Messages::WebPage::SetMockCaptureDevicesInterrupted(isCameraInterrupted, isMicrophoneInterrupted));
 }
+
+void WebPageProxy::triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
+{
+    send(Messages::WebPage::TriggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay));
+}
 #endif
 
 void WebPageProxy::getLoadedSubresourceDomains(CompletionHandler<void(Vector<RegistrableDomain>&&)>&& completionHandler)

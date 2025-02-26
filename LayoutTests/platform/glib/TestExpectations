@@ -2214,9 +2214,6 @@ webkit.org/b/265860 imported/w3c/web-platform-tests/webrtc-stats/supported-stats
 
 webkit.org/b/262989 imported/w3c/web-platform-tests/webrtc-stats/hardware-capability-stats.https.html [ Failure ]
 
-# This ends up calling WKPageTriggerMockMicrophoneConfigurationChange which is specific to GPUProcess.
-fast/mediastream/mediastreamtrack-configurationchange.html [ Skip ]
-
 fast/mediastream/video-rotation2.html [ Failure Pass Timeout ]
 
 # Regressions introduced by https://commits.webkit.org/263750@main
@@ -2246,6 +2243,7 @@ webkit.org/b/256758 fast/mediastream/captureStream/canvas3d.html [ Failure ]
 
 webkit.org/b/194611 http/wpt/webrtc/getUserMedia-processSwapping.html [ Failure ]
 
+# These tests are macOS-specific. In Linux changing the PipeWire capture source on the fly is not supported.
 fast/mediastream/getDisplayMedia-max-constraints4.html [ Skip ]
 fast/mediastream/getDisplayMedia-max-constraints5.html [ Skip ]
 

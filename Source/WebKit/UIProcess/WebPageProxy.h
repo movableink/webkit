@@ -2240,6 +2240,7 @@ public:
 
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
+    void triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay);
 #endif
 
     bool isHandlingPreventableTouchStart() const { return m_handlingPreventableTouchStartCount; }

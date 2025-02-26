@@ -47,6 +47,7 @@ public:
 
     virtual void sourceCapsChanged(const GstCaps*) { }
     virtual void captureEnded() { }
+    virtual void captureDeviceUpdated(const GStreamerCaptureDevice&) { }
 };
 
 class GStreamerCapturer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<GStreamerCapturer> {
@@ -56,6 +57,8 @@ public:
     virtual ~GStreamerCapturer();
 
     void tearDown(bool disconnectSignals = true);
+
+    void setDevice(std::optional<GStreamerCaptureDevice>&&);
 
     void addObserver(GStreamerCapturerObserver&);
     void removeObserver(GStreamerCapturerObserver&);

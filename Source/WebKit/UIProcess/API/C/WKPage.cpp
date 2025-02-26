@@ -3377,7 +3377,11 @@ void WKPageTriggerMockCaptureConfigurationChange(WKPageRef pageRef, bool forCame
 {
     CRASH_IF_SUSPENDED;
 #if ENABLE(MEDIA_STREAM)
+#if USE(GSTREAMER)
+    toImpl(pageRef)->triggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay);
+#else
     MockRealtimeMediaSourceCenter::singleton().triggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay);
+#endif // USE(GSTREAMER)
 
 #if ENABLE(GPU_PROCESS)
     auto preferences = toImpl(pageRef)->protectedPreferences();

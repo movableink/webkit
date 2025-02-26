@@ -1497,6 +1497,7 @@ public:
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
     void setOrientationForMediaCapture(uint64_t rotation);
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
+    void triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay);
 #endif
 
     void addUserScript(String&& source, InjectedBundleScriptWorld&, WebCore::UserContentInjectedFrames, WebCore::UserScriptInjectionTime);

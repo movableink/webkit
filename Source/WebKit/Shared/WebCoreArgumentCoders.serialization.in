@@ -6522,6 +6522,7 @@ header: <WebCore/MockMediaDevice.h>
     String persistentId;
     String label;
     OptionSet<WebCore::MockMediaDevice::Flag> flags;
+    bool isDefault;
     std::variant<WebCore::MockMicrophoneProperties, WebCore::MockSpeakerProperties, WebCore::MockCameraProperties, WebCore::MockDisplayProperties> properties;
 };
 

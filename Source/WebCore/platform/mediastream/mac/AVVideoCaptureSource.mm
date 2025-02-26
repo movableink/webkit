@@ -440,9 +440,7 @@ void AVVideoCaptureSource::configurationChanged()
     m_currentSettings = { };
     m_capabilities = { };
 
-    forEachObserver([](auto& observer) {
-        observer.sourceConfigurationChanged();
-    });
+    RealtimeMediaSource::configurationChanged();
 }
 
 static bool isZoomSupported(const Vector<VideoPreset>& presets)
