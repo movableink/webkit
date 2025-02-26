@@ -277,6 +277,9 @@ set(WTF_PUBLIC_HEADERS
     Seconds.h
     SegmentedVector.h
     SentinelLinkedList.h
+    SequesteredAllocator.h
+    SequesteredImmortalHeap.h
+    SequesteredMalloc.h
     SetForScope.h
     SharedTask.h
     SignedPtr.h
@@ -573,6 +576,9 @@ set(WTF_SOURCES
     SafeStrerror.cpp
     Seconds.cpp
     SegmentedVector.cpp
+    SequesteredAllocator.cpp
+    SequesteredImmortalHeap.cpp
+    SequesteredMalloc.cpp
     SixCharacterHash.cpp
     SmallSet.cpp
     StackBounds.cpp

@@ -12671,7 +12671,7 @@
 		};
 		5D5D8ABF0E0D0B0300F9C692 /* Create /usr/local/bin/jsc symlink */ = {
 			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
+			buildActionMask = 8;
 			files = (
 			);
 			inputPaths = (
@@ -12872,7 +12872,7 @@
 		};
 		F4CDF3C927E9147500191928 /* Copy Profiling Data */ = {
 			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 12;
+			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
