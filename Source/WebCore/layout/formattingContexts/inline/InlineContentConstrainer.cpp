@@ -42,25 +42,24 @@ namespace Layout {
 // used decreases. So, we ignore this ideal number of lines requirement beyond this threshold.
 static const size_t maximumLinesToBalanceWithLineRequirement { 12 };
 
-// TODO: Tweak these values to make pretty look nicer.
 // Define the penalty associated with show text wider/narrower than ideal bounds.
 // Separating stretchability and shrinkability allows us to weight under/over
 // filling the ideal bounds differently.
-static const InlineLayoutUnit textWrapPrettyStretchability = 10;
-static const InlineLayoutUnit textWrapPrettyShrinkability = 10;
+static const InlineLayoutUnit textWrapPrettyStretchability = 15;
+static const InlineLayoutUnit textWrapPrettyShrinkability = 15;
 
-// TODO: Tweak these values to make pretty look nicer.
 // Defines the maximum shrink/stretch factor allowed for text-wrap-pretty.
-static const float textWrapPrettyMaxStretch = 2;
-static const float textWrapPrettyMaxShrink = 2;
+static const float textWrapPrettyMaxStretch = 3;
+static const float textWrapPrettyMaxShrink = 3;
 
 // We would like 2 or more items on the last line for text-wrap-style:pretty to avoid orphans.
 static const size_t lastLinePreferredInlineItemCount = 2;
 
 // Use auto layout if ideal line width is too short relative to the largest inline item.
+// In these situations, text-wrap-pretty does very little of note other than take up time.
 static bool validIdealLineWidth(InlineLayoutUnit maxItemWidth, InlineLayoutUnit idealLineWidth)
 {
-    return idealLineWidth >= maxItemWidth * 2;
+    return idealLineWidth >= maxItemWidth * 3;
 }
 
 static bool validLineWidthPretty(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth)
@@ -89,8 +88,8 @@ static float computeCostPretty(InlineLayoutUnit candidateLineWidth, InlineLayout
 {
     // FIXME: add support for river minimization.
     if (breakIndex == numberOfBreakOpportunities - lastLinePreferredInlineItemCount) {
-        // Allow a slightly shorter next-to-last line if doing so would yield a final line with lastLinePreferredInlineItemCount inline items.
-        const auto minimumLastLineWidth = lastLineWidth - textWrapPrettyShrinkability * textWrapPrettyMaxShrink;
+        // Allow a shorter next-to-last line if doing so would yield a final line with lastLinePreferredInlineItemCount inline items.
+        const auto minimumLastLineWidth = lastLineWidth - 2 * textWrapPrettyShrinkability * textWrapPrettyMaxShrink;
         if (candidateLineWidth < minimumLastLineWidth)
             return std::numeric_limits<float>::infinity();
         return 0;
@@ -99,8 +98,7 @@ static float computeCostPretty(InlineLayoutUnit candidateLineWidth, InlineLayout
     // (lines that have more than one word but are still sufficiently short to appear like an orphan)
     if (breakIndex == numberOfBreakOpportunities - 1) {
         const auto minimumLastLineWidth = lastLineWidth * 0.2;
-        const auto maximumLastLineWidth = lastLineWidth + textWrapPrettyStretchability * textWrapPrettyMaxStretch;
-        if (candidateLineWidth < minimumLastLineWidth || candidateLineWidth > maximumLastLineWidth)
+        if (candidateLineWidth < minimumLastLineWidth)
             return std::numeric_limits<float>::infinity();
         return 0;
     }
