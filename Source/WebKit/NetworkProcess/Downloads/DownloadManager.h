@@ -123,6 +123,7 @@ public:
     AuthenticationManager& downloadsAuthenticationManager();
     
     Client& client() { return m_client; }
+    Ref<Client> protectedClient() { return m_client.get(); }
 
 private:
     CheckedRef<Client> m_client;
