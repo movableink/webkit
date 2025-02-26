@@ -1936,6 +1936,8 @@ set(CRYPTO_SOURCES_ASM
   Source/third_party/boringssl/src/gen/crypto/chacha20_poly1305_x86_64-linux.S
   Source/third_party/boringssl/src/third_party/fiat/asm/fiat_curve25519_adx_mul.S
   Source/third_party/boringssl/src/third_party/fiat/asm/fiat_curve25519_adx_square.S
+  Source/third_party/boringssl/src/third_party/fiat/asm/fiat_p256_adx_sqr.S
+  Source/third_party/boringssl/src/third_party/fiat/asm/fiat_p256_adx_mul.S
 )
 
 perlasm(CRYPTO_SOURCES aarch64 chacha/chacha-armv8 ${CRYPTO_PATH}/chacha/asm/chacha-armv8.pl)
