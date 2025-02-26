@@ -1201,7 +1201,7 @@ private:
         for (BasicBlock* block : m_code) {
             for (Inst& inst : block->insts()) {
                 inst.forEachArg([&](Arg& arg, Arg::Role, Bank, Width) {
-                    if (arg.isTmp() && arg.tmp().bank() != bank && inst.admitsStack(arg))
+                    if (arg.isTmp() && (arg.tmp().bank() != bank || inst.admitsStack(arg)))
                         return;
                     // Arg cannot be spilled in-place.
                     arg.forEachTmpFast([&](Tmp& tmp) {
