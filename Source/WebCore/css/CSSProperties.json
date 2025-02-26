@@ -11626,6 +11626,19 @@
                 "url": "https://drafts.csswg.org/css-anchor-position-1/#position-area"
             }
         },
+        "position-try": {
+            "codegen-properties": {
+                "longhands": [
+                    "position-try-order",
+                    "position-try-fallbacks"
+                ],
+                "settings-flag": "cssAnchorPositioningEnabled"
+            },
+            "specification": {
+                "category": "css-anchor-position",
+                "url": "https://drafts.csswg.org/css-anchor-position-1/#position-try-prop"
+            }
+        },
         "position-try-order": {
             "animation-type": "discrete",
             "initial": "normal",

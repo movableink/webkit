@@ -162,6 +162,7 @@ private:
     bool consumeTextWrapShorthand(bool important);
     bool consumeWhiteSpaceShorthand(bool important);
 
+    bool consumePositionTryShorthand(bool important);
 private:
     // Inputs:
     CSSParserTokenRange m_range;

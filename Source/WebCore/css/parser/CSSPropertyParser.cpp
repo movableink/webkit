@@ -1312,6 +1312,10 @@ static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)
         return InitialNumericValue { 50, CSSUnitType::CSS_PERCENTAGE };
     case CSSPropertyPosition:
         return CSSValueStatic;
+    case CSSPropertyPositionTryOrder:
+        return CSSValueNormal;
+    case CSSPropertyPositionTryFallbacks:
+        return CSSValueNone;
     case CSSPropertyPrintColorAdjust:
         return CSSValueEconomy;
     case CSSPropertyScrollTimelineAxis:
@@ -3018,6 +3022,18 @@ bool CSSPropertyParser::consumeViewTimelineShorthand(bool important)
     return true;
 }
 
+bool CSSPropertyParser::consumePositionTryShorthand(bool important)
+{
+    auto order = parseSingleValue(CSSPropertyPositionTryOrder);
+    auto fallbacks = parseSingleValue(CSSPropertyPositionTryFallbacks);
+    if (!fallbacks)
+        return false;
+
+    addProperty(CSSPropertyPositionTryOrder, CSSPropertyPositionTry, WTFMove(order), important);
+    addProperty(CSSPropertyPositionTryFallbacks, CSSPropertyPositionTry, WTFMove(fallbacks), important);
+    return true;
+}
+
 bool CSSPropertyParser::parseShorthand(CSSPropertyID property, bool important)
 {
     switch (property) {
@@ -3245,6 +3261,8 @@ bool CSSPropertyParser::parseShorthand(CSSPropertyID property, bool important)
         return consumeWhiteSpaceShorthand(important);
     case CSSPropertyAnimationRange:
         return consumeAnimationRangeShorthand(important);
+    case CSSPropertyPositionTry:
+        return consumePositionTryShorthand(important);
     default:
         return false;
     }

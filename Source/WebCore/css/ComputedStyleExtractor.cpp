@@ -5012,6 +5012,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         return valueForScopedName(*style.positionAnchor());
     case CSSPropertyPositionArea:
         return valueForPositionArea(style.positionArea());
+    case CSSPropertyPositionTry:
+        if (style.positionTryOrder() == RenderStyle::initialPositionTryOrder())
+            return valueForPositionTryFallbacks(style.positionTryFallbacks());
+        return getCSSPropertyValuesForShorthandProperties(positionTryShorthand());
     case CSSPropertyPositionTryFallbacks:
         return valueForPositionTryFallbacks(style.positionTryFallbacks());
     case CSSPropertyPositionTryOrder: {

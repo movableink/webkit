@@ -4231,6 +4231,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         CSSPropertyPlaceContent,
         CSSPropertyPlaceItems,
         CSSPropertyPlaceSelf,
+        CSSPropertyPositionTry,
         CSSPropertyWebkitTextStroke,
         CSSPropertyColumnRule,
         CSSPropertyWebkitBorderRadius,
