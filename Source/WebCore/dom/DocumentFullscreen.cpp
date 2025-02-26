@@ -365,21 +365,19 @@ bool DocumentFullscreen::isSimpleFullscreenDocument() const
 static Vector<Ref<Document>> documentsToUnfullscreen(Frame& firstFrame)
 {
     Vector<Ref<Document>> documents;
-    if (RefPtr localFirstFrame = dynamicDowncast<LocalFrame>(firstFrame); localFirstFrame && localFirstFrame->document())
-        documents.append(*localFirstFrame->document());
-    for (RefPtr frame = firstFrame.tree().parent(); frame; frame = frame->tree().parent()) {
+    for (RefPtr frame = &firstFrame; frame; frame = frame->tree().parent()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
         RefPtr document = localFrame->document();
         if (!document)
             continue;
+        documents.append(*document);
         ASSERT(document->fullscreen().fullscreenElement());
         if (!document->fullscreen().isSimpleFullscreenDocument())
             break;
         if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(document->ownerElement()); iframe && iframe->hasIFrameFullscreenFlag())
             break;
-        documents.append(*document);
     }
     return documents;
 }

@@ -1,4 +1,4 @@
 
 
-FAIL Exit fullscreen for nested fullscreen inside an iframe assert_equals: expected Element node <div id="outer"><div id="inner"></div></div> but got null
+PASS Exit fullscreen for nested fullscreen inside an iframe
 
