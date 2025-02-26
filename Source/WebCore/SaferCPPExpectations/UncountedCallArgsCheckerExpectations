@@ -1027,7 +1027,6 @@ platform/cocoa/VideoPresentationModelVideoElement.mm
 platform/cocoa/WebAVPlayerLayer.mm
 platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/CDMProxy.h
-platform/encryptedmedia/clearkey/CDMClearKey.cpp
 platform/graphics/BitmapImage.cpp
 platform/graphics/BitmapImage.h
 platform/graphics/BitmapImageDescriptor.cpp

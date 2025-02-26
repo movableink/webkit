@@ -107,7 +107,6 @@ page/scrolling/AsyncScrollingCoordinator.cpp
 page/scrolling/mac/ScrollingStateScrollingNodeMac.mm
 platform/ThreadGlobalData.cpp
 platform/ThreadGlobalData.h
-platform/encryptedmedia/clearkey/CDMClearKey.cpp
 platform/graphics/GraphicsLayer.cpp
 platform/graphics/avfoundation/objc/CDMSessionAVContentKeySession.h
 platform/graphics/avfoundation/objc/CDMSessionMediaSourceAVFObjC.h
