@@ -649,17 +649,18 @@ void SourceBufferPrivateAVFObjC::trackDidChangeEnabled(AudioTrackPrivate& track,
 void SourceBufferPrivateAVFObjC::setCDMSession(LegacyCDMSession* session)
 {
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-    if (session == m_session)
+  RefPtr oldSession = m_session.get();
+    if (session == oldSession)
         return;
 
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    if (RefPtr session = m_session.get()) {
-        session->removeSourceBuffer(this);
+    if (oldSession) {
+        oldSession->removeSourceBuffer(this);
 
         auto parser = this->streamDataParser();
         if (parser && shouldAddContentKeyRecipients())
-            [session->contentKeySession() removeContentKeyRecipient:parser];
+            [oldSession->contentKeySession() removeContentKeyRecipient:parser];
     }
 
     m_session = toCDMSessionAVContentKeySession(session);
@@ -749,7 +750,7 @@ void SourceBufferPrivateAVFObjC::attemptToDecrypt()
             if (auto parser = this->streamDataParser())
                 [instanceSession->contentKeySession() addContentKeyRecipient:parser];
         }
-    } else if (!m_session)
+    } else if (!m_session.get())
         return;
 
     if (m_hasSessionSemaphore) {
@@ -1009,7 +1010,7 @@ bool SourceBufferPrivateAVFObjC::canEnqueueSample(TrackID trackID, const MediaSa
         return true;
 
     // if sample is encrypted, but we are not attached to a CDM: do not enqueue sample.
-    if (!m_cdmInstance && !m_session)
+    if (!m_cdmInstance && !m_session.get())
         return false;
 
     // DecompressionSessions doesn't support encrypted media.

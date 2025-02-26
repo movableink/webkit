@@ -70,7 +70,7 @@ typedef NSString *AVContentKeySystem;
 @end
 
 @interface WebCDMSessionAVContentKeySessionDelegate : NSObject<AVContentKeySessionDelegate> {
-    WeakPtr<WebCore::CDMSessionAVContentKeySession> m_parent;
+    ThreadSafeWeakPtr<WebCore::CDMSessionAVContentKeySession> m_parent;
 }
 - (void)invalidate;
 @end
@@ -100,14 +100,14 @@ typedef NSString *AVContentKeySystem;
 - (void)contentKeySessionContentProtectionSessionIdentifierDidChange:(AVContentKeySession *)session
 {
     RefPtr parent = m_parent.get();
-    if (!m_parent)
+    if (!parent)
         return;
 
     NSData* identifier = [session contentProtectionSessionIdentifier];
     RetainPtr<NSString> sessionIdentifierString = identifier ? adoptNS([[NSString alloc] initWithData:identifier encoding:NSUTF8StringEncoding]) : nil;
     callOnMainThread([self, protectedSelf = RetainPtr { self }, sessionIdentifierString = WTFMove(sessionIdentifierString)] {
         RefPtr parent = m_parent.get();
-        if (!m_parent)
+        if (!parent)
             return;
 
         parent->setSessionId(sessionIdentifierString.get());
