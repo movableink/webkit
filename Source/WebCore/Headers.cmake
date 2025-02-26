@@ -987,7 +987,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/values/CSSValueConcepts.h
     css/values/CSSValueTypes.h
 
-    css/values/backgrounds/CSSBorderRadius.h
+    css/values/borders/CSSBorderRadius.h
 
     css/values/color/CSSColor.h
     css/values/color/CSSColorDescriptors.h
@@ -2689,7 +2689,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/StyleValidity.h
     style/Styleable.h
 
-    style/values/backgrounds/StyleBorderRadius.h
+    style/values/borders/StyleBorderRadius.h
 
     style/values/color/StyleColor.h
     style/values/color/StyleColorOptions.h

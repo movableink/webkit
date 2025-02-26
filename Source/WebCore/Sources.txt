@@ -1154,7 +1154,7 @@ css/typedom/transform/CSSTranslate.cpp
 css/values/CSSSerializationContext.cpp
 css/values/CSSValueAggregates.cpp
 css/values/CSSValueTypes.cpp
-css/values/backgrounds/CSSBorderRadius.cpp
+css/values/borders/CSSBorderRadius.cpp
 css/values/color-adjust/CSSColorScheme.cpp
 css/values/color/CSSColor.cpp
 css/values/color/CSSColorLayers.cpp
@@ -3145,8 +3145,8 @@ style/StyleUpdate.cpp
 style/Styleable.cpp
 style/TransformOperationsBuilder.cpp
 style/UserAgentStyle.cpp
-style/values/backgrounds/StyleBorderRadius.cpp
-style/values/backgrounds/StyleBoxShadow.cpp
+style/values/borders/StyleBorderRadius.cpp
+style/values/borders/StyleBoxShadow.cpp
 style/values/color-adjust/StyleColorScheme.cpp
 style/values/color/StyleColor.cpp
 style/values/color/StyleColorLayers.cpp
