@@ -162,7 +162,11 @@ bool wpeDisplayCheckEGLExtension(WPEDisplay* display, const char* extensionName)
 WPEInputMethodContext* wpeDisplayCreateInputMethodContext(WPEDisplay* display)
 {
     auto* wpeDisplayClass = WPE_DISPLAY_GET_CLASS(display);
-    return wpeDisplayClass->create_input_method_context ? wpeDisplayClass->create_input_method_context(display) : wpeInputMethodContextNoneNew();
+
+    auto* inputMethodContext = wpeDisplayClass->create_input_method_context ? wpeDisplayClass->create_input_method_context(display) : nullptr;
+    if (!inputMethodContext)
+        inputMethodContext = wpeInputMethodContextNoneNew();
+    return inputMethodContext;
 }
 
 /**
