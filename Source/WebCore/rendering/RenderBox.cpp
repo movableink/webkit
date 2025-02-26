@@ -3908,8 +3908,7 @@ struct RenderBox::PositionedLayoutConstraints {
 
     bool needsAnchor(const RenderStyle& style) const
     {
-        UNUSED_PARAM(style); // FIXME: Add position-area check later.
-        return alignment.position() == ItemPosition::AnchorCenter;
+        return style.positionArea() || alignment.position() == ItemPosition::AnchorCenter;
     }
     bool isOrthogonal() const { return containingWritingMode.isOrthogonal(selfWritingMode); }
     bool isBlockOpposing() const { return containingWritingMode.isBlockOpposing(selfWritingMode); }
@@ -3944,7 +3943,11 @@ struct RenderBox::PositionedLayoutConstraints {
                 self.containingBlockLogicalHeightForPositioned(containingBox, false));
         marginPercentageBasis = containingWidth;
 
+        computeAnchorGeometry(self);
     }
+
+    void computeAnchorGeometry(const RenderBox& self);
+    LayoutRange adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis, const RenderStyle&);
 
     void computeInlineStaticDistance(const RenderBox& self);
     void computeBlockStaticDistance(const RenderBox& self);
@@ -3952,6 +3955,72 @@ struct RenderBox::PositionedLayoutConstraints {
     void convertLogicalLeftValue(LayoutUnit& logicalLeftValue, const RenderBox* child, const LayoutUnit logicalWidthValue, const bool logicalLeftIsAuto, const bool logicalRightIsAuto) const;
     void convertLogicalTopValue(LayoutUnit& logicalTopValue, const RenderBox* child, const LayoutUnit logicalHeightValue, const bool logicalTopIsAuto, const bool logicalBottomIsAuto) const;
 };
+
+void RenderBox::PositionedLayoutConstraints::computeAnchorGeometry(const RenderBox& self)
+{
+    if (!defaultAnchorBox)
+        return;
+
+    // Store the anchor geometry.
+    LayoutRect anchorRect = Style::AnchorPositionEvaluator::computeAnchorRectRelativeToContainingBlock(*defaultAnchorBox, *self.containingBlock());
+    if (BoxAxis::Horizontal == physicalAxis)
+        anchorArea.set(anchorRect.x(), anchorRect.width());
+    else
+        anchorArea.set(anchorRect.y(), anchorRect.height());
+    if (containingWritingMode.isBlockFlipped()
+        && LogicalBoxAxis::Block == containingAxis) {
+        // Coordinate fixup for flipped blocks.
+        anchorArea.moveTo(containingBlock.max()
+            - anchorArea.max() + containingBox.borderAfter());
+    }
+
+    // Adjust containing block for position-area.
+    if (!self.style().positionArea())
+        return;
+    containingBlock = adjustForPositionArea(containingBlock, anchorArea, physicalAxis, self.style());
+
+    // Margin basis is always against the inline axis.
+    if (LogicalBoxAxis::Inline == containingAxis) {
+        marginPercentageBasis = containingBlock.size();
+        return;
+    }
+    // Else we're representing the block axis, but need the inline dimensions.
+    BoxAxis inlineAxis = oppositeAxis(physicalAxis);
+    LayoutRange inlineContainingBlock(containingBox.borderLogicalLeft(), marginPercentageBasis);
+    auto inlineAnchorArea = BoxAxis::Horizontal == inlineAxis
+        ? LayoutRange { anchorRect.x(), anchorRect.width() }
+        : LayoutRange { anchorRect.y(), anchorRect.height() };
+    marginPercentageBasis = adjustForPositionArea(inlineContainingBlock, inlineAnchorArea, inlineAxis, self.style()).size();
+}
+
+LayoutRange RenderBox::PositionedLayoutConstraints::adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis, const RenderStyle& style)
+{
+    ASSERT(style.positionArea() && defaultAnchorBox && needsAnchor(style));
+
+    auto adjustedRange = rangeToAdjust;
+    switch (style.positionArea()->coordMatchedTrackForAxis(containerAxis, containingWritingMode, selfWritingMode)) {
+    case PositionAreaTrack::Start:
+        adjustedRange.shiftMaxEdgeTo(anchorArea.min());
+        return adjustedRange;
+    case PositionAreaTrack::SpanStart:
+        adjustedRange.shiftMaxEdgeTo(anchorArea.max());
+        return adjustedRange;
+    case PositionAreaTrack::End:
+        adjustedRange.shiftMinEdgeTo(anchorArea.max());
+        return adjustedRange;
+    case PositionAreaTrack::SpanEnd:
+        adjustedRange.shiftMinEdgeTo(anchorArea.min());
+        return adjustedRange;
+    case PositionAreaTrack::Center:
+        adjustedRange = anchorArea;
+        return adjustedRange;
+    case PositionAreaTrack::SpanAll:
+        return adjustedRange;
+    default:
+        ASSERT_NOT_REACHED();
+        return adjustedRange;
+    };
+}
 
 LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxModelObject& containingBlock, bool checkForPerpendicularWritingMode) const
 {
