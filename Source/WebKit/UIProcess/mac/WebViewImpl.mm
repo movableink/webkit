@@ -1261,14 +1261,13 @@ static void setEDRStrengthRecursive(CALayer* layer, float strength, bool animate
     ALLOW_DEPRECATED_DECLARATIONS_END
         if (animate) {
             CASpringAnimation* animation = [[CASpringAnimation alloc] initWithPerceptualDuration:3.f bounce:0];
-            float edrStrength = allow ? 1.f : 0.f;
             animation.keyPath = @"contentsEDRStrength";
             animation.fromValue = @([layer contentsEDRStrength]);
-            animation.toValue = @(edrStrength);
+            animation.toValue = @(strength);
             [layer addAnimation:animation forKey:@"contentsEDRStrength"];
             [animation release];
         }
-        [layer setContentsEDRStrength:edrStrength];
+        [layer setContentsEDRStrength:strength];
     }
     for (CALayer* sublayer in [layer sublayers])
         setEDRStrengthRecursive(sublayer, strength, animate);
