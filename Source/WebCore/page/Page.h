@@ -1683,7 +1683,7 @@ private:
     std::optional<std::pair<uint16_t, uint16_t>> m_portsForUpgradingInsecureSchemeForTesting;
 
     const UniqueRef<StorageProvider> m_storageProvider;
-    const UniqueRef<ModelPlayerProvider> m_modelPlayerProvider;
+    const Ref<ModelPlayerProvider> m_modelPlayerProvider;
 
     WeakPtr<KeyboardScrollingAnimator> m_currentKeyboardScrollingAnimator;
 

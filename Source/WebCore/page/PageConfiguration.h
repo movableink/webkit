@@ -127,7 +127,7 @@ public:
         UniqueRef<SpeechRecognitionProvider>&&,
         Ref<BroadcastChannelRegistry>&&,
         UniqueRef<StorageProvider>&&,
-        UniqueRef<ModelPlayerProvider>&&,
+        Ref<ModelPlayerProvider>&&,
         Ref<BadgeClient>&&,
         Ref<HistoryItemClient>&&,
 #if ENABLE(CONTEXT_MENUS)
@@ -216,7 +216,7 @@ public:
 
     UniqueRef<StorageProvider> storageProvider;
 
-    UniqueRef<ModelPlayerProvider> modelPlayerProvider;
+    Ref<ModelPlayerProvider> modelPlayerProvider;
 #if ENABLE(ATTACHMENT_ELEMENT)
     std::unique_ptr<AttachmentElementClient> attachmentElementClient;
 #endif

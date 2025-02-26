@@ -1226,7 +1226,7 @@ PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier
         makeUniqueRef<DummySpeechRecognitionProvider>(),
         EmptyBroadcastChannelRegistry::create(),
         makeUniqueRef<DummyStorageProvider>(),
-        makeUniqueRef<DummyModelPlayerProvider>(),
+        DummyModelPlayerProvider::create(),
         EmptyBadgeClient::create(),
         EmptyHistoryItemClient::create(),
 #if ENABLE(CONTEXT_MENUS)
