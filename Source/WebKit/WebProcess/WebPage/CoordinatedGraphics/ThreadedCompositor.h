@@ -128,6 +128,8 @@ private:
     void sceneUpdateFinished();
 #endif
 
+    void updateSceneAttributes(const WebCore::IntSize&, float deviceScaleFactor);
+
     CheckedPtr<LayerTreeHost> m_layerTreeHost;
     std::unique_ptr<AcceleratedSurface> m_surface;
     RefPtr<CoordinatedSceneState> m_sceneState;

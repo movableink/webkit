@@ -99,9 +99,7 @@ ThreadedCompositor::ThreadedCompositor(LayerTreeHost& layerTreeHost, ThreadedDis
     ASSERT(RunLoop::isMain());
 
     const auto& webPage = m_layerTreeHost->webPage();
-    m_attributes.viewportSize = webPage.size();
-    m_attributes.deviceScaleFactor = webPage.deviceScaleFactor();
-    m_attributes.viewportSize.scale(m_attributes.deviceScaleFactor);
+    updateSceneAttributes(webPage.size(), webPage.deviceScaleFactor());
 
     m_surface->didCreateCompositingRunLoop(m_compositingRunLoop->runLoop());
 
@@ -227,9 +225,7 @@ void ThreadedCompositor::setSize(const IntSize& size, float deviceScaleFactor)
 {
     ASSERT(RunLoop::isMain());
     Locker locker { m_attributes.lock };
-    m_attributes.viewportSize = size;
-    m_attributes.deviceScaleFactor = deviceScaleFactor;
-    m_attributes.viewportSize.scale(m_attributes.deviceScaleFactor);
+    updateSceneAttributes(size, deviceScaleFactor);
 }
 
 #if ENABLE(DAMAGE_TRACKING)
@@ -478,6 +474,13 @@ void ThreadedCompositor::resetFrameDamageHistory()
     m_frameDamageHistory = WTF::makeUnique<FrameDamageHistory>();
 }
 #endif
+
+void ThreadedCompositor::updateSceneAttributes(const IntSize& size, float deviceScaleFactor)
+{
+    m_attributes.viewportSize = size;
+    m_attributes.deviceScaleFactor = deviceScaleFactor;
+    m_attributes.viewportSize.scale(m_attributes.deviceScaleFactor);
+}
 
 }
 #endif // USE(COORDINATED_GRAPHICS)
