@@ -47,6 +47,7 @@ class EventRegion;
 class Path;
 class RenderObject;
 class RenderStyle;
+enum class TrackingType : uint8_t;
 
 class EventRegionContext final : public RegionContext {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(EventRegionContext, WEBCORE_EXPORT);
@@ -143,8 +144,10 @@ public:
     const Region* regionForTouchAction(TouchAction) const;
 #endif
 
-#if ENABLE(WHEEL_EVENT_REGIONS)
+    WEBCORE_EXPORT TrackingType eventTrackingTypeForPoint(EventListenerRegionType, const IntPoint&) const;
     WEBCORE_EXPORT OptionSet<EventListenerRegionType> eventListenerRegionTypesForPoint(const IntPoint&) const;
+
+#if ENABLE(WHEEL_EVENT_REGIONS)
     const Region& eventListenerRegionForType(EventListenerRegionType) const;
 #endif
 

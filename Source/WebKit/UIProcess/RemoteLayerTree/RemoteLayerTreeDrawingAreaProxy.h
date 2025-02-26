@@ -84,6 +84,7 @@ public:
 
     // For testing.
     unsigned countOfTransactionsWithNonEmptyLayerChanges() const { return m_countOfTransactionsWithNonEmptyLayerChanges; }
+    WebCore::TrackingType eventTrackingTypeForPoint(WebCore::EventListenerRegionType, WebCore::IntPoint);
 
 protected:
     RemoteLayerTreeDrawingAreaProxy(WebPageProxy&, WebProcessProxy&);

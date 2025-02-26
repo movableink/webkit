@@ -26,6 +26,7 @@
 #include "config.h"
 #include "EventRegion.h"
 
+#include "EventTrackingRegions.h"
 #include "HTMLFormControlElement.h"
 #include "Logging.h"
 #include "Path.h"
@@ -630,17 +631,83 @@ void EventRegion::uniteEventListeners(const Region& region, OptionSet<EventListe
 #endif
 }
 
-#if ENABLE(WHEEL_EVENT_REGIONS)
+TrackingType EventRegion::eventTrackingTypeForPoint(EventListenerRegionType event, const IntPoint& point) const
+{
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    auto types = eventListenerRegionTypesForPoint(point);
+    switch (event) {
+    case EventListenerRegionType::TouchStart:
+        if (types.contains(EventListenerRegionType::NonPassiveTouchStart))
+            return TrackingType::Synchronous;
+        if (types.contains(EventListenerRegionType::TouchStart))
+            return TrackingType::Asynchronous;
+        return TrackingType::NotTracking;
+    case EventListenerRegionType::TouchMove:
+        if (types.contains(EventListenerRegionType::NonPassiveTouchMove))
+            return TrackingType::Synchronous;
+        if (types.contains(EventListenerRegionType::TouchMove))
+            return TrackingType::Asynchronous;
+        return TrackingType::NotTracking;
+    case EventListenerRegionType::TouchEnd:
+        if (types.contains(EventListenerRegionType::NonPassiveTouchEnd))
+            return TrackingType::Synchronous;
+        if (types.contains(EventListenerRegionType::TouchEnd))
+            return TrackingType::Asynchronous;
+        return TrackingType::NotTracking;
+    case EventListenerRegionType::TouchCancel:
+        if (types.contains(EventListenerRegionType::NonPassiveTouchCancel))
+            return TrackingType::Synchronous;
+        if (types.contains(EventListenerRegionType::TouchCancel))
+            return TrackingType::Asynchronous;
+        return TrackingType::NotTracking;
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED();
+#else
+    UNUSED_PARAM(event);
+    UNUSED_PARAM(point);
+#endif
+    return TrackingType::NotTracking;
+}
+
 OptionSet<EventListenerRegionType> EventRegion::eventListenerRegionTypesForPoint(const IntPoint& point) const
 {
     OptionSet<EventListenerRegionType> regionTypes;
+#if ENABLE(WHEEL_EVENT_REGIONS)
     if (m_wheelEventListenerRegion.contains(point))
         regionTypes.add(EventListenerRegionType::Wheel);
     if (m_nonPassiveWheelEventListenerRegion.contains(point))
         regionTypes.add(EventListenerRegionType::NonPassiveWheel);
+#endif
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    if (m_nonPassiveTouchEventListenerRegion.start.contains(point))
+        regionTypes.add(EventListenerRegionType::NonPassiveTouchStart);
+    if (m_touchEventListenerRegion.start.contains(point))
+        regionTypes.add(EventListenerRegionType::TouchStart);
 
+    if (m_nonPassiveTouchEventListenerRegion.move.contains(point))
+        regionTypes.add(EventListenerRegionType::NonPassiveTouchMove);
+    if (m_touchEventListenerRegion.move.contains(point))
+        regionTypes.add(EventListenerRegionType::TouchMove);
+
+    if (m_nonPassiveTouchEventListenerRegion.end.contains(point))
+        regionTypes.add(EventListenerRegionType::NonPassiveTouchEnd);
+    if (m_touchEventListenerRegion.end.contains(point))
+        regionTypes.add(EventListenerRegionType::TouchEnd);
+
+    if (m_nonPassiveTouchEventListenerRegion.cancel.contains(point))
+        regionTypes.add(EventListenerRegionType::NonPassiveTouchCancel);
+    if (m_touchEventListenerRegion.cancel.contains(point))
+        regionTypes.add(EventListenerRegionType::TouchCancel);
+#endif
+#if !ENABLE(TOUCH_EVENT_REGIONS) && !ENABLE(WHEEL_EVENT_REGIONS)
+    UNUSED_PARAM(point);
+#endif
     return regionTypes;
 }
+
+#if ENABLE(WHEEL_EVENT_REGIONS)
 
 const Region& EventRegion::eventListenerRegionForType(EventListenerRegionType type) const
 {
