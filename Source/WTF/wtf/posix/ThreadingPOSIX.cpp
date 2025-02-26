@@ -542,7 +542,7 @@ size_t Thread::getRegisters(const ThreadSuspendLocker&, PlatformRegisters& regis
     kern_return_t result = thread_get_state(m_platformThread, metadata.flavor, (thread_state_t)&registers, &metadata.userCount);
     if (result != KERN_SUCCESS) {
         WTFReportFatalError(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "JavaScript garbage collection failed because thread_get_state returned an error (%d). This is probably the result of running inside Rosetta, which is not supported.", result);
-        CRASH();
+        CRASH_WITH_INFO(result, KERN_SUCCESS);
     }
     return metadata.userCount * sizeof(uintptr_t);
 #else
