@@ -110,7 +110,6 @@ static bool didCloseCalled;
     return _isUnwantedSoftware;
 }
 
-#if HAVE(SAFE_BROWSING_RESULT_DETAILS)
 - (NSString *)malwareDetailsBaseURLString
 {
     return @"test://";
@@ -130,7 +129,6 @@ static bool didCloseCalled;
 {
     return @"test display name";
 }
-#endif
 
 @end
 
