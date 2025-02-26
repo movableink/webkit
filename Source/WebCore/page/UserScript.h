@@ -42,7 +42,7 @@ public:
     UserScript& operator=(const UserScript&) = default;
     UserScript& operator=(UserScript&&) = default;
 
-    WEBCORE_EXPORT UserScript(String&&, URL&&, Vector<String>&&, Vector<String>&&, UserScriptInjectionTime, UserContentInjectedFrames, WaitForNotificationBeforeInjecting);
+    WEBCORE_EXPORT UserScript(String&&, URL&&, Vector<String>&&, Vector<String>&&, UserScriptInjectionTime, UserContentInjectedFrames);
 
     const String& source() const { return m_source; }
     const URL& url() const { return m_url; }
@@ -50,7 +50,6 @@ public:
     const Vector<String>& blocklist() const { return m_blocklist; }
     UserScriptInjectionTime injectionTime() const { return m_injectionTime; }
     UserContentInjectedFrames injectedFrames() const { return m_injectedFrames; }
-    WaitForNotificationBeforeInjecting waitForNotificationBeforeInjecting() const { return m_waitForNotificationBeforeInjecting; }
 
 private:
     String m_source;
@@ -59,7 +58,6 @@ private:
     Vector<String> m_blocklist;
     UserScriptInjectionTime m_injectionTime { UserScriptInjectionTime::DocumentStart };
     UserContentInjectedFrames m_injectedFrames { UserContentInjectedFrames::InjectInAllFrames };
-    WaitForNotificationBeforeInjecting m_waitForNotificationBeforeInjecting { WaitForNotificationBeforeInjecting::No };
 };
 
 } // namespace WebCore

@@ -4543,18 +4543,6 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
     _page->updateWebsitePolicies(WTFMove(data));
 }
 
-- (void)_notifyUserScripts
-{
-    THROW_IF_SUSPENDED;
-    _page->notifyUserScripts();
-}
-
-- (BOOL)_deferrableUserScriptsNeedNotification
-{
-    THROW_IF_SUSPENDED;
-    return _page->userScriptsNeedNotification();
-}
-
 - (BOOL)_allowsRemoteInspection
 {
     return self.inspectable;

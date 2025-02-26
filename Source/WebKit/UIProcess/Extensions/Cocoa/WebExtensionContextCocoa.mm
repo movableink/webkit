@@ -4527,7 +4527,6 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
 
         auto injectedFrames = injectedContentData.injectsIntoAllFrames ? WebCore::UserContentInjectedFrames::InjectInAllFrames : WebCore::UserContentInjectedFrames::InjectInTopFrameOnly;
         auto injectionTime = toImpl(injectedContentData.injectionTime);
-        auto waitForNotification = WebCore::WaitForNotificationBeforeInjecting::No;
         Ref executionWorld = toContentWorld(injectedContentData.contentWorldType);
         auto styleLevel = injectedContentData.styleLevel;
 
@@ -4544,7 +4543,7 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
                 continue;
             }
 
-            Ref userScript = API::UserScript::create(WebCore::UserScript { WTFMove(scriptString), URL { m_baseURL, scriptPath }, makeVector<String>(includeMatchPatterns), makeVector<String>(excludeMatchPatterns), injectionTime, injectedFrames, waitForNotification }, executionWorld);
+            Ref userScript = API::UserScript::create(WebCore::UserScript { WTFMove(scriptString), URL { m_baseURL, scriptPath }, makeVector<String>(includeMatchPatterns), makeVector<String>(excludeMatchPatterns), injectionTime, injectedFrames }, executionWorld);
             originInjectedScripts.append(userScript);
 
             for (Ref userContentController : userContentControllers)

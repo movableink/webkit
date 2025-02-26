@@ -1138,9 +1138,6 @@ public:
     bool isTakingSnapshotsForApplicationSuspension() const { return m_isTakingSnapshotsForApplicationSuspension; }
     void setIsTakingSnapshotsForApplicationSuspension(bool isTakingSnapshotsForApplicationSuspension) { m_isTakingSnapshotsForApplicationSuspension = isTakingSnapshotsForApplicationSuspension; }
 
-    bool hasBeenNotifiedToInjectUserScripts() const { return m_hasBeenNotifiedToInjectUserScripts; }
-    WEBCORE_EXPORT void notifyToInjectUserScripts();
-
     MonotonicTime lastRenderingUpdateTimestamp() const { return m_lastRenderingUpdateTimestamp; }
     std::optional<MonotonicTime> nextRenderingUpdateTimestamp() const;
 
@@ -1669,7 +1666,6 @@ private:
     bool m_canUseCredentialStorage { true };
     ShouldRelaxThirdPartyCookieBlocking m_shouldRelaxThirdPartyCookieBlocking;
     LoadSchedulingMode m_loadSchedulingMode { LoadSchedulingMode::Direct };
-    bool m_hasBeenNotifiedToInjectUserScripts { false };
     bool m_isServiceWorkerPage { false };
 
     MonotonicTime m_lastRenderingUpdateTimestamp;

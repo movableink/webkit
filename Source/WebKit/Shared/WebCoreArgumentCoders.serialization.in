@@ -7525,8 +7525,6 @@ header: <WebCore/FontTaggedSettings.h>
 
 enum class WebCore::UserScriptInjectionTime : bool;
 
-enum class WebCore::WaitForNotificationBeforeInjecting : bool;
-
 enum class WebCore::UserContentInjectedFrames : bool;
 
 class WebCore::UserScript {
@@ -7536,7 +7534,6 @@ class WebCore::UserScript {
     Vector<String> blocklist();
     WebCore::UserScriptInjectionTime injectionTime();
     WebCore::UserContentInjectedFrames injectedFrames();
-    WebCore::WaitForNotificationBeforeInjecting waitForNotificationBeforeInjecting();
 }
 
 header: <WebCore/GraphicsContextState.h>

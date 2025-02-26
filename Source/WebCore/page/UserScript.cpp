@@ -39,14 +39,13 @@ static WTF::URL generateUserScriptUniqueURL()
     return { { }, makeString("user-script:"_s, ++identifier) };
 }
 
-UserScript::UserScript(String&& source, URL&& url, Vector<String>&& allowlist, Vector<String>&& blocklist, UserScriptInjectionTime injectionTime, UserContentInjectedFrames injectedFrames, WaitForNotificationBeforeInjecting waitForNotification)
+UserScript::UserScript(String&& source, URL&& url, Vector<String>&& allowlist, Vector<String>&& blocklist, UserScriptInjectionTime injectionTime, UserContentInjectedFrames injectedFrames)
     : m_source(WTFMove(source))
     , m_url(url.isEmpty() ? generateUserScriptUniqueURL() : WTFMove(url))
     , m_allowlist(WTFMove(allowlist))
     , m_blocklist(WTFMove(blocklist))
     , m_injectionTime(injectionTime)
     , m_injectedFrames(injectedFrames)
-    , m_waitForNotificationBeforeInjecting(waitForNotification)
 {
 }
 

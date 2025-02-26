@@ -215,7 +215,6 @@ messages -> WebPage WantsAsyncDispatchMessage {
     DidRemoveBackForwardItem(WebCore::BackForwardItemIdentifier backForwardItemID)
 
     UpdateWebsitePolicies(struct WebKit::WebsitePoliciesData websitePolicies)
-    NotifyUserScripts()
 
     ClearSelection()
     RestoreSelectionInFocusedEditableElement()

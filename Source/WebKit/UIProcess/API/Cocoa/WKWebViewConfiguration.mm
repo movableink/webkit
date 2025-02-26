@@ -1093,16 +1093,6 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
     return _pageConfiguration->loadsSubresources();
 }
 
-- (BOOL)_deferrableUserScriptsShouldWaitUntilNotification
-{
-    return _pageConfiguration->userScriptsShouldWaitUntilNotification();
-}
-
-- (void)_setDeferrableUserScriptsShouldWaitUntilNotification:(BOOL)value
-{
-    _pageConfiguration->setUserScriptsShouldWaitUntilNotification(value);
-}
-
 - (void)_setCrossOriginAccessControlCheckEnabled:(BOOL)enabled
 {
     _pageConfiguration->setCrossOriginAccessControlCheckEnabled(enabled);

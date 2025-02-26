@@ -278,7 +278,6 @@ struct WebPageCreationParameters {
     String overriddenMediaType { };
     Vector<String> corsDisablingPatterns { };
     HashSet<String> maskedURLSchemes { };
-    bool userScriptsShouldWaitUntilNotification { true };
     bool loadsSubresources { true };
     std::optional<MemoryCompactLookupOnlyRobinHoodHashSet<String>> allowedNetworkHosts { };
     std::optional<std::pair<uint16_t, uint16_t>> portsForUpgradingInsecureSchemeForTesting { };

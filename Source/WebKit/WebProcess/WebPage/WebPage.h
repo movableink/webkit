@@ -2325,7 +2325,6 @@ private:
     void reportUsedFeatures();
 
     void updateWebsitePolicies(WebsitePoliciesData&&);
-    void notifyUserScripts();
 
     void changeFont(WebCore::FontChanges&&);
     void changeFontAttributes(WebCore::FontAttributeChanges&&);

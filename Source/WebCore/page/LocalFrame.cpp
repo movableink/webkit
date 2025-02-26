@@ -735,14 +735,9 @@ void LocalFrame::injectUserScripts(UserScriptInjectionTime injectionTime)
         return;
 
     RefPtr page = this->page();
-    bool pageWasNotified = page->hasBeenNotifiedToInjectUserScripts();
-    page->protectedUserContentProvider()->forEachUserScript([this, protectedThis = Ref { *this }, injectionTime, pageWasNotified] (DOMWrapperWorld& world, const UserScript& script) {
-        if (script.injectionTime() == injectionTime) {
-            if (script.waitForNotificationBeforeInjecting() == WaitForNotificationBeforeInjecting::Yes && !pageWasNotified)
-                addUserScriptAwaitingNotification(world, script);
-            else
-                injectUserScriptImmediately(world, script);
-        }
+    page->protectedUserContentProvider()->forEachUserScript([this, protectedThis = Ref { *this }, injectionTime] (DOMWrapperWorld& world, const UserScript& script) {
+        if (script.injectionTime() == injectionTime)
+            injectUserScriptImmediately(world, script);
     });
 }
 
@@ -773,17 +768,6 @@ void LocalFrame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserS
     page->setHasInjectedUserScript();
     loader->client().willInjectUserScript(world);
     checkedScript()->evaluateInWorldIgnoringException(ScriptSourceCode(script.source(), JSC::SourceTaintedOrigin::Untainted, URL(script.url())), world);
-}
-
-void LocalFrame::addUserScriptAwaitingNotification(DOMWrapperWorld& world, const UserScript& script)
-{
-    m_userScriptsAwaitingNotification.append({ world, makeUniqueRef<UserScript>(script) });
-}
-
-void LocalFrame::injectUserScriptsAwaitingNotification()
-{
-    for (const auto& [world, script] : std::exchange(m_userScriptsAwaitingNotification, { }))
-        injectUserScriptImmediately(world, script.get());
 }
 
 RenderView* LocalFrame::contentRenderer() const

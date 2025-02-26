@@ -195,9 +195,6 @@ public:
     WEBCORE_EXPORT void injectUserScripts(UserScriptInjectionTime);
     WEBCORE_EXPORT void injectUserScriptImmediately(DOMWrapperWorld&, const UserScript&);
 
-    void injectUserScriptsAwaitingNotification();
-    void addUserScriptAwaitingNotification(DOMWrapperWorld&, const UserScript&);
-
     WEBCORE_EXPORT String trackedRepaintRectsAsText() const;
 
     WEBCORE_EXPORT static LocalFrame* frameForWidget(const Widget&);
@@ -360,8 +357,6 @@ private:
     void documentURLForConsoleLog(CompletionHandler<void(const URL&)>&&) final;
 
     WeakHashSet<FrameDestructionObserver> m_destructionObservers;
-
-    Vector<std::pair<Ref<DOMWrapperWorld>, UniqueRef<UserScript>>> m_userScriptsAwaitingNotification;
 
     const UniqueRef<FrameLoader> m_loader;
 
