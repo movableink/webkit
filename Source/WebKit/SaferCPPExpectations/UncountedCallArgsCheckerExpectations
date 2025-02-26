@@ -18,7 +18,6 @@ NetworkProcess/cache/NetworkCacheSpeculativeLoad.cpp
 NetworkProcess/mac/SecItemShim.cpp
 NetworkProcess/storage/BackgroundFetchStoreImpl.cpp
 NetworkProcess/storage/BackgroundFetchStoreManager.cpp
-NetworkProcess/storage/IDBStorageRegistry.cpp
 Platform/IPC/ArgumentCoders.h
 Shared/API/APIArray.h
 Shared/API/c/WKArray.cpp

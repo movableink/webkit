@@ -54,6 +54,11 @@ WebCore::IDBServer::IDBConnectionToClient& IDBStorageConnectionToClient::connect
     return m_connectionToClient;
 }
 
+Ref<WebCore::IDBServer::IDBConnectionToClient> IDBStorageConnectionToClient::protectedConnectionToClient()
+{
+    return m_connectionToClient;
+}
+
 void IDBStorageConnectionToClient::didDeleteDatabase(const WebCore::IDBResultData& resultData)
 {
     IPC::Connection::send(m_connection, Messages::WebIDBConnectionToServer::DidDeleteDatabase(resultData), 0);
