@@ -1983,3 +1983,4 @@ webkit.org/b/288603 imported/w3c/web-platform-tests/screen-orientation/hidden_do
 
 webkit.org/b/288613 [ Sonoma+ ] pdf/pdf-in-embed-with-root-page-zoom.html [ Pass Timeout Failure ]
 
+webkit.org/b/288620 [ Debug ] ipc/large-vector-allocate-failure-crash.html [ Skip ]
