@@ -1,7 +1,6 @@
 AutomationBackendDispatchers.cpp
 AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
-NetworkProcess/BackgroundFetchLoad.cpp
 NetworkProcess/Downloads/Download.cpp
 NetworkProcess/Downloads/DownloadManager.cpp
 NetworkProcess/Downloads/PendingDownload.cpp
