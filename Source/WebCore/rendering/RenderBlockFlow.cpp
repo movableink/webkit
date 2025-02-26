@@ -205,31 +205,28 @@ RenderBlockFlow* RenderBlockFlow::previousSiblingWithOverhangingFloats(bool& par
 
 void RenderBlockFlow::rebuildFloatingObjectSetFromIntrudingFloats()
 {
-    if (m_floatingObjects)
-        m_floatingObjects->setHorizontalWritingMode(isHorizontalWritingMode());
-
     UncheckedKeyHashSet<CheckedPtr<RenderBox>> oldIntrudingFloatSet;
-    if (!childrenInline() && m_floatingObjects) {
-        const FloatingObjectSet& floatingObjectSet = m_floatingObjects->set();
-        auto end = floatingObjectSet.end();
-        for (auto it = floatingObjectSet.begin(); it != end; ++it) {
-            FloatingObject* floatingObject = it->get();
-            if (!floatingObject->isDescendant())
-                oldIntrudingFloatSet.add(&floatingObject->renderer());
+
+    if (m_floatingObjects) {
+        m_floatingObjects->setHorizontalWritingMode(isHorizontalWritingMode());
+        if (!childrenInline()) {
+            const FloatingObjectSet& floatingObjectSet = m_floatingObjects->set();
+            auto end = floatingObjectSet.end();
+            for (auto it = floatingObjectSet.begin(); it != end; ++it) {
+                FloatingObject* floatingObject = it->get();
+                if (!floatingObject->isDescendant())
+                    oldIntrudingFloatSet.add(&floatingObject->renderer());
+            }
         }
+        m_floatingObjects->clear();
     }
 
     // Inline blocks are covered by the isReplacedOrAtomicInline() check in the avoidFloats method.
     if (avoidsFloats() || isDocumentElementRenderer() || isRenderView() || isFloatingOrOutOfFlowPositioned() || isRenderTableCell()) {
-        if (m_floatingObjects)
-            m_floatingObjects->clear();
         if (!oldIntrudingFloatSet.isEmpty())
             markAllDescendantsWithFloatsForLayout();
         return;
     }
-
-    if (m_floatingObjects)
-        m_floatingObjects->clear();
 
     // We should not process floats if the parent node is not a RenderBlock. Otherwise, we will add 
     // floats in an invalid context. This will cause a crash arising from a bad cast on the parent.
@@ -437,12 +434,70 @@ void RenderBlockFlow::setChildrenInline(bool value)
     RenderBlock::setChildrenInline(value);
 }
 
+void RenderBlockFlow::layoutBlockWithNoChildren()
+{
+    ASSERT(!firstChild());
+
+    // Empty block containers produce empty formatting lines which may affect trim-start/end.
+    auto textBoxTrimmer = TextBoxTrimmer { *this };
+    auto repainter = LayoutRepainter { *this };
+
+    // FIXME: Instead of taking floats from previous sibling and forwarding them to next unconditionally, we should completely skip these empty block containers.
+    rebuildFloatingObjectSetFromIntrudingFloats();
+
+    auto computeInlineAxisSize =[&] {
+        updateLogicalWidth();
+    };
+    computeInlineAxisSize();
+
+    auto computeBlockAxisSize =[&] {
+        auto& style = this->style();
+
+        if (!is<RenderTableCell>(*this)) {
+            initMaxMarginValues();
+            setHasMarginBeforeQuirk(style.marginBefore().hasQuirk());
+            setHasMarginAfterQuirk(style.marginAfter().hasQuirk());
+        }
+        setLogicalHeight(borderAndPaddingLogicalHeight() + scrollbarLogicalHeight() + (hasLineIfEmpty() ? lineHeight(true, isHorizontalWritingMode() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes) : 0_lu));
+        updateLogicalHeight();
+    };
+    computeBlockAxisSize();
+
+    auto computeOverflow = [&] {
+        clearOverflow();
+        addVisualEffectOverflow();
+        addVisualOverflowFromTheme();
+    };
+    computeOverflow();
+
+    auto updateLayerProperties = [&] {
+        updateLayerTransform();
+        updateScrollInfoAfterLayout();
+    };
+    if (hasLayer())
+        updateLayerProperties();
+
+    repainter.repaintAfterLayout();
+
+    clearNeedsLayout();
+}
+
 void RenderBlockFlow::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit pageLogicalHeight)
 {
     ASSERT(needsLayout());
 
     if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
+
+    auto isPaginated = [&] {
+        // FIXME: Grid calls into layout outside of regular layout phase (during preferred width computation).
+        if (auto* layoutState = view().frameView().layoutContext().layoutState())
+            return layoutState->isPaginated();
+        return false;
+    }();
+
+    if (!firstChild() && !isPaginated && !is<RenderMultiColumnSet>(*this))
+        return layoutBlockWithNoChildren();
 
     LayoutRepainter repainter(*this);
 
@@ -466,12 +521,6 @@ void RenderBlockFlow::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit 
     LayoutUnit repaintLogicalBottom;
     LayoutUnit maxFloatLogicalBottom;
     LayoutUnit pageRemaining;
-    auto isPaginated = [&] {
-        // FIXME: Grid calls into layout outside of regular layout phase (during preferred width computation).
-        if (auto* layoutState = view().frameView().layoutContext().layoutState())
-            return layoutState->isPaginated();
-        return false;
-    }();
     const RenderStyle& styleToUse = style();
     do {
         LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || styleToUse.writingMode().isBlockFlipped(), pageLogicalHeight, pageLogicalHeightChanged);
