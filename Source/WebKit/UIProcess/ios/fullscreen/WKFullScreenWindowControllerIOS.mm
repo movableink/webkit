@@ -1747,6 +1747,7 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
     OBJC_ALWAYS_LOG(OBJC_LOGIDENTIFIER);
     _inInteractiveDismiss = true;
     [self requestExitFullScreen];
+    [self _dismissFullscreenViewController:[] { }];
 }
 
 - (void)_dismissFullscreenViewController:(CompletionHandler<void()>&&)completionHandler
