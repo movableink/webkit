@@ -26,7 +26,8 @@
 #include "ContainerQueryParser.h"
 
 #include "CSSPrimitiveValue.h"
-#include "CSSPropertyParsing.h"
+#include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+Conditional.h"
 #include "ContainerQueryFeatures.h"
 #include "MediaQueryParserContext.h"
 
@@ -43,10 +44,10 @@ std::optional<ContainerQuery> ContainerQueryParser::consumeContainerQuery(CSSPar
     auto consumeName = [&] {
         if (range.peek().type() == LeftParenthesisToken || range.peek().type() == FunctionToken)
             return nullAtom();
-        RefPtr nameValue = CSSPropertyParsing::consumeSingleContainerName(range);
-        if (RefPtr namePrimitive = dynamicDowncast<CSSPrimitiveValue>(nameValue))
-            return AtomString { namePrimitive->stringValue() };
-        return nullAtom();
+        auto nameValue = CSSPropertyParserHelpers::consumeSingleContainerName(range, context.context);
+        if (!nameValue)
+            return nullAtom();
+        return AtomString { nameValue->stringValue() };
     };
 
     auto name = consumeName();

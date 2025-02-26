@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,41 +25,38 @@
 
 #pragma once
 
-#include "CSSParserTokenRange.h"
-#include "CSSPropertyParserConsumer+Primitives.h"
-#include "CSSValueList.h"
+#include "CSSValueKeywords.h"
+#include <wtf/Forward.h>
 
 namespace WebCore {
+
+class CSSParserTokenRange;
+class CSSPrimitiveValue;
+class CSSValue;
+struct CSSParserContext;
+
 namespace CSSPropertyParserHelpers {
 
-template<typename SubConsumer, typename... Args>
-RefPtr<CSSValue> consumeCommaSeparatedListWithSingleValueOptimization(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args)
-{
-    CSSValueListBuilder list;
-    do {
-        auto value = std::invoke(subConsumer, range, std::forward<Args>(args)...);
-        if (!value)
-            return nullptr;
-        list.append(value.releaseNonNull());
-    } while (consumeCommaIncludingWhitespace(range));
-    if (list.size() == 1)
-        return WTFMove(list[0]);
-    return CSSValueList::createCommaSeparated(WTFMove(list));
-}
+// MARK: <single-container-name> consuming
+// https://drafts.csswg.org/css-conditional-5/#propdef-container-name
+RefPtr<CSSPrimitiveValue> consumeSingleContainerName(CSSParserTokenRange&, const CSSParserContext&);
 
-template<typename SubConsumer, typename... Args>
-RefPtr<CSSValueList> consumeCommaSeparatedListWithoutSingleValueOptimization(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args)
+// MARK: <'container-name'> consuming
+// https://drafts.csswg.org/css-conditional-5/#propdef-container-name
+RefPtr<CSSValue> consumeContainerName(CSSParserTokenRange&, const CSSParserContext&);
+
+inline bool isValidContainerNameIdentifier(CSSValueID valueID)
 {
-    CSSValueListBuilder list;
-    do {
-        auto value = std::invoke(subConsumer, range, std::forward<Args>(args)...);
-        if (!value)
-            return nullptr;
-        list.append(value.releaseNonNull());
-    } while (consumeCommaIncludingWhitespace(range));
-    return CSSValueList::createCommaSeparated(WTFMove(list));
+    switch (valueID) {
+    case CSSValueNone:
+    case CSSValueAnd:
+    case CSSValueOr:
+    case CSSValueNot:
+        return false;
+    default:
+        return true;
+    }
 }
 
 } // namespace CSSPropertyParserHelpers
-
 } // namespace WebCore

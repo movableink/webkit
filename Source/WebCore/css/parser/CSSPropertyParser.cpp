@@ -52,6 +52,7 @@
 #include "CSSPropertyParserConsumer+AppleVisualEffect.h"
 #include "CSSPropertyParserConsumer+Background.h"
 #include "CSSPropertyParserConsumer+Color.h"
+#include "CSSPropertyParserConsumer+Conditional.h"
 #include "CSSPropertyParserConsumer+Easing.h"
 #include "CSSPropertyParserConsumer+Font.h"
 #include "CSSPropertyParserConsumer+Grid.h"
@@ -432,14 +433,19 @@ std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> CSSPropertyParser::co
         switch (component.multiplier) {
         case CSSCustomPropertySyntax::Multiplier::Single:
             return consumeSingleValue(range, component);
-        case CSSCustomPropertySyntax::Multiplier::CommaList:
-            return consumeListSeparatedBy<',', OneOrMore>(range, [&](auto& range) {
+        case CSSCustomPropertySyntax::Multiplier::CommaList: {
+            return consumeCommaSeparatedListWithoutSingleValueOptimization(range, [&](auto& range) {
                 return consumeSingleValue(range, component);
             });
-        case CSSCustomPropertySyntax::Multiplier::SpaceList:
-            return consumeListSeparatedBy<' ', OneOrMore>(range, [&](auto& range) {
-                return consumeSingleValue(range, component);
-            });
+        }
+        case CSSCustomPropertySyntax::Multiplier::SpaceList: {
+            CSSValueListBuilder valueList;
+            while (RefPtr value = consumeSingleValue(range, component))
+                valueList.append(value.releaseNonNull());
+            if (valueList.isEmpty())
+                return nullptr;
+            return CSSValueList::createSpaceSeparated(WTFMove(valueList));
+        }
         }
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -2539,7 +2545,7 @@ bool CSSPropertyParser::consumeOverscrollBehaviorShorthand(bool important)
 
 bool CSSPropertyParser::consumeContainerShorthand(bool important)
 {
-    RefPtr name = parseSingleValue(CSSPropertyContainerName, CSSPropertyContainer);
+    RefPtr name = consumeContainerName(m_range, m_context);
     if (!name)
         return false;
 
@@ -2551,7 +2557,7 @@ bool CSSPropertyParser::consumeContainerShorthand(bool important)
         if (!consumeSlashIncludingWhitespace(m_range))
             return nullptr;
         sawSlash = true;
-        return parseSingleValue(CSSPropertyContainerType, CSSPropertyContainer);
+        return parseSingleValue(CSSPropertyContainerType);
     };
 
     auto type = consumeSlashType();
@@ -3180,7 +3186,7 @@ bool CSSPropertyParser::parseShorthand(CSSPropertyID property, bool important)
     case CSSPropertyBackground:
         return consumeBackgroundShorthand(backgroundShorthand(), important);
     case CSSPropertyWebkitBackgroundSize: {
-        auto backgroundSize = consumeListSeparatedBy<',', OneOrMore, ListOptimization::SingleValue>(m_range, [] (auto& range, auto& context) {
+        auto backgroundSize = consumeCommaSeparatedListWithSingleValueOptimization(m_range, [] (auto& range, auto& context) {
             return consumeSingleWebkitBackgroundSize(range, context);
         }, m_context);
         if (!backgroundSize || !m_range.atEnd())

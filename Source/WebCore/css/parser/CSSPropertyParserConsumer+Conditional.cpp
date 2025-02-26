@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,43 +23,45 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "CSSPropertyParserConsumer+Conditional.h"
 
+#include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
-#include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSValueList.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-template<typename SubConsumer, typename... Args>
-RefPtr<CSSValue> consumeCommaSeparatedListWithSingleValueOptimization(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args)
+RefPtr<CSSPrimitiveValue> consumeSingleContainerName(CSSParserTokenRange& range, const CSSParserContext&)
 {
-    CSSValueListBuilder list;
-    do {
-        auto value = std::invoke(subConsumer, range, std::forward<Args>(args)...);
-        if (!value)
-            return nullptr;
-        list.append(value.releaseNonNull());
-    } while (consumeCommaIncludingWhitespace(range));
-    if (list.size() == 1)
-        return WTFMove(list[0]);
-    return CSSValueList::createCommaSeparated(WTFMove(list));
+    // <single-container-name> = <custom-ident excluding=[none,and,or,not]>+
+    // https://drafts.csswg.org/css-conditional-5/#propdef-container-name
+
+    if (!isValidContainerNameIdentifier(range.peek().id()))
+        return nullptr;
+    return consumeCustomIdent(range);
 }
 
-template<typename SubConsumer, typename... Args>
-RefPtr<CSSValueList> consumeCommaSeparatedListWithoutSingleValueOptimization(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args)
+RefPtr<CSSValue> consumeContainerName(CSSParserTokenRange& range, const CSSParserContext& context)
 {
+    // <'container-name'> = none | <custom-ident excluding=[none,and,or,not]>+
+    // https://drafts.csswg.org/css-conditional-5/#propdef-container-name
+
+    if (range.peek().id() == CSSValueNone)
+        return consumeIdent(range);
     CSSValueListBuilder list;
     do {
-        auto value = std::invoke(subConsumer, range, std::forward<Args>(args)...);
-        if (!value)
-            return nullptr;
-        list.append(value.releaseNonNull());
-    } while (consumeCommaIncludingWhitespace(range));
-    return CSSValueList::createCommaSeparated(WTFMove(list));
+        auto name = consumeSingleContainerName(range, context);
+        if (!name)
+            break;
+        list.append(name.releaseNonNull());
+    } while (!range.atEnd());
+    if (list.isEmpty())
+        return nullptr;
+    return CSSValueList::createSpaceSeparated(WTFMove(list));
 }
 
 } // namespace CSSPropertyParserHelpers
-
 } // namespace WebCore

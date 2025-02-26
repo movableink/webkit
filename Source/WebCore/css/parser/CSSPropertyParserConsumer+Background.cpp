@@ -376,7 +376,7 @@ RefPtr<CSSValue> consumeBackgroundClip(CSSParserTokenRange& range, const CSSPars
     auto lambda = [&](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
         return consumeSingleBackgroundClip(range, context);
     };
-    return consumeListSeparatedBy<',', OneOrMore, ListOptimization::SingleValue>(range, lambda);
+    return consumeCommaSeparatedListWithSingleValueOptimization(range, lambda);
 }
 
 // MARK: - Background Size
