@@ -19,6 +19,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/CustomElementRegistry-initialize.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/CustomElementRegistry-upgrade.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/Document-createElement.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/Document-createElementNS.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/Document-importNode.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/Element-customElements-exceptions.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/revamped-scoped-registry/Element-customElements.tentative.html
