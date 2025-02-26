@@ -192,7 +192,7 @@ RefPtr<CSSValue> consumeCounterStyleRange(CSSParserTokenRange& range, const CSSP
     if (auto autoValue = consumeIdent<CSSValueAuto>(range))
         return autoValue;
 
-    auto rangeList = consumeCommaSeparatedListWithoutSingleValueOptimization(range, [&](auto& range) -> RefPtr<CSSValue> {
+    auto rangeList = consumeListSeparatedBy<',', OneOrMore>(range, [&](auto& range) -> RefPtr<CSSValue> {
         auto lowerBound = consumeCounterStyleRangeBound(range);
         if (!lowerBound)
             return nullptr;
@@ -261,7 +261,7 @@ RefPtr<CSSValue> consumeCounterStyleAdditiveSymbols(CSSParserTokenRange& range, 
     // https://drafts.csswg.org/css-counter-styles-3/#descdef-counter-style-additive-symbols
 
     std::optional<int> lastWeight;
-    auto values = consumeCommaSeparatedListWithoutSingleValueOptimization(range, [&lastWeight](auto& range, auto& context) -> RefPtr<CSSValue> {
+    auto values = consumeListSeparatedBy<',', OneOrMore>(range, [&lastWeight](auto& range, auto& context) -> RefPtr<CSSValue> {
         auto integer = consumeNonNegativeInteger(range, context);
         auto symbol = consumeCounterStyleSymbol(range, context);
         if (!integer) {

@@ -403,7 +403,7 @@
                 "style-builder-custom": "All",
                 "high-priority": true,
                 "fast-path-inherited": true,
-                "parser-grammar": "<color accept-quirky-colors-in-quirks-mode>"
+                "parser-grammar": "<color quirky-colors-in-quirks-mode=allowed>"
             },
             "status": {
                 "comment": "All the values from CSS Color Level 3 are supported, as well as the 8- and 4-digit forms of hex color, and the color() function."
@@ -643,7 +643,7 @@
             "codegen-properties": {
                 "style-builder-custom": "All",
                 "high-priority": true,
-                "parser-grammar": "<absolute-size> | <relative-size> | <length-percentage [0,inf] unitless-allowed> | <-webkit-absolute-size> | <-webkit-relative-size>",
+                "parser-grammar": "<absolute-size> | <relative-size> | <length-percentage [0,inf] unitless=allowed> | <-webkit-absolute-size> | <-webkit-relative-size>",
                 "parser-exported": true
             },
             "specification": {
@@ -2040,7 +2040,7 @@
                 "visited-link-color-support": true,
                 "color-property": true,
                 "disables-native-appearance": true,
-                "parser-grammar": "<color accept-quirky-colors-in-quirks-mode>"
+                "parser-grammar": "<color quirky-colors-in-quirks-mode=allowed>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2558,7 +2558,7 @@
                 },
                 "parser-function": "consumeBorderColor",
                 "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<color accept-quirky-colors-in-quirks-mode>",
+                "parser-grammar-unused": "<color quirky-colors-in-quirks-mode=allowed>",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
             "specification": {
@@ -3108,7 +3108,7 @@
                 },
                 "parser-function": "consumeBorderColor",
                 "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<color accept-quirky-colors-in-quirks-mode>",
+                "parser-grammar-unused": "<color quirky-colors-in-quirks-mode=allowed>",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
             "specification": {
@@ -3212,7 +3212,7 @@
                 },
                 "parser-function": "consumeBorderColor",
                 "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<color accept-quirky-colors-in-quirks-mode>",
+                "parser-grammar-unused": "<color quirky-colors-in-quirks-mode=allowed>",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
             "specification": {
@@ -3369,7 +3369,7 @@
                 },
                 "parser-function": "consumeBorderColor",
                 "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<color accept-quirky-colors-in-quirks-mode>",
+                "parser-grammar-unused": "<color quirky-colors-in-quirks-mode=allowed>",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
             "specification": {
@@ -3505,7 +3505,7 @@
                 },
                 "parser-function": "consumeInsetPhysical",
                 "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "auto | <length-percentage anchor-allowed anchor-size-allowed>",
+                "parser-grammar-unused": "auto | <length-percentage anchor=allowed anchor-size=allowed>",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
             "specification": {
@@ -3998,7 +3998,7 @@
                 "style-builder-custom": "All",
                 "parser-function": "consumeCounterIncrement",
                 "parser-grammar-unused": "[ <counter-name> <integer>? ]+ | none",
-                "parser-grammar-unused-reason": "Needs support for '+' multipliers and optionals."
+                "parser-grammar-unused-reason": "Needs support ordered groups and optionals."
             },
             "specification": {
                 "category": "css-lists",
@@ -4015,7 +4015,7 @@
                 "style-builder-custom": "All",
                 "parser-function": "consumeCounterReset",
                 "parser-grammar-unused": "[ <counter-name> <integer>? ]+ | none",
-                "parser-grammar-unused-reason": "Needs support for '+' multipliers and optionals."
+                "parser-grammar-unused-reason": "Needs support for ordered groups and optionals."
             },
             "specification": {
                 "category": "css-lists",
@@ -4032,7 +4032,7 @@
                 "style-builder-custom": "All",
                 "parser-function": "consumeCounterSet",
                 "parser-grammar-unused": "[ <counter-name> <integer>? ]+ | none",
-                "parser-grammar-unused-reason": "Needs support for '+' multipliers and optionals."
+                "parser-grammar-unused-reason": "Needs support for ordered groups and optionals."
             },
             "specification": {
                 "category": "css-lists",
@@ -4346,7 +4346,7 @@
             "codegen-properties": {
                 "style-builder-converter": "GlyphOrientation",
                 "svg": true,
-                "parser-grammar": "<angle unitless-allowed unitless-zero-allowed>"
+                "parser-grammar": "<angle unitless=allowed unitless-zero=allowed>"
             },
             "specification": {
                 "category": "svg",
@@ -4363,7 +4363,7 @@
             "codegen-properties": {
                 "style-builder-converter": "GlyphOrientationOrAuto",
                 "svg": true,
-                "parser-grammar": "auto | <angle unitless-allowed unitless-zero-allowed>"
+                "parser-grammar": "auto | <angle unitless=allowed unitless-zero=allowed>"
             },
             "specification": {
                 "category": "svg",
@@ -4615,7 +4615,7 @@
                     "name": "inset",
                     "resolver": "block-end"
                 },
-                "parser-grammar": "auto | <length-percentage anchor-allowed anchor-size-allowed>"
+                "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
             "specification": {
                 "category": "css-logical-props",
@@ -4631,7 +4631,7 @@
                     "name": "inset",
                     "resolver": "block-start"
                 },
-                "parser-grammar": "auto | <length-percentage anchor-allowed anchor-size-allowed>"
+                "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
             "specification": {
                 "category": "css-logical-props",
@@ -4659,7 +4659,7 @@
                     "name": "inset",
                     "resolver": "inline-end"
                 },
-                "parser-grammar": "auto | <length-percentage anchor-allowed anchor-size-allowed>"
+                "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
             "specification": {
                 "category": "css-logical-props",
@@ -4675,7 +4675,7 @@
                     "name": "inset",
                     "resolver": "inline-start"
                 },
-                "parser-grammar": "auto | <length-percentage anchor-allowed anchor-size-allowed>"
+                "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
             "specification": {
                 "category": "css-logical-props",
@@ -4697,7 +4697,7 @@
                 },
                 "parser-function": "consumeInsetPhysical",
                 "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "auto | <length-percentage anchor-allowed anchor-size-allowed>",
+                "parser-grammar-unused": "auto | <length-percentage anchor=allowed anchor-size=allowed>",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
             "specification": {
@@ -4718,7 +4718,7 @@
                 "high-priority": true,
                 "sink-priority": true,
                 "style-builder-converter": "TextLengthOrNormal",
-                "parser-grammar": "normal | <length-percentage unitless-allowed>"
+                "parser-grammar": "normal | <length-percentage unitless=allowed>"
             },
             "specification": {
                 "category": "css-text",
@@ -6723,7 +6723,7 @@
                     "name": "padding",
                     "resolver": "bottom"
                 },
-                "parser-grammar": "<length-percentage [0,inf] unitless-allowed>"
+                "parser-grammar": "<length-percentage [0,inf] unitless=allowed>"
             },
             "specification": {
                 "category": "css-22",
@@ -6790,7 +6790,7 @@
                     "name": "padding",
                     "resolver": "left"
                 },
-                "parser-grammar": "<length-percentage [0,inf] unitless-allowed>"
+                "parser-grammar": "<length-percentage [0,inf] unitless=allowed>"
             },
             "specification": {
                 "category": "css-22",
@@ -6807,7 +6807,7 @@
                     "name": "padding",
                     "resolver": "right"
                 },
-                "parser-grammar": "<length-percentage [0,inf] unitless-allowed>"
+                "parser-grammar": "<length-percentage [0,inf] unitless=allowed>"
             },
             "specification": {
                 "category": "css-22",
@@ -6824,7 +6824,7 @@
                     "name": "padding",
                     "resolver": "top"
                 },
-                "parser-grammar": "<length-percentage [0,inf] unitless-allowed>"
+                "parser-grammar": "<length-percentage [0,inf] unitless=allowed>"
             },
             "specification": {
                 "category": "css-22",
@@ -6961,7 +6961,7 @@
                 "style-builder-converter": "Quotes",
                 "parser-function": "consumeQuotes",
                 "parser-grammar-unused": "auto | none | [ <string> <string> ]+",
-                "parser-grammar-unused-reason": "Needs support for ordered groups and the '+' multiplier."
+                "parser-grammar-unused-reason": "Needs support for ordered groups."
             },
             "specification": {
                 "category": "css-content",
@@ -7022,7 +7022,7 @@
                 },
                 "parser-function": "consumeInsetPhysical",
                 "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "auto | <length-percentage anchor-allowed anchor-size-allowed>",
+                "parser-grammar-unused": "auto | <length-percentage anchor=allowed anchor-size=allowed>",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
             "specification": {
@@ -7190,7 +7190,7 @@
                 "parser-function": "consumeStrokeDasharray",
                 "parser-function-allows-number-or-integer-input": true,
                 "parser-grammar-unused": "none | [ [ <length-percentage> | <number> ]+ ]#",
-                "parser-grammar-unused-reason": "Needs support for '+' and stacked multipliers.",
+                "parser-grammar-unused-reason": "Needs support for stacked multipliers.",
                 "comment": "Also specified (with different grammar) in CSS Fill and Stroke Module Level 3"
             },
             "specification": {
@@ -7673,7 +7673,7 @@
                 },
                 "parser-function": "consumeInsetPhysical",
                 "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "auto | <length-percentage anchor-allowed anchor-size-allowed>",
+                "parser-grammar-unused": "auto | <length-percentage anchor=allowed anchor-size=allowed>",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
             "specification": {
@@ -7873,7 +7873,7 @@
             ],
             "codegen-properties": {
                 "style-builder-custom": "Inherit|Value",
-                "parser-grammar": "<<values>> | <length-percentage unitless-allowed>",
+                "parser-grammar": "<<values>> | <length-percentage unitless=allowed>",
                 "parser-grammar-comment": "Current spec has 'vertical-align' specified as a shorthand with grammar '[ first | last] || <<'alignment-baseline'>> || <<'baseline-shift'>>'"
             },
             "specification": {
@@ -8018,8 +8018,8 @@
             "codegen-properties": {
                 "style-builder-converter": "WillChange",
                 "parser-function": "consumeWillChange",
-                "parser-grammar-unused": "auto | [ scroll-position | contents | <custom-ident> ]#",
-                "parser-grammar-unused-reason": "Needs support for applying restrictions to <custom-ident>. Specifically 'The <custom-ident> production used here excludes the keywords will-change, none, all, auto, scroll-position, and contents'. Maybe something like <custom-ident exclude='will-change none all auto scroll-position contents'>"
+                "parser-grammar-unused": "auto | [ scroll-position | contents | <custom-ident excluding=will-change,none,all,auto,scroll-position,contents> ]#",
+                "parser-grammar-unused-reason": "Current implementation stores supported CSS property names passed to <custom-ident> as specially, something the current generator does not support. One possibility would be to introduce a new builtin production <css-property-name> that does this and use that here."
             },
             "specification": {
                 "category": "css-will-change",
@@ -8066,7 +8066,7 @@
                 "style-builder-custom": "Inherit",
                 "sink-priority": true,
                 "style-builder-converter": "TextLengthOrNormal",
-                "parser-grammar": "normal | <length-percentage unitless-allowed>"
+                "parser-grammar": "normal | <length-percentage unitless=allowed>"
             },
             "specification": {
                 "category": "css-text",
@@ -8331,9 +8331,7 @@
             "codegen-properties": {
                 "style-builder-converter": "ContainerName",
                 "render-style-name-for-methods": "ContainerNames",
-                "parser-function": "consumeContainerName",
-                "parser-grammar-unused": "none | <custom-ident>+",
-                "parser-grammar-unused-reason": "Needs support for '+' multipliers and applying restrictions to <custom-ident>."
+                "parser-grammar": "none | <single-container-name>+@(no-single-item-opt)"
             },
             "specification": {
                 "category": "css-contain",
@@ -8890,7 +8888,7 @@
                 ],
                 "style-builder-converter": "ComputedLength<float>",
                 "auto-functions": true,
-                "parser-grammar": "auto | <length [0,inf] strict>",
+                "parser-grammar": "auto | <length [0,inf] mode=strict>",
                 "parser-exported": true
             },
             "specification":  {
@@ -8991,7 +8989,7 @@
                 "style-builder-converter": "FilterOperations",
                 "parser-function": "consumeFilter",
                 "parser-grammar-unused": "none | <filter-value-list>",
-                "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers."
+                "parser-grammar-unused-reason": "Needs support for functional syntax groupings."
             },
             "specification":  {
                 "category": "css-filters",
@@ -9010,7 +9008,7 @@
                 "style-builder-converter": "AppleColorFilterOperations",
                 "parser-function": "consumeAppleColorFilter",
                 "parser-grammar-unused": "none | <-apple-color-filter-value-list>",
-                "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers."
+                "parser-grammar-unused-reason": "Needs support for functional syntax groupings."
             },
             "status": {
                 "status": "non-standard"
@@ -9317,7 +9315,7 @@
                 "skip-style-builder": true,
                 "parser-function": "consumeFilter",
                 "parser-grammar-unused": "none | <filter-value-list>",
-                "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers."
+                "parser-grammar-unused-reason": "Needs support for functional syntax groupings."
             },
             "status": {
                 "status": "experimental"
@@ -9334,7 +9332,7 @@
                 "style-builder-converter": "FilterOperations",
                 "parser-function": "consumeFilter",
                 "parser-grammar-unused": "none | <filter-value-list>",
-                "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers.",
+                "parser-grammar-unused-reason": "Needs support for functional syntax groupings.",
                 "settings-flag": "cssUnprefixedBackdropFilterEnabled"
             },
             "status": {
@@ -9350,7 +9348,7 @@
             "codegen-properties": {
                 "skip-style-builder": true,
                 "internal-only": true,
-                "parser-grammar": "<length unitless-allowed>"
+                "parser-grammar": "<length unitless=allowed>"
             },
             "status": "non-standard"
         },
@@ -9461,7 +9459,7 @@
                 "parser-function": "consumeGridTrackList",
                 "parser-function-requires-additional-parameters": ["GridAuto"],
                 "parser-grammar-unused": "<track-size>+",
-                "parser-grammar-unused-reason": "Needs support for '+' multipliers and function notation"
+                "parser-grammar-unused-reason": "Needs support for functional syntax groupings."
             },
             "specification": {
                 "category": "css-grid",
@@ -9477,7 +9475,7 @@
                 "parser-function": "consumeGridTrackList",
                 "parser-function-requires-additional-parameters": ["GridAuto"],
                 "parser-grammar-unused": "<track-size>+",
-                "parser-grammar-unused-reason": "Needs support for '+' multipliers and function notation"
+                "parser-grammar-unused-reason": "Needs support for functional syntax groupings."
             },
             "specification": {
                 "category": "css-grid",
@@ -9535,7 +9533,7 @@
                 "style-builder-conditional-converter": "GridTrackList",
                 "parser-function": "consumeGridTemplatesRowsOrColumns",
                 "parser-grammar-unused": "none | <track-list> | <auto-track-list>",
-                "parser-grammar-unused-reason": "Needs support for '+' multiplier, '*' multiplier, optionals and function notation"
+                "parser-grammar-unused-reason": "Needs support for optionals and functional syntax groupings."
             },
             "specification": {
                 "category": "css-grid",
@@ -9550,7 +9548,7 @@
                 "style-builder-conditional-converter": "GridTrackList",
                 "parser-function": "consumeGridTemplatesRowsOrColumns",
                 "parser-grammar-unused": "none | <track-list> | <auto-track-list>",
-                "parser-grammar-unused-reason": "Needs support for '+' multiplier, '*' multiplier, optionals and function notation"
+                "parser-grammar-unused-reason": "Needs support for optionals and functional syntax groupings."
             },
             "specification": {
                 "category": "css-grid",
@@ -9618,7 +9616,7 @@
                 "style-builder-custom": "All",
                 "parser-function": "consumeGridTemplateAreas",
                 "parser-grammar-unused": "none | <string>+",
-                "parser-grammar-unused-reason": "Needs support for '+' multipliers."
+                "parser-grammar-unused-reason": "Needs support for parsing nested grammars in <string> values."
             },
             "specification": {
                 "category": "css-grid",
@@ -9912,7 +9910,7 @@
             "codegen-properties": {
                 "style-builder-conditional-converter": "MarqueeIncrement",
                 "internal-only": true,
-                "parser-grammar": "<length-percentage unitless-allowed>"
+                "parser-grammar": "<length-percentage unitless=allowed>"
             },
             "status": "non-standard"
         },
@@ -10062,8 +10060,8 @@
                 "top-priority": true,
                 "top-priority-reason": "This is a top priority property to ensure that its value can be checked when resolving colors.",
                 "parser-function": "consumeColorScheme",
-                "parser-grammar-unused": "normal | [ [ light | dark | <custom-ident> ]+ && only? ]",
-                "parser-grammar-unused-reason": "Needs support for '&&' groups, '+' multipliers, optionals and applying restrictions to <custom-ident>."
+                "parser-grammar-unused": "normal | [ [ light | dark | <custom-ident excluding=light,dark,normal,only> ]+ && only? ]",
+                "parser-grammar-unused-reason": "Needs support for '&&' groups and optionals."
             },
             "specification": {
                 "category": "css-color-adjust",
@@ -10584,7 +10582,7 @@
                 "style-builder-converter": "Transform",
                 "parser-function": "consumeTransform",
                 "parser-grammar-unused": "none | <transform-list>",
-                "parser-grammar-unused-reason": "Needs support for '+' multipliers and function notation."
+                "parser-grammar-unused-reason": "Needs support for function notation."
             },
             "specification": {
                 "category": "css-transforms",
@@ -11529,9 +11527,7 @@
             "codegen-properties": {
                 "style-builder-converter": "ViewTransitionClass",
                 "render-style-name-for-methods": "ViewTransitionClasses",
-                "parser-function": "consumeViewTransitionClass",
-                "parser-grammar-unused": "none | <custom-ident>+",
-                "parser-grammar-unused-reason": "Needs support for '+' multipliers.",
+                "parser-grammar": "none | <custom-ident excluding=none>+@(no-single-item-opt)",
                 "settings-flag": "viewTransitionClassesEnabled"
             },
             "specification": {
@@ -12344,9 +12340,9 @@
                 ],
                 "codegen-properties": {
                     "settings-flag": "crossDocumentViewTransitionsEnabled",
-                    "parser-grammar-unused": "none | <custom-ident>+",
-                    "parser-grammar-unused-reason": "Needs support for space separated idents",
-                    "parser-function": "consumeViewTransitionTypes"
+                    "parser-function": "consumeViewTransitionTypes",
+                    "parser-grammar-unused": "none | <custom-ident excluding=none>+",
+                    "parser-grammar-unused-reason": "Needs support for excluding from <custom-ident> based on prefixes."
                 },
                  "specification": {
                      "category": "css-view-transitions",
@@ -12775,7 +12771,7 @@
             "grammar":  "intrinsic | min-intrinsic | min-content | -webkit-min-content | max-content | -webkit-max-content | -webkit-fill-available | fit-content | -webkit-fit-content"
         },
         "<width-or-height>": {
-            "grammar":  "auto | <width-or-height-keyword> | <length-percentage [0,inf] anchor-size-allowed>",
+            "grammar":  "auto | <width-or-height-keyword> | <length-percentage [0,inf] anchor-size=allowed>",
             "exported": true,
             "comment": "Doesn't match current specification",
             "specification": {
@@ -12784,7 +12780,7 @@
             }
         },
         "<width-or-height-unitless-allowed>": {
-            "grammar":  "auto | <width-or-height-keyword> | <length-percentage [0,inf] unitless-allowed anchor-size-allowed>",
+            "grammar":  "auto | <width-or-height-keyword> | <length-percentage [0,inf] unitless=allowed anchor-size=allowed>",
             "comment": "Doesn't match current specification",
             "specification": {
                 "category": "css-sizing",
@@ -12792,7 +12788,7 @@
             }
         },
         "<max-width-or-height>": {
-            "grammar": "none | <width-or-height-keyword> | <length-percentage [0,inf] anchor-size-allowed>",
+            "grammar": "none | <width-or-height-keyword> | <length-percentage [0,inf] anchor-size=allowed>",
             "comment": "Doesn't match current specification",
             "specification": {
                 "category": "css-sizing",
@@ -12800,7 +12796,7 @@
             }
         },
         "<max-width-or-height-unitless-allowed>": {
-            "grammar":  "none | <width-or-height-keyword> | <length-percentage [0,inf] unitless-allowed anchor-size-allowed>",
+            "grammar":  "none | <width-or-height-keyword> | <length-percentage [0,inf] unitless=allowed anchor-size=allowed>",
             "comment": "Doesn't match current specification",
             "specification": {
                 "category": "css-sizing",
@@ -12832,7 +12828,7 @@
             }
         },
         "<margin-logical>": {
-            "grammar": "auto | <length-percentage anchor-size-allowed>",
+            "grammar": "auto | <length-percentage anchor-size=allowed>",
             "specification": {
                 "category": "css-logical-props",
                 "url": "https://www.w3.org/TR/css-logical/#margin-properties"
@@ -13239,7 +13235,7 @@
             }
         },
         "<hue-rotate()>": {
-            "grammar": "hue-rotate( <angle unitless-zero-allowed>? )",
+            "grammar": "hue-rotate( <angle unitless-zero=allowed>? )",
             "specification": {
                 "category": "css-filters",
                 "url": "https://www.w3.org/TR/filter-effects/#funcdef-filter-hue-rotate"
@@ -13628,6 +13624,14 @@
             "specification": {
                 "category": "scroll-animations",
                 "url": "https://drafts.csswg.org/scroll-animations-1/#propdef-view-timeline-inset"
+            }
+        },
+        "<single-container-name>": {
+            "grammar": "<custom-ident excluding=none,and,or,not>",
+            "exported": true,
+            "specification": {
+                "category": "css-contain",
+                "url": "https://drafts.csswg.org/css-contain-3/#container-name"
             }
         }
     }

@@ -64,7 +64,7 @@ RefPtr<CSSValue> consumePositionTryFallbacks(CSSParserTokenRange& range, const C
 
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
-    return consumeCommaSeparatedListWithSingleValueOptimization(range, consume);
+    return consumeListSeparatedBy<',', OneOrMore, ListOptimization::SingleValue>(range, consume);
 }
 
 } // namespace CSSPropertyParserHelpers

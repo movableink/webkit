@@ -354,7 +354,7 @@ RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange& range, const CSSParserCo
     // <'font-family'> = [ <family-name> | <generic-family> ]#
     // https://drafts.csswg.org/css-fonts-4/#font-family-prop
 
-    return consumeCommaSeparatedListWithoutSingleValueOptimization(range, [] (auto& range) -> RefPtr<CSSValue> {
+    return consumeListSeparatedBy<',', OneOrMore>(range, [] (auto& range) -> RefPtr<CSSValue> {
         if (auto parsedValue = consumeGenericFamily(range))
             return parsedValue;
         return consumeFamilyName(range);
@@ -1437,7 +1437,7 @@ RefPtr<CSSValue> consumeFontPaletteValuesFontFamily(CSSParserTokenRange& range, 
     // <'font-family'> = <family-name>#
     // https://drafts.csswg.org/css-fonts/#descdef-font-palette-values-font-family
 
-    return consumeCommaSeparatedListWithoutSingleValueOptimization(range, [](auto& range) {
+    return consumeListSeparatedBy<',', OneOrMore>(range, [](auto& range) {
         return consumeFamilyName(range);
     });
 }
@@ -1449,7 +1449,7 @@ RefPtr<CSSValue> consumeFontPaletteValuesOverrideColors(CSSParserTokenRange& ran
     // <'override-colors'> = [ <integer [0,∞]> <color> ]#
     // https://drafts.csswg.org/css-fonts/#descdef-font-palette-values-override-colors
 
-    auto list = consumeCommaSeparatedListWithoutSingleValueOptimization(range, [](auto& range, auto& context) -> RefPtr<CSSValue> {
+    auto list = consumeListSeparatedBy<',', OneOrMore>(range, [](auto& range, auto& context) -> RefPtr<CSSValue> {
         auto key = consumeNonNegativeInteger(range, context);
         if (!key)
             return nullptr;
