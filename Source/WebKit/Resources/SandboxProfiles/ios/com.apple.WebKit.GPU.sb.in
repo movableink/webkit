@@ -281,7 +281,7 @@
     (allow mach-lookup
         (global-name "com.apple.CARenderServer"))
 
-    (allow iokit-open-user-client (with telemetry) (with report)
+    (allow iokit-open-user-client
         (iokit-user-client-class "IOSurfaceAcceleratorClient")
         (apply-message-filter
             (allow (with telemetry) (with report) (with message "IOSurfaceAcceleratorClient")
