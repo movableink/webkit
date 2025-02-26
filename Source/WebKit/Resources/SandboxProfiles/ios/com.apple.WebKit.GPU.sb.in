@@ -959,6 +959,7 @@
     io_service_get_matching_services_bin
     io_service_open_extended
     mach_eventlink_associate
+    mach_eventlink_create
     mach_exception_raise
     mach_memory_entry_ownership
     mach_port_extract_right
