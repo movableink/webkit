@@ -165,14 +165,4 @@ typedef NSDictionary<NSNumber *, NSValue *> *ProgressToCGPointValueMap;
 
 #endif // !PLATFORM(MACCATALYST)
 
-#if ENABLE(MODEL_PROCESS)
-@interface DragAndDropSimulator (ModelElementStageMode)
-
-- (void)hitTestForStageModeAt:(CGPoint)hitPoint;
-- (BOOL)awaitingStageModeHitResult;
-- (BOOL)stageModeHitTestValidModel;
-
-@end
-#endif
-
 #endif // ENABLE(DRAG_SUPPORT)

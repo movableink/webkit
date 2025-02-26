@@ -532,29 +532,6 @@ static void dumpUIView(TextStream& ts, UIView *view)
     }).get()];
 }
 
-- (void)_simulateModelInteractionPanGestureBeginAtPoint:(CGPoint)hitPoint
-{
-#if ENABLE(MODEL_PROCESS)
-    [_contentView _simulateModelInteractionPanGestureBeginAtPoint:hitPoint];
-#endif
-}
-
-- (void)_simulateModelInteractionPanGestureUpdateAtPoint:(CGPoint)hitPoint
-{
-#if ENABLE(MODEL_PROCESS)
-    [_contentView _simulateModelInteractionPanGestureUpdateAtPoint:hitPoint];
-#endif
-}
-
-- (NSDictionary *)_stageModeInfoForTesting
-{
-#if ENABLE(MODEL_PROCESS)
-    return [_contentView _stageModeInfoForTesting];
-#else
-    return @{ };
-#endif
-}
-
 @end
 
 #endif // PLATFORM(IOS_FAMILY)
