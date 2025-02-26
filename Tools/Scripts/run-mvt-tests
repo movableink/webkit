@@ -37,6 +37,7 @@ import urllib3
 from random import randint
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
+from time import sleep
 
 
 top_level_directory = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -91,6 +92,28 @@ def parse_args(argument_list):
     return args
 
 
+class ProgressLogInfo():
+
+    def __init__(self):
+        self.last_msg_printed = ""
+
+    def log(self, msg):
+        if msg == self.last_msg_printed:
+            return
+        if len(msg) < len(self.last_msg_printed):
+            self.maybe_clean()
+        sys.stdout.write(f"\r{msg}")
+        sys.stdout.flush()
+        self.last_msg_printed = msg
+
+    def maybe_clean(self):
+        len_last_msg_printed = len(self.last_msg_printed)
+        if len_last_msg_printed > 0:
+            clean_str = " " * len_last_msg_printed
+            sys.stdout.write(f"\r{clean_str}\r")
+            sys.stdout.flush()
+
+
 class MVTWebDriverRunner():
 
     def __init__(self, platform, configuration, extra_browser_args, mvt_instance_address, browser_name):
@@ -125,15 +148,38 @@ class MVTWebDriverRunner():
     def _suite_has_started(self, driver):
         return driver.execute_script('return !(typeof globalRunner === "undefined" || globalRunner === null);')
 
-    def _suite_has_finished(self, driver):
-        return driver.execute_script("return globalRunner.currentTestIdx == globalRunner.testList.length;")
+    def _wait_until_suite_has_finished(self, maxwait_secs, suite_name):
+        poll_interval_secs = 5
+        max_loops = maxwait_secs / poll_interval_secs
+        i=0
+        try:
+            progress_log_info = ProgressLogInfo()
+            while True:
+                sleep(poll_interval_secs)
+                i+=1
+                running_test_id = self.driver.execute_script("return globalRunner.currentTestIdx;")
+                total_tests_to_run = self.driver.execute_script("return globalRunner.testList.length;")
+                if total_tests_to_run > 0 and running_test_id==total_tests_to_run:
+                    break
+                if i >= max_loops:
+                    raise TimeoutException(f'Timed out waiting for the suite "{suite_name}" to finish after waiting {maxwait_secs} seconds')
+                if _log.getEffectiveLevel() in [logging.DEBUG, logging.INFO]:
+                    percent_completed = float(100) * float(running_test_id) / float(total_tests_to_run)
+                    progress_log_msg = f'Completed {percent_completed:.0f}% of suite "{suite_name}": running test {running_test_id} of {total_tests_to_run}.'
+                    if _log.getEffectiveLevel() == logging.INFO:
+                        progress_log_info.log(progress_log_msg)
+                    else:
+                        _log.debug(progress_log_msg)
+        finally:
+            progress_log_info.maybe_clean()
 
     def run_suite(self, suite):
         test_url = f"{self.mvt_instance_address}/?test_type={suite}&command=run"
         _log.info(f'Running MVT suite "{suite}" at {test_url}')
         self.driver.get(test_url)
         WebDriverWait(self.driver, 20).until(self._suite_has_started)
-        WebDriverWait(self.driver, 3600).until(self._suite_has_finished)
+        self._wait_until_suite_has_finished(3600, suite)
+        _log.info(f'MVT suite "{suite}" has finished. Results below:')
         return self.driver.execute_script("return getMvtTestResults()")
 
     def __del__(self):
