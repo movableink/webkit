@@ -982,7 +982,7 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
 
     [_scrollView setMinimumZoomScale:minimumScaleFactor];
     [_scrollView setMaximumZoomScale:maximumScaleFactor];
-    [_scrollView _setZoomEnabledInternal:allowsUserScaling];
+    [_scrollView _setZoomEnabledInternal:allowsUserScaling && self._allowsMagnification];
     if ([_scrollView showsHorizontalScrollIndicator] && [_scrollView showsVerticalScrollIndicator]) {
         [_scrollView setShowsHorizontalScrollIndicator:(_page->scrollingCoordinatorProxy()->mainFrameScrollbarWidth() != WebCore::ScrollbarWidth::None)];
         [_scrollView setShowsVerticalScrollIndicator:(_page->scrollingCoordinatorProxy()->mainFrameScrollbarWidth() != WebCore::ScrollbarWidth::None)];
@@ -3888,12 +3888,23 @@ static bool isLockdownModeWarningNeeded()
     _overriddenZoomScaleParameters = { minimumZoomScale, maximumZoomScale, allowUserScaling };
     [_scrollView setMinimumZoomScale:minimumZoomScale];
     [_scrollView setMaximumZoomScale:maximumZoomScale];
-    [_scrollView _setZoomEnabledInternal:allowUserScaling];
+    [_scrollView _setZoomEnabledInternal:allowUserScaling && self._allowsMagnification];
 }
 
 - (void)_clearOverrideZoomScaleParameters
 {
     _overriddenZoomScaleParameters = std::nullopt;
+}
+
+- (BOOL)_allowsMagnification
+{
+    return _allowsMagnification;
+}
+
+- (void)_setAllowsMagnification:(BOOL)allowsMagnification
+{
+    _allowsMagnification = allowsMagnification;
+    [_contentView _updateDoubleTapGestureRecognizerEnablement];
 }
 
 #if ENABLE(MODEL_PROCESS)

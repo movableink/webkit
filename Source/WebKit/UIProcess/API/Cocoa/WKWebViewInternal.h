@@ -429,6 +429,8 @@ struct PerWebProcessState {
     WebCore::FixedContainerEdges _fixedContainerEdges;
 
     RetainPtr<WKScrollGeometry> _currentScrollGeometry;
+
+    BOOL _allowsMagnification;
 }
 
 - (BOOL)_isValid;
@@ -567,6 +569,10 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const WebCore::ExceptionDetails&)
 @property (nonatomic, setter=_setAlwaysBounceHorizontal:) BOOL _alwaysBounceHorizontal;
 
 - (void)_setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated;
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+@property (nonatomic, setter=_setAllowsMagnification:) BOOL _allowsMagnification;
 #endif
 
 @end

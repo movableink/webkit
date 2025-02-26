@@ -579,6 +579,7 @@ struct ImageAnalysisContextMenuActionData {
     BOOL _isHandlingActivePressesEvent;
     BOOL _isDeferringKeyEventsToInputMethod;
     BOOL _isUpdatingAccessoryView;
+    BOOL _doubleTapGesturesAreDisabledTemporarilyForFastTap;
 
     BOOL _focusRequiresStrongPasswordAssistance;
     BOOL _waitingForEditDragSnapshot;
@@ -983,6 +984,8 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (ScopeExit<Function<void()>>)makeTextSelectionViewsNonInteractiveForScope;
 
 - (BOOL)_shouldHideSelectionDuringOverflowScroll:(UIScrollView *)scrollView;
+
+- (void)_updateDoubleTapGestureRecognizerEnablement;
 
 @property (nonatomic, readonly) BOOL shouldUseAsyncInteractions;
 

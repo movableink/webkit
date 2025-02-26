@@ -72,6 +72,27 @@ extension WebView {
         let value: Value
     }
 
+    @_spi(Private)
+    public struct MagnificationGesturesBehavior: Sendable {
+        enum Value {
+            case automatic
+            case enabled
+            case disabled
+        }
+
+        public static let automatic: Self = .init(.automatic)
+
+        public static let enabled: Self = .init(.enabled)
+
+        public static let disabled: Self = .init(.disabled)
+
+        init(_ value: Value) {
+            self.value = value
+        }
+
+        let value: Value
+    }
+
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)

@@ -102,6 +102,12 @@ extension WebPageWebView {
         get { scrollView.bouncesHorizontally }
         set { scrollView.bouncesHorizontally = newValue }
     }
+
+    @_spi(CrossImportOverlay)
+    public var allowsMagnification: Bool {
+        get { self._allowsMagnification }
+        set { self._allowsMagnification = newValue }
+    }
 #else
     @_spi(CrossImportOverlay)
     public var alwaysBounceVertical: Bool {

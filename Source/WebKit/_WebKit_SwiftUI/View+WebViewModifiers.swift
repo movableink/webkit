@@ -30,6 +30,9 @@ extension EnvironmentValues {
     var webViewAllowsBackForwardNavigationGestures = WebView.BackForwardNavigationGesturesBehavior.automatic
 
     @Entry
+    var webViewMagnificationGestures = WebView.MagnificationGesturesBehavior.automatic
+
+    @Entry
     var webViewAllowsLinkPreview = WebView.LinkPreviewBehavior.automatic
 
     @Entry
@@ -58,6 +61,11 @@ extension View {
     @available(tvOS, unavailable)
     public func webViewBackForwardNavigationGestures(_ value: WebView.BackForwardNavigationGesturesBehavior = .automatic) -> some View {
         environment(\.webViewAllowsBackForwardNavigationGestures, value)
+    }
+
+    @_spi(Private)
+    public func webViewMagnificationGestures(_ value: WebView.MagnificationGesturesBehavior) -> some View {
+        environment(\.webViewMagnificationGestures, value)
     }
 
     /// Determines whether pressing a link displays a preview of the destination for the link.

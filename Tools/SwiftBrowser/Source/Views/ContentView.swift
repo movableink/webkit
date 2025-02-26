@@ -231,6 +231,7 @@ struct ContentView: View {
 
             WebView(viewModel.page)
                 .webViewBackForwardNavigationGestures(.enabled)
+                .webViewMagnificationGestures(.enabled)
                 .webViewLinkPreviews(.enabled)
                 .webViewTextSelection(.enabled)
                 .webViewAllowsElementFullscreen()

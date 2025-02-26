@@ -2331,7 +2331,7 @@ typedef NS_ENUM(NSInteger, EndEditingReason) {
     if (gestureRecognizer == [_webView scrollView].pinchGestureRecognizer)
         return YES;
 
-    // The gesture recognizer is another UIPichGestureRecognizer known to lead to pinch-to-zoom.
+    // The gesture recognizer is another UIPinchGestureRecognizer known to lead to pinch-to-zoom.
     if ([gestureRecognizer isKindOfClass:[UIPinchGestureRecognizer class]]) {
         if (auto uiDelegate = static_cast<id<WKUIDelegatePrivate>>(self.webView.UIDelegate)) {
             if ([uiDelegate respondsToSelector:@selector(_webView:gestureRecognizerCouldPinch:)])
@@ -6130,8 +6130,14 @@ static void logTextInteraction(const char* methodName, UIGestureRecognizer *loup
     if (_showDebugTapHighlightsForFastClicking && !enabled)
         _tapHighlightInformation.color = [self _tapHighlightColorForFastClick:YES];
 
-    [_doubleTapGestureRecognizer setEnabled:enabled];
-    [_nonBlockingDoubleTapGestureRecognizer setEnabled:!enabled];
+    _doubleTapGesturesAreDisabledTemporarilyForFastTap = !enabled;
+    [self _updateDoubleTapGestureRecognizerEnablement];
+}
+
+- (void)_updateDoubleTapGestureRecognizerEnablement
+{
+    [_doubleTapGestureRecognizer setEnabled:!_doubleTapGesturesAreDisabledTemporarilyForFastTap && [_webView _allowsMagnification]];
+    [_nonBlockingDoubleTapGestureRecognizer setEnabled:_doubleTapGesturesAreDisabledTemporarilyForFastTap && [_webView _allowsMagnification]];
     [self _resetIsDoubleTapPending];
 }
 
