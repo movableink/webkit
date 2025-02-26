@@ -1519,6 +1519,7 @@
 		A3EE8543262514B000FC9B8D /* IntlWorkaround.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A37619402625127C00CBCBA9 /* IntlWorkaround.cpp */; };
 		A3FF9BC72234749100B1A9AB /* YarrFlags.h in Headers */ = {isa = PBXBuildFile; fileRef = A3FF9BC52234746600B1A9AB /* YarrFlags.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		A40755D92D10CAE000DC55FF /* AirAllocateRegistersByGreedy.h in Headers */ = {isa = PBXBuildFile; fileRef = A40755D72D10CABA00DC55FF /* AirAllocateRegistersByGreedy.h */; };
+		A43531C12D6E40E200B01FE1 /* AirRegisterAllocatorStats.h in Headers */ = {isa = PBXBuildFile; fileRef = A43531C02D6E40E200B01FE1 /* AirRegisterAllocatorStats.h */; };
 		A503FA1A188E0FB000110F14 /* JavaScriptCallFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = A503FA14188E0FAF00110F14 /* JavaScriptCallFrame.h */; };
 		A503FA1E188E0FB000110F14 /* JSJavaScriptCallFramePrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = A503FA18188E0FB000110F14 /* JSJavaScriptCallFramePrototype.h */; };
 		A503FA2A188F105900110F14 /* JSGlobalObjectDebugger.h in Headers */ = {isa = PBXBuildFile; fileRef = A503FA28188F105900110F14 /* JSGlobalObjectDebugger.h */; };
@@ -4991,6 +4992,7 @@
 		A3FF9BC62234746600B1A9AB /* YarrFlags.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = YarrFlags.cpp; path = yarr/YarrFlags.cpp; sourceTree = "<group>"; };
 		A40755D72D10CABA00DC55FF /* AirAllocateRegistersByGreedy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AirAllocateRegistersByGreedy.h; path = b3/air/AirAllocateRegistersByGreedy.h; sourceTree = "<group>"; };
 		A40755D82D10CABA00DC55FF /* AirAllocateRegistersByGreedy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AirAllocateRegistersByGreedy.cpp; path = b3/air/AirAllocateRegistersByGreedy.cpp; sourceTree = "<group>"; };
+		A43531C02D6E40E200B01FE1 /* AirRegisterAllocatorStats.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AirRegisterAllocatorStats.h; path = b3/air/AirRegisterAllocatorStats.h; sourceTree = "<group>"; };
 		A503FA13188E0FAF00110F14 /* JavaScriptCallFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JavaScriptCallFrame.cpp; sourceTree = "<group>"; };
 		A503FA14188E0FAF00110F14 /* JavaScriptCallFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JavaScriptCallFrame.h; sourceTree = "<group>"; };
 		A503FA15188E0FB000110F14 /* JSJavaScriptCallFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSJavaScriptCallFrame.cpp; sourceTree = "<group>"; };
@@ -6811,6 +6813,7 @@
 				0FEC855F1BDACDC70080FF74 /* AirPhaseScope.h */,
 				FE5628CB1E99512400C49E45 /* AirPrintSpecial.cpp */,
 				FE5628CC1E99512400C49E45 /* AirPrintSpecial.h */,
+				A43531C02D6E40E200B01FE1 /* AirRegisterAllocatorStats.h */,
 				0FF4B4BA1E88449500DBBE86 /* AirRegLiveness.cpp */,
 				0FF4B4BB1E88449500DBBE86 /* AirRegLiveness.h */,
 				0F45703A1BE45F0A0062A629 /* AirReportUsedRegisters.cpp */,
@@ -10388,6 +10391,7 @@
 				0F2AC56F1E8D7B030001EE3F /* AirPhaseInsertionSet.h in Headers */,
 				0FEC85841BDACDC70080FF74 /* AirPhaseScope.h in Headers */,
 				FE5628CE1E99513200C49E45 /* AirPrintSpecial.h in Headers */,
+				A43531C12D6E40E200B01FE1 /* AirRegisterAllocatorStats.h in Headers */,
 				0FF4B4BD1E88449A00DBBE86 /* AirRegLiveness.h in Headers */,
 				0F45703D1BE45F0A0062A629 /* AirReportUsedRegisters.h in Headers */,
 				0F338DFE1BED51270013C88F /* AirSimplifyCFG.h in Headers */,

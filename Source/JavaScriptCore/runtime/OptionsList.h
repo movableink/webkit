@@ -472,6 +472,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, airGreedyRegAllocVerbose, false, Normal, nullptr) \
     v(Bool, airUseGreedyRegAlloc, false, Normal, nullptr) \
     v(Double, airGreedyRegAllocSplitMultiplier, 2.0, Normal, nullptr) \
+    v(Bool, airDumpRegAllocStats, false, Normal, nullptr) \
     v(Bool, airValidateGreedRegAlloc, ASSERT_ENABLED, Normal, nullptr) \
     v(Bool, airRandomizeRegs, false, Normal, nullptr) \
     v(Unsigned, airRandomizeRegsSeed, 0, Normal, nullptr) \

@@ -37,6 +37,7 @@
 #include "AirPadInterference.h"
 #include "AirPhaseScope.h"
 #include "AirRegLiveness.h"
+#include "AirRegisterAllocatorStats.h"
 #include "AirTmpMap.h"
 #include "AirTmpWidthInlines.h"
 #include "AirUseCounts.h"
@@ -591,6 +592,9 @@ public:
 
     void run()
     {
+        m_stats[GP].numTmpsIn = m_code.numTmps(GP);
+        m_stats[FP].numTmpsIn = m_code.numTmps(FP);
+
         // FIXME: reconsider use of padIntereference, https://bugs.webkit.org/show_bug.cgi?id=288122
         padInterference(m_code);
         buildRegisterSets();
@@ -613,6 +617,10 @@ public:
 
         assignRegisters();
         fixSpillsAfterTerminals(m_code);
+
+        m_stats[GP].numTmpsOut = m_code.numTmps(GP);
+        m_stats[FP].numTmpsOut = m_code.numTmps(FP);
+
     }
 
     void dump(PrintStream& out) const
@@ -1224,13 +1232,16 @@ private:
             tmpData.useDefCost = useDefCost;
 
             if (cannotSpillInPlace.contains(tmp)
-                && tmpData.liveRange.intervals().size() == 1 && tmpData.liveRange.size() <= pointsPerInst)
+                && tmpData.liveRange.intervals().size() == 1 && tmpData.liveRange.size() <= pointsPerInst) {
                 tmpData.unspillable = true;
+                m_stats[bank].numUnspillableTmps++;
+            }
         });
         m_code.forEachFastTmp([&](Tmp tmp) {
             if (tmp.bank() != bank)
                 return;
             m_map[tmp].unspillable = true;
+            m_stats[bank].numUnspillableTmps++;
             dataLogLnIf(verbose(), "FastTmp: ", tmp);
         });
     }
@@ -1256,6 +1267,7 @@ private:
         m_map[tmp].unspillable = true;
         dataLogLnIf(verbose(), "New spill for ", spilledTmp, " tmp: ", tmp, ": ", m_map[tmp]);
         setStageAndEnqueue(tmp, m_map[tmp], Stage::Unspillable);
+        m_stats[tmp.bank()].numSpillTmps++;
         return tmp;
     }
 
@@ -1698,8 +1710,10 @@ private:
     {
         m_code.forEachTmp<bank>([&](Tmp tmp) {
             TmpData& tmpData = m_map[tmp];
-            if (tmpData.stage == Stage::Spilled && !tmpData.spillSlot)
+            if (tmpData.stage == Stage::Spilled && !tmpData.spillSlot) {
                 tmpData.spillSlot = m_code.addStackSlot(stackSlotMinimumWidth(m_tmpWidth.requiredWidth(tmp)), StackSlotKind::Spill);
+                m_stats[bank].numSpillStackSlots++;
+            }
         });
         for (BasicBlock* block : m_code) {
             Point positionOfHead = this->positionOfHead(block);
@@ -1800,6 +1814,7 @@ private:
                     Tmp tmp = addSpillTmpWithInterval(scratchForTmp, intervalForSpill(indexOfEarly, Arg::Scratch));
                     inst.args.append(tmp);
                     RELEASE_ASSERT(inst.args.size() == 3);
+                    m_stats[bank].numMoveSpillSpillInsts++;
                     // WTF::Liveness and Air::LivenessAdapter do not handle a late-def/use followed by early-def
                     // correctly. While this register allocator does handle it correctly (since it models distinct
                     // late and early points between instructions (i.e. intervalForSpill() won't overlap for different
@@ -1834,11 +1849,13 @@ private:
                                     int64_t value = m_useCounts.constant<bank>(oldIndex);
                                     if (Arg::isValidImmForm(value) && isValidForm(Move, Arg::Imm, Arg::Tmp)) {
                                         m_insertionSets[block].insert(instIndex, spillLoad, Move, inst.origin, Arg::imm(value), tmp);
+                                        m_stats[bank].numRematerializeConst++;
                                         dataLogLnIf(verbose(), "Rematerialized (imm) ", oldTmp, ": ", tmp, " <- ", WTF::RawHex(value));
                                         return true;
                                     }
                                     if (isValidForm(Move, Arg::BigImm, Arg::Tmp)) {
                                         m_insertionSets[block].insert(instIndex, spillLoad, Move, inst.origin, Arg::bigImm(value), tmp);
+                                        m_stats[bank].numRematerializeConst++;
                                         dataLogLnIf(verbose(), "Rematerialized (bigImm) ", oldTmp, ": ", tmp, " <- ", WTF::RawHex(value));
                                         return true;
                                     }
@@ -1847,11 +1864,15 @@ private:
                             return false;
                         };
 
-                        if (!tryRematerialize())
+                        if (!tryRematerialize()) {
                             m_insertionSets[block].insert(instIndex, spillLoad, move, inst.origin, arg, tmp);
+                            m_stats[bank].numLoadSpill++;
+                        }
                     }
-                    if (Arg::isAnyDef(role))
+                    if (Arg::isAnyDef(role)) {
                         m_insertionSets[block].insert(instIndex + 1, spillStore, move, inst.origin, tmp, arg);
+                        m_stats[bank].numStoreSpill++;
+                    }
                 });
                 ASSERT(inst.isValidForm());
             }
@@ -1990,6 +2011,7 @@ private:
     BlockWorklist m_fastBlocks;
     UseCounts m_useCounts;
     TmpWidth m_tmpWidth;
+    std::array<AirAllocateRegistersStats, numBanks> m_stats = { GP, FP };
     bool m_didSpill { false };
 };
 
