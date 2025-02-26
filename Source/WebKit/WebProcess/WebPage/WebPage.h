@@ -3054,3 +3054,7 @@ bool scalesAreEssentiallyEqual(float, float);
 #endif
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebPage) \
+    static bool isType(const API::Object& object) { return object.type() == API::Object::Type::BundlePage; } \
+SPECIALIZE_TYPE_TRAITS_END()

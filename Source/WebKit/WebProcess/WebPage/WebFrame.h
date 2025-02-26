@@ -272,3 +272,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebFrame) \
+    static bool isType(const API::Object& object) { return object.type() == API::Object::Type::BundleFrame; } \
+SPECIALIZE_TYPE_TRAITS_END()

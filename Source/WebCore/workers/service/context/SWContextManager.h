@@ -92,6 +92,8 @@ public:
 
         virtual void removeNavigationFetch(SWServerConnectionIdentifier, FetchIdentifier) = 0;
 
+        virtual bool isWebSWContextManagerConnection() const { return false; }
+
     protected:
         void setAsClosed() { m_isClosed = true; }
 

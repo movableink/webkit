@@ -81,6 +81,11 @@ private:
     String m_userAgent;
     Ref<WebUserContentController> m_userContentController;
     std::optional<WebPreferencesStore> m_preferencesStore;
+    bool isWebSharedWorkerContextManagerConnection() const final { return true; }
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebSharedWorkerContextManagerConnection) \
+    static bool isType(const WebCore::SharedWorkerContextManager::Connection& connection) { return connection.isWebSharedWorkerContextManagerConnection(); } \
+SPECIALIZE_TYPE_TRAITS_END()

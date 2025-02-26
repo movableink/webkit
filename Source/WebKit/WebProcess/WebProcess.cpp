@@ -1001,14 +1001,14 @@ bool WebProcess::dispatchMessage(IPC::Connection& connection, IPC::Decoder& deco
     if (decoder.messageReceiverName() == Messages::WebSWContextManagerConnection::messageReceiverName()) {
         ASSERT(SWContextManager::singleton().connection());
         if (RefPtr contextManagerConnection = SWContextManager::singleton().connection())
-            static_cast<WebSWContextManagerConnection&>(*contextManagerConnection).didReceiveMessage(connection, decoder);
+            downcast<WebSWContextManagerConnection>(*contextManagerConnection).didReceiveMessage(connection, decoder);
         return true;
     }
 
     if (decoder.messageReceiverName() == Messages::WebSharedWorkerContextManagerConnection::messageReceiverName()) {
         ASSERT(SharedWorkerContextManager::singleton().connection());
         if (RefPtr contextManagerConnection = SharedWorkerContextManager::singleton().connection())
-            static_cast<WebSharedWorkerContextManagerConnection&>(*contextManagerConnection).didReceiveMessage(connection, decoder);
+            downcast<WebSharedWorkerContextManagerConnection>(*contextManagerConnection).didReceiveMessage(connection, decoder);
         return true;
     }
     return false;
@@ -1953,10 +1953,10 @@ RefPtr<API::Object> WebProcess::transformHandlesToObjects(API::Object* object)
         {
             switch (object.type()) {
             case API::Object::Type::FrameHandle:
-                return static_cast<const API::FrameHandle&>(object).isAutoconverting();
+                return downcast<const API::FrameHandle>(object).isAutoconverting();
 
             case API::Object::Type::PageHandle:
-                return static_cast<const API::PageHandle&>(object).isAutoconverting();
+                return downcast<const API::PageHandle>(object).isAutoconverting();
 
             default:
                 return false;
@@ -1967,11 +1967,11 @@ RefPtr<API::Object> WebProcess::transformHandlesToObjects(API::Object* object)
         {
             switch (object.type()) {
             case API::Object::Type::FrameHandle: {
-                auto frameID = static_cast<const API::FrameHandle&>(object).frameID();
+                auto frameID = downcast<const API::FrameHandle>(object).frameID();
                 return frameID ? WebProcess::singleton().webFrame(*frameID) : nullptr;
             }
             case API::Object::Type::PageHandle:
-                return WebProcess::singleton().webPage(static_cast<const API::PageHandle&>(object).webPageID());
+                return WebProcess::singleton().webPage(downcast<const API::PageHandle>(object).webPageID());
 
             default:
                 return &object;
@@ -2001,10 +2001,10 @@ RefPtr<API::Object> WebProcess::transformObjectsToHandles(API::Object* object)
         {
             switch (object.type()) {
             case API::Object::Type::BundleFrame:
-                return API::FrameHandle::createAutoconverting(static_cast<const WebFrame&>(object).frameID());
+                return API::FrameHandle::createAutoconverting(downcast<const WebFrame>(object).frameID());
 
             case API::Object::Type::BundlePage:
-                return API::PageHandle::createAutoconverting(static_cast<const WebPage&>(object).webPageProxyIdentifier(), static_cast<const WebPage&>(object).identifier());
+                return API::PageHandle::createAutoconverting(downcast<const WebPage>(object).webPageProxyIdentifier(), downcast<const WebPage>(object).identifier());
 
             default:
                 return &object;

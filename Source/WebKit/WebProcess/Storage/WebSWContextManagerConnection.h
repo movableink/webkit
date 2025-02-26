@@ -157,9 +157,14 @@ private:
 
     using FetchKey = std::pair<WebCore::SWServerConnectionIdentifier, WebCore::FetchIdentifier>;
     HashMap<FetchKey, Ref<WebServiceWorkerFetchTaskClient>> m_ongoingNavigationFetchTasks WTF_GUARDED_BY_CAPABILITY(m_queue.get());
+    bool isWebSWContextManagerConnection() const final { return true; }
 #if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
     HashMap<WebCore::ServiceWorkerIdentifier, Ref<ServiceWorkerDebuggableFrontendChannel>> m_channels;
 #endif
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebSWContextManagerConnection) \
+    static bool isType(const WebCore::SWContextManager::Connection& connection) { return connection.isWebSWContextManagerConnection(); } \
+SPECIALIZE_TYPE_TRAITS_END()
