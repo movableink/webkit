@@ -545,7 +545,9 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
             [layer setContentsFormat:formatString];
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
         if (contentsFormat == ContentsFormat::RGBA16F) {
+            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             [layer setWantsExtendedDynamicRangeContent:true];
+            ALLOW_DEPRECATED_DECLARATIONS_END
             [layer setToneMapMode:CAToneMapModeIfSupported];
         }
 #endif

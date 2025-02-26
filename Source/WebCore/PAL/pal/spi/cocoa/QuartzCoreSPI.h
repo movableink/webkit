@@ -155,6 +155,7 @@ typedef struct _CARenderContext CARenderContext;
 @property BOOL needsLayoutOnGeometryChange;
 @property BOOL shadowPathIsBounds;
 @property BOOL continuousCorners;
+@property CGFloat contentsEDRStrength;
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
 @property (getter=isSeparated) BOOL separated;
 #endif

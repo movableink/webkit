@@ -328,6 +328,9 @@ public:
     void screenDidChangeColorSpace();
     bool shouldDelayWindowOrderingForEvent(NSEvent *);
     bool windowResizeMouseLocationIsInVisibleScrollerThumb(CGPoint);
+    void applicationShouldSuppressHDR();
+    void applicationShouldAllowHDR();
+    void updateHDRState();
 
     void accessibilitySettingsDidChange();
 
@@ -1066,6 +1069,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if HAVE(INLINE_PREDICTIONS)
     bool m_inlinePredictionsEnabled { false };
 #endif
+    bool m_hdrAllowed { true };
 };
     
 } // namespace WebKit
