@@ -921,8 +921,10 @@ void RenderThemeIOS::adjustButtonLikeControlStyle(RenderStyle& style, const Elem
 void RenderThemeIOS::adjustButtonStyle(RenderStyle& style, const Element* element) const
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (adjustButtonStyleForCatalyst(style, element))
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustButtonStyle(style, element);
         return;
+    }
 #endif
 
     // If no size is specified, ensure the height of the button matches ControlBaseHeight scaled
