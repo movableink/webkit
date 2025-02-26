@@ -1002,15 +1002,20 @@ static void webkit_media_stream_src_class_init(WebKitMediaStreamSrcClass* klass)
     gst_element_class_add_pad_template(gstElementClass, gst_static_pad_template_get(&audioSrcTemplate));
 }
 
-static GstFlowReturn webkitMediaStreamSrcChain(GstPad* pad, GstObject* parent, GstBuffer* buffer)
+struct PadChainData {
+    GRefPtr<GstStream> stream;
+    WebKitMediaStreamSrc* element;
+};
+WEBKIT_DEFINE_ASYNC_DATA_STRUCT(PadChainData);
+
+static GstFlowReturn webkitMediaStreamSrcChain(GstPad* pad, GstObject*, GstBuffer* buffer)
 {
-    auto element = adoptGRef(GST_ELEMENT_CAST(gst_object_get_parent(parent)));
-    auto* self = WEBKIT_MEDIA_STREAM_SRC_CAST(element.get());
-    GUniquePtr<char> name(gst_pad_get_name(pad));
-    auto padName = String::fromLatin1(name.get());
+    auto data = reinterpret_cast<PadChainData*>(pad->chaindata);
+    auto self = data->element;
+    auto element = GST_ELEMENT_CAST(self);
 
     for (auto& source : self->priv->sources) {
-        if (source->padName() != padName)
+        if (source->stream() != data->stream)
             continue;
 
         Locker locker { *source->eosLocker() };
@@ -1024,7 +1029,7 @@ static GstFlowReturn webkitMediaStreamSrcChain(GstPad* pad, GstObject* parent, G
         gst_pad_push_event(pad, gst_event_new_tag(tags.leakRef()));
 
         {
-            auto locker = GstStateLocker(element.get());
+            auto locker = GstStateLocker(element);
             auto* appSrc = source->get();
             gst_element_set_locked_state(appSrc, true);
             gst_element_set_state(appSrc, GST_STATE_NULL);
@@ -1036,12 +1041,12 @@ static GstFlowReturn webkitMediaStreamSrcChain(GstPad* pad, GstObject* parent, G
             gst_flow_combiner_remove_pad(self->priv->flowCombiner.get(), proxyPad.get());
 
         gst_pad_set_active(pad, FALSE);
-        gst_element_remove_pad(element.get(), pad);
+        gst_element_remove_pad(element, pad);
         source->notifyEOS();
         return GST_FLOW_EOS;
     }
 
-    GstFlowReturn chainResult = gst_proxy_pad_chain_default(pad, GST_OBJECT_CAST(element.get()), buffer);
+    GstFlowReturn chainResult = gst_proxy_pad_chain_default(pad, GST_OBJECT_CAST(element), buffer);
     GstFlowReturn result = gst_flow_combiner_update_pad_flow(self->priv->flowCombiner.get(), pad, chainResult);
 
     if (result == GST_FLOW_FLUSHING)
@@ -1147,7 +1152,7 @@ void webkitMediaStreamSrcAddTrack(WebKitMediaStreamSrc* self, MediaStreamTrackPr
     auto* element = source->get();
     gst_bin_add(GST_BIN_CAST(self), element);
 
-    auto stream = source->stream();
+    GRefPtr stream = source->stream();
     source->startObserving();
     self->priv->sources.append(WTFMove(source));
     self->priv->tracks.append(track);
@@ -1157,9 +1162,9 @@ void webkitMediaStreamSrcAddTrack(WebKitMediaStreamSrc* self, MediaStreamTrackPr
     data->element = GST_ELEMENT_CAST(self);
     data->sourceType = track->source().type();
     data->collection = webkitMediaStreamSrcCreateStreamCollection(self);
-    data->streamStartEvent = adoptGRef(gst_event_new_stream_start(gst_stream_get_stream_id(stream)));
+    data->streamStartEvent = adoptGRef(gst_event_new_stream_start(gst_stream_get_stream_id(stream.get())));
     gst_event_set_group_id(data->streamStartEvent.get(), self->priv->groupId);
-    gst_event_set_stream(data->streamStartEvent.get(), stream);
+    gst_event_set_stream(data->streamStartEvent.get(), stream.get());
 
     GRefPtr stickyStreamStartEvent = data->streamStartEvent;
 
@@ -1178,7 +1183,12 @@ void webkitMediaStreamSrcAddTrack(WebKitMediaStreamSrc* self, MediaStreamTrackPr
 
     auto proxyPad = adoptGRef(GST_PAD_CAST(gst_proxy_pad_get_internal(GST_PROXY_PAD(ghostPad))));
     gst_flow_combiner_add_pad(self->priv->flowCombiner.get(), proxyPad.get());
-    gst_pad_set_chain_function(proxyPad.get(), static_cast<GstPadChainFunction>(webkitMediaStreamSrcChain));
+
+    auto padChainData = createPadChainData();
+    padChainData->stream = WTFMove(stream);
+    padChainData->element = self;
+
+    gst_pad_set_chain_function_full(proxyPad.get(), static_cast<GstPadChainFunction>(webkitMediaStreamSrcChain), padChainData, reinterpret_cast<GDestroyNotify>(destroyPadChainData));
     gst_pad_set_event_function(proxyPad.get(), static_cast<GstPadEventFunction>([](GstPad* pad, GstObject* parent, GstEvent* event) {
         switch (GST_EVENT_TYPE(event)) {
         case GST_EVENT_RECONFIGURE: {
