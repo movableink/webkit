@@ -160,9 +160,12 @@ public:
 
     bool shouldCachePagePreviews() const;
 
-#if PLATFORM(MAC)
     WebCore::FloatRect convertFromPDFPageToScreenForAccessibility(const WebCore::FloatRect&, PDFDocumentLayout::PageIndex) const;
+#if PLATFORM(MAC)
     void accessibilityScrollToPage(PDFDocumentLayout::PageIndex);
+#endif
+#if !PLATFORM(MAC)
+    id accessibilityHitTestInPageForIOS(WebCore::FloatPoint);
 #endif
 
 #if ENABLE(UNIFIED_PDF_DATA_DETECTION)

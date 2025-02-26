@@ -117,6 +117,12 @@
 
 #include "PDFKitSoftLink.h"
 
+#if PLATFORM(IOS_FAMILY)
+@interface NSObject (AXPriv)
+- (id)accessibilityHitTest:(CGPoint)point withPlugin:(id)plugin;
+@end
+#endif
+
 @interface WKPDFFormMutationObserver : NSObject {
     ThreadSafeWeakPtr<WebKit::UnifiedPDFPlugin> _plugin;
 }
@@ -181,12 +187,10 @@ UnifiedPDFPlugin::UnifiedPDFPlugin(HTMLPlugInElement& element)
 
     setDisplayMode(PDFDocumentLayout::DisplayMode::SinglePageContinuous);
 
-#if PLATFORM(MAC)
     m_accessibilityDocumentObject = adoptNS([[WKAccessibilityPDFDocumentObject alloc] initWithPDFDocument:m_pdfDocument andElement:&element]);
     [m_accessibilityDocumentObject setPDFPlugin:this];
-    if (this->isFullFramePlugin() && m_frame && m_frame->page() && m_frame->isMainFrame())
+    if (isFullMainFramePlugin())
         [m_accessibilityDocumentObject setParent:m_frame->protectedPage()->accessibilityRemoteObject()];
-#endif
 
     if (m_presentationController->wantsWheelEvents())
         wantsWheelEventsChanged();
@@ -3558,18 +3562,6 @@ void UnifiedPDFPlugin::accessibilityScrollToPage(PDFDocumentLayout::PageIndex pa
     revealPage(pageIndex);
 }
 
-FloatRect UnifiedPDFPlugin::convertFromPDFPageToScreenForAccessibility(const FloatRect& rectInPageCoordinate, PDFDocumentLayout::PageIndex pageIndex) const
-{
-    return WebCore::Accessibility::retrieveValueFromMainThread<FloatRect>([&]() ->FloatRect {
-        auto rectInPluginCoordinates = convertUp(CoordinateSpace::PDFPage, CoordinateSpace::Plugin, rectInPageCoordinate, pageIndex);
-        rectInPluginCoordinates.setLocation(convertFromPluginToRootView(IntPoint(rectInPluginCoordinates.location())));
-        RefPtr page = this->page();
-        if (!page)
-            return { };
-        return page->chrome().rootViewToScreen(enclosingIntRect(rectInPluginCoordinates));
-    });
-}
-
 id UnifiedPDFPlugin::accessibilityHitTestIntPoint(const WebCore::IntPoint& point) const
 {
     return WebCore::Accessibility::retrieveValueFromMainThread<id>([&] () -> id {
@@ -3584,7 +3576,19 @@ id UnifiedPDFPlugin::accessibilityHitTestIntPoint(const WebCore::IntPoint& point
         return [m_accessibilityDocumentObject accessibilityHitTest:pointInPDFPageSpace];
     });
 }
+
 #endif
+
+FloatRect UnifiedPDFPlugin::convertFromPDFPageToScreenForAccessibility(const FloatRect& rectInPageCoordinates, PDFDocumentLayout::PageIndex pageIndex) const
+{
+    return WebCore::Accessibility::retrieveValueFromMainThread<FloatRect>([&] -> FloatRect {
+        auto rectInPluginCoordinates = pageToRootView(rectInPageCoordinates, pageIndex);
+        RefPtr page = this->page();
+        if (!page)
+            return { };
+        return page->chrome().rootViewToScreen(enclosingIntRect(rectInPluginCoordinates));
+    });
+}
 
 id UnifiedPDFPlugin::accessibilityHitTest(const WebCore::IntPoint& point) const
 {
@@ -3597,11 +3601,22 @@ id UnifiedPDFPlugin::accessibilityHitTest(const WebCore::IntPoint& point) const
 
 id UnifiedPDFPlugin::accessibilityObject() const
 {
-#if PLATFORM(MAC)
     return m_accessibilityDocumentObject.get();
-#endif
+}
+
+#if !PLATFORM(MAC)
+id UnifiedPDFPlugin::accessibilityHitTestInPageForIOS(WebCore::FloatPoint point)
+{
+    RefPtr corePage = this->page();
+    if (!corePage)
+        return nil;
+
+    auto [page, pointInPage] = rootViewToPage(corePage->chrome().screenToRootView(WebCore::IntPoint(point)));
+    if ([page respondsToSelector:@selector(accessibilityHitTest:withPlugin:)])
+        return [page accessibilityHitTest:point withPlugin:m_accessibilityDocumentObject.get()];
     return nil;
 }
+#endif // !PLATFORM(MAC)
 
 #if ENABLE(PDF_HUD)
 

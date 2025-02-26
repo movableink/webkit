@@ -60,9 +60,7 @@ OBJC_CLASS NSString;
 OBJC_CLASS PDFAnnotation;
 OBJC_CLASS PDFDocument;
 OBJC_CLASS PDFSelection;
-#if PLATFORM(MAC)
 OBJC_CLASS WKAccessibilityPDFDocumentObject;
-#endif
 
 namespace WebCore {
 class Color;
@@ -473,9 +471,8 @@ protected:
     RangeSet<WTF::Range<uint64_t>> m_validRanges WTF_GUARDED_BY_LOCK(m_streamedDataLock);
 
     RetainPtr<PDFDocument> m_pdfDocument;
-#if PLATFORM(MAC)
+
     RetainPtr<WKAccessibilityPDFDocumentObject> m_accessibilityDocumentObject;
-#endif
 
     String m_suggestedFilename;
 

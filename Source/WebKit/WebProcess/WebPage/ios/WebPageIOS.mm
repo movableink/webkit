@@ -695,6 +695,11 @@ void WebPage::getSelectionContext(CompletionHandler<void(const String&, const St
 
 NSObject *WebPage::accessibilityObjectForMainFramePlugin()
 {
+#if ENABLE(PDF_PLUGIN)
+    if (RefPtr pluginView = mainFramePlugIn())
+        return pluginView->accessibilityObject();
+#endif
+
     return nil;
 }
     
