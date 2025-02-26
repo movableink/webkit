@@ -6478,7 +6478,8 @@ struct WebCore::DigitalCredentialsResponseData {
 };
 
 [Nested] enum class WebCore::IdentityCredentialProtocol : uint8_t {
-    Openid4vp
+    Openid4vp,
+    OrgIsoMdoc
 };
 
 #endif // HAVE(DIGITAL_CREDENTIALS_UI)
