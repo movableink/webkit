@@ -430,7 +430,6 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
         return ropeString;
     };
 
-    AtomString atomString;
     if (!ropeString->isSubstring()) {
         uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
         JSString* fiber0 = ropeString->fiber0();
