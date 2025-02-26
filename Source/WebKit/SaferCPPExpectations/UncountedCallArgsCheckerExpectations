@@ -9,7 +9,6 @@ NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementManager.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementPersistentStore.cpp
 NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
 NetworkProcess/cache/NetworkCacheSpeculativeLoad.cpp
-NetworkProcess/mac/SecItemShim.cpp
 Platform/IPC/ArgumentCoders.h
 Shared/API/APIArray.h
 Shared/API/c/WKArray.cpp
