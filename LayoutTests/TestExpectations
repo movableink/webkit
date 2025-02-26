@@ -6438,9 +6438,6 @@ imported/w3c/web-platform-tests/xhr/send-after-setting-document-domain.htm [ Ski
 imported/w3c/web-platform-tests/html/capability-delegation/delegate-fullscreen-request-subframe-same-origin.https.tentative.html [ Pass Failure ]
 imported/w3c/web-platform-tests/fullscreen/api/element-request-fullscreen-and-move-to-iframe.html [ Pass Failure ]
 
-# This test needs fixing (see https://github.com/web-platform-tests/wpt/pull/50895):
-imported/w3c/web-platform-tests/fullscreen/api/document-exit-fullscreen-nested-in-iframe.html [ Skip ]
-
 imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.html?h264_annexb [ DumpJSConsoleLogInStdErr ]
 imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.html?h264_avc [ DumpJSConsoleLogInStdErr ]
 imported/w3c/web-platform-tests/webcodecs/videoFrame-createImageBitmap.any.html [ DumpJSConsoleLogInStdErr ]
