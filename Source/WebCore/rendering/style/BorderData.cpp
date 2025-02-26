@@ -41,10 +41,10 @@ bool BorderData::isEquivalentForPainting(const BorderData& other, bool currentCo
     if (!currentColorDiffers)
         return true;
 
-    auto visibleBorderHasCurrentColor = (m_top.isVisible() && m_top.color().containsCurrentColor())
-        || (m_right.isVisible() && m_right.color().containsCurrentColor())
-        || (m_bottom.isVisible() && m_bottom.color().containsCurrentColor())
-        || (m_left.isVisible() && m_left.color().containsCurrentColor());
+    auto visibleBorderHasCurrentColor = m_edges.anyOf([](const auto& edge) {
+        return edge.isVisible() && edge.color().containsCurrentColor();
+    });
+
     return !visibleBorderHasCurrentColor;
 }
 

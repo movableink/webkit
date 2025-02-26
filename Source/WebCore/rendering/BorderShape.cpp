@@ -44,10 +44,10 @@ namespace WebCore {
 static RoundedRect::Radii calcRadiiFor(const BorderData::Radii& radii, const LayoutSize& size)
 {
     return {
-        sizeForLengthSize(radii.topLeft, size),
-        sizeForLengthSize(radii.topRight, size),
-        sizeForLengthSize(radii.bottomLeft, size),
-        sizeForLengthSize(radii.bottomRight, size)
+        sizeForLengthSize(radii.topLeft(), size),
+        sizeForLengthSize(radii.topRight(), size),
+        sizeForLengthSize(radii.bottomLeft(), size),
+        sizeForLengthSize(radii.bottomRight(), size)
     };
 }
 

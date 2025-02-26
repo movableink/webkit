@@ -1915,6 +1915,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/PromisedAttachmentInfo.h
     platform/PublicSuffix.h
     platform/PublicSuffixStore.h
+    platform/RectCorners.h
     platform/RectEdges.h
     platform/ReferrerPolicy.h
     platform/RegistrableDomain.h

@@ -251,7 +251,6 @@ enum class WhiteSpaceCollapse : uint8_t;
 enum class WordBreak : uint8_t;
 
 struct BlockEllipsis;
-struct BorderDataRadii;
 struct CounterDirectiveMap;
 struct FillRepeatXY;
 struct FontPalette;
@@ -284,6 +283,7 @@ struct TransformOperationData;
 
 template<typename> class FontTaggedSettings;
 template<typename> class RectEdges;
+template<typename> class RectCorners;
 
 using FontVariationSettings = FontTaggedSettings<float>;
 using IntOutsets = RectEdges<int>;
@@ -516,7 +516,7 @@ public:
     inline const LengthSize& borderTopRightRadius() const;
     inline const LengthSize& borderBottomLeftRadius() const;
     inline const LengthSize& borderBottomRightRadius() const;
-    inline const BorderDataRadii& borderRadii() const;
+    inline const RectCorners<LengthSize>& borderRadii() const;
     inline bool hasBorderRadius() const;
     inline bool hasExplicitlySetBorderBottomLeftRadius() const;
     inline bool hasExplicitlySetBorderBottomRightRadius() const;
@@ -1262,7 +1262,7 @@ public:
     RoundedRect getRoundedInnerBorderFor(const LayoutRect& borderRect, RectEdges<bool> closedEdges) const;
 
     RoundedRect getRoundedInnerBorderFor(const LayoutRect& borderRect, LayoutUnit topWidth, LayoutUnit bottomWidth, LayoutUnit leftWidth, LayoutUnit rightWidth, RectEdges<bool> closedEdges) const;
-    static RoundedRect getRoundedInnerBorderFor(const LayoutRect&, LayoutUnit topWidth, LayoutUnit bottomWidth, LayoutUnit leftWidth, LayoutUnit rightWidth, std::optional<BorderDataRadii>, RectEdges<bool> closedEdges);
+    static RoundedRect getRoundedInnerBorderFor(const LayoutRect&, LayoutUnit topWidth, LayoutUnit bottomWidth, LayoutUnit leftWidth, LayoutUnit rightWidth, std::optional<RectCorners<LengthSize>>, RectEdges<bool> closedEdges);
 
     inline void setBorderLeftWidth(float);
     inline void setBorderLeftStyle(BorderStyle);

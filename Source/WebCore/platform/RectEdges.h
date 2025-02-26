@@ -129,9 +129,24 @@ public:
         return yFlippedCopy();
     }
 
+    template<typename F> bool anyOf(F&& functor) const
+    {
+        return std::ranges::any_of(m_sides, std::forward<F>(functor));
+    }
+
+    template<typename F> bool allOf(F&& functor) const
+    {
+        return std::ranges::all_of(m_sides, std::forward<F>(functor));
+    }
+
+    template<typename F> bool noneOf(F&& functor) const
+    {
+        return std::ranges::none_of(m_sides, std::forward<F>(functor));
+    }
+
     bool isZero() const
     {
-        return !top() && !right() && !bottom() && !left();
+        return allOf([](auto& edge) { return !edge; });
     }
 
     bool operator==(const RectEdges<T>&) const = default;
