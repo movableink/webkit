@@ -56,6 +56,9 @@ namespace Greedy {
 static constexpr bool eagerGroups = true;
 static constexpr bool eagerGroupsSplitFully = false;
 static constexpr bool eagerGroupsExhaustiveSearch = false;
+static constexpr bool spillCostDivideBySize = false;
+static constexpr bool spillCostSizeBias = 100; // Only relevant when spillCostDivideBySize
+static constexpr bool evictHeuristicAggregatorIsMax = false;
 
 // Quickly filters out short ranges from live range splitting consideration.
 static constexpr size_t splitMinRangeSize = 8;
@@ -513,11 +516,11 @@ struct TmpData {
     struct CoalescableWith {
         void dump(PrintStream& out) const
         {
-            out.print("(", tmp, ", ", weight, ")");
+            out.print("(", tmp, ", ", moveCost, ")");
         }
 
         Tmp tmp;
-        float weight;
+        float moveCost; // The frequency-adjusted number of moves between TmpData's tmp and CoalescableWith.tmp
     };
 
     void dump(PrintStream& out) const
@@ -535,13 +538,25 @@ struct TmpData {
 
     float spillCost()
     {
-        return unspillable ? unspillableCost : useDefCost;
+        ASSERT(liveRange.size()); // 0-sized ranges shouldn't be allocated
+        if (unspillable)
+            return unspillableCost;
+
+        // Heuristic that favors not spilling higher use/def frequency-adjusted counts and
+        // shorter ranges. The spillCostSizeBias causes the penalty for larger ranges to
+        // be more dramatic as the range size gets larger.
+        if (spillCostDivideBySize)
+            return useDefCost / (liveRange.size() + spillCostSizeBias);
+
+        // Simplest heuristic: favors not spill higher use/def frequency-adjusted counts.
+        return useDefCost;
     }
 
     void validate()
     {
         ASSERT(!(spillSlot && assigned));
         ASSERT(!!assigned == (stage == Stage::Assigned));
+        ASSERT(liveRange.intervals().isEmpty() == !liveRange.size());
         ASSERT_IMPLIES(spillSlot, stage == Stage::Spilled);
         ASSERT_IMPLIES(spillSlot, spillCost() != unspillableCost);
         ASSERT_IMPLIES(spillSlot, !isGroup()); // Should have been split
@@ -879,7 +894,7 @@ private:
             float freq = adjustedBlockFrequency(block);
             for (auto& with : tmpData.coalescables) {
                 if (with.tmp == b) {
-                    with.weight += freq;
+                    with.moveCost += freq;
                     return;
                 }
             }
@@ -1073,11 +1088,11 @@ private:
 
         struct Move {
             Tmp tmp0, tmp1;
-            float weight;
+            float cost;
 
             void dump(PrintStream& out) const
             {
-                out.print(tmp0, ", ", tmp1, " ", weight);
+                out.print(tmp0, ", ", tmp1, " ", cost);
             }
         };
         Vector<Move> moves;
@@ -1087,8 +1102,8 @@ private:
             TmpData& data = m_map[tmp];
             std::sort(data.coalescables.begin(), data.coalescables.end(),
                 [this] (const auto& a, const auto& b) -> bool {
-                    if (a.weight != b.weight)
-                        return a.weight > b.weight;
+                    if (a.moveCost != b.moveCost)
+                        return a.moveCost > b.moveCost;
                     // Favor coalescing shorter live ranges.
                     auto aSize = m_map[a.tmp].liveRange.size();
                     auto bSize = m_map[b.tmp].liveRange.size();
@@ -1102,15 +1117,15 @@ private:
 
             for (auto& with : m_map[tmp].coalescables) {
                 if (tmp.tmpIndex(bank) < with.tmp.tmpIndex(bank))
-                    moves.append({ tmp, with.tmp, with.weight });
+                    moves.append({ tmp, with.tmp, with.moveCost });
             }
         });
 
         ASSERT_IMPLIES(!eagerGroups, moves.isEmpty());
         std::sort(moves.begin(), moves.end(),
             [](Move& a, Move& b) -> bool {
-                if (a.weight != b.weight)
-                    return a.weight > b.weight;
+                if (a.cost != b.cost)
+                    return a.cost > b.cost;
                 if (a.tmp0.tmpIndex(bank) != b.tmp1.tmpIndex(bank))
                     return a.tmp0.tmpIndex(bank) < a.tmp0.tmpIndex(bank);
                 ASSERT(a.tmp1.tmpIndex(bank) != b.tmp1.tmpIndex(bank));
@@ -1236,6 +1251,7 @@ private:
                 tmpData.unspillable = true;
                 m_stats[bank].numUnspillableTmps++;
             }
+            tmpData.validate();
         });
         m_code.forEachFastTmp([&](Tmp tmp) {
             if (tmp.bank() != bank)
@@ -1274,6 +1290,7 @@ private:
     void setStageAndEnqueue(Tmp tmp, TmpData& tmpData, Stage stage)
     {
         ASSERT(!tmp.isReg());
+        ASSERT(m_map[tmp].liveRange.size()); // 0-size ranges don't need a register and spillCost() depends on size() != 0
         ASSERT(stage == Stage::Unspillable || stage == Stage::TryAllocate || stage == Stage::TrySplit || stage == Stage::Spill);
         ASSERT(!tmpData.parentGroup); // Group member should not be enquened
         ASSERT_IMPLIES(!eagerGroups, !tmpData.isGroup());
@@ -1458,7 +1475,10 @@ private:
                         conflictsSpillCost = unspillableCost;
                         return IterationStatus::Done;
                     }
-                    conflictsSpillCost += cost;
+                    if (evictHeuristicAggregatorIsMax)
+                        conflictsSpillCost = std::max(conflictsSpillCost, cost);
+                    else
+                        conflictsSpillCost += cost;
                     return conflictsSpillCost >= minSpillCost ? IterationStatus::Done : IterationStatus::Continue;
             });
             if (conflictsSpillCost < minSpillCost) {
