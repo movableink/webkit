@@ -494,6 +494,44 @@ UNIFIED_PDF_TEST(ShouldNotRespectSetViewScale)
     EXPECT_EQ(colorsBefore, colorsAfter);
 }
 
+UNIFIED_PDF_TEST(KeepScrollPositionAtOriginAfterAnimatedResize)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 800) configuration:configurationForWebViewTestingUnifiedPDF().get()]);
+    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"multiple-pages" withExtension:@"pdf"]];
+    [webView synchronouslyLoadRequest:request.get()];
+    [webView waitForNextPresentationUpdate];
+
+    [[webView scrollView] setContentOffset:CGPointMake(0, 400)];
+    [webView waitForNextVisibleContentRectUpdate];
+    [webView waitForNextPresentationUpdate];
+
+    auto contentOffsetAfterResizing = [webView](CGFloat width, CGFloat height) {
+        [webView _beginAnimatedResizeWithUpdates:^{
+            [webView setFrame:CGRectMake(0, 0, width, height)];
+        }];
+        [webView _endAnimatedResize];
+        [webView waitForNextVisibleContentRectUpdate];
+        [webView waitForNextPresentationUpdate];
+        return [[webView scrollView] contentOffset];
+    };
+
+    auto checkOffsetsAreApproximatelyEqual = [](CGPoint offset, CGPoint otherOffset) {
+        static constexpr auto epsilon = 3;
+
+        EXPECT_LT(std::abs(offset.x - otherOffset.x), epsilon);
+        EXPECT_LT(std::abs(offset.y - otherOffset.y), epsilon);
+    };
+
+    Vector<CGPoint, 4> offsetsAfterResizing;
+    offsetsAfterResizing.append(contentOffsetAfterResizing(800, 600));
+    offsetsAfterResizing.append(contentOffsetAfterResizing(600, 800));
+    offsetsAfterResizing.append(contentOffsetAfterResizing(800, 600));
+    offsetsAfterResizing.append(contentOffsetAfterResizing(600, 800));
+
+    checkOffsetsAreApproximatelyEqual(offsetsAfterResizing[0], offsetsAfterResizing[2]);
+    checkOffsetsAreApproximatelyEqual(offsetsAfterResizing[1], offsetsAfterResizing[3]);
+}
+
 #endif // PLATFORM(IOS_FAMILY)
 
 #if HAVE(UIKIT_WITH_MOUSE_SUPPORT)

@@ -264,7 +264,7 @@ auto PDFPresentationController::pdfPositionForCurrentView(AnchorPoint anchorPoin
         return { };
 
     enum class PagePosition : bool { TopLeft, TopCenter };
-    auto pagePosition = PagePosition::TopLeft;
+    auto pagePosition = PagePosition::TopCenter;
     FloatPoint topLeftInPluginSpace;
     if (checkedPlugin->shouldSizeToFitContent()) {
         RefPtr view = checkedPlugin->frameView();
@@ -273,7 +273,7 @@ auto PDFPresentationController::pdfPositionForCurrentView(AnchorPoint anchorPoin
 
         auto topLeftInRootView = view->contentsToRootView(view->unobscuredContentRect().location());
         topLeftInPluginSpace = checkedPlugin->convertFromRootViewToPlugin(topLeftInRootView);
-        pagePosition = PagePosition::TopCenter;
+        pagePosition = PagePosition::TopLeft;
     }
 
     auto pageIndex = *maybePageIndex;
