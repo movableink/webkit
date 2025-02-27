@@ -1979,8 +1979,6 @@ webkit.org/b/288603 imported/w3c/web-platform-tests/screen-orientation/hidden_do
 
 webkit.org/b/288613 [ Sonoma+ ] pdf/pdf-in-embed-with-root-page-zoom.html [ Pass Timeout Failure ]
 
-webkit.org/b/288620 [ Debug ] ipc/large-vector-allocate-failure-crash.html [ Skip ]
-
 # webkit.org/b/288642 [Sonoma H Release x86_64 EWS ] webgl/1.0.x/conformance/glsl/bugs/sampler-array-using-loop-index.html and webgl/2.0.y/conformance/glsl/bugs/sampler-array-using-loop-index.html failure
 [ Sonoma Release x86_64 ] webgl/1.0.x/conformance/glsl/bugs/sampler-array-using-loop-index.html [ Skip ]
 [ Sonoma Release x86_64 ] webgl/2.0.y/conformance/glsl/bugs/sampler-array-using-loop-index.html [ Skip ]
@@ -2003,3 +2001,7 @@ webkit.org/b/288660 [ Sonoma Release x86_64 ] media/media-hevc-video-as-img.html
 [ Sonoma Release x86_64 ] imported/w3c/web-platform-tests/css/css-view-transitions/massive-element-below-viewport-offscreen-old.html [ Skip ]
 
 webkit.org/b/288670 [ Release x86_64 ] media/media-source/media-source-vp8-hiddenframes.html [ Pass ImageOnlyFailure ]
+
+# webkit.org/b/288620 REGRESSION(290300@main): SaveAsPDF crashes if site-isolation is enabled
+[ Debug ] ipc/large-vector-allocate-failure-crash.html [ Skip ]
+[ Debug ] ipc/invalid-path-segments-crash.html [ Skip ]
