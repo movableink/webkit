@@ -291,7 +291,6 @@ animation/AnimationEffectTiming.cpp
 animation/AnimationTimeline.cpp
 animation/AnimationTimelinesController.cpp
 animation/BlendingKeyframes.cpp
-animation/CSSPropertyAnimation.cpp
 animation/CSSTransition.cpp
 animation/CustomEffect.cpp
 animation/DocumentTimeline.cpp
@@ -1306,6 +1305,9 @@ style/StyleBuilder.cpp
 style/StyleBuilderConverter.h
 style/StyleBuilderCustom.h
 style/StyleBuilderState.cpp
+style/StyleInterpolation.cpp
+style/StyleInterpolationFunctions.h
+style/StyleInterpolationWrappers.h
 style/StyleInvalidator.cpp
 style/StylePendingResources.cpp
 style/StyleResolveForDocument.cpp

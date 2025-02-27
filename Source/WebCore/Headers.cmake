@@ -727,7 +727,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     animation/AnimationFrameRatePreset.h
     animation/AnimationTimeline.h
     animation/AnimationTimelinesController.h
-    animation/CSSPropertyBlendingClient.h
     animation/CustomAnimationOptions.h
     animation/CompositeOperation.h
     animation/EffectTiming.h
@@ -2683,6 +2682,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/PseudoElementIdentifier.h
     style/ScopedName.h
     style/StyleChange.h
+    style/StyleInterpolationClient.h
     style/StyleScope.h
     style/StyleScopeOrdinal.h
     style/StyleUpdate.h

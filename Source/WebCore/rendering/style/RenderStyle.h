@@ -506,7 +506,7 @@ public:
 
     inline const NinePieceImage& borderImage() const;
     inline StyleImage* borderImageSource() const;
-    inline const LengthBox& borderImageSlices() const;
+    inline const LengthBox& borderImageSlice() const;
     inline const LengthBox& borderImageWidth() const;
     inline const LengthBox& borderImageOutset() const;
     inline NinePieceImageRule borderImageHorizontalRule() const;
@@ -688,7 +688,7 @@ public:
     inline Ref<const FillLayer> protectedMaskLayers() const; // Defined in RenderStyleInlines.h.
     inline const NinePieceImage& maskBorder() const;
     inline StyleImage* maskBorderSource() const;
-    inline const LengthBox& maskBorderSlices() const;
+    inline const LengthBox& maskBorderSlice() const;
     inline const LengthBox& maskBorderWidth() const;
     inline const LengthBox& maskBorderOutset() const;
     inline NinePieceImageRule maskBorderHorizontalRule() const;
@@ -1240,7 +1240,7 @@ public:
     inline void setBorderImage(const NinePieceImage&);
     void setBorderImageSource(RefPtr<StyleImage>&&);
     void setBorderImageSliceFill(bool);
-    void setBorderImageSlices(LengthBox&&);
+    void setBorderImageSlice(LengthBox&&);
     void setBorderImageWidth(LengthBox&&);
     void setBorderImageWidthOverridesBorderWidths(bool);
     void setBorderImageOutset(LengthBox&&);
@@ -1379,7 +1379,7 @@ public:
     inline void setMaskBorder(const NinePieceImage&);
     void setMaskBorderSource(RefPtr<StyleImage>&&);
     void setMaskBorderSliceFill(bool);
-    void setMaskBorderSlices(LengthBox&&);
+    void setMaskBorderSlice(LengthBox&&);
     void setMaskBorderWidth(LengthBox&&);
     void setMaskBorderOutset(LengthBox&&);
     void setMaskBorderHorizontalRule(NinePieceImageRule);

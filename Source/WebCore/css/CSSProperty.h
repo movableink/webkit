@@ -30,6 +30,7 @@
 namespace WebCore {
 
 class CSSValueList;
+class Settings;
 
 enum class IsImportant : bool { No, Yes };
 
@@ -85,7 +86,13 @@ public:
     static bool isListValuedProperty(CSSPropertyID propertyID) { return !!listValuedPropertySeparator(propertyID); }
     static bool allowsNumberOrIntegerInput(CSSPropertyID);
 
-    // Logical Property Group Predicates.
+    static bool animationUsesNonAdditiveOrCumulativeInterpolation(CSSPropertyID);
+    static bool animationUsesNonNormalizedDiscreteInterpolation(CSSPropertyID);
+
+    static bool animationIsAccelerated(CSSPropertyID, const Settings&);
+    static std::span<const CSSPropertyID> allAcceleratedAnimationProperties(const Settings&);
+
+    // Logical Property Groups.
     // NOTE: These return true if the CSSPropertyID is member of the named logical
     // property group or is the shorthand of a member of the logical property group.
 

@@ -3424,7 +3424,7 @@ void RenderStyle::setBorderImageSliceFill(bool fill)
     m_nonInheritedData.access().surroundData.access().border.m_image.setFill(fill);
 }
 
-void RenderStyle::setBorderImageSlices(LengthBox&& slices)
+void RenderStyle::setBorderImageSlice(LengthBox&& slices)
 {
     if (m_nonInheritedData->surroundData->border.m_image.imageSlices() == slices)
         return;
@@ -3480,7 +3480,7 @@ void RenderStyle::setMaskBorderSliceFill(bool fill)
     m_nonInheritedData.access().rareData.access().maskBorder.setFill(fill);
 }
 
-void RenderStyle::setMaskBorderSlices(LengthBox&& slices)
+void RenderStyle::setMaskBorderSlice(LengthBox&& slices)
 {
     if (m_nonInheritedData->rareData->maskBorder.imageSlices() == slices)
         return;

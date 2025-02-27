@@ -128,7 +128,7 @@ inline const NinePieceImage& RenderStyle::borderImage() const { return border().
 inline NinePieceImageRule RenderStyle::borderImageHorizontalRule() const { return border().image().horizontalRule(); }
 inline const LengthBox& RenderStyle::borderImageOutset() const { return border().image().outset(); }
 inline LayoutBoxExtent RenderStyle::borderImageOutsets() const { return imageOutsets(borderImage()); }
-inline const LengthBox& RenderStyle::borderImageSlices() const { return border().image().imageSlices(); }
+inline const LengthBox& RenderStyle::borderImageSlice() const { return border().image().imageSlices(); }
 inline StyleImage* RenderStyle::borderImageSource() const { return border().image().image(); }
 inline NinePieceImageRule RenderStyle::borderImageVerticalRule() const { return border().image().verticalRule(); }
 inline const LengthBox& RenderStyle::borderImageWidth() const { return border().image().borderSlices(); }
@@ -632,7 +632,7 @@ inline const NinePieceImage& RenderStyle::maskBorder() const { return m_nonInher
 inline NinePieceImageRule RenderStyle::maskBorderHorizontalRule() const { return maskBorder().horizontalRule(); }
 inline const LengthBox& RenderStyle::maskBorderOutset() const { return maskBorder().outset(); }
 inline LayoutBoxExtent RenderStyle::maskBorderOutsets() const { return imageOutsets(maskBorder()); }
-inline const LengthBox& RenderStyle::maskBorderSlices() const { return maskBorder().imageSlices(); }
+inline const LengthBox& RenderStyle::maskBorderSlice() const { return maskBorder().imageSlices(); }
 inline StyleImage* RenderStyle::maskBorderSource() const { return maskBorder().image(); }
 inline NinePieceImageRule RenderStyle::maskBorderVerticalRule() const { return maskBorder().verticalRule(); }
 inline const LengthBox& RenderStyle::maskBorderWidth() const { return maskBorder().borderSlices(); }

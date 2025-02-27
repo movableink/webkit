@@ -48,7 +48,6 @@
 #include "CSSPathValue.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSProperty.h"
-#include "CSSPropertyAnimation.h"
 #include "CSSPropertyParserConsumer+Anchor.h"
 #include "CSSQuadValue.h"
 #include "CSSRayValue.h"
@@ -94,6 +93,7 @@
 #include "StyleDynamicRangeLimit.h"
 #include "StyleEasingFunction.h"
 #include "StyleFilterProperty.h"
+#include "StyleInterpolation.h"
 #include "StylePathData.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 #include "StylePropertyShorthand.h"
@@ -2955,7 +2955,7 @@ static inline const RenderStyle* computeRenderStyleForProperty(Element& element,
     if (!renderer)
         renderer = element.renderer();
 
-    if (renderer && renderer->isComposited() && CSSPropertyAnimation::animationOfPropertyIsAccelerated(propertyID, element.document().settings())) {
+    if (renderer && renderer->isComposited() && Style::Interpolation::isAccelerated(propertyID, element.document().settings())) {
         ownedStyle = renderer->animatedStyle();
         if (pseudoElementIdentifier) {
             // FIXME: This cached pseudo style will only exist if the animation has been run at least once.

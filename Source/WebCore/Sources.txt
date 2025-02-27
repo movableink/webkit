@@ -602,7 +602,6 @@ animation/AnimationTimeline.cpp
 animation/BlendingKeyframes.cpp
 animation/CSSAnimation.cpp
 animation/CSSAnimationEvent.cpp
-animation/CSSPropertyAnimation.cpp
 animation/CSSTransition.cpp
 animation/CSSTransitionEvent.cpp
 animation/CompositeOperation.cpp
@@ -3130,6 +3129,7 @@ style/StyleBuilder.cpp
 style/StyleBuilderState.cpp
 style/StyleChange.cpp
 style/StyleFontSizeFunctions.cpp
+style/StyleInterpolation.cpp
 style/StyleInvalidator.cpp
 style/StylePendingResources.cpp
 style/StyleRelations.cpp
@@ -3467,6 +3467,7 @@ MathMLElementFactory.cpp
 ProcessSyncClient.cpp
 SVGElementFactory.cpp
 StyleBuilderGenerated.cpp
+StyleInterpolationWrapperMap.cpp
 StylePropertyShorthandFunctions.cpp
 UserAgentStyleSheetsData.cpp
 WebCoreJSBuiltinInternals.cpp
