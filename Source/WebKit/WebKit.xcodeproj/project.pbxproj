@@ -2505,6 +2505,8 @@
 		F4ABDB662B01C68F00C5471A /* CoreIPCError.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4ABDB622B018C1B00C5471A /* CoreIPCError.mm */; };
 		F4ABDB732B0417AD00C5471A /* CoreIPCLocale.h in Headers */ = {isa = PBXBuildFile; fileRef = F4ABDB722B0417AD00C5471A /* CoreIPCLocale.h */; };
 		F4B021E72D0BAC2D00D9145E /* CoreIPCSecTrust.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4B021E62D0BAB6D00D9145E /* CoreIPCSecTrust.mm */; };
+		F4B24AA72D5ED4D300725993 /* CoreIPCAVOutputContext.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4B24AA62D5ED3CD00725993 /* CoreIPCAVOutputContext.mm */; };
+		F4B24AA82D5ED4DE00725993 /* CoreIPCAVOutputContext.h in Headers */ = {isa = PBXBuildFile; fileRef = F4B24AA52D5ED3CD00725993 /* CoreIPCAVOutputContext.h */; };
 		F4BA33F225757E89000A3CE8 /* WKImageAnalysisGestureRecognizer.h in Headers */ = {isa = PBXBuildFile; fileRef = F4BA33F025757E89000A3CE8 /* WKImageAnalysisGestureRecognizer.h */; };
 		F4BCBBEC2AC332AA00C1858D /* WKFormAccessoryView.h in Headers */ = {isa = PBXBuildFile; fileRef = F4BCBBE62AC3295300C1858D /* WKFormAccessoryView.h */; };
 		F4BE0D7727AAE1CB005F0323 /* PlaybackSessionContextIdentifier.h in Headers */ = {isa = PBXBuildFile; fileRef = F4BE0D7627AAE1CB005F0323 /* PlaybackSessionContextIdentifier.h */; };
@@ -8339,6 +8341,8 @@
 		F4ABDB742B041FE900C5471A /* CoreIPCLocale.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CoreIPCLocale.serialization.in; sourceTree = "<group>"; };
 		F4AC655E22A3140E00A05607 /* WebPreferencesDefaultValuesIOS.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = WebPreferencesDefaultValuesIOS.mm; path = ios/WebPreferencesDefaultValuesIOS.mm; sourceTree = "<group>"; };
 		F4B021E62D0BAB6D00D9145E /* CoreIPCSecTrust.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCSecTrust.mm; sourceTree = "<group>"; };
+		F4B24AA52D5ED3CD00725993 /* CoreIPCAVOutputContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreIPCAVOutputContext.h; sourceTree = "<group>"; };
+		F4B24AA62D5ED3CD00725993 /* CoreIPCAVOutputContext.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCAVOutputContext.mm; sourceTree = "<group>"; };
 		F4B378D021DDBBAB0095A378 /* WebUndoStepID.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebUndoStepID.h; sourceTree = "<group>"; };
 		F4B63E162C49586700BC59EF /* CoreIPCPlist.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = CoreIPCPlist.serialization.in; sourceTree = "<group>"; };
 		F4BA33F025757E89000A3CE8 /* WKImageAnalysisGestureRecognizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = WKImageAnalysisGestureRecognizer.h; path = ios/WKImageAnalysisGestureRecognizer.h; sourceTree = "<group>"; };
@@ -12100,6 +12104,8 @@
 				5197FAD82AFD33B1009180C5 /* CoreIPCArray.serialization.in */,
 				FA39AE662B23972A008F93CD /* CoreIPCAuditToken.h */,
 				FA39AE672B23972A008F93CD /* CoreIPCAuditToken.serialization.in */,
+				F4B24AA52D5ED3CD00725993 /* CoreIPCAVOutputContext.h */,
+				F4B24AA62D5ED3CD00725993 /* CoreIPCAVOutputContext.mm */,
 				51E8284B2B2036DD009119F9 /* CoreIPCAVOutputContext.serialization.in */,
 				523475D32B68470D0029B9AE /* CoreIPCCFCharacterSet.h */,
 				523475D42B6849A70029B9AE /* CoreIPCCFCharacterSet.serialization.in */,
@@ -16704,6 +16710,7 @@
 				5106D7C418BDBE73000AB166 /* ContextMenuContextData.h in Headers */,
 				5197FAEB2AFD33CF009180C5 /* CoreIPCArray.h in Headers */,
 				FA39AE682B23972B008F93CD /* CoreIPCAuditToken.h in Headers */,
+				F4B24AA82D5ED4DE00725993 /* CoreIPCAVOutputContext.h in Headers */,
 				523475D52B6849D10029B9AE /* CoreIPCCFCharacterSet.h in Headers */,
 				5197FAE72AFD33CF009180C5 /* CoreIPCCFType.h in Headers */,
 				519F6F7C2B2D77E300559CB3 /* CoreIPCCFURL.h in Headers */,
@@ -19964,6 +19971,7 @@
 			files = (
 				51FFD3092AE9A9FC00B0AB70 /* ArgumentCodersCocoa.mm in Sources */,
 				5187BDEA2AFF5419008A6EE5 /* CoreIPCArray.mm in Sources */,
+				F4B24AA72D5ED4D300725993 /* CoreIPCAVOutputContext.mm in Sources */,
 				5C5786902B6EFA29005D51D5 /* CoreIPCCFArray.mm in Sources */,
 				5CFC9C812B71809600F8D289 /* CoreIPCCFDictionary.mm in Sources */,
 				FA1ED3F42B76B93700C90F3B /* CoreIPCCFType.mm in Sources */,
