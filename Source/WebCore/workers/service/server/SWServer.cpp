@@ -1942,4 +1942,19 @@ void SWServer::Connection::retrieveRecordResponseBody(BackgroundFetchRecordIdent
         callback(makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, { }, "No server found"_s }));
 }
 
+#if ENABLE(CONTENT_EXTENSIONS)
+void SWServer::reportNetworkUsageToAllWorkerClients(ServiceWorkerIdentifier identifier, size_t bytesTransferredOverNetworkDelta)
+{
+    if (RefPtr worker = workerByID(identifier)) {
+        if (RefPtr connection = contextConnectionForRegistrableDomain(worker->topRegistrableDomain())) {
+            ServiceWorkerClientQueryOptions options = { true, ServiceWorkerClientType::Window };
+            matchAll(*worker, options, [connection = connection.releaseNonNull(), bytesTransferredOverNetworkDelta](auto&& clientDataList) {
+                for (auto& data : clientDataList)
+                    connection->reportNetworkUsageToWorkerClient(data.identifier, bytesTransferredOverNetworkDelta);
+            });
+        }
+    }
+}
+#endif
+
 } // namespace WebCore

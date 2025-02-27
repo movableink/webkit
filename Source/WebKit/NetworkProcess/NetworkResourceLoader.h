@@ -287,8 +287,12 @@ private:
     bool shouldSendResourceLoadMessages() const;
 
     void sendDidReceiveDataMessage(const WebCore::FragmentedSharedBuffer&, size_t encodedDataLength);
+
+#if ENABLE(CONTENT_EXTENSIONS)
     void updateBytesTransferredOverNetwork(size_t bytesTransferredOverNetwork);
-    void reportNetworkUsageToAllSharedWorkers(WebCore::SharedWorkerIdentifier, size_t bytesTransferredOverNetwork);
+    void reportNetworkUsageToAllSharedWorkerObjects(WebCore::SharedWorkerIdentifier, size_t bytesTransferredOverNetworkDelta);
+    void reportNetworkUsageToAllServiceWorkerClients(WebCore::ServiceWorkerIdentifier, size_t bytesTransferredOverNetworkDelta);
+#endif
 
     NetworkResourceLoadParameters m_parameters;
 
@@ -309,7 +313,9 @@ private:
     bool m_didConsumeSandboxExtensions { false };
     bool m_isAllowedToAskUserForCredentials { false };
     size_t m_numBytesReceived { 0 };
+#if ENABLE(CONTENT_EXTENSIONS)
     size_t m_bytesTransferredOverNetwork { 0 };
+#endif
 
     unsigned m_retrievedDerivedDataCount { 0 };
 

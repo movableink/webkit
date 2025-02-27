@@ -99,6 +99,10 @@ public:
 
     void terminateIdleServiceWorkers();
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    void reportNetworkUsageToWorkerClient(const WebCore::ScriptExecutionContextIdentifier, size_t bytesTransferredOverNetworkDelta) final;
+#endif
+
 private:
     WebSWServerToContextConnection(NetworkConnectionToWebProcess&, WebPageProxyIdentifier, WebCore::Site&&, std::optional<WebCore::ScriptExecutionContextIdentifier>, WebCore::SWServer&);
 

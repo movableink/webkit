@@ -75,7 +75,10 @@ public:
     void fetchScriptInClient(const WebSharedWorker&, WebCore::SharedWorkerObjectIdentifier, CompletionHandler<void(WebCore::WorkerFetchResult&&, WebCore::WorkerInitializationData&&)>&&);
     void notifyWorkerObjectOfLoadCompletion(WebCore::SharedWorkerObjectIdentifier, const WebCore::ResourceError&);
     void postErrorToWorkerObject(WebCore::SharedWorkerObjectIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, bool isErrorEvent);
-    void reportNetworkUsageToWorkerObject(WebCore::SharedWorkerObjectIdentifier, size_t bytesTransferredOverNetwork);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void reportNetworkUsageToWorkerObject(WebCore::SharedWorkerObjectIdentifier, size_t bytesTransferredOverNetworkDelta);
+#endif
 
 private:
     WebSharedWorkerServerConnection(NetworkProcess&, WebSharedWorkerServer&, IPC::Connection&, WebCore::ProcessIdentifier);

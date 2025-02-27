@@ -165,6 +165,10 @@ protected:
     WEBCORE_EXPORT void notifyClientsOfControllerChange(const HashSet<ScriptExecutionContextIdentifier>& contextIdentifiers, std::optional<ServiceWorkerData>&& newController);
     WEBCORE_EXPORT void updateBackgroundFetchRegistration(const BackgroundFetchInformation&);
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT void reportNetworkUsageToWorkerClient(ScriptExecutionContextIdentifier, size_t bytesTransferredOverNetwork);
+#endif
+
     WEBCORE_EXPORT void clearPendingJobs();
     void setIsClosed() { m_isClosed = true; }
 

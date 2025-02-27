@@ -316,17 +316,19 @@ void WebSharedWorkerServer::terminateContextConnectionWhenPossible(const WebCore
     contextConnection->terminateWhenPossible();
 }
 
-void WebSharedWorkerServer::reportNetworkUsageToAllSharedWorkerClients(WebCore::SharedWorkerIdentifier sharedWorkerIdentifier, size_t bytesTransferredOverNetwork)
+#if ENABLE(CONTENT_EXTENSIONS)
+void WebSharedWorkerServer::reportNetworkUsageToAllSharedWorkerObjects(WebCore::SharedWorkerIdentifier sharedWorkerIdentifier, size_t bytesTransferredOverNetworkDelta)
 {
     auto* sharedWorker = WebSharedWorker::fromIdentifier(sharedWorkerIdentifier);
-    RELEASE_LOG_ERROR(SharedWorker, "WebSharedWorkerServer::sendNetworkUsageToAllSharedWorkerClients: sharedWorkerIdentifier=%" PRIu64 ", sharedWorker=%p", sharedWorkerIdentifier.toUInt64(), sharedWorker);
+    RELEASE_LOG(SharedWorker, "WebSharedWorkerServer::reportNetworkUsageToAllSharedWorkerObjects: sharedWorkerIdentifier=%" PRIu64 ", sharedWorker=%p, bytesTransferredOverNetworkDelta=%zu", sharedWorkerIdentifier.toUInt64(), sharedWorker, bytesTransferredOverNetworkDelta);
     if (!sharedWorker)
         return;
 
     sharedWorker->forEachSharedWorkerObject([&](auto sharedWorkerObjectIdentifier, auto&) {
         if (auto* serverConnection = m_connections.get(sharedWorkerObjectIdentifier.processIdentifier()))
-            serverConnection->reportNetworkUsageToWorkerObject(sharedWorkerObjectIdentifier, bytesTransferredOverNetwork);
+            serverConnection->reportNetworkUsageToWorkerObject(sharedWorkerObjectIdentifier, bytesTransferredOverNetworkDelta);
     });
 }
+#endif
 
 } // namespace WebKit

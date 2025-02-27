@@ -304,6 +304,10 @@ public:
 
     unsigned runningOrTerminatingCount() const { return m_runningOrTerminatingWorkers.size(); }
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT void reportNetworkUsageToAllWorkerClients(ServiceWorkerIdentifier, size_t bytesTransferredOverNetworkDelta);
+#endif
+
 private:
     SWServer(SWServerDelegate&, UniqueRef<SWOriginStore>&&, bool processTerminationDelayEnabled, String&& registrationDatabaseDirectory, PAL::SessionID, bool shouldRunServiceWorkersOnMainThreadForTesting, bool hasServiceWorkerEntitlement, std::optional<unsigned> overrideServiceWorkerRegistrationCountTestingValue, ServiceWorkerIsInspectable);
 

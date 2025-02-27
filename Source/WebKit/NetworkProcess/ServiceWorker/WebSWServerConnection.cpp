@@ -953,6 +953,13 @@ void WebSWServerConnection::getNotifications(const URL& registrationURL, const S
 }
 #endif
 
+#if ENABLE(CONTENT_EXTENSIONS)
+void WebSWServerConnection::reportNetworkUsageToWorkerClient(WebCore::ScriptExecutionContextIdentifier identifier, size_t bytesTransferredOverNetworkDelta)
+{
+    send(Messages::WebSWClientConnection::ReportNetworkUsageToWorkerClient(identifier, bytesTransferredOverNetworkDelta));
+}
+#endif
+
 } // namespace WebKit
 
 #undef MESSAGE_CHECK
