@@ -71,9 +71,6 @@ void RenderMedia::styleDidChange(StyleDifference difference, const RenderStyle* 
     RenderImage::styleDidChange(difference, oldStyle);
     if (!oldStyle || style().usedVisibility() != oldStyle->usedVisibility())
         mediaElement().visibilityDidChange();
-
-    if (!oldStyle || style().dynamicRangeLimit() != oldStyle->dynamicRangeLimit())
-        mediaElement().dynamicRangeLimitDidChange(style().dynamicRangeLimit().toPlatformDynamicRangeLimit());
 }
 
 } // namespace WebCore

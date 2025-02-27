@@ -55,7 +55,6 @@
 #import "MediaSessionManagerCocoa.h"
 #import "OutOfBandTextTrackPrivateAVF.h"
 #import "PixelBufferConformerCV.h"
-#import "PlatformDynamicRangeLimitCocoa.h"
 #import "PlatformMediaResourceLoader.h"
 #import "PlatformScreen.h"
 #import "PlatformTextTrack.h"
@@ -652,7 +651,6 @@ void MediaPlayerPrivateAVFoundationObjC::createAVPlayerLayer()
     [m_videoLayer addObserver:m_objcObserver.get() forKeyPath:@"readyForDisplay" options:NSKeyValueObservingOptionNew context:(void *)MediaPlayerAVFoundationObservationContextAVPlayerLayer];
     updateVideoLayerGravity();
     [m_videoLayer setContentsScale:player->playerContentsScale()];
-    setPlatformDynamicRangeLimit(player->platformDynamicRangeLimit());
     m_videoLayerManager->setVideoLayer(m_videoLayer.get(), player->presentationSize());
 
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
@@ -4025,18 +4023,6 @@ void MediaPlayerPrivateAVFoundationObjC::setShouldDisableHDR(bool shouldDisable)
 
     ALWAYS_LOG(LOGIDENTIFIER, shouldDisable);
     [m_videoLayer setToneMapToStandardDynamicRange:shouldDisable];
-}
-
-void MediaPlayerPrivateAVFoundationObjC::setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit platformDynamicRangeLimit)
-{
-    assertIsMainThread();
-
-#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
-    if ([m_videoLayer respondsToSelector:@selector(setPreferredDynamicRange:)])
-        [m_videoLayer setPreferredDynamicRange:platformDynamicRangeLimitString(platformDynamicRangeLimit)];
-#else // HAVE(SUPPORT_HDR_DISPLAY_APIS)
-    UNUSED_PARAM(platformDynamicRangeLimit);
-#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
 }
 
 void MediaPlayerPrivateAVFoundationObjC::audioOutputDeviceChanged()

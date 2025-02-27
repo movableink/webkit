@@ -1905,14 +1905,6 @@ void MediaPlayer::setPreferredDynamicRangeMode(DynamicRangeMode mode)
     m_private->setPreferredDynamicRangeMode(mode);
 }
 
-void MediaPlayer::setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit platformDynamicRangeLimit)
-{
-    if (m_platformDynamicRangeLimit == platformDynamicRangeLimit)
-        return;
-    m_platformDynamicRangeLimit = platformDynamicRangeLimit;
-    m_private->setPlatformDynamicRangeLimit(platformDynamicRangeLimit);
-}
-
 void MediaPlayer::audioOutputDeviceChanged()
 {
     m_private->audioOutputDeviceChanged();

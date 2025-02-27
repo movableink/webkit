@@ -232,11 +232,10 @@ void MediaPlayerPrivateRemote::prepareForPlayback(bool privateMode, MediaPlayer:
 
     auto scale = player->playerContentsScale();
     auto preferredDynamicRangeMode = player->preferredDynamicRangeMode();
-    auto platformDynamicRangeLimit = player->platformDynamicRangeLimit();
     auto presentationSize = player->presentationSize();
     auto pitchCorrectionAlgorithm = player->pitchCorrectionAlgorithm();
 
-    protectedConnection()->send(Messages::RemoteMediaPlayerProxy::PrepareForPlayback(privateMode, preload, preservesPitch, pitchCorrectionAlgorithm, prepareToPlay, prepareToRender, presentationSize, scale, preferredDynamicRangeMode, platformDynamicRangeLimit), m_id);
+    protectedConnection()->send(Messages::RemoteMediaPlayerProxy::PrepareForPlayback(privateMode, preload, preservesPitch, pitchCorrectionAlgorithm, prepareToPlay, prepareToRender, presentationSize, scale, preferredDynamicRangeMode), m_id);
 }
 
 void MediaPlayerPrivateRemote::load(const URL& url, const LoadOptions& options)
@@ -1586,11 +1585,6 @@ void MediaPlayerPrivateRemote::applicationDidBecomeActive()
 void MediaPlayerPrivateRemote::setPreferredDynamicRangeMode(WebCore::DynamicRangeMode mode)
 {
     protectedConnection()->send(Messages::RemoteMediaPlayerProxy::SetPreferredDynamicRangeMode(mode), m_id);
-}
-
-void MediaPlayerPrivateRemote::setPlatformDynamicRangeLimit(WebCore::PlatformDynamicRangeLimit platformDynamicRangeLimit)
-{
-    protectedConnection()->send(Messages::RemoteMediaPlayerProxy::SetPlatformDynamicRangeLimit(platformDynamicRangeLimit), m_id);
 }
 
 bool MediaPlayerPrivateRemote::performTaskAtTime(WTF::Function<void()>&& task, const MediaTime& mediaTime)

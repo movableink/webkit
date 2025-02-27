@@ -36,7 +36,6 @@
 #include "MediaPlayerEnums.h"
 #include "MediaPlayerIdentifier.h"
 #include "MediaPromiseTypes.h"
-#include "PlatformDynamicRangeLimit.h"
 #include "PlatformLayer.h"
 #include "PlatformTextTrack.h"
 #include "ProcessIdentity.h"
@@ -747,8 +746,6 @@ public:
 
     DynamicRangeMode preferredDynamicRangeMode() const { return m_preferredDynamicRangeMode; }
     void setPreferredDynamicRangeMode(DynamicRangeMode);
-    PlatformDynamicRangeLimit platformDynamicRangeLimit() const { return m_platformDynamicRangeLimit; }
-    void setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit);
 
     String audioOutputDeviceId() const;
     String audioOutputDeviceIdOverride() const;
@@ -840,7 +837,6 @@ private:
     bool m_shouldPrepareToRender { false };
     bool m_initializingMediaEngine { false };
     DynamicRangeMode m_preferredDynamicRangeMode;
-    PlatformDynamicRangeLimit m_platformDynamicRangeLimit;
     PitchCorrectionAlgorithm m_pitchCorrectionAlgorithm { PitchCorrectionAlgorithm::BestAllAround };
     RefPtr<PlatformMediaResourceLoader> m_mediaResourceLoader;
 

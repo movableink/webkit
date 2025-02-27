@@ -323,7 +323,6 @@ public:
     virtual bool shouldIgnoreIntrinsicSize() { return false; }
 
     virtual void setPreferredDynamicRangeMode(DynamicRangeMode) { }
-    virtual void setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit) { }
 
     virtual void audioOutputDeviceChanged() { }
 
