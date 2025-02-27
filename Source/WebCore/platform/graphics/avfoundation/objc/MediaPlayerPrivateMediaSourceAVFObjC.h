@@ -324,6 +324,7 @@ private:
     MediaTime clampTimeToSensicalValue(const MediaTime&) const;
 
     void setShouldDisableHDR(bool) final;
+    void setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit) final;
     void playerContentBoxRectChanged(const LayoutRect&) final;
     void setShouldMaintainAspectRatio(bool) final;
 

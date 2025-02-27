@@ -42,6 +42,7 @@
 #import "MediaSourcePrivateAVFObjC.h"
 #import "MediaSourcePrivateClient.h"
 #import "PixelBufferConformerCV.h"
+#import "PlatformDynamicRangeLimitCocoa.h"
 #import "PlatformScreen.h"
 #import "SourceBufferPrivateAVFObjC.h"
 #import "SpatialAudioExperienceHelper.h"
@@ -903,6 +904,11 @@ void MediaPlayerPrivateMediaSourceAVFObjC::ensureLayer()
         if ([sampleBufferDisplayLayer respondsToSelector:@selector(setToneMapToStandardDynamicRange:)])
             [sampleBufferDisplayLayer setToneMapToStandardDynamicRange:player->shouldDisableHDR()];
 
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+        if ([sampleBufferDisplayLayer respondsToSelector:@selector(setPreferredDynamicRange:)])
+            [sampleBufferDisplayLayer setPreferredDynamicRange:platformDynamicRangeLimitString(player->platformDynamicRangeLimit())];
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
+
         m_videoLayerManager->setVideoLayer(sampleBufferDisplayLayer.get(), player->presentationSize());
     }
 }
@@ -1736,6 +1742,16 @@ void MediaPlayerPrivateMediaSourceAVFObjC::setShouldDisableHDR(bool shouldDisabl
 
     ALWAYS_LOG(LOGIDENTIFIER, shouldDisable);
     [m_sampleBufferDisplayLayer->as<AVSampleBufferDisplayLayer>() setToneMapToStandardDynamicRange:shouldDisable];
+}
+
+void MediaPlayerPrivateMediaSourceAVFObjC::setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit platformDynamicRangeLimit)
+{
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    if (RetainPtr displayLayer = m_sampleBufferDisplayLayer->as<AVSampleBufferDisplayLayer>(); displayLayer && [displayLayer respondsToSelector:@selector(setPreferredDynamicRange:)])
+        [displayLayer setPreferredDynamicRange:platformDynamicRangeLimitString(platformDynamicRangeLimit)];
+#else // HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    UNUSED_PARAM(platformDynamicRangeLimit);
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::playerContentBoxRectChanged(const LayoutRect& newRect)
