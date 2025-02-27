@@ -41,7 +41,9 @@
 #include <wtf/Atomics.h>
 #include <wtf/Compiler.h>
 #include <wtf/DataLog.h>
+#include <wtf/DoublyLinkedList.h>
 #include <wtf/Lock.h>
+#include <wtf/PageBlock.h>
 #include <wtf/Threading.h>
 
 #if OS(DARWIN)
@@ -49,6 +51,48 @@
 #endif
 
 namespace WTF {
+
+struct GranuleHeader : public DoublyLinkedListNode<GranuleHeader> {
+    // non-inclusive of the page this is on
+    // so a value of 0 encodes 1 total pages
+    GranuleHeader* m_prev;
+    GranuleHeader* m_next;
+    size_t additionalPageCount;
+};
+using GranuleList = DoublyLinkedList<GranuleHeader>;
+
+
+class ConcurrentDecommitQueue {
+    static constexpr bool verbose { false };
+public:
+    void concatenate(GranuleList&& granules)
+    {
+        if (granules.isEmpty())
+            return;
+
+        {
+            Locker lock(m_decommitLock);
+            m_granules.append(granules);
+            granules.clear();
+        }
+    }
+
+    void decommit();
+private:
+    GranuleList acquireExclusiveCopyOfGranuleList()
+    {
+        GranuleList granules { };
+        {
+            Locker lock(m_decommitLock);
+            granules = m_granules;
+            m_granules.clear();
+        }
+        return granules;
+    }
+
+    GranuleList m_granules { };
+    Lock m_decommitLock { };
+};
 
 class SequesteredImmortalHeap {
     static constexpr bool verbose { false };
@@ -80,7 +124,7 @@ public:
     {
         T* slot = nullptr;
         {
-            WTF::Locker locker { m_scavengerLock };
+            Locker locker { m_scavengerLock };
             ASSERT(!getUnchecked());
             // FIXME: implement resizing to a larger capacity
             RELEASE_ASSERT(m_nextFreeIndex < numSlots);
@@ -117,16 +161,30 @@ public:
     }
 
     template<AllocationFailureMode mode>
-    void* mapPages(size_t bytes)
+    GranuleHeader* mapGranule(size_t bytes)
     {
-        void* memory = mmap(nullptr, bytes, PROT_READ | PROT_WRITE,
+        void* p = mmap(nullptr, bytes, PROT_READ | PROT_WRITE,
             MAP_PRIVATE | MAP_ANON, -1, 0);
-        if (UNLIKELY(memory == MAP_FAILED)) {
+        if (UNLIKELY(p == MAP_FAILED)) {
             if constexpr (mode == AllocationFailureMode::ReturnNull)
                 return nullptr;
             RELEASE_ASSERT_NOT_REACHED();
         }
-        return memory;
+        auto* gran = reinterpret_cast<GranuleHeader*>(p);
+        gran->additionalPageCount = bytes / pageSize() - 1;
+        return gran;
+    }
+
+    size_t decommitGranule(GranuleHeader* gran)
+    {
+        size_t pageCount = 1 + gran->additionalPageCount;
+        size_t bytes = pageCount * pageSize();
+
+        // FIXME: experiment with other decommit strategies
+        auto success = munmap(gran, bytes);
+        RELEASE_ASSERT(!success);
+
+        return pageCount;
     }
 
 private:
@@ -138,7 +196,7 @@ private:
         auto flags = VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE | VM_FLAGS_PERMANENT;
         auto prots = VM_PROT_READ | VM_PROT_WRITE;
         auto* self = reinterpret_cast<mach_vm_address_t*>(this);
-        mach_vm_map(mach_task_self(), self, sizeof(*this), sequesteredImmortalHeapSlotSize - 1, flags, MEMORY_OBJECT_NULL, 0, false, prots, prots, VM_INHERIT_DEFAULT);
+        mach_vm_map(mach_task_self(), self, sequesteredImmortalHeapSlotSize, sequesteredImmortalHeapSlotSize - 1, flags, MEMORY_OBJECT_NULL, 0, false, prots, prots, VM_INHERIT_DEFAULT);
 
         // Cannot use dataLog here as it takes a lock
         if constexpr (verbose)
@@ -150,18 +208,6 @@ private:
         return _pthread_getspecific_direct(key);
     }
 
-    struct alignas(WTF::Lock) LockSlot {
-        std::array<std::byte, sizeof(WTF::Lock)> m_bytes;
-        WTF::Lock& asLock()
-        {
-            return *reinterpret_cast<WTF::Lock*>(this);
-        }
-        void initialize()
-        {
-            new (this) WTF::Lock();
-        }
-    };
-
     struct alignas(slotSize) Slot {
         std::array<std::byte, slotSize> data;
     };
@@ -170,7 +216,7 @@ private:
         std::byte data[sequesteredImmortalHeapSlotSize];
     };
 
-    WTF::Lock m_scavengerLock { };
+    Lock m_scavengerLock { };
     size_t m_nextFreeIndex { };
     std::array<Slot, numSlots> m_slots { };
 

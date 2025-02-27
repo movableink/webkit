@@ -24,10 +24,45 @@
 
 #include "config.h"
 #include <wtf/SequesteredImmortalHeap.h>
+#include <wtf/Compiler.h>
 
 #if USE(PROTECTED_JIT)
 
 namespace WTF {
+
+void ConcurrentDecommitQueue::decommit()
+{
+    auto lst = acquireExclusiveCopyOfGranuleList();
+
+    auto* curr = lst.head();
+    if (!curr)
+        return;
+
+    // FIXME: this should go to a page-provider rather than the SIH
+    auto& sih = SequesteredImmortalHeap::instance();
+
+    size_t decommitPageCount { 0 };
+    size_t decommitGranuleCount { 0 };
+    UNUSED_VARIABLE(decommitPageCount);
+    UNUSED_VARIABLE(decommitGranuleCount);
+
+    do {
+        auto* next = curr->next();
+        auto pages = sih.decommitGranule(curr);
+
+        dataLogLnIf(verbose,
+            "ConcurrentDecommitQueue: decommitted granule at ",
+            RawPointer(curr), " (", pages, " pages)");
+
+        decommitPageCount += pages;
+        decommitGranuleCount++;
+
+        curr = next;
+    } while (curr);
+
+    dataLogLnIf(verbose, "ConcurrentDecommitQueue: decommitted ",
+        decommitGranuleCount, " granules (", decommitPageCount, " pages)");
+}
 
 SequesteredImmortalHeap::Instance SequesteredImmortalHeap::s_instance;
 
