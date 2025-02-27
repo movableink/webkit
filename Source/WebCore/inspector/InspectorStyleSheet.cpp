@@ -1699,8 +1699,8 @@ bool InspectorStyleSheet::ensureSourceData()
     // FIXME: <webkit.org/b/161747> Media control CSS uses out-of-spec selectors in inline user agent shadow root style
     // element. See corresponding workaround in `CSSSelectorParser::extractCompoundFlags`.
     if (auto* ownerNode = m_pageStyleSheet->ownerNode(); ownerNode && ownerNode->isInUserAgentShadowTree())
-        context.mode = UASheetMode;
-    
+        context.setUASheetMode();
+
     StyleSheetHandler handler(m_parsedStyleSheet->text(), m_pageStyleSheet->ownerDocument(), ruleSourceDataResult.get());
     CSSParser::parseSheetForInspector(context, newStyleSheet, m_parsedStyleSheet->text(), handler);
     m_parsedStyleSheet->setSourceData(WTFMove(ruleSourceDataResult));

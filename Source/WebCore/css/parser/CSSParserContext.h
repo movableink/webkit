@@ -112,7 +112,10 @@ struct CSSParserContext {
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
     WEBCORE_EXPORT CSSParserContext(const Document&);
     CSSParserContext(const Document&, const URL& baseURL, ASCIILiteral charset = ""_s);
+
     ResolvedURL completeURL(const String&) const;
+
+    void setUASheetMode();
 
     bool operator==(const CSSParserContext&) const = default;
 };

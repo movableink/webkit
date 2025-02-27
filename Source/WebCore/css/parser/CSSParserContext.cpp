@@ -49,21 +49,28 @@ const CSSParserContext& strictCSSParserContext()
     return strictContext;
 }
 
+static void applyUASheetBehaviorsToContext(CSSParserContext& context)
+{
+    // FIXME: We should turn all of the features on from their WebCore Settings defaults.
+    context.cssAppearanceBaseEnabled = true;
+    context.cssTextUnderlinePositionLeftRightEnabled = true;
+    context.lightDarkColorEnabled = true;
+    context.popoverAttributeEnabled = true;
+    context.propertySettings.cssInputSecurityEnabled = true;
+    context.propertySettings.cssCounterStyleAtRulesEnabled = true;
+    context.propertySettings.viewTransitionsEnabled = true;
+#if HAVE(CORE_MATERIAL)
+    context.propertySettings.useSystemAppearance = true;
+#endif
+    context.thumbAndTrackPseudoElementsEnabled = true;
+}
+
 CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
     : baseURL(baseURL)
     , mode(mode)
 {
-    // FIXME: We should turn all of the features on from their WebCore Settings defaults.
-    if (isUASheetBehavior(mode)) {
-        cssAppearanceBaseEnabled = true;
-        cssTextUnderlinePositionLeftRightEnabled = true;
-        lightDarkColorEnabled = true;
-        popoverAttributeEnabled = true;
-        propertySettings.cssInputSecurityEnabled = true;
-        propertySettings.cssCounterStyleAtRulesEnabled = true;
-        propertySettings.viewTransitionsEnabled = true;
-        thumbAndTrackPseudoElementsEnabled = true;
-    }
+    if (isUASheetBehavior(mode))
+        applyUASheetBehaviorsToContext(*this);
 
     StaticCSSValuePool::init();
 }
@@ -170,6 +177,12 @@ ResolvedURL CSSParserContext::completeURL(const String& string) const
         return { };
 
     return result;
+}
+
+void CSSParserContext::setUASheetMode()
+{
+    mode = UASheetMode;
+    applyUASheetBehaviorsToContext(*this);
 }
 
 bool mayDependOnBaseURL(const ResolvedURL& resolved)
