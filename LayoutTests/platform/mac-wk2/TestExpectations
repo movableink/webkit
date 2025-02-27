@@ -1992,3 +1992,5 @@ webkit.org/b/288620 [ Debug ] ipc/large-vector-allocate-failure-crash.html [ Ski
 [ Sonoma Release x86_64 ] platform/mac/media/mediacapabilities/vp9-decodingInfo-sw.html [ Skip ]
 
 webkit.org/b/288655 [ Sequoia x86_64 ] webrtc/captureCanvas-webrtc-software-h264-high.html [ Failure ]
+
+webkit.org/b/288660 [ Sonoma Release x86_64 ] media/media-hevc-video-as-img.html [ Skip ]
