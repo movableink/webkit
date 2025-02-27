@@ -187,14 +187,13 @@ private:
     void collect3DRenderingContextLayers(Vector<TextureMapperLayer*>&);
 
 #if ENABLE(DAMAGE_TRACKING)
-    bool canInferDamage() const { return m_damagePropagation && !m_damage.isInvalid(); }
+    bool canInferDamage() const { return m_damagePropagation && !m_receivedDamage.isInvalid(); }
     void collectDamageRecursive(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelfAndChildren(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelf(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelfChildrenFilterAndMask(TextureMapperPaintOptions&, Damage&);
     void damageWholeLayerDueToTransformChange(const TransformationMatrix& beforeChange, const TransformationMatrix& afterChange);
-    FloatRect transformRectForDamage(const FloatRect&, const TransformationMatrix&, const TextureMapperPaintOptions&);
 #endif
 
     bool isVisible() const;
@@ -287,8 +286,9 @@ private:
 
 #if ENABLE(DAMAGE_TRACKING)
     bool m_damagePropagation { false };
-    Damage m_damage; // In layer coordinate space.
-    Damage m_inferredDamage; // In global coordinate space.
+    Damage m_receivedDamage; // In layer coordinate space.
+    Damage m_inferredLayerDamage; // In layer coordinate space.
+    Damage m_inferredGlobalDamage; // In global coordinate space.
     FloatRect m_accumulatedOverlapRegionDamage;
 #endif
 
