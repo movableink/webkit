@@ -7702,3 +7702,5 @@ webkit.org/b/287741 fast/viewport/ios/non-responsive-viewport-after-changing-vie
 [ Debug ] http/wpt/mediarecorder/MediaRecorder-webm-AV-audio-video-dataavailable.html [ Skip ]
 
 webkit.org/b/288133 imported/w3c/web-platform-tests/scroll-to-text-fragment/find-range-from-text-directive.html [ Pass Failure ]
+
+webkit.org/b/288677 [ Debug arm64 ] fast/scrolling/ios/body-overflow-hidden-keyboard.html [ Pass Crash ]
