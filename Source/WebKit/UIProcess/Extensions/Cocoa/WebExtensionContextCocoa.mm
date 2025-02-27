@@ -1737,7 +1737,7 @@ WebExtensionContext::PermissionState WebExtensionContext::permissionState(const 
     if (!pattern.isValid())
         return PermissionState::Unknown;
 
-    if (pattern.matchesURL(baseURL()))
+    if (!pattern.matchesAllURLs() && pattern.matchesURL(baseURL()))
         return PermissionState::GrantedImplicitly;
 
     if (!pattern.matchesAllURLs() && !WebExtensionMatchPattern::validSchemes().contains(pattern.scheme()))
