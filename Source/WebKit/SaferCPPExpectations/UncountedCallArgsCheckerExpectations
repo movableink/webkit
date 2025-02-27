@@ -1,7 +1,6 @@
 AutomationBackendDispatchers.cpp
 AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
-NetworkProcess/Downloads/DownloadManager.cpp
 Platform/IPC/ArgumentCoders.h
 Shared/API/APIArray.h
 Shared/API/c/WKArray.cpp
