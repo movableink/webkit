@@ -7316,7 +7316,7 @@ class FindUnexpectedStaticAnalyzerResults(shell.ShellCommandNewStyle, AnalyzeCha
     @defer.inlineCallbacks
     def filter_results_using_results_db(self, results_json):
         self.unexpected_results_filtered = results_json
-        identifier = self.getProperty('identifier', None)
+        identifier = self.getProperty('identifier', None) or self.getProperty('got_revision', None)
         platform = self.getProperty('platform', None)
         configuration = {}
         if platform:
@@ -7332,6 +7332,9 @@ class FindUnexpectedStaticAnalyzerResults(shell.ShellCommandNewStyle, AnalyzeCha
             if not has_commit:
                 yield self._addToLog(self.results_db_log_name, f"'{identifier}' could not be found on the results database, falling back to tip-of-tree\n")
                 return defer.returnValue(False)
+        else:
+            yield self._addToLog(self.results_db_log_name, f"Could not find the commit identifier, falling back to tip-of-tree\n")
+            return defer.returnValue(False)
 
         has_results = yield ResultsDatabase.get_results(self.suite, commit=identifier, configuration=configuration)
         if not has_results:
