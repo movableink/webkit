@@ -439,6 +439,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
             [screenTimeView setFrame:self.bounds];
             [self addSubview:screenTimeView.get()];
         }
+        RELEASE_LOG(ScreenTime, "Screen Time controller was installed.");
     }
 }
 
@@ -455,6 +456,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     [[_screenTimeWebpageController view] removeFromSuperview];
     [_screenTimeWebpageController removeObserver:self forKeyPath:@"URLIsBlocked" context:&screenTimeWebpageControllerBlockedKVOContext];
     _screenTimeWebpageController = nil;
+    RELEASE_LOG(ScreenTime, "Screen Time controller was uninstalled.");
 }
 
 - (void)_updateScreenTimeViewGeometry
@@ -471,15 +473,21 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     BOOL showsSystemScreenTimeBlockingView = [_configuration _showsSystemScreenTimeBlockingView];
 
     if (viewIsInWindow) {
-        if (!showsSystemScreenTimeBlockingView && _screenTimeBlurredSnapshot)
+        if (!showsSystemScreenTimeBlockingView && _screenTimeBlurredSnapshot) {
             [_screenTimeBlurredSnapshot setHidden:NO];
-        else if (showsSystemScreenTimeBlockingView)
+            RELEASE_LOG(ScreenTime, "Screen Time has updated visibility to show blurred view.");
+        } else if (showsSystemScreenTimeBlockingView) {
             [[_screenTimeWebpageController view] setHidden:NO];
+            RELEASE_LOG(ScreenTime, "Screen Time has updated visibility to show system shield.");
+        }
     } else {
-        if (_screenTimeBlurredSnapshot)
+        if (_screenTimeBlurredSnapshot) {
             [_screenTimeBlurredSnapshot setHidden:YES];
-        else if (showsSystemScreenTimeBlockingView)
+            RELEASE_LOG(ScreenTime, "Screen Time has updated visibility to hide blurred view.");
+        } else if (showsSystemScreenTimeBlockingView) {
             [[_screenTimeWebpageController view] setHidden:YES];
+            RELEASE_LOG(ScreenTime, "Screen Time has updated visibility to hide system shield.");
+        }
     }
 
     BOOL viewIsVisible = viewIsInWindow;
@@ -504,6 +512,10 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
             [self willChangeValueForKey:@"_isBlockedByScreenTime"];
             _isBlockedByScreenTime = urlIsBlocked;
             [self didChangeValueForKey:@"_isBlockedByScreenTime"];
+            if (urlIsBlocked)
+                RELEASE_LOG(ScreenTime, "Screen Time is blocking the URL.");
+            else
+                RELEASE_LOG(ScreenTime, "Screen Time is not blocking the URL.");
         }
         if (wasBlockedByScreenTime != _isBlockedByScreenTime) {
             if (!_screenTimeBlurredSnapshot && ![_configuration _showsSystemScreenTimeBlockingView]) {

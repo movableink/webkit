@@ -149,6 +149,7 @@ extern "C" {
     M(Resize) \
     M(ResourceLoadStatistics) \
     M(Sandbox) \
+    M(ScreenTime) \
     M(ScrollAnimations) \
     M(Scrolling) \
     M(SecureCoding) \
