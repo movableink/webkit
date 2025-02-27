@@ -53,6 +53,7 @@
 #include "InjectUserScriptImmediately.h"
 #include "InjectedBundle.h"
 #include "InjectedBundleScriptWorld.h"
+#include "JavaScriptEvaluationResult.h"
 #include "LibWebRTCCodecs.h"
 #include "LibWebRTCProvider.h"
 #include "LoadParameters.h"
@@ -4378,25 +4379,25 @@ KeyboardUIMode WebPage::keyboardUIMode()
     return static_cast<KeyboardUIMode>((fullKeyboardAccessEnabled ? KeyboardAccessFull : KeyboardAccessDefault) | (m_tabToLinks ? KeyboardAccessTabsToLinks : 0));
 }
 
-void WebPage::runJavaScript(WebFrame* frame, RunJavaScriptParameters&& parameters, ContentWorldIdentifier worldIdentifier, CompletionHandler<void(std::span<const uint8_t>, const std::optional<WebCore::ExceptionDetails>&)>&& completionHandler)
+void WebPage::runJavaScript(WebFrame* frame, RunJavaScriptParameters&& parameters, ContentWorldIdentifier worldIdentifier, CompletionHandler<void(Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>)>&& completionHandler)
 {
     // NOTE: We need to be careful when running scripts that the objects we depend on don't
     // disappear during script execution.
 
     if (!frame || !frame->coreLocalFrame()) {
-        completionHandler({ }, ExceptionDetails { "Unable to execute JavaScript: Target frame could not be found in the page"_s, 0, 0, ExceptionDetails::Type::InvalidTargetFrame });
+        completionHandler(makeUnexpected(ExceptionDetails { "Unable to execute JavaScript: Target frame could not be found in the page"_s, 0, 0, ExceptionDetails::Type::InvalidTargetFrame }));
         return;
     }
 
     RefPtr world = m_userContentController->worldForIdentifier(worldIdentifier);
     if (!world) {
-        completionHandler({ }, ExceptionDetails { "Unable to execute JavaScript: Cannot find specified content world"_s });
+        completionHandler(makeUnexpected(ExceptionDetails { "Unable to execute JavaScript: Cannot find specified content world"_s }));
         return;
     }
 
 #if ENABLE(APP_BOUND_DOMAINS)
     if (frame->shouldEnableInAppBrowserPrivacyProtections()) {
-        completionHandler({ }, ExceptionDetails { "Unable to execute JavaScript in a frame that is not in an app-bound domain"_s, 0, 0, ExceptionDetails::Type::AppBoundDomain });
+        completionHandler(makeUnexpected(ExceptionDetails { "Unable to execute JavaScript in a frame that is not in an app-bound domain"_s, 0, 0, ExceptionDetails::Type::AppBoundDomain }));
         if (RefPtr localTopDocument = protectedCorePage()->localTopDocument())
             localTopDocument->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user script injection for non-app bound domain."_s);
         WEBPAGE_RELEASE_LOG_ERROR(Loading, "runJavaScript: Ignoring user script injection for non app-bound domain");
@@ -4421,27 +4422,20 @@ void WebPage::runJavaScript(WebFrame* frame, RunJavaScriptParameters&& parameter
 
     SetForScope userIsInteractingChange { m_userIsInteracting, shouldAllowUserInteraction };
     auto resolveFunction = [world = Ref { *world }, frame = Ref { *frame }, coreFrame = Ref { *frame->coreLocalFrame() }, completionHandler = WTFMove(completionHandler)] (ValueOrException result) mutable {
-        RefPtr<SerializedScriptValue> serializedResultValue;
-        if (result) {
-            serializedResultValue = SerializedScriptValue::create(frame->jsContextForWorld(world.ptr()),
-                toRef(coreFrame->script().globalObject(Ref { world->coreWorld() }), result.value()), nullptr);
-        }
-
-        std::span<const uint8_t> dataReference;
-        if (serializedResultValue)
-            dataReference = serializedResultValue->wireBytes();
-
-        std::optional<ExceptionDetails> details;
         if (!result)
-            details = result.error();
-
-        completionHandler(dataReference, details);
+            return completionHandler(makeUnexpected(result.error()));
+        if (RefPtr serializedResultValue = SerializedScriptValue::create(frame->jsContextForWorld(world.ptr()), toRef(coreFrame->script().globalObject(Ref { world->coreWorld() }), result.value()), nullptr)) {
+            if (auto wireBytes = serializedResultValue->wireBytes(); !wireBytes.isEmpty())
+                return completionHandler(JavaScriptEvaluationResult { wireBytes });
+            return completionHandler(makeUnexpected(std::nullopt));
+        }
+        return completionHandler(makeUnexpected(std::nullopt));
     };
     JSLockHolder lock(commonVM());
     frame->coreLocalFrame()->script().executeAsynchronousUserAgentScriptInWorld(world->protectedCoreWorld(), WTFMove(parameters), WTFMove(resolveFunction));
 }
 
-void WebPage::runJavaScriptInFrameInScriptWorld(RunJavaScriptParameters&& parameters, std::optional<WebCore::FrameIdentifier> frameID, const ContentWorldData& worldData, CompletionHandler<void(std::span<const uint8_t>, const std::optional<WebCore::ExceptionDetails>&)>&& completionHandler)
+void WebPage::runJavaScriptInFrameInScriptWorld(RunJavaScriptParameters&& parameters, std::optional<WebCore::FrameIdentifier> frameID, const ContentWorldData& worldData, CompletionHandler<void(Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>)>&& completionHandler)
 {
     WEBPAGE_RELEASE_LOG(Process, "runJavaScriptInFrameInScriptWorld: frameID=%" PRIu64, frameID ? frameID->object().toUInt64() : 0);
     RefPtr webFrame = frameID ? WebProcess::singleton().webFrame(*frameID) : &mainWebFrame();
@@ -4454,15 +4448,15 @@ void WebPage::runJavaScriptInFrameInScriptWorld(RunJavaScriptParameters&& parame
         }
     }
 
-    runJavaScript(webFrame.get(), WTFMove(parameters), worldData.identifier, [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](std::span<const uint8_t> result, const std::optional<WebCore::ExceptionDetails>& exception) mutable {
+    runJavaScript(webFrame.get(), WTFMove(parameters), worldData.identifier, [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](auto&& result) mutable {
 #if RELEASE_LOG_DISABLED
         UNUSED_PARAM(this);
 #endif
-        if (exception)
-            WEBPAGE_RELEASE_LOG_ERROR(Process, "runJavaScriptInFrameInScriptWorld: Request to run JavaScript failed with error %" PRIVATE_LOG_STRING, exception->message.utf8().data());
+        if (!result && result.error())
+            WEBPAGE_RELEASE_LOG_ERROR(Process, "runJavaScriptInFrameInScriptWorld: Request to run JavaScript failed with error %" PRIVATE_LOG_STRING, result.error()->message.utf8().data());
         else
             WEBPAGE_RELEASE_LOG(Process, "runJavaScriptInFrameInScriptWorld: Request to run JavaScript succeeded");
-        completionHandler(result, exception);
+        completionHandler(WTFMove(result));
     });
 }
 

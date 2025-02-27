@@ -434,6 +434,7 @@ class DrawingAreaProxy;
 class FrameState;
 class GamepadData;
 class GeolocationPermissionRequestManagerProxy;
+class JavaScriptEvaluationResult;
 class LayerTreeContext;
 class ListDataObserver;
 class MediaCapability;
@@ -1573,8 +1574,8 @@ public:
     void getSelectionAsWebArchiveData(CompletionHandler<void(API::Data*)>&&);
     void getSourceForFrame(WebFrameProxy*, CompletionHandler<void(const String&)>&&);
     void getWebArchiveOfFrame(WebFrameProxy*, CompletionHandler<void(API::Data*)>&&);
-    void runJavaScriptInMainFrame(WebCore::RunJavaScriptParameters&&, CompletionHandler<void(Expected<RefPtr<API::SerializedScriptValue>, WebCore::ExceptionDetails>&&)>&&);
-    void runJavaScriptInFrameInScriptWorld(WebCore::RunJavaScriptParameters&&, std::optional<WebCore::FrameIdentifier>, API::ContentWorld&, CompletionHandler<void(Expected<RefPtr<API::SerializedScriptValue>, WebCore::ExceptionDetails>&&)>&&);
+    void runJavaScriptInMainFrame(WebCore::RunJavaScriptParameters&&, CompletionHandler<void(Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>)>&&);
+    void runJavaScriptInFrameInScriptWorld(WebCore::RunJavaScriptParameters&&, std::optional<WebCore::FrameIdentifier>, API::ContentWorld&, CompletionHandler<void(Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>)>&&);
     void getAccessibilityTreeData(CompletionHandler<void(API::Data*)>&&);
     void updateRenderingWithForcedRepaint(CompletionHandler<void()>&&);
 

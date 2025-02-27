@@ -8466,6 +8466,10 @@
 		FAC3C3BA2A93E561001E2EB8 /* RemoteScrollingCoordinatorTransaction.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = RemoteScrollingCoordinatorTransaction.serialization.in; sourceTree = "<group>"; };
 		FAC59A3D2AF9A6BB00FA7AB6 /* GPUProcessCreationParameters.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = GPUProcessCreationParameters.serialization.in; sourceTree = "<group>"; };
 		FAC59A3E2AF9AF4B00FA7AB6 /* MediaDeviceSandboxExtensions.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = MediaDeviceSandboxExtensions.serialization.in; sourceTree = "<group>"; };
+		FAC7C0AF2D70225500E7297E /* JavaScriptEvaluationResult.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JavaScriptEvaluationResult.h; sourceTree = "<group>"; };
+		FAC7C0B02D70228200E7297E /* JavaScriptEvaluationResult.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JavaScriptEvaluationResult.serialization.in; sourceTree = "<group>"; };
+		FAC7C0B12D70229C00E7297E /* JavaScriptEvaluationResult.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JavaScriptEvaluationResult.cpp; sourceTree = "<group>"; };
+		FAC7C0B22D7022AF00E7297E /* JavaScriptEvaluationResult.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JavaScriptEvaluationResult.mm; sourceTree = "<group>"; };
 		FAC849872A9E92B600D407EF /* NetworkTransportSession.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkTransportSession.cpp; sourceTree = "<group>"; };
 		FAC849882A9E92B600D407EF /* NetworkTransportSession.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = NetworkTransportSession.messages.in; sourceTree = "<group>"; };
 		FAC849892A9E92B600D407EF /* NetworkTransportSession.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkTransportSession.h; sourceTree = "<group>"; };
@@ -9404,6 +9408,10 @@
 				86EFFA402B03A6B900ABE77D /* IPCTester.messages.in */,
 				7BF19B60290FC5B400EF322A /* IPCTesterReceiver.cpp */,
 				7BF19B5F290FC5B400EF322A /* IPCTesterReceiver.h */,
+				FAC7C0B12D70229C00E7297E /* JavaScriptEvaluationResult.cpp */,
+				FAC7C0AF2D70225500E7297E /* JavaScriptEvaluationResult.h */,
+				FAC7C0B22D7022AF00E7297E /* JavaScriptEvaluationResult.mm */,
+				FAC7C0B02D70228200E7297E /* JavaScriptEvaluationResult.serialization.in */,
 				074A6FC62D5F1DEA0027F958 /* KeyEventInterpretationContext.cpp */,
 				074A6FC52D5F1DEA0027F958 /* KeyEventInterpretationContext.h */,
 				074A6FC82D5F20190027F958 /* KeyEventInterpretationContext.serialization.in */,

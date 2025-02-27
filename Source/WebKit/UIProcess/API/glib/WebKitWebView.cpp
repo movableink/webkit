@@ -4181,27 +4181,27 @@ static void webkitWebViewRunJavaScriptWithParams(WebKitWebView* webView, RunJava
         if (g_task_return_error_if_cancelled(task.get()))
             return;
 
-        if (result.has_value()) {
-            if (!result.value())
-                g_task_return_new_error(task.get(), WEBKIT_JAVASCRIPT_ERROR, WEBKIT_JAVASCRIPT_ERROR_INVALID_RESULT, "Unsupported result type");
-            else {
+        if (result) {
 #if ENABLE(2022_GLIB_API)
-                ASSERT_UNUSED(returnType, returnType == RunJavascriptReturnType::JSCValue);
-                g_task_return_pointer(task.get(), API::SerializedScriptValue::deserialize(result.value()->internalRepresentation()).leakRef(),
-                    reinterpret_cast<GDestroyNotify>(g_object_unref));
+            ASSERT_UNUSED(returnType, returnType == RunJavascriptReturnType::JSCValue);
+            g_task_return_pointer(task.get(), API::SerializedScriptValue::deserialize(result->legacySerializedScriptValue()->internalRepresentation()).leakRef(),
+                reinterpret_cast<GDestroyNotify>(g_object_unref));
 #else
-                if (returnType == RunJavascriptReturnType::JSCValue) {
-                    g_task_return_pointer(task.get(), API::SerializedScriptValue::deserialize(result.value()->internalRepresentation()).leakRef(),
-                        reinterpret_cast<GDestroyNotify>(g_object_unref));
-                } else {
-                    ASSERT(returnType == RunJavascriptReturnType::WebKitJavascriptResult);
-                    g_task_return_pointer(task.get(), webkitJavascriptResultCreate(result.value()->internalRepresentation()),
-                        reinterpret_cast<GDestroyNotify>(webkit_javascript_result_unref));
-                }
-#endif
+            if (returnType == RunJavascriptReturnType::JSCValue) {
+                g_task_return_pointer(task.get(), API::SerializedScriptValue::deserialize(result->legacySerializedScriptValue()->internalRepresentation()).leakRef(),
+                    reinterpret_cast<GDestroyNotify>(g_object_unref));
+            } else {
+                ASSERT(returnType == RunJavascriptReturnType::WebKitJavascriptResult);
+                g_task_return_pointer(task.get(), webkitJavascriptResultCreate(result->legacySerializedScriptValue()->internalRepresentation()),
+                    reinterpret_cast<GDestroyNotify>(webkit_javascript_result_unref));
             }
+#endif
         } else {
-            ExceptionDetails exceptionDetails = WTFMove(result.error());
+            if (!result.error()) {
+                g_task_return_new_error(task.get(), WEBKIT_JAVASCRIPT_ERROR, WEBKIT_JAVASCRIPT_ERROR_INVALID_RESULT, "Unsupported result type");
+                return;
+            }
+            ExceptionDetails exceptionDetails = WTFMove(*result.error());
             StringBuilder builder;
             if (!exceptionDetails.sourceURL.isEmpty()) {
                 builder.append(exceptionDetails.sourceURL);

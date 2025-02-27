@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,30 +25,48 @@
 
 #pragma once
 
-#if ENABLE(APPLE_PAY)
+#include "WKRetainPtr.h"
 
-#include <WebCore/ApplePaySessionPaymentRequest.h>
-#include <pal/spi/cocoa/PassKitSPI.h>
-#include <wtf/Forward.h>
+#if PLATFORM(COCOA)
+#include <wtf/RetainPtr.h>
+#endif
 
-OBJC_CLASS PKShippingMethod;
-OBJC_CLASS PKShippingMethods;
+namespace API {
+class SerializedScriptValue;
+}
 
 namespace WebCore {
-struct ApplePayShippingMethod;
-class ApplePaySessionPaymentRequest;
+struct ExceptionDetails;
 }
 
 namespace WebKit {
 
-// FIXME: Rather than having these free functions scattered about, Apple Pay data types should know
-// how to convert themselves to and from their platform representations.
-PKShippingMethod *toPKShippingMethod(const WebCore::ApplePayShippingMethod&);
-#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
-PKShippingMethods *toPKShippingMethods(const Vector<WebCore::ApplePayShippingMethod>&);
+class JavaScriptEvaluationResult {
+public:
+    JavaScriptEvaluationResult(std::span<const uint8_t> wireBytes)
+        : m_wireBytes(wireBytes) { }
+    JavaScriptEvaluationResult(JavaScriptEvaluationResult&&) = default;
+    JavaScriptEvaluationResult& operator=(JavaScriptEvaluationResult&&) = default;
+
+    std::span<const uint8_t> wireBytes() const { return m_wireBytes; }
+
+#if PLATFORM(COCOA)
+    RetainPtr<id> toID() const;
 #endif
-PKMerchantCapability toPKMerchantCapabilities(const WebCore::ApplePaySessionPaymentRequest::MerchantCapabilities&);
+    WKRetainPtr<WKTypeRef> toWK() const;
 
-} // namespace WebKit
+    Ref<API::SerializedScriptValue> legacySerializedScriptValue() const;
+private:
+    std::span<const uint8_t> m_wireBytes;
+};
 
-#endif // ENABLE(APPLE_PAY)
+}
+
+namespace IPC {
+
+template<typename> struct AsyncReplyError;
+template<> struct AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>> {
+    static Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> create();
+};
+
+}

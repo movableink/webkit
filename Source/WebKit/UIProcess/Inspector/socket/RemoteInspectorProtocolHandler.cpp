@@ -32,6 +32,7 @@
 #include "APILoaderClient.h"
 #include "APINavigation.h"
 #include "APIPageConfiguration.h"
+#include "JavaScriptEvaluationResult.h"
 #include "PageLoadState.h"
 #include "WebPageGroup.h"
 #include "WebPageProxy.h"
@@ -149,8 +150,8 @@ void RemoteInspectorProtocolHandler::runScript(const String& script)
 {
     protectedPage()->runJavaScriptInMainFrame({ script, JSC::SourceTaintedOrigin::Untainted, URL { }, false, std::nullopt, false, RemoveTransientActivation::Yes },
         [] (auto&& result) {
-        if (!result.has_value())
-            LOG_ERROR("Exception running script \"%s\"", result.error().message.utf8().data());
+        if (!result && result.error())
+            LOG_ERROR("Exception running script \"%s\"", result.error()->message.utf8().data());
     });
 }
 

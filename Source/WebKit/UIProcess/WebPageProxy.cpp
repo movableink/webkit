@@ -88,6 +88,7 @@
 #include "FrameTreeNodeData.h"
 #include "GoToBackForwardItemParameters.h"
 #include "ImageOptions.h"
+#include "JavaScriptEvaluationResult.h"
 #include "LegacyGlobalSettings.h"
 #include "LoadParameters.h"
 #include "LoadedWebArchive.h"
@@ -6157,18 +6158,18 @@ void WebPageProxy::launchInitialProcessIfNecessary()
         launchProcess(Site(aboutBlankURL()), ProcessLaunchReason::InitialProcess);
 }
 
-void WebPageProxy::runJavaScriptInMainFrame(RunJavaScriptParameters&& parameters, CompletionHandler<void(Expected<RefPtr<API::SerializedScriptValue>, WebCore::ExceptionDetails>&&)>&& callbackFunction)
+void WebPageProxy::runJavaScriptInMainFrame(RunJavaScriptParameters&& parameters, CompletionHandler<void(Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>)>&& callbackFunction)
 {
     runJavaScriptInFrameInScriptWorld(WTFMove(parameters), std::nullopt, API::ContentWorld::pageContentWorldSingleton(), WTFMove(callbackFunction));
 }
 
-void WebPageProxy::runJavaScriptInFrameInScriptWorld(RunJavaScriptParameters&& parameters, std::optional<WebCore::FrameIdentifier> frameID, API::ContentWorld& world, CompletionHandler<void(Expected<RefPtr<API::SerializedScriptValue>, WebCore::ExceptionDetails>&&)>&& callbackFunction)
+void WebPageProxy::runJavaScriptInFrameInScriptWorld(RunJavaScriptParameters&& parameters, std::optional<WebCore::FrameIdentifier> frameID, API::ContentWorld& world, CompletionHandler<void(Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>)>&& callbackFunction)
 {
     // For backward-compatibility support running script in a WebView which has not done any loads yets.
     launchInitialProcessIfNecessary();
 
     if (!hasRunningProcess())
-        return callbackFunction({ nullptr });
+        return callbackFunction(makeUnexpected(std::nullopt));
 
     RefPtr<ProcessThrottler::Activity> activity;
 #if USE(RUNNINGBOARD)
@@ -6176,15 +6177,9 @@ void WebPageProxy::runJavaScriptInFrameInScriptWorld(RunJavaScriptParameters&& p
         activity = m_legacyMainFrameProcess->throttler().foregroundActivity("WebPageProxy::runJavaScriptInFrameInScriptWorld"_s);
 #endif
 
-    auto completionHandler = [activity = WTFMove(activity), callbackFunction = WTFMove(callbackFunction)] (std::span<const uint8_t> dataReference, std::optional<ExceptionDetails>&& details) mutable {
-        if (details)
-            return callbackFunction(makeUnexpected(WTFMove(*details)));
-        if (dataReference.empty())
-            return callbackFunction({ nullptr });
-        callbackFunction({ API::SerializedScriptValue::createFromWireBytes(Vector(dataReference)).ptr() });
-    };
-
-    sendWithAsyncReplyToProcessContainingFrame(frameID, Messages::WebPage::RunJavaScriptInFrameInScriptWorld(parameters, frameID, world.worldData()), WTFMove(completionHandler));
+    sendWithAsyncReplyToProcessContainingFrame(frameID, Messages::WebPage::RunJavaScriptInFrameInScriptWorld(parameters, frameID, world.worldData()), [activity = WTFMove(activity), callbackFunction = WTFMove(callbackFunction)] (auto&& result) mutable {
+        callbackFunction(WTFMove(result));
+    });
 }
 
 void WebPageProxy::getRenderTreeExternalRepresentation(CompletionHandler<void(const String&)>&& callback)

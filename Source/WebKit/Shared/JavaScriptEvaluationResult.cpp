@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,32 +23,31 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "JavaScriptEvaluationResult.h"
 
-#if ENABLE(APPLE_PAY)
-
-#include <WebCore/ApplePaySessionPaymentRequest.h>
-#include <pal/spi/cocoa/PassKitSPI.h>
-#include <wtf/Forward.h>
-
-OBJC_CLASS PKShippingMethod;
-OBJC_CLASS PKShippingMethods;
-
-namespace WebCore {
-struct ApplePayShippingMethod;
-class ApplePaySessionPaymentRequest;
-}
+#include "APISerializedScriptValue.h"
+#include <WebCore/ExceptionDetails.h>
 
 namespace WebKit {
 
-// FIXME: Rather than having these free functions scattered about, Apple Pay data types should know
-// how to convert themselves to and from their platform representations.
-PKShippingMethod *toPKShippingMethod(const WebCore::ApplePayShippingMethod&);
-#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
-PKShippingMethods *toPKShippingMethods(const Vector<WebCore::ApplePayShippingMethod>&);
-#endif
-PKMerchantCapability toPKMerchantCapabilities(const WebCore::ApplePaySessionPaymentRequest::MerchantCapabilities&);
+Ref<API::SerializedScriptValue> JavaScriptEvaluationResult::legacySerializedScriptValue() const
+{
+    return API::SerializedScriptValue::createFromWireBytes(Vector(wireBytes()));
+}
+
+WKRetainPtr<WKTypeRef> JavaScriptEvaluationResult::toWK() const
+{
+    return API::SerializedScriptValue::deserializeWK(legacySerializedScriptValue()->internalRepresentation());
+}
 
 } // namespace WebKit
 
-#endif // ENABLE(APPLE_PAY)
+namespace IPC {
+
+Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>>::create()
+{
+    return makeUnexpected(std::nullopt);
+}
+
+} // namespace IPC

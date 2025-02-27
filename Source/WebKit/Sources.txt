@@ -225,6 +225,7 @@ Shared/IPCConnectionTester.cpp
 Shared/IPCStreamTester.cpp
 Shared/IPCTester.cpp
 Shared/IPCTesterReceiver.cpp
+Shared/JavaScriptEvaluationResult.cpp
 Shared/KeyEventInterpretationContext.cpp
 Shared/PersistencyUtils.cpp
 Shared/PrintInfo.cpp

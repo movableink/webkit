@@ -476,6 +476,7 @@ set(WebKit_SERIALIZATION_IN_FILES
     Shared/ImageOptions.serialization.in
     Shared/InspectorExtensionTypes.serialization.in
     Shared/JavaScriptCore.serialization.in
+    Shared/JavaScriptEvaluationResult.serialization.in
     Shared/LayerTreeContext.serialization.in
     Shared/LoadParameters.serialization.in
     Shared/MediaPlaybackState.serialization.in
