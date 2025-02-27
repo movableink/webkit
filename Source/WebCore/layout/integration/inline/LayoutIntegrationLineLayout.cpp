@@ -1263,6 +1263,11 @@ bool LineLayout::insertedIntoTree(const RenderElement& parent, RenderObject& chi
 
 bool LineLayout::removedFromTree(const RenderElement& parent, RenderObject& child)
 {
+    if (!child.everHadLayout()) {
+        BoxTreeUpdater { flow() }.remove(parent, child);
+        return false;
+    }
+
     if (!m_inlineContent) {
         // This should only be called on partial layout.
         ASSERT_NOT_REACHED();

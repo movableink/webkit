@@ -88,6 +88,15 @@ static void invalidateLineLayout(RenderObject& renderer, IsRemoval isRemoval)
     CheckedPtr container = LayoutIntegration::LineLayout::blockContainer(renderer);
     if (!container)
         return;
+
+    if (isRemoval == IsRemoval::Yes && !renderer.everHadLayout()) {
+        // Certain mutations can make renderer to be removed before running layout. In such cases we don't have to try to
+        // run invalidation only remove it from layout tree.
+        if (auto* inlineLayout = container->inlineLayout())
+            inlineLayout->removedFromTree(*renderer.parent(), renderer);
+        return;
+    }
+
     auto shouldInvalidateLineLayoutPath = [&](auto& inlineLayout) {
         if (LayoutIntegration::LineLayout::shouldInvalidateLineLayoutPathAfterTreeMutation(*container, renderer, inlineLayout, isRemoval == IsRemoval::Yes))
             return true;
