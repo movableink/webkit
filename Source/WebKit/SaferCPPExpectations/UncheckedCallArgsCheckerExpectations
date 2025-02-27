@@ -1,4 +1,3 @@
-NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/C/mac/WKPagePrivateMac.mm
 UIProcess/API/Cocoa/WKBrowsingContextController.mm

@@ -2,7 +2,6 @@ AutomationBackendDispatchers.cpp
 AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
 NetworkProcess/Downloads/DownloadManager.cpp
-NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
 Platform/IPC/ArgumentCoders.h
 Shared/API/APIArray.h

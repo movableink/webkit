@@ -42,15 +42,15 @@ namespace WebKit {
 void Download::resume(std::span<const uint8_t> resumeData, const String& path, SandboxExtension::Handle&& sandboxExtensionHandle, std::span<const uint8_t> activityAccessToken)
 {
     m_sandboxExtension = SandboxExtension::create(WTFMove(sandboxExtensionHandle));
-    if (m_sandboxExtension)
-        m_sandboxExtension->consume();
+    if (RefPtr extension = m_sandboxExtension)
+        extension->consume();
 
-    auto* networkSession = m_downloadManager->client().networkSession(m_sessionID);
+    auto* networkSession = m_downloadManager->protectedClient()->networkSession(m_sessionID);
     if (!networkSession) {
         WTFLogAlways("Could not find network session with given session ID");
         return;
     }
-    auto& cocoaSession = static_cast<NetworkSessionCocoa&>(*networkSession);
+    auto& cocoaSession = downcast<NetworkSessionCocoa>(*networkSession);
     RetainPtr nsData = toNSData(resumeData);
 
     NSMutableDictionary *dictionary = [NSPropertyListSerialization propertyListWithData:nsData.get() options:NSPropertyListMutableContainersAndLeaves format:0 error:nullptr];
