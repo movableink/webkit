@@ -594,6 +594,8 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
 #if HAVE(NSCOLOR_FILL_COLOR_HIERARCHY)
             case CSSValueAppleSystemOpaqueFill:
                 return @selector(systemFillColor);
+            case CSSValueAppleSystemOpaqueSecondaryFill:
+                return @selector(secondarySystemFillColor);
             case CSSValueAppleSystemTertiaryFill:
                 return @selector(tertiarySystemFillColor);
 #endif
