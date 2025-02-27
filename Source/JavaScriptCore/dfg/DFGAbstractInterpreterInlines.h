@@ -75,7 +75,7 @@ AbstractInterpreter<AbstractStateType>::AbstractInterpreter(Graph& graph, Abstra
     , m_state(state)
 {
     if (m_graph.m_form == SSA)
-        m_phiChildren = makeUnique<PhiChildren>(m_graph);
+        m_phiChildren = makeUniqueWithoutFastMallocCheck<PhiChildren>(m_graph);
 }
 
 template<typename AbstractStateType>

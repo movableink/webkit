@@ -38,7 +38,7 @@
 namespace JSC { namespace DFG {
 
 class InPlaceAbstractState {
-    WTF_MAKE_TZONE_ALLOCATED(InPlaceAbstractState);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(InPlaceAbstractState);
 public:
     InPlaceAbstractState(Graph&);
     

@@ -46,7 +46,7 @@
 
 namespace JSC { namespace DFG {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(JITCompiler);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(JITCompiler);
 
 JITCompiler::JITCompiler(Graph& dfg)
     : CCallHelpers(dfg.m_codeBlock)
@@ -56,7 +56,7 @@ JITCompiler::JITCompiler(Graph& dfg)
     , m_pcToCodeOriginMapBuilder(dfg.m_vm)
 {
     if (UNLIKELY(shouldDumpDisassembly() || m_graph.m_vm.m_perBytecodeProfiler))
-        m_disassembler = makeUnique<Disassembler>(dfg);
+        m_disassembler = makeUniqueWithoutFastMallocCheck<Disassembler>(dfg);
 #if ENABLE(FTL_JIT)
     m_jitCode->tierUpInLoopHierarchy = WTFMove(m_graph.m_plan.tierUpInLoopHierarchy());
     for (BytecodeIndex tierUpBytecode : m_graph.m_plan.tierUpAndOSREnterBytecodes())

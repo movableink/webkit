@@ -2074,7 +2074,7 @@ public:
 // in order to make space available for another.
 
 class JSValueOperand {
-    WTF_MAKE_TZONE_ALLOCATED(JSValueOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(JSValueOperand);
 public:
     explicit JSValueOperand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2232,7 +2232,7 @@ private:
 };
 
 class StorageOperand {
-    WTF_MAKE_TZONE_ALLOCATED(StorageOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(StorageOperand);
 public:
     StorageOperand() = default;
 
@@ -2300,7 +2300,7 @@ private:
 enum ReuseTag { Reuse };
 
 class GPRTemporary {
-    WTF_MAKE_TZONE_ALLOCATED(GPRTemporary);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(GPRTemporary);
 public:
     GPRTemporary();
     GPRTemporary(SpeculativeJIT*);
@@ -2371,7 +2371,7 @@ private:
 };
 
 class JSValueRegsTemporary {
-    WTF_MAKE_TZONE_ALLOCATED(JSValueRegsTemporary);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(JSValueRegsTemporary);
 public:
     JSValueRegsTemporary();
     JSValueRegsTemporary(SpeculativeJIT*);
@@ -2420,7 +2420,7 @@ JSValueRegsTemporary::JSValueRegsTemporary(SpeculativeJIT* jit, ReuseTag, T& ope
 #endif
 
 class FPRTemporary {
-    WTF_MAKE_TZONE_ALLOCATED(FPRTemporary);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(FPRTemporary);
 public:
     FPRTemporary(FPRTemporary&&);
     FPRTemporary(SpeculativeJIT*);
@@ -2492,7 +2492,7 @@ private:
 };
 
 class JSValueRegsFlushedCallResult {
-    WTF_MAKE_TZONE_ALLOCATED(JSValueRegsFlushedCallResult);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(JSValueRegsFlushedCallResult);
 public:
     JSValueRegsFlushedCallResult(SpeculativeJIT* jit)
 #if USE(JSVALUE64)
@@ -2534,7 +2534,7 @@ private:
 // a bail-out to the non-speculative path will be taken.
 
 class SpeculateInt32Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateInt32Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateInt32Operand);
 public:
     explicit SpeculateInt32Operand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2593,7 +2593,7 @@ private:
 };
 
 class SpeculateStrictInt32Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateStrictInt32Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateStrictInt32Operand);
 public:
     explicit SpeculateStrictInt32Operand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2642,7 +2642,7 @@ private:
 
 // Gives you a canonical Int52 (i.e. it's left-shifted by 12, low bits zero).
 class SpeculateInt52Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateInt52Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateInt52Operand);
 public:
     explicit SpeculateInt52Operand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2690,7 +2690,7 @@ private:
 
 // Gives you a strict Int52 (i.e. the payload is in the low 52 bits, high 12 bits are sign-extended).
 class SpeculateStrictInt52Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateStrictInt52Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateStrictInt52Operand);
 public:
     explicit SpeculateStrictInt52Operand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2739,7 +2739,7 @@ private:
 enum OppositeShiftTag { OppositeShift };
 
 class SpeculateWhicheverInt52Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateWhicheverInt52Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateWhicheverInt52Operand);
 public:
     explicit SpeculateWhicheverInt52Operand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2817,7 +2817,7 @@ private:
 };
 
 class SpeculateDoubleOperand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateDoubleOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateDoubleOperand);
 public:
     explicit SpeculateDoubleOperand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2865,7 +2865,7 @@ private:
 };
 
 class SpeculateCellOperand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateCellOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateCellOperand);
 
 public:
     explicit SpeculateCellOperand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
@@ -2930,7 +2930,7 @@ private:
 };
 
 class SpeculateBooleanOperand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateBooleanOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateBooleanOperand);
 public:
     explicit SpeculateBooleanOperand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2979,7 +2979,7 @@ private:
 
 #if USE(BIGINT32)
 class SpeculateBigInt32Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateBigInt32Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateBigInt32Operand);
 public:
     explicit SpeculateBigInt32Operand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)

@@ -32,6 +32,7 @@
 #include "DFGNode.h"
 #include "DFGNodeFlowProjection.h"
 #include "DFGPhiChildren.h"
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TriState.h>
 
@@ -39,7 +40,7 @@ namespace JSC { namespace DFG {
 
 template<typename AbstractStateType>
 class AbstractInterpreter {
-    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(AbstractInterpreter);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE(AbstractInterpreter);
 public:
     AbstractInterpreter(Graph&, AbstractStateType&);
     ~AbstractInterpreter();
@@ -282,7 +283,7 @@ private:
     std::unique_ptr<PhiChildren> m_phiChildren;
 };
 
-WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename AbstractStateType>, AbstractInterpreter<AbstractStateType>);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE_IMPL(template<typename AbstractStateType>, AbstractInterpreter<AbstractStateType>);
 
 } } // namespace JSC::DFG
 
