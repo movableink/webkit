@@ -544,6 +544,20 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
         m_stringBuilder.append(m_indent, "}\n\n"_s);
     }
 
+    if (m_shaderModule.usesInsertBits()) {
+        m_stringBuilder.append(m_indent, "template <typename T>\n"_s,
+            m_indent, "static T __wgslInsertBits(T e, T newBits, unsigned offset, unsigned count)\n"_s,
+            m_indent, "{\n"_s);
+        {
+            IndentationScope scope(m_indent);
+            m_stringBuilder.append(m_indent, "constexpr unsigned w = 8 * static_cast<unsigned>(sizeof(make_scalar_t<T>));\n"_s);
+            m_stringBuilder.append(m_indent, "const unsigned o = min(offset, w);\n"_s);
+            m_stringBuilder.append(m_indent, "const unsigned c = min(count, w - o);\n"_s);
+            m_stringBuilder.append(m_indent, "return insert_bits(e, newBits, o, c);\n"_s);
+        }
+        m_stringBuilder.append(m_indent, "}\n\n"_s);
+    }
+
     m_shaderModule.clearUsesPackedVec3();
 }
 
@@ -2031,7 +2045,7 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
             { "frexp"_s, "__wgslFrexp"_s },
             { "fwidthCoarse"_s, "fwidth"_s },
             { "fwidthFine"_s, "fwidth"_s },
-            { "insertBits"_s, "insert_bits"_s },
+            { "insertBits"_s, "__wgslInsertBits"_s },
             { "inverseSqrt"_s, "rsqrt"_s },
             { "modf"_s, "__wgslModf"_s },
             { "pack2x16snorm"_s, "pack_float_to_snorm2x16"_s },

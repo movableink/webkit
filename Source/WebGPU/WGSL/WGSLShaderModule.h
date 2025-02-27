@@ -148,6 +148,9 @@ public:
     bool usesFtoi() const { return m_usesFtoi; }
     void setUsesFtoi() { m_usesFtoi = true; }
 
+    bool usesInsertBits() const { return m_usesInsertBits; }
+    void setUsesInsertBits() { m_usesInsertBits = true; }
+
     template<typename T>
     std::enable_if_t<std::is_base_of_v<AST::Node, T>, void> replace(T* current, T&& replacement)
     {
@@ -315,6 +318,7 @@ private:
     bool m_usesPackedVec3 { false };
     bool m_usesMin { false };
     bool m_usesFtoi { false };
+    bool m_usesInsertBits { false };
     OptionSet<Extension> m_enabledExtensions;
     OptionSet<LanguageFeature> m_requiredFeatures;
     Configuration m_configuration;
