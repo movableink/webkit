@@ -170,7 +170,7 @@ static bool didCloseCalled;
 
 - (void)lookUpURL:(NSURL *)URL completionHandler:(void (^)(TestLookupResult *, NSError *))completionHandler
 {
-    completionHandler([TestLookupResult resultWithResults:@[[TestServiceLookupResult resultWithProvider:@"TestProvider" phishing:YES malware:NO unwantedSoftware:NO]]], nil);
+    completionHandler([TestLookupResult resultWithResults:@[[TestServiceLookupResult resultWithProvider:@"SSBProviderApple" phishing:YES malware:NO unwantedSoftware:NO]]], nil);
 }
 
 @end
@@ -443,7 +443,7 @@ static RetainPtr<NSString> phishingResourceName;
     BOOL phishing = NO;
     if ([URL isEqual:resourceURL(phishingResourceName.get())])
         phishing = YES;
-    completionHandler([TestLookupResult resultWithResults:@[[TestServiceLookupResult resultWithProvider:@"TestProvider" phishing:phishing malware:NO unwantedSoftware:NO]]], nil);
+    completionHandler([TestLookupResult resultWithResults:@[[TestServiceLookupResult resultWithProvider:@"SSBProviderApple" phishing:phishing malware:NO unwantedSoftware:NO]]], nil);
 }
 
 @end
