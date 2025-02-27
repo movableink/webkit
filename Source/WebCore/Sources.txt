@@ -545,6 +545,7 @@ Modules/webxr/XRLayerEvent.cpp
 Modules/webxr/XRProjectionLayer.cpp
 Modules/webxr/XRReferenceSpaceEvent.cpp
 Modules/webxr/XRSessionEvent.cpp
+Modules/webxr/XRSubImage.cpp
 Modules/webxr/XRWebGLBinding.cpp
 Modules/webxr/XRWebGLSubImage.cpp
 accessibility/AXCoreObject.cpp
