@@ -8157,6 +8157,22 @@ UsesSingleWebProcess:
       default: false
   sharedPreferenceForWebProcess: true
 
+UsesWebContentRestrictionsForFilter:
+  type: bool
+  status: internal
+  condition: HAVE(WEBCONTENTRESTRICTIONS)
+  defaultsOverridable: true
+  humanReadableName: "Uses WebContentRestriction framework for content filter"
+  webcoreBinding: DeprecatedGlobalSettings
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+  sharedPreferenceForWebProcess: true
+
 VP9DecoderEnabled:
   type: bool
   status: embedder

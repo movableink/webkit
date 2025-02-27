@@ -88,6 +88,9 @@ header: <WebCore/FontPlatformData.h>
 class WebCore::ContentFilterUnblockHandler {
     String unblockURLHost()
     URL unreachableURL()
+#if HAVE(WEBCONTENTRESTRICTIONS)
+    std::optional<URL> evaluatedURL();
+#endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
     Vector<uint8_t> webFilterEvaluatorData()
 #endif

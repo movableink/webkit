@@ -42,6 +42,7 @@
 #include "CrossOriginOpenerPolicy.h"
 #include "CustomHeaderFields.h"
 #include "DNS.h"
+#include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "DocumentParser.h"
 #include "DocumentWriter.h"
@@ -2179,6 +2180,10 @@ void DocumentLoader::startLoadingMainResource()
     contentFilterInDocumentLoader() = frame && frame->view() && frame->protectedView()->platformWidget();
     if (contentFilterInDocumentLoader())
         m_contentFilter = !m_substituteData.isValid() ? ContentFilter::create(*this) : nullptr;
+#if HAVE(WEBCONTENTRESTRICTIONS)
+    if (m_contentFilter)
+        m_contentFilter->setUsesWebContentRestrictions(DeprecatedGlobalSettings::usesWebContentRestrictionsForFilter());
+#endif
 #endif
 
     auto url = m_request.url();

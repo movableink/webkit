@@ -294,6 +294,9 @@ bool NetworkResourceLoader::startContentFiltering(ResourceRequest& request)
 #if HAVE(AUDIT_TOKEN)
     m_contentFilter->setHostProcessAuditToken(protectedConnectionToWebProcess()->protectedNetworkProcess()->sourceApplicationAuditToken());
 #endif
+#if HAVE(WEBCONTENTRESTRICTIONS)
+    m_contentFilter->setUsesWebContentRestrictions(protectedConnectionToWebProcess()->usesWebContentRestrictionsForFilter());
+#endif
     m_contentFilter->startFilteringMainResource(request.url());
     if (!m_contentFilter->continueAfterWillSendRequest(request, ResourceResponse())) {
         m_contentFilter->stopFilteringMainResource();
