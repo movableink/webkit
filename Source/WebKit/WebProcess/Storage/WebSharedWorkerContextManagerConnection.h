@@ -73,13 +73,13 @@ private:
     void setUserAgent(String&& userAgent) { m_userAgent = WTFMove(userAgent); }
     void close();
 
-    Ref<IPC::Connection> m_connectionToNetworkProcess;
+    const Ref<IPC::Connection> m_connectionToNetworkProcess;
     const WebCore::Site m_site;
     PageGroupIdentifier m_pageGroupID;
     WebPageProxyIdentifier m_webPageProxyID;
     WebCore::PageIdentifier m_pageID;
     String m_userAgent;
-    Ref<WebUserContentController> m_userContentController;
+    const Ref<WebUserContentController> m_userContentController;
     std::optional<WebPreferencesStore> m_preferencesStore;
     bool isWebSharedWorkerContextManagerConnection() const final { return true; }
 };

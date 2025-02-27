@@ -2,7 +2,6 @@ AutomationBackendDispatchers.cpp
 AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
 NetworkProcess/Downloads/DownloadManager.cpp
-NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
 Platform/IPC/ArgumentCoders.h
 Shared/API/APIArray.h
 Shared/API/c/WKArray.cpp
@@ -320,7 +319,6 @@ WebProcess/Speech/SpeechRecognitionRealtimeMediaSourceManager.cpp
 WebProcess/Storage/WebSWClientConnection.cpp
 WebProcess/Storage/WebSWContextManagerConnection.cpp
 WebProcess/Storage/WebServiceWorkerProvider.cpp
-WebProcess/Storage/WebSharedWorkerContextManagerConnection.cpp
 WebProcess/UserContent/WebUserContentController.cpp
 WebProcess/WebCoreSupport/ShareableBitmapUtilities.cpp
 WebProcess/WebCoreSupport/WebBroadcastChannelRegistry.cpp

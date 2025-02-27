@@ -100,7 +100,7 @@ private:
     Ref<Document> m_document;
     ScriptExecutionContextIdentifier m_contextIdentifier;
     Ref<SharedWorkerThread> m_workerThread;
-    CacheStorageProvider& m_cacheStorageProvider;
+    WeakRef<CacheStorageProvider> m_cacheStorageProvider;
     RefPtr<CacheStorageConnection> m_cacheStorageConnection;
     bool m_isTerminatingOrTerminated { false };
     ClientOrigin m_clientOrigin;

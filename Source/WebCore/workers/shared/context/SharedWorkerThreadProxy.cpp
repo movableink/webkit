@@ -173,7 +173,7 @@ RefPtr<CacheStorageConnection> SharedWorkerThreadProxy::createCacheStorageConnec
 {
     ASSERT(isMainThread());
     if (!m_cacheStorageConnection)
-        m_cacheStorageConnection = m_cacheStorageProvider.createCacheStorageConnection();
+        m_cacheStorageConnection = m_cacheStorageProvider->createCacheStorageConnection();
     return m_cacheStorageConnection;
 }
 
