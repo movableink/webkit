@@ -253,6 +253,7 @@ public:
     virtual void willAttachScrollingNode() { }
     virtual void didAttachScrollingNode() { }
     virtual void didChangeSettings() { }
+    virtual void finalizeRenderingUpdate() { }
 
     // HUD Actions.
 #if ENABLE(PDF_HUD)

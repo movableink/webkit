@@ -86,6 +86,7 @@
 #include <WebCore/ImageBuffer.h>
 #include <WebCore/ImmediateActionStage.h>
 #include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameView.h>
 #include <WebCore/LocalizedStrings.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
@@ -274,6 +275,14 @@ void UnifiedPDFPlugin::setPresentationController(RefPtr<PDFPresentationControlle
         m_presentationController->teardown();
 
     m_presentationController = WTFMove(presentationController);
+}
+
+LocalFrameView* UnifiedPDFPlugin::frameView() const
+{
+    if (!m_frame)
+        return nullptr;
+
+    return m_frame->coreLocalFrame()->view();
 }
 
 FrameView* UnifiedPDFPlugin::mainFrameView() const
@@ -1172,11 +1181,13 @@ void UnifiedPDFPlugin::setScaleFactor(double scale, std::optional<WebCore::IntPo
         m_activeAnnotation->updateGeometry();
 #endif
 
-    auto scrolledContentsPoint = roundedIntPoint(convertUp(CoordinateSpace::Contents, CoordinateSpace::ScrolledContents, FloatPoint { zoomContentsOrigin }));
-    auto newScrollPosition = IntPoint { scrolledContentsPoint - originInPluginCoordinates };
-    newScrollPosition = newScrollPosition.expandedTo({ 0, 0 });
+    if (scrollingMode() == DelegatedScrollingMode::NotDelegated) {
+        auto scrolledContentsPoint = roundedIntPoint(convertUp(CoordinateSpace::Contents, CoordinateSpace::ScrolledContents, FloatPoint { zoomContentsOrigin }));
+        auto newScrollPosition = IntPoint { scrolledContentsPoint - originInPluginCoordinates };
+        newScrollPosition = newScrollPosition.expandedTo({ 0, 0 });
 
-    scrollToPointInContentsSpace(newScrollPosition);
+        scrollToPointInContentsSpace(newScrollPosition);
+    }
 
     scheduleRenderingUpdate();
 
@@ -1200,7 +1211,7 @@ void UnifiedPDFPlugin::setPageScaleFactor(double scale, std::optional<WebCore::I
         }
     }
 
-    if (scale != 1.0)
+    if (scale != 1.0 && !shouldSizeToFitContent())
         m_shouldUpdateAutoSizeScale = ShouldUpdateAutoSizeScale::No;
 
     // FIXME: Make the overlay scroll with the tiles instead of repainting constantly.
@@ -1282,7 +1293,8 @@ void UnifiedPDFPlugin::updateLayout(AdjustScaleAfterLayout shouldAdjustScale, st
     auto autoSizeMode = shouldUpdateAutoSizeScaleOverride.value_or(m_didLayoutWithValidDocument ? m_shouldUpdateAutoSizeScale : ShouldUpdateAutoSizeScale::Yes);
 
     auto computeAnchoringInfo = [&] {
-        return m_presentationController->pdfPositionForCurrentView(PDFPresentationController::AnchorPoint::TopLeft, shouldAdjustScale == AdjustScaleAfterLayout::Yes || autoSizeMode == ShouldUpdateAutoSizeScale::Yes);
+        auto anchorPoint = shouldSizeToFitContent() ? PDFPresentationController::AnchorPoint::Center : PDFPresentationController::AnchorPoint::TopLeft;
+        return m_presentationController->pdfPositionForCurrentView(anchorPoint, shouldAdjustScale == AdjustScaleAfterLayout::Yes || autoSizeMode == ShouldUpdateAutoSizeScale::Yes);
     };
     auto anchoringInfo = computeAnchoringInfo();
 
@@ -1307,7 +1319,8 @@ void UnifiedPDFPlugin::updateLayout(AdjustScaleAfterLayout shouldAdjustScale, st
         LOG_WITH_STREAM(PDF, stream << "UnifiedPDFPlugin::updateLayout - on first layout, chose scale for actual size " << initialScaleFactor);
         setScaleFactor(initialScaleFactor);
 
-        m_shouldUpdateAutoSizeScale = ShouldUpdateAutoSizeScale::No;
+        if (!shouldSizeToFitContent())
+            m_shouldUpdateAutoSizeScale = ShouldUpdateAutoSizeScale::No;
     }
 
     LOG_WITH_STREAM(PDF, stream << "UnifiedPDFPlugin::updateLayout - scale " << m_scaleFactor << " normalization factor " << m_scaleNormalizationFactor << " layout scale " << m_documentLayout.scale());
@@ -1317,15 +1330,50 @@ void UnifiedPDFPlugin::updateLayout(AdjustScaleAfterLayout shouldAdjustScale, st
         PDFDocumentLayout::LayoutUpdateChange::DocumentBounds,
     };
     if (layoutUpdateChanges.containsAll(allLayoutChangeTypes)) {
-        anchoringInfo = anchoringInfo.and_then([&](const PDFPresentationController::VisiblePDFPosition&) {
+        anchoringInfo = anchoringInfo.and_then([&](auto&) {
             return computeAnchoringInfo();
         });
     }
 
-    if (anchoringInfo)
-        m_presentationController->restorePDFPosition(*anchoringInfo);
+    auto restorePDFPosition = [this, anchoringInfo = WTFMove(anchoringInfo)] {
+        if (!anchoringInfo)
+            return;
 
+        if (!shouldSizeToFitContent()) {
+            m_presentationController->restorePDFPosition(*anchoringInfo);
+            return;
+        }
+
+        if (m_pendingAnchoringInfo || m_willSetPendingAnchoringInfo)
+            return;
+
+        // FIXME: This works around the fact that, during device rotation, the width of the plugin element
+        // updates before the height is updated. If we attempt to scroll to the anchored position with only
+        // the updated width, we'll end up scrolling to the wrong offset, due to the coordinate space
+        // conversion from page -> plugin coordinates producing incorrect result.
+        m_willSetPendingAnchoringInfo = true;
+        RunLoop::main().dispatch([weakThis = WeakPtr { *this }, anchoringInfo = WTFMove(anchoringInfo)] mutable {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return;
+
+            protectedThis->m_pendingAnchoringInfo = WTFMove(anchoringInfo);
+            protectedThis->m_willSetPendingAnchoringInfo = false;
+        });
+    };
+
+    restorePDFPosition();
     sizeToFitContentsIfNeeded();
+}
+
+void UnifiedPDFPlugin::finalizeRenderingUpdate()
+{
+    auto anchoringInfo = std::exchange(m_pendingAnchoringInfo, { });
+    if (!anchoringInfo)
+        return;
+
+    m_view->pluginElement().document().updateLayout();
+    m_presentationController->restorePDFPosition(*anchoringInfo);
 }
 
 FloatSize UnifiedPDFPlugin::centeringOffset() const
@@ -4634,6 +4682,7 @@ ViewportConfiguration::Parameters UnifiedPDFPlugin::viewportParameters()
     parameters.initialScaleIgnoringLayoutScaleFactor = 1;
     parameters.initialScaleIsSet = true;
     parameters.shouldHonorMinimumEffectiveDeviceWidthFromClient = false;
+    parameters.minimumScaleDoesNotAdaptToContent = true;
     return parameters;
 }
 

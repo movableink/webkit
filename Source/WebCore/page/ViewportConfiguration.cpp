@@ -353,6 +353,9 @@ double ViewportConfiguration::minimumScale() const
     if (m_forceAlwaysUserScalable)
         minimumScale = std::min(minimumScale, forceAlwaysUserScalableMinimumScale());
 
+    if (m_configuration.minimumScaleDoesNotAdaptToContent)
+        return minimumScale;
+
     auto scaleForFittingContentIsApproximatelyEqualToMinimumScale = [] (double viewLength, double contentLength, double minimumScale) {
         if (contentLength <= 1 || viewLength <= 1)
             return false;
@@ -716,6 +719,7 @@ TextStream& operator<<(TextStream& ts, const ViewportConfiguration::Parameters& 
     ts.dumpProperty("avoidsUnsafeArea", parameters.avoidsUnsafeArea);
     ts.dumpProperty("ignoreInitialScaleForLayoutWidth", parameters.ignoreInitialScaleForLayoutWidth);
     ts.dumpProperty("shouldHonorMinimumEffectiveDeviceWidthFromClient", parameters.shouldHonorMinimumEffectiveDeviceWidthFromClient);
+    ts.dumpProperty("minimumScaleDoesNotAdaptToContent", parameters.minimumScaleDoesNotAdaptToContent);
 
     return ts;
 }

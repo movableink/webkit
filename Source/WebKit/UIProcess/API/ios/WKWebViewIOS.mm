@@ -4289,7 +4289,7 @@ static bool isLockdownModeWarningNeeded()
     WebCore::FloatRect oldUnobscuredContentRect = _page->unobscuredContentRect();
 
     auto isOldBoundsValid = !CGRectIsEmpty(oldBounds) || !CGRectIsEmpty(_perProcessState.animatedResizeOldBounds);
-    if (![self usesStandardContentView] || !_perProcessState.hasCommittedLoadForMainFrame || !isOldBoundsValid || oldUnobscuredContentRect.isEmpty() || _perProcessState.liveResizeParameters) {
+    if (![self usesStandardContentView] || !_perProcessState.hasCommittedLoadForMainFrame || !isOldBoundsValid || oldUnobscuredContentRect.isEmpty() || _perProcessState.liveResizeParameters || [self _isDisplayingPDF]) {
         if ([_customContentView respondsToSelector:@selector(web_beginAnimatedResizeWithUpdates:)])
             [_customContentView web_beginAnimatedResizeWithUpdates:updateBlock];
         else

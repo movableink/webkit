@@ -51,6 +51,7 @@ class TextStream;
 
 namespace WebCore {
 class FrameView;
+class LocalFrameView;
 class PageOverlay;
 class PlatformWheelEvent;
 class ShadowRoot;
@@ -103,6 +104,11 @@ private:
     bool m_isBeingHovered { false };
 };
 
+struct VisiblePDFPosition {
+    PDFDocumentLayout::PageIndex pageIndex { 0 };
+    WebCore::FloatPoint pagePoint;
+};
+
 enum class AnnotationSearchDirection : bool {
     Forward,
     Backward
@@ -133,6 +139,7 @@ public:
     };
     using PDFElementTypes = OptionSet<PDFElementType>;
 
+    WebCore::LocalFrameView* frameView() const;
     WebCore::FrameView* mainFrameView() const;
 
     CGRect pluginBoundsForAnnotation(RetainPtr<PDFAnnotation>&) const final;
@@ -222,6 +229,8 @@ public:
     bool shouldSizeToFitContent() const final;
 
     static WebCore::ViewportConfiguration::Parameters viewportParameters();
+
+    void finalizeRenderingUpdate() final;
 
 private:
     explicit UnifiedPDFPlugin(WebCore::HTMLPlugInElement&);
@@ -697,6 +706,9 @@ private:
 #endif
 
     RefPtr<WebCore::ShadowRoot> m_shadowRoot;
+
+    std::optional<VisiblePDFPosition> m_pendingAnchoringInfo;
+    bool m_willSetPendingAnchoringInfo { false };
 
     // FIXME: We should rationalize these with the values in ViewGestureController.
     // For now, we'll leave them differing as they do in PDFPlugin.
