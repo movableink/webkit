@@ -2005,3 +2005,5 @@ webkit.org/b/288670 [ Release x86_64 ] media/media-source/media-source-vp8-hidde
 # webkit.org/b/288620 REGRESSION(290300@main): SaveAsPDF crashes if site-isolation is enabled
 [ Debug ] ipc/large-vector-allocate-failure-crash.html [ Skip ]
 [ Debug ] ipc/invalid-path-segments-crash.html [ Skip ]
+
+webkit.org/b/288742 [ Debug ] ipc/media-player-invalid-test.html [ Crash ]
