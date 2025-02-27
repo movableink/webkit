@@ -1364,23 +1364,23 @@ class Term:
         if multiplier.kind == BNFNodeMultiplier.Kind.ZERO_OR_ONE:
             return OptionalTerm.wrapping_term(term, annotation=multiplier.annotation)
         elif multiplier.kind == BNFNodeMultiplier.Kind.SPACE_SEPARATED_ZERO_OR_MORE:
-            return UnboundedRepetitionTerm.wrapping_term(term, variation=' ', min=0, annotation=multiplier.annotation)
+            return UnboundedRepetitionTerm.wrapping_term(term, separator=' ', min=0, annotation=multiplier.annotation)
         elif multiplier.kind == BNFNodeMultiplier.Kind.SPACE_SEPARATED_ONE_OR_MORE:
-            return UnboundedRepetitionTerm.wrapping_term(term, variation=' ', min=1, annotation=multiplier.annotation)
+            return UnboundedRepetitionTerm.wrapping_term(term, separator=' ', min=1, annotation=multiplier.annotation)
         elif multiplier.kind == BNFNodeMultiplier.Kind.SPACE_SEPARATED_EXACT:
-            return FixedSizeRepetitionTerm.wrapping_term(term, variation=' ', size=multiplier.range.min, annotation=multiplier.annotation)
+            return FixedSizeRepetitionTerm.wrapping_term(term, separator=' ', size=multiplier.range.min, annotation=multiplier.annotation)
         elif multiplier.kind == BNFNodeMultiplier.Kind.SPACE_SEPARATED_AT_LEAST:
-            return UnboundedRepetitionTerm.wrapping_term(term, variation=' ', min=multiplier.range.min, annotation=multiplier.annotation)
+            return UnboundedRepetitionTerm.wrapping_term(term, separator=' ', min=multiplier.range.min, annotation=multiplier.annotation)
         elif multiplier.kind == BNFNodeMultiplier.Kind.SPACE_SEPARATED_BETWEEN:
-            return BoundedRepetitionTerm.wrapping_term(term, variation=' ', min=multiplier.range.min, max=multiplier.range.max, annotation=multiplier.annotation)
+            return BoundedRepetitionTerm.wrapping_term(term, separator=' ', min=multiplier.range.min, max=multiplier.range.max, annotation=multiplier.annotation)
         elif multiplier.kind == BNFNodeMultiplier.Kind.COMMA_SEPARATED_ONE_OR_MORE:
-            return UnboundedRepetitionTerm.wrapping_term(term, variation=',', min=1, annotation=multiplier.annotation)
+            return UnboundedRepetitionTerm.wrapping_term(term, separator=',', min=1, annotation=multiplier.annotation)
         elif multiplier.kind == BNFNodeMultiplier.Kind.COMMA_SEPARATED_EXACT:
-            return FixedSizeRepetitionTerm.wrapping_term(term, variation=',', size=multiplier.range.min, annotation=multiplier.annotation)
+            return FixedSizeRepetitionTerm.wrapping_term(term, separator=',', size=multiplier.range.min, annotation=multiplier.annotation)
         elif multiplier.kind == BNFNodeMultiplier.Kind.COMMA_SEPARATED_AT_LEAST:
-            return UnboundedRepetitionTerm.wrapping_term(term, variation=',', min=multiplier.range.min, annotation=multiplier.annotation)
+            return UnboundedRepetitionTerm.wrapping_term(term, separator=',', min=multiplier.range.min, annotation=multiplier.annotation)
         elif multiplier.kind == BNFNodeMultiplier.Kind.COMMA_SEPARATED_BETWEEN:
-            return BoundedRepetitionTerm.wrapping_term(term, variation=',', min=multiplier.range.min, max=multiplier.range.max, annotation=multiplier.annotation)
+            return BoundedRepetitionTerm.wrapping_term(term, separator=',', min=multiplier.range.min, max=multiplier.range.max, annotation=multiplier.annotation)
 
     @staticmethod
     def from_node(node):
@@ -1419,40 +1419,36 @@ class Term:
 
 
 class BuiltinSchema:
-    class OptionalParameter:
-        def __init__(self, name, values, default):
+    class StringParameter:
+        def __init__(self, name, *, mappings=None, default=None):
             self.name = name
-            self.values = values
+            self.mappings = mappings
             self.default = default
 
-    class RequiredParameter:
-        def __init__(self, name, values):
+    class RangeParameter:
+        def __init__(self, name, *, mappings=None, default=None):
             self.name = name
-            self.values = values
+            self.mappings = mappings
+            self.default = default
 
     class Entry:
         def __init__(self, name, consume_function_name, *parameter_descriptors):
             self.name = Name(name)
             self.consume_function_name = consume_function_name
 
-            # Mapping of descriptor name (e.g. 'value_range' or 'mode') to OptionalParameter descriptor.
-            self.optionals = {}
+            # Mapping of descriptor name (e.g. 'mode') to StringParameter descriptor.
+            self.string_parameter_descriptors = {}
 
-            # Mapping of descriptor name (e.g. 'value_range' or 'mode') to RequiredParameter descriptor.
-            self.requireds = {}
-
-            # Mapping from all the potential values (e.g. 'svg', 'unitless-allowed') to the parameter descriptor (e.g. OptionalParameter/RequiredParameter instances).
-            self.value_to_descriptor = {}
+            # RangeParameter descriptor, if specified.
+            self.range_parameter_descriptor = None
 
             for parameter_descriptor in parameter_descriptors:
-                if isinstance(parameter_descriptor, BuiltinSchema.OptionalParameter):
-                    self.optionals[parameter_descriptor.name] = parameter_descriptor
-                    for value in parameter_descriptor.values.keys():
-                        self.value_to_descriptor[value] = parameter_descriptor
-                if isinstance(parameter_descriptor, BuiltinSchema.RequiredParameter):
-                    self.requireds[parameter_descriptor.name] = parameter_descriptor
-                    for value in parameter_descriptor.values.keys():
-                        self.value_to_descriptor[value] = parameter_descriptor
+                if isinstance(parameter_descriptor, BuiltinSchema.StringParameter):
+                    self.string_parameter_descriptors[parameter_descriptor.name] = parameter_descriptor
+                if isinstance(parameter_descriptor, BuiltinSchema.RangeParameter):
+                    if self.range_parameter_descriptor is not None:
+                        raise Exception("BuiltinScheme entry {name} may only specify a since RangeParameter.")
+                    self.range_parameter_descriptor = parameter_descriptor
 
             def builtin_schema_type_init(self, parameters):
                 # Map from descriptor name (e.g. 'value_range' or 'mode') to mapped value (e.g. `ValueRange::NonNegative` or `HTMLStandardMode`) for all of the parameters.
@@ -1461,26 +1457,67 @@ class BuiltinSchema:
                 # Map from descriptor name (e.g. 'value_range' or 'mode') to parameter value (e.g. `[0,inf]` or `strict`) for all of the parameters.
                 descriptors_used = {}
 
-                # Example parameters is ['svg', 'unitless-allowed'].
+                # Example parameters: [ReferenceTerm.StringParameter('svg'), ReferenceTerm.StringParameter('excluding', ['auto','none']), ReferenceTerm.RangeParameter(0, 'inf')].
                 for parameter in parameters:
-                    if parameter not in self.entry.value_to_descriptor:
+                    if type(parameter) is ReferenceTerm.StringParameter:
+                        if parameter.name not in self.entry.string_parameter_descriptors:
+                            raise Exception(f"Unknown parameter '{parameter}' passed to <{self.entry.name.name}>. Supported parameters are {', '.join(quote_iterable(self.entry.string_parameter_descriptors.keys()))}.")
+
+                        descriptor = self.entry.string_parameter_descriptors[parameter.name]
+                        if descriptor.name in descriptors_used:
+                            raise Exception(f"More than one parameter of type '{descriptor.name}` passed to <{self.entry.name.name}>, pick one: {descriptors_used[descriptor.name]}, {parameter}.")
+                        descriptors_used[descriptor.name] = parameter.name
+
+                        if descriptor.mappings:
+                            if not parameter.value:
+                                raise Exception(f"'{parameter}' passed to <{self.entry.name.name}> has no value associated with it. Supported values are {', '.join(quote_iterable(descriptor.mappings.keys()))}.")
+
+                            if len(parameter.value) != 1:
+                                raise Exception(f"'{parameter}' passed to <{self.entry.name.name}> has more than one value associated with it, but only one is allowed. Supported values are {', '.join(quote_iterable(descriptor.mappings.keys()))}.")
+
+                            value = parameter.value[0]
+                            if value not in descriptor.mappings:
+                                raise Exception(f"'{parameter}' passed to <{self.entry.name.name}> does not match any of the supported mappings. Supported mappings are {', '.join(quote_iterable(descriptor.mappings.keys()))}.")
+
+                            self.parameter_map[descriptor.name] = descriptor.mappings[value]
+                        else:
+                            self.parameter_map[descriptor.name] = parameter.value
+                    elif type(parameter) is ReferenceTerm.RangeParameter:
+                        if self.entry.range_parameter_descriptor is None:
+                            raise Exception(f"Range parameter '{parameter}' passed to <{self.entry.name.name}>. Range parameters are not supported for this entry.")
+
+                        descriptor = self.entry.range_parameter_descriptor
+                        if descriptor.name in descriptors_used:
+                            raise Exception(f"More than one parameter of type '{descriptor.name}` passed to <{self.entry.name.name}>, pick one: {descriptors_used[descriptor.name]}, {parameter}.")
+                        descriptors_used[descriptor.name] = descriptor
+
+                        if descriptor.mappings:
+                            if (parameter.min, parameter.max) not in descriptor.mappings:
+                                raise Exception(f"'{parameter}' passed to <{self.entry.name.name}> does not match any of the supported mappings. Supported mappings are {', '.join(quote_iterable(descriptor.mappings.keys()))}.")
+
+                            self.parameter_map[descriptor.name] = descriptor.mappings[(parameter.min, parameter.max)]
+                        else:
+                            self.parameter_map[descriptor.name] = parameter
+                    else:
                         raise Exception(f"Unknown parameter '{parameter}' passed to <{self.entry.name.name}>. Supported parameters are {', '.join(quote_iterable(self.entry.value_to_descriptor.keys()))}.")
-
-                    descriptor = self.entry.value_to_descriptor[parameter]
-                    if descriptor.name in descriptors_used:
-                        raise Exception(f"More than one parameter of type '{descriptor.name}` passed to <{self.entry.name.name}>, pick one: {descriptors_used[descriptor.name]}, {parameter}.")
-                    descriptors_used[descriptor.name] = parameter
-
-                    self.parameter_map[descriptor.name] = descriptor.values[parameter]
 
                 # Fill `results` with mappings from `names` (e.g. `value_range`) to mapped to value (e.g. `ValueRange::NonNegative`)
                 self.results = {}
-                for descriptor in self.entry.optionals.values():
-                    self.results[descriptor.name] = self.parameter_map.get(descriptor.name, descriptor.default)
-                for descriptor in self.entry.requireds.values():
-                    if descriptor.name not in self.parameter_map:
-                        raise Exception(f"Required parameter of type '{descriptor.name}` not passed to <{self.entry.name.name}>. Pick one of {', '.join(quote_iterable(descriptor.values.keys()))}.")
-                    self.results[descriptor.name] = self.parameter_map.get(descriptor.name)
+                for descriptor in self.entry.string_parameter_descriptors.values():
+                    if descriptor.name in self.parameter_map:
+                        self.results[descriptor.name] = self.parameter_map[descriptor.name]
+                    elif descriptor.mappings and descriptor.default:
+                        self.results[descriptor.name] = descriptor.mappings[descriptor.default]
+                    else:
+                        self.results[descriptor.name] = None
+                if self.entry.range_parameter_descriptor is not None:
+                    descriptor = self.entry.range_parameter_descriptor
+                    if descriptor.name in self.parameter_map:
+                        self.results[descriptor.name] = self.parameter_map[descriptor.name]
+                    elif descriptor.mappings and descriptor.default:
+                        self.results[descriptor.name] = descriptor.mappings[descriptor.default]
+                    else:
+                        self.results[descriptor.name] = None
 
             def builtin_schema_type_parameter_string_getter(name, self):
                 return self.results[name]
@@ -1493,7 +1530,10 @@ class BuiltinSchema:
                 "entry": self,
             }
 
-            for name in itertools.chain(self.optionals.keys(), self.requireds.keys()):
+            for name in self.string_parameter_descriptors.keys():
+                class_attributes[name.replace('-', '_')] = property(functools.partial(builtin_schema_type_parameter_string_getter, name))
+            if self.range_parameter_descriptor is not None:
+                name = self.range_parameter_descriptor.name
                 class_attributes[name.replace('-', '_')] = property(functools.partial(builtin_schema_type_parameter_string_getter, name))
 
             self.constructor = type(class_name, (), class_attributes)
@@ -1517,42 +1557,83 @@ class BuiltinSchema:
 #
 #   e.g. "<length unitless-allowed>"
 #
+
+# BuiltinSchema.StringParameter Mappings
+MODE_MAPPINGS = {'svg': 'SVGAttributeMode', 'strict': 'HTMLStandardMode'}
+UNITLESS_MAPPINGS = {'allowed': 'UnitlessQuirk::Allow', 'forbidden': 'UnitlessQuirk::Forbid'}
+UNITLESS_ZERO_MAPPINGS = {'allowed': 'UnitlessZeroQuirk::Allow', 'forbidden': 'UnitlessZeroQuirk::Forbid'}
+ANCHOR_MAPPINGS = {'allowed': 'AnchorPolicy::Allow', 'forbidden': 'AnchorPolicy::Forbid'}
+ANCHOR_SIZE_MAPPINGS = {'allowed': 'AnchorSizePolicy::Allow', 'forbidden': 'AnchorSizePolicy::Forbid'}
+QUIRKY_COLORS_MAPPINGS = {'allowed': True, 'forbidden': False}
+
+# BuiltinSchema.RangeParameter Mappings
+# NOTE: "FontWeight" is not supported value and is just here until arbitrary ranges are fully supported.
+VALUE_RANGE_MAPPINGS = {('0','inf'): 'ValueRange::NonNegative', ('-inf','inf'): 'ValueRange::All', ('1','1000'): 'ValueRange::FontWeight'}
+CSS_RANGE_MAPPINGS = {('0','inf'): 'CSS::Range{0, CSS::Range::infinity}', ('1','inf'): 'CSS::Range{1, CSS::Range::infinity}', ('-inf','inf'): 'CSS::Range{-CSS::Range::infinity, CSS::Range::infinity}'}
+
 class ReferenceTerm:
     builtins = BuiltinSchema(
-        BuiltinSchema.Entry("angle", "consumeAngle",
-            BuiltinSchema.OptionalParameter("unitless", values={"unitless-allowed": "UnitlessQuirk::Allow"}, default="UnitlessQuirk::Forbid"),
-            BuiltinSchema.OptionalParameter("unitless-zero", values={"unitless-zero-allowed": "UnitlessZeroQuirk::Allow"}, default="UnitlessZeroQuirk::Forbid")),
-        BuiltinSchema.Entry("length", "consumeLength",
-            BuiltinSchema.OptionalParameter("value_range", values={"[0,inf]": "ValueRange::NonNegative"}, default="ValueRange::All"),
-            BuiltinSchema.OptionalParameter("mode", values={"svg": "SVGAttributeMode", "strict": "HTMLStandardMode"}, default=None),
-            BuiltinSchema.OptionalParameter("unitless", values={"unitless-allowed": "UnitlessQuirk::Allow"}, default="UnitlessQuirk::Forbid")),
-        BuiltinSchema.Entry("length-percentage", "consumeLengthPercentage",
-            BuiltinSchema.OptionalParameter("value_range", values={"[0,inf]": "ValueRange::NonNegative"}, default="ValueRange::All"),
-            BuiltinSchema.OptionalParameter("unitless", values={"unitless-allowed": "UnitlessQuirk::Allow"}, default="UnitlessQuirk::Forbid"),
-            BuiltinSchema.OptionalParameter("unitless_zero", values={"unitless-zero-forbidden": "UnitlessZeroQuirk::Forbid"}, default="UnitlessZeroQuirk::Allow"),
-            BuiltinSchema.OptionalParameter("anchor", values={"anchor-allowed": "AnchorPolicy::Allow"}, default="AnchorPolicy::Forbid"),
-            BuiltinSchema.OptionalParameter("anchor_size", values={"anchor-size-allowed": "AnchorSizePolicy::Allow"}, default="AnchorSizePolicy::Forbid")),
-        BuiltinSchema.Entry("time", "consumeTime",
-            BuiltinSchema.OptionalParameter("value_range", values={"[0,inf]": "ValueRange::NonNegative"}, default="ValueRange::All")),
-        BuiltinSchema.Entry("integer", "consumeInteger",
-            BuiltinSchema.OptionalParameter("value_range", values={"[0,inf]": "CSS::Range{0, CSS::Range::infinity}", "[1,inf]": "CSS::Range{1, CSS::Range::infinity}"}, default="CSS::Range{-CSS::Range::infinity, CSS::Range::infinity}")),
-        BuiltinSchema.Entry("number", "consumeNumber",
-            # FIXME: "FontWeight" is not real. Add support for arbitrary ranges.
-            BuiltinSchema.OptionalParameter("value_range", values={"[0,inf]": "ValueRange::NonNegative", "[1,1000]": "ValueRange::FontWeight"}, default="ValueRange::All")),
-        BuiltinSchema.Entry("percentage", "consumePercentage",
-            BuiltinSchema.OptionalParameter("value_range", values={"[0,inf]": "ValueRange::NonNegative"}, default="ValueRange::All")),
-        BuiltinSchema.Entry("position", "consumePosition",
-            BuiltinSchema.OptionalParameter("unitless", values={"unitless-allowed": "UnitlessQuirk::Allow"}, default="UnitlessQuirk::Forbid")),
-        BuiltinSchema.Entry("color", "consumeColor",
-            BuiltinSchema.OptionalParameter("quirky_colors", values={"accept-quirky-colors-in-quirks-mode": True}, default=False)),
-        BuiltinSchema.Entry("resolution", "consumeResolution"),
-        BuiltinSchema.Entry("string", "consumeString"),
-        BuiltinSchema.Entry("custom-ident", "consumeCustomIdent"),
-        BuiltinSchema.Entry("dashed-ident", "consumeDashedIdent"),
-        BuiltinSchema.Entry("url", "consumeURL"),
-        BuiltinSchema.Entry("feature-tag-value", "consumeFeatureTagValue"),
-        BuiltinSchema.Entry("variation-tag-value", "consumeVariationTagValue"),
+        BuiltinSchema.Entry('angle', 'consumeAngle',
+            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden'),
+            BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='forbidden')),
+        BuiltinSchema.Entry('length', 'consumeLength',
+            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf')),
+            BuiltinSchema.StringParameter('mode', mappings=MODE_MAPPINGS),
+            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden')),
+        BuiltinSchema.Entry('length-percentage', 'consumeLengthPercentage',
+            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf')),
+            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden'),
+            BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='allowed'),
+            BuiltinSchema.StringParameter('anchor', mappings=ANCHOR_MAPPINGS, default='forbidden'),
+            BuiltinSchema.StringParameter('anchor-size', mappings=ANCHOR_SIZE_MAPPINGS, default='forbidden')),
+        BuiltinSchema.Entry('time', 'consumeTime',
+            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf'))),
+        BuiltinSchema.Entry('integer', 'consumeInteger',
+            BuiltinSchema.RangeParameter('value-range', mappings=CSS_RANGE_MAPPINGS, default=('-inf','inf'))),
+        BuiltinSchema.Entry('number', 'consumeNumber',
+            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf'))),
+        BuiltinSchema.Entry('percentage', 'consumePercentage',
+            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf'))),
+        BuiltinSchema.Entry('resolution', 'consumeResolution'),
+        BuiltinSchema.Entry('position', 'consumePosition',
+            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden')),
+        BuiltinSchema.Entry('color', 'consumeColor',
+            BuiltinSchema.StringParameter('quirky-colors-in-quirks-mode', mappings=QUIRKY_COLORS_MAPPINGS, default='forbidden')),
+        BuiltinSchema.Entry('string', 'consumeString'),
+        BuiltinSchema.Entry('custom-ident', 'consumeCustomIdent',
+            BuiltinSchema.StringParameter('excluding')),
+        BuiltinSchema.Entry('dashed-ident', 'consumeDashedIdent'),
+        BuiltinSchema.Entry('url', 'consumeURL'),
+        BuiltinSchema.Entry('feature-tag-value', 'consumeFeatureTagValue'),
+        BuiltinSchema.Entry('variation-tag-value', 'consumeVariationTagValue')
     )
+
+    class StringParameter:
+        def __init__(self, name, value):
+            self.name = name
+            self.value = value
+
+        def __str__(self):
+            if self.value:
+                return str(self.name) + '=' + str(self.value)
+            return str(self.name)
+
+    class RangeParameter:
+        def __init__(self, min, max):
+            self.min = min
+            self.max = max
+
+        def __str__(self):
+            return '[' + str(self.min) + ',' + str(self.max) + ']'
+
+    class Parameter:
+        @staticmethod
+        def from_node(node):
+            if type(node) is BNFReferenceNode.StringAttribute:
+                return ReferenceTerm.StringParameter(node.name, node.value)
+            if type(node) is BNFReferenceNode.RangeAttribute:
+                return ReferenceTerm.RangeParameter(node.min, node.max)
+            raise Exception(f"Unknown reference term attribute '{node}'.")
 
     def __init__(self, name, is_internal, is_function_reference, parameters):
         # Store the first (and perhaps only) part as the reference's name (e.g. for <length-percentage [0,inf] unitless-allowed> store 'length-percentage').
@@ -1575,7 +1656,7 @@ class ReferenceTerm:
             name = self.name.name + '()'
         else:
             name = self.name.name
-        base = ' '.join([name] + self.parameters)
+        base = ' '.join([name] + [str(p) for p in self.parameters])
         if self.is_internal:
             return f"<<{base}>>"
         return f"<{base}>"
@@ -1586,7 +1667,7 @@ class ReferenceTerm:
     @staticmethod
     def from_node(node):
         assert(type(node) is BNFReferenceNode)
-        return ReferenceTerm(node.name, node.is_internal, node.is_function_reference, [str(attribute) for attribute in node.attributes])
+        return ReferenceTerm(node.name, node.is_internal, node.is_function_reference, [ReferenceTerm.Parameter.from_node(attribute) for attribute in node.attributes])
 
     def perform_fixups(self, all_rules):
         # Replace a reference with the term it references if it can be found.
@@ -1911,9 +1992,9 @@ class OptionalTerm:
 #   e.g. "<length>#" or "<length>+"
 #
 class UnboundedRepetitionTerm:
-    def __init__(self, repeated_term, *, variation, min, annotation):
+    def __init__(self, repeated_term, *, separator, min, annotation):
         self.repeated_term = repeated_term
-        self.variation = variation
+        self.separator = separator
         self.min = min
 
         self.single_value_optimization = True
@@ -1927,19 +2008,19 @@ class UnboundedRepetitionTerm:
 
     @property
     def stringified_suffix(self):
-        if self.variation == ' ':
+        if self.separator == ' ':
             if self.min == 0:
                 return '*'
             elif self.min == 1:
                 return '+'
             else:
                 return '{' + str(self.min) + ',}'
-        if self.variation == ',':
+        if self.separator == ',':
             if self.min == 1:
                 return '#'
             else:
                 return '#{' + str(self.min) + ',}'
-        raise Exception(f"Unknown UnboundedRepetitionTerm variation '{self.variation}'")
+        raise Exception(f"Unknown UnboundedRepetitionTerm with separator '{self.separator}'")
 
     @property
     def stringified_annotation(self):
@@ -1957,8 +2038,8 @@ class UnboundedRepetitionTerm:
                 raise Exception(f"Unknown multiplier annotation directive '{directive}'.")
 
     @staticmethod
-    def wrapping_term(term, *, variation, min, annotation):
-        return UnboundedRepetitionTerm(term, variation=variation, min=min, annotation=annotation)
+    def wrapping_term(term, *, separator, min, annotation):
+        return UnboundedRepetitionTerm(term, separator=separator, min=min, annotation=annotation)
 
     def perform_fixups(self, all_rules):
         self.repeated_term = self.repeated_term.perform_fixups(all_rules)
@@ -1981,14 +2062,14 @@ class UnboundedRepetitionTerm:
 # separated by either spaces or commas where the list of terms
 # has a length between provided upper and lower bounds . The
 # syntax in the CSS specifications uses a trailing 'multiplier'
-# range '{A,B}' with a '#' prefix for comma speparation.
+# range '{A,B}' with a '#' prefix for comma separation.
 #
 #   e.g. "<length>{1,2}" or "<length>#{3,5}"
 #
 class BoundedRepetitionTerm:
-    def __init__(self, repeated_term, *, variation, min, max, annotation):
+    def __init__(self, repeated_term, *, separator, min, max, annotation):
         self.repeated_term = repeated_term
-        self.variation = variation
+        self.separator = separator
         self.min = min
         self.max = max
 
@@ -2002,11 +2083,11 @@ class BoundedRepetitionTerm:
 
     @property
     def stringified_suffix(self):
-        if self.variation == ' ':
+        if self.separator == ' ':
             return '{' + str(self.min) + ',' + str(self.max) + '}'
-        if self.variation == ',':
+        if self.separator == ',':
             return '#{' + str(self.min) + ',' + str(self.max) + '}'
-        raise Exception(f"Unknown BoundedRepetitionTerm variation '{self.variation}'")
+        raise Exception(f"Unknown BoundedRepetitionTerm with separator '{self.separator}'")
 
     def _process_annotation(self, annotation):
         if not annotation:
@@ -2015,8 +2096,8 @@ class BoundedRepetitionTerm:
             raise Exception(f"Unknown bounded repetition term annotation directive '{directive}'.")
 
     @staticmethod
-    def wrapping_term(term, *, variation, min, max, annotation):
-        return BoundedRepetitionTerm(term, variation=variation, min=min, max=max, annotation=annotation)
+    def wrapping_term(term, *, separator, min, max, annotation):
+        return BoundedRepetitionTerm(term, separator=separator, min=min, max=max, annotation=annotation)
 
     def perform_fixups(self, all_rules):
         self.repeated_term = self.repeated_term.perform_fixups(all_rules)
@@ -2044,9 +2125,9 @@ class BoundedRepetitionTerm:
 #   e.g. "<length>{2}" or "<length>#{4}"
 #
 class FixedSizeRepetitionTerm:
-    def __init__(self, repeated_term, *, variation, size, annotation):
+    def __init__(self, repeated_term, *, separator, size, annotation):
         self.repeated_term = repeated_term
-        self.variation = variation
+        self.separator = separator
         self.size = size
 
         self._process_annotation(annotation)
@@ -2059,11 +2140,11 @@ class FixedSizeRepetitionTerm:
 
     @property
     def stringified_suffix(self):
-        if self.variation == ' ':
+        if self.separator == ' ':
             return '{' + str(self.size) + '}'
-        if self.variation == ',':
+        if self.separator == ',':
             return '#{' + str(self.size) + '}'
-        raise Exception(f"Unknown FixedSizeRepetitionTerm variation '{self.variation}'")
+        raise Exception(f"Unknown FixedSizeRepetitionTerm separator '{self.separator}'")
 
     def _process_annotation(self, annotation):
         if not annotation:
@@ -2072,8 +2153,8 @@ class FixedSizeRepetitionTerm:
             raise Exception(f"Unknown fixed size repetition term annotation directive '{directive}'.")
 
     @staticmethod
-    def wrapping_term(term, *, variation, size, annotation):
-        return FixedSizeRepetitionTerm(term, variation=variation, size=size, annotation=annotation)
+    def wrapping_term(term, *, separator, size, annotation):
+        return FixedSizeRepetitionTerm(term, separator=separator, size=size, annotation=annotation)
 
     def perform_fixups(self, all_rules):
         self.repeated_term = self.repeated_term.perform_fixups(all_rules)
@@ -4047,7 +4128,6 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+Box.h",
                     "CSSPropertyParserConsumer+Color.h",
                     "CSSPropertyParserConsumer+ColorAdjust.h",
-                    "CSSPropertyParserConsumer+Conditional.h",
                     "CSSPropertyParserConsumer+Contain.h",
                     "CSSPropertyParserConsumer+Content.h",
                     "CSSPropertyParserConsumer+CounterStyles.h",
@@ -4453,8 +4533,9 @@ class TermGeneratorUnboundedRepetitionTerm(TermGenerator):
         if self.repeated_term_generator.requires_context:
             parameters += [context_string]
 
-        with_or_without = 'With' if self.term.single_value_optimization else 'Without'
-        return f"consumeCommaSeparatedList{with_or_without}SingleValueOptimization({', '.join(parameters)})"
+        optimization = 'SingleValue' if self.term.single_value_optimization else 'None'
+
+        return f"consumeListSeparatedBy<'{self.term.separator}', ListBounds::minimumOf({self.term.min}), ListOptimization::{optimization}>({', '.join(parameters)})"
 
 
 class TermGeneratorMatchOneTerm(TermGenerator):
@@ -4564,9 +4645,13 @@ class TermGeneratorReferenceTerm(TermGenerator):
             elif isinstance(builtin, BuiltinPositionConsumer):
                 return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.unitless}, PositionSyntax::Position)"
             elif isinstance(builtin, BuiltinColorConsumer):
-                if builtin.quirky_colors:
+                if builtin.quirky_colors_in_quirks_mode:
                     return f"{builtin.consume_function_name}({range_string}, {context_string}, {{ .acceptQuirkyColors = ({context_string}.mode == HTMLQuirksMode) }})"
                 return f"{builtin.consume_function_name}({range_string}, {context_string})"
+            elif isinstance(builtin, BuiltinCustomIdentConsumer):
+                if builtin.excluding:
+                    return f"{builtin.consume_function_name}Excluding({range_string}, {{ { ', '.join(ValueKeywordName(id).id for id in builtin.excluding)} }})"
+                return f"{builtin.consume_function_name}({range_string})"
             elif self.requires_context:
                 return f"{builtin.consume_function_name}({range_string}, {context_string})"
             else:
@@ -5246,6 +5331,7 @@ class BNFToken(StringEqualingEnum):
 
     # Literals
     SLASH   = re.compile(r'/')
+    EQUAL   = re.compile(r'=')
 
     # Identifiers.
     FUNC    = re.compile(r'[_a-zA-Z\-][_a-zA-Z0-9\-]*\(')
@@ -5534,6 +5620,16 @@ class BNFFunctionNode:
 
 
 class BNFReferenceNode:
+    class StringAttribute:
+        def __init__(self, name):
+            self.name = name
+            self.value = []
+
+        def __str__(self):
+            if self.value:
+                return str(self.name) + '=' + str(self.value)
+            return str(self.name)
+
     class RangeAttribute:
         def __init__(self):
             self.min = None
@@ -5662,10 +5758,13 @@ class BNFParserState(enum.Enum):
     REFERENCE_INITIAL = enum.auto()
     REFERENCE_SEEN_FUNCTION_OPEN = enum.auto()
     REFERENCE_SEEN_ID_OR_FUNCTION = enum.auto()
-    REFERENCE_RANGE_INITIAL = enum.auto()
-    REFERENCE_RANGE_SEEN_MIN = enum.auto()
-    REFERENCE_RANGE_SEEN_MIN_AND_COMMA = enum.auto()
-    REFERENCE_RANGE_SEEN_MAX = enum.auto()
+    REFERENCE_STRING_ATTRIBUTE_INITIAL = enum.auto()
+    REFERENCE_STRING_ATTRIBUTE_SEEN_EQUAL = enum.auto()
+    REFERENCE_STRING_ATTRIBUTE_SEEN_VALUE = enum.auto()
+    REFERENCE_RANGE_ATTRIBUTE_INITIAL = enum.auto()
+    REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN = enum.auto()
+    REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN_AND_COMMA = enum.auto()
+    REFERENCE_RANGE_ATTRIBUTE_SEEN_MAX = enum.auto()
     REPETITION_MODIFIER_INITIAL = enum.auto()
     REPETITION_MODIFIER_SEEN_MIN = enum.auto()
     REPETITION_MODIFIER_SEEN_MIN_AND_COMMA = enum.auto()
@@ -5697,7 +5796,7 @@ class BNFParser:
 
     SUPPORTED_UNQUOTED_LITERALS = {
         BNFToken.COMMA.name,
-        BNFToken.SLASH.name
+        BNFToken.SLASH.name,
     }
 
     DEBUG_PRINT_STATE = 0
@@ -5723,10 +5822,13 @@ class BNFParser:
             BNFParserState.REFERENCE_INITIAL: BNFParser.parse_REFERENCE_INITIAL,
             BNFParserState.REFERENCE_SEEN_FUNCTION_OPEN: BNFParser.parse_REFERENCE_SEEN_FUNCTION_OPEN,
             BNFParserState.REFERENCE_SEEN_ID_OR_FUNCTION: BNFParser.parse_REFERENCE_SEEN_ID_OR_FUNCTION,
-            BNFParserState.REFERENCE_RANGE_INITIAL: BNFParser.parse_REFERENCE_RANGE_INITIAL,
-            BNFParserState.REFERENCE_RANGE_SEEN_MIN: BNFParser.parse_REFERENCE_RANGE_SEEN_MIN,
-            BNFParserState.REFERENCE_RANGE_SEEN_MIN_AND_COMMA: BNFParser.parse_REFERENCE_RANGE_SEEN_MIN_AND_COMMA,
-            BNFParserState.REFERENCE_RANGE_SEEN_MAX: BNFParser.parse_REFERENCE_RANGE_SEEN_MAX,
+            BNFParserState.REFERENCE_STRING_ATTRIBUTE_INITIAL: BNFParser.parse_REFERENCE_STRING_ATTRIBUTE_INITIAL,
+            BNFParserState.REFERENCE_STRING_ATTRIBUTE_SEEN_EQUAL: BNFParser.parse_REFERENCE_STRING_ATTRIBUTE_SEEN_EQUAL,
+            BNFParserState.REFERENCE_STRING_ATTRIBUTE_SEEN_VALUE: BNFParser.parse_REFERENCE_STRING_ATTRIBUTE_SEEN_VALUE,
+            BNFParserState.REFERENCE_RANGE_ATTRIBUTE_INITIAL: BNFParser.parse_REFERENCE_RANGE_ATTRIBUTE_INITIAL,
+            BNFParserState.REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN: BNFParser.parse_REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN,
+            BNFParserState.REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN_AND_COMMA: BNFParser.parse_REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN_AND_COMMA,
+            BNFParserState.REFERENCE_RANGE_ATTRIBUTE_SEEN_MAX: BNFParser.parse_REFERENCE_RANGE_ATTRIBUTE_SEEN_MAX,
             BNFParserState.REPETITION_MODIFIER_INITIAL: BNFParser.parse_REPETITION_MODIFIER_INITIAL,
             BNFParserState.REPETITION_MODIFIER_SEEN_MIN: BNFParser.parse_REPETITION_MODIFIER_SEEN_MIN,
             BNFParserState.REPETITION_MODIFIER_SEEN_MIN_AND_COMMA: BNFParser.parse_REPETITION_MODIFIER_SEEN_MIN_AND_COMMA,
@@ -5768,11 +5870,11 @@ class BNFParser:
         return self.state_stack[-1]
 
     def unexpected(self, token, state):
-        return Exception(f"Unexpected token '{token}' found while in state '{state.state.name}'")
+        return Exception(f"Unexpected token '{token}' found while in state '{state.state.name}' while parsing '{self.data}'")
 
     # COMMON ACTIONS.
 
-    # Root BNFGroupingNode. Syntatically isn't surrounded by square brackets.
+    # Root BNFGroupingNode. Syntactically isn't surrounded by square brackets.
     def enter_initial_grouping(self):
         self.push(BNFParserState.UNKNOWN_GROUPING_INITIAL, self.root)
 
@@ -5829,9 +5931,17 @@ class BNFParser:
         self.pop()
         self.top.node.last.multiplier.add(state.node)
 
+    # BNFReferenceNode.StringAttribute. e.g. allows-quirks or excludes=auto,none
+    def enter_string_attribute(self, token, state):
+        self.push(BNFParserState.REFERENCE_STRING_ATTRIBUTE_INITIAL, BNFReferenceNode.StringAttribute(token.value))
+
+    def exit_string_attribute(self, token, state):
+        self.pop()
+        self.top.node.add_attribute(state.node)
+
     # BNFReferenceNode.RangeAttribute. e.g. [0,inf]
     def enter_range_attribute(self, token, state):
-        self.push(BNFParserState.REFERENCE_RANGE_INITIAL, BNFReferenceNode.RangeAttribute())
+        self.push(BNFParserState.REFERENCE_RANGE_ATTRIBUTE_INITIAL, BNFReferenceNode.RangeAttribute())
 
     def exit_range_attribute(self, token, state):
         self.pop()
@@ -6104,8 +6214,7 @@ class BNFParser:
 
     def parse_REFERENCE_SEEN_ID_OR_FUNCTION(self, token, state):
         if token.name == BNFToken.ID:
-            state.node.add_attribute(token.value)
-            # Remain in BNFParserState.REFERENCE_SEEN_ID_OR_FUNCTION.
+            self.enter_string_attribute(token, state)
             return
 
         if token.name == BNFToken.LSQUARE:
@@ -6142,30 +6251,72 @@ class BNFParser:
 
         raise self.unexpected(token, state)
 
-    def parse_REFERENCE_RANGE_INITIAL(self, token, state):
-        if token.name == BNFToken.INT or token.name == BNFToken.FLOAT or (token.name == BNFToken.ID and token.value == "inf"):
-            self.transition_top(to=BNFParserState.REFERENCE_RANGE_SEEN_MIN)
+    def parse_REFERENCE_STRING_ATTRIBUTE_INITIAL(self, token, state):
+        if token.name == BNFToken.EQUAL:
+            self.transition_top(to=BNFParserState.REFERENCE_STRING_ATTRIBUTE_SEEN_EQUAL)
+            return
+
+        self.exit_string_attribute(token, state)
+
+        if token.name == BNFToken.LSQUARE:
+            self.enter_range_attribute(token, state)
+            return
+
+        if token.name == BNFToken.GT:
+            self.exit_reference(token, state)
+            return
+
+    def parse_REFERENCE_STRING_ATTRIBUTE_SEEN_EQUAL(self, token, state):
+        if token.name == BNFToken.ID:
+            self.transition_top(to=BNFParserState.REFERENCE_STRING_ATTRIBUTE_SEEN_VALUE)
+            state.node.value.append(token.value)
+            return
+
+        raise self.unexpected(token, state)
+
+    def parse_REFERENCE_STRING_ATTRIBUTE_SEEN_VALUE(self, token, state):
+        if token.name == BNFToken.COMMA:
+            self.transition_top(to=BNFParserState.REFERENCE_STRING_ATTRIBUTE_SEEN_EQUAL)
+            return
+
+        self.exit_string_attribute(token, state)
+
+        if token.name == BNFToken.ID:
+            self.enter_string_attribute(token, state)
+            return
+
+        if token.name == BNFToken.LSQUARE:
+            self.enter_range_attribute(token, state)
+            return
+
+        if token.name == BNFToken.GT:
+            self.exit_reference(token, state)
+            return
+
+    def parse_REFERENCE_RANGE_ATTRIBUTE_INITIAL(self, token, state):
+        if token.name == BNFToken.INT or token.name == BNFToken.FLOAT or (token.name == BNFToken.ID and token.value == '-inf'):
+            self.transition_top(to=BNFParserState.REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN)
             state.node.min = token.value
             return
 
         raise self.unexpected(token, state)
 
-    def parse_REFERENCE_RANGE_SEEN_MIN(self, token, state):
+    def parse_REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN(self, token, state):
         if token.name == BNFToken.COMMA:
-            self.transition_top(to=BNFParserState.REFERENCE_RANGE_SEEN_MIN_AND_COMMA)
+            self.transition_top(to=BNFParserState.REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN_AND_COMMA)
             return
 
         raise self.unexpected(token, state)
 
-    def parse_REFERENCE_RANGE_SEEN_MIN_AND_COMMA(self, token, state):
-        if token.name == BNFToken.INT or token.name == BNFToken.FLOAT or (token.name == BNFToken.ID and token.value == "inf"):
-            self.transition_top(to=BNFParserState.REFERENCE_RANGE_SEEN_MAX)
+    def parse_REFERENCE_RANGE_ATTRIBUTE_SEEN_MIN_AND_COMMA(self, token, state):
+        if token.name == BNFToken.INT or token.name == BNFToken.FLOAT or (token.name == BNFToken.ID and token.value == 'inf'):
+            self.transition_top(to=BNFParserState.REFERENCE_RANGE_ATTRIBUTE_SEEN_MAX)
             state.node.max = token.value
             return
 
         raise self.unexpected(token, state)
 
-    def parse_REFERENCE_RANGE_SEEN_MAX(self, token, state):
+    def parse_REFERENCE_RANGE_ATTRIBUTE_SEEN_MAX(self, token, state):
         if token.name == BNFToken.RSQUARE:
             self.exit_range_attribute(token, state)
             return
@@ -6223,7 +6374,7 @@ class BNFParser:
             self.exit_quoted_literal(token, state)
             return
 
-        # Append the value regardles of the token value.
+        # Append the value regardless of the token value.
         state.node.value = state.node.value + token.value
 
     def parse_ANNOTATION_INITIAL(self, token, state):
