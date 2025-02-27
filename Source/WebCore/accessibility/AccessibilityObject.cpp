@@ -633,6 +633,18 @@ static bool isTableComponent(AXCoreObject& axObject)
 
 void AccessibilityObject::insertChild(AccessibilityObject& child, unsigned index, DescendIfIgnored descendIfIgnored)
 {
+    auto owners = child.owners();
+    if (owners.size()) {
+        size_t indexOfThis = owners.findIf([this] (const Ref<AXCoreObject>& object) {
+            return object.ptr() == this;
+        });
+
+        if (indexOfThis == notFound) {
+            // The child is aria-owned, and not by us, so we shouldn't insert it.
+            return;
+        }
+    }
+
     // If the parent is asking for this child's children, then either it's the first time (and clearing is a no-op),
     // or its visibility has changed. In the latter case, this child may have a stale child cached.
     // This can prevent aria-hidden changes from working correctly. Hence, whenever a parent is getting children, ensure data is not stale.

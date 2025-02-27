@@ -2565,10 +2565,6 @@ void AccessibilityRenderObject::addChildren()
         if (object.renderer()->isRenderListMarker())
             return;
 #endif
-        auto owners = object.owners();
-        if (owners.size() && !owners.contains(Ref { *this }))
-            return;
-
         addChild(object);
     };
 
