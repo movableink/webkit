@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,27 +23,30 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#if defined(TARGET_OS_VISION) && TARGET_OS_VISION
+#import "RealityKitBridging.h"
+#import <Foundation/Foundation.h>
+#import <simd/simd.h>
 
-#import <wtf/SoftLinking.h>
+NS_ASSUME_NONNULL_BEGIN
 
-SOFT_LINK_LIBRARY_FOR_HEADER(WebKit, WebKitSwift)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKGroupSessionObserver)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaContentMetadata)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaPlayer)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaTimeRange)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaTrack)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSPreviewWindowController)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSRKEntity)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSTextAnimationManager)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKIntelligenceReplacementTextEffectCoordinator)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKIntelligenceSmartReplyTextEffectCoordinator)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionContainerItem)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionEditable)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionLink)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionTextItem)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionScrollableItem)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionImageItem)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaSpatialVideoMetadata)
-SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKStageModeInteractionDriver)
+typedef NS_ENUM(NSInteger, WKStageModeOperation) {
+    WKStageModeOperationNone = 0,
+    WKStageModeOperationOrbit,
+};
 
+@interface WKStageModeInteractionDriver : NSObject
+@property (nonatomic, readonly) REEntityRef interactionContainerRef;
+
+- (instancetype)initWithModel:(WKSRKEntity *)model container:(REEntityRef)container NS_SWIFT_NAME(init(with:container:));
+- (void)setContainerTransformInPortal NS_SWIFT_NAME(setContainerTransformInPortal());
+- (void)interactionDidBegin:(simd_float4x4)transform NS_SWIFT_NAME(interactionDidBegin(_:));
+- (void)interactionDidUpdate:(simd_float4x4)transform NS_SWIFT_NAME(interactionDidUpdate(_:));
+- (void)interactionDidEnd NS_SWIFT_NAME(interactionDidEnd());
+- (void)operationDidUpdate:(WKStageModeOperation)operation NS_SWIFT_NAME(operationDidUpdate(_:));
+- (void)removeInteractionContainerFromSceneOrParent;
+@end
+
+NS_ASSUME_NONNULL_END
+
+#endif
