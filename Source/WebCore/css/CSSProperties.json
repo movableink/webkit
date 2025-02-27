@@ -1715,7 +1715,7 @@
         },
         "animation-duration": {
             "animation-type": "not animatable",
-            "initial": "0s",
+            "initial": "auto",
             "codegen-properties": {
                 "aliases": [
                     "-webkit-animation-duration"
