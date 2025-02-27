@@ -923,7 +923,12 @@ TEST(WKWebExtensionAPIRuntime, ConnectFromContentScript)
     [manager run];
 }
 
+// rdar://145509206 https://bugs.webkit.org/show_bug.cgi?id=288410
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPIRuntime, DISABLED_ConnectFromContentScriptWithImmediateMessage)
+#else
 TEST(WKWebExtensionAPIRuntime, ConnectFromContentScriptWithImmediateMessage)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
