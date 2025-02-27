@@ -306,18 +306,19 @@ void WebFullScreenManager::enterFullScreenForElement(Element& element, HTMLMedia
     m_page->prepareToEnterElementFullScreen();
 
     if (mode == HTMLMediaElementEnums::VideoFullscreenModeInWindow) {
-        willEnterFullScreen(WTFMove(willEnterFullScreenCallback), WTFMove(didEnterFullScreenCallback), mode);
+        willEnterFullScreen(element, WTFMove(willEnterFullScreenCallback), WTFMove(didEnterFullScreenCallback), mode);
         m_inWindowFullScreenMode = true;
     } else {
         m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::EnterFullScreen(frameID, m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), WTFMove(mediaDetails)), [
             this,
             protectedThis = Ref { *this },
+            element = Ref { element },
             willEnterFullScreenCallback = WTFMove(willEnterFullScreenCallback),
             didEnterFullScreenCallback = WTFMove(didEnterFullScreenCallback)
         ] (bool success) mutable {
             if (success) {
                 m_scrollPosition = m_page->corePage()->mainFrame().virtualView()->scrollPosition();
-                willEnterFullScreen(WTFMove(willEnterFullScreenCallback), WTFMove(didEnterFullScreenCallback));
+                willEnterFullScreen(element, WTFMove(willEnterFullScreenCallback), WTFMove(didEnterFullScreenCallback));
                 return;
             }
             willEnterFullScreenCallback(Exception { ExceptionCode::InvalidStateError });
@@ -363,34 +364,22 @@ void WebFullScreenManager::exitFullScreenForElement(WebCore::Element* element, C
 #endif
 }
 
-void WebFullScreenManager::willEnterFullScreen(CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreenCallback, CompletionHandler<bool(bool)>&& didEnterFullscreenCallback, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode)
+void WebFullScreenManager::willEnterFullScreen(Element& element, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreenCallback, CompletionHandler<bool(bool)>&& didEnterFullscreenCallback, WebCore::HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
-    if (!m_element) {
-        willEnterFullscreenCallback(Exception { ExceptionCode::InvalidStateError });
-        didEnterFullscreenCallback(false);
-        return;
-    }
-
-    ALWAYS_LOG(LOGIDENTIFIER, "<", m_element->tagName(), " id=\"", m_element->getIdAttribute(), "\">");
+    ALWAYS_LOG(LOGIDENTIFIER, "<", element.tagName(), " id=\"", element.getIdAttribute(), "\">");
 
     m_page->isInFullscreenChanged(WebPage::IsInFullscreenMode::Yes);
 
-    auto result = m_element->document().fullscreen().willEnterFullscreen(*m_element, mode);
+    auto result = element.document().fullscreen().willEnterFullscreen(element, mode);
     if (result.hasException())
         close();
     willEnterFullscreenCallback(result);
 
-    if (!m_element) {
-        close();
-        didEnterFullscreenCallback(false);
-        return;
-    }
-
 #if !PLATFORM(IOS_FAMILY)
     m_page->hidePageBanners();
 #endif
-    m_element->protectedDocument()->updateLayout();
-    m_finalFrame = screenRectOfContents(m_element.get());
+    element.protectedDocument()->updateLayout();
+    m_finalFrame = screenRectOfContents(&element);
 
     m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::BeganEnterFullScreen(m_initialFrame, m_finalFrame), [this, protectedThis = Ref { *this }, mode, completionHandler = WTFMove(didEnterFullscreenCallback)] (bool success) mutable {
         if (!success && mode != WebCore::HTMLMediaElementEnums::VideoFullscreenModeInWindow) {

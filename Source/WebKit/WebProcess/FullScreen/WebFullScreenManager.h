@@ -90,7 +90,7 @@ protected:
 
     void setPIPStandbyElement(WebCore::HTMLVideoElement*);
 
-    void willEnterFullScreen(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&, CompletionHandler<bool(bool)>&&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard);
+    void willEnterFullScreen(WebCore::Element&, CompletionHandler<void(WebCore::ExceptionOr<void>)>&&, CompletionHandler<bool(bool)>&&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard);
     void setAnimatingFullScreen(bool);
     void requestRestoreFullScreen(CompletionHandler<void(bool)>&&);
     void requestExitFullScreen();
