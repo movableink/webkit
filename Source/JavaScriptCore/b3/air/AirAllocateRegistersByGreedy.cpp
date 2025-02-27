@@ -56,8 +56,8 @@ namespace Greedy {
 static constexpr bool eagerGroups = true;
 static constexpr bool eagerGroupsSplitFully = false;
 static constexpr bool eagerGroupsExhaustiveSearch = false;
-static constexpr bool spillCostDivideBySize = false;
-static constexpr bool spillCostSizeBias = 100; // Only relevant when spillCostDivideBySize
+static constexpr bool spillCostDivideBySize = true;
+static constexpr bool spillCostSizeBias = 1000; // Only relevant when spillCostDivideBySize
 static constexpr bool evictHeuristicAggregatorIsMax = false;
 
 // Quickly filters out short ranges from live range splitting consideration.
