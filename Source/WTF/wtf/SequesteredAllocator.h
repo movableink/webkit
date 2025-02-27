@@ -209,10 +209,8 @@ private:
                     return nullptr;
             }
 
-            static_assert(sizeof(GranuleHeader) >= minHeadAlignment);
-            m_allocHead = reinterpret_cast<uintptr_t>(granule) + sizeof(GranuleHeader);
-            m_allocBound = reinterpret_cast<uintptr_t>(granule) + minArenaGranuleSize;
             m_granules.push(granule);
+            setBoundsFromGranule(granule);
 
             static_assert(sizeof(GranuleHeader) >= minHeadAlignment);
             dataLogLnIf(verbose,
@@ -227,6 +225,13 @@ private:
                 ")");
 
             return granule;
+        }
+
+        void setBoundsFromGranule(GranuleHeader* granule)
+        {
+            static_assert(sizeof(GranuleHeader) >= minHeadAlignment);
+            m_allocHead = reinterpret_cast<uintptr_t>(granule) + sizeof(GranuleHeader);
+            m_allocBound = reinterpret_cast<uintptr_t>(granule) + (pageSize * (1 + granule->additionalPageCount));
         }
 
         template<AllocationFailureMode mode>
@@ -394,13 +399,22 @@ public:
             RawPointer(reinterpret_cast<void*>(m_genericSmallArena.m_allocHead)),
             "), allocBound (",
             RawPointer(reinterpret_cast<void*>(m_genericSmallArena.m_allocBound)),
-            ")");
+            "); ", m_totalAllocatedBytes, "B total");
 
-        // FIXME: try leaving behind the top granule for next time
-        m_decommitQueue.concatenate(WTFMove(m_genericSmallArena.m_granules));
+        GranuleList tail { m_genericSmallArena.m_granules.splitAt(1) };
+        GranuleHeader* head { m_genericSmallArena.m_granules.head() };
 
-        m_genericSmallArena.m_allocHead = 0;
-        m_genericSmallArena.m_allocBound = 0;
+        if (!head) {
+            ASSERT(tail.isEmpty());
+            ASSERT(!m_genericSmallArena.m_allocHead);
+            ASSERT(!m_genericSmallArena.m_allocBound);
+            return;
+        }
+
+        if constexpr (verbose)
+            m_totalAllocatedBytes = 0;
+        m_genericSmallArena.setBoundsFromGranule(head);
+        m_decommitQueue.concatenate(WTFMove(tail));
 
         m_decommitQueue.decommit();
     }
@@ -436,6 +450,8 @@ private:
 
     ALWAYS_INLINE void registerSuccessfulAllocation(void* p, size_t bytes) {
         m_liveAllocations++;
+        if constexpr (verbose)
+            m_totalAllocatedBytes += bytes;
 
         if constexpr (trackAllocationDebugInfo) {
             auto debugKey = reinterpret_cast<uintptr_t>(p);
@@ -510,6 +526,7 @@ private:
     // FIXME: wrap this in a child class so we can ifdef it out
     // when we don't need it
     StdMap<uintptr_t, AllocationDebugInfo> m_allocationInfos;
+    size_t m_totalAllocatedBytes { 0 };
 };
 static_assert(sizeof(SequesteredArenaAllocator) <= SequesteredImmortalHeap::slotSize);
 
