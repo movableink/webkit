@@ -347,6 +347,8 @@ public:
 
     virtual MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const = 0;
 
+    virtual MediaPlayerSoundStageSize mediaPlayerSoundStageSize() const { return MediaPlayerSoundStageSize::Auto; }
+
 #if !RELEASE_LOG_DISABLED
     virtual uint64_t mediaPlayerLogIdentifier() { return 0; }
     virtual const Logger& mediaPlayerLogger() = 0;
@@ -785,6 +787,9 @@ public:
     void setPrefersSpatialAudioExperience(bool);
     bool prefersSpatialAudioExperience() const { return m_prefersSpatialAudioExperience; }
 #endif
+
+    SoundStageSize soundStageSize() const;
+    void soundStageSizeDidChange();
 
     void setInFullscreenOrPictureInPicture(bool);
     bool isInFullscreenOrPictureInPicture() const;

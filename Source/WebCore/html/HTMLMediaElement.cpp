@@ -9809,6 +9809,16 @@ void HTMLMediaElement::defaultSpatialTrackingLabelChanged(const String& defaultS
 }
 #endif
 
+void HTMLMediaElement::setSoundStageSize(SoundStageSize size)
+{
+    if (m_soundStageSize == size)
+        return;
+    m_soundStageSize = size;
+
+    if (m_player)
+        m_player->soundStageSizeDidChange();
+}
+
 bool HTMLMediaElement::shouldLogWatchtimeEvent() const
 {
     // Autoplaying content should not produce watchtime diagnostics:

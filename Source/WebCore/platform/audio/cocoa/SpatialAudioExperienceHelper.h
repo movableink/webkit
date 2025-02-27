@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "MediaPlayerEnums.h"
+
 OBJC_CLASS CASpatialAudioExperience;
 
 #if HAVE(SPATIAL_AUDIO_EXPERIENCE)
@@ -34,13 +36,14 @@ struct SpatialAudioExperienceOptions {
     bool hasLayer { false };
     bool hasTarget { false };
     bool isVisible { false };
+    MediaPlayerSoundStageSize soundStageSize { MediaPlayerSoundStageSize::Auto };
     String sceneIdentifier;
 #if HAVE(SPATIAL_TRACKING_LABEL)
     String spatialTrackingLabel;
 #endif
 };
 
-RetainPtr<CASpatialAudioExperience> createExperienceWithOptions(const SpatialAudioExperienceOptions&);
+WEBCORE_EXPORT RetainPtr<CASpatialAudioExperience> createSpatialAudioExperienceWithOptions(const SpatialAudioExperienceOptions&);
 
 }
 #endif

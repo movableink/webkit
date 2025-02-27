@@ -765,6 +765,9 @@ protected:
 
     void ignoreFullscreenPermissionPolicyOnNextCallToEnterFullscreen() { m_ignoreFullscreenPermissionsPolicy = true; }
 
+    SoundStageSize soundStageSize() const { return m_soundStageSize; }
+    void setSoundStageSize(SoundStageSize);
+
 protected:
     // ActiveDOMObject
     void stop() override;
@@ -883,6 +886,7 @@ private:
     void mediaPlayerVideoLayerSizeDidChange(const FloatSize& size) final { m_videoLayerSize = size; }
 
     MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const final { return identifier(); }
+    SoundStageSize mediaPlayerSoundStageSize() const final { return soundStageSize(); }
 
     void pendingActionTimerFired();
     void progressEventTimerFired();
@@ -1436,6 +1440,7 @@ private:
     RefPtr<WTF::Stopwatch> m_bufferingStopwatch;
 
     bool m_ignoreFullscreenPermissionsPolicy { false };
+    SoundStageSize m_soundStageSize { SoundStageSize::Auto };
 };
 
 String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState);

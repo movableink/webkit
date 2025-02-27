@@ -375,6 +375,8 @@ public:
     virtual void sceneIdentifierDidChange() { }
 #endif
 
+    virtual void soundStageSizeDidChange() { }
+
 protected:
     mutable PlatformTimeRanges m_seekable;
     bool m_shouldCheckHardwareSupport { false };

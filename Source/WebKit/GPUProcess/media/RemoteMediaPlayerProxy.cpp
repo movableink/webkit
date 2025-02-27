@@ -1352,6 +1352,15 @@ void RemoteMediaPlayerProxy::audioOutputDeviceChanged(String&& deviceId)
 #endif
 }
 
+void RemoteMediaPlayerProxy::setSoundStageSize(SoundStageSize size)
+{
+    if (m_soundStageSize == size)
+        return;
+    m_soundStageSize = size;
+
+    protectedPlayer()->soundStageSizeDidChange();
+}
+
 } // namespace WebKit
 
 #endif // ENABLE(GPU_PROCESS) && ENABLE(VIDEO)

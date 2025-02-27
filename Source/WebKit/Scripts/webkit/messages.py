@@ -993,6 +993,7 @@ def headers_for_type(type):
         'WebCore::MediaEngineSupportParameters': ['<WebCore/MediaPlayer.h>'],
         'WebCore::MediaPlayerLoadOptions': ['<WebCore/MediaPlayer.h>'],
         'WebCore::MediaPlayerReadyState': ['<WebCore/MediaPlayerEnums.h>'],
+        'WebCore::MediaPlayerSoundStageSize': ['<WebCore/MediaPlayerEnums.h>'],
         'WebCore::MediaProducerMediaCaptureKind': ['<WebCore/MediaProducer.h>'],
         'WebCore::MediaProducerMediaState': ['<WebCore/MediaProducer.h>'],
         'WebCore::MediaProducerMutedState': ['<WebCore/MediaProducer.h>'],

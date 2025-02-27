@@ -4787,6 +4787,13 @@ enum class WebCore::MediaPlayerPitchCorrectionAlgorithm : uint8_t {
     BestForSpeech,
 };
 
+enum class WebCore::MediaPlayerSoundStageSize : uint8_t {
+    Auto,
+    Small,
+    Medium,
+    Large,
+};
+
 class WebCore::GeolocationPositionData {
     double timestamp;
     double latitude;

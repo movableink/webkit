@@ -44,6 +44,7 @@ typedef NS_ENUM(NSInteger, CAAudioTetherType) {
     CAAudioTetherTypeEntity,
 };
 
+NS_ASSUME_NONNULL_BEGIN
 @interface CAAudioTether : NSObject
 - (instancetype)initWithType:(CAAudioTetherType)type identifier:(NSUUID*)identifier pid:(pid_t)pid;
 @end
@@ -51,6 +52,7 @@ typedef NS_ENUM(NSInteger, CAAudioTetherType) {
 @interface CAAudioTetherAnchoringStrategy : CAAnchoringStrategy
 - (instancetype)initWithAudioTether:(CAAudioTether*)audioTether;
 @end
+NS_ASSUME_NONNULL_END
 #endif
 
 #endif

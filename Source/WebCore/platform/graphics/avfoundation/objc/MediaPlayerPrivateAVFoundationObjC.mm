@@ -4079,10 +4079,11 @@ void MediaPlayerPrivateAVFoundationObjC::updateSpatialTrackingLabel()
 
 #if HAVE(SPATIAL_AUDIO_EXPERIENCE)
     if (player->prefersSpatialAudioExperience()) {
-        RetainPtr experience = createExperienceWithOptions({
+        RetainPtr experience = createSpatialAudioExperienceWithOptions({
             .hasLayer = !!m_videoLayer,
             .hasTarget = !!m_videoTarget,
             .isVisible = isVisible(),
+            .soundStageSize = player->soundStageSize(),
             .sceneIdentifier = player->sceneIdentifier(),
 #if HAVE(SPATIAL_TRACKING_LABEL)
             .spatialTrackingLabel = m_spatialTrackingLabel,

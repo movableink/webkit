@@ -2028,6 +2028,16 @@ void MediaPlayer::setPrefersSpatialAudioExperience(bool value)
 }
 #endif
 
+auto MediaPlayer::soundStageSize() const -> SoundStageSize
+{
+    return client().mediaPlayerSoundStageSize();
+}
+
+void MediaPlayer::soundStageSizeDidChange()
+{
+    m_private->soundStageSizeDidChange();
+}
+
 void MediaPlayer::setInFullscreenOrPictureInPicture(bool isInFullscreenOrPictureInPicture)
 {
     if (m_isInFullscreenOrPictureInPicture == isInFullscreenOrPictureInPicture)

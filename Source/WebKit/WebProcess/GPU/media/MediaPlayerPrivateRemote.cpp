@@ -1818,6 +1818,12 @@ void MediaPlayerPrivateRemote::prefersSpatialAudioExperienceChanged()
 }
 #endif
 
+void MediaPlayerPrivateRemote::soundStageSizeDidChange()
+{
+    if (RefPtr player = m_player.get())
+        protectedConnection()->send(Messages::RemoteMediaPlayerProxy::SetSoundStageSize(player->soundStageSize()), m_id);
+}
+
 void MediaPlayerPrivateRemote::isInFullscreenOrPictureInPictureChanged(bool isInFullscreenOrPictureInPicture)
 {
     protectedConnection()->send(Messages::RemoteMediaPlayerProxy::IsInFullscreenOrPictureInPictureChanged(isInFullscreenOrPictureInPicture), m_id);

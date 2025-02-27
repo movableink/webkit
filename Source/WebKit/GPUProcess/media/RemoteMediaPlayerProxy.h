@@ -390,6 +390,9 @@ private:
     void isInFullscreenOrPictureInPictureChanged(bool);
 
     void audioOutputDeviceChanged(String&&);
+    using SoundStageSize = WebCore::MediaPlayer::SoundStageSize;
+    void setSoundStageSize(SoundStageSize);
+        SoundStageSize mediaPlayerSoundStageSize() const final { return m_soundStageSize; }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& mediaPlayerLogger() final { return m_logger; }
@@ -460,6 +463,7 @@ private:
     Ref<RemoteVideoFrameObjectHeap> m_videoFrameObjectHeap;
     RefPtr<WebCore::VideoFrame> m_videoFrameForCurrentTime;
     bool m_shouldCheckHardwareSupport { false };
+    SoundStageSize m_soundStageSize { SoundStageSize::Auto };
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
 #endif

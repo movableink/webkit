@@ -1805,10 +1805,11 @@ void MediaPlayerPrivateWebM::updateSpatialTrackingLabel()
 
 #if HAVE(SPATIAL_AUDIO_EXPERIENCE)
     if (RefPtr player = m_player.get(); player && player->prefersSpatialAudioExperience()) {
-        RetainPtr experience = createExperienceWithOptions({
+        RetainPtr experience = createSpatialAudioExperienceWithOptions({
             .hasLayer = !!renderer,
             .hasTarget = !!m_videoTarget,
             .isVisible = m_visible,
+            .soundStageSize = player->soundStageSize(),
             .sceneIdentifier = player->sceneIdentifier(),
 #if HAVE(SPATIAL_TRACKING_LABEL)
             .spatialTrackingLabel = m_spatialTrackingLabel,

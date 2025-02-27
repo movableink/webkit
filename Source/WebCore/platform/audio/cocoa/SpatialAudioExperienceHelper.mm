@@ -32,7 +32,16 @@
 
 namespace WebCore {
 
-RetainPtr<CASpatialAudioExperience> createExperienceWithOptions(const SpatialAudioExperienceOptions& options)
+static CASoundStageSize toCASoundStageSize(MediaPlayerSoundStageSize size)
+{
+    static_assert(static_cast<CASoundStageSize>(MediaPlayerSoundStageSize::Auto) == CASoundStageSizeAutomatic);
+    static_assert(static_cast<CASoundStageSize>(MediaPlayerSoundStageSize::Small) == CASoundStageSizeSmall);
+    static_assert(static_cast<CASoundStageSize>(MediaPlayerSoundStageSize::Medium) == CASoundStageSizeMedium);
+    static_assert(static_cast<CASoundStageSize>(MediaPlayerSoundStageSize::Large) == CASoundStageSizeLarge);
+    return static_cast<CASoundStageSize>(size);
+}
+
+RetainPtr<CASpatialAudioExperience> createSpatialAudioExperienceWithOptions(const SpatialAudioExperienceOptions& options)
 {
 #if HAVE(SPATIAL_TRACKING_LABEL)
     if (options.isVisible && options.hasTarget) {
@@ -43,16 +52,18 @@ RetainPtr<CASpatialAudioExperience> createExperienceWithOptions(const SpatialAud
         RetainPtr uuid = adoptNS([[NSUUID alloc] initWithUUIDString:options.spatialTrackingLabel]);
         RetainPtr tether = adoptNS([[CAAudioTether alloc] initWithType:CAAudioTetherTypeLayer identifier:uuid.get() pid:0]);
         RetainPtr anchoringStrategy = adoptNS([[CAAudioTetherAnchoringStrategy alloc] initWithAudioTether:tether.get()]);
-        return adoptNS([[CAHeadTrackedSpatialAudio alloc] initWithSoundStageSize:CASoundStageSizeAutomatic anchoringStrategy:anchoringStrategy.get()]);
+        return adoptNS([[CAHeadTrackedSpatialAudio alloc] initWithSoundStageSize:toCASoundStageSize(options.soundStageSize) anchoringStrategy:anchoringStrategy.get()]);
     }
 #endif
 
-    if (options.isVisible && options.hasLayer)
-        return adoptNS([[CAAutomaticSpatialAudio alloc] init]);
+    if (options.isVisible && options.hasLayer) {
+        RetainPtr anchoring = adoptNS([[CAAutomaticAnchoringStrategy alloc] init]);
+        return adoptNS([[CAHeadTrackedSpatialAudio alloc] initWithSoundStageSize:toCASoundStageSize(options.soundStageSize) anchoringStrategy:anchoring.get()]);
+    }
 
     // Either not visible, or with no layer or target:
     RetainPtr anchoring = adoptNS([[CASceneAnchoringStrategy alloc] initWithSceneIdentifier:options.sceneIdentifier]);
-    return adoptNS([[CAHeadTrackedSpatialAudio alloc] initWithSoundStageSize:CASoundStageSizeAutomatic anchoringStrategy:anchoring.get()]);
+    return adoptNS([[CAHeadTrackedSpatialAudio alloc] initWithSoundStageSize:toCASoundStageSize(options.soundStageSize) anchoringStrategy:anchoring.get()]);
 }
 
 }

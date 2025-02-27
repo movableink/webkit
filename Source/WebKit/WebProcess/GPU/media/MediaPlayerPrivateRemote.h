@@ -483,6 +483,8 @@ private:
 
     void audioOutputDeviceChanged() final;
 
+    void soundStageSizeDidChange() final;
+
 #if PLATFORM(COCOA)
     void pushVideoFrameMetadata(WebCore::VideoFrameMetadata&&, RemoteVideoFrameProxy::Properties&&);
 #endif
