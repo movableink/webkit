@@ -5,7 +5,6 @@ NetworkProcess/Downloads/DownloadManager.cpp
 NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/Downloads/cocoa/WKDownloadProgress.mm
 NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
-NetworkProcess/cache/NetworkCacheSpeculativeLoad.cpp
 Platform/IPC/ArgumentCoders.h
 Shared/API/APIArray.h
 Shared/API/c/WKArray.cpp

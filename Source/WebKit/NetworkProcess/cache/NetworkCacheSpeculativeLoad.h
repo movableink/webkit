@@ -74,7 +74,7 @@ private:
 
     void didComplete();
 
-    Ref<Cache> m_cache;
+    const Ref<Cache> m_cache;
     RevalidationCompletionHandler m_completionHandler;
     WebCore::ResourceRequest m_originalRequest;
 
