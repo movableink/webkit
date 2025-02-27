@@ -1012,6 +1012,12 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_dismissContactPickerWithContacts:(NSArray *)contacts;
 - (void)_simulateSelectionStart;
 
+#if ENABLE(MODEL_PROCESS)
+- (void)_simulateModelInteractionPanGestureBeginAtPoint:(CGPoint)hitPoint;
+- (void)_simulateModelInteractionPanGestureUpdateAtPoint:(CGPoint)hitPoint;
+- (NSDictionary *)_stageModeInfoForTesting;
+#endif
+
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
 - (BOOL)_allowAnimationControls;
 #endif

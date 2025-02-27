@@ -90,6 +90,10 @@
 - (BOOL)_hasResizeAssertion;
 - (void)_simulateSelectionStart;
 
+- (void)_simulateModelInteractionPanGestureBeginAtPoint:(CGPoint)hitPoint;
+- (void)_simulateModelInteractionPanGestureUpdateAtPoint:(CGPoint)hitPoint;
+- (NSDictionary *)_stageModeInfoForTesting;
+
 + (void)_resetPresentLockdownModeMessage;
 
 - (void)_doAfterNextVisibleContentRectAndStablePresentationUpdate:(void (^)(void))updateBlock;
