@@ -205,9 +205,7 @@ void WebBackForwardList::addChildItem(FrameIdentifier parentFrameID, Ref<FrameSt
 
 void WebBackForwardList::goToItem(WebBackForwardListItem& item)
 {
-    if (m_provisionalIndex)
-        m_currentIndex = std::exchange(m_provisionalIndex, std::nullopt);
-
+    commitProvisionalItem();
     goToItemInternal(item, m_currentIndex);
 }
 
@@ -286,12 +284,9 @@ void WebBackForwardList::clearProvisionalItem(WebBackForwardListFrameItem& frame
     m_provisionalIndex = std::nullopt;
 }
 
-void WebBackForwardList::commitProvisionalItem(WebBackForwardListFrameItem& frameItem)
+void WebBackForwardList::commitProvisionalItem()
 {
     if (!m_provisionalIndex)
-        return;
-
-    if (m_entries[*m_provisionalIndex].ptr() != frameItem.backForwardListItem())
         return;
 
     if (*m_provisionalIndex >= m_entries.size()) {
@@ -312,6 +307,19 @@ WebBackForwardListItem* WebBackForwardList::currentItem() const
 RefPtr<WebBackForwardListItem> WebBackForwardList::protectedCurrentItem() const
 {
     return currentItem();
+}
+
+WebBackForwardListItem* WebBackForwardList::provisionalItem() const
+{
+    if (!m_provisionalIndex)
+        return nullptr;
+
+    if (*m_provisionalIndex >= m_entries.size()) {
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    }
+
+    return m_entries[*m_provisionalIndex].ptr();
 }
 
 WebBackForwardListItem* WebBackForwardList::backItem() const

@@ -53,7 +53,6 @@ public:
     void goToItem(WebCore::HistoryItem&) override;
     void goToProvisionalItem(const WebCore::HistoryItem&) final;
     void clearProvisionalItem(const WebCore::HistoryItem&) final;
-    void commitProvisionalItem(const WebCore::HistoryItem&) final { }
 
     RefPtr<WebCore::HistoryItem> backItem();
     RefPtr<WebCore::HistoryItem> currentItem();

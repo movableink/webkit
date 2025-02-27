@@ -644,7 +644,6 @@ void HistoryController::updateForCommit()
         ASSERT(m_provisionalItem);
         if (RefPtr provisionalItem = m_provisionalItem) {
             setCurrentItem(provisionalItem.releaseNonNull());
-            commitProvisionalItem();
             m_provisionalItem = nullptr;
         }
 
@@ -691,7 +690,6 @@ void HistoryController::recursiveUpdateForCommit()
         // Now commit the provisional item
         if (RefPtr provisionalItem = m_provisionalItem) {
             setCurrentItem(provisionalItem.releaseNonNull());
-            commitProvisionalItem();
             m_provisionalItem = nullptr;
         }
 
@@ -750,7 +748,6 @@ void HistoryController::recursiveUpdateForSameDocumentNavigation()
     // Commit the provisional item.
     if (RefPtr provisionalItem = m_provisionalItem) {
         setCurrentItem(provisionalItem.releaseNonNull());
-        commitProvisionalItem();
         m_provisionalItem = nullptr;
     }
 
@@ -814,16 +811,6 @@ void HistoryController::clearProvisionalItem()
 
     if (RefPtr page = m_frame->page())
         page->checkedBackForward()->clearProvisionalItem(*provisionalItem);
-}
-
-void HistoryController::commitProvisionalItem()
-{
-    RefPtr provisionalItem = m_provisionalItem;
-    if (!provisionalItem)
-        return;
-
-    if (RefPtr page = m_frame->page())
-        page->checkedBackForward()->commitProvisionalItem(*provisionalItem);
 }
 
 void HistoryController::initializeItem(HistoryItem& item, RefPtr<DocumentLoader> documentLoader)

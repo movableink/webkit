@@ -2936,7 +2936,6 @@ private:
     void backForwardListCounts(CompletionHandler<void(WebBackForwardListCounts&&)>&&);
     void backForwardGoToProvisionalItem(IPC::Connection&, WebCore::BackForwardItemIdentifier, CompletionHandler<void(const WebBackForwardListCounts&)>&&);
     void backForwardClearProvisionalItem(IPC::Connection&, WebCore::BackForwardItemIdentifier, WebCore::BackForwardFrameItemIdentifier, CompletionHandler<void(const WebBackForwardListCounts&)>&&);
-    void backForwardCommitProvisionalItem(IPC::Connection&, WebCore::BackForwardItemIdentifier, WebCore::BackForwardFrameItemIdentifier);
     void backForwardUpdateItem(IPC::Connection&, Ref<FrameState>&&);
 
     // Undo management

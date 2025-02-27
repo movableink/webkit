@@ -162,11 +162,6 @@ void BackForwardController::clearProvisionalItem(const HistoryItem& item)
     protectedClient()->clearProvisionalItem(item);
 }
 
-void BackForwardController::commitProvisionalItem(const HistoryItem& item)
-{
-    protectedClient()->commitProvisionalItem(item);
-}
-
 bool BackForwardController::containsItem(const HistoryItem& item) const
 {
     return protectedClient()->containsItem(item);
