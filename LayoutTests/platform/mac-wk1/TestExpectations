@@ -3025,3 +3025,6 @@ webkit.org/b/287976 imported/w3c/web-platform-tests/css/css-box/margin-trim/comp
 webkit.org/b/288627 editing/spelling/spellcheck-async-mutation.html [ Timeout ]
 
 webkit.org/b/288725 http/tests/security/file-system-access-via-dataTransfer.html [ Pass Failure ]
+
+webkit.org/b/288757 [ Sonoma ] imported/w3c/web-platform-tests/fullscreen/rendering/fullscreen-css-invalidation.html [ Pass Failure ]
+webkit.org/b/288757 [ Sequoia Release ] imported/w3c/web-platform-tests/fullscreen/rendering/fullscreen-css-invalidation.html [ Pass Failure ]
