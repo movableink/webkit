@@ -155,7 +155,10 @@ class RadarModel(object):
         self.lastModifiedAt = datetime.utcfromtimestamp(issue['modified' if issue.get('modified') else 'timestamp'] - timedelta(hours=7).seconds)
         self.assignee = self.Person(Radar.transform_user(issue['assignee']))
         self.description = self.CollectionProperty(self, self.DescriptionEntry(issue['description']))
-        self.state = 'Analyze' if issue['opened'] else 'Verify'
+        if issue.get('state'):
+            self.state = issue['state']
+        else:
+            self.state = 'Analyze' if issue['opened'] else 'Verify'
         self.duplicateOfProblemID = issue['original']['id'] if issue.get('original', None) else None
         self.related = list()
         self.substate = 'Investigate' if issue['opened'] else None
@@ -219,6 +222,7 @@ class RadarModel(object):
         ]
         self.client.parent.issues[self.id]['assignee'] = self.client.parent.users[self.assignee.dsid]
         self.client.parent.issues[self.id]['opened'] = self.state not in ('Verify', 'Closed')
+        self.client.parent.issues[self.id]['state'] = self.state
         if self.duplicateOfProblemID:
             if self.duplicateOfProblemID not in self.client.parent.issues:
                 raise ValueError('{} is not a known radar'.format(self.duplicateOfProblemID))
