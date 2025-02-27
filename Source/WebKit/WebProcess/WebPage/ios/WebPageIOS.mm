@@ -4993,7 +4993,7 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
             RefPtr pluginView = mainFramePlugIn();
             if (!pluginView)
                 return true;
-            return pluginView->pluginHandlesPageScaleFactor() ? false : m_isInStableState;
+            return !pluginView->pluginHandlesPageScaleFactor();
 #else
             UNUSED_PARAM(this);
             return true;
