@@ -406,7 +406,7 @@ static Class scrollViewScrollIndicatorClass()
         return nil;
 
     _contentView = adoptNS([[UIView alloc] init]);
-    _hostingView = adoptNS([WKMaterialHostingSupport createHostingView:_contentView.get()]);
+    _hostingView = [WKMaterialHostingSupport hostingView:_contentView.get()];
 
     [self addSubview:_hostingView.get()];
 

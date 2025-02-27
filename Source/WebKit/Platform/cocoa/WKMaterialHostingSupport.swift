@@ -133,7 +133,7 @@ private extension CALayer {
         return true;
     }
 
-    class func createHostingLayer() -> CALayer {
+    class func hostingLayer() -> CALayer {
         let contentLayer = CALayer()
 
         let hostingLayer = CAHostingLayer(rootView: MaterialHostingView<LayerBackedMaterialHostingProvider>(content: contentLayer))
@@ -163,7 +163,7 @@ private extension CALayer {
 
 #if canImport(UIKit)
 
-    class func createHostingView(_ contentView: UIView) -> UIView {
+    class func hostingView(_ contentView: UIView) -> UIView {
         _UIHostingView(rootView: MaterialHostingView<ViewBackedMaterialHostingProvider>(content: contentView))
     }
 
