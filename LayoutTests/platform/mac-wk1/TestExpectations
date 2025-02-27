@@ -3025,3 +3025,5 @@ webkit.org/b/287976 imported/w3c/web-platform-tests/css/css-box/margin-trim/comp
 webkit.org/b/288378 fast/harness/internals-object-property-access-on-window-without-frame-crash.html [ Skip ]
 
 webkit.org/b/288627 editing/spelling/spellcheck-async-mutation.html [ Timeout ]
+
+webkit.org/b/288725 http/tests/security/file-system-access-via-dataTransfer.html [ Pass Failure ]
