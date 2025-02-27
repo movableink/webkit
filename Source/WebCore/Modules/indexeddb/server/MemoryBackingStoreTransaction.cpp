@@ -165,22 +165,12 @@ void MemoryBackingStoreTransaction::indexRenamed(MemoryIndex& index, const Strin
     m_originalIndexNames.add(&index, oldName);
 }
 
-void MemoryBackingStoreTransaction::indexCleared(MemoryIndex& index, std::unique_ptr<IndexValueStore>&& valueStore)
-{
-    auto addResult = m_clearedIndexValueStores.add(&index, nullptr);
-
-    // If this index has already been cleared during this transaction, we shouldn't remember this clearing.
-    if (!addResult.isNewEntry)
-        return;
-
-    addResult.iterator->value = WTFMove(valueStore);
-}
-
 void MemoryBackingStoreTransaction::abort()
 {
     LOG(IndexedDB, "MemoryBackingStoreTransaction::abort()");
     SetForScope change(m_isAborting, true);
 
+    // Restore renamed indexes.
     for (const auto& iterator : m_originalIndexNames) {
         auto* index = iterator.key;
         auto originalName = iterator.value;
@@ -207,10 +197,12 @@ void MemoryBackingStoreTransaction::abort()
     }
     m_originalIndexNames.clear();
 
+    // Restore renamed object stores.
     for (const auto& iterator : m_originalObjectStoreNames)
         m_backingStore->renameObjectStoreForVersionChangeAbort(*iterator.key, iterator.value);
     m_originalObjectStoreNames.clear();
 
+    // Restore added object stores.
     for (const auto& objectStore : m_versionChangeAddedObjectStores)
         m_backingStore->removeObjectStoreForVersionChangeAbort(*objectStore);
     m_deletedIndexes.removeIf([&](auto& entry) {
@@ -218,6 +210,7 @@ void MemoryBackingStoreTransaction::abort()
     });
     m_versionChangeAddedObjectStores.clear();
 
+    // Restore deleted object stores.
     for (auto& objectStore : m_deletedObjectStores.values()) {
         m_backingStore->restoreObjectStoreForVersionChangeAbort(*objectStore);
         ASSERT(!m_objectStores.contains(objectStore.get()));
@@ -225,26 +218,21 @@ void MemoryBackingStoreTransaction::abort()
     }
     m_deletedObjectStores.clear();
 
+    // Restore database info.
     if (m_originalDatabaseInfo) {
         ASSERT(m_info.mode() == IDBTransactionMode::Versionchange);
         m_backingStore->setDatabaseInfo(*m_originalDatabaseInfo);
     }
-
-    // Restore cleared index value stores before we re-insert values into object stores
-    // because inserting those values will regenerate the appropriate index values.
-    for (auto& iterator : m_clearedIndexValueStores)
-        iterator.key->replaceIndexValueStore(WTFMove(iterator.value));
-    m_clearedIndexValueStores.clear();
-
-    // Restore object store records.
-    for (auto& objectStore : m_objectStores)
-        objectStore->transactionAborted(*this);
 
     for (auto& index : m_deletedIndexes.values()) {
         RELEASE_ASSERT(m_backingStore->hasObjectStore(index->info().objectStoreIdentifier()));
         index->objectStore()->maybeRestoreDeletedIndex(*index);
     }
     m_deletedIndexes.clear();
+
+    // Restore object store records.
+    for (auto& objectStore : m_objectStores)
+        objectStore->transactionAborted(*this);
 
     finish();
 }

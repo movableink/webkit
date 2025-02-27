@@ -66,7 +66,6 @@ public:
     void objectStoreCleared(MemoryObjectStore&, std::unique_ptr<KeyValueMap>&&, std::unique_ptr<IDBKeyDataSet>&&);
     void objectStoreRenamed(MemoryObjectStore&, const String& oldName);
     void indexRenamed(MemoryIndex&, const String& oldName);
-    void indexCleared(MemoryIndex&, std::unique_ptr<IndexValueStore>&&);
 
     void addNewIndex(MemoryIndex&);
     void removeNewIndex(MemoryIndex&);
@@ -75,6 +74,8 @@ public:
 
     void abort();
     void commit();
+
+    IDBTransactionInfo info() const { return m_info; }
 
 private:
     void finish();
@@ -96,7 +97,6 @@ private:
     HashMap<String, RefPtr<MemoryIndex>> m_deletedIndexes;
     HashMap<MemoryObjectStore*, String> m_originalObjectStoreNames;
     HashMap<MemoryIndex*, String> m_originalIndexNames;
-    HashMap<MemoryIndex*, std::unique_ptr<IndexValueStore>> m_clearedIndexValueStores;
 };
 
 } // namespace IDBServer

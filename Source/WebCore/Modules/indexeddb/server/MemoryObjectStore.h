@@ -78,7 +78,6 @@ public:
     bool containsRecord(const IDBKeyData&);
     void deleteRecord(const IDBKeyData&);
     void deleteRange(const IDBKeyRangeData&);
-    IDBError addRecord(MemoryBackingStoreTransaction&, const IDBKeyData&, const IDBValue&);
     IDBError addRecord(MemoryBackingStoreTransaction&, const IDBKeyData&, const IndexIDToIndexKeyMap&, const IDBValue&);
 
     uint64_t currentKeyGeneratorValue() const { return m_keyGeneratorValue; }
@@ -115,11 +114,11 @@ private:
 
     IDBKeyDataSet::iterator lowestIteratorInRange(const IDBKeyRangeData&, bool reverse) const;
 
-    IDBError populateIndexWithExistingRecords(MemoryIndex&);
     IDBError updateIndexesForPutRecord(const IDBKeyData&, const IndexIDToIndexKeyMap&);
     void updateIndexesForDeleteRecord(const IDBKeyData& value);
     void updateCursorsForPutRecord(IDBKeyDataSet::iterator);
     void updateCursorsForDeleteRecord(const IDBKeyData&);
+    void addRecordWithoutUpdatingIndexes(MemoryBackingStoreTransaction&, const IDBKeyData&, const IDBValue&);
 
     IDBObjectStoreInfo m_info;
 
