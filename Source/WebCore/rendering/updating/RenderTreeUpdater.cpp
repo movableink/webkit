@@ -731,7 +731,7 @@ static std::optional<DidRepaintAndMarkContainingBlock> repaintAndMarkContainingB
             container->setPreferredLogicalWidthsDirty(true);
             return;
         }
-        container->setNeedsLayoutForOverflowChange();
+        container->setNeedsSimplifiedNormalFlowLayout();
     };
 
     auto repaintBackdropIfApplicable = [&](auto& renderer) {

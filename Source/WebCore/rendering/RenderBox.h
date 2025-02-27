@@ -699,9 +699,7 @@ protected:
     void computePreferredLogicalWidths(const Length& minLogicalWidth, const Length& maxLogicalWidth, LayoutUnit borderAndPaddingLogicalWidth);
     
     bool isAspectRatioDegenerate(double aspectRatio) const { return !aspectRatio || isnan(aspectRatio); }
-
-    bool overflowChangesMayAffectLayout() const final;
-
+    
 private:
     bool replacedMinMaxLogicalHeightComputesAsNone(SizeType) const;
 

@@ -280,9 +280,9 @@ StyleDifference RenderElement::adjustStyleDifference(StyleDifference diff, Optio
             if (!hasLayer())
                 diff = std::max(diff, StyleDifference::Layout);
             else {
-                // We need to set at least Overflow, but if PositionedMovementOnly is already set
-                // then we actually need OverflowAndPositionedMovement.
-                diff = std::max(diff, (diff == StyleDifference::LayoutPositionedMovementOnly) ? StyleDifference::OverflowAndPositionedMovement : StyleDifference::Overflow);
+                // We need to set at least SimplifiedLayout, but if PositionedMovementOnly is already set
+                // then we actually need SimplifiedLayoutAndPositionedMovement.
+                diff = std::max(diff, (diff == StyleDifference::LayoutPositionedMovementOnly) ? StyleDifference::SimplifiedLayoutAndPositionedMovement : StyleDifference::SimplifiedLayout);
             }
         
         } else
@@ -423,7 +423,7 @@ bool RenderElement::repaintBeforeStyleChange(StyleDifference diff, const RenderS
             if (diff == StyleDifference::RepaintLayer)
                 return RequiredRepaint::RendererAndDescendantsRenderersWithLayers;
 
-            if (diff == StyleDifference::Layout || diff == StyleDifference::Overflow) {
+            if (diff == StyleDifference::Layout || diff == StyleDifference::SimplifiedLayout) {
                 // Certain style changes require layer repaint, since the layer could end up being destroyed.
                 auto layerMayGetDestroyed = oldStyle.position() != newStyle.position()
                     || oldStyle.usedZIndex() != newStyle.usedZIndex()
@@ -583,8 +583,17 @@ void RenderElement::setStyle(RenderStyle&& style, StyleDifference minimalStyleDi
     // check whether we should layout now, and decide if we need to repaint.
     StyleDifference updatedDiff = adjustStyleDifference(diff, contextSensitiveProperties);
     
-    if (diff <= StyleDifference::LayoutPositionedMovementOnly)
-        setNeedsLayoutForStyleDifference(updatedDiff, &oldStyle);
+    if (diff <= StyleDifference::LayoutPositionedMovementOnly) {
+        if (updatedDiff == StyleDifference::Layout)
+            setNeedsLayoutAndPrefWidthsRecalc();
+        else if (updatedDiff == StyleDifference::LayoutPositionedMovementOnly)
+            setNeedsPositionedMovementLayout(&oldStyle);
+        else if (updatedDiff == StyleDifference::SimplifiedLayoutAndPositionedMovement) {
+            setNeedsPositionedMovementLayout(&oldStyle);
+            setNeedsSimplifiedNormalFlowLayout();
+        } else if (updatedDiff == StyleDifference::SimplifiedLayout)
+            setNeedsSimplifiedNormalFlowLayout();
+    }
 
     if (!didRepaint && (updatedDiff == StyleDifference::RepaintLayer || shouldRepaintForStyleDifference(updatedDiff))) {
         // Do a repaint with the new style now, e.g., for example if we go from
@@ -1038,7 +1047,7 @@ void RenderElement::styleDidChange(StyleDifference diff, const RenderStyle* oldS
     if (!m_parent)
         return;
     
-    if (diff == StyleDifference::Layout || diff == StyleDifference::Overflow) {
+    if (diff == StyleDifference::Layout || diff == StyleDifference::SimplifiedLayout) {
         RenderCounter::rendererStyleChanged(*this, oldStyle, m_style);
 
         // If the object already needs layout, then setNeedsLayout won't do
@@ -1048,16 +1057,16 @@ void RenderElement::styleDidChange(StyleDifference diff, const RenderStyle* oldS
         // the position style.
         if (needsLayout() && oldStyle && oldStyle->position() != m_style.position())
             scheduleLayout(markContainingBlocksForLayout());
-    }
 
-    setNeedsLayoutForStyleDifference(diff, oldStyle);
-
-    if (isOutOfFlowPositioned() && oldStyle && oldStyle->isOriginalDisplayBlockType() != style().isOriginalDisplayBlockType()) {
-        if (CheckedPtr ancestor = RenderObject::containingBlockForPositionType(PositionType::Static, *this)) {
-            ancestor->setNeedsLayout();
-            ancestor->setOutOfFlowChildNeedsStaticPositionLayout();
-        }
-    }
+        if (diff == StyleDifference::Layout)
+            setNeedsLayoutAndPrefWidthsRecalc();
+        else
+            setNeedsSimplifiedNormalFlowLayout();
+    } else if (diff == StyleDifference::SimplifiedLayoutAndPositionedMovement) {
+        setNeedsPositionedMovementLayout(oldStyle);
+        setNeedsSimplifiedNormalFlowLayout();
+    } else if (diff == StyleDifference::LayoutPositionedMovementOnly)
+        setNeedsPositionedMovementLayout(oldStyle);
 
     // Don't check for repaint here; we need to wait until the layer has been
     // updated by subclasses before we know if we have to repaint (in setStyle()).
@@ -1215,29 +1224,9 @@ void RenderElement::clearChildNeedsLayout()
     setOutOfFlowChildNeedsStaticPositionLayoutBit(false);
 }
 
-void RenderElement::setNeedsLayoutForStyleDifference(StyleDifference diff, const RenderStyle* oldStyle)
-{
-    if (diff == StyleDifference::Layout)
-        setNeedsLayoutAndPrefWidthsRecalc();
-    else if (diff == StyleDifference::LayoutPositionedMovementOnly)
-        setNeedsPositionedMovementLayout(oldStyle);
-    else if (diff == StyleDifference::OverflowAndPositionedMovement) {
-        setNeedsPositionedMovementLayout(oldStyle);
-        setNeedsLayoutForOverflowChange();
-    } else if (diff == StyleDifference::Overflow)
-        setNeedsLayoutForOverflowChange();
-}
-
-void RenderElement::setNeedsLayoutForOverflowChange()
+void RenderElement::setNeedsSimplifiedNormalFlowLayout()
 {
     ASSERT(!isSetNeedsLayoutForbidden());
-    // FIXME: Eagerly preventing simplified layout due to the (unlikely) possibility of a size change
-    // is possibly wasteful. We could in theory detect an actual change during layout, and
-    // unwind back to restart proper layout.
-    if (overflowChangesMayAffectLayout()) {
-        setNeedsLayout();
-        return;
-    }
     if (needsSimplifiedNormalFlowLayout())
         return;
     setNeedsSimplifiedNormalFlowLayoutBit(true);
