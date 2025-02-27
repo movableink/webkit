@@ -256,7 +256,7 @@ private:
     void platformLoad(const String& path, CompletionHandler<void(const String&)>&&);
     void platformPickColorFromScreen(CompletionHandler<void(const std::optional<WebCore::Color>&)>&&);
 
-#if PLATFORM(MAC) || PLATFORM(GTK)
+#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(WIN)
     bool platformCanAttach(bool webProcessCanAttach);
 #elif PLATFORM(WPE)
     bool platformCanAttach(bool) { return false; }
