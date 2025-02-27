@@ -2773,8 +2773,6 @@ css3/viewport-percentage-lengths/vh-auto-size.html [ ImageOnlyFailure ]
 # This test relies on the ::selection pseudoclass which isn't honored on iOS.
 webkit.org/b/169517 fast/text/complex-text-selection.html [ ImageOnlyFailure ]
 
-webkit.org/b/124933 svg/animations/getCurrentTime-pause-unpause.html [ Pass Failure ]
-
 webkit.org/b/172610 media/ios/autoplay-only-in-main-document.html [ Skip ]
 webkit.org/b/172672 fast/events/before-unload-returnValue.html [ Skip ]
 
