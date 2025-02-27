@@ -7684,6 +7684,22 @@ bool Document::hasSVGRootNode() const
     return documentElement() && documentElement()->hasTagName(SVGNames::svgTag);
 }
 
+#if HAVE(SUPPORT_HDR_DISPLAY)
+bool Document::canDrawHDRContent() const
+{
+    if (!(settings().supportHDRDisplayEnabled() || settings().canvasPixelFormatEnabled()))
+        return false;
+
+    if (!hasPaintedHDRContent())
+        return false;
+
+    if (RefPtr frameView = view())
+        return screenSupportsHighDynamicRange(frameView.get());
+
+    return false;
+}
+#endif
+
 template <CollectionType collectionType>
 Ref<HTMLCollection> Document::ensureCachedCollection()
 {

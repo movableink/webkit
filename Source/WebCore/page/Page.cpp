@@ -4223,16 +4223,6 @@ void Page::setFullscreenAutoHideDuration(Seconds duration)
     });
 }
 
-#if HAVE(SUPPORT_HDR_DISPLAY)
-bool Page::canDrawHDRContent() const
-{
-    if (!(m_settings->supportHDRDisplayEnabled() || m_settings->canvasPixelFormatEnabled()))
-        return false;
-
-    return screenSupportsHighDynamicRange();
-}
-#endif
-
 Document* Page::outermostFullscreenDocument() const
 {
 #if ENABLE(FULLSCREEN_API)

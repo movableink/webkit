@@ -151,7 +151,7 @@ public:
         : m_backing(inBacking)
     {
 #if HAVE(SUPPORT_HDR_DISPLAY)
-        if (m_backing.renderer().page().canDrawHDRContent()) {
+        if (m_backing.renderer().document().canDrawHDRContent()) {
             m_hdrContent = RequestState::Unknown;
             m_isReplacedElementWithHDR = RequestState::Unknown;
         }

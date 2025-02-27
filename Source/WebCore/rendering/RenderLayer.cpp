@@ -406,7 +406,7 @@ RenderLayer::~RenderLayer()
 RenderLayer::PaintedContentRequest::PaintedContentRequest(const RenderLayer& owningLayer)
 {
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (owningLayer.page().canDrawHDRContent())
+    if (owningLayer.renderer().document().canDrawHDRContent())
         makePaintedHDRContentUnknown();
 #else
     UNUSED_PARAM(owningLayer);
@@ -5870,13 +5870,8 @@ void RenderLayer::determineNonLayerDescendantsPaintedContent(PaintedContentReque
 #if HAVE(SUPPORT_HDR_DISPLAY)
 bool RenderLayer::isReplacedElementWithHDR() const
 {
-    if (auto* imageDocument = dynamicDowncast<ImageDocument>(renderer().document())) {
-        if (RefPtr imageElement = imageDocument->imageElement()) {
-            if (auto* cachedImage = imageElement->cachedImage())
-                return cachedImage->isHDR();
-        }
-        return false;
-    }
+    if (auto* imageDocument = dynamicDowncast<ImageDocument>(renderer().document()))
+        return imageDocument->hasPaintedHDRContent();
     return WebCore::isReplacedElementWithHDR(renderer());
 }
 #endif

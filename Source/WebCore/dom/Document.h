@@ -629,6 +629,12 @@ public:
     bool hasSVGRootNode() const;
     virtual bool isFrameSet() const { return false; }
 
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    void setHasPaintedHDRContent() { m_hasPaintedHDRContent = true; }
+    bool hasPaintedHDRContent() const { return m_hasPaintedHDRContent; }
+    bool canDrawHDRContent() const;
+#endif
+
     static constexpr ptrdiff_t documentClassesMemoryOffset() { return OBJECT_OFFSETOF(Document, m_documentClasses); }
     static auto isHTMLDocumentClassFlag() { return enumToUnderlyingType(DocumentClass::HTML); }
 
@@ -2659,6 +2665,10 @@ private:
 
 #if ENABLE(MEDIA_STREAM)
     bool m_hasHadCaptureMediaStreamTrack { false };
+#endif
+
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    bool m_hasPaintedHDRContent { false };
 #endif
 
     bool m_hasViewTransitionPseudoElementTree { false };
