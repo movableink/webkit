@@ -5283,7 +5283,7 @@ bool OMGIRGenerator::canInline(FunctionSpaceIndex functionIndexSpace) const
     if (m_inlineRoot->m_inlinedBytes.value() >= Options::maximumWasmCallerSizeForInlining())
         return false;
 
-    if (m_inlineDepth > 1 && !StackCheck(Thread::current().stack(), StackBounds::DefaultReservedZone * 2).isSafeToRecurse())
+    if (m_inlineDepth > 1 && !StackCheck(Thread::currentSingleton().stack(), StackBounds::DefaultReservedZone * 2).isSafeToRecurse())
         return false;
 
     // FIXME: There's no fundamental reason we can't inline these including imports.

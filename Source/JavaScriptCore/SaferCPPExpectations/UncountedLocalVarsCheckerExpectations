@@ -1,6 +1,4 @@
 API/JSCallbackObjectFunctions.h
-API/JSContext.mm
-API/JSContextRef.cpp
 API/JSValue.mm
 API/JSWrapperMap.mm
 API/tests/testapi.cpp
@@ -62,7 +60,6 @@ ftl/FTLPatchpointExceptionHandle.cpp
 heap/ConservativeRoots.cpp
 heap/HeapHelperPool.cpp
 heap/JITStubRoutineSet.cpp
-heap/MachineStackMarker.cpp
 inspector/AsyncStackTrace.cpp
 inspector/InspectorBackendDispatcher.cpp
 inspector/JSJavaScriptCallFrame.cpp
@@ -94,13 +91,11 @@ runtime/FileBasedFuzzerAgent.cpp
 runtime/HasOwnPropertyCache.h
 runtime/HashMapHelper.h
 runtime/InferredValue.h
-runtime/InitializeThreading.cpp
 runtime/JSCJSValue.cpp
 runtime/JSCJSValueInlines.h
 runtime/JSFinalizationRegistry.cpp
 runtime/JSFunction.cpp
 runtime/JSGlobalObject.cpp
-runtime/JSLock.cpp
 runtime/JSObject.cpp
 runtime/JSRunLoopTimer.cpp
 runtime/JSString.cpp
@@ -117,7 +112,6 @@ runtime/StructureInlines.h
 runtime/SymbolConstructor.cpp
 runtime/SymbolTable.h
 runtime/TypeSet.cpp
-runtime/VMEntryScope.cpp
 runtime/VMTraps.cpp
 runtime/WaiterListManager.h
 tools/JSDollarVM.cpp

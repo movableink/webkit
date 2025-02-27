@@ -99,7 +99,7 @@ ServiceWorkerContainer::ServiceWorkerContainer(ScriptExecutionContext* context, 
 
 ServiceWorkerContainer::~ServiceWorkerContainer()
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
 }
 
 void ServiceWorkerContainer::refEventTarget()
@@ -293,7 +293,7 @@ void ServiceWorkerContainer::updateRegistration(const URL& scopeURL, const URL& 
 
 void ServiceWorkerContainer::scheduleJob(std::unique_ptr<ServiceWorkerJob>&& job)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(m_swConnection);
     ASSERT(!isStopped());
 
@@ -393,7 +393,7 @@ void ServiceWorkerContainer::startMessages()
 
 void ServiceWorkerContainer::jobFailedWithException(ServiceWorkerJob& job, const Exception& exception)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT_WITH_MESSAGE(job.hasPromise() || job.data().type == ServiceWorkerJobType::Update, "Only soft updates have no promise");
 
     auto guard = makeScopeExit([this, &job] {
@@ -416,7 +416,7 @@ void ServiceWorkerContainer::jobFailedWithException(ServiceWorkerJob& job, const
 
 void ServiceWorkerContainer::queueTaskToFireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier identifier)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
 
     if (auto* registration = m_registrations.get(identifier))
         registration->queueTaskToFireUpdateFoundEvent();
@@ -424,7 +424,7 @@ void ServiceWorkerContainer::queueTaskToFireUpdateFoundEvent(ServiceWorkerRegist
 
 void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, ServiceWorkerRegistrationData&& data, ShouldNotifyWhenResolved shouldNotifyWhenResolved)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT_WITH_MESSAGE(job.hasPromise() || job.data().type == ServiceWorkerJobType::Update, "Only soft updates have no promise");
 
     if (job.data().type == ServiceWorkerJobType::Register) {
@@ -514,7 +514,7 @@ void ServiceWorkerContainer::notifyRegistrationIsSettled(const ServiceWorkerRegi
 
 void ServiceWorkerContainer::jobResolvedWithUnregistrationResult(ServiceWorkerJob& job, bool unregistrationResult)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(job.hasPromise());
 
     auto guard = makeScopeExit([this, &job] {
@@ -536,7 +536,7 @@ void ServiceWorkerContainer::jobResolvedWithUnregistrationResult(ServiceWorkerJo
 
 void ServiceWorkerContainer::startScriptFetchForJob(ServiceWorkerJob& job, FetchOptions::Cache cachePolicy)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
 
     CONTAINER_RELEASE_LOG("startScriptFetchForJob: Starting script fetch for job %" PRIu64, job.identifier().toUInt64());
 
@@ -553,7 +553,7 @@ void ServiceWorkerContainer::startScriptFetchForJob(ServiceWorkerJob& job, Fetch
 
 void ServiceWorkerContainer::jobFinishedLoadingScript(ServiceWorkerJob& job, WorkerFetchResult&& fetchResult)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
 
     CONTAINER_RELEASE_LOG("jobFinishedLoadingScript: Successfuly finished fetching script for job %" PRIu64, job.identifier().toUInt64());
 
@@ -562,7 +562,7 @@ void ServiceWorkerContainer::jobFinishedLoadingScript(ServiceWorkerJob& job, Wor
 
 void ServiceWorkerContainer::jobFailedLoadingScript(ServiceWorkerJob& job, const ResourceError& error, Exception&& exception)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT_WITH_MESSAGE(job.hasPromise() || job.data().type == ServiceWorkerJobType::Update, "Only soft updates have no promise");
 
     CONTAINER_RELEASE_LOG_ERROR("jobFinishedLoadingScript: Failed to fetch script for job %" PRIu64 ", error: %s", job.identifier().toUInt64(), error.localizedDescription().utf8().data());
@@ -587,7 +587,7 @@ void ServiceWorkerContainer::notifyFailedFetchingScript(ServiceWorkerJob& job, c
 
 void ServiceWorkerContainer::destroyJob(ServiceWorkerJob& job)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(m_jobMap.contains(job.identifier()));
     m_jobMap.remove(job.identifier());
 }
@@ -612,7 +612,7 @@ Ref<SWClientConnection> ServiceWorkerContainer::ensureProtectedSWClientConnectio
 
 void ServiceWorkerContainer::addRegistration(ServiceWorkerRegistration& registration)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
 
     ensureSWClientConnection().addServiceWorkerRegistrationInServer(registration.identifier());
     m_registrations.add(registration.identifier(), registration);
@@ -620,7 +620,7 @@ void ServiceWorkerContainer::addRegistration(ServiceWorkerRegistration& registra
 
 void ServiceWorkerContainer::removeRegistration(ServiceWorkerRegistration& registration)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
 
     m_swConnection->removeServiceWorkerRegistrationInServer(registration.identifier());
     m_registrations.remove(registration.identifier());
@@ -695,7 +695,7 @@ void ServiceWorkerContainer::getNotifications(const URL& serviceWorkerRegistrati
 
 void ServiceWorkerContainer::queueTaskToDispatchControllerChangeEvent()
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
 
     queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().controllerchangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
@@ -718,7 +718,7 @@ void ServiceWorkerContainer::stop()
 
 ServiceWorkerOrClientIdentifier ServiceWorkerContainer::contextIdentifier()
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(scriptExecutionContext());
     if (RefPtr serviceWorkerGlobal = dynamicDowncast<ServiceWorkerGlobalScope>(*scriptExecutionContext()))
         return serviceWorkerGlobal->thread().identifier();

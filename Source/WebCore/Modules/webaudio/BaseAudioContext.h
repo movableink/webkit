@@ -185,7 +185,7 @@ public:
     //
     
     void setAudioThread(Thread& thread) { m_audioThread = &thread; } // FIXME: check either not initialized or the same
-    bool isAudioThread() const { return m_audioThread == &Thread::current(); }
+    bool isAudioThread() const { return m_audioThread == &Thread::currentSingleton(); }
 
     // Returns true only after the audio thread has been started and then shutdown.
     bool isAudioThreadFinished() const { return m_isAudioThreadFinished; }

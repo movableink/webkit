@@ -1351,7 +1351,7 @@ auto Heap::runCurrentPhase(GCConductor conn, CurrentThreadState* currentThreadSt
 {
     checkConn(conn);
     m_currentThreadState = currentThreadState;
-    m_currentThread = &Thread::current();
+    m_currentThread = &Thread::currentSingleton();
     
     if (conn == GCConductor::Mutator)
         sanitizeStackForVM(vm());
@@ -1684,9 +1684,9 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
     }
         
     {
-        auto* previous = Thread::current().setCurrentAtomStringTable(nullptr);
+        auto* previous = Thread::currentSingleton().setCurrentAtomStringTable(nullptr);
         auto scopeExit = makeScopeExit([&] {
-            Thread::current().setCurrentAtomStringTable(previous);
+            Thread::currentSingleton().setCurrentAtomStringTable(previous);
         });
 
         if (vm().typeProfiler())
@@ -2282,7 +2282,7 @@ Heap::Ticket Heap::requestCollection(GCRequest request)
     stopIfNecessary();
     
     ASSERT(vm().currentThreadIsHoldingAPILock());
-    RELEASE_ASSERT(vm().atomStringTable() == Thread::current().atomStringTable());
+    RELEASE_ASSERT(vm().atomStringTable() == Thread::currentSingleton().atomStringTable());
     
     Locker locker { *m_threadLock };
     // We may be able to steal the conn. That only works if the collector is definitely not running

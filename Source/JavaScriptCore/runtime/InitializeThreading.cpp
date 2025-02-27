@@ -119,7 +119,7 @@ void initialize()
         AssertNoGC::initialize();
 
         initializeSuperSampler();
-        Thread& thread = Thread::current();
+        auto& thread = Thread::currentSingleton();
         thread.setSavedLastStackTop(thread.stack().origin());
 
         NativeCalleeRegistry::initialize();

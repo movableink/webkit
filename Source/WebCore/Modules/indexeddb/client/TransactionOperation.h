@@ -139,7 +139,7 @@ private:
     std::optional<IDBResourceIdentifier> cursorIdentifier() const { return m_cursorIdentifier; }
     IndexedDB::IndexRecordType indexRecordType() const { return m_indexRecordType; }
 
-    Ref<Thread> m_originThread { Thread::current() };
+    Ref<Thread> m_originThread { Thread::currentSingleton() };
     RefPtr<IDBRequest> m_idbRequest;
     bool m_nextRequestCanGoToServer { true };
     bool m_didComplete { false };

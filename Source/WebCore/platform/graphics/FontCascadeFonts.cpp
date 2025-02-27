@@ -111,7 +111,7 @@ FontCascadeFonts::FontCascadeFonts(RefPtr<FontSelector>&& fontSelector)
 {
 #if ASSERT_ENABLED
     if (!isMainThread())
-        m_thread = Thread::current();
+        m_thread = Thread::currentSingleton();
 #endif
 }
 
@@ -534,7 +534,7 @@ static RefPtr<GlyphPage> glyphPageFromFontRanges(unsigned pageNumber, const Font
 
 GlyphData FontCascadeFonts::glyphDataForCharacter(char32_t c, const FontCascadeDescription& description, FontVariant variant, ResolvedEmojiPolicy resolvedEmojiPolicy)
 {
-    ASSERT(m_thread ? m_thread->ptr() == &Thread::current() : isMainThread());
+    ASSERT(m_thread ? m_thread->ptr() == &Thread::currentSingleton() : isMainThread());
     ASSERT(variant != AutoVariant);
 
     if (variant != NormalVariant)

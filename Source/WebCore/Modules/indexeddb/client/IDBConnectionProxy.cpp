@@ -602,7 +602,7 @@ void removeItemsMatchingCurrentThread(HashMap<KeyType, ValueType>& map, Function
 {
     // FIXME: Revisit when introducing WebThread aware thread comparison.
     // https://bugs.webkit.org/show_bug.cgi?id=204345
-    map.removeIf([currentThread = &Thread::current(), cleanupFunction = WTFMove(cleanupFunction)](auto& entry) {
+    map.removeIf([currentThread = &Thread::currentSingleton(), cleanupFunction = WTFMove(cleanupFunction)](auto& entry) {
         if (&entry.value->originThread() == currentThread) {
             cleanupFunction(entry.value);
             return true;
@@ -616,7 +616,7 @@ void setMatchingItemsContextSuspended(ScriptExecutionContext& currentContext, Ha
 {
     // FIXME: Revisit when introducing WebThread aware thread comparison.
     // https://bugs.webkit.org/show_bug.cgi?id=204345
-    auto& currentThread = Thread::current();
+    auto& currentThread = Thread::currentSingleton();
     for (auto& iterator : map) {
         if (&iterator.value->originThread() != &currentThread)
             continue;
@@ -659,7 +659,7 @@ void IDBConnectionProxy::abortActivitiesForCurrentThread()
     {
         Locker locker { m_transactionOperationLock };
         for (auto& operation : m_activeOperations.values()) {
-            if (&operation->originThread() == &Thread::current())
+            if (&operation->originThread() == &Thread::currentSingleton())
                 activeOperationsForThread.add(operation);
         }
         for (auto& operation : activeOperationsForThread)

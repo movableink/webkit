@@ -45,7 +45,7 @@ void WorkQueueBase::platformInitialize(ASCIILiteral name, Type, QOS qos)
     m_runLoop = RunLoop::create(name, ThreadType::Unknown, qos).ptr();
     BinarySemaphore semaphore;
     m_runLoop->dispatch([&] {
-        m_threadID = Thread::current().uid();
+        m_threadID = Thread::currentSingleton().uid();
         semaphore.signal();
     });
     semaphore.wait();

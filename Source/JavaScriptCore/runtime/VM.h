@@ -293,7 +293,7 @@ public:
     // WebCore has a one-to-one mapping of threads to VMs;
     // create() should only be called once
     // on a thread, this is the 'default' VM (it uses the
-    // thread's default string uniquing table from Thread::current()).
+    // thread's default string uniquing table from Thread::currentSingleton()).
     enum class VMType { Default, APIContextGroup };
 
     struct ClientData {

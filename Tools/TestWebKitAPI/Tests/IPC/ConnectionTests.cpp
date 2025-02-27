@@ -469,7 +469,7 @@ public:
         // FIXME: Cannot wait for RunLoop to really exit.
         for (auto& runLoop : std::exchange(m_runLoops, { })) {
             dispatchSync(runLoop, [&] {
-                threadsToWait.append(Thread::current());
+                threadsToWait.append(Thread::currentSingleton());
                 RunLoop::current().stop();
             });
         }

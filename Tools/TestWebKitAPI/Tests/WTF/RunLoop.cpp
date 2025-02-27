@@ -268,7 +268,7 @@ TEST(WTF_RunLoop, Create)
     {
         BinarySemaphore semaphore;
         runLoop->dispatch([&] {
-            runLoopThread = &Thread::current();
+            runLoopThread = &Thread::currentSingleton();
             semaphore.signal();
         });
         semaphore.wait();

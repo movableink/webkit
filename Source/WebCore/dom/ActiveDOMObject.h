@@ -158,7 +158,7 @@ private:
     uint64_t m_pendingActivityInstanceCount { 0 };
 #if ASSERT_ENABLED
     bool m_suspendIfNeededWasCalled { false };
-    Ref<Thread> m_creationThread { Thread::current() };
+    Ref<Thread> m_creationThread { Thread::currentSingleton() };
 #endif
 
     friend class ActiveDOMObjectEventDispatchTask;

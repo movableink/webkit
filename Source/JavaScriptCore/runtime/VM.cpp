@@ -229,7 +229,7 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     , clientHeap(heap)
     , vmType(vmType)
     , deferredWorkTimer(DeferredWorkTimer::create(*this))
-    , m_atomStringTable(vmType == VMType::Default ? Thread::current().atomStringTable() : new AtomStringTable)
+    , m_atomStringTable(vmType == VMType::Default ? Thread::currentSingleton().atomStringTable() : new AtomStringTable)
     , emptyList(new ArgList)
     , machineCodeBytesPerBytecodeWordForBaselineJIT(makeUnique<SimpleStats>())
     , symbolImplToSymbolMap(*this)
@@ -275,14 +275,14 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     }
 
     updateSoftReservedZoneSize(Options::softReservedZoneSize());
-    setLastStackTop(Thread::current());
+    setLastStackTop(Thread::currentSingleton());
     stringSplitIndice.reserveInitialCapacity(256);
 
     JSRunLoopTimer::Manager::singleton().registerVM(*this);
 
     // Need to be careful to keep everything consistent here
     JSLockHolder lock(this);
-    AtomStringTable* existingEntryAtomStringTable = Thread::current().setCurrentAtomStringTable(m_atomStringTable);
+    AtomStringTable* existingEntryAtomStringTable = Thread::currentSingleton().setCurrentAtomStringTable(m_atomStringTable);
     structureStructure.setWithoutWriteBarrier(Structure::createStructure(*this));
     structureRareDataStructure.setWithoutWriteBarrier(StructureRareData::createStructure(*this, nullptr, jsNull()));
     stringStructure.setWithoutWriteBarrier(JSString::createStructure(*this, nullptr, jsNull()));
@@ -352,7 +352,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
     }
 
-    Thread::current().setCurrentAtomStringTable(existingEntryAtomStringTable);
+    Thread::currentSingleton().setCurrentAtomStringTable(existingEntryAtomStringTable);
     
     Gigacage::addPrimitiveDisableCallback(primitiveGigacageDisabledCallback, this);
 
@@ -971,7 +971,7 @@ Exception* VM::throwException(JSGlobalObject* globalObject, Exception* exception
 
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
     m_nativeStackTraceOfLastThrow = StackTrace::captureStackTrace(Options::unexpectedExceptionStackTraceLimit());
-    m_throwingThread = &Thread::current();
+    m_throwingThread = &Thread::currentSingleton();
 #endif
     return exceptionToThrow;
 }
@@ -1038,7 +1038,7 @@ void VM::updateStackLimits()
 {
     void* lastSoftStackLimit = m_softStackLimit;
 
-    const StackBounds& stack = Thread::current().stack();
+    const StackBounds& stack = Thread::currentSingleton().stack();
     size_t reservedZoneSize = Options::reservedZoneSize();
     // We should have already ensured that Options::reservedZoneSize() >= minimumReserveZoneSize at
     // options initialization time, and the option value should not have been changed thereafter.
@@ -1151,7 +1151,7 @@ void VM::popAllCheckpointOSRSideStateUntil(CallFrame* target)
 static void logSanitizeStack(VM& vm)
 {
     if (UNLIKELY(Options::verboseSanitizeStack())) {
-        auto& stackBounds = Thread::current().stack();
+        auto& stackBounds = Thread::currentSingleton().stack();
         dataLogLn("Sanitizing stack for VM = ", RawPointer(&vm), ", current stack pointer at ", RawPointer(currentStackPointer()), ", last stack top = ", RawPointer(vm.lastStackTop()), ", in stack range (", RawPointer(stackBounds.end()), ", ", RawPointer(stackBounds.origin()), "]");
     }
 }
@@ -1369,8 +1369,8 @@ void VM::drainMicrotasks()
 
 void sanitizeStackForVM(VM& vm)
 {
-    Ref thread = Thread::current();
-    auto& stack = thread->stack();
+    auto& thread = Thread::currentSingleton();
+    auto& stack = thread.stack();
     if (!vm.currentThreadIsHoldingAPILock())
         return; // vm.lastStackTop() may not be set up correctly if JSLock is not held.
 
@@ -1391,7 +1391,7 @@ size_t VM::committedStackByteCount()
     // When using the C stack, we don't know how many stack pages are actually
     // committed. So, we use the current stack usage as an estimate.
     uint8_t* current = std::bit_cast<uint8_t*>(currentStackPointer());
-    uint8_t* high = std::bit_cast<uint8_t*>(Thread::current().stack().origin());
+    uint8_t* high = std::bit_cast<uint8_t*>(Thread::currentSingleton().stack().origin());
     return high - current;
 #else
     return CLoopStack::committedByteCount();

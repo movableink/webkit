@@ -59,7 +59,7 @@ struct JSGlobalObject::GlobalPropertyInfo {
         , value(v)
         , attributes(a)
     {
-        ASSERT(Thread::current().stack().contains(this));
+        ASSERT(Thread::currentSingleton().stack().contains(this));
     }
 
     const Identifier identifier;

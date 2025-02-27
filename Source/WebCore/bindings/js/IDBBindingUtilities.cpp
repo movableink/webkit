@@ -531,14 +531,14 @@ class IDBSerializationContext {
 public:
     IDBSerializationContext()
 #if ASSERT_ENABLED
-        : m_threadUID(Thread::current().uid())
+        : m_threadUID(Thread::currentSingleton().uid())
 #endif
     {
     }
 
     ~IDBSerializationContext()
     {
-        ASSERT(m_threadUID == Thread::current().uid());
+        ASSERT(m_threadUID == Thread::currentSingleton().uid());
         if (!m_vm)
             return;
 
@@ -549,7 +549,7 @@ public:
 
     JSC::JSGlobalObject& globalObject()
     {
-        ASSERT(m_threadUID == Thread::current().uid());
+        ASSERT(m_threadUID == Thread::currentSingleton().uid());
 
         initializeVM();
         return *m_globalObject.get();

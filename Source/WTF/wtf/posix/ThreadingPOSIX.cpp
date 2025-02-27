@@ -450,7 +450,7 @@ bool Thread::signal(int signalNumber)
 
 auto Thread::suspend(const ThreadSuspendLocker&) -> Expected<void, PlatformSuspendError>
 {
-    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::current(), "We do not support suspending the current thread itself.");
+    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::currentSingleton(), "We do not support suspending the current thread itself.");
 #if OS(DARWIN)
     kern_return_t result = thread_suspend(m_platformThread);
     if (result != KERN_SUCCESS)
@@ -603,8 +603,8 @@ void Thread::destructTLS(void* data)
     _pthread_setspecific_direct(WTF_THREAD_DATA_KEY, thread);
     pthread_key_init_np(WTF_THREAD_DATA_KEY, &destructTLS);
 #endif
-    // Destructor of ClientData can rely on Thread::current() (e.g. AtomStringTable).
-    // We destroy it after re-setting Thread::current() so that we can ensure destruction
+    // Destructor of ClientData can rely on Thread::currentSingleton() (e.g. AtomStringTable).
+    // We destroy it after re-setting Thread::currentSingleton() so that we can ensure destruction
     // can still access to it.
     thread->m_clientData = nullptr;
 }

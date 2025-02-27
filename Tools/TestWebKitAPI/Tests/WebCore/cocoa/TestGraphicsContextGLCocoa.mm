@@ -607,12 +607,12 @@ TEST_P(AnyContextAttributeTest, FinishIsSignaled)
     std::atomic<uint32_t> signalThreadUID = 0;
     context->prepareForDisplayWithFinishedSignal([&signalled, &signalThreadUID] {
         signalled = true;
-        signalThreadUID = Thread::current().uid();
+        signalThreadUID = Thread::currentSingleton().uid();
     });
     while (!signalled)
         sleep(.1_s);
     EXPECT_TRUE(signalled);
-    EXPECT_NE(Thread::current().uid(), signalThreadUID);
+    EXPECT_NE(Thread::currentSingleton().uid(), signalThreadUID);
 }
 
 INSTANTIATE_TEST_SUITE_P(GraphicsContextGLCocoaTest,

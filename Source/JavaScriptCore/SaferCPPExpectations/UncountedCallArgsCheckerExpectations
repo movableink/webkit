@@ -3,8 +3,6 @@ API/JSCallbackConstructor.cpp
 API/JSCallbackObject.h
 API/JSCallbackObjectFunctions.h
 API/JSClassRef.cpp
-API/JSContext.mm
-API/JSContextRef.cpp
 API/JSObjectRef.cpp
 API/JSRetainPtr.h
 API/JSScript.mm
@@ -168,10 +166,8 @@ runtime/TypeProfiler.cpp
 runtime/TypeProfilerLog.cpp
 runtime/TypeSet.cpp
 runtime/VMTraps.cpp
-runtime/WaiterListManager.cpp
 runtime/Watchdog.cpp
 tools/FunctionOverrides.cpp
-tools/HeapVerifier.cpp
 tools/JSDollarVM.cpp
 wasm/WasmBBQJIT.cpp
 wasm/WasmBBQJIT64.cpp

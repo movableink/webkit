@@ -375,7 +375,7 @@ WASM_SLOW_PATH_DECL(trace)
 
     WasmOpcodeID opcodeID = pc->opcodeID();
     dataLogF("<%p> %p / %p: executing bc#%zu, %s, pc = %p\n",
-        &Thread::current(),
+        &Thread::currentSingleton(),
         CALLEE(),
         callFrame,
         static_cast<intptr_t>(CALLEE()->bytecodeOffset(pc)),
