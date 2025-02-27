@@ -335,6 +335,8 @@ public:
 
     virtual WebCore::FloatRect absoluteBoundingRectForSmartMagnificationAtPoint(WebCore::FloatPoint) const { return { }; }
 
+    virtual void frameViewLayoutOrVisualViewportChanged(const WebCore::IntRect&) { }
+
 protected:
     virtual double contentScaleFactor() const = 0;
     virtual bool platformPopulateEditorStateIfNeeded(EditorState&) const { return false; }

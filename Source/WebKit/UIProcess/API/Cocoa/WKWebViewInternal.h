@@ -42,6 +42,7 @@
 #import <variant>
 #import <wtf/BlockPtr.h>
 #import <wtf/CompletionHandler.h>
+#import <wtf/HashMap.h>
 #import <wtf/NakedPtr.h>
 #import <wtf/RefPtr.h>
 #import <wtf/RetainPtr.h>
@@ -156,6 +157,10 @@ class ViewGestureController;
 
 #if PLATFORM(MAC)
 @class WKTextFinderClient;
+#endif
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+@class WKPDFPageNumberIndicator;
 #endif
 
 @protocol _WKTextManipulationDelegate;
@@ -431,6 +436,10 @@ struct PerWebProcessState {
     RetainPtr<WKScrollGeometry> _currentScrollGeometry;
 
     BOOL _allowsMagnification;
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    std::pair<Markable<WebKit::PDFPluginIdentifier>, RetainPtr<WKPDFPageNumberIndicator>> _pdfPageNumberIndicator;
+#endif
 }
 
 - (BOOL)_isValid;
@@ -532,6 +541,16 @@ struct PerWebProcessState {
 #else
 - (UIVisualEffectView *)_screenTimeBlurredSnapshot;
 #endif
+#endif
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+
+- (void)_createPDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier withFrame:(CGRect)rect pageCount:(size_t)pageCount;
+- (void)_removePDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier;
+- (void)_updatePDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier withFrame:(CGRect)rect;
+- (void)_updatePDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier currentPage:(size_t)pageIndex;
+- (void)_removeAnyPDFPageNumberIndicator;
+
 #endif
 
 @property (nonatomic, setter=_setHasActiveNowPlayingSession:) BOOL _hasActiveNowPlayingSession;

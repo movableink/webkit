@@ -43,6 +43,7 @@
 #import "MessageSenderInlines.h"
 #import "NativeWebKeyboardEvent.h"
 #import "NavigationState.h"
+#import "PDFPluginIdentifier.h"
 #import "PageClient.h"
 #import "PaymentAuthorizationController.h"
 #import "PrintInfo.h"
@@ -1769,6 +1770,34 @@ FloatSize WebPageProxy::viewLayoutSize() const
 {
     return internals().viewportConfigurationViewLayoutSize;
 }
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+
+void WebPageProxy::createPDFPageNumberIndicator(PDFPluginIdentifier identifier, const IntRect& rect, size_t pageCount)
+{
+    if (RefPtr pageClient = this->pageClient())
+        pageClient->createPDFPageNumberIndicator(identifier, rect, pageCount);
+}
+
+void WebPageProxy::removePDFPageNumberIndicator(PDFPluginIdentifier identifier)
+{
+    if (RefPtr pageClient = this->pageClient())
+        pageClient->removePDFPageNumberIndicator(identifier);
+}
+
+void WebPageProxy::updatePDFPageNumberIndicatorLocation(PDFPluginIdentifier identifier, const IntRect& rect)
+{
+    if (RefPtr pageClient = this->pageClient())
+        pageClient->updatePDFPageNumberIndicatorLocation(identifier, rect);
+}
+
+void WebPageProxy::updatePDFPageNumberIndicatorCurrentPage(PDFPluginIdentifier identifier, size_t pageIndex)
+{
+    if (RefPtr pageClient = this->pageClient())
+        pageClient->updatePDFPageNumberIndicatorCurrentPage(identifier, pageIndex);
+}
+
+#endif
 
 #if ENABLE(DRAG_SUPPORT)
 

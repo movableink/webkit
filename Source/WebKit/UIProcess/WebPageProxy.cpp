@@ -7126,6 +7126,9 @@ void WebPageProxy::didCommitLoadForFrame(IPC::Connection& connection, FrameIdent
 #if ENABLE(PDF_HUD)
         protectedPageClient->removeAllPDFHUDs();
 #endif
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+        protectedPageClient->removeAnyPDFPageNumberIndicator();
+#endif
 #if ENABLE(GAMEPAD)
         resetRecentGamepadAccessState();
 #endif
@@ -11029,6 +11032,10 @@ void WebPageProxy::resetStateAfterProcessTermination(ProcessTerminationReason re
 #if ENABLE(PDF_HUD)
     if (RefPtr pageClient = this->pageClient())
         pageClient->removeAllPDFHUDs();
+#endif
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    if (RefPtr pageClient = this->pageClient())
+        pageClient->removeAnyPDFPageNumberIndicator();
 #endif
 
     if (reason != ProcessTerminationReason::NavigationSwap) {

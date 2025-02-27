@@ -1504,6 +1504,15 @@ bool WebChromeClient::shouldUseTiledBackingForFrameView(const LocalFrameView& fr
     return protectedPage()->drawingArea()->shouldUseTiledBackingForFrameView(frameView);
 }
 
+void WebChromeClient::frameViewLayoutOrVisualViewportChanged(const LocalFrameView& frameView)
+{
+    RefPtr page = protectedPage();
+    if (!page)
+        return;
+
+    page->frameViewLayoutOrVisualViewportChanged(frameView);
+}
+
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
 void WebChromeClient::isAnyAnimationAllowedToPlayDidChange(bool anyAnimationCanPlay)
 {

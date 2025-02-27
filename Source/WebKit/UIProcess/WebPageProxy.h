@@ -2332,6 +2332,13 @@ public:
     void removePDFHUD(PDFPluginIdentifier);
 #endif
 
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    void createPDFPageNumberIndicator(PDFPluginIdentifier, const WebCore::IntRect&, size_t pageCount);
+    void updatePDFPageNumberIndicatorLocation(PDFPluginIdentifier, const WebCore::IntRect&);
+    void updatePDFPageNumberIndicatorCurrentPage(PDFPluginIdentifier, size_t pageIndex);
+    void removePDFPageNumberIndicator(PDFPluginIdentifier);
+#endif
+
     Seconds mediaCaptureReportingDelay() const { return m_mediaCaptureReportingDelay; }
     void setMediaCaptureReportingDelay(Seconds captureReportingDelay) { m_mediaCaptureReportingDelay = captureReportingDelay; }
     size_t suspendMediaPlaybackCounter() { return m_suspendMediaPlaybackCounter; }

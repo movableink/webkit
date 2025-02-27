@@ -987,6 +987,8 @@
 		33AE61252B20F13B00E1C215 /* PDFKitSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 3178AF9720E2A7F80074DE94 /* PDFKitSPI.h */; };
 		33B5A80C2AFD298100A15D40 /* WebExtensionFrameParameters.h in Headers */ = {isa = PBXBuildFile; fileRef = 33B5A80B2AFD298100A15D40 /* WebExtensionFrameParameters.h */; };
 		33B5A80F2AFD5DE800A15D40 /* WebExtensionContextAPIWebNavigationCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33B5A80E2AFD5DE800A15D40 /* WebExtensionContextAPIWebNavigationCocoa.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
+		33E743E82D66C0AC00AC715E /* WKPDFPageNumberIndicator.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33E743E72D66C0AC00AC715E /* WKPDFPageNumberIndicator.mm */; };
+		33E743E92D66C0AC00AC715E /* WKPDFPageNumberIndicator.h in Headers */ = {isa = PBXBuildFile; fileRef = 33E743E62D66C0AC00AC715E /* WKPDFPageNumberIndicator.h */; };
 		33F6833E293FFA4B005C63C0 /* WebExtensionAPIWebNavigationEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = 33F6833D293FFA4B005C63C0 /* WebExtensionAPIWebNavigationEvent.h */; };
 		33F68340293FFB3F005C63C0 /* WebExtensionAPIWebNavigationEventCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33F6833F293FFB3F005C63C0 /* WebExtensionAPIWebNavigationEventCocoa.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		370F34A31829BE1E009027C8 /* WKNavigationData.h in Headers */ = {isa = PBXBuildFile; fileRef = 370F34A11829BE1E009027C8 /* WKNavigationData.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -5051,6 +5053,8 @@
 		33DAECEE2B9AAE91005C596E /* PDFDataDetectorOverlayController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PDFDataDetectorOverlayController.h; sourceTree = "<group>"; };
 		33DAECEF2B9AAE92005C596E /* PDFDataDetectorOverlayController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PDFDataDetectorOverlayController.mm; sourceTree = "<group>"; };
 		33E5A6B32C6F8F8D00F2CD04 /* ImageOptions.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = ImageOptions.serialization.in; sourceTree = "<group>"; };
+		33E743E62D66C0AC00AC715E /* WKPDFPageNumberIndicator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = WKPDFPageNumberIndicator.h; path = PDF/WKPDFPageNumberIndicator.h; sourceTree = "<group>"; };
+		33E743E72D66C0AC00AC715E /* WKPDFPageNumberIndicator.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = WKPDFPageNumberIndicator.mm; path = PDF/WKPDFPageNumberIndicator.mm; sourceTree = "<group>"; };
 		33EBE2852C98366200549FB9 /* PDFAnnotationTypeHelpers.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = PDFAnnotationTypeHelpers.h; path = PDF/PDFAnnotationTypeHelpers.h; sourceTree = "<group>"; tabWidth = 8; };
 		33EBE2872C9838F900549FB9 /* PDFAnnotationTypeHelpers.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = PDFAnnotationTypeHelpers.mm; path = PDF/PDFAnnotationTypeHelpers.mm; sourceTree = "<group>"; };
 		33F68335293FF6F5005C63C0 /* JSWebExtensionAPIWebNavigationEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSWebExtensionAPIWebNavigationEvent.h; sourceTree = "<group>"; };
@@ -16070,6 +16074,8 @@
 			children = (
 				DF84CEE3249AA21F009096F6 /* WKPDFHUDView.h */,
 				DF84CEE2249AA21F009096F6 /* WKPDFHUDView.mm */,
+				33E743E62D66C0AC00AC715E /* WKPDFPageNumberIndicator.h */,
+				33E743E72D66C0AC00AC715E /* WKPDFPageNumberIndicator.mm */,
 			);
 			name = PDF;
 			sourceTree = "<group>";
@@ -17940,6 +17946,7 @@
 				A15EEDE61E301CEE000069B0 /* WKPasswordView.h in Headers */,
 				A1798B49222E531D000764BD /* WKPaymentAuthorizationDelegate.h in Headers */,
 				51D7E0AD2356555E00A67D3A /* WKPDFConfiguration.h in Headers */,
+				33E743E92D66C0AC00AC715E /* WKPDFPageNumberIndicator.h in Headers */,
 				A1046EA12079263100F0C5D8 /* WKPDFView.h in Headers */,
 				7C135AA9173B0BCA00586AE2 /* WKPluginInformation.h in Headers */,
 				2DABA7741A817EE600EF0F1A /* WKPluginLoadPolicy.h in Headers */,
@@ -20464,6 +20471,7 @@
 				E502E4F82D4810EA00C3D56D /* WKMaterialHostingSupport.swift in Sources */,
 				07CB79982CE943E400199C49 /* WKNavigationDelegateAdapter.swift in Sources */,
 				DF84CEE4249AA24D009096F6 /* WKPDFHUDView.mm in Sources */,
+				33E743E82D66C0AC00AC715E /* WKPDFPageNumberIndicator.mm in Sources */,
 				E31869C42B1A7C2400571519 /* WKProcessExtension.mm in Sources */,
 				07AF79E12D693DD7004E8D3A /* WKScrollGeometryAdapter.swift in Sources */,
 				B62449482CF672D800CBB3CF /* WKSeparatedImageView.mm in Sources */,

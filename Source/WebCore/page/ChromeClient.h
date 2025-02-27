@@ -575,6 +575,8 @@ public:
 
     virtual bool shouldUseTiledBackingForFrameView(const LocalFrameView&) const { return false; }
 
+    virtual void frameViewLayoutOrVisualViewportChanged(const LocalFrameView&) { }
+
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     virtual void isAnyAnimationAllowedToPlayDidChange(bool /* anyAnimationCanPlay */) { };
 #endif

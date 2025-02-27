@@ -37,6 +37,7 @@
 #import "Logging.h"
 #import "MessageSenderInlines.h"
 #import "NativeWebKeyboardEvent.h"
+#import "PDFPluginBase.h"
 #import "PluginView.h"
 #import "PrintInfo.h"
 #import "RemoteLayerTreeDrawingArea.h"
@@ -6163,6 +6164,35 @@ void WebPage::didEndContextMenuInteraction()
 }
 
 #endif // USE(UICONTEXTMENU)
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+
+void WebPage::createPDFPageNumberIndicator(PDFPluginBase& plugin, const IntRect& boundingBox, size_t pageCount)
+{
+    auto addResult = m_pdfPlugInsWithPageNumberIndicator.add(plugin.identifier(), plugin);
+    if (addResult.isNewEntry)
+        send(Messages::WebPageProxy::CreatePDFPageNumberIndicator(plugin.identifier(), boundingBox, pageCount));
+}
+
+void WebPage::updatePDFPageNumberIndicatorLocation(PDFPluginBase& plugin, const IntRect& boundingBox)
+{
+    if (m_pdfPlugInsWithPageNumberIndicator.contains(plugin.identifier()))
+        send(Messages::WebPageProxy::UpdatePDFPageNumberIndicatorLocation(plugin.identifier(), boundingBox));
+}
+
+void WebPage::updatePDFPageNumberIndicatorCurrentPage(PDFPluginBase& plugin, size_t pageIndex)
+{
+    if (m_pdfPlugInsWithPageNumberIndicator.contains(plugin.identifier()))
+        send(Messages::WebPageProxy::UpdatePDFPageNumberIndicatorCurrentPage(plugin.identifier(), pageIndex));
+}
+
+void WebPage::removePDFPageNumberIndicator(PDFPluginBase& plugin)
+{
+    if (m_pdfPlugInsWithPageNumberIndicator.remove(plugin.identifier()))
+        send(Messages::WebPageProxy::RemovePDFPageNumberIndicator(plugin.identifier()));
+}
+
+#endif
 
 } // namespace WebKit
 

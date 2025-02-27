@@ -10348,6 +10348,17 @@ void WebPage::setPresentingApplicationAuditTokenAndBundleIdentifier(CoreIPCAudit
 }
 #endif
 
+void WebPage::frameViewLayoutOrVisualViewportChanged(const LocalFrameView& frameView)
+{
+#if ENABLE(PDF_PLUGIN)
+    Ref frame = frameView.frame();
+    if (RefPtr plugin = pluginViewForFrame(frame.ptr()))
+        plugin->frameViewLayoutOrVisualViewportChanged(frameView.unobscuredContentRect());
+#else
+    UNUSED_PARAM(frameView);
+#endif
+}
+
 } // namespace WebKit
 
 #undef WEBPAGE_RELEASE_LOG

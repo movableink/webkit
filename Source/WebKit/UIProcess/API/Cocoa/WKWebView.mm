@@ -48,6 +48,7 @@
 #import "MediaPlaybackState.h"
 #import "MediaUtilities.h"
 #import "NavigationState.h"
+#import "PDFPluginIdentifier.h"
 #import "PageClient.h"
 #import "PlatformWritingToolsUtilities.h"
 #import "ProcessTerminationReason.h"
@@ -78,6 +79,7 @@
 #import "WKNavigationDelegate.h"
 #import "WKNavigationInternal.h"
 #import "WKPDFConfiguration.h"
+#import "WKPDFPageNumberIndicator.h"
 #import "WKPDFView.h"
 #import "WKPreferencesInternal.h"
 #import "WKProcessPoolInternal.h"
@@ -3036,6 +3038,44 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     for (auto selector : changedSelectors)
         [self didChangeValueForKey:NSStringFromSelector(selector)];
 }
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+
+- (void)_createPDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier withFrame:(CGRect)rect pageCount:(size_t)pageCount
+{
+    [self _removePDFPageNumberIndicator:identifier];
+    RetainPtr indicator = adoptNS([[WKPDFPageNumberIndicator alloc] initWithFrame:rect view:self pageCount:pageCount]);
+    [self addSubview:indicator.get()];
+    _pdfPageNumberIndicator = std::make_pair(identifier, WTFMove(indicator));
+}
+
+- (void)_removePDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier
+{
+    if (_pdfPageNumberIndicator.first == identifier) {
+        RetainPtr indicator = std::exchange(_pdfPageNumberIndicator, std::make_pair(Markable<WebKit::PDFPluginIdentifier> { }, nullptr)).second;
+        [indicator removeFromSuperview];
+    }
+}
+
+- (void)_updatePDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier withFrame:(CGRect)rect
+{
+    if (_pdfPageNumberIndicator.first == identifier)
+        [_pdfPageNumberIndicator.second updatePosition:rect];
+}
+
+- (void)_updatePDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier currentPage:(size_t)pageIndex
+{
+    if (_pdfPageNumberIndicator.first == identifier)
+        [_pdfPageNumberIndicator.second setCurrentPageNumber:pageIndex];
+}
+
+- (void)_removeAnyPDFPageNumberIndicator
+{
+    if (auto pluginIdentifier = _pdfPageNumberIndicator.first)
+        [self _removePDFPageNumberIndicator:*pluginIdentifier];
+}
+
+#endif
 
 @end
 

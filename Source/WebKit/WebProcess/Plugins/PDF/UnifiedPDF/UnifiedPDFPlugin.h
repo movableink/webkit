@@ -310,6 +310,7 @@ private:
     void didAttachScrollingNode() final;
 
     bool geometryDidChange(const WebCore::IntSize&, const WebCore::AffineTransform&) override;
+    void visibilityDidChange(bool) override;
 
     RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const override;
 
@@ -528,6 +529,18 @@ private:
     void zoomOut() final;
     void resetZoom();
 #endif
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    WebCore::IntRect frameForPageNumberIndicatorInRootViewCoordinates() const;
+    bool pageNumberIndicatorEnabled() const;
+    bool shouldShowPageNumberIndicator() const;
+    void updatePageNumberIndicatorVisibility();
+    void updatePageNumberIndicatorLocation();
+    void updatePageNumberIndicatorCurrentPage(const std::optional<WebCore::IntRect>& unobscuredContentRectInRootView);
+    void updatePageNumberIndicator(const std::optional<WebCore::IntRect>& unobscuredContentRectInRootView = { });
+#endif
+
+    void frameViewLayoutOrVisualViewportChanged(const WebCore::IntRect&) final;
 
     bool supportsPasswordForm() const;
     void installAnnotationContainer();

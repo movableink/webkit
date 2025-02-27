@@ -5651,6 +5651,18 @@ PDFPluginHUDEnabled:
     WebCore:
       default: false
 
+PDFPluginPageNumberIndicatorEnabled:
+  type: bool
+  status: embedder
+  condition: ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: true
+    WebCore:
+      default: false
+
 PageAtRuleMarginDescriptorsEnabled:
   type: bool
   status: stable

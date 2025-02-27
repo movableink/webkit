@@ -566,12 +566,21 @@ public:
     void removePDFHUD(PDFPluginBase&);
 #endif
 
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    void createPDFPageNumberIndicator(PDFPluginBase&, const WebCore::IntRect&, size_t pageCount);
+    void updatePDFPageNumberIndicatorLocation(PDFPluginBase&, const WebCore::IntRect&);
+    void updatePDFPageNumberIndicatorCurrentPage(PDFPluginBase&, size_t pageIndex);
+    void removePDFPageNumberIndicator(PDFPluginBase&);
+#endif
+
 #if ENABLE(PDF_PLUGIN) && PLATFORM(MAC)
     void zoomPDFIn(PDFPluginIdentifier);
     void zoomPDFOut(PDFPluginIdentifier);
     void savePDF(PDFPluginIdentifier, CompletionHandler<void(const String&, const URL&, std::span<const uint8_t>)>&&);
     void openPDFWithPreview(PDFPluginIdentifier, CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&&);
 #endif
+
+    void frameViewLayoutOrVisualViewportChanged(const WebCore::LocalFrameView&);
 
 #if PLATFORM(COCOA)
     void willCommitLayerTree(RemoteLayerTreeTransaction&, WebCore::FrameIdentifier);
@@ -2537,6 +2546,9 @@ private:
 #endif
 #if ENABLE(PDF_HUD)
     HashMap<PDFPluginIdentifier, WeakPtr<PDFPluginBase>> m_pdfPlugInsWithHUD;
+#endif
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    HashMap<PDFPluginIdentifier, WeakPtr<PDFPluginBase>> m_pdfPlugInsWithPageNumberIndicator;
 #endif
 
     WTF::Function<void()> m_selectionChangedHandler;

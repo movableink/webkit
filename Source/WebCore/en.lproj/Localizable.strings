@@ -88,6 +88,9 @@
 /* Label to describe the number of files selected in a file upload control that allows multiple files */
 "%d files" = "%d files";
 
+/* Label for PDF page number indicator. */
+"%1$d of %2$d" = "%1$d of %2$d";
+
 /* Codec Level (Codec Strings) */
 "%d.%d" = "%d.%d";
 

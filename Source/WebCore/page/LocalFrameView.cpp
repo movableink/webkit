@@ -3250,6 +3250,9 @@ void LocalFrameView::layoutOrVisualViewportChanged()
         if (RefPtr scrollingCoordinator = this->scrollingCoordinator())
             scrollingCoordinator->frameViewVisualViewportChanged(*this);
     }
+
+    if (RefPtr page = m_frame->page())
+        page->chrome().client().frameViewLayoutOrVisualViewportChanged(*this);
 }
 
 void LocalFrameView::unobscuredContentSizeChanged()

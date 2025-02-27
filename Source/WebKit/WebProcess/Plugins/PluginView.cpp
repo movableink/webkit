@@ -905,6 +905,14 @@ void PluginView::viewGeometryDidChange()
     protectedPlugin()->geometryDidChange(size(), pluginToRootViewTransform);
 }
 
+void PluginView::frameViewLayoutOrVisualViewportChanged(const IntRect& unobscuredContentRect)
+{
+    if (!m_isInitialized || !parent())
+        return;
+
+    protectedPlugin()->frameViewLayoutOrVisualViewportChanged(unobscuredContentRect);
+}
+
 void PluginView::viewVisibilityDidChange()
 {
     if (!m_isInitialized || !parent())

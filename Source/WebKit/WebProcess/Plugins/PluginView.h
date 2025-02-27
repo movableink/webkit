@@ -163,6 +163,8 @@ public:
 
     WebCore::FloatRect absoluteBoundingRectForSmartMagnificationAtPoint(WebCore::FloatPoint) const;
 
+    void frameViewLayoutOrVisualViewportChanged(const WebCore::IntRect& unobscuredContentRect);
+
 private:
     PluginView(WebCore::HTMLPlugInElement&, const URL&, const String& contentType, bool shouldUseManualLoader, WebPage&);
     virtual ~PluginView();

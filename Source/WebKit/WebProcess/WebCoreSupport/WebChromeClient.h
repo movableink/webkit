@@ -392,6 +392,8 @@ private:
 
     bool shouldUseTiledBackingForFrameView(const WebCore::LocalFrameView&) const final;
 
+    void frameViewLayoutOrVisualViewportChanged(const WebCore::LocalFrameView&) final;
+
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     void isAnyAnimationAllowedToPlayDidChange(bool /* anyAnimationCanPlay */) final;
 #endif

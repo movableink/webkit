@@ -562,6 +562,13 @@ messages -> WebPageProxy {
     RemovePDFHUD(WebKit::PDFPluginIdentifier identifier)
 #endif
 
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    CreatePDFPageNumberIndicator(WebKit::PDFPluginIdentifier identifier, WebCore::IntRect boundingBox, size_t pageCount)
+    UpdatePDFPageNumberIndicatorLocation(WebKit::PDFPluginIdentifier identifier, WebCore::IntRect boundingBox)
+    UpdatePDFPageNumberIndicatorCurrentPage(WebKit::PDFPluginIdentifier identifier, size_t pageIndex)
+    RemovePDFPageNumberIndicator(WebKit::PDFPluginIdentifier identifier)
+#endif
+
     ConfigureLoggingChannel(String channelName, enum:uint8_t WTFLogChannelState state, enum:uint8_t WTFLogLevel level)
 
 #if PLATFORM(GTK)
