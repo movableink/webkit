@@ -2939,7 +2939,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
         }
 
         case CharCodeAtIntrinsic: {
-            if (argumentCountIncludingThis < 2)
+            if (argumentCountIncludingThis < 1)
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, Uncountable) || m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -2947,8 +2947,10 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
             insertChecks();
             VirtualRegister thisOperand = virtualRegisterForArgumentIncludingThis(0, registerOffset);
-            VirtualRegister indexOperand = virtualRegisterForArgumentIncludingThis(1, registerOffset);
-            Node* charCode = addToGraph(StringCharCodeAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), get(indexOperand));
+            Node* index = argumentCountIncludingThis == 1
+                ? jsConstant(jsNumber(0))
+                : get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
+            Node* charCode = addToGraph(StringCharCodeAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), index);
 
             setResult(charCode);
             return CallOptimizationResult::Inlined;
@@ -2958,7 +2960,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (!is64Bit())
                 return CallOptimizationResult::DidNothing;
 
-            if (argumentCountIncludingThis < 2)
+            if (argumentCountIncludingThis < 1)
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, Uncountable) || m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -2966,8 +2968,10 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
             insertChecks();
             VirtualRegister thisOperand = virtualRegisterForArgumentIncludingThis(0, registerOffset);
-            VirtualRegister indexOperand = virtualRegisterForArgumentIncludingThis(1, registerOffset);
-            Node* result = addToGraph(StringCodePointAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), get(indexOperand));
+            Node* index = argumentCountIncludingThis == 1
+                ? jsConstant(jsNumber(0))
+                : get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
+            Node* result = addToGraph(StringCodePointAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), index);
 
             setResult(result);
             return CallOptimizationResult::Inlined;
@@ -2996,7 +3000,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
         }
 
         case CharAtIntrinsic: {
-            if (argumentCountIncludingThis < 2)
+            if (argumentCountIncludingThis < 1)
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -3004,8 +3008,10 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
             insertChecks();
             VirtualRegister thisOperand = virtualRegisterForArgumentIncludingThis(0, registerOffset);
-            VirtualRegister indexOperand = virtualRegisterForArgumentIncludingThis(1, registerOffset);
-            Node* charCode = addToGraph(StringCharAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), get(indexOperand));
+            Node* index = argumentCountIncludingThis == 1
+                ? jsConstant(jsNumber(0))
+                : get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
+            Node* charCode = addToGraph(StringCharAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), index);
 
             setResult(charCode);
             return CallOptimizationResult::Inlined;
@@ -3015,7 +3021,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (!is64Bit())
                 return CallOptimizationResult::DidNothing;
 
-            if (argumentCountIncludingThis < 2)
+            if (argumentCountIncludingThis < 1)
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -3023,9 +3029,11 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
             insertChecks();
             VirtualRegister thisOperand = virtualRegisterForArgumentIncludingThis(0, registerOffset);
-            VirtualRegister indexOperand = virtualRegisterForArgumentIncludingThis(1, registerOffset);
+            Node* index = argumentCountIncludingThis == 1
+                ? jsConstant(jsNumber(0))
+                : get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
             bool hasOutOfBoundsExitSite = m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, OutOfBounds);
-            Node* node = addToGraph(StringAt, OpInfo(ArrayMode(Array::String, Array::Read, hasOutOfBoundsExitSite ? Array::OutOfBounds : Array::InBounds).asWord()), get(thisOperand), get(indexOperand));
+            Node* node = addToGraph(StringAt, OpInfo(ArrayMode(Array::String, Array::Read, hasOutOfBoundsExitSite ? Array::OutOfBounds : Array::InBounds).asWord()), get(thisOperand), index);
 
             setResult(node);
             return CallOptimizationResult::Inlined;
