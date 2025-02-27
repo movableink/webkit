@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "DocumentFullscreen.h"
 #include "Element.h"
+#include "FrameDestructionObserverInlines.h"
 #include "TreeScope.h"
 
 namespace WebCore {

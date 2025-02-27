@@ -32,6 +32,7 @@
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkLoadChecker.h"
 #include "NetworkProcess.h"
+#include "NetworkSchemeRegistry.h"
 #include "WebErrors.h"
 
 #define PING_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - PingLoad::" fmt, this, ##__VA_ARGS__)
