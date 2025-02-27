@@ -91,6 +91,7 @@
 #include "IdTargetObserverRegistry.h"
 #include "InputType.h"
 #include "InspectorInstrumentation.h"
+#include "JSCustomElementRegistry.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSLazyEventListener.h"
 #include "KeyboardEvent.h"
@@ -160,6 +161,7 @@
 #include "XMLNSNames.h"
 #include "XMLNames.h"
 #include "markup.h"
+#include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSONObject.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
@@ -3267,7 +3269,9 @@ ExceptionOr<ShadowRoot&> Element::attachShadow(const ShadowRootInit& init, Custo
         }
         return Exception { ExceptionCode::NotSupportedError };
     }
-    RefPtr registry = init.customElements;
+    RefPtr<CustomElementRegistry> registry;
+    if (auto* wrapper = jsDynamicCast<JSCustomElementRegistry*>(init.customElements))
+        registry = &wrapper->wrapped();
     auto scopedRegistry = ShadowRoot::ScopedCustomElementRegistry::No;
     if (registryKind == CustomElementRegistryKind::Null) {
         ASSERT(!registry);
@@ -3300,7 +3304,7 @@ ExceptionOr<ShadowRoot&> Element::attachDeclarativeShadow(ShadowRootMode mode, S
         clonable == ShadowRootClonable::Yes,
         serializable == ShadowRootSerializable::Yes,
         SlotAssignmentMode::Named,
-        nullptr,
+        JSC::jsUndefined(),
         referenceTarget,
     }, registryKind);
     if (exceptionOrShadowRoot.hasException())
