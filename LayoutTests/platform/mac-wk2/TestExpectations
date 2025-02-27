@@ -1997,3 +1997,6 @@ webkit.org/b/288660 [ Sonoma Release x86_64 ] media/media-hevc-video-as-img.html
 
 # webkit.org/b/280189 [EWS] imported/w3c/web-platform-tests/webcodecs/videoFrame-construction.any.html is a constant failure on Ventura+ Intel EWS
 [ Sonoma Release x86_64 ] imported/w3c/web-platform-tests/webcodecs/videoFrame-construction.any.html [ Skip ]
+
+# webkit.org/b/280186 [EWS] imported/w3c/web-platform-tests/html/canvas/element/manual/drawing-images-to-the-canvas/drawimage_canvas.html is failing on Ventura+ Intel EWS
+[ Sonoma Release x86_64 ] imported/w3c/web-platform-tests/html/canvas/element/manual/drawing-images-to-the-canvas/drawimage_canvas.html [ Skip ]
