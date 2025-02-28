@@ -37,7 +37,3 @@ WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/WebStorage/StorageAreaMap.cpp
 WebProcess/cocoa/VideoPresentationManager.mm
 WebProcess/cocoa/WebProcessCocoa.mm
-webpushd/ApplePushServiceConnection.mm
-webpushd/PushService.mm
-webpushd/PushServiceConnection.mm
-webpushd/WebPushDaemon.mm

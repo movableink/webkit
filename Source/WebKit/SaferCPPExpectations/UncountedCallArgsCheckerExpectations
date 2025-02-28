@@ -365,6 +365,3 @@ WebProcess/cocoa/TextTrackRepresentationCocoa.mm
 WebProcess/cocoa/UserMediaCaptureManager.cpp
 WebProcess/cocoa/VideoPresentationManager.mm
 WebProcess/cocoa/WebProcessCocoa.mm
-webpushd/ApplePushServiceConnection.mm
-webpushd/PushService.h
-webpushd/WebPushDaemon.mm
