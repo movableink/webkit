@@ -549,6 +549,7 @@ struct PerWebProcessState {
 - (void)_removePDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier;
 - (void)_updatePDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier withFrame:(CGRect)rect;
 - (void)_updatePDFPageNumberIndicator:(WebKit::PDFPluginIdentifier)identifier currentPage:(size_t)pageIndex;
+- (void)_updatePDFPageNumberIndicatorIfNeeded;
 - (void)_removeAnyPDFPageNumberIndicator;
 
 #endif

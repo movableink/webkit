@@ -3064,6 +3064,12 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
         [_pdfPageNumberIndicator.second setCurrentPageNumber:pageIndex];
 }
 
+- (void)_updatePDFPageNumberIndicatorIfNeeded
+{
+    if (_pdfPageNumberIndicator.first)
+        [_pdfPageNumberIndicator.second updatePosition:self.bounds];
+}
+
 - (void)_removeAnyPDFPageNumberIndicator
 {
     if (auto pluginIdentifier = _pdfPageNumberIndicator.first)

@@ -2322,6 +2322,10 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
         scrollPerfData->didScroll([self visibleRectInViewCoordinates]);
 
     [_contentView updateSelection];
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    [self _updatePDFPageNumberIndicatorIfNeeded];
+#endif
 }
 
 - (void)scrollViewDidZoom:(UIScrollView *)scrollView
@@ -2956,6 +2960,10 @@ static bool scrollViewCanScroll(UIScrollView *scrollView)
         auto callback = _visibleContentRectUpdateCallbacks.takeLast();
         callback();
     }
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    [self _updatePDFPageNumberIndicatorIfNeeded];
+#endif
 
     if ((timeNow - _timeOfRequestForVisibleContentRectUpdate) > delayBeforeNoVisibleContentsRectsLogging)
         WKWEBVIEW_RELEASE_LOG("%p -[WKWebView _updateVisibleContentRects:] finally ran %.2fs after being scheduled", self, (timeNow - _timeOfRequestForVisibleContentRectUpdate).value());

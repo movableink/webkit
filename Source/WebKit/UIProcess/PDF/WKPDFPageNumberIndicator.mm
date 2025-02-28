@@ -70,7 +70,6 @@ static constexpr Seconds indicatorMoveDuration { 0.3_s };
     self.userInteractionEnabled = NO;
     self.layer.allowsGroupOpacity = NO;
     self.layer.allowsGroupBlending = NO;
-    [self setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight];
 
     _backdropView = adoptNS([[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleLight]]);
     [_backdropView setFrame:self.bounds];
@@ -167,6 +166,8 @@ static constexpr Seconds indicatorMoveDuration { 0.3_s };
     auto animations = [view = retainPtr(self), point, &originMoved] {
         CGRect frame = [view frame];
         originMoved = !CGPointEqualToPoint(frame.origin, point);
+        if (!originMoved)
+            return;
         frame.origin = point;
         [view setFrame:frame];
     };
