@@ -128,7 +128,7 @@ WKRetainPtr<WKTypeRef> JavaScriptEvaluationResult::toWK()
     for (auto [vector, array] : std::exchange(m_arrays, { })) {
         for (auto identifier : vector) {
             if (RefPtr object = m_instantiatedObjects.get(identifier))
-                array->append(object.releaseNonNull());
+                Ref { array }->append(object.releaseNonNull());
         }
     }
     for (auto [map, dictionary] : std::exchange(m_dictionaries, { })) {
@@ -139,7 +139,7 @@ WKRetainPtr<WKTypeRef> JavaScriptEvaluationResult::toWK()
             RefPtr value = m_instantiatedObjects.get(valueIdentifier);
             if (!value)
                 continue;
-            dictionary->add(key->string(), WTFMove(value));
+            Ref { dictionary }->add(key->string(), WTFMove(value));
         }
     }
     return WebKit::toAPI(std::exchange(m_instantiatedObjects, { }).take(m_root).get());
