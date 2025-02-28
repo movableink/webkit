@@ -366,6 +366,9 @@ private:
 #if PLATFORM(MAC)
     void updateActivePages(const String& name, const Vector<String>& activePagesOrigins, CoreIPCAuditToken&&);
     void getProcessDisplayName(CoreIPCAuditToken&&, CompletionHandler<void(const String&)>&&);
+#if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
+    void checkInWebProcess(const CoreIPCAuditToken&);
+#endif
 #endif
 
 #if USE(LIBWEBRTC)

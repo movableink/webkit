@@ -1268,7 +1268,10 @@ NetworkProcessConnection& WebProcess::ensureNetworkProcessConnection()
         // The NSApplication initialization is being done in [NSApplication _accessibilityInitialize]
         LaunchServicesDatabaseManager::singleton().waitForDatabaseUpdate();
 #endif
-
+#if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
+        if (auto auditToken = auditTokenForSelf())
+            m_networkProcessConnection->protectedConnection()->send(Messages::NetworkConnectionToWebProcess::CheckInWebProcess(*auditToken), 0);
+#endif
         // This can be called during a WebPage's constructor, so wait until after the constructor returns to touch the WebPage.
         RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }] {
             for (auto& webPage : m_pageMap.values())
