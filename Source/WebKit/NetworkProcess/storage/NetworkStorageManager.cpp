@@ -1053,7 +1053,7 @@ void NetworkStorageManager::executeCommandForWritable(WebCore::FileSystemHandleI
     if (!handle)
         return completionHandler(FileSystemStorageError::Unknown);
 
-    completionHandler(handle->executeCommandForWritable(streamIdentifier, type, position, size, dataBytes, hasDataError));
+    handle->executeCommandForWritable(streamIdentifier, type, position, size, dataBytes, hasDataError, WTFMove(completionHandler));
 }
 
 void NetworkStorageManager::getHandleNames(WebCore::FileSystemHandleIdentifier identifier, CompletionHandler<void(Expected<Vector<String>, FileSystemStorageError>)>&& completionHandler)

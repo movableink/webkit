@@ -76,14 +76,15 @@ public:
 
     Expected<WebCore::FileSystemWritableFileStreamIdentifier, FileSystemStorageError> createWritable(bool keepExistingData);
     std::optional<FileSystemStorageError> closeWritable(WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCloseReason);
-    std::optional<FileSystemStorageError> executeCommandForWritable(WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError);
+    void executeCommandForWritable(WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError, CompletionHandler<void(std::optional<FileSystemStorageError>)>&&);
     Vector<WebCore::FileSystemWritableFileStreamIdentifier> writables() const;
 
 private:
     FileSystemStorageHandle(FileSystemStorageManager&, Type, String&& path, String&& name);
     Expected<WebCore::FileSystemHandleIdentifier, FileSystemStorageError> requestCreateHandle(IPC::Connection::UniqueID, Type, String&& name, bool createIfNecessary);
     bool isActiveSyncAccessHandle(WebCore::FileSystemSyncAccessHandleIdentifier);
-    std::optional<FileSystemStorageError> executeCommandForWritableInternal(WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError);
+    std::optional<FileSystemStorageError> executeCommandForWritableInternal(WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t>, bool hasDataError);
+    std::optional<size_t> computeCommandSpace(WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t>, bool hasDataError);
 
     WeakPtr<FileSystemStorageManager> m_manager;
     Type m_type;
