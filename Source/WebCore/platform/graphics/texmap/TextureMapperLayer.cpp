@@ -28,6 +28,7 @@
 #include "TextureMapper.h"
 #include "TextureMapperLayer3DRenderingContext.h"
 #include <wtf/MathExtras.h>
+#include <wtf/Scope.h>
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -399,8 +400,31 @@ void TextureMapperLayer::collectDamageRecursive(TextureMapperPaintOptions& optio
 void TextureMapperLayer::collectDamageSelfAndChildren(TextureMapperPaintOptions& options, Damage& damage)
 {
     collectDamageSelf(options, damage);
+
+    bool shouldClip = (m_state.masksToBounds || m_state.contentsRectClipsDescendants) && !m_state.preserves3D;
+    if (shouldClip) {
+        TransformationMatrix clipTransform;
+        clipTransform.translate(options.offset.width(), options.offset.height());
+        clipTransform.multiply(options.transform);
+        clipTransform.multiply(m_layerTransforms.combined);
+        if (m_state.contentsRectClipsDescendants)
+            options.textureMapper.beginClipWithoutApplying(clipTransform, m_state.contentsClippingRect.rect());
+        else {
+            clipTransform.translate(m_state.boundsOrigin.x(), m_state.boundsOrigin.y());
+            options.textureMapper.beginClipWithoutApplying(clipTransform, layerRect());
+        }
+
+        if (options.textureMapper.clipBounds().isEmpty()) {
+            options.textureMapper.endClipWithoutApplying();
+            return;
+        }
+    }
+
     for (auto* child : m_children)
         child->collectDamageRecursive(options, damage);
+
+    if (shouldClip)
+        options.textureMapper.endClip();
 }
 
 static FloatRect transformRectFromLayerToGlobalCoordinateSpace(const FloatRect& rect, const TransformationMatrix& transform, const TextureMapperPaintOptions& options)
@@ -420,12 +444,27 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
 {
     ASSERT(m_damagePropagation);
 
+    auto cleanup = WTF::makeScopeExit([&]() {
+        m_receivedDamage = { };
+        m_inferredLayerDamage = { };
+        m_inferredGlobalDamage = { };
+    });
+
     if (!m_state.visible || !m_state.contentsVisible)
         return;
 
     auto targetRect = layerRect();
     if (targetRect.isEmpty())
         return;
+
+    if ((!isFlattened() || m_flattenedLayer->needsUpdate())
+        && !m_state.backgroundColor.isValid()
+        && !m_backingStore
+        && (!m_state.solidColor.isValid() || !m_state.solidColor.isVisible())
+        && !m_contentsLayer) {
+        // Layers that have no visuals on their own should not contribute to the damage.
+        return;
+    }
 
     TransformationMatrix transform;
     transform.translate(options.offset.width(), options.offset.height());
@@ -438,13 +477,14 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
     // Inferred damage always takes precedence over any other kind of damage as it stores
     // the damage that is a result of the layer-level operations.
     if (!m_inferredGlobalDamage.isEmpty() || !m_inferredLayerDamage.isEmpty()) {
+        const auto& clipBounds = options.textureMapper.clipBounds();
         for (const auto& rect : m_inferredGlobalDamage.rects()) {
             ASSERT(!rect.isEmpty());
-            damage.add(rect);
+            damage.add(intersection(rect, clipBounds));
         }
         for (const auto& rect : m_inferredLayerDamage.rects()) {
             ASSERT(!rect.isEmpty());
-            damage.add(transformRectFromLayerToGlobalCoordinateSpace(rect, transform, options));
+            damage.add(intersection(transformRectFromLayerToGlobalCoordinateSpace(rect, transform, options), clipBounds));
         }
     } else if (m_contentsLayer) {
         // Layers with content layer are fully damaged if there's no explicit damage.
@@ -460,10 +500,6 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
             damage.add(transformRectFromLayerToGlobalCoordinateSpace(rect, transform, options));
         }
     }
-
-    m_receivedDamage = { };
-    m_inferredLayerDamage = { };
-    m_inferredGlobalDamage = { };
 }
 
 void TextureMapperLayer::collectDamageSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions& options, Damage& damage)

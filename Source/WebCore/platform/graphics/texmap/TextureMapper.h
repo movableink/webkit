@@ -83,9 +83,11 @@ public:
     BitmapTexture* currentSurface();
     void beginClip(const TransformationMatrix&, const FloatRoundedRect&);
     void beginClip(const TransformationMatrix&, const ClipPath&);
+    void beginClipWithoutApplying(const TransformationMatrix&, const FloatRect&);
     WEBCORE_EXPORT void beginPainting(FlipY = FlipY::No, BitmapTexture* = nullptr);
     WEBCORE_EXPORT void endPainting();
     void endClip();
+    void endClipWithoutApplying();
     IntRect clipBounds();
     IntSize maxTextureSize() const;
     void setDepthRange(double zNear, double zFar);

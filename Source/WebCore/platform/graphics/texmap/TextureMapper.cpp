@@ -1434,10 +1434,21 @@ void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const
     clipStack().applyIfNeeded();
 }
 
+void TextureMapper::beginClipWithoutApplying(const TransformationMatrix& modelViewMatrix, const FloatRect& targetRect)
+{
+    clipStack().push();
+    clipStack().intersect(enclosingIntRect(modelViewMatrix.mapRect(targetRect)));
+}
+
 void TextureMapper::endClip()
 {
     clipStack().pop();
     clipStack().applyIfNeeded();
+}
+
+void TextureMapper::endClipWithoutApplying()
+{
+    clipStack().pop();
 }
 
 IntRect TextureMapper::clipBounds()

@@ -4367,9 +4367,6 @@ imported/w3c/web-platform-tests/upgrade-insecure-requests/gen/iframe-blank-inher
 imported/w3c/web-platform-tests/upgrade-insecure-requests/gen/srcdoc-inherit.meta/unset/img-tag.https.html [ Failure Pass ]
 imported/w3c/web-platform-tests/upgrade-insecure-requests/gen/top.meta/unset/img-tag.https.html [ Failure Pass ]
 
-webkit.org/b/288468 platform/glib/damage/scrolling-fullscreen-002.html [ Failure ]
-webkit.org/b/288468 platform/glib/damage/scrolling-fullscreen-003.html [ Failure ]
-
 webkit.org/b/288471 platform/glib/damage/transform-3d-dynamic-addition.html [ Failure ]
 
 # End: Common failures between GTK and WPE.
