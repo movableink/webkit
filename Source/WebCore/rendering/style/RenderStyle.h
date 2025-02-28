@@ -1432,6 +1432,10 @@ public:
     inline void setPaddingBottom(Length&&);
     inline void setPaddingLeft(Length&&);
     inline void setPaddingRight(Length&&);
+    void setPaddingStart(Length&&);
+    void setPaddingEnd(Length&&);
+    void setPaddingBefore(Length&&);
+    void setPaddingAfter(Length&&);
 
     void setCursor(CursorType c) { m_inheritedFlags.cursor = static_cast<unsigned>(c); }
     void addCursor(RefPtr<StyleImage>&&, const std::optional<IntPoint>& hotSpot);

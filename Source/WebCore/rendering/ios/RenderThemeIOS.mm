@@ -1714,8 +1714,8 @@ bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& p
 bool RenderThemeIOS::paintListButton(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (paintListButtonForCatalyst(box, paintInfo, rect))
-        return false;
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintListButton(box, paintInfo, rect);
 #endif
 
     auto& context = paintInfo.context();

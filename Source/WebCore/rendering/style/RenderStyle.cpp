@@ -3363,6 +3363,64 @@ void RenderStyle::setMarginAfter(Length&& margin)
     }
 }
 
+void RenderStyle::setPaddingStart(Length&& margin)
+{
+    if (writingMode().isHorizontal()) {
+        if (writingMode().isInlineLeftToRight())
+            setPaddingLeft(WTFMove(margin));
+        else
+            setPaddingRight(WTFMove(margin));
+    } else {
+        if (writingMode().isInlineTopToBottom())
+            setPaddingTop(WTFMove(margin));
+        else
+            setPaddingBottom(WTFMove(margin));
+    }
+}
+
+void RenderStyle::setPaddingEnd(Length&& margin)
+{
+    if (writingMode().isHorizontal()) {
+        if (writingMode().isInlineLeftToRight())
+            setPaddingRight(WTFMove(margin));
+        else
+            setPaddingLeft(WTFMove(margin));
+    } else {
+        if (writingMode().isInlineTopToBottom())
+            setPaddingBottom(WTFMove(margin));
+        else
+            setPaddingTop(WTFMove(margin));
+    }
+}
+
+void RenderStyle::setPaddingBefore(Length&& margin)
+{
+    switch (writingMode().blockDirection()) {
+    case FlowDirection::TopToBottom:
+        return setPaddingTop(WTFMove(margin));
+    case FlowDirection::BottomToTop:
+        return setPaddingBottom(WTFMove(margin));
+    case FlowDirection::LeftToRight:
+        return setPaddingLeft(WTFMove(margin));
+    case FlowDirection::RightToLeft:
+        return setPaddingRight(WTFMove(margin));
+    }
+}
+
+void RenderStyle::setPaddingAfter(Length&& margin)
+{
+    switch (writingMode().blockDirection()) {
+    case FlowDirection::TopToBottom:
+        return setPaddingBottom(WTFMove(margin));
+    case FlowDirection::BottomToTop:
+        return setPaddingTop(WTFMove(margin));
+    case FlowDirection::LeftToRight:
+        return setPaddingRight(WTFMove(margin));
+    case FlowDirection::RightToLeft:
+        return setPaddingLeft(WTFMove(margin));
+    }
+}
+
 TextEmphasisMark RenderStyle::textEmphasisMark() const
 {
     auto mark = static_cast<TextEmphasisMark>(m_rareInheritedData->textEmphasisMark);
