@@ -189,6 +189,53 @@ static RetainPtr<TestWKWebView> testShowsSystemScreenTimeBlockingView(bool shows
     return webView;
 }
 
+#if PLATFORM(MAC)
+static void testWebContentIsNotClickableShowingSystemScreenTimeBlockingView(bool showsSystemScreenTimeBlockingView)
+{
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration _setShowsSystemScreenTimeBlockingView:showsSystemScreenTimeBlockingView];
+
+    RetainPtr webView = webViewForScreenTimeTests(configuration.get());
+    RetainPtr observer = adoptNS([[BlockedStateObserver alloc] initWithWebView:webView.get()]);
+
+    [webView synchronouslyLoadHTMLString:
+    @"<!DOCTYPE html>"
+    "<html>"
+    "<head>"
+    "<style>"
+    "body, html { margin: 0; width: 100%; height: 100%; }"
+    "</style>"
+    "</head>"
+    "<body>"
+    "<script>"
+    "let mouseDownCounter = 0;"
+    "addEventListener('mousedown', function() { mouseDownCounter += 1; });"
+    "</script>"
+    "</body>"
+    "</html>"
+    ")"];
+
+    [webView waitForNextPresentationUpdate];
+
+    RetainPtr screenTimeController = [webView _screenTimeWebpageController];
+    [screenTimeController setURLIsBlocked:YES];
+    TestWebKitAPI::Util::run(&stateDidChange);
+
+    [webView sendClickAtPoint:NSMakePoint(300, 300)];
+    [webView waitForPendingMouseEvents];
+
+    stateDidChange = false;
+    [screenTimeController setURLIsBlocked:NO];
+    TestWebKitAPI::Util::run(&stateDidChange);
+
+    [webView sendClickAtPoint:NSMakePoint(300, 300)];
+    [webView waitForPendingMouseEvents];
+
+    int mouseDownCounter = [[webView objectByEvaluatingJavaScript:@"mouseDownCounter"] intValue];
+    EXPECT_EQ(mouseDownCounter, 1);
+}
+#endif
+
 TEST(ScreenTime, IsBlockedByScreenTimeTrue)
 {
     RetainPtr webView = webViewForScreenTimeTests();
@@ -485,6 +532,16 @@ TEST(ScreenTime, URLIsPictureInPictureMacos)
     TestWebKitAPI::Util::run(&hasVideoInPictureInPictureCalled);
     EXPECT_FALSE(hasVideoInPictureInPictureValue);
     EXPECT_FALSE([[webView _screenTimeWebpageController] URLIsPictureInPicture]);
+}
+
+TEST(ScreenTime, WebContentIsNotClickableBehindSystemScreenTimeBlockingView)
+{
+    testWebContentIsNotClickableShowingSystemScreenTimeBlockingView(true);
+}
+
+TEST(ScreenTime, WebContentIsNotClickableBehindBlurredBlockingView)
+{
+    testWebContentIsNotClickableShowingSystemScreenTimeBlockingView(false);
 }
 
 #endif

@@ -5777,6 +5777,10 @@ void WebViewImpl::nativeMouseEventHandlerInternal(NSEvent *event)
 {
     if (m_warningView)
         return;
+#if ENABLE(SCREEN_TIME)
+    if ([[m_view _screenTimeWebpageController] URLIsBlocked])
+        return;
+#endif
 
     nativeMouseEventHandler(event);
 }

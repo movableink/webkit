@@ -256,34 +256,6 @@ static void *screenTimeWebpageControllerBlockedKVOContext = &screenTimeWebpageCo
 @interface STWebpageController (Staging_138865295)
 @property (nonatomic, copy) NSString *profileIdentifier;
 @end
-#if PLATFORM(MAC)
-@interface WKSTVisualEffectView : NSVisualEffectView
-@end
-
-@implementation WKSTVisualEffectView
-
-- (void)mouseDown:(NSEvent *)event
-{
-}
-
-- (void)rightMouseDown:(NSEvent *)event
-{
-}
-
-- (void)mouseMoved:(NSEvent *)event
-{
-}
-
-- (void)mouseEntered:(NSEvent *)event
-{
-}
-
-- (void)mouseExited:(NSEvent *)event
-{
-}
-
-@end
-#endif
 #endif
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
@@ -526,7 +498,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
         if (wasBlockedByScreenTime != _isBlockedByScreenTime) {
             if (!_screenTimeBlurredSnapshot && ![_configuration _showsSystemScreenTimeBlockingView]) {
 #if PLATFORM(MAC)
-                _screenTimeBlurredSnapshot = adoptNS([[WKSTVisualEffectView alloc] init]);
+                _screenTimeBlurredSnapshot = adoptNS([[NSVisualEffectView alloc] init]);
                 [_screenTimeBlurredSnapshot setMaterial:NSVisualEffectMaterialUnderWindowBackground];
                 [_screenTimeBlurredSnapshot setBlendingMode:NSVisualEffectBlendingModeWithinWindow];
 #else
