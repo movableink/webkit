@@ -1573,6 +1573,14 @@ String WebPageProxy::presentingApplicationBundleIdentifier() const
     return { };
 }
 
+#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
+void WebPageProxy::initializeAccessibility()
+{
+    auto handleArray = SandboxExtension::createHandlesForMachLookup({ }, legacyMainFrameProcess().auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
+    protectedLegacyMainFrameProcess()->send(Messages::WebPage::InitializeAccessibility(WTFMove(handleArray)), webPageIDInMainFrameProcess());
+}
+#endif
+
 } // namespace WebKit
 
 #undef MESSAGE_CHECK_COMPLETION

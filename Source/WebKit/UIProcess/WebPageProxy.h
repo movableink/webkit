@@ -1418,6 +1418,10 @@ public:
     void accessibilitySettingsDidChange();
     void enableAccessibilityForAllProcesses();
 
+#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
+    void initializeAccessibility();
+#endif
+
     void windowScreenDidChange(WebCore::PlatformDisplayID);
     std::optional<WebCore::PlatformDisplayID> displayID() const { return m_displayID; }
 

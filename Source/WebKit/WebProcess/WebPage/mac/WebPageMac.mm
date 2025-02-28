@@ -121,6 +121,7 @@ void WebPage::platformInitializeAccessibility()
     // For performance reasons, we should have received the LS database before initializing NSApplication.
     ASSERT(LaunchServicesDatabaseManager::singleton().hasReceivedLaunchServicesDatabase());
 
+#if !ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
     // Need to initialize accessibility for VoiceOver to work when the WebContent process is using NSRunLoop.
     // Currently, it is also needed to allocate and initialize an NSApplication object.
     [NSApplication _accessibilityInitialize];
@@ -130,6 +131,8 @@ void WebPage::platformInitializeAccessibility()
     createMockAccessibilityElement(pid);
     if (protectedCorePage()->localMainFrame())
         accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
+#endif
+
 
     // Close Mach connection to Launch Services.
 #if HAVE(LS_SERVER_CONNECTION_STATUS_RELEASE_NOTIFICATIONS_MASK)
@@ -1061,6 +1064,29 @@ void WebPage::removePDFHUD(PDFPluginBase& plugin)
 }
 
 #endif // ENABLE(PDF_PLUGIN)
+
+#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
+void WebPage::initializeAccessibility(Vector<SandboxExtension::Handle>&& handles)
+{
+    auto extensions = WTF::compactMap(WTFMove(handles), [](SandboxExtension::Handle&& handle) -> RefPtr<SandboxExtension> {
+        auto extension = SandboxExtension::create(WTFMove(handle));
+        if (extension)
+            extension->consume();
+        return extension;
+    });
+
+    [NSApplication _accessibilityInitialize];
+
+    // Get the pid for the starting process.
+    pid_t pid = legacyPresentingApplicationPID();
+    createMockAccessibilityElement(pid);
+    if (protectedCorePage()->localMainFrame())
+        accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
+
+    for (auto& extension : extensions)
+        extension->revoke();
+}
+#endif
 
 } // namespace WebKit
 

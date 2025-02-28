@@ -28,6 +28,7 @@
 #include "APIObject.h"
 #include "MessageReceiver.h"
 #include "MessageSender.h"
+#include "SandboxExtension.h"
 #include <JavaScriptCore/InspectorFrontendChannel.h>
 #include <WebCore/BoxExtents.h>
 #include <WebCore/DictionaryPopupInfo.h>
@@ -792,6 +793,10 @@ public:
 #endif
     void enableAccessibilityForAllProcesses();
     void enableAccessibility();
+
+#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
+    void initializeAccessibility(Vector<SandboxExtension::Handle>&&);
+#endif
 
     void screenPropertiesDidChange();
 

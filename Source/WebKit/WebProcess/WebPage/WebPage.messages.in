@@ -502,6 +502,10 @@ messages -> WebPage WantsAsyncDispatchMessage {
     ResolveAccessibilityHitTestForTesting(WebCore::FrameIdentifier frameID, WebCore::IntPoint point) -> (String result)
     EnableAccessibility()
 
+#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
+    InitializeAccessibility(Vector<WebKit::SandboxExtensionHandle> handles);
+#endif
+
 #if PLATFORM(COCOA)
     WindowAndViewFramesChanged(struct WebKit::ViewWindowCoordinates coordinates)
     SetMainFrameIsScrollable(bool isScrollable)
