@@ -30,6 +30,7 @@
 
 #include "APISerializedScriptValue.h"
 #include "InspectorExtensionTypes.h"
+#include "JavaScriptEvaluationResult.h"
 #include "WebInspectorUIExtensionControllerProxy.h"
 #include <WebCore/ExceptionDetails.h>
 #include <wtf/UniqueRef.h>

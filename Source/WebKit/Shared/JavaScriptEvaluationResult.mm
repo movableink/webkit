@@ -26,13 +26,216 @@
 #import "config.h"
 #import "JavaScriptEvaluationResult.h"
 
-#import "APISerializedScriptValue.h"
+#include "APIArray.h"
+#include "APIDictionary.h"
+#include "APINumber.h"
+#include "APISerializedScriptValue.h"
+#include "APIString.h"
+#include "CoreIPCNumber.h"
+#include "WKSharedAPICast.h"
+#include <JavaScriptCore/JSContext.h>
+#include <JavaScriptCore/JSValue.h>
+#include <WebCore/ExceptionDetails.h>
+#include <WebCore/SerializedScriptValue.h>
+#include <wtf/RunLoop.h>
 
 namespace WebKit {
 
-RetainPtr<id> JavaScriptEvaluationResult::toID() const
+JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSObjectID root, HashMap<JSObjectID, Variant>&& map)
+    : m_map(WTFMove(map))
+    , m_root(root) { }
+
+RetainPtr<id> JavaScriptEvaluationResult::toID(Variant&& root)
 {
-    return API::SerializedScriptValue::deserialize(legacySerializedScriptValue()->internalRepresentation());
+    return WTF::switchOn(WTFMove(root), [] (NullType nullType) -> RetainPtr<id> {
+        switch (nullType) {
+        case NullType::NSNull:
+            return NSNull.null;
+        case NullType::NullPointer:
+            break;
+        }
+        return nullptr;
+    }, [] (bool value) -> RetainPtr<id> {
+        return value ? @YES : @NO;
+    }, [] (CoreIPCNumber&& value) -> RetainPtr<id> {
+        return value.toID();
+    }, [] (String&& value) -> RetainPtr<id> {
+        return (NSString *)value;
+    }, [] (Seconds value) -> RetainPtr<id> {
+        return [NSDate dateWithTimeIntervalSince1970:value.seconds()];
+    }, [&] (Vector<JSObjectID>&& vector) -> RetainPtr<id> {
+        RetainPtr array = adoptNS([[NSMutableArray alloc] initWithCapacity:vector.size()]);
+        m_nsArrays.append({ WTFMove(vector), array });
+        return array;
+    }, [&] (HashMap<JSObjectID, JSObjectID>&& map) -> RetainPtr<id> {
+        RetainPtr dictionary = adoptNS([[NSMutableDictionary alloc] initWithCapacity:map.size()]);
+        m_nsDictionaries.append({ WTFMove(map), dictionary });
+        return dictionary;
+    });
+}
+
+RefPtr<API::Object> JavaScriptEvaluationResult::toAPI(Variant&& root)
+{
+    return WTF::switchOn(WTFMove(root), [] (NullType) -> RefPtr<API::Object> {
+        return nullptr;
+    }, [] (bool value) -> RefPtr<API::Object> {
+        return API::Boolean::create(value);
+    }, [] (CoreIPCNumber&& value) -> RefPtr<API::Object> {
+        return API::Double::create([value.toID() doubleValue]);
+    }, [] (String&& value) -> RefPtr<API::Object> {
+        return API::String::create(value);
+    }, [] (Seconds value) -> RefPtr<API::Object> {
+        return API::Double::create(value.seconds());
+    }, [&] (Vector<JSObjectID>&& vector) -> RefPtr<API::Object> {
+        Ref array = API::Array::create();
+        m_arrays.append({ WTFMove(vector), array });
+        return { WTFMove(array) };
+    }, [&] (HashMap<JSObjectID, JSObjectID>&& map) -> RefPtr<API::Object> {
+        Ref dictionary = API::Dictionary::create();
+        m_dictionaries.append({ WTFMove(map), dictionary });
+        return { WTFMove(dictionary) };
+    });
+}
+
+RetainPtr<id> JavaScriptEvaluationResult::toID()
+{
+    for (auto [identifier, variant] : std::exchange(m_map, { }))
+        m_instantiatedNSObjects.add(identifier, toID(WTFMove(variant)));
+    for (auto [vector, array] : std::exchange(m_nsArrays, { })) {
+        for (auto identifier : vector) {
+            if (RetainPtr element = m_instantiatedNSObjects.get(identifier))
+                [array addObject:element.get()];
+        }
+    }
+    for (auto [map, dictionary] : std::exchange(m_nsDictionaries, { })) {
+        for (auto [keyIdentifier, valueIdentifier] : map) {
+            RetainPtr key = m_instantiatedNSObjects.get(keyIdentifier);
+            if (!key)
+                continue;
+            RetainPtr value = m_instantiatedNSObjects.get(valueIdentifier);
+            if (!value)
+                continue;
+            [dictionary setObject:value.get() forKey:key.get()];
+        }
+    }
+    return std::exchange(m_instantiatedNSObjects, { }).take(m_root);
+}
+
+WKRetainPtr<WKTypeRef> JavaScriptEvaluationResult::toWK()
+{
+    for (auto [identifier, variant] : std::exchange(m_map, { }))
+        m_instantiatedObjects.add(identifier, toAPI(WTFMove(variant)));
+    for (auto [vector, array] : std::exchange(m_arrays, { })) {
+        for (auto identifier : vector) {
+            if (RefPtr object = m_instantiatedObjects.get(identifier))
+                array->append(object.releaseNonNull());
+        }
+    }
+    for (auto [map, dictionary] : std::exchange(m_dictionaries, { })) {
+        for (auto [keyIdentifier, valueIdentifier] : map) {
+            RefPtr key = dynamicDowncast<API::String>(m_instantiatedObjects.get(keyIdentifier));
+            if (!key)
+                continue;
+            RefPtr value = m_instantiatedObjects.get(valueIdentifier);
+            if (!value)
+                continue;
+            dictionary->add(key->string(), WTFMove(value));
+        }
+    }
+    return WebKit::toAPI(std::exchange(m_instantiatedObjects, { }).take(m_root).get());
+}
+
+auto JavaScriptEvaluationResult::toVariant(id object) -> Variant
+{
+    if (!object)
+        return NullType::NullPointer;
+
+    if ([object isKindOfClass:NSNull.class])
+        return NullType::NSNull;
+
+    if ([object isKindOfClass:NSNumber.class]) {
+        if (CFNumberGetType((CFNumberRef)object) == kCFNumberCharType) {
+            if ([object isEqual:@YES])
+                return true;
+            if ([object isEqual:@NO])
+                return false;
+        }
+        return CoreIPCNumber((NSNumber *)object);
+    }
+
+    if ([object isKindOfClass:NSString.class])
+        return String((NSString *)object);
+
+    if ([object isKindOfClass:NSDate.class])
+        return Seconds([(NSDate *)object timeIntervalSince1970]);
+
+    if ([object isKindOfClass:NSArray.class]) {
+        Vector<JSObjectID> vector;
+        for (id element : (NSArray *)object)
+            vector.append(addObjectToMap(element));
+        return { WTFMove(vector) };
+    }
+
+    if ([object isKindOfClass:NSDictionary.class]) {
+        HashMap<JSObjectID, JSObjectID> map;
+        [(NSDictionary *)object enumerateKeysAndObjectsUsingBlock:[&](id key, id value, BOOL *) {
+            map.add(addObjectToMap(key), addObjectToMap(value));
+        }];
+        return { WTFMove(map) };
+    }
+
+    // This object has been null checked and came from JSC::valueToObject which only supports these types.
+    ASSERT_NOT_REACHED();
+    return NullType::NullPointer;
+}
+
+JSObjectID JavaScriptEvaluationResult::addObjectToMap(id object)
+{
+    if (!object) {
+        if (!m_nullObjectID) {
+            m_nullObjectID = JSObjectID::generate();
+            m_map.add(*m_nullObjectID, Variant { NullType::NullPointer });
+        }
+        return *m_nullObjectID;
+    }
+
+    auto it = m_objectsInMap.find(object);
+    if (it != m_objectsInMap.end())
+        return it->value;
+
+    auto identifier = JSObjectID::generate();
+    m_objectsInMap.set(object, identifier);
+    m_map.add(identifier, toVariant(object));
+    return identifier;
+}
+
+static std::optional<JSValueRef> roundTripThroughSerializedScriptValue(JSGlobalContextRef serializationContext, JSGlobalContextRef deserializationContext, JSValueRef value)
+{
+    if (RefPtr serialized = WebCore::SerializedScriptValue::create(serializationContext, value, nullptr))
+        return serialized->deserialize(deserializationContext, nullptr);
+    return std::nullopt;
+}
+
+static RetainPtr<id> convertToObjC(JSGlobalContextRef context, JSValueRef value)
+{
+    return [JSValue valueWithJSValueRef:value inContext:[JSContext contextWithJSGlobalContextRef:context]].toObject;
+}
+
+Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> JavaScriptEvaluationResult::extract(JSGlobalContextRef context, JSValueRef value)
+{
+    JSRetainPtr deserializationContext = API::SerializedScriptValue::deserializationContext();
+
+    auto result = roundTripThroughSerializedScriptValue(context, deserializationContext.get(), value);
+    if (!result)
+        return makeUnexpected(std::nullopt);
+    return { JavaScriptEvaluationResult { deserializationContext.get(), *result } };
+}
+
+JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)
+    : m_root(addObjectToMap(convertToObjC(context, value).get()))
+{
+    m_objectsInMap.clear();
+    m_nullObjectID = std::nullopt;
 }
 
 }

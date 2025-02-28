@@ -27,6 +27,7 @@
 
 #include "APIObject.h"
 #include "WKRetainPtr.h"
+#include <JavaScriptCore/JSRetainPtr.h>
 #include <WebCore/CryptoKey.h>
 #include <WebCore/SerializedScriptValue.h>
 #include <wtf/RefPtr.h>
@@ -74,6 +75,7 @@ public:
 #if PLATFORM(COCOA) && defined(__OBJC__)
     static id deserialize(WebCore::SerializedScriptValue&);
     static RefPtr<SerializedScriptValue> createFromNSObject(id);
+    static JSRetainPtr<JSGlobalContextRef> deserializationContext();
 #endif
 
 #if USE(GLIB)

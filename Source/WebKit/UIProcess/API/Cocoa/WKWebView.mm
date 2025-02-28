@@ -299,12 +299,15 @@ SOFT_LINK_OPTIONAL(libAccessibility, _AXSReduceMotionAutoplayAnimatedImagesEnabl
 #define THROW_IF_SUSPENDED if (UNLIKELY(_page && _page->isSuspended())) \
     [NSException raise:NSInternalInconsistencyException format:@"The WKWebView is suspended"]
 
-RetainPtr<NSError> nsErrorFromExceptionDetails(const WebCore::ExceptionDetails& details)
+RetainPtr<NSError> nsErrorFromExceptionDetails(const std::optional<WebCore::ExceptionDetails>& details)
 {
+    if (!details)
+        return createNSError(WKErrorJavaScriptResultTypeIsUnsupported);
+
     auto userInfo = adoptNS([[NSMutableDictionary alloc] init]);
 
     WKErrorCode errorCode;
-    switch (details.type) {
+    switch (details->type) {
     case WebCore::ExceptionDetails::Type::InvalidTargetFrame:
         errorCode = WKErrorJavaScriptInvalidFrameTarget;
         break;
@@ -317,12 +320,12 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const WebCore::ExceptionDetails& 
     }
 
     [userInfo setObject:localizedDescriptionForErrorCode(errorCode) forKey:NSLocalizedDescriptionKey];
-    [userInfo setObject:details.message forKey:_WKJavaScriptExceptionMessageErrorKey];
-    [userInfo setObject:@(details.lineNumber) forKey:_WKJavaScriptExceptionLineNumberErrorKey];
-    [userInfo setObject:@(details.columnNumber) forKey:_WKJavaScriptExceptionColumnNumberErrorKey];
+    [userInfo setObject:details->message forKey:_WKJavaScriptExceptionMessageErrorKey];
+    [userInfo setObject:@(details->lineNumber) forKey:_WKJavaScriptExceptionLineNumberErrorKey];
+    [userInfo setObject:@(details->columnNumber) forKey:_WKJavaScriptExceptionColumnNumberErrorKey];
 
-    if (!details.sourceURL.isEmpty()) {
-        if (NSURL *url = URL(details.sourceURL))
+    if (!details->sourceURL.isEmpty()) {
+        if (NSURL *url = URL(details->sourceURL))
             [userInfo setObject:url forKey:_WKJavaScriptExceptionSourceURLErrorKey];
     }
 
@@ -1432,11 +1435,8 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
             return;
 
         auto rawHandler = (void (^)(id, NSError *))handler.get();
-        if (!result) {
-            if (result.error())
-                return rawHandler(nil, nsErrorFromExceptionDetails(*result.error()).get());
-            return rawHandler(nil, createNSError(WKErrorJavaScriptResultTypeIsUnsupported).get());
-        }
+        if (!result)
+            return rawHandler(nil, nsErrorFromExceptionDetails(result.error()).get());
         rawHandler(result->toID().get(), nil);
     });
 }

@@ -899,10 +899,8 @@ static JSContainerConvertor::Task valueToObjectWithoutCopy(JSGlobalContextRef co
             primitive = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, jsstring.get())).bridgingAutorelease();
         } else if (JSValueIsNull(context, value))
             primitive = [NSNull null];
-        else {
-            ASSERT(JSValueIsUndefined(context, value));
+        else
             primitive = nil;
-        }
         return { value, primitive, ContainerNone };
     }
 

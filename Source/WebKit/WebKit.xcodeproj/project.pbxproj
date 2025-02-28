@@ -2557,6 +2557,7 @@
 		FABBBC852D35B59A00820017 /* UnifiedSource138.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FABBBC812D35B59A00820017 /* UnifiedSource138.cpp */; };
 		FABBBC862D35B59A00820017 /* UnifiedSource139.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FABBBC822D35B59A00820017 /* UnifiedSource139.cpp */; };
 		FABBDEA12B85557500EFAFC4 /* CoreIPCNSURLCredential.mm in Sources */ = {isa = PBXBuildFile; fileRef = FABBDE9E2B85550100EFAFC4 /* CoreIPCNSURLCredential.mm */; };
+		FAC7C0C22D712E2900E7297E /* CoreIPCNumber.mm in Sources */ = {isa = PBXBuildFile; fileRef = FAC7C0C12D712AAF00E7297E /* CoreIPCNumber.mm */; };
 		FAD2A1EE2BF6D51000953297 /* CoroutineUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = FAD2A1ED2BF6D4FD00953297 /* CoroutineUtilities.h */; };
 		FAE61CE62D0A5608000D238D /* UnifiedSource132.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FAE61CDF2D0A5606000D238D /* UnifiedSource132.cpp */; };
 		FAE61CE72D0A5608000D238D /* UnifiedSource134.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FAE61CE02D0A5606000D238D /* UnifiedSource134.cpp */; };
@@ -8474,6 +8475,7 @@
 		FAC7C0B02D70228200E7297E /* JavaScriptEvaluationResult.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JavaScriptEvaluationResult.serialization.in; sourceTree = "<group>"; };
 		FAC7C0B12D70229C00E7297E /* JavaScriptEvaluationResult.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JavaScriptEvaluationResult.cpp; sourceTree = "<group>"; };
 		FAC7C0B22D7022AF00E7297E /* JavaScriptEvaluationResult.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JavaScriptEvaluationResult.mm; sourceTree = "<group>"; };
+		FAC7C0C12D712AAF00E7297E /* CoreIPCNumber.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreIPCNumber.mm; sourceTree = "<group>"; };
 		FAC849872A9E92B600D407EF /* NetworkTransportSession.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkTransportSession.cpp; sourceTree = "<group>"; };
 		FAC849882A9E92B600D407EF /* NetworkTransportSession.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = NetworkTransportSession.messages.in; sourceTree = "<group>"; };
 		FAC849892A9E92B600D407EF /* NetworkTransportSession.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkTransportSession.h; sourceTree = "<group>"; };
@@ -9689,6 +9691,7 @@
 				52FB15422B646156000933CC /* CoreIPCCGColorSpace.h */,
 				52FB15432B64680B000933CC /* CoreIPCCGColorSpace.serialization.in */,
 				F4EFF36B2AF0267200479AB8 /* CoreIPCNumber.h */,
+				FAC7C0C12D712AAF00E7297E /* CoreIPCNumber.mm */,
 				F4EFF36A2AF0267200479AB8 /* CoreIPCNumber.serialization.in */,
 				560F03DB2B6C47F900F53EE7 /* CoreIPCSecAccessControl.h */,
 				561A54522B61E49E00073A72 /* CoreIPCSecAccessControl.serialization.in */,
@@ -20020,6 +20023,7 @@
 				F4F12C932C41CED500BC1254 /* CoreIPCNSURLRequest.mm in Sources */,
 				51ACFFE02B048829001331A2 /* CoreIPCNSValue.mm in Sources */,
 				FA4FE2662B75EB290016E671 /* CoreIPCNull.mm in Sources */,
+				FAC7C0C22D712E2900E7297E /* CoreIPCNumber.mm in Sources */,
 				5157AE0B2B23E97400C0E095 /* CoreIPCPassKit.mm in Sources */,
 				51AD56902B1C46FE001A0ECB /* CoreIPCPersonNameComponents.mm in Sources */,
 				FAF27D302D2851EB00F1F0BB /* CoreIPCPKSecureElementPass.mm in Sources */,

@@ -26,20 +26,34 @@
 #include "config.h"
 #include "JavaScriptEvaluationResult.h"
 
+#include "APIArray.h"
+#include "APIDictionary.h"
 #include "APISerializedScriptValue.h"
 #include <WebCore/ExceptionDetails.h>
 
+#if PLATFORM(COCOA)
+#include "CoreIPCNumber.h"
+#endif
+
 namespace WebKit {
 
+#if !PLATFORM(COCOA)
 Ref<API::SerializedScriptValue> JavaScriptEvaluationResult::legacySerializedScriptValue() const
 {
     return API::SerializedScriptValue::createFromWireBytes(Vector(wireBytes()));
 }
 
-WKRetainPtr<WKTypeRef> JavaScriptEvaluationResult::toWK() const
+WKRetainPtr<WKTypeRef> JavaScriptEvaluationResult::toWK()
 {
     return API::SerializedScriptValue::deserializeWK(legacySerializedScriptValue()->internalRepresentation());
 }
+#endif
+
+JavaScriptEvaluationResult::JavaScriptEvaluationResult(JavaScriptEvaluationResult&&) = default;
+
+JavaScriptEvaluationResult& JavaScriptEvaluationResult::operator=(JavaScriptEvaluationResult&&) = default;
+
+JavaScriptEvaluationResult::~JavaScriptEvaluationResult() = default;
 
 } // namespace WebKit
 
@@ -48,6 +62,11 @@ namespace IPC {
 Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>>::create()
 {
     return makeUnexpected(std::nullopt);
+}
+
+Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String> AsyncReplyError<Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String>>::create()
+{
+    return makeUnexpected(String());
 }
 
 } // namespace IPC

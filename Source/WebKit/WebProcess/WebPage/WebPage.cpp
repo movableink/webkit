@@ -4424,12 +4424,19 @@ void WebPage::runJavaScript(WebFrame* frame, RunJavaScriptParameters&& parameter
     auto resolveFunction = [world = Ref { *world }, frame = Ref { *frame }, coreFrame = Ref { *frame->coreLocalFrame() }, completionHandler = WTFMove(completionHandler)] (ValueOrException result) mutable {
         if (!result)
             return completionHandler(makeUnexpected(result.error()));
-        if (RefPtr serializedResultValue = SerializedScriptValue::create(frame->jsContextForWorld(world.ptr()), toRef(coreFrame->script().globalObject(Ref { world->coreWorld() }), result.value()), nullptr)) {
+
+        JSGlobalContextRef context = frame->jsContextForWorld(world.ptr());
+        JSValueRef jsValue = toRef(coreFrame->script().globalObject(Ref { world->coreWorld() }), result.value());
+#if PLATFORM(COCOA)
+        completionHandler(JavaScriptEvaluationResult::extract(context, jsValue));
+#else
+        if (RefPtr serializedResultValue = SerializedScriptValue::create(context, jsValue, nullptr)) {
             if (auto wireBytes = serializedResultValue->wireBytes(); !wireBytes.isEmpty())
                 return completionHandler(JavaScriptEvaluationResult { wireBytes });
             return completionHandler(makeUnexpected(std::nullopt));
         }
         return completionHandler(makeUnexpected(std::nullopt));
+#endif
     };
     JSLockHolder lock(commonVM());
     frame->coreLocalFrame()->script().executeAsynchronousUserAgentScriptInWorld(world->protectedCoreWorld(), WTFMove(parameters), WTFMove(resolveFunction));

@@ -97,6 +97,8 @@ public:
         });
     }
 
+    void append(RefPtr<Object>&& element) { m_elements.append(WTFMove(element)); }
+
 private:
     explicit Array(Vector<RefPtr<Object>>&& elements)
         : m_elements(WTFMove(elements))

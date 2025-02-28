@@ -4905,7 +4905,6 @@ private:
             unsigned length = 0;
             if (!read(length))
                 return JSValue();
-            ASSERT(m_globalObject->inherits<JSDOMGlobalObject>());
             Vector<Ref<File>> files;
             for (unsigned i = 0; i < length; i++) {
                 RefPtr<File> file;

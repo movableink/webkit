@@ -26,13 +26,21 @@
 #pragma once
 
 #include "WKRetainPtr.h"
+#include <JavaScriptCore/APICast.h>
 #include <optional>
+#include <wtf/HashMap.h>
+#include <wtf/ObjectIdentifier.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
+OBJC_CLASS NSMutableArray;
+OBJC_CLASS NSMutableDictionary;
 #endif
 
 namespace API {
+class Array;
+class Dictionary;
+class Object;
 class SerializedScriptValue;
 }
 
@@ -42,23 +50,70 @@ struct ExceptionDetails;
 
 namespace WebKit {
 
+class CoreIPCNumber;
+class CoreIPCDate;
+
+struct JSObjectIDType;
+using JSObjectID = ObjectIdentifier<JSObjectIDType>;
+
 class JavaScriptEvaluationResult {
 public:
+#if PLATFORM(COCOA)
+    enum class NullType : bool { NullPointer, NSNull };
+    using Variant = std::variant<NullType, bool, CoreIPCNumber, String, Seconds, Vector<JSObjectID>, HashMap<JSObjectID, JSObjectID>>;
+
+    JavaScriptEvaluationResult(JSObjectID, HashMap<JSObjectID, Variant>&&);
+    static Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> extract(JSGlobalContextRef, JSValueRef);
+#else
     JavaScriptEvaluationResult(std::span<const uint8_t> wireBytes)
         : m_wireBytes(wireBytes) { }
-    JavaScriptEvaluationResult(JavaScriptEvaluationResult&&) = default;
-    JavaScriptEvaluationResult& operator=(JavaScriptEvaluationResult&&) = default;
-
-    std::span<const uint8_t> wireBytes() const { return m_wireBytes; }
+#endif
+    JavaScriptEvaluationResult(JavaScriptEvaluationResult&&);
+    JavaScriptEvaluationResult& operator=(JavaScriptEvaluationResult&&);
+    ~JavaScriptEvaluationResult();
 
 #if PLATFORM(COCOA)
-    RetainPtr<id> toID() const;
-#endif
-    WKRetainPtr<WKTypeRef> toWK() const;
+    JSObjectID root() const { return m_root; }
+    const HashMap<JSObjectID, Variant>& map() const { return m_map; }
 
+    RetainPtr<id> toID();
+#else
+    std::span<const uint8_t> wireBytes() const { return m_wireBytes; }
     Ref<API::SerializedScriptValue> legacySerializedScriptValue() const;
+#endif
+
+    WKRetainPtr<WKTypeRef> toWK();
+
 private:
+#if PLATFORM(COCOA)
+    JavaScriptEvaluationResult(JSGlobalContextRef, JSValueRef);
+
+    RetainPtr<id> toID(Variant&&);
+    RefPtr<API::Object> toAPI(Variant&&);
+
+    Variant toVariant(id);
+    JSObjectID addObjectToMap(id);
+
+    // Used for deserializing from IPC to ObjC
+    HashMap<JSObjectID, RetainPtr<id>> m_instantiatedNSObjects;
+    Vector<std::pair<HashMap<JSObjectID, JSObjectID>, RetainPtr<NSMutableDictionary>>> m_nsDictionaries;
+    Vector<std::pair<Vector<JSObjectID>, RetainPtr<NSMutableArray>>> m_nsArrays;
+
+    // Used for deserializing from IPC to WKTypeRef
+    HashMap<JSObjectID, RefPtr<API::Object>> m_instantiatedObjects;
+    Vector<std::pair<HashMap<JSObjectID, JSObjectID>, Ref<API::Dictionary>>> m_dictionaries;
+    Vector<std::pair<Vector<JSObjectID>, Ref<API::Array>>> m_arrays;
+
+    // Used for serializing to IPC
+    HashMap<RetainPtr<id>, JSObjectID> m_objectsInMap;
+    std::optional<JSObjectID> m_nullObjectID;
+
+    // IPC representation
+    HashMap<JSObjectID, Variant> m_map;
+    JSObjectID m_root;
+#else
     std::span<const uint8_t> m_wireBytes;
+#endif
 };
 
 }
@@ -68,6 +123,10 @@ namespace IPC {
 template<typename> struct AsyncReplyError;
 template<> struct AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>> {
     static Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> create();
+};
+
+template<> struct AsyncReplyError<Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String>> {
+    static Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String> create();
 };
 
 }
