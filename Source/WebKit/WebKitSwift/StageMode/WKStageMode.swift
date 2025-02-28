@@ -36,7 +36,8 @@ import simd
 @MainActor
 @objc(WKStageModeInteractionDriver)
 final public class WKStageModeInteractionDriver: NSObject {
-    private let kDragToRotationMultiplier: Float = 5.0
+    private let kDragToRotationMultiplier: Float = 3.0
+    private let kPitchSettleAnimationDuration: Double = 0.2
     
     private var stageModeOperation: WKStageModeOperation = .none
     
@@ -55,6 +56,14 @@ final public class WKStageModeInteractionDriver: NSObject {
     private var initialManipulationPose: Transform = .identity
     private var previousManipulationPose: Transform = .identity
     private var initialTargetPose: Transform = .identity
+    private var initialTurntablePose: Transform = .identity
+    
+    // Animation Controllers
+    private var pitchSettleAnimationController: AnimationPlaybackController? = nil
+    
+    private var pitchAnimationIsPlaying: Bool {
+        pitchSettleAnimationController?.isPlaying ?? false
+    }
     
     // MARK: ObjC Exposed API
     @objc(interactionContainerRef)
@@ -109,6 +118,7 @@ final public class WKStageModeInteractionDriver: NSObject {
         initialManipulationPose = initialPoseTransform
         previousManipulationPose = initialPoseTransform
         initialTargetPose = interactionContainer.transform
+        initialTurntablePose = turntableInteractionContainer.transform
         self.delegate?.stageModeInteractionDidUpdateModel()
     }
     
@@ -118,15 +128,16 @@ final public class WKStageModeInteractionDriver: NSObject {
         switch stageModeOperation {
         case .orbit:
             do {
-                let xyDelta = (poseTransform.translation._inMeters - previousManipulationPose.translation._inMeters).xy * kDragToRotationMultiplier
+                let xyDelta = (poseTransform.translation._inMeters - initialManipulationPose.translation._inMeters).xy * kDragToRotationMultiplier
 
                 // Apply pitch along global x axis
-                var orbitRotation = Rotation3D(angle: .init(radians: xyDelta.y), axis: .init(vector: self.interactionContainer.convert(direction: .init(1, 0, 0), from: nil).double3))
+                let containerPitchRotation = Rotation3D(angle: .init(radians: xyDelta.y), axis: .x)
+                self.interactionContainer.orientation = initialTargetPose.rotation * containerPitchRotation.quaternion.quatf
 
                 // Apply yaw along local y axis
-                orbitRotation = orbitRotation.rotated(by: Rotation3D(angle: .init(radians: xyDelta.x), axis: .y))
+                let turntableYawRotation = Rotation3D(angle: .init(radians: xyDelta.x), axis: .y)
+                self.turntableInteractionContainer.orientation = initialTurntablePose.rotation * turntableYawRotation.quaternion.quatf
 
-                self.interactionContainer.orientation *= orbitRotation.quaternion.quatf
                 break
             }
         default:
@@ -142,11 +153,34 @@ final public class WKStageModeInteractionDriver: NSObject {
         driverInitialized = false
         initialManipulationPose = .identity
         previousManipulationPose = .identity
+        
+        // Settle the pitch of the interaction container
+        pitchSettleAnimationController = self.interactionContainer.move(to: initialTargetPose, relativeTo: self.interactionContainer.parent, duration: kPitchSettleAnimationDuration, timingFunction: .easeOut)
+        subscribeToPitchChanges()
     }
     
     @objc(operationDidUpdate:)
     func operationDidUpdate(_ operation: WKStageModeOperation) {
         self.stageModeOperation = operation
+    }
+    
+    private func subscribeToPitchChanges() {
+        if pitchAnimationIsPlaying {
+            withObservationTracking {
+#if USE_APPLE_INTERNAL_SDK
+                if #available(WK_XROS_TBA, *) {
+                    _ = self.interactionContainer.proto_observableComponents[Transform.self]
+                }
+#endif
+            } onChange: {
+                Task { @MainActor in
+                    self.delegate?.stageModeInteractionDidUpdateModel()
+                    
+                    // Because the onChange only gets called once, we need to re-subscribe to the function while we are animating
+                    self.subscribeToPitchChanges()
+                }
+            }
+        }
     }
 }
 
