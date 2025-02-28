@@ -79,10 +79,19 @@ WI.ScriptClusterTimelineView = class ScriptClusterTimelineView extends WI.Cluste
     set endTime(x) { this._contentViewContainer.currentContentView.endTime = x; }
     get currentTime() { return this._contentViewContainer.currentContentView.currentTime; }
     set currentTime(x) { this._contentViewContainer.currentContentView.currentTime = x; }
-    selectRecord(record) { this._contentViewContainer.currentContentView.selectRecord(record); }
     updateFilter(filters) { return this._contentViewContainer.currentContentView.updateFilter(filters); }
     filterDidChange() { return this._contentViewContainer.currentContentView.filterDidChange(); }
     matchDataGridNodeAgainstCustomFilters(node) { return this._contentViewContainer.currentContentView.matchDataGridNodeAgainstCustomFilters(node); }
+
+    selectRecord(record)
+    {
+        if (record) {
+            this._selectedTarget = this._displayedTarget = record.target;
+            this._currentContentViewSetting.value = WI.ScriptClusterTimelineView.EventsIdentifier;
+            this._updateCurrentContentView();
+        }
+        this._contentViewContainer.currentContentView.selectRecord(record);
+    }
 
     reset()
     {
