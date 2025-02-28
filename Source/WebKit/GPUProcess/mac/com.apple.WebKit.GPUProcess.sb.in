@@ -86,7 +86,18 @@
 
 ;; FIXME: Add check `(with-filter (system-attribute virtual-device)` when this is supported. See rdar://118274636.
 (allow iokit-open-service (iokit-registry-entry-class "AppleVideoToolboxParavirtualizationDriver"))
-(allow iokit-open-user-client (iokit-user-client-class "AppleVideoToolboxParavirtualizationUserClient"))
+
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow iokit-open-user-client
+        (iokit-user-client-class "AppleVideoToolboxParavirtualizationUserClient")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow iokit-open-user-client
+        (iokit-user-client-class "AppleVideoToolboxParavirtualizationUserClient")))
 
 (deny darwin-notification-post (with no-report))
 (deny nvram-get (with no-report))
