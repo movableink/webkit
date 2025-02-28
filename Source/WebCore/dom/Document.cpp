@@ -9759,10 +9759,21 @@ void Document::applyContentDispositionAttachmentSandbox()
     ASSERT(shouldEnforceContentDispositionAttachmentSandbox());
 
     setReferrerPolicy(ReferrerPolicy::NoReferrer);
-    if (!isMediaDocument())
-        enforceSandboxFlags(SandboxFlags::all());
-    else
-        enforceSandboxFlags(SandboxFlag::Origin);
+
+    auto sandboxFlags = [this] -> SandboxFlags {
+        if (isMediaDocument())
+            return SandboxFlag::Origin;
+        if (isPluginDocument()) {
+            // This reads counterintuitively, but for PluginDocuments, we want all other
+            // sandbox restrictions to still apply, inspite of the fact that the sandbox
+            // should _not_ restrict plugin instantiation in configurations where we want
+            // to display inline attachments despite the Content-Disposition header.
+            return SandboxFlags::all() - SandboxFlag::Plugins;
+        }
+        return SandboxFlags::all();
+    }();
+
+    enforceSandboxFlags(sandboxFlags);
 }
 
 void Document::addDynamicMediaQueryDependentImage(HTMLImageElement& element)
