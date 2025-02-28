@@ -105,6 +105,11 @@ ScrollTimeline::ScrollTimeline(Scroller scroller, ScrollAxis axis)
     m_scroller = scroller;
 }
 
+Element* ScrollTimeline::bindingsSource() const
+{
+    return source();
+}
+
 Element* ScrollTimeline::source() const
 {
     auto source = m_source.styleable();

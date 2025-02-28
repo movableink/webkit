@@ -438,6 +438,13 @@ TimelineRange ViewTimeline::defaultRange() const
     return TimelineRange::defaultForViewTimeline();
 }
 
+Element* ViewTimeline::bindingsSource() const
+{
+    if (auto subject = m_subject.styleable())
+        subject->element.protectedDocument()->updateStyleIfNeeded();
+    return ScrollTimeline::bindingsSource();
+}
+
 Element* ViewTimeline::source() const
 {
     if (CheckedPtr sourceRender = sourceScrollerRenderer())
