@@ -4593,9 +4593,9 @@ MacStyleControlsOnCatalyst:
   condition: ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
   defaultValue:
     WebKit:
-      default: false
+      default: defaultMacStyleControlsOnCatalyst()
     WebKitLegacy:
-      default: false
+      default: WebKit::defaultMacStyleControlsOnCatalyst()
     WebCore:
       default: false
 
@@ -8193,9 +8193,9 @@ VectorBasedControlsOnMacEnabled:
   condition: ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
   defaultValue:
     WebKit:
-      default: false
+      default: defaultVectorBasedControlsOnMacEnabled()
     WebKitLegacy:
-      default: false
+      default: WebKit::defaultVectorBasedControlsOnMacEnabled()
     WebCore:
       default: false
 
