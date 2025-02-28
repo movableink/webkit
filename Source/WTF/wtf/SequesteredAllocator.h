@@ -415,8 +415,6 @@ public:
             m_totalAllocatedBytes = 0;
         m_genericSmallArena.setBoundsFromGranule(head);
         m_decommitQueue.concatenate(WTFMove(tail));
-
-        m_decommitQueue.decommit();
     }
 
     bool inArenaLifetime()
@@ -434,6 +432,8 @@ public:
         using SelfT = SequesteredArenaAllocator;
         auto ptr = reinterpret_cast<SelfT*>(SequesteredImmortalHeap::instance().getSlot());
         if (UNLIKELY(!ptr)) {
+            static_assert(sizeof(SequesteredArenaAllocator) <= SequesteredImmortalHeap::slotSize);
+            static_assert(!offsetof(SequesteredArenaAllocator, m_decommitQueue));
             ptr = reinterpret_cast<SelfT*>(
                 SequesteredImmortalHeap::instance().allocateAndInstall<SelfT>());
         }
@@ -528,7 +528,6 @@ private:
     StdMap<uintptr_t, AllocationDebugInfo> m_allocationInfos;
     size_t m_totalAllocatedBytes { 0 };
 };
-static_assert(sizeof(SequesteredArenaAllocator) <= SequesteredImmortalHeap::slotSize);
 
 class ArenaLifetime {
 public:

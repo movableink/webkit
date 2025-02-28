@@ -63,8 +63,8 @@ void ConcurrentDecommitQueue::decommit()
         auto pages = sih.decommitGranule(curr);
 
         dataLogLnIf(verbose,
-            "ConcurrentDecommitQueue: decommitted granule at ",
-            RawPointer(curr), " (", pages, " pages)");
+            "ConcurrentDecommitQueue: decommitted granule at "(,
+            RawPointer(curr), ") (", pages, " pages)");
 
         decommitPageCount += pages;
         decommitGranuleCount++;
@@ -74,6 +74,29 @@ void ConcurrentDecommitQueue::decommit()
 
     dataLogLnIf(verbose, "ConcurrentDecommitQueue: decommitted ",
         decommitGranuleCount, " granules (", decommitPageCount, " pages)");
+}
+
+void SequesteredImmortalHeap::installScavenger()
+{
+    RELEASE_ASSERT(pas_scavenger_try_install_foreign_work_callback(scavenge, 11, nullptr));
+}
+
+bool SequesteredImmortalHeap::scavengeImpl(void* /*userdata*/)
+{
+    dataLogLnIf(verbose, "SequesteredImmortalHeap: scavenging");
+    {
+        Locker listLocker { m_scavengerLock };
+        auto bound = m_nextFreeIndex;
+        ASSERT(bound <= m_slots.size());
+        for (size_t i = 0; i < bound; i++) {
+            // FIXME: Refactor the SeqImmortalHeap <-> SeqArenaAllocator
+            // relationship so that we don't have to assume data layouts
+            // here
+            auto& queue = *reinterpret_cast<ConcurrentDecommitQueue*>(&m_slots[i]);
+            queue.decommit();
+        }
+    }
+    return false;
 }
 
 SequesteredImmortalHeap::Instance SequesteredImmortalHeap::s_instance;

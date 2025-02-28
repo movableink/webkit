@@ -28,6 +28,7 @@
 
 #if USE(PROTECTED_JIT)
 
+#include <bmalloc/pas_scavenger.h>
 #include <cstddef>
 #include <cstdint>
 #include <mach/mach_vm.h>
@@ -145,9 +146,10 @@ public:
         return static_cast<int>((slot - arrayBase) / slotSize);
     }
 
-    static void scavenge()
+    static bool scavenge(void* userdata)
     {
-        // FIXME: provide hook for libpas scavenger
+        auto& sih = instance();
+        return sih.scavengeImpl(userdata);
     }
 
     template<AllocationFailureMode mode>
@@ -188,10 +190,15 @@ private:
         auto* self = reinterpret_cast<mach_vm_address_t*>(this);
         mach_vm_map(mach_task_self(), self, sequesteredImmortalHeapSlotSize, sequesteredImmortalHeapSlotSize - 1, flags, MEMORY_OBJECT_NULL, 0, false, prots, prots, VM_INHERIT_DEFAULT);
 
+        installScavenger();
+
         // Cannot use dataLog here as it takes a lock
         if constexpr (verbose)
             fprintf(stderr, "SequesteredImmortalHeap: initialized by thread (%u)\n", Thread::current().uid());
     }
+
+    void installScavenger();
+    bool scavengeImpl(void* userdata);
 
     static void* getUnchecked()
     {
