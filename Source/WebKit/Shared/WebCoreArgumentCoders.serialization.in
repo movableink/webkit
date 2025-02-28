@@ -6126,16 +6126,6 @@ struct WebCore::VideoFrameTimeMetadata {
     WebCore::FontSmoothingMode smoothingMode;
 };
 
-#if ENABLE(TOUCH_EVENT_REGIONS)
-header: <WebCore/EventRegion.h>
-[CustomHeader] struct WebCore::TouchEventListenerRegion {
-    WebCore::Region start;
-    WebCore::Region end;
-    WebCore::Region move;
-    WebCore::Region cancel;
-};
-#endif
-
 class WebCore::EventRegion {
     WebCore::Region m_region;
 #if ENABLE(TOUCH_ACTION_REGIONS)
@@ -6146,8 +6136,7 @@ class WebCore::EventRegion {
     WebCore::Region m_nonPassiveWheelEventListenerRegion;
 #endif
 #if ENABLE(TOUCH_EVENT_REGIONS)
-    WebCore::TouchEventListenerRegion m_touchEventListenerRegion;
-    WebCore::TouchEventListenerRegion m_nonPassiveTouchEventListenerRegion;
+    WebCore::EventTrackingRegions m_touchEventListenerRegion;
 #endif
 #if ENABLE(EDITABLE_REGION)
     std::optional<WebCore::Region> m_editableRegion;

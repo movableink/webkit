@@ -345,6 +345,19 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
         findListeners(eventNames().touchendEvent, EventListenerRegionType::TouchEnd, EventListenerRegionType::NonPassiveTouchEnd);
         findListeners(eventNames().touchcancelEvent, EventListenerRegionType::TouchCancel, EventListenerRegionType::NonPassiveTouchCancel);
         findListeners(eventNames().touchmoveEvent, EventListenerRegionType::TouchMove, EventListenerRegionType::NonPassiveTouchMove);
+
+        findListeners(eventNames().pointerdownEvent, EventListenerRegionType::PointerDown, EventListenerRegionType::NonPassivePointerDown);
+        findListeners(eventNames().pointerenterEvent, EventListenerRegionType::PointerEnter, EventListenerRegionType::NonPassivePointerEnter);
+        findListeners(eventNames().pointerleaveEvent, EventListenerRegionType::PointerLeave, EventListenerRegionType::NonPassivePointerLeave);
+        findListeners(eventNames().pointermoveEvent, EventListenerRegionType::PointerMove, EventListenerRegionType::NonPassivePointerMove);
+        findListeners(eventNames().pointeroutEvent, EventListenerRegionType::PointerOut, EventListenerRegionType::NonPassivePointerOut);
+        findListeners(eventNames().pointeroverEvent, EventListenerRegionType::PointerOver, EventListenerRegionType::NonPassivePointerOver);
+        findListeners(eventNames().pointerupEvent, EventListenerRegionType::PointerUp, EventListenerRegionType::NonPassivePointerUp);
+        if (document.quirks().shouldDispatchSimulatedMouseEvents(&eventTarget)) {
+            findListeners(eventNames().mousedownEvent, EventListenerRegionType::MouseDown, EventListenerRegionType::NonPassiveMouseDown);
+            findListeners(eventNames().mouseupEvent, EventListenerRegionType::MouseUp, EventListenerRegionType::NonPassiveMouseUp);
+            findListeners(eventNames().mousemoveEvent, EventListenerRegionType::MouseMove, EventListenerRegionType::NonPassiveMouseMove);
+        }
     }
 #endif
 

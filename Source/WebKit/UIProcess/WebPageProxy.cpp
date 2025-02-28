@@ -4339,32 +4339,24 @@ void WebPageProxy::updateTouchEventTracking(const WebTouchEvent& touchStartEvent
         auto update = [this, location](TrackingType& trackingType, EventTrackingRegions::EventType eventType) {
             if (trackingType == TrackingType::Synchronous)
                 return;
-            auto trackingTypeForLocation = m_scrollingCoordinatorProxy->eventTrackingTypeForPoint(eventType, location);
-            trackingType = mergeTrackingTypes(trackingType, trackingTypeForLocation);
-        };
-
-        auto& tracking = internals().touchEventTracking;
-        using Type = EventTrackingRegions::EventType;
 #if ENABLE(TOUCH_EVENT_REGIONS)
-        auto updateTouchEvents = [this, location](TrackingType& trackingType, EventListenerRegionType eventType) {
-            if (trackingType == TrackingType::Synchronous)
-                return;
             if (RefPtr drawingAreaProxy = dynamicDowncast<RemoteLayerTreeDrawingAreaProxy>(*m_drawingArea)) {
                 auto trackingTypeForLocation = drawingAreaProxy->eventTrackingTypeForPoint(eventType, WebCore::IntPoint(location));
                 trackingType = mergeTrackingTypes(trackingType, trackingTypeForLocation);
             }
+#else
+            auto trackingTypeForLocation = m_scrollingCoordinatorProxy->eventTrackingTypeForPoint(eventType, location);
+            trackingType = mergeTrackingTypes(trackingType, trackingTypeForLocation);
+#endif
         };
 
-        updateTouchEvents(tracking.touchForceChangedTracking, EventListenerRegionType::TouchCancel);
-        updateTouchEvents(tracking.touchStartTracking, EventListenerRegionType::TouchStart);
-        updateTouchEvents(tracking.touchMoveTracking, EventListenerRegionType::TouchMove);
-        updateTouchEvents(tracking.touchEndTracking, EventListenerRegionType::TouchEnd);
-#else
+        auto& tracking = internals().touchEventTracking;
+        using Type = EventTrackingRegions::EventType;
+
         update(tracking.touchForceChangedTracking, Type::Touchforcechange);
         update(tracking.touchStartTracking, Type::Touchstart);
         update(tracking.touchMoveTracking, Type::Touchmove);
         update(tracking.touchEndTracking, Type::Touchend);
-#endif
         update(tracking.touchStartTracking, Type::Pointerover);
         update(tracking.touchStartTracking, Type::Pointerenter);
         update(tracking.touchStartTracking, Type::Pointerdown);

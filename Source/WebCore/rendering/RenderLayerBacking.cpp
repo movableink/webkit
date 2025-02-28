@@ -3907,6 +3907,24 @@ static RefPtr<Pattern> patternForEventListenerRegionType(EventListenerRegionType
         case EventListenerRegionType::NonPassiveTouchCancel:
         case EventListenerRegionType::NonPassiveTouchMove:
             return { "sync touch"_s, { 0, 9 }, SRGBA<uint8_t> { 200, 200, 0, 128 } };
+        case EventListenerRegionType::PointerDown:
+        case EventListenerRegionType::PointerEnter:
+        case EventListenerRegionType::PointerLeave:
+        case EventListenerRegionType::PointerMove:
+        case EventListenerRegionType::PointerOut:
+        case EventListenerRegionType::PointerOver:
+        case EventListenerRegionType::PointerUp:
+            return { "pointer"_s, { }, Color::lightGray.colorWithAlphaByte(128) };
+        case EventListenerRegionType::NonPassivePointerDown:
+        case EventListenerRegionType::NonPassivePointerEnter:
+        case EventListenerRegionType::NonPassivePointerLeave:
+        case EventListenerRegionType::NonPassivePointerMove:
+        case EventListenerRegionType::NonPassivePointerOut:
+        case EventListenerRegionType::NonPassivePointerOver:
+        case EventListenerRegionType::NonPassivePointerUp:
+            return { "sync pointer"_s, { 0, 9 }, SRGBA<uint8_t> { 200, 200, 0, 128 } };
+        default:
+            return { ""_s, { }, Color::black };
         }
         ASSERT_NOT_REACHED();
         return { ""_s, { }, Color::black };

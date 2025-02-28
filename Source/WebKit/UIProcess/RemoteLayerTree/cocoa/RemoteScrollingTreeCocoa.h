@@ -29,7 +29,7 @@
 
 namespace WebCore {
 class EventRegion;
-enum class EventListenerRegionType : uint16_t;
+enum class EventListenerRegionType : uint32_t;
 class FloatPoint;
 }
 

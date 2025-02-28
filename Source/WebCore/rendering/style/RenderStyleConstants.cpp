@@ -518,6 +518,26 @@ TextStream& operator<<(TextStream& ts, EventListenerRegionType listenerType)
     case EventListenerRegionType::NonPassiveTouchCancel: ts << "active touch cancel"; break;
     case EventListenerRegionType::TouchMove: ts << "touch move"; break;
     case EventListenerRegionType::NonPassiveTouchMove: ts << "active touch move"; break;
+    case EventListenerRegionType::PointerDown: ts << "pointer down"; break;
+    case EventListenerRegionType::NonPassivePointerDown: ts << "active pointer down"; break;
+    case EventListenerRegionType::PointerEnter: ts << "pointer enter"; break;
+    case EventListenerRegionType::NonPassivePointerEnter: ts << "active pointer down"; break;
+    case EventListenerRegionType::PointerLeave: ts << "pointer leave"; break;
+    case EventListenerRegionType::NonPassivePointerLeave: ts << "active pointer down"; break;
+    case EventListenerRegionType::PointerMove: ts << "pointer move"; break;
+    case EventListenerRegionType::NonPassivePointerMove: ts << "active pointer down"; break;
+    case EventListenerRegionType::PointerOut: ts << "pointer out"; break;
+    case EventListenerRegionType::NonPassivePointerOut: ts << "active pointer down"; break;
+    case EventListenerRegionType::PointerOver: ts << "pointer over"; break;
+    case EventListenerRegionType::NonPassivePointerOver: ts << "active pointer down"; break;
+    case EventListenerRegionType::PointerUp: ts << "pointer up"; break;
+    case EventListenerRegionType::NonPassivePointerUp: ts << "active pointer down"; break;
+    case EventListenerRegionType::MouseDown: ts << "mouse down"; break;
+    case EventListenerRegionType::NonPassiveMouseDown: ts << "active mouse down"; break;
+    case EventListenerRegionType::MouseUp: ts << "mouse up"; break;
+    case EventListenerRegionType::NonPassiveMouseUp: ts << "active mouse up"; break;
+    case EventListenerRegionType::MouseMove: ts << "mouse down"; break;
+    case EventListenerRegionType::NonPassiveMouseMove: ts << "active mouse move"; break;
     }
     return ts;
 }

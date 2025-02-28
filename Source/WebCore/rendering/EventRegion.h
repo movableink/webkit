@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AffineTransform.h"
+#include "EventTrackingRegions.h"
 #include "FloatRoundedRect.h"
 #include "IntRect.h"
 #include "IntRectHash.h"
@@ -112,8 +113,7 @@ public:
     , WebCore::Region nonPassiveWheelEventListenerRegion
 #endif
 #if ENABLE(TOUCH_EVENT_REGIONS)
-    , TouchEventListenerRegion touchEventListenerRegion
-    , TouchEventListenerRegion nonPassiveTouchEventListenerRegion
+    , EventTrackingRegions touchEventListenerRegion
 #endif
 #if ENABLE(EDITABLE_REGION)
     , std::optional<WebCore::Region>
@@ -144,10 +144,12 @@ public:
     const Region* regionForTouchAction(TouchAction) const;
 #endif
 
-    WEBCORE_EXPORT TrackingType eventTrackingTypeForPoint(EventListenerRegionType, const IntPoint&) const;
-    WEBCORE_EXPORT OptionSet<EventListenerRegionType> eventListenerRegionTypesForPoint(const IntPoint&) const;
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    WEBCORE_EXPORT TrackingType eventTrackingTypeForPoint(EventTrackingRegionsEventType, const IntPoint&) const;
+#endif
 
 #if ENABLE(WHEEL_EVENT_REGIONS)
+    WEBCORE_EXPORT OptionSet<EventListenerRegionType> eventListenerRegionTypesForPoint(const IntPoint&) const;
     const Region& eventListenerRegionForType(EventListenerRegionType) const;
 #endif
 
@@ -182,8 +184,7 @@ private:
     Region m_nonPassiveWheelEventListenerRegion;
 #endif
 #if ENABLE(TOUCH_EVENT_REGIONS)
-    TouchEventListenerRegion m_touchEventListenerRegion;
-    TouchEventListenerRegion m_nonPassiveTouchEventListenerRegion;
+    EventTrackingRegions m_touchEventListenerRegion;
 #endif
 #if ENABLE(EDITABLE_REGION)
     std::optional<Region> m_editableRegion;
