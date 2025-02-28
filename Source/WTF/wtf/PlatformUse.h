@@ -315,8 +315,8 @@
 #endif
 
 #if !defined(USE_PROTECTED_JIT)
-#if CPU(ADDRESS64) && OS(DARWIN) && (__SIZEOF_POINTER__ == 8)
-#define USE_PROTECTED_JIT 0
+#if CPU(ADDRESS64) && OS(DARWIN) && USE(APPLE_INTERNAL_SDK)
+#define USE_PROTECTED_JIT 1
 #else
 #define USE_PROTECTED_JIT 0
 #endif

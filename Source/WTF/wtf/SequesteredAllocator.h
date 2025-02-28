@@ -46,7 +46,7 @@
 
 namespace WTF {
 
-constexpr size_t minArenaGranuleSize { 16 * KB };
+constexpr size_t minArenaGranuleSize { 16 * 16 * KB };
 
 class alignas(128) SequesteredArenaAllocator {
 private:
