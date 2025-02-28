@@ -608,9 +608,56 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearchWithCache(VM& vm, JSGloba
     RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, string, source, sourceRanges.data(), sourceRanges.size(), replacements.data(), replacements.size()));
 }
 
-static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(
-    VM& vm, JSGlobalObject* globalObject, JSString* string, JSValue searchValue, const CallData& callData,
-    const String& replacementString, JSValue replaceValue)
+static ALWAYS_INLINE JSString* tryTrimSpaces(VM& vm, JSGlobalObject* globalObject, const String& source, JSString* string, RegExp* regExp)
+{
+    unsigned sourceLen = source.length();
+    unsigned left = 0;
+    unsigned right = sourceLen;
+    switch (regExp->specificPattern()) {
+    case Yarr::SpecificPattern::TrailingSpacesPlus: {
+        while (right > 0 && isStrWhiteSpace(source[right - 1]))
+            right--;
+
+        if (right == sourceLen) {
+            // Not found.
+            return string;
+        }
+
+        if (!right) {
+            // Everything is spaces.
+            globalObject->regExpGlobalData().resetResultFromCache(globalObject, regExp, string, MatchResult { 0, sourceLen }, { });
+            return jsEmptyString(vm);
+        }
+
+        globalObject->regExpGlobalData().resetResultFromCache(globalObject, regExp, string, MatchResult { right, sourceLen }, { });
+        return jsString(vm, source.substringSharingImpl(0, right));
+    }
+    case Yarr::SpecificPattern::LeadingSpacesPlus: {
+        while (left < sourceLen && isStrWhiteSpace(source[left]))
+            left++;
+
+        if (!left)
+            return string;
+
+        if (left == sourceLen) {
+            // Everything is spaces.
+            globalObject->regExpGlobalData().resetResultFromCache(globalObject, regExp, string, MatchResult { 0, sourceLen }, { });
+            return jsEmptyString(vm);
+        }
+
+        globalObject->regExpGlobalData().resetResultFromCache(globalObject, regExp, string, MatchResult { 0, left }, { });
+        return jsString(vm, source.substringSharingImpl(left, sourceLen));
+    }
+    case Yarr::SpecificPattern::TrailingSpacesStar:
+    case Yarr::SpecificPattern::LeadingSpacesStar:
+    case Yarr::SpecificPattern::Atom:
+    case Yarr::SpecificPattern::None:
+        break;
+    }
+    return nullptr;
+}
+
+static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(VM& vm, JSGlobalObject* globalObject, JSString* string, JSValue searchValue, const CallData& callData, const String& replacementString, JSValue replaceValue)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -633,6 +680,26 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(
 
         if (callData.type == CallData::Type::JS && !hasNamedCaptures && sourceLen >= Options::thresholdForStringReplaceCache())
             RELEASE_AND_RETURN(scope, replaceUsingRegExpSearchWithCache(vm, globalObject, string, source, regExp, jsCast<JSFunction*>(replaceValue)));
+    }
+
+    if (callData.type == CallData::Type::None) {
+        switch (regExp->specificPattern()) {
+        case Yarr::SpecificPattern::TrailingSpacesPlus:
+        case Yarr::SpecificPattern::LeadingSpacesPlus:
+        case Yarr::SpecificPattern::TrailingSpacesStar:
+        case Yarr::SpecificPattern::LeadingSpacesStar: {
+            if (!replacementString.isEmpty())
+                break;
+
+            if (auto* result = tryTrimSpaces(vm, globalObject, source, string, regExp))
+                return result;
+
+            break;
+        }
+        case Yarr::SpecificPattern::Atom:
+        case Yarr::SpecificPattern::None:
+            break;
+        }
     }
 
     size_t lastIndex = 0;

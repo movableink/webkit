@@ -736,6 +736,7 @@ struct YarrPattern {
     bool m_hasNamedCaptureGroups : 1;
     bool m_saveInitialStartValue : 1;
     OptionSet<Flags> m_flags;
+    SpecificPattern m_specificPattern { SpecificPattern::None };
     unsigned m_numSubpatterns { 0 };
     unsigned m_initialStartValueFrameLocation { 0 };
     unsigned m_numDuplicateNamedCaptureGroups { 0 };

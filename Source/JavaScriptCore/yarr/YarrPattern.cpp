@@ -2079,60 +2079,194 @@ public:
         }
     }
 
-    String extractAtom()
+    void extractSpecificPattern()
     {
         if (m_pattern.m_containsBackreferences)
-            return { };
-        if (m_pattern.m_containsBOL)
-            return { };
+            return;
         if (m_pattern.m_containsLookbehinds)
-            return { };
+            return;
         if (m_pattern.m_containsUnsignedLengthPattern)
-            return { };
+            return;
+        if (m_pattern.m_containsModifiers)
+            return;
         if (m_pattern.m_hasCopiedParenSubexpressions)
-            return { };
+            return;
         if (m_pattern.m_hasNamedCaptureGroups)
-            return { };
+            return;
         if (m_pattern.m_saveInitialStartValue)
-            return { };
+            return;
         if (m_pattern.m_numSubpatterns)
-            return { };
+            return;
         if (m_pattern.multiline())
-            return { };
+            return;
         if (m_pattern.sticky())
-            return { };
+            return;
         if (m_pattern.eitherUnicode())
-            return { };
+            return;
         if (m_pattern.ignoreCase())
-            return { };
-        PatternDisjunction* disjunction = m_pattern.m_body;
-        if (!disjunction->m_minimumSize)
-            return { };
-        auto& alternatives = disjunction->m_alternatives;
-        if (alternatives.size() != 1)
-            return { };
-        StringBuilder builder;
-        auto* alternative = alternatives[0].get();
-        for (unsigned index = 0; index < alternative->m_terms.size(); ++index) {
-            auto& term = alternative->m_terms[index];
-            if (term.type != PatternTerm::Type::PatternCharacter)
-                return { };
-            if (term.quantityType != QuantifierType::FixedCount)
-                return { };
-            if (term.quantityMaxCount != 1)
-                return { };
-            if (term.inputPosition != index)
-                return { };
-            if (U16_LENGTH(term.patternCharacter) != 1)
-                return { };
-            if (term.m_matchDirection != MatchDirection::Forward)
-                return { };
-            builder.append(static_cast<UChar>(term.patternCharacter));
-        }
-        String atom = builder.toString();
-        if (atom.length() > 0)
-            return atom;
-        return { };
+            return;
+
+        auto tryExtractAtom = [&]() -> bool {
+            if (m_pattern.m_containsBOL)
+                return false;
+            PatternDisjunction* disjunction = m_pattern.m_body;
+            if (!disjunction->m_minimumSize)
+                return false;
+            auto& alternatives = disjunction->m_alternatives;
+            if (alternatives.size() != 1)
+                return false;
+            StringBuilder builder;
+            auto* alternative = alternatives[0].get();
+            for (unsigned index = 0; index < alternative->m_terms.size(); ++index) {
+                auto& term = alternative->m_terms[index];
+                if (term.type != PatternTerm::Type::PatternCharacter)
+                    return false;
+                if (term.quantityType != QuantifierType::FixedCount)
+                    return false;
+                if (term.quantityMaxCount != 1)
+                    return false;
+                if (term.inputPosition != index)
+                    return false;
+                if (U16_LENGTH(term.patternCharacter) != 1)
+                    return false;
+                if (term.m_matchDirection != MatchDirection::Forward)
+                    return false;
+                builder.append(static_cast<UChar>(term.patternCharacter));
+            }
+            String atom = builder.toString();
+            if (atom.length() > 0) {
+                m_pattern.m_atom = WTFMove(atom);
+                m_pattern.m_specificPattern = SpecificPattern::Atom;
+                return true;
+            }
+            return false;
+        };
+
+        auto tryExtractSpaces = [&]() -> bool {
+            PatternDisjunction* disjunction = m_pattern.m_body;
+            auto& alternatives = disjunction->m_alternatives;
+            if (alternatives.size() != 1)
+                return false;
+
+            auto* alternative = alternatives[0].get();
+            if (alternative->m_terms.isEmpty())
+                return false;
+
+            if (m_pattern.m_containsBOL) {
+                auto& termFirst = alternative->m_terms.first();
+                if (termFirst.invert() || termFirst.type != PatternTerm::Type::AssertionBOL)
+                    return false;
+
+                if (alternative->m_terms.size() == 2) {
+                    // ^\s*
+                    auto& term1 = alternative->m_terms[1];
+                    if (term1.invert() || term1.type != PatternTerm::Type::CharacterClass || term1.characterClass != m_pattern.spacesCharacterClass())
+                        return false;
+                    if (term1.inputPosition)
+                        return false;
+                    if (term1.quantityType != QuantifierType::Greedy)
+                        return false;
+                    if (term1.quantityMinCount)
+                        return false;
+                    if (term1.quantityMaxCount != quantifyInfinite)
+                        return false;
+
+                    m_pattern.m_specificPattern = SpecificPattern::LeadingSpacesStar;
+                    return true;
+                }
+
+                if (alternative->m_terms.size() == 3) {
+                    // ^\s+
+                    auto& term1 = alternative->m_terms[1];
+                    if (term1.invert() || term1.type != PatternTerm::Type::CharacterClass || term1.characterClass != m_pattern.spacesCharacterClass())
+                        return false;
+                    if (term1.inputPosition)
+                        return false;
+                    if (term1.quantityType != QuantifierType::FixedCount)
+                        return false;
+                    if (term1.quantityMinCount != 1)
+                        return false;
+                    if (term1.quantityMaxCount != 1)
+                        return false;
+
+                    auto& term2 = alternative->m_terms[2];
+                    if (term2.invert() || term2.type != PatternTerm::Type::CharacterClass || term2.characterClass != m_pattern.spacesCharacterClass())
+                        return false;
+                    if (term2.inputPosition != 1)
+                        return false;
+                    if (term2.quantityType != QuantifierType::Greedy)
+                        return false;
+                    if (term2.quantityMinCount)
+                        return false;
+                    if (term2.quantityMaxCount != quantifyInfinite)
+                        return false;
+
+                    m_pattern.m_specificPattern = SpecificPattern::LeadingSpacesPlus;
+                    return true;
+                }
+                return false;
+            }
+
+            auto& termLast = alternative->m_terms.last();
+            if (termLast.invert() || termLast.type != PatternTerm::Type::AssertionEOL)
+                return false;
+
+            if (alternative->m_terms.size() == 2) {
+                // \s*$
+                auto& term0 = alternative->m_terms[0];
+                if (term0.invert() || term0.type != PatternTerm::Type::CharacterClass || term0.characterClass != m_pattern.spacesCharacterClass())
+                    return false;
+                if (term0.inputPosition)
+                    return false;
+                if (term0.quantityType != QuantifierType::Greedy)
+                    return false;
+                if (term0.quantityMinCount)
+                    return false;
+                if (term0.quantityMaxCount != quantifyInfinite)
+                    return false;
+
+                m_pattern.m_specificPattern = SpecificPattern::TrailingSpacesStar;
+                return true;
+            }
+
+            if (alternative->m_terms.size() == 3) {
+                // \s+$
+                auto& term0 = alternative->m_terms[0];
+                if (term0.invert() || term0.type != PatternTerm::Type::CharacterClass || term0.characterClass != m_pattern.spacesCharacterClass())
+                    return false;
+                if (term0.inputPosition)
+                    return false;
+                if (term0.quantityType != QuantifierType::FixedCount)
+                    return false;
+                if (term0.quantityMinCount != 1)
+                    return false;
+                if (term0.quantityMaxCount != 1)
+                    return false;
+
+                auto& term1 = alternative->m_terms[1];
+                if (term1.invert() || term1.type != PatternTerm::Type::CharacterClass || term1.characterClass != m_pattern.spacesCharacterClass())
+                    return false;
+                if (term1.inputPosition != 1)
+                    return false;
+                if (term1.quantityType != QuantifierType::Greedy)
+                    return false;
+                if (term1.quantityMinCount)
+                    return false;
+                if (term1.quantityMaxCount != quantifyInfinite)
+                    return false;
+
+                m_pattern.m_specificPattern = SpecificPattern::TrailingSpacesPlus;
+                return true;
+            }
+
+            return false;
+        };
+
+        if (tryExtractAtom())
+            return;
+
+        if (tryExtractSpaces())
+            return;
     }
 
     ErrorCode error() { return m_error; }
@@ -2347,7 +2481,7 @@ ErrorCode YarrPattern::compile(StringView patternString)
 
     constructor.setupNamedCaptures();
 
-    m_atom = constructor.extractAtom();
+    constructor.extractSpecificPattern();
 
     if (UNLIKELY(Options::dumpCompiledRegExpPatterns()))
         dumpPattern(patternString);
@@ -2718,6 +2852,8 @@ void YarrPattern::dumpPattern(PrintStream& out, StringView patternString)
         out.print(")");
     }
     out.print(":\n");
+    if (m_specificPattern != SpecificPattern::None)
+        out.print("    specific pattern: ", m_specificPattern, "\n");
     if (m_body->m_callFrameSize)
         out.print("    callframe size: ", m_body->m_callFrameSize, "\n");
     m_body->dump(out, this);
