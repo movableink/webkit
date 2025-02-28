@@ -248,8 +248,6 @@ WebProcess/GPU/media/RemoteMediaPlayerMIMETypeCache.cpp
 WebProcess/GPU/media/RemoteMediaPlayerManager.cpp
 WebProcess/GPU/media/RemoteRemoteCommandListener.cpp
 WebProcess/GPU/media/RemoteVideoCodecFactory.cpp
-WebProcess/GPU/media/SourceBufferPrivateRemote.cpp
-WebProcess/GPU/media/SourceBufferPrivateRemote.h
 WebProcess/GPU/media/TextTrackPrivateRemote.cpp
 WebProcess/GPU/media/VideoTrackPrivateRemote.cpp
 WebProcess/GPU/media/WebMediaStrategy.cpp

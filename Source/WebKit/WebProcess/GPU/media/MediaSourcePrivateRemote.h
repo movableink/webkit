@@ -80,7 +80,7 @@ public:
 
     RemoteMediaSourceIdentifier identifier() const { return m_identifier; }
 
-    static WorkQueue& queue();
+    static WorkQueue& queueSingleton();
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
