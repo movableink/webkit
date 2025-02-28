@@ -42,7 +42,6 @@ Shared/WebCompiledContentRuleListData.cpp
 Shared/WebHitTestResultData.cpp
 Shared/WebImage.cpp
 Shared/WebMemorySampler.cpp
-Shared/graphics/ImageBufferSet.cpp
 UIProcess/API/APIAttachment.cpp
 UIProcess/API/APIDownloadClient.h
 UIProcess/API/APIInspectorExtension.cpp
