@@ -211,15 +211,20 @@
     (deny file-read* file-write*
           (vnode-type BLOCK-DEVICE CHARACTER-DEVICE))
 
-    (allow file-read* file-write-data
+    (allow file-read*
+           (literal "/dev/null")
+           (literal "/dev/zero"))
+
+    (allow file-write-data (with report) (with telemetry)
            (literal "/dev/null")
            (literal "/dev/zero"))
 
     (with-filter (system-attribute apple-internal)
-        (allow file-read* file-write-data file-ioctl
+        (allow file-read* file-ioctl
             (literal "/dev/dtracehelper"))
-        (allow nvram-get (nvram-variable "emu")) ;; <rdar://problem/78363040>
-    )
+        (allow file-write-data (with report) (with telemetry)
+            (literal "/dev/dtracehelper"))
+        (allow nvram-get (nvram-variable "emu"))) ;; <rdar://problem/78363040>
 
     (allow file-read*
            (literal "/dev/random")
@@ -229,7 +234,7 @@
           (literal "/dev/random")
           (literal "/dev/urandom"))
 
-    (allow file-read* file-write-data (with telemetry)
+    (deny file-read* file-write-data
            (literal "/dev/aes_0")))
 
 (define required-etc-files
@@ -394,7 +399,7 @@
         (with-filter
             (extension
                 "com.apple.app-sandbox.read-write")
-            (allow file-write*)
+            (allow file-write* (with report) (with telemetry))
             (allow file-issue-extension
                    (extension-class "com.apple.app-sandbox.read-write"
                                     "com.apple.mediaserverd.read-write"))))
@@ -787,7 +792,8 @@
     (apply-read-and-issue-extension allow path-filter)
     (apply-write-and-issue-extension allow path-filter))
 (read-only-and-issue-extensions (extension "com.apple.app-sandbox.read"))
-(read-write-and-issue-extensions (extension "com.apple.app-sandbox.read-write"))
+(define (read-write-extension-with-telemetry) (with report) (with telemetry) (extension "com.apple.app-sandbox.read-write"))
+(read-write-and-issue-extensions (read-write-extension-with-telemetry))
 
 ;; Access to client's cache folder & re-vending to CFNetwork.
 (allow file-issue-extension (require-all
