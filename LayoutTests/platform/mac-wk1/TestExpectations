@@ -3037,3 +3037,5 @@ webkit.org/b/288843 [ Release ] compositing/repaint/iframes/compositing-iframe-s
 webkit.org/b/288862 fast/repaint/switch-overflow-vertical-rl.html [ Pass Failure ]
 
 webkit.org/b/288865 imported/w3c/web-platform-tests/fullscreen/rendering/fullscreen-root-block-size.html [ Pass Failure ]
+
+webkit.org/b/288872 [ X86_64 ] imported/w3c/web-platform-tests/webvtt/rendering/cues-with-video/processing-model/selectors/cue/color_hsla.html [ ImageOnlyFailure ]
