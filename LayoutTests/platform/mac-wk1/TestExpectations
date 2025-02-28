@@ -3041,3 +3041,5 @@ webkit.org/b/288865 imported/w3c/web-platform-tests/fullscreen/rendering/fullscr
 webkit.org/b/288872 [ X86_64 ] imported/w3c/web-platform-tests/webvtt/rendering/cues-with-video/processing-model/selectors/cue/color_hsla.html [ ImageOnlyFailure ]
 
 webkit.org/b/288871 imported/w3c/web-platform-tests/workers/WorkerGlobalScope_ErrorEvent_message.htm [ Pass Failure ]
+
+webkit.org/b/288874 [ x86_64 ] fast/canvas/image-buffer-backend-variants.html [ Pass Failure ]
