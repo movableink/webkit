@@ -5957,7 +5957,7 @@ PreferSpatialAudioExperience:
     WebKitLegacy:
       default: false
     WebKit:
-      default: false
+      default: WebKit::defaultPreferSpatialAudioExperience()
     WebCore:
       default: false
   defaultsOverridable: true

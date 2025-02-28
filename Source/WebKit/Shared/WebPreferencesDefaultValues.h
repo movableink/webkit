@@ -190,4 +190,8 @@ bool defaultVectorBasedControlsOnMacEnabled();
 bool defaultIFrameResourceMonitoringEnabled();
 #endif
 
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+bool defaultPreferSpatialAudioExperience();
+#endif
+
 } // namespace WebKit
