@@ -2713,9 +2713,11 @@ inline NameScope BuilderConverter::convertNameScope(BuilderState& builderState, 
     if (!list)
         return { };
 
-    return { NameScope::Type::Ident, WTF::map(*list, [&](auto& item) {
-        return AtomString { item.stringValue() };
-    }) };
+    ListHashSet<AtomString> nameHashSet;
+    for (auto& name : *list)
+        nameHashSet.add(AtomString { name.stringValue() });
+
+    return { NameScope::Type::Ident, WTFMove(nameHashSet) };
 }
 
 inline Vector<PositionTryFallback> BuilderConverter::convertPositionTryFallbacks(BuilderState& builderState, const CSSValue& value)

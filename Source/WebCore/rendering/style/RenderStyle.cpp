@@ -921,7 +921,8 @@ static bool rareDataChangeRequiresLayout(const StyleRareNonInheritedData& first,
     if (first.overflowContinue != second.overflowContinue)
         return true;
 
-    if (first.positionArea != second.positionArea)
+    // CSS Anchor Positioning.
+    if (first.anchorScope != second.anchorScope || first.positionArea != second.positionArea)
         return true;
 
     return false;

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/ListHashSet.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/TextStream.h>
 
@@ -34,10 +35,29 @@ struct NameScope {
     enum class Type : uint8_t { None, All, Ident };
 
     Type type { Type::None };
-    Vector<AtomString> names;
+    ListHashSet<AtomString> names;
 
-    bool operator==(const NameScope& other) const = default;
+    friend bool operator==(const NameScope&, const NameScope&);
 };
+
+inline bool operator==(const NameScope& lhs, const NameScope& rhs)
+{
+    switch (lhs.type) {
+    case NameScope::Type::None:
+        return rhs.type == NameScope::Type::None;
+
+    case NameScope::Type::All:
+        return rhs.type == NameScope::Type::All;
+
+    case NameScope::Type::Ident:
+        // Two name lists are equal if they contain the same values
+        // in the same order.
+        return std::equal(lhs.names.begin(), lhs.names.end(), rhs.names.begin(), rhs.names.end());
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
 
 inline TextStream& operator<<(TextStream& ts, const NameScope& scope)
 {

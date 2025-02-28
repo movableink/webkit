@@ -167,6 +167,7 @@ template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, ty
 template<typename KeyArg, typename MappedArg, typename KeyHash = DefaultHash<KeyArg>, typename KeyTraits = HashTraits<KeyArg>, typename MappedTraits = HashTraits<MappedArg>, typename HashTraits = HashTableTraits>
 using UncheckedKeyHashMap = HashMap<KeyArg, MappedArg, KeyHash, KeyTraits, MappedTraits, HashTraits, ShouldValidateKey::No>;
 template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>, typename = HashTableTraits, ShouldValidateKey = ShouldValidateKey::Yes> class HashSet;
+template<typename ValueArg, typename = DefaultHash<ValueArg>> class ListHashSet;
 template<typename ValueArg, typename HashArg = DefaultHash<ValueArg>, typename TraitsArg = HashTraits<ValueArg>, typename TableTraitsArg = HashTableTraits>
 using UncheckedKeyHashSet = HashSet<ValueArg, HashArg, TraitsArg, TableTraitsArg, ShouldValidateKey::No>;
 template<typename ResolveValueT, typename RejectValueT, unsigned options = 0> class NativePromise;
@@ -209,6 +210,7 @@ using WTF::HashMap;
 using WTF::HashSet;
 using WTF::Hasher;
 using WTF::LazyNeverDestroyed;
+using WTF::ListHashSet;
 using WTF::Lock;
 using WTF::Logger;
 using WTF::MachSendRight;

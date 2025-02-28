@@ -32,6 +32,7 @@
 #include "DocumentInlines.h"
 #include "Element.h"
 #include "Node.h"
+#include "NodeRenderStyle.h"
 #include "RenderBoxInlines.h"
 #include "RenderBlock.h"
 #include "RenderBoxModelObjectInlines.h"
@@ -741,9 +742,73 @@ static bool firstChildPrecedesSecondChild(const RenderObject* firstChild, const 
     return false;
 }
 
+// Given an anchor element and its anchor names, locate the closest ancestor element
+// that establishes an anchor scope affecting this anchor element, and return the pointer
+// to such element. If no ancestor establishes an anchor scope affecting this anchor,
+// returns nullptr.
+static CheckedPtr<Element> anchorScopeForAnchorElement(const Element& anchorElement, const Vector<ScopedName>& anchorNames)
+{
+    // Precondition: anchorElement is an anchor, which has at least one anchor name.
+    ASSERT(!anchorNames.isEmpty());
+
+    // Traverse up the composed tree through each ancestor.
+    for (CheckedPtr currentAncestor = anchorElement.parentElementInComposedTree(); currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
+        CheckedPtr currentAncestorStyle = currentAncestor->renderStyle();
+        if (!currentAncestorStyle)
+            continue;
+
+        const auto& currentAncestorAnchorScope = currentAncestorStyle->anchorScope();
+        switch (currentAncestorAnchorScope.type) {
+        // Does not establish a scope.
+        case NameScope::Type::None:
+            continue;
+
+        // Scopes all anchors that are descendants of the current ancestor.
+        case NameScope::Type::All:
+            return currentAncestor;
+
+        // Scopes anchors that are (1) descendants of the current ancestor and
+        // (2) its name is specified in the scope.
+        case NameScope::Type::Ident:
+            for (const auto& anchorName : anchorNames) {
+                if (currentAncestorAnchorScope.names.contains(anchorName.name))
+                    return currentAncestor;
+            }
+
+            continue;
+        }
+    }
+
+    return nullptr;
+}
+
+// Checks if `parent` is the parent of `descendant` within the composed tree.
+static bool elementIsParentOfElementInComposedTree(const Element& parent, const Element& descendant)
+{
+    for (CheckedPtr currentAncestor = descendant.parentElementInComposedTree(); currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
+        if (currentAncestor.get() == &parent)
+            return true;
+    }
+
+    return false;
+}
+
 // See: https://drafts.csswg.org/css-anchor-position-1/#acceptable-anchor-element
 static bool isAcceptableAnchorElement(const RenderBoxModelObject& anchorRenderer, Ref<const Element> anchorPositionedElement)
 {
+    CheckedPtr anchorElement = anchorRenderer.element();
+
+    // "Possible anchor is either an element or a fully styleable tree-abiding pseudo-element."
+    // This always have an associated Element (for ::before/::after it is PseudoElement).
+    if (!anchorElement)
+        return false;
+
+    if (auto anchorScopeElement = anchorScopeForAnchorElement(*anchorElement, anchorRenderer.style().anchorNames())) {
+        // If the anchor is scoped, the anchor-positioned element must also be in the same scope.
+        if (!elementIsParentOfElementInComposedTree(*anchorScopeElement, anchorPositionedElement))
+            return false;
+    }
+
     CheckedPtr anchorPositionedRenderer = anchorPositionedElement->renderer();
     ASSERT(anchorPositionedRenderer);
     CheckedPtr containingBlock = anchorPositionedRenderer->containingBlock();
@@ -757,11 +822,6 @@ static bool isAcceptableAnchorElement(const RenderBoxModelObject& anchorRenderer
         return true;
 
     if (!firstChildPrecedesSecondChild(penultimateElement, anchorPositionedRenderer.get(), containingBlock.get()))
-        return false;
-
-    // "Possible anchor is either an element or a fully styleable tree-abiding pseudo-element."
-    // This always have an associated Element (for ::before/::after it is PseudoElement).
-    if (!anchorRenderer.element())
         return false;
 
     // FIXME: Implement the rest of https://drafts.csswg.org/css-anchor-position-1/#acceptable-anchor-element.

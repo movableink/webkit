@@ -282,6 +282,12 @@ TextStream& operator<<(TextStream& ts, const HashSet<ValueArg, HashArg, TraitsAr
     return streamSizedContainer(ts, set);
 }
 
+template<typename T, typename U>
+TextStream& operator<<(TextStream& ts, const ListHashSet<T, U>& set)
+{
+    return streamSizedContainer(ts, set);
+}
+
 template<typename T, size_t size>
 TextStream& operator<<(TextStream& ts, const std::array<T, size>& array)
 {
