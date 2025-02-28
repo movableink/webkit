@@ -1764,7 +1764,10 @@ void enumerateUnignoredDescendants(T& object, bool includeSelf, const F& lambda)
     if (includeSelf)
         lambda(object);
 
-    for (const auto& child : object.unignoredChildren())
+    // We have a reference to unignored children here, so it's possible that it will change when enumerating the unignored
+    // descendants, so copying here ensures they don't change.
+    auto children = object.unignoredChildren();
+    for (const auto& child : children)
         enumerateUnignoredDescendants(child.get(), true, lambda);
 }
 
