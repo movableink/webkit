@@ -7537,6 +7537,9 @@ class FindUnexpectedStaticAnalyzerResultsWithoutChange(FindUnexpectedStaticAnaly
         self.setProperty('num_failing_files', len(filtered_failures))
         self.setProperty('num_passing_files', len(filtered_passes))
 
+        yield self._addToLog('stdio', f'\nSuccessfully filtered results! Updating unexpected_results.json on disk.\n')
+        self.write_unexpected_results_file_to_master()
+
 
 class DownloadUnexpectedResultsFromMaster(transfer.FileDownload):
     mastersrc = WithProperties('public_html/results/%(buildername)s/%(change_id)s-%(buildnumber)s/unexpected_results.json')
