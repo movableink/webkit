@@ -138,8 +138,12 @@ RenderTheme& RenderTheme::singleton()
     return theme;
 }
 
-bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings&, StyleAppearance appearance) const
+bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings& settings, StyleAppearance appearance) const
 {
+#if !ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    UNUSED_PARAM(settings);
+#endif
+
     switch (appearance) {
 #if ENABLE(ATTACHMENT_ELEMENT)
     case StyleAppearance::Attachment:
@@ -178,6 +182,10 @@ bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings&, Style
     case StyleAppearance::TextArea:
     case StyleAppearance::TextField:
         return true;
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    case StyleAppearance::ListButton:
+        return settings.vectorBasedControlsOnMacEnabled();
+#endif
     default:
         break;
     }
@@ -922,8 +930,17 @@ static void setFontFromControlSize(RenderStyle& style, NSControlSize controlSize
     style.setFontDescription(WTFMove(fontDescription));
 }
 
-void RenderThemeMac::adjustListButtonStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustListButtonStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustListButtonStyle(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     // Add a margin to place the button at end of the input field.
     style.setMarginEnd(Length(-4, LengthType::Fixed));
 }
