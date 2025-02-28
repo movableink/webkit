@@ -30,9 +30,46 @@ struct ContextMenuContext {
 #endif
 }
 
-struct OnScrollGeometryChangeContext {
-    let transform: (ScrollGeometry) -> AnyEquatable
-    let action: (AnyEquatable, AnyEquatable) -> Void
+// FIXME: (rdar://145869526) Improve efficiency and memory usage of `OnScrollGeometryChangeContext`.
+class OnScrollGeometryChangeContext {
+    private struct Change {
+        var transform: (ScrollGeometry) -> AnyHashable
+        var action: (AnyHashable, AnyHashable) -> Void
+    }
+
+    private var changes: [Namespace.ID : Change] = [:]
+
+    func register<T>(
+        changeID: Namespace.ID,
+        transform: @escaping (ScrollGeometry) -> T,
+        action: @escaping (T, T) -> Void
+    ) where T: Hashable {
+        let erasedTransform = { (geometry: ScrollGeometry) in
+            AnyHashable(transform(geometry))
+        }
+
+        let erasedAction = { (old: AnyHashable, new: AnyHashable) in
+            action(old.base as! T, new.base as! T)
+        }
+
+        if changes[changeID] == nil {
+            changes[changeID] = .init(transform: erasedTransform, action: erasedAction)
+        } else {
+            changes[changeID]!.transform = erasedTransform
+            changes[changeID]!.action = erasedAction
+        }
+    }
+
+    func apply(from oldGeometry: ScrollGeometry, to newGeometry: ScrollGeometry) {
+        for change in changes.values {
+            let oldTransformed = change.transform(oldGeometry)
+            let newTransformed = change.transform(newGeometry)
+
+            if oldTransformed != newTransformed {
+                change.action(oldTransformed, newTransformed)
+            }
+        }
+    }
 }
 
 struct FindContext {

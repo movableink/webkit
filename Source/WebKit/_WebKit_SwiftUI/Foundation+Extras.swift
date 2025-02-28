@@ -34,18 +34,4 @@ func onNextMainRunLoop(do body: @escaping @MainActor () -> Void) {
     }
 }
 
-struct AnyEquatable: Equatable {
-    let value: Any
-    private let equals: (Any) -> Bool
-
-    init<E: Equatable>(_ value: E) {
-        self.value = value
-        self.equals = { ($0 as! E) == value }
-    }
-
-    static func == (lhs: AnyEquatable, rhs: AnyEquatable) -> Bool {
-        lhs.equals(rhs.value)
-    }
-}
-
 #endif
