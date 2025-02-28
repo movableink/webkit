@@ -25,10 +25,22 @@
 #include "config.h"
 #include <wtf/SequesteredImmortalHeap.h>
 #include <wtf/Compiler.h>
+#include <wtf/NeverDestroyed.h>
 
 #if USE(PROTECTED_JIT)
 
 namespace WTF {
+
+SequesteredImmortalHeap& SequesteredImmortalHeap::instance()
+{
+    // FIXME: this storage is not contained within the sequestered region
+    static LazyNeverDestroyed<SequesteredImmortalHeap> instance;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        instance.construct();
+    });
+    return instance.get();
+}
 
 void ConcurrentDecommitQueue::decommit()
 {

@@ -94,7 +94,7 @@ private:
     Lock m_decommitLock { };
 };
 
-class SequesteredImmortalHeap {
+class alignas(16 * KB) SequesteredImmortalHeap {
     static constexpr bool verbose { false };
     static constexpr pthread_key_t key = __PTK_FRAMEWORK_JAVASCRIPTCORE_KEY0;
     static constexpr size_t sequesteredImmortalHeapSlotSize { 16 * KB };
@@ -107,17 +107,7 @@ public:
         ReturnNull
     };
 
-    static SequesteredImmortalHeap& instance()
-    {
-        // FIXME: this storage is not contained within the sequestered region
-        static std::once_flag onceFlag;
-        auto ptr = reinterpret_cast<SequesteredImmortalHeap*>(&s_instance);
-        std::call_once(onceFlag, [] {
-            storeStoreFence();
-            new (&s_instance) SequesteredImmortalHeap();
-        });
-        return *ptr;
-    }
+    static SequesteredImmortalHeap& instance();
 
     template <typename T> requires (sizeof(T) <= slotSize)
     T* allocateAndInstall()
@@ -212,15 +202,9 @@ private:
         std::array<std::byte, slotSize> data;
     };
 
-    struct alignas(sequesteredImmortalHeapSlotSize) Instance {
-        std::byte data[sequesteredImmortalHeapSlotSize];
-    };
-
     Lock m_scavengerLock { };
     size_t m_nextFreeIndex { };
     std::array<Slot, numSlots> m_slots { };
-
-    static Instance s_instance;
 };
 
 }
