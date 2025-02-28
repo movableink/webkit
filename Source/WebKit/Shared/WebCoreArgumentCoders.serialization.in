@@ -1836,7 +1836,8 @@ enum class WebCore::ContentsFormat : uint8_t {
 #endif
 };
 
-class WebCore::PlatformDynamicRangeLimit {
+header: <WebCore/PlatformDynamicRangeLimit.h>
+[CustomHeader, AdditionalEncoder=StreamConnectionEncoder] class WebCore::PlatformDynamicRangeLimit {
     float m_value;
 };
 
@@ -5284,6 +5285,7 @@ header: <WebCore/ImageTypes.h>
     WebCore::ImageOrientation::Orientation orientation().orientation();
     WebCore::InterpolationQuality interpolationQuality();
     WebCore::Headroom headroom();
+    WebCore::PlatformDynamicRangeLimit dynamicRangeLimit();
 };
 
 [AdditionalEncoder=StreamConnectionEncoder] struct WebCore::FloatSegment {

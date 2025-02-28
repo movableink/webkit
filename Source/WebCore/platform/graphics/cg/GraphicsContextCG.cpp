@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -378,11 +378,21 @@ void GraphicsContextCG::drawNativeImageInternal(NativeImage& nativeImage, const 
     auto oldHeadroom = CGContextGetEDRTargetHeadroom(context);
 
     auto headroom = options.headroom();
+    auto dynamicRangeLimit = options.dynamicRangeLimit();
+
     if (headroom == Headroom::FromImage)
         headroom = nativeImage.headroom();
 
-    if (headroom > Headroom::None)
-        CGContextSetEDRTargetHeadroom(context, headroom);
+    // FIXME: Use CoreGraphics to constrain the brightness of the image more appropriately.
+    if (headroom > Headroom::None) {
+        static constexpr float maxConstrainedHeadroom = 2;
+        if (dynamicRangeLimit == PlatformDynamicRangeLimit::standard())
+            headroom = Headroom::None;
+        else if (dynamicRangeLimit == PlatformDynamicRangeLimit::constrainedHigh())
+            headroom = std::max<float>(Headroom::None, std::min<float>(headroom * dynamicRangeLimit.value(), maxConstrainedHeadroom));
+    }
+
+    CGContextSetEDRTargetHeadroom(context, headroom);
 #endif
 
     // Make the origin be at adjustedDestRect.location()
