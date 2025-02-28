@@ -37,7 +37,6 @@ Shared/Cocoa/WKNSString.mm
 Shared/Cocoa/WKNSURL.mm
 Shared/RemoteLayerTree/RemoteLayerWithInProcessRenderingBackingStore.mm
 Shared/RemoteLayerTree/RemoteLayerWithRemoteRenderingBackingStore.mm
-Shared/SharedStringHashStore.cpp
 Shared/WebCompiledContentRuleListData.cpp
 Shared/WebHitTestResultData.cpp
 Shared/WebImage.cpp
