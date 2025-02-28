@@ -185,8 +185,9 @@ static std::optional<unsigned> retrieveTemporalIndex(const GRefPtr<GstSample>& s
         return gstStructureGet<unsigned>(metaStructure, "layer-id"_s);
     }
 #ifndef GST_DISABLE_GST_DEBUG
-    auto name = gstStructureGetName(structure);
-    GST_TRACE("Retrieval of temporal index from encoded format %s is not yet supported.", reinterpret_cast<const char*>(name.rawCharacters()));
+    auto nameView = gstStructureGetName(structure);
+    auto name = nameView.utf8();
+    GST_TRACE("Retrieval of temporal index from encoded format %s is not yet supported.", name.data());
 #endif
 #endif
     return { };

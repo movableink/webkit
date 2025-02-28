@@ -338,10 +338,14 @@ void AppendPipeline::appsinkCapsChanged(Track& track)
     // If this is not the first time we're parsing an initialization segment, fail if the track
     // has a different codec or type (e.g. if we were previously demuxing an audio stream and
     // someone appends a video stream).
-    auto currentMediaType = capsMediaType(caps.get());
-    auto trackMediaType = capsMediaType(track.finalCaps.get());
-    if (track.finalCaps && currentMediaType != trackMediaType) {
-        GST_WARNING_OBJECT(pipeline(), "Track received incompatible caps, received '%s' for a track previously handling '%s'. Erroring out.", reinterpret_cast<const char*>(currentMediaType.rawCharacters()), reinterpret_cast<const char*>(trackMediaType.rawCharacters()));
+    auto currentMediaTypeView = capsMediaType(caps.get());
+    auto trackMediaTypeView = capsMediaType(track.caps.get());
+    if (track.finalCaps && currentMediaTypeView != trackMediaTypeView) {
+#ifndef GST_DISABLE_GST_DEBUG
+        auto currentMediaType = currentMediaTypeView.utf8();
+        auto trackMediaType = trackMediaTypeView.utf8();
+        GST_WARNING_OBJECT(pipeline(), "Track received incompatible caps, received '%s' for a track previously handling '%s'. Erroring out.", currentMediaType.data(), trackMediaType.data());
+#endif
         m_sourceBufferPrivate.appendParsingFailed();
         return;
     }
