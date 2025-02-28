@@ -233,7 +233,6 @@ public final class WKSRKEntity: NSObject {
     }
 
     @objc(applyIBLData:withCompletion:) public func applyIBL(data: Data, completion: @escaping (Bool) -> Void) {
-#if canImport(RealityKit, _version: 366)
         guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
             Logger.realityKitEntity.error("Cannot get CGImageSource from IBL image data")
             completion(false)
@@ -260,7 +259,6 @@ public final class WKSRKEntity: NSObject {
                 completion(false)
             }
         }
-#endif
     }
 
     @objc(removeIBL) public func removeIBL() {

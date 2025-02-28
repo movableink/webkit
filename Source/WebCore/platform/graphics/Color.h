@@ -134,7 +134,7 @@ public:
     // from the underlying type into any analogous components in ColorType.
     template<typename ColorType> ColorType toColorTypeLossyCarryingForwardMissing() const;
 
-    ColorComponents<float, 4> toResolvedColorComponentsInColorSpace(ColorSpace) const;
+    WEBCORE_EXPORT ColorComponents<float, 4> toResolvedColorComponentsInColorSpace(ColorSpace) const;
     ColorComponents<float, 4> toResolvedColorComponentsInColorSpace(const DestinationColorSpace&) const;
 
     WEBCORE_EXPORT std::pair<ColorSpace, ColorComponents<float, 4>> colorSpaceAndResolvedColorComponents() const;
