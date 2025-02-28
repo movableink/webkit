@@ -153,6 +153,16 @@ void sequesteredArenaMallocDumpMallocStats()
 {
 }
 
+void* sequesteredImmortalMalloc(size_t size)
+{
+    return SequesteredImmortalHeap::instance().immortalMalloc(size);
+}
+
+void* sequesteredImmortalAlignedMalloc(size_t alignment, size_t size)
+{
+    return SequesteredImmortalHeap::instance().immortalAlignedMalloc(alignment, size);
+}
+
 }
 
 #endif // USE(PROTECTED_JIT)

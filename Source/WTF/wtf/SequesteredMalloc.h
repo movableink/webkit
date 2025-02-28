@@ -36,6 +36,8 @@
 
 namespace WTF {
 
+// Arena Allocator
+
 #if ASSERT_ENABLED
 WTF_EXPORT_PRIVATE void sequesteredArenaSetMaxSingleAllocationSize(size_t);
 #endif
@@ -240,7 +242,59 @@ using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(type)
 
+// Immortal Allocator
+
+// This is not a proper malloc implementation as it effectively leaks all
+// allocations, and does not support many of the variants, so much of the
+// machinery used in the other mallocs is intentionally left out
+
+namespace WTF {
+WTF_EXPORT_PRIVATE void* sequesteredImmortalMalloc(size_t) RETURNS_NONNULL;
+WTF_EXPORT_PRIVATE void* sequesteredImmortalAlignedMalloc(size_t alignment, size_t) RETURNS_NONNULL;
+}
+using WTF::sequesteredImmortalMalloc;
+using WTF::sequesteredImmortalAlignedMalloc;
+
+#define WTF_MAKE_SEQUESTERED_IMMORTAL_ALLOCATED_COMMON \
+    void* operator new(size_t, void* p) { return p; } \
+    void* operator new[](size_t, void* p) { return p; } \
+    \
+    void* operator new(size_t size) \
+    { \
+        return ::WTF::sequesteredImmortalMalloc(size); \
+    } \
+    \
+    void operator delete(void*) { } \
+    \
+    void* operator new[](size_t size) \
+    { \
+        return ::WTF::sequesteredImmortalMalloc(size); \
+    } \
+    \
+    void operator delete[](void*) \
+    { \
+    } \
+    void* operator new(size_t, NotNullTag, void* location) \
+    { \
+        ASSERT(location); \
+        return location; \
+    } \
+    static void freeAfterDestruction(void*) { } \
+    using WTFIsSiAllocated = int; \
+
+#define WTF_MAKE_SEQUESTERED_IMMORTAL_ALLOCATED(type) \
+public: \
+    WTF_MAKE_SEQUESTERED_IMMORTAL_ALLOCATED_COMMON \
+private: \
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
+
+#define WTF_MAKE_STRUCT_SEQUESTERED_IMMORTAL_ALLOCATED(type) \
+    WTF_MAKE_SEQUESTERED_IMMORTAL_ALLOCATED_COMMON \
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
+
 #else // !USE(PROTECTED_JIT)
+
+// Arena Allocator
 
 namespace WTF {
 using SequesteredArenaMalloc = FastMalloc;
@@ -266,5 +320,10 @@ using WTF::SequesteredArenaMalloc;
 #define WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE_IMPL(_templateParameters, _type) WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(_templateParameters, _type)
 #define WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS() \
     WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS()
+
+// Immortal Allocator
+
+#define WTF_MAKE_SEQUESTERED_IMMORTAL_ALLOCATED(type) WTF_MAKE_FAST_ALLOCATED
+#define WTF_MAKE_STRUCT_SEQUESTERED_IMMORTAL_ALLOCATED(type) WTF_MAKE_FAST_ALLOCATED
 
 #endif // !USE(PROTECTED_JIT)

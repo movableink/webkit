@@ -99,6 +99,32 @@ bool SequesteredImmortalHeap::scavengeImpl(void* /*userdata*/)
     return false;
 }
 
+GranuleHeader* SequesteredImmortalAllocator::addGranule(size_t minSize)
+{
+    size_t granuleSize = std::max(minSize, minGranuleSize);
+
+    using AllocationFailureMode = SequesteredImmortalHeap::AllocationFailureMode;
+    GranuleHeader* granule = SequesteredImmortalHeap::instance().mapGranule<AllocationFailureMode::Assert>(granuleSize);
+
+    static_assert(sizeof(GranuleHeader) >= minHeadAlignment);
+    m_allocHead = reinterpret_cast<uintptr_t>(granule) + sizeof(GranuleHeader);
+    m_allocBound = reinterpret_cast<uintptr_t>(granule) + granuleSize;
+    m_granules.push(granule);
+
+    static_assert(sizeof(GranuleHeader) >= minHeadAlignment);
+    dataLogLnIf(verbose,
+        "SequesteredImmortalAllocator at ", RawPointer(this),
+        ": expanded: granule was (", RawPointer(m_granules.first()->next),
+        "), now (", RawPointer(m_granules.first()),
+        "); allocHead (",
+        RawPointer(reinterpret_cast<void*>(m_allocHead)),
+        "), allocBound (",
+        RawPointer(reinterpret_cast<void*>(m_allocBound)),
+        ")");
+
+    return granule;
+}
+
 SequesteredImmortalHeap::Instance SequesteredImmortalHeap::s_instance;
 
 }
