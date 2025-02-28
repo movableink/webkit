@@ -3450,6 +3450,20 @@ HiddenPageDOMTimerThrottlingEnabled:
     WebCore:
       default: false
 
+HostedBlurMaterialInMediaControlsEnabled:
+  type: bool
+  status: internal
+  humanReadableName: "Hosted blur material in media controls"
+  humanReadableDescription: "Enable hosted blur material in media controls"
+  condition: HAVE(MATERIAL_HOSTING)
+  defaultValue:
+    WebKit:
+      default: false
+    WebKitLegacy:
+      default: false
+    WebCore:
+      default: false
+
 HyperlinkAuditingEnabled:
   type: bool
   status: embedder
