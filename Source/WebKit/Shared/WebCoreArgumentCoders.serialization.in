@@ -2839,6 +2839,7 @@ class WebCore::UserStyleSheet {
     Vector<String> allowlist();
     Vector<String> blocklist();
     WebCore::UserContentInjectedFrames injectedFrames();
+    WebCore::UserContentMatchParentFrame matchParentFrame();
     WebCore::UserStyleLevel level();
     std::optional<WebCore::PageIdentifier> pageID();
 };
@@ -7536,6 +7537,12 @@ enum class WebCore::UserScriptInjectionTime : bool;
 
 enum class WebCore::UserContentInjectedFrames : bool;
 
+enum class WebCore::UserContentMatchParentFrame : uint8_t {
+    Never,
+    ForAboutBlank,
+    ForOpaqueOrigins
+}
+
 class WebCore::UserScript {
     String source();
     URL url();
@@ -7543,6 +7550,7 @@ class WebCore::UserScript {
     Vector<String> blocklist();
     WebCore::UserScriptInjectionTime injectionTime();
     WebCore::UserContentInjectedFrames injectedFrames();
+    WebCore::UserContentMatchParentFrame matchParentFrame();
 }
 
 header: <WebCore/GraphicsContextState.h>

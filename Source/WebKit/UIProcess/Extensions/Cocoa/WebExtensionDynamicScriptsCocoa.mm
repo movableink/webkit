@@ -181,7 +181,7 @@ void injectStyleSheets(const SourcePairs& styleSheetPairs, WKWebView *webView, A
     auto pageID = page->webPageIDInMainFrameProcess();
 
     for (auto& styleSheet : styleSheetPairs) {
-        auto userStyleSheet = API::UserStyleSheet::create(WebCore::UserStyleSheet { styleSheet.first, styleSheet.second, Vector<String> { }, Vector<String> { }, injectedFrames, styleLevel, pageID }, executionWorld);
+        auto userStyleSheet = API::UserStyleSheet::create(WebCore::UserStyleSheet { styleSheet.first, styleSheet.second, { }, { }, injectedFrames, WebCore::UserContentMatchParentFrame::Never, styleLevel, pageID }, executionWorld);
 
         Ref controller = page.get()->userContentController();
         controller->addUserStyleSheet(userStyleSheet);
@@ -255,6 +255,9 @@ void WebExtensionRegisteredScript::merge(WebExtensionRegisteredScriptParameters&
 
     if (!parameters.allFrames)
         parameters.allFrames = m_parameters.allFrames.value();
+
+    if (!parameters.matchParentFrame && m_parameters.matchParentFrame)
+        parameters.matchParentFrame = m_parameters.matchParentFrame.value();
 
     if (!parameters.persistent)
         parameters.persistent = m_parameters.persistent.value();

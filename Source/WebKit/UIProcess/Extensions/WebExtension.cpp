@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2024 Igalia S.L. All rights reserved.
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -86,7 +86,8 @@ static constexpr auto contentScriptsMatchesManifestKey = "matches"_s;
 static constexpr auto contentScriptsExcludeMatchesManifestKey = "exclude_matches"_s;
 static constexpr auto contentScriptsIncludeGlobsManifestKey = "include_globs"_s;
 static constexpr auto contentScriptsExcludeGlobsManifestKey = "exclude_globs"_s;
-static constexpr auto contentScriptsMatchesAboutBlankManifestKey = "match_about_blank"_s;
+static constexpr auto contentScriptsMatchAboutBlankManifestKey = "match_about_blank"_s;
+static constexpr auto contentScriptsMatchOriginAsFallbackManifestKey = "match_origin_as_fallback"_s;
 static constexpr auto contentScriptsRunAtManifestKey = "run_at"_s;
 static constexpr auto contentScriptsDocumentIdleManifestKey = "document_idle"_s;
 static constexpr auto contentScriptsDocumentStartManifestKey = "document_start"_s;
@@ -1406,7 +1407,18 @@ void WebExtension::populateContentScriptPropertiesIfNeeded()
         }
 
         // Optional. Whether the script should inject into an about:blank frame where the parent or opener frame matches one of the patterns declared in matches. Defaults to false.
-        auto matchesAboutBlank = injectedContentObject->getBoolean(contentScriptsMatchesAboutBlankManifestKey).value_or(false);
+        bool matchAboutBlank = injectedContentObject->getBoolean(contentScriptsMatchAboutBlankManifestKey).value_or(false);
+
+        // Optional. Whether the script should inject in frames that were created by a matching origin, but whose URL or origin may not directly match the pattern.
+        // These include frames with different schemes, such as about:, data:, and blob:. Defaults to false.
+        bool matchOriginAsFallback = injectedContentObject->getBoolean(contentScriptsMatchOriginAsFallbackManifestKey).value_or(false);
+
+        // When both "match_origin_as_fallback" and "match_about_blank" are specified, "match_origin_as_fallback" takes priority.
+        auto matchParentFrame = WebCore::UserContentMatchParentFrame::Never;
+        if (matchOriginAsFallback)
+            matchParentFrame = UserContentMatchParentFrame::ForOpaqueOrigins;
+        else if (matchAboutBlank)
+            matchParentFrame = UserContentMatchParentFrame::ForAboutBlank;
 
         HashSet<Ref<WebExtensionMatchPattern>> excludeMatchPatterns;
 
@@ -1483,7 +1495,7 @@ void WebExtension::populateContentScriptPropertiesIfNeeded()
         injectedContentData.includeMatchPatterns = WTFMove(includeMatchPatterns);
         injectedContentData.excludeMatchPatterns = WTFMove(excludeMatchPatterns);
         injectedContentData.injectionTime = injectionTime;
-        injectedContentData.matchesAboutBlank = matchesAboutBlank;
+        injectedContentData.matchParentFrame = matchParentFrame;
         injectedContentData.injectsIntoAllFrames = injectsIntoAllFrames;
         injectedContentData.contentWorldType = contentWorldType;
         injectedContentData.styleLevel = styleLevel;
