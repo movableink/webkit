@@ -444,6 +444,16 @@ void RenderThemeCocoa::adjustInnerSpinButtonStyle(RenderStyle& style, const Elem
     RenderTheme::adjustInnerSpinButtonStyle(style, element);
 }
 
+bool RenderThemeCocoa::paintInnerSpinButton(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintInnerSpinButtonStyleForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintInnerSpinButton(box, paintInfo, rect);
+}
+
 void RenderThemeCocoa::adjustTextFieldStyle(RenderStyle& style, const Element* element) const
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)

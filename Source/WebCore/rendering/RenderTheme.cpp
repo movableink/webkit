@@ -835,6 +835,8 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     case StyleAppearance::TextArea:
     case StyleAppearance::Listbox:
         return true;
+    case StyleAppearance::InnerSpinButton:
+        return paintInnerSpinButton(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchField:
         return paintSearchField(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldCancelButton:

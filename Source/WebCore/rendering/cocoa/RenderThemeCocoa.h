@@ -65,6 +65,7 @@ protected:
     void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const override;
+    bool paintInnerSpinButton(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustTextFieldStyle(RenderStyle&, const Element*) const override;
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
