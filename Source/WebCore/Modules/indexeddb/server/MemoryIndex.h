@@ -26,6 +26,7 @@
 #pragma once
 
 #include "IDBIndexInfo.h"
+#include "IDBKeyData.h"
 #include "IDBResourceIdentifier.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
