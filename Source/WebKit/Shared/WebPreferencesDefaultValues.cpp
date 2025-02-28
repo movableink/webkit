@@ -263,6 +263,17 @@ bool defaultGamepadVibrationActuatorEnabled()
 }
 #endif
 
+#if ENABLE(WEB_AUTHN)
+bool defaultDigitalCredentialsEnabled()
+{
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    return true;
+#else
+    return false;
+#endif
+}
+#endif
+
 bool defaultShouldEnableScreenOrientationAPI()
 {
 #if PLATFORM(MAC)

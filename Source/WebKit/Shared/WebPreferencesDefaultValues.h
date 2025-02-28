@@ -137,6 +137,10 @@ bool defaultRemoveBackgroundEnabled();
 bool defaultGamepadVibrationActuatorEnabled();
 #endif
 
+#if ENABLE(WEB_AUTHN)
+bool defaultDigitalCredentialsEnabled();
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 bool defaultAutomaticLiveResizeEnabled();
 bool defaultVisuallyContiguousBidiTextSelectionEnabled();

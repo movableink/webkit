@@ -2681,15 +2681,16 @@ DiagnosticLoggingEnabled:
 
 DigitalCredentialsEnabled:
   type: bool
-  status: testable
+  status: stable
   category: dom
   humanReadableName: "Digital Credentials API"
-  humanReadableDescription: "Enable the experimental Digital Credentials API"
+  humanReadableDescription: "Enable the Digital Credentials API"
+  condition: ENABLE(WEB_AUTHN)
   defaultValue:
     WebKitLegacy:
       default: false
     WebKit:
-      default: false
+      default: WebKit::defaultDigitalCredentialsEnabled()
     WebCore:
       default: false
   sharedPreferenceForWebProcess: true

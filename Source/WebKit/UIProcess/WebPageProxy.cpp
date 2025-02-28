@@ -8948,6 +8948,7 @@ void WebPageProxy::showContactPicker(IPC::Connection& connection, const Contacts
         pageClient->showContactPicker(requestData, WTFMove(completionHandler));
 }
 
+#if ENABLE(WEB_AUTHN)
 void WebPageProxy::showDigitalCredentialsPicker(IPC::Connection& connection, const WebCore::DigitalCredentialsRequestData& requestData, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& completionHandler)
 {
     MESSAGE_CHECK_COMPLETION_BASE(
@@ -8982,6 +8983,7 @@ void WebPageProxy::dismissDigitalCredentialsPicker(IPC::Connection& connection, 
     completionHandler(false);
 #endif
 }
+#endif // ENABLE(WEB_AUTHN)
 
 void WebPageProxy::printFrame(IPC::Connection& connection, FrameIdentifier frameID, const String& title, const FloatSize& pdfFirstPageSize, CompletionHandler<void()>&& completionHandler)
 {
