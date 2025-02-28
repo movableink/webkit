@@ -41,7 +41,6 @@ WebProcess/Automation/WebAutomationSessionProxy.cpp
 WebProcess/EncryptedMedia/MediaKeySystemPermissionRequestManager.cpp
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.cpp
 WebProcess/FullScreen/WebFullScreenManager.cpp
-WebProcess/GPU/media/RemoteAudioDestinationProxy.cpp
 WebProcess/GPU/webrtc/SampleBufferDisplayLayerManager.cpp
 WebProcess/Geolocation/GeolocationPermissionRequestManager.cpp
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInFrame.mm

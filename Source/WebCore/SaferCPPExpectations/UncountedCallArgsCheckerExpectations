@@ -1017,7 +1017,6 @@ platform/audio/PlatformMediaSessionManager.cpp
 platform/audio/PushPullFIFO.cpp
 platform/audio/Reverb.cpp
 platform/audio/ReverbConvolver.cpp
-platform/audio/cocoa/AudioDestinationCocoa.cpp
 platform/audio/cocoa/AudioFileReaderCocoa.cpp
 platform/audio/cocoa/AudioSampleDataSource.mm
 platform/cocoa/DragImageCocoa.mm

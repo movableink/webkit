@@ -66,11 +66,11 @@ private:
 
 protected:
     // To pass the data from FIFO to the audio device callback.
-    Ref<AudioBus> m_outputBus;
+    const Ref<AudioBus> m_outputBus;
 
 private:
     // To push the rendered result from WebAudio graph into the FIFO.
-    Ref<AudioBus> m_renderBus;
+    const Ref<AudioBus> m_renderBus;
 
     // Resolves the buffer size mismatch between the WebAudio engine and
     // the callback function from the actual audio device.

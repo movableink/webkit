@@ -76,7 +76,7 @@ std::unique_ptr<WebCore::NowPlayingManager> WebMediaStrategy::createNowPlayingMa
             void clearNowPlayingInfoPrivate() final
             {
                 if (RefPtr connection = WebProcess::singleton().existingGPUProcessConnection())
-                    connection->connection().send(Messages::GPUConnectionToWebProcess::ClearNowPlayingInfo { }, 0);
+                    connection->protectedConnection()->send(Messages::GPUConnectionToWebProcess::ClearNowPlayingInfo { }, 0);
             }
 
             void setNowPlayingInfoPrivate(const WebCore::NowPlayingInfo& nowPlayingInfo, bool) final
@@ -128,7 +128,7 @@ std::unique_ptr<MediaRecorderPrivateWriter> WebMediaStrategy::createMediaRecorde
     ASSERT(isMainRunLoop());
 #if ENABLE(GPU_PROCESS)
     if (m_useGPUProcess && (equalLettersIgnoringASCIICase(type, "video/mp4"_s) || equalLettersIgnoringASCIICase(type, "audio/mp4"_s)))
-        return RemoteMediaRecorderPrivateWriter::create(WebProcess::singleton().ensureGPUProcessConnection(), type, listener);
+        return RemoteMediaRecorderPrivateWriter::create(WebProcess::singleton().ensureProtectedGPUProcessConnection(), type, listener);
 #else
     UNUSED_PARAM(type);
     UNUSED_PARAM(listener);

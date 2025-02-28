@@ -88,7 +88,7 @@ void RemoteAudioDestinationProxy::startRenderingThread()
 {
     ASSERT(!m_renderThread);
 
-    auto offThreadRendering = [this]() mutable {
+    auto offThreadRendering = [this, protectedThis = Ref { *this }]() mutable {
         do {
             m_renderSemaphore.wait();
             if (m_shouldStopThread || !m_frameCount)
@@ -112,7 +112,8 @@ void RemoteAudioDestinationProxy::startRenderingThread()
     }
     auto schedulingPolicy = shouldCreateRealtimeThread ? Thread::SchedulingPolicy::Realtime : Thread::SchedulingPolicy::Other;
 
-    m_renderThread = Thread::create("RemoteAudioDestinationProxy render thread"_s, WTFMove(offThreadRendering), ThreadType::Audio, Thread::QOS::UserInteractive, schedulingPolicy);
+    Ref renderThread = Thread::create("RemoteAudioDestinationProxy render thread"_s, WTFMove(offThreadRendering), ThreadType::Audio, Thread::QOS::UserInteractive, schedulingPolicy);
+    m_renderThread = renderThread.copyRef();
 
 #if HAVE(THREAD_TIME_CONSTRAINTS)
     if (shouldCreateRealtimeThread) {
@@ -120,24 +121,25 @@ void RemoteAudioDestinationProxy::startRenderingThread()
         auto rawRenderingQuantumDuration = 128 / m_remoteSampleRate;
         auto renderingQuantumDuration = MonotonicTime::fromRawSeconds(rawRenderingQuantumDuration);
         auto renderingTimeConstraint = MonotonicTime::fromRawSeconds(rawRenderingQuantumDuration * 2);
-        m_renderThread->setThreadTimeConstraints(renderingQuantumDuration, renderingQuantumDuration, renderingTimeConstraint, true);
+        renderThread->setThreadTimeConstraints(renderingQuantumDuration, renderingQuantumDuration, renderingTimeConstraint, true);
     }
 #endif
 
 #if PLATFORM(COCOA)
     // Roughly match the priority of the Audio IO thread in the GPU process
-    m_renderThread->changePriority(60);
+    renderThread->changePriority(60);
 #endif
 }
 
 void RemoteAudioDestinationProxy::stopRenderingThread()
 {
-    if (!m_renderThread)
+    RefPtr renderThread = m_renderThread;
+    if (!renderThread)
         return;
 
     m_shouldStopThread = true;
     m_renderSemaphore.signal();
-    m_renderThread->waitForCompletion();
+    renderThread->waitForCompletion();
     m_renderThread = nullptr;
 
     if (m_isRealtimeThread) {
@@ -158,11 +160,12 @@ IPC::Connection* RemoteAudioDestinationProxy::connection()
 
         m_lastFrameCount = 0;
         std::optional<WebCore::SharedMemory::Handle> frameCountHandle;
-        if ((m_frameCount = WebCore::SharedMemory::allocate(sizeof(std::atomic<uint32_t>)))) {
-            frameCountHandle = m_frameCount->createHandle(WebCore::SharedMemory::Protection::ReadWrite);
-        }
+        RefPtr frameCount = WebCore::SharedMemory::allocate(sizeof(std::atomic<uint32_t>));
+        m_frameCount = frameCount;
+        if (frameCount)
+            frameCountHandle = frameCount->createHandle(WebCore::SharedMemory::Protection::ReadWrite);
         RELEASE_ASSERT(frameCountHandle.has_value());
-        gpuProcessConnection->connection().sendWithAsyncReply(Messages::RemoteAudioDestinationManager::CreateAudioDestination(*m_destinationID, m_inputDeviceId, m_numberOfInputChannels, m_outputBus->numberOfChannels(), sampleRate(), m_remoteSampleRate, m_renderSemaphore, WTFMove(*frameCountHandle)), [protectedThis = Ref { *this }](size_t latency) {
+        gpuProcessConnection->protectedConnection()->sendWithAsyncReply(Messages::RemoteAudioDestinationManager::CreateAudioDestination(*m_destinationID, m_inputDeviceId, m_numberOfInputChannels, m_outputBus->numberOfChannels(), sampleRate(), m_remoteSampleRate, m_renderSemaphore, WTFMove(*frameCountHandle)), [protectedThis = Ref { *this }](size_t latency) {
             protectedThis->m_audioUnitLatency = latency;
         }, 0);
 
@@ -174,7 +177,7 @@ IPC::Connection* RemoteAudioDestinationProxy::connection()
         RELEASE_ASSERT(result); // FIXME(https://bugs.webkit.org/show_bug.cgi?id=262690): Handle allocation failure.
         auto [ringBuffer, handle] = WTFMove(*result);
         m_ringBuffer = WTFMove(ringBuffer);
-        gpuProcessConnection->connection().send(Messages::RemoteAudioDestinationManager::AudioSamplesStorageChanged { *m_destinationID, WTFMove(handle) }, 0);
+        gpuProcessConnection->protectedConnection()->send(Messages::RemoteAudioDestinationManager::AudioSamplesStorageChanged { *m_destinationID, WTFMove(handle) }, 0);
         m_audioBufferList = makeUnique<WebCore::WebAudioBufferList>(streamFormat);
         m_audioBufferList->setSampleCount(maxAudioBufferListSampleCount);
 #endif
@@ -193,7 +196,7 @@ IPC::Connection* RemoteAudioDestinationProxy::existingConnection()
 RemoteAudioDestinationProxy::~RemoteAudioDestinationProxy()
 {
     if (auto gpuProcessConnection = m_gpuProcessConnection.get(); gpuProcessConnection && m_destinationID)
-        gpuProcessConnection->connection().send(Messages::RemoteAudioDestinationManager::DeleteAudioDestination(*m_destinationID), 0);
+        gpuProcessConnection->protectedConnection()->send(Messages::RemoteAudioDestinationManager::DeleteAudioDestination(*m_destinationID), 0);
     stopRenderingThread();
 }
 
@@ -217,7 +220,7 @@ void RemoteAudioDestinationProxy::startRendering(CompletionHandler<void(bool)>&&
 
 void RemoteAudioDestinationProxy::stopRendering(CompletionHandler<void(bool)>&& completionHandler)
 {
-    auto* connection = existingConnection();
+    RefPtr connection = existingConnection();
     if (!connection) {
         RunLoop::protectedCurrent()->dispatch([protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
             protectedThis->setIsPlaying(false);

@@ -16,11 +16,6 @@ UIProcess/WebsiteData/WebDeviceOrientationAndMotionAccessController.cpp
 UIProcess/mac/WebContextMenuProxyMac.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIRuntimeCocoa.mm
-WebProcess/GPU/media/RemoteAudioDestinationProxy.cpp
-WebProcess/GPU/media/RemoteImageDecoderAVF.cpp
-WebProcess/GPU/media/RemoteImageDecoderAVFManager.cpp
-WebProcess/GPU/media/RemoteMediaPlayerManager.cpp
-WebProcess/GPU/media/RemoteVideoFrameProxy.cpp
 WebProcess/GPU/webrtc/SampleBufferDisplayLayer.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/Network/WebLoaderStrategy.cpp

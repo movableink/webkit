@@ -59,7 +59,7 @@ private:
     void audioStorageChanged(WebCore::MediaPlayerIdentifier, ConsumerSharedCARingBuffer::Handle&&, const WebCore::CAAudioStreamDescription&);
     void audioSamplesAvailable(WebCore::MediaPlayerIdentifier, uint64_t startFrame, uint64_t numberOfFrames);
 
-    void setConnection(IPC::Connection*);
+    void setConnection(RefPtr<IPC::Connection>&&);
 
     class RemoteAudio {
         WTF_MAKE_TZONE_ALLOCATED(RemoteAudio);
@@ -70,13 +70,13 @@ private:
         void audioSamplesAvailable(uint64_t startFrame, uint64_t numberOfFrames);
 
     private:
-        Ref<RemoteAudioSourceProvider> m_provider;
+        const Ref<RemoteAudioSourceProvider> m_provider;
         std::optional<WebCore::CAAudioStreamDescription> m_description;
         std::unique_ptr<ConsumerSharedCARingBuffer> m_ringBuffer;
         std::unique_ptr<WebCore::WebAudioBufferList> m_buffer;
     };
 
-    Ref<WorkQueue> m_queue;
+    const Ref<WorkQueue> m_queue;
     RefPtr<IPC::Connection> m_connection;
 
     // background thread member
