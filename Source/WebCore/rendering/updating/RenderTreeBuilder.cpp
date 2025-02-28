@@ -36,6 +36,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "LocalFrameViewLayoutContext.h"
+#include "RenderBlockInlines.h"
 #include "RenderButton.h"
 #include "RenderCounter.h"
 #include "RenderDescendantIterator.h"
