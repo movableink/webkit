@@ -139,7 +139,7 @@ private:
 #endif
 
 #if ENABLE(VIDEO)
-    String mediaControlsStyleSheet() override;
+    Vector<String> mediaControlsStyleSheets(const HTMLMediaElement&) override;
     Vector<String, 2> mediaControlsScripts() override;
     String mediaControlsBase64StringForIconNameAndType(const String&, const String&) override;
     String mediaControlsFormattedStringForDuration(double) override;

@@ -102,7 +102,12 @@ static bool renderThemePaintSwitchTrack(OptionSet<ControlStyle::State>, const Re
     return true;
 }
 
+static Vector<String> additionalMediaControlsStyleSheets(const HTMLMediaElement&)
+{
+    return { };
 }
+
+} // namespace WebCore
 
 #endif
 
@@ -217,11 +222,15 @@ void RenderThemeCocoa::adjustApplePayButtonStyle(RenderStyle& style, const Eleme
 
 #if ENABLE(VIDEO)
 
-String RenderThemeCocoa::mediaControlsStyleSheet()
+Vector<String> RenderThemeCocoa::mediaControlsStyleSheets(const HTMLMediaElement& mediaElement)
 {
     if (m_mediaControlsStyleSheet.isEmpty())
         m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
-    return m_mediaControlsStyleSheet;
+
+    auto mediaControlsStyleSheets = Vector<String>::from(m_mediaControlsStyleSheet);
+    mediaControlsStyleSheets.appendVector(additionalMediaControlsStyleSheets(mediaElement));
+
+    return mediaControlsStyleSheets;
 }
 
 Vector<String, 2> RenderThemeCocoa::mediaControlsScripts()

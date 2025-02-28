@@ -206,11 +206,11 @@ Vector<String, 2> RenderThemeAdwaita::mediaControlsScripts()
     return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript) };
 }
 
-String RenderThemeAdwaita::mediaControlsStyleSheet()
+Vector<String> RenderThemeAdwaita::mediaControlsStyleSheets(const HTMLMediaElement&)
 {
     if (m_mediaControlsStyleSheet.isEmpty())
         m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
-    return m_mediaControlsStyleSheet;
+    return { m_mediaControlsStyleSheet };
 }
 
 String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
