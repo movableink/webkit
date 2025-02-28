@@ -35,7 +35,6 @@ Shared/Cocoa/APIObject.mm
 Shared/Cocoa/WKNSData.mm
 Shared/Cocoa/WKNSString.mm
 Shared/Cocoa/WKNSURL.mm
-Shared/ContextMenuContextData.cpp
 Shared/RemoteLayerTree/RemoteLayerWithInProcessRenderingBackingStore.mm
 Shared/RemoteLayerTree/RemoteLayerWithRemoteRenderingBackingStore.mm
 Shared/SharedStringHashStore.cpp

@@ -4,7 +4,6 @@ Shared/API/APIObject.h
 Shared/API/c/cg/WKImageCG.cpp
 Shared/APIWebArchive.mm
 Shared/Cocoa/APIObject.mm
-Shared/ContextMenuContextData.cpp
 Shared/WebContextMenuItem.cpp
 Shared/WebHitTestResultData.cpp
 UIProcess/API/C/WKContext.cpp
