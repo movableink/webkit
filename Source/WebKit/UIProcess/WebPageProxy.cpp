@@ -12179,20 +12179,12 @@ void WebPageProxy::microphoneMuteStatusChanged(bool isMuting)
     // We are updating both the internal and web app muting states so that only microphone changes, and not camera or screenshare.
     auto mutedState = internals().mutedState;
     if (isMuting) {
-#if PLATFORM(MAC)
-        mutedState.add(WebCore::MediaProducer::MediaStreamCaptureIsMuted);
-#else
         mutedState.add(WebCore::MediaProducerMutedState::AudioCaptureIsMuted);
-#endif
         m_mutedCaptureKindsDesiredByWebApp.add(WebCore::MediaProducerMediaCaptureKind::Microphone);
     } else {
         WebProcessProxy::muteCaptureInPagesExcept(m_webPageID);
 
-#if PLATFORM(MAC)
-        mutedState.remove(WebCore::MediaProducer::MediaStreamCaptureIsMuted);
-#else
         mutedState.remove(WebCore::MediaProducerMutedState::AudioCaptureIsMuted);
-#endif
         m_mutedCaptureKindsDesiredByWebApp.remove(WebCore::MediaProducerMediaCaptureKind::Microphone);
     }
 
