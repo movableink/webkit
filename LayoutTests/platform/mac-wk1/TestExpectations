@@ -3034,3 +3034,4 @@ webkit.org/b/288831 [ Debug ] fast/css/shadow-box-recursion-depth.html [ Pass Ti
 
 webkit.org/b/288843 [ Release ] compositing/repaint/iframes/compositing-iframe-scroll-repaint.html [ Pass Failure ]
 
+webkit.org/b/288862 fast/repaint/switch-overflow-vertical-rl.html [ Pass Failure ]
