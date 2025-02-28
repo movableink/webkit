@@ -66,6 +66,8 @@ private:
 
 } // namespace API
 
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(WebArchiveResource);
+
 #endif // PLATFORM(COCOA)
 
 #endif // WebArchiveResource_h

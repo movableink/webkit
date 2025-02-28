@@ -1,6 +1,5 @@
 AutomationProtocolObjects.h
 Platform/cocoa/CocoaHelpers.mm
-Shared/API/APIArray.h
 Shared/API/APIDictionary.h
 Shared/API/c/WKSharedAPICast.h
 Shared/API/c/cf/WKStringCF.mm

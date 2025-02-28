@@ -2,7 +2,6 @@ AutomationBackendDispatchers.cpp
 AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
 Platform/IPC/ArgumentCoders.h
-Shared/API/APIArray.h
 Shared/API/c/WKArray.cpp
 Shared/API/c/WKContextMenuItem.cpp
 Shared/API/c/WKData.cpp

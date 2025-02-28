@@ -42,7 +42,7 @@ private:
 
     template <class T>
     struct GetObjectTransform {
-        const T* operator()(const RefPtr<Object>& object) const { return static_cast<const T*>(object.get()); }
+        const T* operator()(const RefPtr<Object>& object) const { return downcast<T>(object.get()); }
     };
 
     template <typename T>
@@ -60,10 +60,7 @@ public:
     template<typename T>
     T* at(size_t i) const
     {
-        if (!m_elements[i] || m_elements[i]->type() != T::APIType)
-            return nullptr;
-
-        return static_cast<T*>(m_elements[i].get());
+        return dynamicDowncast<T>(m_elements[i].get());
     }
 
     Object* at(size_t i) const { return m_elements[i].get(); }
