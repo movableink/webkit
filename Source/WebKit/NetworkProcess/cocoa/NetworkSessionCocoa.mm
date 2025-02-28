@@ -1419,6 +1419,7 @@ NetworkSessionCocoa::NetworkSessionCocoa(NetworkProcess& networkProcess, const N
     , m_fastServerTrustEvaluationEnabled(parameters.fastServerTrustEvaluationEnabled)
     , m_dataConnectionServiceType(parameters.dataConnectionServiceType)
     , m_preventsSystemHTTPProxyAuthentication(parameters.preventsSystemHTTPProxyAuthentication)
+    , m_isLegacyTLSAllowed(parameters.isLegacyTLSAllowed)
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
 
@@ -1519,6 +1520,15 @@ NetworkSessionCocoa::NetworkSessionCocoa(NetworkProcess& networkProcess, const N
 
     cookieStorage.get()._overrideSessionCookieAcceptPolicy = YES;
 
+#if ENABLE(TLS_1_2_DEFAULT_MINIMUM)
+    if (m_isLegacyTLSAllowed) {
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+        configuration.TLSMinimumSupportedProtocolVersion = tls_protocol_version_TLSv10;
+ALLOW_DEPRECATED_DECLARATIONS_END
+    } else
+        configuration.TLSMinimumSupportedProtocolVersion = tls_protocol_version_TLSv12;
+#endif
+
     initializeNSURLSessionsInSet(m_defaultSessionSet.get(), configuration);
 
     m_deviceManagementRestrictionsEnabled = parameters.deviceManagementRestrictionsEnabled;
@@ -1596,6 +1606,13 @@ SessionWrapper& SessionSet::initializeEphemeralStatelessSessionIfNeeded(Navigati
     configuration.URLCache = nil;
     configuration.allowsCellularAccess = existingConfiguration.allowsCellularAccess;
     configuration.connectionProxyDictionary = existingConfiguration.connectionProxyDictionary;
+
+#if ENABLE(TLS_1_2_DEFAULT_MINIMUM)
+    if (session.isLegacyTLSAllowed())
+        configuration.TLSMinimumSupportedProtocolVersion = existingConfiguration.TLSMinimumSupportedProtocolVersion;
+    else
+        configuration.TLSMinimumSupportedProtocolVersion = tls_protocol_version_TLSv12;
+#endif
 
     configuration._shouldSkipPreferredClientCertificateLookup = YES;
     configuration._sourceApplicationAuditTokenData = existingConfiguration._sourceApplicationAuditTokenData;

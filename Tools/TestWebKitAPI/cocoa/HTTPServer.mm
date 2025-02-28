@@ -133,8 +133,12 @@ RetainPtr<nw_parameters_t> HTTPServer::listenerParameters(Protocol protocol, Cer
         auto options = adoptNS(nw_tls_copy_sec_protocol_options(protocolOptions));
         auto identity = adoptNS(sec_identity_create(testIdentity.get()));
         sec_protocol_options_set_local_identity(options.get(), identity.get());
-        if (protocol == Protocol::HttpsWithLegacyTLS)
+        if (protocol == Protocol::HttpsWithLegacyTLS) {
+#if ENABLE(TLS_1_2_DEFAULT_MINIMUM)
+            sec_protocol_options_set_min_tls_protocol_version(options.get(), tls_protocol_version_TLSv10);
+#endif
             sec_protocol_options_set_max_tls_protocol_version(options.get(), tls_protocol_version_TLSv10);
+        }
         if (verifier) {
             sec_protocol_options_set_peer_authentication_required(options.get(), true);
             sec_protocol_options_set_verify_block(options.get(), makeBlockPtr([verifier = WTFMove(verifier)](sec_protocol_metadata_t metadata, sec_trust_t trust, sec_protocol_verify_complete_t completion) {

@@ -2204,6 +2204,7 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
 #if HAVE(NW_PROXY_CONFIG)
     networkSessionParameters.proxyConfigData = m_proxyConfigData;
 #endif
+    networkSessionParameters.isLegacyTLSAllowed = m_configuration->legacyTLSEnabled();
 
     parameters.networkSessionParameters = WTFMove(networkSessionParameters);
     parameters.networkSessionParameters.resourceLoadStatisticsParameters.enabled = trackingPreventionEnabled();

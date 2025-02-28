@@ -324,7 +324,11 @@ private:
     bool m_deviceManagementRestrictionsEnabled { false };
     bool m_allLoadsBlockedByDeviceManagementRestrictionsForTesting { false };
     bool m_allowsCellularAccess { true };
+#if ENABLE(TLS_1_2_DEFAULT_MINIMUM)
+    bool m_legacyTLSEnabled { false };
+#else
     bool m_legacyTLSEnabled { true };
+#endif
     bool m_fastServerTrustEvaluationEnabled { false };
     bool m_serviceWorkerProcessTerminationDelayEnabled { true };
     bool m_testingSessionEnabled { false };

@@ -167,6 +167,7 @@ public:
 
     void applyProxyConfigurationToSessionConfiguration(NSURLSessionConfiguration *);
 #endif
+    bool isLegacyTLSAllowed() const { return m_isLegacyTLSAllowed; }
 
 private:
     void invalidateAndCancel() override;
@@ -229,6 +230,7 @@ private:
     bool m_fastServerTrustEvaluationEnabled { false };
     String m_dataConnectionServiceType;
     bool m_preventsSystemHTTPProxyAuthentication { false };
+    bool m_isLegacyTLSAllowed { false };
 #if HAVE(AD_ATTRIBUTION_KIT_PRIVATE_BROWSING)
     Markable<WTF::UUID> m_donatedEphemeralImpressionSessionID;
 #endif
