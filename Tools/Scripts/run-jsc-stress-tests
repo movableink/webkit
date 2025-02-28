@@ -2118,6 +2118,9 @@ def runLayoutTest(kind, *options)
     else
         kind = "layout"
     end
+    if $skipModes.include?(kind.to_sym)
+        return
+    end
 
     prepareExtraRelativeFiles(["../#{testName}-expected.txt"], $benchmarkDirectory)
     prepareExtraAbsoluteFiles(LAYOUTTESTS_PATH, ["resources/standalone-pre.js", "resources/standalone-post.js"])
