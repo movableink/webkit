@@ -1095,7 +1095,10 @@ void UserMediaPermissionRequestManagerProxy::setMockCaptureDevicesEnabledOverrid
 
 bool UserMediaPermissionRequestManagerProxy::mockCaptureDevicesEnabled() const
 {
-    return m_mockDevicesEnabledOverride ? *m_mockDevicesEnabledOverride : m_page && m_page->protectedPreferences()->mockCaptureDevicesEnabled();
+    if (m_mockDevicesEnabledOverride)
+        return *m_mockDevicesEnabledOverride;
+    RefPtr page = m_page.get();
+    return page && page->protectedPreferences()->mockCaptureDevicesEnabled();
 }
 
 bool UserMediaPermissionRequestManagerProxy::canAudioCaptureSucceed() const

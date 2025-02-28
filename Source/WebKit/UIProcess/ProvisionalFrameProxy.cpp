@@ -58,12 +58,13 @@ ProvisionalFrameProxy::~ProvisionalFrameProxy()
     if (!m_frameProcess)
         return;
 
-    RefPtr page = m_frame->page();
+    Ref frame = m_frame.get();
+    RefPtr page = frame->page();
     if (!page)
         return;
 
     Ref process = this->process();
-    process->send(Messages::WebPage::DestroyProvisionalFrame(m_frame->frameID()), page->webPageIDInProcess(process));
+    process->send(Messages::WebPage::DestroyProvisionalFrame(frame->frameID()), page->webPageIDInProcess(process));
 }
 
 RefPtr<FrameProcess> ProvisionalFrameProxy::takeFrameProcess()
