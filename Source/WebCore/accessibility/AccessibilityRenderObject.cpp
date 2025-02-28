@@ -2585,7 +2585,13 @@ void AccessibilityRenderObject::addChildren()
 
     if (node && !(element && element->isPseudoElement()) && cache) {
         // If we have a DOM node, use the DOM to find accessible children.
-        for (Ref child : composedTreeChildren(*node)) {
+        //
+        // The ComposedTreeIterator is extremely large by default, and will cause a stack
+        // overflow when building the accessibility tree from a deep DOM. Specify that we
+        // do not want its internal vector to allocate any space on the stack, in turn
+        // ensuring its contents go on the heap. We should consider rewriting our algorithm
+        // to build the accessibility tree to be iterative rather than recursive.
+        for (Ref child : composedTreeChildren</* InlineContextCapacity */ 0>(*node)) {
             if (RefPtr childObject = cache->getOrCreate(child.get()))
                 addChildIfNeeded(*childObject);
         }

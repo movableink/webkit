@@ -530,7 +530,7 @@ dom/Attr.cpp
 dom/BoundaryPoint.cpp
 dom/BroadcastChannel.cpp
 dom/ChildListMutationScope.h
-dom/ComposedTreeIterator.cpp
+dom/ComposedTreeIterator.h
 dom/ContainerNode.cpp
 dom/ContainerNodeAlgorithms.cpp
 dom/ContentVisibilityDocumentState.cpp

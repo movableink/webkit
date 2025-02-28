@@ -600,7 +600,10 @@ void AccessibilityNodeObject::addChildren()
         addChild(cache->getOrCreate(*child));
 #else
     if (auto* containerNode = dynamicDowncast<ContainerNode>(*node)) {
-        for (Ref child : composedTreeChildren(*containerNode))
+        // Specify an InlineContextCapacity template parameter of 0 to avoid allocating ComposedTreeIterator's
+        // internal vector on the stack. See comment in AccessibilityRenderObject::addChildren() for a full
+        // explanation of this behavior.
+        for (Ref child : composedTreeChildren</* InlineContextCapacity */ 0>(*containerNode))
             addChild(cache->getOrCreate(child.get()));
     }
 #endif // USE(ATSPI)
