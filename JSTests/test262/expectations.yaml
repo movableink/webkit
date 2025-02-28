@@ -1368,8 +1368,6 @@ test/staging/sm/RegExp/unicode-class-negated.js:
   default: 'Test262Error: Actual [�] and expected [�] should have the same contents. '
 test/staging/sm/RegExp/unicode-raw.js:
   default: 'Test262Error: Expected SameValue(«🐸», «null») to be true'
-test/staging/sm/Set/difference.js:
-  default: 'Test262Error: Expected SameValue(«false», «true») to be true'
 test/staging/sm/Set/symmetric-difference.js:
   default: 'Test262Error: Expected SameValue(«3», «1») to be true'
 test/staging/sm/Set/union.js:
