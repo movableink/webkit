@@ -172,6 +172,7 @@ private:
     bool ended() const override { return m_ended; }
 
     void setBufferingPolicy(MediaPlayer::BufferingPolicy) override;
+    void setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit) final;
     void audioOutputDeviceChanged() final;
     std::optional<VideoFrameMetadata> videoFrameMetadata() final;
     void setResourceOwner(const ProcessIdentity&) final { ASSERT_NOT_REACHED(); }

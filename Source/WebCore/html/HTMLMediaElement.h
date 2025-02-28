@@ -43,6 +43,7 @@
 #include "MediaProducer.h"
 #include "MediaResourceSniffer.h"
 #include "MediaUniqueIdentifier.h"
+#include "PlatformDynamicRangeLimit.h"
 #include "ReducedResolutionSeconds.h"
 #include "TextTrackClient.h"
 #include "URLKeepingBlobAlive.h"
@@ -650,6 +651,7 @@ public:
 
     WEBCORE_EXPORT void setOverridePreferredDynamicRangeMode(DynamicRangeMode);
     void setPreferredDynamicRangeMode(DynamicRangeMode);
+    void dynamicRangeLimitDidChange(PlatformDynamicRangeLimit);
 
     void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) override;
 
@@ -1343,6 +1345,7 @@ private:
     WeakPtr<const MediaResourceLoader> m_lastMediaResourceLoaderForTesting;
 
     std::optional<DynamicRangeMode> m_overrideDynamicRangeMode;
+    PlatformDynamicRangeLimit m_platformDynamicRangeLimit;
 
     friend class TrackDisplayUpdateScope;
 

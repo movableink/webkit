@@ -37,6 +37,7 @@
 #import "MediaSessionManagerCocoa.h"
 #import "MediaStreamPrivate.h"
 #import "PixelBufferConformerCV.h"
+#import "PlatformDynamicRangeLimitCocoa.h"
 #import "VideoFrame.h"
 #import "VideoFrameMetadata.h"
 #import "VideoLayerManagerObjC.h"
@@ -446,6 +447,13 @@ void MediaPlayerPrivateMediaStreamAVFObjC::layersAreInitialized(IntSize size, bo
         sampleBufferDisplayLayer->updateBoundsAndPosition(*m_storedBounds);
 
     sampleBufferDisplayLayer->updateDisplayMode(m_displayMode < PausedImage, hideRootLayer());
+
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    if ([sampleBufferDisplayLayer->rootLayer() respondsToSelector:@selector(setPreferredDynamicRange:)]) {
+        if (auto player = m_player.get())
+            [sampleBufferDisplayLayer->rootLayer() setPreferredDynamicRange:platformDynamicRangeLimitString(player->platformDynamicRangeLimit())];
+    }
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
 
     m_videoLayerManager->setVideoLayer(sampleBufferDisplayLayer->rootLayer(), size);
 
@@ -1190,6 +1198,18 @@ void MediaPlayerPrivateMediaStreamAVFObjC::setBufferingPolicy(MediaPlayer::Buffe
         if (RefPtr sampleBufferDisplayLayer = m_sampleBufferDisplayLayer)
             sampleBufferDisplayLayer->flushAndRemoveImage();
     }
+}
+
+void MediaPlayerPrivateMediaStreamAVFObjC::setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit platformDynamicRangeLimit)
+{
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    if (RefPtr sampleBufferDisplayLayer = m_sampleBufferDisplayLayer) {
+        if (auto* rootLayer = sampleBufferDisplayLayer->rootLayer(); rootLayer && [rootLayer respondsToSelector:@selector(setPreferredDynamicRange:)])
+            [rootLayer setPreferredDynamicRange:platformDynamicRangeLimitString(platformDynamicRangeLimit)];
+    }
+#else // HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    UNUSED_PARAM(platformDynamicRangeLimit);
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
 }
 
 void MediaPlayerPrivateMediaStreamAVFObjC::audioOutputDeviceChanged()
