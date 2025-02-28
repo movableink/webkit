@@ -512,7 +512,7 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
             IndentationScope scope(m_indent);
             m_stringBuilder.append(m_indent, "auto o = min(offset, 32u);\n"_s,
                 m_indent, "auto c = min(count, 32u - o);\n"_s,
-                m_indent, "return extract_bits(e, o, c);\n"_s);
+                m_indent, "return extract_bits(e, min(o, 31u), c);\n"_s);
         }
         m_stringBuilder.append(m_indent, "}\n"_s);
     }
@@ -553,7 +553,7 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
             m_stringBuilder.append(m_indent, "constexpr unsigned w = 8 * static_cast<unsigned>(sizeof(make_scalar_t<T>));\n"_s);
             m_stringBuilder.append(m_indent, "const unsigned o = min(offset, w);\n"_s);
             m_stringBuilder.append(m_indent, "const unsigned c = min(count, w - o);\n"_s);
-            m_stringBuilder.append(m_indent, "return insert_bits(e, newBits, o, c);\n"_s);
+            m_stringBuilder.append(m_indent, "return insert_bits(e, newBits, min(o, w - 1), c);\n"_s);
         }
         m_stringBuilder.append(m_indent, "}\n\n"_s);
     }
