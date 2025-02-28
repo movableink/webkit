@@ -1332,8 +1332,6 @@ test/staging/sm/Function/function-name-assignment.js:
   default: 'Test262Error: Expected SameValue(«"inParen"», «""») to be true'
 test/staging/sm/Function/function-toString-builtin-name.js:
   default: 'Test262Error: Incorrect match for undefined Expected SameValue(«"fn"», «undefined») to be true'
-test/staging/sm/Iterator/from/modify-return.js:
-  default: 'TypeError: null is not a function'
 test/staging/sm/Iterator/prototype/every/check-fn-after-getting-iterator.js:
   default: 'Test262Error: Actual [get: every, get: return] and expected [get: every] should have the same contents. '
 test/staging/sm/Iterator/prototype/find/check-fn-after-getting-iterator.js:
