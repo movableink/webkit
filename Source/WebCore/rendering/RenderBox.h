@@ -720,10 +720,8 @@ private:
 
     struct PositionedLayoutConstraints;
     void computePositionedLogicalHeight(LogicalExtentComputedValues&) const;
-    void computePositionedLogicalWidthUsing(SizeType, Length logicalWidth, const PositionedLayoutConstraints&,
-                                            LogicalExtentComputedValues&) const;
-    void computePositionedLogicalHeightUsing(SizeType, Length logicalHeightLength, LayoutUnit computedHeight, const PositionedLayoutConstraints&,
-                                             LogicalExtentComputedValues&) const;
+    LayoutUnit computePositionedLogicalWidthUsing(SizeType, Length logicalWidth, const PositionedLayoutConstraints&) const;
+    LayoutUnit computePositionedLogicalHeightUsing(SizeType, Length logicalHeightLength, LayoutUnit computedHeight, const PositionedLayoutConstraints&) const;
 
     void computePositionedLogicalHeightReplaced(LogicalExtentComputedValues&) const;
     void computePositionedLogicalWidthReplaced(LogicalExtentComputedValues&) const;

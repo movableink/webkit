@@ -3887,14 +3887,13 @@ public:
 
 // Convenience struct to package constraints and inputs.
 struct RenderBox::PositionedLayoutConstraints {
-    /* These values are set and tweaked by the user. */
-    LayoutUnit bordersPlusPadding;
-    Length marginBefore; // Logical top or left.
-    Length marginAfter; // Logical bottom or right.
+    /* These values are captured by the constructor and may be tweaked by the user. */
+    Length marginBefore; // Logical top or left wrt containing block.
+    Length marginAfter; // Logical bottom or right wrt containing block.
     Length insetBefore;
     Length insetAfter;
 
-    /* These values are set by the constructor. */
+    /* These values are calculated by the constructor. */
     LayoutRange containingBlock;
     LayoutUnit marginPercentageBasis;
     const RenderBoxModelObject& containingBox;
@@ -3906,6 +3905,10 @@ struct RenderBox::PositionedLayoutConstraints {
     const CheckedPtr<const RenderBoxModelObject> defaultAnchorBox; // Only set if needed.
     LayoutRange anchorArea; // Only valid if defaultAnchor exists.
 
+    /* These values are cached by the constructor, and should not be changed afterwards. */
+    LayoutUnit bordersPlusPadding;
+    bool useStaticPosition { false };
+
     bool needsAnchor(const RenderStyle& style) const
     {
         return style.positionArea() || alignment.position() == ItemPosition::AnchorCenter;
@@ -3914,6 +3917,13 @@ struct RenderBox::PositionedLayoutConstraints {
     bool isBlockOpposing() const { return containingWritingMode.isBlockOpposing(selfWritingMode); }
     bool isBlockFlipped() const { return containingWritingMode.isBlockFlipped(); }
     bool isLogicalLeftInlineStart() const { return containingWritingMode.isLogicalLeftInlineStart(); }
+    bool containingCoordsAreFlipped() const
+    {
+        // FIXME: Static position has a confusing implementation. Leaving it alone for now.
+        return !useStaticPosition
+            && ((isBlockOpposing() && containingAxis == LogicalBoxAxis::Block)
+            || (isOrthogonal() && containingAxis == LogicalBoxAxis::Inline && selfWritingMode.isBlockFlipped()));
+    }
 
     LayoutUnit containingSize() const { return containingBlock.size(); }
 
@@ -3921,6 +3931,10 @@ struct RenderBox::PositionedLayoutConstraints {
     LayoutUnit marginAfterValue() const { return minimumValueForLength(marginAfter, marginPercentageBasis); }
     LayoutUnit insetBeforeValue() const { return minimumValueForLength(insetBefore, containingSize()); }
     LayoutUnit insetAfterValue() const { return minimumValueForLength(insetAfter, containingSize()); }
+    LayoutUnit availableContentSpace() const // This may be negative.
+    {
+        return containingSize() - insetBeforeValue() - marginBeforeValue() - bordersPlusPadding - marginAfterValue() - insetAfterValue();
+    }
 
     PositionedLayoutConstraints(const RenderBox& self, const RenderBoxModelObject& containingBlockBox, LogicalBoxAxis logicalAxis)
         : containingBox(containingBlockBox)
@@ -3944,8 +3958,10 @@ struct RenderBox::PositionedLayoutConstraints {
         marginPercentageBasis = containingWidth;
 
         computeAnchorGeometry(self);
-    }
 
+        captureInsets(self, logicalAxis);
+    }
+    void captureInsets(const RenderBox& self, const LogicalBoxAxis selfAxis);
     void computeAnchorGeometry(const RenderBox& self);
     LayoutRange adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis, const RenderStyle&);
 
@@ -3953,8 +3969,50 @@ struct RenderBox::PositionedLayoutConstraints {
     void computeBlockStaticDistance(const RenderBox& self);
 
     void convertLogicalLeftValue(LayoutUnit& logicalLeftValue, const RenderBox* child, const LayoutUnit logicalWidthValue, const bool logicalLeftIsAuto, const bool logicalRightIsAuto) const;
-    void convertLogicalTopValue(LayoutUnit& logicalTopValue, const RenderBox* child, const LayoutUnit logicalHeightValue, const bool logicalTopIsAuto, const bool logicalBottomIsAuto) const;
+    void convertLogicalTopValue(LayoutUnit& logicalTopValue, const RenderBox& self, const LayoutUnit logicalHeightValue) const;
+
+    void resolvePosition(LogicalExtentComputedValues&) const;
 };
+
+void RenderBox::PositionedLayoutConstraints::captureInsets(const RenderBox& self, const LogicalBoxAxis selfAxis)
+{
+    const RenderStyle& style = self.style();
+    bool isHorizontal = BoxAxis::Horizontal == physicalAxis;
+
+    if (isHorizontal) {
+        bordersPlusPadding = self.borderLeft() + self.paddingLeft() + self.paddingRight() + self.borderRight();
+        useStaticPosition = style.left().isAuto() && style.right().isAuto() && !defaultAnchorBox;
+    } else {
+        bordersPlusPadding = self.borderTop() + self.paddingTop() + self.paddingBottom() + self.borderBottom();
+        useStaticPosition = style.top().isAuto() && style.bottom().isAuto() && !defaultAnchorBox;
+    }
+
+    if (LogicalBoxAxis::Inline == selfAxis) {
+        marginBefore = isHorizontal ? style.marginLeft() : style.marginTop();
+        marginAfter = isHorizontal ? style.marginRight() : style.marginBottom();
+        insetBefore = style.logicalLeft();
+        insetAfter = style.logicalRight();
+    } else if (containingCoordsAreFlipped()) {
+        marginBefore = style.marginAfter();
+        marginAfter = style.marginBefore();
+        insetBefore = style.logicalBottom();
+        insetAfter = style.logicalTop();
+    } else {
+        marginBefore = style.marginBefore();
+        marginAfter = style.marginAfter();
+        insetBefore = style.logicalTop();
+        insetAfter = style.logicalBottom();
+    }
+
+    if (defaultAnchorBox) {
+        // If the box uses anchor-center and does have a default anchor box,
+        // any auto insets are set to zero.
+        if (insetBefore.isAuto())
+            insetBefore = Length(0, LengthType::Fixed);
+        if (insetAfter.isAuto())
+            insetAfter = Length(0, LengthType::Fixed);
+    }
+}
 
 void RenderBox::PositionedLayoutConstraints::computeAnchorGeometry(const RenderBox& self)
 {
@@ -4020,6 +4078,66 @@ LayoutRange RenderBox::PositionedLayoutConstraints::adjustForPositionArea(const 
         ASSERT_NOT_REACHED();
         return adjustedRange;
     };
+}
+
+void RenderBox::PositionedLayoutConstraints::resolvePosition(LogicalExtentComputedValues& computedValues) const
+{
+    // Static position should have resolved one of our insets by now.
+    ASSERT(!(insetBefore.isAuto() && insetAfter.isAuto()));
+
+    auto position = insetBeforeValue();
+    auto usedMarginBefore = marginBeforeValue();
+    auto usedMarginAfter = marginAfterValue();
+
+    auto remainingSpace = containingSize()
+        - insetBeforeValue()
+        - marginBeforeValue()
+        - computedValues.m_extent
+        - marginAfterValue()
+        - insetAfterValue();
+
+    // See CSS2 § 10.3.7-8 and 10.6.4-5.
+    if (!insetBefore.isAuto() && !insetAfter.isAuto()) {
+        bool startIsBefore = containingAxis == LogicalBoxAxis::Block || containingWritingMode.isLogicalLeftInlineStart();
+        if (marginBefore.isAuto() && marginAfter.isAuto()) {
+            // Distribute usable space to both margins equally.
+            auto usableRemainingSpace = (LogicalBoxAxis::Inline == containingAxis)
+                ? std::max(0_lu, remainingSpace) : remainingSpace;
+            usedMarginBefore = usedMarginAfter = usableRemainingSpace / 2;
+
+            // Distribute unused space to the end side.
+            auto unusedSpace = remainingSpace - (usedMarginBefore + usedMarginAfter);
+            if (startIsBefore)
+                usedMarginAfter += unusedSpace;
+            else
+                usedMarginBefore += unusedSpace;
+        } else if (marginBefore.isAuto())
+            usedMarginBefore = remainingSpace;
+        else if (marginAfter.isAuto())
+            usedMarginAfter = remainingSpace;
+        else if (!startIsBefore)
+            position += remainingSpace; // Align to start, which is the after side.
+    } else if (insetBefore.isAuto())
+        position += remainingSpace;
+    position += usedMarginBefore;
+
+    computedValues.m_position = position;
+    LogicalBoxAxis selfAxis = isOrthogonal() ? oppositeAxis(containingAxis) : containingAxis;
+    if (LogicalBoxAxis::Inline == selfAxis) {
+        if (selfWritingMode.isLogicalLeftInlineStart()) {
+            computedValues.m_margins.m_start = usedMarginBefore;
+            computedValues.m_margins.m_end = usedMarginAfter;
+        } else {
+            computedValues.m_margins.m_start = usedMarginAfter;
+            computedValues.m_margins.m_end = usedMarginBefore;
+        }
+    } else if (containingCoordsAreFlipped()) {
+        computedValues.m_margins.m_before = usedMarginAfter;
+        computedValues.m_margins.m_after = usedMarginBefore;
+    } else {
+        computedValues.m_margins.m_before = usedMarginBefore;
+        computedValues.m_margins.m_after = usedMarginAfter;
+    }
 }
 
 LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxModelObject& containingBlock, bool checkForPerpendicularWritingMode) const
@@ -4122,7 +4240,7 @@ LayoutUnit RenderBox::containingBlockLogicalHeightForPositioned(const RenderBoxM
 
 void RenderBox::PositionedLayoutConstraints::computeInlineStaticDistance(const RenderBox& self)
 {
-    if (!insetBefore.isAuto() || !insetAfter.isAuto())
+    if (!useStaticPosition)
         return;
 
     auto* parent = self.parent();
@@ -4181,6 +4299,8 @@ void RenderBox::PositionedLayoutConstraints::computeInlineStaticDistance(const R
     }
 }
 
+static std::optional<float> adjustmentForRTLInlineBoxContainingBlock(const RenderElement& containingBlock);
+
 void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& computedValues) const
 {
     if (isReplacedOrAtomicInline()) {
@@ -4207,83 +4327,69 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
     // relative positioned inline.
     PositionedLayoutConstraints inlineConstraints(*this, downcast<RenderBoxModelObject>(*container()), LogicalBoxAxis::Inline);
 
-    // Cache margin/border/padding values.
-    bool isHorizontal = isHorizontalWritingMode();
-    inlineConstraints.bordersPlusPadding = borderAndPaddingLogicalWidth();
-    const RenderStyle& styleToUse = style();
-    inlineConstraints.marginBefore = isHorizontal ? styleToUse.marginLeft() : styleToUse.marginTop();
-    inlineConstraints.marginAfter = isHorizontal ? styleToUse.marginRight() : styleToUse.marginBottom();
-
-    // Calculate inset values.
-    inlineConstraints.insetBefore = styleToUse.logicalLeft();
-    inlineConstraints.insetAfter = styleToUse.logicalRight();
-    if (inlineConstraints.defaultAnchorBox) {
-        // If the box uses anchor-center and does have a default anchor box,
-        // any auto insets are set to zero.
-        if (inlineConstraints.insetBefore.isAuto())
-            inlineConstraints.insetBefore = Length(0, LengthType::Fixed);
-        if (inlineConstraints.insetAfter.isAuto())
-            inlineConstraints.insetAfter = Length(0, LengthType::Fixed);
-    }
     // Calculate the static distance if needed.
     inlineConstraints.computeInlineStaticDistance(*this);
 
-    // Calculate constraint equation values for 'width' case.
-    computePositionedLogicalWidthUsing(SizeType::MainOrPreferredSize,
-        styleToUse.logicalWidth(), inlineConstraints, computedValues);
+    // Calculate the used width. See CSS2 § 10.3.7.
+    const RenderStyle& styleToUse = style();
+    auto usedWidth = computePositionedLogicalWidthUsing(SizeType::MainOrPreferredSize,
+        styleToUse.logicalWidth(), inlineConstraints);
 
     LayoutUnit transferredMinSize = LayoutUnit::min();
     LayoutUnit transferredMaxSize = LayoutUnit::max();
     if (shouldComputeLogicalHeightFromAspectRatio())
         std::tie(transferredMinSize, transferredMaxSize) = computeMinMaxLogicalWidthFromAspectRatio();
 
-    LogicalExtentComputedValues maxValues;
-    maxValues.m_extent = LayoutUnit::max();
-    // Calculate constraint equation values for 'max-width' case.
+    // Clamp by max-width.
+    auto usedMaxWidth = LayoutUnit::max();
     if (!styleToUse.logicalMaxWidth().isUndefined()) {
-        computePositionedLogicalWidthUsing(SizeType::MaxSize,
-            styleToUse.logicalMaxWidth(), inlineConstraints, maxValues);
+        usedMaxWidth = computePositionedLogicalWidthUsing(SizeType::MaxSize,
+            styleToUse.logicalMaxWidth(), inlineConstraints);
     }
-    if (transferredMaxSize < maxValues.m_extent) {
-        computePositionedLogicalWidthUsing(SizeType::MaxSize,
-            Length(transferredMaxSize, LengthType::Fixed), inlineConstraints, maxValues);
+    if (transferredMaxSize < usedMaxWidth) {
+        usedMaxWidth = computePositionedLogicalWidthUsing(SizeType::MaxSize,
+            Length(transferredMaxSize, LengthType::Fixed), inlineConstraints);
     }
-    if (computedValues.m_extent > maxValues.m_extent) {
-        computedValues.m_extent = maxValues.m_extent;
-        computedValues.m_position = maxValues.m_position;
-        computedValues.m_margins.m_start = maxValues.m_margins.m_start;
-        computedValues.m_margins.m_end = maxValues.m_margins.m_end;
-    }
+    if (usedWidth > usedMaxWidth)
+        usedWidth = usedMaxWidth;
 
-    LogicalExtentComputedValues minValues;
-    minValues.m_extent = LayoutUnit::min();
-    // Calculate constraint equation values for 'min-width' case.
+    // Clamp by min-width.
+    auto usedMinWidth = LayoutUnit::min();
     if (!styleToUse.logicalMinWidth().isZero() || styleToUse.logicalMinWidth().isIntrinsic()) {
-        computePositionedLogicalWidthUsing(SizeType::MinSize,
-            styleToUse.logicalMinWidth(), inlineConstraints, minValues);
+        usedMinWidth = computePositionedLogicalWidthUsing(SizeType::MinSize,
+            styleToUse.logicalMinWidth(), inlineConstraints);
     }
-    if (transferredMinSize > minValues.m_extent) {
-        computePositionedLogicalWidthUsing(SizeType::MinSize,
-            Length(transferredMinSize, LengthType::Fixed), inlineConstraints, minValues);
+    if (transferredMinSize > usedMinWidth) {
+        usedMinWidth = computePositionedLogicalWidthUsing(SizeType::MinSize,
+            Length(transferredMinSize, LengthType::Fixed), inlineConstraints);
     }
-    if (computedValues.m_extent < minValues.m_extent) {
-        computedValues.m_extent = minValues.m_extent;
-        computedValues.m_position = minValues.m_position;
-        computedValues.m_margins.m_start = minValues.m_margins.m_start;
-        computedValues.m_margins.m_end = minValues.m_margins.m_end;
-    }
+    if (usedWidth < usedMinWidth)
+        usedWidth = usedMinWidth;
 
-    // Perform alignment. FIXME: Shouldn't this be after the size adjustments below?
-    if (inlineConstraints.defaultAnchorBox
-        && inlineConstraints.alignment.position() == ItemPosition::AnchorCenter)
-        computeAnchorCenteredPosition(inlineConstraints, computedValues);
+    // Set the final width value.
+    computedValues.m_extent = usedWidth + inlineConstraints.bordersPlusPadding;
 
-    computedValues.m_extent += inlineConstraints.bordersPlusPadding;
+    // Calculate the position.
+    inlineConstraints.resolvePosition(computedValues);
+    // FIXME: This hack is needed to calculate the logical left position for a 'rtl' relatively
+    // positioned, inline because right now, it is using the logical left position
+    // of the first line box when really it should use the last line box. When
+    // this is fixed elsewhere, this block should be removed.
+    if (auto adjustment = adjustmentForRTLInlineBoxContainingBlock(inlineConstraints.containingBox))
+        computedValues.m_position += *adjustment;
+    else
+        inlineConstraints.convertLogicalLeftValue(computedValues.m_position, this, computedValues.m_extent, style().logicalLeft().isAuto(), style().logicalRight().isAuto());
+
     if (auto* containingBox = dynamicDowncast<RenderBox>(inlineConstraints.containingBox)) {
         if (containingBox->shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
             computedValues.m_position += containingBox->verticalScrollbarWidth();
     }
-    
+
+    // Perform alignment.
+    if (inlineConstraints.defaultAnchorBox
+        && inlineConstraints.alignment.position() == ItemPosition::AnchorCenter)
+        computeAnchorCenteredPosition(inlineConstraints, computedValues);
+
     // Adjust logicalLeft if we need to for the flipped version of our writing mode in fragments.
     // FIXME: Add support for other types of objects as containerBlock, not only RenderBlock.
     if (enclosingFragmentedFlow() && isWritingModeRoot() && inlineConstraints.isOrthogonal()) {
@@ -4316,7 +4422,7 @@ void RenderBox::PositionedLayoutConstraints::convertLogicalLeftValue(LayoutUnit&
         logicalLeftPos += containingBlock.min();
 }
 
-static std::optional<float> positionWithRTLInlineBoxContainingBlock(const RenderElement& containingBlock, LayoutUnit logicalLeftValue, LayoutUnit marginLogicalLeftValue)
+static std::optional<float> adjustmentForRTLInlineBoxContainingBlock(const RenderElement& containingBlock)
 {
     CheckedPtr renderInline = dynamicDowncast<RenderInline>(containingBlock);
     if (!renderInline || containingBlock.writingMode().isLogicalLeftInlineStart())
@@ -4338,11 +4444,11 @@ static std::optional<float> positionWithRTLInlineBoxContainingBlock(const Render
     // FIXME: This does not work with decoration break clone.
     auto firstInlineBoxPaddingBoxVisualRight = firstInlineBox->logicalLeftIgnoringInlineDirection();
     auto distance = lastInlineBoxPaddingBoxVisualRight - firstInlineBoxPaddingBoxVisualRight;
-    return logicalLeftValue + marginLogicalLeftValue + distance;
+    return distance;
 }
 
-void RenderBox::computePositionedLogicalWidthUsing(SizeType widthType, Length logicalWidth,
-    const PositionedLayoutConstraints& inlineConstraints, LogicalExtentComputedValues& computedValues) const
+LayoutUnit RenderBox::computePositionedLogicalWidthUsing(SizeType widthType, Length logicalWidth,
+    const PositionedLayoutConstraints& inlineConstraints) const
 {
     ASSERT(widthType == SizeType::MinSize || widthType == SizeType::MainOrPreferredSize || !logicalWidth.isAuto());
     auto originalLogicalWidthType = logicalWidth.type();
@@ -4365,173 +4471,18 @@ void RenderBox::computePositionedLogicalWidthUsing(SizeType widthType, Length lo
         logicalWidth = Length(computeIntrinsicLogicalWidthUsing(logicalWidth, availableSpace, inlineConstraints.bordersPlusPadding) - inlineConstraints.bordersPlusPadding, LengthType::Fixed);
     }
 
-    // 'left' and 'right' cannot both be 'auto' because one would've been
-    // converted to the static position already.
-    ASSERT(!(inlineConstraints.insetBefore.isAuto() && inlineConstraints.insetAfter.isAuto()));
-
-    LayoutUnit logicalLeftValue;
     bool logicalWidthIsAuto = logicalWidth.isIntrinsicOrAuto() && !shouldComputeLogicalWidthFromAspectRatio();
     bool logicalLeftIsAuto = inlineConstraints.insetBefore.isAuto();
     bool logicalRightIsAuto = inlineConstraints.insetAfter.isAuto();
-    LayoutUnit& marginLogicalLeftValue = writingMode().isLogicalLeftInlineStart()
-        ? computedValues.m_margins.m_start : computedValues.m_margins.m_end;
-    LayoutUnit& marginLogicalRightValue = writingMode().isLogicalLeftInlineStart()
-        ? computedValues.m_margins.m_end : computedValues.m_margins.m_start;
 
-    if (!logicalLeftIsAuto && !logicalWidthIsAuto && !logicalRightIsAuto) {
-        /*-----------------------------------------------------------------------*\
-         * If none of the three is 'auto': If both 'margin-left' and 'margin-
-         * right' are 'auto', solve the equation under the extra constraint that
-         * the two margins get equal values, unless this would make them negative,
-         * in which case when direction of the containing block is 'ltr' ('rtl'),
-         * set 'margin-left' ('margin-right') to zero and solve for 'margin-right'
-         * ('margin-left'). If one of 'margin-left' or 'margin-right' is 'auto',
-         * solve the equation for that value. If the values are over-constrained,
-         * ignore the value for 'left' (in case the 'direction' property of the
-         * containing block is 'rtl') or 'right' (in case 'direction' is 'ltr')
-         * and solve for that value.
-        \*-----------------------------------------------------------------------*/
-        // NOTE:  It is not necessary to solve for 'right' in the over constrained
-        // case because the value is not used for any further calculations.
-
-        logicalLeftValue = inlineConstraints.insetBeforeValue();
-        computedValues.m_extent = adjustContentBoxLogicalWidthForBoxSizing(valueForLength(logicalWidth, inlineConstraints.containingSize()), originalLogicalWidthType);
-
-        const LayoutUnit availableSpace = inlineConstraints.containingSize() - (logicalLeftValue + computedValues.m_extent + inlineConstraints.insetAfterValue() + inlineConstraints.bordersPlusPadding);
-
-        // Margins are now the only unknown
-        if (inlineConstraints.marginBefore.isAuto() && inlineConstraints.marginAfter.isAuto()) {
-            // Both margins auto, solve for equality
-            // FIXME: See webkit.org/b/285803
-            if (availableSpace >= 0 || inlineConstraints.isOrthogonal()) {
-                marginLogicalLeftValue = availableSpace / 2; // split the difference
-                marginLogicalRightValue = availableSpace - marginLogicalLeftValue; // account for odd valued differences
-            } else {
-                // Use the containing block's direction rather than the parent block's
-                // per CSS 2.1 reference test abspos-non-replaced-width-margin-000.
-                if (inlineConstraints.isLogicalLeftInlineStart()) {
-                    marginLogicalLeftValue = 0;
-                    marginLogicalRightValue = availableSpace; // will be negative
-                } else {
-                    marginLogicalLeftValue = availableSpace; // will be negative
-                    marginLogicalRightValue = 0;
-                }
-            }
-        } else if (inlineConstraints.marginBefore.isAuto()) {
-            // Solve for left margin
-            marginLogicalRightValue = inlineConstraints.marginAfterValue();
-            marginLogicalLeftValue = availableSpace - marginLogicalRightValue;
-        } else if (inlineConstraints.marginAfter.isAuto()) {
-            // Solve for right margin
-            marginLogicalLeftValue = inlineConstraints.marginBeforeValue();
-            marginLogicalRightValue = availableSpace - marginLogicalLeftValue;
-        } else {
-            // Over-constrained, solve for left if direction is RTL
-            marginLogicalLeftValue = inlineConstraints.marginBeforeValue();
-            marginLogicalRightValue = inlineConstraints.marginAfterValue();
-
-            // Use the containing block's direction rather than the parent block's
-            // per CSS 2.1 reference test abspos-non-replaced-width-margin-000.
-            if (!inlineConstraints.isOrthogonal() && !inlineConstraints.isLogicalLeftInlineStart())
-                logicalLeftValue = (availableSpace + logicalLeftValue) - marginLogicalLeftValue - marginLogicalRightValue;
-        }
-    } else {
-        /*--------------------------------------------------------------------*\
-         * Otherwise, set 'auto' values for 'margin-left' and 'margin-right'
-         * to 0, and pick the one of the following six rules that applies.
-         *
-         * 1. 'left' and 'width' are 'auto' and 'right' is not 'auto', then the
-         *    width is shrink-to-fit. Then solve for 'left'
-         *
-         *              OMIT RULE 2 AS IT SHOULD NEVER BE HIT
-         * ------------------------------------------------------------------
-         * 2. 'left' and 'right' are 'auto' and 'width' is not 'auto', then if
-         *    the 'direction' property of the containing block is 'ltr' set
-         *    'left' to the static position, otherwise set 'right' to the
-         *    static position. Then solve for 'left' (if 'direction is 'rtl')
-         *    or 'right' (if 'direction' is 'ltr').
-         * ------------------------------------------------------------------
-         *
-         * 3. 'width' and 'right' are 'auto' and 'left' is not 'auto', then the
-         *    width is shrink-to-fit . Then solve for 'right'
-         * 4. 'left' is 'auto', 'width' and 'right' are not 'auto', then solve
-         *    for 'left'
-         * 5. 'width' is 'auto', 'left' and 'right' are not 'auto', then solve
-         *    for 'width'
-         * 6. 'right' is 'auto', 'left' and 'width' are not 'auto', then solve
-         *    for 'right'
-         *
-         * Calculation of the shrink-to-fit width is similar to calculating the
-         * width of a table cell using the automatic table layout algorithm.
-         * Roughly: calculate the preferred width by formatting the content
-         * without breaking lines other than where explicit line breaks occur,
-         * and also calculate the preferred minimum width, e.g., by trying all
-         * possible line breaks. CSS 2.1 does not define the exact algorithm.
-         * Thirdly, calculate the available width: this is found by solving
-         * for 'width' after setting 'left' (in case 1) or 'right' (in case 3)
-         * to 0.
-         *
-         * Then the shrink-to-fit width is:
-         * min(max(preferred minimum width, available width), preferred width).
-        \*--------------------------------------------------------------------*/
-        // NOTE: For rules 3 and 6 it is not necessary to solve for 'right'
-        // because the value is not used for any further calculations.
-
-        // Calculate margins, 'auto' margins are ignored.
-        marginLogicalLeftValue = inlineConstraints.marginBeforeValue();
-        marginLogicalRightValue = inlineConstraints.marginAfterValue();
-
-        const LayoutUnit availableSpace = inlineConstraints.containingSize() - (marginLogicalLeftValue + marginLogicalRightValue + inlineConstraints.bordersPlusPadding);
-
-        // FIXME: Is there a faster way to find the correct case?
-        // Use rule/case that applies.
-        if (logicalLeftIsAuto && logicalWidthIsAuto && !logicalRightIsAuto) {
-            // RULE 1: (use shrink-to-fit for width, and solve of left)
-            LayoutUnit logicalRightValue = inlineConstraints.insetAfterValue();
-
-            // FIXME: would it be better to have shrink-to-fit in one step?
-            LayoutUnit preferredWidth = maxPreferredLogicalWidth() - inlineConstraints.bordersPlusPadding;
-            LayoutUnit preferredMinWidth = minPreferredLogicalWidth() - inlineConstraints.bordersPlusPadding;
-            LayoutUnit availableWidth = availableSpace - logicalRightValue;
-            computedValues.m_extent = std::min(std::max(preferredMinWidth, availableWidth), preferredWidth);
-            logicalLeftValue = availableSpace - (computedValues.m_extent + logicalRightValue);
-        } else if (!logicalLeftIsAuto && logicalWidthIsAuto && logicalRightIsAuto) {
-            // RULE 3: (use shrink-to-fit for width, and no need solve of right)
-            logicalLeftValue = inlineConstraints.insetBeforeValue();
-
-            // FIXME: would it be better to have shrink-to-fit in one step?
-            LayoutUnit preferredWidth = maxPreferredLogicalWidth() - inlineConstraints.bordersPlusPadding;
-            LayoutUnit preferredMinWidth = minPreferredLogicalWidth() - inlineConstraints.bordersPlusPadding;
-            LayoutUnit availableWidth = availableSpace - logicalLeftValue;
-            computedValues.m_extent = std::min(std::max(preferredMinWidth, availableWidth), preferredWidth);
-        } else if (logicalLeftIsAuto && !logicalWidthIsAuto && !logicalRightIsAuto) {
-            // RULE 4: (solve for left)
-            computedValues.m_extent = adjustContentBoxLogicalWidthForBoxSizing(valueForLength(logicalWidth, inlineConstraints.containingSize()), originalLogicalWidthType);
-            logicalLeftValue = availableSpace - (computedValues.m_extent + inlineConstraints.insetAfterValue());
-        } else if (!logicalLeftIsAuto && logicalWidthIsAuto && !logicalRightIsAuto) {
-            // RULE 5: (solve for width)
-            logicalLeftValue = inlineConstraints.insetBeforeValue();
-            computedValues.m_extent = availableSpace - (logicalLeftValue + inlineConstraints.insetAfterValue());
-        } else if (!logicalLeftIsAuto && !logicalWidthIsAuto && logicalRightIsAuto) {
-            // RULE 6: (no need solve for right)
-            logicalLeftValue = inlineConstraints.insetBeforeValue();
-            computedValues.m_extent = adjustContentBoxLogicalWidthForBoxSizing(valueForLength(logicalWidth, inlineConstraints.containingSize()), originalLogicalWidthType);
-        }
+    if (!logicalWidthIsAuto)
+        return adjustContentBoxLogicalWidthForBoxSizing(valueForLength(logicalWidth, inlineConstraints.containingSize()), originalLogicalWidthType);
+    if (logicalLeftIsAuto || logicalRightIsAuto) {
+        LayoutUnit preferredWidth = maxPreferredLogicalWidth() - inlineConstraints.bordersPlusPadding;
+        LayoutUnit preferredMinWidth = minPreferredLogicalWidth() - inlineConstraints.bordersPlusPadding;
+        return std::min(std::max(preferredMinWidth, inlineConstraints.availableContentSpace()), preferredWidth);
     }
-
-    // Use computed values to calculate the horizontal position.
-
-    // FIXME: This hack is needed to calculate the logical left position for a 'rtl' relatively
-    // positioned, inline because right now, it is using the logical left position
-    // of the first line box when really it should use the last line box. When
-    // this is fixed elsewhere, this block should be removed.
-    if (auto position = positionWithRTLInlineBoxContainingBlock(inlineConstraints.containingBox, logicalLeftValue, marginLogicalLeftValue)) {
-        computedValues.m_position = *position;
-        return;
-    }
-
-    computedValues.m_position = logicalLeftValue + marginLogicalLeftValue;
-    inlineConstraints.convertLogicalLeftValue(computedValues.m_position, this, computedValues.m_extent + inlineConstraints.bordersPlusPadding, style().logicalLeft().isAuto(), style().logicalRight().isAuto());
+    return std::max(0_lu, inlineConstraints.availableContentSpace());
 }
 
 static bool shouldFlipStaticPositionInParent(const RenderBox& outOfFlowBox, const RenderBoxModelObject& containerBlock)
@@ -4553,7 +4504,7 @@ static bool shouldFlipStaticPositionInParent(const RenderBox& outOfFlowBox, cons
 
 void RenderBox::PositionedLayoutConstraints::computeBlockStaticDistance(const RenderBox& self)
 {
-    if (!insetBefore.isAuto() || !insetAfter.isAuto())
+    if (!useStaticPosition)
         return;
 
     auto* parent = self.parent();
@@ -4593,83 +4544,46 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
         return;
     }
 
-    // The following is based off of the W3C Working Draft from April 11, 2006 of
-    // CSS 2.1: Section 10.6.4 "Absolutely positioned, non-replaced elements"
-    // <http://www.w3.org/TR/2005/WD-CSS21-20050613/visudet.html#abs-non-replaced-height>
-    // (block-style-comments in this function and in computePositionedLogicalHeightUsing()
-    // correspond to text from the spec)
-
-
     // We don't use containingBlock(), since we may be positioned by an enclosing relpositioned inline.
     PositionedLayoutConstraints blockConstraints(*this, downcast<RenderBoxModelObject>(*container()), LogicalBoxAxis::Block);
 
-    // Cache margin/border/padding values.
-    const RenderStyle& styleToUse = style();
-    blockConstraints.bordersPlusPadding = borderAndPaddingLogicalHeight();
-    blockConstraints.marginBefore = styleToUse.marginBefore();
-    blockConstraints.marginAfter = styleToUse.marginAfter();
-
-    // Calculate inset values.
-    blockConstraints.insetBefore = styleToUse.logicalTop();
-    blockConstraints.insetAfter = styleToUse.logicalBottom();
-    if (blockConstraints.defaultAnchorBox) {
-        // If the box uses anchor-center and does have a default anchor box,
-        // any auto insets are set to zero.
-        if (blockConstraints.insetBefore.isAuto())
-            blockConstraints.insetBefore = Length(0, LengthType::Fixed);
-        if (blockConstraints.insetAfter.isAuto())
-            blockConstraints.insetAfter = Length(0, LengthType::Fixed);
-    }
-    // see FIXME 1
     // Calculate the static distance if needed.
     blockConstraints.computeBlockStaticDistance(*this);
 
-    // Calculate constraint equation values for 'height' case.
+    // Calculate the used height. See CSS2 § 10.6.4.
+    const RenderStyle& styleToUse = style();
     LayoutUnit computedHeight = computedValues.m_extent;
-    computePositionedLogicalHeightUsing(SizeType::MainOrPreferredSize,
-        styleToUse.logicalHeight(), computedHeight, blockConstraints, computedValues);
+    LayoutUnit usedHeight = computePositionedLogicalHeightUsing(SizeType::MainOrPreferredSize,
+        styleToUse.logicalHeight(), computedHeight, blockConstraints);
 
-    // Avoid doing any work in the common case (where the values of min-height and max-height are their defaults).
-    // see FIXME 2
-
-    // Calculate constraint equation values for 'max-height' case.
+    // Clamp by max height.
     if (!styleToUse.logicalMaxHeight().isUndefined()) {
-        LogicalExtentComputedValues maxValues;
-
-        computePositionedLogicalHeightUsing(SizeType::MaxSize,
-            styleToUse.logicalMaxHeight(), computedHeight, blockConstraints, maxValues);
-
-        if (computedValues.m_extent > maxValues.m_extent) {
-            computedValues.m_extent = maxValues.m_extent;
-            computedValues.m_position = maxValues.m_position;
-            computedValues.m_margins.m_before = maxValues.m_margins.m_before;
-            computedValues.m_margins.m_after = maxValues.m_margins.m_after;
-        }
+        LayoutUnit usedMaxHeight = computePositionedLogicalHeightUsing(SizeType::MaxSize,
+            styleToUse.logicalMaxHeight(), computedHeight, blockConstraints);
+        if (usedHeight > usedMaxHeight)
+            usedHeight = usedMaxHeight;
     }
 
-    // Calculate constraint equation values for 'min-height' case.
+    // Clamp by min height.
     Length logicalMinHeight = styleToUse.logicalMinHeight();
     if (logicalMinHeight.isAuto() || !logicalMinHeight.isZero() || logicalMinHeight.isIntrinsic()) {
-        LogicalExtentComputedValues minValues;
-
-        computePositionedLogicalHeightUsing(SizeType::MinSize,
-            styleToUse.logicalMinHeight(), computedHeight, blockConstraints, minValues);
-
-        if (computedValues.m_extent < minValues.m_extent) {
-            computedValues.m_extent = minValues.m_extent;
-            computedValues.m_position = minValues.m_position;
-            computedValues.m_margins.m_before = minValues.m_margins.m_before;
-            computedValues.m_margins.m_after = minValues.m_margins.m_after;
-        }
+        LayoutUnit usedMinHeight = computePositionedLogicalHeightUsing(SizeType::MinSize,
+            styleToUse.logicalMinHeight(), computedHeight, blockConstraints);
+        if (usedHeight < usedMinHeight)
+            usedHeight = usedMinHeight;
     }
 
-    // Perform alignment. FIXME: Shouldn't this be after adding in border/padding?
+    // Set the final height value.
+    computedValues.m_extent = usedHeight + blockConstraints.bordersPlusPadding;
+
+    // Calculate the position.
+    blockConstraints.resolvePosition(computedValues);
+    blockConstraints.convertLogicalTopValue(computedValues.m_position, *this, computedValues.m_extent);
+
+    // Perform alignment.
     if (blockConstraints.defaultAnchorBox
         && blockConstraints.alignment.position() == ItemPosition::AnchorCenter)
         computeAnchorCenteredPosition(blockConstraints, computedValues);
-
-    // Set final height value.
-    computedValues.m_extent += blockConstraints.bordersPlusPadding;
 
     // Adjust logicalTop if we need to for perpendicular writing modes in fragments.
     // FIXME: Add support for other types of objects as containerBlock, not only RenderBlock.
@@ -4693,470 +4607,98 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
 // The |containerLogicalHeightForPositioned| is already aware of orthogonal flows.
 // The logicalTop concept is confusing here. It's the logical top from the child's POV. This means that is the physical
 // y if the child is vertical or the physical x if the child is horizontal.
-void RenderBox::PositionedLayoutConstraints::convertLogicalTopValue(LayoutUnit& logicalTopPos, const RenderBox* child, const LayoutUnit logicalHeightValue, const bool logicalTopIsAuto, const bool logicalBottomIsAuto) const
+void RenderBox::PositionedLayoutConstraints::convertLogicalTopValue(LayoutUnit& logicalTopPos, const RenderBox& self, const LayoutUnit logicalHeightValue) const
 {
-    auto logicalTopAndBottomAreAuto = logicalTopIsAuto && logicalBottomIsAuto;
-    auto haveOrthogonalWritingModes = isOrthogonal();
-    auto haveOpposingWritingModes = isBlockOpposing();
-    bool isOverconstrained = !logicalTopIsAuto && !logicalBottomIsAuto && !child->style().logicalHeight().isAuto();
-
     // Deal with differing writing modes here.  Our offset needs to be in the containing block's coordinate space. If the containing block is flipped
-    // along this axis, then we need to flip the coordinate.  This can only happen if the containing block is both a flipped mode and perpendicular to us.
-    if (!isOverconstrained) {
-        if (logicalTopIsAuto && logicalBottomIsAuto && shouldFlipStaticPositionInParent(*child, containingBox)) {
+    // along this axis, then we need to flip the coordinate. This can only happen if the containing block is both a flipped mode and perpendicular to us.
+    if (useStaticPosition) {
+        if (shouldFlipStaticPositionInParent(self, containingBox)) {
             // Let's finish computing static top postion inside parents with flipped writing mode now that we've got final height value.
             // see details in computeBlockStaticDistance.
             logicalTopPos -= logicalHeightValue;
         }
-        if ((haveOrthogonalWritingModes && !logicalTopAndBottomAreAuto && selfWritingMode.isBlockFlipped())
-            || (haveOpposingWritingModes && !haveOrthogonalWritingModes))
+        if (isBlockOpposing())
             logicalTopPos = containingSize() - logicalHeightValue - logicalTopPos;
-
     }
-
     logicalTopPos += containingBlock.min();
 }
 
-void RenderBox::computePositionedLogicalHeightUsing(SizeType heightType, Length logicalHeightLength, LayoutUnit computedHeight,
-    const PositionedLayoutConstraints& blockConstraints, LogicalExtentComputedValues& computedValues) const
+LayoutUnit RenderBox::computePositionedLogicalHeightUsing(SizeType heightType, Length logicalHeightLength, LayoutUnit computedHeight,
+    const PositionedLayoutConstraints& blockConstraints) const
 {
     ASSERT(heightType == SizeType::MinSize || heightType == SizeType::MainOrPreferredSize || !logicalHeightLength.isAuto());
+
+    LayoutUnit contentLogicalHeight = computedHeight - blockConstraints.bordersPlusPadding;
+
+    // Height is never unsolved for tables.
+    if (isRenderTable())
+        return contentLogicalHeight;
+
     if (heightType == SizeType::MinSize && logicalHeightLength.isAuto()) {
         if (shouldComputeLogicalHeightFromAspectRatio())
             logicalHeightLength = Length(computedHeight, LengthType::Fixed);
         else
             logicalHeightLength = Length(0, LengthType::Fixed);
     }
-
-    // 'top' and 'bottom' cannot both be 'auto' because one would've been
-    // converted to the static position already.
-    ASSERT(!(blockConstraints.insetBefore.isAuto() && blockConstraints.insetAfter.isAuto()));
-
-    LayoutUnit logicalHeightValue;
-    LayoutUnit contentLogicalHeight = computedHeight - blockConstraints.bordersPlusPadding;
-    LayoutUnit logicalTopValue;
-
     bool fromAspectRatio = heightType == SizeType::MainOrPreferredSize && shouldComputeLogicalHeightFromAspectRatio();
     bool logicalHeightIsAuto = logicalHeightLength.isAuto() && !fromAspectRatio;
-    bool logicalTopIsAuto = blockConstraints.insetBefore.isAuto();
-    bool logicalBottomIsAuto = blockConstraints.insetAfter.isAuto();
 
-    // Height is never unsolved for tables.
-    LayoutUnit resolvedLogicalHeight;
-    if (isRenderTable()) {
-        resolvedLogicalHeight = contentLogicalHeight;
-        logicalHeightIsAuto = false;
-    } else {
+    if (!logicalHeightIsAuto) {
         if (logicalHeightLength.isIntrinsic())
-            resolvedLogicalHeight = adjustContentBoxLogicalHeightForBoxSizing(computeIntrinsicLogicalContentHeightUsing(logicalHeightLength, contentLogicalHeight, blockConstraints.bordersPlusPadding).value_or(0_lu));
-        else if (fromAspectRatio) {
-            resolvedLogicalHeight = blockSizeFromAspectRatio(horizontalBorderAndPaddingExtent(), verticalBorderAndPaddingExtent(), style().logicalAspectRatio(), style().boxSizingForAspectRatio(), logicalWidth(), style().aspectRatioType(), isRenderReplaced());
-            resolvedLogicalHeight = std::max(LayoutUnit(), resolvedLogicalHeight - blockConstraints.bordersPlusPadding);
-        } else
-            resolvedLogicalHeight = adjustContentBoxLogicalHeightForBoxSizing(valueForLength(logicalHeightLength, blockConstraints.containingSize()));
+            return adjustContentBoxLogicalHeightForBoxSizing(computeIntrinsicLogicalContentHeightUsing(logicalHeightLength, contentLogicalHeight, blockConstraints.bordersPlusPadding).value_or(0_lu));
+        if (fromAspectRatio) {
+            auto resolvedLogicalHeight = blockSizeFromAspectRatio(horizontalBorderAndPaddingExtent(), verticalBorderAndPaddingExtent(), style().logicalAspectRatio(), style().boxSizingForAspectRatio(), logicalWidth(), style().aspectRatioType(), isRenderReplaced());
+            return std::max(LayoutUnit(), resolvedLogicalHeight - blockConstraints.bordersPlusPadding);
+        }
+        return adjustContentBoxLogicalHeightForBoxSizing(valueForLength(logicalHeightLength, blockConstraints.containingSize()));
     }
 
-    if (!logicalTopIsAuto && !logicalHeightIsAuto && !logicalBottomIsAuto) {
-        /*-----------------------------------------------------------------------*\
-         * If none of the three are 'auto': If both 'margin-top' and 'margin-
-         * bottom' are 'auto', solve the equation under the extra constraint that
-         * the two margins get equal values. If one of 'margin-top' or 'margin-
-         * bottom' is 'auto', solve the equation for that value. If the values
-         * are over-constrained, ignore the value for 'bottom' and solve for that
-         * value.
-        \*-----------------------------------------------------------------------*/
-        // NOTE:  It is not necessary to solve for 'bottom' in the over constrained
-        // case because the value is not used for any further calculations.
+    if (!blockConstraints.insetBefore.isAuto() && !blockConstraints.insetAfter.isAuto())
+        return std::max<LayoutUnit>(0, blockConstraints.availableContentSpace());
 
-        logicalHeightValue = resolvedLogicalHeight;
-        logicalTopValue = blockConstraints.insetBeforeValue();
-
-        const LayoutUnit availableSpace = blockConstraints.containingSize() - (logicalTopValue + logicalHeightValue + blockConstraints.insetAfterValue() + blockConstraints.bordersPlusPadding);
-
-        // Margins are now the only unknown
-        if (blockConstraints.marginBefore.isAuto() && blockConstraints.marginAfter.isAuto()) {
-            // FIXME: See webkit.org/b/285803
-            if (!blockConstraints.isOrthogonal() || availableSpace >= 0) {
-                // Both margins auto, solve for equality
-                // NOTE: This may result in negative values.
-                computedValues.m_margins.m_before = availableSpace / 2; // split the difference
-                computedValues.m_margins.m_after = availableSpace - computedValues.m_margins.m_before; // account for odd valued differences
-            } else {
-                auto isLogicalLeftInlineStart = blockConstraints.isLogicalLeftInlineStart();
-                computedValues.m_margins.m_before = isLogicalLeftInlineStart ? 0_lu : availableSpace;
-                computedValues.m_margins.m_after = isLogicalLeftInlineStart ? availableSpace : 0_lu;
-            }
-        } else if (blockConstraints.marginBefore.isAuto()) {
-            // Solve for top margin
-            computedValues.m_margins.m_after = blockConstraints.marginAfterValue();
-            computedValues.m_margins.m_before = availableSpace - computedValues.m_margins.m_after;
-        } else if (blockConstraints.marginAfter.isAuto()) {
-            // Solve for bottom margin
-            computedValues.m_margins.m_before = blockConstraints.marginBeforeValue();
-            computedValues.m_margins.m_after = availableSpace - computedValues.m_margins.m_before;
-        } else {
-            // Over-constrained, (no need solve for bottom)
-            computedValues.m_margins.m_before = blockConstraints.marginBeforeValue();
-            computedValues.m_margins.m_after = blockConstraints.marginAfterValue();
-
-            if (blockConstraints.isOrthogonal()) {
-                // When orthogonal we want to explicitly deal with left/right instead of top/bottom, so compute physical left next.
-                logicalTopValue = valueForLength(style().left(), blockConstraints.containingSize());
-                if (!blockConstraints.isLogicalLeftInlineStart()) {
-                    // Recompute availableSpace with physical left.
-                    LayoutUnit availableSpace = blockConstraints.containingSize() - (logicalTopValue + logicalHeightValue + valueForLength(style().right(), blockConstraints.containingSize()) + blockConstraints.bordersPlusPadding);
-                    logicalTopValue = (availableSpace + logicalTopValue) - computedValues.m_margins.m_before - computedValues.m_margins.m_after;
-                }
-            }
-        }
-    } else {
-        /*--------------------------------------------------------------------*\
-         * Otherwise, set 'auto' values for 'margin-top' and 'margin-bottom'
-         * to 0, and pick the one of the following six rules that applies.
-         *
-         * 1. 'top' and 'height' are 'auto' and 'bottom' is not 'auto', then
-         *    the height is based on the content, and solve for 'top'.
-         *
-         *              OMIT RULE 2 AS IT SHOULD NEVER BE HIT
-         * ------------------------------------------------------------------
-         * 2. 'top' and 'bottom' are 'auto' and 'height' is not 'auto', then
-         *    set 'top' to the static position, and solve for 'bottom'.
-         * ------------------------------------------------------------------
-         *
-         * 3. 'height' and 'bottom' are 'auto' and 'top' is not 'auto', then
-         *    the height is based on the content, and solve for 'bottom'.
-         * 4. 'top' is 'auto', 'height' and 'bottom' are not 'auto', and
-         *    solve for 'top'.
-         * 5. 'height' is 'auto', 'top' and 'bottom' are not 'auto', and
-         *    solve for 'height'.
-         * 6. 'bottom' is 'auto', 'top' and 'height' are not 'auto', and
-         *    solve for 'bottom'.
-        \*--------------------------------------------------------------------*/
-        // NOTE: For rules 3 and 6 it is not necessary to solve for 'bottom'
-        // because the value is not used for any further calculations.
-
-        // Calculate margins, 'auto' margins are ignored.
-        computedValues.m_margins.m_before = blockConstraints.marginBeforeValue();
-        computedValues.m_margins.m_after = blockConstraints.marginAfterValue();
-
-        const LayoutUnit availableSpace = blockConstraints.containingSize() - (computedValues.m_margins.m_before + computedValues.m_margins.m_after + blockConstraints.bordersPlusPadding);
-
-        // Use rule/case that applies.
-        if (logicalTopIsAuto && logicalHeightIsAuto && !logicalBottomIsAuto) {
-            // RULE 1: (height is content based, solve of top)
-            logicalHeightValue = contentLogicalHeight;
-            logicalTopValue = availableSpace - (logicalHeightValue + blockConstraints.insetAfterValue());
-        } else if (!logicalTopIsAuto && logicalHeightIsAuto && logicalBottomIsAuto) {
-            // RULE 3: (height is content based, no need solve of bottom)
-            logicalTopValue = blockConstraints.insetBeforeValue();
-            logicalHeightValue = contentLogicalHeight;
-        } else if (logicalTopIsAuto && !logicalHeightIsAuto && !logicalBottomIsAuto) {
-            // RULE 4: (solve of top)
-            logicalHeightValue = resolvedLogicalHeight;
-            logicalTopValue = availableSpace - (logicalHeightValue + blockConstraints.insetAfterValue());
-        } else if (!logicalTopIsAuto && logicalHeightIsAuto && !logicalBottomIsAuto) {
-            // RULE 5: (solve of height)
-            logicalTopValue = blockConstraints.insetBeforeValue();
-            logicalHeightValue = std::max<LayoutUnit>(0, availableSpace - (logicalTopValue + blockConstraints.insetAfterValue()));
-        } else if (!logicalTopIsAuto && !logicalHeightIsAuto && logicalBottomIsAuto) {
-            // RULE 6: (no need solve of bottom)
-            logicalHeightValue = resolvedLogicalHeight;
-            logicalTopValue = blockConstraints.insetBeforeValue();
-        }
-    }
-    computedValues.m_extent = logicalHeightValue;
-
-    // Use computed values to calculate the vertical position.
-    computedValues.m_position = logicalTopValue + computedValues.m_margins.m_before;
-    blockConstraints.convertLogicalTopValue(computedValues.m_position, this, logicalHeightValue + blockConstraints.bordersPlusPadding, style().logicalTop().isAuto(), style().logicalBottom().isAuto());
+    return contentLogicalHeight;
 }
 
 void RenderBox::computePositionedLogicalWidthReplaced(LogicalExtentComputedValues& computedValues) const
 {
-    // The following is based off of the W3C Working Draft from April 11, 2006 of
-    // CSS 2.1: Section 10.3.8 "Absolutely positioned, replaced elements"
-    // <http://www.w3.org/TR/2005/WD-CSS21-20050613/visudet.html#abs-replaced-width>
-    // (block-style-comments in this function correspond to text from the spec and
-    // the numbers correspond to numbers in spec)
-
     // We don't use containingBlock(), since we may be positioned by an enclosing
     // relative positioned inline.
     PositionedLayoutConstraints inlineConstraints(*this, downcast<RenderBoxModelObject>(*container()), LogicalBoxAxis::Inline);
+    inlineConstraints.computeInlineStaticDistance(*this);
 
-    // Variables to solve.
-    bool isHorizontal = isHorizontalWritingMode();
-    inlineConstraints.insetBefore = style().logicalLeft();
-    inlineConstraints.insetAfter = style().logicalRight();
-
-    inlineConstraints.marginBefore = isHorizontal ? style().marginLeft() : style().marginTop();
-    inlineConstraints.marginAfter = isHorizontal ? style().marginRight() : style().marginBottom();
-    LayoutUnit& marginLogicalLeftAlias = writingMode().isLogicalLeftInlineStart()
-        ? computedValues.m_margins.m_start : computedValues.m_margins.m_end;
-    LayoutUnit& marginLogicalRightAlias = writingMode().isLogicalLeftInlineStart()
-        ? computedValues.m_margins.m_end : computedValues.m_margins.m_start;
-
-    /*-----------------------------------------------------------------------*\
-     * 1. The used value of 'width' is determined as for inline replaced
-     *    elements.
-    \*-----------------------------------------------------------------------*/
     // NOTE: This value of width is final in that the min/max width calculations
-    // are dealt with in computeReplacedWidth().  This means that the steps to produce
+    // are dealt with in computeReplacedWidth(). This means that the steps to produce
     // correct max/min in the non-replaced version, are not necessary.
     computedValues.m_extent = computeReplacedLogicalWidth() + borderAndPaddingLogicalWidth();
 
-    const LayoutUnit availableSpace = inlineConstraints.containingSize() - computedValues.m_extent;
-
-    /*-----------------------------------------------------------------------*\
-     * 2. If both 'left' and 'right' have the value 'auto', then if 'direction'
-     *    of the containing block is 'ltr', set 'left' to the static position;
-     *    else if 'direction' is 'rtl', set 'right' to the static position.
-    \*-----------------------------------------------------------------------*/
-    // see FIXME 1
-    inlineConstraints.computeInlineStaticDistance(*this);
-
-    /*-----------------------------------------------------------------------*\
-     * 3. If 'left' or 'right' are 'auto', replace any 'auto' on 'margin-left'
-     *    or 'margin-right' with '0'.
-    \*-----------------------------------------------------------------------*/
-    if (inlineConstraints.insetBefore.isAuto() || inlineConstraints.insetAfter.isAuto()) {
-        if (inlineConstraints.marginBefore.isAuto())
-            inlineConstraints.marginBefore.setValue(LengthType::Fixed, 0);
-        if (inlineConstraints.marginAfter.isAuto())
-            inlineConstraints.marginAfter.setValue(LengthType::Fixed, 0);
-    }
-
-    /*-----------------------------------------------------------------------*\
-     * 4. If at this point both 'margin-left' and 'margin-right' are still
-     *    'auto', solve the equation under the extra constraint that the two
-     *    margins must get equal values, unless this would make them negative,
-     *    in which case when the direction of the containing block is 'ltr'
-     *    ('rtl'), set 'margin-left' ('margin-right') to zero and solve for
-     *    'margin-right' ('margin-left').
-    \*-----------------------------------------------------------------------*/
-    LayoutUnit logicalLeftValue;
-    LayoutUnit logicalRightValue;
-
-    if (inlineConstraints.marginBefore.isAuto() && inlineConstraints.marginAfter.isAuto()) {
-        // 'left' and 'right' cannot be 'auto' due to step 3
-        ASSERT(!(inlineConstraints.insetBefore.isAuto() && inlineConstraints.insetAfter.isAuto()));
-
-        logicalLeftValue = inlineConstraints.insetBeforeValue();
-        logicalRightValue = inlineConstraints.insetAfterValue();
-
-        LayoutUnit difference = availableSpace - (logicalLeftValue + logicalRightValue);
-        if (difference > 0) {
-            marginLogicalLeftAlias = difference / 2; // split the difference
-            marginLogicalRightAlias = difference - marginLogicalLeftAlias; // account for odd valued differences
-        } else {
-            // Use the containing block's direction rather than the parent block's
-            // per CSS 2.1 reference test abspos-replaced-width-margin-000.
-            if (inlineConstraints.isLogicalLeftInlineStart()) {
-                marginLogicalLeftAlias = 0;
-                marginLogicalRightAlias = difference; // will be negative
-            } else {
-                marginLogicalLeftAlias = difference; // will be negative
-                marginLogicalRightAlias = 0;
-            }
-        }
-
-    /*-----------------------------------------------------------------------*\
-     * 5. If at this point there is an 'auto' left, solve the equation for
-     *    that value.
-    \*-----------------------------------------------------------------------*/
-    } else if (inlineConstraints.insetBefore.isAuto()) {
-        marginLogicalLeftAlias = inlineConstraints.marginBeforeValue();
-        marginLogicalRightAlias = inlineConstraints.marginAfterValue();
-        logicalRightValue = inlineConstraints.insetAfterValue();
-
-        // Solve for 'left'
-        logicalLeftValue = availableSpace - (logicalRightValue + marginLogicalLeftAlias + marginLogicalRightAlias);
-    } else if (inlineConstraints.insetAfter.isAuto()) {
-        marginLogicalLeftAlias = inlineConstraints.marginBeforeValue();
-        marginLogicalRightAlias = inlineConstraints.marginAfterValue();
-        logicalLeftValue = inlineConstraints.insetBeforeValue();
-
-        // Solve for 'right'
-        logicalRightValue = availableSpace - (logicalLeftValue + marginLogicalLeftAlias + marginLogicalRightAlias);
-    } else if (inlineConstraints.marginBefore.isAuto()) {
-        marginLogicalRightAlias = inlineConstraints.marginAfterValue();
-        logicalLeftValue = inlineConstraints.insetBeforeValue();
-        logicalRightValue = inlineConstraints.insetAfterValue();
-
-        // Solve for 'margin-left'
-        marginLogicalLeftAlias = availableSpace - (logicalLeftValue + logicalRightValue + marginLogicalRightAlias);
-    } else if (inlineConstraints.marginAfter.isAuto()) {
-        marginLogicalLeftAlias = inlineConstraints.marginBeforeValue();
-        logicalLeftValue = inlineConstraints.insetBeforeValue();
-        logicalRightValue = inlineConstraints.insetAfterValue();
-
-        // Solve for 'margin-right'
-        marginLogicalRightAlias = availableSpace - (logicalLeftValue + logicalRightValue + marginLogicalLeftAlias);
-    } else {
-        // Nothing is 'auto', just calculate the values.
-        marginLogicalLeftAlias = inlineConstraints.marginBeforeValue();
-        marginLogicalRightAlias = inlineConstraints.marginAfterValue();
-        logicalLeftValue = inlineConstraints.insetBeforeValue();
-        logicalRightValue = inlineConstraints.insetAfterValue();
-        // If the containing block is right-to-left, then push the left position as far to the right as possible
-        if (!inlineConstraints.isLogicalLeftInlineStart()) {
-            int totalLogicalWidth = computedValues.m_extent + logicalLeftValue + logicalRightValue +  marginLogicalLeftAlias + marginLogicalRightAlias;
-            logicalLeftValue = inlineConstraints.containingSize() - (totalLogicalWidth - logicalLeftValue);
-        }
-    }
-
-    /*-----------------------------------------------------------------------*\
-     * 6. If at this point the values are over-constrained, ignore the value
-     *    for either 'left' (in case the 'direction' property of the
-     *    containing block is 'rtl') or 'right' (in case 'direction' is
-     *    'ltr') and solve for that value.
-    \*-----------------------------------------------------------------------*/
-    // NOTE: Constraints imposed by the width of the containing block and its content have already been accounted for above.
-
-    // FIXME: Deal with differing writing modes here.  Our offset needs to be in the containing block's coordinate space, so that
-    // can make the result here rather complicated to compute.
-
-    // Use computed values to calculate the horizontal position.
+    inlineConstraints.resolvePosition(computedValues);
 
     // FIXME: This hack is needed to calculate the logical left position for a 'rtl' relatively
     // positioned, inline containing block because right now, it is using the logical left position
     // of the first line box when really it should use the last line box. When
     // this is fixed elsewhere, this block should be removed.
-    if (auto position = positionWithRTLInlineBoxContainingBlock(inlineConstraints.containingBox, logicalLeftValue, marginLogicalLeftAlias)) {
-        computedValues.m_position = *position;
+    if (auto adjustment = adjustmentForRTLInlineBoxContainingBlock(inlineConstraints.containingBox)) {
+        computedValues.m_position += *adjustment;
         return;
     }
 
-    LayoutUnit logicalLeftPos = logicalLeftValue + marginLogicalLeftAlias;
-    // Border and padding have already been included in computedValues.m_extent.
-    inlineConstraints.convertLogicalLeftValue(logicalLeftPos, this, computedValues.m_extent, style().logicalLeft().isAuto(), style().logicalRight().isAuto());
-    computedValues.m_position = logicalLeftPos;
+    inlineConstraints.convertLogicalLeftValue(computedValues.m_position, this, computedValues.m_extent, style().logicalLeft().isAuto(), style().logicalRight().isAuto());
 }
 
 void RenderBox::computePositionedLogicalHeightReplaced(LogicalExtentComputedValues& computedValues) const
 {
-    // The following is based off of the W3C Working Draft from April 11, 2006 of
-    // CSS 2.1: Section 10.6.5 "Absolutely positioned, replaced elements"
-    // <http://www.w3.org/TR/2005/WD-CSS21-20050613/visudet.html#abs-replaced-height>
-    // (block-style-comments in this function correspond to text from the spec and
-    // the numbers correspond to numbers in spec)
-
     // We don't use containingBlock(), since we may be positioned by an enclosing relpositioned inline.
     PositionedLayoutConstraints blockConstraints(*this, downcast<RenderBoxModelObject>(*container()), LogicalBoxAxis::Block);
-
-    // Variables to solve.
-    blockConstraints.marginBefore = style().marginBefore();
-    blockConstraints.marginAfter = style().marginAfter();
-    LayoutUnit& marginBeforeAlias = computedValues.m_margins.m_before;
-    LayoutUnit& marginAfterAlias = computedValues.m_margins.m_after;
-
-    blockConstraints.insetBefore = style().logicalTop();
-    blockConstraints.insetAfter = style().logicalBottom();
-
-    /*-----------------------------------------------------------------------*\
-     * 1. The used value of 'height' is determined as for inline replaced
-     *    elements.
-    \*-----------------------------------------------------------------------*/
-    // NOTE: This value of height is final in that the min/max height calculations
-    // are dealt with in computeReplacedHeight().  This means that the steps to produce
-    // correct max/min in the non-replaced version, are not necessary.
-    computedValues.m_extent = computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight();
-    const LayoutUnit availableSpace = blockConstraints.containingSize() - computedValues.m_extent;
-
-    /*-----------------------------------------------------------------------*\
-     * 2. If both 'top' and 'bottom' have the value 'auto', replace 'top'
-     *    with the element's static position.
-    \*-----------------------------------------------------------------------*/
-    // see FIXME 1
     blockConstraints.computeBlockStaticDistance(*this);
 
-    /*-----------------------------------------------------------------------*\
-     * 3. If 'bottom' is 'auto', replace any 'auto' on 'margin-top' or
-     *    'margin-bottom' with '0'.
-    \*-----------------------------------------------------------------------*/
-    // FIXME: The spec. says that this step should only be taken when bottom is
-    // auto, but if only top is auto, this makes step 4 impossible.
-    if (blockConstraints.insetBefore.isAuto() || blockConstraints.insetAfter.isAuto()) {
-        if (blockConstraints.marginBefore.isAuto())
-            blockConstraints.marginBefore.setValue(LengthType::Fixed, 0);
-        if (blockConstraints.marginAfter.isAuto())
-            blockConstraints.marginAfter.setValue(LengthType::Fixed, 0);
-    }
+    // NOTE: This value of height is final in that the min/max height calculations
+    // are dealt with in computeReplacedHeight(). This means that the steps to produce
+    // correct max/min in the non-replaced version, are not necessary.
+    computedValues.m_extent = computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight();
 
-    /*-----------------------------------------------------------------------*\
-     * 4. If at this point both 'margin-top' and 'margin-bottom' are still
-     *    'auto', solve the equation under the extra constraint that the two
-     *    margins must get equal values.
-    \*-----------------------------------------------------------------------*/
-    LayoutUnit logicalTopValue;
-    LayoutUnit logicalBottomValue;
+    blockConstraints.resolvePosition(computedValues);
 
-    if (blockConstraints.marginBefore.isAuto() && blockConstraints.marginAfter.isAuto()) {
-        // 'top' and 'bottom' cannot be 'auto' due to step 2 and 3 combined.
-        ASSERT(!(blockConstraints.insetBefore.isAuto() || blockConstraints.insetAfter.isAuto()));
-
-        logicalTopValue = blockConstraints.insetBeforeValue();
-        logicalBottomValue = blockConstraints.insetAfterValue();
-
-        LayoutUnit difference = availableSpace - (logicalTopValue + logicalBottomValue);
-        // NOTE: This may result in negative values.
-        marginBeforeAlias =  difference / 2; // split the difference
-        marginAfterAlias = difference - marginBeforeAlias; // account for odd valued differences
-
-    /*-----------------------------------------------------------------------*\
-     * 5. If at this point there is only one 'auto' left, solve the equation
-     *    for that value.
-    \*-----------------------------------------------------------------------*/
-    } else if (blockConstraints.insetBefore.isAuto()) {
-        marginBeforeAlias = blockConstraints.marginBeforeValue();
-        marginAfterAlias = blockConstraints.marginAfterValue();
-        logicalBottomValue = blockConstraints.insetAfterValue();
-
-        // Solve for 'top'
-        logicalTopValue = availableSpace - (logicalBottomValue + marginBeforeAlias + marginAfterAlias);
-    } else if (blockConstraints.insetAfter.isAuto()) {
-        marginBeforeAlias = blockConstraints.marginBeforeValue();
-        marginAfterAlias = blockConstraints.marginAfterValue();
-        logicalTopValue = blockConstraints.insetBeforeValue();
-
-        // Solve for 'bottom'
-        // NOTE: It is not necessary to solve for 'bottom' because we don't ever
-        // use the value.
-    } else if (blockConstraints.marginBefore.isAuto()) {
-        marginAfterAlias = blockConstraints.marginAfterValue();
-        logicalTopValue = blockConstraints.insetBeforeValue();
-        logicalBottomValue = blockConstraints.insetAfterValue();
-
-        // Solve for 'margin-top'
-        marginBeforeAlias = availableSpace - (logicalTopValue + logicalBottomValue + marginAfterAlias);
-    } else if (blockConstraints.marginAfter.isAuto()) {
-        marginBeforeAlias = blockConstraints.marginBeforeValue();
-        logicalTopValue = blockConstraints.insetBeforeValue();
-        logicalBottomValue = blockConstraints.insetAfterValue();
-
-        // Solve for 'margin-bottom'
-        marginAfterAlias = availableSpace - (logicalTopValue + logicalBottomValue + marginBeforeAlias);
-    } else {
-        // Nothing is 'auto', just calculate the values.
-        marginBeforeAlias = blockConstraints.marginBeforeValue();
-        marginAfterAlias = blockConstraints.marginAfterValue();
-        logicalTopValue = blockConstraints.insetBeforeValue();
-        // NOTE: It is not necessary to solve for 'bottom' because we don't ever
-        // use the value.
-     }
-
-    /*-----------------------------------------------------------------------*\
-     * 6. If at this point the values are over-constrained, ignore the value
-     *    for 'bottom' and solve for that value.
-    \*-----------------------------------------------------------------------*/
-    // NOTE: It is not necessary to do this step because we don't end up using
-    // the value of 'bottom' regardless of whether the values are over-constrained
-    // or not.
-
-    // Use computed values to calculate the vertical position.
-    LayoutUnit logicalTopPos = logicalTopValue + marginBeforeAlias;
-    // Border and padding have already been included in computedValues.m_extent.
-    blockConstraints.convertLogicalTopValue(logicalTopPos, this, computedValues.m_extent, style().logicalTop().isAuto(), style().logicalBottom().isAuto());
-    computedValues.m_position = logicalTopPos;
+    blockConstraints.convertLogicalTopValue(computedValues.m_position, *this, computedValues.m_extent);
 }
 
 VisiblePosition RenderBox::positionForPoint(const LayoutPoint& point, HitTestSource source, const RenderFragmentContainer* fragment)
