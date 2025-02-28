@@ -341,6 +341,7 @@ public:
     InjectedContentVector injectedContents() const;
     bool hasInjectedContentForURL(const URL&);
     bool hasInjectedContent();
+    bool safeToInjectContent() const { return isLoaded() && m_safeToInjectContent; }
 
     bool hasContentModificationRules();
 
@@ -1017,6 +1018,8 @@ private:
 #if ENABLE(INSPECTOR_EXTENSIONS)
     WeakHashMap<WebInspectorUIProxy, InspectorContext> m_inspectorContextMap;
 #endif
+
+    bool m_safeToInjectContent { false };
 
     HashMap<Ref<WebExtensionMatchPattern>, UserScriptVector> m_injectedScriptsPerPatternMap;
     HashMap<Ref<WebExtensionMatchPattern>, UserStyleSheetVector> m_injectedStyleSheetsPerPatternMap;

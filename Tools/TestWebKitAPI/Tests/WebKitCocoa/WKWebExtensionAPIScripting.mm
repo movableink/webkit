@@ -1165,6 +1165,49 @@ TEST(WKWebExtensionAPIScripting, RegisteredScriptIsInjectedAfterContextReloads)
     [manager run];
 }
 
+TEST(WKWebExtensionAPIScripting, InjectedOnlyOnce)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<iframe src='about:blank'></iframe>"_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *contentScriptsManifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Scripting Test",
+        @"description": @"Scripting Test",
+        @"version": @"1.0",
+
+        @"content_scripts": @[ @{
+            @"matches": @[ @"*://localhost/*" ],
+            @"js": @[ @"content_script.js" ]
+        } ]
+    };
+
+    auto *contentScript = Util::constructScript(@[
+        @"if (document.body.dataset.injected)",
+        @"    browser.test.notifyFail('Script injected more than once')",
+
+        @"document.body.dataset.injected = 'true'",
+
+        @"browser.test.sendMessage('script-injected')"
+    ]);
+
+    auto *resources = @{
+        @"content_script.js": contentScript
+    };
+
+    auto manager = Util::loadExtension(contentScriptsManifest, resources);
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager runUntilTestMessage:@"script-injected"];
+
+    [manager runForTimeInterval:3];
+}
+
 TEST(WKWebExtensionAPIScripting, MainWorld)
 {
     TestWebKitAPI::HTTPServer server({

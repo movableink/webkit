@@ -370,6 +370,8 @@ bool WebExtensionContext::load(WebExtensionController& controller, String storag
         if (!isLoaded())
             return;
 
+        m_safeToInjectContent = true;
+
         loadBackgroundWebViewDuringLoad();
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
@@ -419,6 +421,7 @@ bool WebExtensionContext::unload(NSError **outError)
     m_dynamicallyInjectedUserStyleSheets.clear();
     m_injectedScriptsPerPatternMap.clear();
     m_injectedStyleSheetsPerPatternMap.clear();
+    m_safeToInjectContent = false;
 
     m_extensionController = nullptr;
     m_contentScriptWorld = nullptr;
@@ -743,7 +746,7 @@ void WebExtensionContext::setHasAccessToPrivateData(bool hasAccess)
 
     m_hasAccessToPrivateData = hasAccess;
 
-    if (!isLoaded())
+    if (!safeToInjectContent())
         return;
 
     if (m_hasAccessToPrivateData) {
@@ -4364,7 +4367,7 @@ void WebExtensionContext::inspectorEffectiveAppearanceDidChange(API::InspectorEx
 
 void WebExtensionContext::addInjectedContent(const InjectedContentVector& injectedContents)
 {
-    if (!isLoaded())
+    if (!safeToInjectContent())
         return;
 
     // Only add content for one "all hosts" pattern if the extension has the permission.
@@ -4383,7 +4386,7 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
 
 void WebExtensionContext::addInjectedContent(const InjectedContentVector& injectedContents, const MatchPatternSet& grantedMatchPatterns)
 {
-    if (!isLoaded())
+    if (!safeToInjectContent())
         return;
 
     if (hasAccessToAllHosts()) {
@@ -4444,7 +4447,7 @@ API::ContentWorld& WebExtensionContext::toContentWorld(WebExtensionContentWorldT
 
 void WebExtensionContext::addInjectedContent(const InjectedContentVector& injectedContents, WebExtensionMatchPattern& pattern)
 {
-    if (!isLoaded())
+    if (!safeToInjectContent())
         return;
 
     auto scriptAddResult = m_injectedScriptsPerPatternMap.ensure(pattern, [&] {
@@ -4589,6 +4592,9 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
 
 void WebExtensionContext::addInjectedContent(WebUserContentControllerProxy& userContentController)
 {
+    if (!safeToInjectContent())
+        return;
+
     for (auto& entry : m_injectedScriptsPerPatternMap) {
         for (auto& userScript : entry.value)
             userContentController.addUserScript(userScript, InjectUserScriptImmediately::Yes);
