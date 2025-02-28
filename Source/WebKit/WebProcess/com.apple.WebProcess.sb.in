@@ -952,7 +952,9 @@
 ;; Allow certain Mach extensions. See <rdar://87850345>.
 (allow mach-lookup
     (require-all
+        (require-not (state-flag "WebProcessDidNotInjectStoreBundle"))
         (extension "com.apple.app-sandbox.mach")
+        (extension "com.apple.webkit.mach-bootstrap")
         (global-name "com.apple.commerce")))
 
 ;; Allow the OpenGL Profiler to attach.

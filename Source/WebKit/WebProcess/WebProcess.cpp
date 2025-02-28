@@ -242,6 +242,10 @@
 #include "LaunchServicesDatabaseManager.h"
 #endif
 
+#if PLATFORM(MAC)
+#import <wtf/spi/darwin/SandboxSPI.h>
+#endif
+
 #undef WEBPROCESS_RELEASE_LOG
 #define RELEASE_LOG_SESSION_ID (m_sessionID ? m_sessionID->toUInt64() : 0)
 #if RELEASE_LOG_DISABLED
@@ -538,6 +542,14 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
 #endif
 
     SandboxExtension::consumePermanently(parameters.additionalSandboxExtensionHandles);
+
+#if PLATFORM(MAC) && HAVE(SANDBOX_STATE_FLAGS)
+    if (!parameters.injectedBundlePath.endsWith("StoreWebBundle.bundle"_s)) {
+        auto auditToken = auditTokenForSelf();
+        if (!sandbox_enable_state_flag("WebProcessDidNotInjectStoreBundle", auditToken.value()))
+            WEBPROCESS_RELEASE_LOG_ERROR(Process, "Could not state sandbox state flag");
+    }
+#endif
 
     if (!parameters.injectedBundlePath.isEmpty()) {
         if (RefPtr injectedBundle = InjectedBundle::create(parameters, transformHandlesToObjects(parameters.initializationUserData.protectedObject().get())))
