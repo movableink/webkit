@@ -4305,7 +4305,7 @@
             "initial": "no-limit",
             "values": [
                 "standard",
-                "high",
+                "constrained-high",
                 "no-limit"
             ],
             "codegen-properties": {
