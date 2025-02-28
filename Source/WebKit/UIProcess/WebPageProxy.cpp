@@ -15317,6 +15317,11 @@ void WebPageProxy::setContentOffset(WebCore::ScrollOffset offset, WebCore::Scrol
     send(Messages::WebPage::SetContentOffset(offset, animated));
 }
 
+void WebPageProxy::scrollToEdge(WebCore::RectEdges<bool> edges, WebCore::ScrollIsAnimated animated)
+{
+    send(Messages::WebPage::ScrollToEdge(edges, animated));
+}
+
 bool WebPageProxy::shouldEnableLockdownMode() const
 {
     return m_configuration->lockdownModeEnabled();

@@ -108,6 +108,16 @@ extension WebPageWebView {
         get { self._allowsMagnification }
         set { self._allowsMagnification = newValue }
     }
+
+    @_spi(CrossImportOverlay)
+    public func setContentOffset(_ offset: CGPoint, animated: Bool) {
+        scrollView.setContentOffset(offset, animated: animated)
+    }
+
+    @_spi(CrossImportOverlay)
+    public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {
+        self._scroll(to: _WKRectEdge(edge), animated: animated)
+    }
 #else
     @_spi(CrossImportOverlay)
     public var alwaysBounceVertical: Bool {
@@ -131,6 +141,16 @@ extension WebPageWebView {
     public var bouncesHorizontally: Bool {
         get { self._rubberBandingEnabled.contains(.left) && self._rubberBandingEnabled.contains(.right) }
         set { self._rubberBandingEnabled.formUnion([.left, .right]) }
+    }
+
+    @_spi(CrossImportOverlay)
+    public func setContentOffset(_ offset: CGPoint, animated: Bool) {
+        self._setContentOffset(offset, animated: animated)
+    }
+
+    @_spi(CrossImportOverlay)
+    public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {
+        self._scroll(to: _WKRectEdge(edge), animated: animated)
     }
 #endif
 }

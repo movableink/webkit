@@ -24,12 +24,24 @@
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
 import Foundation
+import SwiftUI
 
 @MainActor
 func onNextMainRunLoop(do body: @escaping @MainActor () -> Void) {
     RunLoop.main.perform(inModes: [.common]) {
         MainActor.assumeIsolated {
             body()
+        }
+    }
+}
+
+extension NSDirectionalRectEdge {
+    init(_ edge: Edge) {
+        self = switch edge {
+        case .top: .top
+        case .leading: .leading
+        case .bottom: .bottom
+        case .trailing: .trailing
         }
     }
 }

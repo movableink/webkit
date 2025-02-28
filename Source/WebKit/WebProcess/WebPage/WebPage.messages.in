@@ -742,6 +742,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
 
     ScrollToRect(WebCore::FloatRect targetRect, WebCore::FloatPoint origin)
     SetContentOffset(WebCore::IntPoint position, enum:bool WebCore::ScrollIsAnimated animated)
+    ScrollToEdge(WebCore::RectEdges<bool> edges, enum:bool WebCore::ScrollIsAnimated animated)
 
     NavigateServiceWorkerClient(WebCore::ScriptExecutionContextIdentifier documentIdentifier, URL url) -> (enum:uint8_t WebCore::ScheduleLocationChangeResult result)
 

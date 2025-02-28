@@ -77,3 +77,7 @@ struct FindContext {
     var canFind = true
     var canReplace = true
 }
+
+struct ScrollPositionContext {
+    var position: Binding<ScrollPosition>?
+}

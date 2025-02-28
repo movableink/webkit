@@ -9537,6 +9537,18 @@ void WebPage::setContentOffset(WebCore::ScrollOffset offset, WebCore::ScrollIsAn
     frameView->setScrollOffsetWithOptions(offset, options);
 }
 
+void WebPage::scrollToEdge(WebCore::RectEdges<bool> edges, WebCore::ScrollIsAnimated animated)
+{
+    RefPtr frameView = localMainFrameView();
+    if (!frameView)
+        return;
+
+    auto options = WebCore::ScrollPositionChangeOptions::createProgrammatic();
+    options.animated = animated;
+
+    frameView->scrollToEdgeWithOptions(edges, options);
+}
+
 #if ENABLE(IMAGE_ANALYSIS) && ENABLE(VIDEO)
 void WebPage::beginTextRecognitionForVideoInElementFullScreen(const HTMLVideoElement& element)
 {

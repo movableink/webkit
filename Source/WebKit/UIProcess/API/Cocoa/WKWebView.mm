@@ -364,6 +364,16 @@ static bool shouldRestrictBaseURLSchemes()
     return shouldRestrictBaseURLSchemes;
 }
 
+static WebCore::RectEdges<bool> toRectEdges(_WKRectEdge edges)
+{
+    return {
+        static_cast<bool>(edges & _WKRectEdgeTop),
+        static_cast<bool>(edges & _WKRectEdgeRight),
+        static_cast<bool>(edges & _WKRectEdgeBottom),
+        static_cast<bool>(edges & _WKRectEdgeLeft),
+    };
+}
+
 #if PLATFORM(MAC)
 static uint32_t convertUserInterfaceDirectionPolicy(WKUserInterfaceDirectionPolicy policy)
 {
@@ -5812,6 +5822,11 @@ struct WKWebViewData {
 - (void)_setUseSystemAppearance:(BOOL)useSystemAppearance
 {
     [[_configuration preferences] _setUseSystemAppearance:useSystemAppearance];
+}
+
+- (void)_scrollToEdge:(_WKRectEdge)edge animated:(BOOL)animated
+{
+    self._protectedPage->scrollToEdge(toRectEdges(edge), animated ? WebCore::ScrollIsAnimated::Yes : WebCore::ScrollIsAnimated::No);
 }
 
 @end

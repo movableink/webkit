@@ -2461,6 +2461,28 @@ void LocalFrameView::setScrollOffsetWithOptions(const ScrollOffset& scrollOffset
     setCurrentScrollType(oldScrollType);
 }
 
+void LocalFrameView::scrollToEdgeWithOptions(RectEdges<bool> edges, const ScrollPositionChangeOptions& options)
+{
+    LOG_WITH_STREAM(Scrolling, stream << "LocalFrameView::scrollToEdgeWithOptions " << edges << " animated " << (options.animated == ScrollIsAnimated::Yes) << ", clearing anchor");
+
+    ASSERT(std::ranges::count_if(WebCore::allBoxSides, [edges](auto side) { return edges[side]; }) == 1);
+
+    auto currentOffset = scrollOffsetFromPosition(scrollPosition());
+    auto minimumScrollOffset = scrollOffsetFromPosition(minimumScrollPosition());
+    auto maximumScrollOffset = scrollOffsetFromPosition(maximumScrollPosition());
+
+    if (edges.top())
+        currentOffset.setY(minimumScrollOffset.y());
+    else if (edges.left())
+        currentOffset.setX(minimumScrollOffset.x());
+    else if (edges.bottom())
+        currentOffset.setY(maximumScrollOffset.y());
+    else if (edges.right())
+        currentOffset.setX(maximumScrollOffset.x());
+
+    setScrollOffsetWithOptions(currentOffset, options);
+}
+
 void LocalFrameView::setScrollPosition(const ScrollPosition& scrollPosition, const ScrollPositionChangeOptions& options)
 {
     LOG_WITH_STREAM(Scrolling, stream << "LocalFrameView::setScrollPosition " << scrollPosition << " animated " << (options.animated == ScrollIsAnimated::Yes) << ", clearing anchor");

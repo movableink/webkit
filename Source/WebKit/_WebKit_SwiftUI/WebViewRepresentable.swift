@@ -91,7 +91,7 @@ struct WebViewRepresentable {
 
         platformView.onScrollGeometryChange = environment.webViewOnScrollGeometryChange
 
-        context.coordinator.update(platformView, configuration: self, environment: environment)
+        context.coordinator.update(platformView, configuration: self, context: context)
 
 #if os(macOS) && !targetEnvironment(macCatalyst)
         owner.page.setMenuBuilder(environment.webViewContextMenuContext?.menu)
@@ -121,16 +121,38 @@ final class WebViewCoordinator {
 
     var configuration: WebViewRepresentable
 
-    func update(_ view: CocoaWebViewAdapter, configuration: WebViewRepresentable, environment: EnvironmentValues) {
+    func update(_ view: CocoaWebViewAdapter, configuration: WebViewRepresentable, context: WebViewRepresentable.Context) {
         self.configuration = configuration
 
-        self.updateFindInteraction(view, environment: environment)
+        self.updateFindInteraction(view, context: context)
+        self.updateScrollPosition(view, context: context)
     }
 
-    private func updateFindInteraction(_ view: CocoaWebViewAdapter, environment: EnvironmentValues) {
+    private func updateScrollPosition(_ view: CocoaWebViewAdapter, context: WebViewRepresentable.Context) {
         guard let webView = view.webView else {
             return
         }
+
+        let environment = context.environment
+
+        // FIXME: Use the binding to update the `isPositionedByUser` property when applicable.
+
+        let scrollPosition = environment.webViewScrollPositionContext
+        view.scrollPosition = scrollPosition
+
+        if let point = environment.webViewScrollPositionContext.position?.wrappedValue.point {
+            webView.setContentOffset(point, animated: context.transaction.isAnimated)
+        } else if let edge = environment.webViewScrollPositionContext.position?.wrappedValue.edge {
+            webView.scrollTo(edge: NSDirectionalRectEdge(edge), animated: context.transaction.isAnimated)
+        }
+    }
+
+    private func updateFindInteraction(_ view: CocoaWebViewAdapter, context: WebViewRepresentable.Context) {
+        guard let webView = view.webView else {
+            return
+        }
+
+        let environment = context.environment
 
         let findContext = environment.webViewFindContext
         view.findContext = findContext

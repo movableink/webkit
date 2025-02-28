@@ -595,4 +595,6 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const std::optional<WebCore::Exce
 @property (nonatomic, setter=_setAllowsMagnification:) BOOL _allowsMagnification;
 #endif
 
+- (void)_scrollToEdge:(_WKRectEdge)edge animated:(BOOL)animated;
+
 @end

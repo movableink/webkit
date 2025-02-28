@@ -92,6 +92,8 @@ class CocoaWebViewAdapter: PlatformView, PlatformTextSearching {
 
     var findContext: FindContext?
 
+    var scrollPosition: ScrollPositionContext?
+
 #if os(macOS)
     // This is called by the Find menu items in the Menu Bar
     @objc(performFindPanelAction:)

@@ -21,29 +21,28 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-public import SwiftUI
-@_spi(CrossImportOverlay) public import WebKit
+#if ENABLE_SWIFTUI && compiler(>=6.0)
 
-extension EdgeInsets {
-#if canImport(UIKit)
-    init(_ edgeInsets: UIEdgeInsets) {
-        self = EdgeInsets(top: edgeInsets.top, leading: edgeInsets.left, bottom: edgeInsets.bottom, trailing: edgeInsets.right)
+import Foundation
+internal import WebKit_Internal
+
+extension _WKRectEdge {
+    init(_ cocoaEdge: NSDirectionalRectEdge) {
+        var result: _WKRectEdge = []
+        if cocoaEdge.contains(.top) {
+            result.insert(.top)
+        }
+        if cocoaEdge.contains(.leading) {
+            result.insert(.left)
+        }
+        if cocoaEdge.contains(.bottom) {
+            result.insert(.bottom)
+        }
+        if cocoaEdge.contains(.trailing) {
+            result.insert(.right)
+        }
+        self = result
     }
-#else
-    init(_ edgeInsets: NSEdgeInsets) {
-        self = EdgeInsets(top: edgeInsets.top, leading: edgeInsets.left, bottom: edgeInsets.bottom, trailing: edgeInsets.right)
-    }
+}
+
 #endif
-}
-
-extension ScrollGeometry {
-    init(_ geometry: WKScrollGeometryAdapter) {
-        self = ScrollGeometry(contentOffset: geometry.contentOffset, contentSize: geometry.contentSize, contentInsets: EdgeInsets(geometry.contentInsets), containerSize: geometry.containerSize)
-    }
-}
-
-extension Transaction {
-    var isAnimated: Bool {
-        animation != nil && !disablesAnimations
-    }
-}

@@ -52,6 +52,9 @@ extension EnvironmentValues {
 
     @Entry
     var webViewOnScrollGeometryChange = OnScrollGeometryChangeContext()
+
+    @Entry
+    var webViewScrollPositionContext = ScrollPositionContext()
 }
 
 extension View {
@@ -127,6 +130,11 @@ extension View {
         action: @escaping (T, T) -> Void
     ) -> some View where T : Hashable {
         modifier(OnScrollGeometryChangeModifier(transform: transform, action: action))
+    }
+
+    @_spi(Private)
+    public func webViewScrollPosition(_ position: Binding<ScrollPosition>) -> some View {
+        environment(\.webViewScrollPositionContext, .init(position: position))
     }
 }
 
