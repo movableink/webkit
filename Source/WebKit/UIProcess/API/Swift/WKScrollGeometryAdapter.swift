@@ -28,21 +28,16 @@ internal import WebKit_Internal
 
 @_spi(CrossImportOverlay)
 public struct WKScrollGeometryAdapter {
-    @_spi(CrossImportOverlay)
     public let containerSize: CGSize
 
 #if canImport(UIKit)
-    @_spi(CrossImportOverlay)
     public let contentInsets: UIEdgeInsets
 #else
-    @_spi(CrossImportOverlay)
     public let contentInsets: NSEdgeInsets
 #endif
 
-    @_spi(CrossImportOverlay)
     public let contentOffset: CGPoint
 
-    @_spi(CrossImportOverlay)
     public let contentSize: CGSize
 
     init(_ geometry: WKScrollGeometry) {
