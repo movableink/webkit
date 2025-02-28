@@ -29,8 +29,6 @@ UIProcess/Cocoa/GroupActivities/GroupActivitiesSessionNotifier.mm
 UIProcess/Cocoa/SOAuthorization/SubFrameSOAuthorizationSession.mm
 UIProcess/Gamepad/UIGamepadProvider.cpp
 UIProcess/Notifications/ServiceWorkerNotificationHandler.cpp
-UIProcess/Notifications/WebNotificationManagerProxy.cpp
-UIProcess/UserMediaPermissionRequestManagerProxy.cpp
 UIProcess/WebAuthentication/AuthenticatorManager.cpp
 UIProcess/WebAuthentication/Cocoa/NfcService.mm
 UIProcess/WebPreferences.cpp

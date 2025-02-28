@@ -51,6 +51,9 @@ public:
 #define WARNING_LOG(...)    Ref { logger() }->warningVerbose(logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define INFO_LOG(...)       Ref { logger() }->infoVerbose(logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define DEBUG_LOG(...)      Ref { logger() }->debugVerbose(logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+
+#define ALWAYS_LOG_WITH_THIS(thisPtr, ...)     Ref { thisPtr->logger() }->logAlwaysVerbose(thisPtr->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define ERROR_LOG_WITH_THIS(thisPtr, ...)     Ref { thisPtr->logger() }->errorVerbose(thisPtr->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
 #else
 #define ALWAYS_LOG(...)     Ref { logger() }->logAlways(logChannel(), __VA_ARGS__)
 #define ERROR_LOG(...)      Ref { logger() }->error(logChannel(), __VA_ARGS__)

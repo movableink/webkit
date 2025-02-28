@@ -317,8 +317,8 @@ void WebFrameProxy::didChangeTitle(const String& title)
 
 WebFramePolicyListenerProxy& WebFrameProxy::setUpPolicyListenerProxy(CompletionHandler<void(PolicyAction, API::WebsitePolicies*, ProcessSwapRequestedByClient, RefPtr<BrowsingWarning>&&, std::optional<NavigatingToAppBoundDomain>, WasNavigationIntercepted)>&& completionHandler, ShouldExpectSafeBrowsingResult expectSafeBrowsingResult, ShouldExpectAppBoundDomainResult expectAppBoundDomainResult, ShouldWaitForInitialLinkDecorationFilteringData shouldWaitForInitialLinkDecorationFilteringData)
 {
-    if (m_activeListener)
-        m_activeListener->ignore();
+    if (RefPtr previousListener = m_activeListener)
+        previousListener->ignore();
     m_activeListener = WebFramePolicyListenerProxy::create([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (PolicyAction action, API::WebsitePolicies* policies, ProcessSwapRequestedByClient processSwapRequestedByClient, RefPtr<BrowsingWarning>&& safeBrowsingWarning, std::optional<NavigatingToAppBoundDomain> isNavigatingToAppBoundDomain, WasNavigationIntercepted wasNavigationIntercepted) mutable {
         if (action != PolicyAction::Use && m_navigateCallback)
             m_navigateCallback(pageIdentifier(), frameID());
@@ -489,7 +489,7 @@ void WebFrameProxy::getFrameInfo(CompletionHandler<void(FrameTreeNodeData&&)>&& 
     }, *webPageIDInCurrentProcess());
 
     RefPtr page = this->page();
-    bool isSiteIsolationEnabled = page && page->preferences().siteIsolationEnabled();
+    bool isSiteIsolationEnabled = page && page->protectedPreferences()->siteIsolationEnabled();
     size_t index = 0;
     for (Ref childFrame : m_childFrames) {
         childFrame->getFrameInfo([aggregator, index = index++, frameID = this->frameID(), isSiteIsolationEnabled] (FrameTreeNodeData&& data) {

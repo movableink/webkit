@@ -4,7 +4,6 @@ UIProcess/Automation/WebAutomationSession.cpp
 UIProcess/Cocoa/SOAuthorization/SOAuthorizationSession.mm
 UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm
 UIProcess/SpeechRecognitionPermissionManager.cpp
-UIProcess/UserMediaPermissionRequestManagerProxy.cpp
 UIProcess/UserMediaProcessManager.cpp
 UIProcess/WebAuthentication/Authenticator.cpp
 UIProcess/WebAuthentication/AuthenticatorManager.cpp
