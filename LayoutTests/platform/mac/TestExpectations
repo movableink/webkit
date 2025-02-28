@@ -1501,8 +1501,6 @@ webkit.org/b/112939 fast/performance/performance-now-timestamps.html [ Pass Fail
 
 webkit.org/b/207363 inspector/css/pseudo-creation.html [ Pass Failure ]
 
-webkit.org/b/207392 [ Debug ] imported/w3c/web-platform-tests/workers/WorkerGlobalScope_ErrorEvent_message.htm [ Pass Failure ]
-
 webkit.org/b/207461 imported/w3c/web-platform-tests/wasm/jsapi/constructor/instantiate-bad-imports.any.worker.html [ Pass Failure ]
 
 webkit.org/b/207463 inspector/runtime/getCollectionEntries.html [ Pass Failure ]

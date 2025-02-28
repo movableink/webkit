@@ -818,3 +818,5 @@ webkit.org/b/288774 fast/dynamic/content-visibility-crash-with-continuation-and-
 webkit.org/b/288847 imported/w3c/web-platform-tests/cookie-store/cookieStore_event_delete.https.window.html [ Pass Failure ]
 
 webkit.org/b/288851 imported/w3c/web-platform-tests/fetch/http-cache/invalidate.any.html [ Pass Failure ]
+
+webkit.org/b/288871 imported/w3c/web-platform-tests/workers/WorkerGlobalScope_ErrorEvent_message.htm [ Pass Failure ]
