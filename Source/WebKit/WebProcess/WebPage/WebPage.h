@@ -842,6 +842,8 @@ public:
 
     void setUnderPageBackgroundColorOverride(WebCore::Color&&);
 
+    void setShouldSuppressHDR(bool);
+
     void setUnderlayColor(const WebCore::Color& color) { m_underlayColor = color; }
     WebCore::Color underlayColor() const { return m_underlayColor; }
 

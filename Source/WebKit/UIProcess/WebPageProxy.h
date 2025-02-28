@@ -945,6 +945,8 @@ public:
     std::optional<WebCore::SpatialBackdropSource> spatialBackdropSource() const;
 #endif
 
+    void setShouldSuppressHDR(bool);
+
     WebCore::Color underlayColor() const;
     void setUnderlayColor(const WebCore::Color&);
 

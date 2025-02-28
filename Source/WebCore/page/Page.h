@@ -990,6 +990,8 @@ public:
     void mediaEngineChanged(HTMLMediaElement&);
 #endif
     WEBCORE_EXPORT void setMuted(MediaProducerMutedStateFlags);
+    bool shouldSuppressHDR() const { return m_shouldSuppressHDR; }
+    WEBCORE_EXPORT void setShouldSuppressHDR(bool);
 
     WEBCORE_EXPORT void stopMediaCapture(MediaProducerMediaCaptureKind);
 #if ENABLE(MEDIA_STREAM)
@@ -1441,6 +1443,7 @@ private:
     bool m_hasPendingMemoryCacheLoadNotifications { false };
     float m_mediaVolume { 1 };
     MediaProducerMutedStateFlags m_mutedState;
+    bool m_shouldSuppressHDR { false };
 
     float m_pageScaleFactor { 1 };
     float m_zoomedOutPageScaleFactor { 0 };

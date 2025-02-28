@@ -1337,6 +1337,7 @@ public:
     void setMediaElementShowingTextTrack(const HTMLMediaElement&);
     void clearMediaElementShowingTextTrack();
     void updateTextTrackRepresentationImageIfNeeded();
+    WEBCORE_EXPORT void shouldSuppressHDRDidChange();
 #endif
 
     void registerForVisibilityStateChangedCallbacks(VisibilityChangeClient&);

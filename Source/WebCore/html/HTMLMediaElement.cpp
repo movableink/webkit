@@ -7906,6 +7906,18 @@ void HTMLMediaElement::markCaptionAndSubtitleTracksAsUnconfigured(ReconfigureMod
         scheduleConfigureTextTracks();
 }
 
+PlatformDynamicRangeLimit HTMLMediaElement::computePlayerDynamicRangeLimit() const
+{
+    bool shouldSuppressHDR = [this]() {
+        if (Page* page = document().page())
+            return page->shouldSuppressHDR();
+        return false;
+    }();
+    if (!shouldSuppressHDR)
+        return m_platformDynamicRangeLimit;
+    return std::min(m_platformDynamicRangeLimit, PlatformDynamicRangeLimit::constrainedHigh());
+}
+
 // Use WTF_IGNORES_THREAD_SAFETY_ANALYSIS because this function does conditional locking of m_audioSourceNode->processLock()
 // which analysis doesn't support.
 void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
@@ -7948,7 +7960,7 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     player->setBufferingPolicy(m_bufferingPolicy);
     player->setPreferredDynamicRangeMode(m_overrideDynamicRangeMode.value_or(preferredDynamicRangeMode(document().protectedView().get())));
     player->setShouldDisableHDR(shouldDisableHDR());
-    player->setPlatformDynamicRangeLimit(m_platformDynamicRangeLimit);
+    player->setPlatformDynamicRangeLimit(computePlayerDynamicRangeLimit());
     player->setVolumeLocked(m_volumeLocked);
     player->setMuted(effectiveMuted());
     RefPtr page = document().page();
@@ -8390,7 +8402,13 @@ void HTMLMediaElement::dynamicRangeLimitDidChange(PlatformDynamicRangeLimit plat
 {
     m_platformDynamicRangeLimit = platformDynamicRangeLimit;
     if (RefPtr player = m_player)
-        player->setPlatformDynamicRangeLimit(platformDynamicRangeLimit);
+        player->setPlatformDynamicRangeLimit(computePlayerDynamicRangeLimit());
+}
+
+void HTMLMediaElement::shouldSuppressHDRDidChange()
+{
+    if (RefPtr player = m_player)
+        player->setPlatformDynamicRangeLimit(computePlayerDynamicRangeLimit());
 }
 
 Vector<String> HTMLMediaElement::mediaPlayerPreferredAudioCharacteristics() const

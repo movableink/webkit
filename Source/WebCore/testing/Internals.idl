@@ -991,6 +991,9 @@ enum ContentsFormat {
 
     [Conditional=VIDEO] undefined enableGStreamerHolePunching(HTMLVideoElement element);
 
+    [Conditional=VIDEO] double effectiveDynamicRangeLimitValue(HTMLMediaElement media);
+    undefined setPageShouldSuppressHDR(boolean shouldSuppressHDR);
+
     undefined setIsPlayingToBluetoothOverride(optional boolean? isPlaying = null);
 
     [Conditional=LEGACY_ENCRYPTED_MEDIA] undefined initializeMockCDM();

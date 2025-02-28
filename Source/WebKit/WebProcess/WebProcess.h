@@ -257,6 +257,9 @@ public:
     OptionSet<TextCheckerState> textCheckerState() const { return m_textCheckerState; }
     void setTextCheckerState(OptionSet<TextCheckerState>);
 
+    bool shouldSuppressHDR() const { return m_shouldSuppressHDR; }
+    void setShouldSuppressHDR(bool);
+
     EventDispatcher& eventDispatcher() { return m_eventDispatcher; }
     Ref<EventDispatcher> protectedEventDispatcher() { return m_eventDispatcher; }
     Ref<WebInspectorInterruptDispatcher> protectedWebInspectorInterruptDispatcher() { return m_webInspectorInterruptDispatcher; }
@@ -762,6 +765,8 @@ private:
     WebProcessSupplementMap m_supplements;
 
     OptionSet<TextCheckerState> m_textCheckerState;
+
+    bool m_shouldSuppressHDR { false };
 
     String m_uiProcessBundleIdentifier;
     RefPtr<NetworkProcessConnection> m_networkProcessConnection;

@@ -965,6 +965,9 @@ void WebProcess::createWebPage(PageIdentifier pageID, WebPageCreationParameters&
         accessibilityRelayProcessSuspended(false);
     }
     ASSERT(result.iterator->value);
+
+    if (m_shouldSuppressHDR)
+        RefPtr { result.iterator->value }->setShouldSuppressHDR(m_shouldSuppressHDR);
 }
 
 void WebProcess::removeWebPage(PageIdentifier pageID)
@@ -1556,6 +1559,16 @@ void WebProcess::setTextCheckerState(OptionSet<TextCheckerState> textCheckerStat
         if (grammarCheckingTurnedOff)
             page->unmarkAllBadGrammar();
     }
+}
+
+void WebProcess::setShouldSuppressHDR(bool shouldSuppressHDR)
+{
+    m_shouldSuppressHDR = shouldSuppressHDR;
+
+#if ENABLE(VIDEO)
+    for (auto& page : m_pageMap.values())
+        page->setShouldSuppressHDR(shouldSuppressHDR);
+#endif // ENABLE(VIDEO)
 }
 
 void WebProcess::fetchWebsiteData(OptionSet<WebsiteDataType> websiteDataTypes, CompletionHandler<void(WebsiteData&&)>&& completionHandler)

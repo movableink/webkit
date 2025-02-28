@@ -2975,6 +2975,17 @@ void Page::setMuted(MediaProducerMutedStateFlags mutedState)
     });
 }
 
+void Page::setShouldSuppressHDR(bool shouldSuppressHDR)
+{
+    if (m_shouldSuppressHDR == shouldSuppressHDR)
+        return;
+
+    m_shouldSuppressHDR = shouldSuppressHDR;
+    forEachDocument([](auto& document) {
+        document.shouldSuppressHDRDidChange();
+    });
+}
+
 #if ENABLE(MEDIA_STREAM)
 static inline MediaProducerMutedStateFlags toMediaProducerMutedStateFlags(MediaProducerMediaCaptureKind kind)
 {

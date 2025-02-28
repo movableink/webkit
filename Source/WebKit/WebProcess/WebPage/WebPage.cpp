@@ -2966,6 +2966,11 @@ void WebPage::setUnderPageBackgroundColorOverride(WebCore::Color&& underPageBack
     protectedCorePage()->setUnderPageBackgroundColorOverride(WTFMove(underPageBackgroundColorOverride));
 }
 
+void WebPage::setShouldSuppressHDR(bool shouldSuppressHDR)
+{
+    protectedCorePage()->setShouldSuppressHDR(shouldSuppressHDR);
+}
+
 #if !PLATFORM(IOS_FAMILY)
 
 void WebPage::setHeaderPageBanner(PageBanner* pageBanner)

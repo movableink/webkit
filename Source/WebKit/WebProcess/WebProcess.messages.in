@@ -75,6 +75,8 @@ messages -> WebProcess : AuxiliaryProcess WantsAsyncDispatchMessage {
 
     SetTextCheckerState(OptionSet<WebKit::TextCheckerState> textCheckerState)
 
+    SetShouldSuppressHDR(bool shouldSuppressHDR)
+
     SetEnhancedAccessibility(bool flag)
     BindAccessibilityFrameWithData(WebCore::FrameIdentifier frameID, std::span<const uint8_t> data);
 

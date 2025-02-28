@@ -104,6 +104,10 @@
 #import <WebKitAdditions/WKWebViewIOSAdditionsBefore.mm>
 #endif
 
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+#import <UIKit/_UITraitHDRHeadroomUsage.h>
+#endif
+
 #import <pal/ios/ManagedConfigurationSoftLink.h>
 
 #define FORWARD_ACTION_TO_WKCONTENTVIEW(_action) \
@@ -238,6 +242,11 @@ static WebCore::IntDegrees deviceOrientationForUIInterfaceOrientation(UIInterfac
 #if HAVE(UIKIT_RESIZABLE_WINDOWS)
     [center addObserver:self selector:@selector(_enhancedWindowingToggled:) name:_UIWindowSceneEnhancedWindowingModeChanged object:nil];
 #endif
+
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    [self registerForTraitChanges:@[[_UITraitHDRHeadroomUsage class]] withAction:@selector(_UITraitHDRHeadroomUsageDidChange)];
+    [self _UITraitHDRHeadroomUsageDidChange];
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
 }
 
 - (BOOL)_isShowingVideoPictureInPicture
@@ -3662,6 +3671,14 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(UISe
 }
 
 #endif // HAVE(UIKIT_RESIZABLE_WINDOWS)
+
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+- (void)_UITraitHDRHeadroomUsageDidChange
+{
+    const _UIHDRHeadroomUsage _headroomUsage = [[self traitCollection] _headroomUsage];
+    _page->setShouldSuppressHDR(_headroomUsage != _UIHDRHeadroomUsageEnabled);
+}
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
 
 #if ENABLE(LOCKDOWN_MODE_API)
 

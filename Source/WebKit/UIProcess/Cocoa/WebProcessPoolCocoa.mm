@@ -918,6 +918,20 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }
 #endif
 
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+#if PLATFORM(MAC)
+    NSNotificationName const NSApplicationShouldBeginSuppressingHighDynamicRangeContentNotification = @"NSApplicationShouldBeginSuppressingHighDynamicRangeContentNotification";
+    NSNotificationName const NSApplicationShouldEndSuppressingHighDynamicRangeContentNotification = @"NSApplicationShouldEndSuppressingHighDynamicRangeContentNotification";
+    m_beginSuppressingHDRObserver = [[NSNotificationCenter defaultCenter] addObserverForName:NSApplicationShouldBeginSuppressingHighDynamicRangeContentNotification object:NSApp queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
+        sendToAllProcesses(Messages::WebProcess::SetShouldSuppressHDR(true));
+    }];
+
+    m_endSuppressingHDRObserver = [[NSNotificationCenter defaultCenter] addObserverForName:NSApplicationShouldEndSuppressingHighDynamicRangeContentNotification object:NSApp queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
+        sendToAllProcesses(Messages::WebProcess::SetShouldSuppressHDR(false));
+    }];
+#endif // PLATFORM(MAC)
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
+
     m_finishedMobileAssetFontDownloadObserver = [[NSNotificationCenter defaultCenter] addObserverForName:@"FontActivateNotification" object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
         NSString *fontFamily = notification.userInfo[@"FontActivateNotificationFontFamilyKey"];
         if ([fontFamily isKindOfClass:[NSString class]]) {
@@ -1006,6 +1020,13 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     auto notificationName = adoptNS([[NSString alloc] initWithCString:kGSEventHardwareKeyboardAvailabilityChangedNotification encoding:NSUTF8StringEncoding]);
     removeCFNotificationObserver((__bridge CFStringRef)notificationName.get());
 #endif
+
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+#if PLATFORM(MAC)
+    [[NSNotificationCenter defaultCenter] removeObserver:m_beginSuppressingHDRObserver.get()];
+    [[NSNotificationCenter defaultCenter] removeObserver:m_endSuppressingHDRObserver.get()];
+#endif // PLATFORM(MAC)
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
 
     [[NSNotificationCenter defaultCenter] removeObserver:m_activationObserver.get()];
 

@@ -7415,7 +7415,14 @@ void Document::updateTextTrackRepresentationImageIfNeeded()
         mediaElement->updateTextTrackRepresentationImageIfNeeded();
 }
 
-#endif
+void Document::shouldSuppressHDRDidChange()
+{
+    forEachMediaElement([](HTMLMediaElement& element) {
+        element.shouldSuppressHDRDidChange();
+    });
+}
+
+#endif // ENABLE(VIDEO)
 
 void Document::setShouldCreateRenderers(bool f)
 {

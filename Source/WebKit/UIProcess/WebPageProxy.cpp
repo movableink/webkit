@@ -2773,6 +2773,12 @@ Color WebPageProxy::underlayColor() const
     return internals().underlayColor;
 }
 
+void WebPageProxy::setShouldSuppressHDR(bool shouldSuppressHDR)
+{
+    if (hasRunningProcess())
+        send(Messages::WebPage::SetShouldSuppressHDR(shouldSuppressHDR));
+}
+
 void WebPageProxy::setUnderlayColor(const Color& color)
 {
     if (internals().underlayColor == color)

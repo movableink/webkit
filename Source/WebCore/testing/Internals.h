@@ -814,7 +814,11 @@ public:
     ExceptionOr<void> setOverridePreferredDynamicRangeMode(HTMLMediaElement&, const String&);
 
     void enableGStreamerHolePunching(HTMLVideoElement&);
+
+    double effectiveDynamicRangeLimitValue(const HTMLMediaElement&);
 #endif
+
+    ExceptionOr<void> setPageShouldSuppressHDR(bool);
 
     ExceptionOr<void> setIsPlayingToBluetoothOverride(std::optional<bool>);
 
