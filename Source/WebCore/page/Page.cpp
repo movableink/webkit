@@ -839,8 +839,6 @@ void Page::setMainFrameURLAndOrigin(const URL& url, RefPtr<SecurityOrigin>&& ori
     RELEASE_ASSERT(url == m_topDocumentSyncData->documentURL);
     if (!origin)
         RELEASE_ASSERT(!m_topDocumentSyncData->documentSecurityOrigin);
-    else
-        RELEASE_ASSERT(origin->equal(*m_topDocumentSyncData->documentSecurityOrigin));
 
     processSyncClient().broadcastTopDocumentSyncDataToOtherProcesses(m_topDocumentSyncData.get());
 }
