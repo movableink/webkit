@@ -5097,6 +5097,18 @@
    },
    {
       "emails" : [
+         "k_monsen@apple.com",
+         "kmonsen@gmail.com",
+         "kristianm@chromium.org"
+      ],
+      "github" : "kmonsen",
+      "name" : "Kristian Monsen",
+      "nicks" : [
+         "kmonsen"
+      ]
+   },
+   {
+      "emails" : [
          "kkristof@inf.u-szeged.hu",
          "kkosztyo.u-szeged@partner.samsung.com",
          "Kosztyo.Kristof@stud.u-szeged.hu"
