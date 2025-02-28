@@ -65,7 +65,6 @@
 #import "LocalCurrentTraitCollection.h"
 #import "LocalFrame.h"
 #import "LocalFrameView.h"
-#import "LocalizedDateCache.h"
 #import "NodeRenderStyle.h"
 #import "PaintInfo.h"
 #import "PathUtilities.h"
@@ -351,10 +350,6 @@ const int MenuListMinHeight = 15;
 const float MenuListBaseHeight = 20;
 const float MenuListBaseFontSize = 11;
 
-const float MenuListArrowWidth = 7;
-const float MenuListArrowHeight = 6;
-const float MenuListButtonPaddingAfter = 19;
-
 LengthBox RenderThemeIOS::popupInternalPaddingBox(const RenderStyle& style) const
 {
     auto emSize = CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_EM);
@@ -408,7 +403,7 @@ void RenderThemeIOS::adjustRoundBorderRadius(RenderStyle& style, RenderBox& box)
 static void applyCommonButtonPaddingToStyle(RenderStyle& style, const Element& element)
 {
     Document& document = element.document();
-    auto emSize = CSSPrimitiveValue::create(0.5, CSSUnitType::CSS_EM);
+    Ref emSize = CSSPrimitiveValue::create(0.5, CSSUnitType::CSS_EM);
     // We don't need this element's parent style to calculate `em` units, so it's okay to pass nullptr for it here.
     int pixels = emSize->resolveAsLength<int>({ style, document.renderStyle(), nullptr, document.renderView() });
 
@@ -427,7 +422,7 @@ static void adjustSelectListButtonStyle(RenderStyle& style, const Element& eleme
     // Enforce "line-height: normal".
     style.setLineHeight(Length(LengthType::Normal));
 }
-    
+
 class RenderThemeMeasureTextClient : public MeasureTextClient {
 public:
     RenderThemeMeasureTextClient(const FontCascade& font, const RenderStyle& style)
@@ -466,7 +461,7 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
 
     // Enforce the width and set the box-sizing to content-box to not conflict with the padding.
     FontCascade font = style.fontCascade();
-    
+
     float maximumWidth = localizedDateCache().maximumWidthForDateType(dateType, font, RenderThemeMeasureTextClient(font, style));
 
     ASSERT(maximumWidth >= 0);
@@ -481,8 +476,10 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
 void RenderThemeIOS::adjustMenuListButtonStyle(RenderStyle& style, const Element* element) const
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (adjustMenuListButtonStyleForCatalyst(style, element))
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustMenuListButtonStyle(style, element);
         return;
+    }
 #endif
 
     // Set the min-height to be at least MenuListMinHeight.
@@ -508,8 +505,8 @@ void RenderThemeIOS::adjustMenuListButtonStyle(RenderStyle& style, const Element
 void RenderThemeIOS::paintMenuListButtonDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    if (paintMenuListButtonDecorationsForCatalyst(box, paintInfo, rect))
-        return;
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintMenuListButtonDecorations(box, paintInfo, rect);
 #endif
 
     if (is<HTMLInputElement>(box.element()))
@@ -1039,12 +1036,13 @@ bool RenderThemeIOS::shouldHaveSpinButton(const HTMLInputElement&) const
 bool RenderThemeIOS::supportsFocusRing(const RenderObject& renderer, const RenderStyle& style) const
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
-    return supportsFocusRingForCatalyst(renderer, style);
+    if (renderer.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::supportsFocusRing(renderer, style);
 #else
     UNUSED_PARAM(renderer);
     UNUSED_PARAM(style);
-    return false;
 #endif
+    return false;
 }
 
 bool RenderThemeIOS::supportsBoxShadow(const RenderStyle& style) const

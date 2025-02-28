@@ -819,6 +819,8 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
         return paintButton(box, paintInfo, integralSnappedRect);
     case StyleAppearance::Menulist:
         return paintMenuList(box, paintInfo, devicePixelSnappedRect);
+    case StyleAppearance::MenulistButton:
+        return paintMenuListButton(box, paintInfo, integralSnappedRect);
     case StyleAppearance::Meter:
         return paintMeter(box, paintInfo, integralSnappedRect);
     case StyleAppearance::ProgressBar:
@@ -829,7 +831,6 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     case StyleAppearance::SliderThumbHorizontal:
     case StyleAppearance::SliderThumbVertical:
         return paintSliderThumb(box, paintInfo, integralSnappedRect);
-    case StyleAppearance::MenulistButton:
     case StyleAppearance::TextField:
     case StyleAppearance::TextArea:
     case StyleAppearance::Listbox:

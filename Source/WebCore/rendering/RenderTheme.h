@@ -303,6 +303,7 @@ protected:
 
     virtual void adjustMenuListButtonStyle(RenderStyle&, const Element*) const { }
     virtual void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) { }
+    virtual bool paintMenuListButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
 
     virtual void adjustMeterStyle(RenderStyle&, const Element*) const;
     virtual bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }

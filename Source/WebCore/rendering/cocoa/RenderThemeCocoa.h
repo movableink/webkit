@@ -80,6 +80,7 @@ protected:
 
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
     void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
+    bool paintMenuListButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
     void adjustMeterStyle(RenderStyle&, const Element*) const override;
     bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) override;
@@ -116,6 +117,8 @@ protected:
     void adjustSwitchStyle(RenderStyle&, const Element*) const override;
     bool paintSwitchThumb(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     bool paintSwitchTrack(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const override;
 
 #if USE(APPLE_INTERNAL_SDK)
 #import <WebKitAdditions/RenderThemeCocoaAdditions.h>

@@ -29,15 +29,19 @@
 #import "AttachmentLayout.h"
 #import "CaretRectComputation.h"
 #import "ColorBlending.h"
+#import "DateComponents.h"
 #import "DrawGlyphsRecorder.h"
 #import "FloatRoundedRect.h"
 #import "FontCacheCoreText.h"
 #import "GraphicsContextCG.h"
+#import "HTMLButtonElement.h"
 #import "HTMLDataListElement.h"
 #import "HTMLInputElement.h"
 #import "HTMLMeterElement.h"
 #import "HTMLOptionElement.h"
+#import "HTMLSelectElement.h"
 #import "ImageBuffer.h"
+#import "LocalizedDateCache.h"
 #import "NodeRenderStyle.h"
 #import "Page.h"
 #import "RenderButton.h"
@@ -550,6 +554,16 @@ void RenderThemeCocoa::paintMenuListButtonDecorations(const RenderBox& box, cons
     RenderTheme::paintMenuListButtonDecorations(box, paintInfo, rect);
 }
 
+bool RenderThemeCocoa::paintMenuListButton(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintMenuListButtonForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintMenuListButton(box, paintInfo, rect);
+}
+
 void RenderThemeCocoa::adjustMeterStyle(RenderStyle& style, const Element* element) const
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
@@ -823,6 +837,23 @@ bool RenderThemeCocoa::paintSwitchTrack(const RenderObject& renderer, const Pain
 #endif
 
     return renderThemePaintSwitchTrack(extractControlStyleStatesForRenderer(renderer), renderer, paintInfo, rect);
+}
+
+bool RenderThemeCocoa::supportsFocusRing(const RenderObject& renderer, const RenderStyle& style) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+
+#if PLATFORM(MAC)
+    auto tryFocusRingForVectorBasedControls = renderer.settings().vectorBasedControlsOnMacEnabled();
+#else
+    auto tryFocusRingForVectorBasedControls = renderer.settings().macStyleControlsOnCatalyst();
+#endif
+    if (tryFocusRingForVectorBasedControls)
+        return supportsFocusRingForVectorBasedControls(renderer, style);
+
+#endif
+
+    return RenderTheme::supportsFocusRing(renderer, style);
 }
 
 }
