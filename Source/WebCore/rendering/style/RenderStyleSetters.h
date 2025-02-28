@@ -361,10 +361,10 @@ inline void RenderStyle::setVisitedLinkTextStrokeColor(const Style::Color& value
 inline void RenderStyle::setWidth(Length&& length) { SET_NESTED(m_nonInheritedData, boxData, m_width, WTFMove(length)); }
 inline void RenderStyle::setWordBreak(WordBreak rule) { SET(m_rareInheritedData, wordBreak, static_cast<unsigned>(rule)); }
 
-inline void RenderStyle::setCornerBottomLeftShape(CornerShape shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_cornerShapes.bottomLeft(), shape); }
-inline void RenderStyle::setCornerBottomRightShape(CornerShape shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_cornerShapes.bottomRight(), shape); }
-inline void RenderStyle::setCornerTopLeftShape(CornerShape shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_cornerShapes.topLeft(), shape); }
-inline void RenderStyle::setCornerTopRightShape(CornerShape shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_cornerShapes.topRight(), shape); }
+inline void RenderStyle::setCornerBottomLeftShape(Style::CornerShapeValue&& shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_cornerShapes.bottomLeft(), WTFMove(shape)); }
+inline void RenderStyle::setCornerBottomRightShape(Style::CornerShapeValue&& shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_cornerShapes.bottomRight(), WTFMove(shape)); }
+inline void RenderStyle::setCornerTopLeftShape(Style::CornerShapeValue&& shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_cornerShapes.topLeft(), WTFMove(shape)); }
+inline void RenderStyle::setCornerTopRightShape(Style::CornerShapeValue&& shape) { SET_NESTED(m_nonInheritedData, surroundData, border.m_cornerShapes.topRight(), WTFMove(shape)); }
 
 inline void RenderStyle::setNativeAppearanceDisabled(bool value) { SET_NESTED(m_nonInheritedData, rareData, nativeAppearanceDisabled, value); }
 

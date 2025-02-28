@@ -4,6 +4,7 @@
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
  * Copyright (C) 2003, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,6 +30,7 @@
 #include "NinePieceImage.h"
 #include "RectCorners.h"
 #include "RectEdges.h"
+#include "StyleCornerShapeValue.h"
 
 namespace WebCore {
 
@@ -95,10 +97,10 @@ public:
     const LengthSize& bottomLeftRadius() const { return m_radii.bottomLeft(); }
     const LengthSize& bottomRightRadius() const { return m_radii.bottomRight(); }
 
-    CornerShape topLeftCornerShape() const { return m_cornerShapes.topLeft(); }
-    CornerShape topRightCornerShape() const { return m_cornerShapes.topRight(); }
-    CornerShape bottomLeftCornerShape() const { return m_cornerShapes.bottomLeft(); }
-    CornerShape bottomRightCornerShape() const { return m_cornerShapes.bottomRight(); }
+    const Style::CornerShapeValue& topLeftCornerShape() const { return m_cornerShapes.topLeft(); }
+    const Style::CornerShapeValue& topRightCornerShape() const { return m_cornerShapes.topRight(); }
+    const Style::CornerShapeValue& bottomLeftCornerShape() const { return m_cornerShapes.bottomLeft(); }
+    const Style::CornerShapeValue& bottomRightCornerShape() const { return m_cornerShapes.bottomRight(); }
 
     void dump(TextStream&, DumpStyleValues = DumpStyleValues::All) const;
 
@@ -106,7 +108,7 @@ private:
     RectEdges<BorderValue> m_edges;
     NinePieceImage m_image;
     RectCorners<LengthSize> m_radii { LengthSize { LengthType::Fixed, LengthType::Fixed } };
-    RectCorners<CornerShape> m_cornerShapes { CornerShape::Round };
+    RectCorners<Style::CornerShapeValue> m_cornerShapes { Style::CornerShapeValue::round() };
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const BorderValue&);

@@ -78,6 +78,7 @@
 #include "StyleBasicShape.h"
 #include "StyleBuilderState.h"
 #include "StyleColorScheme.h"
+#include "StyleCornerShapeValue.h"
 #include "StyleDynamicRangeLimit.h"
 #include "StyleEasingFunction.h"
 #include "StylePathData.h"
@@ -261,6 +262,7 @@ public:
     static Style::ScrollPaddingEdge convertScrollPaddingEdge(BuilderState&, const CSSValue&);
     static Style::ScrollMarginEdge convertScrollMarginEdge(BuilderState&, const CSSValue&);
     static Style::DynamicRangeLimit convertDynamicRangeLimit(BuilderState&, const CSSValue&);
+    static Style::CornerShapeValue convertCornerShapeValue(BuilderState&, const CSSValue&);
 
     static Vector<PositionTryFallback> convertPositionTryFallbacks(BuilderState&, const CSSValue&);
 
@@ -285,8 +287,8 @@ public:
 
         CSSValueList::iterator iterator;
     };
-    template<class ValueType> struct TypedList {
-        TypedList(const CSSValueContainingVector& list)
+    template<class ListType, class ValueType> struct TypedList {
+        TypedList(const ListType& list)
             : list(list)
         { }
 
@@ -295,9 +297,10 @@ public:
         TypedListIterator<ValueType> begin() const { return list->begin(); }
         TypedListIterator<ValueType> end() const { return list->end(); }
 
-        Ref<const CSSValueContainingVector> list;
+        Ref<const ListType> list;
     };
-    template<class ListType, class ValueType, unsigned minimumLength = 1> static std::optional<TypedList<ValueType>> requiredListDowncast(BuilderState&, const CSSValue&);
+    template<class ListType, class ValueType, unsigned minimumLength = 1> static std::optional<TypedList<ListType, ValueType>> requiredListDowncast(BuilderState&, const CSSValue&);
+    template<CSSValueID, class ValueType, unsigned minimumLength = 1> static std::optional<TypedList<CSSFunctionValue, ValueType>> requiredFunctionDowncast(BuilderState&, const CSSValue&);
 
 private:
     friend class BuilderCustom;
@@ -343,7 +346,7 @@ inline std::optional<std::pair<const ValueType&, const ValueType&>> BuilderConve
 }
 
 template<class ListType, class ValueType, unsigned minimumSize>
-inline auto BuilderConverter::requiredListDowncast(BuilderState& builderState, const CSSValue& value) -> std::optional<TypedList<ValueType>>
+inline auto BuilderConverter::requiredListDowncast(BuilderState& builderState, const CSSValue& value) -> std::optional<TypedList<ListType, ValueType>>
 {
     auto* listValue = requiredDowncast<ListType>(builderState, value);
     if (UNLIKELY(!listValue))
@@ -356,7 +359,20 @@ inline auto BuilderConverter::requiredListDowncast(BuilderState& builderState, c
         if (UNLIKELY(!requiredDowncast<ValueType>(builderState, value)))
             return { };
     }
-    return TypedList<ValueType> { *listValue };
+    return TypedList<ListType, ValueType> { *listValue };
+}
+
+template<CSSValueID functionName, class ValueType, unsigned minimumSize>
+inline auto BuilderConverter::requiredFunctionDowncast(BuilderState& builderState, const CSSValue& value) -> std::optional<TypedList<CSSFunctionValue, ValueType>>
+{
+    auto function = requiredListDowncast<CSSFunctionValue, ValueType, minimumSize>(builderState, value);
+    if (UNLIKELY(!function))
+        return { };
+    if (function->list->name() != functionName) {
+        builderState.setCurrentPropertyInvalidAtComputedValueTime();
+        return { };
+    }
+    return function;
 }
 
 inline WebCore::Length BuilderConverter::convertLength(BuilderState& builderState, const CSSValue& value)
@@ -2796,6 +2812,45 @@ inline Style::DynamicRangeLimit BuilderConverter::convertDynamicRangeLimit(Build
         return Style::DynamicRangeLimit { CSS::Keyword::NoLimit { } };
 
     return toStyle(dynamicRangeLimit->dynamicRangeLimit(), builderState);
+}
+
+inline Style::CornerShapeValue BuilderConverter::convertCornerShapeValue(BuilderState& builderState, const CSSValue& value)
+{
+    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        switch (primitiveValue->valueID()) {
+        case CSSValueRound:
+            return Style::CornerShapeValue::round();
+        case CSSValueScoop:
+            return Style::CornerShapeValue::scoop();
+        case CSSValueBevel:
+            return Style::CornerShapeValue::bevel();
+        case CSSValueNotch:
+            return Style::CornerShapeValue::notch();
+        case CSSValueStraight:
+            return Style::CornerShapeValue::straight();
+        case CSSValueSquircle:
+            return Style::CornerShapeValue::squircle();
+        default:
+            break;
+        }
+
+        builderState.setCurrentPropertyInvalidAtComputedValueTime();
+        return Style::CornerShapeValue::round();
+    }
+
+    auto superellipseFunction = requiredFunctionDowncast<CSSValueSuperellipse, CSSPrimitiveValue>(builderState, value);
+    if (!superellipseFunction)
+        return Style::CornerShapeValue::round();
+
+    Ref superellipseDescriptor = superellipseFunction->item(0);
+    if (superellipseDescriptor->valueID() == CSSValueInfinity)
+        return { Style::SuperellipseFunction { Style::Number<CSS::Nonnegative>(std::numeric_limits<double>::infinity()) } };
+
+    if (superellipseDescriptor->isNumber())
+        return { Style::SuperellipseFunction { Style::Number<CSS::Nonnegative>(std::max(0.0, superellipseDescriptor->resolveAsNumber<double>(builderState.cssToLengthConversionData()))) } };
+
+    builderState.setCurrentPropertyInvalidAtComputedValueTime();
+    return Style::CornerShapeValue::round();
 }
 
 } // namespace Style

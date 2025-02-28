@@ -2194,12 +2194,6 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef FOR_EACH
 
 
-#define TYPE CornerShape
-#define FOR_EACH(CASE) CASE(Round) CASE(Scoop) CASE(Bevel) CASE(Notch) CASE(Straight)
-DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
-#undef TYPE
-#undef FOR_EACH
-
 #define TYPE DominantBaseline
 #define FOR_EACH(CASE) CASE(Auto) CASE(UseScript) CASE(NoChange) CASE(ResetSize) CASE(Central) \
     CASE(Middle) CASE(TextBeforeEdge) CASE(TextAfterEdge) CASE(Ideographic) CASE(Alphabetic) \

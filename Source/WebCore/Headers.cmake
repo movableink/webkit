@@ -2690,6 +2690,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/Styleable.h
 
     style/values/borders/StyleBorderRadius.h
+    style/values/borders/StyleCornerShapeValue.h
 
     style/values/color/StyleColor.h
     style/values/color/StyleColorOptions.h

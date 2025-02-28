@@ -956,6 +956,9 @@ scoop
 // bevel
 notch
 straight
+squircle
+superellipse
+// infinity
 
 //
 // CSS_PROP_MASK_CLIP

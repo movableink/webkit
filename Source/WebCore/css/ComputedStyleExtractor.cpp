@@ -90,6 +90,7 @@
 #include "StyleAppleColorFilterProperty.h"
 #include "StyleBoxShadow.h"
 #include "StyleColorScheme.h"
+#include "StyleCornerShapeValue.h"
 #include "StyleDynamicRangeLimit.h"
 #include "StyleEasingFunction.h"
 #include "StyleFilterProperty.h"
@@ -4854,13 +4855,13 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyCornerShape:
         return getCSSPropertyValuesFor4SidesShorthand(cornerShapeShorthand());
     case CSSPropertyCornerTopLeftShape:
-        return createConvertingToCSSValueID(style.cornerTopLeftShape());
+        return Style::toCSSValue(style.cornerTopLeftShape(), style);
     case CSSPropertyCornerTopRightShape:
-        return createConvertingToCSSValueID(style.cornerTopRightShape());
+        return Style::toCSSValue(style.cornerTopRightShape(), style);
     case CSSPropertyCornerBottomRightShape:
-        return createConvertingToCSSValueID(style.cornerBottomRightShape());
+        return Style::toCSSValue(style.cornerBottomRightShape(), style);
     case CSSPropertyCornerBottomLeftShape:
-        return createConvertingToCSSValueID(style.cornerBottomLeftShape());
+        return Style::toCSSValue(style.cornerBottomLeftShape(), style);
     case CSSPropertyInset:
         return getCSSPropertyValuesFor4SidesShorthand(insetShorthand());
     case CSSPropertyInsetBlock:

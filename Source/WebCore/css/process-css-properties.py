@@ -2221,7 +2221,7 @@ class FunctionTerm:
         self.parameter_group_term = parameter_group_term
 
     def __str__(self):
-        return self.name + '(' + str(self.parameter_group_term) + ')'
+        return str(self.name) + '(' + str(self.parameter_group_term) + ')'
 
     def __repr__(self):
         return self.__str__()
@@ -2229,7 +2229,7 @@ class FunctionTerm:
     @staticmethod
     def from_node(node):
         assert(type(node) is BNFFunctionNode)
-        return FunctionTerm(node.name, Term.from_node(node.parameter_group))
+        return FunctionTerm(ValueKeywordName(node.name), Term.from_node(node.parameter_group))
 
     def perform_fixups(self, all_rules):
         self.parameter_group_term = self.parameter_group_term.perform_fixups(all_rules)
@@ -4233,6 +4233,7 @@ class GenerateCSSPropertyParsing:
             self.generation_context.generate_includes(
                 to=writer,
                 headers=[
+                    "CSSFunctionValue.h",
                     "CSSParserContext.h",
                     "CSSParserIdioms.h",
                     "CSSPropertyParser.h",
@@ -4857,12 +4858,78 @@ class TermGeneratorFunctionTerm(TermGenerator):
         self.requires_context = self.parameter_group_generator.requires_context
 
     def generate_conditional(self, *, to, range_string, context_string):
-        # FIXME: Implement generation.
-        pass
+        self._generate_consume_lambda(to=to, range_string=range_string, context_string=context_string)
+        self._generate_create_value_lambda(to=to, range_string=range_string, context_string=context_string)
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        with to.indent():
+            to.write(f"return result;")
 
     def generate_unconditional(self, *, to, range_string, context_string):
-        # FIXME: Implement generation.
-        pass
+        self._generate_consume_lambda(to=to, range_string=range_string, context_string=context_string)
+        self._generate_create_value_lambda(to=to, range_string=range_string, context_string=context_string)
+        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+
+    @property
+    def _consume_lambda_name(self):
+        return f"consume{self.term.name.id_without_prefix}Function"
+
+    @property
+    def _create_value_lambda_name(self):
+        return f"create{self.term.name.id_without_prefix}FunctionValue"
+
+    def _generate_consume_lambda(self, *, to, range_string, context_string):
+        lambda_declaration_paramaters = ["CSSParserTokenRange& range"]
+        if self.parameter_group_generator.requires_context:
+            lambda_declaration_paramaters += ["const CSSParserContext& context"]
+
+        to.write(f"auto {self._consume_lambda_name} = []({', '.join(lambda_declaration_paramaters)}) -> RefPtr<CSSValue> {{")
+        with to.indent():
+            inner_lambda_declaration_paramaters = ["CSSParserTokenRange& args"]
+            inner_lambda_declaration_calling_parameters = ["args"]
+            if self.parameter_group_generator.requires_context:
+                inner_lambda_declaration_paramaters += ["const CSSParserContext& context"]
+                inner_lambda_declaration_calling_parameters += ["context"]
+
+            to.write(f"auto consumeParameters = []({', '.join(inner_lambda_declaration_paramaters)}) -> RefPtr<CSSValue> {{")
+            with to.indent():
+                self.parameter_group_generator.generate_unconditional(to=to, range_string="args", context_string="context")
+            to.write(f"}};")
+
+            to.write(f"if (range.peek().functionId() != {self.term.name.id})")
+            with to.indent():
+                to.write(f"return nullptr;")
+
+            to.write(f"CSSParserTokenRange rangeCopy = range;")
+            to.write(f"CSSParserTokenRange args = consumeFunction(rangeCopy);")
+
+            to.write(f"auto result = consumeParameters({', '.join(inner_lambda_declaration_calling_parameters)});")
+            to.write(f"if (!result)")
+            with to.indent():
+                to.write(f"return nullptr;")
+
+            to.write(f"if (!args.atEnd())")
+            with to.indent():
+                to.write(f"return nullptr;")
+
+            to.write(f"range = rangeCopy;")
+            to.write(f"return result;")
+        to.write(f"}};")
+
+    def _generate_create_value_lambda(self, *, to, range_string, context_string):
+        to.write(f"auto {self._create_value_lambda_name} = [](RefPtr<CSSValue>&& parameterValues) -> RefPtr<CSSValue> {{")
+        with to.indent():
+            to.write(f"if (!parameterValues)")
+            with to.indent():
+                to.write(f"return nullptr;")
+            to.write(f"return CSSFunctionValue::create({self.term.name.id}, parameterValues.releaseNonNull());")
+        to.write(f"}};")
+
+    def _generate_call_string(self, *, range_string, context_string):
+        parameters = [range_string]
+        if self.parameter_group_generator.requires_context:
+            parameters += [context_string]
+
+        return f"{self._create_value_lambda_name}({self._consume_lambda_name}({', '.join(parameters)}))"
 
 
 class TermGeneratorLiteralTerm(TermGenerator):
@@ -4929,8 +4996,7 @@ class TermGeneratorMatchOneTerm(TermGenerator):
         non_fast_path_keyword_terms = []
         reference_terms = []
         repetition_terms = []
-        group_terms = []
-        optional_terms = []
+        function_terms = []
 
         for sub_term in term.terms:
             if isinstance(sub_term, KeywordTerm):
@@ -4942,16 +5008,10 @@ class TermGeneratorMatchOneTerm(TermGenerator):
                 reference_terms.append(sub_term)
             elif isinstance(sub_term, UnboundedRepetitionTerm):
                 repetition_terms.append(sub_term)
-            elif isinstance(sub_term, BoundedRepetitionTerm):
-                repetition_terms.append(sub_term)
-            elif isinstance(sub_term, FixedSizeRepetitionTerm):
-                repetition_terms.append(sub_term)
-            elif isinstance(sub_term, GroupTerm):
-                group_terms.append(sub_term)
-            elif isinstance(sub_term, OptionalTerm):
-                optional_terms.append(sub_term)
+            elif isinstance(sub_term, FunctionTerm):
+                function_terms.append(sub_term)
             else:
-                raise Exception(f"Only KeywordTerm, ReferenceTerm and UnboundedRepetitionTerm terms are supported inside MatchOneTerm at this time: '{term}' - {sub_term}")
+                raise Exception(f"Only KeywordTerm, ReferenceTerm, UnboundedRepetitionTerm and FunctionTerms terms are supported inside MatchOneTerm at this time: '{term}' - {sub_term}")
 
         # Build a list of generators for the terms, starting with all (if any) the keywords at once.
         term_generators = []
@@ -4964,10 +5024,8 @@ class TermGeneratorMatchOneTerm(TermGenerator):
             term_generators += [TermGeneratorReferenceTerm(sub_term) for sub_term in reference_terms]
         if repetition_terms:
             term_generators += [TermGeneratorUnboundedRepetitionTerm(sub_term) for sub_term in repetition_terms]
-        if group_terms:
-            term_generators += [TermGeneratorGroupTerm(sub_term) for sub_term in group_terms]
-        if repetition_terms:
-            term_generators += [TermGeneratorOptionalTerm(sub_term) for sub_term in optional_terms]
+        if function_terms:
+            term_generators += [TermGeneratorFunctionTerm(sub_term) for sub_term in function_terms]
         return term_generators
 
     def generate_conditional(self, *, to, range_string, context_string):

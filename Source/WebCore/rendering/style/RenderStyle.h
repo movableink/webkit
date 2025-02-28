@@ -146,7 +146,6 @@ enum class Containment : uint8_t;
 enum class ContentDistribution : uint8_t;
 enum class ContentPosition : uint8_t;
 enum class ContentVisibility : uint8_t;
-enum class CornerShape : uint8_t;
 enum class CursorType : uint8_t;
 enum class CursorVisibility : bool;
 enum class DisplayType : uint8_t;
@@ -293,6 +292,7 @@ class CustomPropertyRegistry;
 class ViewTransitionName;
 struct Color;
 struct ColorScheme;
+struct CornerShapeValue;
 struct DynamicRangeLimit;
 struct ScopedName;
 struct ScrollMargin;
@@ -549,15 +549,15 @@ public:
 
     inline bool borderIsEquivalentForPainting(const RenderStyle&) const;
 
-    inline CornerShape cornerBottomLeftShape() const;
-    inline CornerShape cornerBottomRightShape() const;
-    inline CornerShape cornerTopLeftShape() const;
-    inline CornerShape cornerTopRightShape() const;
+    inline const Style::CornerShapeValue& cornerBottomLeftShape() const;
+    inline const Style::CornerShapeValue& cornerBottomRightShape() const;
+    inline const Style::CornerShapeValue& cornerTopLeftShape() const;
+    inline const Style::CornerShapeValue& cornerTopRightShape() const;
 
-    void setCornerBottomLeftShape(CornerShape);
-    void setCornerBottomRightShape(CornerShape);
-    void setCornerTopLeftShape(CornerShape);
-    void setCornerTopRightShape(CornerShape);
+    void setCornerBottomLeftShape(Style::CornerShapeValue&&);
+    void setCornerBottomRightShape(Style::CornerShapeValue&&);
+    void setCornerTopLeftShape(Style::CornerShapeValue&&);
+    void setCornerTopRightShape(Style::CornerShapeValue&&);
 
     float outlineSize() const { return std::max<float>(0, outlineWidth() + outlineOffset()); }
     float outlineWidth() const;
@@ -1949,7 +1949,7 @@ public:
     static constexpr BorderStyle initialBorderStyle();
     static constexpr OutlineIsAuto initialOutlineStyleIsAuto();
     static inline LengthSize initialBorderRadius();
-    static constexpr CornerShape initialCornerShape();
+    static constexpr Style::CornerShapeValue initialCornerShapeValue();
     static constexpr CaptionSide initialCaptionSide();
     static constexpr ColumnAxis initialColumnAxis();
     static constexpr ColumnProgression initialColumnProgression();

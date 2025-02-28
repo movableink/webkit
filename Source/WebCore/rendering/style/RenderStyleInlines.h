@@ -395,7 +395,7 @@ constexpr ContainerType RenderStyle::initialContainerType() { return ContainerTy
 constexpr OptionSet<Containment> RenderStyle::initialContainment() { return { }; }
 constexpr StyleContentAlignmentData RenderStyle::initialContentAlignment() { return { }; }
 constexpr ContentVisibility RenderStyle::initialContentVisibility() { return ContentVisibility::Visible; }
-constexpr CornerShape RenderStyle::initialCornerShape() { return CornerShape::Round; }
+constexpr Style::CornerShapeValue RenderStyle::initialCornerShapeValue() { return Style::CornerShapeValue::round(); }
 constexpr CursorType RenderStyle::initialCursor() { return CursorType::Auto; }
 constexpr StyleSelfAlignmentData RenderStyle::initialDefaultAlignment() { return { ItemPosition::Normal, OverflowAlignment::Default }; }
 constexpr TextDirection RenderStyle::initialDirection() { return TextDirection::LTR; }
@@ -820,10 +820,10 @@ inline float RenderStyle::zoom() const { return m_nonInheritedData->rareData->zo
 
 inline bool RenderStyle::nativeAppearanceDisabled() const { return m_nonInheritedData->rareData->nativeAppearanceDisabled; }
 
-inline CornerShape RenderStyle::cornerBottomLeftShape() const { return border().bottomLeftCornerShape(); }
-inline CornerShape RenderStyle::cornerBottomRightShape() const { return border().bottomRightCornerShape(); }
-inline CornerShape RenderStyle::cornerTopLeftShape() const { return border().topLeftCornerShape(); }
-inline CornerShape RenderStyle::cornerTopRightShape() const { return border().topRightCornerShape(); }
+inline const Style::CornerShapeValue& RenderStyle::cornerBottomLeftShape() const { return border().bottomLeftCornerShape(); }
+inline const Style::CornerShapeValue& RenderStyle::cornerBottomRightShape() const { return border().bottomRightCornerShape(); }
+inline const Style::CornerShapeValue& RenderStyle::cornerTopLeftShape() const { return border().topLeftCornerShape(); }
+inline const Style::CornerShapeValue& RenderStyle::cornerTopRightShape() const { return border().topRightCornerShape(); }
 
 // ignore non-standard ::-webkit-scrollbar when standard properties are in use
 inline bool RenderStyle::usesStandardScrollbarStyle() const { return scrollbarWidth() != ScrollbarWidth::Auto || scrollbarColor().has_value(); }

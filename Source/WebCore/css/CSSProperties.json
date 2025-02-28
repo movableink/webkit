@@ -3941,16 +3941,18 @@
             }
         },
         "corner-top-left-shape": {
-            "animation-type": "discrete",
+            "animation-type": "see prose",
             "initial": "round",
             "codegen-properties": {
-                "disables-native-appearance": true,
                 "logical-property-group": {
                     "name": "corner-shape",
                     "resolver": "top-left"
                 },
+                "animation-wrapper": "StyleTypeWrapper",
+                "disables-native-appearance": true,
                 "parser-grammar": "<corner-shape-value>",
-                "render-style-initial": "initialCornerShape",
+                "render-style-initial": "initialCornerShapeValue",
+                "style-builder-converter": "CornerShapeValue",
                 "settings-flag": "cssCornerShapeEnabled"
             },
             "specification": {
@@ -3959,16 +3961,18 @@
             }
         },
         "corner-top-right-shape": {
-            "animation-type": "discrete",
+            "animation-type": "see prose",
             "initial": "round",
             "codegen-properties": {
-                "disables-native-appearance": true,
                 "logical-property-group": {
                     "name": "corner-shape",
                     "resolver": "top-right"
                 },
+                "animation-wrapper": "StyleTypeWrapper",
+                "disables-native-appearance": true,
                 "parser-grammar": "<corner-shape-value>",
-                "render-style-initial": "initialCornerShape",
+                "render-style-initial": "initialCornerShapeValue",
+                "style-builder-converter": "CornerShapeValue",
                 "settings-flag": "cssCornerShapeEnabled"
             },
             "specification": {
@@ -3977,16 +3981,18 @@
             }
         },
         "corner-bottom-left-shape": {
-            "animation-type": "discrete",
+            "animation-type": "see prose",
             "initial": "round",
             "codegen-properties": {
-                "disables-native-appearance": true,
                 "logical-property-group": {
                     "name": "corner-shape",
                     "resolver": "bottom-left"
                 },
+                "animation-wrapper": "StyleTypeWrapper",
+                "disables-native-appearance": true,
                 "parser-grammar": "<corner-shape-value>",
-                "render-style-initial": "initialCornerShape",
+                "render-style-initial": "initialCornerShapeValue",
+                "style-builder-converter": "CornerShapeValue",
                 "settings-flag": "cssCornerShapeEnabled"
             },
             "specification": {
@@ -3995,16 +4001,18 @@
             }
         },
         "corner-bottom-right-shape": {
-            "animation-type": "discrete",
+            "animation-type": "see prose",
             "initial": "round",
             "codegen-properties": {
-                "disables-native-appearance": true,
                 "logical-property-group": {
                     "name": "corner-shape",
                     "resolver": "bottom-right"
                 },
+                "animation-wrapper": "StyleTypeWrapper",
+                "disables-native-appearance": true,
                 "parser-grammar": "<corner-shape-value>",
-                "render-style-initial": "initialCornerShape",
+                "render-style-initial": "initialCornerShapeValue",
+                "style-builder-converter": "CornerShapeValue",
                 "settings-flag": "cssCornerShapeEnabled"
             },
             "specification": {
@@ -4013,15 +4021,15 @@
             }
         },
         "corner-start-start-shape": {
-            "animation-type": "discrete",
+            "animation-type": "see prose",
             "initial": "round",
             "codegen-properties": {
-                "skip-style-builder": true,
-                "disables-native-appearance": true,
                 "logical-property-group": {
                     "name": "corner-shape",
                     "resolver": "start-start"
                 },
+                "skip-style-builder": true,
+                "disables-native-appearance": true,
                 "parser-grammar": "<corner-shape-value>",
                 "settings-flag": "cssCornerShapeEnabled"
             },
@@ -4031,15 +4039,15 @@
             }
         },
         "corner-start-end-shape": {
-            "animation-type": "discrete",
+            "animation-type": "see prose",
             "initial": "round",
             "codegen-properties": {
-                "skip-style-builder": true,
-                "disables-native-appearance": true,
                 "logical-property-group": {
                     "name": "corner-shape",
                     "resolver": "start-end"
                 },
+                "skip-style-builder": true,
+                "disables-native-appearance": true,
                 "parser-grammar": "<corner-shape-value>",
                 "parser-exported": true,
                 "settings-flag": "cssCornerShapeEnabled"
@@ -4050,15 +4058,15 @@
             }
         },
         "corner-end-start-shape": {
-            "animation-type": "discrete",
+            "animation-type": "see prose",
             "initial": "round",
             "codegen-properties": {
-                "skip-style-builder": true,
-                "disables-native-appearance": true,
                 "logical-property-group": {
                     "name": "corner-shape",
                     "resolver": "end-start"
                 },
+                "skip-style-builder": true,
+                "disables-native-appearance": true,
                 "parser-grammar": "<corner-shape-value>",
                 "settings-flag": "cssCornerShapeEnabled"
             },
@@ -4068,15 +4076,15 @@
             }
         },
         "corner-end-end-shape": {
-            "animation-type": "discrete",
+            "animation-type": "see prose",
             "initial": "round",
             "codegen-properties": {
-                "skip-style-builder": true,
-                "disables-native-appearance": true,
                 "logical-property-group": {
                     "name": "corner-shape",
                     "resolver": "end-end"
                 },
+                "skip-style-builder": true,
+                "disables-native-appearance": true,
                 "parser-grammar": "<corner-shape-value>",
                 "settings-flag": "cssCornerShapeEnabled"
             },
@@ -13515,8 +13523,7 @@
             }
         },
         "<corner-shape-value>": {
-            "grammar": "round | scoop | bevel | notch | straight",
-            "exported": true,
+            "grammar": "round | scoop | bevel | notch | straight | squircle | superellipse(<number [0,inf]> | infinity)",
             "specification": {
                 "category": "css-borders",
                 "url": "https://drafts.csswg.org/css-borders-4/#corner-shaping"

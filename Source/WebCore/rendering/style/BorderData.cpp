@@ -1,5 +1,6 @@
 /*
 * Copyright (C) 2019 Apple Inc. All rights reserved.
+* Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -72,13 +73,13 @@ void BorderData::dump(TextStream& ts, DumpStyleValues behavior) const
     if (behavior == DumpStyleValues::All || bottom() != BorderValue())
         ts.dumpProperty("bottom", bottom());
 
-    if (behavior == DumpStyleValues::All || topLeftCornerShape() != CornerShape::Round)
+    if (behavior == DumpStyleValues::All || topLeftCornerShape() != Style::CornerShapeValue::round())
         ts.dumpProperty("top-left corner shape", topLeftCornerShape());
-    if (behavior == DumpStyleValues::All || topRightCornerShape() != CornerShape::Round)
+    if (behavior == DumpStyleValues::All || topRightCornerShape() != Style::CornerShapeValue::round())
         ts.dumpProperty("top-right corner shape", topRightCornerShape());
-    if (behavior == DumpStyleValues::All || bottomLeftCornerShape() != CornerShape::Round)
+    if (behavior == DumpStyleValues::All || bottomLeftCornerShape() != Style::CornerShapeValue::round())
         ts.dumpProperty("bottom-left corner shape", bottomLeftCornerShape());
-    if (behavior == DumpStyleValues::All || bottomRightCornerShape() != CornerShape::Round)
+    if (behavior == DumpStyleValues::All || bottomRightCornerShape() != Style::CornerShapeValue::round())
         ts.dumpProperty("bottom-right corner shape", bottomRightCornerShape());
 
     ts.dumpProperty("image", image());
