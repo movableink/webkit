@@ -168,9 +168,7 @@ final public class WKStageModeInteractionDriver: NSObject {
         if pitchAnimationIsPlaying {
             withObservationTracking {
 #if USE_APPLE_INTERNAL_SDK
-                if #available(WK_XROS_TBA, *) {
-                    _ = self.interactionContainer.proto_observableComponents[Transform.self]
-                }
+                // FIXME: https://bugs.webkit.org/show_bug.cgi?id=288873
 #endif
             } onChange: {
                 Task { @MainActor in
