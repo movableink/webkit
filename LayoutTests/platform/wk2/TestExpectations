@@ -816,3 +816,5 @@ webkit.org/b/288422 imported/w3c/web-platform-tests/navigation-api/navigate-even
 webkit.org/b/288774 fast/dynamic/content-visibility-crash-with-continuation-and-table.html [ Pass Failure ]
 
 webkit.org/b/288847 imported/w3c/web-platform-tests/cookie-store/cookieStore_event_delete.https.window.html [ Pass Failure ]
+
+webkit.org/b/288851 imported/w3c/web-platform-tests/fetch/http-cache/invalidate.any.html [ Pass Failure ]
