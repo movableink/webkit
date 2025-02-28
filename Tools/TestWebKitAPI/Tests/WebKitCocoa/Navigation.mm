@@ -744,7 +744,7 @@ static bool didRejectNavigation = false;
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-- (void)_webView:(WKWebView *)webView shouldGoToBackForwardListItem:(WKBackForwardListItem *)item inPageCache:(BOOL)inPageCache completionHandler:(void (^)(bool shouldGoToItem))completionHandler
+- (void)_webView:(WKWebView *)webView shouldGoToBackForwardListItem:(WKBackForwardListItem *)item inPageCache:(BOOL)inPageCache completionHandler:(void (^)(BOOL shouldGoToItem))completionHandler
 {
     EXPECT_EQ(item, _targetItem);
     EXPECT_TRUE(item.title == nil);
