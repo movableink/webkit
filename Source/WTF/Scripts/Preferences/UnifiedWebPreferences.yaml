@@ -5245,17 +5245,20 @@ ModelDocumentEnabled:
 
 ModelElementEnabled:
   type: bool
-  status: testable
+  status: Modelelement_feature_status
   category: html
   humanReadableName: "HTML <model> element"
   humanReadableDescription: "Enable HTML <model> element"
   condition: ENABLE(MODEL_ELEMENT)
   defaultValue:
     WebKitLegacy:
+      "PLATFORM(VISION) && ENABLE(MODEL_ELEMENT)": true
       default: false
     WebKit:
+      "PLATFORM(VISION) && ENABLE(MODEL_ELEMENT)": true
       default: false
     WebCore:
+      "PLATFORM(VISION) && ENABLE(MODEL_ELEMENT)": true
       default: false
   disableInLockdownMode: true
   sharedPreferenceForWebProcess: true
@@ -5277,7 +5280,8 @@ ModelNoPortalAttributeEnabled:
 
 ModelProcessEnabled:
   type: bool
-  status: unstable
+  status: stable
+  category: dom
   condition: ENABLE(MODEL_PROCESS)
   humanReadableName: "Enable Model Process"
   humanReadableDescription: "Load <model> content in a separate process"

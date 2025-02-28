@@ -72,6 +72,12 @@
 #define Backdropfilter_feature_status Testable
 #endif
 
+#if defined(ENABLE_MODEL_ELEMENT) && ENABLE_MODEL_ELEMENT && PLATFORM(VISION)
+#define Modelelement_feature_status Stable
+#else
+#define Modelelement_feature_status Testable
+#endif
+
 namespace WebKit {
 
 #if PLATFORM(IOS_FAMILY)
