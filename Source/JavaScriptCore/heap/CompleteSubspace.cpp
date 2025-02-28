@@ -139,7 +139,8 @@ void* CompleteSubspace::tryAllocateSlow(VM& vm, size_t size, GCDeferralContext* 
     if (!allocation)
         return nullptr;
     
-    m_space.registerPreciseAllocation(allocation);
+    m_preciseAllocations.append(allocation);
+    m_space.registerPreciseAllocation(allocation, /* isNewAllocation */ true);
     return allocation->cell();
 }
 
