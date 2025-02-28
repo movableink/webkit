@@ -132,7 +132,7 @@ GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate* staticPadTempl
 }
 
 #if ENABLE(VIDEO)
-bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, GstVideoFormat& format, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride)
+bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, GstVideoFormat& format, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride, double& frameRate, PlatformVideoColorSpace& colorSpace)
 {
     if (!doCapsHaveType(caps, GST_VIDEO_CAPS_TYPE_PREFIX)) {
         GST_WARNING("Failed to get the video size and format, these are not a video caps");
@@ -146,6 +146,11 @@ bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, 
         if (!gst_video_info_from_caps(&info, caps))
             return false;
 
+        if (GST_VIDEO_INFO_FPS_N(&info))
+            gst_util_fraction_to_double(GST_VIDEO_INFO_FPS_N(&info), GST_VIDEO_INFO_FPS_D(&info), &frameRate);
+
+        colorSpace = videoColorSpaceFromInfo(info);
+
         format = GST_VIDEO_INFO_FORMAT(&info);
         size.setWidth(GST_VIDEO_INFO_WIDTH(&info));
         size.setHeight(GST_VIDEO_INFO_HEIGHT(&info));
@@ -158,6 +163,7 @@ bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, 
         else
             format = GST_VIDEO_FORMAT_UNKNOWN;
         stride = 0;
+        frameRate = 1;
 
         auto width = gstStructureGet<int>(structure, "width"_s);
         if (!width) {
@@ -193,7 +199,7 @@ std::optional<FloatSize> getVideoResolutionFromCaps(const GstCaps* caps)
     int pixelAspectRatioNumerator = 1, pixelAspectRatioDenominator = 1;
 
     GstStructure* structure = gst_caps_get_structure(caps, 0);
-    if (!areEncryptedCaps(caps) && (!gst_structure_has_name(structure, "video/x-raw") || gst_structure_has_field(structure, "format"))) {
+    if (!areEncryptedCaps(caps) && (gst_structure_has_name(structure, "video/x-raw") || gst_structure_has_field(structure, "format"))) {
         GstVideoInfo info;
         gst_video_info_init(&info);
         if (!gst_video_info_from_caps(&info, caps))

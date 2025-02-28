@@ -3601,9 +3601,11 @@ void MediaPlayerPrivateGStreamer::updateVideoSizeAndOrientationFromCaps(const Gs
     // Get the video PAR and original size, if this fails the
     // video-sink has likely not yet negotiated its caps.
     int pixelAspectRatioNumerator, pixelAspectRatioDenominator, stride;
+    double frameRate;
     IntSize originalSize;
     GstVideoFormat format;
-    if (!getVideoSizeAndFormatFromCaps(caps, originalSize, format, pixelAspectRatioNumerator, pixelAspectRatioDenominator, stride)) {
+    PlatformVideoColorSpace colorSpace;
+    if (!getVideoSizeAndFormatFromCaps(caps, originalSize, format, pixelAspectRatioNumerator, pixelAspectRatioDenominator, stride, frameRate, colorSpace)) {
         GST_WARNING("Failed to get size and format from caps: %" GST_PTR_FORMAT, caps);
         return;
     }
