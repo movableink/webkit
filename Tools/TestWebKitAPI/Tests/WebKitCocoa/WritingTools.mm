@@ -812,6 +812,42 @@ TEST(WritingTools, ProofreadingWithImage)
     TestWebKitAPI::Util::run(&finished);
 }
 
+TEST(WritingTools, ProofreadingWithUntitledImageAttachment)
+{
+    RetainPtr session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeProofreading textViewDelegate:nil]);
+    RetainPtr markupString = @"<!DOCTYPE html>"
+        "<html>"
+        "  <body contenteditable>"
+        "    <p>Hello<img src='sunset-in-cupertino-200px.png'></img></p>"
+        "  </body>"
+        "</html>";
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:markupString.get() writingToolsBehavior:PlatformWritingToolsBehaviorComplete attachmentElementEnabled:YES]);
+    [webView focusDocumentBodyAndSelectAll];
+    [webView stringByEvaluatingJavaScript:@"HTMLAttachmentElement.getAttachmentIdentifier(document.querySelector('img'))"];
+
+    __block bool finished = false;
+    __block RetainPtr<NSAttributedString> attributedText;
+    [[webView writingToolsDelegate] willBeginWritingToolsSession:session.get() requestContexts:^(NSArray<WTContext *> *contexts) {
+        EXPECT_EQ(1UL, contexts.count);
+        attributedText = contexts.firstObject.attributedText;
+        finished = true;
+    }];
+    TestWebKitAPI::Util::run(&finished);
+
+    __block Vector<std::pair<RetainPtr<NSString>, RetainPtr<NSDictionary>>> textAndAttributes;
+    RetainPtr plainString = [attributedText string];
+    [attributedText enumerateAttributesInRange:NSMakeRange(0, [attributedText length]) options:0 usingBlock:^(NSDictionary<NSAttributedStringKey, id> *attributes, NSRange range, BOOL*) {
+        textAndAttributes.append({ { [plainString substringWithRange:range] }, { attributes } });
+    }];
+
+    EXPECT_EQ(textAndAttributes.size(), 2U);
+    EXPECT_WK_STREQ(@"Hello", textAndAttributes[0].first.get());
+    EXPECT_WK_STREQ(@"<replacement char>", [textAndAttributes[1].first _withVisibleReplacementCharacters]);
+
+    RetainPtr<NSTextAttachment> attachment = [textAndAttributes[1].second objectForKey:NSAttachmentAttributeName];
+    EXPECT_WK_STREQ(@"sunset-in-cupertino-200px.png", [attachment fileWrapper].preferredFilename);
+}
+
 TEST(WritingTools, ProofreadingWithLinks)
 {
     RetainPtr session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeProofreading textViewDelegate:nil]);
