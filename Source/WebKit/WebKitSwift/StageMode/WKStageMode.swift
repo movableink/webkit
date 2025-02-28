@@ -36,6 +36,8 @@ import simd
 @MainActor
 @objc(WKStageModeInteractionDriver)
 final public class WKStageModeInteractionDriver: NSObject {
+    private let kDragToRotationMultiplier: Float = 5.0
+    
     private var stageModeOperation: WKStageModeOperation = .none
     
     /// The parent container on which pitch changes will be applied
@@ -47,19 +49,32 @@ final public class WKStageModeInteractionDriver: NSObject {
     
     let modelEntity: WKSRKEntity
     
+    weak var delegate: WKStageModeInteractionAware?
+    
+    private var driverInitialized: Bool = false
+    private var initialManipulationPose: Transform = .identity
+    private var previousManipulationPose: Transform = .identity
+    private var initialTargetPose: Transform = .identity
+    
     // MARK: ObjC Exposed API
     @objc(interactionContainerRef)
     var interactionContainerRef: REEntityRef {
         self.interactionContainer.__coreEntity.__as(REEntityRef.self)
     }
     
-    @objc(initWithModel:container:)
-    init(with model: WKSRKEntity, container: REEntityRef) {
+    @objc(stageModeInteractionInProgress)
+    var stageModeInteractionInProgress: Bool {
+        self.driverInitialized && self.stageModeOperation != .none
+    }
+    
+    @objc(initWithModel:container:delegate:)
+    init(with model: WKSRKEntity, container: REEntityRef, delegate: WKStageModeInteractionAware?) {
         self.modelEntity = model
         self.interactionContainer = Entity()
         self.turntableInteractionContainer = Entity()
         self.interactionContainer.name = "WebKit:InteractionContainerEntity"
         self.turntableInteractionContainer.name = "WebKit:TurntableContainerEntity"
+        self.delegate = delegate
         
         let containerEntity = Entity.__fromCore(__EntityRef.__fromCore(container))
         self.interactionContainer.setParent(containerEntity, preservingWorldTransform: true)
@@ -82,22 +97,77 @@ final public class WKStageModeInteractionDriver: NSObject {
     
     @objc(interactionDidBegin:)
     func interactionDidBegin(_ transform: simd_float4x4) {
-        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287601
+        driverInitialized = true
+
+        let initialCenter = modelEntity.interactionPivotPoint
+        let initialTransform = modelEntity.transform
+        let transformMatrix = Transform(scale: initialTransform.scale, rotation: initialTransform.rotation, translation: initialTransform.translation)
+        self.interactionContainer.setPosition(initialCenter, relativeTo: nil)
+        self.modelEntity.interactionContainerDidRecenter(transformMatrix.matrix)
+
+        let initialPoseTransform = Transform(matrix: transform)
+        initialManipulationPose = initialPoseTransform
+        previousManipulationPose = initialPoseTransform
+        initialTargetPose = interactionContainer.transform
+        self.delegate?.stageModeInteractionDidUpdateModel()
     }
     
     @objc(interactionDidUpdate:)
     func interactionDidUpdate(_ transform: simd_float4x4) {
-        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287601
+        let poseTransform = Transform(matrix: transform)
+        switch stageModeOperation {
+        case .orbit:
+            do {
+                let xyDelta = (poseTransform.translation._inMeters - previousManipulationPose.translation._inMeters).xy * kDragToRotationMultiplier
+
+                // Apply pitch along global x axis
+                var orbitRotation = Rotation3D(angle: .init(radians: xyDelta.y), axis: .init(vector: self.interactionContainer.convert(direction: .init(1, 0, 0), from: nil).double3))
+
+                // Apply yaw along local y axis
+                orbitRotation = orbitRotation.rotated(by: Rotation3D(angle: .init(radians: xyDelta.x), axis: .y))
+
+                self.interactionContainer.orientation *= orbitRotation.quaternion.quatf
+                break
+            }
+        default:
+            break
+        }
+
+        previousManipulationPose = poseTransform
+        self.delegate?.stageModeInteractionDidUpdateModel()
     }
     
     @objc(interactionDidEnd)
     func interactionDidEnd() {
-        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=287601
+        driverInitialized = false
+        initialManipulationPose = .identity
+        previousManipulationPose = .identity
     }
     
     @objc(operationDidUpdate:)
     func operationDidUpdate(_ operation: WKStageModeOperation) {
         self.stageModeOperation = operation
+    }
+}
+
+extension simd_float3 {
+    // Based on visionOS's Points Per Meter (PPM) heuristics
+    var _inMeters: simd_float3 {
+        self / 1360.0
+    }
+
+    var xy: simd_float2 {
+        return .init(x, y)
+    }
+
+    var double3: simd_double3 {
+        return .init(Double(x), Double(y), Double(z))
+    }
+}
+
+extension simd_quatd {
+    var quatf: simd_quatf {
+        return .init(ix: Float(self.imag.x), iy: Float(self.imag.y), iz: Float(self.imag.z), r: Float(self.real))
     }
 }
 

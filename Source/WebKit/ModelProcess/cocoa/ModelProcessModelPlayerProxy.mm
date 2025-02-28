@@ -59,7 +59,7 @@
 
 #import "WebKitSwiftSoftLink.h"
 
-@interface WKModelProcessModelPlayerProxyObjCAdapter : NSObject<WKSRKEntityDelegate>
+@interface WKModelProcessModelPlayerProxyObjCAdapter : NSObject<WKSRKEntityDelegate, WKStageModeInteractionAware>
 - (instancetype)initWithModelProcessModelPlayerProxy:(std::reference_wrapper<WebKit::ModelProcessModelPlayerProxy>)modelProcessModelPlayerProxy;
 @end
 
@@ -79,6 +79,11 @@
 - (void)entityAnimationPlaybackStateDidUpdate:(id)entity
 {
     _modelProcessModelPlayerProxy->animationPlaybackStateDidUpdate();
+}
+
+- (void)stageModeInteractionDidUpdateModel
+{
+    _modelProcessModelPlayerProxy->stageModeInteractionDidUpdateModel();
 }
 
 @end
@@ -361,7 +366,7 @@ static CGFloat effectivePointsPerMeter(CALayer *caLayer)
 
 void ModelProcessModelPlayerProxy::computeTransform()
 {
-    if (!m_model || !m_layer)
+    if (!m_model || !m_layer || stageModeInteractionInProgress())
         return;
 
     // FIXME: Use the value of the 'object-fit' property here to compute an appropriate SRT.
@@ -375,7 +380,7 @@ void ModelProcessModelPlayerProxy::computeTransform()
 
 void ModelProcessModelPlayerProxy::updateTransform()
 {
-    if (!m_model || !m_layer)
+    if (!m_model || !m_layer || stageModeInteractionInProgress())
         return;
 
     [m_modelRKEntity setTransform:WKEntityTransform({ m_transformSRT.scale, m_transformSRT.rotation, m_transformSRT.translation })];
@@ -458,7 +463,7 @@ void ModelProcessModelPlayerProxy::didFinishLoading(WebCore::REModelLoader& load
         REEntitySetParent(m_model->rootEntity(), clientComponentEntity);
     }
 
-    m_stageModeInteractionDriver = adoptNS([allocWKStageModeInteractionDriverInstance() initWithModel:m_modelRKEntity.get() container:clientComponentEntity]);
+    m_stageModeInteractionDriver = adoptNS([allocWKStageModeInteractionDriverInstance() initWithModel:m_modelRKEntity.get() container:clientComponentEntity delegate:m_objCAdapter.get()]);
 
     REEntitySubtreeAddNetworkComponentRecursive([m_stageModeInteractionDriver interactionContainerRef]);
     RENetworkMarkEntityMetadataDirty([m_stageModeInteractionDriver interactionContainerRef]);
@@ -694,6 +699,27 @@ void ModelProcessModelPlayerProxy::updateStageModeTransform(const WebCore::Trans
 void ModelProcessModelPlayerProxy::endStageModeInteraction()
 {
     [m_stageModeInteractionDriver interactionDidEnd];
+}
+
+void ModelProcessModelPlayerProxy::stageModeInteractionDidUpdateModel()
+{
+    if (stageModeInteractionInProgress() && m_modelRKEntity) {
+        WKEntityTransform entityTransform = [m_modelRKEntity transform];
+        m_transformSRT = RESRT {
+            .scale = entityTransform.scale,
+            .rotation = entityTransform.rotation,
+            .translation = entityTransform.translation
+        };
+
+        simd_float4x4 matrix = RESRTMatrix(m_transformSRT);
+        WebCore::TransformationMatrix transform = WebCore::TransformationMatrix(matrix);
+        send(Messages::ModelProcessModelPlayer::DidUpdateEntityTransform(transform));
+    }
+}
+
+bool ModelProcessModelPlayerProxy::stageModeInteractionInProgress() const
+{
+    return [m_stageModeInteractionDriver stageModeInteractionInProgress];
 }
 
 void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()

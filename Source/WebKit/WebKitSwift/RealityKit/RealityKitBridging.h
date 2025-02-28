@@ -66,6 +66,7 @@ typedef struct {
 - (void)setUpAnimationWithAutoPlay:(BOOL)autoPlay;
 - (void)applyIBLData:(NSData *)data withCompletion:(void (^)(BOOL success))completion;
 - (void)removeIBL;
+- (void)interactionContainerDidRecenterFromTransform:(simd_float4x4)transform NS_SWIFT_NAME(interactionContainerDidRecenter(_:));
 @end
 
 NS_ASSUME_NONNULL_END
