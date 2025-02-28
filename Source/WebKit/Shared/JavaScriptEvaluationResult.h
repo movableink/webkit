@@ -26,6 +26,7 @@
 #pragma once
 
 #include "WKRetainPtr.h"
+#include <optional>
 
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
