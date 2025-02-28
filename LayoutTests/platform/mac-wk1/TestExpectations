@@ -3031,3 +3031,6 @@ webkit.org/b/288757 [ Sequoia Release ] imported/w3c/web-platform-tests/fullscre
 webkit.org/b/288827 http/wpt/webaudio/audioworklet-addModule-cors.sub.https.html [ Failure ]
 
 webkit.org/b/288831 [ Debug ] fast/css/shadow-box-recursion-depth.html [ Pass Timeout ]
+
+webkit.org/b/288843 [ Release ] compositing/repaint/iframes/compositing-iframe-scroll-repaint.html [ Pass Failure ]
+
