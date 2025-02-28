@@ -247,7 +247,6 @@ void StyleOriginatedTimelinesController::documentDidResolveStyle()
     }
 
     // Purge any inactive named timeline no longer attached to an animation.
-    Vector<AtomString> namesToRemove;
     for (auto& [name, timelines] : m_nameToTimelineMap) {
         timelines.removeAllMatching([](auto& timeline) {
             return timeline->isInactiveStyleOriginatedTimeline() && timeline->relevantAnimations().isEmpty();
