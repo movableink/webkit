@@ -1907,8 +1907,6 @@ webkit.org/b/287122 imported/w3c/web-platform-tests/html/capability-delegation/d
 webkit.org/b/287865 [ Release ] pdf/two-pages-continuous-to-discrete.html [ Pass ImageOnlyFailure ]
 webkit.org/b/287865 [ Debug ] pdf/two-pages-continuous-to-discrete.html [ Pass Crash ]
 
-webkit.org/b/287889 [ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.sharedworker.html [ Skip ]
-
 # webkit.org/b/287875 [ macOS Release wk2 x86_64 ] 2x fast/borders/border-painting-*.html are consistently failing.
 [ Sonoma x86_64 Release ] fast/borders/border-painting-inset.html [ Pass ImageOnlyFailure  ]
 [ Sonoma x86_64 Release ] fast/borders/border-painting-outset.html [ Pass ImageOnlyFailure ] 
@@ -2032,3 +2030,10 @@ webkit.org/b/288742 [ Debug ] ipc/media-player-invalid-test.html [ Crash ]
 [ Sonoma Release ] imported/w3c/web-platform-tests/html/semantics/forms/form-submission-target/rel-input-target.html [ Skip ]
 
 webkit.org/b/288878 media/modern-media-controls/tracks-support/audio-multiple-tracks.html [ Pass Timeout ]
+
+# webkit.org/b/287889 [macOS Debug] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.sharedworker.html is flaky crash(flaky in EWS)
+[ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.sharedworker.html [ Skip ]
+[ Debug ] imported/w3c/web-platform-tests/css/css-view-transitions/writing-mode-container-resize.html [ Skip ]
+[ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.html [ Skip ]
+[ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.serviceworker.html [ Skip ]
+[ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.worker.html [ Skip ]
