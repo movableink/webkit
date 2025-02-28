@@ -2030,3 +2030,5 @@ webkit.org/b/288742 [ Debug ] ipc/media-player-invalid-test.html [ Crash ]
 [ Sonoma Release ] imported/w3c/web-platform-tests/html/semantics/forms/form-submission-target/rel-button-target.html [ Skip ]
 [ Sonoma Release ] imported/w3c/web-platform-tests/html/semantics/forms/form-submission-target/rel-form-target.html [ Skip ]
 [ Sonoma Release ] imported/w3c/web-platform-tests/html/semantics/forms/form-submission-target/rel-input-target.html [ Skip ]
+
+webkit.org/b/288878 media/modern-media-controls/tracks-support/audio-multiple-tracks.html [ Pass Timeout ]
