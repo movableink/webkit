@@ -416,7 +416,7 @@ void NavigationState::NavigationClient::shouldGoToBackForwardListItem(WebPagePro
     }
 
     if (navigationState->m_navigationDelegateMethods.webViewShouldGoToBackForwardListItemInBackForwardCacheCompletionHandler) {
-        [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() shouldGoToBackForwardListItem:wrapper(item) inPageCache:inBackForwardCache completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)] (bool result) mutable {
+        [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() shouldGoToBackForwardListItem:wrapper(item) inPageCache:inBackForwardCache completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)] (BOOL result) mutable {
             completionHandler(result);
         }).get()];
         return;
