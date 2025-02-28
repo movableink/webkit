@@ -3043,3 +3043,5 @@ webkit.org/b/288872 [ X86_64 ] imported/w3c/web-platform-tests/webvtt/rendering/
 webkit.org/b/288871 imported/w3c/web-platform-tests/workers/WorkerGlobalScope_ErrorEvent_message.htm [ Pass Failure ]
 
 webkit.org/b/288874 [ x86_64 ] fast/canvas/image-buffer-backend-variants.html [ Pass Failure ]
+
+webkit.org/b/288882 fast/scrolling/page-cache-back-overflow-scroll-restore.html [ Pass Timeout ]
