@@ -607,7 +607,6 @@ dom/Traversal.cpp
 dom/TreeScope.cpp
 dom/TreeWalker.cpp
 dom/ViewTransition.cpp
-dom/ViewTransitionTypeSet.cpp
 dom/VisitedLinkState.cpp
 dom/WindowOrWorkerGlobalScopeTrustedTypes.cpp
 dom/mac/ImageControlsMac.cpp
