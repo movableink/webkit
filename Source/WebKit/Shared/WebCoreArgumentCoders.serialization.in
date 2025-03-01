@@ -8050,6 +8050,7 @@ enum class WebCore::AppleVisualEffect : uint8_t {
 #if HAVE(MATERIAL_HOSTING)
     HostedBlurMaterial,
     HostedThinBlurMaterial,
+    HostedMediaControlsMaterial,
 #endif
     VibrancyLabel,
     VibrancySecondaryLabel,

@@ -45,6 +45,7 @@ enum class AppleVisualEffect : uint8_t {
 #if HAVE(MATERIAL_HOSTING)
     HostedBlurMaterial,
     HostedThinBlurMaterial,
+    HostedMediaControlsMaterial,
 #endif
     VibrancyLabel,
     VibrancySecondaryLabel,
