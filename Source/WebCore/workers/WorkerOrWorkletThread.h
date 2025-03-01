@@ -67,7 +67,7 @@ public:
     void stop(Function<void()>&& terminatedCallback = { });
 
     void startRunningDebuggerTasks();
-    void stopRunningDebuggerTasks();
+    WEBCORE_EXPORT void stopRunningDebuggerTasks();
 
     void suspend();
     void resume();

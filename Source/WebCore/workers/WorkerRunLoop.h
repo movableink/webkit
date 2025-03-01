@@ -67,7 +67,7 @@ public:
     virtual Type type() const = 0;
 
     void postTask(ScriptExecutionContext::Task&&);
-    void postDebuggerTask(ScriptExecutionContext::Task&&);
+    WEBCORE_EXPORT void postDebuggerTask(ScriptExecutionContext::Task&&);
 
     WEBCORE_EXPORT static String defaultMode();
 

@@ -136,7 +136,7 @@ private:
     void setRegistrationUpdateViaCache(WebCore::ServiceWorkerRegistrationIdentifier, WebCore::ServiceWorkerUpdateViaCache);
 
 #if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
-    void connectToInspector(WebCore::ServiceWorkerIdentifier);
+    void connectToInspector(WebCore::ServiceWorkerIdentifier, bool isAutomaticConnection, bool immediatelyPause);
     void disconnectFromInspector(WebCore::ServiceWorkerIdentifier);
     void dispatchMessageFromInspector(WebCore::ServiceWorkerIdentifier, String&&);
 #endif

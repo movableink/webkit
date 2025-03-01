@@ -86,18 +86,8 @@ ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(Ref<Page>&& page, ServiceWork
 
 #if ENABLE(REMOTE_INSPECTOR)
     m_remoteDebuggable->init();
-
-#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
-    thread().runLoop().postDebuggerTask([this, protectedThis = Ref { *this }](ScriptExecutionContext&) {
-        callOnMainThread([this, protectedThis] {
-            threadStartedRunningDebuggerTasks();
-        });
-    });
-#else
     m_remoteDebuggable->setInspectable(m_page->inspectable());
-#endif // not ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
-
-#endif // not ENABLE(REMOTE_INSPECTOR)
+#endif
 }
 
 ServiceWorkerThreadProxy::~ServiceWorkerThreadProxy()
@@ -110,21 +100,6 @@ ServiceWorkerThreadProxy::~ServiceWorkerThreadProxy()
 
     m_serviceWorkerThread->clearProxies();
 }
-
-#if ENABLE(REMOTE_INSPECTOR) && ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
-
-void ServiceWorkerThreadProxy::threadStartedRunningDebuggerTasks()
-{
-    m_remoteDebuggable->setInspectable(m_page->inspectable());
-
-    // In case the worker is paused running debugger tasks, ensure we break out of
-    // the pause since this will be the last debugger task we send to the worker.
-    thread().runLoop().postDebuggerTask([this, protectedThis = Ref { *this }](ScriptExecutionContext&) {
-        thread().stopRunningDebuggerTasks();
-    });
-}
-
-#endif
 
 void ServiceWorkerThreadProxy::setLastNavigationWasAppInitiated(bool wasAppInitiated)
 {

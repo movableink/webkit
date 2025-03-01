@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ServiceWorkerDebuggable.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
@@ -53,7 +52,7 @@ public:
 
     WEBCORE_EXPORT void connectToWorker(Inspector::FrontendChannel&);
 #if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
-    WEBCORE_EXPORT void connectToWorker(Inspector::FrontendChannel&, ServiceWorkerDebuggable&, bool isAutomaticConnection = false, bool immediatelyPause = false);
+    WEBCORE_EXPORT void connectToWorker(Inspector::FrontendChannel&, bool isAutomaticConnection, bool immediatelyPause, Function<void()>&& frontendInitializedCallback);
 #endif
     WEBCORE_EXPORT void disconnectFromWorker(Inspector::FrontendChannel&);
     WEBCORE_EXPORT void sendMessageToWorker(String&&);

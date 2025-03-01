@@ -30,6 +30,7 @@
 #include "WebProcessProxy.h"
 #include "WebSWContextManagerConnectionMessages.h"
 #include <JavaScriptCore/RemoteConnectionToTarget.h>
+#include <JavaScriptCore/RemoteInspectionTarget.h>
 
 #if ENABLE(REMOTE_INSPECTOR)
 
@@ -53,11 +54,19 @@ ServiceWorkerDebuggableProxy::ServiceWorkerDebuggableProxy(const String& url, We
 {
 }
 
-void ServiceWorkerDebuggableProxy::connect(FrontendChannel& channel, bool, bool)
+void ServiceWorkerDebuggableProxy::connect(FrontendChannel& channel, bool isAutomaticConnection, bool immediatelyPause)
 {
     RELEASE_LOG(Inspector, "ServiceWorkerDebuggableProxy::connect");
+
+#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+    // FIXME: Due to this debuggable not actually paused to wait for the inspector, it might not've been in the
+    // RemoteInspector's m_pausedAutomaticInspectionCandidates, which was used to determine the value of
+    // isAutomaticConnection. Handle this in a more elegant way.
+    isAutomaticConnection |= m_wasRequestedToWaitForAutoInspection;
+#endif
+
     if (RefPtr webProcessProxy = m_webProcessProxy.get())
-        webProcessProxy->send(Messages::WebSWContextManagerConnection::ConnectToInspector(m_identifier), 0);
+        webProcessProxy->send(Messages::WebSWContextManagerConnection::ConnectToInspector(m_identifier, isAutomaticConnection, immediatelyPause), 0);
 }
 
 void ServiceWorkerDebuggableProxy::disconnect(FrontendChannel& channel)
@@ -73,6 +82,17 @@ void ServiceWorkerDebuggableProxy::dispatchMessageFromRemote(String&& message)
     if (RefPtr webProcessProxy = m_webProcessProxy.get())
         webProcessProxy->send(Messages::WebSWContextManagerConnection::DispatchMessageFromInspector(m_identifier, WTFMove(message)), 0);
 }
+
+#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+void ServiceWorkerDebuggableProxy::pauseWaitingForAutomaticInspection()
+{
+    m_wasRequestedToWaitForAutoInspection = true;
+
+    // This debuggable may live in the UI process, the same process receiving responses from the remote inspector,
+    // so it shouldn't be blocked. Instead, the underlying service worker was already blocked. The web process
+    // will handle the unpausing from this point on.
+}
+#endif
 
 } // namespace WebKit
 
