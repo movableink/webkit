@@ -320,6 +320,7 @@ namespace WebCore {
     macro(MediaStreamTrackProcessor) \
     macro(MerchantValidationEvent) \
     macro(MockRTCRtpTransform) \
+    macro(MutationEvent) \
     macro(NavigateEvent) \
     macro(Navigation) \
     macro(NavigationCurrentEntryChangeEvent) \
