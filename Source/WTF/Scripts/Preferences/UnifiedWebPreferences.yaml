@@ -1782,6 +1782,7 @@ CacheAPIEnabled:
     WebCore:
       default: false
   disableInLockdownMode: true
+  sharedPreferenceForWebProcess: true
 
 CanvasColorSpaceEnabled:
   type: bool
