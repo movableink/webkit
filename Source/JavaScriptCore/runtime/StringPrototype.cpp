@@ -1907,12 +1907,14 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToLocaleUpperCase, (JSGlobalObject* glob
     return toLocaleCase<CaseConversionMode::Upper>(globalObject, callFrame);
 }
 
-enum {
+enum class TrimKind : uint8_t {
     TrimStart = 1,
-    TrimEnd = 2
+    TrimEnd = 2,
+    TrimBoth = TrimStart | TrimEnd
 };
 
-static inline JSValue trimString(JSGlobalObject* globalObject, JSValue thisValue, int trimKind)
+template<TrimKind trimKind>
+static inline JSValue trimString(JSGlobalObject* globalObject, JSValue thisValue)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -1923,12 +1925,12 @@ static inline JSValue trimString(JSGlobalObject* globalObject, JSValue thisValue
     RETURN_IF_EXCEPTION(scope, { });
 
     unsigned left = 0;
-    if (trimKind & TrimStart) {
+    if constexpr (static_cast<uint8_t>(trimKind) & static_cast<uint8_t>(TrimKind::TrimStart)) {
         while (left < str.length() && isStrWhiteSpace(str[left]))
             left++;
     }
     unsigned right = str.length();
-    if (trimKind & TrimEnd) {
+    if constexpr (static_cast<uint8_t>(trimKind) & static_cast<uint8_t>(TrimKind::TrimEnd)) {
         while (right > left && isStrWhiteSpace(str[right - 1]))
             right--;
     }
@@ -1943,19 +1945,19 @@ static inline JSValue trimString(JSGlobalObject* globalObject, JSValue thisValue
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncTrim, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSValue thisValue = callFrame->thisValue();
-    return JSValue::encode(trimString(globalObject, thisValue, TrimStart | TrimEnd));
+    return JSValue::encode(trimString<TrimKind::TrimBoth>(globalObject, thisValue));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncTrimStart, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSValue thisValue = callFrame->thisValue();
-    return JSValue::encode(trimString(globalObject, thisValue, TrimStart));
+    return JSValue::encode(trimString<TrimKind::TrimStart>(globalObject, thisValue));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncTrimEnd, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSValue thisValue = callFrame->thisValue();
-    return JSValue::encode(trimString(globalObject, thisValue, TrimEnd));
+    return JSValue::encode(trimString<TrimKind::TrimEnd>(globalObject, thisValue));
 }
 
 static inline unsigned clampAndTruncateToUnsigned(double value, unsigned min, unsigned max)
