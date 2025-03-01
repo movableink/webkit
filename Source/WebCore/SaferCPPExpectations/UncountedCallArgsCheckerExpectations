@@ -1026,7 +1026,6 @@ platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/CDMProxy.h
 platform/graphics/BitmapImage.cpp
 platform/graphics/BitmapImage.h
-platform/graphics/BitmapImageDescriptor.cpp
 platform/graphics/BitmapImageSource.cpp
 platform/graphics/ComplexTextController.cpp
 platform/graphics/DisplayRefreshMonitorManager.h
