@@ -222,10 +222,7 @@ final public class WKStageModeInteractionDriver: NSObject {
         if yawAnimationIsPlaying {
             withObservationTracking {
 #if USE_APPLE_INTERNAL_SDK
-                if #available(WK_XROS_TBA, *) {
-                    // By default, we do not care about the proxy, but we use the update to set the deceleration of the turntable container
-                    _ = turntableAnimationProxyEntity.proto_observableComponents[Transform.self]
-                }
+                // FIXME: https://bugs.webkit.org/show_bug.cgi?id=288873
 #endif
             } onChange: {
                 Task { @MainActor in
