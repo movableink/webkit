@@ -3044,4 +3044,6 @@ webkit.org/b/288871 imported/w3c/web-platform-tests/workers/WorkerGlobalScope_Er
 
 webkit.org/b/288874 [ x86_64 ] fast/canvas/image-buffer-backend-variants.html [ Pass Failure ]
 
+webkit.org/b/288885 fullscreen/element-clear-during-fullscreen-crash.html [ Pass Timeout ]
+
 webkit.org/b/288882 fast/scrolling/page-cache-back-overflow-scroll-restore.html [ Pass Timeout ]
