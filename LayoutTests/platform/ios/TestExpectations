@@ -7707,3 +7707,5 @@ webkit.org/b/288677 [ Debug arm64 ] fast/scrolling/ios/body-overflow-hidden-keyb
 webkit.org/b/288694 [ Debug arm64 ] fast/multicol/body-stuck-with-dirty-bit-with-columns.html [ Crash ]
 
 webkit.org/b/288888 [ arm64 ] compositing/contents-format/deep-color-backing-store.html [ Failure ]
+
+webkit.org/b/288896 editing/caret/caret-position-vertical-rl.html [ Failure ]
