@@ -1404,6 +1404,11 @@ WebLoaderStrategy& WebProcess::webLoaderStrategy()
     return m_webLoaderStrategy;
 }
 
+Ref<WebLoaderStrategy> WebProcess::protectedWebLoaderStrategy()
+{
+    return m_webLoaderStrategy.get();
+}
+
 #if ENABLE(GPU_PROCESS)
 
 GPUProcessConnection& WebProcess::ensureGPUProcessConnection()

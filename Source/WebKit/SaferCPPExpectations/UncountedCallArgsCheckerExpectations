@@ -155,13 +155,10 @@ UIProcess/Extensions/WebExtensionCommand.cpp
 UIProcess/FrameProcess.cpp
 UIProcess/Inspector/Agents/InspectorBrowserAgent.cpp
 UIProcess/Inspector/Cocoa/InspectorExtensionDelegate.mm
-UIProcess/Inspector/InspectorTargetProxy.cpp
 UIProcess/Inspector/WebPageInspectorController.cpp
 UIProcess/Inspector/mac/WKInspectorViewController.mm
 UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.cpp
-UIProcess/RemotePageProxy.cpp
 UIProcess/SpeechRecognitionPermissionManager.cpp
-UIProcess/WebOpenPanelResultListenerProxy.cpp
 UIProcess/WebPreferences.h
 UIProcess/WebProcessActivityState.cpp
 UIProcess/WebURLSchemeHandler.cpp
@@ -202,10 +199,7 @@ WebProcess/Extensions/API/Cocoa/WebExtensionAPIWindowsCocoa.mm
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIWindowsEventCocoa.mm
 WebProcess/Extensions/Cocoa/WebExtensionControllerProxyCocoa.mm
 WebProcess/Extensions/Bindings/Cocoa/JSWebExtensionWrapperCocoa.mm
-WebProcess/FileAPI/BlobRegistryProxy.cpp
 WebProcess/FullScreen/WebFullScreenManager.cpp
-WebProcess/GPU/graphics/RemoteNativeImageBackendProxy.cpp
-WebProcess/GPU/graphics/RemoteResourceCacheProxy.cpp
 WebProcess/GPU/media/MediaSourcePrivateRemote.cpp
 WebProcess/GPU/media/RemoteAudioHardwareListener.cpp
 WebProcess/GPU/media/RemoteImageDecoderAVFManager.cpp
@@ -313,8 +307,6 @@ WebProcess/WebPage/WebFoundTextRangeController.cpp
 WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/WebOpenPanelResultListener.cpp
 WebProcess/WebPage/WebPageOverlay.cpp
-WebProcess/WebPage/WebURLSchemeHandlerProxy.cpp
-WebProcess/WebPage/WebURLSchemeTaskProxy.cpp
 WebProcess/WebPage/mac/PageBannerMac.mm
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/WebPage/mac/TiledCoreAnimationScrollingCoordinator.mm
@@ -327,7 +319,6 @@ WebProcess/cocoa/PlaybackSessionManager.mm
 WebProcess/cocoa/RemoteCaptureSampleManager.cpp
 WebProcess/cocoa/RemoteRealtimeAudioSource.cpp
 WebProcess/cocoa/RemoteRealtimeMediaSource.cpp
-WebProcess/cocoa/RemoteRealtimeMediaSourceProxy.cpp
 WebProcess/cocoa/RemoteRealtimeVideoSource.cpp
 WebProcess/cocoa/TextTrackRepresentationCocoa.mm
 WebProcess/cocoa/UserMediaCaptureManager.cpp

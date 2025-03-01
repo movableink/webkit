@@ -163,8 +163,8 @@ void RemoteResourceCacheProxy::recordNativeImageUse(NativeImage& image)
 
 void RemoteResourceCacheProxy::recordFontUse(Font& font)
 {
-    if (font.platformData().customPlatformData())
-        recordFontCustomPlatformDataUse(*font.platformData().customPlatformData());
+    if (RefPtr platformData = font.platformData().customPlatformData())
+        recordFontCustomPlatformDataUse(*platformData);
 
     auto result = m_fonts.add(font.renderingResourceIdentifier(), m_renderingUpdateID);
 

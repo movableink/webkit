@@ -99,7 +99,7 @@ private:
     unsigned m_numberOfFontsUsedInCurrentRenderingUpdate { 0 };
     unsigned m_numberOfFontCustomPlatformDatasUsedInCurrentRenderingUpdate { 0 };
 
-    CheckedRef<RemoteRenderingBackendProxy> m_remoteRenderingBackendProxy;
+    const CheckedRef<RemoteRenderingBackendProxy> m_remoteRenderingBackendProxy;
     uint64_t m_renderingUpdateID;
 };
 

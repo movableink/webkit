@@ -271,6 +271,7 @@ public:
     NetworkProcessConnection* existingNetworkProcessConnection() { return m_networkProcessConnection.get(); }
     RefPtr<NetworkProcessConnection> protectedNetworkProcessConnection();
     WebLoaderStrategy& webLoaderStrategy();
+    Ref<WebLoaderStrategy> protectedWebLoaderStrategy();
     WebFileSystemStorageConnection& fileSystemStorageConnection();
 
     RefPtr<WebTransportSession> webTransportSession(WebTransportSessionIdentifier);
