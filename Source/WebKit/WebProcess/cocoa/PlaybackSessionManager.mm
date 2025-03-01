@@ -620,8 +620,12 @@ void PlaybackSessionManager::actionHandlersChanged()
     if (!m_mediaSession)
         return;
 
+    if (!m_controlsManagerContextId)
+        return;
+
     bool canSkipAd = m_mediaSession->hasActionHandler(MediaSessionAction::Skipad);
-    m_page->send(Messages::PlaybackSessionManagerProxy::CanSkipAdChanged(*m_controlsManagerContextId, canSkipAd));
+    if (RefPtr page = m_page.get())
+        page->send(Messages::PlaybackSessionManagerProxy::CanSkipAdChanged(*m_controlsManagerContextId, canSkipAd));
 }
 
 void PlaybackSessionManager::skipAd(PlaybackSessionContextIdentifier contextId)
