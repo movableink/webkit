@@ -403,6 +403,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         if (changed) {
             // State-at-tail and state-at-head will be invalid if we did strength reduction since
             // it might increase live ranges.
+            RUN_PHASE(performGlobalCSE);
             RUN_PHASE(performGraphPackingAndLivenessAnalysis);
             RUN_PHASE(performCFA);
             RUN_PHASE(performConstantFolding);

@@ -1617,6 +1617,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         ArrayMode mode = node->arrayMode();
         DFG_ASSERT(graph, node, mode.isSomeTypedArrayView());
         DFG_ASSERT(graph, node, !mode.mayBeResizableOrGrowableSharedTypedArray());
+        mode = mode.withAction(Array::Action::Read); // Force action to Read to prevent incorrect optimizations in equality checks.
         def(PureValue(node, mode.asWord()));
         return;
     }
