@@ -63,7 +63,7 @@ void ConcurrentDecommitQueue::decommit()
         auto pages = sih.decommitGranule(curr);
 
         dataLogLnIf(verbose,
-            "ConcurrentDecommitQueue: decommitted granule at "(,
+            "ConcurrentDecommitQueue: decommitted granule at (",
             RawPointer(curr), ") (", pages, " pages)");
 
         decommitPageCount += pages;
@@ -87,12 +87,12 @@ bool SequesteredImmortalHeap::scavengeImpl(void* /*userdata*/)
     {
         Locker listLocker { m_scavengerLock };
         auto bound = m_nextFreeIndex;
-        ASSERT(bound <= m_slots.size());
+        ASSERT(bound <= m_allocatorSlots.size());
         for (size_t i = 0; i < bound; i++) {
             // FIXME: Refactor the SeqImmortalHeap <-> SeqArenaAllocator
             // relationship so that we don't have to assume data layouts
             // here
-            auto& queue = *reinterpret_cast<ConcurrentDecommitQueue*>(&m_slots[i]);
+            auto& queue = *reinterpret_cast<ConcurrentDecommitQueue*>(&m_allocatorSlots[i]);
             queue.decommit();
         }
     }
@@ -114,8 +114,8 @@ GranuleHeader* SequesteredImmortalAllocator::addGranule(size_t minSize)
     static_assert(sizeof(GranuleHeader) >= minHeadAlignment);
     dataLogLnIf(verbose,
         "SequesteredImmortalAllocator at ", RawPointer(this),
-        ": expanded: granule was (", RawPointer(m_granules.first()->next),
-        "), now (", RawPointer(m_granules.first()),
+        ": expanded: granule was (", RawPointer(m_granules.head()->next()),
+        "), now (", RawPointer(m_granules.head()),
         "); allocHead (",
         RawPointer(reinterpret_cast<void*>(m_allocHead)),
         "), allocBound (",
@@ -124,8 +124,6 @@ GranuleHeader* SequesteredImmortalAllocator::addGranule(size_t minSize)
 
     return granule;
 }
-
-SequesteredImmortalHeap::Instance SequesteredImmortalHeap::s_instance;
 
 }
 

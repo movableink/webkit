@@ -168,7 +168,7 @@ template<typename T> inline DoublyLinkedList<T> DoublyLinkedList<T>::splitAt(siz
 
     if (!p || !p->next())
         return { };
-    for (auto i = 1; i < toKeep; i++) {
+    for (size_t i = 1; i < toKeep; i++) {
         p = p->next();
         if (!p->next())
             return { };

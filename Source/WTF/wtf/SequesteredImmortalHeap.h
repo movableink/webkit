@@ -187,7 +187,7 @@ private:
         addGranule(bytes);
 
         alignment = std::max(alignment, minHeadAlignment);
-        uintptr_t allocation = WTF::roundUpToMultipleOf<alignment>(m_allocHead);
+        uintptr_t allocation = WTF::roundUpToMultipleOf(alignment, m_allocHead);
         m_allocHead = headIncrementedBy((allocation - m_allocHead) + bytes);
         ASSERT(m_allocHead <= m_allocBound);
 
@@ -203,6 +203,7 @@ private:
 };
 
 class alignas(16 * KB) SequesteredImmortalHeap {
+    friend class WTF::LazyNeverDestroyed<SequesteredImmortalHeap>;
     static constexpr bool verbose { false };
     static constexpr pthread_key_t key = __PTK_FRAMEWORK_JAVASCRIPTCORE_KEY0;
     static constexpr size_t sequesteredImmortalHeapSlotSize { 16 * KB };
@@ -235,7 +236,7 @@ public:
         _pthread_setspecific_direct(key, reinterpret_cast<void*>(slot));
         pthread_key_init_np(key, nullptr);
 
-        dataLogIf(verbose, "SequesteredImmortalHeap: thread (", Thread::current(), ") allocated slot ", instance().m_nextFreeIndex - 1, " (", slot, ")");
+        dataLogIf(verbose, "SequesteredImmortalHeap: thread (", Thread::currentSingleton(), ") allocated slot ", instance().m_nextFreeIndex - 1, " (", slot, ")");
         return slot;
     }
 
@@ -311,7 +312,7 @@ private:
 
         // Cannot use dataLog here as it takes a lock
         if constexpr (verbose)
-            fprintf(stderr, "SequesteredImmortalHeap: initialized by thread (%u)\n", Thread::current().uid());
+            SAFE_FPRINTF(stderr, "SequesteredImmortalHeap: initialized by thread (%u)\n", Thread::currentSingleton().uid());
     }
 
     void installScavenger();
