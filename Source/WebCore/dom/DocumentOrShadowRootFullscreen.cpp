@@ -43,7 +43,7 @@ Element* DocumentOrShadowRootFullscreen::fullscreenElement(TreeScope& treeScope)
     CheckedPtr documentFullscreen = document->fullscreenIfExists();
     if (!documentFullscreen)
         return nullptr;
-    return treeScope.ancestorElementInThisScope(documentFullscreen->fullscreenElement());
+    return treeScope.ancestorElementInThisScope(documentFullscreen->protectedFullscreenElement().get());
 }
 
 } // namespace WebCore

@@ -164,23 +164,24 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
     if (auto error = fullscreenElementReadyCheck(element, protectedDocument()))
         return handleError(error, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
-    if (!document().domWindow() || !document().domWindow()->consumeTransientActivation())
+    if (RefPtr window = document().domWindow(); !window || !window->consumeTransientActivation())
         return handleError("Cannot request fullscreen without transient activation."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
     if (UserGestureIndicator::processingUserGesture() && UserGestureIndicator::currentUserGesture()->gestureType() == UserGestureType::EscapeKey)
         return handleError("Cannot request fullscreen with Escape key as current gesture."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
     // There is a previously-established user preference, security risk, or platform limitation.
-    if (!page() || !page()->isDocumentFullscreenEnabled())
+    RefPtr page = this->page();
+    if (!page || !page->isDocumentFullscreenEnabled())
         return handleError("Fullscreen API is disabled."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
     bool hasKeyboardAccess = true;
-    if (!page()->chrome().client().supportsFullScreenForElement(element, hasKeyboardAccess)) {
+    if (!page->chrome().client().supportsFullScreenForElement(element, hasKeyboardAccess)) {
         // The new full screen API does not accept a "flags" parameter, so fall back to disallowing
         // keyboard input if the chrome client refuses to allow keyboard input.
         hasKeyboardAccess = false;
 
-        if (!page()->chrome().client().supportsFullScreenForElement(element, hasKeyboardAccess))
+        if (!page->chrome().client().supportsFullScreenForElement(element, hasKeyboardAccess))
             return handleError("Cannot request fullscreen with unsupported element."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
     }
 
@@ -215,7 +216,7 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
             auto* localFrame = dynamicDowncast<LocalFrame>(descendant.get());
             if (!localFrame)
                 continue;
-            if (localFrame->document()->fullscreen().fullscreenElement()) {
+            if (localFrame->protectedDocument()->fullscreen().fullscreenElement()) {
                 descendantHasNonEmptyStack = true;
                 break;
             }
@@ -233,7 +234,7 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
                 return completionHandler(Exception { ExceptionCode::TypeError });
 
             RefPtr page = this->page();
-            if (!page || (this->document().hidden() && mode != HTMLMediaElementEnums::VideoFullscreenModeInWindow) || !element->isConnected())
+            if (!page || (this->protectedDocument()->hidden() && mode != HTMLMediaElementEnums::VideoFullscreenModeInWindow) || !element->isConnected())
                 return handleError("Invalid state when requesting fullscreen."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
             INFO_LOG(identifier, "task - success");
@@ -290,7 +291,7 @@ ExceptionOr<void> DocumentFullscreen::willEnterFullscreen(Element& element, HTML
             ancestors.append(ownerElement.releaseNonNull());
     }
 
-    bool elementWasFullscreen = &element == element.document().fullscreen().fullscreenElement();
+    bool elementWasFullscreen = &element == element.protectedDocument()->fullscreen().fullscreenElement();
     for (auto ancestor : makeReversedRange(ancestors))
         elementEnterFullscreen(ancestor);
 
@@ -302,25 +303,26 @@ ExceptionOr<void> DocumentFullscreen::willEnterFullscreen(Element& element, HTML
 
 void DocumentFullscreen::elementEnterFullscreen(Element& element)
 {
-    if (&element == element.document().fullscreen().fullscreenElement())
+    Ref document = element.document();
+    if (&element == document->fullscreen().fullscreenElement())
         return;
 
     auto hideUntil = element.topmostPopoverAncestor(Element::TopLayerElementType::Other);
-    element.document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
+    document->hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
 
     auto containingBlockBeforeStyleResolution = SingleThreadWeakPtr<RenderBlock> { };
     if (CheckedPtr renderer = element.renderer())
         containingBlockBeforeStyleResolution = renderer->containingBlock();
 
     element.setFullscreenFlag(true);
-    element.document().resolveStyle(Document::ResolveStyleType::Rebuild);
+    document->resolveStyle(Document::ResolveStyleType::Rebuild);
 
     // Remove before adding, so we always add at the end of the top layer.
     if (element.isInTopLayer())
         element.removeFromTopLayer();
     element.addToTopLayer();
 
-    queueFullscreenChangeEventForDocument(element.document());
+    queueFullscreenChangeEventForDocument(document);
 
     RenderElement::markRendererDirtyAfterTopLayerChange(element.checkedRenderer().get(), containingBlockBeforeStyleResolution.get());
 }
@@ -497,17 +499,17 @@ void DocumentFullscreen::exitFullscreen(CompletionHandler<void(ExceptionOr<void>
 void DocumentFullscreen::finishExitFullscreen(Frame& currentFrame, ExitMode mode)
 {
     RefPtr currentLocalFrame = dynamicDowncast<LocalFrame>(currentFrame);
-    if (currentLocalFrame && currentLocalFrame->document() && !currentLocalFrame->document()->fullscreen().fullscreenElement())
+    if (currentLocalFrame && currentLocalFrame->document() && !currentLocalFrame->protectedDocument()->fullscreen().fullscreenElement())
         return;
 
     // Let descendantDocs be an ordered set consisting of doc’s descendant browsing contexts' active documents whose fullscreen element is non-null, if any, in tree order.
     Vector<Ref<Document>> descendantDocuments;
     for (RefPtr descendant = currentFrame.tree().traverseNext(); descendant; descendant = descendant->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(descendant);
-        if (!localFrame || !localFrame->document())
+        if (!localFrame)
             continue;
-        if (localFrame->document()->fullscreen().fullscreenElement())
-            descendantDocuments.append(*localFrame->document());
+        if (RefPtr document = localFrame->document(); document && document->fullscreen().fullscreenElement())
+            descendantDocuments.append(document.releaseNonNull());
     }
 
     auto unfullscreenDocument = [](const Ref<Document>& document) {
@@ -570,7 +572,7 @@ void DocumentFullscreen::didExitFullscreen(CompletionHandler<void(ExceptionOr<vo
     // Get `fullscreenElement()` before `finishExitFullscreen` clears it.
     RefPtr exitedFullscreenElement = fullscreenElement();
     if (RefPtr frame = document().frame())
-        finishExitFullscreen(frame->mainFrame(), ExitMode::Resize);
+        finishExitFullscreen(frame->protectedMainFrame(), ExitMode::Resize);
 
     if (exitedFullscreenElement)
         exitedFullscreenElement->didStopBeingFullscreenElement();
@@ -678,8 +680,9 @@ void DocumentFullscreen::dispatchPendingEvents()
 
         switch (eventType) {
         case EventType::Change: {
+            Ref targetDocument = target->document();
             target->dispatchEvent(Event::create(eventNames().fullscreenchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
-            bool shouldEmitUnprefixed = !(target->hasEventListeners(eventNames().webkitfullscreenchangeEvent) && target->hasEventListeners(eventNames().fullscreenchangeEvent)) && !(target->document().hasEventListeners(eventNames().webkitfullscreenchangeEvent) && target->document().hasEventListeners(eventNames().fullscreenchangeEvent));
+            bool shouldEmitUnprefixed = !(target->hasEventListeners(eventNames().webkitfullscreenchangeEvent) && target->hasEventListeners(eventNames().fullscreenchangeEvent)) && !(targetDocument->hasEventListeners(eventNames().webkitfullscreenchangeEvent) && targetDocument->hasEventListeners(eventNames().fullscreenchangeEvent));
             if (shouldEmitUnprefixed)
                 target->dispatchEvent(Event::create(eventNames().webkitfullscreenchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
             break;

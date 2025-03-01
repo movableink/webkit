@@ -545,10 +545,7 @@ dom/DataTransferItemList.cpp
 dom/Document.cpp
 dom/DocumentFontLoader.cpp
 dom/DocumentFragment.cpp
-dom/DocumentFullscreen.cpp
-dom/DocumentFullscreen.h
 dom/DocumentInlines.h
-dom/DocumentOrShadowRootFullscreen.cpp
 dom/DocumentStorageAccess.cpp
 dom/Element.cpp
 dom/ElementData.cpp

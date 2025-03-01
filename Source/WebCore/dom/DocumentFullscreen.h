@@ -107,13 +107,13 @@ protected:
 
 private:
 #if !RELEASE_LOG_DISABLED
-    const Logger& logger() const { return document().logger(); }
+    const Logger& logger() const { return protectedDocument()->logger(); }
     uint64_t logIdentifier() const { return m_logIdentifier; }
     ASCIILiteral logClassName() const { return "DocumentFullscreen"_s; }
     WTFLogChannel& logChannel() const;
 #endif
 
-    Document* mainFrameDocument() { return document().mainFrameDocument(); }
+    Document* mainFrameDocument() { return protectedDocument()->mainFrameDocument(); }
     RefPtr<Document> protectedMainFrameDocument() { return mainFrameDocument(); }
 
     bool didEnterFullscreen();

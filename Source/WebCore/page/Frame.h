@@ -77,6 +77,8 @@ public:
     Settings& settings() const { return m_settings.get(); }
     Frame& mainFrame() { return *m_mainFrame; }
     const Frame& mainFrame() const { return *m_mainFrame; }
+    Ref<Frame> protectedMainFrame() { return mainFrame(); }
+    Ref<const Frame> protectedMainFrame() const { return mainFrame(); }
     bool isMainFrame() const { return this == m_mainFrame.get(); }
     WEBCORE_EXPORT void disownOpener();
     WEBCORE_EXPORT void updateOpener(Frame&, NotifyUIProcess = NotifyUIProcess::Yes);
