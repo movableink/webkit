@@ -185,7 +185,9 @@ void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextDat
             } }, SandboxFlags { }
         };
 
+#if !RELEASE_LOG_DISABLED || ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA) && ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
         auto serviceWorkerIdentifier = contextData.serviceWorkerIdentifier;
+#endif
         auto scopeURL = contextData.registration.scopeURL;
 
         auto lastNavigationWasAppInitiated = contextData.lastNavigationWasAppInitiated;
