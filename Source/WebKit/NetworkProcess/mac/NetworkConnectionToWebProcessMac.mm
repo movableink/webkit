@@ -41,12 +41,20 @@ SOFT_LINK_OPTIONAL(CoreServices, _LSApplicationCheckInProxy, Boolean, __cdecl, (
 
 namespace WebKit {
 
-void NetworkConnectionToWebProcess::updateActivePages(const String& overrideDisplayName, const Vector<String>& activePagesOrigins, CoreIPCAuditToken&& auditToken)
+void NetworkConnectionToWebProcess::updateActivePages(String&& overrideDisplayName, const Vector<String>& activePagesOrigins, CoreIPCAuditToken&& auditToken)
 {
     // Setting and getting the display name of another process requires a private entitlement.
     RELEASE_LOG(Process, "NetworkConnectionToWebProcess::updateActivePages");
 #if USE(APPLE_INTERNAL_SDK)
     auto asn = adoptCF(_LSCopyLSASNForAuditToken(kLSDefaultSessionID, auditToken.auditToken()));
+    if (!asn) {
+#if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
+        // In this case, the WebContent process has not been checked in with Launch Services yet.
+        // We store the display name, and set it after checkin has completed.
+        m_pendingDisplayName = WTFMove(overrideDisplayName);
+#endif
+        return;
+    }
     if (!overrideDisplayName)
         _LSSetApplicationInformationItem(kLSDefaultSessionID, asn.get(), CFSTR("LSActivePageUserVisibleOriginsKey"), (__bridge CFArrayRef)createNSArray(activePagesOrigins).get(), nullptr);
     else
@@ -105,10 +113,21 @@ void NetworkConnectionToWebProcess::checkInWebProcess(const CoreIPCAuditToken& a
 
     RELEASE_LOG(Process, "Launch Services checkin starting, infoDictionary = %{public}@", (__bridge NSDictionary *)infoDictionary.get());
 
-    Boolean ok = _LSApplicationCheckInProxyPtr()(kLSDefaultSessionID, auditToken.auditToken(), infoDictionary.get(), ^(CFDictionaryRef result, CFErrorRef error) {
+    auto block = makeBlockPtr([weakThis = WeakPtr { *this }, auditToken](CFDictionaryRef result, CFErrorRef error) mutable {
         NSDictionary *dictionary = (__bridge NSDictionary *)result;
         RELEASE_LOG(Process, "Launch Services checkin completed, result = %{public}@, error = %{public}@", dictionary, (__bridge NSError *)error);
+
+        callOnMainRunLoop([weakThis = WTFMove(weakThis), auditToken = WTFMove(auditToken)] mutable {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return;
+            if (protectedThis->m_pendingDisplayName.isNull())
+                return;
+            protectedThis->updateActivePages(std::exchange(protectedThis->m_pendingDisplayName, String()), { }, WTFMove(auditToken));
+        });
     });
+
+    Boolean ok = _LSApplicationCheckInProxyPtr()(kLSDefaultSessionID, auditToken.auditToken(), infoDictionary.get(), block.get());
 
     if (!ok)
         RELEASE_LOG(Process, "Launch Services checkin did not succeed");

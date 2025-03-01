@@ -364,7 +364,7 @@ private:
     void setCORSDisablingPatterns(WebCore::PageIdentifier, Vector<String>&&);
 
 #if PLATFORM(MAC)
-    void updateActivePages(const String& name, const Vector<String>& activePagesOrigins, CoreIPCAuditToken&&);
+    void updateActivePages(String&& name, const Vector<String>& activePagesOrigins, CoreIPCAuditToken&&);
     void getProcessDisplayName(CoreIPCAuditToken&&, CompletionHandler<void(const String&)>&&);
 #if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
     void checkInWebProcess(const CoreIPCAuditToken&);
@@ -542,6 +542,9 @@ private:
 #endif
 
     HashMap<WebTransportSessionIdentifier, Ref<NetworkTransportSession>> m_networkTransportSessions;
+#if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
+    String m_pendingDisplayName;
+#endif
 };
 
 } // namespace WebKit

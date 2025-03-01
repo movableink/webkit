@@ -922,6 +922,9 @@ private:
 #if ENABLE(NOTIFY_BLOCKING)
     HashMap<String, int> m_notifyTokens;
 #endif
+#if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
+    String m_pendingDisplayName;
+#endif
 };
 
 } // namespace WebKit

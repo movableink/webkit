@@ -1284,8 +1284,11 @@ NetworkProcessConnection& WebProcess::ensureNetworkProcessConnection()
         LaunchServicesDatabaseManager::singleton().waitForDatabaseUpdate();
 #endif
 #if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
-        if (auto auditToken = auditTokenForSelf())
+        if (auto auditToken = auditTokenForSelf()) {
             m_networkProcessConnection->protectedConnection()->send(Messages::NetworkConnectionToWebProcess::CheckInWebProcess(*auditToken), 0);
+            if (!m_pendingDisplayName.isNull())
+                m_networkProcessConnection->protectedConnection()->send(Messages::NetworkConnectionToWebProcess::UpdateActivePages(std::exchange(m_pendingDisplayName, String()), { }, *auditToken), 0);
+        }
 #endif
         // This can be called during a WebPage's constructor, so wait until after the constructor returns to touch the WebPage.
         RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }] {

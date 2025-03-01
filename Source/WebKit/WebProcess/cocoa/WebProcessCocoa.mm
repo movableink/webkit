@@ -668,19 +668,18 @@ void WebProcess::updateProcessName(IsInProcessInitialization isInProcessInitiali
     // via the NetworkProcess. Prewarmed WebProcesses also do not have a network process connection until they are actually used by
     // a page.
 
-#if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
-    bool shouldSetProcessInformationInNetworkProcess = true;
-#else
-    bool shouldSetProcessInformationInNetworkProcess = isInProcessInitialization == IsInProcessInitialization::No;
-#endif
-    if (shouldSetProcessInformationInNetworkProcess) {
+    String displayName = applicationName.get();
+    if (m_sessionID) {
         auto auditToken = auditTokenForSelf();
         if (!auditToken)
             return;
-        String displayName = applicationName.get();
-        ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::UpdateActivePages(displayName, Vector<String>(), *auditToken), 0);
+        ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::UpdateActivePages(displayName, { }, *auditToken), 0);
         return;
     }
+#if ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
+    m_pendingDisplayName = WTFMove(displayName);
+    return;
+#endif
 #endif // ENABLE(SET_WEBCONTENT_PROCESS_INFORMATION_IN_NETWORK_PROCESS)
 
 #if !ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
