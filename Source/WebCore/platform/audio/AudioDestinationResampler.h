@@ -41,7 +41,7 @@ class MultiChannelResampler;
 // The subclass should use m_outputBus to access the rendering.
 class AudioDestinationResampler : public AudioDestination {
 public:
-    WEBCORE_EXPORT AudioDestinationResampler(AudioIOCallback&, unsigned numberOfOutputChannels, float inputSampleRate, float outputSampleRate);
+    WEBCORE_EXPORT AudioDestinationResampler(const CreationOptions&, float outputSampleRate);
     WEBCORE_EXPORT virtual ~AudioDestinationResampler();
 
     WEBCORE_EXPORT void start(Function<void(Function<void()>&&)>&& dispatchToRenderThread, CompletionHandler<void(bool)>&&) final;

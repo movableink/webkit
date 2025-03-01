@@ -58,17 +58,19 @@ uint8_t RemoteAudioDestinationProxy::s_realtimeThreadCount { 0 };
 
 using AudioIOCallback = WebCore::AudioIOCallback;
 
-Ref<RemoteAudioDestinationProxy> RemoteAudioDestinationProxy::create(AudioIOCallback& callback,
-    const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
+Ref<RemoteAudioDestinationProxy> RemoteAudioDestinationProxy::create(const CreationOptions& options)
 {
-    return adoptRef(*new RemoteAudioDestinationProxy(callback, inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate));
+    return adoptRef(*new RemoteAudioDestinationProxy(options));
 }
 
-RemoteAudioDestinationProxy::RemoteAudioDestinationProxy(AudioIOCallback& callback, const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
-    : WebCore::AudioDestinationResampler(callback, numberOfOutputChannels, sampleRate, hardwareSampleRate())
-    , m_inputDeviceId(inputDeviceId)
-    , m_numberOfInputChannels(numberOfInputChannels)
+RemoteAudioDestinationProxy::RemoteAudioDestinationProxy(const CreationOptions& options)
+    : WebCore::AudioDestinationResampler(options, hardwareSampleRate())
+    , m_inputDeviceId(options.inputDeviceId)
+    , m_numberOfInputChannels(options.numberOfInputChannels)
     , m_remoteSampleRate(hardwareSampleRate())
+#if PLATFORM(IOS_FAMILY)
+    , m_sceneIdentifier(options.sceneIdentifier)
+#endif
 {
 #if PLATFORM(MAC)
     // On macOS, we are seeing page load time improvements when eagerly creating the Audio destination in the GPU process. See rdar://124071843.
@@ -182,6 +184,10 @@ IPC::Connection* RemoteAudioDestinationProxy::connection()
         m_audioBufferList->setSampleCount(maxAudioBufferListSampleCount);
 #endif
 
+#if PLATFORM(IOS_FAMILY)
+        gpuProcessConnection->connection().send(Messages::RemoteAudioDestinationManager::SetSceneIdentifier { *m_destinationID, m_sceneIdentifier }, 0);
+#endif
+
         startRenderingThread();
     }
     return m_destinationID ? &gpuProcessConnection->connection() : nullptr;
@@ -274,6 +280,18 @@ void RemoteAudioDestinationProxy::renderAudio(unsigned frameCount)
     }
 #endif
 }
+
+#if PLATFORM(IOS_FAMILY)
+void RemoteAudioDestinationProxy::setSceneIdentifier(const String& sceneIdentifier)
+{
+    if (sceneIdentifier == m_sceneIdentifier)
+        return;
+    m_sceneIdentifier = sceneIdentifier;
+
+    if (auto gpuProcessConnection = m_gpuProcessConnection.get(); gpuProcessConnection && m_destinationID)
+        gpuProcessConnection->connection().send(Messages::RemoteAudioDestinationManager::SetSceneIdentifier { *m_destinationID, m_sceneIdentifier }, 0);
+}
+#endif
 
 void RemoteAudioDestinationProxy::gpuProcessConnectionDidClose(GPUProcessConnection& oldConnection)
 {

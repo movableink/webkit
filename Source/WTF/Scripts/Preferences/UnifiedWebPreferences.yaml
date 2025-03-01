@@ -5980,6 +5980,7 @@ PreferSpatialAudioExperience:
     WebCore:
       default: false
   defaultsOverridable: true
+  sharedPreferenceForWebProcess: true
 
 PrivateClickMeasurementDebugModeEnabled:
   type: bool

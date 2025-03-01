@@ -39,8 +39,8 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(MockAudioDestinationCocoa);
 
 const int kRenderBufferSize = 128;
 
-MockAudioDestinationCocoa::MockAudioDestinationCocoa(AudioIOCallback& callback, float sampleRate)
-    : AudioDestinationCocoa(callback, 2, sampleRate)
+MockAudioDestinationCocoa::MockAudioDestinationCocoa(const CreationOptions& options)
+    : AudioDestinationCocoa(options)
     , m_workQueue(WorkQueue::create("MockAudioDestinationCocoa Render Queue"_s))
     , m_timer(RunLoop::current(), this, &MockAudioDestinationCocoa::tick)
 {

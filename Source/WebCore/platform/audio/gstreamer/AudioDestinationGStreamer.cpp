@@ -84,16 +84,16 @@ static unsigned long maximumNumberOfOutputChannels()
     return count;
 }
 
-Ref<AudioDestination> AudioDestination::create(AudioIOCallback& callback, const String&, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
+Ref<AudioDestination> AudioDestination::create(const CreationOptions& options)
 {
     initializeAudioDestinationDebugCategory();
     // FIXME: make use of inputDeviceId as appropriate.
 
     // FIXME: Add support for local/live audio input.
-    if (numberOfInputChannels)
-        WTFLogAlways("AudioDestination::create(%u, %u, %f) - unhandled input channels", numberOfInputChannels, numberOfOutputChannels, sampleRate);
+    if (options.numberOfInputChannels)
+        WTFLogAlways("AudioDestination::create(%u, %u, %f) - unhandled input channels", options.numberOfInputChannels, options.numberOfOutputChannels, options.sampleRate);
 
-    return adoptRef(*new AudioDestinationGStreamer(callback, numberOfOutputChannels, sampleRate));
+    return adoptRef(*new AudioDestinationGStreamer(options));
 }
 
 float AudioDestination::hardwareSampleRate()
@@ -106,9 +106,9 @@ unsigned long AudioDestination::maxChannelCount()
     return maximumNumberOfOutputChannels();
 }
 
-AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, unsigned long numberOfOutputChannels, float sampleRate)
-    : AudioDestination(callback, sampleRate)
-    , m_renderBus(AudioBus::create(numberOfOutputChannels, AudioUtilities::renderQuantumSize, false))
+AudioDestinationGStreamer::AudioDestinationGStreamer(const CreationOptions& options)
+    : AudioDestination(options)
+    , m_renderBus(AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize, false))
 {
     static Atomic<uint32_t> pipelineId;
     m_pipeline = gst_pipeline_new(makeString("audio-destination-"_s, pipelineId.exchangeAdd(1)).ascii().data());
@@ -117,7 +117,7 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, 
         this->handleMessage(message);
     });
 
-    m_src = GST_ELEMENT_CAST(g_object_new(WEBKIT_TYPE_WEB_AUDIO_SRC, "rate", sampleRate,
+    m_src = GST_ELEMENT_CAST(g_object_new(WEBKIT_TYPE_WEB_AUDIO_SRC, "rate", options.sampleRate,
         "destination", this, "frames", AudioUtilities::renderQuantumSize, nullptr));
 
     webkitWebAudioSourceSetBus(WEBKIT_WEB_AUDIO_SRC(m_src.get()), m_renderBus);

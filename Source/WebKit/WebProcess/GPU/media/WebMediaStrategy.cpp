@@ -53,17 +53,16 @@ using namespace WebCore;
 WebMediaStrategy::~WebMediaStrategy() = default;
 
 #if ENABLE(WEB_AUDIO)
-Ref<WebCore::AudioDestination> WebMediaStrategy::createAudioDestination(WebCore::AudioIOCallback& callback, const String& inputDeviceId,
-    unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
+Ref<WebCore::AudioDestination> WebMediaStrategy::createAudioDestination(const WebCore::AudioDestinationCreationOptions& options)
 {
     ASSERT(isMainRunLoop());
 #if ENABLE(GPU_PROCESS)
     if (m_useGPUProcess)
-        return WebCore::SharedAudioDestination::create(callback, numberOfOutputChannels, sampleRate, [inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate] (WebCore::AudioIOCallback& callback) {
-            return RemoteAudioDestinationProxy::create(callback, inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate);
+        return WebCore::SharedAudioDestination::create(options, [] (auto& options) {
+            return RemoteAudioDestinationProxy::create(options);
         });
 #endif
-    return WebCore::AudioDestination::create(callback, inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate);
+    return WebCore::AudioDestination::create(options);
 }
 #endif
 

@@ -633,8 +633,14 @@ void AudioContext::pageMutedStateDidChange()
 #if PLATFORM(IOS_FAMILY)
 void AudioContext::sceneIdentifierDidChange()
 {
-    if (document() && document()->page())
-        destination().setSceneIdentifier(document()->page()->sceneIdentifier());
+    RefPtr document = this->document();
+    if (!document)
+        return;
+
+    if (RefPtr page = document->page()) {
+        ALWAYS_LOG(LOGIDENTIFIER, page->sceneIdentifier());
+        destination().setSceneIdentifier(page->sceneIdentifier());
+    }
 }
 
 const String& AudioContext::sceneIdentifier() const
