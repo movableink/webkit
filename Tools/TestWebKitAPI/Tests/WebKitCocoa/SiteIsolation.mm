@@ -33,6 +33,7 @@
 #import "TestUIDelegate.h"
 #import "TestURLSchemeHandler.h"
 #import "TestWKWebView.h"
+#import "UserMediaCaptureUIDelegate.h"
 #import "Utilities.h"
 #import "WKWebViewConfigurationExtras.h"
 #import "WKWebViewFindStringFindDelegate.h"
@@ -4079,6 +4080,111 @@ TEST(SiteIsolation, MutesAndSetsAudioInMultipleFrames)
     expectMuted(true, [webView secondChildFrame], "Should be muted in newly created remote frame"_s);
     expectMediaVolume(0.125f, [webView secondChildFrame], "Should initialize newly created remote frame with previously set media volume"_s);
 }
+
+#if ENABLE(MEDIA_STREAM)
+
+TEST(SiteIsolation, StopsMediaCaptureInRemoteFrame)
+{
+    auto mainFrameHTML = "<video id='video' controlsplaysinline autoplay></video>"
+        "<script>var didStartStream = new Promise(resolve => { video.onplay = resolve; })</script>"
+        "<script>var didEndStream = new Promise(resolve => { video.onended = resolve; })</script>"
+        "<iframe allow='camera *' src='https://webkit.org/subframe'></iframe>"_s;
+    auto subFrameHTML = "<video id='video' controlsplaysinline autoplay></video>"
+        "<script>var didStartStream = new Promise(resolve => { video.onplay = resolve; })</script>"
+        "<script>var didEndStream = new Promise(resolve => { video.onended = resolve; })</script>"_s;
+
+    HTTPServer server({
+        { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, subFrameHTML } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    [configuration _setMediaCaptureEnabled:YES];
+
+    RetainPtr preferences = [configuration preferences];
+    [preferences _setMediaCaptureRequiresSecureConnection:NO];
+    [preferences _setMockCaptureDevicesEnabled:YES];
+    [preferences _setGetUserMediaRequiresFocus:NO];
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration, CGRectZero, false);
+    auto delegate = adoptNS([[UserMediaCaptureUIDelegate alloc] init]);
+    [webView setUIDelegate:delegate.get()];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    auto assertStartCaptureSucceedsInFrameWithPrompt = [&](WKFrameInfo *frame) {
+        __block RetainPtr<NSError> error;
+        __block bool done = false;
+
+        NSString *source = @"return navigator.mediaDevices.getUserMedia({ audio: false, video: true }).then(stream => { video.srcObject = stream; })";
+        [webView callAsyncJavaScript:source arguments:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *callError) {
+            error = callError;
+            done = true;
+        }];
+        TestWebKitAPI::Util::run(&done);
+
+        ASSERT_FALSE(!!error) << "Failed to start capture: " << [error description].UTF8String;
+
+        [delegate waitUntilPrompted];
+    };
+
+    // FIXME: the mock media stream doesn't seem to start or stop producing frames for the video
+    // element in the sim. This doesn't seem to be related to site isolation.
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+    auto assertVideoStreamStartedOrEndedInFrame = [&](bool, WKFrameInfo*) { };
+#else
+    auto assertVideoStreamStartedOrEndedInFrame = [&](bool started, WKFrameInfo* frame) {
+        __block RetainPtr<NSError> error;
+        __block bool done = false;
+
+        NSString *source = started ? @"return didStartStream.then(() => true)" : @"return didEndStream.then(() => true)";
+        [webView callAsyncJavaScript:source arguments:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *callError) {
+            error = callError;
+            done = true;
+        }];
+        TestWebKitAPI::Util::run(&done);
+
+        ASSERT_FALSE(!!error) << "Capture failed to " << (started ? "start" : "end") << " frames for video element: " << [error description].UTF8String;
+    };
+#endif
+
+    auto assertVideoStreamStartedInFrame = [&](WKFrameInfo *frame) {
+        assertVideoStreamStartedOrEndedInFrame(true, frame);
+    };
+    auto assertVideoStreamEndedInFrame = [&](WKFrameInfo *frame) {
+        assertVideoStreamStartedOrEndedInFrame(false, frame);
+    };
+
+    auto assertCaptureState = [&](_WKMediaCaptureStateDeprecated expected) {
+        _WKMediaCaptureStateDeprecated actual;
+        TestWebKitAPI::Util::waitFor([webView, expected, &actual]() {
+            actual = [webView _mediaCaptureState];
+            return actual == expected;
+        });
+        ASSERT_EQ(actual, expected);
+    };
+
+    assertStartCaptureSucceedsInFrameWithPrompt(nil);
+    assertStartCaptureSucceedsInFrameWithPrompt([webView firstChildFrame]);
+    assertVideoStreamStartedInFrame(nil);
+    assertVideoStreamStartedInFrame([webView firstChildFrame]);
+    assertCaptureState(_WKMediaCaptureStateDeprecatedActiveCamera);
+
+    [webView _stopMediaCapture];
+
+    assertVideoStreamEndedInFrame(nil);
+    assertVideoStreamEndedInFrame([webView firstChildFrame]);
+    assertCaptureState(_WKMediaCaptureStateDeprecatedNone);
+
+    assertStartCaptureSucceedsInFrameWithPrompt([webView firstChildFrame]);
+    assertStartCaptureSucceedsInFrameWithPrompt(nil);
+    assertVideoStreamStartedInFrame(nil);
+    assertVideoStreamStartedInFrame([webView firstChildFrame]);
+    assertCaptureState(_WKMediaCaptureStateDeprecatedActiveCamera);
+}
+
+#endif // ENABLE(MEDIA_STREAM)
 
 TEST(SiteIsolation, FrameServerTrust)
 {

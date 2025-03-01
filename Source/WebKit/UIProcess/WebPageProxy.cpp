@@ -9123,7 +9123,11 @@ void WebPageProxy::stopMediaCapture(MediaProducerMediaCaptureKind kind, Completi
 #if ENABLE(MEDIA_STREAM)
     if (RefPtr manager = m_userMediaPermissionRequestManager)
         manager->resetAccess();
-    sendWithAsyncReply(Messages::WebPage::StopMediaCapture(kind), WTFMove(completionHandler));
+
+    auto aggregator = CallbackAggregator::create(WTFMove(completionHandler));
+    forEachWebContentProcess([&](auto& webProcess, auto pageID) {
+        webProcess.sendWithAsyncReply(Messages::WebPage::StopMediaCapture(kind), [aggregator] { }, pageID);
+    });
 #endif
 }
 
