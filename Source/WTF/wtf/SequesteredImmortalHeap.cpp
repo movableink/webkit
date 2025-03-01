@@ -24,10 +24,13 @@
 
 #include "config.h"
 #include <wtf/SequesteredImmortalHeap.h>
+
 #include <wtf/Compiler.h>
 #include <wtf/NeverDestroyed.h>
 
 #if USE(PROTECTED_JIT)
+
+#include <bmalloc/pas_scavenger.h>
 
 namespace WTF {
 

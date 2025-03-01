@@ -429,6 +429,7 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_compact_tagged_unsigned_ptr.h
     libpas/src/libpas/pas_compact_thread_local_cache_layout_node.h
     libpas/src/libpas/pas_compact_unsigned_ptr.h
+    libpas/src/libpas/pas_compiler_utils.h
     libpas/src/libpas/pas_compute_summary_object_callbacks.h
     libpas/src/libpas/pas_config.h
     libpas/src/libpas/pas_config_prefix.h

@@ -23,6 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+#include "pas_compiler_utils.h"
 #include "pas_platform.h"
 
 #ifdef __cplusplus

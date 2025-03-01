@@ -29,7 +29,6 @@
 
 #if USE(PROTECTED_JIT)
 
-#include <bmalloc/pas_scavenger.h>
 #include <cstddef>
 #include <cstdint>
 #include <mach/mach_vm.h>

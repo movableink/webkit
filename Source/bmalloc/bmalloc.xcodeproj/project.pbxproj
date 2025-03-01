@@ -136,7 +136,7 @@
 		3044790B2B992F5500043E8E /* CompactAllocationMode.h in Headers */ = {isa = PBXBuildFile; fileRef = 3044790A2B992F4A00043E8E /* CompactAllocationMode.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		304B034B2B18FBE00063B1B5 /* AllocationCounts.h in Headers */ = {isa = PBXBuildFile; fileRef = 306D49052ACCA01400CCFEE5 /* AllocationCounts.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		304B03532B1901730063B1B5 /* libWebKitAdditions.a in Product Dependencies */ = {isa = PBXBuildFile; fileRef = 304B03502B19014B0063B1B5 /* libWebKitAdditions.a */; };
-		314164E62D38446D006B8C0D /* pas_compiler_utils.h in Headers */ = {isa = PBXBuildFile; fileRef = 314164E52D38445C006B8C0D /* pas_compiler_utils.h */; };
+		314164E62D38446D006B8C0D /* pas_compiler_utils.h in Headers */ = {isa = PBXBuildFile; fileRef = 314164E52D38445C006B8C0D /* pas_compiler_utils.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		314164E82D38449E006B8C0D /* pas_promote_intrinsic_heap.h in Headers */ = {isa = PBXBuildFile; fileRef = 314164E72D38449E006B8C0D /* pas_promote_intrinsic_heap.h */; };
 		4426E2801C838EE0008EB042 /* Logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4426E27E1C838EE0008EB042 /* Logging.cpp */; };
 		4426E2811C838EE0008EB042 /* Logging.h in Headers */ = {isa = PBXBuildFile; fileRef = 4426E27F1C838EE0008EB042 /* Logging.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1367,7 +1367,7 @@
 		3044790A2B992F4A00043E8E /* CompactAllocationMode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CompactAllocationMode.h; path = bmalloc/CompactAllocationMode.h; sourceTree = "<group>"; };
 		304B03502B19014B0063B1B5 /* libWebKitAdditions.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libWebKitAdditions.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		306D49052ACCA01400CCFEE5 /* AllocationCounts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AllocationCounts.h; path = bmalloc/AllocationCounts.h; sourceTree = "<group>"; };
-		314164E52D38445C006B8C0D /* pas_compiler_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pas_compiler_utils.h; sourceTree = "<group>"; };
+		314164E52D38445C006B8C0D /* pas_compiler_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pas_compiler_utils.h; path = libpas/src/libpas/pas_compiler_utils.h; sourceTree = "<group>"; };
 		314164E72D38449E006B8C0D /* pas_promote_intrinsic_heap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = pas_promote_intrinsic_heap.h; path = libpas/src/libpas/pas_promote_intrinsic_heap.h; sourceTree = "<group>"; };
 		4426E27E1C838EE0008EB042 /* Logging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Logging.cpp; path = bmalloc/Logging.cpp; sourceTree = "<group>"; };
 		4426E27F1C838EE0008EB042 /* Logging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Logging.h; path = bmalloc/Logging.h; sourceTree = "<group>"; };

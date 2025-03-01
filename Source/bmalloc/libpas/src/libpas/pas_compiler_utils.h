@@ -22,14 +22,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#pragma once
+#ifndef PAS_COMPILER_UTILS_H
+#define PAS_COMPILER_UTILS_H
 
-#if defined(__clang__)
-#define PAS_COMPILER_CLANG 1
-#endif
+#include "pas_platform.h"
 
 /* PAS_ALLOW_UNSAFE_BUFFER_USAGE */
-#if PAS_COMPILER_CLANG
+#if PAS_COMPILER(CLANG)
 #define PAS_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunsafe-buffer-usage\"")
@@ -50,7 +49,7 @@
 #define __has_cpp_attribute(x) 0
 #endif
 
-#if PAS_COMPILER_CLANG
+#if PAS_COMPILER(CLANG)
 #if __has_cpp_attribute(clang::unsafe_buffer_usage)
 #define PAS_UNSAFE_BUFFER_USAGE [[clang::unsafe_buffer_usage]]
 #elif __has_attribute(unsafe_buffer_usage)
@@ -61,3 +60,5 @@
 #else
 #define PAS_UNSAFE_BUFFER_USAGE
 #endif
+
+#endif /* PAS_COMPILER_UTILS_H */
