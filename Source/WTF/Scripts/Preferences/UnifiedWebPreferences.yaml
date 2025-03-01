@@ -3034,7 +3034,7 @@ FileSystemAccessEnabled:
 
 FileSystemWritableStreamEnabled:
   type: bool
-  status: testable
+  status: stable
   category: dom
   humanReadableName: "File System WritableStream"
   humanReadableDescription: "Enable File System WritableStream API"
@@ -3042,8 +3042,10 @@ FileSystemWritableStreamEnabled:
     WebKitLegacy:
       default: false
     WebKit:
+      "PLATFORM(COCOA)" : true
       default: false
     WebCore:
+      "PLATFORM(COCOA)" : true
       default: false
   disableInLockdownMode: true
   sharedPreferenceForWebProcess: true
