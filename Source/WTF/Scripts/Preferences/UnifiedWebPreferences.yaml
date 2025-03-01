@@ -3031,6 +3031,7 @@ FileSystemAccessEnabled:
       "PLATFORM(COCOA)" : true
       default: false
   disableInLockdownMode: true
+  sharedPreferenceForWebProcess: true
 
 FileSystemWritableStreamEnabled:
   type: bool
