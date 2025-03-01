@@ -1167,11 +1167,23 @@
                     iokit-external-trap)))
         ;; else
         (allow IOKIT_OPEN_USER_CLIENT
-            (iokit-user-client-class "IOMobileFramebufferUserClient")))
+            (iokit-user-client-class "IOMobileFramebufferUserClient"))))
 
-    (allow IOKIT_OPEN_USER_CLIENT
-        ;; VideoToolbox VTImageRotationSession
-        (iokit-user-client-class "IOSurfaceAcceleratorClient")))
+;; VideoToolbox VTImageRotationSession
+(when (equal? (param "CPU") "arm64")
+    (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-user-client-class "IOSurfaceAcceleratorClient")
+            (apply-message-filter
+                (allow iokit-external-method
+                    (iokit-method-number 10))
+                (allow (with report) (with telemetry)
+                    iokit-async-external-method
+                    iokit-external-method
+                    iokit-external-trap)))
+        ;; else
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-user-client-class "IOSurfaceAcceleratorClient"))))
 
 #if HAVE(SANDBOX_MESSAGE_FILTERING)
 (when (and (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES") (defined? 'mach-kernel-endpoint))
