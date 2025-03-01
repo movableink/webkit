@@ -947,7 +947,7 @@ WebThreadContext* WebThreadCurrentContext(void)
 void WebThreadEnable(void)
 {
     RELEASE_ASSERT_WITH_MESSAGE(!WTF::IOSApplication::isWebProcess(), "The WebProcess should never run a Web Thread");
-    if (WTF::IOSApplication::isAppleApplication()) {
+    if (WTF::CocoaApplication::isAppleApplication()) {
         using WebCore::LogThreading;
         RELEASE_LOG_FAULT(Threading, "WebThread enabled");
     }

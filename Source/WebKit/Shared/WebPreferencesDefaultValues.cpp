@@ -378,4 +378,24 @@ bool defaultPreferSpatialAudioExperience()
 }
 #endif
 
+#if PLATFORM(COCOA)
+static bool isSafariOrWebApp()
+{
+#if PLATFORM(MAC)
+    return WTF::MacApplication::isSafari();
+#else
+    return WTF::IOSApplication::isMobileSafari() || WTF::IOSApplication::isSafariViewService() || WTF::IOSApplication::isAppleWebApp();
+#endif
+}
+#endif
+
+bool defaultMutationEventsEnabled()
+{
+#if PLATFORM(COCOA)
+    return (WTF::CocoaApplication::isAppleApplication() && !isSafariOrWebApp()) || !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::MutationEventsDisabledByDefault);
+#else
+    return false;
+#endif
+}
+
 } // namespace WebKit

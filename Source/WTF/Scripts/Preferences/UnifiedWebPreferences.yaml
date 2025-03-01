@@ -5352,7 +5352,7 @@ MutationEventsEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      default: false
+      default: WebKit::defaultMutationEventsEnabled()
     WebCore:
       default: false
 

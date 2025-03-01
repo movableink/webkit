@@ -202,4 +202,6 @@ bool defaultPreferSpatialAudioExperience();
 bool defaultHostedBlurMaterialInMediaControlsEnabled();
 #endif
 
+bool defaultMutationEventsEnabled();
+
 } // namespace WebKit
