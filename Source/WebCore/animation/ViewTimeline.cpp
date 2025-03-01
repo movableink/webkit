@@ -502,44 +502,56 @@ ScrollTimeline::Data ViewTimeline::computeTimelineData() const
 
 std::pair<double, double> ViewTimeline::intervalForTimelineRangeName(const ScrollTimeline::Data& data, const SingleTimelineRange::Name name) const
 {
-    auto subjectRangeStart = [&]() {
+    auto subjectRangeStart = [&]() -> double {
         switch (name) {
         case SingleTimelineRange::Name::Normal:
         case SingleTimelineRange::Name::Omitted:
         case SingleTimelineRange::Name::Cover:
-        case SingleTimelineRange::Name::Entry:
         case SingleTimelineRange::Name::EntryCrossing:
             return data.rangeStart;
+        case SingleTimelineRange::Name::Entry:
+            // https://drafts.csswg.org/scroll-animations-1/#valdef-animation-timeline-range-entry
+            // 0% is equivalent to 0% of the cover range.
+            return intervalForTimelineRangeName(data, SingleTimelineRange::Name::Cover).first;
         case SingleTimelineRange::Name::Contain:
             return data.rangeStart + m_cachedCurrentTimeData.subjectSize + m_cachedCurrentTimeData.stickinessData.entryDistanceAdjustment();
         case SingleTimelineRange::Name::Exit:
+            // https://drafts.csswg.org/scroll-animations-1/#valdef-animation-timeline-range-exit
+            // 0% is equivalent to 100% of the contain range.
+            return intervalForTimelineRangeName(data, SingleTimelineRange::Name::Contain).second;
         case SingleTimelineRange::Name::ExitCrossing:
             return data.rangeEnd - m_cachedCurrentTimeData.subjectSize - m_cachedCurrentTimeData.stickinessData.exitDistanceAdjustment();
         default:
             break;
         }
         ASSERT_NOT_REACHED();
-        return 0.f;
+        return 0.0;
     }();
 
-    auto subjectRangeEnd = [&]() {
+    auto subjectRangeEnd = [&]() -> double {
         switch (name) {
         case SingleTimelineRange::Name::Normal:
         case SingleTimelineRange::Name::Omitted:
         case SingleTimelineRange::Name::Cover:
-        case SingleTimelineRange::Name::Exit:
         case SingleTimelineRange::Name::ExitCrossing:
             return data.rangeEnd;
+        case SingleTimelineRange::Name::Exit:
+            // https://drafts.csswg.org/scroll-animations-1/#valdef-animation-timeline-range-exit
+            // 100% is equivalent to 100% of the cover range.
+            return intervalForTimelineRangeName(data, SingleTimelineRange::Name::Cover).second;
         case SingleTimelineRange::Name::Contain:
             return data.rangeEnd - m_cachedCurrentTimeData.subjectSize - m_cachedCurrentTimeData.stickinessData.exitDistanceAdjustment();
         case SingleTimelineRange::Name::Entry:
+            // https://drafts.csswg.org/scroll-animations-1/#valdef-animation-timeline-range-entry
+            // 100% is equivalent to 0% of the contain range.
+            return intervalForTimelineRangeName(data, SingleTimelineRange::Name::Contain).first;
         case SingleTimelineRange::Name::EntryCrossing:
             return data.rangeStart + m_cachedCurrentTimeData.subjectSize + m_cachedCurrentTimeData.stickinessData.entryDistanceAdjustment();
         default:
             break;
         }
         ASSERT_NOT_REACHED();
-        return 0.f;
+        return 0.0;
     }();
 
     if (subjectRangeEnd < subjectRangeStart)
