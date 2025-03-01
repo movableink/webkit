@@ -391,7 +391,7 @@ public:
 #if ENABLE(AX_THREAD_TEXT_APIS)
     virtual AXTextRuns textRuns() { return { }; }
     bool hasTextRuns() final { return textRuns().size(); }
-    TextEmissionBehavior emitTextAfterBehavior() const override { return TextEmissionBehavior::None; }
+    TextEmissionBehavior textEmissionBehavior() const override { return TextEmissionBehavior::None; }
     AXTextRunLineID listMarkerLineID() const override { return { }; }
     String listMarkerText() const override { return { }; }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)

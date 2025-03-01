@@ -136,7 +136,7 @@ public:
     LayoutRect elementRect() const override;
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
-    TextEmissionBehavior emitTextAfterBehavior() const final;
+    TextEmissionBehavior textEmissionBehavior() const final;
 #endif
 
 protected:

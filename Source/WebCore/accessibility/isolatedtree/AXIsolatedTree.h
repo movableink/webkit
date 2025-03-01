@@ -127,7 +127,6 @@ enum class AXProperty : uint16_t {
     DocumentLinks,
     DocumentURI,
     EmbeddedImageDescription,
-    EmitTextAfterBehavior,
     ExpandedTextValue,
     ExtendedDescription,
 #if PLATFORM(COCOA)
@@ -278,6 +277,7 @@ enum class AXProperty : uint16_t {
     // synthesize it on-the-fly using AXProperty::TextRuns.
     TextContent,
 #endif // !ENABLE(AX_THREAD_TEXT_APIS)
+    TextEmissionBehavior,
     TextInputMarkedTextMarkerRange,
 #if ENABLE(AX_THREAD_TEXT_APIS)
     TextRuns,

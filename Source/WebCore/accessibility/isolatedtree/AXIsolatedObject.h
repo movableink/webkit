@@ -89,7 +89,7 @@ public:
         const auto* runs = textRuns();
         return runs && runs->size();
     }
-    TextEmissionBehavior emitTextAfterBehavior() const final { return propertyValue<TextEmissionBehavior>(AXProperty::EmitTextAfterBehavior); }
+    TextEmissionBehavior textEmissionBehavior() const final { return propertyValue<TextEmissionBehavior>(AXProperty::TextEmissionBehavior); }
     AXTextRunLineID listMarkerLineID() const final { return propertyValue<AXTextRunLineID>(AXProperty::ListMarkerLineID); };
     String listMarkerText() const final { return stringAttributeValue(AXProperty::ListMarkerText); }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)

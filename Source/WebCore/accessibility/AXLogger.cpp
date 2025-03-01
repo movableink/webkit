@@ -745,8 +745,8 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::EmbeddedImageDescription:
         stream << "EmbeddedImageDescription";
         break;
-    case AXProperty::EmitTextAfterBehavior:
-        stream << "EmitTextAfterBehavior";
+    case AXProperty::TextEmissionBehavior:
+        stream << "TextEmissionBehavior";
         break;
     case AXProperty::ExpandedTextValue:
         stream << "ExpandedTextValue";

@@ -117,7 +117,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
             setProperty(AXProperty::TagName, TagName::attachment);
 
         setProperty(AXProperty::TextRuns, object.textRuns());
-        setProperty(AXProperty::EmitTextAfterBehavior, object.emitTextAfterBehavior());
+        setProperty(AXProperty::TextEmissionBehavior, object.textEmissionBehavior());
         if (roleValue() == AccessibilityRole::ListMarker) {
             setProperty(AXProperty::ListMarkerText, object.listMarkerText().isolatedCopy());
             setProperty(AXProperty::ListMarkerLineID, object.listMarkerLineID());
