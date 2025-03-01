@@ -1696,10 +1696,7 @@
     (message-number 204 207 301 711 800 804))
 
 (define (mach-bootstrap-message-numbers-post-launch)
-#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
-    (message-number 204)
-#endif
-    (message-number 207 301 800 804))
+    (message-number 204 207 301 800 804))
 
 (define (allow-mach-bootstrap-with-filter)
     (allow mach-bootstrap
