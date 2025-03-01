@@ -4256,14 +4256,7 @@ void WebPage::setViewportConfigurationViewLayoutSize(const FloatSize& size, doub
     if (!m_viewportConfiguration.isKnownToLayOutWiderThanViewport())
         m_viewportConfiguration.setMinimumEffectiveDeviceWidthForShrinkToFit(0);
 
-    bool mainFramePluginOverridesViewScale = [&] {
-#if ENABLE(PDF_PLUGIN)
-        RefPtr pluginView = mainFramePlugIn();
-        return pluginView && !pluginView->pluginHandlesPageScaleFactor();
-#else
-        return false;
-#endif
-    }();
+    bool mainFramePluginOverridesViewScale = mainFramePlugInDefersScalingToViewport();
 
     m_baseViewportLayoutSizeScaleFactor = [&] {
         if (!m_page->settings().automaticallyAdjustsViewScaleUsingMinimumEffectiveDeviceWidth())
@@ -4735,10 +4728,19 @@ bool WebPage::shouldIgnoreMetaViewport() const
     return m_page->settings().shouldIgnoreMetaViewport();
 }
 
+bool WebPage::mainFramePlugInDefersScalingToViewport() const
+{
+#if ENABLE(PDF_PLUGIN)
+    if (RefPtr plugin = mainFramePlugIn(); plugin && !plugin->pluginHandlesPageScaleFactor())
+        return true;
+#endif
+    return false;
+}
+
 bool WebPage::shouldEnableViewportBehaviorsForResizableWindows() const
 {
 #if HAVE(UIKIT_RESIZABLE_WINDOWS)
-    return shouldIgnoreMetaViewport() && m_isWindowResizingEnabled;
+    return shouldIgnoreMetaViewport() && m_isWindowResizingEnabled && !mainFramePlugInDefersScalingToViewport();
 #else
     return false;
 #endif

@@ -4314,7 +4314,7 @@ static bool isLockdownModeWarningNeeded()
     WebCore::FloatRect oldUnobscuredContentRect = _page->unobscuredContentRect();
 
     auto isOldBoundsValid = !CGRectIsEmpty(oldBounds) || !CGRectIsEmpty(_perProcessState.animatedResizeOldBounds);
-    if (![self usesStandardContentView] || !_perProcessState.hasCommittedLoadForMainFrame || !isOldBoundsValid || oldUnobscuredContentRect.isEmpty() || _perProcessState.liveResizeParameters || [self _isDisplayingPDF]) {
+    if (![self usesStandardContentView] || !_perProcessState.hasCommittedLoadForMainFrame || !isOldBoundsValid || oldUnobscuredContentRect.isEmpty() || _perProcessState.liveResizeParameters) {
         if ([_customContentView respondsToSelector:@selector(web_beginAnimatedResizeWithUpdates:)])
             [_customContentView web_beginAnimatedResizeWithUpdates:updateBlock];
         else
@@ -4405,7 +4405,7 @@ static bool isLockdownModeWarningNeeded()
     CGFloat oldWebViewWidthInContentViewCoordinates = oldUnobscuredContentRect.width();
     _perProcessState.animatedResizeOriginalContentWidth = [&] {
 #if HAVE(UIKIT_RESIZABLE_WINDOWS)
-        if (self._isWindowResizingEnabled)
+        if (self._isWindowResizingEnabled && !self._isDisplayingPDF)
             return contentSizeInContentViewCoordinates.width;
 #endif
         return std::min(contentSizeInContentViewCoordinates.width, oldWebViewWidthInContentViewCoordinates);

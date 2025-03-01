@@ -1226,6 +1226,13 @@ bool UnifiedPDFPlugin::geometryDidChange(const IntSize& pluginSize, const Affine
 {
     bool sizeChanged = pluginSize != m_size;
 
+#if PLATFORM(IOS_FAMILY)
+    if (sizeChanged && m_currentSelection) {
+        if (RefPtr webPage = this->webPage())
+            webPage->scheduleFullEditorStateUpdate();
+    }
+#endif
+
     if (!PDFPluginBase::geometryDidChange(pluginSize, pluginToRootViewTransform))
         return false;
 
@@ -1293,8 +1300,7 @@ void UnifiedPDFPlugin::updateLayout(AdjustScaleAfterLayout shouldAdjustScale, st
     auto autoSizeMode = shouldUpdateAutoSizeScaleOverride.value_or(m_didLayoutWithValidDocument ? m_shouldUpdateAutoSizeScale : ShouldUpdateAutoSizeScale::Yes);
 
     auto computeAnchoringInfo = [&] {
-        auto anchorPoint = shouldSizeToFitContent() ? PDFPresentationController::AnchorPoint::Center : PDFPresentationController::AnchorPoint::TopLeft;
-        return m_presentationController->pdfPositionForCurrentView(anchorPoint, shouldAdjustScale == AdjustScaleAfterLayout::Yes || autoSizeMode == ShouldUpdateAutoSizeScale::Yes);
+        return m_presentationController->pdfPositionForCurrentView(PDFPresentationController::AnchorPoint::TopLeft, shouldAdjustScale == AdjustScaleAfterLayout::Yes || autoSizeMode == ShouldUpdateAutoSizeScale::Yes);
     };
     auto anchoringInfo = computeAnchoringInfo();
 
@@ -1335,45 +1341,10 @@ void UnifiedPDFPlugin::updateLayout(AdjustScaleAfterLayout shouldAdjustScale, st
         });
     }
 
-    auto restorePDFPosition = [this, anchoringInfo = WTFMove(anchoringInfo)] {
-        if (!anchoringInfo)
-            return;
+    if (anchoringInfo && !shouldSizeToFitContent())
+        m_presentationController->restorePDFPosition(*anchoringInfo);
 
-        if (!shouldSizeToFitContent()) {
-            m_presentationController->restorePDFPosition(*anchoringInfo);
-            return;
-        }
-
-        if (m_pendingAnchoringInfo || m_willSetPendingAnchoringInfo)
-            return;
-
-        // FIXME: This works around the fact that, during device rotation, the width of the plugin element
-        // updates before the height is updated. If we attempt to scroll to the anchored position with only
-        // the updated width, we'll end up scrolling to the wrong offset, due to the coordinate space
-        // conversion from page -> plugin coordinates producing incorrect result.
-        m_willSetPendingAnchoringInfo = true;
-        RunLoop::main().dispatch([weakThis = WeakPtr { *this }, anchoringInfo = WTFMove(anchoringInfo)] mutable {
-            RefPtr protectedThis = weakThis.get();
-            if (!protectedThis)
-                return;
-
-            protectedThis->m_pendingAnchoringInfo = WTFMove(anchoringInfo);
-            protectedThis->m_willSetPendingAnchoringInfo = false;
-        });
-    };
-
-    restorePDFPosition();
     sizeToFitContentsIfNeeded();
-}
-
-void UnifiedPDFPlugin::finalizeRenderingUpdate()
-{
-    auto anchoringInfo = std::exchange(m_pendingAnchoringInfo, { });
-    if (!anchoringInfo)
-        return;
-
-    m_view->pluginElement().document().updateLayout();
-    m_presentationController->restorePDFPosition(*anchoringInfo);
 }
 
 FloatSize UnifiedPDFPlugin::centeringOffset() const

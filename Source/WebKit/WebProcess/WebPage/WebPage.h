@@ -2023,6 +2023,7 @@ private:
     void scheduleLayoutViewportHeightExpansionUpdate();
     void scheduleEditorStateUpdateAfterAnimationIfNeeded(const WebCore::Element&);
     void computeEnclosingLayerID(EditorState&, const WebCore::VisibleSelection&) const;
+    bool mainFramePlugInDefersScalingToViewport() const;
 
     void addTextInteractionSources(OptionSet<TextInteractionSource>);
     void removeTextInteractionSources(OptionSet<TextInteractionSource>);

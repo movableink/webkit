@@ -230,8 +230,6 @@ public:
 
     static WebCore::ViewportConfiguration::Parameters viewportParameters();
 
-    void finalizeRenderingUpdate() final;
-
 private:
     explicit UnifiedPDFPlugin(WebCore::HTMLPlugInElement&);
     bool isUnifiedPDFPlugin() const override { return true; }
@@ -706,9 +704,6 @@ private:
 #endif
 
     RefPtr<WebCore::ShadowRoot> m_shadowRoot;
-
-    std::optional<VisiblePDFPosition> m_pendingAnchoringInfo;
-    bool m_willSetPendingAnchoringInfo { false };
 
     // FIXME: We should rationalize these with the values in ViewGestureController.
     // For now, we'll leave them differing as they do in PDFPlugin.

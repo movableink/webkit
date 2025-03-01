@@ -5121,11 +5121,6 @@ void WebPage::finalizeRenderingUpdate(OptionSet<FinalizeRenderingUpdateFlags> fl
     WTFBeginSignpost(this, FinalizeRenderingUpdate);
 #endif
 
-#if ENABLE(PDF_PLUGIN)
-    if (RefPtr pluginView = mainFramePlugIn())
-        pluginView->finalizeRenderingUpdate();
-#endif
-
     protectedCorePage()->finalizeRenderingUpdate(flags);
 #if ENABLE(GPU_PROCESS)
     if (RefPtr proxy = m_remoteRenderingBackendProxy)

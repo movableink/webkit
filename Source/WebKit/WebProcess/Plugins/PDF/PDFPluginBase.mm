@@ -185,6 +185,12 @@ void PDFPluginBase::teardown()
         m_element->pluginDestroyedWithPendingPDFTestCallback(WTFMove(m_pdfTestCallback));
 }
 
+WebPage* PDFPluginBase::webPage() const
+{
+    RefPtr frame = m_frame.get();
+    return frame ? frame->page() : nullptr;
+}
+
 Page* PDFPluginBase::page() const
 {
     if (RefPtr coreFrame = m_frame ? m_frame->coreLocalFrame() : nullptr)

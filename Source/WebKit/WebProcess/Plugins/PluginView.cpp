@@ -1225,14 +1225,6 @@ bool PluginView::pluginHandlesPageScaleFactor() const
     return protectedPlugin()->handlesPageScaleFactor();
 }
 
-void PluginView::finalizeRenderingUpdate()
-{
-    if (!m_isInitialized)
-        return;
-
-    return protectedPlugin()->finalizeRenderingUpdate();
-}
-
 } // namespace WebKit
 
 #endif

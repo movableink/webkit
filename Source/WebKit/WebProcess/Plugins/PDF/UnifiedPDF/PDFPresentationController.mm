@@ -263,26 +263,10 @@ auto PDFPresentationController::pdfPositionForCurrentView(AnchorPoint anchorPoin
     if (!maybePageIndex)
         return { };
 
-    enum class PagePosition : bool { TopLeft, TopCenter };
-    auto pagePosition = PagePosition::TopCenter;
-    FloatPoint topLeftInPluginSpace;
-    if (checkedPlugin->shouldSizeToFitContent()) {
-        RefPtr view = checkedPlugin->frameView();
-        if (!view)
-            return { };
-
-        auto topLeftInRootView = view->contentsToRootView(view->unobscuredContentRect().location());
-        topLeftInPluginSpace = checkedPlugin->convertFromRootViewToPlugin(topLeftInRootView);
-        pagePosition = PagePosition::TopLeft;
-    }
-
     auto pageIndex = *maybePageIndex;
     auto pageBounds = documentLayout.layoutBoundsForPageAtIndex(pageIndex);
-    auto topLeftInDocumentSpace = checkedPlugin->convertDown(UnifiedPDFPlugin::CoordinateSpace::Plugin, UnifiedPDFPlugin::CoordinateSpace::PDFDocumentLayout, topLeftInPluginSpace);
-    auto pagePoint = documentLayout.documentToPDFPage(FloatPoint {
-        pagePosition == PagePosition::TopLeft ? topLeftInDocumentSpace.x() : pageBounds.center().x(),
-        topLeftInDocumentSpace.y()
-    }, pageIndex);
+    auto topLeftInDocumentSpace = checkedPlugin->convertDown(UnifiedPDFPlugin::CoordinateSpace::Plugin, UnifiedPDFPlugin::CoordinateSpace::PDFDocumentLayout, FloatPoint::zero());
+    auto pagePoint = documentLayout.documentToPDFPage(FloatPoint { pageBounds.center().x(), topLeftInDocumentSpace.y() }, pageIndex);
 
     LOG_WITH_STREAM(PDF, stream << "PDFPresentationController::pdfPositionForCurrentView - point " << pagePoint << " in page " << pageIndex << " with anchor point " << std::to_underlying(anchorPoint));
 

@@ -83,6 +83,7 @@ class PDFIncrementalLoader;
 class PDFPluginAnnotation;
 class PluginView;
 class WebFrame;
+class WebPage;
 class WebKeyboardEvent;
 class WebMouseEvent;
 class WebWheelEvent;
@@ -253,7 +254,6 @@ public:
     virtual void willAttachScrollingNode() { }
     virtual void didAttachScrollingNode() { }
     virtual void didChangeSettings() { }
-    virtual void finalizeRenderingUpdate() { }
 
     // HUD Actions.
 #if ENABLE(PDF_HUD)
@@ -366,6 +366,7 @@ private:
 protected:
     explicit PDFPluginBase(WebCore::HTMLPlugInElement&);
 
+    WebPage* webPage() const;
     WebCore::Page* page() const;
 
     virtual void teardown();
