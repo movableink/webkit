@@ -576,32 +576,57 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearchWithCache(VM& vm, JSGloba
     CachedCall cachedCall(globalObject, replaceFunction, argCount);
     RETURN_IF_EXCEPTION(scope, nullptr);
     size_t replacementIndex = 0;
-    for (unsigned cursor = 0; cursor < length; cursor += cachedCount) {
-        cachedCall.clearArguments();
-        for (unsigned i = 0; i < cachedCount; ++i)
-            cachedCall.appendArgument(result->get(cursor + i));
-        cachedCall.appendArgument(string);
+    if (argCount == 3) {
+        ASSERT(!regExp->numSubpatterns());
+        ASSERT(cachedCount == 2);
+        for (unsigned cursor = 0; cursor < length; cursor += 2) {
+            JSString* matchedString = asString(result->get(cursor + 0));
+            JSValue startOffset = result->get(cursor + 1);
 
-        int32_t start = result->get(cursor + cachedCount - 1).asInt32();
-        int32_t end = start + asString(result->get(cursor))->length();
+            int32_t start = startOffset.asInt32();
+            int32_t end = start + matchedString->length();
 
-        sourceRanges.constructAndAppend(lastIndex, start);
+            JSValue jsResult = cachedCall.callWithArguments(globalObject, jsUndefined(), matchedString, startOffset, string);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, nullptr);
 
-        cachedCall.setThis(jsUndefined());
-        if (UNLIKELY(cachedCall.hasOverflowedArguments())) {
-            throwOutOfMemoryError(globalObject, scope);
-            return nullptr;
+            auto string = jsResult.toWTFString(globalObject);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, nullptr);
+
+            sourceRanges.constructAndAppend(lastIndex, start);
+            replacements[replacementIndex++] = WTFMove(string);
+
+            lastIndex = end;
         }
+    } else {
+        for (unsigned cursor = 0; cursor < length; cursor += cachedCount) {
+            cachedCall.clearArguments();
+            for (unsigned i = 0; i < cachedCount; ++i)
+                cachedCall.appendArgument(result->get(cursor + i));
+            cachedCall.appendArgument(string);
 
-        JSValue jsResult = cachedCall.call();
-        RETURN_IF_EXCEPTION(scope, nullptr);
-        auto string = jsResult.toWTFString(globalObject);
-        RETURN_IF_EXCEPTION(scope, nullptr);
-        replacements[replacementIndex++] = WTFMove(string);
+            int32_t start = result->get(cursor + cachedCount - 1).asInt32();
+            int32_t end = start + asString(result->get(cursor))->length();
 
-        lastIndex = end;
+            sourceRanges.constructAndAppend(lastIndex, start);
+
+            cachedCall.setThis(jsUndefined());
+            if (UNLIKELY(cachedCall.hasOverflowedArguments())) {
+                throwOutOfMemoryError(globalObject, scope);
+                return nullptr;
+            }
+
+            JSValue jsResult = cachedCall.call();
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, nullptr);
+
+            auto string = jsResult.toWTFString(globalObject);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, nullptr);
+
+            replacements[replacementIndex++] = WTFMove(string);
+
+            lastIndex = end;
+        }
+        ASSERT(replacementIndex == replacements.size());
     }
-    ASSERT(replacementIndex == replacements.size());
 
     if (static_cast<unsigned>(lastIndex) < sourceLen)
         sourceRanges.constructAndAppend(lastIndex, sourceLen);
