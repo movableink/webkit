@@ -71,6 +71,7 @@
 #include "PrintInfo.h"
 #include "ProcessTerminationReason.h"
 #include "QueryPermissionResultCallback.h"
+#include "RunJavaScriptParameters.h"
 #include "SpeechRecognitionPermissionRequest.h"
 #include "UserMediaPermissionCheckProxy.h"
 #include "UserMediaPermissionRequestProxy.h"
@@ -2730,7 +2731,15 @@ void WKPageEvaluateJavaScriptInMainFrame(WKPageRef pageRef, WKStringRef scriptRe
 {
     CRASH_IF_SUSPENDED;
 
-    toImpl(pageRef)->runJavaScriptInMainFrame({ toImpl(scriptRef)->string(), JSC::SourceTaintedOrigin::Untainted, URL { }, false, std::nullopt, true, RemoveTransientActivation::Yes }, [context, callback] (auto&& result) {
+    toImpl(pageRef)->runJavaScriptInMainFrame(WebKit::RunJavaScriptParameters {
+        toImpl(scriptRef)->string(),
+        JSC::SourceTaintedOrigin::Untainted,
+        URL { },
+        WebCore::RunAsAsyncFunction::No,
+        std::nullopt,
+        WebCore::ForceUserGesture::Yes,
+        RemoveTransientActivation::Yes
+    }, [context, callback] (auto&& result) {
         if (!callback)
             return;
         if (result)

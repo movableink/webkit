@@ -58,12 +58,14 @@ public:
             return nullptr;
         return adoptRef(*new SerializedScriptValue(serializedValue.releaseNonNull()));
     }
-    
+
+#if !PLATFORM(COCOA)
     static Ref<SerializedScriptValue> createFromWireBytes(std::span<const uint8_t> buffer)
     {
         return adoptRef(*new SerializedScriptValue(WebCore::SerializedScriptValue::createFromWireBytes(Vector<uint8_t>(buffer))));
     }
-    
+#endif
+
     JSValueRef deserialize(JSContextRef context, JSValueRef* exception)
     {
         return m_serializedScriptValue->deserialize(context, exception);

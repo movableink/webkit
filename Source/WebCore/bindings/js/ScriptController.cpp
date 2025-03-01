@@ -668,10 +668,9 @@ ValueOrException ScriptController::callInWorld(RunJavaScriptParameters&& paramet
     functionStringBuilder.append("(async function("_s);
     for (auto argument = parameters.arguments->begin(); argument != parameters.arguments->end();) {
         functionStringBuilder.append(argument->key);
-        auto serializedArgument = SerializedScriptValue::createFromWireBytes(WTFMove(argument->value));
 
         auto scope = DECLARE_CATCH_SCOPE(globalObject.vm());
-        auto jsArgument = serializedArgument->deserialize(globalObject, &globalObject);
+        auto jsArgument = argument->value(globalObject);
         if (UNLIKELY(scope.exception())) {
             errorMessage = "Unable to deserialize argument to execute asynchronous JavaScript function"_s;
             break;

@@ -235,11 +235,71 @@ Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> J
     return JavaScriptEvaluationResult { context, value };
 }
 
-JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)
-    : m_root(addObjectToMap(convertToObjC(context, value).get()))
+static bool isSerializable(id argument)
+{
+    if (!argument)
+        return true;
+
+    if ([argument isKindOfClass:[NSString class]] || [argument isKindOfClass:[NSNumber class]] || [argument isKindOfClass:[NSDate class]] || [argument isKindOfClass:[NSNull class]])
+        return true;
+
+    if ([argument isKindOfClass:[NSArray class]]) {
+        __block BOOL valid = true;
+
+        [argument enumerateObjectsUsingBlock:^(id object, NSUInteger, BOOL *stop) {
+            if (!isSerializable(object)) {
+                valid = false;
+                *stop = YES;
+            }
+        }];
+
+        return valid;
+    }
+
+    if ([argument isKindOfClass:[NSDictionary class]]) {
+        __block bool valid = true;
+
+        [argument enumerateKeysAndObjectsUsingBlock:^(id key, id value, BOOL *stop) {
+            if (!isSerializable(key) || !isSerializable(value)) {
+                valid = false;
+                *stop = YES;
+            }
+        }];
+
+        return valid;
+    }
+
+    return false;
+}
+
+std::optional<JavaScriptEvaluationResult> JavaScriptEvaluationResult::extract(id object)
+{
+    if (object && !isSerializable(object))
+        return std::nullopt;
+    return JavaScriptEvaluationResult { object };
+}
+
+JavaScriptEvaluationResult::JavaScriptEvaluationResult(id object)
+    : m_root(addObjectToMap(object))
 {
     m_objectsInMap.clear();
     m_nullObjectID = std::nullopt;
+}
+
+JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)
+    : JavaScriptEvaluationResult(convertToObjC(context, value).get())
+{
+    // FIXME: This does not need to roundtrip through ObjC.
+    // As a performance improvement we could make a converter directly from JS.
+}
+
+JSValueRef JavaScriptEvaluationResult::toJS(JSGlobalContextRef context)
+{
+    // FIXME: This does not need to roundtrip through ObjC.
+    // As a performance improvement we could make a converter directly to JS.
+    if (JSValueRef result = [[JSValue valueWithObject:toID().get() inContext:[JSContext contextWithJSGlobalContextRef:context]] JSValueRef])
+        return result;
+    return JSValueMakeUndefined(context);
 }
 
 }

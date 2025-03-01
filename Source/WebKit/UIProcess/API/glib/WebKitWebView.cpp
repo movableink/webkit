@@ -29,10 +29,12 @@
 #include "APISerializedScriptValue.h"
 #include "FrameInfoData.h"
 #include "ImageOptions.h"
+#include "JavaScriptEvaluationResult.h"
 #include "NotificationService.h"
 #include "PageLoadState.h"
 #include "ProcessTerminationReason.h"
 #include "ProvisionalPageProxy.h"
+#include "RunJavaScriptParameters.h"
 #include "SystemSettingsManagerProxy.h"
 #include "WebContextMenuItem.h"
 #include "WebContextMenuItemData.h"
@@ -4174,7 +4176,7 @@ enum class RunJavascriptReturnType {
 #endif
 };
 
-static void webkitWebViewRunJavaScriptWithParams(WebKitWebView* webView, RunJavaScriptParameters&& params, const char* worldName, RunJavascriptReturnType returnType, GRefPtr<GTask>&& task)
+static void webkitWebViewRunJavaScriptWithParams(WebKitWebView* webView, WebKit::RunJavaScriptParameters&& params, const char* worldName, RunJavascriptReturnType returnType, GRefPtr<GTask>&& task)
 {
     auto world = worldName ? API::ContentWorld::sharedWorldWithName(String::fromUTF8(worldName)) : Ref<API::ContentWorld> { API::ContentWorld::pageContentWorldSingleton() };
     getPage(webView).runJavaScriptInFrameInScriptWorld(WTFMove(params), std::nullopt, world.get(), [task = WTFMove(task), returnType] (auto&& result) {
@@ -4224,7 +4226,15 @@ void webkitWebViewRunJavascriptWithoutForcedUserGestures(WebKitWebView* webView,
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
     g_return_if_fail(script);
 
-    RunJavaScriptParameters params = { String::fromUTF8(script), JSC::SourceTaintedOrigin::Untainted, URL { }, RunAsAsyncFunction::No, std::nullopt, ForceUserGesture::No, RemoveTransientActivation::Yes };
+    WebKit::RunJavaScriptParameters params {
+        String::fromUTF8(script),
+        JSC::SourceTaintedOrigin::Untainted,
+        URL { },
+        RunAsAsyncFunction::No,
+        std::nullopt,
+        ForceUserGesture::No,
+        RemoveTransientActivation::Yes
+    };
     webkitWebViewRunJavaScriptWithParams(webView, WTFMove(params), nullptr, RunJavascriptReturnType::JSCValue, adoptGRef(g_task_new(webView, cancellable, callback, userData)));
 }
 
@@ -4234,7 +4244,15 @@ static void webkitWebViewEvaluateJavascriptInternal(WebKitWebView* webView, cons
     g_return_if_fail(script);
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GTK/WPE port
-    RunJavaScriptParameters params = { String::fromUTF8(std::span(script, length < 0 ? strlen(script) : length)), JSC::SourceTaintedOrigin::Untainted, URL({ }, String::fromUTF8(sourceURI)), RunAsAsyncFunction::No, std::nullopt, ForceUserGesture::Yes, RemoveTransientActivation::Yes };
+    WebKit::RunJavaScriptParameters params {
+        String::fromUTF8(std::span(script, length < 0 ? strlen(script) : length)),
+        JSC::SourceTaintedOrigin::Untainted,
+        URL({ }, String::fromUTF8(sourceURI)),
+        RunAsAsyncFunction::No,
+        std::nullopt,
+        ForceUserGesture::Yes,
+        RemoveTransientActivation::Yes
+    };
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     webkitWebViewRunJavaScriptWithParams(webView, WTFMove(params), worldName, returnType, adoptGRef(g_task_new(webView, cancellable, callback, userData)));
 }
@@ -4333,12 +4351,14 @@ JSCValue* webkit_web_view_evaluate_javascript_finish(WebKitWebView* webView, GAs
     return static_cast<JSCValue*>(g_task_propagate_pointer(G_TASK(result), error));
 }
 
-static ArgumentWireBytesMap parseAsyncFunctionArguments(GVariant* arguments, GError** error)
+static std::pair<Vector<Vector<uint8_t>>, Vector<std::pair<String, JavaScriptEvaluationResult>>> parseAsyncFunctionArguments(GVariant* arguments, GError** error)
 {
-    if (!arguments)
-        return { };
+    Vector<std::pair<String, JavaScriptEvaluationResult>> argumentsVector;
+    Vector<Vector<uint8_t>> wireBytes;
 
-    ArgumentWireBytesMap argumentsMap;
+    if (!arguments)
+        return { WTFMove(wireBytes), WTFMove(argumentsVector) };
+
     GVariantIter iter;
     g_variant_iter_init(&iter, arguments);
     const char* key;
@@ -4350,12 +4370,13 @@ static ArgumentWireBytesMap parseAsyncFunctionArguments(GVariant* arguments, GEr
         auto serializedValue = API::SerializedScriptValue::createFromGVariant(value);
         if (!serializedValue) {
             *error = g_error_new(WEBKIT_JAVASCRIPT_ERROR, WEBKIT_JAVASCRIPT_ERROR_INVALID_PARAMETER, "Invalid parameter %s passed as argument of async function call", key);
-            return { };
+            return { WTFMove(wireBytes), WTFMove(argumentsVector) };
         }
-        argumentsMap.set(String::fromUTF8(key), serializedValue->internalRepresentation().wireBytes());
+        wireBytes.append(serializedValue->internalRepresentation().wireBytes());
+        argumentsVector.append({ String::fromUTF8(key), JavaScriptEvaluationResult { wireBytes.last().span() } });
     }
 
-    return argumentsMap;
+    return { WTFMove(wireBytes), WTFMove(argumentsVector) };
 }
 
 static void webkitWebViewCallAsyncJavascriptFunctionInternal(WebKitWebView* webView, const char* body, gssize length, GVariant* arguments, const char* worldName, const char* sourceURI, RunJavascriptReturnType returnType, GCancellable* cancellable, GAsyncReadyCallback callback, gpointer userData)
@@ -4365,14 +4386,22 @@ static void webkitWebViewCallAsyncJavascriptFunctionInternal(WebKitWebView* webV
     g_return_if_fail(!arguments || g_variant_is_of_type(arguments, G_VARIANT_TYPE("a{sv}")));
 
     GError* error = nullptr;
-    auto argumentsMap = parseAsyncFunctionArguments(arguments, &error);
+    auto [wireBytes, argumentsVector] = parseAsyncFunctionArguments(arguments, &error);
     if (error) {
         g_task_report_error(webView, callback, userData, nullptr, error);
         return;
     }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GTK/WPE port
-    RunJavaScriptParameters params = { String::fromUTF8(std::span(body, length < 0 ? strlen(body) : length)), JSC::SourceTaintedOrigin::Untainted, URL({ }, String::fromUTF8(sourceURI)), RunAsAsyncFunction::Yes, WTFMove(argumentsMap), ForceUserGesture::Yes, RemoveTransientActivation::Yes };
+    WebKit::RunJavaScriptParameters params {
+        String::fromUTF8(std::span(body, length < 0 ? strlen(body) : length)),
+        JSC::SourceTaintedOrigin::Untainted,
+        URL({ }, String::fromUTF8(sourceURI)),
+        RunAsAsyncFunction::Yes,
+        WTFMove(argumentsVector),
+        ForceUserGesture::Yes,
+        RemoveTransientActivation::Yes
+    };
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     webkitWebViewRunJavaScriptWithParams(webView, WTFMove(params), worldName, returnType, adoptGRef(g_task_new(webView, cancellable, callback, userData)));
 }
@@ -4634,7 +4663,15 @@ static void resourcesStreamReadCallback(GObject* object, GAsyncResult* result, g
 
     WebKitWebView* webView = WEBKIT_WEB_VIEW(g_task_get_source_object(task.get()));
     gpointer outputStreamData = g_memory_output_stream_get_data(G_MEMORY_OUTPUT_STREAM(object));
-    RunJavaScriptParameters params = { String::fromUTF8(reinterpret_cast<const gchar*>(outputStreamData)), JSC::SourceTaintedOrigin::Untainted, URL { }, RunAsAsyncFunction::No, std::nullopt, ForceUserGesture::Yes, RemoveTransientActivation::Yes };
+    WebKit::RunJavaScriptParameters params {
+        String::fromUTF8(reinterpret_cast<const gchar*>(outputStreamData)),
+        JSC::SourceTaintedOrigin::Untainted,
+        URL { },
+        RunAsAsyncFunction::No,
+        std::nullopt,
+        ForceUserGesture::Yes,
+        RemoveTransientActivation::Yes
+    };
     webkitWebViewRunJavaScriptWithParams(webView, WTFMove(params), nullptr, RunJavascriptReturnType::WebKitJavascriptResult, WTFMove(task));
 }
 

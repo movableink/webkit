@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,11 +23,29 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-[
-    ExceptionForEnabledBy,
-    DispatchedFrom=WebContent,
-    DispatchedTo=UI
-]
-messages -> WebUserContentControllerProxy {
-    DidPostMessage(WebKit::WebPageProxyIdentifier pageID, struct WebKit::FrameInfoData frameInfoData, WebKit::ScriptMessageHandlerIdentifier messageHandlerID, WebKit::JavaScriptEvaluationResult message) -> (Expected<WebKit::JavaScriptEvaluationResult, String> reply)
+#pragma once
+
+#include <wtf/HashMap.h>
+#include <wtf/URL.h>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
+
+namespace WebCore {
+enum class RunAsAsyncFunction : bool;
+enum class ForceUserGesture : bool;
+enum class RemoveTransientActivation : bool;
+}
+
+namespace WebKit {
+
+struct RunJavaScriptParameters {
+    String source;
+    JSC::SourceTaintedOrigin taintedness;
+    URL sourceURL;
+    WebCore::RunAsAsyncFunction runAsAsyncFunction;
+    std::optional<Vector<std::pair<String, JavaScriptEvaluationResult>>> arguments;
+    WebCore::ForceUserGesture forceUserGesture;
+    WebCore::RemoveTransientActivation removeTransientActivation;
+};
+
 }

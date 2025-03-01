@@ -74,6 +74,7 @@
 #include "RemoteScrollingCoordinator.h"
 #include "RemoteWebInspectorUI.h"
 #include "RemoteWebInspectorUIMessages.h"
+#include "RunJavaScriptParameters.h"
 #include "SessionState.h"
 #include "SessionStateConversion.h"
 #include "ShareableBitmapUtilities.h"
@@ -4443,8 +4444,31 @@ void WebPage::runJavaScript(WebFrame* frame, RunJavaScriptParameters&& parameter
         return completionHandler(makeUnexpected(std::nullopt));
 #endif
     };
+
+    auto mapArguments = [] (auto&& vector) -> std::optional<HashMap<String, Function<JSC::JSValue(JSC::JSGlobalObject&)>>> {
+        if (!vector)
+            return std::nullopt;
+        HashMap<String, Function<JSC::JSValue(JSC::JSGlobalObject&)>> map;
+        for (auto&& [key, result] : WTFMove(*vector)) {
+            map.set(key, [result = WTFMove(result)] (JSC::JSGlobalObject& globalObject) mutable -> JSC::JSValue {
+                return toJS(&globalObject, result.toJS(JSContextGetGlobalContext(toRef(&globalObject))));
+            });
+        }
+        return { WTFMove(map) };
+    };
+
+    WebCore::RunJavaScriptParameters coreParameters {
+        WTFMove(parameters.source),
+        WTFMove(parameters.taintedness),
+        WTFMove(parameters.sourceURL),
+        parameters.runAsAsyncFunction == WebCore::RunAsAsyncFunction::Yes,
+        mapArguments(WTFMove(parameters.arguments)),
+        parameters.forceUserGesture == WebCore::ForceUserGesture::Yes,
+        parameters.removeTransientActivation
+    };
+
     JSLockHolder lock(commonVM());
-    frame->coreLocalFrame()->script().executeAsynchronousUserAgentScriptInWorld(world->protectedCoreWorld(), WTFMove(parameters), WTFMove(resolveFunction));
+    frame->coreLocalFrame()->script().executeAsynchronousUserAgentScriptInWorld(world->protectedCoreWorld(), WTFMove(coreParameters), WTFMove(resolveFunction));
 }
 
 void WebPage::runJavaScriptInFrameInScriptWorld(RunJavaScriptParameters&& parameters, std::optional<WebCore::FrameIdentifier> frameID, const ContentWorldData& worldData, CompletionHandler<void(Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>)>&& completionHandler)

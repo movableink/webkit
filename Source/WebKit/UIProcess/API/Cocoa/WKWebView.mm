@@ -59,6 +59,7 @@
 #import "RemoteObjectRegistry.h"
 #import "RemoteObjectRegistryMessages.h"
 #import "ResourceLoadDelegate.h"
+#import "RunJavaScriptParameters.h"
 #import "SessionStateCoding.h"
 #import "UIDelegate.h"
 #import "VideoPresentationManagerProxy.h"
@@ -1376,20 +1377,20 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
     THROW_IF_SUSPENDED;
     auto handler = adoptNS([completionHandler copy]);
 
-    std::optional<WebCore::ArgumentWireBytesMap> argumentsMap;
+    std::optional<Vector<std::pair<String, WebKit::JavaScriptEvaluationResult>>> argumentsMap;
     if (asAsyncFunction)
-        argumentsMap = WebCore::ArgumentWireBytesMap { };
+        argumentsMap = Vector<std::pair<String, WebKit::JavaScriptEvaluationResult>> { };
     NSString *errorMessage = nil;
 
     for (id key in arguments) {
         id value = [arguments objectForKey:key];
-        auto serializedValue = API::SerializedScriptValue::createFromNSObject(value);
+        auto serializedValue = WebKit::JavaScriptEvaluationResult::extract(value);
         if (!serializedValue) {
             errorMessage = @"Function argument values must be one of the following types, or contain only the following types: NSNumber, NSNull, NSDate, NSString, NSArray, and NSDictionary";
             break;
         }
 
-        argumentsMap->set(key, serializedValue->internalRepresentation().wireBytes());
+        argumentsMap->append({ key, WTFMove(*serializedValue) });
     }
 
     if (errorMessage && handler) {
@@ -1412,7 +1413,15 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
         frameID = frame._handle->_frameHandle->frameID();
 
     auto removeTransientActivation = !_dontResetTransientActivationAfterRunJavaScript && WebKit::shouldEvaluateJavaScriptWithoutTransientActivation() ? WebCore::RemoveTransientActivation::Yes : WebCore::RemoveTransientActivation::No;
-    _page->runJavaScriptInFrameInScriptWorld({ javaScriptString, JSC::SourceTaintedOrigin::Untainted, sourceURL, !!asAsyncFunction, WTFMove(argumentsMap), !!forceUserGesture, removeTransientActivation }, frameID, Ref { *world->_contentWorld }, [handler] (auto&& result) {
+    _page->runJavaScriptInFrameInScriptWorld(WebKit::RunJavaScriptParameters {
+        javaScriptString,
+        JSC::SourceTaintedOrigin::Untainted,
+        sourceURL,
+        asAsyncFunction ? WebCore::RunAsAsyncFunction::Yes : WebCore::RunAsAsyncFunction::No,
+        WTFMove(argumentsMap),
+        forceUserGesture ? WebCore::ForceUserGesture::Yes : WebCore::ForceUserGesture::No,
+        removeTransientActivation
+    }, frameID, Ref { *world->_contentWorld }, [handler] (auto&& result) {
         if (!handler)
             return;
 

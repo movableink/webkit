@@ -27,6 +27,7 @@
 
 #include "WKRetainPtr.h"
 #include <JavaScriptCore/APICast.h>
+#include <WebCore/SerializedScriptValue.h>
 #include <optional>
 #include <wtf/HashMap.h>
 #include <wtf/ObjectIdentifier.h>
@@ -64,10 +65,13 @@ public:
 
     JavaScriptEvaluationResult(JSObjectID, HashMap<JSObjectID, Variant>&&);
     static Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> extract(JSGlobalContextRef, JSValueRef);
+    static std::optional<JavaScriptEvaluationResult> extract(id);
 #else
     JavaScriptEvaluationResult(std::span<const uint8_t> wireBytes)
         : m_wireBytes(wireBytes) { }
 #endif
+
+    JavaScriptEvaluationResult(JSGlobalContextRef, JSValueRef);
     JavaScriptEvaluationResult(JavaScriptEvaluationResult&&);
     JavaScriptEvaluationResult& operator=(JavaScriptEvaluationResult&&);
     ~JavaScriptEvaluationResult();
@@ -84,9 +88,11 @@ public:
 
     WKRetainPtr<WKTypeRef> toWK();
 
+    JSValueRef toJS(JSGlobalContextRef);
+
 private:
 #if PLATFORM(COCOA)
-    JavaScriptEvaluationResult(JSGlobalContextRef, JSValueRef);
+    JavaScriptEvaluationResult(id);
 
     RetainPtr<id> toID(Variant&&);
     RefPtr<API::Object> toAPI(Variant&&);
@@ -112,6 +118,7 @@ private:
     HashMap<JSObjectID, Variant> m_map;
     JSObjectID m_root;
 #else
+    RefPtr<WebCore::SerializedScriptValue> m_valueFromJS;
     std::span<const uint8_t> m_wireBytes;
 #endif
 };
@@ -127,6 +134,10 @@ template<> struct AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, s
 
 template<> struct AsyncReplyError<Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String>> {
     static Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String> create();
+};
+
+template<> struct AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, String>> {
+    static Expected<WebKit::JavaScriptEvaluationResult, String> create();
 };
 
 }

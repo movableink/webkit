@@ -216,7 +216,6 @@ $(PROJECT_DIR)/Shared/API/APIGeometry.serialization.in
 $(PROJECT_DIR)/Shared/API/APINumber.serialization.in
 $(PROJECT_DIR)/Shared/API/APIObject.serialization.in
 $(PROJECT_DIR)/Shared/API/APIPageHandle.serialization.in
-$(PROJECT_DIR)/Shared/API/APISerializedScriptValue.serialization.in
 $(PROJECT_DIR)/Shared/API/APIString.serialization.in
 $(PROJECT_DIR)/Shared/API/APIURL.serialization.in
 $(PROJECT_DIR)/Shared/API/APIURLRequest.serialization.in

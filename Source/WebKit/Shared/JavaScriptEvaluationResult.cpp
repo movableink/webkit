@@ -30,6 +30,7 @@
 #include "APIDictionary.h"
 #include "APISerializedScriptValue.h"
 #include <WebCore/ExceptionDetails.h>
+#include <WebCore/SerializedScriptValue.h>
 
 #if PLATFORM(COCOA)
 #include "CoreIPCNumber.h"
@@ -46,6 +47,18 @@ Ref<API::SerializedScriptValue> JavaScriptEvaluationResult::legacySerializedScri
 WKRetainPtr<WKTypeRef> JavaScriptEvaluationResult::toWK()
 {
     return API::SerializedScriptValue::deserializeWK(legacySerializedScriptValue()->internalRepresentation());
+}
+
+JSValueRef JavaScriptEvaluationResult::toJS(JSGlobalContextRef context)
+{
+    Ref serializedScriptValue = API::SerializedScriptValue::createFromWireBytes(wireBytes());
+    return serializedScriptValue->internalRepresentation().deserialize(context, nullptr);
+}
+
+JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)
+    : m_valueFromJS(WebCore::SerializedScriptValue::create(context, value, nullptr))
+    , m_wireBytes(m_valueFromJS ? m_valueFromJS->wireBytes().span() : std::span<const uint8_t>())
+{
 }
 #endif
 
@@ -65,6 +78,11 @@ Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDet
 }
 
 Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String> AsyncReplyError<Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String>>::create()
+{
+    return makeUnexpected(String());
+}
+
+Expected<WebKit::JavaScriptEvaluationResult, String> AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, String>>::create()
 {
     return makeUnexpected(String());
 }
