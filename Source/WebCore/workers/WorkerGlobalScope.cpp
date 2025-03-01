@@ -679,11 +679,7 @@ void WorkerGlobalScope::deleteJSCodeAndGC(Synchronous synchronous)
         return;
     }
 #endif
-#if USE(CF) || USE(GLIB)
     vm().heap.reportAbandonedObjectGraph();
-#else
-    vm().heap.collectNow(JSC::Async, JSC::CollectionScope::Full);
-#endif
 }
 
 void WorkerGlobalScope::releaseMemoryInWorkers(Synchronous synchronous)

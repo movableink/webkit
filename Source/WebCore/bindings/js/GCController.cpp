@@ -70,15 +70,8 @@ GCController::GCController()
 
 void GCController::garbageCollectSoon()
 {
-    // We only use reportAbandonedObjectGraph for systems for which there's an implementation
-    // of the garbage collector timers in JavaScriptCore. We wouldn't need this if JavaScriptCore
-    // used a timer implementation from WTF like RunLoop::Timer.
-#if USE(CF) || USE(GLIB)
     JSLockHolder lock(commonVM());
     commonVM().heap.reportAbandonedObjectGraph();
-#else
-    garbageCollectNow();
-#endif
 }
 
 void GCController::garbageCollectOnNextRunLoop()
@@ -103,13 +96,9 @@ void GCController::garbageCollectNow()
 
 void GCController::garbageCollectNowIfNotDoneRecently()
 {
-#if USE(CF) || USE(GLIB)
     JSLockHolder lock(commonVM());
     if (!commonVM().heap.currentThreadIsDoingGCWork())
         commonVM().heap.collectNowFullIfNotDoneRecently(Async);
-#else
-    garbageCollectNow();
-#endif
 }
 
 void GCController::garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone)
