@@ -874,6 +874,19 @@ void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const Render
             auto shadowRect = paintRect;
             shadowRect.inflate(shadowPaintingExtent + shadowSpread);
             shadowRect.move(shadowOffset);
+
+            if (!closedEdges.left())
+                shadowRect.shiftXEdgeTo(paintRect.x());
+
+            if (!closedEdges.top())
+                shadowRect.shiftYEdgeTo(paintRect.y());
+
+            if (!closedEdges.right())
+                shadowRect.shiftMaxXEdgeTo(paintRect.maxX());
+
+            if (!closedEdges.bottom())
+                shadowRect.shiftMaxYEdgeTo(paintRect.maxY());
+
             auto pixelSnappedShadowRect = snapRectToDevicePixels(shadowRect, deviceScaleFactor);
 
             GraphicsContextStateSaver stateSaver(context);
