@@ -79,6 +79,9 @@ public:
     const RoundedRectRadii& radii() const { return m_borderRect.radii(); }
     void setRadii(const RoundedRectRadii& radii) { m_borderRect.setRadii(radii); }
 
+    // Note that the inner edge isn't necessarily a rounded rect, but the radii still represent where the straight edge sections terminate.
+    const RoundedRectRadii& innerEdgeRadii() const { return m_innerEdgeRect.radii(); }
+
     FloatRect snappedOuterRect(float deviceScaleFactor) const;
     FloatRect snappedInnerRect(float deviceScaleFactor) const;
 

@@ -54,7 +54,7 @@ private:
 
     void paintOneBorderSide(const BorderShape&, const Sides&, const LayoutRect& sideRect, BoxSide, BoxSide adjacentSide1, BoxSide adjacentSide2, const Path*, bool antialias, const Color* overrideColor) const;
 
-    void drawBoxSideFromPath(const LayoutRect& borderRect, const Path& borderPath, const BorderEdges&, std::optional<RectCorners<LengthSize>>, float thickness, float drawThickness, BoxSide, Color, BorderStyle, BleedAvoidance, RectEdges<bool> closedEdges) const;
+    void drawBoxSideFromPath(const BorderShape&, const Path& borderPath, const BorderEdges&, float thickness, float drawThickness, BoxSide, Color, BorderStyle, BleedAvoidance) const;
     void clipBorderSidePolygon(const BorderShape&, BoxSide, bool firstEdgeMatches, bool secondEdgeMatches) const;
 
     LayoutRect borderRectAdjustedForBleedAvoidance(const LayoutRect&, BleedAvoidance) const;
