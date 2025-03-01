@@ -82,10 +82,8 @@ TEST(WKWebView, EvaluateJavaScriptErrorCases)
     [webView _test_waitForDidFinishNavigation];
 
     [webView evaluateJavaScript:@"document.body" completionHandler:^(id result, NSError *error) {
-        EXPECT_NULL(result);
-        EXPECT_WK_STREQ(@"WKErrorDomain", [error domain]);
-        EXPECT_EQ(WKErrorJavaScriptResultTypeIsUnsupported, [error code]);
-
+        EXPECT_TRUE([result isKindOfClass:NSDictionary.class]);
+        EXPECT_NULL(error);
         isDone = true;
     }];
 
@@ -922,10 +920,19 @@ TEST(EvaluateJavaScript, ReturnTypes)
     "(function(){return {"
     "    blob: new Blob(['Hello']),\n"
     "}})()";
+    NSDictionary *expectedBlob = @{
+        @"arrayBuffer" : @{ },
+        @"bytes" : @{ },
+        @"size" : @5,
+        @"slice" : @{ },
+        @"stream" : @{ },
+        @"text" : @{ },
+        @"type" : @"",
+    };
     [webView evaluateJavaScript:jsWithBlob completionHandler:^(id value, NSError *error) {
         EXPECT_FALSE(error);
         NSDictionary *dict = (NSDictionary *)value;
-        EXPECT_EQ([dict objectForKey:@"blob"], [NSNull null]);
+        EXPECT_TRUE([[dict objectForKey:@"blob"] isEqual:expectedBlob]);
     }];
 
     NSString *jsWithNestedObjects = @""
@@ -993,7 +1000,7 @@ TEST(EvaluateJavaScript, ReturnTypes)
     "aDouble: 3.14,\n"
     "file: new File(['content'], 'file.txt', { type: 'text/plain' }),\n"
     "fileList: new DataTransfer().files,\n"
-    "imageData: new ImageData(100, 100),\n"
+    "imageData: new ImageData(2, 2),\n"
     "emptyString: '',\n"
     "arrayBuffer: new ArrayBuffer(8),\n"
     "arrayBufferView: new Uint8Array(this.arrayBuffer),\n"
@@ -1036,11 +1043,38 @@ TEST(EvaluateJavaScript, ReturnTypes)
         EXPECT_TRUE([regex isKindOfClass:[NSDictionary class]]); // Converted to empty dictionary
         EXPECT_EQ([regex count], 0u);
 
-        EXPECT_EQ([dict objectForKey:@"blob"], [NSNull null]); // Converted to null
+        EXPECT_TRUE([[dict objectForKey:@"blob"] isEqual:expectedBlob]);
         EXPECT_TRUE([[dict objectForKey:@"aDouble"] isKindOfClass:[NSNumber class]]);
         EXPECT_TRUE([[dict objectForKey:@"zero"] isKindOfClass:[NSNumber class]]);
-        EXPECT_EQ([dict objectForKey:@"imageData"], [NSNull null]); // Converted to null
-        EXPECT_EQ([dict objectForKey:@"file"], [NSNull null]); // Converted to null
+
+        NSDictionary *expectedImageData = @{
+            @"colorSpace" : @"srgb",
+            @"height" : @2,
+            @"width" : @2,
+            @"data" : @{
+                @"0" : @0, @"1" : @0, @"2" : @0, @"3" : @0,
+                @"4" : @0, @"5" : @0, @"6" : @0, @"7" : @0,
+                @"8" : @0, @"9" : @0, @"10" : @0, @"11" : @0,
+                @"12" : @0, @"13" : @0, @"14" : @0, @"15" : @0
+            }
+        };
+        EXPECT_TRUE([[dict objectForKey:@"imageData"] isEqual:expectedImageData]);
+
+        RetainPtr<NSMutableDictionary> fileWithLastModifiedRemoved = adoptNS([[dict objectForKey:@"file"] mutableCopy]);
+        [fileWithLastModifiedRemoved removeObjectForKey:@"lastModified"]; // Nondeterministic value.
+        NSDictionary *expectedFileObject = @{
+            @"arrayBuffer" : @{ },
+            @"bytes" : @{ },
+            @"name" : @"file.txt",
+            @"size" : @7,
+            @"slice" : @{ },
+            @"stream" : @{ },
+            @"text" : @{ },
+            @"type" : @"text/plain",
+            @"webkitRelativePath" : @""
+        };
+        EXPECT_TRUE([fileWithLastModifiedRemoved isEqual:expectedFileObject]);
+
         NSDictionary* arrayBufferView = [dict objectForKey:@"arrayBufferView"];
         EXPECT_TRUE([arrayBufferView isKindOfClass:[NSDictionary class]]);
         EXPECT_EQ([arrayBufferView count], 0u);
@@ -1065,7 +1099,11 @@ TEST(EvaluateJavaScript, ReturnTypes)
         EXPECT_TRUE([aSet isKindOfClass:[NSDictionary class]]);
         EXPECT_EQ([aSet count], 0u);
 
-        EXPECT_EQ([dict objectForKey:@"fileList"], [NSNull null]); // Converted to null
+        NSDictionary *expectedFileList = @{
+            @"item" : @{ },
+            @"length" : @0,
+        };
+        EXPECT_TRUE([[dict objectForKey:@"fileList"] isEqual:expectedFileList]);
         NSString *emptyString = [dict objectForKey:@"emptyString"];
         EXPECT_TRUE([emptyString isKindOfClass:[NSString class]]);
         if ([emptyString isKindOfClass:[NSString class]])
