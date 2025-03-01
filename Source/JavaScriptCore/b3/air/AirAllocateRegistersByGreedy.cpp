@@ -125,7 +125,7 @@ static bool verbose() { return Options::airGreedyRegAllocVerbose(); }
 //
 // Note that stack slots are allocated during a subsequent compiler phase.
 
-using Point = size_t;
+using Point = uint32_t;
 using Interval = WTF::Range<Point>;
 
 class LiveRange {
@@ -173,16 +173,6 @@ public:
         }
         m_size += interval.distance();
         validate();
-    }
-
-    void crossBasicBlockBoundary()
-    {
-        m_crossesBasicBlockBoundary = true;
-    }
-
-    bool isLocal() const
-    {
-        return !m_crossesBasicBlockBoundary && m_intervals.size() <= 1;
     }
 
     const Deque<Interval>& intervals() const
@@ -298,17 +288,14 @@ public:
         for (auto& interval : intervals())
             out.print(comma, interval);
         out.print(" }[", m_size, "]");
-        if (isLocal())
-            out.print("(local)");
     }
 
 private:
     Deque<Interval> m_intervals;
     size_t m_size { 0 }; // Sum of the distances over m_intervals
-    bool m_crossesBasicBlockBoundary { false };
 };
 
-enum class Stage {
+enum class Stage : uint8_t {
     New,
     Unspillable,
     TryAllocate,
@@ -564,18 +551,17 @@ struct TmpData {
         ASSERT_IMPLIES(coalescables.size(), !isGroup()); // Only bottom-most should have coalescables
     }
 
-    Stage stage { Stage::New };
     LiveRange liveRange;
-    float useDefCost { 0.0f };
-    bool unspillable { false };
-    Reg preferredReg;
     Vector<CoalescableWith> coalescables;
+    StackSlot* spillSlot { nullptr };
+    float useDefCost { 0.0f };
     Tmp parentGroup;
     Tmp subGroup0, subGroup1;
-    size_t splitMetadataIndex { 0 };
-
+    uint32_t splitMetadataIndex { 0 };
+    Stage stage { Stage::New };
+    bool unspillable { false };
+    Reg preferredReg;
     Reg assigned;
-    StackSlot* spillSlot { nullptr };
 };
 
 // SplitMetadata tracks a Tmp that is split and the new Tmps that are used to carry the value
@@ -988,9 +974,7 @@ private:
 
             if (blockAfter) {
                 for (Tmp tmp : liveness.liveAtHead(blockAfter)) {
-                    if (activeIntervals[tmp].contains(positionOfTail))
-                        m_map[tmp].liveRange.crossBasicBlockBoundary();
-                    else {
+                    if (!activeIntervals[tmp].contains(positionOfTail)) {
                         // If tmp was live at the head of the next block but no longer live, close
                         // the current interval.
                         ASSERT(activeIntervals[tmp].begin() == this->positionOfHead(blockAfter));
@@ -1297,11 +1281,19 @@ private:
         tmpData.validate();
 
         tmpData.stage = stage;
-        size_t rangeSizeOrStart = tmpData.liveRange.size();
-        if (tmpData.liveRange.isLocal())
-            rangeSizeOrStart = tmpData.liveRange.intervals().first().begin();
 
-        m_queue.enqueue({ tmp, stage, rangeSizeOrStart, tmpData.preferredReg || tmpData.coalescables.size(), !tmpData.liveRange.isLocal() });
+        bool isLocal = false;
+        size_t rangeSizeOrStart = tmpData.liveRange.size();
+        if (tmpData.liveRange.intervals().size() == 1) {
+            const Interval& interval = tmpData.liveRange.intervals().first();
+            BasicBlock* block = findBlockContainingPoint(interval.begin());
+            Point blockTail = positionOfTail(block);
+            if (interval.end() - 1 <= blockTail) {
+                isLocal = true;
+                rangeSizeOrStart = interval.begin();
+            }
+        }
+        m_queue.enqueue({ tmp, stage, rangeSizeOrStart, tmpData.preferredReg || tmpData.coalescables.size(), !isLocal });
         dataLogLnIf(verbose(), "Enqueued (", stage, ") ", tmp);
     }
 
