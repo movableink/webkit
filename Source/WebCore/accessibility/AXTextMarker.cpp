@@ -1257,9 +1257,30 @@ AXTextMarker AXTextMarker::nextParagraphEnd() const
 
 AXTextMarker AXTextMarker::toTextRunMarker(std::optional<AXID> stopAtID) const
 {
-    if (!isValid() || isInTextRun()) {
+    RefPtr object = isolatedObject();
+    if (!object) {
+        // Equivalent to AXTextMarker::isValid, but "inlined" since this function is hot.
+        return *this;
+    }
+
+    const auto* runs = object->textRuns();
+    if (runs && runs->size()) {
+        unsigned totalLength = runs->totalLength();
         // If something has constructed a text-run marker, it should've done so with an in-bounds offset.
-        TEXT_MARKER_ASSERT(!isValid() || isolatedObject()->textRuns()->totalLength() >= offset());
+        bool isInBounds = totalLength >= offset();
+        if (isInBounds)
+            return *this;
+
+        if (object->editableAncestor()) {
+            // When a user types, we send out notifications with text markers whose offsets are relative
+            // to the text at that time. By the time VoiceOver sends that text marker back to us, the text
+            // may have further changed (e.g. when rapidly deleting multiple characters). Gracefully handle
+            // this scenario by setting this text marker back in-bounds.
+            const_cast<AXTextMarker*>(this)->m_data.offset = totalLength;
+            return *this;
+        }
+
+        RELEASE_ASSERT_NOT_REACHED();
         return *this;
     }
 
@@ -1273,8 +1294,7 @@ AXTextMarker AXTextMarker::toTextRunMarker(std::optional<AXID> stopAtID) const
     // AXTextMarker { ID 3: StaticText, Offset 3 }
     // Because we had to walk over ID 2 which had length 3 text.
     size_t precedingOffset = 0;
-    RefPtr start = isolatedObject();
-    RefPtr current = start->hasTextRuns() ? WTFMove(start) : findObjectWithRuns(*start, AXDirection::Next, stopAtID);
+    RefPtr current = runs ? WTFMove(object) : findObjectWithRuns(*object, AXDirection::Next, stopAtID);
     while (current) {
         unsigned totalLength = current->textRuns()->totalLength();
         if (precedingOffset + totalLength >= offset())

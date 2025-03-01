@@ -1483,7 +1483,7 @@ void AXObjectCache::handleRowspanChanged(AccessibilityTableCell& axCell)
 #if ENABLE(AX_THREAD_TEXT_APIS)
 void AXObjectCache::onTextRunsChanged(const RenderObject& renderer)
 {
-    postNotification(const_cast<RenderObject*>(&renderer), AXNotification::TextRunsChanged);
+    updateIsolatedTree(get(const_cast<RenderObject&>(renderer)), AXNotification::TextRunsChanged);
 }
 #endif
 

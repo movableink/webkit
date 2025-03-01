@@ -908,6 +908,8 @@ accessibility/mac/dynamic-drag.html [ Skip ]
 
 accessibility/display-contents/role-row-headers.html [ Skip ]
 
+accessibility/mac/text-marker-from-typing-notification.html [ Skip ]
+
 # Missing AccessibilityUIElement::dateTimeValue() implementation.
 accessibility/dynamic-datetime-attribute.html [ Skip ]
 
@@ -925,6 +927,8 @@ accessibility/select-whitespace-collapsed-text.html [ Skip ]
 # Missing AccessibilityUIElement::isIndeterminate() implementation.
 accessibility/indeterminate-progressbar-custom-element.html [ Skip ]
 accessibility/progress-indeterminate-value.html [ Skip ]
+
+accessibility/mac/input-type-change-crash.html [ Skip ]
 
 # Missing AccessibilityUIElement::isInTable() implementation.
 accessibility/table-ancestry.html [ Skip ]
