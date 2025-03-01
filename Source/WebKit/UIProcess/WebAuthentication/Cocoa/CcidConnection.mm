@@ -101,10 +101,10 @@ void CcidConnection::trySelectFidoApplet()
 
 void CcidConnection::transact(Vector<uint8_t>&& data, DataReceivedCallback&& callback) const
 {
-    [m_smartCard beginSessionWithReply:makeBlockPtr([this, data = WTFMove(data), callback = WTFMove(callback)] (BOOL success, NSError *error) mutable {
+    [m_smartCard beginSessionWithReply:makeBlockPtr([this, protectedThis = Ref { *this }, data = WTFMove(data), callback = WTFMove(callback)] (BOOL success, NSError *error) mutable {
         if (!success)
             return;
-        [m_smartCard transmitRequest:toNSData(data).autorelease() reply:makeBlockPtr([this, callback = WTFMove(callback)](NSData * _Nullable nsResponse, NSError * _Nullable error) mutable {
+        [m_smartCard transmitRequest:toNSData(data).autorelease() reply:makeBlockPtr([this, protectedThis = Ref { *this }, callback = WTFMove(callback)](NSData * _Nullable nsResponse, NSError * _Nullable error) mutable {
             [m_smartCard endSession];
             callOnMainRunLoop([response = makeVector(nsResponse), callback = WTFMove(callback)] () mutable {
                 callback(WTFMove(response));

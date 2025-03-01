@@ -161,17 +161,6 @@ UIProcess/Inspector/mac/WKInspectorViewController.mm
 UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.cpp
 UIProcess/RemotePageProxy.cpp
 UIProcess/SpeechRecognitionPermissionManager.cpp
-UIProcess/WebAuthentication/AuthenticatorManager.cpp
-UIProcess/WebAuthentication/Cocoa/LocalService.mm
-UIProcess/WebAuthentication/Cocoa/NfcService.mm
-UIProcess/WebAuthentication/Cocoa/WebAuthenticationPanelClient.mm
-UIProcess/WebAuthentication/Mock/MockNfcService.mm
-UIProcess/WebAuthentication/Virtual/VirtualService.mm
-UIProcess/WebAuthentication/fido/CtapAuthenticator.cpp
-UIProcess/WebAuthentication/fido/CtapCcidDriver.cpp
-UIProcess/WebAuthentication/fido/CtapNfcDriver.cpp
-UIProcess/WebAuthentication/fido/FidoService.cpp
-UIProcess/WebAuthentication/fido/U2fAuthenticator.cpp
 UIProcess/WebOpenPanelResultListenerProxy.cpp
 UIProcess/WebPreferences.h
 UIProcess/WebProcessActivityState.cpp

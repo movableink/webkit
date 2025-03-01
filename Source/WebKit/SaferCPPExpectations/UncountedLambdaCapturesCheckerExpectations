@@ -5,13 +5,6 @@ UIProcess/Cocoa/SOAuthorization/SOAuthorizationSession.mm
 UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm
 UIProcess/SpeechRecognitionPermissionManager.cpp
 UIProcess/UserMediaProcessManager.cpp
-UIProcess/WebAuthentication/Authenticator.cpp
-UIProcess/WebAuthentication/AuthenticatorManager.cpp
-UIProcess/WebAuthentication/Cocoa/CcidConnection.mm
-UIProcess/WebAuthentication/Cocoa/CcidService.mm
-UIProcess/WebAuthentication/Cocoa/NfcService.mm
-UIProcess/WebAuthentication/fido/CtapAuthenticator.cpp
-UIProcess/WebAuthentication/fido/CtapCcidDriver.cpp
 UIProcess/WebsiteData/WebDeviceOrientationAndMotionAccessController.cpp
 UIProcess/mac/WebContextMenuProxyMac.mm
 UIProcess/mac/WebViewImpl.mm
