@@ -87,7 +87,7 @@ void BrowsingContextGroup::addFrameProcessAndInjectPageContextIf(FrameProcess& p
     Ref processProxy = process.process();
     for (Ref page : m_pages) {
         if (site == Site(URL(page->currentURL())))
-            return;
+            continue;
         if (!functor(page))
             continue;
         auto& set = m_remotePages.ensure(page, [] {
