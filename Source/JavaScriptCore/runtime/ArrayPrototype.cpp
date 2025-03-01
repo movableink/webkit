@@ -1513,7 +1513,33 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIndexOf, (JSGlobalObject* globalObject, C
     JSValue searchElement = callFrame->argument(0);
 
     if (LIKELY(isJSArray(thisObject))) {
-        JSValue result = fastIndexOf<IndexOfDirection::Forward>(globalObject, vm, asArray(thisObject), length, searchElement, index);
+        JSArray* array = asArray(thisObject);
+        Butterfly* butterfly = array->butterfly();
+        if (isCopyOnWrite(array->indexingMode()) && JSImmutableButterfly::isOnlyAtomStringsStructure(vm, butterfly) && searchElement.isString()) {
+            AtomString search = asString(searchElement)->toAtomString(globalObject);
+            RETURN_IF_EXCEPTION(scope, { });
+
+            JSValue result = jsNumber(-1);
+            if (vm.atomStringToJSStringMap.contains(search.impl())) {
+                auto data = butterfly->contiguous().data();
+                for (unsigned i = index; i < length; ++i) {
+                    JSValue value = data[i].get();
+                    if (asString(value)->getValueImpl() == search.impl()) {
+                        result = jsNumber(i);
+                        break;
+                    }
+                }
+            }
+
+#if ASSERT_ENABLED
+            JSValue expected = fastIndexOf<IndexOfDirection::Forward>(globalObject, vm, array, length, searchElement, index);
+            RETURN_IF_EXCEPTION(scope, { });
+            ASSERT(expected.asNumber() == result.asNumber());
+#endif
+            return JSValue::encode(result);
+        }
+
+        JSValue result = fastIndexOf<IndexOfDirection::Forward>(globalObject, vm, array, length, searchElement, index);
         RETURN_IF_EXCEPTION(scope, { });
         if (result)
             return JSValue::encode(result);
@@ -2127,6 +2153,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncWith, (JSGlobalObject* globalObject, Call
     return JSValue::encode(result);
 }
 
+// FIXME: We can optimize `Array.prototype.includes` for atom string arrays too. https://bugs.webkit.org/show_bug.cgi?id=288695
 JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIncludes, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();

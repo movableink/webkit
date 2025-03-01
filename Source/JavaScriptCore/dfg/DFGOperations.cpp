@@ -3864,6 +3864,39 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfString, UCPUStrictInt32, (JSGlobal
     OPERATION_RETURN(scope, arrayIndexOfString(globalObject, butterfly, searchElement, index));
 }
 
+JSC_DEFINE_JIT_OPERATION(operationCopyOnWriteArrayIndexOfString, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, JSString* searchElement, int32_t index))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (JSImmutableButterfly::isOnlyAtomStringsStructure(vm, butterfly)) {
+        AtomString search = searchElement->toAtomString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        UCPUStrictInt32 result = toUCPUStrictInt32(-1);
+        if (vm.atomStringToJSStringMap.contains(search.impl())) {
+            int32_t length = butterfly->publicLength();
+            auto data = butterfly->contiguous().data();
+            for (int32_t i = index; i < length; ++i) {
+                JSValue value = data[i].get();
+                if (asString(value)->getValueImpl() == search.impl()) {
+                    result = toUCPUStrictInt32(i);
+                    break;
+                }
+            }
+        }
+#if ASSERT_ENABLED
+        UCPUStrictInt32 expected = arrayIndexOfString(globalObject, butterfly, searchElement, index);
+        ASSERT(expected == result);
+#endif
+        OPERATION_RETURN(scope, result);
+    }
+
+    OPERATION_RETURN(scope, arrayIndexOfString(globalObject, butterfly, searchElement, index));
+}
+
 JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32OrContiguous, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
 {
     VM& vm = globalObject->vm();
