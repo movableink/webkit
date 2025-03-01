@@ -775,6 +775,7 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/webaudio/WaveShaperNode.idl
     Modules/webaudio/WaveShaperOptions.idl
 
+    Modules/webauthn/AllAcceptedCredentialsOptions.idl
     Modules/webauthn/AttestationConveyancePreference.idl
     Modules/webauthn/AuthenticationExtensionsClientInputs.idl
     Modules/webauthn/AuthenticationExtensionsClientInputsJSON.idl
@@ -788,6 +789,7 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/webauthn/AuthenticatorSelectionCriteria.idl
     Modules/webauthn/AuthenticatorTransport.idl
     Modules/webauthn/CredentialPropertiesOutput.idl
+    Modules/webauthn/CurrentUserDetailsOptions.idl
     Modules/webauthn/PublicKeyCredential.idl
     Modules/webauthn/PublicKeyCredentialCreationOptions.idl
     Modules/webauthn/PublicKeyCredentialCreationOptionsJSON.idl
@@ -798,12 +800,12 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/webauthn/PublicKeyCredentialRequestOptions.idl
     Modules/webauthn/PublicKeyCredentialRequestOptionsJSON.idl
     Modules/webauthn/PublicKeyCredentialRpEntity.idl
+    Modules/webauthn/PublicKeyCredentialType.idl
     Modules/webauthn/PublicKeyCredentialUserEntity.idl
     Modules/webauthn/PublicKeyCredentialUserEntityJSON.idl
-
-    Modules/webauthn/PublicKeyCredentialType.idl
     Modules/webauthn/RegistrationResponseJSON.idl
     Modules/webauthn/ResidentKeyRequirement.idl
+    Modules/webauthn/UnknownCredentialOptions.idl
     Modules/webauthn/UserVerificationRequirement.idl
 
     Modules/webcodecs/AacEncoderConfig.idl

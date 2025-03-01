@@ -1678,6 +1678,24 @@ struct WebCore::AuthenticationExtensionsClientOutputs {
     int64_t alg;
 };
 
+struct WebCore::UnknownCredentialOptions {
+    String rpId;
+    String credentialId;
+};
+
+struct WebCore::AllAcceptedCredentialsOptions {
+    String rpId;
+    String userId;
+    Vector<String> allAcceptedCredentialIds;
+};
+
+struct WebCore::CurrentUserDetailsOptions {
+    String rpId;
+    String userId;
+    String name;
+    String displayName;
+};
+
 struct WebCore::AuthenticatorSelectionCriteria {
     std::optional<WebCore::AuthenticatorAttachment> authenticatorAttachment;
     std::optional<WebCore::ResidentKeyRequirement> residentKey;

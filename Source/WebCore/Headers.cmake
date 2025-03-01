@@ -624,6 +624,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/web-locks/WebLockMode.h
     Modules/web-locks/WebLockRegistry.h
 
+    Modules/webauthn/AllAcceptedCredentialsOptions.h
     Modules/webauthn/AttestationConveyancePreference.h
     Modules/webauthn/AuthenticationExtensionsClientInputs.h
     Modules/webauthn/AuthenticationExtensionsClientInputsJSON.h
@@ -633,6 +634,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/webauthn/AuthenticatorCoordinatorClient.h
     Modules/webauthn/AuthenticatorResponseData.h
     Modules/webauthn/AuthenticatorTransport.h
+    Modules/webauthn/CurrentUserDetailsOptions.h
     Modules/webauthn/PublicKeyCredentialCreationOptions.h
     Modules/webauthn/PublicKeyCredentialCreationOptionsJSON.h
     Modules/webauthn/PublicKeyCredentialDescriptor.h
@@ -641,6 +643,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/webauthn/PublicKeyCredentialRequestOptions.h
     Modules/webauthn/PublicKeyCredentialRequestOptionsJSON.h
     Modules/webauthn/PublicKeyCredentialType.h
+    Modules/webauthn/UnknownCredentialOptions.h
     Modules/webauthn/UserVerificationRequirement.h
     Modules/webauthn/WebAuthenticationConstants.h
     Modules/webauthn/WebAuthenticationUtils.h

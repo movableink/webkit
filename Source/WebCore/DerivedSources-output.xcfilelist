@@ -84,6 +84,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSAesGcmParams.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSAesGcmParams.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSAesKeyParams.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSAesKeyParams.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSAllAcceptedCredentialsOptions.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSAllAcceptedCredentialsOptions.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSAnalyserNode.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSAnalyserNode.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSAnalyserOptions.cpp
@@ -708,6 +710,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCryptoRsaHashedKeyAlgorithm.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCryptoRsaHashedKeyAlgorithm.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCryptoRsaKeyAlgorithm.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCryptoRsaKeyAlgorithm.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCurrentUserDetailsOptions.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCurrentUserDetailsOptions.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCustomAnimationOptions.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCustomAnimationOptions.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCustomEffect.cpp
@@ -3082,6 +3086,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUndoItem.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUndoItem.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUndoManager.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUndoManager.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUnknownCredentialOptions.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUnknownCredentialOptions.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUserActivation.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUserActivation.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUserMessageHandler.cpp

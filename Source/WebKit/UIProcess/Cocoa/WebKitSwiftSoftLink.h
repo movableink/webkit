@@ -46,4 +46,4 @@ SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionScrollableItem)
 SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKTextExtractionImageItem)
 SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaSpatialVideoMetadata)
 SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKStageModeInteractionDriver)
-
+SOFT_LINK_CLASS_FOR_HEADER(WebKit, CredentialUpdaterShim)

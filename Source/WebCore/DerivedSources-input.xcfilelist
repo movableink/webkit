@@ -993,6 +993,7 @@ $(PROJECT_DIR)/Modules/webaudio/WebKitAudioPannerNode.idl
 $(PROJECT_DIR)/Modules/webaudio/WebKitDynamicsCompressorNode.idl
 $(PROJECT_DIR)/Modules/webaudio/WebKitOfflineAudioContext.idl
 $(PROJECT_DIR)/Modules/webaudio/WebKitOscillatorNode.idl
+$(PROJECT_DIR)/Modules/webauthn/AllAcceptedCredentialsOptions.idl
 $(PROJECT_DIR)/Modules/webauthn/AttestationConveyancePreference.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticationExtensionsClientInputs.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticationExtensionsClientInputsJSON.idl
@@ -1005,6 +1006,7 @@ $(PROJECT_DIR)/Modules/webauthn/AuthenticatorAttestationResponse.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorResponse.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorSelectionCriteria.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorTransport.idl
+$(PROJECT_DIR)/Modules/webauthn/CurrentUserDetailsOptions.idl
 $(PROJECT_DIR)/Modules/webauthn/CredentialPropertiesOutput.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredential.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialCreationOptions.idl
@@ -1022,6 +1024,7 @@ $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialUserEntityJSON.idl
 $(PROJECT_DIR)/Modules/webauthn/RegistrationResponseJSON.idl
 $(PROJECT_DIR)/Modules/webauthn/ResidentKeyRequirement.idl
 $(PROJECT_DIR)/Modules/webauthn/UserVerificationRequirement.idl
+$(PROJECT_DIR)/Modules/webauthn/UnknownCredentialOptions.idl
 $(PROJECT_DIR)/Modules/webcodecs/AacEncoderConfig.idl
 $(PROJECT_DIR)/Modules/webcodecs/AudioSampleFormat.idl
 $(PROJECT_DIR)/Modules/webcodecs/AvcEncoderConfig.idl
