@@ -887,12 +887,14 @@ void UnifiedPDFPlugin::paintPDFContent(const WebCore::GraphicsLayer* layer, Grap
             [page drawWithBox:kPDFDisplayBoxCropBox toContext:context.platformContext()];
         }
 
-        if (currentPageHasAnnotation) {
-            auto pageGeometry = m_documentLayout.geometryForPage(page);
-            auto transformForBox = m_documentLayout.toPageTransform(*pageGeometry).inverse().value_or(AffineTransform { });
-            GraphicsContextStateSaver stateSaver(context);
-            context.concatCTM(transformForBox);
-            paintHoveredAnnotationOnPage(pageInfo.pageIndex, context, clipRect);
+        if constexpr (hasFullAnnotationSupport) {
+            if (currentPageHasAnnotation) {
+                auto pageGeometry = m_documentLayout.geometryForPage(page);
+                auto transformForBox = m_documentLayout.toPageTransform(*pageGeometry).inverse().value_or(AffineTransform { });
+                GraphicsContextStateSaver stateSaver(context);
+                context.concatCTM(transformForBox);
+                paintHoveredAnnotationOnPage(pageInfo.pageIndex, context, clipRect);
+            }
         }
     }
 }
@@ -965,8 +967,8 @@ void UnifiedPDFPlugin::paintPDFSelection(const GraphicsLayer* layer, GraphicsCon
 static const WebCore::Color textAnnotationHoverColor()
 {
     static constexpr auto textAnnotationHoverAlpha = 0.12;
-    static NeverDestroyed color = WebCore::Color::createAndPreserveColorSpace([[[WebCore::CocoaColor systemBlueColor] colorWithAlphaComponent:textAnnotationHoverAlpha] CGColor]);
-    return color;
+    static NeverDestroyed color = RenderTheme::singleton().systemColor(CSSValueAppleSystemBlue, { }).colorWithAlpha(textAnnotationHoverAlpha);
+    return color.get();
 }
 
 void UnifiedPDFPlugin::paintHoveredAnnotationOnPage(PDFDocumentLayout::PageIndex indexOfPaintedPage, GraphicsContext& context, const FloatRect& clipRect)

@@ -713,6 +713,12 @@ private:
     static constexpr double minimumZoomScale = 0.2;
 #endif
     static constexpr double maximumZoomScale = 6.0;
+
+#if PLATFORM(MAC)
+    static constexpr bool hasFullAnnotationSupport = true;
+#else
+    static constexpr bool hasFullAnnotationSupport = false;
+#endif
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, RepaintRequirement);
