@@ -146,6 +146,12 @@ void WebSharedWorkerServerConnection::postErrorToWorkerObject(WebCore::SharedWor
     send(Messages::WebSharedWorkerObjectConnection::PostErrorToWorkerObject { sharedWorkerObjectIdentifier, errorMessage, lineNumber, columnNumber, sourceURL, isErrorEvent });
 }
 
+std::optional<SharedPreferencesForWebProcess> WebSharedWorkerServerConnection::sharedPreferencesForWebProcess(const IPC::Connection& connection) const
+{
+    Ref networkProcess = m_networkProcess;
+    return networkProcess->webProcessConnection(connection)->sharedPreferencesForWebProcess();
+}
+
 #if ENABLE(CONTENT_EXTENSIONS)
 void WebSharedWorkerServerConnection::reportNetworkUsageToWorkerObject(WebCore::SharedWorkerObjectIdentifier sharedWorkerObjectIdentifier, size_t bytesTransferredOverNetworkDelta)
 {

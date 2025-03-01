@@ -6879,6 +6879,7 @@ SharedWorkerEnabled:
       default: false
     WebKit:
       default: true
+  sharedPreferenceForWebProcess: true
 
 ShouldAllowUserInstalledFonts:
   type: bool
