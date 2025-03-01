@@ -2672,6 +2672,12 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
 
+#define TYPE PositionVisibility
+#define FOR_EACH(CASE) CASE(AnchorsValid) CASE(AnchorsVisible) CASE(NoOverflow)
+DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
+#undef TYPE
+#undef FOR_EACH
+
 #define TYPE PositionTryFallback::Tactic
 #define FOR_EACH(CASE) CASE(FlipBlock) CASE(FlipInline) CASE(FlipStart)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS

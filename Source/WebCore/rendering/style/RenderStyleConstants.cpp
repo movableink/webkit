@@ -1502,6 +1502,16 @@ TextStream& operator<<(TextStream& ts, OverflowContinue overflowContinue)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, PositionVisibility positionVisibility)
+{
+    switch (positionVisibility) {
+    case PositionVisibility::AnchorsValid: ts << "anchors-valid"; break;
+    case PositionVisibility::AnchorsVisible: ts << "anchors-visible"; break;
+    case PositionVisibility::NoOverflow: ts << "no-overflow"; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, StyleDifferenceContextSensitiveProperty property)
 {
     switch (property) {

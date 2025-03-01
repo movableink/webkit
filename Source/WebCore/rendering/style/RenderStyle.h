@@ -196,6 +196,7 @@ enum class PaintOrder : uint8_t;
 enum class PaintType : uint8_t;
 enum class PointerEvents : uint8_t;
 enum class PositionType : uint8_t;
+enum class PositionVisibility : uint8_t;
 enum class PrintColorAdjust : bool;
 enum class PseudoId : uint32_t;
 enum class QuoteType : uint8_t;
@@ -2355,6 +2356,10 @@ public:
     static Vector<PositionTryFallback> initialPositionTryFallbacks();
     const Vector<PositionTryFallback>& positionTryFallbacks() const;
     void setPositionTryFallbacks(const Vector<PositionTryFallback>&);
+
+    static constexpr OptionSet<PositionVisibility> initialPositionVisibility();
+    inline OptionSet<PositionVisibility> positionVisibility() const;
+    inline void setPositionVisibility(OptionSet<PositionVisibility>);
 
 private:
     struct NonInheritedFlags {

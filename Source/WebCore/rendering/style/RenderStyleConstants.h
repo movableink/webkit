@@ -1247,6 +1247,12 @@ enum class FieldSizing : bool {
     Content
 };
 
+enum class PositionVisibility : uint8_t {
+    AnchorsValid   = 1 << 0,
+    AnchorsVisible = 1 << 1,
+    NoOverflow     = 1 << 2
+};
+
 CSSBoxType transformBoxToCSSBoxType(TransformBox);
 
 constexpr float defaultMiterLimit = 4;
@@ -1325,6 +1331,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, OverflowWrap);
 WTF::TextStream& operator<<(WTF::TextStream&, PaintOrder);
 WTF::TextStream& operator<<(WTF::TextStream&, PointerEvents);
 WTF::TextStream& operator<<(WTF::TextStream&, PositionType);
+WTF::TextStream& operator<<(WTF::TextStream&, PositionVisibility);
 WTF::TextStream& operator<<(WTF::TextStream&, PrintColorAdjust);
 WTF::TextStream& operator<<(WTF::TextStream&, PseudoId);
 WTF::TextStream& operator<<(WTF::TextStream&, QuoteType);

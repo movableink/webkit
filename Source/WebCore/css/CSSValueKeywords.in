@@ -1895,6 +1895,11 @@ self-inline-start
 self-inline-end
 span-self-inline-start
 span-self-inline-end
+// position-visibility
+// always
+anchors-valid
+anchors-visible
+no-overflow
 
 // view-transition-name
 match-element

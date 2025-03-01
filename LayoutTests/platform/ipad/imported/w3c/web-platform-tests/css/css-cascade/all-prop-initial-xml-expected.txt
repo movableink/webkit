@@ -272,6 +272,7 @@ PASS position
 PASS position-anchor
 PASS position-area
 PASS position-try-order
+PASS position-visibility
 PASS print-color-adjust
 PASS quotes
 PASS r

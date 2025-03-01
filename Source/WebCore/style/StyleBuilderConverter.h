@@ -246,6 +246,7 @@ public:
     static Vector<ScopedName> convertAnchorName(BuilderState&, const CSSValue&);
     static std::optional<ScopedName> convertPositionAnchor(BuilderState&, const CSSValue&);
     static std::optional<PositionArea> convertPositionArea(BuilderState&, const CSSValue&);
+    static OptionSet<PositionVisibility> convertPositionVisibility(BuilderState&, const CSSValue&);
 
     static BlockEllipsis convertBlockEllipsis(BuilderState&, const CSSValue&);
     static size_t convertMaxLines(BuilderState&, const CSSValue&);
@@ -2668,6 +2669,23 @@ inline std::optional<PositionArea> BuilderConverter::convertPositionArea(Builder
         { *dim1Axis, positionAreaKeywordToTrack(dimPair.first), positionAreaKeywordToSelf(dimPair.first) },
         { *dim2Axis, positionAreaKeywordToTrack(dimPair.second), positionAreaKeywordToSelf(dimPair.second) }
     };
+}
+
+inline OptionSet<PositionVisibility> BuilderConverter::convertPositionVisibility(BuilderState& builderState, const CSSValue& value)
+{
+    if (value.valueID() == CSSValueAlways)
+        return { };
+
+    auto maybeList = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
+    if (!maybeList)
+        return { };
+    auto list = *maybeList;
+
+    OptionSet<PositionVisibility> result;
+    for (const auto& value : list)
+        result.add(fromCSSValue<PositionVisibility>(value));
+
+    return result;
 }
 
 inline BlockEllipsis BuilderConverter::convertBlockEllipsis(BuilderState& builderState, const CSSValue& value)

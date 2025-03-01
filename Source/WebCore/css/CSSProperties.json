@@ -12031,6 +12031,27 @@
                 "url": "https://drafts.csswg.org/css-anchor-position-1/#position-try-fallbacks"
             }
         },
+        "position-visibility": {
+            "animation-type": "discrete",
+            "initial": "anchors-visible",
+            "values": [
+                "always",
+                "anchors-valid",
+                "anchors-visible",
+                "no-overflow"
+            ],
+            "codegen-properties": {
+                "settings-flag": "cssAnchorPositioningEnabled",
+                "parser-function": "consumePositionVisibility",
+                "parser-grammar-unused": "always | [ anchors-valid || anchors-visible || no-overflow ]",
+                "parser-grammar-unused-reason": "Needs support for '||' groups.",
+                "style-builder-converter": "PositionVisibility"
+            },
+            "specification": {
+                "category": "css-anchor-position",
+                "url": "https://drafts.csswg.org/css-anchor-position/#position-visibility"
+            }
+        },
         "-webkit-tap-highlight-color": {
             "animation-type": "not animatable (legacy)",
             "inherited": true,

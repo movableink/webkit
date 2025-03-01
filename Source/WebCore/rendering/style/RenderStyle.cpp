@@ -2007,6 +2007,8 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyPositionTryFallbacks);
         if (first.positionTryOrder != second.positionTryOrder)
             changingProperties.m_properties.set(CSSPropertyPositionTryOrder);
+        if (first.positionVisibility != second.positionVisibility)
+            changingProperties.m_properties.set(CSSPropertyPositionVisibility);
         if (first.scrollSnapAlign != second.scrollSnapAlign)
             changingProperties.m_properties.set(CSSPropertyScrollSnapAlign);
         if (first.scrollSnapStop != second.scrollSnapStop)

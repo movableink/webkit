@@ -1267,6 +1267,12 @@ const gCSSProperties2 = {
       { type: 'discrete', options: [ [ 'absolute', 'fixed' ] ] }
     ]
   },
+  'position-visibility': {
+    // https://drafts.csswg.org/css-anchor-position-1/#position-visibility
+    types: [
+      { type: 'discrete', options: [ [ 'always', 'anchors-visible' ] ] }
+    ]
+  },
   'quotes': {
     // https://drafts.csswg.org/css-content-3/#propdef-quotes
     types: [

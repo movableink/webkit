@@ -271,6 +271,7 @@ public:
     bool hasClip : 1;
 
     unsigned positionTryOrder : 3; // Style::PositionTryOrder; 5 values so 3 bits.
+    unsigned positionVisibility : 3; // OptionSet<PositionVisibilty>
 
     unsigned fieldSizing : 1; // FieldSizing
 
