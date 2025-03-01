@@ -3718,6 +3718,7 @@ IndexedDBAPIEnabled:
     WebCore:
       default: true
   disableInLockdownMode: true
+  sharedPreferenceForWebProcess: true
 
 InlineMediaPlaybackRequiresPlaysInlineAttribute:
   type: bool
