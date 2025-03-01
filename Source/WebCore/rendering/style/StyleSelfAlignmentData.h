@@ -34,6 +34,11 @@ class TextStream;
 
 namespace WebCore {
 
+class LayoutUnit;
+class WritingMode;
+
+enum class LogicalBoxAxis : uint8_t;
+
 class StyleSelfAlignmentData {
 public:
     constexpr StyleSelfAlignmentData() = default;

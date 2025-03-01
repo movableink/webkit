@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "EventTrackingRegions.h"
+#include <wtf/text/TextStream.h>
 
 #include "EventNames.h"
 

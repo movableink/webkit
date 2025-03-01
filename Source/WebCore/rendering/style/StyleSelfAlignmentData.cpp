@@ -26,6 +26,10 @@
 #include "config.h"
 #include "StyleSelfAlignmentData.h"
 
+#include "BoxSides.h"
+#include "LayoutUnit.h"
+#include "WritingMode.h"
+
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
