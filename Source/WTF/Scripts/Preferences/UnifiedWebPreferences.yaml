@@ -8193,10 +8193,13 @@ UsesWebContentRestrictionsForFilter:
   webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
+      "PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)": true
       default: false
     WebKit:
+      "PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)": true
       default: false
     WebCore:
+      "PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)": true
       default: false
   sharedPreferenceForWebProcess: true
 
