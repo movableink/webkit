@@ -23,7 +23,7 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
-@_spi(Private) import WebKit
+import WebKit
 @_spi(Private) import _WebKit_SwiftUI
 
 private struct ToolbarBackForwardMenuView: View {

@@ -229,7 +229,6 @@ final public class WebPage {
         self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: dialogPresenter, _downloadCoordinator: downloadCoordinator)
     }
 
-    @_spi(Private)
     public convenience init(
         configuration: Configuration = Configuration(),
         navigationDecider: some NavigationDeciding,
@@ -256,7 +255,6 @@ final public class WebPage {
         self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: dialogPresenter, _downloadCoordinator: downloadCoordinator)
     }
 
-    @_spi(Private)
     public convenience init(
         configuration: Configuration = Configuration(),
         dialogPresenter: some DialogPresenting
@@ -264,7 +262,6 @@ final public class WebPage {
         self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: dialogPresenter, _downloadCoordinator: nil)
     }
 
-    @_spi(Private)
     public convenience init(
         configuration: Configuration = Configuration(),
         navigationDecider: some NavigationDeciding
@@ -280,7 +277,6 @@ final public class WebPage {
         self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: nil, _downloadCoordinator: downloadCoordinator)
     }
 
-    @_spi(Private)
     public convenience init(
         configuration: Configuration = Configuration(),
     ) {

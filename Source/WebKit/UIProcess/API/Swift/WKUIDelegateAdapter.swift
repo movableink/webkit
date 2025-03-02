@@ -77,7 +77,7 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
         let result = await dialogPresenter.handleFileInputPrompt(parameters: parameters, initiatedBy: .init(frame))
 
         return switch result {
-        case let .ok(value): value
+        case let .selected(value): value
         case .cancel: nil
         }
     }
