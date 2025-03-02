@@ -202,8 +202,8 @@ final public class WKStageModeInteractionDriver: NSObject {
     private func subscribeToPitchChanges() {
         if pitchAnimationIsPlaying {
             withObservationTracking {
-#if USE_APPLE_INTERNAL_SDK
-                // FIXME: https://bugs.webkit.org/show_bug.cgi?id=288873
+#if canImport(RealityFoundation, _version: 380)
+                _ = self.interactionContainer.proto_observableComponents[Transform.self]
 #endif
             } onChange: {
                 Task { @MainActor in
@@ -221,8 +221,9 @@ final public class WKStageModeInteractionDriver: NSObject {
     private func subscribeToYawChanges() {
         if yawAnimationIsPlaying {
             withObservationTracking {
-#if USE_APPLE_INTERNAL_SDK
-                // FIXME: https://bugs.webkit.org/show_bug.cgi?id=288873
+#if canImport(RealityFoundation, _version: 380)
+                // By default, we do not care about the proxy, but we use the update to set the deceleration of the turntable container
+                _ = turntableAnimationProxyEntity.proto_observableComponents[Transform.self]
 #endif
             } onChange: {
                 Task { @MainActor in
