@@ -480,6 +480,7 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearchWithCache(VM& vm, JSGloba
     auto scope = DECLARE_THROW_SCOPE(vm);
     SuperSamplerScope superSamplerScope(true);
 
+    ASSERT(!string->isRope()); // This is already resolved.
     ASSERT(source.length() >= Options::thresholdForStringReplaceCache());
     // Currently not caching results when named captures are specified.
     ASSERT(!regExp->hasNamedCaptures());
@@ -513,7 +514,7 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearchWithCache(VM& vm, JSGloba
                 if (matchStart < 0)
                     patternValue = jsUndefined();
                 else {
-                    patternValue = jsSubstring(globalObject, string, matchStart, matchLen);
+                    patternValue = jsSubstringOfResolved(vm, string, matchStart, matchLen);
                     RETURN_IF_EXCEPTION(scope, { });
                 }
 

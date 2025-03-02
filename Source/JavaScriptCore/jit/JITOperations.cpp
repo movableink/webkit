@@ -3540,11 +3540,13 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
         RELEASE_AND_RETURN(scope, getByValWithThis(globalObject, callFrame, profile, baseValue, subscript, thisValue));
     }
 
+    JSObject* baseObject = asObject(baseValue);
+
     Identifier propertyName = subscript.toPropertyKey(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
     UniquedStringImpl* uid = propertyName.impl();
-    if (UNLIKELY(!canUseMegamorphicGetById(vm, uid))) {
+    if (UNLIKELY(!canUseMegamorphicGetByIdExcludingIndex(vm, uid))) {
         if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
             repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
         if (kind == GetByKind::ByVal)
@@ -3552,8 +3554,17 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
         RELEASE_AND_RETURN(scope, getByValWithThis(globalObject, callFrame, profile, baseValue, subscript, thisValue));
     }
 
+    if (auto index = parseIndex(*uid); UNLIKELY(index)) {
+        if (!baseObject->structure()->isCacheableDictionary() || index.value() >= 100) {
+            if (stubInfo && stubInfo->considerRepatchingCacheMegamorphic(vm))
+                repatchGetBySlowPathCall(callFrame->codeBlock(), *stubInfo, kind);
+        }
+        if (kind == GetByKind::ByVal)
+            RELEASE_AND_RETURN(scope, getByVal(globalObject, callFrame, profile, baseValue, subscript));
+        RELEASE_AND_RETURN(scope, getByValWithThis(globalObject, callFrame, profile, baseValue, subscript, thisValue));
+    }
+
     PropertySlot slot(thisValue, PropertySlot::InternalMethodType::Get);
-    JSObject* baseObject = asObject(baseValue);
     JSObject* object = baseObject;
     bool cacheable = true;
     while (true) {

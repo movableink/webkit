@@ -283,9 +283,14 @@ private:
     std::unique_ptr<StructureStubInfoClearingWatchpoint> m_watchpoint;
 };
 
+ALWAYS_INLINE bool canUseMegamorphicGetByIdExcludingIndex(VM& vm, UniquedStringImpl* uid)
+{
+    return uid != vm.propertyNames->length && uid != vm.propertyNames->name && uid != vm.propertyNames->prototype && uid != vm.propertyNames->underscoreProto;
+}
+
 inline bool canUseMegamorphicGetById(VM& vm, UniquedStringImpl* uid)
 {
-    return !parseIndex(*uid) && uid != vm.propertyNames->length && uid != vm.propertyNames->name && uid != vm.propertyNames->prototype && uid != vm.propertyNames->underscoreProto;
+    return !parseIndex(*uid) && canUseMegamorphicGetByIdExcludingIndex(vm, uid);
 }
 
 inline bool canUseMegamorphicInById(VM& vm, UniquedStringImpl* uid)
