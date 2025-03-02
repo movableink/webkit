@@ -58,7 +58,7 @@ def config_argument_parser():
     parser.add_argument('--no-adjust-unit', dest='scale_unit', action='store_false', help="Don't convert to scientific notation.")
     parser.add_argument('--show-iteration-values', dest='show_iteration_values', action='store_true', help="Show the measured value for each iteration in addition to averages.")
     parser.add_argument('--generate-pgo-profiles', dest="generate_pgo_profiles", action='store_true', help="Collect LLVM profiles for PGO, and copy them to the diagnostics directory.")
-    parser.add_argument('--profile', dest='trace_type', default="full", choices=["full", "full-no-clpc", "ktrace-full", "ktrace-profile"], help="Collect profiling traces, and copy them to the diagnostic directory. 'ktrace' tracing types are deprecated, but currently supported for backwards compatibility.")
+    parser.add_argument('--profile', dest='trace_type', default=None, choices=["full", "full-no-clpc", "ktrace-full", "ktrace-profile"], help="Collect profiling traces, and copy them to the diagnostic directory. 'ktrace' tracing types are deprecated, but currently supported for backwards compatibility.")
     parser.add_argument('--profiling-interval', default=None, help="Specify the profiling sampling rate.")
 
     group = parser.add_mutually_exclusive_group()
