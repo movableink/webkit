@@ -43,7 +43,7 @@ MetadataType BitmapImageDescriptor::imageMetadata(MetadataType& cachedValue, con
     if (m_cachedFlags.contains(cachedFlag))
         return cachedValue;
 
-    auto decoder = m_source->decoderIfExists();
+    RefPtr decoder = m_source->decoderIfExists();
     if (!decoder)
         return defaultValue;
 
@@ -112,7 +112,7 @@ IntSize BitmapImageDescriptor::sourceSize(ImageOrientation orientation) const
 #if !USE(CG)
     // It's possible that we have decoded the metadata, but not frame contents yet. In that case ImageDecoder claims to
     // have the size available, but the frame cache is empty. Return the decoder size without caching in such case.
-    auto decoder = m_source->decoderIfExists();
+    RefPtr decoder = m_source->decoderIfExists();
     if (decoder && m_source->frames().isEmpty())
         size = decoder->size();
     else
