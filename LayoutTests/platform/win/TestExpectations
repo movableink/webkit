@@ -1326,6 +1326,25 @@ fast/dom/Window/window-resize.html [ Failure ]
 webkit.org/b/288006 http/tests/dom/noreferrer-window-not-targetable.html [ Failure Pass ]
 webkit.org/b/288006 http/tests/dom/noopener-window-not-targetable.html [ Failure Pass ]
 
+fast/shadow-dom/css-scoping-host-and-slotted-context-invalidation.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/css-scoping-slot-with-id.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/css-scoping-slotted-invalidation.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/focus-ring-on-shadow-host-focuswithin.html [ Skip ] # Timeout
+fast/shadow-dom/focus-ring-on-shadow-host-sibling.html [ Skip ] # Timeout
+fast/shadow-dom/focus-ring-on-shadow-host.html [ Skip ] # Timeout
+fast/shadow-dom/fullscreen-in-shadow-event-should-propagate.html [ Skip ] # Timeout
+fast/shadow-dom/fullscreen-in-shadow-fullscreenElement.html [ Skip ] # Failure
+fast/shadow-dom/fullscreen-in-shadow-webkitCurrentFullScreenElement.html [ Skip ] # Failure
+fast/shadow-dom/fullscreen-in-slot-fullscreenElement.html [ Skip ] # Failure
+fast/shadow-dom/fullscreen-in-slot-webkitCurrentFullScreenElement.html [ Skip ] # Failure
+fast/shadow-dom/hover-over-nested-slotted-content.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/imperative-slot-update-1.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/mutating-stylesheet-in-shadow-tree.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/shadow-host-animation.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/shadow-host-move-to-different-document.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/shadow-host-transition.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/shadow-host-with-before-after.html [ Skip ] # ImageOnlyFailure
+fast/shadow-dom/shadow-layout-after-toggling-display-slot-parent.html [ Skip ] # ImageOnlyFailure
  
 #//////////////////////////////////////////////////////////////////////////////////////////
 # Editing
@@ -2011,7 +2030,6 @@ fast/ruby [ Skip ]
 fast/screen-orientation [ Skip ]
 fast/scrolling [ Skip ]
 fast/selectors [ Skip ]
-fast/shadow-dom [ Skip ]
 fast/shapes [ Skip ]
 fast/sub-pixel [ Skip ]
 fast/table [ Skip ]
