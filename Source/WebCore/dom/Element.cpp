@@ -3270,8 +3270,10 @@ ExceptionOr<ShadowRoot&> Element::attachShadow(const ShadowRootInit& init, Custo
         return Exception { ExceptionCode::NotSupportedError };
     }
     RefPtr<CustomElementRegistry> registry;
-    if (auto* wrapper = jsDynamicCast<JSCustomElementRegistry*>(init.customElements))
-        registry = &wrapper->wrapped();
+    if (document().settings().scopedCustomElementRegistryEnabled() && !init.customElements.isEmpty()) {
+        if (auto* wrapper = jsDynamicCast<JSCustomElementRegistry*>(init.customElements))
+            registry = &wrapper->wrapped();
+    }
     auto scopedRegistry = ShadowRoot::ScopedCustomElementRegistry::No;
     if (registryKind == CustomElementRegistryKind::Null) {
         ASSERT(!registry);
