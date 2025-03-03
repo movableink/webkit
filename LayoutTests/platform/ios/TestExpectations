@@ -7719,3 +7719,5 @@ webkit.org/b/288987 fast/viewport/ios/device-width-viewport-after-changing-view-
 webkit.org/b/289002 [ Release ] imported/blink/fast/text/international-iteration-simple-text.html [ Pass Failure ]
 
 webkit.org/b/289005 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-position-try-006.html [ Failure ]
+
+webkit.org/b/289010 imported/w3c/web-platform-tests/html/semantics/disabled-elements/event-propagate-disabled-keyboard.tentative.html [ Failure ]
