@@ -314,8 +314,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [self _installVisibilityPropagationViews];
 #endif
 
-#if HAVE(SPATIAL_TRACKING_LABEL) && HAVE(SPATIAL_AUDIO_EXPERIENCE)
+#if HAVE(SPATIAL_TRACKING_LABEL)
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
     if (!_page->preferences().preferSpatialAudioExperience()) {
+#endif
         _spatialTrackingView = adoptNS([[UIView alloc] init]);
         [_spatialTrackingView layer].separatedState = kCALayerSeparatedStateTracked;
         _spatialTrackingLabel = makeString("WKContentView Label: "_s, createVersion4UUIDString());
@@ -324,7 +326,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [_spatialTrackingView setFrame:CGRectMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds), 0, 0)];
         [_spatialTrackingView setUserInteractionEnabled:NO];
         [self addSubview:_spatialTrackingView.get()];
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
     }
+#endif
 #endif
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationWillResignActive:) name:UIApplicationWillResignActiveNotification object:[UIApplication sharedApplication]];
