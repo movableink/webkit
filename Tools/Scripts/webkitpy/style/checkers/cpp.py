@@ -2,7 +2,7 @@
 #
 # Copyright (C) 2009, 2010, 2012 Google Inc. All rights reserved.
 # Copyright (C) 2009 Torch Mobile Inc.
-# Copyright (C) 2009-2023 Apple Inc. All rights reserved.
+# Copyright (C) 2009-2025 Apple Inc. All rights reserved.
 # Copyright (C) 2010 Chris Jerdonek (cjerdonek@webkit.org)
 #
 # Redistribution and use in source and binary forms, with or without
@@ -3567,6 +3567,10 @@ def check_safer_cpp(clean_lines, line_number, error):
     if uses_xpc_dictionary_get_string:
         error(line_number, 'safercpp/xpc_dictionary_get_string', 4, "Use xpc_dictionary_get_wtfstring() instead of xpc_dictionary_get_string().")
 
+    uses_xpc_string_get_string_ptr = search(r'xpc_string_get_string_ptr\(', line)
+    if uses_xpc_string_get_string_ptr:
+        error(line_number, 'safercpp/xpc_string_get_string_ptr', 4, "Use xpc_string_get_wtfstring() instead of xpc_string_get_string_ptr().")
+
 
 def check_style(clean_lines, line_number, file_extension, class_state, file_state, enum_state, error):
     """Checks rules from the 'C++ style rules' section of cppguide.html.
@@ -4916,6 +4920,7 @@ class CppChecker(object):
         'safercpp/timer_exception',
         'safercpp/xpc_dictionary_get_data',
         'safercpp/xpc_dictionary_get_string',
+        'safercpp/xpc_string_get_string_ptr',
         'security/assertion',
         'security/assertion_fallthrough',
         'security/javascriptcore_wtf_blockptr',

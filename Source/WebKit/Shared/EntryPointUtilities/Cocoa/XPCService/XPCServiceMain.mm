@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -169,7 +169,7 @@ void XPCServiceEventHandler(xpc_connection_t peer)
                 Vector<String> newLanguages;
                 @autoreleasepool {
                     xpc_array_apply(languages, makeBlockPtr([&newLanguages](size_t index, xpc_object_t value) {
-                        newLanguages.append(String::fromUTF8(xpc_string_get_string_ptr(value)));
+                        newLanguages.append(xpc_string_get_wtfstring(value));
                         return true;
                     }).get());
                 }
@@ -185,7 +185,7 @@ void XPCServiceEventHandler(xpc_connection_t peer)
 #if PLATFORM(IOS_FAMILY)
             auto containerEnvironmentVariables = xpc_dictionary_get_value(event, "ContainerEnvironmentVariables");
             xpc_dictionary_apply(containerEnvironmentVariables, ^(const char *key, xpc_object_t value) {
-                setenv(key, xpc_string_get_string_ptr(value), 1);
+                setenv(key, xpc_string_get_string_ptr(value), 1);  // NOLINT
                 return true;
             });
 #endif

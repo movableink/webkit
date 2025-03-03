@@ -2,7 +2,7 @@
 #
 # Copyright (C) 2011 Google Inc. All rights reserved.
 # Copyright (C) 2009 Torch Mobile Inc.
-# Copyright (C) 2009-2020 Apple Inc. All rights reserved.
+# Copyright (C) 2009-2025 Apple Inc. All rights reserved.
 # Copyright (C) 2010 Chris Jerdonek (cjerdonek@webkit.org)
 #
 # Redistribution and use in source and binary forms, with or without
@@ -6346,6 +6346,11 @@ class WebKitStyleTest(CppStyleTestBase):
         self.assert_lint(
             'auto* result = xpc_dictionary_get_string(dictionary, "foo");',
             'Use xpc_dictionary_get_wtfstring() instead of xpc_dictionary_get_string().  [safercpp/xpc_dictionary_get_string] [4]',
+            'foo.cpp')
+
+        self.assert_lint(
+            'auto* result = xpc_string_get_string_ptr(value);',
+            'Use xpc_string_get_wtfstring() instead of xpc_string_get_string_ptr().  [safercpp/xpc_string_get_string_ptr] [4]',
             'foo.cpp')
 
     def test_ctype_fucntion(self):
