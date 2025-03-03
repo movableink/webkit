@@ -3507,19 +3507,7 @@ void MediaPlayerPrivateGStreamer::pushTextureToCompositor(bool isDuplicateSample
         updateVideoInfoFromCaps(caps);
     }
 
-    if (m_contentsBufferProxy->setDisplayBuffer(CoordinatedPlatformLayerBufferVideo::create(m_sample.get(), &m_videoInfo, m_dmabufFormat, m_videoDecoderPlatform, !m_isUsingFallbackVideoSink, m_textureMapperFlags))) {
-        m_hasFirstVideoSampleBeenRendered = true;
-        return;
-    }
-
-    GST_ERROR_OBJECT(pipeline(), "CoordinatedPlatformLayerBufferProxy is inactive");
-    if (!m_hasFirstVideoSampleBeenRendered)
-        return;
-
-    RunLoop::protectedMain()->dispatch([weakThis = ThreadSafeWeakPtr { *this }] {
-        if (RefPtr player = weakThis.get())
-            player->tearDown(false);
-    });
+    m_contentsBufferProxy->setDisplayBuffer(CoordinatedPlatformLayerBufferVideo::create(m_sample.get(), &m_videoInfo, m_dmabufFormat, m_videoDecoderPlatform, !m_isUsingFallbackVideoSink, m_textureMapperFlags));
 }
 #endif // USE(COORDINATED_GRAPHICS)
 

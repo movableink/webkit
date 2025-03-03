@@ -401,7 +401,6 @@ protected:
 
     mutable Lock m_sampleMutex;
     GRefPtr<GstSample> m_sample WTF_GUARDED_BY_LOCK(m_sampleMutex);
-    bool m_hasFirstVideoSampleBeenRendered WTF_GUARDED_BY_LOCK(m_sampleMutex) { false };
 
     mutable FloatSize m_videoSize;
     bool m_isUsingFallbackVideoSink { false };
