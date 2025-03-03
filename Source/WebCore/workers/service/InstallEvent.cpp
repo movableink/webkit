@@ -27,8 +27,10 @@
 #include "InstallEvent.h"
 
 #include "HTTPParsers.h"
+#include "JSDOMPromiseDeferred.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerRoute.h"
+#include "WorkerSWClientConnection.h"
 #include <wtf/Algorithms.h>
 #include <wtf/TZoneMallocInlines.h>
 
