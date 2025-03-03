@@ -229,6 +229,8 @@ MediaTime MediaPlayerPrivateGStreamerMSE::duration() const
 
 void MediaPlayerPrivateGStreamerMSE::seekToTarget(const SeekTarget& target)
 {
+    if (!m_pipeline)
+        return;
     GST_DEBUG_OBJECT(pipeline(), "Requested seek to %s", target.time.toString().utf8().data());
     doSeek(target, m_playbackRate);
 }

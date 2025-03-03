@@ -734,6 +734,8 @@ MediaTime MediaPlayerPrivateGStreamer::currentTime() const
 
 void MediaPlayerPrivateGStreamer::setRate(float rate)
 {
+    if (!m_pipeline)
+        return;
     RefPtr player = m_player.get();
 
     float rateClamped = clampTo(rate, -20.0, 20.0);
