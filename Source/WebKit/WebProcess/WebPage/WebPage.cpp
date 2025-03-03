@@ -5789,11 +5789,6 @@ void WebPage::findRectsForStringMatches(const String& string, OptionSet<FindOpti
     findController().findRectsForStringMatches(string, options, maxMatchCount, WTFMove(completionHandler));
 }
 
-void WebPage::hideFindIndicator()
-{
-    findController().hideFindIndicator();
-}
-
 void WebPage::findTextRangesForStringMatches(const String& string, OptionSet<FindOptions> options, uint32_t maxMatchCount, CompletionHandler<void(Vector<WebFoundTextRange>&&)>&& completionHandler)
 {
     foundTextRangeController().findTextRangesForStringMatches(string, options, maxMatchCount, WTFMove(completionHandler));

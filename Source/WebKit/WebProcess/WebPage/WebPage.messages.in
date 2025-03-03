@@ -339,7 +339,6 @@ messages -> WebPage WantsAsyncDispatchMessage {
     ReplaceMatches(Vector<uint32_t> matchIndices, String replacementText, bool selectionOnly) -> (uint64_t numberOfReplacements)
 
     FindRectsForStringMatches(String string, OptionSet<WebKit::FindOptions> findOptions, unsigned maxMatchCount) -> (Vector<WebCore::FloatRect> matches)
-    HideFindIndicator()
 
     FindTextRangesForStringMatches(String string, OptionSet<WebKit::FindOptions> findOptions, unsigned maxMatchCount) -> (Vector<WebKit::WebFoundTextRange> ranges)
     ReplaceFoundTextRangeWithString(struct WebKit::WebFoundTextRange range, String string)

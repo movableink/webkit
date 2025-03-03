@@ -6130,11 +6130,6 @@ void WebPageProxy::hideFindUI()
     send(Messages::WebPage::HideFindUI());
 }
 
-void WebPageProxy::hideFindIndicator()
-{
-    send(Messages::WebPage::HideFindIndicator());
-}
-
 void WebPageProxy::countStringMatches(const String& string, OptionSet<FindOptions> options, unsigned maxMatchCount)
 {
     if (!hasRunningProcess())
