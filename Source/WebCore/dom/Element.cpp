@@ -300,13 +300,6 @@ inline ElementRareData& Element::ensureElementRareData()
     return static_cast<ElementRareData&>(ensureRareData());
 }
 
-inline void Node::setTabIndexState(TabIndexState state)
-{
-    auto bitfields = rareDataBitfields();
-    bitfields.tabIndexState = enumToUnderlyingType(state);
-    setRareDataBitfields(bitfields);
-}
-
 void Element::setTabIndexExplicitly(std::optional<int> tabIndex)
 {
     if (!tabIndex) {

@@ -78,6 +78,7 @@
 #include "Page.h"
 #include "PageConfiguration.h"
 #include "PasteboardItemInfo.h"
+#include "PositionInlines.h"
 #include "Quirks.h"
 #include "Range.h"
 #include "RenderBlock.h"

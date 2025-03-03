@@ -32,7 +32,7 @@
 #include "FragmentDirectiveUtilities.h"
 #include "HTMLParserIdioms.h"
 #include "Logging.h"
-#include "Position.h"
+#include "PositionInlines.h"
 #include "Range.h"
 #include "SimpleRange.h"
 #include "TextIterator.h"

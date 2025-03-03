@@ -2991,6 +2991,11 @@ void Node::notifyInspectorOfRendererChange()
     InspectorInstrumentation::didChangeRendererForDOMNode(*this);
 }
 
+ScriptExecutionContext* Node::scriptExecutionContext() const
+{
+    return &document().contextDocument();
+}
+
 template<> ContainerNode* parent<Tree>(const Node& node)
 {
     return node.parentNode();

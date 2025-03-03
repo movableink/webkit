@@ -45,7 +45,7 @@ public:
     void setToBeforeNode(Node&);
     void setToAfterNode(Ref<Node>&&);
     void setToBeforeContents(Ref<Node>&&);
-    void setToAfterContents(Ref<Node>&&);
+    inline void setToAfterContents(Ref<Node>&&);
 
     void childBeforeWillBeRemoved();
     void invalidateOffset();
@@ -115,13 +115,6 @@ inline void RangeBoundaryPoint::setToBeforeContents(Ref<Node>&& container)
     m_container = WTFMove(container);
     m_offset = 0;
     m_childBefore = nullptr;
-}
-
-inline void RangeBoundaryPoint::setToAfterContents(Ref<Node>&& container)
-{
-    m_container = WTFMove(container);
-    m_offset = m_container->length();
-    m_childBefore = m_container->lastChild();
 }
 
 inline void RangeBoundaryPoint::childBeforeWillBeRemoved()

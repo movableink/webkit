@@ -148,8 +148,8 @@ public:
     ContainerNode* parentNode() const;
     inline RefPtr<ContainerNode> protectedParentNode() const; // Defined in ContainerNode.h.
     static constexpr ptrdiff_t parentNodeMemoryOffset() { return OBJECT_OFFSETOF(Node, m_parentNode); }
-    inline Element* parentElement() const; // Defined in ElementInlines.h.
-    inline RefPtr<Element> protectedParentElement() const; // Defined in ElementInlines.h.
+    inline Element* parentElement() const;
+    inline RefPtr<Element> protectedParentElement() const;
     Node* previousSibling() const { return m_previousSibling; }
     RefPtr<Node> protectedPreviousSibling() const { return m_previousSibling; }
     static constexpr ptrdiff_t previousSiblingMemoryOffset() { return OBJECT_OFFSETOF(Node, m_previousSibling); }
@@ -318,7 +318,7 @@ public:
     };
     Node& getRootNode(const GetRootNodeOptions&) const;
     
-    inline WebCoreOpaqueRoot opaqueRoot() const; // Defined in DocumentInlines.h.
+    inline WebCoreOpaqueRoot opaqueRoot() const;
     WebCoreOpaqueRoot traverseToOpaqueRoot() const;
 
     void queueTaskKeepingThisNodeAlive(TaskSource, Function<void ()>&&);
@@ -410,7 +410,7 @@ public:
 
     // Returns the document associated with this node. A document node returns itself.
     Document& document() const { return treeScope().documentScope(); }
-    inline Ref<Document> protectedDocument() const; // Defined in DocumentInlines.h.
+    inline Ref<Document> protectedDocument() const;
 
     TreeScope& treeScope() const
     {
@@ -436,9 +436,9 @@ public:
 
     bool isDocumentTypeNode() const { return nodeType() == DOCUMENT_TYPE_NODE; }
     virtual bool childTypeAllowed(NodeType) const { return false; }
-    unsigned countChildNodes() const;
-    unsigned length() const;
-    Node* traverseToChildAt(unsigned) const;
+    inline unsigned countChildNodes() const;
+    inline unsigned length() const;
+    inline Node* traverseToChildAt(unsigned) const;
 
     ExceptionOr<void> checkSetPrefix(const AtomString& prefix);
 
@@ -522,8 +522,8 @@ public:
     WEBCORE_EXPORT unsigned short compareDocumentPosition(Node&);
 
     enum EventTargetInterfaceType eventTargetInterface() const override;
-    ScriptExecutionContext* scriptExecutionContext() const final; // Implemented in DocumentInlines.h.
-    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    inline RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
 
     WEBCORE_EXPORT bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
     bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) override;
@@ -695,7 +695,7 @@ protected:
     void setRareDataBitfields(RareDataBitFields bitfields) { m_rareDataWithBitfields.setType(std::bit_cast<uint16_t>(bitfields)); }
 
     TabIndexState tabIndexState() const { return static_cast<TabIndexState>(rareDataBitfields().tabIndexState); }
-    void setTabIndexState(TabIndexState);
+    inline void setTabIndexState(TabIndexState);
 
     CustomElementState customElementState() const { return static_cast<CustomElementState>(rareDataBitfields().customElementState); }
     void setCustomElementState(CustomElementState);

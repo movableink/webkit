@@ -32,7 +32,7 @@
 #include "CSSSerializationContext.h"
 #include "CSSValuePool.h"
 #include "Document.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "ElementChildIteratorInlines.h"
 #include "HTMLFontElement.h"

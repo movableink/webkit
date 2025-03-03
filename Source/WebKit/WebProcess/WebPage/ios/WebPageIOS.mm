@@ -81,7 +81,7 @@
 #import <WebCore/DocumentLoader.h>
 #import <WebCore/DocumentMarkerController.h>
 #import <WebCore/DragController.h>
-#import <WebCore/Editing.h>
+#import <WebCore/EditingInlines.h>
 #import <WebCore/Editor.h>
 #import <WebCore/EditorClient.h>
 #import <WebCore/Element.h>

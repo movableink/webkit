@@ -31,6 +31,7 @@
 #include "AlternativeTextController.h"
 #include "ApplyStyleCommand.h"
 #include "AttachmentAssociatedElement.h"
+#include "BoundaryPointInlines.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyNames.h"
 #include "CSSSerializationContext.h"

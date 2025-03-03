@@ -33,7 +33,7 @@
 #include "CSSFontSelector.h"
 #include "Document.h"
 #include "DocumentInlines.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "EventHandler.h"
 #include "FloatQuad.h"
 #include "FloatRoundedRect.h"

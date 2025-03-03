@@ -26,11 +26,13 @@
 #include "config.h"
 #include "VisibleSelection.h"
 
+#include "BoundaryPointInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "Editing.h"
 #include "ElementInlines.h"
 #include "HTMLInputElement.h"
+#include "PositionInlines.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "TextIterator.h"

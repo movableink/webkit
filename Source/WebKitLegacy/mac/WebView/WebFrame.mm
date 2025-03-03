@@ -62,6 +62,7 @@
 #import <JavaScriptCore/JSObject.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/AccessibilityObject.h>
+#import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/CSSStyleDeclaration.h>
 #import <WebCore/CachedResourceLoader.h>
 #import <WebCore/CaptionUserPreferences.h>

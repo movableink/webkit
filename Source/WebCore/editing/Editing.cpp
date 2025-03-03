@@ -30,6 +30,7 @@
 #include "AXObjectCache.h"
 #include "CachedImage.h"
 #include "DocumentInlines.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementInlines.h"

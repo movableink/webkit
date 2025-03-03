@@ -1041,6 +1041,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/Attr.h
     dom/Attribute.h
     dom/BoundaryPoint.h
+    dom/BoundaryPointInlines.h
     dom/BroadcastChannel.h
     dom/BroadcastChannelIdentifier.h
     dom/BroadcastChannelRegistry.h
@@ -1141,6 +1142,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/NamedNodeMap.h
     dom/NativeNodeFilter.h
     dom/Node.h
+    dom/NodeInlines.h
     dom/NodeConstants.h
     dom/NodeFilter.h
     dom/NodeFilterCondition.h
@@ -1156,6 +1158,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/PopoverData.h
     dom/PortIdentifier.h
     dom/Position.h
+    dom/PositionInlines.h
     dom/ProcessingInstruction.h
     dom/ProgressEvent.h
     dom/PseudoElement.h
@@ -1163,6 +1166,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/RadioButtonGroups.h
     dom/Range.h
     dom/RangeBoundaryPoint.h
+    dom/RangeBoundaryPointInlines.h
     dom/RegisteredEventListener.h
     dom/RenderedDocumentMarker.h
     dom/SandboxFlags.h
@@ -1236,6 +1240,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     editing/EditAction.h
     editing/EditableLinkBehavior.h
     editing/Editing.h
+    editing/EditingInlines.h
     editing/EditingBehavior.h
     editing/EditingBehaviorType.h
     editing/EditingBoundary.h

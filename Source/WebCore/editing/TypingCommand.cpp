@@ -44,6 +44,7 @@
 #include "Logging.h"
 #include "MarkupAccumulator.h"
 #include "MathMLElement.h"
+#include "PositionInlines.h"
 #include "Range.h"
 #include "RenderElement.h"
 #include "StaticRange.h"

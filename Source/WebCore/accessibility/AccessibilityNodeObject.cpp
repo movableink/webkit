@@ -39,7 +39,7 @@
 #include "AccessibilityTable.h"
 #include "ComposedTreeIterator.h"
 #include "DateComponents.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "Event.h"

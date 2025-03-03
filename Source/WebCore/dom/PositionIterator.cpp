@@ -26,7 +26,7 @@
 #include "config.h"
 #include "PositionIterator.h"
 
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "HTMLBodyElement.h"
 #include "HTMLElement.h"
 #include "HTMLHtmlElement.h"

@@ -29,7 +29,7 @@
 
 #include "AXObjectCache.h"
 #include "DocumentInlines.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "FloatQuad.h"
