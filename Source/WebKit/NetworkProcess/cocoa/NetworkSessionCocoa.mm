@@ -1116,8 +1116,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             ? PrivateRelayed::No : PrivateRelayed::Yes;
         String proxyName;
         if (metrics._establishmentReport) {
-            if (auto endpoint = nw_establishment_report_copy_proxy_endpoint(metrics._establishmentReport)) {
-                if (const char *hostname = nw_endpoint_get_hostname(endpoint))
+            if (RetainPtr endpoint = adoptNS(nw_establishment_report_copy_proxy_endpoint(metrics._establishmentReport))) {
+                if (const char *hostname = nw_endpoint_get_hostname(endpoint.get()))
                     proxyName = String::fromUTF8(unsafeSpan(hostname));
             }
         }
