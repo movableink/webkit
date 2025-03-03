@@ -7715,3 +7715,5 @@ webkit.org/b/287569 http/tests/site-isolation/page-visibility-onvisibilitychange
 webkit.org/b/287033 fast/mediastream/microphone-interruption-and-audio-session.html [ Failure ]
 
 webkit.org/b/288987 fast/viewport/ios/device-width-viewport-after-changing-view-scale.html [ Pass Failure ]
+
+webkit.org/b/289002 [ Release ] imported/blink/fast/text/international-iteration-simple-text.html [ Pass Failure ]
