@@ -1,0 +1,4 @@
+
+FAIL Subreosurce load matched with the requestMethod script condition assert_equals: expected (boolean) true but got (undefined) undefined
+PASS Subreosurce load not matched with the requestMethod script condition
+

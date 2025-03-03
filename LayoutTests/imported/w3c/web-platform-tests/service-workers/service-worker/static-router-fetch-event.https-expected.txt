@@ -1,0 +1,4 @@
+
+FAIL Main resource matched the rule with fetch-event source assert_equals: expected 0 but got 1
+PASS Subresource load matched the rule fetch-event source
+

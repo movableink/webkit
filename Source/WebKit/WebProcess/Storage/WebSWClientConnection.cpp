@@ -494,4 +494,10 @@ void WebSWClientConnection::cookieChangeSubscriptions(WebCore::ServiceWorkerRegi
     });
 }
 
+Ref<WebSWClientConnection::AddRoutePromise> WebSWClientConnection::addRoutes(ServiceWorkerRegistrationIdentifier identifier, Vector<ServiceWorkerRoute>&& routes)
+{
+    // FIXM:Implement this.
+    return AddRoutePromise::createAndReject(WebCore::ExceptionData { WebCore::ExceptionCode::NotSupportedError, "not yet implemented"_s });
+}
+
 } // namespace WebKit

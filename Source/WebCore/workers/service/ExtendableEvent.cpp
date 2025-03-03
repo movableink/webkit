@@ -103,6 +103,7 @@ void ExtendableEvent::addExtendLifetimePromise(Ref<DOMPromise>&& promise)
                 if (m_pendingPromiseCount)
                     return;
 
+                m_isWaiting = false;
                 auto settledPromises = WTFMove(m_extendLifetimePromises);
                 if (auto handler = WTFMove(m_whenAllExtendLifetimePromisesAreSettledHandler))
                     handler(WTFMove(settledPromises));
@@ -120,6 +121,7 @@ void ExtendableEvent::whenAllExtendLifetimePromisesAreSettled(Function<void(Hash
     ASSERT(!m_whenAllExtendLifetimePromisesAreSettledHandler);
 
     if (!m_pendingPromiseCount) {
+        m_isWaiting = false;
         handler(WTFMove(m_extendLifetimePromises));
         return;
     }

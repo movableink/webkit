@@ -3379,6 +3379,7 @@ workers/service/ServiceWorkerRegistration.cpp
 workers/service/ServiceWorkerRegistrationData.cpp
 workers/service/ServiceWorkerRegistrationKey.cpp
 workers/service/ServiceWorkerRegistrationOptions.cpp
+workers/service/ServiceWorkerRoute.cpp
 workers/service/ServiceWorkerWindowClient.cpp
 workers/service/WorkerSWClientConnection.cpp
 workers/service/background-fetch/BackgroundFetch.cpp

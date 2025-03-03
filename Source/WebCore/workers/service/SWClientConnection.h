@@ -26,6 +26,7 @@
 #pragma once
 
 #include "BackgroundFetchRecordIdentifier.h"
+#include "ExceptionData.h"
 #include "ExceptionOr.h"
 #include "NavigationPreloadState.h"
 #include "NotificationData.h"
@@ -37,6 +38,7 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+#include <wtf/NativePromise.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -66,6 +68,7 @@ struct ServiceWorkerClientData;
 struct ServiceWorkerClientPendingMessage;
 struct ServiceWorkerData;
 struct ServiceWorkerRegistrationData;
+struct ServiceWorkerRoute;
 struct WorkerFetchResult;
 
 class SWClientConnection : public RefCounted<SWClientConnection> {
@@ -149,6 +152,9 @@ public:
     virtual void removeCookieChangeSubscriptions(ServiceWorkerRegistrationIdentifier, Vector<CookieChangeSubscription>&&, ExceptionOrVoidCallback&&) = 0;
     using ExceptionOrCookieChangeSubscriptionsCallback = CompletionHandler<void(ExceptionOr<Vector<CookieChangeSubscription>>&&)>;
     virtual void cookieChangeSubscriptions(ServiceWorkerRegistrationIdentifier, ExceptionOrCookieChangeSubscriptionsCallback&&) = 0;
+
+    using AddRoutePromise = NativePromise<void, ExceptionData>;
+    virtual Ref<AddRoutePromise> addRoutes(ServiceWorkerRegistrationIdentifier, Vector<ServiceWorkerRoute>&&) = 0;
 
 protected:
     WEBCORE_EXPORT SWClientConnection();
