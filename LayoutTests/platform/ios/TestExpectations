@@ -7717,3 +7717,5 @@ webkit.org/b/287033 fast/mediastream/microphone-interruption-and-audio-session.h
 webkit.org/b/288987 fast/viewport/ios/device-width-viewport-after-changing-view-scale.html [ Pass Failure ]
 
 webkit.org/b/289002 [ Release ] imported/blink/fast/text/international-iteration-simple-text.html [ Pass Failure ]
+
+webkit.org/b/289005 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-position-try-006.html [ Failure ]
