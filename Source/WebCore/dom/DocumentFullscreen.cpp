@@ -259,9 +259,8 @@ ExceptionOr<void> DocumentFullscreen::willEnterFullscreen(Element& element, HTML
         return Exception { ExceptionCode::TypeError };
     }
 
-    // Protect against being called after the document has been removed from the page.
-    RefPtr protectedPage = page();
-    if (!protectedPage) {
+    RefPtr page = this->page();
+    if (!page) {
         ERROR_LOG(LOGIDENTIFIER, "Document no longer in page; bailing");
         return Exception { ExceptionCode::TypeError };
     }
@@ -273,7 +272,7 @@ ExceptionOr<void> DocumentFullscreen::willEnterFullscreen(Element& element, HTML
     }
 
     INFO_LOG(LOGIDENTIFIER);
-    ASSERT(page()->isDocumentFullscreenEnabled());
+    ASSERT(page->isDocumentFullscreenEnabled());
 
 #if ENABLE(VIDEO)
     if (RefPtr mediaElement = dynamicDowncast<HTMLMediaElement>(element))
@@ -655,11 +654,6 @@ static bool hasJSEventListener(Node& node, const AtomString& eventType)
 
 void DocumentFullscreen::dispatchPendingEvents()
 {
-    // Since we dispatch events in this function, it's possible that the
-    // document will be detached and GC'd. We protect it here to make sure we
-    // can finish the function successfully.
-    Ref<Document> protectedDocument(document());
-
     // Steps 1-2:
     auto pendingEvents = std::exchange(m_pendingEvents, { });
 
@@ -670,7 +664,7 @@ void DocumentFullscreen::dispatchPendingEvents()
         // Gaining or losing fullscreen state may change viewport arguments
         element->protectedDocument()->updateViewportArguments();
         if (&element->document() != &document())
-            protectedDocument->updateViewportArguments();
+            protectedDocument()->updateViewportArguments();
 
 #if ENABLE(VIDEO)
         if (eventType == EventType::Change) {
