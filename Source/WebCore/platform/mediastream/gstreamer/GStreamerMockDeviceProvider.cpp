@@ -30,7 +30,6 @@
 using namespace WebCore;
 
 struct _GStreamerMockDeviceProviderPrivate {
-    Vector<GRefPtr<GstDevice>> devices;
 };
 
 GST_DEBUG_CATEGORY_STATIC(webkitGstMockDeviceProviderDebug);
@@ -45,25 +44,16 @@ static GList* webkitMockDeviceProviderProbe(GstDeviceProvider* provider)
         return nullptr;
     }
 
-    auto self = WEBKIT_MOCK_DEVICE_PROVIDER(provider);
     GST_INFO_OBJECT(provider, "Probing");
     GList* devices = nullptr;
     auto& sourceCenter = MockRealtimeMediaSourceCenter::singleton();
-    for (auto& device : sourceCenter.videoDevices()) {
-        auto gstDevice = adoptGRef(webkitMockDeviceCreate(device));
-        devices = g_list_prepend(devices, gstDevice.get());
-        self->priv->devices.append(WTFMove(gstDevice));
-    }
-    for (auto& device : sourceCenter.microphoneDevices()) {
-        auto gstDevice = adoptGRef(webkitMockDeviceCreate(device));
-        devices = g_list_prepend(devices, gstDevice.get());
-        self->priv->devices.append(WTFMove(gstDevice));
-    }
-    for (auto& device : sourceCenter.displayDevices()) {
-        auto gstDevice = adoptGRef(webkitMockDeviceCreate(device));
-        devices = g_list_prepend(devices, gstDevice.get());
-        self->priv->devices.append(WTFMove(gstDevice));
-    }
+    for (auto& device : sourceCenter.videoDevices())
+        devices = g_list_prepend(devices, webkitMockDeviceCreate(device));
+    for (auto& device : sourceCenter.microphoneDevices())
+        devices = g_list_prepend(devices, webkitMockDeviceCreate(device));
+    for (auto& device : sourceCenter.displayDevices())
+        devices = g_list_prepend(devices, webkitMockDeviceCreate(device));
+
     devices = g_list_reverse(devices);
     return devices;
 }
@@ -75,23 +65,26 @@ GStreamerMockDeviceProvider* webkitGstMockDeviceProviderSingleton()
     return s_provider;
 }
 
-static WARN_UNUSED_RETURN GRefPtr<GstDevice> findDeviceWithID(GStreamerMockDeviceProvider* self, StringView id)
-{
-    GRefPtr<GstDevice> result;
-    for (auto& device : self->priv->devices) {
-        GUniquePtr<GstStructure> properties(gst_device_get_properties(device.get()));
-        if (gstStructureGetString(properties.get(), "persistent-id"_s) == id)
-            return device;
-    }
-    return nullptr;
-}
-
 void webkitGstMockDeviceProviderSwitchDefaultDevice(const CaptureDevice& oldDevice, const CaptureDevice& newDevice)
 {
     if (!s_provider)
         return;
 
-    auto oldGstDevice = findDeviceWithID(s_provider, oldDevice.persistentId());
+    GRefPtr<GstDevice> oldGstDevice, newGstDevice;
+    GList* devices = gst_device_provider_get_devices(GST_DEVICE_PROVIDER_CAST(s_provider));
+    for (GList* it = devices; it; it = it->next) {
+        auto device = GST_DEVICE_CAST(it->data);
+        GUniquePtr<GstStructure> properties(gst_device_get_properties(device));
+        auto persistentId = gstStructureGetString(properties.get(), "persistent-id"_s);
+        if (persistentId == oldDevice.persistentId())
+            oldGstDevice = device;
+        else if (persistentId == newDevice.persistentId())
+            newGstDevice = device;
+        if (oldGstDevice && newGstDevice)
+            break;
+    }
+    g_list_free_full(devices, gst_object_unref);
+
     if (!oldGstDevice)
         return;
 
@@ -100,7 +93,6 @@ void webkitGstMockDeviceProviderSwitchDefaultDevice(const CaptureDevice& oldDevi
     auto previousDefaultGstDevice = adoptGRef(webkitMockDeviceCreate(previousDefaultDevice));
     gst_device_provider_device_changed(GST_DEVICE_PROVIDER_CAST(s_provider), previousDefaultGstDevice.get(), oldGstDevice.get());
 
-    auto newGstDevice = findDeviceWithID(s_provider, newDevice.persistentId());
     if (!newGstDevice)
         return;
 
