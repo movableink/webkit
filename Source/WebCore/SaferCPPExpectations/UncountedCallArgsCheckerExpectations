@@ -98,8 +98,6 @@ Modules/indexeddb/client/TransactionOperation.h
 Modules/indexeddb/server/MemoryBackingStoreTransaction.cpp
 Modules/indexeddb/server/MemoryIDBBackingStore.cpp
 Modules/indexeddb/server/MemoryIndex.cpp
-Modules/indexeddb/server/ServerOpenDBRequest.cpp
-Modules/indexeddb/server/UniqueIDBDatabase.cpp
 Modules/indexeddb/server/UniqueIDBDatabaseConnection.cpp
 Modules/indexeddb/server/UniqueIDBDatabaseTransaction.cpp
 Modules/mediacontrols/MediaControlsHost.cpp

@@ -55,6 +55,7 @@ public:
     UniqueIDBDatabase* database() { return m_database.get(); }
     UniqueIDBDatabaseManager* manager();
     IDBConnectionToClient& connectionToClient() { return m_connectionToClient; }
+    Ref<IDBConnectionToClient> protectedConnectionToClient();
 
     WEBCORE_EXPORT void connectionPendingCloseFromClient();
     WEBCORE_EXPORT void connectionClosedFromClient();
