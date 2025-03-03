@@ -20,7 +20,6 @@ Modules/fetch/FetchResponse.cpp
 Modules/gamepad/GamepadHapticActuator.cpp
 Modules/indexeddb/IDBObjectStore.cpp
 Modules/indexeddb/client/IDBConnectionProxy.cpp
-Modules/indexeddb/server/UniqueIDBDatabaseTransaction.cpp
 Modules/mediacontrols/MediaControlsHost.cpp
 Modules/mediarecorder/MediaRecorder.cpp
 Modules/mediasession/MediaMetadata.cpp

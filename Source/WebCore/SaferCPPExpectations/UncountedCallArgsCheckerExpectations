@@ -99,7 +99,6 @@ Modules/indexeddb/server/MemoryBackingStoreTransaction.cpp
 Modules/indexeddb/server/MemoryIDBBackingStore.cpp
 Modules/indexeddb/server/MemoryIndex.cpp
 Modules/indexeddb/server/UniqueIDBDatabaseConnection.cpp
-Modules/indexeddb/server/UniqueIDBDatabaseTransaction.cpp
 Modules/mediacontrols/MediaControlsHost.cpp
 Modules/mediarecorder/MediaRecorder.cpp
 Modules/mediarecorder/MediaRecorder.h
