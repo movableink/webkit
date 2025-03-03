@@ -2554,11 +2554,9 @@ public:
     Jump branch32(RelationalCondition cond, RegisterID left, RegisterID right)
     {
         if (left == ARMRegisters::sp) {
-            ASSERT(right != addressTempRegister);
             move(left, addressTempRegister);
             m_assembler.cmp(addressTempRegister, right);
         } else if (right == ARMRegisters::sp) {
-            ASSERT(left != addressTempRegister);
             move(right, addressTempRegister);
             m_assembler.cmp(left, addressTempRegister);
         } else
