@@ -309,10 +309,10 @@ IntSize ScrollView::sizeForUnobscuredContent(VisibleContentRectIncludesScrollbar
         return platformVisibleContentSize(scrollbarInclusion == VisibleContentRectIncludesScrollbars::Yes);
 
     auto obscuredContentInsets = this->obscuredContentInsets();
-    IntSize visibleContentSize = sizeForVisibleContent(scrollbarInclusion);
-    visibleContentSize.setWidth(visibleContentSize.width() - obscuredContentInsets.left());
-    visibleContentSize.setHeight(visibleContentSize.height() - obscuredContentInsets.top());
-    return visibleContentSize;
+    return sizeForVisibleContent(scrollbarInclusion) - roundedIntSize(FloatSize {
+        obscuredContentInsets.left() + obscuredContentInsets.right(),
+        obscuredContentInsets.top() + obscuredContentInsets.bottom()
+    });
 }
 
 IntRect ScrollView::visibleContentRectInternal(VisibleContentRectIncludesScrollbars scrollbarInclusion, VisibleContentRectBehavior visibleContentRectBehavior) const
