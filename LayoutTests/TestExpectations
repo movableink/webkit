@@ -5564,9 +5564,6 @@ fast/forms/switch/ [ Skip ]
 # These tests are for iOS port.
 fast/shadow-dom/ios/ [ Skip ]
 
-# Requires WK2 TestRunner
-fullscreen/full-screen-enter-while-exiting.html [ Skip ]
-
 # Animation / Layout workets are not supported
 imported/w3c/web-platform-tests/worklets/animation-worklet-service-worker-interception.https.html [ Skip ]
 imported/w3c/web-platform-tests/worklets/animation-worklet-csp.https.html [ Skip ]

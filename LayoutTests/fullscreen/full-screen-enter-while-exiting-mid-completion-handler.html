@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Entering fullscreen while exiting fullscreen</title>
+    <title>Entering fullscreen while exiting fullscreen mid-completion handler</title>
     <script src="full-screen-test.js"></script>
     <script>
 
@@ -12,11 +12,13 @@
             return;
         }
 
-        if (!window.testRunner) {
+        if (!window.testRunner || !window.testRunner.isWebKit2) {
             logResult(false, "This test requires WebKitTestRunner.");
             endTest();
             return;
         }
+
+        testRunner.waitBeforeFinishingFullscreenExit();
 
         consoleWrite('Enter fullscreen with target1');
         internals.withUserGesture(() => { run('target1.requestFullscreen()'); });
@@ -25,11 +27,15 @@
 
         consoleWrite('Exit fullscreen with target1');
         run('document.exitFullscreen()');
+        changePromise = waitFor(document, 'fullscreenchange')
+        await testRunner.updatePresentation();
 
         consoleWrite('Attempt to enter fullscreen with target2');
         internals.withUserGesture(() => { run('target2.requestFullscreen()'); });
 
         await waitFor(target2, 'fullscreenerror');
+
+        testRunner.finishFullscreenExit();
         await testRunner.updatePresentation();
 
         internals.withUserGesture(() => { run('target2.requestFullscreen()'); });

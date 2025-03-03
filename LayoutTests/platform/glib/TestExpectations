@@ -4372,6 +4372,8 @@ imported/w3c/web-platform-tests/upgrade-insecure-requests/gen/top.meta/unset/img
 
 webkit.org/b/288471 platform/glib/damage/transform-3d-dynamic-addition.html [ Failure ]
 
+fullscreen/full-screen-enter-while-exiting-mid-completion-handler.html [ Skip ]
+
 # End: Common failures between GTK and WPE.
 
 #////////////////////////////////////////////////////////////////////////////////////////

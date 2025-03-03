@@ -1659,6 +1659,7 @@ webkit.org/b/186099 editing/caret/caret-in-empty-cell.html [ ImageOnlyFailure ]
 webkit.org/b/186142 imported/w3c/web-platform-tests/css/css-text/text-transform/text-transform-upperlower-016.html [ ImageOnlyFailure ]
 
 webkit.org/b/186601 fullscreen/full-screen-layer-dump.html [ Failure ]
+fullscreen/full-screen-enter-while-exiting-multiple-elements.html [ Skip ]
 
 webkit.org/b/187994 compositing/backing/backing-store-attachment-fill-forwards-animation.html [ Failure ]
 

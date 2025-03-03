@@ -1044,6 +1044,8 @@ http/tests/local/blob/navigate-blob.html [ Skip ]
 
 # Not supported on WK1
 media/no-fullscreen-when-hidden.html [ Skip ]
+fullscreen/full-screen-enter-while-exiting-fully-mid-completion-handler.html [ Skip ]
+fullscreen/full-screen-enter-while-exiting-mid-completion-handler.html [ Skip ]
 
 # Multi-process test
 fullscreen/iframe-fullscreen-system-exit.html [ Skip ]
