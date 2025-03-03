@@ -5018,7 +5018,7 @@ void HTMLMediaElement::removeTextTrack(TrackID trackID, bool scheduleEvent)
 {
     if (!m_textTracks)
         return;
-    if (RefPtr track = m_audioTracks->find(trackID))
+    if (RefPtr track = m_textTracks->find(trackID))
         removeTextTrack(downcast<TextTrack>(*track), scheduleEvent);
 }
 
@@ -5034,7 +5034,7 @@ void HTMLMediaElement::removeVideoTrack(TrackID trackID)
 {
     if (!m_videoTracks)
         return;
-    if (RefPtr track = m_audioTracks->find(trackID))
+    if (RefPtr track = m_videoTracks->find(trackID))
         removeVideoTrack(downcast<VideoTrack>(*track));
 }
 
