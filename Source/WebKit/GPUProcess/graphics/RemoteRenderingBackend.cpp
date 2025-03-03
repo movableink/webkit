@@ -305,7 +305,8 @@ static RefPtr<ImageBuffer> allocateImageBufferInternal(const FloatSize& logicalS
         break;
 
     case RenderingMode::DisplayList:
-        imageBuffer = ImageBuffer::create<ImageBufferDisplayListBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
+        if (auto backend = ImageBufferDisplayListBackend::create(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, ControlFactory::create()))
+            imageBuffer = ImageBuffer::create<ImageBufferDisplayListBackend, ImageBufferType>(logicalSize, creationContext, WTFMove(backend), imageBufferIdentifier);
         break;
     }
 

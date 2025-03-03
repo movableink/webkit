@@ -106,6 +106,15 @@ public:
         return create<ImageBufferType>(parameters, backendInfo, creationContext, WTFMove(backend), std::forward<Arguments>(arguments)...);
     }
 
+    template<typename BackendType, typename ImageBufferType = ImageBuffer, typename... Arguments>
+    static RefPtr<ImageBufferType> create(const FloatSize& size, const ImageBufferCreationContext& creationContext, std::unique_ptr<ImageBufferBackend>&& backend, Arguments&&... arguments)
+    {
+        auto backendParameters = backend->parameters();
+        auto parameters = Parameters { size, backendParameters.resolutionScale, backendParameters.colorSpace, backendParameters.pixelFormat, backendParameters.purpose };
+        auto backendInfo = populateBackendInfo<BackendType>(backendParameters);
+        return create<ImageBufferType>(parameters, backendInfo, creationContext, WTFMove(backend), std::forward<Arguments>(arguments)...);
+    }
+
     template<typename ImageBufferType = ImageBuffer, typename... Arguments>
     static RefPtr<ImageBufferType> create(Parameters parameters, const ImageBufferBackend::Info& backendInfo, const WebCore::ImageBufferCreationContext& creationContext, std::unique_ptr<ImageBufferBackend>&& backend, Arguments&&... arguments)
     {
