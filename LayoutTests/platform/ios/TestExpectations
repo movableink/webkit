@@ -7711,3 +7711,5 @@ webkit.org/b/288888 [ arm64 ] compositing/contents-format/deep-color-backing-sto
 webkit.org/b/288896 editing/caret/caret-position-vertical-rl.html [ Failure ]
 
 webkit.org/b/287569 http/tests/site-isolation/page-visibility-onvisibilitychange-in-iframe.html [ Timeout ]
+
+webkit.org/b/287033 fast/mediastream/microphone-interruption-and-audio-session.html [ Failure ]
