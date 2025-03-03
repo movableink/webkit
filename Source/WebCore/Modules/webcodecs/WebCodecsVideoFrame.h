@@ -81,7 +81,7 @@ public:
         std::optional<size_t> displayHeight;
     };
     struct BufferInit {
-        VideoPixelFormat format { VideoPixelFormat::I420 };
+        std::optional<VideoPixelFormat> format;
         size_t codedWidth { 0 };
         size_t codedHeight { 0 };
         int64_t timestamp { 0 };
