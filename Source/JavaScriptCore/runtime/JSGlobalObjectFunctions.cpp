@@ -495,17 +495,17 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
         return JSValue::encode(jsUndefined());
     }
 
-    JSValue parsedObject;
+    JSValue parsedValue;
     if (programSource.is8Bit()) {
         LiteralParser<LChar, JSONReviverMode::Disabled> preparser(globalObject, programSource.span8(), SloppyJSON, nullptr);
-        parsedObject = preparser.tryLiteralParse();
+        parsedValue = preparser.tryEval();
     } else {
         LiteralParser<UChar, JSONReviverMode::Disabled> preparser(globalObject, programSource.span16(), SloppyJSON, nullptr);
-        parsedObject = preparser.tryLiteralParse();
+        parsedValue = preparser.tryEval();
     }
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    if (parsedObject)
-        return JSValue::encode(parsedObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (parsedValue)
+        return JSValue::encode(parsedValue);
 
     SourceOrigin sourceOrigin = callFrame->callerSourceOrigin(vm);
     SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
