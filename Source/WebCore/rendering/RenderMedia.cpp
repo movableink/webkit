@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,13 +42,6 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMedia);
 RenderMedia::RenderMedia(Type type, HTMLMediaElement& element, RenderStyle&& style)
     : RenderImage(type, element, WTFMove(style), ReplacedFlag::IsMedia)
 {
-    setHasShadowControls(true);
-}
-
-RenderMedia::RenderMedia(Type type, HTMLMediaElement& element, RenderStyle&& style, const IntSize& intrinsicSize)
-    : RenderImage(type, element, WTFMove(style), ReplacedFlag::IsMedia)
-{
-    setIntrinsicSize(intrinsicSize);
     setHasShadowControls(true);
 }
 
