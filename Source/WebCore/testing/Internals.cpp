@@ -3348,6 +3348,36 @@ ExceptionOr<uint64_t> Internals::layerIDForElement(Element& element)
     return backing->graphicsLayer()->primaryLayerID() ? backing->graphicsLayer()->primaryLayerID()->object().toUInt64() : 0;
 }
 
+static ExceptionOr<uint64_t> getLayerID(GraphicsLayer* layer)
+{
+    if (!layer)
+        return Exception { ExceptionCode::NotFoundError };
+
+    auto primaryLayerID = layer->primaryLayerID();
+    if (!primaryLayerID)
+        return Exception { ExceptionCode::NotFoundError };
+
+    return primaryLayerID ? primaryLayerID->object().toUInt64() : 0;
+}
+
+ExceptionOr<uint64_t> Internals::horizontalScrollbarLayerID(Node* node) const
+{
+    auto areaOrException = scrollableAreaForNode(node);
+    if (areaOrException.hasException())
+        return areaOrException.releaseException();
+
+    return getLayerID(areaOrException.returnValue()->layerForHorizontalScrollbar());
+}
+
+ExceptionOr<uint64_t> Internals::verticalScrollbarLayerID(Node* node) const
+{
+    auto areaOrException = scrollableAreaForNode(node);
+    if (areaOrException.hasException())
+        return areaOrException.releaseException();
+
+    return getLayerID(areaOrException.returnValue()->layerForVerticalScrollbar());
+}
+
 ExceptionOr<Vector<uint64_t>> Internals::scrollingNodeIDForNode(Node* node)
 {
     auto areaOrException = scrollableAreaForNode(node);

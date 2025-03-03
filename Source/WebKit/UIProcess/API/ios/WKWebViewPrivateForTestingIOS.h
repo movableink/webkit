@@ -73,7 +73,6 @@
 - (double)timePickerValueHour;
 - (double)timePickerValueMinute;
 
-- (NSDictionary *)_propertiesOfLayerWithID:(unsigned long long)layerID;
 - (void)_simulateElementAction:(_WKElementActionType)actionType atLocation:(CGPoint)location;
 - (void)_simulateLongPressActionAtLocation:(CGPoint)location;
 - (void)_simulateTextEntered:(NSString *)text;

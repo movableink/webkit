@@ -1874,9 +1874,20 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static propertiesOfLayerWithID(layerID)
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        const script = `uiController.uiScriptComplete(JSON.stringify(uiController.propertiesOfLayerWithID(${layerID})))`;
+        return new Promise(resolve => {
+            testRunner.runUIScript(script, properties => resolve(JSON.parse(properties)));
+        });
+    }
+
     static getCALayerTree()
     {
-        if (!this.isWebKit2() || !this.isIOSFamily())
+        if (!this.isWebKit2())
             return Promise.resolve();
 
         return new Promise(resolve => {
