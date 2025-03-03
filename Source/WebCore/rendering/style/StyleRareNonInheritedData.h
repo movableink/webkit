@@ -222,7 +222,7 @@ public:
     NameScope anchorScope;
     std::optional<Style::ScopedName> positionAnchor;
     std::optional<PositionArea> positionArea;
-    Vector<PositionTryFallback> positionTryFallbacks;
+    Vector<Style::PositionTryFallback> positionTryFallbacks;
 
     std::optional<Length> blockStepSize;
     unsigned blockStepAlign : 2; // BlockStepAlign

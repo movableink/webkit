@@ -1,9 +1,9 @@
 
-FAIL top left assert_equals: offsetLeft expected 0 but got 180
-FAIL span-top left assert_equals: offsetLeft expected 0 but got 180
-FAIL top span-left assert_equals: offsetLeft expected 0 but got 180
-FAIL top center assert_equals: offsetLeft expected 100 but got 180
-FAIL left center assert_equals: offsetLeft expected 0 but got 180
-FAIL start center assert_equals: offsetLeft expected 100 but got 180
-FAIL center start assert_equals: offsetLeft expected 0 but got 180
+PASS top left
+PASS span-top left
+PASS top span-left
+PASS top center
+PASS left center
+PASS start center
+PASS center start
 

@@ -1114,13 +1114,20 @@ static Ref<CSSValue> valueForTextShadow(const ShadowData* shadow, const RenderSt
     return CSSTextShadowPropertyValue::create(CSS::TextShadowProperty { WTFMove(list) });
 }
 
-static Ref<CSSValue> valueForPositionTryFallbacks(const Vector<PositionTryFallback>& fallbacks)
+static Ref<CSSValue> valueForPositionTryFallbacks(const Vector<Style::PositionTryFallback>& fallbacks)
 {
     if (fallbacks.isEmpty())
         return CSSPrimitiveValue::create(CSSValueNone);
 
     CSSValueListBuilder list;
     for (auto& fallback : fallbacks) {
+        if (fallback.positionAreaProperties) {
+            auto areaValue = fallback.positionAreaProperties->getPropertyCSSValue(CSSPropertyPositionArea);
+            if (areaValue)
+                list.append(*areaValue);
+            continue;
+        }
+
         CSSValueListBuilder singleFallbackList;
         if (fallback.positionTryRuleName)
             singleFallbackList.append(valueForScopedName(*fallback.positionTryRuleName));

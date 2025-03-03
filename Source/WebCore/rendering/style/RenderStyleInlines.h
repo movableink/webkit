@@ -478,7 +478,7 @@ constexpr PointerEvents RenderStyle::initialPointerEvents() { return PointerEven
 constexpr PositionType RenderStyle::initialPosition() { return PositionType::Static; }
 inline std::optional<Style::ScopedName> RenderStyle::initialPositionAnchor() { return { }; }
 inline std::optional<PositionArea> RenderStyle::initialPositionArea() { return { }; }
-inline Vector<PositionTryFallback> RenderStyle::initialPositionTryFallbacks() { return { }; }
+inline Vector<Style::PositionTryFallback> RenderStyle::initialPositionTryFallbacks() { return { }; }
 constexpr Style::PositionTryOrder RenderStyle::initialPositionTryOrder() { return Style::PositionTryOrder::Normal; }
 constexpr OptionSet<PositionVisibility> RenderStyle::initialPositionVisibility() { return PositionVisibility::AnchorsVisible; }
 constexpr PrintColorAdjust RenderStyle::initialPrintColorAdjust() { return PrintColorAdjust::Economy; }

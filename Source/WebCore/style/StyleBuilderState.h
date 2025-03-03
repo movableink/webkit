@@ -28,6 +28,7 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSToStyleMap.h"
 #include "CascadeLevel.h"
+#include "PositionArea.h"
 #include "PositionTryFallback.h"
 #include "PropertyCascade.h"
 #include "RuleSet.h"

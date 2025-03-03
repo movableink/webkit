@@ -265,7 +265,6 @@ struct MasonryAutoFlow;
 struct NamedGridAreaMap;
 struct NamedGridLinesMap;
 struct OrderedNamedGridLinesMap;
-struct PositionTryFallback;
 struct SingleTimelineRange;
 
 struct ScrollSnapAlign;
@@ -295,6 +294,7 @@ struct Color;
 struct ColorScheme;
 struct CornerShapeValue;
 struct DynamicRangeLimit;
+struct PositionTryFallback;
 struct ScopedName;
 struct ScrollMargin;
 struct ScrollMarginEdge;
@@ -2348,9 +2348,9 @@ public:
     inline Style::PositionTryOrder positionTryOrder() const;
     inline void setPositionTryOrder(Style::PositionTryOrder);
 
-    static Vector<PositionTryFallback> initialPositionTryFallbacks();
-    const Vector<PositionTryFallback>& positionTryFallbacks() const;
-    void setPositionTryFallbacks(const Vector<PositionTryFallback>&);
+    static Vector<Style::PositionTryFallback> initialPositionTryFallbacks();
+    const Vector<Style::PositionTryFallback>& positionTryFallbacks() const;
+    void setPositionTryFallbacks(const Vector<Style::PositionTryFallback>&);
 
     static constexpr OptionSet<PositionVisibility> initialPositionVisibility();
     inline OptionSet<PositionVisibility> positionVisibility() const;

@@ -1362,6 +1362,11 @@ std::unique_ptr<RenderStyle> TreeResolver::generatePositionOption(const Position
         return { };
 
     auto resolveFallbackProperties = [&]() -> RefPtr<const StyleProperties> {
+        if (fallback.positionAreaProperties) {
+            ASSERT(!fallback.positionTryRuleName);
+            ASSERT(fallback.tactics.isEmpty());
+            return fallback.positionAreaProperties;
+        }
         if (!fallback.positionTryRuleName)
             return nullptr;
         auto* styleScope = Style::Scope::forOrdinal(styleable.element, fallback.positionTryRuleName->scopeOrdinal);

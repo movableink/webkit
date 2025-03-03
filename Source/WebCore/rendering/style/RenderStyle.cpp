@@ -3973,12 +3973,12 @@ UserSelect RenderStyle::usedUserSelect() const
     return value;
 }
 
-const Vector<PositionTryFallback>& RenderStyle::positionTryFallbacks() const
+const Vector<Style::PositionTryFallback>& RenderStyle::positionTryFallbacks() const
 {
     return m_nonInheritedData->rareData->positionTryFallbacks;
 }
 
-void RenderStyle::setPositionTryFallbacks(const Vector<PositionTryFallback>& fallbacks)
+void RenderStyle::setPositionTryFallbacks(const Vector<Style::PositionTryFallback>& fallbacks)
 {
     SET_NESTED_VAR(m_nonInheritedData, rareData, positionTryFallbacks, fallbacks);
 }

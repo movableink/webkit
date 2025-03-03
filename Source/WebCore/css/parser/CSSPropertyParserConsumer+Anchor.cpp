@@ -306,8 +306,11 @@ RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange& range, const CSSParser
         return CSSPrimitiveValue::create(CSSValueNone);
 
     auto maybeDim2 = consumeIdentRaw(range);
-    if (!maybeDim2)
+    if (!maybeDim2) {
+        if (!getKeywordType(dim1))
+            return nullptr;
         return CSSPrimitiveValue::create(dim1);
+    }
     auto dim2 = *maybeDim2;
 
     return valueForPositionArea(dim1, dim2);

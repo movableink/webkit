@@ -2756,13 +2756,22 @@ inline NameScope BuilderConverter::convertNameScope(BuilderState& builderState, 
 
 inline Vector<PositionTryFallback> BuilderConverter::convertPositionTryFallbacks(BuilderState& builderState, const CSSValue& value)
 {
-    auto fallbackForValueList = [&](const CSSValueList& valueList) -> std::optional<PositionTryFallback> {
-        if (valueList.separator() != CSSValueList::SpaceSeparator)
+    auto convertFallback = [&](const CSSValue& fallbackValue) -> std::optional<PositionTryFallback> {
+        auto* valueList = dynamicDowncast<CSSValueList>(fallbackValue);
+        if (!valueList) {
+            // Turn the inlined position-area fallback into properties object that can be applied similarly to @position-try declarations.
+            auto property = CSSProperty { CSSPropertyPositionArea, Ref { const_cast<CSSValue&>(fallbackValue) } };
+            return PositionTryFallback {
+                .positionAreaProperties = ImmutableStyleProperties::create(std::span { &property, 1 }, HTMLStandardMode)
+            };
+        }
+
+        if (valueList->separator() != CSSValueList::SpaceSeparator)
             return { };
 
         auto fallback = PositionTryFallback { };
 
-        for (auto& item : valueList) {
+        for (auto& item : *valueList) {
             if (item.isCustomIdent())
                 fallback.positionTryRuleName = Style::ScopedName { AtomString { item.customIdent() }, builderState.styleScopeOrdinal() };
             else
@@ -2771,28 +2780,18 @@ inline Vector<PositionTryFallback> BuilderConverter::convertPositionTryFallbacks
         return fallback;
     };
 
-    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
-        switch (primitiveValue->valueID()) {
-        case CSSValueNone:
-            return { };
-        default:
-            ASSERT_NOT_REACHED();
-            return { };
-        }
-    }
+    if (value.valueID() == CSSValueNone)
+        return { };
+
+    if (auto fallback = convertFallback(value))
+        return { *fallback };
 
     auto* list = dynamicDowncast<CSSValueList>(value);
     if (!list)
         return { };
 
-    if (auto fallback = fallbackForValueList(*list))
-        return { *fallback };
-
     return WTF::map(*list, [&](auto& item) {
-        auto* itemList = dynamicDowncast<CSSValueList>(item);
-        if (!itemList)
-            return PositionTryFallback { };
-        auto fallback = fallbackForValueList(*itemList);
+        auto fallback = convertFallback(item);
         return fallback ? *fallback : PositionTryFallback { };
     });
 }

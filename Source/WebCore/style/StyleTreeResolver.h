@@ -43,13 +43,13 @@ class Element;
 class Node;
 class RenderStyle;
 class ShadowRoot;
-struct PositionTryFallback;
 
 namespace Style {
 
-struct BuilderPositionTryFallback;
 class Resolver;
+struct BuilderPositionTryFallback;
 struct MatchResult;
+struct PositionTryFallback;
 struct PseudoElementIdentifier;
 struct ResolutionContext;
 struct ResolvedStyle;
