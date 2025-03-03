@@ -2161,6 +2161,16 @@ void TestRunner::setResourceMonitorList(JSContextRef context, JSStringRef rulesT
     postMessageWithAsyncReply(context, "SetResourceMonitorList", toWK(rulesText), callback);
 }
 
+void TestRunner::dumpChildFrameScrollPositions()
+{
+    postSynchronousPageMessage("DumpChildFrameScrollPositions");
+}
+
+bool TestRunner::shouldDumpAllFrameScrollPositions() const
+{
+    return postSynchronousPageMessageReturningBoolean("ShouldDumpAllFrameScrollPositions");
+}
+
 ALLOW_DEPRECATED_DECLARATIONS_END
 
 } // namespace WTR

@@ -160,6 +160,7 @@ private:
     bool m_canOpenWindows { true };
     bool m_shouldDumpPrivateClickMeasurement { false };
     bool m_shouldDumpBackForwardListsForAllWindows { false };
+    bool m_shouldDumpAllFrameScrollPositions { false };
     WhatToDump m_whatToDump { WhatToDump::RenderTree };
 
     StringBuilder m_textOutput;

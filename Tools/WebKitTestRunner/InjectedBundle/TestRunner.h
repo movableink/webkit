@@ -121,7 +121,7 @@ public:
 
     // Other dumping.
     void dumpBackForwardList();
-    void dumpChildFrameScrollPositions() { m_shouldDumpAllFrameScrollPositions = true; }
+    void dumpChildFrameScrollPositions();
     void dumpEditingCallbacks() { m_dumpEditingCallbacks = true; }
     void dumpSelectionRect() { m_dumpSelectionRect = true; }
     void dumpStatusCallbacks() { m_dumpStatusCallbacks = true; }
@@ -230,7 +230,7 @@ public:
     WhatToDump whatToDump() const;
     void setWhatToDump(WhatToDump);
 
-    bool shouldDumpAllFrameScrollPositions() const { return m_shouldDumpAllFrameScrollPositions; }
+    bool shouldDumpAllFrameScrollPositions() const;
     bool shouldDumpBackForwardListsForAllWindows() const;
     bool shouldDumpEditingCallbacks() const { return m_dumpEditingCallbacks; }
     bool shouldDumpMainFrameScrollPosition() const { return whatToDump() == WhatToDump::RenderTree; }
@@ -613,7 +613,6 @@ private:
     size_t m_userMediaPermissionRequestCount { 0 };
 
     unsigned m_renderTreeDumpOptions { 0 };
-    bool m_shouldDumpAllFrameScrollPositions { false };
     bool m_shouldAllowEditing { true };
 
     bool m_dumpEditingCallbacks { false };

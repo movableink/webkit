@@ -1456,6 +1456,14 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
     if (WKStringIsEqualToUTF8CString(messageName, "ShouldDumpBackForwardListsForAllWindows"))
         return adoptWK(WKBooleanCreate(m_shouldDumpBackForwardListsForAllWindows));
 
+    if (WKStringIsEqualToUTF8CString(messageName, "DumpChildFrameScrollPositions")) {
+        m_shouldDumpAllFrameScrollPositions = true;
+        return nullptr;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "ShouldDumpAllFrameScrollPositions"))
+        return adoptWK(WKBooleanCreate(m_shouldDumpAllFrameScrollPositions));
+
     ASSERT_NOT_REACHED();
     return nullptr;
 }
