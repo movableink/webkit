@@ -62,7 +62,7 @@ const uint8_t kGetUidCommand[] = {
 
 void CcidConnection::detectContactless()
 {
-    transact(Vector(std::span { kGetUidCommand }), [weakThis = WeakPtr { *this }] (Vector<uint8_t>&& response) mutable {
+    transact(Vector(std::span { kGetUidCommand }), [weakThis = ThreadSafeWeakPtr { *this }] (Vector<uint8_t>&& response) mutable {
         ASSERT(RunLoop::isMain());
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
@@ -75,7 +75,7 @@ void CcidConnection::detectContactless()
 
 void CcidConnection::trySelectFidoApplet()
 {
-    transact(Vector(std::span { kCtapNfcAppletSelectionCommand }), [weakThis = WeakPtr { *this }] (Vector<uint8_t>&& response) mutable {
+    transact(Vector(std::span { kCtapNfcAppletSelectionCommand }), [weakThis = ThreadSafeWeakPtr { *this }] (Vector<uint8_t>&& response) mutable {
         ASSERT(RunLoop::isMain());
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
