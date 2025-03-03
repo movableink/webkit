@@ -518,8 +518,13 @@ void GStreamerRegistryScanner::initializeDecoders(const GStreamerRegistryScanner
     };
     fillMimeTypeSetFromCapsMapping(factories, mseCompatibleMapping);
 
-    if (m_isMediaSource)
+    if (m_isMediaSource) {
+        // This ensures WebVTT will always be supported in MSE, since it's decoded directly by WebKit,
+        // so we don't actually push any WebVTT to the playback pipeline.
+        RegistryLookupResult webvttDecoderAvailable = { true, false, nullptr };
+        m_decoderCodecMap.add("wvtt"_s, webvttDecoderAvailable);
         return;
+    }
 
     // The mime-types initialized below are not supported by the MSE backend.
 

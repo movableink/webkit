@@ -1755,7 +1755,6 @@ void MediaPlayerPrivateGStreamer::updateTracks([[maybe_unused]] const GRefPtr<Gs
         type##TrackIndex++;                                             \
     } G_STMT_END
 
-    bool useMediaSource = isMediaSource();
     unsigned audioTrackIndex = 0;
     unsigned videoTrackIndex = 0;
     unsigned textTrackIndex = 0;
@@ -1775,7 +1774,7 @@ void MediaPlayerPrivateGStreamer::updateTracks([[maybe_unused]] const GRefPtr<Gs
             configureMediaStreamAudioTracks();
         } else if (type & GST_STREAM_TYPE_VIDEO && player && player->isVideoPlayer())
             CREATE_OR_SELECT_TRACK(video, Video);
-        else if (type & GST_STREAM_TYPE_TEXT && !useMediaSource)
+        else if (type & GST_STREAM_TYPE_TEXT)
             CREATE_OR_SELECT_TRACK(text, Text);
         else
             GST_WARNING("Unknown track type found for stream %" PRIu64 "", streamId);

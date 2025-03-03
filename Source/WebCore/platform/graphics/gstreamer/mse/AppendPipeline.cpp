@@ -307,7 +307,9 @@ std::tuple<GRefPtr<GstCaps>, AppendPipeline::StreamType, FloatSize> AppendPipeli
 
     auto originalMediaType = capsMediaType(demuxerSrcPadCaps);
     auto& gstRegistryScanner = GStreamerRegistryScannerMSE::singleton();
-    if (!gstRegistryScanner.isCodecSupported(GStreamerRegistryScanner::Configuration::Decoding, originalMediaType.toStringWithoutCopying())) {
+    if (doCapsHaveType(demuxerSrcPadCaps, GST_TEXT_CAPS_TYPE_PREFIX) || originalMediaType == "application/x-subtitle-vtt"_s) {
+        streamType = StreamType::Text;
+    } else if (!gstRegistryScanner.isCodecSupported(GStreamerRegistryScanner::Configuration::Decoding, originalMediaType.toString())) {
         streamType = StreamType::Invalid;
     } else if (doCapsHaveType(demuxerSrcPadCaps, GST_VIDEO_CAPS_TYPE_PREFIX)) {
         presentationSize = getVideoResolutionFromCaps(demuxerSrcPadCaps).value_or(FloatSize());
@@ -315,8 +317,6 @@ std::tuple<GRefPtr<GstCaps>, AppendPipeline::StreamType, FloatSize> AppendPipeli
     } else {
         if (doCapsHaveType(demuxerSrcPadCaps, GST_AUDIO_CAPS_TYPE_PREFIX))
             streamType = StreamType::Audio;
-        else if (doCapsHaveType(demuxerSrcPadCaps, GST_TEXT_CAPS_TYPE_PREFIX))
-            streamType = StreamType::Text;
     }
 
     return { WTFMove(parsedCaps), streamType, WTFMove(presentationSize) };
@@ -377,8 +377,10 @@ void AppendPipeline::appsinkNewSample(const Track& track, GRefPtr<GstSample>&& s
     }
 
     auto* buffer = gst_sample_get_buffer(sample.get());
-    if (!GST_BUFFER_PTS_IS_VALID(buffer)) {
+    auto hasValidPTS = GST_BUFFER_PTS_IS_VALID(buffer);
+    if (!hasValidPTS && track.streamType != Text) {
         // When demuxing Vorbis, matroskademux creates several PTS-less frames with header information. We don't need those.
+        // However, for text tracks, that's likely our WebVTT header, which is required for WebVTTParser.
         GST_DEBUG_OBJECT(pipeline(), "Ignoring sample without PTS: %" GST_PTR_FORMAT, buffer);
         return;
     }
@@ -413,7 +415,13 @@ void AppendPipeline::appsinkNewSample(const Track& track, GRefPtr<GstSample>&& s
         mediaSample->extendToTheBeginning();
     }
 
-    m_sourceBufferPrivate.didReceiveSample(mediaSample.get());
+    if (track.streamType == Text) {
+        const auto textTrack = static_cast<InbandTextTrackPrivateGStreamer*>(track.webKitTrack.get());
+        textTrack->handleSample(GRefPtr(mediaSample->sample()));
+    }
+
+    if (hasValidPTS)
+        m_sourceBufferPrivate.didReceiveSample(mediaSample.get());
 }
 
 void AppendPipeline::didReceiveInitializationSegment()
@@ -523,7 +531,7 @@ void AppendPipeline::didReceiveInitializationSegment()
             SourceBufferPrivateClient::InitializationSegment::AudioTrackInformation info;
             info.track = static_cast<AudioTrackPrivateGStreamer*>(track->webKitTrack.get());
             info.description = GStreamerMediaDescription::create(track->finalCaps);
-            initializationSegment.audioTracks.append(info);
+            initializationSegment.audioTracks.append(WTFMove(info));
             break;
         }
         case Video: {
@@ -531,7 +539,15 @@ void AppendPipeline::didReceiveInitializationSegment()
             SourceBufferPrivateClient::InitializationSegment::VideoTrackInformation info;
             info.track = static_cast<VideoTrackPrivateGStreamer*>(track->webKitTrack.get());
             info.description = GStreamerMediaDescription::create(track->finalCaps);
-            initializationSegment.videoTracks.append(info);
+            initializationSegment.videoTracks.append(WTFMove(info));
+            break;
+        }
+        case Text: {
+            ASSERT(track->webKitTrack);
+            SourceBufferPrivateClient::InitializationSegment::TextTrackInformation info;
+            info.track = static_cast<InbandTextTrackPrivateGStreamer*>(track->webKitTrack.get());
+            info.description = GStreamerMediaDescription::create(track->finalCaps);
+            initializationSegment.textTracks.append(WTFMove(info));
             break;
         }
         default:
@@ -780,6 +796,9 @@ GRefPtr<GstElement> createOptionalEncoderForFormat([[maybe_unused]] GstBin* bin,
 
     const char* elementClass = "identity";
 
+    // FIXME scenarios we haven't tested yet:
+    //   - "Different cues can overlap." (WebVTT, 4.1 WebVTT file structure)
+    //   - SouceBuffer timestampOffset   (Media Source Extensions, 5.1 Attributes)
     if (mediaType == "text/x-raw"_s)
         elementClass = "webvttenc";
 
@@ -975,7 +994,7 @@ void AppendPipeline::Track::emplaceOptionalParserForFormat(GstBin* bin, const GR
         gst_bin_remove(bin, parser.get());
     }
 
-    auto parserName = makeString("parser"_s, unsafeSpan8(streamTypeToStringLower(streamType)), "_"_s, trackId);
+    auto parserName = makeString("parser_"_s, unsafeSpan8(streamTypeToStringLower(streamType)), "_"_s, trackId);
     parser = createOptionalParserForFormat(bin, parserName, newCaps.get());
     gst_bin_add(bin, parser.get());
     gst_element_sync_state_with_parent(parser.get());
@@ -986,7 +1005,7 @@ void AppendPipeline::Track::emplaceOptionalParserForFormat(GstBin* bin, const GR
 
 void AppendPipeline::Track::emplaceOptionalEncoderForFormat(GstBin* bin, const GRefPtr<GstCaps>& newCaps)
 {
-    auto encoderName = makeString("encoder"_s, unsafeSpan8(streamTypeToStringLower(streamType)), "_"_s, trackId);
+    auto encoderName = makeString("encoder_"_s, unsafeSpan8(streamTypeToStringLower(streamType)), "_"_s, trackId);
     encoder = createOptionalEncoderForFormat(bin, encoderName, newCaps.get());
     gst_bin_add(bin, encoder.get());
     gst_element_sync_state_with_parent(encoder.get());
