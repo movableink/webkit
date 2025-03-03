@@ -744,10 +744,11 @@ id<MTLRenderPipelineState> Device::indexBufferClampPipeline(MTLIndexType indexTy
         /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:@R"(
 #define vertexCount 0
 #define primitiveRestart 1
+#define indexCountMinusOne 2
     using namespace metal;
     [[vertex]] void vsUshortIndexClamp(device const ushort* indexBuffer [[buffer(0)]], device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput [[buffer(1)]], const constant uint* data [[buffer(2)]], uint indexId [[vertex_id]])
     {
-        ushort indexBufferValue = indexBuffer[indexId];
+        ushort indexBufferValue = indexBuffer[min(indexId, data[indexCountMinusOne])];
         ushort vertexIndex = data[primitiveRestart] + indexBufferValue;
         bool negativeCondition = indexedOutput.baseVertex + data[primitiveRestart] < indexedOutput.baseVertex;
         if (negativeCondition || (vertexIndex + indexedOutput.baseVertex >= data[vertexCount] + data[primitiveRestart])) {
@@ -757,7 +758,7 @@ id<MTLRenderPipelineState> Device::indexBufferClampPipeline(MTLIndexType indexTy
     }
     [[vertex]] void vsUintIndexClamp(device const uint* indexBuffer [[buffer(0)]], device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput [[buffer(1)]], const constant uint* data [[buffer(2)]], uint indexId [[vertex_id]])
     {
-        uint indexBufferValue = indexBuffer[indexId];
+        uint indexBufferValue = indexBuffer[min(indexId, data[indexCountMinusOne])];
         uint vertexIndex = data[primitiveRestart] + indexBufferValue;
         bool negativeCondition = indexedOutput.baseVertex + data[primitiveRestart] < indexedOutput.baseVertex;
         if (negativeCondition || (vertexIndex + indexedOutput.baseVertex >= data[vertexCount] + data[primitiveRestart])) {
