@@ -2,6 +2,7 @@ import json
 import logging
 import shutil
 import os
+import collections
 from collections import defaultdict, OrderedDict
 
 from webkitpy.benchmark_runner.benchmark_builder import BenchmarkBuilder
@@ -119,12 +120,19 @@ class BenchmarkRunner(object):
         for subtest in subtests:
             if '/' in subtest:
                 subtest_suite, subtest_name = subtest.split('/')
+            elif subtest in valid_subtests:
+                subtest_suite, subtest_name = subtest, None
             else:
                 subtest_suite, subtest_name = None, subtest
             did_append_subtest = False
             if subtest_suite:
                 if subtest_suite not in valid_subtests:
                     _log.warning('{} does not belong to a valid suite, skipping'.format(subtest))
+                    continue
+                if subtest_name is None:
+                    for name in valid_subtests[subtest_suite]:
+                        subtests_to_run[subtest_suite].append(name)
+                        did_append_subtest = True
                     continue
                 if subtest_name in valid_subtests[subtest_suite]:
                     subtests_to_run[subtest_suite].append(subtest_name)
@@ -142,6 +150,14 @@ class BenchmarkRunner(object):
             return subtests_to_run
         else:
             raise Exception('No valid subtests were specified')
+
+    def _construct_subtest_url(self, subtests):
+        if not subtests or not isinstance(subtests, collections.abc.Mapping) or 'subtest_url_format' not in self._plan:
+            return ''
+        for suite, tests in subtests.items():
+            for test in tests:
+                subtest_url += self._plan['subtest_url_format'].replace('${SUITE}', suite).replace('${TEST}', test)
+        return subtest_url
 
     def _run_one_test(self, web_root, test_file, iteration):
         raise NotImplementedError('BenchmarkRunner is an abstract class and shouldn\'t be instantiated.')
