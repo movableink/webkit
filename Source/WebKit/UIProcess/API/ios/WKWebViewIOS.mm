@@ -713,6 +713,14 @@ static WebCore::Color scrollViewBackgroundColor(WKWebView *webView, AllowPageBac
 #endif
 }
 
+- (void)_videosInElementFullscreenChanged
+{
+#if ENABLE(FULLSCREEN_API)
+    if (_fullScreenWindowController)
+        [_fullScreenWindowController videosInElementFullscreenChanged];
+#endif
+}
+
 - (CGPoint)_initialContentOffsetForScrollView
 {
     // FIXME: Should this use -[_scrollView adjustedContentInset]?

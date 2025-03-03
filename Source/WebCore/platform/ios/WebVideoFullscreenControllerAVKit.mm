@@ -207,6 +207,7 @@ private:
     void setVideoFullscreenFrame(FloatRect) override { }
     void fullscreenModeChanged(HTMLMediaElementEnums::VideoFullscreenMode) override;
     bool hasVideo() const override;
+    bool isChildOfElementFullscreen() const override;
     FloatSize videoDimensions() const override;
     bool isMuted() const override;
     double volume() const override;
@@ -638,6 +639,12 @@ bool VideoFullscreenControllerContext::hasVideo() const
 {
     ASSERT(isUIThread());
     return m_presentationModel ? m_presentationModel->hasVideo() : false;
+}
+
+bool VideoFullscreenControllerContext::isChildOfElementFullscreen() const
+{
+    ASSERT(isUIThread());
+    return m_presentationModel ? m_presentationModel->isChildOfElementFullscreen() : false;
 }
 
 bool VideoFullscreenControllerContext::isMuted() const

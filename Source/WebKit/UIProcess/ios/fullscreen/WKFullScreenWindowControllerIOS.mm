@@ -1477,6 +1477,12 @@ static constexpr NSString *kPrefersFullScreenDimmingKey = @"WebKitPrefersFullScr
         [_fullscreenViewController videoControlsManagerDidChange];
 }
 
+- (void)videosInElementFullscreenChanged
+{
+    if (_fullscreenViewController)
+        [_fullscreenViewController videosInElementFullscreenChanged];
+}
+
 - (void)placeholderWillMoveToSuperview:(UIView *)superview
 {
 #if !PLATFORM(APPLETV)

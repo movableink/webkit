@@ -71,6 +71,7 @@ public:
     WEBCORE_EXPORT void fullscreenModeChanged(HTMLMediaElementEnums::VideoFullscreenMode) final;
     FloatSize videoDimensions() const final { return m_videoDimensions; }
     bool hasVideo() const final { return m_hasVideo; }
+    bool isChildOfElementFullscreen() const final { return m_isChildOfElementFullscreen; }
 
     WEBCORE_EXPORT void setVideoSizeFenced(const FloatSize&, WTF::MachSendRight&&);
 
@@ -120,6 +121,9 @@ private:
     void updateForEventName(const AtomString&);
     void cleanVideoListeners();
     void documentVisibilityChanged();
+#if ENABLE(FULLSCREEN_API)
+    void documentFullscreenChanged();
+#endif
 
     Ref<VideoListener> m_videoListener;
     RefPtr<HTMLVideoElement> m_videoElement;
@@ -128,12 +132,13 @@ private:
     UncheckedKeyHashSet<CheckedPtr<VideoPresentationModelClient>> m_clients;
     bool m_hasVideo { false };
     bool m_documentIsVisible { true };
+    bool m_isChildOfElementFullscreen { false };
     FloatSize m_videoDimensions;
     FloatRect m_videoFrame;
     Vector<RefPtr<TextTrack>> m_legibleTracksForMenu;
     Vector<RefPtr<AudioTrack>> m_audioTracksForMenu;
     std::optional<MediaPlayerIdentifier> m_playerIdentifier;
-
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 #if !RELEASE_LOG_DISABLED
     mutable uint64_t m_childIdentifierSeed { 0 };
 #endif

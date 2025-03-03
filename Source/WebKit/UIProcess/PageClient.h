@@ -692,6 +692,7 @@ public:
     virtual void systemAudioCaptureChanged() { }
 
     virtual void videoControlsManagerDidChange() { }
+    virtual void videosInElementFullscreenChanged() { }
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
     virtual WebCore::WebMediaSessionManager& mediaSessionManager() = 0;

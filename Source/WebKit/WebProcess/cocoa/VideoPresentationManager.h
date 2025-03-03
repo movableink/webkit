@@ -105,6 +105,7 @@ private:
     // VideoPresentationModelClient
     void hasVideoChanged(bool) override;
     void documentVisibilityChanged(bool) override;
+    void isChildOfElementFullscreenChanged(bool) final;
 
     // CheckedPtr interface
     uint32_t checkedPtrCount() const final { return CanMakeCheckedPtr::checkedPtrCount(); }
@@ -185,6 +186,7 @@ protected:
     // Interface to VideoPresentationInterfaceContext
     void hasVideoChanged(PlaybackSessionContextIdentifier, bool hasVideo);
     void documentVisibilityChanged(PlaybackSessionContextIdentifier, bool isDocumentVisible);
+    void isChildOfElementFullscreenChanged(PlaybackSessionContextIdentifier, bool);
     void videoDimensionsChanged(PlaybackSessionContextIdentifier, const WebCore::FloatSize&);
     void setPlayerIdentifier(PlaybackSessionContextIdentifier, std::optional<WebCore::MediaPlayerIdentifier>);
 

@@ -58,6 +58,7 @@
 - (void)close;
 - (void)webViewDidRemoveFromSuperviewWhileInFullscreen;
 - (void)videoControlsManagerDidChange;
+- (void)videosInElementFullscreenChanged;
 - (void)didCleanupFullscreen;
 
 #if PLATFORM(VISION)

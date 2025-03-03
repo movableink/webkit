@@ -991,6 +991,11 @@ void PageClientImpl::videoControlsManagerDidChange()
     [webView() _videoControlsManagerDidChange];
 }
 
+void PageClientImpl::videosInElementFullscreenChanged()
+{
+    [webView() _videosInElementFullscreenChanged];
+}
+
 void PageClientImpl::refView()
 {
     [m_contentView retain];

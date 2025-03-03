@@ -118,6 +118,7 @@ enum class TapHandlingResult : uint8_t;
 - (void)_updateScrollViewIndicatorStyle;
 
 - (void)_videoControlsManagerDidChange;
+- (void)_videosInElementFullscreenChanged;
 
 - (void)_navigationGestureDidBegin;
 - (void)_navigationGestureDidEnd;

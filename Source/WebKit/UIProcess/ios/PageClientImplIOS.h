@@ -283,6 +283,7 @@ private:
 
     void didChangeBackgroundColor() override;
     void videoControlsManagerDidChange() override;
+    void videosInElementFullscreenChanged() override;
 
     void refView() override;
     void derefView() override;

@@ -640,6 +640,16 @@ void DocumentFullscreen::fullyExitFullscreen()
     });
 }
 
+static bool hasJSEventListener(Node& node, const AtomString& eventType)
+{
+    for (const auto& listener : node.eventListeners(eventType)) {
+        if (listener->callback().type() == EventListener::JSEventListenerType)
+            return true;
+    }
+
+    return false;
+}
+
 // MARK: - Fullscreen rendering update steps / event dispatching.
 // https://fullscreen.spec.whatwg.org/#run-the-fullscreen-steps
 
@@ -679,7 +689,7 @@ void DocumentFullscreen::dispatchPendingEvents()
         case EventType::Change: {
             Ref targetDocument = target->document();
             target->dispatchEvent(Event::create(eventNames().fullscreenchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
-            bool shouldEmitUnprefixed = !(target->hasEventListeners(eventNames().webkitfullscreenchangeEvent) && target->hasEventListeners(eventNames().fullscreenchangeEvent)) && !(targetDocument->hasEventListeners(eventNames().webkitfullscreenchangeEvent) && targetDocument->hasEventListeners(eventNames().fullscreenchangeEvent));
+            bool shouldEmitUnprefixed = !(hasJSEventListener(target, eventNames().webkitfullscreenchangeEvent) && hasJSEventListener(target, eventNames().fullscreenchangeEvent)) && !(hasJSEventListener(targetDocument, eventNames().webkitfullscreenchangeEvent) && hasJSEventListener(targetDocument, eventNames().fullscreenchangeEvent));
             if (shouldEmitUnprefixed)
                 target->dispatchEvent(Event::create(eventNames().webkitfullscreenchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
             break;

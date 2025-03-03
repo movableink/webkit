@@ -122,6 +122,12 @@ void VideoPresentationInterfaceContext::documentVisibilityChanged(bool isDocumen
         manager->documentVisibilityChanged(m_contextId, isDocumentVisible);
 }
 
+void VideoPresentationInterfaceContext::isChildOfElementFullscreenChanged(bool isChildOfElementFullscreen)
+{
+    if (RefPtr manager = m_manager.get())
+        manager->isChildOfElementFullscreenChanged(m_contextId, isChildOfElementFullscreen);
+}
+
 void VideoPresentationInterfaceContext::videoDimensionsChanged(const FloatSize& videoDimensions)
 {
     if (m_manager)
@@ -567,6 +573,12 @@ void VideoPresentationManager::documentVisibilityChanged(PlaybackSessionContextI
 {
     if (RefPtr page = m_page.get())
         page->send(Messages::VideoPresentationManagerProxy::SetDocumentVisibility(contextId, isDocumentVisibile));
+}
+
+void VideoPresentationManager::isChildOfElementFullscreenChanged(PlaybackSessionContextIdentifier contextId, bool isChildOfElementFullscreen)
+{
+    if (RefPtr page = m_page.get())
+        page->send(Messages::VideoPresentationManagerProxy::SetIsChildOfElementFullscreen(contextId, isChildOfElementFullscreen));
 }
 
 void VideoPresentationManager::videoDimensionsChanged(PlaybackSessionContextIdentifier contextId, const FloatSize& videoDimensions)
