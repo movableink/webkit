@@ -377,7 +377,7 @@ private:
     Vector<PDFContextMenuItem> scaleContextMenuItems() const;
     Vector<PDFContextMenuItem> navigationContextMenuItemsForPageAtIndex(PDFDocumentLayout::PageIndex) const;
     WebCore::ContextMenuAction contextMenuActionFromTag(ContextMenuItemTag) const;
-    ContextMenuItemTag toContextMenuItemTag(int tagValue) const;
+    static ContextMenuItemTag toContextMenuItemTag(int tagValue);
     void performContextMenuAction(ContextMenuItemTag, const WebCore::IntPoint& contextMenuEventRootViewPoint);
 
     ContextMenuItemTag contextMenuItemTagFromDisplayMode(const PDFDocumentLayout::DisplayMode&) const;

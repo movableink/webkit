@@ -584,7 +584,7 @@ bool WebContextMenuProxyMac::showAfterPostProcessingContextData()
             }
 
             auto fallbackImage = potentialQRCodeViewportSnapshotImage->makeCGImage();
-            requestPayloadForQRCode(fallbackImage.get(), [this, protectedThis = WTFMove(protectedThis)](NSString *result) mutable {
+            requestPayloadForQRCode(fallbackImage.get(), [this, protectedThis = Ref { *this }](NSString *result) mutable {
                 m_context.setQRCodePayloadString(result);
                 WebContextMenuProxy::show();
             });
@@ -996,7 +996,7 @@ void WebContextMenuProxyMac::useContextMenuItems(Vector<Ref<WebContextMenuItem>>
 
         [[WKMenuTarget sharedMenuTarget] setMenuProxy:this];
 
-        auto menuFromProposedMenu = [this, protectedThis = WTFMove(protectedThis)] (RetainPtr<NSMenu>&& menu) {
+        auto menuFromProposedMenu = [this, protectedThis = Ref { *this }] (RetainPtr<NSMenu>&& menu) {
             m_menuDelegate = adoptNS([[WKMenuDelegate alloc] initWithMenuProxy:*this]);
 
             m_menu = WTFMove(menu);

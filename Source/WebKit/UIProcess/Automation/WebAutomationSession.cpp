@@ -369,7 +369,7 @@ Ref<Inspector::Protocol::Automation::BrowsingContext> WebAutomationSession::buil
 
 // Platform-independent Commands.
 
-void WebAutomationSession::getNextContext(Ref<WebAutomationSession>&& protectedThis, Vector<Ref<WebPageProxy>>&& pages, Ref<JSON::ArrayOf<Inspector::Protocol::Automation::BrowsingContext>> contexts, CommandCallback<Ref<JSON::ArrayOf<Protocol::Automation::BrowsingContext>>>&& callback)
+void WebAutomationSession::getNextContext(Vector<Ref<WebPageProxy>>&& pages, Ref<JSON::ArrayOf<Inspector::Protocol::Automation::BrowsingContext>> contexts, CommandCallback<Ref<JSON::ArrayOf<Protocol::Automation::BrowsingContext>>>&& callback)
 {
     if (pages.isEmpty()) {
         callback(WTFMove(contexts));
@@ -377,9 +377,9 @@ void WebAutomationSession::getNextContext(Ref<WebAutomationSession>&& protectedT
     }
     auto page = pages.takeLast();
     Ref webPageProxy = page.get();
-    webPageProxy->getWindowFrameWithCallback([this, protectedThis = WTFMove(protectedThis), callback = WTFMove(callback), pages = WTFMove(pages), contexts = WTFMove(contexts), page = WTFMove(page)](WebCore::FloatRect windowFrame) mutable {
+    webPageProxy->getWindowFrameWithCallback([this, protectedThis = Ref { *this }, callback = WTFMove(callback), pages = WTFMove(pages), contexts = WTFMove(contexts), page = WTFMove(page)](WebCore::FloatRect windowFrame) mutable {
         contexts->addItem(protectedThis->buildBrowsingContextForPage(page.get(), windowFrame));
-        getNextContext(WTFMove(protectedThis), WTFMove(pages), WTFMove(contexts), WTFMove(callback));
+        getNextContext(WTFMove(pages), WTFMove(contexts), WTFMove(callback));
     });
 }
 
@@ -394,7 +394,7 @@ void WebAutomationSession::getBrowsingContexts(CommandCallback<Ref<JSON::ArrayOf
         }
     }
 
-    getNextContext(Ref { *this }, WTFMove(pages), JSON::ArrayOf<Inspector::Protocol::Automation::BrowsingContext>::create(), WTFMove(callback));
+    getNextContext(WTFMove(pages), JSON::ArrayOf<Inspector::Protocol::Automation::BrowsingContext>::create(), WTFMove(callback));
 }
 
 void WebAutomationSession::getBrowsingContext(const Inspector::Protocol::Automation::BrowsingContextHandle& handle, CommandCallback<Ref<Protocol::Automation::BrowsingContext>>&& callback)

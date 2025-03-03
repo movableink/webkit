@@ -3,7 +3,6 @@ UIProcess/API/C/mac/WKPagePrivateMac.mm
 UIProcess/API/Cocoa/WKBrowsingContextController.mm
 UIProcess/API/Cocoa/WKWebViewTesting.mm
 UIProcess/API/Cocoa/WKWebsiteDataStore.mm
-UIProcess/WebURLSchemeTask.cpp
 UIProcess/mac/WKImmediateActionController.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/FullScreen/WebFullScreenManager.cpp

@@ -105,17 +105,18 @@ void LibWebRTCNetworkManager::setEnumeratingVisibleNetworkInterfacesEnabled(bool
 
 void LibWebRTCNetworkManager::StartUpdating()
 {
-    callOnMainRunLoop([this, weakThis = WeakPtr { *this }] {
-        if (!weakThis)
+    callOnMainRunLoop([weakThis = WeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
         auto& monitor = WebProcess::singleton().libWebRTCNetwork().monitor();
-        if (m_receivedNetworkList) {
-            WebCore::LibWebRTCProvider::callOnWebRTCNetworkThread([this, protectedThis = Ref { *this }] {
-                SignalNetworksChanged();
+        if (protectedThis->m_receivedNetworkList) {
+            WebCore::LibWebRTCProvider::callOnWebRTCNetworkThread([protectedThis] {
+                protectedThis->SignalNetworksChanged();
             });
         } else if (monitor.didReceiveNetworkList())
-            networksChanged(monitor.networkList() , monitor.ipv4(), monitor.ipv6());
+            protectedThis->networksChanged(monitor.networkList() , monitor.ipv4(), monitor.ipv6());
         monitor.startUpdating();
     });
 }

@@ -1944,7 +1944,7 @@ bool UnifiedPDFPlugin::handleMouseEvent(const WebMouseEvent& event)
 
     // Even if the mouse event isn't handled (e.g. because the event is over a page we shouldn't
     // display in Single Page mode), we should stop tracking selections (and soon autoscrolling) on MouseUp.
-    auto stopStateTrackingIfNeeded = makeScopeExit([this, isMouseUp = event.type() == WebEventType::MouseUp] {
+    auto stopStateTrackingIfNeeded = makeScopeExit([this, protectedThis = Ref { *this }, isMouseUp = event.type() == WebEventType::MouseUp] {
         if (isMouseUp) {
             stopTrackingSelection();
             stopAutoscroll();
@@ -2125,13 +2125,13 @@ bool UnifiedPDFPlugin::handleContextMenuEvent(const WebMouseEvent& event)
     if (!contextMenu)
         return false;
 
-    webPage->sendWithAsyncReply(Messages::WebPageProxy::ShowPDFContextMenu { *contextMenu, identifier() }, [eventPosition = event.position(), this, weakThis = WeakPtr { *this }](std::optional<int32_t>&& selectedItemTag) {
+    webPage->sendWithAsyncReply(Messages::WebPageProxy::ShowPDFContextMenu { *contextMenu, identifier() }, [eventPosition = event.position(), weakThis = WeakPtr { *this }](std::optional<int32_t>&& selectedItemTag) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
         if (selectedItemTag)
-            performContextMenuAction(toContextMenuItemTag(selectedItemTag.value()), eventPosition);
-        stopTrackingSelection();
+            protectedThis->performContextMenuAction(toContextMenuItemTag(selectedItemTag.value()), eventPosition);
+        protectedThis->stopTrackingSelection();
     });
 
     return true;
@@ -2400,7 +2400,7 @@ ContextMenuAction UnifiedPDFPlugin::contextMenuActionFromTag(ContextMenuItemTag 
     return ContextMenuItemTagNoAction;
 }
 
-auto UnifiedPDFPlugin::toContextMenuItemTag(int tagValue) const -> ContextMenuItemTag
+auto UnifiedPDFPlugin::toContextMenuItemTag(int tagValue) -> ContextMenuItemTag
 {
     static constexpr std::array regularContextMenuItemTags {
         ContextMenuItemTag::AutoSize,
@@ -2941,9 +2941,9 @@ void UnifiedPDFPlugin::continueTrackingSelection(PDFDocumentLayout::PageIndex pa
 {
     freezeCursorDuringSelectionDragIfNeeded(isDraggingSelection, m_selectionTrackingData.shouldMakeMarqueeSelection ? IsMarqueeSelection::Yes : IsMarqueeSelection::No);
 
-    auto beginAutoscrollIfNecessary = makeScopeExit([&] {
+    auto beginAutoscrollIfNecessary = makeScopeExit([protectedThis = Ref { *this }, isDraggingSelection] {
         if (isDraggingSelection == IsDraggingSelection::Yes)
-            beginAutoscroll();
+            protectedThis->beginAutoscroll();
     });
 
     if (m_selectionTrackingData.shouldMakeMarqueeSelection) {
@@ -3610,16 +3610,17 @@ void UnifiedPDFPlugin::accessibilityScrollToPage(PDFDocumentLayout::PageIndex pa
 
 id UnifiedPDFPlugin::accessibilityHitTestIntPoint(const WebCore::IntPoint& point) const
 {
-    return WebCore::Accessibility::retrieveValueFromMainThread<id>([&] () -> id {
+    Ref protectedThis { *this };
+    return WebCore::Accessibility::retrieveValueFromMainThread<id>([&protectedThis, point] () -> id {
         auto floatPoint = FloatPoint { point };
-        auto pointInDocumentSpace = convertDown(CoordinateSpace::Plugin, CoordinateSpace::PDFDocumentLayout, floatPoint);
-        auto hitPageIndex = m_presentationController->pageIndexForDocumentPoint(pointInDocumentSpace);
-        if (!hitPageIndex || *hitPageIndex >= m_documentLayout.pageCount())
+        auto pointInDocumentSpace = protectedThis->convertDown(CoordinateSpace::Plugin, CoordinateSpace::PDFDocumentLayout, floatPoint);
+        auto hitPageIndex = protectedThis->m_presentationController->pageIndexForDocumentPoint(pointInDocumentSpace);
+        if (!hitPageIndex || *hitPageIndex >= protectedThis->m_documentLayout.pageCount())
             return { };
         auto pageIndex = *hitPageIndex;
-        auto pointInPDFPageSpace = convertDown(CoordinateSpace::PDFDocumentLayout, CoordinateSpace::PDFPage, pointInDocumentSpace, pageIndex);
+        auto pointInPDFPageSpace = protectedThis->convertDown(CoordinateSpace::PDFDocumentLayout, CoordinateSpace::PDFPage, pointInDocumentSpace, pageIndex);
 
-        return [m_accessibilityDocumentObject accessibilityHitTest:pointInPDFPageSpace];
+        return [protectedThis->m_accessibilityDocumentObject accessibilityHitTest:pointInPDFPageSpace];
     });
 }
 
@@ -3627,9 +3628,10 @@ id UnifiedPDFPlugin::accessibilityHitTestIntPoint(const WebCore::IntPoint& point
 
 FloatRect UnifiedPDFPlugin::convertFromPDFPageToScreenForAccessibility(const FloatRect& rectInPageCoordinates, PDFDocumentLayout::PageIndex pageIndex) const
 {
-    return WebCore::Accessibility::retrieveValueFromMainThread<FloatRect>([&] -> FloatRect {
-        auto rectInPluginCoordinates = pageToRootView(rectInPageCoordinates, pageIndex);
-        RefPtr page = this->page();
+    Ref protectedThis { *this };
+    return WebCore::Accessibility::retrieveValueFromMainThread<FloatRect>([&protectedThis, rectInPageCoordinates, pageIndex] -> FloatRect {
+        auto rectInPluginCoordinates = protectedThis->pageToRootView(rectInPageCoordinates, pageIndex);
+        RefPtr page = protectedThis->page();
         if (!page)
             return { };
         return page->chrome().rootViewToScreen(enclosingIntRect(rectInPluginCoordinates));

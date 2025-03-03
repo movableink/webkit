@@ -257,7 +257,7 @@ void WebProcessCache::clearAllProcessesForSession(PAL::SessionID sessionID)
 
     Vector<uint64_t> pendingRequestsToRemove;
     for (auto& pair : m_pendingAddRequests) {
-        auto* dataStore = pair.value->process().websiteDataStore();
+        RefPtr dataStore = pair.value->process().websiteDataStore();
         if (!dataStore || dataStore->sessionID() == sessionID) {
             WEBPROCESSCACHE_RELEASE_LOG("clearAllProcessesForSession: Evicting process because its session was destroyed", pair.value->process().processID());
             pendingRequestsToRemove.append(pair.key);

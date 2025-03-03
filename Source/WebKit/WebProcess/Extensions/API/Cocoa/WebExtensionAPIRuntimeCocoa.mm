@@ -99,7 +99,7 @@ using ReplyCallbackAggregator = EagerCallbackAggregator<void(id, IsDefaultReply)
 
 namespace WebKit {
 
-JSValue *WebExtensionAPIRuntimeBase::reportError(NSString *errorMessage, JSGlobalContextRef contextRef, Function<void()>&& handler)
+JSValue *WebExtensionAPIRuntimeBase::reportError(NSString *errorMessage, JSGlobalContextRef contextRef, NOESCAPE const Function<void()>& handler)
 {
     ASSERT(errorMessage.length);
     ASSERT(contextRef);

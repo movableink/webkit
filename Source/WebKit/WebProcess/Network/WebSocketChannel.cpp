@@ -62,16 +62,25 @@ void WebSocketChannel::notifySendFrame(WebSocketFrame::OpCode opCode, std::span<
 
 NetworkSendQueue WebSocketChannel::createMessageQueue(Document& document, WebSocketChannel& channel)
 {
-    return { document, [&channel](auto& utf8String) {
+    return { document, [weakChannel = WeakPtr { channel }](auto& utf8String) {
+        RefPtr channel = weakChannel.get();
+        if (!channel)
+            return;
         auto data = utf8String.span();
-        channel.notifySendFrame(WebSocketFrame::OpCode::OpCodeText, byteCast<uint8_t>(data));
-        channel.sendMessageInternal(Messages::NetworkSocketChannel::SendString { byteCast<uint8_t>(data) }, utf8String.length());
-    }, [&channel](auto span) {
-        channel.notifySendFrame(WebSocketFrame::OpCode::OpCodeBinary, span);
-        channel.sendMessageInternal(Messages::NetworkSocketChannel::SendData { span }, span.size());
-    }, [&channel](ExceptionCode exceptionCode) {
+        channel->notifySendFrame(WebSocketFrame::OpCode::OpCodeText, byteCast<uint8_t>(data));
+        channel->sendMessageInternal(Messages::NetworkSocketChannel::SendString { byteCast<uint8_t>(data) }, utf8String.length());
+    }, [weakChannel = WeakPtr { channel }](auto span) {
+        RefPtr channel = weakChannel.get();
+        if (!channel)
+            return;
+        channel->notifySendFrame(WebSocketFrame::OpCode::OpCodeBinary, span);
+        channel->sendMessageInternal(Messages::NetworkSocketChannel::SendData { span }, span.size());
+    }, [weakChannel = WeakPtr { channel }](ExceptionCode exceptionCode) {
+        RefPtr channel = weakChannel.get();
+        if (!channel)
+            return NetworkSendQueue::Continue::No;
         auto code = static_cast<int>(exceptionCode);
-        channel.fail(makeString("Failed to load Blob: exception code = "_s, code));
+        channel->fail(makeString("Failed to load Blob: exception code = "_s, code));
         return NetworkSendQueue::Continue::No;
     } };
 }

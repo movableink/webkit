@@ -500,13 +500,13 @@ void VideoPresentationManager::exitVideoFullscreenForVideoElement(HTMLVideoEleme
         return;
     }
 
-    m_page->sendWithAsyncReply(Messages::VideoPresentationManagerProxy::ExitFullscreen(*contextId, inlineVideoFrame(videoElement)), [protectedThis = Ref { *this }, this, videoElementPtr = &videoElement, interface = WTFMove(interface), completionHandler = WTFMove(completionHandler)](auto success) mutable {
+    m_page->sendWithAsyncReply(Messages::VideoPresentationManagerProxy::ExitFullscreen(*contextId, inlineVideoFrame(videoElement)), [protectedThis = Ref { *this }, this, videoElement = Ref { videoElement }, interface = WTFMove(interface), completionHandler = WTFMove(completionHandler)](auto success) mutable {
         if (!success) {
             completionHandler(false);
             return;
         }
 
-        if (m_videoElementInPictureInPicture == videoElementPtr)
+        if (m_videoElementInPictureInPicture == videoElement.ptr())
             m_videoElementInPictureInPicture = nullptr;
 
         protectedThis->setCurrentlyInFullscreen(interface, false);

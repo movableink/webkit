@@ -102,8 +102,11 @@ Ref<ListDataObserver> ListDataControllerBase::observeUpdates(Function<void()>&& 
     ASSERT(RunLoop::isMain());
     if (!m_notificationListener) {
         m_notificationListener = adoptNS([[WKWebPrivacyNotificationListener alloc] initWithType:resourceType() callback:^{
-            updateList([this] {
-                m_observers.forEach([](auto& observer) {
+            updateList([weakThis = WeakPtr { *this }] {
+                RefPtr protectedThis = weakThis.get();
+                if (!protectedThis)
+                    return;
+                protectedThis->m_observers.forEach([](auto& observer) {
                     observer.invokeCallback();
                 });
             });
@@ -122,8 +125,11 @@ void ListDataControllerBase::initializeIfNeeded()
     if (std::exchange(m_wasInitialized, true))
         return;
 
-    updateList([this] {
-        m_observers.forEach([](auto& observer) {
+    updateList([weakThis = WeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        protectedThis->m_observers.forEach([](auto& observer) {
             observer.invokeCallback();
         });
     });

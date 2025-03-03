@@ -705,10 +705,11 @@ void PDFPluginBase::invalidateRect(const IntRect& rect)
 
 IntRect PDFPluginBase::boundsOnScreen() const
 {
-    return WebCore::Accessibility::retrieveValueFromMainThread<WebCore::IntRect>([&] () -> WebCore::IntRect {
-        FloatRect bounds = FloatRect(FloatPoint(), size());
-        FloatRect rectInRootViewCoordinates = valueOrDefault(m_rootViewToPluginTransform.inverse()).mapRect(bounds);
-        RefPtr page = this->page();
+    Ref protectedThis { *this };
+    return WebCore::Accessibility::retrieveValueFromMainThread<WebCore::IntRect>([&protectedThis] () -> WebCore::IntRect {
+        FloatRect bounds = FloatRect(FloatPoint(), protectedThis->size());
+        FloatRect rectInRootViewCoordinates = valueOrDefault(protectedThis->m_rootViewToPluginTransform.inverse()).mapRect(bounds);
+        RefPtr page = protectedThis->page();
         if (!page)
             return { };
         return page->chrome().rootViewToScreen(enclosingIntRect(rectInRootViewCoordinates));

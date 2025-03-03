@@ -113,7 +113,7 @@ private:
         }
         
     private:
-        Ref<WebPreferences> m_preferences;
+        const Ref<WebPreferences> m_preferences;
     };
 
     void updateStringValueForKey(const String& key, const String& value, bool ephemeral);

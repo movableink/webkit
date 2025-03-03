@@ -53,6 +53,7 @@
 #import <pal/cocoa/AppSSOSoftLink.h>
 
 #define AUTHORIZATIONSESSION_RELEASE_LOG(fmt, ...) RELEASE_LOG(AppSSO, "%p - [InitiatingAction=%s][State=%s] SOAuthorizationSession::" fmt, this, toString(m_action).characters(), stateString().characters(), ##__VA_ARGS__)
+#define AUTHORIZATIONSESSION_RELEASE_LOG_WITH_THIS(thisPtr, fmt, ...) RELEASE_LOG(AppSSO, "%p - [InitiatingAction=%s][State=%s] SOAuthorizationSession::" fmt, thisPtr.get(), toString(thisPtr->m_action).characters(), thisPtr->stateString().characters(), ##__VA_ARGS__)
 
 namespace WebKit {
 using namespace WebCore;
@@ -180,22 +181,22 @@ void SOAuthorizationSession::start()
     ASSERT((m_state == State::Idle || m_state == State::Waiting) && m_navigationAction);
     m_state = State::Active;
     AUTHORIZATIONSESSION_RELEASE_LOG("start: Moving m_state to Active.");
-    [m_soAuthorization getAuthorizationHintsWithURL:m_navigationAction->request().url() responseCode:0 completion:makeBlockPtr([this, weakThis = ThreadSafeWeakPtr { *this }] (SOAuthorizationHints *authorizationHints, NSError *error) {
-        AUTHORIZATIONSESSION_RELEASE_LOG("start: Receive SOAuthorizationHints (error=%ld)", error ? error.code : 0);
-
+    [m_soAuthorization getAuthorizationHintsWithURL:m_navigationAction->request().url() responseCode:0 completion:makeBlockPtr([weakThis = ThreadSafeWeakPtr { *this }] (SOAuthorizationHints *authorizationHints, NSError *error) {
         auto protectedThis = weakThis.get();
         if (!protectedThis) {
             RELEASE_LOG_ERROR(AppSSO, "SOAuthorizationSession::start (getAuthorizationHintsWithURL completion handler): Returning early because weakThis is now null.");
             return;
         }
 
+        AUTHORIZATIONSESSION_RELEASE_LOG_WITH_THIS(protectedThis, "start: Receive SOAuthorizationHints (error=%ld)", error ? error.code : 0);
+
         if (error || !authorizationHints) {
-            AUTHORIZATIONSESSION_RELEASE_LOG("start (getAuthorizationHintsWithURL completion handler): Returning early due to error or lack of hints.");
+            AUTHORIZATIONSESSION_RELEASE_LOG_WITH_THIS(protectedThis, "start (getAuthorizationHintsWithURL completion handler): Returning early due to error or lack of hints.");
             return;
         }
 
-        AUTHORIZATIONSESSION_RELEASE_LOG("start (getAuthorizationHintsWithURL completion handler): Receive SOAuthorizationHints.");
-        continueStartAfterGetAuthorizationHints(authorizationHints.localizedExtensionBundleDisplayName);
+        AUTHORIZATIONSESSION_RELEASE_LOG_WITH_THIS(protectedThis, "start (getAuthorizationHintsWithURL completion handler): Receive SOAuthorizationHints.");
+        protectedThis->continueStartAfterGetAuthorizationHints(authorizationHints.localizedExtensionBundleDisplayName);
     }).get()];
 }
 
@@ -343,14 +344,14 @@ void SOAuthorizationSession::complete(NSHTTPURLResponse *httpResponse, NSData *d
         return;
     }
 
-    m_page->websiteDataStore().cookieStore().setCookies(WTFMove(cookies), [this, weakThis = ThreadSafeWeakPtr { *this }, response = WTFMove(response), data = adoptNS([[NSData alloc] initWithData:data])] () mutable {
+    m_page->websiteDataStore().cookieStore().setCookies(WTFMove(cookies), [weakThis = ThreadSafeWeakPtr { *this }, response = WTFMove(response), data = adoptNS([[NSData alloc] initWithData:data])] () mutable {
         auto protectedThis = weakThis.get();
         if (!protectedThis)
             return;
 
-        AUTHORIZATIONSESSION_RELEASE_LOG("complete: Cookies are set.");
+        AUTHORIZATIONSESSION_RELEASE_LOG_WITH_THIS(protectedThis, "complete: Cookies are set.");
 
-        completeInternal(response, data.get());
+        protectedThis->completeInternal(response, data.get());
     });
 }
 
