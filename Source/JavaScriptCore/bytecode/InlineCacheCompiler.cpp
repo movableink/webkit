@@ -4849,11 +4849,11 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
 
     if (ASSERT_ENABLED) {
         if (m_stubInfo.useDataIC) {
-            jit.loadPtr(CCallHelpers::Address(GPRInfo::jitDataRegister, BaselineJITData::offsetOfStackOffset()), jit.scratchRegister());
-            jit.addPtr(jit.scratchRegister(), GPRInfo::callFrameRegister, jit.scratchRegister());
+            jit.loadPtr(CCallHelpers::Address(GPRInfo::jitDataRegister, BaselineJITData::offsetOfStackOffset()), m_scratchGPR);
+            jit.addPtr(m_scratchGPR, GPRInfo::callFrameRegister, m_scratchGPR);
         } else
-            jit.addPtr(CCallHelpers::TrustedImm32(codeBlock->stackPointerOffset() * sizeof(Register)), GPRInfo::callFrameRegister, jit.scratchRegister());
-        auto ok = jit.branchPtr(CCallHelpers::Equal, CCallHelpers::stackPointerRegister, jit.scratchRegister());
+            jit.addPtr(CCallHelpers::TrustedImm32(codeBlock->stackPointerOffset() * sizeof(Register)), GPRInfo::callFrameRegister, m_scratchGPR);
+        auto ok = jit.branchPtr(CCallHelpers::Equal, CCallHelpers::stackPointerRegister, m_scratchGPR);
         jit.breakpoint();
         ok.link(&jit);
     }
