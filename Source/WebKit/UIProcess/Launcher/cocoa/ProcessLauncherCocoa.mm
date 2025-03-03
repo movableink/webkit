@@ -425,7 +425,8 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
     }
     
     auto sdkBehaviors = sdkAlignedBehaviors();
-    xpc_dictionary_set_data(bootstrapMessage.get(), "client-sdk-aligned-behaviors", sdkBehaviors.storage().data(), sdkBehaviors.storageLengthInBytes());
+    auto sdkBehaviorBytes = sdkBehaviors.storageBytes();
+    xpc_dictionary_set_data(bootstrapMessage.get(), "client-sdk-aligned-behaviors", sdkBehaviorBytes.data(), sdkBehaviorBytes.size());
 
     auto extraInitializationData = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
 

@@ -94,7 +94,12 @@ bool XPCServiceInitializerDelegate::getClientSDKAlignedBehaviors(SDKAlignedBehav
     auto behaviorData = xpc_dictionary_get_data_span(m_initializerMessage, "client-sdk-aligned-behaviors"_s);
     if (behaviorData.empty())
         return false;
-    memcpySpan(behaviors.storageBytes(), behaviorData);
+    auto storageBytes = behaviors.storageBytes();
+    if (behaviorData.size() > storageBytes.size()) {
+        RELEASE_LOG_FAULT(Process, "XPCServiceInitializerDelegate::getClientSDKAlignedBehaviors: Receives too many bytes (got %lu but expected %lu bytes)", behaviorData.size(), storageBytes.size());
+        return false;
+    }
+    memcpySpan(storageBytes, behaviorData);
     return true;
 }
 
