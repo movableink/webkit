@@ -72,6 +72,19 @@ DocumentFullscreen::DocumentFullscreen(Document& document)
 {
 }
 
+// MARK: - Fullscreen element.
+// https://fullscreen.spec.whatwg.org/#fullscreen-element
+
+Element* DocumentFullscreen::fullscreenElement() const
+{
+    for (Ref element : makeReversedRange(document().topLayerElements())) {
+        if (element->hasFullscreenFlag())
+            return element.ptr();
+    }
+
+    return nullptr;
+}
+
 // MARK: - fullscreenEnabled attribute.
 // https://fullscreen.spec.whatwg.org/#dom-document-fullscreenenabled
 
@@ -91,18 +104,22 @@ bool DocumentFullscreen::enabledByPermissionsPolicy() const
     return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Fullscreen, protectedDocument());
 }
 
-// MARK: - Fullscreen element.
-// https://fullscreen.spec.whatwg.org/#fullscreen-element
+// MARK: - Fullscreen element ready check.
+// https://fullscreen.spec.whatwg.org/#fullscreen-element-ready-check
 
-Element* DocumentFullscreen::fullscreenElement() const
+static ASCIILiteral fullscreenElementReadyCheck(DocumentFullscreen::FullscreenCheckType checkType, Element& element)
 {
-    for (Ref element : makeReversedRange(document().topLayerElements())) {
-        if (element->hasFullscreenFlag())
-            return element.ptr();
-    }
+    if (!element.isConnected())
+        return "Cannot request fullscreen on a disconnected element."_s;
 
-    return nullptr;
-}
+    if (element.isPopoverShowing())
+        return "Cannot request fullscreen on an open popover."_s;
+
+    if (checkType == DocumentFullscreen::EnforceIFrameAllowFullscreenRequirement && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Fullscreen, element.protectedDocument()))
+        return "Fullscreen API is disabled by permissions policy."_s;
+
+    return { };
+};
 
 // MARK: - requestFullscreen() steps.
 // https://fullscreen.spec.whatwg.org/#dom-element-requestfullscreen
@@ -128,20 +145,6 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
     if (!protectedDocument()->isFullyActive())
         return handleError("Cannot request fullscreen on a document that is not fully active."_s, EmitErrorEvent::No, WTFMove(completionHandler));
 
-    // https://fullscreen.spec.whatwg.org/#fullscreen-element-ready-check
-    auto fullscreenElementReadyCheck = [checkType] (auto element, auto document) -> ASCIILiteral {
-        if (!element->isConnected())
-            return "Cannot request fullscreen on a disconnected element."_s;
-
-        if (element->isPopoverShowing())
-            return "Cannot request fullscreen on an open popover."_s;
-
-        if (checkType == EnforceIFrameAllowFullscreenRequirement && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Fullscreen, document))
-            return "Fullscreen API is disabled by permissions policy."_s;
-
-        return { };
-    };
-
     auto isElementTypeAllowedForFullscreen = [] (const auto& element) {
         if (is<HTMLElement>(element) || is<SVGSVGElement>(element))
             return true;
@@ -161,7 +164,7 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
     if (is<HTMLDialogElement>(element))
         return handleError("Cannot request fullscreen on a <dialog> element."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
-    if (auto error = fullscreenElementReadyCheck(element, protectedDocument()))
+    if (auto error = fullscreenElementReadyCheck(checkType, element))
         return handleError(error, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
     if (RefPtr window = document().domWindow(); !window || !window->consumeTransientActivation())
@@ -187,7 +190,7 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
 
     INFO_LOG(identifier);
 
-    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, element = WTFMove(element), scope = CompletionHandlerScope(WTFMove(completionHandler)), hasKeyboardAccess, fullscreenElementReadyCheck, handleError, identifier, mode] () mutable {
+    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, element = WTFMove(element), scope = CompletionHandlerScope(WTFMove(completionHandler)), hasKeyboardAccess, checkType, handleError, identifier, mode]() mutable {
         auto completionHandler = scope.release();
         CheckedPtr checkedThis = weakThis.get();
         if (!checkedThis)
@@ -203,7 +206,7 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
             return handleError("Cannot request fullscreen in a hidden document."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
         // Fullscreen element ready check.
-        if (auto error = fullscreenElementReadyCheck(element, protectedDocument()))
+        if (auto error = fullscreenElementReadyCheck(checkType, element))
             return handleError(error, EmitErrorEvent::Yes, WTFMove(completionHandler));
 
         // Don't allow if element changed document.
@@ -227,24 +230,18 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
         // 5. Return, and run the remaining steps asynchronously.
         // 6. Optionally, perform some animation.
         m_areKeysEnabledInFullscreen = hasKeyboardAccess;
-        document->eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WTFMove(weakThis), element = WTFMove(element), scope = CompletionHandlerScope(WTFMove(completionHandler)), handleError = WTFMove(handleError), identifier, mode] () mutable {
-            auto completionHandler = scope.release();
+
+        RefPtr page = this->page();
+        if (!page)
+            return handleError("Invalid state when requesting fullscreen."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+
+        INFO_LOG(identifier, "task - success");
+
+        page->chrome().client().enterFullScreenForElement(element, mode, WTFMove(completionHandler), [weakThis = WTFMove(weakThis)](bool success) {
             CheckedPtr checkedThis = weakThis.get();
-            if (!checkedThis)
-                return completionHandler(Exception { ExceptionCode::TypeError });
-
-            RefPtr page = this->page();
-            if (!page || (this->protectedDocument()->hidden() && mode != HTMLMediaElementEnums::VideoFullscreenModeInWindow) || !element->isConnected())
-                return handleError("Invalid state when requesting fullscreen."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
-
-            INFO_LOG(identifier, "task - success");
-
-            page->chrome().client().enterFullScreenForElement(element, mode, WTFMove(completionHandler), [weakThis = WTFMove(weakThis)] (bool success) {
-                CheckedPtr checkedThis = weakThis.get();
-                if (!checkedThis || !success)
-                    return true;
-                return checkedThis->didEnterFullscreen();
-            });
+            if (!checkedThis || !success)
+                return true;
+            return checkedThis->didEnterFullscreen();
         });
 
         // 7. Optionally, display a message indicating how the user can exit displaying the context object fullscreen.
@@ -269,10 +266,10 @@ ExceptionOr<void> DocumentFullscreen::willEnterFullscreen(Element& element, HTML
         return Exception { ExceptionCode::TypeError };
     }
 
-    // The element is an open popover.
-    if (element.isPopoverShowing()) {
-        ERROR_LOG(LOGIDENTIFIER, "Element to fullscreen is an open popover; bailing.");
-        return Exception { ExceptionCode::TypeError, "Cannot request fullscreen on an open popover."_s };
+    // FIXME: Should we enforce the iframe requirement here? (webkit.org/b/288951)
+    if (auto error = fullscreenElementReadyCheck(FullscreenCheckType::ExemptIFrameAllowFullscreenRequirement, element)) {
+        ERROR_LOG(LOGIDENTIFIER, error);
+        return Exception { ExceptionCode::TypeError, error };
     }
 
     INFO_LOG(LOGIDENTIFIER);
