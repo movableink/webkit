@@ -1009,6 +1009,7 @@ ifeq ($(USE_INTERNAL_SDK),YES)
 WEBKIT_ADDITIONS_SWIFT_FILES = \
 	MaterialAdditions.swift \
 	WKSeparatedImageView.swift \
+	CredentialUpdaterShim.swift \
 #
 
 $(WEBKIT_ADDITIONS_SWIFT_FILES): %.swift : %.swift.in
