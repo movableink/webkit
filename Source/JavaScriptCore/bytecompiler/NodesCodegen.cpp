@@ -467,7 +467,7 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
                 if (allDenseStrings) {
                     JSString* string = asString(constant);
                     StringImpl* stringImpl = const_cast<StringImpl*>(string->getValueImpl());
-                    constant = vm.atomStringToJSStringMap.add(stringImpl, string).iterator->value.get();
+                    constant = vm.atomStringToJSStringMap.ensureValue(stringImpl, [&] { return string; });
                 }
                 array->setIndex(generator.vm(), index++, constant);
             }

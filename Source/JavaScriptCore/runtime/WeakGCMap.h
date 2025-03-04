@@ -54,11 +54,6 @@ public:
         return m_map.get(key);
     }
 
-    AddResult add(const KeyType& key, ValueType value)
-    {
-        return m_map.add(key, WTFMove(value));
-    }
-
     AddResult set(const KeyType& key, ValueType value)
     {
         return m_map.set(key, WTFMove(value));
