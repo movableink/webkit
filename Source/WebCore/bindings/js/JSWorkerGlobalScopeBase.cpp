@@ -32,7 +32,7 @@
 #include "EventLoop.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMGuardedObject.h"
-#include "JSMicrotaskCallback.h"
+#include "JSExecState.h"
 #include "JSTrustedScript.h"
 #include "TrustedType.h"
 #include "WorkerGlobalScope.h"
@@ -153,11 +153,9 @@ void JSWorkerGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObject* 
 void JSWorkerGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
 {
     JSWorkerGlobalScopeBase& thisObject = static_cast<JSWorkerGlobalScopeBase&>(object);
-
-    auto callback = JSMicrotaskCallback::create(thisObject, WTFMove(task));
     auto& context = thisObject.wrapped();
-    context.eventLoop().queueMicrotask([callback = WTFMove(callback)]() mutable {
-        callback->call();
+    context.eventLoop().queueMicrotask([task = WTFMove(task)]() mutable {
+        JSExecState::runTask(task->globalObject(), task.get());
     });
 }
 

@@ -42,7 +42,7 @@ namespace JSC {
 class JSMicrotask final : public Microtask {
 public:
     static constexpr unsigned maxArguments = 4;
-    JSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
+    JS_EXPORT_PRIVATE JSMicrotask(VM& vm, JSFunction* job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
     {
         m_job.set(vm, job);
         if (argument0 && !argument0.isUndefined())
@@ -55,19 +55,26 @@ public:
             m_arguments[3].set(vm, argument3);
     }
 
-private:
-    void run(JSGlobalObject*) final;
+    JS_EXPORT_PRIVATE ~JSMicrotask() = default;
 
-    Strong<Unknown> m_job;
+    JS_EXPORT_PRIVATE JSGlobalObject* globalObject() const final
+    {
+        return m_job->globalObject();
+    }
+
+private:
+    void run() final;
+
+    Strong<JSFunction> m_job;
     Strong<Unknown> m_arguments[maxArguments];
 };
 
-Ref<Microtask> createJSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
+Ref<Microtask> createJSMicrotask(VM& vm, JSFunction* job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
 {
     return adoptRef(*new JSMicrotask(vm, job, argument0, argument1, argument2, argument3));
 }
 
-void runJSMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
+void runJSMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier, JSObject* job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
 {
     VM& vm = globalObject->vm();
 
@@ -108,9 +115,9 @@ void runJSMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier
     }
 }
 
-void JSMicrotask::run(JSGlobalObject* globalObject)
+void JSMicrotask::run()
 {
-    runJSMicrotask(globalObject, identifier(), m_job.get(), m_arguments[0].get(), m_arguments[1].get(), m_arguments[2].get(), m_arguments[3].get());
+    runJSMicrotask(globalObject(), identifier(), m_job.get(), m_arguments[0].get(), m_arguments[1].get(), m_arguments[2].get(), m_arguments[3].get());
 }
 
 } // namespace JSC

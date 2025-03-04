@@ -606,7 +606,7 @@ JSValue JSDOMWindow::queueMicrotask(JSGlobalObject& lexicalGlobalObject, CallFra
         return JSValue::decode(throwArgumentMustBeFunctionError(lexicalGlobalObject, scope, 0, "callback"_s, "Window"_s, "queueMicrotask"_s));
 
     scope.release();
-    Base::queueMicrotask(createJSDOMMicrotask(vm, asObject(functionValue)));
+    Base::queueMicrotask(createJSDOMMicrotask(vm, this, asObject(functionValue)));
     return jsUndefined();
 }
 

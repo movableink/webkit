@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "EventLoop.h"
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -31,9 +32,6 @@ class VM;
 } // namespace JSC
 
 namespace WebCore {
-
-class EventLoop;
-class EventLoopTask;
 
 class MicrotaskQueue final {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(MicrotaskQueue, WEBCORE_EXPORT);
@@ -53,12 +51,12 @@ private:
     JSC::VM& vm() const { return m_vm.get(); }
 
     bool m_performingMicrotaskCheckpoint { false };
-    Vector<std::unique_ptr<EventLoopTask>> m_microtaskQueue;
+    EventLoop::TaskVector m_microtaskQueue;
     // For the main thread the VM lives forever. For workers it's lifetime is tied to our owning WorkerGlobalScope. Regardless, we retain the VM here to be safe.
     Ref<JSC::VM> m_vm;
     WeakPtr<EventLoop> m_eventLoop;
 
-    Vector<std::unique_ptr<EventLoopTask>> m_checkpointTasks;
+    EventLoop::TaskVector m_checkpointTasks;
 };
 
 } // namespace WebCore

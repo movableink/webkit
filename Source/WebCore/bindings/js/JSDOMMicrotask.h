@@ -30,6 +30,8 @@
 
 namespace WebCore {
 
-Ref<JSC::Microtask> createJSDOMMicrotask(JSC::VM&, JSC::JSObject* job);
+class JSDOMGlobalObject;
+
+Ref<JSC::Microtask> createJSDOMMicrotask(JSC::VM&, JSDOMGlobalObject*, JSC::JSObject* job);
 
 }

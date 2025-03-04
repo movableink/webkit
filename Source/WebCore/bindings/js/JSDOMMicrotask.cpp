@@ -40,25 +40,32 @@ using namespace JSC;
 
 class JSDOMMicrotask final : public Microtask {
 public:
-    JSDOMMicrotask(VM& vm, JSObject* job)
-        : m_job { vm, job }
+    JSDOMMicrotask(VM& vm, JSDOMGlobalObject* globalObject, JSObject* job)
+        : m_globalObject { vm, globalObject }
+        , m_job { vm, job }
     {
     }
 
-private:
-    void run(JSGlobalObject*) final;
+    JSGlobalObject* globalObject() const final
+    {
+        return m_globalObject.get();
+    }
 
+    void run() final;
+
+private:
+    Strong<JSDOMGlobalObject> m_globalObject;
     Strong<JSObject> m_job;
 };
 
-Ref<Microtask> createJSDOMMicrotask(VM& vm, JSObject* job)
+Ref<Microtask> createJSDOMMicrotask(VM& vm, JSDOMGlobalObject* globalObject, JSObject* job)
 {
-    return adoptRef(*new JSDOMMicrotask(vm, job));
+    return adoptRef(*new JSDOMMicrotask(vm, globalObject, job));
 }
 
-void JSDOMMicrotask::run(JSGlobalObject* globalObject)
+void JSDOMMicrotask::run()
 {
-    VM& vm = globalObject->vm();
+    VM& vm = m_globalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     JSObject* job = m_job.get();
@@ -77,9 +84,9 @@ void JSDOMMicrotask::run(JSGlobalObject* globalObject)
         return;
     ASSERT(callData.type != CallData::Type::None);
 
-    if (UNLIKELY(globalObject->hasDebugger())) {
+    if (UNLIKELY(m_globalObject->hasDebugger())) {
         JSC::DeferTerminationForAWhile deferTerminationForAWhile(vm);
-        globalObject->debugger()->willRunMicrotask(globalObject, identifier());
+        m_globalObject->debugger()->willRunMicrotask(m_globalObject.get(), identifier());
         scope.clearException();
     }
 
@@ -91,9 +98,9 @@ void JSDOMMicrotask::run(JSGlobalObject* globalObject)
         scope.clearExceptionExceptTermination();
     }
 
-    if (UNLIKELY(globalObject->hasDebugger())) {
+    if (UNLIKELY(m_globalObject->hasDebugger())) {
         JSC::DeferTerminationForAWhile deferTerminationForAWhile(vm);
-        globalObject->debugger()->didRunMicrotask(globalObject, identifier());
+        m_globalObject->debugger()->didRunMicrotask(m_globalObject.get(), identifier());
         scope.clearException();
     }
 }

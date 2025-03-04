@@ -98,6 +98,8 @@ enum class HasReachedMaxNestingLevel : bool { No, Yes };
 // https://html.spec.whatwg.org/multipage/webappapis.html#event-loop
 class EventLoop : public RefCountedAndCanMakeWeakPtr<EventLoop> {
 public:
+    using TaskVector = Vector<std::unique_ptr<EventLoopTask>, 4>;
+
     virtual ~EventLoop();
 
     typedef Function<void ()> TaskFunction;
@@ -144,7 +146,7 @@ private:
     virtual bool isContextThread() const = 0;
 
     // Use a global queue instead of multiple task queues since HTML5 spec allows UA to pick arbitrary queue.
-    Vector<std::unique_ptr<EventLoopTask>> m_tasks;
+    TaskVector m_tasks;
     WeakHashSet<EventLoopTimer> m_scheduledTasks;
     WeakHashSet<EventLoopTimer> m_repeatingTasks;
     WeakHashSet<EventLoopTaskGroup> m_associatedGroups;

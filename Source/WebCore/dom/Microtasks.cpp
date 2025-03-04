@@ -61,9 +61,9 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
     JSC::JSLockHolder locker(vm);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    Vector<std::unique_ptr<EventLoopTask>> toKeep;
+    EventLoop::TaskVector toKeep;
     while (!m_microtaskQueue.isEmpty() && !vm->executionForbidden()) {
-        Vector<std::unique_ptr<EventLoopTask>> queue = WTFMove(m_microtaskQueue);
+        auto queue = WTFMove(m_microtaskQueue);
         for (auto& task : queue) {
             auto* group = task->group();
             if (!group || group->isStoppedPermanently())

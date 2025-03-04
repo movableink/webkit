@@ -116,7 +116,7 @@ public:
     static void runTask(JSC::JSGlobalObject* lexicalGlobalObject, JSC::Microtask& task)
     {
         JSExecState currentState(lexicalGlobalObject);
-        task.run(lexicalGlobalObject);
+        task.run();
     }
 
     static JSC::JSInternalPromise* loadModule(JSC::JSGlobalObject& lexicalGlobalObject, const URL& topLevelModuleURL, JSC::JSValue parameters, JSC::JSValue scriptFetcher)

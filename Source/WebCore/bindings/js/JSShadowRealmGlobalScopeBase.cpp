@@ -27,7 +27,6 @@
 #include "JSShadowRealmGlobalScopeBase.h"
 
 #include "EventLoop.h"
-#include "JSMicrotaskCallback.h"
 #include "JSShadowRealmGlobalScope.h"
 #include "ScriptModuleLoader.h"
 #include "ShadowRealmGlobalScope.h"

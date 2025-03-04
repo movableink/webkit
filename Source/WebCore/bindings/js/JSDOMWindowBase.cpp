@@ -39,8 +39,8 @@
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMWindowCustom.h"
 #include "JSDocument.h"
+#include "JSExecState.h"
 #include "JSFetchResponse.h"
-#include "JSMicrotaskCallback.h"
 #include "JSNode.h"
 #include "JSTrustedScript.h"
 #include "LocalFrame.h"
@@ -252,21 +252,21 @@ void JSDOMWindowBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC:
 {
     JSDOMWindowBase& thisObject = static_cast<JSDOMWindowBase&>(object);
 
-    auto callback = JSMicrotaskCallback::create(thisObject, WTFMove(task));
     auto* objectScriptExecutionContext = thisObject.scriptExecutionContext();
     auto& eventLoop = objectScriptExecutionContext->eventLoop();
     // Propagating media only user gesture for Fetch API's promise chain.
     auto userGestureToken = UserGestureIndicator::currentUserGesture();
     if (userGestureToken && (!userGestureToken->isPropagatedFromFetch() || !objectScriptExecutionContext->settingsValues().userGesturePromisePropagationEnabled))
         userGestureToken = nullptr;
-    eventLoop.queueMicrotask([callback = WTFMove(callback), userGestureToken = WTFMove(userGestureToken)]() mutable {
+    eventLoop.queueMicrotask([task = WTFMove(task), userGestureToken = WTFMove(userGestureToken)]() mutable {
+        auto* globalObject = task->globalObject();
         if (!userGestureToken) {
-            callback->call();
+            JSExecState::runTask(globalObject, task.get());
             return;
         }
 
         UserGestureIndicator gestureIndicator(userGestureToken, UserGestureToken::GestureScope::MediaOnly, UserGestureToken::IsPropagatedFromFetch::Yes);
-        callback->call();
+        JSExecState::runTask(globalObject, task.get());
     });
 }
 

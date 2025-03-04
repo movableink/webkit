@@ -318,7 +318,7 @@ void EventLoop::run(std::optional<ApproximateTime> deadline)
     if (!m_tasks.isEmpty()) {
         auto tasks = std::exchange(m_tasks, { });
         m_groupsWithSuspendedTasks.clear();
-        Vector<std::unique_ptr<EventLoopTask>> remainingTasks;
+        TaskVector remainingTasks;
         bool hasReachedDeadline = false;
         for (auto& task : tasks) {
             auto* group = task->group();

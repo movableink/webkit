@@ -66,22 +66,26 @@ ExceptionOr<void> ExtendableEvent::waitUntil(Ref<DOMPromise>&& promise)
 
 class FunctionMicrotask final : public JSC::Microtask {
 public:
-    static Ref<FunctionMicrotask> create(Function<void()>&& function)
+    static Ref<FunctionMicrotask> create(JSDOMGlobalObject* globalObject, Function<void()>&& function)
     {
-        return adoptRef(*new FunctionMicrotask(WTFMove(function)));
+        return adoptRef(*new FunctionMicrotask(globalObject, WTFMove(function)));
     }
+
+    JSC::JSGlobalObject* globalObject() const final { return m_globalObject.get(); }
 
 private:
-    explicit FunctionMicrotask(Function<void()>&& function)
-        : m_function(WTFMove(function))
+    explicit FunctionMicrotask(JSDOMGlobalObject* globalObject, Function<void()>&& function)
+        : m_globalObject(globalObject->vm(), globalObject)
+        , m_function(WTFMove(function))
     {
     }
 
-    void run(JSC::JSGlobalObject*) final
+    void run() final
     {
         m_function();
     }
 
+    JSC::Strong<JSDOMGlobalObject> m_globalObject;
     Function<void()> m_function;
 };
 
@@ -89,7 +93,7 @@ void ExtendableEvent::addExtendLifetimePromise(Ref<DOMPromise>&& promise)
 {
     promise->whenSettled([this, protectedThis = Ref { *this }, settledPromise = promise.ptr()] () mutable {
         auto& globalObject = *settledPromise->globalObject();
-        globalObject.queueMicrotask(FunctionMicrotask::create([this, protectedThis = WTFMove(protectedThis), settledPromise = WTFMove(settledPromise)] () mutable {
+        globalObject.queueMicrotask(FunctionMicrotask::create(&globalObject, [this, protectedThis = WTFMove(protectedThis), settledPromise = WTFMove(settledPromise)] () mutable {
             --m_pendingPromiseCount;
 
             // FIXME: Let registration be the context object's relevant global object's associated service worker's containing service worker registration.

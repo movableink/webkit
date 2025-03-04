@@ -49,7 +49,8 @@ public:
 
     MicrotaskIdentifier identifier() const { return m_identifier; }
 
-    virtual void run(JSGlobalObject*) = 0;
+    virtual JSGlobalObject* globalObject() const = 0;
+    virtual void run() = 0;
 
 protected:
     MicrotaskIdentifier m_identifier;
