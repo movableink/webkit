@@ -7733,3 +7733,5 @@ webkit.org/b/289097 imported/w3c/web-platform-tests/css/css-position/sticky/posi
 # webkit.org/b/289095 REGRESSION(291032@main): [macOS iOS Debug] ipc/large-vector-allocate-failure-crash.html is constantly crashing ( failure in EWS)
 [ Debug ] ipc/large-vector-allocate-failure-crash.html [ Skip ]
 [ Debug ] ipc/invalid-path-segments-crash.html [ Skip ]
+
+webkit.org/b/289094 imported/w3c/web-platform-tests/webcodecs/audio-data.crossOriginIsolated.https.any.html [ Pass Timeout ]

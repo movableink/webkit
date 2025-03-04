@@ -2062,3 +2062,5 @@ webkit.org/b/289092 http/wpt/background-fetch/background-fetch-abort.window.html
 # webkit.org/b/289095 REGRESSION(291032@main): [macOS iOS Debug] ipc/large-vector-allocate-failure-crash.html is constantly crashing ( failure in EWS)
 [ Debug ] ipc/large-vector-allocate-failure-crash.html [ Skip ]
 [ Debug ] ipc/invalid-path-segments-crash.html [ Skip ]
+
+webkit.org/b/289094 [ Sequoia Debug ] imported/w3c/web-platform-tests/webcodecs/audio-data.crossOriginIsolated.https.any.html [ Pass Timeout ]
