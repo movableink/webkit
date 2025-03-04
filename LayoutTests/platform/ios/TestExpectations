@@ -7730,4 +7730,6 @@ webkit.org/b/289090 imported/w3c/web-platform-tests/dom/nodes/remove-from-shadow
 
 webkit.org/b/289097 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-fixed-ancestor.html [ Pass Failure ]
 
-webkit.org/b/289095 ipc/large-vector-allocate-failure-crash.html [ Skip ]
+# webkit.org/b/289095 REGRESSION(291032@main): [macOS iOS Debug] ipc/large-vector-allocate-failure-crash.html is constantly crashing ( failure in EWS)
+[ Debug ] ipc/large-vector-allocate-failure-crash.html [ Skip ]
+[ Debug ] ipc/invalid-path-segments-crash.html [ Skip ]
