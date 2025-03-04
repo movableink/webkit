@@ -26,6 +26,7 @@
 
 #pragma once
 #include "BoxSides.h"
+#include "StyleSelfAlignmentData.h"
 #include "WritingMode.h"
 
 namespace WebCore {
@@ -164,9 +165,13 @@ public:
 
     PositionAreaSpan blockOrXAxis() const { return m_blockOrXAxis; }
     PositionAreaSpan inlineOrYAxis() const { return m_inlineOrYAxis; }
+    PositionAreaSpan spanForAxis(BoxAxis physicalAxis, WritingMode containerWritingMode, WritingMode selfWritingMode) const;
+    PositionAreaSpan spanForAxis(LogicalBoxAxis logicalAxis, WritingMode containerWritingMode, WritingMode selfWritingMode) const;
 
     // Start/end based on container's coordinate-increasing direction (RenderBox coordinates)
     PositionAreaTrack coordMatchedTrackForAxis(BoxAxis, WritingMode containerWritingMode, WritingMode selfWritingMode) const;
+
+    ItemPosition defaultAlignmentForAxis(BoxAxis, WritingMode containerWritingMode, WritingMode selfWritingMode) const;
 
     bool operator==(const PositionArea&) const = default;
 

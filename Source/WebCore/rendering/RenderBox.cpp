@@ -3902,6 +3902,7 @@ struct RenderBox::PositionedLayoutConstraints {
     const BoxAxis physicalAxis;
     const LogicalBoxAxis containingAxis;
     const StyleSelfAlignmentData& alignment;
+    const RenderStyle& style;
     const CheckedPtr<const RenderBoxModelObject> defaultAnchorBox; // Only set if needed.
     LayoutRange anchorArea; // Only valid if defaultAnchor exists.
 
@@ -3909,7 +3910,7 @@ struct RenderBox::PositionedLayoutConstraints {
     LayoutUnit bordersPlusPadding;
     bool useStaticPosition { false };
 
-    bool needsAnchor(const RenderStyle& style) const
+    bool needsAnchor() const
     {
         return style.positionArea() || alignment.position() == ItemPosition::AnchorCenter;
     }
@@ -3947,7 +3948,8 @@ struct RenderBox::PositionedLayoutConstraints {
         , containingAxis(!isOrthogonal() ? logicalAxis : oppositeAxis(logicalAxis))
         , alignment(containingAxis == LogicalBoxAxis::Inline
             ? self.style().justifySelf() : self.style().alignSelf())
-        , defaultAnchorBox(needsAnchor(self.style())
+        , style(self.style())
+        , defaultAnchorBox(needsAnchor()
             ? dynamicDowncast<const RenderBoxModelObject>(self.defaultAnchorRenderer()) : nullptr)
     {
         // Compute the baseline containing block info.
@@ -3965,7 +3967,7 @@ struct RenderBox::PositionedLayoutConstraints {
     }
     void captureInsets(const RenderBox& self, const LogicalBoxAxis selfAxis);
     void computeAnchorGeometry(const RenderBox& self);
-    LayoutRange adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis, const RenderStyle&);
+    LayoutRange adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis);
 
     void computeInlineStaticDistance(const RenderBox& self);
     void computeBlockStaticDistance(const RenderBox& self);
@@ -3975,12 +3977,12 @@ struct RenderBox::PositionedLayoutConstraints {
 
     void resolvePosition(LogicalExtentComputedValues&) const;
     LayoutUnit resolveAlignmentAdjustment(const LayoutUnit unusedSpace) const;
-
+    ItemPosition resolveAlignmentPosition() const;
+    bool alignmentAppliesStretch(ItemPosition normalAlignment) const;
 };
 
 void RenderBox::PositionedLayoutConstraints::captureInsets(const RenderBox& self, const LogicalBoxAxis selfAxis)
 {
-    const RenderStyle& style = self.style();
     bool isHorizontal = BoxAxis::Horizontal == physicalAxis;
 
     if (isHorizontal) {
@@ -4037,9 +4039,9 @@ void RenderBox::PositionedLayoutConstraints::computeAnchorGeometry(const RenderB
     }
 
     // Adjust containing block for position-area.
-    if (!self.style().positionArea())
+    if (!style.positionArea())
         return;
-    containingBlock = adjustForPositionArea(containingBlock, anchorArea, physicalAxis, self.style());
+    containingBlock = adjustForPositionArea(containingBlock, anchorArea, physicalAxis);
 
     // Margin basis is always against the inline axis.
     if (LogicalBoxAxis::Inline == containingAxis) {
@@ -4052,12 +4054,12 @@ void RenderBox::PositionedLayoutConstraints::computeAnchorGeometry(const RenderB
     auto inlineAnchorArea = BoxAxis::Horizontal == inlineAxis
         ? LayoutRange { anchorRect.x(), anchorRect.width() }
         : LayoutRange { anchorRect.y(), anchorRect.height() };
-    marginPercentageBasis = adjustForPositionArea(inlineContainingBlock, inlineAnchorArea, inlineAxis, self.style()).size();
+    marginPercentageBasis = adjustForPositionArea(inlineContainingBlock, inlineAnchorArea, inlineAxis).size();
 }
 
-LayoutRange RenderBox::PositionedLayoutConstraints::adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis, const RenderStyle& style)
+LayoutRange RenderBox::PositionedLayoutConstraints::adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis)
 {
-    ASSERT(style.positionArea() && defaultAnchorBox && needsAnchor(style));
+    ASSERT(style.positionArea() && defaultAnchorBox && needsAnchor());
 
     auto adjustedRange = rangeToAdjust;
     switch (style.positionArea()->coordMatchedTrackForAxis(containerAxis, containingWritingMode, selfWritingMode)) {
@@ -4154,12 +4156,31 @@ LayoutUnit RenderBox::PositionedLayoutConstraints::resolveAlignmentAdjustment(co
     if (unusedSpace < 0 && alignment.overflow() == OverflowAlignment::Safe)
         return 0_lu;
 
-    ItemPosition resolvedAlignment = alignment.position();
+    ItemPosition resolvedAlignment = resolveAlignmentPosition();
     if (ItemPosition::Auto == resolvedAlignment
         || ItemPosition::AnchorCenter == resolvedAlignment) // Handled in computeAnchorCenteredPosition().
         resolvedAlignment = ItemPosition::Normal;
 
     return StyleSelfAlignmentData::adjustmentFromStartEdge(unusedSpace, resolvedAlignment, containingAxis, containingWritingMode, selfWritingMode);
+}
+
+ItemPosition RenderBox::PositionedLayoutConstraints::resolveAlignmentPosition() const
+{
+    auto alignmentPosition = alignment.position();
+    if (ItemPosition::Auto == alignmentPosition)
+        alignmentPosition = ItemPosition::Normal;
+
+    if (style.positionArea() && ItemPosition::Normal == alignmentPosition)
+        return style.positionArea()->defaultAlignmentForAxis(physicalAxis, containingWritingMode, selfWritingMode);
+    return alignmentPosition;
+}
+
+bool RenderBox::PositionedLayoutConstraints::alignmentAppliesStretch(ItemPosition normalAlignment) const
+{
+    auto alignmentPosition = alignment.position();
+    if (!style.positionArea() && (ItemPosition::Auto == alignmentPosition || ItemPosition::Normal == alignmentPosition))
+        alignmentPosition = normalAlignment;
+    return ItemPosition::Stretch == alignmentPosition;
 }
 
 LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxModelObject& containingBlock, bool checkForPerpendicularWritingMode) const
@@ -4409,7 +4430,7 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
 
     // Perform alignment.
     if (inlineConstraints.defaultAnchorBox
-        && inlineConstraints.alignment.position() == ItemPosition::AnchorCenter)
+        && inlineConstraints.resolveAlignmentPosition() == ItemPosition::AnchorCenter)
         computeAnchorCenteredPosition(inlineConstraints, computedValues);
 
     // Adjust logicalLeft if we need to for the flipped version of our writing mode in fragments.
@@ -4491,11 +4512,7 @@ LayoutUnit RenderBox::computePositionedLogicalWidthUsing(SizeType widthType, Len
 
     bool logicalLeftIsAuto = inlineConstraints.insetBefore.isAuto();
     bool logicalRightIsAuto = inlineConstraints.insetAfter.isAuto();
-    bool alignmentStretchDefault =
-        ItemPosition::Auto == inlineConstraints.alignment.position()
-        || ItemPosition::Normal == inlineConstraints.alignment.position()
-        || ItemPosition::Stretch == inlineConstraints.alignment.position();
-    bool shrinkToFit = logicalLeftIsAuto || logicalRightIsAuto || !alignmentStretchDefault;
+    bool shrinkToFit = logicalLeftIsAuto || logicalRightIsAuto || !inlineConstraints.alignmentAppliesStretch(ItemPosition::Stretch);
     if (shrinkToFit) {
         LayoutUnit preferredWidth = maxPreferredLogicalWidth() - inlineConstraints.bordersPlusPadding;
         LayoutUnit preferredMinWidth = minPreferredLogicalWidth() - inlineConstraints.bordersPlusPadding;
@@ -4602,7 +4619,7 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
 
     // Perform alignment.
     if (blockConstraints.defaultAnchorBox
-        && blockConstraints.alignment.position() == ItemPosition::AnchorCenter)
+        && blockConstraints.resolveAlignmentPosition() == ItemPosition::AnchorCenter)
         computeAnchorCenteredPosition(blockConstraints, computedValues);
 
     // Adjust logicalTop if we need to for perpendicular writing modes in fragments.
@@ -4676,11 +4693,7 @@ LayoutUnit RenderBox::computePositionedLogicalHeightUsing(SizeType heightType, L
 
     bool logicalLeftIsAuto = blockConstraints.insetBefore.isAuto();
     bool logicalRightIsAuto = blockConstraints.insetAfter.isAuto();
-    bool alignmentStretchDefault =
-        ItemPosition::Auto == blockConstraints.alignment.position()
-        || ItemPosition::Normal == blockConstraints.alignment.position()
-        || ItemPosition::Stretch == blockConstraints.alignment.position();
-    bool shrinkToFit = logicalLeftIsAuto || logicalRightIsAuto || !alignmentStretchDefault;
+    bool shrinkToFit = logicalLeftIsAuto || logicalRightIsAuto || !blockConstraints.alignmentAppliesStretch(ItemPosition::Stretch);
     if (!shrinkToFit)
         return std::max<LayoutUnit>(0, blockConstraints.availableContentSpace());
 
