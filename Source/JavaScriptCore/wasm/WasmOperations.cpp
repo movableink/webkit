@@ -1588,15 +1588,6 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmRefFunc, EncodedJSValue, (JSWebAs
     return refFunc(instance, index);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructNew, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex, bool useDefault, uint64_t* arguments))
-{
-    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
-    assertCalleeIsReferenced(callFrame, instance);
-    VM& vm = instance->vm();
-    NativeCallFrameTracer tracer(vm, callFrame);
-    return structNew(instance, typeIndex, useDefault, arguments);
-}
-
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex))
 {
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);

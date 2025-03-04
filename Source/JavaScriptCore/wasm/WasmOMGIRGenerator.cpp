@@ -827,7 +827,8 @@ private:
 
     void emitArrayNullCheck(Value*, ExceptionType);
     void emitArraySetUnchecked(uint32_t, Value*, Value*, Value*);
-    void emitStructSet(Value*, uint32_t, const StructType&, Value*);
+    // Returns true if a writeBarrier/mutatorFence is needed.
+    bool WARN_UNUSED_RETURN emitStructSet(Value*, uint32_t, const StructType&, Value*);
     ExpressionType WARN_UNUSED_RETURN pushArrayNew(uint32_t typeIndex, Value* initValue, ExpressionType size);
     using ArraySegmentOperation = EncodedJSValue SYSV_ABI (&)(JSC::JSWebAssemblyInstance*, uint32_t, uint32_t, uint32_t, uint32_t);
     ExpressionType WARN_UNUSED_RETURN pushArrayNewFromSegment(ArraySegmentOperation, uint32_t typeIndex, uint32_t segmentIndex, ExpressionType arraySize, ExpressionType offset, ExceptionType);
@@ -2725,27 +2726,26 @@ Value* OMGIRGenerator::emitAtomicCompareExchange(ExtAtomicOpType op, Type valueT
     return sanitizeAtomicResult(op, valueType, result);
 }
 
-void OMGIRGenerator::emitStructSet(Value* structValue, uint32_t fieldIndex, const StructType& structType, Value* argument)
+bool WARN_UNUSED_RETURN OMGIRGenerator::emitStructSet(Value* structValue, uint32_t fieldIndex, const StructType& structType, Value* argument)
 {
     auto fieldType = structType.field(fieldIndex).type;
-    Value* payloadBase = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load), Int64, origin(), structValue, JSWebAssemblyStruct::offsetOfPayload());
-    int32_t fieldOffset = fixupPointerPlusOffset(payloadBase, *structType.offsetOfField(fieldIndex));
+    int32_t fieldOffset = fixupPointerPlusOffset(structValue, JSWebAssemblyStruct::offsetOfData() + structType.offsetOfFieldInPayload(fieldIndex));
 
     if (fieldType.is<PackedType>()) {
         switch (structType.field(fieldIndex).type.as<PackedType>()) {
         case PackedType::I8:
-            m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Store8), origin(), argument, payloadBase, fieldOffset);
-            return;
+            m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Store8), origin(), argument, structValue, fieldOffset);
+            return false;
         case PackedType::I16:
-            m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Store16), origin(), argument, payloadBase, fieldOffset);
-            return;
+            m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Store16), origin(), argument, structValue, fieldOffset);
+            return false;
         }
     }
 
     ASSERT(fieldType.is<Type>());
-    m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Store), origin(), argument, payloadBase, fieldOffset);
-    if (isRefType(fieldType.unpacked()))
-        emitWriteBarrier(structValue, instanceValue());
+    m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Store), origin(), argument, structValue, fieldOffset);
+    // FIXME: We should be able elide this write barrier if we know we're storing jsNull();
+    return isRefType(fieldType.unpacked());
 }
 
 auto OMGIRGenerator::atomicCompareExchange(ExtAtomicOpType op, Type valueType, ExpressionType pointer, ExpressionType expected, ExpressionType value, ExpressionType& result, uint32_t offset) -> PartialResult
@@ -3446,8 +3446,13 @@ auto OMGIRGenerator::addStructNew(uint32_t typeIndex, ArgumentList& args, Expres
     }
 
     const auto& structType = *m_info.typeSignatures[typeIndex]->expand().template as<StructType>();
+    bool needsWriteBarrier = false;
     for (uint32_t i = 0; i < args.size(); ++i)
-        emitStructSet(structValue, i, structType, get(args[i]));
+        needsWriteBarrier |= emitStructSet(structValue, i, structType, get(args[i]));
+
+    // FIXME: This just needs to be a mutator fence.
+    if (needsWriteBarrier)
+        emitWriteBarrier(structValue, instanceValue());
 
     result = push(structValue);
 
@@ -3481,7 +3486,9 @@ auto OMGIRGenerator::addStructNewDefault(uint32_t typeIndex, ExpressionType& res
             initValue = m_currentBlock->appendNew<Const32Value>(m_proc, origin(), 0);
         else
             initValue = m_currentBlock->appendNew<Const64Value>(m_proc, origin(), 0);
-        emitStructSet(structValue, i, structType, initValue);
+        // We know all the values here are not cells so we don't need a writeBarrier.
+        bool needsWriteBarrier = emitStructSet(structValue, i, structType, initValue);
+        UNUSED_VARIABLE(needsWriteBarrier);
     }
 
     result = push(structValue);
@@ -3502,17 +3509,17 @@ auto OMGIRGenerator::addStructGet(ExtGCOpType structGetKind, ExpressionType stru
         });
     }
 
-    Value* payloadBase = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load), pointerType(), origin(), get(structReference), JSWebAssemblyStruct::offsetOfPayload());
-    int32_t fieldOffset = fixupPointerPlusOffset(payloadBase, *structType.offsetOfField(fieldIndex));
+    Value* structValue = get(structReference);
+    int32_t fieldOffset = fixupPointerPlusOffset(structValue, JSWebAssemblyStruct::offsetOfData() + structType.offsetOfFieldInPayload(fieldIndex));
 
     if (fieldType.is<PackedType>()) {
         Value* load;
         switch (fieldType.as<PackedType>()) {
         case PackedType::I8:
-            load = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load8Z), Int32, origin(), payloadBase, fieldOffset);
+            load = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load8Z), Int32, origin(), structValue, fieldOffset);
             break;
         case PackedType::I16:
-            load = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load16Z), Int32, origin(), payloadBase, fieldOffset);
+            load = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load16Z), Int32, origin(), structValue, fieldOffset);
             break;
         }
         Value* postProcess = load;
@@ -3534,7 +3541,7 @@ auto OMGIRGenerator::addStructGet(ExtGCOpType structGetKind, ExpressionType stru
     }
 
     ASSERT(fieldType.is<Type>());
-    result = push(m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load), toB3Type(resultType), origin(), payloadBase, fieldOffset));
+    result = push(m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load), toB3Type(resultType), origin(), structValue, fieldOffset));
 
     return { };
 }
@@ -3549,7 +3556,10 @@ auto OMGIRGenerator::addStructSet(ExpressionType structReference, const StructTy
         });
     }
 
-    emitStructSet(get(structReference), fieldIndex, structType, get(value));
+    Value* structValue = get(structReference);
+    bool needsWriteBarrier = emitStructSet(structValue, fieldIndex, structType, get(value));
+    if (needsWriteBarrier)
+        emitWriteBarrier(structValue, instanceValue());
     return { };
 }
 

@@ -2065,43 +2065,47 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayFill(uint32_t typeIndex, Expres
     return { };
 }
 
-void BBQJIT::emitStructPayloadSet(GPRReg payloadGPR, const StructType& structType, uint32_t fieldIndex, Value value)
+bool BBQJIT::emitStructSet(GPRReg structGPR, const StructType& structType, uint32_t fieldIndex, Value value)
 {
-    unsigned fieldOffset = *structType.offsetOfField(fieldIndex);
+    unsigned fieldOffset = JSWebAssemblyStruct::offsetOfData() + structType.offsetOfFieldInPayload(fieldIndex);
     RELEASE_ASSERT((std::numeric_limits<int32_t>::max() & fieldOffset) == fieldOffset);
 
-    TypeKind kind = toValueKind(structType.field(fieldIndex).type.unpacked().kind);
+    StorageType storageType = structType.field(fieldIndex).type;
+    TypeKind kind = toValueKind(storageType.unpacked().kind);
+    JIT_COMMENT(m_jit, "emitStructSet for ", fieldIndex, " in ", structType);
     if (value.isConst()) {
         switch (kind) {
         case TypeKind::I32:
-            if (structType.field(fieldIndex).type.is<PackedType>()) {
+            if (storageType.is<PackedType>()) {
                 ScratchScope<1, 0> scratches(*this);
                 // If it's a packed type, we materialize the constant to ensure constant blinding.
                 emitMoveConst(value, Location::fromGPR(scratches.gpr(0)));
                 switch (structType.field(fieldIndex).type.as<PackedType>()) {
                 case PackedType::I8:
-                    m_jit.store8(scratches.gpr(0), MacroAssembler::Address(payloadGPR, fieldOffset));
+                    m_jit.store8(scratches.gpr(0), MacroAssembler::Address(structGPR, fieldOffset));
                     break;
                 case PackedType::I16:
-                    m_jit.store16(scratches.gpr(0), MacroAssembler::Address(payloadGPR, fieldOffset));
+                    m_jit.store16(scratches.gpr(0), MacroAssembler::Address(structGPR, fieldOffset));
                     break;
                 }
                 break;
             }
-            m_jit.store32(MacroAssembler::Imm32(value.asI32()), MacroAssembler::Address(payloadGPR, fieldOffset));
+            m_jit.store32(MacroAssembler::Imm32(value.asI32()), MacroAssembler::Address(structGPR, fieldOffset));
             break;
         case TypeKind::F32:
-            m_jit.store32(MacroAssembler::Imm32(value.asI32()), MacroAssembler::Address(payloadGPR, fieldOffset));
+            m_jit.store32(MacroAssembler::Imm32(value.asI32()), MacroAssembler::Address(structGPR, fieldOffset));
             break;
         case TypeKind::I64:
         case TypeKind::F64:
-            m_jit.store64(MacroAssembler::Imm64(value.asI64()), MacroAssembler::Address(payloadGPR, fieldOffset));
+            m_jit.store64(MacroAssembler::Imm64(value.asI64()), MacroAssembler::Address(structGPR, fieldOffset));
             break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
             break;
         }
-        return;
+
+        ASSERT_IMPLIES(isRefType(storageType.unpacked()), value.asI64() == JSValue::encode(jsNull()));
+        return false;
     }
 
     Location valueLocation;
@@ -2114,33 +2118,35 @@ void BBQJIT::emitStructPayloadSet(GPRReg payloadGPR, const StructType& structTyp
         if (structType.field(fieldIndex).type.is<PackedType>()) {
             switch (structType.field(fieldIndex).type.as<PackedType>()) {
             case PackedType::I8:
-                m_jit.store8(valueLocation.asGPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
+                m_jit.store8(valueLocation.asGPR(), MacroAssembler::Address(structGPR, fieldOffset));
                 break;
             case PackedType::I16:
-                m_jit.store16(valueLocation.asGPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
+                m_jit.store16(valueLocation.asGPR(), MacroAssembler::Address(structGPR, fieldOffset));
                 break;
             }
             break;
         }
-        m_jit.store32(valueLocation.asGPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
+        m_jit.store32(valueLocation.asGPR(), MacroAssembler::Address(structGPR, fieldOffset));
         break;
     case TypeKind::I64:
-        m_jit.store64(valueLocation.asGPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
+        m_jit.store64(valueLocation.asGPR(), MacroAssembler::Address(structGPR, fieldOffset));
         break;
     case TypeKind::F32:
-        m_jit.storeFloat(valueLocation.asFPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
+        m_jit.storeFloat(valueLocation.asFPR(), MacroAssembler::Address(structGPR, fieldOffset));
         break;
     case TypeKind::F64:
-        m_jit.storeDouble(valueLocation.asFPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
+        m_jit.storeDouble(valueLocation.asFPR(), MacroAssembler::Address(structGPR, fieldOffset));
         break;
     case TypeKind::V128:
-        m_jit.storeVector(valueLocation.asFPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
+        m_jit.storeVector(valueLocation.asFPR(), MacroAssembler::Address(structGPR, fieldOffset));
         break;
     default:
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
     consume(value);
+
+    return isRefType(storageType.unpacked());
 }
 
 PartialResult WARN_UNUSED_RETURN BBQJIT::addStructNewDefault(uint32_t typeIndex, ExpressionType& result)
@@ -2156,18 +2162,32 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructNewDefault(uint32_t typeIndex,
     const auto& structType = *m_info.typeSignatures[typeIndex]->expand().template as<StructType>();
     Location structLocation = loadIfNecessary(result);
     emitThrowOnNullReference(ExceptionType::BadStructNew, structLocation);
-    m_jit.loadPtr(MacroAssembler::Address(structLocation.asGPR(), JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
+    bool needsWriteBarrier = false;
     for (StructFieldCount i = 0; i < structType.fieldCount(); ++i) {
         if (Wasm::isRefType(structType.field(i).type))
-            emitStructPayloadSet(wasmScratchGPR, structType, i, Value::fromRef(TypeKind::RefNull, JSValue::encode(jsNull())));
+            needsWriteBarrier |= emitStructSet(structLocation.asGPR(), structType, i, Value::fromRef(TypeKind::RefNull, JSValue::encode(jsNull())));
         else if (structType.field(i).type.unpacked().isV128()) {
             materializeVectorConstant(v128_t { }, Location::fromFPR(wasmScratchFPR));
-            emitStructPayloadSet(wasmScratchGPR, structType, i, Value::pinned(TypeKind::V128, Location::fromFPR(wasmScratchFPR)));
+            needsWriteBarrier |= emitStructSet(structLocation.asGPR(), structType, i, Value::pinned(TypeKind::V128, Location::fromFPR(wasmScratchFPR)));
         } else
-            emitStructPayloadSet(wasmScratchGPR, structType, i, Value::fromI64(0));
+            needsWriteBarrier |= emitStructSet(structLocation.asGPR(), structType, i, Value::fromI64(0));
     }
 
     // No write barrier needed here as all fields are set to constants.
+    ASSERT_UNUSED(needsWriteBarrier, !needsWriteBarrier);
+
+#if ASSERT_ENABLED
+    auto resultGPR = structLocation.asGPR();
+    auto debugStructType = &structType;
+    m_jit.probeDebug([=] (Probe::Context& context) {
+        auto* structPtr = context.gpr<JSWebAssemblyStruct*>(resultGPR);
+        for (unsigned i = 0; i < debugStructType->fieldCount(); ++i) {
+            auto type = debugStructType->field(i).type.unpacked();
+            if (type.kind != TypeKind::V128)
+                validateWasmValue(structPtr->get(i), type);
+        }
+    });
+#endif
 
     LOG_INSTRUCTION("StructNewDefault", typeIndex, RESULT(result));
 
@@ -2187,15 +2207,12 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructNew(uint32_t typeIndex, Argume
     const auto& structType = *m_info.typeSignatures[typeIndex]->expand().template as<StructType>();
     Location structLocation = loadIfNecessary(allocationResult);
     emitThrowOnNullReference(ExceptionType::BadStructNew, structLocation);
-    m_jit.loadPtr(MacroAssembler::Address(structLocation.asGPR(), JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
-    bool hasRefTypeField = false;
-    for (uint32_t i = 0; i < args.size(); ++i) {
-        if (isRefType(structType.field(i).type))
-            hasRefTypeField = true;
-        emitStructPayloadSet(wasmScratchGPR, structType, i, args[i]);
-    }
+    bool needsWriteBarrier = false;
+    for (uint32_t i = 0; i < args.size(); ++i)
+        needsWriteBarrier |= emitStructSet(structLocation.asGPR(), structType, i, args[i]);
 
-    if (hasRefTypeField)
+    // FIXME: This just needs to be a mutator fence.
+    if (needsWriteBarrier)
         emitWriteBarrier(structLocation.asGPR());
 
     result = topValue(TypeKind::Structref);
@@ -2209,6 +2226,19 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructNew(uint32_t typeIndex, Argume
         RELEASE_ASSERT(result.asTemp() == allocationResult.asTemp());
         resultLocation = structLocation;
     }
+
+#if ASSERT_ENABLED
+    auto resultGPR = resultLocation.asGPR();
+    auto debugStructType = &structType;
+    m_jit.probeDebug([=] (Probe::Context& context) {
+        auto* structPtr = context.gpr<JSWebAssemblyStruct*>(resultGPR);
+        for (unsigned i = 0; i < debugStructType->fieldCount(); ++i) {
+            auto type = debugStructType->field(i).type.unpacked();
+            if (type.kind != TypeKind::V128)
+                validateWasmValue(structPtr->get(i), type);
+        }
+    });
+#endif
 
     LOG_INSTRUCTION("StructNew", typeIndex, args, RESULT(result));
 
@@ -2230,23 +2260,24 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructGet(ExtGCOpType structGetKind,
     Location structLocation = loadIfNecessary(structValue);
     emitThrowOnNullReference(ExceptionType::NullStructGet, structLocation);
 
-    m_jit.loadPtr(MacroAssembler::Address(structLocation.asGPR(), JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
-    unsigned fieldOffset = *structType.offsetOfField(fieldIndex);
+    unsigned fieldOffset = JSWebAssemblyStruct::offsetOfData() + structType.offsetOfFieldInPayload(fieldIndex);
     RELEASE_ASSERT((std::numeric_limits<int32_t>::max() & fieldOffset) == fieldOffset);
 
+    // We're ok with reusing the struct value for our result since their live ranges don't overlap within a struct.get.
     consume(structValue);
     result = topValue(resultKind);
     Location resultLocation = allocate(result);
 
+    JIT_COMMENT(m_jit, "emitStructGet for ", fieldIndex, " in ", structType);
     switch (result.type()) {
     case TypeKind::I32:
         if (structType.field(fieldIndex).type.is<PackedType>()) {
             switch (structType.field(fieldIndex).type.as<PackedType>()) {
             case PackedType::I8:
-                m_jit.load8(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+                m_jit.load8(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asGPR());
                 break;
             case PackedType::I16:
-                m_jit.load16(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+                m_jit.load16(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asGPR());
                 break;
             }
             switch (structGetKind) {
@@ -2265,24 +2296,35 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructGet(ExtGCOpType structGetKind,
                 return { };
             }
         }
-        m_jit.load32(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+        m_jit.load32(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asGPR());
         break;
     case TypeKind::I64:
-        m_jit.load64(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+        m_jit.load64(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asGPR());
         break;
     case TypeKind::F32:
-        m_jit.loadFloat(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asFPR());
+        m_jit.loadFloat(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asFPR());
         break;
     case TypeKind::F64:
-        m_jit.loadDouble(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asFPR());
+        m_jit.loadDouble(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asFPR());
         break;
     case TypeKind::V128:
-        m_jit.loadVector(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asFPR());
+        m_jit.loadVector(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asFPR());
         break;
     default:
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
+
+#if ASSERT_ENABLED
+    if (isRefType(structType.field(fieldIndex).type.unpacked())) {
+        auto resultGPR = resultLocation.asGPR();
+        auto debugStructType = &structType;
+        m_jit.probeDebug([=] (Probe::Context& context) {
+            auto type = debugStructType->field(fieldIndex).type.unpacked();
+            validateWasmValue(context.gpr<uint64_t>(resultGPR), type);
+        });
+    }
+#endif
 
     LOG_INSTRUCTION("StructGet", structValue, fieldIndex, RESULT(result));
     return { };
@@ -2303,7 +2345,10 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructSet(Value structValue, const S
     Location structLocation = loadIfNecessary(structValue);
     emitThrowOnNullReference(ExceptionType::NullStructSet, structLocation);
 
-    emitStructSet(structLocation.asGPR(), structType, fieldIndex, value);
+    bool needsWriteBarrier = emitStructSet(structLocation.asGPR(), structType, fieldIndex, value);
+    if (needsWriteBarrier)
+        emitWriteBarrier(structLocation.asGPR());
+
     LOG_INSTRUCTION("StructSet", structValue, fieldIndex, value);
 
     consume(structValue);

@@ -838,6 +838,12 @@ struct WasmOrJSImportableFunctionCallLinkInfo final : public WasmOrJSImportableF
     static constexpr ptrdiff_t offsetOfCallLinkInfo() { return OBJECT_OFFSETOF(WasmOrJSImportableFunctionCallLinkInfo, callLinkInfo); }
 };
 
+#if ASSERT_ENABLED
+void validateWasmValue(uint64_t wasmValue, Type expectedType);
+#else
+ALWAYS_INLINE void validateWasmValue(uint64_t, Type) { }
+#endif
+
 } } // namespace JSC::Wasm
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

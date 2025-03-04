@@ -1217,9 +1217,8 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addArrayInitData(uint32_t dstTypeIndex, ExpressionType dst, ExpressionType dstOffset, uint32_t srcDataIndex, ExpressionType srcOffset, ExpressionType size);
 
-    void emitStructSet(GPRReg structGPR, const StructType& structType, uint32_t fieldIndex, Value value);
-
-    void emitStructPayloadSet(GPRReg payloadGPR, const StructType& structType, uint32_t fieldIndex, Value value);
+    // Returns true if a writeBarrier/mutatorFence is needed.
+    bool WARN_UNUSED_RETURN emitStructSet(GPRReg structGPR, const StructType& structType, uint32_t fieldIndex, Value value);
 
     PartialResult WARN_UNUSED_RETURN addStructNewDefault(uint32_t typeIndex, ExpressionType& result);
 

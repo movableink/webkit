@@ -104,7 +104,6 @@ JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationMemoryAtomicNotify, int32_t, (JSWebA
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmMemoryInit, UCPUStrictInt32, (JSWebAssemblyInstance*, unsigned dataSegmentIndex, uint32_t dstAddress, uint32_t srcAddress, uint32_t length));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmDataDrop, void, (JSWebAssemblyInstance*, unsigned dataSegmentIndex));
 
-JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmStructNew, EncodedJSValue, (JSWebAssemblyInstance*, uint32_t, bool, uint64_t*));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (JSWebAssemblyInstance*, uint32_t));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmStructGet, EncodedJSValue, (EncodedJSValue, uint32_t));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmStructSet, void, (JSWebAssemblyInstance*, EncodedJSValue, uint32_t, EncodedJSValue));

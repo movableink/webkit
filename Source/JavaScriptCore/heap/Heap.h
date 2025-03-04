@@ -182,14 +182,20 @@ class Heap;
     v(webAssemblyFunctionSpace, webAssemblyFunctionHeapCellType, WebAssemblyFunction) \
     v(webAssemblyGlobalSpace, webAssemblyGlobalHeapCellType, JSWebAssemblyGlobal) \
     v(webAssemblyMemorySpace, webAssemblyMemoryHeapCellType, JSWebAssemblyMemory) \
-    v(webAssemblyStructSpace, webAssemblyStructHeapCellType, JSWebAssemblyStruct) \
     v(webAssemblyModuleSpace, webAssemblyModuleHeapCellType, JSWebAssemblyModule) \
     v(webAssemblyModuleRecordSpace, webAssemblyModuleRecordHeapCellType, WebAssemblyModuleRecord) \
     v(webAssemblyTableSpace, webAssemblyTableHeapCellType, JSWebAssemblyTable) \
     v(webAssemblyTagSpace, webAssemblyTagHeapCellType, JSWebAssemblyTag) \
     v(webAssemblyWrapperFunctionSpace, cellHeapCellType, WebAssemblyWrapperFunction)
+
+// FIXME: This is a bit confusingly named since the objects in here are exclusive to the subspace but they can vary in size thus can't be in an IsoSubspace.
+#define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(v) \
+    v(webAssemblyInstanceSpace, webAssemblyInstanceHeapCellType, JSWebAssemblyInstance, PreciseSubspace) \
+    v(webAssemblyStructSpace, webAssemblyStructHeapCellType, JSWebAssemblyStruct, CompleteSubspace)
+
 #else
 #define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v)
+#define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(v)
 #endif
 
 #define FOR_EACH_JSC_DYNAMIC_ISO_SUBSPACE(v) \
@@ -286,7 +292,6 @@ class Heap;
     v(regExpStringIteratorSpace, cellHeapCellType, JSRegExpStringIterator) \
     \
     FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v)
-
 
 typedef HashCountedSet<JSCell*> ProtectCountSet;
 typedef HashCountedSet<ASCIILiteral> TypeCountSet;
@@ -1074,18 +1079,6 @@ public:
     CompleteSubspace variableSizedCellSpace; // FIXME: This space is problematic because we have things in here like DirectArguments and ScopedArguments; those should be split into JSValueOOB cells and JSValueStrict auxiliaries. https://bugs.webkit.org/show_bug.cgi?id=182858
     CompleteSubspace destructibleObjectSpace;
 
-#if ENABLE(WEBASSEMBLY)
-    template<SubspaceAccess mode>
-    PreciseSubspace* webAssemblyInstanceSpace()
-    {
-        if (m_webAssemblyInstanceSpace || mode == SubspaceAccess::Concurrently)
-            return m_webAssemblyInstanceSpace.get();
-        return webAssemblyInstanceSpaceSlow();
-    }
-    JS_EXPORT_PRIVATE PreciseSubspace* webAssemblyInstanceSpaceSlow();
-    std::unique_ptr<PreciseSubspace> m_webAssemblyInstanceSpace;
-#endif
-
 #define DECLARE_ISO_SUBSPACE(name, heapCellType, type) \
     IsoSubspace name;
 
@@ -1199,6 +1192,21 @@ public:
     UnlinkedFunctionExecutableSpaceAndSet unlinkedFunctionExecutableSpaceAndSet;
 
 #undef DYNAMIC_SPACE_AND_SET_DEFINE_MEMBER
+
+#define DEFINE_NON_ISO_SUBSPACE_MEMBER(name, heapCellType, type, SubspaceType) \
+    template<SubspaceAccess mode> \
+    SubspaceType* name() \
+    { \
+        if (m_##name || mode == SubspaceAccess::Concurrently) \
+            return m_##name.get(); \
+        return name##Slow(); \
+    } \
+    JS_EXPORT_PRIVATE SubspaceType* name##Slow(); \
+    std::unique_ptr<SubspaceType> m_##name;
+
+    FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(DEFINE_NON_ISO_SUBSPACE_MEMBER)
+#undef DEFINE_NON_ISO_SUBSPACE_MEMBER
+
     CString m_signpostMessage;
 };
 

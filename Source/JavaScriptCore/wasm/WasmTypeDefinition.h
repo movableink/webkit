@@ -580,15 +580,13 @@ public:
     FieldType* storage(StructFieldCount i) { return i + m_payload; }
     const FieldType* storage(StructFieldCount i) const { return const_cast<StructType*>(this)->storage(i); }
 
-    // Returns the offset relative to `m_payload` (the internal vector of fields)
-    const unsigned* offsetOfField(StructFieldCount i) const { ASSERT(i < fieldCount()); return std::bit_cast<const unsigned*>(m_payload + m_fieldCount) + i; }
-    unsigned* offsetOfField(StructFieldCount i) { return const_cast<unsigned*>(const_cast<const StructType*>(this)->offsetOfField(i)); }
-
-    // Returns the offset relative to `m_payload.storage` (the internal storage for the internal vector of fields)
-    unsigned offsetOfFieldInternal(StructFieldCount i) const { ASSERT(i < fieldCount()); return(*offsetOfField(i) - FixedVector<uint8_t>::Storage::offsetOfData()); }
+    // Returns the offset relative to JSWebAssemblyStruct::offsetOfData() (the internal vector of fields)
+    unsigned offsetOfFieldInPayload(StructFieldCount i) const { return const_cast<StructType*>(this)->fieldOffsetFromInstancePayload(i); }
     size_t instancePayloadSize() const { return m_instancePayloadSize; }
 
 private:
+    unsigned& fieldOffsetFromInstancePayload(StructFieldCount i) { ASSERT(i < fieldCount()); return *(std::bit_cast<unsigned*>(m_payload + m_fieldCount) + i); }
+
     // Payload is structured this way = | field types | precalculated field offsets |.
     FieldType* m_payload;
     StructFieldCount m_fieldCount;
@@ -758,10 +756,12 @@ public:
 
     static RefPtr<RTT> tryCreateRTT(RTTKind, DisplayCount);
 
+    RTTKind kind() const { return m_kind; }
     DisplayCount displaySize() const { return m_displaySize; }
     const RTT* displayEntry(DisplayCount i) const { ASSERT(i < displaySize()); return const_cast<RTT*>(this)->payload()[i]; }
     void setDisplayEntry(DisplayCount i, RefPtr<const RTT> entry) { ASSERT(i < displaySize()); payload()[i] = entry.get(); }
 
+    bool isSubRTTWithEquality(const RTT& other) const { return this == &other ? true : isSubRTT(other); }
     bool isSubRTT(const RTT& other) const;
     static size_t allocatedRTTSize(Checked<DisplayCount> count) { return sizeof(RTT) + count * sizeof(TypeIndex); }
 

@@ -1600,14 +1600,6 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayInitData(uint32_t dstTypeIndex,
     return { };
 }
 
-void BBQJIT::emitStructSet(GPRReg structGPR, const StructType& structType, uint32_t fieldIndex, Value value)
-{
-    m_jit.loadPtr(MacroAssembler::Address(structGPR, JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
-    emitStructPayloadSet(wasmScratchGPR, structType, fieldIndex, value);
-    if (isRefType(structType.field(fieldIndex).type))
-        emitWriteBarrier(structGPR);
-}
-
 PartialResult WARN_UNUSED_RETURN BBQJIT::addRefTest(ExpressionType reference, bool allowNull, int32_t heapType, bool shouldNegate, ExpressionType& result)
 {
     Vector<Value, 8> arguments = {
