@@ -1802,6 +1802,9 @@ fast/flexbox/overhanging-floats-removed.html [ Failure ]
 fast/forms/autofocus-opera-003.html [ Failure ]
 fast/forms/button-with-float.html [ ImageOnlyFailure ]
 
+# <rdar://122127465>
+fast/forms/ios/focus-input-in-fixed.html [ Pass Crash ]
+
 fast/forms/datalist/input-list.html [ Failure ]
 fast/forms/fieldset-legend-padding-unclipped-fieldset-border.html [ Failure ]
 fast/forms/fieldset-with-float.html [ Failure ]
