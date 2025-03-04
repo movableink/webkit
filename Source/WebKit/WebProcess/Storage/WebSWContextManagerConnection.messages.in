@@ -60,7 +60,7 @@ messages -> WebSWContextManagerConnection {
     SetRegistrationUpdateViaCache(WebCore::ServiceWorkerRegistrationIdentifier identifier, enum:uint8_t WebCore::ServiceWorkerUpdateViaCache updateViaCache)
 
 #if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
-    ConnectToInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier, bool isAutomaticConnection, bool immediatelyPause)
+    ConnectToInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier)
     DisconnectFromInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier)
     DispatchMessageFromInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier, String message)
 #endif

@@ -677,9 +677,8 @@ private:
 #endif
 
 #if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
-    void createServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier, URL&&, CompletionHandler<void(bool)>&&);
+    void createServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier, URL&&);
     void deleteServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier);
-    void unpauseServiceWorkerDebuggableForInitializedInspector(WebCore::ServiceWorkerIdentifier);
     void sendMessageToInspector(WebCore::ServiceWorkerIdentifier, String&& message);
 #endif
 

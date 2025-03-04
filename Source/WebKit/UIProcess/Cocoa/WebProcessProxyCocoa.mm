@@ -273,22 +273,16 @@ void WebProcessProxy::setupLogStream(uint32_t pid, IPC::StreamServerConnectionHa
 #endif // ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
 
 #if ENABLE(REMOTE_INSPECTOR)
-void WebProcessProxy::createServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier identifier, URL&& url, CompletionHandler<void(bool)>&& completionHandler)
+void WebProcessProxy::createServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier identifier, URL&& url)
 {
     MESSAGE_CHECK_URL(url);
     RELEASE_LOG(Inspector, "WebProcessProxy::createServiceWorkerDebuggable");
     if (!shouldEnableRemoteInspector())
         return;
     Ref serviceWorkerDebuggableProxy = ServiceWorkerDebuggableProxy::create(url.string(), identifier, *this);
-    m_serviceWorkerDebuggableProxies.add(identifier, serviceWorkerDebuggableProxy);
-    serviceWorkerDebuggableProxy->init();
     serviceWorkerDebuggableProxy->setInspectable(true);
-#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
-    completionHandler(serviceWorkerDebuggableProxy->wasRequestedToWaitForAutoInspection());
-#else
-    bool shouldWaitForAutomaticInspection = false;
-    completionHandler(shouldWaitForAutomaticInspection);
-#endif
+    serviceWorkerDebuggableProxy->init();
+    m_serviceWorkerDebuggableProxies.add(identifier, serviceWorkerDebuggableProxy);
 }
 
 void WebProcessProxy::deleteServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier identifier)

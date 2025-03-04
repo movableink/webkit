@@ -51,10 +51,17 @@ ServiceWorkerDebuggable::ServiceWorkerDebuggable(ServiceWorkerThreadProxy& servi
 {
 }
 
-void ServiceWorkerDebuggable::connect(FrontendChannel& channel, bool, bool)
+void ServiceWorkerDebuggable::connect(FrontendChannel& channel, bool isAutomaticInspection, bool immediatelyPause)
 {
-    if (RefPtr serviceWorkerThreadProxy = m_serviceWorkerThreadProxy.get())
+    if (RefPtr serviceWorkerThreadProxy = m_serviceWorkerThreadProxy.get()) {
+#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+        serviceWorkerThreadProxy->inspectorProxy().connectToWorker(channel, *this, isAutomaticInspection, immediatelyPause);
+#else
+        UNUSED_PARAM(isAutomaticInspection);
+        UNUSED_PARAM(immediatelyPause);
         serviceWorkerThreadProxy->inspectorProxy().connectToWorker(channel);
+#endif
+    }
 }
 
 void ServiceWorkerDebuggable::disconnect(FrontendChannel& channel)
