@@ -4543,7 +4543,7 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
             RefPtr<API::Error> error;
             auto scriptString = extension->resourceStringForPath(scriptPath, error, WebExtension::CacheResult::Yes);
             if (!scriptString) {
-                recordError(::WebKit::wrapper(error));
+                recordErrorIfNeeded(::WebKit::wrapper(error));
                 continue;
             }
 
@@ -4567,7 +4567,7 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
             RefPtr<API::Error> error;
             auto styleSheetString = extension->resourceStringForPath(styleSheetPath, error, WebExtension::CacheResult::Yes);
             if (!styleSheetString) {
-                recordError(::WebKit::wrapper(error));
+                recordErrorIfNeeded(::WebKit::wrapper(error));
                 continue;
             }
 
@@ -4841,7 +4841,7 @@ void WebExtensionContext::loadDeclarativeNetRequestRules(CompletionHandler<void(
             RefPtr<API::Error> error;
             RefPtr jsonData = extension->resourceDataForPath(ruleset.jsonPath, error);
             if (!jsonData || error) {
-                recordError(::WebKit::wrapper(*error));
+                recordErrorIfNeeded(::WebKit::wrapper(*error));
                 continue;
             }
 
