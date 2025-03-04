@@ -487,7 +487,7 @@ void ThreadedScrollingTree::scheduleDelayedRenderingUpdateDetectionTimer(Seconds
     ASSERT(m_treeLock.isLocked());
 
     if (!m_delayedRenderingUpdateDetectionTimer)
-        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer>(RunLoop::protectedCurrent(), this, &ThreadedScrollingTree::delayedRenderingUpdateDetectionTimerFired);
+        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer>(RunLoop::currentSingleton(), this, &ThreadedScrollingTree::delayedRenderingUpdateDetectionTimerFired);
 
     m_delayedRenderingUpdateDetectionTimer->startOneShot(delay);
 }

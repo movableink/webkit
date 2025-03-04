@@ -368,7 +368,7 @@ public:
     void addMessageReceiver(FunctionDispatcher&, MessageReceiver&, ReceiverName, uint64_t destinationID = 0);
     void removeMessageReceiver(ReceiverName, uint64_t destinationID = 0);
 
-    bool open(Client&, SerialFunctionDispatcher& = RunLoop::protectedCurrent().get());
+    bool open(Client&, SerialFunctionDispatcher& = RunLoop::currentSingleton());
     // Ensures that messages sent prior to the call are not affected by invalidate() or crash done after the call returns.
     Error flushSentMessages(Timeout);
     void invalidate();

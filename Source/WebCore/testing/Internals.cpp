@@ -4808,14 +4808,14 @@ void Internals::initializeMockMediaSource()
 
 void Internals::setMaximumSourceBufferSize(SourceBuffer& buffer, uint64_t maximumSize, DOMPromiseDeferred<void>&& promise)
 {
-    buffer.setMaximumSourceBufferSize(maximumSize)->whenSettled(RunLoop::protectedCurrent(), [promise = WTFMove(promise)]() mutable {
+    buffer.setMaximumSourceBufferSize(maximumSize)->whenSettled(RunLoop::currentSingleton(), [promise = WTFMove(promise)]() mutable {
         promise.resolve();
     });
 }
 
 void Internals::bufferedSamplesForTrackId(SourceBuffer& buffer, const AtomString& trackId, BufferedSamplesPromise&& promise)
 {
-    buffer.bufferedSamplesForTrackId(parseInteger<uint64_t>(trackId).value_or(0))->whenSettled(RunLoop::protectedCurrent(), [promise = WTFMove(promise)](auto&& samples) mutable {
+    buffer.bufferedSamplesForTrackId(parseInteger<uint64_t>(trackId).value_or(0))->whenSettled(RunLoop::currentSingleton(), [promise = WTFMove(promise)](auto&& samples) mutable {
         if (!samples) {
             promise.reject(Exception { ExceptionCode::OperationError, makeString("Error "_s, samples.error()) });
             return;
@@ -4826,7 +4826,7 @@ void Internals::bufferedSamplesForTrackId(SourceBuffer& buffer, const AtomString
 
 void Internals::enqueuedSamplesForTrackID(SourceBuffer& buffer, const AtomString& trackID, BufferedSamplesPromise&& promise)
 {
-    buffer.enqueuedSamplesForTrackID(parseInteger<uint64_t>(trackID).value_or(0))->whenSettled(RunLoop::protectedCurrent(), [promise = WTFMove(promise)](auto&& samples) mutable {
+    buffer.enqueuedSamplesForTrackID(parseInteger<uint64_t>(trackID).value_or(0))->whenSettled(RunLoop::currentSingleton(), [promise = WTFMove(promise)](auto&& samples) mutable {
         if (!samples) {
             promise.reject(Exception { ExceptionCode::OperationError, makeString("Error "_s, samples.error()) });
             return;

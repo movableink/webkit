@@ -872,7 +872,7 @@ void WebProcess::setupLogStream()
     if (!logStreamConnection)
         return;
 
-    logStreamConnection->open(*this, RunLoop::protectedCurrent());
+    logStreamConnection->open(*this, RunLoop::currentSingleton());
 
     parentProcessConnection()->sendWithAsyncReply(Messages::WebProcessProxy::SetupLogStream(getpid(), WTFMove(serverHandle), logStreamIdentifier), [logStreamConnection, logStreamIdentifier] (IPC::Semaphore&& wakeUpSemaphore, IPC::Semaphore&& clientWaitSemaphore) {
         logStreamConnection->setSemaphores(WTFMove(wakeUpSemaphore), WTFMove(clientWaitSemaphore));

@@ -1806,7 +1806,7 @@ void WebPageProxy::close()
     Ref processPool = process->processPool();
     processPool->protectedBackForwardCache()->removeEntriesForPage(*this);
 
-    RunLoop::protectedCurrent()->dispatch([destinationID = webPageIDInMainFrameProcess(), process, preventProcessShutdownScope = process->shutdownPreventingScope()] {
+    RunLoop::currentSingleton().dispatch([destinationID = webPageIDInMainFrameProcess(), process, preventProcessShutdownScope = process->shutdownPreventingScope()] {
         process->send(Messages::WebPage::Close(), destinationID);
     });
     process->removeWebPage(*this, WebProcessProxy::EndsUsingDataStore::Yes);

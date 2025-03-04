@@ -69,7 +69,7 @@ void RemoteInspector::didClose(RemoteInspectorSocketEndpoint&, ConnectionID)
 
     m_clientConnection = std::nullopt;
 
-    RunLoop::protectedCurrent()->dispatch([this] {
+    RunLoop::currentSingleton().dispatch([this] {
         Locker locker { m_mutex };
         stopInternal(StopSource::API);
     });
@@ -180,7 +180,7 @@ void RemoteInspector::pushListingsSoon()
 
     m_pushScheduled = true;
 
-    RunLoop::protectedCurrent()->dispatch([this] {
+    RunLoop::currentSingleton().dispatch([this] {
         Locker locker { m_mutex };
         if (m_pushScheduled)
             pushListingsNow();

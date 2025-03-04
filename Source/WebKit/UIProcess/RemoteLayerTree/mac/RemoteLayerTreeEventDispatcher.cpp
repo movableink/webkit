@@ -487,7 +487,7 @@ void RemoteLayerTreeEventDispatcher::scheduleDelayedRenderingUpdateDetectionTime
     ASSERT(ScrollingThread::isCurrentThread());
 
     if (!m_delayedRenderingUpdateDetectionTimer)
-        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer>(RunLoop::protectedCurrent(), [weakThis = ThreadSafeWeakPtr { *this }] {
+        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer>(RunLoop::currentSingleton(), [weakThis = ThreadSafeWeakPtr { *this }] {
             auto strongThis = weakThis.get();
             if (strongThis)
                 strongThis->delayedRenderingUpdateDetectionTimerFired();
@@ -744,7 +744,7 @@ void RemoteLayerTreeEventDispatcher::stopDisplayDidRefreshCallbacks(PlatformDisp
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER_TEMPORARY_LOGGING)
 void RemoteLayerTreeEventDispatcher::flushMomentumEventLoggingSoon()
 {
-    RunLoop::protectedCurrent()->dispatchAfter(1_s, [protectedThis = Ref { *this }] {
+    RunLoop::currentSingleton().dispatchAfter(1_s, [protectedThis = Ref { *this }] {
         protectedThis->m_momentumEventDispatcher->flushLog();
     });
 }

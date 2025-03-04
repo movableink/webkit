@@ -1685,7 +1685,7 @@ void NetworkProcess::deleteWebsiteData(PAL::SessionID sessionID, OptionSet<Websi
         return;
 
     // Schedule a timer in case web processes do not exit on time.
-    RunLoop::protectedCurrent()->dispatchAfter(3_s, [protectedThis = Ref { *this }, taskIdentifier]() mutable {
+    RunLoop::currentSingleton().dispatchAfter(3_s, [protectedThis = Ref { *this }, taskIdentifier]() mutable {
         protectedThis->performDeleteWebsiteDataTask(taskIdentifier);
     });
 }

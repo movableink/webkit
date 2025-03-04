@@ -284,7 +284,7 @@ bool AuxiliaryProcessProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, Optio
     }
 
     if (asyncReplyHandler && asyncReplyHandler->completionHandler) {
-        RunLoop::protectedCurrent()->dispatch([completionHandler = WTFMove(asyncReplyHandler->completionHandler)]() mutable {
+        RunLoop::currentSingleton().dispatch([completionHandler = WTFMove(asyncReplyHandler->completionHandler)]() mutable {
             completionHandler(nullptr);
         });
     }

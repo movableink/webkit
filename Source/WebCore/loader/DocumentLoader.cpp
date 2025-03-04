@@ -859,7 +859,7 @@ bool DocumentLoader::tryLoadingSubstituteData()
 #if USE(COCOA_EVENT_LOOP)
         RunLoop::dispatch(*m_frame->page()->scheduledRunLoopPairs(), WTFMove(loadData));
 #else
-        RunLoop::protectedCurrent()->dispatch(WTFMove(loadData));
+        RunLoop::currentSingleton().dispatch(WTFMove(loadData));
 #endif
     }
 

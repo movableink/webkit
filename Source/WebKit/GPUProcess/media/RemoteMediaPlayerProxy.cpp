@@ -1206,7 +1206,7 @@ void RemoteMediaPlayerProxy::updateCachedVideoMetrics()
     if (m_hasPlaybackMetricsUpdatePending)
         return;
     m_hasPlaybackMetricsUpdatePending = true;
-    protectedPlayer()->asyncVideoPlaybackQualityMetrics()->whenSettled(RunLoop::protectedCurrent(), [weakThis = WeakPtr { *this }](auto&& result) {
+    protectedPlayer()->asyncVideoPlaybackQualityMetrics()->whenSettled(RunLoop::currentSingleton(), [weakThis = WeakPtr { *this }](auto&& result) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;

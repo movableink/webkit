@@ -87,7 +87,7 @@ void RemoteConnectionToTarget::sendMessageToTarget(String&& message)
 
 void RemoteConnectionToTarget::close()
 {
-    RunLoop::protectedCurrent()->dispatch([this, protectThis = Ref { *this }] {
+    RunLoop::currentSingleton().dispatch([this, protectThis = Ref { *this }] {
         Locker locker { m_targetMutex };
         RefPtr target = m_target.get();
         if (!target)

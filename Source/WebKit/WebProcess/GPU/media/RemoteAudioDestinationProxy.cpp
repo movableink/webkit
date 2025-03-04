@@ -74,7 +74,7 @@ RemoteAudioDestinationProxy::RemoteAudioDestinationProxy(const CreationOptions& 
 {
 #if PLATFORM(MAC)
     // On macOS, we are seeing page load time improvements when eagerly creating the Audio destination in the GPU process. See rdar://124071843.
-    RunLoop::protectedCurrent()->dispatch([protectedThis = Ref { *this }]() {
+    RunLoop::currentSingleton().dispatch([protectedThis = Ref { *this }]() {
         protectedThis->connection();
     });
 #endif
@@ -210,7 +210,7 @@ void RemoteAudioDestinationProxy::startRendering(CompletionHandler<void(bool)>&&
 {
     RefPtr connection = this->connection();
     if (!connection) {
-        RunLoop::protectedCurrent()->dispatch([protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
+        RunLoop::currentSingleton().dispatch([protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
             protectedThis->setIsPlaying(false);
             completionHandler(false);
         });
@@ -228,7 +228,7 @@ void RemoteAudioDestinationProxy::stopRendering(CompletionHandler<void(bool)>&& 
 {
     RefPtr connection = existingConnection();
     if (!connection) {
-        RunLoop::protectedCurrent()->dispatch([protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
+        RunLoop::currentSingleton().dispatch([protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
             protectedThis->setIsPlaying(false);
             completionHandler(true);
         });

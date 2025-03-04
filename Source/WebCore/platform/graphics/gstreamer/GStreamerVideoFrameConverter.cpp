@@ -149,7 +149,7 @@ GStreamerVideoFrameConverter::Pipeline& GStreamerVideoFrameConverter::ensurePipe
     if (features && gst_caps_features_contains(features, GST_CAPS_FEATURE_MEMORY_DMABUF)) {
         if (!m_dmabufMemoryPipeline) {
             m_dmabufMemoryPipeline = makeUnique<Pipeline>(Pipeline::Type::DMABufMemory);
-            m_releaseUnusedDMABufMemoryPipelineTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &GStreamerVideoFrameConverter::releaseUnusedDMABufMemoryPipelineTimerFired);
+            m_releaseUnusedDMABufMemoryPipelineTimer = makeUnique<RunLoop::Timer>(RunLoop::currentSingleton(), this, &GStreamerVideoFrameConverter::releaseUnusedDMABufMemoryPipelineTimerFired);
             m_releaseUnusedDMABufMemoryPipelineTimer->setPriority(RunLoopSourcePriority::ReleaseUnusedResourcesTimer);
         }
         m_releaseUnusedDMABufMemoryPipelineTimer->startOneShot(s_releaseUnusedPipelinesTimerInterval);
@@ -159,7 +159,7 @@ GStreamerVideoFrameConverter::Pipeline& GStreamerVideoFrameConverter::ensurePipe
     if (features && gst_caps_features_contains(features, GST_CAPS_FEATURE_MEMORY_GL_MEMORY)) {
         if (!m_glMemoryPipeline) {
             m_glMemoryPipeline = makeUnique<Pipeline>(Pipeline::Type::GLMemory);
-            m_releaseUnusedGLMemoryPipelineTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &GStreamerVideoFrameConverter::releaseUnusedGLMemoryPipelineTimerFired);
+            m_releaseUnusedGLMemoryPipelineTimer = makeUnique<RunLoop::Timer>(RunLoop::currentSingleton(), this, &GStreamerVideoFrameConverter::releaseUnusedGLMemoryPipelineTimerFired);
             m_releaseUnusedGLMemoryPipelineTimer->setPriority(RunLoopSourcePriority::ReleaseUnusedResourcesTimer);
         }
         m_releaseUnusedGLMemoryPipelineTimer->startOneShot(s_releaseUnusedPipelinesTimerInterval);
@@ -168,7 +168,7 @@ GStreamerVideoFrameConverter::Pipeline& GStreamerVideoFrameConverter::ensurePipe
 
     if (!m_systemMemoryPipeline) {
         m_systemMemoryPipeline = makeUnique<Pipeline>(Pipeline::Type::SystemMemory);
-        m_releaseUnusedSystemMemoryPipelineTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &GStreamerVideoFrameConverter::releaseUnusedSystemMemoryPipelineTimerFired);
+        m_releaseUnusedSystemMemoryPipelineTimer = makeUnique<RunLoop::Timer>(RunLoop::currentSingleton(), this, &GStreamerVideoFrameConverter::releaseUnusedSystemMemoryPipelineTimerFired);
         m_releaseUnusedSystemMemoryPipelineTimer->setPriority(RunLoopSourcePriority::ReleaseUnusedResourcesTimer);
     }
     m_releaseUnusedSystemMemoryPipelineTimer->startOneShot(s_releaseUnusedPipelinesTimerInterval);

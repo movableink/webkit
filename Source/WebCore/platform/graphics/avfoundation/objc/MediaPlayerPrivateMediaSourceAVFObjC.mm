@@ -498,7 +498,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::seekInternal()
     m_lastSeekTime = pendingSeek.time;
 
     m_seekState = Seeking;
-    mediaSourcePrivate->waitForTarget(pendingSeek)->whenSettled(RunLoop::protectedCurrent(), [weakThis = WeakPtr { *this }] (auto&& result) mutable {
+    mediaSourcePrivate->waitForTarget(pendingSeek)->whenSettled(RunLoop::currentSingleton(), [weakThis = WeakPtr { *this }] (auto&& result) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -527,7 +527,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::seekInternal()
         mediaSourcePrivate->willSeek();
         [protectedThis->m_synchronizer setRate:0 time:PAL::toCMTime(seekedTime)];
 
-        mediaSourcePrivate->seekToTime(seekedTime)->whenSettled(RunLoop::protectedCurrent(), [weakThis = WTFMove(weakThis)]() mutable {
+        mediaSourcePrivate->seekToTime(seekedTime)->whenSettled(RunLoop::currentSingleton(), [weakThis = WTFMove(weakThis)]() mutable {
             if (RefPtr protectedThis = weakThis.get())
                 protectedThis->maybeCompleteSeek();
         });

@@ -457,7 +457,7 @@ Ref<MediaPromise> SourceBufferPrivateAVFObjC::appendInternal(Ref<SharedBuffer>&&
         });
 
         return MediaPromise::createAndSettle(parser->appendData(WTFMove(data)));
-    })->whenSettled(RunLoop::protectedCurrent(), [weakThis = ThreadSafeWeakPtr { *this }](auto&& result) {
+    })->whenSettled(RunLoop::currentSingleton(), [weakThis = ThreadSafeWeakPtr { *this }](auto&& result) {
         if (RefPtr protectedThis = weakThis.get())
             protectedThis->appendCompleted(!!result);
         return MediaPromise::createAndSettle(WTFMove(result));

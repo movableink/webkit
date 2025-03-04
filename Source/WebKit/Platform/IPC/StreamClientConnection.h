@@ -76,7 +76,7 @@ public:
     bool hasSemaphores() const;
     void setMaxBatchSize(unsigned);
 
-    void open(Connection::Client&, SerialFunctionDispatcher& = RunLoop::current());
+    void open(Connection::Client&, SerialFunctionDispatcher& = RunLoop::currentSingleton());
     Error flushSentMessages();
     void invalidate();
 
