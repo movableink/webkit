@@ -154,6 +154,7 @@ class BenchmarkRunner(object):
     def _construct_subtest_url(self, subtests):
         if not subtests or not isinstance(subtests, collections.abc.Mapping) or 'subtest_url_format' not in self._plan:
             return ''
+        subtest_url = ''
         for suite, tests in subtests.items():
             for test in tests:
                 subtest_url += self._plan['subtest_url_format'].replace('${SUITE}', suite).replace('${TEST}', test)
