@@ -21,8 +21,6 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
-
 public import SwiftUI
 public import WebKit
 
@@ -116,5 +114,3 @@ extension WebView {
         let value: Value
     }
  }
-
-#endif

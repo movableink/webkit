@@ -179,44 +179,4 @@ extension WebPage.Configuration {
     }
 }
 
-// MARK: Adapters
-
-extension WKWebViewConfiguration {
-    convenience init(_ wrapped: WebPage.Configuration) {
-        self.init()
-
-        self.websiteDataStore = wrapped.websiteDataStore
-        self.userContentController = wrapped.userContentController
-        self.webExtensionController = wrapped.webExtensionController
-
-        self.defaultWebpagePreferences = WKWebpagePreferences(wrapped.defaultNavigationPreferences)
-
-        self.applicationNameForUserAgent = wrapped.applicationNameForUserAgent
-        self.limitsNavigationsToAppBoundDomains = wrapped.limitsNavigationsToAppBoundDomains
-        self.upgradeKnownHostsToHTTPS = wrapped.upgradeKnownHostsToHTTPS
-        self.suppressesIncrementalRendering = wrapped.suppressesIncrementalRendering
-        self.allowsInlinePredictions = wrapped.allowsInlinePredictions
-        self.supportsAdaptiveImageGlyph = wrapped.supportsAdaptiveImageGlyph
-        self._loadsSubresources = wrapped.loadsSubresources
-
-#if os(iOS)
-        self.dataDetectorTypes = wrapped.dataDetectorTypes
-        self.ignoresViewportScaleLimits = wrapped.ignoresViewportScaleLimits
-
-        if wrapped.mediaPlaybackBehavior != .automatic {
-            self.allowsInlineMediaPlayback = wrapped.mediaPlaybackBehavior == .allowsInlinePlayback
-        }
-#endif
-
-#if os(macOS)
-        self.userInterfaceDirectionPolicy = wrapped.userInterfaceDirectionPolicy
-#endif
-
-        for (scheme, handler) in wrapped.urlSchemeHandlers {
-            let handlerAdapter = WKURLSchemeHandlerAdapter(handler)
-            self.setURLSchemeHandler(handlerAdapter, forURLScheme: scheme.rawValue)
-        }
-    }
-}
-
 #endif

@@ -25,38 +25,6 @@ import Foundation
 public import SwiftUI
 @_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
-extension EnvironmentValues {
-    @Entry
-    var webViewAllowsBackForwardNavigationGestures = WebView.BackForwardNavigationGesturesBehavior.automatic
-
-    @Entry
-    var webViewMagnificationGestures = WebView.MagnificationGesturesBehavior.automatic
-
-    @Entry
-    var webViewAllowsLinkPreview = WebView.LinkPreviewBehavior.automatic
-
-    @Entry
-    var webViewTextSelection = true
-
-    @Entry
-    var webViewAllowsElementFullscreen = false
-
-    @Entry
-    var webViewFindContext: FindContext = .init()
-
-    @Entry
-    var webViewContextMenuContext: ContextMenuContext? = nil
-
-    @Entry
-    var webViewContentBackground: Visibility = .automatic
-
-    @Entry
-    var webViewOnScrollGeometryChange = OnScrollGeometryChangeContext()
-
-    @Entry
-    var webViewScrollPositionContext = ScrollPositionContext()
-}
-
 extension View {
     /// Determines whether horizontal swipe gestures trigger backward and forward page navigation.
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
@@ -135,19 +103,5 @@ extension View {
     @_spi(Private)
     public func webViewScrollPosition(_ position: Binding<ScrollPosition>) -> some View {
         environment(\.webViewScrollPositionContext, .init(position: position))
-    }
-}
-
-private struct OnScrollGeometryChangeModifier<T>: ViewModifier where T: Hashable {
-    @Namespace private var namespace
-    @Environment(\.webViewOnScrollGeometryChange) var onScrollGeometryChange
-
-    let transform: (ScrollGeometry) -> T
-    let action: (T, T) -> Void
-
-    func body(content: Content) -> some View {
-        onScrollGeometryChange.register(changeID: namespace, transform: transform, action: action)
-
-        return content.environment(\.webViewOnScrollGeometryChange, onScrollGeometryChange)
     }
 }

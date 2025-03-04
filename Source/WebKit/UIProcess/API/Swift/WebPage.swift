@@ -28,118 +28,6 @@ import Observation
 internal import WebKit_Private
 internal import WebKit_Internal
 
-@MainActor
-@_spi(CrossImportOverlay)
-public final class WebPageWebView: WKWebView {
-    public weak var delegate: (any Delegate)? = nil
-
-#if os(iOS)
-    override func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession) {
-        super.findInteraction(interaction, didBegin: session)
-        delegate?.findInteraction(interaction, didBegin: session)
-    }
-
-    override func findInteraction(_ interaction: UIFindInteraction, didEnd session: UIFindSession) {
-        super.findInteraction(interaction, didBegin: session)
-        delegate?.findInteraction(interaction, didEnd: session)
-    }
-
-    override func supportsTextReplacement() -> Bool {
-        guard let delegate else {
-            return super.supportsTextReplacement()
-        }
-
-        return super.supportsTextReplacement() && delegate.supportsTextReplacement()
-    }
-#endif
-
-    func geometryDidChange(_ geometry: WKScrollGeometryAdapter) {
-        delegate?.geometryDidChange(geometry)
-    }
-}
-
-extension WebPageWebView {
-    @MainActor
-    public protocol Delegate: AnyObject {
-#if os(iOS)
-        func findInteraction(_ interaction: UIFindInteraction, didBegin session: UIFindSession)
-
-        func findInteraction(_ interaction: UIFindInteraction, didEnd session: UIFindSession)
-
-        func supportsTextReplacement() -> Bool
-#endif
-
-        func geometryDidChange(_ geometry: WKScrollGeometryAdapter)
-    }
-}
-
-extension WebPageWebView {
-    // MARK: Platform-agnostic scrolling capabilities
-
-#if canImport(UIKit)
-    public var alwaysBounceVertical: Bool {
-        get { scrollView.alwaysBounceVertical }
-        set { scrollView.alwaysBounceVertical = newValue }
-    }
-
-    public var alwaysBounceHorizontal: Bool {
-        get { scrollView.alwaysBounceHorizontal }
-        set { scrollView.alwaysBounceHorizontal = newValue }
-    }
-
-    public var bouncesVertically: Bool {
-        get { scrollView.bouncesVertically }
-        set { scrollView.bouncesVertically = newValue }
-    }
-
-    public var bouncesHorizontally: Bool {
-        get { scrollView.bouncesHorizontally }
-        set { scrollView.bouncesHorizontally = newValue }
-    }
-
-    public var allowsMagnification: Bool {
-        get { self._allowsMagnification }
-        set { self._allowsMagnification = newValue }
-    }
-
-    public func setContentOffset(_ offset: CGPoint, animated: Bool) {
-        scrollView.setContentOffset(offset, animated: animated)
-    }
-
-    public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {
-        self._scroll(to: _WKRectEdge(edge), animated: animated)
-    }
-#else
-    public var alwaysBounceVertical: Bool {
-        get { self._alwaysBounceVertical }
-        set { self._alwaysBounceVertical = newValue }
-    }
-
-    public var alwaysBounceHorizontal: Bool {
-        get { self._alwaysBounceHorizontal }
-        set { self._alwaysBounceHorizontal = newValue }
-    }
-
-    public var bouncesVertically: Bool {
-        get { self._rubberBandingEnabled.contains(.top) && self._rubberBandingEnabled.contains(.bottom) }
-        set { self._rubberBandingEnabled.formUnion([.top, .bottom]) }
-    }
-
-    public var bouncesHorizontally: Bool {
-        get { self._rubberBandingEnabled.contains(.left) && self._rubberBandingEnabled.contains(.right) }
-        set { self._rubberBandingEnabled.formUnion([.left, .right]) }
-    }
-
-    public func setContentOffset(_ offset: CGPoint, animated: Bool) {
-        self._setContentOffset(offset, animated: animated)
-    }
-
-    public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {
-        self._scroll(to: _WKRectEdge(edge), animated: animated)
-    }
-#endif
-}
-
 /// An object that controls and manages the behavior of interactive web content.
 @MainActor
 @Observable
@@ -703,6 +591,8 @@ final public class WebPage {
     // MARK: Private helper functions
 
     private func createObservation<Value, BackingValue>(for keyPath: KeyPath<WebPage, Value>, backedBy backingKeyPath: KeyPath<WebPageWebView, BackingValue>) -> NSKeyValueObservation {
+        // The key path used within `createObservation` must be Sendable.
+        // This is safe as long as it is not used for object subscripting and isn't created with captured subscript key paths.
         let boxed = UncheckedSendableKeyPathBox(keyPath: keyPath)
 
         return backingWebView.observe(backingKeyPath, options: [.prior, .old, .new]) { [_$observationRegistrar, unowned self] _, change in
@@ -755,12 +645,6 @@ extension WebPage {
             }
         }
     }
-}
-
-/// The key path used within `createObservation` must be Sendable.
-/// This is safe as long as it is not used for object subscripting and isn't created with captured subscript key paths.
-fileprivate struct UncheckedSendableKeyPathBox<Root, Value>: @unchecked Sendable {
-    let keyPath: KeyPath<Root, Value>
 }
 
 #endif

@@ -22,41 +22,24 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 
 import Foundation
-public import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) import WebKit
+import SwiftUI
 
-extension WebPage.NavigationAction {
-    /// The modifier keys that were pressed at the time of the navigation request.
-    @_spi(Private)
-    public var modifierFlags: EventModifiers { EventModifiers(wrapped.modifierFlags) }
+@MainActor
+func onNextMainRunLoop(do body: @escaping @MainActor () -> Void) {
+    RunLoop.main.perform(inModes: [.common]) {
+        MainActor.assumeIsolated {
+            body()
+        }
+    }
 }
 
-// MARK: Adapters
-
-fileprivate extension EventModifiers {
-#if canImport(UIKit)
-    init(_ wrapped: UIKeyModifierFlags) {
-        self = switch wrapped {
-        case .alphaShift: .capsLock
-        case .command: .command
-        case .control: .control
-        case .numericPad: .numericPad
-        case .alternate: .option
-        case .shift: .shift
-        default: []
+extension NSDirectionalRectEdge {
+    init(_ edge: Edge) {
+        self = switch edge {
+        case .top: .top
+        case .leading: .leading
+        case .bottom: .bottom
+        case .trailing: .trailing
         }
     }
-#else
-    init(_ wrapped: NSEvent.ModifierFlags) {
-        self = switch wrapped {
-        case .capsLock: .capsLock
-        case .command: .command
-        case .control: .control
-        case .numericPad: .numericPad
-        case .option: .option
-        case .shift: .shift
-        default: []
-        }
-    }
-#endif
 }

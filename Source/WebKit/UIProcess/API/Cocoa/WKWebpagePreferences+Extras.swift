@@ -21,29 +21,44 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-public import SwiftUI
-@_spi(CrossImportOverlay) public import WebKit
+#if ENABLE_SWIFTUI && compiler(>=6.0)
 
-extension EdgeInsets {
-#if canImport(UIKit)
-    init(_ edgeInsets: UIEdgeInsets) {
-        self = EdgeInsets(top: edgeInsets.top, leading: edgeInsets.left, bottom: edgeInsets.bottom, trailing: edgeInsets.right)
+import Foundation
+internal import WebKit_Internal
+
+extension WKWebpagePreferences.ContentMode {
+    init(_ wrapped: WebPage.NavigationPreferences.ContentMode) {
+        self = switch wrapped {
+        case .recommended: .recommended
+        case .mobile: .mobile
+        case .desktop: .desktop
+        }
     }
-#else
-    init(_ edgeInsets: NSEdgeInsets) {
-        self = EdgeInsets(top: edgeInsets.top, leading: edgeInsets.left, bottom: edgeInsets.bottom, trailing: edgeInsets.right)
+}
+
+extension WKWebpagePreferences.UpgradeToHTTPSPolicy {
+    init(_ wrapped: WebPage.NavigationPreferences.UpgradeToHTTPSPolicy) {
+        self = switch wrapped {
+        case .keepAsRequested: .keepAsRequested
+        case .automaticFallbackToHTTP: .automaticFallbackToHTTP
+        case .userMediatedFallbackToHTTP: .userMediatedFallbackToHTTP
+        case .errorOnFailure: .errorOnFailure
+        }
     }
+}
+
+extension WKWebpagePreferences {
+    convenience init(_ wrapped: WebPage.NavigationPreferences) {
+        self.init()
+
+        self.preferredContentMode = .init(wrapped.preferredContentMode)
+        self.preferredHTTPSNavigationPolicy = .init(wrapped.preferredHTTPSNavigationPolicy)
+        self.allowsContentJavaScript = wrapped.allowsContentJavaScript
+
+        if let isLockdownModeEnabled = wrapped._isLockdownModeEnabled, self.isLockdownModeEnabled != isLockdownModeEnabled {
+            self.isLockdownModeEnabled = isLockdownModeEnabled
+        }
+    }
+}
+
 #endif
-}
-
-extension ScrollGeometry {
-    init(_ geometry: WKScrollGeometryAdapter) {
-        self = ScrollGeometry(contentOffset: geometry.contentOffset, contentSize: geometry.contentSize, contentInsets: EdgeInsets(geometry.contentInsets), containerSize: geometry.containerSize)
-    }
-}
-
-extension Transaction {
-    var isAnimated: Bool {
-        animation != nil && !disablesAnimations
-    }
-}

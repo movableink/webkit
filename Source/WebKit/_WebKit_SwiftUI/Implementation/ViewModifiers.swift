@@ -21,60 +21,19 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if ENABLE_SWIFTUI && compiler(>=6.0)
-
 import Foundation
+public import SwiftUI
 
-@MainActor
-protocol PlatformTextSearching {
-    associatedtype Interaction: PlatformFindInteraction
+struct OnScrollGeometryChangeModifier<T>: ViewModifier where T: Hashable {
+    @Namespace private var namespace
+    @Environment(\.webViewOnScrollGeometryChange) var onScrollGeometryChange
 
-    var isFindNavigatorVisible: Bool { get }
+    let transform: (ScrollGeometry) -> T
+    let action: (T, T) -> Void
 
-    var findInteraction: Interaction? { get }
-}
+    func body(content: Content) -> some View {
+        onScrollGeometryChange.register(changeID: namespace, transform: transform, action: action)
 
-@MainActor
-protocol PlatformFindInteraction {
-    func presentFindNavigator(showingReplace: Bool)
-
-    func dismissFindNavigator()
-}
-
-#if os(macOS)
-
-@MainActor
-struct NSTextFinderAdapter: PlatformFindInteraction {
-    let wrapped: NSTextFinder
-
-    func presentFindNavigator(showingReplace: Bool) {
-        if showingReplace {
-            wrapped.performAction(.showReplaceInterface)
-        } else {
-            wrapped.performAction(.showFindInterface)
-        }
-    }
-
-    func dismissFindNavigator() {
-        wrapped.performAction(.hideFindInterface)
+        return content.environment(\.webViewOnScrollGeometryChange, onScrollGeometryChange)
     }
 }
-
-#else
-
-@MainActor
-struct UIFindInteractionAdapter: PlatformFindInteraction {
-    let wrapped: UIFindInteraction
-    
-    func presentFindNavigator(showingReplace: Bool) {
-        wrapped.presentFindNavigator(showingReplace: showingReplace)
-    }
-
-    func dismissFindNavigator() {
-        wrapped.dismissFindNavigator()
-    }
-}
-
-#endif
-
-#endif

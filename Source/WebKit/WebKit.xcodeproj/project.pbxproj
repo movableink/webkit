@@ -180,6 +180,13 @@
 		078B04A02CF18EAB00B453A6 /* WebPage+NavigationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 078B049F2CF18EAB00B453A6 /* WebPage+NavigationPreferences.swift */; };
 		078B04B42CF1A27F00B453A6 /* WebPage+FrameInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 078B04B32CF1A27F00B453A6 /* WebPage+FrameInfo.swift */; };
 		0792314C239CBCB8009598E2 /* RemoteMediaPlayerManagerProxyMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = 07923146239CBCB7009598E2 /* RemoteMediaPlayerManagerProxyMessages.h */; };
+		079A4DA12D72CC0D00CA387F /* WebPageWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DA02D72CC0D00CA387F /* WebPageWebView.swift */; };
+		079A4DA32D72CDB400CA387F /* WKWebViewConfiguration+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DA22D72CDB400CA387F /* WKWebViewConfiguration+Extras.swift */; };
+		079A4DA52D72CE3F00CA387F /* WKWebpagePreferences+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DA42D72CE3F00CA387F /* WKWebpagePreferences+Extras.swift */; };
+		079A4DA72D72CEDC00CA387F /* Foundation+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DA62D72CEDC00CA387F /* Foundation+Extras.swift */; };
+		079A4DAC2D72D06D00CA387F /* EnvironmentValues+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DAB2D72D06D00CA387F /* EnvironmentValues+Extras.swift */; };
+		079A4DAE2D72D11700CA387F /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DAD2D72D11700CA387F /* ViewModifiers.swift */; };
+		079A4DB02D73EA4A00CA387F /* WKURLSchemeHandlerAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DAF2D73EA4A00CA387F /* WKURLSchemeHandlerAdapter.swift */; };
 		079D1D9A26960CD300883577 /* SystemStatusSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 079D1D9926960CD300883577 /* SystemStatusSPI.h */; };
 		07A33C9A2D67BE2200F30A05 /* WKScrollGeometry.h in Headers */ = {isa = PBXBuildFile; fileRef = 07A33C992D67BE2200F30A05 /* WKScrollGeometry.h */; };
 		07A4CEC72D0933E700764F5E /* WebPageNavigationAction+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A4CEC62D0933E700764F5E /* WebPageNavigationAction+SwiftUI.swift */; };
@@ -3212,6 +3219,13 @@
 		0794B4AC24451BB90001B9C4 /* MediaUsageManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MediaUsageManager.h; sourceTree = "<group>"; };
 		0794B4AE244524B00001B9C4 /* MediaUsageManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MediaUsageManager.cpp; sourceTree = "<group>"; };
 		0794B4AF24452A2C0001B9C4 /* MediaUsageManagerCocoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MediaUsageManagerCocoa.h; sourceTree = "<group>"; };
+		079A4DA02D72CC0D00CA387F /* WebPageWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebPageWebView.swift; sourceTree = "<group>"; };
+		079A4DA22D72CDB400CA387F /* WKWebViewConfiguration+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WKWebViewConfiguration+Extras.swift"; sourceTree = "<group>"; };
+		079A4DA42D72CE3F00CA387F /* WKWebpagePreferences+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WKWebpagePreferences+Extras.swift"; sourceTree = "<group>"; };
+		079A4DA62D72CEDC00CA387F /* Foundation+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Foundation+Extras.swift"; sourceTree = "<group>"; };
+		079A4DAB2D72D06D00CA387F /* EnvironmentValues+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EnvironmentValues+Extras.swift"; sourceTree = "<group>"; };
+		079A4DAD2D72D11700CA387F /* ViewModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
+		079A4DAF2D73EA4A00CA387F /* WKURLSchemeHandlerAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WKURLSchemeHandlerAdapter.swift; sourceTree = "<group>"; };
 		079D1D9926960CD300883577 /* SystemStatusSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemStatusSPI.h; sourceTree = "<group>"; };
 		079D1D9C2698DBD000883577 /* cocoa */ = {isa = PBXFileReference; lastKnownFileType = folder; path = cocoa; sourceTree = "<group>"; };
 		07A33C992D67BE2200F30A05 /* WKScrollGeometry.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKScrollGeometry.h; sourceTree = "<group>"; };
@@ -8681,19 +8695,11 @@
 		07275C5C2D00C9D2002315A5 /* _WebKit_SwiftUI */ = {
 			isa = PBXGroup;
 			children = (
-				076867F42D4C26A8004DA801 /* CocoaWebViewAdapter.swift */,
+				079A4DA82D72CF2C00CA387F /* API */,
+				079A4DAA2D72D02600CA387F /* Implementation */,
 				07275C602D00CD24002315A5 /* CrossImportOverlay.swift */,
 				07275C8E2D011396002315A5 /* Empty.swift */,
-				073EFBB72D0F448500FAE7CF /* Foundation+Extras.swift */,
 				07275C832D00F782002315A5 /* Info.plist */,
-				076867F52D4C26A8004DA801 /* PlatformTextSearching.swift */,
-				07AF79DE2D693BAA004E8D3A /* SwiftUI+Extras.swift */,
-				078B04B52CF2B4D300B453A6 /* View+WebViewModifiers.swift */,
-				07A33C9E2D67EEF600F30A05 /* ViewModifierContexts.swift */,
-				07275C622D00D32D002315A5 /* WebPage+SwiftUI.swift */,
-				07A4CEC62D0933E700764F5E /* WebPageNavigationAction+SwiftUI.swift */,
-				076867F62D4C26A8004DA801 /* WebView.swift */,
-				076867F72D4C26A8004DA801 /* WebViewRepresentable.swift */,
 			);
 			path = _WebKit_SwiftUI;
 			sourceTree = "<group>";
@@ -8837,6 +8843,32 @@
 			path = media;
 			sourceTree = "<group>";
 		};
+		079A4DA82D72CF2C00CA387F /* API */ = {
+			isa = PBXGroup;
+			children = (
+				078B04B52CF2B4D300B453A6 /* View+WebViewModifiers.swift */,
+				07275C622D00D32D002315A5 /* WebPage+SwiftUI.swift */,
+				07A4CEC62D0933E700764F5E /* WebPageNavigationAction+SwiftUI.swift */,
+				076867F62D4C26A8004DA801 /* WebView.swift */,
+			);
+			path = API;
+			sourceTree = "<group>";
+		};
+		079A4DAA2D72D02600CA387F /* Implementation */ = {
+			isa = PBXGroup;
+			children = (
+				076867F42D4C26A8004DA801 /* CocoaWebViewAdapter.swift */,
+				079A4DAB2D72D06D00CA387F /* EnvironmentValues+Extras.swift */,
+				073EFBB72D0F448500FAE7CF /* Foundation+Extras.swift */,
+				076867F52D4C26A8004DA801 /* PlatformTextSearching.swift */,
+				07AF79DE2D693BAA004E8D3A /* SwiftUI+Extras.swift */,
+				07A33C9E2D67EEF600F30A05 /* ViewModifierContexts.swift */,
+				079A4DAD2D72D11700CA387F /* ViewModifiers.swift */,
+				076867F72D4C26A8004DA801 /* WebViewRepresentable.swift */,
+			);
+			path = Implementation;
+			sourceTree = "<group>";
+		};
 		07C75C172399A3DB0088E65B /* media */ = {
 			isa = PBXGroup;
 			children = (
@@ -8951,10 +8983,6 @@
 				074E87E02CF8EA3D0059E469 /* WebPage+NavigationDeciding.swift */,
 				078B049F2CF18EAB00B453A6 /* WebPage+NavigationPreferences.swift */,
 				07CB79952CE9435700199C49 /* WebPage.swift */,
-				0718F1162D1C73450060C030 /* WKDownloadDelegateAdapter.swift */,
-				07CB79972CE943E400199C49 /* WKNavigationDelegateAdapter.swift */,
-				07AF79E02D693DD7004E8D3A /* WKScrollGeometryAdapter.swift */,
-				076897EF2D07B330006F9FA7 /* WKUIDelegateAdapter.swift */,
 			);
 			path = Swift;
 			sourceTree = "<group>";
@@ -9814,6 +9842,7 @@
 				A1AE0EC22B1663D4008A2563 /* ExtensionCapabilityGranter.mm */,
 				00B9661818E25AE100CE1F88 /* FindClient.h */,
 				00B9661718E25AE100CE1F88 /* FindClient.mm */,
+				079A4DA62D72CEDC00CA387F /* Foundation+Extras.swift */,
 				CD78E1131DB7D7ED0014A2DE /* FullscreenClient.h */,
 				CD78E1121DB7D7ED0014A2DE /* FullscreenClient.mm */,
 				2E2B3BA421D4879000538EDF /* GlobalFindInPageState.h */,
@@ -9871,6 +9900,7 @@
 				FA6DCE722BAAB3AB0043109B /* WebPagePreferencesLockdownModeObserver.h */,
 				FA6DCE712BAAB3AB0043109B /* WebPagePreferencesLockdownModeObserver.mm */,
 				1AC0273E196622D600C12B75 /* WebPageProxyCocoa.mm */,
+				079A4DA02D72CC0D00CA387F /* WebPageWebView.swift */,
 				7C4694CB1A4B510A00AD5845 /* WebPasteboardProxyCocoa.mm */,
 				A3937B6123CD1B9B005B2A2E /* WebPreferencesCocoa.mm */,
 				4651ECE622178A850067EB95 /* WebProcessCacheCocoa.mm */,
@@ -9880,12 +9910,15 @@
 				51D124321E6DE521002B2820 /* WebURLSchemeHandlerCocoa.mm */,
 				E596DD68251E71D300C275A7 /* WKContactPicker.h */,
 				E596DD69251E71D400C275A7 /* WKContactPicker.mm */,
+				0718F1162D1C73450060C030 /* WKDownloadDelegateAdapter.swift */,
 				2ECF66CC21D6B77E009E5C3F /* WKEditCommand.h */,
 				2ECF66CD21D6B77E009E5C3F /* WKEditCommand.mm */,
 				E1AEA22D14687BDB00804569 /* WKFullKeyboardAccessWatcher.h */,
 				E1AEA22E14687BDB00804569 /* WKFullKeyboardAccessWatcher.mm */,
+				07CB79972CE943E400199C49 /* WKNavigationDelegateAdapter.swift */,
 				1AD01BCB1905D54900C9C45F /* WKReloadFrameErrorRecoveryAttempter.h */,
 				1AD01BCA1905D54900C9C45F /* WKReloadFrameErrorRecoveryAttempter.mm */,
+				07AF79E02D693DD7004E8D3A /* WKScrollGeometryAdapter.swift */,
 				B6CDC0642CECFC85008A91FE /* WKSeparatedImageView.h */,
 				B62449472CF6728600CBB3CF /* WKSeparatedImageView.mm */,
 				B6CDC0622CECED85008A91FE /* WKSeparatedImageView.swift */,
@@ -9901,6 +9934,8 @@
 				CE21215E240EE571006ED443 /* WKTextPlaceholder.mm */,
 				CE45945A240F85B90078019F /* WKTextSelectionRect.h */,
 				CE45945B240F85B90078019F /* WKTextSelectionRect.mm */,
+				076897EF2D07B330006F9FA7 /* WKUIDelegateAdapter.swift */,
+				079A4DAF2D73EA4A00CA387F /* WKURLSchemeHandlerAdapter.swift */,
 				2D7AAFD218C8640600A7ACD4 /* WKWebViewContentProvider.h */,
 				2DC6D9C118C44A610043BAD4 /* WKWebViewContentProviderRegistry.h */,
 				2DC6D9C218C44A610043BAD4 /* WKWebViewContentProviderRegistry.mm */,
@@ -12075,6 +12110,7 @@
 				1C5ACF8A2A955CA700C041C0 /* WKWebExtensionWindowConfiguration.h */,
 				1C5ACF8B2A955CA700C041C0 /* WKWebExtensionWindowConfiguration.mm */,
 				1C5ACF942A965C4B00C041C0 /* WKWebExtensionWindowConfigurationInternal.h */,
+				079A4DA42D72CE3F00CA387F /* WKWebpagePreferences+Extras.swift */,
 				F438CD1B224140A600DE6DDA /* WKWebpagePreferences.h */,
 				F438CD1D22414AD600DE6DDA /* WKWebpagePreferences.mm */,
 				F438CD1E22414D4000DE6DDA /* WKWebpagePreferencesInternal.h */,
@@ -12089,6 +12125,7 @@
 				1AE286791C7F7BA60069AC4F /* WKWebsiteDataStorePrivate.h */,
 				1A3CC16518906ACF001E6ED8 /* WKWebView.h */,
 				1A3CC16418906ACF001E6ED8 /* WKWebView.mm */,
+				079A4DA22D72CDB400CA387F /* WKWebViewConfiguration+Extras.swift */,
 				1ADF59191890528E0043C145 /* WKWebViewConfiguration.h */,
 				1ADF59181890528E0043C145 /* WKWebViewConfiguration.mm */,
 				2D7AAFD518C956AF00A7ACD4 /* WKWebViewConfigurationInternal.h */,
@@ -19889,11 +19926,13 @@
 				07AF79CF2D68E1DB004E8D3A /* CocoaWebViewAdapter.swift in Sources */,
 				07275C612D00CD24002315A5 /* CrossImportOverlay.swift in Sources */,
 				07275C8F2D011396002315A5 /* Empty.swift in Sources */,
+				079A4DAC2D72D06D00CA387F /* EnvironmentValues+Extras.swift in Sources */,
 				07AF79DD2D6938A1004E8D3A /* Foundation+Extras.swift in Sources */,
 				07AF79D12D68E67F004E8D3A /* PlatformTextSearching.swift in Sources */,
 				07AF79DF2D693BAA004E8D3A /* SwiftUI+Extras.swift in Sources */,
 				076868032D4C2867004DA801 /* View+WebViewModifiers.swift in Sources */,
 				07AF79D02D68E210004E8D3A /* ViewModifierContexts.swift in Sources */,
+				079A4DAE2D72D11700CA387F /* ViewModifiers.swift in Sources */,
 				07275C632D00D32D002315A5 /* WebPage+SwiftUI.swift in Sources */,
 				07A4CEC72D0933E700764F5E /* WebPageNavigationAction+SwiftUI.swift in Sources */,
 				076868022D4C285B004DA801 /* WebView.swift in Sources */,
@@ -20111,6 +20150,7 @@
 				CDCDC99E248FE8DA00A69522 /* EndowmentStateTracker.mm in Sources */,
 				E31586CE2AD610F30062ED2A /* ExtensionEventHandler.mm in Sources */,
 				E34DAD392B753FA700FABEE2 /* ExtensionProcess.mm in Sources */,
+				079A4DA72D72CEDC00CA387F /* Foundation+Extras.swift in Sources */,
 				CDA93DB122F8BCF400490A69 /* FullscreenTouchSecheuristicParameters.cpp in Sources */,
 				86760A6B28DB30DE00D07D06 /* GeneratedSerializers.mm in Sources */,
 				522F792A28D50EC60069B45B /* HidConnection.mm in Sources */,
@@ -20480,6 +20520,7 @@
 				078B04A02CF18EAB00B453A6 /* WebPage+NavigationPreferences.swift in Sources */,
 				07CB79962CE9435700199C49 /* WebPage.swift in Sources */,
 				7CE9CE101FA0767A000177DE /* WebPageUpdatePreferences.cpp in Sources */,
+				079A4DA12D72CC0D00CA387F /* WebPageWebView.swift in Sources */,
 				7CEB00DD1FA69ABE0065473B /* WebPreferencesFeatures.cpp in Sources */,
 				7CF1907125338F3800ABE183 /* WebPreferencesGetterSetters.cpp in Sources */,
 				7CB100F11FA3858A001729EE /* WebPreferencesKeys.cpp in Sources */,
@@ -20510,6 +20551,7 @@
 				1DB01944211CF005009FB3E8 /* WKShareSheet.mm in Sources */,
 				7A78FF332241919B0096483E /* WKStorageAccessAlert.mm in Sources */,
 				076897F02D07B330006F9FA7 /* WKUIDelegateAdapter.swift in Sources */,
+				079A4DB02D73EA4A00CA387F /* WKURLSchemeHandlerAdapter.swift in Sources */,
 				1C627479288B2F7400CED3A2 /* WKWebExtension.mm in Sources */,
 				1CF0C9482AC37FAD00EC82F2 /* WKWebExtensionAction.mm in Sources */,
 				1C974FDF2AFABD03009DE8FC /* WKWebExtensionCommand.mm in Sources */,
@@ -20523,6 +20565,8 @@
 				1C049838289AF5AD0010308B /* WKWebExtensionPermission.mm in Sources */,
 				1C5ACF902A955CB000C041C0 /* WKWebExtensionTabConfiguration.mm in Sources */,
 				1C5ACF8D2A955CA700C041C0 /* WKWebExtensionWindowConfiguration.mm in Sources */,
+				079A4DA52D72CE3F00CA387F /* WKWebpagePreferences+Extras.swift in Sources */,
+				079A4DA32D72CDB400CA387F /* WKWebViewConfiguration+Extras.swift in Sources */,
 				C14D306924B79BE000480387 /* XPCEndpoint.mm in Sources */,
 				C14D306A24B79BE400480387 /* XPCEndpointClient.mm in Sources */,
 			);
