@@ -81,6 +81,20 @@ using GPUShaderValidation = MTLShaderValidation;
 using GPUShaderValidation = uint32_t;
 #endif
 
+#define WEBKIT_DRAW_INDEXED_INDIRECT_STRUCT_TYPE \
+struct WebKitMTLDrawIndexedPrimitivesIndirectArguments { \
+    MTLDrawIndexedPrimitivesIndirectArguments args;         \
+    unsigned lostOrOOBRead;                                 \
+};
+WEBKIT_DRAW_INDEXED_INDIRECT_STRUCT_TYPE
+
+#define WEBKIT_DRAW_INDIRECT_STRUCT_TYPE \
+struct WebKitMTLDrawPrimitivesIndirectArguments { \
+    MTLDrawPrimitivesIndirectArguments args;                \
+    unsigned lostOrOOBRead;                                 \
+};
+WEBKIT_DRAW_INDIRECT_STRUCT_TYPE
+
 // https://gpuweb.github.io/gpuweb/#gpudevice
 class Device : public WGPUDeviceImpl, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Device> {
     WTF_MAKE_TZONE_ALLOCATED(Device);

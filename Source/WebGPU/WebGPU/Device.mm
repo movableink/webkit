@@ -50,6 +50,9 @@
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/WeakPtr.h>
 
+#define OBJC_STRINGIFYHELPER(x) @#x
+#define OBJC_STRINGIFY(x) OBJC_STRINGIFYHELPER(x)
+
 namespace WebGPU {
 
 struct GPUFrameCapture {
@@ -746,24 +749,27 @@ id<MTLRenderPipelineState> Device::indexBufferClampPipeline(MTLIndexType indexTy
 #define primitiveRestart 1
 #define indexCountMinusOne 2
     using namespace metal;
-    [[vertex]] void vsUshortIndexClamp(device const ushort* indexBuffer [[buffer(0)]], device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput [[buffer(1)]], const constant uint* data [[buffer(2)]], uint indexId [[vertex_id]])
+    )"  OBJC_STRINGIFY(WEBKIT_DRAW_INDEXED_INDIRECT_STRUCT_TYPE)   @R"(
+    [[vertex]] void vsUshortIndexClamp(device const ushort* indexBuffer [[buffer(0)]], device WebKitMTLDrawIndexedPrimitivesIndirectArguments& wkindexedOutput [[buffer(1)]], const constant uint* data [[buffer(2)]], uint indexId [[vertex_id]])
     {
+        device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput = wkindexedOutput.args;
         ushort indexBufferValue = indexBuffer[min(indexId, data[indexCountMinusOne])];
         ushort vertexIndex = data[primitiveRestart] + indexBufferValue;
         bool negativeCondition = indexedOutput.baseVertex + data[primitiveRestart] < indexedOutput.baseVertex;
         if (negativeCondition || (vertexIndex + indexedOutput.baseVertex >= data[vertexCount] + data[primitiveRestart])) {
             indexedOutput.indexCount = 0u;
-            *(&indexedOutput.baseInstance + 1) = 1;
+            wkindexedOutput.lostOrOOBRead = 1;
         }
     }
-    [[vertex]] void vsUintIndexClamp(device const uint* indexBuffer [[buffer(0)]], device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput [[buffer(1)]], const constant uint* data [[buffer(2)]], uint indexId [[vertex_id]])
+    [[vertex]] void vsUintIndexClamp(device const uint* indexBuffer [[buffer(0)]], device WebKitMTLDrawIndexedPrimitivesIndirectArguments& wkindexedOutput [[buffer(1)]], const constant uint* data [[buffer(2)]], uint indexId [[vertex_id]])
     {
+        device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput = wkindexedOutput.args;
         uint indexBufferValue = indexBuffer[min(indexId, data[indexCountMinusOne])];
         uint vertexIndex = data[primitiveRestart] + indexBufferValue;
         bool negativeCondition = indexedOutput.baseVertex + data[primitiveRestart] < indexedOutput.baseVertex;
         if (negativeCondition || (vertexIndex + indexedOutput.baseVertex >= data[vertexCount] + data[primitiveRestart])) {
             indexedOutput.indexCount = 0u;
-            *(&indexedOutput.baseInstance + 1) = 1;
+            wkindexedOutput.lostOrOOBRead = 1;
         }
     })" /* NOLINT */ options:options error:&error];
         if (error)
@@ -819,8 +825,10 @@ id<MTLRenderPipelineState> Device::indexedIndirectBufferClampPipeline(NSUInteger
         ALLOW_DEPRECATED_DECLARATIONS_END
         /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:[NSString stringWithFormat:@R"(
     using namespace metal;
-    [[vertex]] void vsIndexedIndirect(device const MTLDrawIndexedPrimitivesIndirectArguments& input [[buffer(0)]], device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput [[buffer(1)]], device MTLDrawPrimitivesIndirectArguments& output [[buffer(2)]], const constant uint* indexBufferCount [[buffer(3)]])
+    )"  OBJC_STRINGIFY(WEBKIT_DRAW_INDIRECT_STRUCT_TYPE)   @R"(
+    [[vertex]] void vsIndexedIndirect(device const MTLDrawIndexedPrimitivesIndirectArguments& input [[buffer(0)]], device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput [[buffer(1)]], device WebKitMTLDrawPrimitivesIndirectArguments& wkoutput [[buffer(2)]], const constant uint* indexBufferCount [[buffer(3)]])
     {
+        device MTLDrawPrimitivesIndirectArguments& output = wkoutput.args;
         bool lostCondition = input.indexCount > %u || input.instanceCount > %u || input.indexCount * input.instanceCount > %u;
         bool condition = lostCondition
             || input.indexCount + input.indexStart > indexBufferCount[0]
@@ -839,7 +847,7 @@ id<MTLRenderPipelineState> Device::indexedIndirectBufferClampPipeline(NSUInteger
         output.vertexStart = input.indexStart;
         output.baseInstance = 0;
         if (lostCondition)
-            *(&output.baseInstance + 1) = 1;
+            wkoutput.lostOrOOBRead = 1;
     })", m_maxVerticesPerDrawCall, m_maxVerticesPerDrawCall, m_maxVerticesPerDrawCall] /* NOLINT */ options:options error:&error];
         if (error)
             WTFLogAlways("%@", error);
@@ -886,8 +894,10 @@ id<MTLRenderPipelineState> Device::indirectBufferClampPipeline(NSUInteger raster
         ALLOW_DEPRECATED_DECLARATIONS_END
         /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:[NSString stringWithFormat:@R"(
     using namespace metal;
-    [[vertex]] void vsIndirect(device const MTLDrawPrimitivesIndirectArguments& input [[buffer(0)]], device MTLDrawPrimitivesIndirectArguments& output [[buffer(1)]], const constant uint* minCounts [[buffer(2)]])
+    )"  OBJC_STRINGIFY(WEBKIT_DRAW_INDIRECT_STRUCT_TYPE)   @R"(
+    [[vertex]] void vsIndirect(device const MTLDrawPrimitivesIndirectArguments& input [[buffer(0)]], device WebKitMTLDrawPrimitivesIndirectArguments& wkoutput [[buffer(1)]], const constant uint* minCounts [[buffer(2)]])
     {
+        device MTLDrawPrimitivesIndirectArguments& output = wkoutput.args;
         bool lostCondition = input.vertexCount > %u || input.instanceCount > %u || input.vertexCount * input.instanceCount > %u;
         bool vertexCondition = lostCondition
             || input.vertexCount + input.vertexStart > minCounts[0]
@@ -900,7 +910,7 @@ id<MTLRenderPipelineState> Device::indirectBufferClampPipeline(NSUInteger raster
         output.vertexStart = input.vertexStart;
         output.baseInstance = input.baseInstance;
         if (lostCondition)
-            *(&output.baseInstance + 1) = 1;
+            wkoutput.lostOrOOBRead = 1;
     })", m_maxVerticesPerDrawCall, m_maxVerticesPerDrawCall, m_maxVerticesPerDrawCall] /* NOLINT */ options:options error:&error];
         if (error)
             WTFLogAlways("%@", error);
@@ -968,8 +978,6 @@ id<MTLRenderPipelineState> Device::icbCommandClampPipeline(MTLIndexType indexTyp
 int Device::bufferIndexForICBContainer() const
 {
 #define DEVICE_BUFFER_INDEX_FOR_ICB_CONTAINER 1
-#define OBJC_STRINGIFYHELPER(x) @#x
-#define OBJC_STRINGIFY(x) OBJC_STRINGIFYHELPER(x)
     return DEVICE_BUFFER_INDEX_FOR_ICB_CONTAINER;
 }
 

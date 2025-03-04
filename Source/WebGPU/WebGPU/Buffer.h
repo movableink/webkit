@@ -143,7 +143,6 @@ private:
     void setState(State);
     void incrementBufferMapCount();
     void decrementBufferMapCount();
-    id<MTLBuffer> makeIndexIndirectBuffer();
     uint64_t mapGPUAddress(MTLResourceID, uint32_t firstInstance) const;
     void takeSlowIndexValidationPath(CommandBuffer&, uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t instanceCount, MTLIndexType, uint32_t firstInstance, uint32_t baseVertex, uint32_t minInstanceCount, uint32_t primitiveOffset);
     void takeSlowIndirectIndexValidationPath(CommandBuffer&, Buffer&, MTLIndexType, uint32_t indexBufferOffsetInBytes, uint32_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount, MTLPrimitiveType);

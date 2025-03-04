@@ -748,12 +748,11 @@ std::pair<RenderPassEncoder::IndexCall, id<MTLBuffer>> RenderPassEncoder::clampI
         }
         protectedDevice->protectedQueue()->scheduleWork([encoderHandle, protectedDevice = WTFMove(protectedDevice), firstIndex, indexCount, effectiveMinVertexCount, indexType, firstInstance, refIndexBuffer = WTFMove(refIndexBuffer), indexedIndirectBuffer]() mutable {
             protectedDevice->protectedQueue()->releaseCounterSampleBuffer(encoderHandle);
-            if (indexedIndirectBuffer.length != sizeof(MTLDrawIndexedPrimitivesIndirectArguments) + sizeof(uint32_t))
+            if (!indexedIndirectBuffer.contents || indexedIndirectBuffer.length != sizeof(WebKitMTLDrawIndexedPrimitivesIndirectArguments))
                 return;
 
-            static_assert(sizeof(MTLDrawIndexedPrimitivesIndirectArguments) == 20);
-            auto uintSpan = unsafeMakeSpan(static_cast<uint32_t*>(indexedIndirectBuffer.contents), indexedIndirectBuffer.length / sizeof(uint32_t));
-            refIndexBuffer->didReadOOB(uintSpan.back());
+            auto& args = *static_cast<WebKitMTLDrawIndexedPrimitivesIndirectArguments*>(indexedIndirectBuffer.contents);
+            refIndexBuffer->didReadOOB(args.lostOrOOBRead);
             refIndexBuffer->drawIndexedValidated(firstIndex, indexCount, effectiveMinVertexCount, indexType, firstInstance);
         });
     }];
@@ -777,12 +776,11 @@ static void checkForIndirectDrawDeviceLost(Device &device, RenderPassEncoder &en
         }
         protectedDevice->protectedQueue()->scheduleWork([encoderHandle, indirectBuffer, protectedDevice = WTFMove(protectedDevice)]() mutable {
             protectedDevice->protectedQueue()->releaseCounterSampleBuffer(encoderHandle);
-            if (indirectBuffer.length != sizeof(MTLDrawPrimitivesIndirectArguments) + sizeof(uint32_t))
+            if (!indirectBuffer.contents || indirectBuffer.length != sizeof(WebKitMTLDrawPrimitivesIndirectArguments))
                 return;
 
-            static_assert(sizeof(MTLDrawPrimitivesIndirectArguments) == 16);
-            auto uintSpan = unsafeMakeSpan(static_cast<uint32_t*>(indirectBuffer.contents), indirectBuffer.length / sizeof(uint32_t));
-            if (uintSpan.back())
+            auto& args = *static_cast<WebKitMTLDrawPrimitivesIndirectArguments*>(indirectBuffer.contents);
+            if (args.lostOrOOBRead)
                 protectedDevice->loseTheDevice(WGPUDeviceLostReason_Undefined);
         });
     }];
