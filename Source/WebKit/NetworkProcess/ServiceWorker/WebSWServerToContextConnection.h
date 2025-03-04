@@ -119,6 +119,7 @@ private:
     void skipWaiting(WebCore::ServiceWorkerIdentifier, CompletionHandler<void()>&&);
 
     // Messages back from the SW host process
+    void setAsInspected(WebCore::ServiceWorkerIdentifier, bool);
     void workerTerminated(WebCore::ServiceWorkerIdentifier);
 
     // Messages to the SW host WebProcess
