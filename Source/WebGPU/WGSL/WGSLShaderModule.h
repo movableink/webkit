@@ -289,6 +289,12 @@ public:
         result.iterator->value.append(WTFMove(validator));
     }
 
+    template<typename Validator>
+    void addOverrideValidation(Validator&& validator)
+    {
+        m_finalOverrideValidations.append(WTFMove(validator));
+    }
+
     std::optional<Error> validateOverrides(const HashMap<String, ConstantValue>&);
 
 private:
@@ -330,6 +336,7 @@ private:
     Vector<std::function<void()>> m_replacements;
     HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_pipelineOverrideIds;
     HashMap<const AST::Expression*, Vector<Function<std::optional<String>(const ConstantValue&)>>> m_overrideValidations;
+    Vector<Function<std::optional<Error>()>> m_finalOverrideValidations;
 };
 
 } // namespace WGSL

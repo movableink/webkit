@@ -1233,10 +1233,10 @@ auto RewriteGlobalVariables::determineUsedGlobals(const AST::Function& function)
     UsedGlobals usedGlobals;
 
     // https://www.w3.org/TR/WGSL/#limits
-    CheckedUint32 combinedPrivateVariablesSize = 0;
-    CheckedUint32 combinedWorkgroupVariablesSize = 0;
     constexpr unsigned maximumCombinedPrivateVariablesSize = 8192;
     unsigned maximumCombinedWorkgroupVariablesSize = m_shaderModule.configuration().maximumCombinedWorkgroupVariablesSize;
+    Vector<const Type*, 16> workgroupVariables;
+    Vector<const Type*, 16> privateVariables;
 
     for (const auto& globalName : m_reads) {
         auto it = m_globals.find(globalName);
@@ -1254,9 +1254,9 @@ auto RewriteGlobalVariables::determineUsedGlobals(const AST::Function& function)
                 usedGlobals.privateGlobals.append(&global);
 
                 if (auto* qualifier = variable.maybeQualifier(); qualifier && qualifier->addressSpace() == AddressSpace::Workgroup)
-                    combinedWorkgroupVariablesSize += variable.storeType()->size();
+                    workgroupVariables.append(variable.storeType());
                 else
-                    combinedPrivateVariablesSize += variable.storeType()->size();
+                    privateVariables.append(variable.storeType());
                 continue;
             }
             break;
@@ -1272,11 +1272,23 @@ auto RewriteGlobalVariables::determineUsedGlobals(const AST::Function& function)
             return makeUnexpected(Error(makeString("entry point '"_s, m_entryPointInformation->originalName, "' uses variables '"_s, bindingResult.iterator->value->declaration->originalName(), "' and '"_s, variable.originalName(), "', both which use the same resource binding: @group("_s, group, ") @binding("_s, binding, ')'), variable.span()));
     }
 
-    if (UNLIKELY(combinedPrivateVariablesSize.hasOverflowed() || combinedPrivateVariablesSize.value() > maximumCombinedPrivateVariablesSize))
-        return makeUnexpected(Error(makeString("The combined byte size of all variables in the private address space exceeds "_s, String::number(maximumCombinedPrivateVariablesSize), " bytes"_s), function.span()));
+    m_shaderModule.addOverrideValidation([span = function.span(), variables = WTFMove(workgroupVariables), maximumCombinedWorkgroupVariablesSize] -> std::optional<Error> {
+        CheckedUint32 combinedWorkgroupVariablesSize = 0;
+        for (const Type* type : variables)
+            combinedWorkgroupVariablesSize += type->size();
+        if (UNLIKELY(combinedWorkgroupVariablesSize.hasOverflowed() || combinedWorkgroupVariablesSize.value() > maximumCombinedWorkgroupVariablesSize))
+            return { Error(makeString("The combined byte size of all variables in the workgroup address space exceeds "_s, String::number(maximumCombinedWorkgroupVariablesSize), " bytes"_s), span) };
+        return std::nullopt;
+    });
+    m_shaderModule.addOverrideValidation([span = function.span(), variables = WTFMove(workgroupVariables)] -> std::optional<Error> {
+        CheckedUint32 combinedPrivateVariablesSize = 0;
+        for (const Type* type : variables)
+            combinedPrivateVariablesSize += type->size();
+        if (UNLIKELY(combinedPrivateVariablesSize.hasOverflowed() || combinedPrivateVariablesSize.value() > maximumCombinedPrivateVariablesSize))
+            return { Error(makeString("The combined byte size of all variables in the private address space exceeds "_s, String::number(maximumCombinedPrivateVariablesSize), " bytes"_s), span) };
+        return std::nullopt;
+    });
 
-    if (UNLIKELY(combinedWorkgroupVariablesSize.hasOverflowed() || combinedWorkgroupVariablesSize.value() > maximumCombinedWorkgroupVariablesSize))
-        return makeUnexpected(Error(makeString("The combined byte size of all variables in the workgroup address space exceeds "_s, String::number(maximumCombinedWorkgroupVariablesSize), " bytes"_s), function.span()));
 
     return usedGlobals;
 }
