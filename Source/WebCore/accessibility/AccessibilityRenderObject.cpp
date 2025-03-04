@@ -2366,6 +2366,13 @@ void AccessibilityRenderObject::addRemoteSVGChildren()
     if (!root)
         return;
 
+    // FIXME: It's possible for an SVG that is rendered twice to share renderers. We don't want to add this as a child of both parents
+    // in this case, as it will create an invalid parent-child relationship in the accessibility tree.
+    // If it's parent is a WebArea, that is just the default value given when the object was created, so still add the child in that case.
+    RefPtr parent = root->parentObject();
+    if (parent && parent->roleValue() != AccessibilityRole::WebArea)
+        return;
+
     // In order to connect the AX hierarchy from the SVG root element from the loaded resource
     // the parent must be set, because there's no other way to get back to who created the image.
     root->setParent(this);
