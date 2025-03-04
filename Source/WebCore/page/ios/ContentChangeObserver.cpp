@@ -64,10 +64,10 @@ static bool isHiddenBehindFullscreenElement(const Node& descendantCandidate)
         return false;
     }
 
-    CheckedPtr documentFullscreen = mainFrameDocument->fullscreenIfExists();
+    RefPtr documentFullscreen = mainFrameDocument->fullscreenIfExists();
     if (!documentFullscreen)
         return false;
-    auto* topMostFullScreenElement = documentFullscreen->fullscreenElement();
+    RefPtr topMostFullScreenElement = documentFullscreen->fullscreenElement();
     if (!topMostFullScreenElement)
         return false;
 

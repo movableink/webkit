@@ -4573,7 +4573,7 @@ Color LocalFrameView::documentBackgroundColor() const
 
 #if ENABLE(FULLSCREEN_API)
     Color fullscreenBackgroundColor = [&] () -> Color {
-        CheckedPtr documentFullscreen = backgroundDocument->fullscreenIfExists();
+        RefPtr documentFullscreen = backgroundDocument->fullscreenIfExists();
         if (!documentFullscreen)
             return { };
 
@@ -4581,7 +4581,7 @@ Color LocalFrameView::documentBackgroundColor() const
         if (!fullscreenElement)
             return { };
 
-        auto* fullscreenRenderer = fullscreenElement->renderer();
+        CheckedPtr fullscreenRenderer = fullscreenElement->renderer();
         if (!fullscreenRenderer)
             return { };
 

@@ -232,7 +232,7 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
 #endif // ENABLE(MATHML)
 
 #if ENABLE(FULLSCREEN_API)
-    if (CheckedPtr documentFullscreen = element.document().fullscreenIfExists(); !fullscreenStyleSheet && documentFullscreen) {
+    if (RefPtr documentFullscreen = element.document().fullscreenIfExists(); !fullscreenStyleSheet && documentFullscreen) {
         fullscreenStyleSheet = parseUASheet(StringImpl::createWithoutCopying(fullscreenUserAgentStyleSheet));
         addToDefaultStyle(*fullscreenStyleSheet);
     }

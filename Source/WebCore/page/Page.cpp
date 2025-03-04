@@ -2154,7 +2154,7 @@ void Page::updateRendering()
 
 #if ENABLE(FULLSCREEN_API)
     runProcessingStep(RenderingUpdateStep::Fullscreen, [] (Document& document) {
-        document.checkedFullscreen()->dispatchPendingEvents();
+        document.protectedFullscreen()->dispatchPendingEvents();
     });
 #else
     m_renderingUpdateRemainingSteps.last().remove(RenderingUpdateStep::Fullscreen);
@@ -4242,7 +4242,7 @@ Document* Page::outermostFullscreenDocument() const
     RefPtr<Document> outermostFullscreenDocument;
     RefPtr currentDocument = localMainFrame->document();
     while (currentDocument) {
-        RefPtr fullscreenElement = currentDocument->fullscreen().fullscreenElement();
+        RefPtr fullscreenElement = currentDocument->protectedFullscreen()->fullscreenElement();
         if (!fullscreenElement)
             break;
 

@@ -7247,7 +7247,7 @@ bool HTMLMediaElement::taintsOrigin(const SecurityOrigin& origin) const
 bool HTMLMediaElement::isFullscreen() const
 {
 #if ENABLE(FULLSCREEN_API)
-    CheckedPtr documentFullscreen = document().fullscreenIfExists();
+    RefPtr documentFullscreen = document().fullscreenIfExists();
     if (documentFullscreen && documentFullscreen->isFullscreen() && documentFullscreen->fullscreenElement() == this)
         return true;
 #endif
@@ -7258,7 +7258,7 @@ bool HTMLMediaElement::isFullscreen() const
 bool HTMLMediaElement::isStandardFullscreen() const
 {
 #if ENABLE(FULLSCREEN_API)
-    CheckedPtr documentFullscreen = document().fullscreenIfExists();
+    RefPtr documentFullscreen = document().fullscreenIfExists();
     if (documentFullscreen && documentFullscreen->isFullscreen() && documentFullscreen->fullscreenElement() == this)
         return true;
 #endif
@@ -7340,7 +7340,7 @@ void HTMLMediaElement::enterFullscreen(VideoFullscreenMode mode)
         m_waitingToEnterFullscreen = true;
         auto fullscreenCheckType = m_ignoreFullscreenPermissionsPolicy ? DocumentFullscreen::ExemptIFrameAllowFullscreenRequirement : DocumentFullscreen::EnforceIFrameAllowFullscreenRequirement;
         m_ignoreFullscreenPermissionsPolicy = false;
-        protectedDocument()->checkedFullscreen()->requestFullscreen(*this, fullscreenCheckType, [weakThis = WeakPtr { *this }](ExceptionOr<void> result) {
+        protectedDocument()->protectedFullscreen()->requestFullscreen(*this, fullscreenCheckType, [weakThis = WeakPtr { *this }](ExceptionOr<void> result) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis || !result.hasException())
                 return;
@@ -7412,7 +7412,7 @@ void HTMLMediaElement::exitFullscreen()
     if (document().fullscreen().fullscreenElement() == this) {
         if (document().fullscreen().isFullscreen()) {
             m_changingVideoFullscreenMode = true;
-            protectedDocument()->checkedFullscreen()->fullyExitFullscreen();
+            protectedDocument()->protectedFullscreen()->fullyExitFullscreen();
         }
 
         if (isInWindowOrStandardFullscreen(m_videoFullscreenMode))

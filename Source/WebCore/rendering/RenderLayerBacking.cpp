@@ -304,10 +304,10 @@ RenderLayerBacking::RenderLayerBacking(RenderLayer& layer)
             return false;
 
         // Only use background layers on the fullscreen element's backdrop.
-        CheckedPtr documentFullscreen = box->document().fullscreenIfExists();
+        RefPtr documentFullscreen = box->document().fullscreenIfExists();
         if (!documentFullscreen)
             return false;
-        auto* fullscreenElement = documentFullscreen->fullscreenElement();
+        RefPtr fullscreenElement = documentFullscreen->fullscreenElement();
         if (!fullscreenElement || !fullscreenElement->renderer() || fullscreenElement->renderer()->backdropRenderer() != &renderer)
             return false;
 

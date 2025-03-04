@@ -567,12 +567,12 @@ void WebLocalFrameLoaderClient::dispatchDidStartProvisionalLoad()
 
 #if ENABLE(FULLSCREEN_API)
     RefPtr document = m_localFrame->document();
-    if (document && document->fullscreen().fullscreenElement()) {
+    if (document && document->protectedFullscreen()->fullscreenElement()) {
         Ref fullScreenManager = webPage->fullScreenManager();
         RefPtr element = fullScreenManager->element();
         fullScreenManager->exitFullScreenForElement(element.get(), [element] {
             if (element)
-                element->protectedDocument()->fullscreen().didExitFullscreen([](auto) { });
+                element->protectedDocument()->protectedFullscreen()->didExitFullscreen([](auto) { });
         });
     }
 #endif

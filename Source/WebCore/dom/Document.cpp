@@ -912,7 +912,7 @@ void Document::commonTeardown()
     stopActiveDOMObjects();
 
 #if ENABLE(FULLSCREEN_API)
-    if (CheckedPtr fullscreen = m_fullscreen.get())
+    if (RefPtr fullscreen = m_fullscreen.get())
         fullscreen->clearPendingEvents();
 #endif
 
@@ -1013,7 +1013,7 @@ VisitedLinkState& Document::ensureVisitedLinkState()
 DocumentFullscreen& Document::ensureFullscreen()
 {
     ASSERT(m_constructionDidFinish);
-    lazyInitialize(m_fullscreen, makeUnique<DocumentFullscreen>(*this));
+    lazyInitialize(m_fullscreen, makeUniqueWithoutRefCountedCheck<DocumentFullscreen>(*this));
     return *m_fullscreen;
 }
 #endif
@@ -8614,12 +8614,12 @@ const DocumentFullscreen& Document::fullscreen() const
     return *m_fullscreen;
 }
 
-CheckedRef<DocumentFullscreen> Document::checkedFullscreen()
+Ref<DocumentFullscreen> Document::protectedFullscreen()
 {
     return fullscreen();
 }
 
-CheckedRef<const DocumentFullscreen> Document::checkedFullscreen() const
+Ref<const DocumentFullscreen> Document::protectedFullscreen() const
 {
     return fullscreen();
 }
@@ -9125,7 +9125,7 @@ Element* eventTargetElementForDocument(Document* document)
     if (!document)
         return nullptr;
 #if ENABLE(FULLSCREEN_API) && ENABLE(VIDEO)
-    if (CheckedPtr documentFullscreen = document->fullscreenIfExists(); documentFullscreen && documentFullscreen->isFullscreen() && is<HTMLVideoElement>(documentFullscreen->fullscreenElement()))
+    if (RefPtr documentFullscreen = document->fullscreenIfExists(); documentFullscreen && documentFullscreen->isFullscreen() && is<HTMLVideoElement>(documentFullscreen->fullscreenElement()))
         return documentFullscreen->fullscreenElement();
 #endif
     Element* element = document->focusedElement();

@@ -53,7 +53,8 @@ public:
 #define DEBUG_LOG(...)      Ref { logger() }->debugVerbose(logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
 
 #define ALWAYS_LOG_WITH_THIS(thisPtr, ...)     Ref { thisPtr->logger() }->logAlwaysVerbose(thisPtr->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
-#define ERROR_LOG_WITH_THIS(thisPtr, ...)     Ref { thisPtr->logger() }->errorVerbose(thisPtr->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define ERROR_LOG_WITH_THIS(thisPtr, ...)      Ref { thisPtr->logger() }->errorVerbose(thisPtr->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define INFO_LOG_WITH_THIS(thisPtr, ...)       Ref { thisPtr->logger() }->infoVerbose(thisPtr->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
 #else
 #define ALWAYS_LOG(...)     Ref { logger() }->logAlways(logChannel(), __VA_ARGS__)
 #define ERROR_LOG(...)      Ref { logger() }->error(logChannel(), __VA_ARGS__)
@@ -63,6 +64,7 @@ public:
 
 #define ALWAYS_LOG_WITH_THIS(thisPtr, ...)     Ref { thisPtr->logger() }->logAlways(thisPtr->logChannel(), __VA_ARGS__)
 #define ERROR_LOG_WITH_THIS(thisPtr, ...)      Ref { thisPtr->logger() }->error(thisPtr->logChannel(), __VA_ARGS__)
+#define INFO_LOG_WITH_THIS(thisPtr, ...)       Ref { thisPtr->logger() }->info(thisPtr->logChannel(), __VA_ARGS__)
 #endif
 
 #define WILL_LOG(_level_)   Ref { logger() }->willLog(logChannel(), _level_)
@@ -112,6 +114,10 @@ public:
 #define INFO_LOG(channelName, ...)    (UNUSED_PARAM(channelName))
 #define DEBUG_LOG(channelName, ...)   (UNUSED_PARAM(channelName))
 #define WILL_LOG(_level_)    false
+
+#define ALWAYS_LOG_WITH_THIS(thisPtr, channelName, ...)   (UNUSED_PARAM(channelName))
+#define ERROR_LOG_WITH_THIS(thisPtr, channelName, ...)    (UNUSED_PARAM(channelName))
+#define INFO_LOG_WITH_THIS(thisPtr, channelName, ...)     (UNUSED_PARAM(channelName))
 
 #define ALWAYS_LOG_IF(condition, ...)     ((void)0)
 #define ERROR_LOG_IF(condition, ...)      ((void)0)

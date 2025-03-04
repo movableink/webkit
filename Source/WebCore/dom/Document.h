@@ -1418,8 +1418,8 @@ public:
     const DocumentFullscreen* fullscreenIfExists() const { return m_fullscreen.get(); }
     WEBCORE_EXPORT DocumentFullscreen& fullscreen();
     WEBCORE_EXPORT const DocumentFullscreen& fullscreen() const;
-    CheckedRef<DocumentFullscreen> checkedFullscreen(); // Defined in DocumentInlines.h.
-    CheckedRef<const DocumentFullscreen> checkedFullscreen() const; // Defined in DocumentInlines.h.
+    WEBCORE_EXPORT Ref<DocumentFullscreen> protectedFullscreen();
+    WEBCORE_EXPORT Ref<const DocumentFullscreen> protectedFullscreen() const;
 #endif
 
 #if ENABLE(POINTER_LOCK)

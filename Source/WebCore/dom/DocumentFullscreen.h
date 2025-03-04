@@ -41,22 +41,24 @@ namespace WebCore {
 
 class RenderStyle;
 
-class DocumentFullscreen final : public CanMakeWeakPtr<DocumentFullscreen>, public CanMakeCheckedPtr<DocumentFullscreen> {
+class DocumentFullscreen final : public CanMakeWeakPtr<DocumentFullscreen> {
     WTF_MAKE_TZONE_ALLOCATED(DocumentFullscreen);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DocumentFullscreen);
 public:
     DocumentFullscreen(Document&);
     ~DocumentFullscreen() = default;
 
+    void ref() const { m_document->ref(); }
+    void deref() const { m_document->deref(); }
+
     // Document+Fullscreen.idl methods.
     static void exitFullscreen(Document&, RefPtr<DeferredPromise>&&);
     static bool fullscreenEnabled(Document&);
-    static bool webkitFullscreenEnabled(Document& document) { return document.fullscreen().enabledByPermissionsPolicy(); }
-    static Element* webkitFullscreenElement(Document& document) { return document.ancestorElementInThisScope(document.fullscreen().protectedFullscreenElement().get()); };
+    static bool webkitFullscreenEnabled(Document& document) { return document.protectedFullscreen()->enabledByPermissionsPolicy(); }
+    static Element* webkitFullscreenElement(Document& document) { return document.ancestorElementInThisScope(document.protectedFullscreen()->protectedFullscreenElement().get()); };
     WEBCORE_EXPORT static void webkitExitFullscreen(Document&);
-    static bool webkitIsFullScreen(Document& document) { return document.fullscreen().isFullscreen(); };
-    static bool webkitFullScreenKeyboardInputAllowed(Document& document) { return document.fullscreen().isFullscreenKeyboardInputAllowed(); };
-    static void webkitCancelFullScreen(Document& document) { document.fullscreen().fullyExitFullscreen(); };
+    static bool webkitIsFullScreen(Document& document) { return document.protectedFullscreen()->isFullscreen(); };
+    static bool webkitFullScreenKeyboardInputAllowed(Document& document) { return document.protectedFullscreen()->isFullscreenKeyboardInputAllowed(); };
+    static void webkitCancelFullScreen(Document& document) { document.protectedFullscreen()->fullyExitFullscreen(); };
 
     // Helpers.
     Document& document() { return m_document.get(); }

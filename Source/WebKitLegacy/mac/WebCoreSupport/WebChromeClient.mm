@@ -260,7 +260,7 @@ RefPtr<Page> WebChromeClient::createWindow(LocalFrame& frame, const String& open
 
 #if ENABLE(FULLSCREEN_API)
     if (RefPtr document = frame.document()) {
-        if (CheckedPtr documentFullscreen = document->fullscreenIfExists()) {
+        if (RefPtr documentFullscreen = document->fullscreenIfExists()) {
             if (documentFullscreen->fullscreenElement())
                 documentFullscreen->fullyExitFullscreen();
         }

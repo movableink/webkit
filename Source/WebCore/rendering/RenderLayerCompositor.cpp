@@ -3258,11 +3258,11 @@ bool RenderLayerCompositor::canBeComposited(const RenderLayer& layer) const
 enum class FullScreenDescendant { Yes, No, NotApplicable };
 static FullScreenDescendant isDescendantOfFullScreenLayer(const RenderLayer& layer)
 {
-    CheckedPtr manager = layer.renderer().document().fullscreenIfExists();
-    if (!manager)
+    RefPtr documentFullscreen = layer.renderer().document().fullscreenIfExists();
+    if (!documentFullscreen)
         return FullScreenDescendant::NotApplicable;
 
-    RefPtr fullScreenElement = manager->fullscreenElement();
+    RefPtr fullScreenElement = documentFullscreen->fullscreenElement();
     if (!fullScreenElement)
         return FullScreenDescendant::NotApplicable;
 
