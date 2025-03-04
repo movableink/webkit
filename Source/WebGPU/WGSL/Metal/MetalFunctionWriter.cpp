@@ -1421,9 +1421,21 @@ static void emitTextureLoad(FunctionDefinitionWriter* writer, AST::CallExpressio
             writer->stringBuilder().append(".FirstPlane.read(__coords).r);\n"_s);
         }
         {
+            writer->stringBuilder().append(writer->indent(), "auto __xAdjustment = "_s);
+            writer->visit(texture);
+            writer->stringBuilder().append(writer->indent(), ".SecondPlane.get_width(0) / static_cast<float>("_s);
+            writer->visit(texture);
+            writer->stringBuilder().append(writer->indent(), ".FirstPlane.get_width(0));"_s);
+
+            writer->stringBuilder().append(writer->indent(), "auto __yAdjustment = "_s);
+            writer->visit(texture);
+            writer->stringBuilder().append(writer->indent(), ".SecondPlane.get_height(0) / static_cast<float>("_s);
+            writer->visit(texture);
+            writer->stringBuilder().append(writer->indent(), ".FirstPlane.get_height(0));"_s);
+
             writer->stringBuilder().append(writer->indent(), "auto __cbcr = float2("_s);
             writer->visit(texture);
-            writer->stringBuilder().append(".SecondPlane.read(__coords).rg);\n"_s);
+            writer->stringBuilder().append(".SecondPlane.read(uint2(uint(__coords.x * __xAdjustment), uint(__coords.y * __yAdjustment))).rg);\n"_s);
         }
         writer->stringBuilder().append(writer->indent(), "auto __ycbcr = float3(__y, __cbcr);\n"_s);
         {
