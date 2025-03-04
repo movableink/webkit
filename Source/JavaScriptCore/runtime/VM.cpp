@@ -239,6 +239,7 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     , m_codeCache(makeUnique<CodeCache>())
     , m_intlCache(makeUnique<IntlCache>())
     , m_builtinExecutables(makeUnique<BuiltinExecutables>(*this))
+    , m_defaultMicrotaskQueue(*this)
     , m_syncWaiter(adoptRef(*new Waiter(this)))
 {
     if (UNLIKELY(vmCreationShouldCrash || g_jscConfig.vmCreationDisallowed))
@@ -1304,7 +1305,7 @@ void VM::dumpTypeProfilerData()
 
 void VM::queueMicrotask(QueuedTask&& task)
 {
-    m_microtaskQueue.enqueue(WTFMove(task));
+    m_defaultMicrotaskQueue.enqueue(WTFMove(task));
 }
 
 void VM::callPromiseRejectionCallback(Strong<JSPromise>& promise)
@@ -1352,11 +1353,11 @@ void VM::drainMicrotasks()
         return;
 
     if (UNLIKELY(executionForbidden()))
-        m_microtaskQueue.clear();
+        m_defaultMicrotaskQueue.clear();
     else {
         do {
-            while (!m_microtaskQueue.isEmpty()) {
-                auto task = m_microtaskQueue.dequeue();
+            while (!m_defaultMicrotaskQueue.isEmpty()) {
+                auto task = m_defaultMicrotaskQueue.dequeue();
                 task.run();
                 if (UNLIKELY(hasPendingTerminationException()))
                     return;
@@ -1366,7 +1367,7 @@ void VM::drainMicrotasks()
             didExhaustMicrotaskQueue();
             if (UNLIKELY(hasPendingTerminationException()))
                 return;
-        } while (!m_microtaskQueue.isEmpty());
+        } while (!m_defaultMicrotaskQueue.isEmpty());
     }
     finalizeSynchronousJSExecution();
 }
@@ -1626,13 +1627,15 @@ void VM::removeLoopHintExecutionCounter(const JSInstruction* instruction)
 
 void VM::beginMarking()
 {
-    m_microtaskQueue.beginMarking();
+    for (auto& microtaskQueue : m_microtaskQueues)
+        microtaskQueue.beginMarking();
 }
 
 template<typename Visitor>
 void VM::visitAggregateImpl(Visitor& visitor)
 {
-    m_microtaskQueue.visitAggregate(visitor);
+    for (auto& microtaskQueue : m_microtaskQueues)
+        microtaskQueue.visitAggregate(visitor);
     numericStrings.visitAggregate(visitor);
     m_builtinExecutables->visitAggregate(visitor);
     m_regExpCache->visitAggregate(visitor);
@@ -1758,37 +1761,6 @@ void VM::performOpportunisticallyScheduledTasks(MonotonicTime deadline, OptionSe
 
     heap.sweeper().doWorkUntil(*this, deadline);
 }
-
-void QueuedTask::run()
-{
-    if (!m_job.isObject())
-        return;
-    JSObject* job = jsCast<JSObject*>(m_job);
-    JSGlobalObject* globalObject = job->globalObject();
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    runJSMicrotask(globalObject, m_identifier, job, m_arguments[0], m_arguments[1], m_arguments[2], m_arguments[3]);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-}
-
-template<typename Visitor>
-void MicrotaskQueue::visitAggregateImpl(Visitor& visitor)
-{
-    // Because content in the queue will not be changed, we need to scan it only once per an entry during one GC cycle.
-    // We record the previous scan's index, and restart scanning again in CollectorPhase::FixPoint from that.
-    // When new GC phase begins, this cursor is reset to zero (beginMarking). This optimization is introduced because
-    // some of application have massive size of MicrotaskQueue depth. For example, in parallel-promises-es2015-native.js
-    // benchmark, it becomes 251670 at most.
-    // This cursor is adjusted when an entry is dequeued. And we do not use any locking here, and that's fine: these
-    // values are read by GC when CollectorPhase::FixPoint and CollectorPhase::Begin, and both suspend the mutator, thus,
-    // there is no concurrency issue.
-    for (auto iterator = m_queue.begin() + m_markedBefore, end = m_queue.end(); iterator != end; ++iterator) {
-        auto& task = *iterator;
-        visitor.appendUnbarriered(task.m_job);
-        visitor.appendUnbarriered(task.m_arguments, QueuedTask::maxArguments);
-    }
-    m_markedBefore = m_queue.size();
-}
-DEFINE_VISIT_AGGREGATE(MicrotaskQueue);
 
 void VM::invalidateStructureChainIntegrity(StructureChainIntegrityEvent)
 {

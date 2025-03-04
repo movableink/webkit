@@ -1145,6 +1145,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/MemoryMode.h
     runtime/MemoryStatistics.h
     runtime/Microtask.h
+    runtime/MicrotaskQueue.h
     runtime/ModuleProgramExecutable.h
     runtime/NativeCallee.h
     runtime/NativeExecutable.h
