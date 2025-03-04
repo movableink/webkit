@@ -32,12 +32,12 @@ internal import WebKit_Internal
 @_spiOnly import WebKit_Private._WKHitTestResult
 #endif
 
-private struct DefaultDialogPresenting: DialogPresenting {
+private struct DefaultDialogPresenting: WebPage.DialogPresenting {
 }
 
 @MainActor
 final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
-    init(dialogPresenter: (any DialogPresenting)?) {
+    init(dialogPresenter: (any WebPage.DialogPresenting)?) {
         self.dialogPresenter = dialogPresenter ?? DefaultDialogPresenting()
     }
 
@@ -47,7 +47,7 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
     var menuBuilder: ((WebPage.ElementInfo) -> NSMenu)? = nil
 #endif
 
-    private let dialogPresenter: any DialogPresenting
+    private let dialogPresenter: any WebPage.DialogPresenting
 
     // MARK: Dialog presentation
 

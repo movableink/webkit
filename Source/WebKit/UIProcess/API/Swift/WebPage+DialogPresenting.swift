@@ -67,50 +67,52 @@ extension WebPage {
 
 // MARK: DialogPresenting protocol
 
-/// Allows providing custom behavior to handle JavaScript actions and provide a response.
-///
-/// Typically when handling these, some UI should be presented to the user for them to provide a response,
-/// which will then be communicated back to JavaScript.
-///
-/// When these methods are invoked, JavaScript is blocked until the async method returns.
-@available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
-@available(watchOS, unavailable)
-@available(tvOS, unavailable)
-public protocol DialogPresenting {
-    /// A JavaScript `alert()` function has been invoked.
+extension WebPage {
+    /// Allows providing custom behavior to handle JavaScript actions and provide a response.
     ///
-    /// - Parameters:
-    ///   - message: The message provided by JavaScript.
-    ///   - frame: Information about the frame whose JavaScript process initiated this call.
-    @MainActor
-    func handleJavaScriptAlert(message: String, initiatedBy frame: WebPage.FrameInfo) async
+    /// Typically when handling these, some UI should be presented to the user for them to provide a response,
+    /// which will then be communicated back to JavaScript.
+    ///
+    /// When these methods are invoked, JavaScript is blocked until the async method returns.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public protocol DialogPresenting {
+        /// A JavaScript `alert()` function has been invoked.
+        ///
+        /// - Parameters:
+        ///   - message: The message provided by JavaScript.
+        ///   - frame: Information about the frame whose JavaScript process initiated this call.
+        @MainActor
+        func handleJavaScriptAlert(message: String, initiatedBy frame: WebPage.FrameInfo) async
 
-    /// A JavaScript `confirm()` function has been invoked.
-    ///
-    /// - Parameters:
-    ///   - message: The message provided by JavaScript.
-    ///   - frame: Information about the frame whose JavaScript process initiated this call.
-    /// - Returns: The result of handling the invocation.
-    @MainActor
-    func handleJavaScriptConfirm(message: String, initiatedBy frame: WebPage.FrameInfo) async -> WebPage.JavaScriptConfirmResult
+        /// A JavaScript `confirm()` function has been invoked.
+        ///
+        /// - Parameters:
+        ///   - message: The message provided by JavaScript.
+        ///   - frame: Information about the frame whose JavaScript process initiated this call.
+        /// - Returns: The result of handling the invocation.
+        @MainActor
+        func handleJavaScriptConfirm(message: String, initiatedBy frame: WebPage.FrameInfo) async -> WebPage.JavaScriptConfirmResult
 
-    /// A JavaScript `prompt()` function has been invoked.
-    ///
-    /// - Parameters:
-    ///   - message: The message provided by JavaScript.
-    ///   - defaultText: The initial text provided by JavaScript, intended to be displayed in some text entry field.
-    ///   - frame: Information about the frame whose JavaScript process initiated this call.
-    /// - Returns: The result of handling the invocation; if the result is affirmative, the response will include some text returned to JavaScript.
-    @MainActor
-    func handleJavaScriptPrompt(message: String, defaultText: String?, initiatedBy frame: WebPage.FrameInfo) async -> WebPage.JavaScriptPromptResult
+        /// A JavaScript `prompt()` function has been invoked.
+        ///
+        /// - Parameters:
+        ///   - message: The message provided by JavaScript.
+        ///   - defaultText: The initial text provided by JavaScript, intended to be displayed in some text entry field.
+        ///   - frame: Information about the frame whose JavaScript process initiated this call.
+        /// - Returns: The result of handling the invocation; if the result is affirmative, the response will include some text returned to JavaScript.
+        @MainActor
+        func handleJavaScriptPrompt(message: String, defaultText: String?, initiatedBy frame: WebPage.FrameInfo) async -> WebPage.JavaScriptPromptResult
 
-    /// Returns the result of handling a JavaScript request to open files.
-    ///
-    /// - Parameter parameters: The options to use for the file dialog.
-    ///   - frame: Information about the frame whose JavaScript process initiated this call.
-    /// - Returns: The result of handling the invocation; if the result is affirmative, the response will include a set of files returned to JavaScript.
-    @MainActor
-    func handleFileInputPrompt(parameters: WKOpenPanelParameters, initiatedBy frame: WebPage.FrameInfo) async -> WebPage.FileInputPromptResult
+        /// Returns the result of handling a JavaScript request to open files.
+        ///
+        /// - Parameter parameters: The options to use for the file dialog.
+        ///   - frame: Information about the frame whose JavaScript process initiated this call.
+        /// - Returns: The result of handling the invocation; if the result is affirmative, the response will include a set of files returned to JavaScript.
+        @MainActor
+        func handleFileInputPrompt(parameters: WKOpenPanelParameters, initiatedBy frame: WebPage.FrameInfo) async -> WebPage.FileInputPromptResult
+    }
 }
 
 // MARK: Default implementation
@@ -118,7 +120,7 @@ public protocol DialogPresenting {
 @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
 @available(watchOS, unavailable)
 @available(tvOS, unavailable)
-public extension DialogPresenting {
+public extension WebPage.DialogPresenting {
     /// By default, this method immediately returns.
     @MainActor
     func handleJavaScriptAlert(message: String, initiatedBy frame: WebPage.FrameInfo) async {
