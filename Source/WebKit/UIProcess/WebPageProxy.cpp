@@ -6139,8 +6139,31 @@ void WebPageProxy::countStringMatches(const String& string, OptionSet<FindOption
     if (!hasRunningProcess())
         return;
 
-    sendWithAsyncReply(Messages::WebPage::CountStringMatches(string, options, maxMatchCount), [this, protectedThis = Ref { *this }, string](uint32_t matchCount) {
-        m_findClient->didCountStringMatches(this, string, matchCount);
+    class CountStringMatchesCallbackAggregator : public RefCounted<CountStringMatchesCallbackAggregator> {
+    public:
+        static Ref<CountStringMatchesCallbackAggregator> create(CompletionHandler<void(uint32_t)>&& completionHandler) { return adoptRef(*new CountStringMatchesCallbackAggregator(WTFMove(completionHandler))); }
+        void didCountStringMatches(uint32_t matchCount) { m_matchCount += matchCount; }
+        ~CountStringMatchesCallbackAggregator()
+        {
+            m_completionHandler(m_matchCount);
+        }
+    private:
+        explicit CountStringMatchesCallbackAggregator(CompletionHandler<void(uint32_t)>&& completionHandler)
+            : m_completionHandler(WTFMove(completionHandler))
+        {
+        }
+        CompletionHandler<void(uint32_t)> m_completionHandler;
+        uint32_t m_matchCount { 0 };
+    };
+
+    Ref callbackAggregator = CountStringMatchesCallbackAggregator::create([protectedThis = Ref { *this }, string](uint32_t matchCount) {
+        protectedThis->m_findClient->didCountStringMatches(protectedThis.ptr(), string, matchCount);
+    });
+
+    forEachWebContentProcess([&](auto& webProcess, auto pageID) {
+        webProcess.sendWithAsyncReply(Messages::WebPage::CountStringMatches(string, options, maxMatchCount), [callbackAggregator](uint32_t matchCount) {
+            callbackAggregator->didCountStringMatches(matchCount);
+        }, pageID);
     });
 }
 

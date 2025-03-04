@@ -2348,6 +2348,24 @@ TEST(SiteIsolation, FindStringMatchCount)
     EXPECT_EQ(3ul, [findDelegate matchesCount]);
 }
 
+TEST(SiteIsolation, CountStringMatches)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<p>Hello world</p><iframe src='https://webkit.org/subframe'></iframe>"_s } },
+        { "/subframe"_s, { "<p>Hello world</p>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    auto findConfiguration = adoptNS([[WKFindConfiguration alloc] init]);
+    auto findDelegate = adoptNS([[WKWebViewFindStringFindDelegate alloc] init]);
+    [webView _setFindDelegate:findDelegate.get()];
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://apple.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    [webView _countStringMatches:@"Hello world" options:0 maxCount:100];
+    while ([findDelegate matchesCount] != 2)
+        Util::spinRunLoop();
+}
+
 #if PLATFORM(MAC)
 TEST(SiteIsolation, ProcessDisplayNames)
 {
