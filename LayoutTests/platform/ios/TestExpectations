@@ -7723,3 +7723,5 @@ webkit.org/b/289005 imported/w3c/web-platform-tests/css/css-anchor-position/anch
 webkit.org/b/289010 imported/w3c/web-platform-tests/html/semantics/disabled-elements/event-propagate-disabled-keyboard.tentative.html [ Failure ]
 
 webkit.org/b/289018 imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/back-204-205-download.html [ Pass Failure ]
+
+webkit.org/b/289020 imported/w3c/web-platform-tests/webrtc-stats/hardware-capability-stats.https.html [ Pass Failure ]
