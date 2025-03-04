@@ -1739,7 +1739,7 @@ void MediaPlayerPrivateGStreamer::updateTracks([[maybe_unused]] const GRefPtr<Gs
         bool isTrackCached = m_##type##Tracks.contains(streamId);       \
         if (!isTrackCached) { \
             auto track = Type##TrackPrivateGStreamer::create(*this, type##TrackIndex, stream); \
-            if (player)                                                 \
+            if (player && !useMediaSource)                              \
                 player->add##Type##Track(track);                        \
             m_##type##Tracks.add(streamId, WTFMove(track));             \
         }                                                               \
@@ -1755,6 +1755,8 @@ void MediaPlayerPrivateGStreamer::updateTracks([[maybe_unused]] const GRefPtr<Gs
         type##TrackIndex++;                                             \
     } G_STMT_END
 
+    // FIXME: We probably don't need to create any *TrackPrivateGStreamer in MSE.
+    bool useMediaSource = isMediaSource();
     unsigned audioTrackIndex = 0;
     unsigned videoTrackIndex = 0;
     unsigned textTrackIndex = 0;

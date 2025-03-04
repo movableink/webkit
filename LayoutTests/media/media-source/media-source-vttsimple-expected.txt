@@ -13,6 +13,9 @@ RUN(sourceBuffer.appendBuffer(loader.mediaSegment(1)))
 EVENT(update)
 
 Verify track properties.
+EXPECTED (video.videoTracks.length == '1') OK
+EXPECTED (video.audioTracks.length == '0') OK
+EXPECTED (video.textTracks.length == '1') OK
 RUN(track = video.textTracks[0])
 EXPECTED (track.id == '4') OK
 

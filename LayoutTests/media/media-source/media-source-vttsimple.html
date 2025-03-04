@@ -40,6 +40,9 @@
         }
 
         consoleWrite('<br/>Verify track properties.');
+        testExpected('video.videoTracks.length', 1);
+        testExpected('video.audioTracks.length', 0);
+        testExpected('video.textTracks.length', 1);
         run('track = video.textTracks[0]');
         testExpected('track.id', '4');
 
