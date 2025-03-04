@@ -181,6 +181,7 @@ void ServiceWorkerNavigationPreloader::didReceiveResponse(ResourceResponse&& res
     }
 
     m_response = WTFMove(response);
+    m_response.setRedirected(false);
     m_responseCompletionHandler = WTFMove(completionHandler);
 
     if (auto callback = std::exchange(m_responseCallback, { }))
