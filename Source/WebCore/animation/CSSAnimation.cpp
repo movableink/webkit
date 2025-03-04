@@ -65,6 +65,12 @@ void CSSAnimation::syncPropertiesWithBackingAnimation()
 
     suspendEffectInvalidation();
 
+    // https://drafts.csswg.org/css-animations-2/#animation-timeline
+    // When multiple animation-* properties are set simultaneously, animation-timeline
+    // is updated first, so e.g. a change to animation-play-state applies to the
+    // simultaneously-applied timeline specified in animation-timeline.
+    syncStyleOriginatedTimeline();
+
     auto& animation = backingAnimation();
     auto* animationEffect = effect();
 
@@ -121,8 +127,6 @@ void CSSAnimation::syncPropertiesWithBackingAnimation()
         if (auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animationEffect))
             keyframeEffect->setComposite(animation.compositeOperation());
     }
-
-    syncStyleOriginatedTimeline();
 
     if (!m_overriddenProperties.contains(Property::RangeStart))
         setRangeStart(animation.range().start);
