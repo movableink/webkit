@@ -2056,3 +2056,5 @@ webkit.org/b/288878 media/modern-media-controls/tracks-support/audio-multiple-tr
 [ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.worker.html [ Skip ]
 
 webkit.org/b/289090 [ Debug arm64 ] imported/w3c/web-platform-tests/dom/nodes/remove-from-shadow-host-and-adopt-into-iframe.html [ Pass Timeout ]
+
+webkit.org/b/289092 http/wpt/background-fetch/background-fetch-abort.window.html [ Pass Failure ]
