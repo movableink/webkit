@@ -7735,3 +7735,5 @@ webkit.org/b/289097 imported/w3c/web-platform-tests/css/css-position/sticky/posi
 [ Debug ] ipc/invalid-path-segments-crash.html [ Skip ]
 
 webkit.org/b/289094 imported/w3c/web-platform-tests/webcodecs/audio-data.crossOriginIsolated.https.any.html [ Pass Timeout ]
+
+webkit.org/b/289109 imported/w3c/web-platform-tests/css/css-view-transitions/transition-skipped-after-animation-started.html [ Pass Crash ]
