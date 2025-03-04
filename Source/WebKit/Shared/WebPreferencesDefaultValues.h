@@ -204,4 +204,6 @@ bool defaultHostedBlurMaterialInMediaControlsEnabled();
 
 bool defaultMutationEventsEnabled();
 
+bool defaultTrustedTypesEnabled();
+
 } // namespace WebKit

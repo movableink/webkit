@@ -7775,7 +7775,7 @@ TrustedTypesEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      default: true
+      default: WebKit::defaultTrustedTypesEnabled()
     WebCore:
       default: true
 

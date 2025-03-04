@@ -398,4 +398,13 @@ bool defaultMutationEventsEnabled()
 #endif
 }
 
+bool defaultTrustedTypesEnabled()
+{
+#if PLATFORM(COCOA)
+    return linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::EnableTrustedTypesByDefault);
+#else
+    return true;
+#endif
+}
+
 } // namespace WebKit

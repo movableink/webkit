@@ -134,6 +134,7 @@ enum class SDKAlignedBehavior {
     DevolvableWidgets,
     SetSelectionRangeCachesSelectionIfNotFocusedOrSelected,
     DispatchFocusEventBeforeNotifyingClient,
+    EnableTrustedTypesByDefault,
 
     NumberOfBehaviors
 };
