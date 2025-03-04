@@ -1565,7 +1565,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
                 if (makeAtomStringsArray) {
                     Identifier identifier = string->toIdentifier(globalObject);
                     RETURN_IF_EXCEPTION(scope, { });
-                    string = vm.atomStringToJSStringMap.set(identifier.impl(), string).iterator->value.get();
+                    string = vm.atomStringToJSStringMap.add(identifier.impl(), string).iterator->value.get();
                 }
                 newButterfly->setIndex(vm, i, string);
             }
