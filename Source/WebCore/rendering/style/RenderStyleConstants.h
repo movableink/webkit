@@ -51,8 +51,8 @@ enum class PrintColorAdjust : bool {
 // - StyleDifference::RepaintIfText - The object needs to be repainted if it contains text.
 // - StyleDifference::RepaintLayer - The layer and its descendant layers needs to be repainted.
 // - StyleDifference::LayoutPositionedMovementOnly - Only the position of this positioned object has been updated
-// - StyleDifference::SimplifiedLayout - Only overflow needs to be recomputed
-// - StyleDifference::SimplifiedLayoutAndPositionedMovement - Both positioned movement and simplified layout updates are required.
+// - StyleDifference::Overflow - Only overflow needs to be recomputed
+// - StyleDifference::OverflowAndPositionedMovement - Both positioned movement and overflow updates are required.
 // - StyleDifference::Layout - A full layout is required.
 enum class StyleDifference : uint8_t {
     Equal,
@@ -61,8 +61,8 @@ enum class StyleDifference : uint8_t {
     RepaintIfText,
     RepaintLayer,
     LayoutPositionedMovementOnly,
-    SimplifiedLayout,
-    SimplifiedLayoutAndPositionedMovement,
+    Overflow,
+    OverflowAndPositionedMovement,
     Layout,
     NewStyle
 };

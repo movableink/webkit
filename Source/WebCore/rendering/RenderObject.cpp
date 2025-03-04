@@ -621,6 +621,9 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             return { };
         }
 
+        if (simplifiedNormalFlowLayout && ancestor->overflowChangesMayAffectLayout())
+            simplifiedNormalFlowLayout = false;
+
         if (hasOutOfFlowPosition) {
             bool willSkipRelativelyPositionedInlines = !ancestor->isRenderBlock() || ancestor->isAnonymousBlock();
             // Skip relatively positioned inlines and anonymous blocks to get to the enclosing RenderBlock.

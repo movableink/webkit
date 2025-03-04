@@ -142,7 +142,8 @@ public:
     void setOutOfFlowChildNeedsStaticPositionLayout();
     void clearChildNeedsLayout();
     void setNeedsPositionedMovementLayout(const RenderStyle* oldStyle);
-    void setNeedsSimplifiedNormalFlowLayout();
+    void setNeedsLayoutForStyleDifference(StyleDifference, const RenderStyle* oldStyle);
+    void setNeedsLayoutForOverflowChange();
 
     // paintOffset is the offset from the origin of the GraphicsContext at which to paint the current object.
     virtual void paint(PaintInfo&, const LayoutPoint& paintOffset) = 0;
