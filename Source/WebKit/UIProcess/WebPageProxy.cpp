@@ -2617,19 +2617,23 @@ void WebPageProxy::didChangeBackForwardList(WebBackForwardListItem* added, Vecto
     pageLoadState->setCanGoForward(transaction, m_backForwardList->forwardItem());
 }
 
-void WebPageProxy::shouldGoToBackForwardListItem(BackForwardItemIdentifier itemID, bool inBackForwardCache, CompletionHandler<void(bool)>&& completionHandler)
+void WebPageProxy::shouldGoToBackForwardListItem(BackForwardItemIdentifier itemID, bool inBackForwardCache, CompletionHandler<void(WebCore::ShouldGoToHistoryItem)>&& completionHandler)
 {
     RefPtr protectedPageClient { pageClient() };
 
     if (RefPtr item = m_backForwardList->itemForID(itemID)) {
-        m_navigationClient->shouldGoToBackForwardListItem(*this, *item, inBackForwardCache, WTFMove(completionHandler));
+        auto innerHandler = [protectedPageClient = WTFMove(protectedPageClient), completionHandler = WTFMove(completionHandler)] (bool result) mutable {
+            completionHandler(result ? WebCore::ShouldGoToHistoryItem::Yes : WebCore::ShouldGoToHistoryItem::No);
+        };
+
+        m_navigationClient->shouldGoToBackForwardListItem(*this, *item, inBackForwardCache, WTFMove(innerHandler));
         return;
     }
 
-    completionHandler(false);
+    completionHandler(WebCore::ShouldGoToHistoryItem::ItemUnknown);
 }
 
-void WebPageProxy::shouldGoToBackForwardListItemSync(BackForwardItemIdentifier itemID, CompletionHandler<void(bool)>&& completionHandler)
+void WebPageProxy::shouldGoToBackForwardListItemSync(BackForwardItemIdentifier itemID, CompletionHandler<void(WebCore::ShouldGoToHistoryItem)>&& completionHandler)
 {
     shouldGoToBackForwardListItem(itemID, false, WTFMove(completionHandler));
 }

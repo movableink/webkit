@@ -9070,3 +9070,10 @@ struct WebCore::FixedContainerEdges {
     WebCore::RectEdges<WebCore::Color> predominantColors;
     WebCore::RectEdges<bool> fixedEdges;
 };
+
+header: <WebCore/LocalFrameLoaderClient.h>
+enum class WebCore::ShouldGoToHistoryItem : uint8_t {
+    No,
+    Yes,
+    ItemUnknown
+};

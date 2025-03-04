@@ -1076,6 +1076,7 @@ def headers_for_type(type):
         'WebCore::SharedWorkerObjectIdentifierID': ['"GeneratedSerializers.h"'],
         'WebCore::ShareDataWithParsedURL': ['<WebCore/ShareData.h>'],
         'WebCore::ShouldContinuePolicyCheck': ['<WebCore/FrameLoaderTypes.h>'],
+        'WebCore::ShouldGoToHistoryItem': ['<WebCore/LocalFrameLoaderClient.h>'],
         'WebCore::ShouldNotifyWhenResolved': ['<WebCore/ServiceWorkerTypes.h>'],
         'WebCore::ShouldSample': ['<WebCore/DiagnosticLoggingClient.h>'],
         'WebCore::SourceBufferAppendMode': ['<WebCore/SourceBufferPrivate.h>'],

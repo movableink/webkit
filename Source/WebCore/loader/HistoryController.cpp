@@ -315,7 +315,7 @@ void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType frameLoa
     if (!page)
         return;
 
-    auto finishGoToItem = [weakThis = WeakPtr { this }, frameLoadType, shouldTreatAsContinuingLoad, page, isInSwipeAnimation = page->isInSwipeAnimation(), targetItem = Ref { targetItem }] (bool result) {
+    auto finishGoToItem = [weakThis = WeakPtr { this }, frameLoadType, shouldTreatAsContinuingLoad, page, isInSwipeAnimation = page->isInSwipeAnimation(), targetItem = Ref { targetItem }] (ShouldGoToHistoryItem result) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -325,7 +325,7 @@ void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType frameLoa
 
         protectedThis->m_policyItem = nullptr;
 
-        if (!result)
+        if (result != ShouldGoToHistoryItem::Yes)
             return;
 
         if (protectedThis->m_defersLoading) {
@@ -371,7 +371,7 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
     if (!page)
         return;
 
-    auto finishGoToItem = [weakThis = WeakPtr { this }, frame, frameLoadType, page, isInSwipeAnimation = page->isInSwipeAnimation(), triggeringFrame = Ref { triggeringFrame }, targetItem = Ref { targetItem }, tracker = RefPtr { tracker }] (bool result) {
+    auto finishGoToItem = [weakThis = WeakPtr { this }, frame, frameLoadType, page, isInSwipeAnimation = page->isInSwipeAnimation(), triggeringFrame = Ref { triggeringFrame }, targetItem = Ref { targetItem }, tracker = RefPtr { tracker }] (ShouldGoToHistoryItem result) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -381,7 +381,10 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
 
         protectedThis->m_policyItem = nullptr;
 
-        if (!result)
+        // For Navigation API navigations covered by HistoryController:goToItemForNavigationAPI, WebContent processes sometimes
+        // know about an item the UI process doesn't know about. In those cases, policy checks will happen elsewhere, and the
+        // traversal should occur
+        if (result == ShouldGoToHistoryItem::No)
             return;
 
         Vector<FrameToNavigate> framesToNavigate;
@@ -420,7 +423,7 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
     goToItemShared(targetItem, WTFMove(finishGoToItem));
 }
 
-void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandler<void(bool)>&& completionHandler)
+void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandler<void(ShouldGoToHistoryItem)>&& completionHandler)
 {
     m_policyItem = &targetItem;
 
@@ -432,7 +435,7 @@ void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandle
     Ref frame = m_frame.get();
     if (sameDocumentNavigation || !frame->protectedLoader()->protectedClient()->supportsAsyncShouldGoToHistoryItem()) {
         auto isSameDocumentNavigation = sameDocumentNavigation ? IsSameDocumentNavigation::Yes : IsSameDocumentNavigation::No;
-        bool result = frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem, isSameDocumentNavigation);
+        auto result = frame->protectedLoader()->protectedClient()->shouldGoToHistoryItem(targetItem, isSameDocumentNavigation);
         completionHandler(result);
         return;
     }

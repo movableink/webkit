@@ -1265,17 +1265,17 @@ void WebLocalFrameLoaderClient::updateGlobalHistoryRedirectLinks()
     }
 }
 
-bool WebLocalFrameLoaderClient::shouldGoToHistoryItem(HistoryItem& item, IsSameDocumentNavigation isSameDocumentNavigation) const
+WebCore::ShouldGoToHistoryItem WebLocalFrameLoaderClient::shouldGoToHistoryItem(HistoryItem& item, IsSameDocumentNavigation isSameDocumentNavigation) const
 {
     // In WebKit2, the synchronous version of this policy client should only ever be consulted for same document navigations.
     RELEASE_ASSERT(isSameDocumentNavigation == IsSameDocumentNavigation::Yes);
 
     RefPtr webPage = m_frame->page();
     if (!webPage)
-        return false;
+        return ShouldGoToHistoryItem::No;
 
     auto sendSyncResult = webPage->sendSync(Messages::WebPageProxy::ShouldGoToBackForwardListItemSync(item.itemID()));
-    auto [shouldGo] = sendSyncResult.takeReplyOr(true);
+    auto [shouldGo] = sendSyncResult.takeReplyOr(ShouldGoToHistoryItem::No);
     return shouldGo;
 }
 
@@ -1284,11 +1284,11 @@ bool WebLocalFrameLoaderClient::supportsAsyncShouldGoToHistoryItem() const
     return true;
 }
 
-void WebLocalFrameLoaderClient::shouldGoToHistoryItemAsync(HistoryItem& item, CompletionHandler<void(bool)>&& completionHandler) const
+void WebLocalFrameLoaderClient::shouldGoToHistoryItemAsync(HistoryItem& item, CompletionHandler<void(WebCore::ShouldGoToHistoryItem)>&& completionHandler) const
 {
     RefPtr webPage = m_frame->page();
     if (!webPage) {
-        completionHandler(false);
+        completionHandler(ShouldGoToHistoryItem::No);
         return;
     }
 
