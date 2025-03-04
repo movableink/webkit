@@ -732,6 +732,16 @@ bool AXCoreObject::supportsRequiredAttribute() const
     }
 }
 
+bool AXCoreObject::isRootWebArea() const
+{
+    if (roleValue() != AccessibilityRole::WebArea)
+        return false;
+
+    RefPtr parent = parentObject();
+    // If the parent is a scroll area, and the scroll area has no parent, we are at the root web area.
+    return parent && parent->roleValue() == AccessibilityRole::ScrollArea && !parent->parentObject();
+}
+
 bool AXCoreObject::hasPopup() const
 {
     return !equalLettersIgnoringASCIICase(popupValue(), "false"_s);

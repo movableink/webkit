@@ -816,6 +816,7 @@ public:
     virtual bool isSecureField() const = 0;
     virtual bool isNativeTextControl() const = 0;
     bool isWebArea() const { return roleValue() == AccessibilityRole::WebArea; }
+    bool isRootWebArea() const;
     bool isCheckbox() const { return roleValue() == AccessibilityRole::Checkbox; }
     bool isRadioButton() const { return roleValue() == AccessibilityRole::RadioButton; }
     bool isListBox() const { return roleValue() == AccessibilityRole::ListBox; }

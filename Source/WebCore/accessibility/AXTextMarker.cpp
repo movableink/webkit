@@ -1450,13 +1450,24 @@ std::partial_ordering AXTextMarker::partialOrderByTraversal(const AXTextMarker& 
     if (!isValid() || !other.isValid())
         return std::partial_ordering::unordered;
 
+    // If one of the objects is the root web area with an offset of 0, we know that it is the first possible text marker, so
+    // can fast-path the ordering.
+    RefPtr current = object();
+    if (current && !offset() && current->isRootWebArea())
+        return std::partial_ordering::less;
+
+    if (!other.offset()) {
+        RefPtr otherObject = other.object();
+        if (otherObject && otherObject->isRootWebArea())
+            return std::partial_ordering::greater;
+    }
+
     // If we're here, expect that we've already handled the case where we just need to compare
     // offsets within the same object.
     RELEASE_ASSERT(objectID() != other.objectID());
 
     // Search forwards for ther other marker. If we find it, we are before it in tree order,
     // and thus are std::partial_ordering::less.
-    RefPtr current = object();
     while (current && current->objectID() != other.objectID())
         current = current->nextInPreOrder();
 
