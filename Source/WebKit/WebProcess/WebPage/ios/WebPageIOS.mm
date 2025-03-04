@@ -1379,7 +1379,13 @@ void WebPage::commitPotentialTap(OptionSet<WebEventModifier> modifiers, Transact
     Node* nodeRespondingToClick = localMainFrame ? localMainFrame->nodeRespondingToClickEvents(m_potentialTapLocation, adjustedPoint, m_potentialTapSecurityOrigin.get()) : nullptr;
     auto* frameRespondingToClick = nodeRespondingToClick ? nodeRespondingToClick->document().frame() : nullptr;
 
-    if (!frameRespondingToClick || lastLayerTreeTransactionId.lessThanSameProcess(*WebFrame::fromCoreFrame(*frameRespondingToClick)->firstLayerTreeTransactionIDAfterDidCommitLoad())) {
+    if (!frameRespondingToClick) {
+        commitPotentialTapFailed();
+        return;
+    }
+
+    auto firstTransactionID = WebFrame::fromCoreFrame(*frameRespondingToClick)->firstLayerTreeTransactionIDAfterDidCommitLoad();
+    if (firstTransactionID && lastLayerTreeTransactionId.lessThanSameProcess(*firstTransactionID)) {
         commitPotentialTapFailed();
         return;
     }
