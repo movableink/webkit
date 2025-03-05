@@ -1205,13 +1205,6 @@ void NetworkConnectionToWebProcess::allowAccessToFile(const String& path)
     m_allowedFilePaths.add(FileSystem::lexicallyNormal(path));
 }
 
-
-void NetworkConnectionToWebProcess::allowAccessToFiles(const Vector<String>& filePaths)
-{
-    for (auto& filePath : filePaths)
-        m_allowedFilePaths.add(FileSystem::lexicallyNormal(filePath));
-}
-
 void NetworkConnectionToWebProcess::setCaptureExtraNetworkLoadMetricsEnabled(bool enabled)
 {
     m_captureExtraNetworkLoadMetricsEnabled = enabled;

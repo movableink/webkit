@@ -263,7 +263,6 @@ public:
     WebSWServerToContextConnection* swContextConnection() { return m_swContextConnection.get(); }
     void clearFrameLoadRecordsForStorageAccess(WebCore::FrameIdentifier);
     void allowAccessToFile(const String& path);
-    void allowAccessToFiles(const Vector<String>& filePaths);
     void loadCancelledDownloadRedirectRequestInFrame(const WebCore::ResourceRequest&, const WebCore::FrameIdentifier&, const WebCore::PageIdentifier&);
 
     bool isAlwaysOnLoggingAllowed() const;
