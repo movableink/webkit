@@ -25,7 +25,9 @@
 
 #if !os(tvOS) && !os(watchOS)
 
-#if ENABLE_WEB_EXTENSION_API
+// Older versions of the Swift compiler fail to import WebKit_Private. Can be
+// removed when WebKit drops support for macOS Sonoma.
+#if ENABLE_WK_WEB_EXTENSIONS && compiler(>=6.0)
 internal import WebKit_Private.WKWebExtensionPrivate
 #endif
 
@@ -66,9 +68,6 @@ extension WKWebView {
     }
 }
 
-// Concurrency diagnostics are incorrectly promoted to errors on older public
-// versions of Swift. Remove when dropping support for macOS Ventura.
-#if (swift(>=5.5) && USE_APPLE_INTERNAL_SDK && NDEBUG) || swift(>=5.10)
 @available(iOS 15.0, macOS 12.0, *)
 extension WKWebView {
     public func callAsyncJavaScript(_ functionBody: String, arguments: [String:Any] = [:], in frame: WKFrameInfo? = nil, contentWorld: WKContentWorld) async throws -> Any? {
@@ -87,9 +86,8 @@ extension WKWebView {
         await __find(string, with: configuration)
     }
 }
-#endif
 
-#if ENABLE_WEB_EXTENSION_API
+#if ENABLE_WK_WEB_EXTENSIONS && compiler(>=6.0)
 @available(iOS 18.4, macOS 15.4, visionOS 2.4, *)
 @available(watchOS, unavailable)
 @available(tvOS, unavailable)
