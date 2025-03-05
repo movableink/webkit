@@ -481,6 +481,7 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
             if (RefPtr parentSettings = observer->settings()) {
                 m_page->settings().setLayerBasedSVGEngineEnabled(parentSettings->layerBasedSVGEngineEnabled());
                 m_page->settings().fontGenericFamilies() = parentSettings->fontGenericFamilies();
+                m_page->settings().setCSSDPropertyEnabled(parentSettings->cssDPropertyEnabled());
             }
         }
 
