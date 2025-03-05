@@ -130,7 +130,7 @@ void initialize()
 #endif
 
         if (VM::isInMiniMode())
-            WTF::fastEnableMiniMode();
+            WTF::fastEnableMiniMode(Options::forceMiniVMMode());
 
         if (Wasm::isSupported() || !Options::usePollingTraps()) {
             if (!Options::usePollingTraps())
