@@ -1001,8 +1001,6 @@ bool Scope::invalidateForAnchorDependencies(LayoutDependencyUpdateContext& conte
     for (auto& anchorRenderer : m_document->renderView()->anchors()) {
         auto rect = anchorRenderer.absoluteBoundingBoxRect();
 
-        m_anchorRectsOnLastUpdate.add(anchorRenderer, rect);
-
         auto it = previousAnchorRects.find(anchorRenderer);
         bool changed = it == previousAnchorRects.end() || it->value != rect;
         if (!changed)
@@ -1011,6 +1009,8 @@ bool Scope::invalidateForAnchorDependencies(LayoutDependencyUpdateContext& conte
         auto anchoredElements = anchorMap.getOptional(anchorRenderer);
         if (!anchoredElements)
             continue;
+
+        m_anchorRectsOnLastUpdate.add(anchorRenderer, rect);
 
         for (auto& anchoredElement : *anchoredElements) {
             if (!context.invalidatedAnchorPositioned.add(anchoredElement.get()).isNewEntry)
@@ -1122,7 +1122,7 @@ void Scope::resetAnchorPositioningStateBeforeStyleResolution()
     // FIXME: Move this transient state to TreeResolver.
     for (auto elementAndState : m_anchorPositionedStates) {
         elementAndState.value->anchorNames.clear();
-        elementAndState.value->stage = AnchorPositionResolutionStage::FindAnchors;
+        elementAndState.value->stage = { };
         elementAndState.value->hasAnchorFunctions = false;
     }
 }
@@ -1133,7 +1133,7 @@ void Scope::updateAnchorPositioningStateAfterStyleResolution()
 
     m_anchorPositionedStates.removeIf([](auto& elementAndState) {
         // Remove if we have no anchors after initial resolution.
-        return elementAndState.value->stage != AnchorPositionResolutionStage::FindAnchors && elementAndState.value->anchorNames.isEmpty();
+        return elementAndState.value->stage && elementAndState.value->anchorNames.isEmpty();
     });
 }
 

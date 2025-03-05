@@ -500,7 +500,7 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
     // should also have layout information for the anchor-positioned element alongside
     // the anchors referenced by the anchor-positioned element. Until then, we cannot
     // resolve this anchor() instance.
-    if (anchorPositionedState.stage == AnchorPositionResolutionStage::FindAnchors)
+    if (anchorPositionedState.stage <= AnchorPositionResolutionStage::FindAnchors)
         return { };
 
     CheckedPtr anchorPositionedRenderer = anchorPositionedElement->renderer();
@@ -522,7 +522,7 @@ RefPtr<Element> AnchorPositionEvaluator::findAnchorForAnchorFunctionAndAttemptRe
 
     if (auto* state = anchorPositionedStates.get(*anchorElement)) {
         // Check if the anchor is itself anchor-positioned but hasn't been positioned yet.
-        if (state->stage != AnchorPositionResolutionStage::Positioned)
+        if (state->stage && *state->stage < AnchorPositionResolutionStage::Positioned)
             return { };
     }
 
@@ -898,12 +898,15 @@ void AnchorPositionEvaluator::updateAnchorPositioningStatesAfterInterleavedLayou
 
 void AnchorPositionEvaluator::updateAnchorPositionedStateForLayoutTimePositioned(Element& element, const RenderStyle& style)
 {
-    if (!isLayoutTimeAnchorPositioned(style))
+    if (!style.positionAnchor())
         return;
 
     auto* state = element.document().styleScope().anchorPositionedStates().ensure(element, [&] {
         return makeUnique<AnchorPositionedState>();
     }).iterator->value.get();
+
+    if (!state->stage)
+        state->stage = AnchorPositionResolutionStage::FindAnchors;
 
     state->anchorNames.add(style.positionAnchor()->name);
 }

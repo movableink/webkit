@@ -148,7 +148,7 @@ private:
     const RenderStyle* parentBoxStyle() const;
     const RenderStyle* parentBoxStyleForPseudoElement(const ElementUpdate&) const;
 
-    AnchorPositionedElementAction updateAnchorPositioningState(Element&, const RenderStyle*);
+    AnchorPositionedElementAction updateAnchorPositioningState(Element&, const RenderStyle*, Change);
 
     void generatePositionOptionsIfNeeded(const ResolvedStyle&, const Styleable&, const ResolutionContext&);
     std::unique_ptr<RenderStyle> generatePositionOption(const PositionTryFallback&, const ResolvedStyle&, const Styleable&, const ResolutionContext&);

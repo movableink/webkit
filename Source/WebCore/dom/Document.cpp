@@ -2777,37 +2777,39 @@ void Document::resolveStyle(ResolveStyleType type)
                 documentElement->invalidateStyleForSubtree();
         }
 
-        Style::TreeResolver resolver(*this, WTFMove(m_pendingRenderTreeUpdate));
-        auto styleUpdate = resolver.resolve();
+        {
+            Style::TreeResolver resolver(*this, WTFMove(m_pendingRenderTreeUpdate));
+            auto styleUpdate = resolver.resolve();
 
-        while (resolver.hasUnresolvedQueryContainers() || resolver.hasUnresolvedAnchorPositionedElements()) {
-            if (styleUpdate) {
-                SetForScope resolvingContainerQueriesScope(m_isResolvingContainerQueries, resolver.hasUnresolvedQueryContainers());
-                SetForScope resolvingAnchorPositionedElementsScope(m_isResolvingAnchorPositionedElements, resolver.hasUnresolvedAnchorPositionedElements());
+            while (resolver.hasUnresolvedQueryContainers() || resolver.hasUnresolvedAnchorPositionedElements()) {
+                if (styleUpdate) {
+                    SetForScope resolvingContainerQueriesScope(m_isResolvingContainerQueries, resolver.hasUnresolvedQueryContainers());
+                    SetForScope resolvingAnchorPositionedElementsScope(m_isResolvingAnchorPositionedElements, resolver.hasUnresolvedAnchorPositionedElements());
 
-                updateRenderTree(WTFMove(styleUpdate));
+                    updateRenderTree(WTFMove(styleUpdate));
 
-                if (frameView->layoutContext().needsLayout())
-                    frameView->layoutContext().interleavedLayout();
+                    if (frameView->layoutContext().needsLayout())
+                        frameView->layoutContext().interleavedLayout();
+                }
+
+                styleUpdate = resolver.resolve();
             }
 
-            styleUpdate = resolver.resolve();
-        }
+            m_lastStyleUpdateSizeForTesting = styleUpdate ? styleUpdate->size() : 0;
 
-        m_lastStyleUpdateSizeForTesting = styleUpdate ? styleUpdate->size() : 0;
+            setHasValidStyle();
+            clearChildNeedsStyleRecalc();
+            unscheduleStyleRecalc();
 
-        setHasValidStyle();
-        clearChildNeedsStyleRecalc();
-        unscheduleStyleRecalc();
+            m_inStyleRecalc = false;
 
-        m_inStyleRecalc = false;
+            if (RefPtr fontLoader = m_fontLoader.get())
+                fontLoader->loadPendingFonts();
 
-        if (RefPtr fontLoader = m_fontLoader.get())
-            fontLoader->loadPendingFonts();
-
-        if (styleUpdate) {
-            updateRenderTree(WTFMove(styleUpdate));
-            frameView->styleAndRenderTreeDidChange();
+            if (styleUpdate) {
+                updateRenderTree(WTFMove(styleUpdate));
+                frameView->styleAndRenderTreeDidChange();
+            }
         }
 
         updatedCompositingLayers = frameView->layoutContext().updateCompositingLayersAfterStyleChange();

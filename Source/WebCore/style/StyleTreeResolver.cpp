@@ -1159,7 +1159,7 @@ void TreeResolver::resolveComposedTree()
 
         auto queryContainerAction = updateStateForQueryContainer(element, style, change, descendantsToResolve);
 
-        auto anchorPositionedElementAction = updateAnchorPositioningState(element, style);
+        auto anchorPositionedElementAction = updateAnchorPositioningState(element, style, change);
 
         bool shouldIterateChildren = [&] {
             // display::none, no need to resolve descendants.
@@ -1284,7 +1284,9 @@ std::unique_ptr<Update> TreeResolver::resolve()
     if (m_hasUnresolvedAnchorPositionedElements) {
         // We need to ensure that style resolution visits any unresolved anchor-positioned elements.
         for (auto elementAndState : m_document->styleScope().anchorPositionedStates()) {
-            if (elementAndState.value->stage < AnchorPositionResolutionStage::Resolved)
+            if (!elementAndState.value->stage)
+                continue;
+            if (*elementAndState.value->stage < AnchorPositionResolutionStage::Resolved)
                 elementAndState.key.invalidateForResumingAnchorPositionedElementResolution();
         }
     }
@@ -1304,16 +1306,23 @@ std::unique_ptr<Update> TreeResolver::resolve()
     return WTFMove(m_update);
 }
 
-auto TreeResolver::updateAnchorPositioningState(Element& element, const RenderStyle* style) -> AnchorPositionedElementAction
+auto TreeResolver::updateAnchorPositioningState(Element& element, const RenderStyle* style, Change change) -> AnchorPositionedElementAction
 {
     if (!style)
         return AnchorPositionedElementAction::None;
 
     AnchorPositionEvaluator::updateAnchorPositionedStateForLayoutTimePositioned(element, *style);
 
-    auto* anchorPositionedState = m_document->styleScope().anchorPositionedStates().get(element);
+    if (change != Change::None && !style->anchorNames().isEmpty()) {
+        // Existing anchor positions may change due to a style change. We need a round of interleaving.
+        m_hasUnresolvedAnchorPositionedElements = true;
+    }
 
-    auto needsInterleavedLayout = anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved;
+    auto* anchorPositionedState = m_document->styleScope().anchorPositionedStates().get(element);
+    if (!anchorPositionedState)
+        return AnchorPositionedElementAction::None;
+
+    auto needsInterleavedLayout = anchorPositionedState->stage && anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved;
     if (!needsInterleavedLayout)
         return AnchorPositionedElementAction::None;
 
@@ -1348,7 +1357,7 @@ void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolved
 
     // If the fallbacks contain anchor references we need to resolve the anchors first and regenerate the options.
     auto* anchorPositionedState = m_document->styleScope().anchorPositionedStates().get(styleable.element);
-    if (anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved)
+    if (anchorPositionedState && anchorPositionedState->stage && *anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved)
         return;
 
     m_positionOptions.add(styleable.element, WTFMove(options));
@@ -1407,6 +1416,11 @@ std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleab
         options.chosen = true;
         return ResolvedStyle { RenderStyle::clonePtr(*options.originalStyle) };
     }
+
+    // We can't test for overflow before the box has been positioned.
+    auto* anchorPositionedState = m_document->styleScope().anchorPositionedStates().get(styleable.element);
+    if (anchorPositionedState && anchorPositionedState->stage && *anchorPositionedState->stage < AnchorPositionResolutionStage::Positioned)
+        return ResolvedStyle { RenderStyle::clonePtr(*existingStyle) };
 
     if (!AnchorPositionEvaluator::overflowsContainingBlock(*renderer)) {
         // We don't overflow anymore so this is a good style.

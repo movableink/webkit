@@ -66,7 +66,7 @@ struct AnchorPositionedState {
 public:
     AnchorElements anchorElements;
     UncheckedKeyHashSet<AtomString> anchorNames;
-    AnchorPositionResolutionStage stage { AnchorPositionResolutionStage::FindAnchors };
+    std::optional<AnchorPositionResolutionStage> stage;
     bool hasAnchorFunctions { false };
 };
 
