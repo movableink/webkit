@@ -156,7 +156,7 @@ static constexpr std::array<uint8_t, 256> characterClassTable {
     UserInfoEncode | ForbiddenHost | ForbiddenDomain, // '['
     UserInfoEncode | SlashQuestionOrHash | ForbiddenHost | ForbiddenDomain, // '\\'
     UserInfoEncode | ForbiddenHost | ForbiddenDomain, // ']'
-    UserInfoEncode | ForbiddenHost | ForbiddenDomain, // '^'
+    UserInfoEncode | PathEncode | ForbiddenHost | ForbiddenDomain, // '^'
     0, // '_'
     UserInfoEncode | PathEncode, // '`'
     ValidScheme, // 'a'

@@ -181,6 +181,7 @@ PASS Origin parsing: <wss:example.com/> without base
 PASS Origin parsing: <data:example.com/> without base
 PASS Origin parsing: <javascript:example.com/> without base
 PASS Origin parsing: <mailto:example.com/> without base
+PASS Origin parsing: <https://example.com/aaa/bbb/%2e%2e?query> without base
 PASS Origin parsing: <http:@www.example.com> without base
 PASS Origin parsing: <http:/@www.example.com> without base
 PASS Origin parsing: <http://@www.example.com> without base
@@ -334,6 +335,7 @@ PASS Origin parsing: <blob:ws://example.org/> without base
 PASS Origin parsing: <blob:wss://example.org/> without base
 PASS Origin parsing: <blob:http%3a//example.org/> without base
 PASS Origin parsing: <non-special:cannot-be-a-base-url-\0~> without base
+PASS Origin parsing: <non-special:cannot-be-a-base-url-!"$%&'()*+,-.;<=>@[\]^_`{|}~@/> without base
 PASS Origin parsing: <https://www.example.com/path{path.html?query'=query#fragment<fragment> without base
 PASS Origin parsing: <https://user:pass[@foo/bar> against <http://example.org>
 PASS Origin parsing: <foo:// !"$%&'()*+,-.;<=>@[\]^_`{|}~@host/> without base
