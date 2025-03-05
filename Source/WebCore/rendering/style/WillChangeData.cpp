@@ -96,7 +96,8 @@ bool WillChangeData::canBeBackdropRoot() const
         || containsProperty(CSSPropertyClipPath)
         || containsProperty(CSSPropertyFilter)
         || containsProperty(CSSPropertyMixBlendMode)
-        || containsProperty(CSSPropertyMask);
+        || containsProperty(CSSPropertyMask)
+        || containsProperty(CSSPropertyViewTransitionName);
 }
 
 // "If any non-initial value of a property would create a stacking context on the element,
@@ -130,6 +131,7 @@ bool WillChangeData::propertyCreatesStackingContext(CSSPropertyID property)
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     case CSSPropertyWebkitOverflowScrolling:
 #endif
+    case CSSPropertyViewTransitionName:
     case CSSPropertyContain:
         return true;
     default:
