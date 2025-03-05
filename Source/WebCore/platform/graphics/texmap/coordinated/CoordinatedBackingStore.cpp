@@ -69,7 +69,32 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
     TransformationMatrix adjustedTransform = transform * TransformationMatrix::rectToRect(layerRect, targetRect);
     for (const auto& tile : m_tiles.values()) {
         ASSERT(tile.scale() == m_scale);
-        textureMapper.drawTexture(tile.texture(), tile.rect(), adjustedTransform, opacity, allTileEdgesExposed(layerRect, tile.rect()) ? TextureMapper::AllEdgesExposed::Yes : TextureMapper::AllEdgesExposed::No);
+        const auto allEdgesExposed = allTileEdgesExposed(layerRect, tile.rect()) ? TextureMapper::AllEdgesExposed::Yes : TextureMapper::AllEdgesExposed::No;
+#if ENABLE(DAMAGE_TRACKING)
+        const auto canUseDamageToDrawTextureFragment = [&]() {
+            return !textureMapper.damage().isInvalid()
+                && !textureMapper.damage().isEmpty()
+                && adjustedTransform.isIdentity()
+                && allEdgesExposed == TextureMapper::AllEdgesExposed::No
+                && opacity == 1.0
+                && tile.texture().isOpaque()
+                && !tile.texture().filterOperation();
+        }();
+        if (canUseDamageToDrawTextureFragment) {
+            // We define damagedTileRect as a minimum bounding rectangle of all damage rects that intersect tile.rect()
+            // - this way we can keep a single texture draw call yet with potentially smaller sourceRect.
+            FloatRect damagedTileRect;
+            for (const auto& damageRect : textureMapper.damage().rects()) {
+                if (!damageRect.isEmpty())
+                    damagedTileRect.unite(intersection(tile.rect(), damageRect));
+            }
+            if (damagedTileRect.isEmpty())
+                continue;
+            const auto sourceRect = FloatRect { FloatPoint { damagedTileRect.location() - tile.rect().location() }, damagedTileRect.size() };
+            textureMapper.drawTextureFragment(tile.texture(), sourceRect, damagedTileRect);
+        } else
+#endif
+        textureMapper.drawTexture(tile.texture(), tile.rect(), adjustedTransform, opacity, allEdgesExposed);
     }
 }
 

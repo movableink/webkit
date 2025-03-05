@@ -275,11 +275,16 @@ void ThreadedCompositor::paintToCurrentGLContext(const TransformationMatrix& mat
         }
 
         const auto& damageSinceLastSurfaceUse = m_surface->addDamage(!frameDamage.isInvalid() && !frameDamage.isEmpty() ? frameDamage : Damage::invalid());
-        if (m_frameDamageHistory)
+        if (m_frameDamageHistory) {
+            // Passing damage rects through region to remove overlaps so that rects are more predictable from the testing perspective.
+            // In other words - the tests should test the damaged area - not the way it's stored internally.
             m_frameDamageHistory->addDamage(std::make_pair(!frameDamage.isInvalid(), frameDamage.region()));
+        }
 
         if (!m_damageVisualizer && !damageSinceLastSurfaceUse.isInvalid() && !FloatRect(damageSinceLastSurfaceUse.bounds()).contains(clipRect))
             rectContainingRegionThatActuallyChanged = FloatRoundedRect(damageSinceLastSurfaceUse.bounds());
+        if (!m_damageVisualizer)
+            m_textureMapper->setDamage(damageSinceLastSurfaceUse);
     }
 #endif
 

@@ -56,32 +56,54 @@ public:
         return invalidDamage;
     }
 
-    ALWAYS_INLINE const Region& region() const { return m_region; }
-    ALWAYS_INLINE IntRect bounds() const { return m_region.bounds(); }
-    ALWAYS_INLINE Rects rects() const { return m_region.rects(); }
-    ALWAYS_INLINE bool isEmpty() const  { return !m_invalid && m_region.isEmpty(); }
+    Region region() const
+    {
+        Region region;
+        for (const auto& rect : rects())
+            region.unite(rect);
+        return region;
+    }
+
+    ALWAYS_INLINE IntRect bounds() const { return m_minimumBoundingRectangle; }
+
+    // May return both empty and overlapping rects.
+    ALWAYS_INLINE const Rects& rects() const { return m_rects; }
+    ALWAYS_INLINE bool isEmpty() const  { return !m_invalid && m_rects.isEmpty(); }
     ALWAYS_INLINE bool isInvalid() const { return m_invalid; }
 
     void invalidate()
     {
         m_invalid = true;
-        m_region = Region();
+        m_rects = { };
     }
 
     ALWAYS_INLINE void add(const Region& region)
     {
         if (isInvalid())
             return;
-        m_region.unite(region);
-        mergeIfNeeded();
+        for (const auto& rect : region.rects())
+            add(rect);
     }
 
-    ALWAYS_INLINE void add(const IntRect& rect)
+    void add(const IntRect& rect)
     {
-        if (isInvalid())
+        if (isInvalid() || rect.isEmpty())
             return;
-        m_region.unite(rect);
-        mergeIfNeeded();
+
+        if (rect.contains(m_minimumBoundingRectangle)) {
+            m_rects = { rect };
+            m_minimumBoundingRectangle = rect;
+            return;
+        }
+
+        m_minimumBoundingRectangle.unite(rect);
+
+        if (!shouldUnite()) {
+            m_rects.append(rect);
+            if (shouldUnite())
+                uniteExistingRects();
+        } else
+            unite(rect);
     }
 
     ALWAYS_INLINE void add(const FloatRect& rect)
@@ -92,23 +114,48 @@ public:
     ALWAYS_INLINE void add(const Damage& other)
     {
         m_invalid = other.isInvalid();
-        add(other.m_region);
+        for (const auto& rect : other.rects())
+            add(rect);
     }
 
 private:
-    bool m_invalid { false };
-    Region m_region;
+    // Artificial NxM grid is used to direct input rectangles into proper buckets (cells)
+    // used to create minimum bounding rectangles that approximate the damaged area -
+    // potentially with overlaps.
+    static constexpr size_t s_gridCols { 8 };
+    static constexpr size_t s_gridRows { 4 };
+    static constexpr size_t s_gridCells { s_gridCols * s_gridRows };
 
-    // From RenderView.cpp::repaintViewRectangle():
-    // Region will get slow if it gets too complex.
-    // Merge all rects so far to bounds if this happens.
-    static constexpr auto maximumGridSize = 16 * 16;
+    bool shouldUnite() const { return m_rects.size() >= s_gridCells; }
 
-    ALWAYS_INLINE void mergeIfNeeded()
+    void uniteExistingRects()
     {
-        if (UNLIKELY(m_region.gridSize() > maximumGridSize))
-            m_region = Region(m_region.bounds());
+        const Rects rectsCopy = m_rects;
+        for (auto& rect : m_rects)
+            rect = { };
+        for (const auto& rect : rectsCopy)
+            unite(rect);
     }
+
+    void unite(const IntRect& rect)
+    {
+        // When merging cannot be avoided, we use m_rects to store minimal bounding rectangles
+        // and perform merging while trying to keep minimal bounding rectangles small and
+        // separated from each other.
+
+        // FIXME: Figure out a way to pass viewport size here for better results.
+        const IntSize viewportSize { 2048, 1024 };
+        const IntSize gridSize { s_gridCols, s_gridRows };
+        const auto tileSize = IntSize(viewportSize / gridSize);
+        const auto rectCenter = rect.center();
+        const auto rectCell = ceiledIntPoint(FloatPoint { static_cast<float>(rectCenter.x()) / tileSize.width(), static_cast<float>(rectCenter.y()) / tileSize.height() });
+        const size_t index = std::clamp(rectCell.x(), 0, static_cast<int>(s_gridCols - 1)) + std::clamp(rectCell.y(), 0, static_cast<int>(s_gridRows - 1)) * s_gridCols;
+        m_rects[index].unite(rect);
+    }
+
+    bool m_invalid { false };
+    Rects m_rects;
+    IntRect m_minimumBoundingRectangle;
 
     explicit Damage(bool invalid)
         : m_invalid(invalid)
