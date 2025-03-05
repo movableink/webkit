@@ -154,7 +154,6 @@ Modules/paymentrequest/PaymentResponse.cpp
 Modules/permissions/MainThreadPermissionObserver.cpp
 Modules/permissions/Permissions.cpp
 Modules/pictureinpicture/HTMLVideoElementPictureInPicture.cpp
-Modules/plugins/YouTubePluginReplacement.cpp
 Modules/push-api/PushDatabase.cpp
 Modules/push-api/PushManager.cpp
 Modules/push-api/PushSubscription.cpp
