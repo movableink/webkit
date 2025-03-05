@@ -671,7 +671,6 @@ media/accessibility-describes-video.html [ Timeout ]
 imported/w3c/web-platform-tests/webrtc-encoded-transform/script-metadata-transform.https.html [ Pass Failure ]
 imported/w3c/web-platform-tests/webrtc-encoded-transform/script-transform.https.html [ Pass Failure ]
 imported/w3c/web-platform-tests/webrtc-encoded-transform/script-write-twice-transform.https.html [ Pass Failure ]
-imported/w3c/web-platform-tests/webrtc-encoded-transform/sframe-transform-in-worker.https.html [ Pass Failure ]
 
 #rdar://92293472 ([ Ventura ] fast/css/stylesheet-candidate-nodes-crash.xhtml is a constant text failure)
 fast/css/stylesheet-candidate-nodes-crash.xhtml [ Pass Failure ]
