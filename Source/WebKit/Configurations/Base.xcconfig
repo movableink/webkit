@@ -125,9 +125,7 @@ OTHER_SWIFT_FLAGS_AVAILABILITY_YES = @$(WK_WEBKITADDITIONS_HEADERS_FOLDER_PATH)/
 OTHER_SWIFT_FLAGS_AVAILABILITY_ = -Xfrontend -define-availability -Xfrontend "WK_IOS_TBA:iOS $(IPHONEOS_DEPLOYMENT_TARGET)" -Xfrontend -define-availability -Xfrontend "WK_MAC_TBA:macOS $(MACOSX_DEPLOYMENT_TARGET)" -Xfrontend -define-availability -Xfrontend "WK_XROS_TBA:visionOS $(XROS_DEPLOYMENT_TARGET)";
 OTHER_SWIFT_FLAGS_XCODE_BEFORE_16 = -Xfrontend -enable-experimental-concurrency -Xfrontend -enable-upcoming-feature -Xfrontend IsolatedDefaultValues;
 
-// Disable SwiftUI overlay on downlevel builds until rdar://145000611 is resolved.
-//WK_ENABLE_SWIFTUI = YES;
-WK_ENABLE_SWIFTUI = $(WK_NOT_$(WK_USE_OVERRIDE_FRAMEWORKS_DIR));
+WK_ENABLE_SWIFTUI = YES;
 WK_ENABLE_SWIFTUI[sdk=macosx13*] = NO;
 WK_ENABLE_SWIFTUI[sdk=macosx14*] = NO;
 WK_ENABLE_SWIFTUI[sdk=macosx15*] = NO;
