@@ -37,18 +37,31 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MicrotaskQueue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebCoreMicrotaskDispatcher);
+
+
+JSC::QueuedTask::Result WebCoreMicrotaskDispatcher::currentRunnability() const
+{
+    auto group = m_group.get();
+    if (!group || group->isStoppedPermanently())
+        return JSC::QueuedTask::Result::Discard;
+    if (group->isSuspended())
+        return JSC::QueuedTask::Result::Suspended;
+    return JSC::QueuedTask::Result::Executed;
+}
 
 MicrotaskQueue::MicrotaskQueue(JSC::VM& vm, EventLoop& eventLoop)
     : m_vm(vm)
     , m_eventLoop(eventLoop)
+    , m_microtaskQueue(vm)
 {
 }
 
 MicrotaskQueue::~MicrotaskQueue() = default;
 
-void MicrotaskQueue::append(std::unique_ptr<EventLoopTask>&& task)
+void MicrotaskQueue::append(JSC::QueuedTask&& task)
 {
-    m_microtaskQueue.append(WTFMove(task));
+    m_microtaskQueue.enqueue(WTFMove(task));
 }
 
 void MicrotaskQueue::performMicrotaskCheckpoint()
@@ -61,25 +74,8 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
     JSC::JSLockHolder locker(vm);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    EventLoop::TaskVector toKeep;
-    while (!m_microtaskQueue.isEmpty() && !vm->executionForbidden()) {
-        auto queue = WTFMove(m_microtaskQueue);
-        for (auto& task : queue) {
-            auto* group = task->group();
-            if (!group || group->isStoppedPermanently())
-                continue;
-            if (group->isSuspended())
-                toKeep.append(WTFMove(task));
-            else {
-                task->execute();
-                if (UNLIKELY(!catchScope.clearExceptionExceptTermination()))
-                    break; // Encountered termination.
-            }
-        }
-    }
-
+    m_microtaskQueue.performMicrotaskCheckpoint(vm);
     vm->finalizeSynchronousJSExecution();
-    m_microtaskQueue = WTFMove(toKeep);
 
     if (!vm->executionForbidden()) {
         auto checkpointTasks = std::exchange(m_checkpointTasks, { });
@@ -120,10 +116,7 @@ void MicrotaskQueue::addCheckpointTask(std::unique_ptr<EventLoopTask>&& task)
 
 bool MicrotaskQueue::hasMicrotasksForFullyActiveDocument() const
 {
-    return m_microtaskQueue.containsIf([](auto& task) {
-        auto group = task->group();
-        return group && !group->isStoppedPermanently() && !group->isSuspended();
-    });
+    return m_microtaskQueue.hasMicrotasksForFullyActiveDocument();
 }
 
 } // namespace WebCore

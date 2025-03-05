@@ -150,13 +150,12 @@ void JSWorkerGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObject* 
     return JSGlobalObject::reportViolationForUnsafeEval(globalObject, source);
 }
 
-void JSWorkerGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
+void JSWorkerGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, JSC::QueuedTask&& task)
 {
     JSWorkerGlobalScopeBase& thisObject = static_cast<JSWorkerGlobalScopeBase&>(object);
     auto& context = thisObject.wrapped();
-    context.eventLoop().queueMicrotask([task = WTFMove(task)]() mutable {
-        JSExecState::runTask(task->globalObject(), task.get());
-    });
+    task.setDispatcher(context.eventLoop().jsMicrotaskDispatcher());
+    context.eventLoop().queueMicrotask(WTFMove(task));
 }
 
 JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, WorkerGlobalScope& workerGlobalScope)

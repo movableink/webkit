@@ -27,9 +27,11 @@
 #include "JSExecState.h"
 
 #include "EventLoop.h"
+#include "JSDOMExceptionHandling.h"
 #include "RejectedPromiseTracker.h"
 #include "ScriptExecutionContext.h"
 #include "WorkerGlobalScope.h"
+#include <JavaScriptCore/VMTrapsInlines.h>
 
 namespace WebCore {
 
@@ -62,5 +64,55 @@ RefPtr<ScriptExecutionContext> protectedExecutionContext(JSC::JSGlobalObject* gl
 {
     return executionContext(globalObject);
 }
+
+void JSExecState::runTask(JSC::JSGlobalObject* globalObject, JSC::QueuedTask& task)
+{
+    JSExecState currentState(globalObject);
+
+    auto& vm = globalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    if (UNLIKELY(!task.job().isObject()))
+        return;
+
+    auto* job = JSC::asObject(task.job());
+
+    if (UNLIKELY(!scope.clearExceptionExceptTermination()))
+        return;
+
+    auto* lexicalGlobalObject = job->globalObject();
+    auto callData = JSC::getCallData(job);
+    if (UNLIKELY(!scope.clearExceptionExceptTermination()))
+        return;
+    ASSERT(callData.type != CallData::Type::None);
+
+    unsigned count = 0;
+    for (auto argument : task.arguments()) {
+        if (!argument)
+            break;
+        ++count;
+    }
+
+    if (UNLIKELY(globalObject->hasDebugger())) {
+        JSC::DeferTerminationForAWhile deferTerminationForAWhile(vm);
+        globalObject->debugger()->willRunMicrotask(globalObject, task.identifier());
+        scope.clearException();
+    }
+
+    NakedPtr<JSC::Exception> returnedException = nullptr;
+    if (LIKELY(!vm.hasPendingTerminationException())) {
+        JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Microtask, job, callData, JSC::jsUndefined(), JSC::ArgList { std::bit_cast<JSC::EncodedJSValue*>(task.arguments().data()), count }, returnedException);
+        if (returnedException)
+            reportException(lexicalGlobalObject, returnedException);
+        scope.clearExceptionExceptTermination();
+    }
+
+    if (UNLIKELY(globalObject->hasDebugger())) {
+        JSC::DeferTerminationForAWhile deferTerminationForAWhile(vm);
+        globalObject->debugger()->didRunMicrotask(globalObject, task.identifier());
+        scope.clearException();
+    }
+}
+
 
 } // namespace WebCore

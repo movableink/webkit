@@ -872,6 +872,11 @@ public:
     void queueMicrotask(QueuedTask&&);
     JS_EXPORT_PRIVATE void drainMicrotasks();
     void setOnEachMicrotaskTick(WTF::Function<void(VM&)>&& func) { m_onEachMicrotaskTick = WTFMove(func); }
+    void callOnEachMicrotaskTick()
+    {
+        if (m_onEachMicrotaskTick)
+            m_onEachMicrotaskTick(*this);
+    }
     void finalizeSynchronousJSExecution()
     {
         ASSERT(currentThreadIsHoldingAPILock());

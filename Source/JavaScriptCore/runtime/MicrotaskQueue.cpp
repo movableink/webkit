@@ -26,9 +26,13 @@
 #include "config.h"
 #include "MicrotaskQueue.h"
 
+#include "CatchScope.h"
+#include "Debugger.h"
+#include "JSGlobalObject.h"
 #include "JSMicrotask.h"
 #include "JSObject.h"
 #include "SlotVisitorInlines.h"
+#include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -37,13 +41,24 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MicrotaskQueue);
 
-void QueuedTask::run()
+QueuedTask::Result QueuedTask::tryRun()
 {
+    if (RefPtr dispatcher = m_dispatcher)
+        return dispatcher->run(*this);
+
     if (!m_job.isObject())
-        return;
+        return Result::Executed;
+
     JSObject* job = jsCast<JSObject*>(m_job);
-    JSGlobalObject* globalObject = job->globalObject();
-    runJSMicrotask(globalObject, m_identifier, job, m_arguments[0], m_arguments[1], m_arguments[2], m_arguments[3]);
+    runJSMicrotask(m_globalObject, m_identifier, job, m_arguments[0], m_arguments[1], m_arguments[2], m_arguments[3]);
+    return Result::Executed;
+}
+
+bool QueuedTask::isRunnable() const
+{
+    if (RefPtr dispatcher = m_dispatcher)
+        return dispatcher->isRunnable();
+    return true;
 }
 
 MicrotaskQueue::MicrotaskQueue(VM& vm)
@@ -51,8 +66,79 @@ MicrotaskQueue::MicrotaskQueue(VM& vm)
     vm.m_microtaskQueues.append(this);
 }
 
+MicrotaskQueue::~MicrotaskQueue()
+{
+    if (isOnList())
+        remove();
+}
+
 template<typename Visitor>
 void MicrotaskQueue::visitAggregateImpl(Visitor& visitor)
+{
+    m_queue.visitAggregate(visitor);
+    m_toKeep.visitAggregate(visitor);
+}
+DEFINE_VISIT_AGGREGATE(MicrotaskQueue);
+
+void MicrotaskQueue::enqueue(QueuedTask&& task)
+{
+    auto* globalObject = task.globalObject();
+    auto microtaskIdentifier = task.identifier();
+    m_queue.enqueue(WTFMove(task));
+    if (globalObject) {
+        if (auto* debugger = globalObject->debugger(); UNLIKELY(debugger))
+            debugger->didQueueMicrotask(globalObject, microtaskIdentifier);
+    }
+}
+
+void MicrotaskQueue::performMicrotaskCheckpoint(VM& vm)
+{
+    auto catchScope = DECLARE_CATCH_SCOPE(vm);
+    while (!m_queue.isEmpty()) {
+        if (UNLIKELY(vm.executionForbidden())) {
+            clear();
+            break;
+        }
+
+        auto task = m_queue.dequeue();
+        auto status = task.tryRun();
+        if (UNLIKELY(!catchScope.clearExceptionExceptTermination())) {
+            clear();
+            break;
+        }
+
+        vm.callOnEachMicrotaskTick();
+        if (UNLIKELY(!catchScope.clearExceptionExceptTermination())) {
+            clear();
+            break;
+        }
+
+        switch (status) {
+        case QueuedTask::Result::Executed:
+            break;
+        case QueuedTask::Result::Discard:
+            // Let this task go away.
+            break;
+        case QueuedTask::Result::Suspended: {
+            m_toKeep.enqueue(WTFMove(task));
+            break;
+        }
+        }
+    }
+    m_queue.swap(m_toKeep);
+}
+
+bool MarkedMicrotaskDeque::hasMicrotasksForFullyActiveDocument() const
+{
+    for (auto& task : m_queue) {
+        if (task.isRunnable())
+            return true;
+    }
+    return false;
+}
+
+template<typename Visitor>
+void MarkedMicrotaskDeque::visitAggregateImpl(Visitor& visitor)
 {
     // Because content in the queue will not be changed, we need to scan it only once per an entry during one GC cycle.
     // We record the previous scan's index, and restart scanning again in CollectorPhase::FixPoint from that.
@@ -64,12 +150,13 @@ void MicrotaskQueue::visitAggregateImpl(Visitor& visitor)
     // there is no concurrency issue.
     for (auto iterator = m_queue.begin() + m_markedBefore, end = m_queue.end(); iterator != end; ++iterator) {
         auto& task = *iterator;
+        visitor.appendUnbarriered(task.m_globalObject);
         visitor.appendUnbarriered(task.m_job);
         visitor.appendUnbarriered(task.m_arguments, QueuedTask::maxArguments);
     }
     m_markedBefore = m_queue.size();
 }
-DEFINE_VISIT_AGGREGATE(MicrotaskQueue);
+DEFINE_VISIT_AGGREGATE(MarkedMicrotaskDeque);
 
 } // namespace JSC
 

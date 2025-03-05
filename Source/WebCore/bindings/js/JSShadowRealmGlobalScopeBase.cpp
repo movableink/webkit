@@ -155,7 +155,7 @@ void JSShadowRealmGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObj
     incubating->globalObjectMethodTable()->reportViolationForUnsafeEval(incubating, msg);
 }
 
-void JSShadowRealmGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
+void JSShadowRealmGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, QueuedTask&& task)
 {
     auto incubating = jsCast<JSShadowRealmGlobalScopeBase*>(&object)->incubatingRealm();
     incubating->globalObjectMethodTable()->queueMicrotaskToEventLoop(*incubating, WTFMove(task));
