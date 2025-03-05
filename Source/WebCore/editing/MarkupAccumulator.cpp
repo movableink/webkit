@@ -422,7 +422,7 @@ void MarkupAccumulator::startAppendingNode(const Node& node, Namespaces* namespa
         if (shadowRoot->isClonable())
             m_markup.append(" shadowrootclonable=\"\""_s);
         if (shadowRoot->protectedHost()->customElementRegistry() != shadowRoot->registryForBindings())
-            m_markup.append(" shadowrootcustomelements=\"\""_s);
+            m_markup.append(" shadowrootcustomelementregistry=\"\""_s);
         m_markup.append('>');
     } else
         appendNonElementNode(m_markup, node, namespaces);

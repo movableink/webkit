@@ -15,6 +15,6 @@ PASS importNode: pass options argument with value undefined
 PASS importNode: pass options argument with value { }
 PASS importNode: pass options argument with value { selfOnly: false }
 PASS importNode: pass options argument with value { selfOnly: true }
-PASS importNode: pass options argument with value { customElements: scopedRegistry }
-PASS importNode: pass options argument with value { customElements: null }
+PASS importNode: pass options argument with value { customElementRegistry: scopedRegistry }
+PASS importNode: pass options argument with value { customElementRegistry: null }
 

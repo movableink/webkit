@@ -1515,7 +1515,7 @@ ExceptionOr<Ref<Element>> Document::createElementForBindings(const AtomString& n
     RefPtr<CustomElementRegistry> registry;
     if (UNLIKELY(argument)) {
         if (auto* options = std::get_if<ElementCreationOptions>(&*argument))
-            registry = options->customElements;
+            registry = options->customElementRegistry;
     }
 
     auto result = [&]() -> ExceptionOr<Ref<Element>> {
@@ -1601,7 +1601,7 @@ ExceptionOr<Ref<Node>> Document::importNode(Node& nodeToImport, std::variant<boo
     if (std::holds_alternative<ImportNodeOptions>(argument)) {
         auto options = std::get<ImportNodeOptions>(argument);
         subtree = !options.selfOnly;
-        registry = WTFMove(options.customElements);
+        registry = WTFMove(options.customElementRegistry);
     } else if (std::get<bool>(argument))
         subtree = true;
     if (!registry)
@@ -1766,6 +1766,13 @@ static inline bool operator<(char32_t a, const UnicodeCodePointRange& b)
     return a < b.minimum;
 }
 
+RefPtr<CustomElementRegistry> Document::customElementRegistryForBindings()
+{
+    if (RefPtr window = document().domWindow())
+        return &window->ensureCustomElementRegistry();
+    return nullptr;
+}
+
 static inline bool isPotentialCustomElementNameCharacter(char32_t character)
 {
     static const UnicodeCodePointRange ranges[] = {
@@ -1918,7 +1925,7 @@ ExceptionOr<Ref<Element>> Document::createElementNS(const AtomString& namespaceU
     RefPtr<CustomElementRegistry> registry;
     if (UNLIKELY(argument)) {
         if (auto* options = std::get_if<ElementCreationOptions>(&*argument))
-            registry = options->customElements;
+            registry = options->customElementRegistry;
     }
 
     auto opportunisticallyMatchedBuiltinElement = ([&]() -> RefPtr<Element> {

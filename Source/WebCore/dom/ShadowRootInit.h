@@ -38,7 +38,7 @@ struct ShadowRootInit {
     bool clonable { false };
     bool serializable { false };
     SlotAssignmentMode slotAssignment { SlotAssignmentMode::Named };
-    JSC::JSValue customElements;
+    RefPtr<CustomElementRegistry> customElementRegistry;
     String referenceTarget;
 };
 

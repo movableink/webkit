@@ -62,6 +62,8 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     HTMLCollection getElementsByTagNameNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString localName);
     HTMLCollection getElementsByClassName([AtomString] DOMString classNames);
 
+    [EnabledBySetting=ScopedCustomElementRegistryEnabled, ImplementedAs=customElementRegistryForBindings] readonly attribute CustomElementRegistry? customElementRegistry;
+
     [NewObject] DocumentFragment createDocumentFragment();
     [NewObject] Text createTextNode(DOMString data);
     [NewObject] CDATASection createCDATASection(DOMString data);

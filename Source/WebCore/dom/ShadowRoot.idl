@@ -36,7 +36,7 @@
     [ImplementedAs=isClonable] readonly attribute boolean clonable;
     [EnabledBySetting=DeclarativeShadowRootsSerializerAPIsEnabled] readonly attribute boolean serializable;
     readonly attribute Element host;
-    [EnabledBySetting=ScopedCustomElementRegistryEnabled, ImplementedAs=registryForBindings, Replaceable] readonly attribute CustomElementRegistry? customElements;
+    [EnabledBySetting=ScopedCustomElementRegistryEnabled, ImplementedAs=registryForBindings] readonly attribute CustomElementRegistry? customElementRegistry;
     [EnabledBySetting=ShadowRootReferenceTargetEnabled] attribute [AtomString] DOMString referenceTarget;
     attribute EventHandler onslotchange;
 };

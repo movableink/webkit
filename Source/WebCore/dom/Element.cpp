@@ -3263,11 +3263,7 @@ ExceptionOr<ShadowRoot&> Element::attachShadow(const ShadowRootInit& init, Custo
         }
         return Exception { ExceptionCode::NotSupportedError };
     }
-    RefPtr<CustomElementRegistry> registry;
-    if (document().settings().scopedCustomElementRegistryEnabled() && !init.customElements.isEmpty()) {
-        if (auto* wrapper = jsDynamicCast<JSCustomElementRegistry*>(init.customElements))
-            registry = &wrapper->wrapped();
-    }
+    RefPtr registry = init.customElementRegistry;
     auto scopedRegistry = ShadowRoot::ScopedCustomElementRegistry::No;
     if (registryKind == CustomElementRegistryKind::Null) {
         ASSERT(!registry);
@@ -3300,7 +3296,7 @@ ExceptionOr<ShadowRoot&> Element::attachDeclarativeShadow(ShadowRootMode mode, S
         clonable == ShadowRootClonable::Yes,
         serializable == ShadowRootSerializable::Yes,
         SlotAssignmentMode::Named,
-        JSC::jsUndefined(),
+        nullptr,
         referenceTarget,
     }, registryKind);
     if (exceptionOrShadowRoot.hasException())
