@@ -2062,3 +2062,4 @@ webkit.org/b/289098 [ Debug ] ipc/serialized-type-info.html [ Failure ]
 
 webkit.org/b/289121 imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-mandatory-getStats.https.html [ Pass Failure ]
 
+webkit.org/b/289176 [ Debug ] http/tests/site-isolation/history/add-iframes-and-go-back.html [ Timeout ]
