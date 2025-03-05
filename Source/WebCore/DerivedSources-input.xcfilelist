@@ -1326,10 +1326,10 @@ $(PROJECT_DIR)/css/htmlSwitchControl.css
 $(PROJECT_DIR)/css/make-css-file-arrays.pl
 $(PROJECT_DIR)/css/mathml.css
 $(PROJECT_DIR)/css/popover.css
-$(PROJECT_DIR)/css/process-css-properties.py
-$(PROJECT_DIR)/css/process-css-pseudo-selectors.py
-$(PROJECT_DIR)/css/process-css-values.py
 $(PROJECT_DIR)/css/quirks.css
+$(PROJECT_DIR)/css/scripts/process-css-properties.py
+$(PROJECT_DIR)/css/scripts/process-css-pseudo-selectors.py
+$(PROJECT_DIR)/css/scripts/process-css-values.py
 $(PROJECT_DIR)/css/svg.css
 $(PROJECT_DIR)/css/typedom/CSSKeywordValue.idl
 $(PROJECT_DIR)/css/typedom/CSSNumericValue.idl

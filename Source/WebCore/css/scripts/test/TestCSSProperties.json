@@ -1,0 +1,178 @@
+{
+    "instructions": [ ],
+    "properties": {
+        "test-property": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "parser-grammar": "<number>"
+            }
+        },
+        "test-using-shared-rule": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "values": [ "auto" ],
+            "codegen-properties": {
+                "parser-grammar": "auto | <shared-rule-one>"
+            }
+        },
+        "test-sink-priority": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "sink-priority": true,
+                "parser-grammar": "<number>"
+            }
+        },
+        "test-high-priority": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "high-priority": true,
+                "parser-grammar": "<number>"
+            }
+        },
+        "test-top-priority": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "top-priority": true,
+                "top-priority-reason": "justification string",
+                "parser-grammar": "<number>"
+            }
+        },
+
+        "test-settings-one": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "settings-flag": "cssSettingsOneEnabled",
+                "parser-grammar": "<number>"
+            }
+        },
+
+        "test-animation-wrapper": {
+            "animation-type": "by computed value",
+            "initial": "0",
+            "codegen-properties": {
+                "animation-wrapper": "Wrapper<float>",
+                "parser-grammar": "<number>"
+            }
+        },
+        "test-animation-wrapper-acceleration-always": {
+            "animation-type": "by computed value",
+            "initial": "0",
+            "codegen-properties": {
+                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper-acceleration": "always",
+                "parser-grammar": "<number>"
+            }
+        },
+        "test-animation-wrapper-acceleration-threaded-only": {
+            "animation-type": "by computed value",
+            "initial": "0",
+            "codegen-properties": {
+                "animation-wrapper": "Wrapper<float>",
+                "animation-wrapper-acceleration": "threaded-only",
+                "parser-grammar": "<number>"
+            }
+        },
+
+        "test-logical-property-group-physical-horizontal": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "logical-property-group": {
+                    "name": "test-group",
+                    "resolver": "horizontal"
+                },
+                "parser-grammar": "<number>"
+            }
+        },
+        "test-logical-property-group-physical-vertical": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "logical-property-group": {
+                    "name": "test-group",
+                    "resolver": "vertical"
+                },
+                "parser-grammar": "<number>"
+            }
+        },
+        "test-logical-property-group-logical-block": {
+            "codegen-properties": {
+                "skip-style-builder": true,
+                "logical-property-group": {
+                    "name": "test-group",
+                    "resolver": "block"
+                },
+                "parser-grammar": "<number>"
+            }
+        },
+        "test-logical-property-group-logical-inline": {
+            "codegen-properties": {
+                "skip-style-builder": true,
+                "logical-property-group": {
+                    "name": "test-group",
+                    "resolver": "inline"
+                },
+                "parser-grammar": "<number>"
+            }
+        },
+
+        "test-shorthand-one": {
+            "codegen-properties": {
+                "longhands": [
+                    "test-logical-property-group-physical-horizontal",
+                    "test-logical-property-group-physical-vertical"
+                ]
+            }
+        },
+        "test-shorthand-two": {
+            "codegen-properties": {
+                "longhands": [
+                    "test-logical-property-group-logical-block",
+                    "test-logical-property-group-logical-inline"
+                ]
+            }
+        },
+        "font": {
+            "codegen-properties": {
+                "longhands": [
+                    "test-sink-priority",
+                    "test-high-priority"
+                ]
+            }
+        }
+    },
+    "descriptors": {
+        "@first-at-rule": {
+            "first-test-descriptor-for-first-descriptor": {
+                "codegen-properties": {
+                    "settings-flag": "cssDescriptorEnabled",
+                    "parser-grammar": "<number>"
+                }
+            }
+        },
+        "@second-at-rule": {
+            "first-test-descriptor-for-second-descriptor": {
+                "codegen-properties": {
+                    "parser-grammar": "<number>"
+                }
+            }
+        }
+    },
+    "categories": {
+        "css-22": {
+            "shortname": "CSS 2.2",
+            "longname": "CSS 2.2",
+            "url": "https://www.w3.org/TR/CSS22/"
+        }
+    },
+    "shared-grammar-rules": {
+        "<shared-rule-one>": {
+            "grammar": "<number> | <percentage>"
+        }
+    }
+}
