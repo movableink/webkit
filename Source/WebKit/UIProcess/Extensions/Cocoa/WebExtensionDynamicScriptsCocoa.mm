@@ -143,7 +143,6 @@ void executeScript(const SourcePairs& scriptPairs, WKWebView *webView, API::Cont
             return;
         }
 
-        auto *world = executionWorld->wrapper();
         auto *frames = getFrames(mainFrame, parameters);
 
         for (_WKFrameTreeNode *frame in frames) {
@@ -159,7 +158,7 @@ void executeScript(const SourcePairs& scriptPairs, WKWebView *webView, API::Cont
                 NSString *javaScript = [NSString stringWithFormat:@"return (%@)(...arguments)", (NSString *)parameters.function.value()];
                 NSArray *arguments = parameters.arguments ? parseJSON(parameters.arguments.value(), JSONOptions::FragmentsAllowed) : @[ ];
 
-                [webView _callAsyncJavaScript:javaScript arguments:@{ @"arguments": arguments } inFrame:frameInfo inContentWorld:world completionHandler:makeBlockPtr([injectionResults, aggregator, frameInfo](id resultOfExecution, NSError *error) mutable {
+                [webView _callAsyncJavaScript:javaScript arguments:@{ @"arguments": arguments } inFrame:frameInfo inContentWorld:executionWorld->wrapper() completionHandler:makeBlockPtr([injectionResults, aggregator, frameInfo](id resultOfExecution, NSError *error) mutable {
                     injectionResults->results.append(toInjectionResultParameters(resultOfExecution, frameInfo, error.localizedDescription));
                 }).get()];
 
