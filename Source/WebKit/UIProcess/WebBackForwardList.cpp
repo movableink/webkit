@@ -453,7 +453,7 @@ BackForwardListState WebBackForwardList::backForwardListState(WTF::Function<bool
             continue;
         }
 
-        backForwardListState.items.append(entry->navigatedFrameState());
+        backForwardListState.items.append(entry->mainFrameState());
     }
 
     if (backForwardListState.items.isEmpty())
@@ -482,8 +482,9 @@ void WebBackForwardList::restoreFromState(BackForwardListState backForwardListSt
         Ref stateCopy = state->copy();
         setBackForwardItemIdentifiers(stateCopy, BackForwardItemIdentifier::generate());
         m_currentIndex = m_entries.isEmpty() ? std::nullopt : std::optional(m_entries.size() - 1);
+        // FIXME: navigatedFrameID will always be the main frame ID, causing the restored session state to be sent to an incorrect process when going back or forward with site isolation enabled.
         auto navigatedFrameID = stateCopy->frameID;
-        return WebBackForwardListItem::create(completeFrameStateForNavigation(WTFMove(stateCopy)), m_page->identifier(), navigatedFrameID);
+        return WebBackForwardListItem::create(WTFMove(stateCopy), m_page->identifier(), navigatedFrameID);
     });
     m_currentIndex = backForwardListState.currentIndex ? std::optional<size_t>(*backForwardListState.currentIndex) : std::nullopt;
 
