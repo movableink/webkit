@@ -635,7 +635,8 @@ void RemoteLayerTreeEventDispatcher::updateAnimations()
     auto now = MonotonicTime::now();
 
     auto effectStacks = std::exchange(m_effectStacks, { });
-    for (auto [layerID, effectStack] : effectStacks) {
+    for (auto [layerID, currentEffectStack] : effectStacks) {
+        Ref effectStack = currentEffectStack;
         effectStack->applyEffectsFromScrollingThread(now);
 
         // We can clear the effect stack if it's empty, but the previous

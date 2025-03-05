@@ -155,13 +155,6 @@ UIProcess/Inspector/Agents/InspectorBrowserAgent.cpp
 UIProcess/Inspector/Cocoa/InspectorExtensionDelegate.mm
 UIProcess/Inspector/WebPageInspectorController.cpp
 UIProcess/Inspector/mac/WKInspectorViewController.mm
-UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.cpp
-UIProcess/mac/CorrectionPanel.mm
-UIProcess/mac/DisplayCaptureSessionManager.mm
-UIProcess/mac/UserMediaPermissionRequestProxyMac.mm
-UIProcess/mac/WKFullScreenWindowController.mm
-UIProcess/mac/WKImmediateActionController.mm
-UIProcess/mac/WKPrintingView.mm
 UIProcess/mac/WKSharingServicePickerDelegate.mm
 UIProcess/mac/WKTextFinderClient.mm
 UIProcess/mac/WKViewLayoutStrategy.mm

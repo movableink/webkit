@@ -93,7 +93,7 @@ String CorrectionPanel::dismissInternal(ReasonForDismissingAlternativeText reaso
 
 void CorrectionPanel::recordAutocorrectionResponse(WebViewImpl& webViewImpl, NSInteger spellCheckerDocumentTag, NSCorrectionResponse response, const String& replacedString, const String& replacementString)
 {
-    if (webViewImpl.page().sessionID().isEphemeral())
+    if (webViewImpl.protectedPage()->sessionID().isEphemeral())
         return;
 
     [[NSSpellChecker sharedSpellChecker] recordResponse:response toCorrection:replacementString forWord:replacedString language:nil inSpellDocumentWithTag:spellCheckerDocumentTag];
