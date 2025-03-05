@@ -1209,6 +1209,15 @@ bool Node::containsIncludingShadowDOM(const Node* node) const
     return false;
 }
 
+bool Node::isComposedTreeDescendantOf(const Node& node) const
+{
+    for (CheckedPtr currentAncestor = parentElementInComposedTree(); currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
+        if (currentAncestor.get() == &node)
+            return true;
+    }
+    return false;
+}
+
 Node* Node::pseudoAwarePreviousSibling() const
 {
     auto* pseudoElement = dynamicDowncast<PseudoElement>(*this);

@@ -782,17 +782,6 @@ static CheckedPtr<Element> anchorScopeForAnchorElement(const Element& anchorElem
     return nullptr;
 }
 
-// Checks if `parent` is the parent of `descendant` within the composed tree.
-static bool elementIsParentOfElementInComposedTree(const Element& parent, const Element& descendant)
-{
-    for (CheckedPtr currentAncestor = descendant.parentElementInComposedTree(); currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
-        if (currentAncestor.get() == &parent)
-            return true;
-    }
-
-    return false;
-}
-
 // See: https://drafts.csswg.org/css-anchor-position-1/#acceptable-anchor-element
 static bool isAcceptableAnchorElement(const RenderBoxModelObject& anchorRenderer, Ref<const Element> anchorPositionedElement)
 {
@@ -805,7 +794,7 @@ static bool isAcceptableAnchorElement(const RenderBoxModelObject& anchorRenderer
 
     if (auto anchorScopeElement = anchorScopeForAnchorElement(*anchorElement, anchorRenderer.style().anchorNames())) {
         // If the anchor is scoped, the anchor-positioned element must also be in the same scope.
-        if (!elementIsParentOfElementInComposedTree(*anchorScopeElement, anchorPositionedElement))
+        if (!anchorPositionedElement->isComposedTreeDescendantOf(*anchorScopeElement))
             return false;
     }
 
