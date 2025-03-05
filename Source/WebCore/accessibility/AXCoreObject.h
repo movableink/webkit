@@ -107,6 +107,8 @@ enum class ClickHandlerFilter : bool {
     IncludeBody,
 };
 
+enum class PreSortedObjectType : bool { LiveRegion, WebArea };
+
 enum class DateComponentsType : uint8_t;
 
 enum class AXIDType { };
@@ -1366,6 +1368,11 @@ public:
     // ARIA live-region features.
     static bool liveRegionStatusIsEnabled(const AtomString&);
     bool supportsLiveRegion(bool excludeIfOff = true) const;
+#if PLATFORM(MAC)
+    virtual AccessibilityChildrenVector allSortedLiveRegions() const = 0;
+    virtual AccessibilityChildrenVector allSortedNonRootWebAreas() const = 0;
+    AccessibilityChildrenVector sortedDescendants(size_t limit, PreSortedObjectType) const;
+#endif // PLATFORM(MAC)
     virtual AXCoreObject* liveRegionAncestor(bool excludeIfOff = true) const = 0;
     virtual const String liveRegionStatus() const = 0;
     virtual const String liveRegionRelevant() const = 0;

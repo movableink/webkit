@@ -339,6 +339,8 @@ private:
     bool fileUploadButtonReturnsValueInTitle() const final;
 #if PLATFORM(MAC)
     bool caretBrowsingEnabled() const final { return boolAttributeValue(AXProperty::CaretBrowsingEnabled); }
+    AccessibilityChildrenVector allSortedLiveRegions() const final;
+    AccessibilityChildrenVector allSortedNonRootWebAreas() const final;
 #endif
     AXIsolatedObject* focusableAncestor() final { return Accessibility::focusableAncestor(*this); }
     AXIsolatedObject* highestEditableAncestor() final { return Accessibility::highestEditableAncestor(*this); }

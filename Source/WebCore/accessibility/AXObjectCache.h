@@ -373,7 +373,7 @@ public:
     void valueChanged(Element&);
     void checkedStateChanged(Element&);
     void autofillTypeChanged(HTMLInputElement&);
-    void handleRoleChanged(AccessibilityObject&);
+    void handleRoleChanged(AccessibilityObject&, AccessibilityRole previousRole);
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void columnIndexChanged(AccessibilityObject&);
@@ -386,6 +386,7 @@ public:
     // re-parented into a subtree that does have a renderer.
     void onRendererCreated(Element&);
 #if PLATFORM(MAC)
+    void onDocumentRenderTreeCreation(const Document&);
     void onSelectedTextChanged(const VisiblePositionRange&);
 #endif
 #if ENABLE(AX_THREAD_TEXT_APIS)
@@ -605,6 +606,12 @@ public:
 #endif
 
 #if PLATFORM(MAC)
+    AXCoreObject::AccessibilityChildrenVector sortedLiveRegions() const;
+    AXCoreObject::AccessibilityChildrenVector sortedNonRootWebAreas() const;
+    void addSortedObject(AccessibilityObject&, PreSortedObjectType);
+    void removeLiveRegion(AccessibilityObject&);
+    void initializeSortedIDLists();
+
     static bool clientIsInTestMode();
 #endif
 
@@ -816,7 +823,18 @@ private:
     ListHashSet<Ref<AccessibilityObject>> m_passwordNotificationsToPost;
     
     Timer m_liveRegionChangedPostTimer;
-    ListHashSet<Ref<AccessibilityObject>> m_liveRegionObjects;
+    ListHashSet<Ref<AccessibilityObject>> m_changedLiveRegions;
+
+#if PLATFORM(MAC)
+    // This block is PLATFORM(MAC) because the remote search API is currently only used on macOS.
+
+    // AX tree-order-sorted list of a few types of objects. This is useful because some assistive
+    // technologies send us frequent remote search requests for all the live regions or non-root webareas
+    // on the page.
+    bool m_sortedIDListsInitialized { false };
+    Vector<AXID> m_sortedLiveRegionIDs;
+    Vector<AXID> m_sortedNonRootWebAreaIDs;
+#endif // PLATFORM(MAC)
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_currentModalElement;
     // Multiple aria-modals behavior is undefined by spec. We keep them sorted based on DOM order here.
@@ -845,6 +863,9 @@ private:
     Vector<AttributeChange> m_deferredAttributeChange;
     std::optional<std::pair<WeakPtr<Element, WeakPtrImplWithEventTargetData>, WeakPtr<Element, WeakPtrImplWithEventTargetData>>> m_deferredFocusedNodeChange;
     WeakHashSet<AccessibilityObject> m_deferredUnconnectedObjects;
+#if PLATFORM(MAC)
+    WeakHashSet<Document, WeakPtrImplWithEventTargetData> m_deferredDocumentAddedList;
+#endif
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     Timer m_buildIsolatedTreeTimer;

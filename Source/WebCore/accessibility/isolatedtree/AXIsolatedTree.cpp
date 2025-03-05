@@ -1072,6 +1072,18 @@ OptionSet<ActivityState> AXIsolatedTree::lockedPageActivityState() const
     return m_pageActivityState;
 }
 
+AXCoreObject::AccessibilityChildrenVector AXIsolatedTree::sortedLiveRegions()
+{
+    ASSERT(!isMainThread());
+    return objectsForIDs(m_sortedLiveRegionIDs);
+}
+
+AXCoreObject::AccessibilityChildrenVector AXIsolatedTree::sortedNonRootWebAreas()
+{
+    ASSERT(!isMainThread());
+    return objectsForIDs(m_sortedNonRootWebAreaIDs);
+}
+
 std::optional<AXID> AXIsolatedTree::focusedNodeID()
 {
     ASSERT(!isMainThread());
@@ -1349,6 +1361,28 @@ void AXIsolatedTree::applyPendingChanges()
         }
     }
     m_pendingPropertyChanges.clear();
+
+    if (m_pendingSortedLiveRegionIDs)
+        m_sortedLiveRegionIDs = std::exchange(m_pendingSortedLiveRegionIDs, std::nullopt).value();
+
+    if (m_pendingSortedNonRootWebAreaIDs)
+        m_sortedNonRootWebAreaIDs = std::exchange(m_pendingSortedNonRootWebAreaIDs, std::nullopt).value();
+}
+
+void AXIsolatedTree::sortedLiveRegionsDidChange(Vector<AXID> liveRegionIDs)
+{
+    ASSERT(isMainThread());
+
+    Locker locker { m_changeLogLock };
+    m_pendingSortedLiveRegionIDs = WTFMove(liveRegionIDs);
+}
+
+void AXIsolatedTree::sortedNonRootWebAreasDidChange(Vector<AXID> webAreaIDs)
+{
+    ASSERT(isMainThread());
+
+    Locker locker { m_changeLogLock };
+    m_pendingSortedNonRootWebAreaIDs = WTFMove(webAreaIDs);
 }
 
 AXTreePtr findAXTree(Function<bool(AXTreePtr)>&& match)

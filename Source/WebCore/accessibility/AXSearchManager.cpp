@@ -279,8 +279,37 @@ AXCoreObject::AccessibilityChildrenVector AXSearchManager::findMatchingObjectsIn
     AXTRACE("AXSearchManager::findMatchingObjectsInternal"_s);
     AXLOG(criteria);
 
-    AXCoreObject::AccessibilityChildrenVector results;
+    if (!criteria.searchKeys.size())
+        return { };
 
+#if PLATFORM(MAC)
+    if (criteria.searchKeys.size() == 1 && criteria.usePreCachedResults) {
+        // Only perform these optimizations if we aren't expected to start from somewhere mid-tree.
+        // We could probably implement these optimizations when we do have a startObject and get
+        // performance benefits, but no known assistive technology needs this right now.
+        if (!criteria.startObject) {
+            if (criteria.searchKeys[0] == AccessibilitySearchKey::LiveRegion) {
+                if (criteria.anchorObject->isRootWebArea()) {
+                    // All live regions will be descendants of the root webarea, so we don't need to do
+                    // any ancestry walks as `sortedDescendants` does.
+                    auto liveRegions = criteria.anchorObject->allSortedLiveRegions();
+                    return liveRegions.subvector(0, std::min(liveRegions.size(), static_cast<size_t>(criteria.resultsLimit)));
+                }
+                return criteria.anchorObject->sortedDescendants(criteria.resultsLimit, PreSortedObjectType::LiveRegion);
+            }
+
+            if (criteria.searchKeys[0] == AccessibilitySearchKey::Frame) {
+                if (criteria.anchorObject->isRootWebArea()) {
+                    auto webAreas = criteria.anchorObject->allSortedNonRootWebAreas();
+                    return webAreas.subvector(0, std::min(webAreas.size(), static_cast<size_t>(criteria.resultsLimit)));
+                }
+                return criteria.anchorObject->sortedDescendants(criteria.resultsLimit, PreSortedObjectType::WebArea);
+            }
+        }
+    }
+#endif // PLATFORM(MAC)
+
+    AXCoreObject::AccessibilityChildrenVector results;
     // This search algorithm only searches the elements before/after the starting object.
     // It does this by stepping up the parent chain and at each level doing a DFS.
 
@@ -381,6 +410,37 @@ std::optional<AXTextMarkerRange> AXSearchManager::findMatchingRange(Accessibilit
         return forward ? ranges[0] : ranges.last();
     }
     return std::nullopt;
+}
+
+AXCoreObject* AXSearchManager::findNextStartingFrom(AccessibilitySearchKey key, AXCoreObject* start, AXCoreObject& anchor)
+{
+    AccessibilitySearchCriteria criteria;
+    criteria.startObject = start;
+    criteria.anchorObject = &anchor;
+    criteria.searchDirection = AccessibilitySearchDirection::Next;
+    criteria.searchKeys = { key };
+    criteria.resultsLimit = 1;
+    criteria.visibleOnly = false;
+    criteria.immediateDescendantsOnly = false;
+    criteria.usePreCachedResults = false;
+
+    auto results = findMatchingObjectsInternal(criteria);
+    return results.size() ? results[0].ptr() : nullptr;
+}
+
+AXCoreObject::AccessibilityChildrenVector AXSearchManager::findAllMatchingObjectsIgnoringCache(Vector<AccessibilitySearchKey>&& keys, AXCoreObject& anchor)
+{
+    AccessibilitySearchCriteria criteria;
+    criteria.anchorObject = &anchor;
+    criteria.startObject = nullptr;
+    criteria.searchDirection = AccessibilitySearchDirection::Next;
+    criteria.searchKeys = WTFMove(keys);
+    criteria.resultsLimit = std::numeric_limits<unsigned>::max();
+    criteria.visibleOnly = false;
+    criteria.immediateDescendantsOnly = false;
+    criteria.usePreCachedResults = false;
+
+    return findMatchingObjectsInternal(criteria);
 }
 
 } // namespace WebCore

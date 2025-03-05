@@ -756,7 +756,10 @@ public:
 #if PLATFORM(MAC)
     bool caretBrowsingEnabled() const final;
     void setCaretBrowsingEnabled(bool) final;
-#endif
+
+    AccessibilityChildrenVector allSortedLiveRegions() const final;
+    AccessibilityChildrenVector allSortedNonRootWebAreas() const final;
+#endif // PLATFORM(MAC)
 
     bool hasClickHandler() const override { return false; }
     AccessibilityObject* clickableSelfOrAncestor(ClickHandlerFilter filter = ClickHandlerFilter::ExcludeBody) const final { return Accessibility::clickableSelfOrAncestor(*this, filter); };

@@ -3258,6 +3258,11 @@ void Document::createRenderTree()
     renderView->setIsInWindow(true);
 
     resolveStyle(ResolveStyleType::Rebuild);
+
+#if PLATFORM(MAC)
+    if (CheckedPtr cache = existingAXObjectCache())
+        cache->onDocumentRenderTreeCreation(*this);
+#endif // PLATFORM(MAC)
 }
 
 void Document::didBecomeCurrentDocumentInFrame()

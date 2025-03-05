@@ -205,6 +205,22 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return Accessibility::roleToPlatformString(role);
 }
 
+AXCoreObject::AccessibilityChildrenVector AccessibilityObject::allSortedLiveRegions() const
+{
+    CheckedPtr cache = axObjectCache();
+    if (!cache)
+        return { };
+    return cache->sortedLiveRegions();
+}
+
+AXCoreObject::AccessibilityChildrenVector AccessibilityObject::allSortedNonRootWebAreas() const
+{
+    CheckedPtr cache = axObjectCache();
+    if (!cache)
+        return { };
+    return cache->sortedNonRootWebAreas();
+}
+
 String AccessibilityObject::subrolePlatformString() const
 {
     if (isSecureField())

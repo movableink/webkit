@@ -468,6 +468,9 @@ public:
     void relationsNeedUpdate(bool needUpdate) { m_relationsNeedUpdate = needUpdate; }
     void updateRelations(const UncheckedKeyHashMap<AXID, AXRelations>&);
 
+    AXCoreObject::AccessibilityChildrenVector sortedLiveRegions();
+    AXCoreObject::AccessibilityChildrenVector sortedNonRootWebAreas();
+
     // Called on AX thread from WebAccessibilityObjectWrapper methods.
     // During layout tests, it is called on the main thread.
     void applyPendingChanges();
@@ -482,6 +485,8 @@ public:
     AXTextMarkerRange selectedTextMarkerRange();
     void setSelectedTextMarkerRange(AXTextMarkerRange&&);
 
+    void sortedLiveRegionsDidChange(Vector<AXID>);
+    void sortedNonRootWebAreasDidChange(Vector<AXID>);
     void queueNodeUpdate(AXID, const NodeUpdateOptions&);
     void queueNodeRemoval(const AccessibilityObject&);
     void processQueuedNodeUpdates();
@@ -590,9 +595,15 @@ private:
     UncheckedKeyHashMap<AXID, AXID> m_pendingParentUpdates WTF_GUARDED_BY_LOCK(m_changeLogLock);
     Markable<AXID> m_pendingFocusedNodeID WTF_GUARDED_BY_LOCK(m_changeLogLock);
     bool m_queuedForDestruction WTF_GUARDED_BY_LOCK(m_changeLogLock) { false };
+    std::optional<Vector<AXID>> m_pendingSortedLiveRegionIDs WTF_GUARDED_BY_LOCK(m_changeLogLock);
+    std::optional<Vector<AXID>> m_pendingSortedNonRootWebAreaIDs WTF_GUARDED_BY_LOCK(m_changeLogLock);
     Markable<AXID> m_focusedNodeID;
     std::atomic<double> m_loadingProgress { 0 };
     std::atomic<double> m_processingProgress { 1 };
+
+    // Only accessed on the accessibility thread.
+    Vector<AXID> m_sortedLiveRegionIDs;
+    Vector<AXID> m_sortedNonRootWebAreaIDs;
 
     // Relationships between objects.
     UncheckedKeyHashMap<AXID, AXRelations> m_relations WTF_GUARDED_BY_LOCK(m_changeLogLock);

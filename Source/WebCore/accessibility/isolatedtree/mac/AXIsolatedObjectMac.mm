@@ -174,6 +174,22 @@ void AXIsolatedObject::detachPlatformWrapper(AccessibilityDetachmentType detachm
     [wrapper() detachIsolatedObject:detachmentType];
 }
 
+AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::allSortedLiveRegions() const
+{
+    RefPtr tree = this->tree();
+    if (!tree)
+        return { };
+    return tree->sortedLiveRegions();
+}
+
+AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::allSortedNonRootWebAreas() const
+{
+    RefPtr tree = this->tree();
+    if (!tree)
+        return { };
+    return tree->sortedNonRootWebAreas();
+}
+
 std::optional<String> AXIsolatedObject::textContent() const
 {
 #if ENABLE(AX_THREAD_TEXT_APIS)

@@ -1140,9 +1140,18 @@ void AXObjectCache::remove(std::optional<AXID> axID)
         return;
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    if (auto tree = AXIsolatedTree::treeForPageID(m_pageID))
+    unsigned liveRegionsRemoved = m_sortedLiveRegionIDs.removeAll(*axID);
+    unsigned webAreasRemoved = m_sortedNonRootWebAreaIDs.removeAll(*axID);
+
+    if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID)) {
         tree->queueNodeRemoval(*object);
-#endif
+
+        if (liveRegionsRemoved)
+            tree->sortedLiveRegionsDidChange(m_sortedLiveRegionIDs);
+        else if (webAreasRemoved)
+            tree->sortedNonRootWebAreasDidChange(m_sortedNonRootWebAreaIDs);
+    }
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
     removeAllRelations(*axID);
     object->detach(AccessibilityDetachmentType::ElementDestroyed);
@@ -1507,8 +1516,15 @@ void AXObjectCache::handleLiveRegionCreated(Element& element)
             liveRegionStatus = AtomString { AccessibilityObject::defaultLiveRegionStatusForRole(AccessibilityObject::ariaRoleToWebCoreRole(ariaRole)) };
     }
 
-    if (AXCoreObject::liveRegionStatusIsEnabled(liveRegionStatus))
-        postNotification(getOrCreate(element), protectedDocument().get(), AXNotification::LiveRegionCreated);
+    if (AXCoreObject::liveRegionStatusIsEnabled(liveRegionStatus)) {
+        RefPtr axObject = getOrCreate(element);
+#if PLATFORM(MAC)
+        if (axObject)
+            addSortedObject(*axObject, PreSortedObjectType::LiveRegion);
+#endif // PLATFORM(MAC)
+
+        postNotification(axObject.get(), protectedDocument().get(), AXNotification::LiveRegionCreated);
+    }
 }
 
 void AXObjectCache::deferElementAddedOrRemoved(Element* element)
@@ -2457,8 +2473,8 @@ void AXObjectCache::postLiveRegionChangeNotification(AccessibilityObject& object
         m_liveRegionChangedPostTimer.stop();
 
     Ref objectRef = object;
-    if (!m_liveRegionObjects.contains(objectRef))
-        m_liveRegionObjects.add(WTFMove(objectRef));
+    if (!m_changedLiveRegions.contains(objectRef))
+        m_changedLiveRegions.add(WTFMove(objectRef));
 
     m_liveRegionChangedPostTimer.startOneShot(0_s);
 }
@@ -2467,12 +2483,12 @@ void AXObjectCache::liveRegionChangedNotificationPostTimerFired()
 {
     m_liveRegionChangedPostTimer.stop();
 
-    if (m_liveRegionObjects.isEmpty())
+    if (m_changedLiveRegions.isEmpty())
         return;
 
-    for (auto& object : m_liveRegionObjects)
+    for (auto& object : m_changedLiveRegions)
         postNotification(object.ptr(), object->protectedDocument().get(), AXNotification::LiveRegionChanged);
-    m_liveRegionObjects.clear();
+    m_changedLiveRegions.clear();
 }
 
 void AXObjectCache::onScrollbarUpdate(ScrollView& view)
@@ -2620,10 +2636,19 @@ void AXObjectCache::handleRoleChanged(Element& element, const AtomString& oldVal
     object->updateRole();
 }
 
-void AXObjectCache::handleRoleChanged(AccessibilityObject& axObject)
+void AXObjectCache::handleRoleChanged(AccessibilityObject& axObject, AccessibilityRole oldRole)
 {
     stopCachingComputedObjectAttributes();
     axObject.recomputeIsIgnored();
+
+#if PLATFORM(MAC)
+    if (axObject.supportsLiveRegion())
+        addSortedObject(axObject, PreSortedObjectType::LiveRegion);
+    else if (AXCoreObject::liveRegionStatusIsEnabled(AtomString { AccessibilityObject::defaultLiveRegionStatusForRole(oldRole) }))
+        removeLiveRegion(axObject);
+#else
+    UNUSED_PARAM(oldRole);
+#endif // PLATFORM(MAC)
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     postNotification(axObject, AXNotification::RoleChanged);
@@ -2837,8 +2862,22 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         postNotification(element, AXNotification::KeyShortcutsChanged);
     else if (attrName == aria_levelAttr)
         postNotification(element, AXNotification::LevelChanged);
-    else if (attrName == aria_liveAttr)
+    else if (attrName == aria_liveAttr) {
         postNotification(element, AXNotification::LiveRegionStatusChanged);
+
+#if PLATFORM(MAC)
+        if (m_sortedIDListsInitialized) {
+            // Once the sorted ID lists have been initialized for the first time, we rely
+            // on handling these dynamic updates to keep them up-to-date.
+            if (RefPtr object = getOrCreate(element)) {
+                if (object->supportsLiveRegion())
+                    addSortedObject(*object, PreSortedObjectType::LiveRegion);
+                else
+                    removeLiveRegion(*object);
+            }
+        }
+#endif // PLATFORM(MAC)
+    }
     else if (attrName == aria_placeholderAttr)
         postNotification(element, AXNotification::PlaceholderChanged);
     else if (attrName == aria_rowindexAttr) {
@@ -4398,6 +4437,9 @@ void AXObjectCache::performDeferredCacheUpdate(ForceLayout forceLayout)
     });
     m_deferredRecomputeTableIsExposedList.clear();
 
+    AXLOGDeferredCollection("ChildrenChangedList"_s, m_deferredChildrenChangedList);
+    handleAllDeferredChildrenChanged();
+
     AXLOGDeferredCollection("ElementAddedOrRemovedList"_s, m_deferredElementAddedOrRemovedList);
     auto nodeAddedOrRemovedList = copyToVector(m_deferredElementAddedOrRemovedList);
     for (auto& weakNode : nodeAddedOrRemovedList) {
@@ -4412,9 +4454,6 @@ void AXObjectCache::performDeferredCacheUpdate(ForceLayout forceLayout)
         }
     }
     m_deferredElementAddedOrRemovedList.clear();
-
-    AXLOGDeferredCollection("ChildrenChangedList"_s, m_deferredChildrenChangedList);
-    handleAllDeferredChildrenChanged();
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     AXLOGDeferredCollection("UnconnectedObjects"_s, m_deferredUnconnectedObjects);
