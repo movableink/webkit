@@ -53,11 +53,6 @@ MemoryIndex::MemoryIndex(const IDBIndexInfo& info, MemoryObjectStore& objectStor
 
 MemoryIndex::~MemoryIndex() = default;
 
-WeakPtr<MemoryObjectStore> MemoryIndex::objectStore()
-{
-    return m_objectStore;
-}
-
 RefPtr<MemoryObjectStore> MemoryIndex::protectedObjectStore()
 {
     return m_objectStore.get();
@@ -124,7 +119,8 @@ IDBGetResult MemoryIndex::getResultForKeyRange(IndexedDB::IndexRecordType type, 
     if (!keyValue)
         return { };
 
-    return type == IndexedDB::IndexRecordType::Key ? IDBGetResult(*keyValue) : IDBGetResult(*keyValue, m_objectStore->valueForKeyRange(*keyValue), m_objectStore->info().keyPath());
+    RefPtr objectStore = m_objectStore.get();
+    return type == IndexedDB::IndexRecordType::Key ? IDBGetResult(*keyValue) : IDBGetResult(*keyValue, objectStore->valueForKeyRange(*keyValue), objectStore->info().keyPath());
 }
 
 uint64_t MemoryIndex::countForKeyRange(const IDBKeyRangeData& inRange)
@@ -154,7 +150,8 @@ void MemoryIndex::getAllRecords(const IDBKeyRangeData& keyRangeData, std::option
 {
     LOG(IndexedDB, "MemoryIndex::getAllRecords");
 
-    result = { type, m_objectStore->info().keyPath() };
+    RefPtr objectStore = m_objectStore.get();
+    result = { type, objectStore->info().keyPath() };
 
     if (!m_records)
         return;
@@ -179,7 +176,7 @@ void MemoryIndex::getAllRecords(const IDBKeyRangeData& keyRangeData, std::option
         for (auto& keyValue : allValues) {
             result.addKey(IDBKeyData(keyValue));
             if (type == IndexedDB::GetAllType::Values)
-                result.addValue(m_objectStore->valueForKeyRange(keyValue));
+                result.addValue(objectStore->valueForKeyRange(keyValue));
         }
 
         currentCount += allValues.size();

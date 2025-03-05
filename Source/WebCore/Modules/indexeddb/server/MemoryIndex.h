@@ -83,7 +83,7 @@ public:
 
     IndexValueStore* valueStore() { return m_records.get(); }
 
-    WeakPtr<MemoryObjectStore> objectStore();
+    MemoryObjectStore* objectStore() { return m_objectStore.get(); }
     RefPtr<MemoryObjectStore> protectedObjectStore();
 
     void cursorDidBecomeClean(MemoryIndexCursor&);

@@ -91,7 +91,7 @@ private:
 
     WeakPtr<UniqueIDBDatabase> m_database;
     WeakPtr<UniqueIDBDatabaseManager> m_manager;
-    Ref<IDBConnectionToClient> m_connectionToClient;
+    const Ref<IDBConnectionToClient> m_connectionToClient;
     IDBResourceIdentifier m_openRequestIdentifier;
 
     bool m_closePending { false };
