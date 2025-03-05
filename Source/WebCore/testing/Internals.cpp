@@ -653,7 +653,6 @@ void Internals::resetToConsistentState(Page& page)
     webRTCProvider.disableNonLocalhostConnections();
     webRTCProvider.setVP9HardwareSupportForTesting({ });
 #endif
-    WebRTCProvider::setH264HardwareEncoderAllowed(true);
     page.settings().setWebRTCEncryptionEnabled(true);
     rtcProvider.setH265Support(true);
     rtcProvider.setVP9Support(true, true);
@@ -6220,13 +6219,6 @@ bool Internals::isPageActive() const
     auto& page = *document->page();
     return page.activityState().contains(ActivityState::WindowIsActive);
 }
-
-#if ENABLE(WEB_RTC)
-void Internals::setH264HardwareEncoderAllowed(bool allowed)
-{
-    WebRTCProvider::setH264HardwareEncoderAllowed(allowed);
-}
-#endif
 
 #if ENABLE(MEDIA_STREAM)
 void Internals::setMockAudioTrackChannelNumber(MediaStreamTrack& track, unsigned short channelNumber)

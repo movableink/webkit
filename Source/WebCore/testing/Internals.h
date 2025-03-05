@@ -1008,10 +1008,6 @@ public:
     void setPageIsInWindow(bool);
     bool isPageActive() const;
 
-#if ENABLE(WEB_RTC)
-    void setH264HardwareEncoderAllowed(bool allowed);
-#endif
-
 #if ENABLE(MEDIA_STREAM)
     void stopObservingRealtimeMediaSource();
 

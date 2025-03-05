@@ -1171,7 +1171,6 @@ enum ContentsFormat {
     undefined setPageIsInWindow(boolean isInWindow);
     boolean isPageActive();
 
-    [Conditional=WEB_RTC] undefined setH264HardwareEncoderAllowed(boolean allowed);
     [Conditional=WEB_RTC] undefined applyRotationForOutgoingVideoSources(RTCPeerConnection connection);
     [Conditional=WEB_RTC] undefined setWebRTCH265Support(boolean allowed);
     [Conditional=WEB_RTC] undefined setWebRTCVP9Support(boolean supportVP9Profile0, boolean supportVP9Profile2);

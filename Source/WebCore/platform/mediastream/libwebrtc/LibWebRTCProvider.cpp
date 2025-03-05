@@ -78,12 +78,6 @@ LibWebRTCProvider::~LibWebRTCProvider()
 {
 }
 
-#if !PLATFORM(COCOA)
-void WebRTCProvider::setH264HardwareEncoderAllowed(bool)
-{
-}
-#endif
-
 static inline rtc::SocketAddress prepareSocketAddress(const rtc::SocketAddress& address, bool disableNonLocalhostConnections)
 {
     auto result = address;

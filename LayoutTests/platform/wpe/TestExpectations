@@ -1573,8 +1573,6 @@ webkit.org/b/282970 imported/w3c/web-platform-tests/scroll-to-text-fragment/drag
 
 fast/text/hyphenate-avoid-orphaned-word.html [ Failure ]
 
-webkit.org/b/216538 webrtc/captureCanvas-webrtc-software-h264-baseline.html [ Timeout Crash Failure ]
-
 # Failures that happen with WEBKIT_SKIA_ENABLE_CPU_RENDERING=1 (which is enabled on the bots)
 webkit.org/b/287572 compositing/clipping/border-radius-async-overflow-stacking.html [ ImageOnlyFailure ]
 webkit.org/b/287572 compositing/overlap-blending/reflection-opacity-huge.html [ ImageOnlyFailure ]

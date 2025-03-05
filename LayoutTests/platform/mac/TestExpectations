@@ -1529,8 +1529,6 @@ webkit.org/b/209257 svg/as-object/object-box-sizing-no-width-height.html [ Pass 
 
 webkit.org/b/209072 [ Debug ] http/tests/css/shared-stylesheet-mutation-preconstruct.html [ Pass Crash Failure ]
 
-webkit.org/b/207150 platform/mac/webrtc/captureCanvas-webrtc-software-encoder.html [ Pass Failure Timeout ]
-
 webkit.org/b/207858 fast/canvas/webgl/simulated-vertexAttrib0-invalid-indicies.html [ Skip ]
 
 webkit.org/b/209619 compositing/clipping/border-radius-async-overflow-stacking.html [ Pass ImageOnlyFailure ]
@@ -1745,7 +1743,6 @@ webkit.org/b/222692 inspector/page/empty-or-missing-resources.html [ Pass Timeou
 [ Debug arm64 ] svg/W3C-SVG-1.1/paths-data-03-f.svg [ Failure ]
 
 # webkit.org/b/223043 the following tests have issues only on Apple Silicon
-[ arm64 ] webrtc/captureCanvas-webrtc-software-h264-high.html [ Pass Failure ]
 webrtc/h264-baseline.html  [ Failure Timeout ]
 
 webkit.org/b/223259 [ arm64 ] webgl/2.0.0/conformance2/textures/misc/tex-mipmap-levels.html [ Failure ]

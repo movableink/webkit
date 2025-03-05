@@ -1391,7 +1391,6 @@ webkit.org/b/245010 imported/w3c/web-platform-tests/html/browsers/browsing-the-w
 #webkit.org/b/248537 Batch mark expectations for Ventura test failures
 webrtc/canvas-to-peer-connection-2d.html [ Pass Failure ]
 webrtc/canvas-to-peer-connection.html [ Pass Failure ]
-[ Sequoia x86_64 ] webrtc/captureCanvas-webrtc-software-h264-baseline.html [ Pass Failure ]
 webaudio/decode-audio-data-webm-vorbis.html [ Failure ]
 [ x86_64 ] scrollbars/scrolling-by-page-accounting-oversized-fixed-elements-on-keyboard-spacebar.html [ Pass Failure ]
 imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/autoplay-allowed-by-feature-policy-attribute.https.sub.html [ Pass Failure ]
@@ -1985,8 +1984,6 @@ webkit.org/b/288613 [ Sonoma+ ] pdf/pdf-in-embed-with-root-page-zoom.html [ Pass
 # webkit.org/b/288651 [ macOS-Ventura-Release-WK2-Intel-Tests-EWS] mediacapabilities/vp9 are failing on Intel machine.
 [ Sonoma Release x86_64 ] media/mediacapabilities/vp9.html [ Skip ]
 [ Sonoma Release x86_64 ] platform/mac/media/mediacapabilities/vp9-decodingInfo-sw.html [ Skip ]
-
-webkit.org/b/288655 [ Sequoia x86_64 ] webrtc/captureCanvas-webrtc-software-h264-high.html [ Failure ]
 
 webkit.org/b/288660 [ Sonoma Release x86_64 ] media/media-hevc-video-as-img.html [ Skip ]
 

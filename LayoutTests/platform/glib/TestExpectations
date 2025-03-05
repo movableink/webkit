@@ -4360,8 +4360,6 @@ webkit.org/b/213508 [ Debug ] imported/w3c/web-platform-tests/service-workers/se
 
 webkit.org/b/213783 webanimations/accelerated-animation-with-easing.html [ Failure Pass ]
 
-webkit.org/b/216763 webrtc/captureCanvas-webrtc-software-h264-high.html [ Skip ] # Timeout
-
 webkit.org/b/285921 media/media-source/media-source-seek-past-end.html [ Failure ]
 
 imported/w3c/web-platform-tests/mixed-content/gen/top.meta/opt-in/img-tag.https.html [ Failure Pass ]
