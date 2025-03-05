@@ -133,7 +133,7 @@ void RenderGrid::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
         || style().gridAutoRepeatRows().size()
         || subgridDidChange == SubgridDidChange::Yes
         || isSubgridWithIndependentFormattingContextChange())
-        dirtyGrid(subgridDidChange);
+        setNeedsItemPlacement(subgridDidChange);
 }
 
 SubgridDidChange RenderGrid::subgridDidChange(const RenderStyle& oldStyle) const
@@ -1309,7 +1309,7 @@ GridTrackSizingDirection RenderGrid::autoPlacementMinorAxisDirection() const
     return (autoPlacementMajorAxisDirection() == GridTrackSizingDirection::ForColumns) ? GridTrackSizingDirection::ForRows : GridTrackSizingDirection::ForColumns;
 }
 
-void RenderGrid::dirtyGrid(SubgridDidChange subgridDidChange)
+void RenderGrid::setNeedsItemPlacement(SubgridDidChange subgridDidChange)
 {
     if (currentGrid().needsItemsPlacement())
         return;

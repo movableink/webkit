@@ -434,7 +434,7 @@ void RenderBox::updateGridPositionAfterStyleChange(const RenderStyle& style, con
     // It should be possible to not dirty the grid in some cases (like moving an
     // explicitly placed grid item).
     // For now, it's more simple to just always recompute the grid.
-    parentGrid->dirtyGrid();
+    parentGrid->setNeedsItemPlacement();
 }
 
 void RenderBox::updateShapeOutsideInfoAfterStyleChange(const RenderStyle& style, const RenderStyle* oldStyle)

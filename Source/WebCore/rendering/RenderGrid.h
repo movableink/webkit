@@ -72,7 +72,7 @@ public:
 
     bool canDropAnonymousBlockChild() const override { return false; }
 
-    void dirtyGrid(SubgridDidChange descendantSubgridsNeedItemPlacement = SubgridDidChange::No);
+    void setNeedsItemPlacement(SubgridDidChange descendantSubgridsNeedItemPlacement = SubgridDidChange::No);
     Vector<LayoutUnit> trackSizesForComputedStyle(GridTrackSizingDirection) const;
 
     const Vector<LayoutUnit>& columnPositions() const { return m_columnPositions; }
