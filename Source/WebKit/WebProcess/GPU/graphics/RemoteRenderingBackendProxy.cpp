@@ -274,8 +274,6 @@ std::unique_ptr<RemoteDisplayListRecorderProxy> RemoteRenderingBackendProxy::cre
 
 void RemoteRenderingBackendProxy::releaseImageBuffer(RenderingResourceIdentifier renderingResourceIdentifier)
 {
-    if (!m_connection)
-        return;
     send(Messages::RemoteRenderingBackend::ReleaseImageBuffer(renderingResourceIdentifier));
 }
 
@@ -385,9 +383,19 @@ void RemoteRenderingBackendProxy::cacheNativeImage(ShareableBitmap::Handle&& han
     send(Messages::RemoteRenderingBackend::CacheNativeImage(WTFMove(handle), renderingResourceIdentifier));
 }
 
+void RemoteRenderingBackendProxy::releaseNativeImage(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseNativeImage(identifier));
+}
+
 void RemoteRenderingBackendProxy::cacheFont(const WebCore::Font::Attributes& fontAttributes, const WebCore::FontPlatformDataAttributes& platformData, std::optional<WebCore::RenderingResourceIdentifier> ident)
 {
     send(Messages::RemoteRenderingBackend::CacheFont(fontAttributes, platformData, ident));
+}
+
+void RemoteRenderingBackendProxy::releaseFont(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseFont(identifier));
 }
 
 void RemoteRenderingBackendProxy::cacheFontCustomPlatformData(Ref<const FontCustomPlatformData>&& customPlatformData)
@@ -396,9 +404,19 @@ void RemoteRenderingBackendProxy::cacheFontCustomPlatformData(Ref<const FontCust
     send(Messages::RemoteRenderingBackend::CacheFontCustomPlatformData(data->serializedData()));
 }
 
+void RemoteRenderingBackendProxy::releaseFontCustomPlatformData(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseFontCustomPlatformData(identifier));
+}
+
 void RemoteRenderingBackendProxy::cacheDecomposedGlyphs(Ref<DecomposedGlyphs>&& decomposedGlyphs)
 {
     send(Messages::RemoteRenderingBackend::CacheDecomposedGlyphs(WTFMove(decomposedGlyphs)));
+}
+
+void RemoteRenderingBackendProxy::releaseDecomposedGlyphs(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseDecomposedGlyphs(identifier));
 }
 
 void RemoteRenderingBackendProxy::cacheGradient(Ref<Gradient>&& gradient)
@@ -406,29 +424,28 @@ void RemoteRenderingBackendProxy::cacheGradient(Ref<Gradient>&& gradient)
     send(Messages::RemoteRenderingBackend::CacheGradient(WTFMove(gradient)));
 }
 
+void RemoteRenderingBackendProxy::releaseGradient(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseGradient(identifier));
+}
+
 void RemoteRenderingBackendProxy::cacheFilter(Ref<Filter>&& filter)
 {
     send(Messages::RemoteRenderingBackend::CacheFilter(WTFMove(filter)));
 }
 
-void RemoteRenderingBackendProxy::releaseAllDrawingResources()
+void RemoteRenderingBackendProxy::releaseFilter(RenderingResourceIdentifier identifier)
 {
-    if (!m_connection)
-        return;
-    send(Messages::RemoteRenderingBackend::ReleaseAllDrawingResources());
+    send(Messages::RemoteRenderingBackend::ReleaseFilter(identifier));
 }
 
-void RemoteRenderingBackendProxy::releaseRenderingResource(RenderingResourceIdentifier renderingResourceIdentifier)
+void RemoteRenderingBackendProxy::releaseAllDrawingResources()
 {
-    if (!m_connection)
-        return;
-    send(Messages::RemoteRenderingBackend::ReleaseRenderingResource(renderingResourceIdentifier));
+    send(Messages::RemoteRenderingBackend::ReleaseAllDrawingResources());
 }
 
 void RemoteRenderingBackendProxy::releaseAllImageResources()
 {
-    if (!m_connection)
-        return;
     send(Messages::RemoteRenderingBackend::ReleaseAllImageResources());
 }
 

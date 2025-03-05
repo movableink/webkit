@@ -49,6 +49,12 @@ Gradient::Gradient(Data&& data, ColorInterpolationMethod colorInterpolationMetho
 {
 }
 
+Gradient::~Gradient()
+{
+    for (auto& observer : m_observers)
+        observer.willDestroyGradient(renderingResourceIdentifier());
+}
+
 void Gradient::adjustParametersForTiledDrawing(FloatSize& size, FloatRect& srcRect, const FloatSize& spacing)
 {
     if (srcRect.isEmpty())

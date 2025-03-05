@@ -54,12 +54,12 @@ template<class T>
 inline static std::optional<RenderingResourceIdentifier> applyFilteredImageBufferItem(GraphicsContext& context, const ResourceHeap& resourceHeap, const T& item, OptionSet<ReplayOption> options)
 {
     auto resourceIdentifier = item.sourceImageIdentifier();
-    auto sourceImage = resourceIdentifier ? resourceHeap.getImageBuffer(*resourceIdentifier, options) : nullptr;
+    RefPtr sourceImage = resourceIdentifier ? resourceHeap.getImageBuffer(*resourceIdentifier, options) : nullptr;
     if (UNLIKELY(!sourceImage && resourceIdentifier))
         return resourceIdentifier;
 
     FilterResults results;
-    item.apply(context, sourceImage, results);
+    item.apply(context, sourceImage.get(), results);
     return std::nullopt;
 }
 
@@ -67,7 +67,7 @@ template<class T>
 inline static std::optional<RenderingResourceIdentifier> applyImageBufferItem(GraphicsContext& context, const ResourceHeap& resourceHeap, const T& item, OptionSet<ReplayOption> options)
 {
     auto resourceIdentifier = item.imageBufferIdentifier();
-    if (auto* imageBuffer = resourceHeap.getImageBuffer(resourceIdentifier, options)) {
+    if (RefPtr imageBuffer = resourceHeap.getImageBuffer(resourceIdentifier, options)) {
         item.apply(context, *imageBuffer);
         return std::nullopt;
     }
@@ -78,7 +78,7 @@ template<class T>
 inline static std::optional<RenderingResourceIdentifier> applyNativeImageItem(GraphicsContext& context, const ResourceHeap& resourceHeap, const T& item, OptionSet<ReplayOption> options)
 {
     auto resourceIdentifier = item.imageIdentifier();
-    if (auto* image = resourceHeap.getNativeImage(resourceIdentifier, options)) {
+    if (RefPtr image = resourceHeap.getNativeImage(resourceIdentifier, options)) {
         item.apply(context, *image);
         return std::nullopt;
     }
@@ -139,7 +139,7 @@ inline static std::optional<RenderingResourceIdentifier> applyDrawDecomposedGlyp
         return fontIdentifier;
 
     auto drawGlyphsIdentifier = item.decomposedGlyphsIdentifier();
-    auto* decomposedGlyphs = resourceHeap.getDecomposedGlyphs(drawGlyphsIdentifier);
+    RefPtr decomposedGlyphs = resourceHeap.getDecomposedGlyphs(drawGlyphsIdentifier);
     if (!decomposedGlyphs)
         return drawGlyphsIdentifier;
 

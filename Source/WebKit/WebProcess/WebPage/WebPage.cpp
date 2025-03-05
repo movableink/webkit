@@ -5204,7 +5204,7 @@ unsigned WebPage::remoteImagesCountForTesting() const
 #if ENABLE(GPU_PROCESS)
     if (!m_remoteRenderingBackendProxy)
         return 0;
-    return m_remoteRenderingBackendProxy->remoteResourceCacheProxy().imagesCount();
+    return m_remoteRenderingBackendProxy->remoteResourceCacheProxy().imagesCountForTesting();
 #else
     return 0;
 #endif

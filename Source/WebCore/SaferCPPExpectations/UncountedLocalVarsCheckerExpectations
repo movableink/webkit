@@ -600,7 +600,6 @@ platform/graphics/displaylists/DisplayListItem.cpp
 platform/graphics/displaylists/DisplayListItems.cpp
 platform/graphics/displaylists/DisplayListRecorder.cpp
 platform/graphics/displaylists/DisplayListRecorderImpl.cpp
-platform/graphics/displaylists/DisplayListResourceHeap.h
 platform/graphics/filters/FilterOperations.cpp
 platform/graphics/mac/controls/ImageControlsButtonMac.mm
 platform/graphics/mac/controls/MeterMac.mm
