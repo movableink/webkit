@@ -175,6 +175,14 @@ void JSWebAssemblyStruct::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     Base::visitChildren(cell, visitor);
 
     auto* wasmStruct = jsCast<JSWebAssemblyStruct*>(cell);
+    if (!wasmStruct->structType().hasRefFieldTypes()) {
+#if ASSERT_ENABLED
+        for (unsigned i = 0; i < wasmStruct->structType().fieldCount(); ++i)
+            ASSERT(!isRefType(wasmStruct->fieldType(i).type));
+#endif
+        return;
+    }
+
     for (unsigned i = 0; i < wasmStruct->structType().fieldCount(); ++i) {
         auto fieldType = wasmStruct->fieldType(i).type;
         if (isRefType(fieldType)) {

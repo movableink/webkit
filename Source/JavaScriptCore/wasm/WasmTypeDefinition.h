@@ -569,9 +569,11 @@ public:
     StructType(void*, StructFieldCount, const FieldType*);
 
     StructFieldCount fieldCount() const { return m_fieldCount; }
+    FieldType field(StructFieldCount i) const { return const_cast<StructType*>(this)->getField(i); }
+
+    bool hasRefFieldTypes() const { return m_hasRefFieldTypes; }
     bool hasRecursiveReference() const { return m_hasRecursiveReference; }
     void setHasRecursiveReference(bool value) { m_hasRecursiveReference = value; }
-    FieldType field(StructFieldCount i) const { return const_cast<StructType*>(this)->getField(i); }
 
     WTF::String toString() const;
     void dump(WTF::PrintStream& out) const;
@@ -590,7 +592,9 @@ private:
     // Payload is structured this way = | field types | precalculated field offsets |.
     FieldType* m_payload;
     StructFieldCount m_fieldCount;
-    bool m_hasRecursiveReference;
+    // FIXME: We should consider caching the offsets of exactly which fields are ref types in m_payload to speed up visitChildren.
+    bool m_hasRefFieldTypes { false };
+    bool m_hasRecursiveReference { false };
     size_t m_instancePayloadSize;
 };
 
@@ -741,40 +745,36 @@ enum class RTTKind : uint8_t {
     Struct
 };
 
-class RTT_ALIGNMENT RTT : public ThreadSafeRefCounted<RTT> {
+class RTT_ALIGNMENT RTT final : public ThreadSafeRefCounted<RTT>, private TrailingArray<RTT, const RTT*> {
     WTF_MAKE_FAST_COMPACT_ALLOCATED;
-
+    WTF_MAKE_NONMOVABLE(RTT);
+    using TrailingArrayType = TrailingArray<RTT, const RTT*>;
+    friend TrailingArrayType;
 public:
     RTT() = delete;
-    RTT(const RTT&) = delete;
-
-    explicit RTT(RTTKind kind, DisplayCount displaySize)
-        : m_kind(kind)
-        , m_displaySize(displaySize)
-    {
-    }
 
     static RefPtr<RTT> tryCreateRTT(RTTKind, DisplayCount);
 
     RTTKind kind() const { return m_kind; }
-    DisplayCount displaySize() const { return m_displaySize; }
-    const RTT* displayEntry(DisplayCount i) const { ASSERT(i < displaySize()); return const_cast<RTT*>(this)->payload()[i]; }
-    void setDisplayEntry(DisplayCount i, RefPtr<const RTT> entry) { ASSERT(i < displaySize()); payload()[i] = entry.get(); }
+    DisplayCount displaySize() const { return size(); }
+    const RTT* displayEntry(DisplayCount i) const { return at(i); }
+    void setDisplayEntry(DisplayCount i, RefPtr<const RTT> entry) { at(i) = entry.get(); }
 
-    bool isSubRTTWithEquality(const RTT& other) const { return this == &other ? true : isSubRTT(other); }
-    bool isSubRTT(const RTT& other) const;
+    bool isSubRTT(const RTT& other) const { return this == &other ? true : isStrictSubRTT(other); }
+    bool isStrictSubRTT(const RTT& other) const;
     static size_t allocatedRTTSize(Checked<DisplayCount> count) { return sizeof(RTT) + count * sizeof(TypeIndex); }
 
     static constexpr ptrdiff_t offsetOfKind() { return OBJECT_OFFSETOF(RTT, m_kind); }
-    static constexpr ptrdiff_t offsetOfDisplaySize() { return OBJECT_OFFSETOF(RTT, m_displaySize); }
-    static constexpr ptrdiff_t offsetOfPayload() { return sizeof(RTT); }
+    static constexpr ptrdiff_t offsetOfDisplaySize() { return offsetOfSize(); }
+    static constexpr ptrdiff_t offsetOfPayload() { return offsetOfData(); }
 
 private:
-    // Payload starts past end of this object.
-    const RTT** payload() { return static_cast<const RTT**>(static_cast<void*>(this + 1)); }
+    explicit RTT(RTTKind kind, DisplayCount displaySize)
+        : TrailingArrayType(displaySize)
+        , m_kind(kind)
+    { }
 
     RTTKind m_kind;
-    DisplayCount m_displaySize;
 };
 
 enum class TypeDefinitionKind : uint8_t {

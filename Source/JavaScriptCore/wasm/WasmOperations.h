@@ -135,7 +135,7 @@ JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmArrayFillVector, UCPUStrictInt32
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmArrayCopy, UCPUStrictInt32, (JSWebAssemblyInstance*, EncodedJSValue, uint32_t, EncodedJSValue, uint32_t, uint32_t));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmArrayInitElem, UCPUStrictInt32, (JSWebAssemblyInstance*, EncodedJSValue, uint32_t, uint32_t, uint32_t, uint32_t));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmArrayInitData, UCPUStrictInt32, (JSWebAssemblyInstance*, EncodedJSValue, uint32_t, uint32_t, uint32_t, uint32_t));
-JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmIsSubRTT, bool, (Wasm::RTT*, Wasm::RTT*));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmIsStrictSubRTT, bool, (Wasm::RTT*, Wasm::RTT*));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmAnyConvertExtern, EncodedJSValue, (EncodedJSValue));
 
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationWasmRefTest, int32_t, (JSWebAssemblyInstance*, EncodedJSValue, uint32_t, int32_t, bool));

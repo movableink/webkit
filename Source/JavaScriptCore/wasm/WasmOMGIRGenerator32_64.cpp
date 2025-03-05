@@ -4003,7 +4003,7 @@ void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referen
         m_currentBlock = slowPath;
         // FIXME: It may be worthwhile to JIT inline this in the future.
         Value* isSubRTT = append<CCallValue>(m_proc, B3::Int32, origin(),
-            append<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(operationWasmIsSubRTT)),
+            append<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(operationWasmIsStrictSubRTT)),
             truncate(rtt), targetRTT);
         emitCheckOrBranchForCast(castKind, append<Value>(m_proc, Equal, origin(), isSubRTT, constant(Int32, 0)), castFailure, falseBlock);
     }

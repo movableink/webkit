@@ -124,13 +124,13 @@ void StructType::dump(PrintStream& out) const
 StructType::StructType(void* payload, StructFieldCount fieldCount, const FieldType* fieldTypes)
     : m_payload(static_cast<FieldType*>(payload))
     , m_fieldCount(fieldCount)
-    , m_hasRecursiveReference(false)
 {
-    bool hasRecursiveReference = false;
     unsigned currentFieldOffset = 0;
     for (unsigned fieldIndex = 0; fieldIndex < m_fieldCount; ++fieldIndex) {
         const auto& fieldType = fieldTypes[fieldIndex];
-        hasRecursiveReference |= isRefWithRecursiveReference(fieldType.type);
+        m_hasRefFieldTypes |= isRefType(fieldType.type);
+        m_hasRecursiveReference |= isRefWithRecursiveReference(fieldType.type);
+
         getField(fieldIndex) = fieldType;
 
         const auto& fieldStorageType = field(fieldIndex).type;
@@ -140,7 +140,6 @@ StructType::StructType(void* payload, StructFieldCount fieldCount, const FieldTy
     }
 
     m_instancePayloadSize = WTF::roundUpToMultipleOf<sizeof(uint64_t)>(currentFieldOffset);
-    setHasRecursiveReference(hasRecursiveReference);
 }
 
 String ArrayType::toString() const
@@ -582,7 +581,7 @@ RefPtr<RTT> RTT::tryCreateRTT(RTTKind kind, DisplayCount displaySize)
     return adoptRef(new (NotNull, memory) RTT(kind, displaySize));
 }
 
-bool RTT::isSubRTT(const RTT& parent) const
+bool RTT::isStrictSubRTT(const RTT& parent) const
 {
     if (displaySize() > 0) {
         if (parent.displaySize() > 0) {
@@ -1143,7 +1142,7 @@ bool TypeInformation::castReference(JSValue refValue, bool allowNull, TypeIndex 
             auto funcRTT = funcRef->rtt();
             if (funcRTT == signatureRTT.get())
                 return true;
-            return funcRTT->isSubRTT(*signatureRTT);
+            return funcRTT->isStrictSubRTT(*signatureRTT);
         }
         if (signature.is<ArrayType>()) {
             JSWebAssemblyArray* arrayRef = jsDynamicCast<JSWebAssemblyArray*>(refValue);
@@ -1152,7 +1151,7 @@ bool TypeInformation::castReference(JSValue refValue, bool allowNull, TypeIndex 
             auto arrayRTT = arrayRef->rtt();
             if (arrayRTT.get() == signatureRTT.get())
                 return true;
-            return arrayRTT->isSubRTT(*signatureRTT);
+            return arrayRTT->isStrictSubRTT(*signatureRTT);
         }
         ASSERT(signature.is<StructType>());
         JSWebAssemblyStruct* structRef = jsDynamicCast<JSWebAssemblyStruct*>(refValue);
@@ -1161,7 +1160,7 @@ bool TypeInformation::castReference(JSValue refValue, bool allowNull, TypeIndex 
         auto structRTT = structRef->rtt();
         if (structRTT.get() == signatureRTT.get())
             return true;
-        return structRTT->isSubRTT(*signatureRTT);
+        return structRTT->isStrictSubRTT(*signatureRTT);
     }
 
     return false;

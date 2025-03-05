@@ -3716,7 +3716,7 @@ void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referen
         slowPath->addPredecessor(m_currentBlock);
 
         m_currentBlock = slowPath;
-        Value* isSubRTT = callWasmOperation(m_currentBlock, B3::Int32, operationWasmIsSubRTT, rtt, targetRTT);
+        Value* isSubRTT = callWasmOperation(m_currentBlock, B3::Int32, operationWasmIsStrictSubRTT, rtt, targetRTT);
         emitCheckOrBranchForCast(castKind, m_currentBlock->appendNew<Value>(m_proc, Equal, origin(), isSubRTT, constant(Int32, 0)), castFailure, falseBlock);
     }
 
