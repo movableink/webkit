@@ -108,6 +108,9 @@ RefPtr<CSSValue> consumeFontStyle(CSSParserTokenRange&, const CSSParserContext&)
 // MARK: 'font-family'
 // https://drafts.csswg.org/css-fonts-4/#font-family-prop
 RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange&, const CSSParserContext&);
+// Sub-production of 'font-family': <family-name>
+// https://drafts.csswg.org/css-fonts-4/#family-name-syntax
+RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange&, const CSSParserContext&);
 // Sub-production of 'font-family': <generic-family>
 // https://drafts.csswg.org/css-fonts-4/#generic-family-name-syntax
 const AtomString& genericFontFamily(CSSValueID);
@@ -194,9 +197,6 @@ RefPtr<CSSValue> parseFontFaceFontWeight(const String&, ScriptExecutionContext&)
 RefPtr<CSSValue> consumeFontFaceFontWeight(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: - @font-palette-values descriptor consumers:
-
-// MARK: @font-palette-values 'font-family'
-RefPtr<CSSValue> consumeFontPaletteValuesFontFamily(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: @font-palette-values 'override-colors'
 // https://drafts.csswg.org/css-fonts-4/#descdef-font-palette-values-override-colors

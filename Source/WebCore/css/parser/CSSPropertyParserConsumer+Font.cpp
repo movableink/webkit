@@ -339,9 +339,9 @@ static std::optional<UnresolvedFontFamily> consumeFontFamilyUnresolved(CSSParser
     return list;
 }
 
-static RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange& range)
+RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange& range, const CSSParserContext&)
 {
-    // // https://drafts.csswg.org/css-fonts-4/#family-name-syntax
+    // https://drafts.csswg.org/css-fonts-4/#family-name-syntax
 
     auto familyName = consumeFamilyNameUnresolved(range);
     if (familyName.isNull())
@@ -349,15 +349,15 @@ static RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange& range)
     return CSSValuePool::singleton().createFontFamilyValue(familyName);
 }
 
-RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     // <'font-family'> = [ <family-name> | <generic-family> ]#
     // https://drafts.csswg.org/css-fonts-4/#font-family-prop
 
-    return consumeListSeparatedBy<',', OneOrMore>(range, [] (auto& range) -> RefPtr<CSSValue> {
+    return consumeListSeparatedBy<',', OneOrMore>(range, [&](auto& range) -> RefPtr<CSSValue> {
         if (auto parsedValue = consumeGenericFamily(range))
             return parsedValue;
-        return consumeFamilyName(range);
+        return consumeFamilyName(range, context);
     });
 }
 
@@ -760,12 +760,12 @@ RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange& range, const CSSPars
 // MARK: - @font-face
 
 // MARK: @font-face 'font-family'
-RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     // <'font-family'> = <family-name>
     // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-family
 
-    auto name = consumeFamilyName(range);
+    auto name = consumeFamilyName(range, context);
     if (!name || !range.atEnd())
         return nullptr;
 
@@ -1429,18 +1429,6 @@ RefPtr<CSSValue> consumeFontFaceFontWeight(CSSParserTokenRange& range, const CSS
 #endif
 
 // MARK: - @font-palette-values
-
-// MARK: @font-palette-values 'font-family'
-
-RefPtr<CSSValue> consumeFontPaletteValuesFontFamily(CSSParserTokenRange& range, const CSSParserContext&)
-{
-    // <'font-family'> = <family-name>#
-    // https://drafts.csswg.org/css-fonts/#descdef-font-palette-values-font-family
-
-    return consumeListSeparatedBy<',', OneOrMore>(range, [](auto& range) {
-        return consumeFamilyName(range);
-    });
-}
 
 // MARK: @font-palette-values 'override-colors'
 

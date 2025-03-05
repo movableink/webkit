@@ -12634,9 +12634,7 @@
         "@font-palette-values": {
             "font-family": {
                 "codegen-properties": {
-                    "parser-function": "consumeFontPaletteValuesFontFamily",
-                    "parser-grammar-unused": "<family-name>#",
-                    "parser-grammar-unused-reason": "Needs support for special 'family-name' processing."
+                    "parser-grammar": "<family-name>#@(no-single-item-opt)"
                 },
                 "specification": {
                     "category": "css-fonts-4",
