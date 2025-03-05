@@ -215,7 +215,7 @@
 #include "MediaSessionCoordinator.h"
 #endif
 
-#define HTMLMEDIAELEMENT_RELEASE_LOG(fmt, ...) RELEASE_LOG_FORWARDABLE(Media, fmt, identifier().toUInt64(), ##__VA_ARGS__)
+#define HTMLMEDIAELEMENT_RELEASE_LOG(fmt, ...) RELEASE_LOG_FORWARDABLE(Media, fmt, logIdentifier(), ##__VA_ARGS__)
 
 namespace WTF {
 template <>
