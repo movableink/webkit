@@ -1280,7 +1280,7 @@ auto RewriteGlobalVariables::determineUsedGlobals(const AST::Function& function)
             return { Error(makeString("The combined byte size of all variables in the workgroup address space exceeds "_s, String::number(maximumCombinedWorkgroupVariablesSize), " bytes"_s), span) };
         return std::nullopt;
     });
-    m_shaderModule.addOverrideValidation([span = function.span(), variables = WTFMove(workgroupVariables)] -> std::optional<Error> {
+    m_shaderModule.addOverrideValidation([span = function.span(), variables = WTFMove(privateVariables)] -> std::optional<Error> {
         CheckedUint32 combinedPrivateVariablesSize = 0;
         for (const Type* type : variables)
             combinedPrivateVariablesSize += type->size();
