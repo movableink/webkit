@@ -342,43 +342,6 @@ RefPtr<CSSValue> consumeBorderColor(CSSParserTokenRange& range, const CSSParserC
     return consumeColor(range, context, { .acceptQuirkyColors = acceptQuirkyColors });
 }
 
-// MARK: - Background Clip
-
-RefPtr<CSSValue> consumeSingleBackgroundClip(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <single-background-clip> = <visual-box>
-    // https://drafts.csswg.org/css-backgrounds/#propdef-background-clip
-
-    switch (auto keyword = range.peek().id(); keyword) {
-    case CSSValueID::CSSValueBorderBox:
-    case CSSValueID::CSSValuePaddingBox:
-    case CSSValueID::CSSValueContentBox:
-    case CSSValueID::CSSValueText:
-    case CSSValueID::CSSValueWebkitText:
-        range.consumeIncludingWhitespace();
-        return CSSPrimitiveValue::create(keyword);
-    case CSSValueID::CSSValueBorderArea:
-        if (!context.cssBackgroundClipBorderAreaEnabled)
-            return nullptr;
-        range.consumeIncludingWhitespace();
-        return CSSPrimitiveValue::create(keyword);
-
-    default:
-        return nullptr;
-    }
-}
-
-RefPtr<CSSValue> consumeBackgroundClip(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'background-clip'> = <visual-box>#
-    // https://drafts.csswg.org/css-backgrounds/#propdef-background-clip
-
-    auto lambda = [&](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
-        return consumeSingleBackgroundClip(range, context);
-    };
-    return consumeListSeparatedBy<',', OneOrMore, ListOptimization::SingleValue>(range, lambda);
-}
-
 // MARK: - Background Size
 
 template<CSSPropertyID property> static RefPtr<CSSValue> consumeBackgroundSize(CSSParserTokenRange& range, const CSSParserContext& context)

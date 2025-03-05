@@ -37,21 +37,20 @@ import sys
 import textwrap
 
 
+def stringify_iterable(iterable):
+    return (str(x) for x in iterable)
+
 def quote_iterable(iterable, *, mark='"', suffix=''):
     return (f'{mark}{x}{mark}{suffix}' for x in iterable)
-
 
 def count_iterable(iterable):
     return sum(1 for _ in iterable)
 
-
 def compact(iterable):
     return filter(lambda value: value is not None, iterable)
 
-
 def compact_map(function, iterable):
     return compact(map(function, iterable))
-
 
 def flatten(list_to_flatten):
     flattened_list = []
@@ -631,7 +630,7 @@ class StylePropertyCodeGenProperties:
         if json_value.get("parser-grammar-unused"):
             if "parser-grammar-unused-reason" not in json_value:
                 raise Exception(f"{key_path} must have 'parser-grammar-unused-reason' specified when using 'parser-grammar-unused'.")
-            # If we have a "parser-grammar-unused" specified, we still process it to ensure that at least it is syntatically valid, we just
+            # If we have a "parser-grammar-unused" specified, we still process it to ensure that at least it is syntactically valid, we just
             # won't actually use it for generation.
             grammar = Grammar.from_string(parsing_context, f"{key_path}", name, json_value["parser-grammar-unused"])
             grammar.perform_fixups(parsing_context.parsed_shared_grammar_rules)
@@ -800,7 +799,7 @@ class StyleProperty:
     def id(self):
         return self.property_name.id
 
-    # Used for parsing and consume methods. It is prefixed with a 'kind' for descriptors, and left unprefixed for style properties.
+    # Used for parsing and consume methods. It is prefixed with a 'kind' for descriptors, and left un-prefixed for style properties.
     # Examples:
     #       style property 'column-width' would generate a consume method called `consumeColumnWidth`
     #       @font-face descriptor 'font-display' would generate a consume method called `consumeFontFaceFontDisplay`
@@ -1093,7 +1092,7 @@ class DescriptorCodeGenProperties:
         if json_value.get("parser-grammar-unused"):
             if "parser-grammar-unused-reason" not in json_value:
                 raise Exception(f"{key_path} must have 'parser-grammar-unused-reason' specified when using 'parser-grammar-unused'.")
-            # If we have a "parser-grammar-unused" specified, we still process it to ensure that at least it is syntatically valid, we just
+            # If we have a "parser-grammar-unused" specified, we still process it to ensure that at least it is syntactically valid, we just
             # won't actually use it for generation.
             grammar = Grammar.from_string(parsing_context, f"{key_path}", name, json_value["parser-grammar-unused"])
             grammar.perform_fixups(parsing_context.parsed_shared_grammar_rules)
@@ -1181,7 +1180,7 @@ class Descriptor:
     def id_without_prefix(self):
         return self.descriptor_name.id_without_prefix
 
-    # Used for parsing and consume methods. It is prefixed with the rule type for descriptors, and left unprefixed for style properties.
+    # Used for parsing and consume methods. It is prefixed with the rule type for descriptors, and left un-prefixed for style properties.
     # Examples:
     #       style property 'column-width' would generate a consume method called `consumeColumnWidth`
     #       @font-face descriptor 'font-display' would generate a consume method called `consumeFontFaceFontDisplay`
@@ -1691,7 +1690,7 @@ class ReferenceTerm:
             name = self.name.name + '()'
         else:
             name = self.name.name
-        base = ' '.join([name] + [str(p) for p in self.parameters])
+        base = ' '.join([name] + list(stringify_iterable(self.parameters)))
         if self.is_internal:
             return f"<<{base}>>"
         return f"<{base}>"
@@ -1772,23 +1771,39 @@ class LiteralTerm:
 #   e.g. "auto" or "box"
 #
 class KeywordTerm:
-    def __init__(self, value, *, aliased_to=None, comment=None, settings_flag=None, status=None):
+    def __init__(self, value, *, annotation=None, aliased_to=None, comment=None, settings_flag=None, status=None):
         self.value = value
         self.aliased_to = aliased_to
         self.comment = comment
         self.settings_flag = settings_flag
         self.status = status
+        self._process_annotation(annotation)
 
     def __str__(self):
-        return self.value.name
+        return self.value.name + stringified_annotation
 
     def __repr__(self):
         return self.__str__()
 
+    @property
+    def stringified_annotation(self):
+        if self.settings_flag:
+            return f"@(settings-flag={settings_flag})"
+        return ""
+
+    def _process_annotation(self, annotation):
+        if not annotation:
+            return
+        for directive in annotation.directives:
+            if directive.name == 'settings-flag':
+                self.settings_flag = directive.value[0]
+            else:
+                raise Exception(f"Unknown keyword annotation directive '{directive}'.")
+
     @staticmethod
     def from_node(node):
         assert(type(node) is BNFKeywordNode)
-        return KeywordTerm(ValueKeywordName(node.keyword))
+        return KeywordTerm(ValueKeywordName(node.keyword), annotation=node.annotation)
 
     def perform_fixups(self, all_rules):
         return self
@@ -1810,7 +1825,7 @@ class KeywordTerm:
 
     @property
     def is_eligible_for_fast_path(self):
-        # Keyword terms that are aliased as not eligable for the fast path as the fast
+        # Keyword terms that are aliased as not eligible for the fast path as the fast
         # path can only support a basic predicate.
         return not self.aliased_to
 
@@ -1829,7 +1844,7 @@ class MatchOneTerm:
         self.terms = terms
 
     def __str__(self):
-        return f"[ {' | '.join(str(term) for term in self.terms)} ]"
+        return f"[ {' | '.join(stringify_iterable(self.terms))} ]"
 
     def __repr__(self):
         return self.__str__()
@@ -1908,7 +1923,7 @@ class MatchOneTerm:
 # GroupTerm represents matching a list of provided terms with
 # options for whether the matches are ordered and whether all
 # terms must be matched. The syntax in the CSS specifications
-# uses space separtion with square brackets (these can be ellided
+# uses space separation with square brackets (these can be elided
 # at the root level) as the base syntax for an match all ordered
 # group, and adds '||' and '&&' combinators to indicate 'match
 # one or more + any order' and 'match all + any order' respectively.
@@ -1934,7 +1949,7 @@ class GroupTerm:
             join_string = ' ' + str(self.kind.value) + ' '
         else:
             join_string = ' '
-        return join_string.join(str(subterm) for subterm in self.subterms)
+        return join_string.join(stringify_iterable(self.subterms))
 
     def _process_annotation(self, annotation):
         if not annotation:
@@ -1975,7 +1990,7 @@ class GroupTerm:
 
 
 # OptionalTerm represents matching a term that is allowed to
-# be ommited. The syntax in the CSS specifications uses a
+# be omitted. The syntax in the CSS specifications uses a
 # trailing '?'.
 #
 #   e.g. "<length>?" or "[ <length> <string> ]?"
@@ -2067,7 +2082,7 @@ class UnboundedRepetitionTerm:
         if not annotation:
             return
         for directive in annotation.directives:
-            if directive == 'no-single-item-opt':
+            if directive.name == 'no-single-item-opt':
                 self.single_value_optimization = False
             else:
                 raise Exception(f"Unknown multiplier annotation directive '{directive}'.")
@@ -2703,7 +2718,7 @@ class GenerateCSSPropertyNames:
             """)
 
     def _generate_gperf_keywords(self, *, to):
-        # Concatenates a list of unique 'propererty-name, property-id' strings with a second list of all 'property-alias, property-id' strings.
+        # Concatenates a list of unique 'property-name, property-id' strings with a second list of all 'property-alias, property-id' strings.
         all_property_names_and_aliases_with_ids = itertools.chain(
               [f'{property.name}, {property.id}'                        for property in self.properties_and_descriptors.all_unique],
             *[[f'{alias}, {property.id}' for alias in property.aliases] for property in self.properties_and_descriptors.all_properties_and_descriptors]
@@ -4370,7 +4385,7 @@ class GenerateCSSPropertyParsing:
             to.newline()
             return
 
-        requires_context = any(propopery_consumer.keyword_fast_path_generator.requires_context for propopery_consumer in keyword_fast_path_eligible_property_consumers)
+        requires_context = any(property_consumer.keyword_fast_path_generator.requires_context for property_consumer in keyword_fast_path_eligible_property_consumers)
 
         self.generation_context.generate_property_id_switch_function(
             to=to,
@@ -5198,7 +5213,7 @@ class TermGeneratorNonFastPathKeywordTerm(TermGenerator):
         to.write(f"}}")
 
 
-# Generation support for a properties fast path eligable keyword terms.
+# Generation support for a properties fast path eligible keyword terms.
 class TermGeneratorFastPathKeywordTerms(TermGenerator):
     def __init__(self, keyword_fast_path_generator):
         self.keyword_fast_path_generator = keyword_fast_path_generator
@@ -5398,7 +5413,7 @@ class GeneratedSharedGrammarRuleConsumer(SharedGrammarRuleConsumer):
 # `PropertyConsumer` are:
 #
 #   - `SkipPropertyConsumer`:
-#        Used when the property is not eligable for parsing, and should be skipped. Used for
+#        Used when the property is not eligible for parsing, and should be skipped. Used for
 #        descriptor-only properties, shorthand properties, and properties marked 'skip-parser`.
 #
 #   - `CustomPropertyConsumer`:
@@ -5411,19 +5426,19 @@ class GeneratedSharedGrammarRuleConsumer(SharedGrammarRuleConsumer):
 #        consumers always emit a `keyword-only fast path` function (e.g. `isKeywordValidFor*`) and the
 #        main `parse` function uses that fast path function directly (e.g. `consumeIdent(range, isKeywordValidFor*)`
 #        This allows us to avoid making a `consume` function for the property in all cases except for
-#        when the property has been marked explicity with `parser-exported`, in which case we do
+#        when the property has been marked explicitly with `parser-exported`, in which case we do
 #        generate a `consume` function to warp that invocation above.
 #
 #   - `DirectPropertyConsumer`:
 #        Used when a property's only term is a single non-simplifiable reference term (e.g. [ <number> ]
 #        or [ <color> ]. These property consumers call the referenced term directly from the main `parse`
 #        function. This allows us to avoid making a `consume` function for the property in all cases
-#        except for when the property has been marked explicity with `parser-exported`, in which case
+#        except for when the property has been marked explicitly with `parser-exported`, in which case
 #        we do generate a `consume` function to warp that invocation above.
 #
 #   - `GeneratedPropertyConsumer`:
 #        Used for all other properties. Requires that `parser-grammar` has been defined. These property
-#        consumers use the provided parser grammer to generate a dedicated `consume` function which is
+#        consumers use the provided parser grammar to generate a dedicated `consume` function which is
 #        called from the main `parse` function. If the parser grammar allows for any keyword only valid
 #        parses (e.g. for the grammar [ none | <image> ], "none" is a valid keyword only parse), these
 #        property consumers will also emit a `keyword-only fast path` function (e.g. `isKeywordValidFor*`)
@@ -5526,7 +5541,7 @@ class CustomPropertyConsumer(PropertyConsumer):
         return None
 
 
-# Property consumer used for properties with only fast-path eligable keyword terms in its grammar.
+# Property consumer used for properties with only fast-path eligible keyword terms in its grammar.
 class FastPathKeywordOnlyPropertyConsumer(PropertyConsumer):
     def __init__(self, property):
         self.property = property
@@ -5567,7 +5582,7 @@ class FastPathKeywordOnlyPropertyConsumer(PropertyConsumer):
         return self.term_generator.generate_call_string(range_string=range_string, context_string=context_string)
 
     # For "direct" and "fast-path keyword only" consumers, we only generate the property specific
-    # defintion if the property has been marked as exported.
+    # definition if the property has been marked as exported.
 
     @property
     def is_exported(self):
@@ -5629,7 +5644,7 @@ class DirectPropertyConsumer(PropertyConsumer):
         return self.term_generator.generate_call_string(range_string=range_string, context_string=context_string)
 
     # For "direct" and "fast-path keyword only" consumers, we only generate the property specific
-    # defintion if the property has been marked as exported.
+    # definition if the property has been marked as exported.
 
     @property
     def is_exported(self):
@@ -5795,7 +5810,7 @@ def BNFLexer(data):
                 yield BNFTokenInfo(token_id.name, match.group(0))
                 break
         else:
-            # in case pattern doesn't match send the charector as illegal
+            # in case pattern doesn't match send the character as illegal
             yield BNFTokenInfo(BNF_ILLEGAL_TOKEN, data[position])
             position += 1
     yield BNFTokenInfo(BNF_EOF_TOKEN, '\x00')
@@ -5824,15 +5839,25 @@ class BNFRepetitionModifier:
         raise Exception("Unknown repetition kind: {self.kind}")
 
 
-# BNFAnnotations are introduced by trailing '@(foo-bar baz)' and are an
+# BNFAnnotations are introduced by trailing '@(foo=bar,baz bat)' and are an
 # extension to the syntax used by CSS, added to allow passing additional
-# metadata to the generators for parser creation.
+# metadata to the code generators.
 class BNFAnnotation:
+    class Directive:
+        def __init__(self, name):
+            self.name = name
+            self.value = []
+
+        def __str__(self):
+            if self.value:
+                return str(self.name) + '=' + str(self.value)
+            return str(self.name)
+
     def __init__(self):
         self.directives = []
 
     def __str__(self):
-        return '@(' + ' '.join(self.directives) + ')'
+        return '@(' + ' '.join(stringify_iterable(self.directives)) + ')'
 
     def add_directive(self, directive):
         self.directives.append(directive)
@@ -5951,9 +5976,9 @@ class BNFNodeMultiplier:
         }
 
         for directive in annotation.directives:
-            if directive not in SUPPORTED_DIRECTIVES:
+            if directive.name not in SUPPORTED_DIRECTIVES:
                 raise Exception(f"Unknown annotation directive '{directive}' for multiplier '{self}'.")
-            if self.kind not in SUPPORTED_DIRECTIVES[directive]:
+            if self.kind not in SUPPORTED_DIRECTIVES[directive.name]:
                 raise Exception(f"Unsupported annotation directive '{directive}' for multiplier '{self}'.")
 
         self.annotation = annotation
@@ -5990,35 +6015,21 @@ class BNFGroupingNode:
         else:
             join_string = ' '
 
-        return join_string.join(str(member) for member in self.members)
+        return join_string.join(stringify_iterable(self.members))
 
     def add(self, member):
         self.members.append(member)
 
-    @property
-    def last(self):
-        return self.members[-1]
-
     def add_annotation(self, annotation):
-        if self.multiplier.kind:
-            self.multiplier.add_annotation(annotation)
-            return
-
         if self.annotation:
             raise Exception("Invalid to add an annotation to a grouping node that already has an annotation.")
 
-        SUPPORTED_DIRECTIVES = {
-            'primitive-pair': {
-                BNFGroupingNode.Kind.MATCH_ALL_ORDERED,
-                BNFGroupingNode.Kind.MATCH_ALL_ANY_ORDER,
-                BNFGroupingNode.Kind.MATCH_ONE_OR_MORE_ANY_ORDER,
-            },
-        }
+        SUPPORTED_DIRECTIVES = {}
 
         for directive in annotation.directives:
-            if directive not in SUPPORTED_DIRECTIVES:
+            if directive.name not in SUPPORTED_DIRECTIVES:
                 raise Exception(f"Unknown annotation directive '{directive}' for grouping '{self}'.")
-            if self.kind not in SUPPORTED_DIRECTIVES[directive]:
+            if self.kind not in SUPPORTED_DIRECTIVES[directive.name]:
                 raise Exception(f"Unsupported annotation directive '{directive}' for grouping '{self}'.")
 
         self.annotation = annotation
@@ -6030,6 +6041,7 @@ class BNFFunctionNode:
         self.name = name
         self.parameter_group = BNFGroupingNode()
         self.multiplier = BNFNodeMultiplier()
+        self.annotation = None
 
     def __str__(self):
         return self.stringified_without_multipliers + str(self.multiplier)
@@ -6049,9 +6061,17 @@ class BNFFunctionNode:
     def add(self, member):
         self.parameter_group.add(member)
 
-    @property
-    def last(self):
-        return self.parameter_group.last
+    def add_annotation(self, annotation):
+        if self.annotation:
+            raise Exception("Invalid to add an annotation to a function node that already has an annotation.")
+
+        SUPPORTED_DIRECTIVES = {}
+
+        for directive in annotation.directives:
+            if directive.name not in SUPPORTED_DIRECTIVES:
+                raise Exception(f"Unknown annotation directive '{directive}' for function node '{self}'.")
+
+        self.annotation = annotation
 
 
 class BNFReferenceNode:
@@ -6099,24 +6119,20 @@ class BNFReferenceNode:
             name = self.name
 
         if self.attributes:
-            return prefix + str(name) + ' ' + ' '.join(str(attribute) for attribute in self.attributes) + suffix
+            return prefix + str(name) + ' ' + ' '.join(stringify_iterable(self.attributes)) + suffix
         return prefix + str(name) + suffix
 
     def add_attribute(self, attribute):
         self.attributes.append(attribute)
 
     def add_annotation(self, annotation):
-        if self.multiplier.kind:
-            self.multiplier.add_annotation(annotation)
-            return
-
         if self.annotation:
             raise Exception("Invalid to add an annotation to a reference node that already has an annotation.")
 
         SUPPORTED_DIRECTIVES = {}
 
         for directive in annotation.directives:
-            if directive not in SUPPORTED_DIRECTIVES:
+            if directive.name not in SUPPORTED_DIRECTIVES:
                 raise Exception(f"Unknown annotation directive '{directive}' for reference node '{self}'.")
 
         self.annotation = annotation
@@ -6136,17 +6152,15 @@ class BNFKeywordNode:
         return self.keyword
 
     def add_annotation(self, annotation):
-        if self.multiplier.kind:
-            self.multiplier.add_annotation(annotation)
-            return
-
         if self.annotation:
             raise Exception("Invalid to add an annotation to a keyword node that already has an annotation.")
 
-        SUPPORTED_DIRECTIVES = {}
+        SUPPORTED_DIRECTIVES = [
+            'settings-flag'
+        ]
 
         for directive in annotation.directives:
-            if directive not in SUPPORTED_DIRECTIVES:
+            if directive.name not in SUPPORTED_DIRECTIVES:
                 raise Exception(f"Unknown annotation directive '{directive}' for keyword '{self}'.")
 
         self.annotation = annotation
@@ -6166,17 +6180,13 @@ class BNFLiteralNode:
         return str(self.value)
 
     def add_annotation(self, annotation):
-        if self.multiplier.kind:
-            self.multiplier.add_annotation(annotation)
-            return
-
         if self.annotation:
             raise Exception("Invalid to add an annotation to a literal node that already has an annotation.")
 
         SUPPORTED_DIRECTIVES = {}
 
         for directive in annotation.directives:
-            if directive not in SUPPORTED_DIRECTIVES:
+            if directive.name not in SUPPORTED_DIRECTIVES:
                 raise Exception(f"Unknown annotation directive '{directive}' for literal '{self}'.")
 
         self.annotation = annotation
@@ -6208,10 +6218,12 @@ class BNFParserState(enum.Enum):
     QUOTED_LITERAL_SEEN_ID = enum.auto()
     ANNOTATION_INITIAL = enum.auto()
     ANNOTATION_SEEN_ID = enum.auto()
+    ANNOTATION_SEEN_EQUAL_OR_COMMA = enum.auto()
+    ANNOTATION_SEEN_VALUE = enum.auto()
     DONE = enum.auto()
 
 
-BNFParserStateInfo = collections.namedtuple("BNFParserStates", ["state", "node"])
+BNFParserStateInfo = collections.namedtuple("BNFParserStates", ["state", "node", "node_owner"])
 
 
 class BNFParser:
@@ -6243,6 +6255,8 @@ class BNFParser:
         self.data = data
         self.root = BNFGroupingNode(is_initial=True)
         self.state_stack = []
+        self.multiplier_target = None
+        self.annotation_target = None
         self.enter_initial_grouping()
 
     def parse(self):
@@ -6272,6 +6286,8 @@ class BNFParser:
             BNFParserState.QUOTED_LITERAL_SEEN_ID: BNFParser.parse_QUOTED_LITERAL_SEEN_ID,
             BNFParserState.ANNOTATION_INITIAL: BNFParser.parse_ANNOTATION_INITIAL,
             BNFParserState.ANNOTATION_SEEN_ID: BNFParser.parse_ANNOTATION_SEEN_ID,
+            BNFParserState.ANNOTATION_SEEN_EQUAL_OR_COMMA: BNFParser.parse_ANNOTATION_SEEN_EQUAL_OR_COMMA,
+            BNFParserState.ANNOTATION_SEEN_VALUE: BNFParser.parse_ANNOTATION_SEEN_VALUE,
         }
 
         for token in BNFLexer(self.data):
@@ -6292,13 +6308,13 @@ class BNFParser:
         return self.root
 
     def transition_top(self, *, to):
-        self.state_stack[-1] = BNFParserStateInfo(to, self.state_stack[-1].node)
+        self.state_stack[-1] = BNFParserStateInfo(to, self.state_stack[-1].node, self.state_stack[-1].node_owner)
 
-    def push(self, new_state, new_node):
-        self.state_stack.append(BNFParserStateInfo(new_state, new_node))
+    def push(self, new_state, new_node, node_owner):
+        self.state_stack.append(BNFParserStateInfo(new_state, new_node, node_owner))
 
     def pop(self):
-        return self.state_stack.pop()
+        self.state_stack.pop()
 
     @property
     def top(self):
@@ -6311,92 +6327,192 @@ class BNFParser:
 
     # Root BNFGroupingNode. Syntactically isn't surrounded by square brackets.
     def enter_initial_grouping(self):
-        self.push(BNFParserState.UNKNOWN_GROUPING_INITIAL, self.root)
+        self.push(BNFParserState.UNKNOWN_GROUPING_INITIAL, self.root, None)
+        return self.top
 
     def exit_initial_grouping(self, token, state):
         if isinstance(state.node, BNFGroupingNode) and state.node.is_initial:
             self.transition_top(to=BNFParserState.DONE)
-            return
+            return self.top
         raise self.unexpected(token, state)
 
     # Non-initial BNFGroupingNode. e.g. "[foo bar]", "[foo | bar]", etc.
     def enter_new_grouping(self, token, state):
-        self.push(BNFParserState.UNKNOWN_GROUPING_INITIAL, BNFGroupingNode())
+        self.push(BNFParserState.UNKNOWN_GROUPING_INITIAL, BNFGroupingNode(), self.top.node)
+        self.multiplier_target = None
+        self.annotation_target = None
+        return self.top
 
     def exit_grouping(self, token, state):
         if isinstance(state.node, BNFGroupingNode) and not state.node.is_initial:
             self.pop()
-            self.top.node.add(state.node)
-            return
+            state.node_owner.add(state.node)
+            self.multiplier_target = state.node
+            self.annotation_target = state.node
+            return self.top
         raise self.unexpected(token, state)
 
     # BNFFunctionNode. e.g. "foo(<bar>)"
     def enter_new_function(self, token, state):
-        self.push(BNFParserState.UNKNOWN_GROUPING_INITIAL, BNFFunctionNode(token.value[:-1]))
+        self.push(BNFParserState.UNKNOWN_GROUPING_INITIAL, BNFFunctionNode(token.value[:-1]), self.top.node)
+        self.multiplier_target = None
+        self.annotation_target = None
+        return self.top
 
     def exit_function(self, token, state):
         if isinstance(state.node, BNFFunctionNode):
             self.pop()
-            self.top.node.add(state.node)
-            return
+            state.node_owner.add(state.node)
+            self.multiplier_target = state.node
+            self.annotation_target = state.node
+            return self.top
         raise self.unexpected(token, state)
 
     # Internal BNFReferenceNodes. e.g. "<<values>>"
     def enter_new_internal_reference(self, token, state):
-        self.push(BNFParserState.INTERNAL_REFERENCE_INITIAL, BNFReferenceNode(is_internal=True))
+        self.push(BNFParserState.INTERNAL_REFERENCE_INITIAL, BNFReferenceNode(is_internal=True), self.top.node)
+        self.multiplier_target = None
+        self.annotation_target = None
+        return self.top
 
     def exit_internal_reference(self, token, state):
-        self.pop()
-        self.top.node.add(state.node)
+        if isinstance(state.node, BNFReferenceNode) and state.node.is_internal:
+            self.pop()
+            state.node_owner.add(state.node)
+            self.multiplier_target = state.node
+            self.annotation_target = state.node
+            return self.top
+        raise self.unexpected(token, state)
 
     # Non-internal BNFReferenceNodes. e.g. "<length>"
     def enter_new_reference(self, token, state):
-        new_reference = BNFReferenceNode()
-        state.node.add(new_reference)
-        self.push(BNFParserState.REFERENCE_INITIAL, new_reference)
+        self.push(BNFParserState.REFERENCE_INITIAL, BNFReferenceNode(), self.top.node)
+        self.multiplier_target = None
+        self.annotation_target = None
+        return self.top
 
     def exit_reference(self, token, state):
-        self.pop()
+        if isinstance(state.node, BNFReferenceNode) and not state.node.is_internal:
+            self.pop()
+            state.node_owner.add(state.node)
+            self.multiplier_target = state.node
+            self.annotation_target = state.node
+            return self.top
+        raise self.unexpected(token, state)
 
     # BNFRepetitionModifier. e.g. {A,B}
     def enter_new_repetition_modifier(self, token, state):
-        self.push(BNFParserState.REPETITION_MODIFIER_INITIAL, BNFRepetitionModifier())
+        self.push(BNFParserState.REPETITION_MODIFIER_INITIAL, BNFRepetitionModifier(), self.multiplier_target)
+        self.annotation_target = None
+        return self.top
 
     def exit_repetition_modifier(self, token, state):
-        self.pop()
-        self.top.node.last.multiplier.add(state.node)
+        if isinstance(state.node, BNFRepetitionModifier):
+            self.pop()
+            state.node_owner.multiplier.add(state.node)
+            self.multiplier_target = None
+            self.annotation_target = state.node_owner.multiplier
+            return self.top
+        raise self.unexpected(token, state)
 
     # BNFReferenceNode.StringAttribute. e.g. allows-quirks or excludes=auto,none
-    def enter_string_attribute(self, token, state):
-        self.push(BNFParserState.REFERENCE_STRING_ATTRIBUTE_INITIAL, BNFReferenceNode.StringAttribute(token.value))
+    def enter_new_string_attribute(self, token, state):
+        self.push(BNFParserState.REFERENCE_STRING_ATTRIBUTE_INITIAL, BNFReferenceNode.StringAttribute(token.value), self.top.node)
+        self.multiplier_target = None
+        self.annotation_target = None
+        return self.top
 
     def exit_string_attribute(self, token, state):
-        self.pop()
-        self.top.node.add_attribute(state.node)
+        if isinstance(state.node, BNFReferenceNode.StringAttribute):
+            self.pop()
+            state.node_owner.add_attribute(state.node)
+            self.multiplier_target = None
+            self.annotation_target = None  # FIXME: Consider adding support for annotations to attributes.
+            return self.top
+        raise self.unexpected(token, state)
 
     # BNFReferenceNode.RangeAttribute. e.g. [0,inf]
-    def enter_range_attribute(self, token, state):
-        self.push(BNFParserState.REFERENCE_RANGE_ATTRIBUTE_INITIAL, BNFReferenceNode.RangeAttribute())
+    def enter_new_range_attribute(self, token, state):
+        self.multiplier_target = None
+        self.annotation_target = None
+        self.push(BNFParserState.REFERENCE_RANGE_ATTRIBUTE_INITIAL, BNFReferenceNode.RangeAttribute(), self.top.node)
+        return self.top
 
     def exit_range_attribute(self, token, state):
-        self.pop()
-        self.top.node.add_attribute(state.node)
+        if isinstance(state.node, BNFReferenceNode.RangeAttribute):
+            self.pop()
+            state.node_owner.add_attribute(state.node)
+            self.multiplier_target = None
+            self.annotation_target = None  # FIXME: Consider adding support for annotations to attributes.
+            return self.top
+        raise self.unexpected(token, state)
 
     # BNFLiteralNode. e.g. '['
     def enter_new_quoted_literal(self, token, state):
-        self.push(BNFParserState.QUOTED_LITERAL_INITIAL, BNFLiteralNode())
+        self.push(BNFParserState.QUOTED_LITERAL_INITIAL, BNFLiteralNode(), self.top.node)
+        self.multiplier_target = None
+        self.annotation_target = None
+        return self.top
 
     def exit_quoted_literal(self, token, state):
-        self.pop()
-        self.top.node.add(state.node)
+        if isinstance(state.node, BNFLiteralNode):
+            self.pop()
+            state.node_owner.add(state.node)
+            self.multiplier_target = state.node
+            self.annotation_target = state.node
+            return self.top
+        raise self.unexpected(token, state)
 
-    # BNFAnnotation. e.g. @(foo-bar baz)
+    # BNFAnnotation. e.g. @(foo=bar,baz bat)
     def enter_new_annotation(self, token, state):
-        self.push(BNFParserState.ANNOTATION_INITIAL, BNFAnnotation())
+        self.push(BNFParserState.ANNOTATION_INITIAL, BNFAnnotation(), self.annotation_target)
+        self.annotation_target = None
+        # NOTE: self.multiplier_target is not cleared here, as you may have `<foo>@(bar){2}` where the {2} associates to <foo> not @(bar).
+        return self.top
 
     def exit_annotation(self, token, state):
-        self.pop()
-        self.top.node.last.add_annotation(state.node)
+        if isinstance(state.node, BNFAnnotation):
+            self.pop()
+            state.node_owner.add_annotation(state.node)
+            self.annotation_target = None
+            return self.top
+        raise self.unexpected(token, state)
+
+    # BNFAnnotation.Directive. e.g. no-single-item-opt or settings-flag=cssFooEnabled
+    def enter_new_directive(self, token, state):
+        self.push(BNFParserState.ANNOTATION_SEEN_ID, BNFAnnotation.Directive(token.value), self.top.node)
+        return self.top
+
+    def exit_directive(self, token, state):
+        if isinstance(state.node, BNFAnnotation.Directive):
+            self.pop()
+            state.node_owner.add_directive(state.node)
+            return self.top
+        raise self.unexpected(token, state)
+
+    def process_keyword(self, token, state):
+        keyword = BNFKeywordNode(token.value)
+        state.node.add(keyword)
+        self.multiplier_target = keyword
+        self.annotation_target = keyword
+
+    def process_unquoted_literal(self, token, state):
+        literal = BNFLiteralNode(token.value)
+        state.node.add(literal)
+        self.multiplier_target = literal
+        self.annotation_target = literal
+
+    def process_simple_multiplier(self, token, state):
+        self.multiplier_target.multiplier.add(token.value)
+        self.annotation_target = self.multiplier_target.multiplier
+
+    def process_combinator(self, token, state, known_kind):
+        if known_kind and known_kind != BNFParser.COMBINATOR_FOR_TOKEN[token.name]:
+            raise Exception(f"Unexpected token '{token}'. Did you mean '{state.node.kind.name}'?.")
+
+        state.node.kind = BNFParser.COMBINATOR_FOR_TOKEN[token.name]
+        self.multiplier_target = None
+        self.annotation_target = None
 
     # MARK: Parsing Thunks.
 
@@ -6423,7 +6539,7 @@ class BNFParser:
 
         if token.name == BNFToken.ID:
             self.transition_top(to=BNFParserState.UNKNOWN_GROUPING_SEEN_TERM)
-            state.node.add(BNFKeywordNode(token.value))
+            self.process_keyword(token, state)
             return
 
         if token.name == BNFToken.SQUOTE:
@@ -6433,7 +6549,7 @@ class BNFParser:
 
         if token.name in BNFParser.SUPPORTED_UNQUOTED_LITERALS:
             self.transition_top(to=BNFParserState.UNKNOWN_GROUPING_SEEN_TERM)
-            state.node.add(BNFLiteralNode(token.value))
+            self.process_unquoted_literal(token, state)
             return
 
         if token.name == BNFToken.RPAREN:
@@ -6478,7 +6594,7 @@ class BNFParser:
 
         if token.name == BNFToken.ID:
             self.transition_top(to=BNFParserState.KNOWN_ORDERED_GROUPING)
-            state.node.add(BNFKeywordNode(token.value))
+            self.process_keyword(token, state)
             return
 
         if token.name == BNFToken.SQUOTE:
@@ -6488,16 +6604,16 @@ class BNFParser:
 
         if token.name in BNFParser.SUPPORTED_UNQUOTED_LITERALS:
             self.transition_top(to=BNFParserState.KNOWN_ORDERED_GROUPING)
-            state.node.add(BNFLiteralNode(token.value))
+            self.process_unquoted_literal(token, state)
             return
 
         if token.name in BNFParser.COMBINATOR_FOR_TOKEN:
             self.transition_top(to=BNFParserState.KNOWN_COMBINATOR_GROUPING_TERM_REQUIRED)
-            state.node.kind = BNFParser.COMBINATOR_FOR_TOKEN[token.name]
+            self.process_combinator(token, state, None)
             return
 
         if token.name in BNFParser.SIMPLE_MULTIPLIERS:
-            state.node.last.multiplier.add(token.value)
+            self.process_simple_multiplier(token, state)
             return
 
         if token.name == BNFToken.ATPAREN:
@@ -6536,7 +6652,7 @@ class BNFParser:
             return
 
         if token.name == BNFToken.ID:
-            state.node.add(BNFKeywordNode(token.value))
+            self.process_keyword(token, state)
             return
 
         if token.name == BNFToken.SQUOTE:
@@ -6544,7 +6660,7 @@ class BNFParser:
             return
 
         if token.name in BNFParser.SUPPORTED_UNQUOTED_LITERALS:
-            state.node.add(BNFLiteralNode(token.value))
+            self.process_unquoted_literal(token, state)
             return
 
         if token.name == BNFToken.FUNC:
@@ -6552,7 +6668,7 @@ class BNFParser:
             return
 
         if token.name in BNFParser.SIMPLE_MULTIPLIERS:
-            state.node.last.multiplier.add(token.value)
+            self.process_simple_multiplier(token, state)
             return
 
         if token.name == BNFToken.ATPAREN:
@@ -6584,7 +6700,7 @@ class BNFParser:
 
         if token.name == BNFToken.ID:
             self.transition_top(to=BNFParserState.KNOWN_COMBINATOR_GROUPING_COMBINATOR_OR_CLOSE_REQUIRED)
-            state.node.add(BNFKeywordNode(token.value))
+            self.process_keyword(token, state)
             return
 
         # FIXME: Does it make any sense to support literals here? e.g. [ <foo> && , ]
@@ -6607,13 +6723,12 @@ class BNFParser:
             return
 
         if token.name in BNFParser.COMBINATOR_FOR_TOKEN:
-            if state.node.kind == BNFParser.COMBINATOR_FOR_TOKEN[token.name]:
-                self.transition_top(to=BNFParserState.KNOWN_COMBINATOR_GROUPING_TERM_REQUIRED)
-                return
-            raise Exception(f"Unexpected token '{token}'. Did you mean '{state.node.kind.name}'?.")
+            self.transition_top(to=BNFParserState.KNOWN_COMBINATOR_GROUPING_TERM_REQUIRED)
+            self.process_combinator(token, state, state.node.kind)
+            return
 
         if token.name in BNFParser.SIMPLE_MULTIPLIERS:
-            state.node.last.multiplier.add(token.value)
+            self.process_simple_multiplier(token, state)
             return
 
         if token.name == BNFToken.ATPAREN:
@@ -6649,11 +6764,11 @@ class BNFParser:
 
     def parse_REFERENCE_SEEN_ID_OR_FUNCTION(self, token, state):
         if token.name == BNFToken.ID:
-            self.enter_string_attribute(token, state)
+            self.enter_new_string_attribute(token, state)
             return
 
         if token.name == BNFToken.LSQUARE:
-            self.enter_range_attribute(token, state)
+            self.enter_new_range_attribute(token, state)
             return
 
         if token.name == BNFToken.GT:
@@ -6672,12 +6787,11 @@ class BNFParser:
 
     def parse_INTERNAL_REFERENCE_SEEN_ID(self, token, state):
         if token.name == BNFToken.ID:
-            state.node.add_attribute(token.value)
-            # Remain in BNFParserState.INTERNAL_REFERENCE_SEEN_ID.
+            self.enter_new_string_attribute(token, state)
             return
 
         if token.name == BNFToken.LSQUARE:
-            self.enter_range_attribute(token, state)
+            self.enter_new_range_attribute(token, state)
             return
 
         if token.name == BNFToken.GTGT:
@@ -6691,15 +6805,25 @@ class BNFParser:
             self.transition_top(to=BNFParserState.REFERENCE_STRING_ATTRIBUTE_SEEN_EQUAL)
             return
 
-        self.exit_string_attribute(token, state)
+        state = self.exit_string_attribute(token, state)
+
+        if token.name == BNFToken.ID:
+            self.enter_new_string_attribute(token, state)
+            return
 
         if token.name == BNFToken.LSQUARE:
-            self.enter_range_attribute(token, state)
+            self.enter_new_range_attribute(token, state)
             return
 
         if token.name == BNFToken.GT:
             self.exit_reference(token, state)
             return
+
+        if token.name == BNFToken.GTGT:
+            self.exit_internal_reference(token, state)
+            return
+
+        raise self.unexpected(token, state)
 
     def parse_REFERENCE_STRING_ATTRIBUTE_SEEN_EQUAL(self, token, state):
         if token.name == BNFToken.ID:
@@ -6714,19 +6838,25 @@ class BNFParser:
             self.transition_top(to=BNFParserState.REFERENCE_STRING_ATTRIBUTE_SEEN_EQUAL)
             return
 
-        self.exit_string_attribute(token, state)
+        state = self.exit_string_attribute(token, state)
 
         if token.name == BNFToken.ID:
-            self.enter_string_attribute(token, state)
+            self.enter_new_string_attribute(token, state)
             return
 
         if token.name == BNFToken.LSQUARE:
-            self.enter_range_attribute(token, state)
+            self.enter_new_range_attribute(token, state)
             return
 
         if token.name == BNFToken.GT:
             self.exit_reference(token, state)
             return
+
+        if token.name == BNFToken.GTGT:
+            self.exit_internal_reference(token, state)
+            return
+
+        raise self.unexpected(token, state)
 
     def parse_REFERENCE_RANGE_ATTRIBUTE_INITIAL(self, token, state):
         if token.name == BNFToken.INT or token.name == BNFToken.FLOAT or (token.name == BNFToken.ID and token.value == '-inf'):
@@ -6814,15 +6944,45 @@ class BNFParser:
 
     def parse_ANNOTATION_INITIAL(self, token, state):
         if token.name == BNFToken.ID:
-            self.transition_top(to=BNFParserState.ANNOTATION_SEEN_ID)
-            state.node.add_directive(token.value)
+            self.enter_new_directive(token, state)
             return
 
         raise self.unexpected(token, state)
 
     def parse_ANNOTATION_SEEN_ID(self, token, state):
+        if token.name == BNFToken.EQUAL:
+            self.transition_top(to=BNFParserState.ANNOTATION_SEEN_EQUAL_OR_COMMA)
+            return
+
+        state = self.exit_directive(token, state)
+
         if token.name == BNFToken.ID:
-            state.node.add_directive(token.value)
+            self.enter_new_directive(token, state)
+            return
+
+        if token.name == BNFToken.RPAREN:
+            self.exit_annotation(token, state)
+            return
+
+        raise self.unexpected(token, state)
+
+    def parse_ANNOTATION_SEEN_EQUAL_OR_COMMA(self, token, state):
+        if token.name == BNFToken.ID:
+            state.node.value.append(token.value)
+            self.transition_top(to=BNFParserState.ANNOTATION_SEEN_VALUE)
+            return
+
+        raise self.unexpected(token, state)
+
+    def parse_ANNOTATION_SEEN_VALUE(self, token, state):
+        if token.name == BNFToken.COMMA:
+            self.transition_top(to=BNFParserState.ANNOTATION_SEEN_EQUAL_OR_COMMA)
+            return
+
+        state = self.exit_directive(token, state)
+
+        if token.name == BNFToken.ID:
+            self.enter_new_directive(token, state)
             return
 
         if token.name == BNFToken.RPAREN:

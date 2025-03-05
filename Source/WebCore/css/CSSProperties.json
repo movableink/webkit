@@ -2080,9 +2080,7 @@
                 "fill-layer-property": true,
                 "separator": " ",
                 "disables-native-appearance": true,
-                "parser-function": "consumeBackgroundClip",
-                "parser-grammar-unused": "<single-background-clip>#",
-                "parser-grammar-unused-reason": "Needs support for settings-enabled keywords in the grammaer."
+                "parser-grammar": "<single-background-clip>#"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -13358,7 +13356,7 @@
             }
         },
         "<single-background-clip>": {
-            "grammar": "<box> | text | -webkit-text",
+            "grammar": "<box> | border-area@(settings-flag=cssBackgroundClipBorderAreaEnabled) | text | -webkit-text",
             "exported": true,
             "specification": {
                 "category": "css-backgrounds",

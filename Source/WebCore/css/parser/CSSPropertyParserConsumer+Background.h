@@ -85,16 +85,6 @@ RefPtr<CSSValue> consumeBorderWidth(CSSParserTokenRange&, const CSSParserContext
 // https://drafts.csswg.org/css-backgrounds/#propdef-border-top-width
 RefPtr<CSSValue> consumeBorderColor(CSSParserTokenRange&, const CSSParserContext&, CSSPropertyID currentShorthand);
 
-// MARK: - Background Clip
-
-// <single-background-clip> = <visual-box>
-// https://drafts.csswg.org/css-backgrounds/#propdef-background-clip
-RefPtr<CSSValue> consumeSingleBackgroundClip(CSSParserTokenRange&, const CSSParserContext&);
-
-// <'background-clip'> = <visual-box>#
-// https://drafts.csswg.org/css-backgrounds/#propdef-background-clip
-RefPtr<CSSValue> consumeBackgroundClip(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: - Background Size
 
 // <bg-size> = [ <length-percentage [0,∞]> | auto ]{1,2} | cover | contain

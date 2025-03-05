@@ -1984,7 +1984,7 @@ static RefPtr<CSSValue> consumeBackgroundComponent(CSSPropertyID property, CSSPa
     switch (property) {
     // background-*
     case CSSPropertyBackgroundClip:
-        return consumeSingleBackgroundClip(range, context);
+        return CSSPropertyParsing::consumeSingleBackgroundClip(range, context);
     case CSSPropertyBackgroundBlendMode:
         return CSSPropertyParsing::consumeSingleBackgroundBlendMode(range);
     case CSSPropertyBackgroundAttachment:
