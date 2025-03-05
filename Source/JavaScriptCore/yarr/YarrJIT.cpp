@@ -4282,6 +4282,18 @@ class YarrGenerator final : public YarrJITInfo {
 
             if (term->parentheses.isStringList) {
                 // This is an anchored non-capturing string list parenthesis that can't backtrack, we use the 'string list' nodes.
+                // We may need to reorder these if we have an EOL after.
+
+                if (term->parentheses.isEOLStringList) {
+                    PatternDisjunction* nestedDisjunction = term->parentheses.disjunction;
+                    nestedDisjunction->m_alternatives.last()->m_isLastAlternative = false;
+
+                    std::sort(nestedDisjunction->m_alternatives.begin(), nestedDisjunction->m_alternatives.end(), [](auto& l, auto& r) -> bool {
+                        return l->m_terms.size() > r->m_terms.size();
+                    });
+                    nestedDisjunction->m_alternatives.last()->m_isLastAlternative = true;
+                }
+
                 alternativeBeginOpCode = YarrOpCode::StringListAlternativeBegin;
                 alternativeNextOpCode = YarrOpCode::StringListAlternativeNext;
                 alternativeEndOpCode = YarrOpCode::StringListAlternativeEnd;

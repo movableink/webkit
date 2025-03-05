@@ -251,3 +251,22 @@ testRegExp(re9, "bbb", ["bb"]);
 testRegExp(re9, "c", null);
 testRegExp(re9, "cc", ["cc"]);
 testRegExp(re9, "ccc", ["cc"]);
+
+// Test 58
+let re10 = /^(?:a|aa|aaa)$/;
+testRegExp(re10, "a", ["a"]);
+testRegExp(re10, "aa", ["aa"]);
+testRegExp(re10, "aaa", ["aaa"]);
+testRegExp(re10, "aaaa", null);
+
+let re11 = /^(?:aa|a|aaa)$/;
+testRegExp(re11, "a", ["a"]);
+testRegExp(re11, "aa", ["aa"]);
+testRegExp(re11, "aaa", ["aaa"]);
+testRegExp(re11, "aaaa", null);
+
+let re12 = /^(?:aa|a|aaa)$/;
+testRegExp(re12, "a", ["a"]);
+testRegExp(re12, "aa", ["aa"]);
+testRegExp(re12, "aaa", ["aaa"]);
+testRegExp(re12, "aaaa", null);

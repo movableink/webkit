@@ -1909,6 +1909,7 @@ public:
                 }
 
                 term.parentheses.isStringList = isStringList;
+                term.parentheses.isEOLStringList = (terms.size() == 3 && terms[2].type == PatternTerm::Type::AssertionEOL);
             }
 
             if (isStringList)
