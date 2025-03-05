@@ -63,7 +63,6 @@ public:
 
     WebBackForwardListItem* currentItem() const;
     RefPtr<WebBackForwardListItem> protectedCurrentItem() const;
-    WebBackForwardListItem* provisionalItem() const;
     WebBackForwardListItem* backItem() const;
     WebBackForwardListItem* forwardItem() const;
     WebBackForwardListItem* itemAtIndex(int) const;
@@ -89,10 +88,6 @@ public:
     void setItemsAsRestoredFromSession();
     void setItemsAsRestoredFromSessionIf(NOESCAPE Function<bool(WebBackForwardListItem&)>&&);
 
-    void goToProvisionalItem(WebBackForwardListItem&);
-    void clearProvisionalItem(WebBackForwardListFrameItem&);
-    void commitProvisionalItem();
-
     Ref<FrameState> completeFrameStateForNavigation(Ref<FrameState>&&);
 
 #if !LOG_DISABLED
@@ -104,17 +99,11 @@ private:
 
     void didRemoveItem(WebBackForwardListItem&);
 
-    void goToItemInternal(WebBackForwardListItem&, std::optional<size_t>& indexToUpdate);
-
-    std::optional<size_t> provisionalOrCurrentIndex() const { return m_provisionalIndex ? m_provisionalIndex : m_currentIndex; }
-    void setProvisionalOrCurrentIndex(size_t);
-
     RefPtr<WebPageProxy> protectedPage();
 
     WeakPtr<WebPageProxy> m_page;
     BackForwardListItemVector m_entries;
     std::optional<size_t> m_currentIndex;
-    std::optional<size_t> m_provisionalIndex;
 };
 
 } // namespace WebKit

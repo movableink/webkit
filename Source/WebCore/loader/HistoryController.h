@@ -91,7 +91,6 @@ public:
     HistoryItem* provisionalItem() const { return m_provisionalItem.get(); }
     RefPtr<HistoryItem> protectedProvisionalItem() const;
     void setProvisionalItem(RefPtr<HistoryItem>&&);
-    void clearProvisionalItem();
 
     void pushState(RefPtr<SerializedScriptValue>&&, const String& url);
     void replaceState(RefPtr<SerializedScriptValue>&&, const String& url);

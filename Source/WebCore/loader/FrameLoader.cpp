@@ -3975,8 +3975,17 @@ void FrameLoader::continueLoadAfterNavigationPolicy(const ResourceRequest& reque
         if (navigationPolicyDecision != NavigationPolicyDecision::LoadWillContinueInAnotherProcess)
             checkLoadComplete();
 
-        if ((isTargetItem || frame->isMainFrame()) && isBackForwardLoadType(policyChecker().loadType()))
-            history().clearProvisionalItem();
+        // If the navigation request came from the back/forward menu, and we punt on it, we have the
+        // problem that we have optimistically moved the b/f cursor already, so move it back. For sanity,
+        // we only do this when punting a navigation for the target frame or top-level frame.
+        if ((isTargetItem || frame->isMainFrame()) && isBackForwardLoadType(policyChecker().loadType())) {
+            if (RefPtr page = frame->page()) {
+                if (RefPtr localMainFrame = frame->localMainFrame()) {
+                    if (RefPtr resetItem = localMainFrame->loader().history().currentItem())
+                        page->checkedBackForward()->setCurrentItem(*resetItem);
+                }
+            }
+        }
         return;
     }
 

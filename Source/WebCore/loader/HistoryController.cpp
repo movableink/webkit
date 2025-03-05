@@ -341,7 +341,7 @@ void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType frameLoa
         // as opposed to happening for some/one of the page commits that might happen soon.
         CheckedRef backForward = page->backForward();
         RefPtr currentItem = backForward->currentItem(protectedThis->m_frame->frameID());
-        backForward->setProvisionalItem(targetItem);
+        backForward->setCurrentItem(targetItem);
 
         // First set the provisional item of any frames that are not actually navigating.
         // This must be done before trying to navigate the desired frame, because some
@@ -400,7 +400,7 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
         // as opposed to happening for some/one of the page commits that might happen soon
         CheckedRef backForward = page->backForward();
         RefPtr currentItem = backForward->currentItem(frame->frameID());
-        backForward->setProvisionalItem(targetItem);
+        backForward->setCurrentItem(targetItem);
 
         // First set the provisional item of any frames that are not actually navigating.
         // This must be done before trying to navigate the desired frame, because some
@@ -806,16 +806,6 @@ void HistoryController::setProvisionalItem(RefPtr<HistoryItem>&& item)
     m_provisionalItem = WTFMove(item);
 }
 
-void HistoryController::clearProvisionalItem()
-{
-    RefPtr provisionalItem = m_provisionalItem;
-    if (!provisionalItem)
-        return;
-
-    if (RefPtr page = m_frame->page())
-        page->checkedBackForward()->clearProvisionalItem(*provisionalItem);
-}
-
 void HistoryController::initializeItem(HistoryItem& item, RefPtr<DocumentLoader> documentLoader)
 {
     ASSERT(documentLoader);
@@ -911,6 +901,8 @@ Ref<HistoryItem> HistoryController::createItemTree(HistoryItemClient& client, Lo
         for (RefPtr child = m_frame->tree().firstLocalDescendant(); child; child = child->tree().nextLocalSibling())
             item->addChildItem(child->loader().protectedHistory()->createItemTree(client, targetFrame, clipAtTarget, itemID));
     }
+
+    // FIXME: Eliminate the isTargetItem flag in favor of itemSequenceNumber.
     if (m_frame.ptr() == &targetFrame)
         item->setIsTargetItem(true);
     return item;
@@ -1013,6 +1005,10 @@ void HistoryController::updateCurrentItem()
         return;
 
     if (currentItem->url() != documentLoader->url()) {
+        // We ended up on a completely different URL this time, so the HistoryItem
+        // needs to be re-initialized. Preserve the isTargetItem flag as it is a
+        // property of how this HistoryItem was originally created and is not
+        // dependent on the document.
         bool isTargetItem = currentItem->isTargetItem();
         auto uuidIdentifier = currentItem->uuidIdentifier();
         bool sameOrigin = SecurityOrigin::create(currentItem->url())->isSameOriginAs(SecurityOrigin::create(documentLoader->url()));

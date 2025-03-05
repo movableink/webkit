@@ -122,8 +122,6 @@ class EmptyBackForwardClient final : public BackForwardClient {
     void addItem(Ref<HistoryItem>&&) final { }
     void setChildItem(BackForwardFrameItemIdentifier, Ref<HistoryItem>&&) final { }
     void goToItem(HistoryItem&) final { }
-    void goToProvisionalItem(const HistoryItem&) final { }
-    void clearProvisionalItem(const HistoryItem&) final { }
     RefPtr<HistoryItem> itemAtIndex(int, FrameIdentifier) final { return nullptr; }
     unsigned backListCount() const final { return 0; }
     unsigned forwardListCount() const final { return 0; }
