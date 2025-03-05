@@ -1962,10 +1962,6 @@ webkit.org/b/287012 [ Sonoma+ Debug ] http/tests/pdf/linearized-pdf-in-iframe.ht
 
 webkit.org/b/288411 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/webrtc/simulcast/getStats.https.html [ Failure ]
 
-webkit.org/b/288493 [ Sequoia+ Debug ] http/tests/media/fairplay/legacy-fairplay-mse-muxed-nowait.html [ Crash ]
-webkit.org/b/288493 [ Sequoia+ Debug ] http/tests/media/fairplay/legacy-fairplay-mse-v2.html [ Crash ]
-webkit.org/b/288493 [ Sequoia+ Debug ] http/tests/media/fairplay/legacy-fairplay-mse-v3.html [ Crash ]
-
 webkit.org/b/288521 [ Sequoia+ X86_64 ] swipe/swipe-disables-view-transition.html [ Timeout ]
 
 webkit.org/b/288535 [ Sequoia+ X86_64 ] swipe/pushstate-with-manual-scrollrestoration.html [ Timeout ]
