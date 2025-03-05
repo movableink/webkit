@@ -2386,9 +2386,13 @@ void FrameLoader::commitProvisionalLoad()
 
 #if PLATFORM(IOS_FAMILY)
         page->chrome().setDispatchViewportDataDidChangeSuppressed(false);
-        page->chrome().dispatchViewportPropertiesDidChange(frame->page()->viewportArguments());
 #endif
-        page->chrome().dispatchDisabledAdaptationsDidChange(frame->page()->disabledAdaptations());
+        if (RefPtr framePage = frame->page()) {
+#if PLATFORM(IOS_FAMILY)
+            page->chrome().dispatchViewportPropertiesDidChange(framePage->viewportArguments());
+#endif
+            page->chrome().dispatchDisabledAdaptationsDidChange(framePage->disabledAdaptations());
+        }
 
         auto& title = m_documentLoader->title();
         if (!title.string.isNull())
