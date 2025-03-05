@@ -146,7 +146,7 @@ public:
     NodeType nodeType() const { return nodeTypeFromBitFields(m_typeBitFields); }
     virtual size_t approximateMemoryCost() const { return sizeof(*this); }
     ContainerNode* parentNode() const;
-    inline RefPtr<ContainerNode> protectedParentNode() const; // Defined in ContainerNode.h.
+    inline RefPtr<ContainerNode> protectedParentNode() const;
     static constexpr ptrdiff_t parentNodeMemoryOffset() { return OBJECT_OFFSETOF(Node, m_parentNode); }
     inline Element* parentElement() const;
     inline RefPtr<Element> protectedParentElement() const;
@@ -157,10 +157,10 @@ public:
     RefPtr<Node> protectedNextSibling() const { return m_next.get(); }
     static constexpr ptrdiff_t nextSiblingMemoryOffset() { return OBJECT_OFFSETOF(Node, m_next); }
     WEBCORE_EXPORT RefPtr<NodeList> childNodes();
-    inline Node* firstChild() const; // Defined in ContainerNode.h
-    inline RefPtr<Node> protectedFirstChild() const; // Defined in ContainerNode.h
-    inline Node* lastChild() const; // Defined in ContainerNode.h
-    inline RefPtr<Node> protectedLastChild() const; // Defined in ContainerNode.h
+    inline Node* firstChild() const;
+    inline RefPtr<Node> protectedFirstChild() const;
+    inline Node* lastChild() const;
+    inline RefPtr<Node> protectedLastChild() const;
     inline bool hasAttributes() const;
     inline NamedNodeMap* attributesMap() const;
     Node* pseudoAwareNextSibling() const;
@@ -308,8 +308,8 @@ public:
     ContainerNode* parentInComposedTree() const;
     WEBCORE_EXPORT Element* parentElementInComposedTree() const;
     Element* parentOrShadowHostElement() const;
-    inline void setParentNode(ContainerNode*); // Defined in ContainerNode.h.
-    Node& rootNode() const;
+    inline void setParentNode(ContainerNode*);
+    inline Node& rootNode() const;
     WEBCORE_EXPORT Node& traverseToRootNode() const;
     Node& shadowIncludingRoot() const;
 
@@ -981,6 +981,8 @@ inline NodeClass& Node::traverseToRootNodeInternal(const NodeClass& node)
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Node&);
+
+inline void collectChildNodes(Node&, NodeVector&);
 
 } // namespace WebCore
 

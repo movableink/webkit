@@ -571,7 +571,6 @@ dom/Observable.cpp
 dom/PendingScript.cpp
 dom/Position.cpp
 dom/PositionIterator.cpp
-dom/PositionIterator.h
 dom/ProcessingInstruction.cpp
 dom/QualifiedName.cpp
 dom/Range.cpp

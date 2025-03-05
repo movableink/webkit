@@ -29,7 +29,7 @@
 #include "HTMLSlotElement.h"
 #include "LocalDOMWindow.h"
 #include "MouseEvent.h"
-#include "Node.h"
+#include "NodeInlines.h"
 #include "PseudoElement.h"
 #include "ShadowRoot.h"
 #include "TouchEvent.h"
