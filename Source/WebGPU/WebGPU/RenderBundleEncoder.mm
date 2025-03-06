@@ -217,8 +217,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     , m_descriptorColorFormats(descriptor.colorFormats ? Vector<WGPUTextureFormat>(std::span { descriptor.colorFormats, descriptor.colorFormatCount }) : Vector<WGPUTextureFormat>())
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 {
-    if (m_descriptorColorFormats.size())
-        m_descriptor.colorFormats = &m_descriptorColorFormats[0];
+    m_descriptor.colorFormats = m_descriptorColorFormats.size() ? &m_descriptorColorFormats[0] : nullptr;
     m_icbArray = [NSMutableArray array];
     m_bindGroupDynamicOffsets = BindGroupDynamicOffsetsContainer();
 #if ENABLE(WEBGPU_ALWAYS_USE_ICB_REPLAY)

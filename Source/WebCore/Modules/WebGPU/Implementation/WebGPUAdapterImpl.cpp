@@ -243,8 +243,8 @@ void AdapterImpl::requestDevice(const DeviceDescriptor& descriptor, CompletionHa
     WGPUDeviceDescriptor backingDescriptor {
         .nextInChain = nullptr,
         .label = label.data(),
-        .requiredFeatureCount = static_cast<uint32_t>(features.size()),
-        .requiredFeatures = features.data(),
+        .requiredFeatureCount = features.size(),
+        .requiredFeatures = features.size() ? features.data() : nullptr,
         .requiredLimits = &requiredLimits,
         .defaultQueue = {
             { },
