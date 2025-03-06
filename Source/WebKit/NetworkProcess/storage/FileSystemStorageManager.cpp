@@ -146,10 +146,8 @@ void FileSystemStorageManager::connectionClosed(IPC::Connection::UniqueID connec
 
     auto identifiers = connectionHandles->value;
     for (auto identifier : identifiers) {
-        if (RefPtr handle = m_handles.take(identifier))
+        if (RefPtr handle = m_handles.get(identifier))
             handle->close();
-        if (RefPtr registry = m_registry.get())
-            registry->unregisterHandle(identifier);
     }
 
     m_handlesByConnection.remove(connectionHandles);

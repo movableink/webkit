@@ -2040,13 +2040,6 @@ webkit.org/b/288742 [ Debug ] ipc/media-player-invalid-test.html [ Crash ]
 
 webkit.org/b/288878 media/modern-media-controls/tracks-support/audio-multiple-tracks.html [ Pass Timeout ]
 
-# webkit.org/b/287889 [macOS Debug] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.sharedworker.html is flaky crash(flaky in EWS)
-[ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.sharedworker.html [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/css/css-view-transitions/writing-mode-container-resize.html [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.html [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.serviceworker.html [ Skip ]
-[ Debug ] imported/w3c/web-platform-tests/file-system-access/getDirectory.https.any.worker.html [ Skip ]
-
 webkit.org/b/289090 [ Debug arm64 ] imported/w3c/web-platform-tests/dom/nodes/remove-from-shadow-host-and-adopt-into-iframe.html [ Pass Timeout ]
 
 webkit.org/b/289092 http/wpt/background-fetch/background-fetch-abort.window.html [ Pass Failure ]
