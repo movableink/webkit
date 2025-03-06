@@ -3053,3 +3053,5 @@ webkit.org/b/288885 fullscreen/element-clear-during-fullscreen-crash.html [ Pass
 webkit.org/b/288882 fast/scrolling/page-cache-back-overflow-scroll-restore.html [ Pass Timeout ]
 
 webkit.org/b/288889 media/track/track-in-band.html [ Pass Timeout ]
+
+webkit.org/b/289275 [ Debug ] media/media-garbage-collection.html [ Pass Crash ]
