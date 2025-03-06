@@ -232,7 +232,8 @@ TrackID MediaSourcePrivateGStreamer::registerTrackId(TrackID preferredId)
     auto maxRegisteredId = std::max_element(m_trackIdRegistry.begin(), m_trackIdRegistry.end());
     auto assignedId = std::max((TrackID) 100, *maxRegisteredId + 1);
 
-    ASSERT(m_trackIdRegistry.add(assignedId).isNewEntry);
+    [[maybe_unused]] auto result = m_trackIdRegistry.add(assignedId);
+    ASSERT(result.isNewEntry);
     if (player)
         GST_DEBUG_OBJECT(player->pipeline(), "Registered new Track ID: %" PRIu64 " (preferred ID would have been %" PRIu64 ")", assignedId, preferredId);
 
