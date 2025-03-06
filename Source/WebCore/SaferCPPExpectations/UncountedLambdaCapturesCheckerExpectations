@@ -93,7 +93,6 @@ fileapi/FileReader.cpp
 html/DirectoryFileListCreator.cpp
 html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
-html/HTMLDialogElement.cpp
 html/HTMLFrameElementBase.cpp
 html/HTMLImageElement.cpp
 html/HTMLMediaElement.cpp

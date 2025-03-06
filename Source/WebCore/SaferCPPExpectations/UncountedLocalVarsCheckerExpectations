@@ -362,7 +362,6 @@ html/HTMLAttachmentElement.cpp
 html/HTMLCanvasElement.cpp
 html/HTMLCollection.cpp
 html/HTMLDetailsElement.cpp
-html/HTMLDialogElement.cpp
 html/HTMLDocument.cpp
 html/HTMLElement.cpp
 html/HTMLFieldSetElement.cpp
