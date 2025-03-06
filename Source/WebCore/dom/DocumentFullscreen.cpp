@@ -304,8 +304,8 @@ void DocumentFullscreen::elementEnterFullscreen(Element& element)
     if (&element == document->protectedFullscreen()->fullscreenElement())
         return;
 
-    auto hideUntil = element.topmostPopoverAncestor(Element::TopLayerElementType::Other);
-    document->hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
+    RefPtr hideUntil = element.topmostPopoverAncestor(Element::TopLayerElementType::Other);
+    document->hideAllPopoversUntil(hideUntil.get(), FocusPreviousElement::No, FireEvents::No);
 
     auto containingBlockBeforeStyleResolution = SingleThreadWeakPtr<RenderBlock> { };
     if (CheckedPtr renderer = element.renderer())

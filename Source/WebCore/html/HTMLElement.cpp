@@ -1121,8 +1121,8 @@ ExceptionOr<void> HTMLElement::showPopoverInternal(const HTMLElement* invoker)
 
     if (popoverState() == PopoverState::Auto) {
         auto originalState = popoverState();
-        auto hideUntil = topmostPopoverAncestor(TopLayerElementType::Popover);
-        document->hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, fireEvents);
+        RefPtr hideUntil = topmostPopoverAncestor(TopLayerElementType::Popover);
+        document->hideAllPopoversUntil(hideUntil.get(), FocusPreviousElement::No, fireEvents);
 
         if (popoverState() != originalState)
             return Exception { ExceptionCode::InvalidStateError, "The value of the popover attribute was changed while hiding the popover."_s };
