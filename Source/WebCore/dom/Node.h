@@ -269,6 +269,7 @@ public:
     ShadowRoot* containingShadowRoot() const;
     RefPtr<ShadowRoot> protectedContainingShadowRoot() const;
     inline ShadowRoot* shadowRoot() const; // Defined in ElementRareData.h
+    inline RefPtr<ShadowRoot> protectedShadowRoot() const; // Defined in ElementRareData.h
     bool isClosedShadowHidden(const Node&) const;
 
     HTMLSlotElement* assignedSlot() const;

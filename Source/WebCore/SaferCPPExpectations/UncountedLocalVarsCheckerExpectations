@@ -359,7 +359,6 @@ html/HTMLAnchorElement.cpp
 html/HTMLAttachmentElement.cpp
 html/HTMLCanvasElement.cpp
 html/HTMLCollection.cpp
-html/HTMLDetailsElement.cpp
 html/HTMLDocument.cpp
 html/HTMLElement.cpp
 html/HTMLFieldSetElement.cpp
@@ -378,7 +377,6 @@ html/HTMLPictureElement.cpp
 html/HTMLSelectElement.cpp
 html/HTMLSlotElement.cpp
 html/HTMLStyleElement.cpp
-html/HTMLSummaryElement.cpp
 html/HTMLTableElement.cpp
 html/HTMLTableRowElement.cpp
 html/HTMLTextFormControlElement.cpp

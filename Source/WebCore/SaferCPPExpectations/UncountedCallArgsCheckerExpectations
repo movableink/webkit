@@ -680,7 +680,6 @@ html/HTMLButtonElement.cpp
 html/HTMLCanvasElement.cpp
 html/HTMLCollection.cpp
 html/HTMLCollectionInlines.h
-html/HTMLDetailsElement.cpp
 html/HTMLElement.cpp
 html/HTMLFormControlElement.cpp
 html/HTMLFormControlsCollection.cpp
@@ -708,7 +707,6 @@ html/HTMLPlugInImageElement.cpp
 html/HTMLProgressElement.cpp
 html/HTMLSelectElement.cpp
 html/HTMLStyleElement.cpp
-html/HTMLSummaryElement.cpp
 html/HTMLTableCellElement.cpp
 html/HTMLTableElement.cpp
 html/HTMLTablePartElement.cpp
