@@ -277,7 +277,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 
 - (pid_t)_networkProcessIdentifier
 {
-    auto* networkProcess = _page->websiteDataStore().networkProcessIfExists();
+    RefPtr networkProcess = _page->websiteDataStore().networkProcessIfExists();
     RELEASE_ASSERT(networkProcess);
     return networkProcess->processID();
 }
@@ -348,7 +348,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
         completionHandler();
         return;
     }
-    _page->legacyMainFrameProcess().sendPrepareToSuspend(WebKit::IsSuspensionImminent::No, 0.0, [completionHandler = makeBlockPtr(completionHandler)] {
+    _page->protectedLegacyMainFrameProcess()->sendPrepareToSuspend(WebKit::IsSuspensionImminent::No, 0.0, [completionHandler = makeBlockPtr(completionHandler)] {
         completionHandler();
     });
 }
@@ -356,13 +356,13 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 - (void)_processWillSuspendImminentlyForTesting
 {
     if (_page)
-        _page->legacyMainFrameProcess().sendPrepareToSuspend(WebKit::IsSuspensionImminent::Yes, 0.0, [] { });
+        _page->protectedLegacyMainFrameProcess()->sendPrepareToSuspend(WebKit::IsSuspensionImminent::Yes, 0.0, [] { });
 }
 
 - (void)_processDidResumeForTesting
 {
     if (_page)
-        _page->legacyMainFrameProcess().sendProcessDidResume(WebKit::AuxiliaryProcessProxy::ResumeReason::ForegroundActivity);
+        _page->protectedLegacyMainFrameProcess()->sendProcessDidResume(WebKit::AuxiliaryProcessProxy::ResumeReason::ForegroundActivity);
 }
 
 - (void)_setThrottleStateForTesting:(int)value
@@ -370,7 +370,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     if (!_page)
         return;
 
-    _page->legacyMainFrameProcess().setThrottleStateForTesting(static_cast<WebKit::ProcessThrottleState>(value));
+    _page->protectedLegacyMainFrameProcess()->setThrottleStateForTesting(static_cast<WebKit::ProcessThrottleState>(value));
 }
 
 - (BOOL)_hasServiceWorkerBackgroundActivityForTesting

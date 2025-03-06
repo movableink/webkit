@@ -1,9 +1,3 @@
-UIProcess/API/C/WKPage.cpp
-UIProcess/API/C/mac/WKPagePrivateMac.mm
-UIProcess/API/Cocoa/WKBrowsingContextController.mm
-UIProcess/API/Cocoa/WKWebViewTesting.mm
-UIProcess/API/Cocoa/WKWebsiteDataStore.mm
-UIProcess/mac/WebViewImpl.mm
 WebProcess/FullScreen/WebFullScreenManager.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/Plugins/PDF/PDFPluginAnnotation.mm

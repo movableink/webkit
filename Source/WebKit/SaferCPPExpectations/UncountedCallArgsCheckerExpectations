@@ -40,9 +40,6 @@ Shared/WebCompiledContentRuleListData.cpp
 Shared/WebHitTestResultData.cpp
 Shared/WebImage.cpp
 Shared/WebMemorySampler.cpp
-UIProcess/API/APIAttachment.cpp
-UIProcess/API/APIDownloadClient.h
-UIProcess/API/APIInspectorExtension.cpp
 UIProcess/API/APINavigationClient.h
 UIProcess/API/APIPageConfiguration.cpp
 UIProcess/API/APIWebAuthenticationAssertionResponse.cpp
@@ -87,7 +84,6 @@ UIProcess/API/C/WKWebsiteDataStoreConfigurationRef.cpp
 UIProcess/API/C/WKWebsiteDataStoreRef.cpp
 UIProcess/API/C/WKWebsitePolicies.cpp
 UIProcess/API/C/mac/WKPagePrivateMac.mm
-UIProcess/API/Cocoa/APIAttachmentCocoa.mm
 UIProcess/API/Cocoa/NSAttributedString.mm
 UIProcess/API/Cocoa/WKBackForwardList.mm
 UIProcess/API/Cocoa/WKBackForwardListItem.mm
@@ -151,7 +147,6 @@ UIProcess/Extensions/Cocoa/WebExtensionActionCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionCommandCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm
 UIProcess/Extensions/WebExtensionCommand.cpp
-UIProcess/Inspector/Agents/InspectorBrowserAgent.cpp
 UIProcess/Inspector/Cocoa/InspectorExtensionDelegate.mm
 UIProcess/Inspector/WebPageInspectorController.cpp
 UIProcess/Inspector/mac/WKInspectorViewController.mm

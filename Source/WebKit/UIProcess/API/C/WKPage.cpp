@@ -1433,7 +1433,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         milestones.add(WebCore::LayoutMilestone::DidFirstVisuallyNonEmptyLayout);
 
     if (milestones)
-        webPageProxy->legacyMainFrameProcess().send(Messages::WebPage::ListenForLayoutMilestones(milestones), webPageProxy->webPageIDInMainFrameProcess());
+        webPageProxy->protectedLegacyMainFrameProcess()->send(Messages::WebPage::ListenForLayoutMilestones(milestones), webPageProxy->webPageIDInMainFrameProcess());
 
     webPageProxy->setLoaderClient(WTFMove(loaderClient));
 }
@@ -3031,7 +3031,7 @@ WKArrayRef WKPageCopyRelatedPages(WKPageRef pageRef)
 {
     Vector<RefPtr<API::Object>> relatedPages;
 
-    for (Ref page : toImpl(pageRef)->legacyMainFrameProcess().pages()) {
+    for (Ref page : toImpl(pageRef)->protectedLegacyMainFrameProcess()->pages()) {
         if (page.ptr() != toImpl(pageRef))
             relatedPages.append(WTFMove(page));
     }
@@ -3186,7 +3186,7 @@ ProcessID WKPageGetProcessIdentifier(WKPageRef page)
 ProcessID WKPageGetGPUProcessIdentifier(WKPageRef page)
 {
 #if ENABLE(GPU_PROCESS)
-    auto* gpuProcess = toImpl(page)->configuration().processPool().gpuProcess();
+    RefPtr gpuProcess = toImpl(page)->configuration().processPool().gpuProcess();
     if (!gpuProcess)
         return 0;
     return gpuProcess->processID();
@@ -3373,8 +3373,8 @@ void WKPageSetMockCaptureDevicesInterrupted(WKPageRef pageRef, bool isCameraInte
 #if ENABLE(MEDIA_STREAM) && ENABLE(GPU_PROCESS)
     auto preferences = toImpl(pageRef)->protectedPreferences();
     if (preferences->useGPUProcessForMediaEnabled()) {
-        auto& gpuProcess = toImpl(pageRef)->configuration().processPool().ensureGPUProcess();
-        gpuProcess.setMockCaptureDevicesInterrupted(isCameraInterrupted, isMicrophoneInterrupted);
+        Ref gpuProcess = toImpl(pageRef)->configuration().processPool().ensureGPUProcess();
+        gpuProcess->setMockCaptureDevicesInterrupted(isCameraInterrupted, isMicrophoneInterrupted);
     }
 #endif
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
@@ -3397,8 +3397,8 @@ void WKPageTriggerMockCaptureConfigurationChange(WKPageRef pageRef, bool forCame
     if (!preferences->useGPUProcessForMediaEnabled())
         return;
 
-    auto& gpuProcess = toImpl(pageRef)->configuration().processPool().ensureGPUProcess();
-    gpuProcess.triggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay);
+    Ref gpuProcess = toImpl(pageRef)->configuration().processPool().ensureGPUProcess();
+    gpuProcess->triggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay);
 #endif // ENABLE(GPU_PROCESS)
 
 #endif // ENABLE(MEDIA_STREAM)

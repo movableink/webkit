@@ -749,7 +749,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 - (BOOL)_webProcessIsResponsive
 {
-    return _page->legacyMainFrameProcess().isResponsive();
+    return _page->protectedLegacyMainFrameProcess()->isResponsive();
 }
 
 @end
