@@ -97,10 +97,6 @@ struct UnresolvedFont {
 // https://drafts.csswg.org/css-fonts-4/#font-prop
 std::optional<UnresolvedFont> parseUnresolvedFont(const String&, const CSSParserContext&);
 
-// MARK: 'font-weight'
-// https://drafts.csswg.org/css-fonts-4/#font-weight-prop
-RefPtr<CSSValue> consumeFontWeight(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: 'font-style'
 // https://drafts.csswg.org/css-fonts-4/#font-style-prop
 RefPtr<CSSValue> consumeFontStyle(CSSParserTokenRange&, const CSSParserContext&);

@@ -737,10 +737,8 @@
                 "font-property": true,
                 "high-priority": true,
                 "style-builder-converter": "FontWeight",
-                "parser-function": "consumeFontWeight",
-                "parser-function-allows-number-or-integer-input": true,
-                "parser-grammar-unused": "<font-weight-absolute> | bolder | lighter",
-                "parser-grammar-unused-reason": "Needs support for arbitrary ranges on <number>."
+                "parser-grammar": "<font-weight-absolute> | bolder | lighter",
+                "parser-exported": true
             },
             "specification": {
                 "category": "css-fonts-4",

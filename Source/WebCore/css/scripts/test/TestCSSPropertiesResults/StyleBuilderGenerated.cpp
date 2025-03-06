@@ -80,6 +80,18 @@ public:
     {
         builderState.style().setTestAnimationWrapperAccelerationThreadedOnly(fromCSSValueDeducingType(builderState, value));
     }
+    static void applyInitialTestNumericValueRange(BuilderState& builderState)
+    {
+        builderState.style().setTestNumericValueRange(RenderStyle::initialTestNumericValueRange());
+    }
+    static void applyInheritTestNumericValueRange(BuilderState& builderState)
+    {
+        builderState.style().setTestNumericValueRange(forwardInheritedValue(builderState.parentStyle().testNumericValueRange()));
+    }
+    static void applyValueTestNumericValueRange(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestNumericValueRange(fromCSSValueDeducingType(builderState, value));
+    }
     static void applyInitialTestProperty(BuilderState& builderState)
     {
         builderState.style().setTestProperty(RenderStyle::initialTestProperty());
@@ -232,6 +244,19 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         case ApplyValueType::Value:
             BuilderFunctions::applyValueTestAnimationWrapperAccelerationThreadedOnly(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestNumericValueRange:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestNumericValueRange(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestNumericValueRange(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestNumericValueRange(builderState, value);
             break;
         }
         break;

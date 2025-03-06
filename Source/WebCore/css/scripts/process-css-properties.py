@@ -1460,15 +1460,12 @@ class BuiltinSchema:
             self.default = default
 
     class RangeParameter:
-        def __init__(self, name, *, mappings=None, default=None):
+        def __init__(self, name):
             self.name = name
-            self.mappings = mappings
-            self.default = default
 
     class Entry:
-        def __init__(self, name, consume_function_name, *parameter_descriptors):
+        def __init__(self, name, *parameter_descriptors):
             self.name = Name(name)
-            self.consume_function_name = consume_function_name
 
             # Mapping of descriptor name (e.g. 'mode') to StringParameter descriptor.
             self.string_parameter_descriptors = {}
@@ -1485,10 +1482,10 @@ class BuiltinSchema:
                     self.range_parameter_descriptor = parameter_descriptor
 
             def builtin_schema_type_init(self, parameters):
-                # Map from descriptor name (e.g. 'value_range' or 'mode') to mapped value (e.g. `ValueRange::NonNegative` or `HTMLStandardMode`) for all of the parameters.
+                # Map from descriptor name (e.g. 'value_range' or 'mode') to value (e.g. `CSS::Range{0, CSS::Range::infinity}` or `HTMLStandardMode`) for all of the parameters.
                 self.parameter_map = {}
 
-                # Map from descriptor name (e.g. 'value_range' or 'mode') to parameter value (e.g. `[0,inf]` or `strict`) for all of the parameters.
+                # Map from descriptor names that have been used so far.
                 descriptors_used = {}
 
                 # Example parameters: [ReferenceTerm.StringParameter('svg'), ReferenceTerm.StringParameter('excluding', ['auto','none']), ReferenceTerm.RangeParameter(0, 'inf')].
@@ -1525,18 +1522,15 @@ class BuiltinSchema:
                             raise Exception(f"More than one parameter of type '{descriptor.name}` passed to <{self.entry.name.name}>, pick one: {descriptors_used[descriptor.name]}, {parameter}.")
                         descriptors_used[descriptor.name] = descriptor
 
-                        if descriptor.mappings:
-                            if (parameter.min, parameter.max) not in descriptor.mappings:
-                                raise Exception(f"'{parameter}' passed to <{self.entry.name.name}> does not match any of the supported mappings. Supported mappings are {', '.join(quote_iterable(descriptor.mappings.keys()))}.")
-
-                            self.parameter_map[descriptor.name] = descriptor.mappings[(parameter.min, parameter.max)]
-                        else:
-                            self.parameter_map[descriptor.name] = parameter
+                        min = '-CSS::Range::infinity' if parameter.min == '-inf' else parameter.min
+                        max =  'CSS::Range::infinity' if parameter.max ==  'inf' else parameter.max
+                        self.parameter_map[descriptor.name] = f'CSS::Range{{{min}, {max}}}'
                     else:
                         raise Exception(f"Unknown parameter '{parameter}' passed to <{self.entry.name.name}>. Supported parameters are {', '.join(quote_iterable(self.entry.value_to_descriptor.keys()))}.")
 
-                # Fill `results` with mappings from `names` (e.g. `value_range`) to mapped to value (e.g. `ValueRange::NonNegative`)
+                # Fill `results` with mappings from names (e.g. 'value_range' or 'mode') to values (e.g. `CSS::Range(0, CSS::Range::infinity)` or `HTMLStandardMode`), pulling in default values for unspecified parameters.
                 self.results = {}
+
                 for descriptor in self.entry.string_parameter_descriptors.values():
                     if descriptor.name in self.parameter_map:
                         self.results[descriptor.name] = self.parameter_map[descriptor.name]
@@ -1544,14 +1538,14 @@ class BuiltinSchema:
                         self.results[descriptor.name] = descriptor.mappings[descriptor.default]
                     else:
                         self.results[descriptor.name] = None
+
                 if self.entry.range_parameter_descriptor is not None:
                     descriptor = self.entry.range_parameter_descriptor
                     if descriptor.name in self.parameter_map:
                         self.results[descriptor.name] = self.parameter_map[descriptor.name]
-                    elif descriptor.mappings and descriptor.default:
-                        self.results[descriptor.name] = descriptor.mappings[descriptor.default]
                     else:
-                        self.results[descriptor.name] = None
+                        # If no range parameter was specified in the grammar, the empty string will work to cause the default range to be used.
+                        self.results[descriptor.name] = ""
 
             def builtin_schema_type_parameter_string_getter(name, self):
                 return self.results[name]
@@ -1560,7 +1554,6 @@ class BuiltinSchema:
             class_name = f"Builtin{self.name.id_without_prefix}Consumer"
             class_attributes = {
                 "__init__": builtin_schema_type_init,
-                "consume_function_name": self.consume_function_name,
                 "entry": self,
             }
 
@@ -1600,46 +1593,44 @@ ANCHOR_MAPPINGS = {'allowed': 'AnchorPolicy::Allow', 'forbidden': 'AnchorPolicy:
 ANCHOR_SIZE_MAPPINGS = {'allowed': 'AnchorSizePolicy::Allow', 'forbidden': 'AnchorSizePolicy::Forbid'}
 QUIRKY_COLORS_MAPPINGS = {'allowed': True, 'forbidden': False}
 
-# BuiltinSchema.RangeParameter Mappings
-# NOTE: "FontWeight" is not supported value and is just here until arbitrary ranges are fully supported.
-VALUE_RANGE_MAPPINGS = {('0','inf'): 'ValueRange::NonNegative', ('-inf','inf'): 'ValueRange::All', ('1','1000'): 'ValueRange::FontWeight'}
-CSS_RANGE_MAPPINGS = {('0','inf'): 'CSS::Range{0, CSS::Range::infinity}', ('1','inf'): 'CSS::Range{1, CSS::Range::infinity}', ('-inf','inf'): 'CSS::Range{-CSS::Range::infinity, CSS::Range::infinity}'}
-
 class ReferenceTerm:
     builtins = BuiltinSchema(
-        BuiltinSchema.Entry('angle', 'consumeAngle',
+        BuiltinSchema.Entry('angle',
+            BuiltinSchema.RangeParameter('value-range'),
             BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden'),
             BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='forbidden')),
-        BuiltinSchema.Entry('length', 'consumeLength',
-            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf')),
+        BuiltinSchema.Entry('length',
+            BuiltinSchema.RangeParameter('value-range'),
             BuiltinSchema.StringParameter('mode', mappings=MODE_MAPPINGS),
-            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden')),
-        BuiltinSchema.Entry('length-percentage', 'consumeLengthPercentage',
-            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf')),
+            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden'),
+            BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='allowed')),
+        BuiltinSchema.Entry('length-percentage',
+            BuiltinSchema.RangeParameter('value-range'),
             BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden'),
             BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='allowed'),
             BuiltinSchema.StringParameter('anchor', mappings=ANCHOR_MAPPINGS, default='forbidden'),
             BuiltinSchema.StringParameter('anchor-size', mappings=ANCHOR_SIZE_MAPPINGS, default='forbidden')),
-        BuiltinSchema.Entry('time', 'consumeTime',
-            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf'))),
-        BuiltinSchema.Entry('integer', 'consumeInteger',
-            BuiltinSchema.RangeParameter('value-range', mappings=CSS_RANGE_MAPPINGS, default=('-inf','inf'))),
-        BuiltinSchema.Entry('number', 'consumeNumber',
-            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf'))),
-        BuiltinSchema.Entry('percentage', 'consumePercentage',
-            BuiltinSchema.RangeParameter('value-range', mappings=VALUE_RANGE_MAPPINGS, default=('-inf','inf'))),
-        BuiltinSchema.Entry('resolution', 'consumeResolution'),
-        BuiltinSchema.Entry('position', 'consumePosition',
+        BuiltinSchema.Entry('time',
+            BuiltinSchema.RangeParameter('value-range')),
+        BuiltinSchema.Entry('integer',
+            BuiltinSchema.RangeParameter('value-range')),
+        BuiltinSchema.Entry('number',
+            BuiltinSchema.RangeParameter('value-range')),
+        BuiltinSchema.Entry('percentage',
+            BuiltinSchema.RangeParameter('value-range')),
+        BuiltinSchema.Entry('resolution',
+            BuiltinSchema.RangeParameter('value-range')),
+        BuiltinSchema.Entry('position',
             BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden')),
-        BuiltinSchema.Entry('color', 'consumeColor',
+        BuiltinSchema.Entry('color',
             BuiltinSchema.StringParameter('quirky-colors-in-quirks-mode', mappings=QUIRKY_COLORS_MAPPINGS, default='forbidden')),
-        BuiltinSchema.Entry('string', 'consumeString'),
-        BuiltinSchema.Entry('custom-ident', 'consumeCustomIdent',
+        BuiltinSchema.Entry('string'),
+        BuiltinSchema.Entry('custom-ident',
             BuiltinSchema.StringParameter('excluding')),
-        BuiltinSchema.Entry('dashed-ident', 'consumeDashedIdent'),
-        BuiltinSchema.Entry('url', 'consumeURL'),
-        BuiltinSchema.Entry('feature-tag-value', 'consumeFeatureTagValue'),
-        BuiltinSchema.Entry('variation-tag-value', 'consumeVariationTagValue')
+        BuiltinSchema.Entry('dashed-ident'),
+        BuiltinSchema.Entry('url'),
+        BuiltinSchema.Entry('feature-tag-value'),
+        BuiltinSchema.Entry('variation-tag-value')
     )
 
     class StringParameter:
@@ -4255,12 +4246,13 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParser.h",
                     "CSSPropertyParserConsumer+Align.h",
                     "CSSPropertyParserConsumer+Anchor.h",
-                    "CSSPropertyParserConsumer+Angle.h",
+                    "CSSPropertyParserConsumer+AngleDefinitions.h",
                     "CSSPropertyParserConsumer+Animations.h",
                     "CSSPropertyParserConsumer+AppleVisualEffect.h",
                     "CSSPropertyParserConsumer+Attr.h",
                     "CSSPropertyParserConsumer+Background.h",
                     "CSSPropertyParserConsumer+Box.h",
+                    "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h",
                     "CSSPropertyParserConsumer+Color.h",
                     "CSSPropertyParserConsumer+ColorAdjust.h",
                     "CSSPropertyParserConsumer+Contain.h",
@@ -4275,22 +4267,22 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+Image.h",
                     "CSSPropertyParserConsumer+Inline.h",
                     "CSSPropertyParserConsumer+Inset.h",
-                    "CSSPropertyParserConsumer+Integer.h",
-                    "CSSPropertyParserConsumer+Length.h",
-                    "CSSPropertyParserConsumer+LengthPercentage.h",
+                    "CSSPropertyParserConsumer+IntegerDefinitions.h",
+                    "CSSPropertyParserConsumer+LengthDefinitions.h",
+                    "CSSPropertyParserConsumer+LengthPercentageDefinitions.h",
                     "CSSPropertyParserConsumer+List.h",
                     "CSSPropertyParserConsumer+Lists.h",
                     "CSSPropertyParserConsumer+Masking.h",
                     "CSSPropertyParserConsumer+Motion.h",
-                    "CSSPropertyParserConsumer+Number.h",
+                    "CSSPropertyParserConsumer+NumberDefinitions.h",
                     "CSSPropertyParserConsumer+Overflow.h",
                     "CSSPropertyParserConsumer+Page.h",
-                    "CSSPropertyParserConsumer+Percentage.h",
+                    "CSSPropertyParserConsumer+PercentageDefinitions.h",
                     "CSSPropertyParserConsumer+PointerEvents.h",
                     "CSSPropertyParserConsumer+Position.h",
                     "CSSPropertyParserConsumer+PositionTry.h",
                     "CSSPropertyParserConsumer+Primitives.h",
-                    "CSSPropertyParserConsumer+Resolution.h",
+                    "CSSPropertyParserConsumer+ResolutionDefinitions.h",
                     "CSSPropertyParserConsumer+Ruby.h",
                     "CSSPropertyParserConsumer+SVG.h",
                     "CSSPropertyParserConsumer+ScrollSnap.h",
@@ -4302,7 +4294,7 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+Syntax.h",
                     "CSSPropertyParserConsumer+Text.h",
                     "CSSPropertyParserConsumer+TextDecoration.h",
-                    "CSSPropertyParserConsumer+Time.h",
+                    "CSSPropertyParserConsumer+TimeDefinitions.h",
                     "CSSPropertyParserConsumer+Timeline.h",
                     "CSSPropertyParserConsumer+Transform.h",
                     "CSSPropertyParserConsumer+Transitions.h",
@@ -5078,35 +5070,35 @@ class TermGeneratorReferenceTerm(TermGenerator):
         if self.term.is_builtin:
             builtin = self.term.builtin
             if isinstance(builtin, BuiltinAngleConsumer):
-                return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.unitless}, {builtin.unitless_zero})"
+                return f"CSSPrimitiveValueResolver<CSS::Angle<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
             elif isinstance(builtin, BuiltinTimeConsumer):
-                return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.value_range})"
+                return f"CSSPrimitiveValueResolver<CSS::Time<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode }})"
             elif isinstance(builtin, BuiltinLengthConsumer):
                 if builtin.mode:
-                    return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.mode}, {builtin.value_range}, {builtin.unitless})"
-                return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.value_range}, {builtin.unitless})"
+                    return f"CSSPrimitiveValueResolver<CSS::Length<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {builtin.mode}, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
+                return f"CSSPrimitiveValueResolver<CSS::Length<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
             elif isinstance(builtin, BuiltinLengthPercentageConsumer):
-                return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.value_range}, {builtin.unitless}, {builtin.unitless_zero}, {builtin.anchor}, {builtin.anchor_size})"
+                return f"CSSPrimitiveValueResolver<CSS::LengthPercentage<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode, .anchorPolicy = {builtin.anchor}, .anchorSizePolicy = {builtin.anchor_size}, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
             elif isinstance(builtin, BuiltinIntegerConsumer):
-                return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.value_range})"
+                return f"CSSPrimitiveValueResolver<CSS::Integer<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode }})"
             elif isinstance(builtin, BuiltinNumberConsumer):
-                return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.value_range})"
+                return f"CSSPrimitiveValueResolver<CSS::Number<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode }})"
             elif isinstance(builtin, BuiltinPercentageConsumer):
-                return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.value_range})"
+                return f"CSSPrimitiveValueResolver<CSS::Percentage<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode }})"
             elif isinstance(builtin, BuiltinPositionConsumer):
-                return f"{builtin.consume_function_name}({range_string}, {context_string}, {builtin.unitless}, PositionSyntax::Position)"
+                return f"consumePosition({range_string}, {context_string}, {builtin.unitless}, PositionSyntax::Position)"
             elif isinstance(builtin, BuiltinColorConsumer):
                 if builtin.quirky_colors_in_quirks_mode:
-                    return f"{builtin.consume_function_name}({range_string}, {context_string}, {{ .acceptQuirkyColors = ({context_string}.mode == HTMLQuirksMode) }})"
-                return f"{builtin.consume_function_name}({range_string}, {context_string})"
+                    return f"consumeColor({range_string}, {context_string}, {{ .acceptQuirkyColors = ({context_string}.mode == HTMLQuirksMode) }})"
+                return f"consumeColor({range_string}, {context_string})"
             elif isinstance(builtin, BuiltinCustomIdentConsumer):
                 if builtin.excluding:
-                    return f"{builtin.consume_function_name}Excluding({range_string}, {{ { ', '.join(ValueKeywordName(id).id for id in builtin.excluding)} }})"
-                return f"{builtin.consume_function_name}({range_string})"
+                    return f"consumeCustomIdentExcluding({range_string}, {{ { ', '.join(ValueKeywordName(id).id for id in builtin.excluding)} }})"
+                return f"consumeCustomIdent({range_string})"
             elif self.requires_context:
-                return f"{builtin.consume_function_name}({range_string}, {context_string})"
+                return f"consume{self.term.name.id_without_prefix}({range_string}, {context_string})"
             else:
-                return f"{builtin.consume_function_name}({range_string})"
+                return f"consume{self.term.name.id_without_prefix}({range_string})"
         else:
             return f"consume{self.term.name.id_without_prefix}({range_string}, {context_string})"
 
@@ -5750,8 +5742,8 @@ class StringEqualingEnum(enum.Enum):
 
 class BNFToken(StringEqualingEnum):
     # Numbers.
-    FLOAT   = re.compile(r'\d+\.\d+')
-    INT     = re.compile(r'\d+')
+    FLOAT   = re.compile(r'\-?\d+\.\d+')
+    INT     = re.compile(r'\-?\d+')
 
     # Brackets.
     LPAREN  = re.compile(r'\(')

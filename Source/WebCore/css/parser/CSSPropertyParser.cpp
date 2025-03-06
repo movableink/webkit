@@ -735,7 +735,7 @@ bool CSSPropertyParser::consumeFont(bool important)
             continue;
         if (!fontVariantCaps && (fontVariantCaps = consumeIdent<CSSValueSmallCaps>(range)))
             continue;
-        if (!fontWeight && (fontWeight = consumeFontWeight(range, m_context)))
+        if (!fontWeight && (fontWeight = CSSPropertyParsing::consumeFontWeight(range, m_context)))
             continue;
         if (!fontWidth && (fontWidth = CSSPropertyParsing::consumeFontWidthAbsolute(range)))
             continue;

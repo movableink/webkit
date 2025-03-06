@@ -38,6 +38,7 @@ WrapperMap::WrapperMap()
         new Wrapper<float>(CSSPropertyID::CSSPropertyTestAnimationWrapper, &RenderStyle::testAnimationWrapper, &RenderStyle::setTestAnimationWrapper), // CSSPropertyID::CSSPropertyTestAnimationWrapper
         new Wrapper<float>(CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways, &RenderStyle::testAnimationWrapperAccelerationAlways, &RenderStyle::setTestAnimationWrapperAccelerationAlways), // CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways
         new Wrapper<float>(CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly, &RenderStyle::testAnimationWrapperAccelerationThreadedOnly, &RenderStyle::setTestAnimationWrapperAccelerationThreadedOnly), // CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly
+        new DiscreteWrapper(CSSPropertyID::CSSPropertyTestNumericValueRange, &RenderStyle::testNumericValueRange, &RenderStyle::setTestNumericValueRange), // CSSPropertyID::CSSPropertyTestNumericValueRange
         new DiscreteWrapper(CSSPropertyID::CSSPropertyTestProperty, &RenderStyle::testProperty, &RenderStyle::setTestProperty), // CSSPropertyID::CSSPropertyTestProperty
         new DiscreteWrapper(CSSPropertyID::CSSPropertyTestSettingsOne, &RenderStyle::testSettingsOne, &RenderStyle::setTestSettingsOne), // CSSPropertyID::CSSPropertyTestSettingsOne
         new DiscreteWrapper(CSSPropertyID::CSSPropertyTestUsingSharedRule, &RenderStyle::testUsingSharedRule, &RenderStyle::setTestUsingSharedRule), // CSSPropertyID::CSSPropertyTestUsingSharedRule

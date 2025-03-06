@@ -168,15 +168,6 @@ static std::optional<UnresolvedFontWeight> consumeFontWeightUnresolved(CSSParser
     return std::nullopt;
 }
 
-RefPtr<CSSValue> consumeFontWeight(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    if (auto keyword = consumeIdentRaw<CSSValueNormal, CSSValueBold, CSSValueBolder, CSSValueLighter>(range))
-        return CSSPrimitiveValue::create(*keyword);
-    if (auto fontWeightNumber = consumeFontWeightNumberUnresolved(range, context))
-        return resolveToCSSPrimitiveValue(WTFMove(*fontWeightNumber));
-    return nullptr;
-}
-
 // MARK: - 'font-style'
 
 #if ENABLE(VARIATION_FONTS)

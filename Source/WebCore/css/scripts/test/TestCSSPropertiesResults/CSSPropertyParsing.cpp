@@ -9,12 +9,13 @@
 #include "CSSPropertyParser.h"
 #include "CSSPropertyParserConsumer+Align.h"
 #include "CSSPropertyParserConsumer+Anchor.h"
-#include "CSSPropertyParserConsumer+Angle.h"
+#include "CSSPropertyParserConsumer+AngleDefinitions.h"
 #include "CSSPropertyParserConsumer+Animations.h"
 #include "CSSPropertyParserConsumer+AppleVisualEffect.h"
 #include "CSSPropertyParserConsumer+Attr.h"
 #include "CSSPropertyParserConsumer+Background.h"
 #include "CSSPropertyParserConsumer+Box.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+ColorAdjust.h"
 #include "CSSPropertyParserConsumer+Contain.h"
@@ -29,22 +30,22 @@
 #include "CSSPropertyParserConsumer+Image.h"
 #include "CSSPropertyParserConsumer+Inline.h"
 #include "CSSPropertyParserConsumer+Inset.h"
-#include "CSSPropertyParserConsumer+Integer.h"
-#include "CSSPropertyParserConsumer+Length.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+List.h"
 #include "CSSPropertyParserConsumer+Lists.h"
 #include "CSSPropertyParserConsumer+Masking.h"
 #include "CSSPropertyParserConsumer+Motion.h"
-#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Overflow.h"
 #include "CSSPropertyParserConsumer+Page.h"
-#include "CSSPropertyParserConsumer+Percentage.h"
+#include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+PointerEvents.h"
 #include "CSSPropertyParserConsumer+Position.h"
 #include "CSSPropertyParserConsumer+PositionTry.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
-#include "CSSPropertyParserConsumer+Resolution.h"
+#include "CSSPropertyParserConsumer+ResolutionDefinitions.h"
 #include "CSSPropertyParserConsumer+Ruby.h"
 #include "CSSPropertyParserConsumer+SVG.h"
 #include "CSSPropertyParserConsumer+ScrollSnap.h"
@@ -56,7 +57,7 @@
 #include "CSSPropertyParserConsumer+Syntax.h"
 #include "CSSPropertyParserConsumer+Text.h"
 #include "CSSPropertyParserConsumer+TextDecoration.h"
-#include "CSSPropertyParserConsumer+Time.h"
+#include "CSSPropertyParserConsumer+TimeDefinitions.h"
 #include "CSSPropertyParserConsumer+Timeline.h"
 #include "CSSPropertyParserConsumer+Transform.h"
 #include "CSSPropertyParserConsumer+Transitions.h"
@@ -81,13 +82,24 @@ static bool isKeywordValidForTestUsingSharedRule(CSSValueID keyword)
     }
 }
 
+static RefPtr<CSSValue> consumeTestNumericValueRange(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    if (auto result = CSSPrimitiveValueResolver<CSS::Number<CSS::Range{-CSS::Range::infinity, -10}>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
+        return result;
+    if (auto result = CSSPrimitiveValueResolver<CSS::Length<CSS::Range{0, CSS::Range::infinity}>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Forbid, .unitlessZero = UnitlessZeroQuirk::Allow }))
+        return result;
+    if (auto result = CSSPrimitiveValueResolver<CSS::Angle<CSS::Range{-90, 90}>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Forbid, .unitlessZero = UnitlessZeroQuirk::Forbid }))
+        return result;
+    return CSSPrimitiveValueResolver<CSS::Percentage<CSS::Range{1, 100}>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+}
+
 static RefPtr<CSSValue> consumeTestUsingSharedRule(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     if (auto result = consumeIdent(range, isKeywordValidForTestUsingSharedRule))
         return result;
-    if (auto result = consumeNumber(range, context, ValueRange::All))
+    if (auto result = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
         return result;
-    return consumePercentage(range, context, ValueRange::All);
+    return CSSPrimitiveValueResolver<CSS::Percentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
 }
 
 RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& range, CSSPropertyID id, CSSPropertyID currentShorthand, const CSSParserContext& context)
@@ -111,7 +123,9 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical:
-        return consumeNumber(range, context, ValueRange::All);
+        return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+    case CSSPropertyID::CSSPropertyTestNumericValueRange:
+        return consumeTestNumericValueRange(range, context);
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
         return consumeTestUsingSharedRule(range, context);
     default:
@@ -149,7 +163,7 @@ RefPtr<CSSValue> CSSPropertyParsing::parseFirstAtRuleDescriptor(CSSParserTokenRa
     }
     switch (id) {
     case CSSPropertyID::CSSPropertyFirstTestDescriptorForFirstDescriptor:
-        return consumeNumber(range, context, ValueRange::All);
+        return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
     default:
         return nullptr;
     }
@@ -175,7 +189,7 @@ RefPtr<CSSValue> CSSPropertyParsing::parseSecondAtRuleDescriptor(CSSParserTokenR
     }
     switch (id) {
     case CSSPropertyID::CSSPropertyFirstTestDescriptorForSecondDescriptor:
-        return consumeNumber(range, context, ValueRange::All);
+        return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
     default:
         return nullptr;
     }

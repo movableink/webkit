@@ -41,7 +41,13 @@
                 "parser-grammar": "<number>"
             }
         },
-
+        "test-numeric-value-range": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "parser-grammar": "<number [-inf, -10]> | <length [0, inf]> | <angle [-90,90]> | <percentage [1,100]>"
+            }
+        },
         "test-settings-one": {
             "animation-type": "discrete",
             "initial": "0",
