@@ -73,6 +73,7 @@
 #include "FrameTree.h"
 #include "Gradient.h"
 #include "GraphicsContext.h"
+#include "HTMLCanvasElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFrameElement.h"
 #include "HTMLFrameOwnerElement.h"

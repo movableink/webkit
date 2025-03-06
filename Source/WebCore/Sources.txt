@@ -2828,6 +2828,7 @@ rendering/MotionPath.cpp
 rendering/OrderIterator.cpp
 rendering/PathOperation.cpp
 rendering/PointerEventsHitRules.cpp
+rendering/PositionedLayoutConstraints.cpp
 rendering/ReferencedSVGResources.cpp
 rendering/RegionContext.cpp
 rendering/RenderAttachment.cpp
