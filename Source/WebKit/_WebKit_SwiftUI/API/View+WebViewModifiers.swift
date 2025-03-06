@@ -97,7 +97,13 @@ extension View {
         of transform: @escaping (ScrollGeometry) -> T,
         action: @escaping (T, T) -> Void
     ) -> some View where T : Hashable {
-        modifier(OnScrollGeometryChangeModifier(transform: transform, action: action))
+        let change = OnScrollGeometryChangeContext {
+            AnyHashable(transform($0))
+        } action: {
+            action($0.base as! T, $1.base as! T)
+        }
+
+        return environment(\.webViewOnScrollGeometryChange, change)
     }
 
     @_spi(Private)

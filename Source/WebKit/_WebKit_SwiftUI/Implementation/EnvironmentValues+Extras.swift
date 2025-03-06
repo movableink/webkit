@@ -51,7 +51,7 @@ extension EnvironmentValues {
     var webViewContentBackground: Visibility = .automatic
 
     @Entry
-    var webViewOnScrollGeometryChange = OnScrollGeometryChangeContext()
+    var webViewOnScrollGeometryChange: OnScrollGeometryChangeContext? = nil
 
     @Entry
     var webViewScrollPositionContext = ScrollPositionContext()

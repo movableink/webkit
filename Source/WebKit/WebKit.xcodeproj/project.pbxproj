@@ -185,7 +185,6 @@
 		079A4DA52D72CE3F00CA387F /* WKWebpagePreferences+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DA42D72CE3F00CA387F /* WKWebpagePreferences+Extras.swift */; };
 		079A4DA72D72CEDC00CA387F /* Foundation+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DA62D72CEDC00CA387F /* Foundation+Extras.swift */; };
 		079A4DAC2D72D06D00CA387F /* EnvironmentValues+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DAB2D72D06D00CA387F /* EnvironmentValues+Extras.swift */; };
-		079A4DAE2D72D11700CA387F /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DAD2D72D11700CA387F /* ViewModifiers.swift */; };
 		079A4DB02D73EA4A00CA387F /* WKURLSchemeHandlerAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079A4DAF2D73EA4A00CA387F /* WKURLSchemeHandlerAdapter.swift */; };
 		079D1D9A26960CD300883577 /* SystemStatusSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 079D1D9926960CD300883577 /* SystemStatusSPI.h */; };
 		07A33C9A2D67BE2200F30A05 /* WKScrollGeometry.h in Headers */ = {isa = PBXBuildFile; fileRef = 07A33C992D67BE2200F30A05 /* WKScrollGeometry.h */; };
@@ -3224,7 +3223,6 @@
 		079A4DA42D72CE3F00CA387F /* WKWebpagePreferences+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WKWebpagePreferences+Extras.swift"; sourceTree = "<group>"; };
 		079A4DA62D72CEDC00CA387F /* Foundation+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Foundation+Extras.swift"; sourceTree = "<group>"; };
 		079A4DAB2D72D06D00CA387F /* EnvironmentValues+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EnvironmentValues+Extras.swift"; sourceTree = "<group>"; };
-		079A4DAD2D72D11700CA387F /* ViewModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
 		079A4DAF2D73EA4A00CA387F /* WKURLSchemeHandlerAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WKURLSchemeHandlerAdapter.swift; sourceTree = "<group>"; };
 		079D1D9926960CD300883577 /* SystemStatusSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemStatusSPI.h; sourceTree = "<group>"; };
 		079D1D9C2698DBD000883577 /* cocoa */ = {isa = PBXFileReference; lastKnownFileType = folder; path = cocoa; sourceTree = "<group>"; };
@@ -8863,7 +8861,6 @@
 				076867F52D4C26A8004DA801 /* PlatformTextSearching.swift */,
 				07AF79DE2D693BAA004E8D3A /* SwiftUI+Extras.swift */,
 				07A33C9E2D67EEF600F30A05 /* ViewModifierContexts.swift */,
-				079A4DAD2D72D11700CA387F /* ViewModifiers.swift */,
 				076867F72D4C26A8004DA801 /* WebViewRepresentable.swift */,
 			);
 			path = Implementation;
@@ -19932,7 +19929,6 @@
 				07AF79DF2D693BAA004E8D3A /* SwiftUI+Extras.swift in Sources */,
 				076868032D4C2867004DA801 /* View+WebViewModifiers.swift in Sources */,
 				07AF79D02D68E210004E8D3A /* ViewModifierContexts.swift in Sources */,
-				079A4DAE2D72D11700CA387F /* ViewModifiers.swift in Sources */,
 				07275C632D00D32D002315A5 /* WebPage+SwiftUI.swift in Sources */,
 				07A4CEC72D0933E700764F5E /* WebPageNavigationAction+SwiftUI.swift in Sources */,
 				076868022D4C285B004DA801 /* WebView.swift in Sources */,
