@@ -118,6 +118,11 @@ bool MediaSourceInterfaceMainThread::detachable() const
     return m_mediaSource->detachable();
 }
 
+void MediaSourceInterfaceMainThread::setLogIdentifier(uint64_t identifier)
+{
+    m_mediaSource->setLogIdentifier(identifier);
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(MEDIA_SOURCE)

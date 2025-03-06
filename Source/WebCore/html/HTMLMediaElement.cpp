@@ -1769,7 +1769,8 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
 {
     ASSERT(initialURL.isEmpty() || isSafeToLoadURL(initialURL, InvalidURLAction::Complain));
 
-    INFO_LOG(LOGIDENTIFIER, initialURL, initialContentType);
+    auto logSiteIdentifier = LOGIDENTIFIER;
+    INFO_LOG(logSiteIdentifier, initialURL, initialContentType);
 
     RefPtr frame = document().frame();
     if (!frame) {
@@ -1836,10 +1837,10 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
 
     if (resource) {
         url = ApplicationCacheHost::createFileURL(resource->path());
-        INFO_LOG(LOGIDENTIFIER, "will load from app cache ", url);
+        INFO_LOG(logSiteIdentifier, "will load from app cache ", url);
     }
 
-    INFO_LOG(LOGIDENTIFIER, "m_currentSrc is ", m_currentSrc);
+    INFO_LOG(logSiteIdentifier, "m_currentSrc is ", m_currentSrc);
 
     startProgressEventTimer();
 
@@ -1863,7 +1864,7 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
     auto contentType = initialContentType;
 
     if (m_blob && !m_remotePlaybackConfiguration) {
-        ALWAYS_LOG(LOGIDENTIFIER, "loading generic blob");
+        ALWAYS_LOG(logSiteIdentifier, "loading generic blob");
         if (!m_blobURLForReading.isEmpty())
             ThreadableBlobRegistry::unregisterBlobURL(m_blobURLForReading);
         m_blobURLForReading = { BlobURL::createPublicURL(document().protectedSecurityOrigin().ptr()), document().topOrigin().data() };
@@ -1874,7 +1875,7 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
             contentType = ContentType { m_blob->type() };
     }
 
-    auto completionHandler = [url, player = m_player, weakThis = WeakPtr { *this }, this](SnifferPromise::Result&& result) {
+    auto completionHandler = [url, player = m_player, logSiteIdentifier, weakThis = WeakPtr { *this }, this](SnifferPromise::Result&& result) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -1898,7 +1899,8 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
         }
 
         if (m_mediaSource) {
-            ALWAYS_LOG(LOGIDENTIFIER, "loading MSE blob");
+            ALWAYS_LOG(logSiteIdentifier, "loading MSE blob");
+            m_mediaSource->setLogIdentifier(m_logIdentifier);
             if (url.protocolIs(mediaSourceBlobProtocol) && m_mediaSource->detachable()) {
                 document().addConsoleMessage(MessageSource::MediaSource, MessageLevel::Error, makeString("Unable to attach detachable MediaSource via blob URL, use srcObject attribute"_s));
                 return mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
@@ -1919,10 +1921,13 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
                 mediaPlayerRenderingModeChanged();
             return;
         }
+#else
+        UNUSED_PARAM(logSiteIdentifier);
 #endif
+
 #if ENABLE(MEDIA_STREAM)
         if (m_mediaStreamSrcObject && !m_remotePlaybackConfiguration) {
-            ALWAYS_LOG(LOGIDENTIFIER, "loading media stream blob ", m_mediaStreamSrcObject->logIdentifier());
+            ALWAYS_LOG(logSiteIdentifier, "loading media stream blob ", m_mediaStreamSrcObject->logIdentifier());
             if (!player->load(m_mediaStreamSrcObject->protectedPrivateStream()))
                 mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
             else
