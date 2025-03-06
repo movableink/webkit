@@ -685,8 +685,6 @@ html/HTMLFormControlElement.cpp
 html/HTMLFormControlsCollection.cpp
 html/HTMLFormElement.cpp
 html/HTMLFrameElementBase.cpp
-html/HTMLFrameOwnerElement.cpp
-html/HTMLFrameSetElement.cpp
 html/HTMLIFrameElement.cpp
 html/HTMLImageElement.cpp
 html/HTMLImageLoader.cpp

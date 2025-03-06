@@ -364,8 +364,6 @@ html/HTMLElement.cpp
 html/HTMLFieldSetElement.cpp
 html/HTMLFormControlsCollection.cpp
 html/HTMLFormElement.cpp
-html/HTMLFrameElementBase.cpp
-html/HTMLFrameOwnerElement.cpp
 html/HTMLImageElement.cpp
 html/HTMLInputElement.cpp
 html/HTMLLabelElement.cpp
