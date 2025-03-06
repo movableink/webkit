@@ -2020,3 +2020,7 @@ webkit.org/b/289207 storage/filesystemaccess/writable-file-stream-abort.html [ P
 webkit.org/b/289211 [ Sequoia Release x86_64 ] imported/w3c/web-platform-tests/mediacapture-insertable-streams/VideoTrackGenerator-with-window-tracks.https.html [ Failure ]
 
 webkit.org/b/289254 [ Debug ] imported/w3c/web-platform-tests/mediacapture-streams/historical.https.html [ Pass Crash ]
+
+# webkit.org/b/289272 [ macOS wk2 arm64 ] 2x imported/w3c/web-platform-tests/editing/other/delete-in-child-of-head.tentative.html?designMode=on&method=* are flaky failures.
+[ arm64 ] imported/w3c/web-platform-tests/editing/other/delete-in-child-of-head.tentative.html?designMode=on&method=forwarddelete [ Pass Failure ]
+[ arm64 ] imported/w3c/web-platform-tests/editing/other/delete-in-child-of-head.tentative.html?designMode=on&method=backspace [ Pass Failure ]
