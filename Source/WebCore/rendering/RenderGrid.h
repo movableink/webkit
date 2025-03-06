@@ -270,7 +270,7 @@ private:
 
     bool aspectRatioPrefersInline(const RenderBox& gridItem, bool blockFlowIsColumnAxis);
 
-    Vector<RenderBox*> computeAspectRatioDependentAndBaselineItems();
+    Vector<RenderBox*> computeAspectRatioDependentAndBaselineItems(GridLayoutState&);
 
     GridSpan gridSpanForOutOfFlowGridItem(const RenderBox&, GridTrackSizingDirection) const;
 
@@ -304,7 +304,6 @@ private:
     OutOfFlowPositionsMap m_outOfFlowItemColumn;
     OutOfFlowPositionsMap m_outOfFlowItemRow;
 
-    bool m_hasAspectRatioBlockSizeDependentItem { false };
     bool m_baselineItemsCached {false};
     bool m_hasAnyBaselineAlignmentItem { false };
 

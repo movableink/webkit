@@ -200,7 +200,7 @@ void RenderGrid::repeatTracksSizingIfNeeded(LayoutUnit availableSpaceForColumns,
     // FIXME: we are avoiding repeating the track sizing algorithm for grid item with baseline alignment
     // here in the case of using flex max-sizing functions. We probably also need to investigate whether
     // it is applicable for the case of percent-sized rows with indefinite height as well.
-    if (gridLayoutState.needsSecondTrackSizingPass() || m_trackSizingAlgorithm.hasAnyPercentSizedRowsIndefiniteHeight() || (m_trackSizingAlgorithm.hasAnyFlexibleMaxTrackBreadth() && !m_trackSizingAlgorithm.hasAnyBaselineAlignmentItem()) || m_hasAspectRatioBlockSizeDependentItem) {
+    if (gridLayoutState.needsSecondTrackSizingPass() || m_trackSizingAlgorithm.hasAnyPercentSizedRowsIndefiniteHeight() || (m_trackSizingAlgorithm.hasAnyFlexibleMaxTrackBreadth() && !m_trackSizingAlgorithm.hasAnyBaselineAlignmentItem()) || gridLayoutState.hasAspectRatioBlockSizeDependentItem()) {
 
         populateGridPositionsForDirection(m_trackSizingAlgorithm, GridTrackSizingDirection::ForRows);
         computeTrackSizesForDefiniteSize(GridTrackSizingDirection::ForColumns, availableSpaceForColumns, gridLayoutState);
@@ -260,12 +260,11 @@ static void cacheBaselineAlignedGridItems(const RenderGrid& grid, GridTrackSizin
     }
 }
 
-Vector<RenderBox*> RenderGrid::computeAspectRatioDependentAndBaselineItems()
+Vector<RenderBox*> RenderGrid::computeAspectRatioDependentAndBaselineItems(GridLayoutState& gridLayoutState)
 {
     Vector<RenderBox*> dependentGridItems;
 
     m_baselineItemsCached = true;
-    m_hasAspectRatioBlockSizeDependentItem = false;
 
     auto computeOrthogonalAndDependentItems = [&](RenderBox* gridItem) {
         // Grid's layout logic controls the grid item's override content size, hence we need to
@@ -277,7 +276,7 @@ Vector<RenderBox*> RenderGrid::computeAspectRatioDependentAndBaselineItems()
         // when the grid width is auto, we may need get the real grid width before laying out the item.
         if (GridLayoutFunctions::isAspectRatioBlockSizeDependentGridItem(*gridItem) && (style().logicalWidth().isAuto() || style().logicalWidth().isMinContent() || style().logicalWidth().isMaxContent())) {
             dependentGridItems.append(gridItem);
-            m_hasAspectRatioBlockSizeDependentItem = true;
+            gridLayoutState.setHasAspectRatioBlockSizeDependentItem();
         }
     };
 
@@ -351,7 +350,7 @@ void RenderGrid::layoutGrid(RelayoutChildren relayoutChildren)
         // FIXME: We might need to cache the hasDefiniteLogicalHeight if the call of RenderBlock::hasDefiniteLogicalHeight() causes a relevant performance regression.
         bool hasDefiniteLogicalHeight = RenderBlock::hasDefiniteLogicalHeight() || overridingBorderBoxLogicalHeight() || computeContentLogicalHeight(RenderBox::SizeType::MainOrPreferredSize, style().logicalHeight(), std::nullopt) || shouldComputeLogicalHeightFromAspectRatio();
 
-        auto aspectRatioBlockSizeDependentGridItems = computeAspectRatioDependentAndBaselineItems();
+        auto aspectRatioBlockSizeDependentGridItems = computeAspectRatioDependentAndBaselineItems(gridLayoutState);
 
         resetLogicalHeightBeforeLayoutIfNeeded();
 
@@ -483,7 +482,7 @@ void RenderGrid::layoutMasonry(RelayoutChildren relayoutChildren)
         // FIXME: We might need to cache the hasDefiniteLogicalHeight if the call of RenderBlock::hasDefiniteLogicalHeight() causes a relevant performance regression.
         bool hasDefiniteLogicalHeight = RenderBlock::hasDefiniteLogicalHeight() || overridingBorderBoxLogicalHeight() || computeContentLogicalHeight(RenderBox::SizeType::MainOrPreferredSize, style().logicalHeight(), std::nullopt);
 
-        auto aspectRatioBlockSizeDependentGridItems = computeAspectRatioDependentAndBaselineItems();
+        auto aspectRatioBlockSizeDependentGridItems = computeAspectRatioDependentAndBaselineItems(gridLayoutState);
 
         resetLogicalHeightBeforeLayoutIfNeeded();
 
