@@ -93,8 +93,6 @@ public:
     id<MTLBuffer> buffer() const { return m_buffer; }
     id<MTLBuffer> indirectBuffer() const;
     id<MTLBuffer> indirectIndexedBuffer() const { return m_indirectIndexedBuffer; }
-    id<MTLBuffer> indirectIndexedBuffer(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType, uint32_t firstInstance, id<MTLIndirectCommandBuffer> = nil);
-    id<MTLBuffer> indirectIndexedBuffer(uint32_t firstIndex, uint32_t indexCount, uint32_t firstInstance, id<MTLIndirectCommandBuffer> = nil) const;
 
     uint64_t initialSize() const;
     uint64_t currentSize() const;
