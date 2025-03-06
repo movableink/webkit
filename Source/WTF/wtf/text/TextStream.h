@@ -400,6 +400,9 @@ struct supports_text_stream_insertion<RefPtr<T>> : supports_text_stream_insertio
 template<typename T>
 struct supports_text_stream_insertion<Ref<T>> : supports_text_stream_insertion<T> { };
 
+template<typename T>
+struct supports_text_stream_insertion<std::unique_ptr<T>> : supports_text_stream_insertion<T> { };
+
 template<typename T, size_t size>
 struct supports_text_stream_insertion<std::array<T, size>> : supports_text_stream_insertion<T> { };
 
