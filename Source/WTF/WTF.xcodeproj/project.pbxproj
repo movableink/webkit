@@ -564,7 +564,6 @@
 		DD4901EA27B4748A00D7E50D /* WindowsExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E327B4748A00D7E50D /* WindowsExtras.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD4901EB27B4748A00D7E50D /* ParallelJobsOpenMP.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E427B4748A00D7E50D /* ParallelJobsOpenMP.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD4901EC27B4748A00D7E50D /* MainThreadData.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E527B4748A00D7E50D /* MainThreadData.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		DD9C67FC2D70243B00D4BEC7 /* generate-platform-args in Sources */ = {isa = PBXBuildFile; fileRef = DD9C67FB2D70243000D4BEC7 /* generate-platform-args */; };
 		DDA35E4A29CA9B68006C1018 /* PlatformEnablePlayStation.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E127B4748A00D7E50D /* PlatformEnablePlayStation.h */; };
 		DDCAF31D27B1E7C500C45308 /* GenericHashKey.h in Headers */ = {isa = PBXBuildFile; fileRef = E3FD6D6627A1F6AD00935000 /* GenericHashKey.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DDF306D827C08654006A526F /* CFStringSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = DDF306C127C08654006A526F /* CFStringSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -962,7 +961,7 @@
 		DD3C8E7627C84C9400322F62 /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
 			compilerSpec = com.apple.compilers.proxy.script;
-			filePatterns = "*/Scripts/*/*.yaml";
+			filePatterns = "*/Scripts/*/*";
 			fileType = pattern.proxy;
 			inputFiles = (
 			);
@@ -972,20 +971,6 @@
 			);
 			runOncePerArchitecture = 0;
 			script = "cp -f \"${INPUT_FILE_PATH}\" \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-		};
-		DD9C67F72D6FE2C600D4BEC7 /* PBXBuildRule */ = {
-			isa = PBXBuildRule;
-			compilerSpec = com.apple.compilers.proxy.script;
-			dependencyFile = "$(DERIVED_FILES_DIR)/$(INPUT_FILE_BASE).$(arch).d";
-			filePatterns = "*/generate-platform-args";
-			fileType = pattern.proxy;
-			inputFiles = (
-			);
-			isEditable = 1;
-			outputFiles = (
-				"$(BUILT_PRODUCTS_DIR)/$(PRIVATE_HEADERS_FOLDER_PATH)/Scripts/platform-enabled-swift-args.$(arch).resp",
-			);
-			script = "\"${INPUT_FILE_PATH}\"\n";
 		};
 		DDF307FB27C08869006A526F /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
@@ -1004,7 +989,7 @@
 		DDF307FD27C088A3006A526F /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
 			compilerSpec = com.apple.compilers.proxy.script;
-			filePatterns = "*/Scripts/*.rb";
+			filePatterns = "*/Scripts/*";
 			fileType = pattern.proxy;
 			inputFiles = (
 			);
@@ -1654,7 +1639,6 @@
 		DD4901E427B4748A00D7E50D /* ParallelJobsOpenMP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ParallelJobsOpenMP.h; sourceTree = "<group>"; };
 		DD4901E527B4748A00D7E50D /* MainThreadData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainThreadData.h; sourceTree = "<group>"; };
 		DD4901ED27B474D900D7E50D /* NullTextBreakIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NullTextBreakIterator.h; sourceTree = "<group>"; };
-		DD9C67FB2D70243000D4BEC7 /* generate-platform-args */ = {isa = PBXFileReference; lastKnownFileType = text; path = "generate-platform-args"; sourceTree = "<group>"; };
 		DDD8BAC227B347C400C109E0 /* translit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = translit.h; sourceTree = "<group>"; };
 		DDD8BAC327B347C400C109E0 /* ustdio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ustdio.h; sourceTree = "<group>"; };
 		DDD8BAC427B347C400C109E0 /* utf_old.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utf_old.h; sourceTree = "<group>"; };
@@ -2846,7 +2830,6 @@
 		DD3DC9FF27A4E176007E5B61 /* Scripts */ = {
 			isa = PBXGroup;
 			children = (
-				DD9C67FB2D70243000D4BEC7 /* generate-platform-args */,
 				DD3DCA0027A4E176007E5B61 /* Preferences */,
 				DD28DF2329D368BD00BBB459 /* generate-tapi-filelist.py */,
 				DD3DCA0527A4E176007E5B61 /* generate-unified-source-bundles.rb */,
@@ -4032,7 +4015,6 @@
 				DDA35E4929CA74D4006C1018 /* Generate TAPI filelist */,
 			);
 			buildRules = (
-				DD9C67F72D6FE2C600D4BEC7 /* PBXBuildRule */,
 				147572882CCD82170027BA8F /* PBXBuildRule */,
 				DDF307FB27C08869006A526F /* PBXBuildRule */,
 				DDF3080F27C091A9006A526F /* PBXBuildRule */,
@@ -4233,7 +4215,6 @@
 				A331D96721F24ABD009F02AA /* FileSystemPOSIX.cpp in Sources */,
 				A8A473B5151A825B004123FF /* fixed-dtoa.cc in Sources */,
 				1A1D8B9E1731879800141DA4 /* FunctionDispatcher.cpp in Sources */,
-				DD9C67FC2D70243B00D4BEC7 /* generate-platform-args in Sources */,
 				0F5BF1761F23D49A0029D91D /* Gigacage.cpp in Sources */,
 				0F30BA901E78708E002CA847 /* GlobalVersion.cpp in Sources */,
 				2CCD892A15C0390200285083 /* GregorianDateTime.cpp in Sources */,
