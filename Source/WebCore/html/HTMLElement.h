@@ -158,7 +158,7 @@ public:
 
     void queuePopoverToggleEventTask(ToggleState oldState, ToggleState newState);
     ExceptionOr<void> showPopover(const ShowPopoverOptions&);
-    ExceptionOr<void> showPopoverInternal(const HTMLElement* = nullptr);
+    ExceptionOr<void> showPopoverInternal(HTMLElement* = nullptr);
     ExceptionOr<void> hidePopover();
     ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
     ExceptionOr<bool> togglePopover(std::optional<std::variant<WebCore::HTMLElement::TogglePopoverOptions, bool>>);
@@ -169,7 +169,7 @@ public:
     void popoverAttributeChanged(const AtomString& value);
 
     bool isValidCommandType(const CommandType) override;
-    bool handleCommandInternal(const HTMLButtonElement& invoker, const CommandType&) override;
+    bool handleCommandInternal(HTMLButtonElement& invoker, const CommandType&) override;
 
 #if PLATFORM(IOS_FAMILY)
     static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);
@@ -208,6 +208,8 @@ protected:
     static const AtomString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap&);
 
 private:
+    void setInvoker(HTMLElement*);
+
     String nodeName() const final;
 
     void mapLanguageAttributeToLocale(const AtomString&, MutableStyleProperties&);

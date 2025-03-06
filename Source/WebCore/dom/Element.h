@@ -676,8 +676,11 @@ public:
     void clearPopoverData();
     bool isPopoverShowing() const;
 
+    Element* invokedPopover() const;
+    void setInvokedPopover(RefPtr<Element>&&);
+
     virtual bool isValidCommandType(const CommandType) { return false; }
-    virtual bool handleCommandInternal(const HTMLButtonElement&, const CommandType&) { return false; }
+    virtual bool handleCommandInternal(HTMLButtonElement&, const CommandType&) { return false; }
 
     ExceptionOr<void> setPointerCapture(int32_t);
     ExceptionOr<void> releasePointerCapture(int32_t);

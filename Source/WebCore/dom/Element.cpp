@@ -3157,6 +3157,17 @@ void Element::clearPopoverData()
         elementRareData()->setPopoverData(nullptr);
 }
 
+Element* Element::invokedPopover() const
+{
+    return hasRareData() ? elementRareData()->invokedPopover() : nullptr;
+}
+
+void Element::setInvokedPopover(RefPtr<Element>&& element)
+{
+    auto& data = ensureElementRareData();
+    data.setInvokedPopover(WTFMove(element));
+}
+
 void Element::addShadowRoot(Ref<ShadowRoot>&& newShadowRoot)
 {
     ASSERT(!newShadowRoot->hasChildNodes());

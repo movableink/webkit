@@ -1087,7 +1087,7 @@ ExceptionOr<void> HTMLElement::showPopover(const ShowPopoverOptions& options)
     return showPopoverInternal(options.source.get());
 }
 
-ExceptionOr<void> HTMLElement::showPopoverInternal(const HTMLElement* invoker)
+ExceptionOr<void> HTMLElement::showPopoverInternal(HTMLElement* invoker)
 {
     auto check = checkPopoverValidity(*this, PopoverVisibilityState::Hidden);
     if (check.hasException())
@@ -1096,7 +1096,7 @@ ExceptionOr<void> HTMLElement::showPopoverInternal(const HTMLElement* invoker)
         return { };
 
     if (popoverData())
-        popoverData()->setInvoker(invoker);
+        setInvoker(invoker);
 
     ASSERT(!isInTopLayer());
 
@@ -1160,6 +1160,15 @@ ExceptionOr<void> HTMLElement::showPopoverInternal(const HTMLElement* invoker)
     return { };
 }
 
+void HTMLElement::setInvoker(HTMLElement* invoker)
+{
+    if (RefPtr oldInvoker = popoverData()->invoker())
+        oldInvoker->setInvokedPopover(nullptr);
+    popoverData()->setInvoker(invoker);
+    if (RefPtr newInvoker = popoverData()->invoker())
+        newInvoker->setInvokedPopover(RefPtr { this });
+}
+
 ExceptionOr<void> HTMLElement::hidePopoverInternal(FocusPreviousElement focusPreviousElement, FireEvents fireEvents)
 {
     auto check = checkPopoverValidity(*this, PopoverVisibilityState::Showing);
@@ -1184,7 +1193,7 @@ ExceptionOr<void> HTMLElement::hidePopoverInternal(FocusPreviousElement focusPre
             return { };
     }
 
-    popoverData()->setInvoker(nullptr);
+    setInvoker(nullptr);
 
     if (fireEvents == FireEvents::Yes)
         dispatchEvent(ToggleEvent::create(eventNames().beforetoggleEvent, { EventInit { }, "open"_s, "closed"_s }, Event::IsCancelable::No));
@@ -1296,7 +1305,7 @@ bool HTMLElement::isValidCommandType(const CommandType command)
     return Element::isValidCommandType(command) || command == CommandType::TogglePopover || command == CommandType::ShowPopover || command == CommandType::HidePopover;
 }
 
-bool HTMLElement::handleCommandInternal(const HTMLButtonElement& invoker, const CommandType& command)
+bool HTMLElement::handleCommandInternal(HTMLButtonElement& invoker, const CommandType& command)
 {
     if (popoverState() == PopoverState::None)
         return false;

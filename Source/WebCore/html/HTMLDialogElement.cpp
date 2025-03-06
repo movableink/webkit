@@ -200,7 +200,7 @@ bool HTMLDialogElement::isValidCommandType(const CommandType command)
     return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close;
 }
 
-bool HTMLDialogElement::handleCommandInternal(const HTMLButtonElement& invoker, const CommandType& command)
+bool HTMLDialogElement::handleCommandInternal(HTMLButtonElement& invoker, const CommandType& command)
 {
     if (HTMLElement::handleCommandInternal(invoker, command))
         return true;
