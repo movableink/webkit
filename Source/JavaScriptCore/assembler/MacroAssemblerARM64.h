@@ -399,6 +399,9 @@ public:
 
     void and32(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return zeroExtend32ToWord(src, dest);
+
         LogicalImmediate logicalImm = LogicalImmediate::create32(imm.m_value);
 
         if (logicalImm.isValid()) {
@@ -429,6 +432,9 @@ public:
 
     void and64(TrustedImm64 imm, RegisterID src, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return move(src, dest);
+
         LogicalImmediate logicalImm = LogicalImmediate::create64(imm.m_value);
 
         if (logicalImm.isValid()) {
@@ -447,6 +453,9 @@ public:
 
     void and64(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return move(src, dest);
+
         LogicalImmediate logicalImm = LogicalImmediate::create64(static_cast<intptr_t>(static_cast<int64_t>(imm.m_value)));
 
         if (logicalImm.isValid()) {
@@ -474,6 +483,9 @@ public:
 
     void and64(TrustedImm64 imm, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return;
+
         LogicalImmediate logicalImm = LogicalImmediate::create64(std::bit_cast<uint64_t>(imm.m_value));
 
         if (logicalImm.isValid()) {

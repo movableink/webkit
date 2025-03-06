@@ -257,6 +257,8 @@ public:
 
     void and32(TrustedImm32 imm, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return zeroExtend32ToWord(dest, dest);
         m_assembler.andl_ir(imm.m_value, dest);
     }
 
@@ -312,11 +314,15 @@ public:
 
     void and32(TrustedImm32 imm, Address address)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andl_im(imm.m_value, address.offset, address.base);
     }
 
     void and32(TrustedImm32 imm, BaseIndex address)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andl_im(imm.m_value, address.offset, address.base, address.index, address.scale);
     }
 
@@ -372,6 +378,8 @@ public:
 
     void and32(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return zeroExtend32ToWord(src, dest);
         move32IfNeeded(src, dest);
         and32(imm, dest);
     }
@@ -4995,16 +5003,22 @@ public:
 
     void and64(TrustedImm32 imm, RegisterID srcDest)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andq_ir(imm.m_value, srcDest);
     }
 
     void and64(TrustedImm32 imm, Address dest)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andq_im(imm.m_value, dest.offset, dest.base);
     }
 
     void and64(TrustedImm32 imm, BaseIndex dest)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andq_im(imm.m_value, dest.offset, dest.base, dest.index, dest.scale);
     }
 
@@ -5016,6 +5030,9 @@ public:
 
     void and64(TrustedImm64 imm, RegisterID srcDest)
     {
+        if (imm.m_value == -1)
+            return;
+
         int64_t intValue = imm.m_value;
         if (isRepresentableAs<int32_t>(intValue)) {
             and64(TrustedImm32(static_cast<int32_t>(intValue)), srcDest);

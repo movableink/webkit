@@ -801,9 +801,15 @@ void AssemblyHelpers::emitEncodeStructureID(RegisterID source, RegisterID dest)
 #if ENABLE(STRUCTURE_ID_WITH_SHIFT)
     urshift64(source, TrustedImm32(StructureID::encodeShiftAmount), dest);
 #elif CPU(ADDRESS64)
-    move(source, dest);
     static_assert(StructureID::structureIDMask <= UINT32_MAX);
-    and64(TrustedImm32(static_cast<uint32_t>(StructureID::structureIDMask)), dest);
+    // We don't guarantee the upper bits are cleared, since generally only
+    // the bottom 32 bits of the register are observed as the structure ID.
+    // So, we don't want to bother masking the register unless it's
+    // observable within those 32 bits.
+    if (StructureID::structureIDMask < UINT32_MAX)
+        and64(TrustedImm32(static_cast<uint32_t>(StructureID::structureIDMask)), source, dest);
+    else
+        move(source, dest);
 #else
     move(source, dest);
 #endif

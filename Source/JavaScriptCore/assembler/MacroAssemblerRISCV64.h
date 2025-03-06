@@ -1459,6 +1459,9 @@ public:
 
     void and32(TrustedImm32 imm, RegisterID op2, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return zeroExtend32ToWord(op2, dest);
+
         if (!Imm::isValid<Imm::IType>(imm.m_value)) {
             auto temp = temps<Data>();
             loadImmediate(imm, temp.data());
@@ -1494,6 +1497,9 @@ public:
 
     void and64(TrustedImm32 imm, RegisterID op2, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return move(op2, dest);
+
         if (Imm::isValid<Imm::IType>(imm.m_value)) {
             m_assembler.andiInsn(dest, op2, Imm::I(imm.m_value));
             return;
@@ -1511,6 +1517,9 @@ public:
 
     void and64(TrustedImm64 imm, RegisterID op2, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return move(op2, dest);
+
         if (Imm::isValid<Imm::IType>(imm.m_value)) {
             m_assembler.andiInsn(dest, op2, Imm::I(imm.m_value));
             return;
