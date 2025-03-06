@@ -2032,3 +2032,5 @@ webkit.org/b/289254 [ Debug ] imported/w3c/web-platform-tests/mediacapture-strea
 [ arm64 ] imported/w3c/web-platform-tests/editing/other/insertparagraph-in-child-of-head.tentative.html?designMode=on&white-space=normal [ Pass Failure ]
 
 webkit.org/b/289284 fast/canvas/image-buffer-resource-limits.html [ Pass Timeout Crash ]
+
+webkit.org/b/289287 [ Release ] accessibility/accessibility-node-memory-management.html [ Timeout ]
