@@ -197,6 +197,21 @@ static bool devolvableWidgetsEnabledAndSupported(const Element* element)
 #endif
 }
 
+static bool shouldCheckLegacyStylesForNativeAppearance(const Element* element)
+{
+#if PLATFORM(MAC)
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    return element && !element->document().settings().vectorBasedControlsOnMacEnabled();
+#else
+    UNUSED_PARAM(element);
+    return true;
+#endif
+#else
+    UNUSED_PARAM(element);
+    return false;
+#endif
+}
+
 void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const RenderStyle* userAgentAppearanceStyle)
 {
     auto autoAppearance = autoAppearanceForElement(style, element);
@@ -216,7 +231,10 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
     bool widgetMayDevolve = devolvableWidgetsEnabledAndSupported(element);
     bool widgetHasNativeAppearanceDisabled = widgetMayDevolve && element->isDevolvableWidget() && style.nativeAppearanceDisabled() && !isAppearanceAllowedForAllElements(appearance);
 
-    if (widgetHasNativeAppearanceDisabled || (userAgentAppearanceStyle && isControlStyled(style, *userAgentAppearanceStyle))) {
+    if (!widgetMayDevolve || shouldCheckLegacyStylesForNativeAppearance(element))
+        widgetHasNativeAppearanceDisabled |= userAgentAppearanceStyle && isControlStyled(style, *userAgentAppearanceStyle);
+
+    if (widgetHasNativeAppearanceDisabled) {
         switch (appearance) {
         case StyleAppearance::Menulist:
             appearance = StyleAppearance::MenulistButton;

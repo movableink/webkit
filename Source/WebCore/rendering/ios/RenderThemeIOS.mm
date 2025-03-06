@@ -181,9 +181,6 @@ bool RenderThemeIOS::isControlStyled(const RenderStyle& style, const RenderStyle
     if (style.usedAppearance() == StyleAppearance::TextField || style.usedAppearance() == StyleAppearance::TextArea || style.usedAppearance() == StyleAppearance::SearchField)
         return !style.borderAndBackgroundEqual(userAgentStyle);
 
-    if (style.usedAppearance() == StyleAppearance::ListButton)
-        return style.hasContent() || style.hasUsedContentNone();
-
     return RenderTheme::isControlStyled(style, userAgentStyle);
 }
 
@@ -1718,10 +1715,12 @@ bool RenderThemeIOS::paintListButton(const RenderObject& box, const PaintInfo& p
         return RenderThemeCocoa::paintListButton(box, paintInfo, rect);
 #endif
 
+    auto& style = box.style();
+    if (style.hasContent() || style.hasUsedContentNone())
+        return false;
+
     auto& context = paintInfo.context();
     GraphicsContextStateSaver stateSaver(context);
-
-    auto& style = box.style();
 
     float paddingTop = floatValueForLength(style.paddingTop(), rect.height());
     float paddingRight = floatValueForLength(style.paddingRight(), rect.width());
