@@ -37,19 +37,11 @@ namespace WebCore {
 class WebCoreMicrotaskDispatcher : public JSC::MicrotaskDispatcher {
     WTF_MAKE_TZONE_ALLOCATED(WebCoreMicrotaskDispatcher);
 public:
-    enum class Type {
-        JavaScript,
-        UserGestureIndicator,
-        Function,
-    };
-
     WebCoreMicrotaskDispatcher(Type type, EventLoopTaskGroup& group)
-        : m_type(type)
+        : JSC::MicrotaskDispatcher(type)
         , m_group(group)
     {
     }
-
-    Type type() const { return m_type; }
 
     bool isRunnable() const final
     {
@@ -59,7 +51,6 @@ public:
     JSC::QueuedTask::Result currentRunnability() const;
 
 private:
-    Type m_type { Type::JavaScript };
     WeakPtr<EventLoopTaskGroup> m_group;
 };
 
@@ -90,3 +81,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebCoreMicrotaskDispatcher)
+    static bool isType(const JSC::MicrotaskDispatcher& dispatcher) { return dispatcher.isWebCoreMicrotaskDispatcher(); }
+SPECIALIZE_TYPE_TRAITS_END()

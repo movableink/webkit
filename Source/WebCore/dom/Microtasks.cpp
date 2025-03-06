@@ -78,7 +78,7 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
 
     m_microtaskQueue.performMicrotaskCheckpoint(vm,
         [&](JSC::QueuedTask& task) ALWAYS_INLINE_LAMBDA {
-            RefPtr dispatcher = static_cast<WebCoreMicrotaskDispatcher*>(task.dispatcher());
+            RefPtr dispatcher = downcast<WebCoreMicrotaskDispatcher>(task.dispatcher());
             if (UNLIKELY(!dispatcher))
                 return JSC::QueuedTask::Result::Discard;
 
@@ -88,6 +88,7 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
                 case WebCoreMicrotaskDispatcher::Type::JavaScript:
                     JSExecState::runTask(task.globalObject(), task);
                     break;
+                case WebCoreMicrotaskDispatcher::Type::None:
                 case WebCoreMicrotaskDispatcher::Type::UserGestureIndicator:
                 case WebCoreMicrotaskDispatcher::Type::Function:
                     dispatcher->run(task);

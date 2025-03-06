@@ -90,9 +90,26 @@ private:
 
 class MicrotaskDispatcher : public RefCounted<MicrotaskDispatcher> {
 public:
+    enum class Type : uint8_t {
+        None,
+        // WebCoreMicrotaskDispatcher starts from here.
+        JavaScript,
+        UserGestureIndicator,
+        Function,
+    };
+
+    explicit MicrotaskDispatcher(Type type)
+        : m_type(type)
+    { }
+
     virtual ~MicrotaskDispatcher() = default;
     virtual QueuedTask::Result run(QueuedTask&) = 0;
     virtual bool isRunnable() const = 0;
+    Type type() const { return m_type; }
+    bool isWebCoreMicrotaskDispatcher() const { return static_cast<uint8_t>(m_type) >= static_cast<uint8_t>(Type::JavaScript); }
+
+private:
+    Type m_type { Type::None };
 };
 
 class MarkedMicrotaskDeque {
