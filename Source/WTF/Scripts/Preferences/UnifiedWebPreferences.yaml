@@ -6127,16 +6127,16 @@ RemotePlaybackEnabled:
 
 RemoteSnapshottingEnabled:
    type: bool
-   status: stable
+   status: testable
    category: media
    humanReadableName: "Remote Snapshotting"
    defaultValue:
      WebKitLegacy:
        default: false
      WebKit:
-       default: true
+       default: false
      WebCore:
-       default: true
+       default: false
 
 RemoveBackgroundEnabled:
   type: bool
