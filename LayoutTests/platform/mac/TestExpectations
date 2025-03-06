@@ -2403,7 +2403,7 @@ webkit.org/b/288518 [ Debug ] fast/text/emoji-num-glyphs.html [ Timeout ]
 
 webkit.org/b/288546 imported/w3c/web-platform-tests/fullscreen/api/element-ready-allowed.html [ Pass Failure ]
 
-webkit.org/b/288631 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-after-snap.html [ Failure ]
+webkit.org/b/288631 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-fired-after-snap.html [ Failure ]
 
 webkit.org/b/288670 [ Debug x86_64 ] media/media-source/media-source-vp8-hiddenframes.html [ ImageOnlyFailure ]
 
