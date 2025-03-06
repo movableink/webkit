@@ -370,7 +370,6 @@ bindings/js/JSReportingObserverCustom.cpp
 bindings/js/JSResizeObserverCustom.cpp
 bindings/js/JSResizeObserverEntryCustom.cpp
 bindings/js/JSSVGViewSpecCustom.cpp
-bindings/js/JSServiceWorkerGlobalScopeCustom.cpp
 bindings/js/JSShadowRootCustom.cpp
 bindings/js/JSStaticRangeCustom.cpp
 bindings/js/JSStylePropertyMapReadOnlyCustom.cpp
@@ -1423,7 +1422,6 @@ workers/service/FetchEvent.cpp
 workers/service/NavigationPreloadManager.cpp
 workers/service/ServiceWorker.cpp
 workers/service/ServiceWorkerClientData.cpp
-workers/service/ServiceWorkerClients.cpp
 workers/service/ServiceWorkerContainer.cpp
 workers/service/ServiceWorkerGlobalScope.cpp
 workers/service/ServiceWorkerRegistration.cpp
@@ -1432,16 +1430,8 @@ workers/service/background-fetch/BackgroundFetch.cpp
 workers/service/background-fetch/BackgroundFetchEngine.cpp
 workers/service/background-fetch/BackgroundFetchRegistration.cpp
 workers/service/background-fetch/ServiceWorkerRegistrationBackgroundFetchAPI.cpp
-workers/service/context/SWContextManager.cpp
-workers/service/context/ServiceWorkerFetch.cpp
-workers/service/context/ServiceWorkerInspectorProxy.cpp
-workers/service/context/ServiceWorkerThread.cpp
-workers/service/context/ServiceWorkerThreadProxy.cpp
-workers/service/server/SWScriptStorage.cpp
 workers/shared/SharedWorker.cpp
 workers/shared/SharedWorkerScriptLoader.cpp
-workers/shared/context/SharedWorkerContextManager.cpp
-workers/shared/context/SharedWorkerThreadProxy.cpp
 worklets/PaintWorkletGlobalScope.cpp
 worklets/WorkletGlobalScope.cpp
 worklets/WorkletPendingTasks.cpp
