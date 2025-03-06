@@ -53,6 +53,11 @@ MemoryIndex::MemoryIndex(const IDBIndexInfo& info, MemoryObjectStore& objectStor
 
 MemoryIndex::~MemoryIndex() = default;
 
+MemoryObjectStore* MemoryIndex::objectStore()
+{
+    return m_objectStore.get();
+}
+
 RefPtr<MemoryObjectStore> MemoryIndex::protectedObjectStore()
 {
     return m_objectStore.get();

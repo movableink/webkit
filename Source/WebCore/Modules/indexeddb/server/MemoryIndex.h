@@ -83,7 +83,7 @@ public:
 
     IndexValueStore* valueStore() { return m_records.get(); }
 
-    MemoryObjectStore* objectStore() { return m_objectStore.get(); }
+    MemoryObjectStore* objectStore();
     RefPtr<MemoryObjectStore> protectedObjectStore();
 
     void cursorDidBecomeClean(MemoryIndexCursor&);

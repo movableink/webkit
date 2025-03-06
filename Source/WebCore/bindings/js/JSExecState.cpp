@@ -84,7 +84,7 @@ void JSExecState::runTask(JSC::JSGlobalObject* globalObject, JSC::QueuedTask& ta
     auto callData = JSC::getCallData(job);
     if (UNLIKELY(!scope.clearExceptionExceptTermination()))
         return;
-    ASSERT(callData.type != CallData::Type::None);
+    ASSERT(callData.type != JSC::CallData::Type::None);
 
     unsigned count = 0;
     for (auto argument : task.arguments()) {
