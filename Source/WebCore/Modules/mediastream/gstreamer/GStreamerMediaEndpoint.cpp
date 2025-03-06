@@ -245,7 +245,10 @@ bool GStreamerMediaEndpoint::initializePipeline()
             endPoint->prepareDataChannel(channel, isLocal);
         }), this);
 
-        g_signal_connect_swapped(m_webrtcBin.get(), "request-aux-sender", G_CALLBACK(+[](GStreamerMediaEndpoint* endPoint, GstWebRTCDTLSTransport* transport) -> GstElement* {
+        ASCIILiteral requestAuxSenderSignalName = "request-aux-sender"_s;
+        if (webkitGstCheckVersion(1, 25, 0))
+            requestAuxSenderSignalName = "request-post-rtp-aux-sender"_s;
+        g_signal_connect_swapped(m_webrtcBin.get(), requestAuxSenderSignalName.characters(), G_CALLBACK(+[](GStreamerMediaEndpoint* endPoint, GstWebRTCDTLSTransport* transport) -> GstElement* {
             // `sender` ownership is transferred to the signal caller.
             return endPoint->requestAuxiliarySender(GRefPtr(transport));
         }), this);
