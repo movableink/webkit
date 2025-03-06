@@ -143,7 +143,6 @@ class TextIterator;
 class TextTrack;
 class TimeRanges;
 class TypeConversions;
-class UnsuspendableActiveDOMObject;
 class VoidCallback;
 class WebAnimation;
 class WebGLRenderingContext;
