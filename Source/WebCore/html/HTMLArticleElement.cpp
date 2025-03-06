@@ -28,6 +28,7 @@
 
 #include "HTMLDocument.h"
 #include "HTMLNames.h"
+#include "NodeInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

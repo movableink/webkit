@@ -80,7 +80,7 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
         [&](JSC::QueuedTask& task) ALWAYS_INLINE_LAMBDA {
             RefPtr dispatcher = static_cast<WebCoreMicrotaskDispatcher*>(task.dispatcher());
             if (UNLIKELY(!dispatcher))
-                return QueuedTask::Result::Discard;
+                return JSC::QueuedTask::Result::Discard;
 
             auto result = dispatcher->currentRunnability();
             if (result == JSC::QueuedTask::Result::Executed) {
