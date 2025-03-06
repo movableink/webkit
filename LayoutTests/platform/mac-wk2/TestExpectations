@@ -2024,3 +2024,9 @@ webkit.org/b/289254 [ Debug ] imported/w3c/web-platform-tests/mediacapture-strea
 # webkit.org/b/289272 [ macOS wk2 arm64 ] 2x imported/w3c/web-platform-tests/editing/other/delete-in-child-of-head.tentative.html?designMode=on&method=* are flaky failures.
 [ arm64 ] imported/w3c/web-platform-tests/editing/other/delete-in-child-of-head.tentative.html?designMode=on&method=forwarddelete [ Pass Failure ]
 [ arm64 ] imported/w3c/web-platform-tests/editing/other/delete-in-child-of-head.tentative.html?designMode=on&method=backspace [ Pass Failure ]
+
+# webkit.org/b/289276 [ macOS wk2 arm64 ] 4x imported/w3c/web-platform-tests/editing/other/insertparagraph-in-child-of-head.tentative.html?designMode=on&white-space=* are flaky failures. 
+[ arm64 ] imported/w3c/web-platform-tests/editing/other/insertparagraph-in-child-of-head.tentative.html?designMode=on&white-space=pre-wrap [ Pass Failure ]
+[ arm64 ] imported/w3c/web-platform-tests/editing/other/insertparagraph-in-child-of-head.tentative.html?designMode=on&white-space=pre-line [ Pass Failure ]
+[ arm64 ] imported/w3c/web-platform-tests/editing/other/insertparagraph-in-child-of-head.tentative.html?designMode=on&white-space=pre [ Pass Failure ]
+[ arm64 ] imported/w3c/web-platform-tests/editing/other/insertparagraph-in-child-of-head.tentative.html?designMode=on&white-space=normal [ Pass Failure ]
