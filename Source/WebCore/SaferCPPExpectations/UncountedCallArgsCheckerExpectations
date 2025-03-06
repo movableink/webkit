@@ -674,7 +674,6 @@ html/FormAssociatedElement.cpp
 html/FormListedElement.cpp
 html/HTMLAllCollection.cpp
 html/HTMLAnchorElement.cpp
-html/HTMLArticleElement.cpp
 html/HTMLAttachmentElement.cpp
 html/HTMLBaseElement.cpp
 html/HTMLBodyElement.cpp
@@ -684,7 +683,6 @@ html/HTMLCollection.cpp
 html/HTMLCollectionInlines.h
 html/HTMLDetailsElement.cpp
 html/HTMLElement.cpp
-html/HTMLEmbedElement.cpp
 html/HTMLFormControlElement.cpp
 html/HTMLFormControlsCollection.cpp
 html/HTMLFormElement.cpp
