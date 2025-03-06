@@ -189,18 +189,20 @@ private:
         RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier]);
 
         [webHistory fetchAllHistoryWithCompletionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](NSSet<NSURL *> *urls, NSError *error) mutable {
-            if (error != nil) {
-                completionHandler({ });
-                return;
-            }
+            ensureOnMainRunLoop([completionHandler = WTFMove(completionHandler), urls = retainPtr(urls), error = retainPtr(error)] mutable {
+                if (error) {
+                    completionHandler({ });
+                    return;
+                }
 
-            HashSet<URL> result;
-            for (NSURL *site in urls) {
-                URL url { site };
-                if (url.isValid())
-                    result.add(url);
-            }
-            completionHandler(WTFMove(result));
+                HashSet<URL> result;
+                for (NSURL *site in urls.get()) {
+                    URL url { site };
+                    if (url.isValid())
+                        result.add(WTFMove(url));
+                }
+                completionHandler(WTFMove(result));
+            });
         }).get()];
     }
 #endif
