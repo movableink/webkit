@@ -1884,7 +1884,7 @@ GRefPtr<GstCaps> buildDMABufCaps()
                 gst_value_list_append_and_take_value(&supportedFormats, &value);
             }
         }
-#elif USE(GBM)
+#else
         GValue value = G_VALUE_INIT;
         g_value_init(&value, G_TYPE_STRING);
         g_value_set_string(&value, gst_video_format_to_string(drmFourccToGstVideoFormat(format.fourcc)));
@@ -1894,7 +1894,7 @@ GRefPtr<GstCaps> buildDMABufCaps()
 
 #if GST_CHECK_VERSION(1, 24, 0)
     gst_caps_set_value(caps.get(), "drm-format", &supportedFormats);
-#elif USE(GBM)
+#else
     gst_caps_set_value(caps.get(), "format", &supportedFormats);
 #endif
     g_value_unset(&supportedFormats);
