@@ -217,6 +217,8 @@ GStreamerInternalVideoDecoder::GStreamerInternalVideoDecoder(const String& codec
     } else
         harnessedElement = WTFMove(element);
 
+    // FIXME: Add DMABuf and GL caps here. See also https://bugs.webkit.org/show_bug.cgi?id=288625.
+    auto allowedSinkCaps = adoptGRef(gst_caps_from_string("video/x-raw"));
     m_harness = GStreamerElementHarness::create(WTFMove(harnessedElement), [weakThis = ThreadSafeWeakPtr { *this }, this](auto& stream, GRefPtr<GstSample>&& outputSample) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
@@ -241,7 +243,17 @@ GStreamerInternalVideoDecoder::GStreamerInternalVideoDecoder(const String& codec
         GST_TRACE_OBJECT(m_harness->element(), "Handling decoded frame with PTS: %" GST_TIME_FORMAT " and duration: %" GST_TIME_FORMAT, GST_TIME_ARGS(timestamp), GST_TIME_ARGS(duration));
         auto videoFrame = VideoFrameGStreamer::create(WTFMove(outputSample), IntSize(m_presentationSize), fromGstClockTime(timestamp));
         m_outputCallback(VideoDecoder::DecodedFrame { WTFMove(videoFrame), timestamp, duration });
-    });
+    }, std::nullopt, WTFMove(allowedSinkCaps));
+
+    const auto& stream = m_harness->outputStreams().first();
+    const auto& pad = stream->targetPad();
+    gst_pad_set_query_function(pad.get(), reinterpret_cast<GstPadQueryFunction>(+[](GstPad* pad, GstObject* parent, GstQuery* query) -> gboolean {
+        if (GST_QUERY_TYPE(query) == GST_QUERY_ALLOCATION) {
+            gst_query_add_allocation_meta(query, GST_VIDEO_META_API_TYPE, nullptr);
+            return true;
+        }
+        return gst_pad_query_default(pad, parent, query);
+    }));
 }
 
 Ref<VideoDecoder::DecodePromise> GStreamerInternalVideoDecoder::decode(std::span<const uint8_t> frameData, bool isKeyFrame, int64_t timestamp, std::optional<uint64_t> duration)
