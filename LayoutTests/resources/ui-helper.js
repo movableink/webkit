@@ -324,6 +324,11 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static selectionHitTestOffset()
+    {
+        return this.isIOSFamily() ? 40 : 0;
+    }
+
     static zoomByDoubleTappingAt(x, y)
     {
         console.assert(this.isIOSFamily());
