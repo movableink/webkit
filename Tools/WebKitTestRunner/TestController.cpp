@@ -2318,6 +2318,16 @@ void TestController::didReceiveAsyncMessageFromInjectedBundle(WKStringRef messag
     if (WKStringIsEqualToUTF8CString(messageName, "SetResourceMonitorList"))
         return setResourceMonitorList(stringValue(messageBody), WTFMove(completionHandler));
 
+    if (WKStringIsEqualToUTF8CString(messageName, "FindString")) {
+        auto messageBodyDictionary = dictionaryValue(messageBody);
+        auto string = stringValue(messageBodyDictionary, "String");
+        auto findOptions = static_cast<WKFindOptions>(uint64Value(messageBodyDictionary, "FindOptions"));
+        return WKPageFindStringForTesting(TestController::singleton().mainWebView()->page(), completionHandler.leak(), string, findOptions, 0, [](bool found, void* context) {
+            auto completionHandler = WTF::adopt(static_cast<CompletionHandler<void(WKTypeRef)>::Impl*>(context));
+            completionHandler(WKBooleanCreate(found));
+        });
+    }
+
     ASSERT_NOT_REACHED();
 }
 

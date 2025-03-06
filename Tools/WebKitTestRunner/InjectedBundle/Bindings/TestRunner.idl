@@ -154,7 +154,7 @@ interface TestRunner {
     attribute double databaseMaxQuota;
 
     // Text search testing.
-    boolean findString(DOMString target, object optionsArray);
+    Promise<boolean> findString(DOMString target, object optionsArray);
     undefined findStringMatchesInPage(DOMString target, object optionsArray);
     undefined replaceFindMatchesAtIndices(object matchIndicesArray, DOMString replacementText, boolean selectionOnly);
 

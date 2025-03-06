@@ -329,12 +329,12 @@ static std::optional<WKFindOptions> findOptionsFromArray(JSContextRef context, J
     return options;
 }
 
-bool TestRunner::findString(JSContextRef context, JSStringRef target, JSValueRef optionsArrayAsValue)
+void TestRunner::findString(JSContextRef context, JSStringRef target, JSValueRef optionsArrayAsValue, JSValueRef callback)
 {
-    if (auto options = findOptionsFromArray(context, optionsArrayAsValue))
-        return WKBundlePageFindString(page(), toWK(target).get(), *options);
-
-    return false;
+    postMessageWithAsyncReply(context, "FindString", createWKDictionary({
+        { "String", toWK(target) },
+        { "FindOptions", adoptWK(WKUInt64Create(findOptionsFromArray(context, optionsArrayAsValue).value_or(WKFindOptions { }))) },
+    }), callback);
 }
 
 void TestRunner::findStringMatchesInPage(JSContextRef context, JSStringRef target, JSValueRef optionsArrayAsValue)

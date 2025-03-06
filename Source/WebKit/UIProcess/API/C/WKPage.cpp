@@ -3511,3 +3511,10 @@ void WKPageDisplayAndTrackRepaintsForTesting(WKPageRef pageRef, void* context, W
         completionHandler(context);
     });
 }
+
+void WKPageFindStringForTesting(WKPageRef pageRef, void* context, WKStringRef string, WKFindOptions options, unsigned maxMatchCount, WKPageFindStringForTestingFunction completionHandler)
+{
+    toImpl(pageRef)->findString(toWTFString(string), toFindOptions(options), maxMatchCount, [context, completionHandler] (bool found) {
+        completionHandler(found, context);
+    });
+}

@@ -237,6 +237,9 @@ typedef void (*WKPageSetTracksRepaintsForTestingFunction)(void* functionContext)
 WK_EXPORT void WKPageSetTracksRepaintsForTesting(WKPageRef page, void* context, bool trackRepaints, WKPageSetTracksRepaintsForTestingFunction completionHandler);
 typedef void (*WKPageDisplayAndTrackRepaintsForTestingFunction)(void* functionContext);
 WK_EXPORT void WKPageDisplayAndTrackRepaintsForTesting(WKPageRef page, void* context, WKPageDisplayAndTrackRepaintsForTestingFunction completionHandler);
+typedef void (*WKPageFindStringForTestingFunction)(bool found, void* functionContext);
+WK_EXPORT void WKPageFindStringForTesting(WKPageRef page, void* context, WKStringRef string, WKFindOptions options, unsigned maxMatchCount, WKPageFindStringForTestingFunction completionHandler);
+
 #ifdef __cplusplus
 }
 #endif

@@ -5757,11 +5757,6 @@ void WebPage::setTextIndicator(const WebCore::TextIndicatorData& indicatorData)
     send(Messages::WebPageProxy::SetTextIndicatorFromFrame(m_mainFrame->frameID(), indicatorData, static_cast<uint64_t>(WebCore::TextIndicatorLifetime::Temporary)));
 }
 
-bool WebPage::findStringFromInjectedBundle(const String& target, OptionSet<FindOptions> options)
-{
-    return protectedCorePage()->findString(target, core(options)).has_value();
-}
-
 void WebPage::replaceStringMatchesFromInjectedBundle(const Vector<uint32_t>& matchIndices, const String& replacementText, bool selectionOnly)
 {
     findController().replaceMatches(matchIndices, replacementText, selectionOnly);
