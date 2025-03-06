@@ -504,6 +504,14 @@ AXTextMarker AXTextMarker::convertToDomOffset() const
     return { newData };
 }
 
+void AXTextMarker::clampOffsetToLengthIfNeeded(unsigned length) const
+{
+    if (offset() <= length)
+        return;
+
+    const_cast<AXTextMarker*>(this)->m_data.offset = length;
+}
+
 AXTextRunLineID AXTextMarker::lineID() const
 {
     if (!isValid())
@@ -1172,6 +1180,8 @@ AXTextMarker AXTextMarker::findWordOrSentence(AXDirection direction, bool findWo
     RefPtr currentObject = isolatedObject();
     const auto* currentRuns = currentObject->textRuns();
 
+    clampOffsetToLengthIfNeeded(currentRuns->totalLength());
+
     unsigned offset = this->offset();
     AXTextMarker resultMarker = *this;
 
@@ -1183,6 +1193,7 @@ AXTextMarker AXTextMarker::findWordOrSentence(AXDirection direction, bool findWo
     // Functions to update resultMarker for word and sentence text units.
     auto updateWordResultMarker = [&] () {
         if (direction == AXDirection::Previous && boundary == AXTextUnitBoundary::Start) {
+            TEXT_MARKER_ASSERT_SINGLE(offset <= flattenedRuns.length(), "findWordOrSentence", (*this));
             int previousWordStart = findNextWordFromIndex(flattenedRuns, offset, false);
             if (previousWordStart <= objectBorder)
                 resultMarker = AXTextMarker(*currentObject, previousWordStart, origin);
@@ -1302,17 +1313,12 @@ AXTextMarker AXTextMarker::toTextRunMarker(std::optional<AXID> stopAtID) const
     const auto* runs = object->textRuns();
     if (runs && runs->size()) {
         unsigned totalLength = runs->totalLength();
-        // If something has constructed a text-run marker, it should've done so with an in-bounds offset.
-        bool isInBounds = totalLength >= offset();
-        if (isInBounds)
-            return *this;
-
         // When a user types, we send out notifications with text markers whose offsets are relative
         // to the text at that time. By the time VoiceOver sends that text marker back to us, the text
         // may have further changed (e.g. when rapidly deleting multiple characters). This can also
         // happen when VoiceOver is holding on to a stale text marker. Gracefully handle this scenario
         // by setting this text marker back in-bounds.
-        const_cast<AXTextMarker*>(this)->m_data.offset = totalLength;
+        clampOffsetToLengthIfNeeded(totalLength);
         return *this;
     }
 

@@ -1,0 +1,8 @@
+This test ensures when we have a stale offset passed into the word methdods, we don't crash.
+
+PASS: input.stringForTextMarkerRange(finalMarkerRange) === 'Hello world'
+
+PASS successfullyParsed is true
+
+TEST COMPLETE
+

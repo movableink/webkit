@@ -282,6 +282,7 @@ public:
     // True if this marker points to an object with non-empty text runs.
     bool isInTextRun() const;
     AXTextMarker convertToDomOffset() const;
+    void clampOffsetToLengthIfNeeded(unsigned) const;
 
     // Find the next or previous marker, optionally stopping at the given ID and returning an invalid marker.
     AXTextMarker findMarker(AXDirection, CoalesceObjectBreaks = CoalesceObjectBreaks::Yes, IgnoreBRs = IgnoreBRs::No, std::optional<AXID> = std::nullopt) const;
