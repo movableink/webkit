@@ -2633,6 +2633,29 @@ static void adjustTextDirectionForCoalescedGeometries(const SimpleRange& range, 
     }
 }
 
+static bool currentNodeRequiresToSeparateLines(const RenderObject* currentRenderer)
+{
+    return currentRenderer && currentRenderer->isOutOfFlowPositioned();
+}
+
+static bool hasAncestorRequiresToSeparateLines(RenderObject* descendant, const RenderObject* stayWithin)
+{
+    for (CheckedPtr current = descendant; current; current = current->parent()) {
+        if (current->isOutOfFlowPositioned())
+            return true;
+        if (current == stayWithin)
+            break;
+    }
+    return false;
+}
+
+static bool previousNodeRequiresToSeparateLines(RenderObject* previousRenderer, const RenderObject* stayWithin)
+{
+    if (!previousRenderer || !stayWithin)
+        return false;
+    return hasAncestorRequiresToSeparateLines(previousRenderer, stayWithin);
+}
+
 auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) -> SelectionGeometries
 {
     Vector<SelectionGeometry> geometries;
@@ -2641,10 +2664,19 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
     bool containsDifferentWritingModes = false;
     bool hasLeftToRightText = false;
     bool hasRightToLeftText = false;
+    bool separateFromPreviousLine = false;
+    SingleThreadWeakPtr<RenderObject> previousRenderer;
     for (Ref node : intersectingNodesWithDeprecatedZeroOffsetStartQuirk(range)) {
         CheckedPtr renderer = node->renderer();
+        if (!renderer)
+            continue;
+
+        if (!separateFromPreviousLine)
+            separateFromPreviousLine = currentNodeRequiresToSeparateLines(renderer.get()) || previousNodeRequiresToSeparateLines(previousRenderer.get(), renderer->previousSibling());
+        previousRenderer = renderer.get();
+
         // Only ask leaf render objects for their line box rects.
-        if (renderer && !renderer->firstChildSlow() && renderer->style().usedUserSelect() != UserSelect::None) {
+        if (!renderer->firstChildSlow() && renderer->style().usedUserSelect() != UserSelect::None) {
             bool isStartNode = renderer->node() == range.start.container.ptr();
             bool isEndNode = renderer->node() == range.end.container.ptr();
             if (hasFlippedWritingMode != renderer->writingMode().isBlockFlipped())
@@ -2659,6 +2691,10 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
             int endSelectionOffset = isEndNode ? range.end.offset : std::numeric_limits<int>::max();
             renderer->collectSelectionGeometries(newGeometries, beginSelectionOffset, endSelectionOffset);
             for (auto& selectionGeometry : newGeometries) {
+                if (separateFromPreviousLine) {
+                    selectionGeometry.setSeparateFromPreviousLine(true);
+                    separateFromPreviousLine = false;
+                }
                 if (selectionGeometry.containsStart() && !isStartNode)
                     selectionGeometry.setContainsStart(false);
                 if (selectionGeometry.containsEnd() && !isEndNode)
@@ -2716,7 +2752,12 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
                 lineBottom = std::min(lastLineTop, lineBottom);
         } else {
             adjustLineHeightOfSelectionGeometries(geometries, i, lineNumber, lineTop, lineBottom - lineTop);
-            if (!hasFlippedWritingMode) {
+            if (geometries[i].separateFromPreviousLine()) {
+                lastLineTop = std::numeric_limits<int>::max();
+                lastLineBottom = std::numeric_limits<int>::min();
+                lineTop = currentRectTop;
+                lineBottom = currentRectBottom;
+            } else if (!hasFlippedWritingMode) {
                 lastLineTop = lineTop;
                 if (currentRectBottom >= lastLineTop) {
                     lastLineBottom = lineBottom;
