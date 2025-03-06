@@ -29,6 +29,7 @@
 #include "JSExecState.h"
 #include "Microtasks.h"
 #include "ScriptExecutionContext.h"
+#include <JavaScriptCore/MicrotaskQueueInlines.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -410,7 +411,7 @@ class JSMicrotaskDispatcher final : public WebCoreMicrotaskDispatcher {
     WTF_MAKE_TZONE_ALLOCATED(JSMicrotaskDispatcher);
 public:
     JSMicrotaskDispatcher(EventLoopTaskGroup& group)
-        : WebCoreMicrotaskDispatcher(group)
+        : WebCoreMicrotaskDispatcher(Type::JavaScript, group)
     {
     }
 
@@ -536,7 +537,7 @@ class EventLoopFunctionMicrotaskDispatcher final : public WebCoreMicrotaskDispat
     WTF_MAKE_TZONE_ALLOCATED(EventLoopFunctionMicrotaskDispatcher);
 public:
     EventLoopFunctionMicrotaskDispatcher(EventLoopTaskGroup& group, EventLoop::TaskFunction&& function)
-        : WebCoreMicrotaskDispatcher(group)
+        : WebCoreMicrotaskDispatcher(Type::Function, group)
         , m_function(WTFMove(function))
     {
     }

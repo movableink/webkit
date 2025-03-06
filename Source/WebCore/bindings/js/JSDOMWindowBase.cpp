@@ -254,7 +254,7 @@ class UserGestureInitiatedMicrotaskDispatcher final : public WebCoreMicrotaskDis
 public:
 
     UserGestureInitiatedMicrotaskDispatcher(EventLoopTaskGroup& group, Ref<UserGestureToken>&& userGestureToken)
-        : WebCoreMicrotaskDispatcher(group)
+        : WebCoreMicrotaskDispatcher(Type::UserGestureIndicator, group)
         , m_userGestureToken(WTFMove(userGestureToken))
     {
     }

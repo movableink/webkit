@@ -25,10 +25,12 @@
 
 #include "CommonVM.h"
 #include "EventLoop.h"
+#include "JSExecState.h"
 #include "RejectedPromiseTracker.h"
 #include "ScriptExecutionContext.h"
 #include "WorkerGlobalScope.h"
 #include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/MicrotaskQueueInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SetForScope.h>
@@ -74,7 +76,26 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
     JSC::JSLockHolder locker(vm);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    m_microtaskQueue.performMicrotaskCheckpoint(vm);
+    m_microtaskQueue.performMicrotaskCheckpoint(vm,
+        [&](JSC::QueuedTask& task) ALWAYS_INLINE_LAMBDA {
+            RefPtr dispatcher = static_cast<WebCoreMicrotaskDispatcher*>(task.dispatcher());
+            if (UNLIKELY(!dispatcher))
+                return QueuedTask::Result::Discard;
+
+            auto result = dispatcher->currentRunnability();
+            if (result == JSC::QueuedTask::Result::Executed) {
+                switch (dispatcher->type()) {
+                case WebCoreMicrotaskDispatcher::Type::JavaScript:
+                    JSExecState::runTask(task.globalObject(), task);
+                    break;
+                case WebCoreMicrotaskDispatcher::Type::UserGestureIndicator:
+                case WebCoreMicrotaskDispatcher::Type::Function:
+                    dispatcher->run(task);
+                    break;
+                }
+            }
+            return result;
+        });
     vm->finalizeSynchronousJSExecution();
 
     if (!vm->executionForbidden()) {

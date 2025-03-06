@@ -87,6 +87,7 @@
 #include "LLIntExceptions.h"
 #include "MarkedBlockInlines.h"
 #include "MegamorphicCache.h"
+#include "MicrotaskQueueInlines.h"
 #include "MinimumReservedZoneSize.h"
 #include "ModuleProgramCodeBlockInlines.h"
 #include "ModuleProgramExecutableInlines.h"
@@ -1359,7 +1360,14 @@ void VM::drainMicrotasks()
         m_defaultMicrotaskQueue.clear();
     else {
         do {
-            m_defaultMicrotaskQueue.performMicrotaskCheckpoint(*this);
+            m_defaultMicrotaskQueue.performMicrotaskCheckpoint(*this,
+                [&](QueuedTask& task) ALWAYS_INLINE_LAMBDA {
+                    if (RefPtr dispatcher = task.dispatcher())
+                        return dispatcher->run(task);
+
+                    runJSMicrotask(task.globalObject(), task.identifier(), task.job(), task.arguments());
+                    return QueuedTask::Result::Executed;
+                });
             if (UNLIKELY(hasPendingTerminationException()))
                 return;
             didExhaustMicrotaskQueue();

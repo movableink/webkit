@@ -72,9 +72,9 @@ public:
         m_dispatcher = WTFMove(dispatcher);
     }
 
-    Result tryRun();
     bool isRunnable() const;
 
+    MicrotaskDispatcher* dispatcher() const { return m_dispatcher.get(); }
     MicrotaskIdentifier identifier() const { return m_identifier; }
     JSGlobalObject* globalObject() const { return m_globalObject; }
     JSValue job() const { return m_job; }
@@ -176,7 +176,7 @@ public:
 
     DECLARE_VISIT_AGGREGATE;
 
-    JS_EXPORT_PRIVATE void performMicrotaskCheckpoint(VM&);
+    inline void performMicrotaskCheckpoint(VM&, const Invocable<QueuedTask::Result(QueuedTask&)> auto& functor);
 
     bool hasMicrotasksForFullyActiveDocument() const
     {

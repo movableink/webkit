@@ -37,20 +37,29 @@ namespace WebCore {
 class WebCoreMicrotaskDispatcher : public JSC::MicrotaskDispatcher {
     WTF_MAKE_TZONE_ALLOCATED(WebCoreMicrotaskDispatcher);
 public:
-    WebCoreMicrotaskDispatcher(EventLoopTaskGroup& group)
-        : m_group(group)
+    enum class Type {
+        JavaScript,
+        UserGestureIndicator,
+        Function,
+    };
+
+    WebCoreMicrotaskDispatcher(Type type, EventLoopTaskGroup& group)
+        : m_type(type)
+        , m_group(group)
     {
     }
+
+    Type type() const { return m_type; }
 
     bool isRunnable() const final
     {
         return currentRunnability() == JSC::QueuedTask::Result::Executed;
     }
 
-protected:
     JSC::QueuedTask::Result currentRunnability() const;
 
 private:
+    Type m_type { Type::JavaScript };
     WeakPtr<EventLoopTaskGroup> m_group;
 };
 

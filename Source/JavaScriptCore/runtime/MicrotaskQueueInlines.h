@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,48 @@
 
 #pragma once
 
-#include "JSCast.h"
-#include "Microtask.h"
-#include "Structure.h"
+#include "CatchScope.h"
+#include "Debugger.h"
+#include "MicrotaskQueue.h"
 
 namespace JSC {
 
-void runJSMicrotask(JSGlobalObject*, MicrotaskIdentifier, JSValue job, std::span<const JSValue>);
+inline void MicrotaskQueue::performMicrotaskCheckpoint(VM& vm, const Invocable<QueuedTask::Result(QueuedTask&)> auto& functor)
+{
+    auto catchScope = DECLARE_CATCH_SCOPE(vm);
+    while (!m_queue.isEmpty()) {
+        if (UNLIKELY(vm.executionForbidden())) {
+            clear();
+            break;
+        }
+
+        auto task = m_queue.dequeue();
+        auto result = functor(task);
+        if (UNLIKELY(!catchScope.clearExceptionExceptTermination())) {
+            clear();
+            break;
+        }
+
+        vm.callOnEachMicrotaskTick();
+        if (UNLIKELY(!catchScope.clearExceptionExceptTermination())) {
+            clear();
+            break;
+        }
+
+        switch (result) {
+        case QueuedTask::Result::Executed:
+            break;
+        case QueuedTask::Result::Discard:
+            // Let this task go away.
+            break;
+        case QueuedTask::Result::Suspended: {
+            m_toKeep.enqueue(WTFMove(task));
+            break;
+        }
+        }
+    }
+    m_queue.swap(m_toKeep);
+}
+
 
 } // namespace JSC

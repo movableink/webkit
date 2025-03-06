@@ -26,10 +26,8 @@
 #include "config.h"
 #include "MicrotaskQueue.h"
 
-#include "CatchScope.h"
 #include "Debugger.h"
 #include "JSGlobalObject.h"
-#include "JSMicrotask.h"
 #include "JSObject.h"
 #include "SlotVisitorInlines.h"
 #include <wtf/SetForScope.h>
@@ -40,19 +38,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MicrotaskQueue);
-
-QueuedTask::Result QueuedTask::tryRun()
-{
-    if (RefPtr dispatcher = m_dispatcher)
-        return dispatcher->run(*this);
-
-    if (!m_job.isObject())
-        return Result::Executed;
-
-    JSObject* job = jsCast<JSObject*>(m_job);
-    runJSMicrotask(m_globalObject, m_identifier, job, m_arguments[0], m_arguments[1], m_arguments[2], m_arguments[3]);
-    return Result::Executed;
-}
 
 bool QueuedTask::isRunnable() const
 {
@@ -89,43 +74,6 @@ void MicrotaskQueue::enqueue(QueuedTask&& task)
         if (auto* debugger = globalObject->debugger(); UNLIKELY(debugger))
             debugger->didQueueMicrotask(globalObject, microtaskIdentifier);
     }
-}
-
-void MicrotaskQueue::performMicrotaskCheckpoint(VM& vm)
-{
-    auto catchScope = DECLARE_CATCH_SCOPE(vm);
-    while (!m_queue.isEmpty()) {
-        if (UNLIKELY(vm.executionForbidden())) {
-            clear();
-            break;
-        }
-
-        auto task = m_queue.dequeue();
-        auto status = task.tryRun();
-        if (UNLIKELY(!catchScope.clearExceptionExceptTermination())) {
-            clear();
-            break;
-        }
-
-        vm.callOnEachMicrotaskTick();
-        if (UNLIKELY(!catchScope.clearExceptionExceptTermination())) {
-            clear();
-            break;
-        }
-
-        switch (status) {
-        case QueuedTask::Result::Executed:
-            break;
-        case QueuedTask::Result::Discard:
-            // Let this task go away.
-            break;
-        case QueuedTask::Result::Suspended: {
-            m_toKeep.enqueue(WTFMove(task));
-            break;
-        }
-        }
-    }
-    m_queue.swap(m_toKeep);
 }
 
 bool MarkedMicrotaskDeque::hasMicrotasksForFullyActiveDocument() const

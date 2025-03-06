@@ -37,11 +37,14 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
-void runJSMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
+void runJSMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier, JSValue job, std::span<const JSValue> arguments)
 {
     VM& vm = globalObject->vm();
 
     auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    if (UNLIKELY(!job.isObject()))
+        return;
 
     // If termination is issued, do not run microtasks. Otherwise, microtask should not care about exceptions.
     if (UNLIKELY(!scope.clearExceptionExceptTermination()))
@@ -52,20 +55,12 @@ void runJSMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier
         return;
     ASSERT(handlerCallData.type != CallData::Type::None);
 
-    MarkedArgumentBuffer handlerArguments;
-    if (argument0) {
-        handlerArguments.append(argument0);
-        if (argument1) {
-            handlerArguments.append(argument1);
-            if (argument2) {
-                handlerArguments.append(argument2);
-                if (argument3)
-                    handlerArguments.append(argument3);
-            }
-        }
+    unsigned count = 0;
+    for (auto argument : arguments) {
+        if (!argument)
+            break;
+        ++count;
     }
-    if (UNLIKELY(handlerArguments.hasOverflowed()))
-        return;
 
     if (UNLIKELY(globalObject->hasDebugger())) {
         DeferTerminationForAWhile deferTerminationForAWhile(vm);
@@ -74,7 +69,7 @@ void runJSMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier
     }
 
     if (LIKELY(!vm.hasPendingTerminationException())) {
-        profiledCall(globalObject, ProfilingReason::Microtask, job, handlerCallData, jsUndefined(), handlerArguments);
+        profiledCall(globalObject, ProfilingReason::Microtask, job, handlerCallData, jsUndefined(), ArgList { std::bit_cast<EncodedJSValue*>(arguments.data()), count });
         scope.clearExceptionExceptTermination();
     }
 
