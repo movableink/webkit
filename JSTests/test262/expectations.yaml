@@ -1099,9 +1099,6 @@ test/intl402/DateTimeFormat/timezone-legacy-non-iana.js:
 test/intl402/DateTimeFormat/timezone-not-canonicalized.js:
   default: 'Test262Error: Expected SameValue(«"Asia/Calcutta"», «"Asia/Kolkata"») to be true'
   strict mode: 'Test262Error: Expected SameValue(«"Asia/Calcutta"», «"Asia/Kolkata"») to be true'
-test/intl402/Intl/getCanonicalLocales/unicode-ext-canonicalize-timezone.js:
-  default: 'Test262Error: Expected SameValue(«"und-u-tz-utcw05"», «"und-u-tz-papty"») to be true'
-  strict mode: 'Test262Error: Expected SameValue(«"und-u-tz-utcw05"», «"und-u-tz-papty"») to be true'
 test/intl402/Locale/extensions-grandfathered.js:
   default: 'Test262Error: Expected SameValue(«"fr-Cyrl-FR-gaulish-u-nu-latn"», «"fr-Cyrl-FR-u-nu-latn"») to be true'
   strict mode: 'Test262Error: Expected SameValue(«"fr-Cyrl-FR-gaulish-u-nu-latn"», «"fr-Cyrl-FR-u-nu-latn"») to be true'
@@ -1319,11 +1316,11 @@ test/staging/sm/ArrayBuffer/slice-species.js:
 test/staging/sm/Date/makeday-year-month-is-infinity.js:
   default: 'Test262Error: Expected SameValue(«-62167219200000», «NaN») to be true'
 test/staging/sm/Date/non-iso.js:
-  default: 'Test262Error: Expected SameValue(«NaN», «857750461010») to be true'
+  default: 'Test262Error: Expected SameValue(«NaN», «857811661010») to be true'
 test/staging/sm/Date/to-temporal-instant.js:
   default: "TypeError: min.toZonedDateTimeISO is not a function. (In 'min.toZonedDateTimeISO('UTC')', 'min.toZonedDateTimeISO' is undefined)"
 test/staging/sm/Date/two-digit-years.js:
-  default: 'Test262Error: Expected SameValue(«923583600000», «NaN») to be true'
+  default: 'Test262Error: Expected SameValue(«923641200000», «NaN») to be true'
 test/staging/sm/Function/arguments-parameter-shadowing.js:
   default: 'Test262Error: Expected SameValue(«true», «false») to be true'
 test/staging/sm/Function/function-bind.js:
@@ -1342,8 +1339,6 @@ test/staging/sm/Iterator/prototype/reduce/check-fn-after-getting-iterator.js:
   default: 'Test262Error: Actual [get: reduce, get: return] and expected [get: reduce] should have the same contents. '
 test/staging/sm/Iterator/prototype/some/check-fn-after-getting-iterator.js:
   default: 'Test262Error: Actual [get: some, get: return] and expected [get: some] should have the same contents. '
-test/staging/sm/Math/cbrt-approx.js:
-  default: 'Error: got 1.39561242508609, expected a number near 1.3956124250860895 (relative error: 2)'
 test/staging/sm/Proxy/revoked-get-function-realm-typeerror.js:
   default: 'Error: Assertion failed: expected exception TypeError, no exception thrown'
 test/staging/sm/RegExp/lastIndex-search.js:
@@ -1364,8 +1359,14 @@ test/staging/sm/RegExp/unicode-braced.js:
   default: 'SyntaxError: Invalid regular expression: regular expression too large'
 test/staging/sm/RegExp/unicode-class-braced.js:
   default: 'SyntaxError: Invalid regular expression: regular expression too large'
+test/staging/sm/RegExp/unicode-class-lead-trail.js:
+  default: "Test262Error: Actual argument shouldn't be nullish. "
 test/staging/sm/RegExp/unicode-class-negated.js:
   default: 'Test262Error: Actual [�] and expected [�] should have the same contents. '
+test/staging/sm/RegExp/unicode-everything.js:
+  default: "Test262Error: Actual argument shouldn't be nullish. "
+test/staging/sm/RegExp/unicode-lead-trail.js:
+  default: "Test262Error: Actual argument shouldn't be nullish. "
 test/staging/sm/RegExp/unicode-raw.js:
   default: 'Test262Error: Expected SameValue(«🐸», «null») to be true'
 test/staging/sm/Set/symmetric-difference.js:
