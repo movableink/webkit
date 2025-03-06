@@ -60,9 +60,13 @@
 
 typedef struct _GstMpegtsSection GstMpegtsSection;
 
+#if USE(GSTREAMER_GL)
 // Include the <epoxy/gl.h> header before <gst/gl/gl.h>.
 #include <epoxy/gl.h>
+#define GST_USE_UNSTABLE_API
 #include <gst/gl/gl.h>
+#undef GST_USE_UNSTABLE_API
+#endif
 
 #if ENABLE(ENCRYPTED_MEDIA)
 #include "CDMProxy.h"
@@ -209,7 +213,9 @@ public:
     void handleMessage(GstMessage*);
 
     void triggerRepaint(GRefPtr<GstSample>&&);
+#if USE(GSTREAMER_GL)
     void flushCurrentBuffer();
+#endif
 
     void handleTextSample(GRefPtr<GstSample>&&, TrackID streamId);
 
@@ -296,7 +302,9 @@ protected:
     void pushNextHolePunchBuffer();
     bool shouldIgnoreIntrinsicSize() final;
 
+#if USE(GSTREAMER_GL)
     GstElement* createVideoSinkGL();
+#endif
 
 #if USE(COORDINATED_GRAPHICS)
     void pushTextureToCompositor(bool isDuplicateSample);

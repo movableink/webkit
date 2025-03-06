@@ -26,11 +26,14 @@
 #include <gst/allocators/gstdmabuf.h>
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
-#include <gst/gl/gl.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
+
+#if USE(GSTREAMER_GL)
+#include <gst/gl/gl.h>
+#endif
 
 namespace WebCore {
 
@@ -57,6 +60,7 @@ GStreamerVideoFrameConverter::Pipeline::Pipeline(Type type)
         gst_element_link_many(m_src.get(), videoconvert, videoscale, m_sink.get(), nullptr);
         break;
     }
+#if USE(GSTREAMER_GL)
     case Type::GLMemory: {
         auto glcolorconvert = makeGStreamerElement("glcolorconvert", nullptr);
         auto gldownload = makeGStreamerElement("gldownload", nullptr);
@@ -76,6 +80,7 @@ GStreamerVideoFrameConverter::Pipeline::Pipeline(Type type)
         gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), m_src.get(), glupload, m_capsfilter.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);
         gst_element_link_many(m_src.get(), glupload, m_capsfilter.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);
     }
+#endif
     }
 }
 
@@ -83,6 +88,7 @@ GStreamerVideoFrameConverter::Pipeline::~Pipeline() = default;
 
 GRefPtr<GstSample> GStreamerVideoFrameConverter::Pipeline::run(const GRefPtr<GstSample>& sample, GstCaps* destinationCaps)
 {
+#if USE(GSTREAMER_GL)
     if (m_type == Type::GLMemory || m_type == Type::DMABufMemory) {
         if (!setGstElementGLContext(m_pipeline.get(), GST_GL_DISPLAY_CONTEXT_TYPE))
             return nullptr;
@@ -96,6 +102,7 @@ GRefPtr<GstSample> GStreamerVideoFrameConverter::Pipeline::run(const GRefPtr<Gst
             g_object_set(m_capsfilter.get(), "caps", outputCaps.get(), nullptr);
         }
     }
+#endif
 
     unsigned capsSize = gst_caps_get_size(destinationCaps);
     auto newCaps = adoptGRef(gst_caps_new_empty());
@@ -145,6 +152,7 @@ GStreamerVideoFrameConverter::GStreamerVideoFrameConverter()
 
 GStreamerVideoFrameConverter::Pipeline& GStreamerVideoFrameConverter::ensurePipeline(GstCaps* caps)
 {
+#if USE(GSTREAMER_GL)
     auto* features = gst_caps_get_features(caps, 0);
     if (features && gst_caps_features_contains(features, GST_CAPS_FEATURE_MEMORY_DMABUF)) {
         if (!m_dmabufMemoryPipeline) {
@@ -165,6 +173,9 @@ GStreamerVideoFrameConverter::Pipeline& GStreamerVideoFrameConverter::ensurePipe
         m_releaseUnusedGLMemoryPipelineTimer->startOneShot(s_releaseUnusedPipelinesTimerInterval);
         return *m_glMemoryPipeline;
     }
+#else
+    UNUSED_PARAM(caps);
+#endif
 
     if (!m_systemMemoryPipeline) {
         m_systemMemoryPipeline = makeUnique<Pipeline>(Pipeline::Type::SystemMemory);
@@ -216,6 +227,7 @@ void GStreamerVideoFrameConverter::releaseUnusedSystemMemoryPipelineTimerFired()
     m_releaseUnusedSystemMemoryPipelineTimer = nullptr;
 }
 
+#if USE(GSTREAMER_GL)
 void GStreamerVideoFrameConverter::releaseUnusedGLMemoryPipelineTimerFired()
 {
     m_glMemoryPipeline = nullptr;
@@ -227,6 +239,7 @@ void GStreamerVideoFrameConverter::releaseUnusedDMABufMemoryPipelineTimerFired()
     m_dmabufMemoryPipeline = nullptr;
     m_releaseUnusedDMABufMemoryPipelineTimer = nullptr;
 }
+#endif
 
 #undef GST_CAT_DEFAULT
 
