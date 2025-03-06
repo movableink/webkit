@@ -33,6 +33,7 @@
 #include "text/TextFlags.h"
 #include <hb-icu.h>
 #include <hb-ot.h>
+#include <hb.h>
 
 namespace WebCore {
 
@@ -191,7 +192,17 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
     }
 
     HbUniquePtr<hb_buffer_t> buffer(hb_buffer_create());
+
+    // The computed "locale" equals the "lang" attribute. The latter must be a valid BCP 47 language tag,
+    // according to <https://html.spec.whatwg.org/multipage/dom.html#attr-lang>.
+    // According to <https://datatracker.ietf.org/doc/html/rfc5646#section-2.1>
+    // "the language tags described in this document are sequences of characters
+    // from the US-ASCII [ISO646] repertoire.".
+    auto language = hb_language_from_string(m_font.fontDescription().computedLocale().string().ascii().data(), -1);
+
     for (unsigned i = 0; i < runCount; ++i) {
+        hb_buffer_set_language(buffer.get(), language);
+
         auto& run = runList[m_run.rtl() ? runCount - i - 1 : i];
 
         hb_buffer_set_script(buffer.get(), hb_icu_script_to_script(run.script));

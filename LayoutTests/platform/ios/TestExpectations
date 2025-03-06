@@ -6291,7 +6291,6 @@ imported/w3c/web-platform-tests/css/css-images/object-position-png-002p.html [ I
 imported/w3c/web-platform-tests/css/css-images/object-position-svg-001p.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-images/object-position-svg-002p.html [ ImageOnlyFailure ]
 
-webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-fonts/font-language-override-02.html [ ImageOnlyFailure ]
 webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-multicol/equal-gap-and-rule.html [ ImageOnlyFailure ]
 webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-multicol/fixed-size-child-with-overflow.html [ ImageOnlyFailure ]
 webkit.org/b/214468 imported/w3c/web-platform-tests/css/css-pseudo/active-selection-041.html [ ImageOnlyFailure ]

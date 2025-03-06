@@ -971,7 +971,6 @@ webkit.org/b/212300 fast/text/font-collection-2.html [ ImageOnlyFailure ]
 
 webkit.org/b/213114 fast/flexbox/line-clamp-with-anchor-content-only.html [ ImageOnlyFailure ]
 
-webkit.org/b/287629 imported/w3c/web-platform-tests/css/css-fonts/lang-attribute-affects-rendering.html [ ImageOnlyFailure ]
 webkit.org/b/189483 imported/w3c/web-platform-tests/css/css-fonts/variations/slnt-variable.html [ ImageOnlyFailure ]
 webkit.org/b/189483 imported/w3c/web-platform-tests/css/css-fonts/variations/slnt-backslant-variable.html [ ImageOnlyFailure ]
 
@@ -3241,6 +3240,8 @@ webkit.org/b/68512 accessibility/aria-hidden-updates-alldescendants.html [ Failu
 # locale-specific shaping isn't implemented on any non-Cocoa port yet.
 webkit.org/b/77568 fast/text/locale-shaping-complex.html [ ImageOnlyFailure ]
 webkit.org/b/77568 fast/text/locale-shaping.html [ ImageOnlyFailure ]
+
+webkit.org/b/161587 fast/text/locale-shaping-3.html  [ ImageOnlyFailure ]
 
 # Fails because MutationObservers are not notified at end-of-task.
 webkit.org/b/78290 fast/dom/MutationObserver/end-of-task-delivery.html [ Failure ]
