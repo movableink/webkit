@@ -536,7 +536,6 @@ dom/DataTransferItemList.cpp
 dom/Document.cpp
 dom/DocumentFontLoader.cpp
 dom/DocumentFragment.cpp
-dom/DocumentInlines.h
 dom/DocumentStorageAccess.cpp
 dom/Element.cpp
 dom/ElementData.cpp
