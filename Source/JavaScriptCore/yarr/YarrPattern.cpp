@@ -1151,7 +1151,7 @@ public:
         m_alternative->m_terms.append(PatternTerm::WordBoundary(invert, m_flags));
     }
 
-    void atomPatternCharacter(char32_t ch)
+    void atomPatternCharacter(char32_t ch, bool)
     {
         // We handle case-insensitive checking of unicode characters which do have both
         // cases by handling them as if they were defined using a CharacterClass.
@@ -1207,7 +1207,7 @@ public:
                         auto string = characterClass->m_strings[i];
 
                         for (auto ch : string)
-                            atomPatternCharacter(ch);
+                            atomPatternCharacter(ch, /* hyphenIsRange */ false);
 
                         ++alternativeCount;
                     }
@@ -1341,7 +1341,7 @@ public:
                 auto string = newCharacterClass->m_strings[i];
 
                 for (auto ch : string)
-                    atomPatternCharacter(ch);
+                    atomPatternCharacter(ch, /* hyphenIsRange */ false);
 
                 ++alternativeCount;
             }
