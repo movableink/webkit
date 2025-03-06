@@ -12,8 +12,6 @@ accessibility/AccessibilityScrollView.cpp
 accessibility/mac/AccessibilityObjectMac.mm
 accessibility/mac/WebAccessibilityObjectWrapperMac.mm
 animation/KeyframeEffect.cpp
-animation/ScrollTimeline.cpp
-animation/ViewTimeline.cpp
 dom/BroadcastChannel.cpp
 dom/Document.cpp
 dom/ScriptExecutionContext.cpp

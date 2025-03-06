@@ -305,7 +305,7 @@ void ViewTimeline::cacheCurrentTime()
             return { };
 
         CheckedPtr sourceRenderer = sourceScrollerRenderer();
-        auto* sourceScrollableArea = scrollableAreaForSourceRenderer(sourceRenderer.get(), subject->element.document());
+        CheckedPtr sourceScrollableArea = scrollableAreaForSourceRenderer(sourceRenderer.get(), subject->element.document());
         if (!sourceScrollableArea)
             return { };
 

@@ -240,7 +240,7 @@ void ScrollTimeline::cacheCurrentTime()
         RefPtr source = this->source();
         if (!source)
             return { };
-        auto* sourceScrollableArea = scrollableAreaForSourceRenderer(source->renderer(), source->document());
+        CheckedPtr sourceScrollableArea = scrollableAreaForSourceRenderer(source->renderer(), source->document());
         if (!sourceScrollableArea)
             return { };
         auto scrollDirection = resolvedScrollDirection();
