@@ -3693,6 +3693,20 @@ RegisterID* InNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 
 RegisterID* LogicalOpNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
+    if (dst == generator.ignoredResult()) {
+        Ref<Label> afterExpr1 = generator.newLabel();
+        Ref<Label> afterExpr2 = generator.newLabel();
+        if (m_operator == LogicalOperator::And)
+            generator.emitNodeInConditionContext(m_expr1, afterExpr1.get(), afterExpr2.get(), FallThroughMeansTrue);
+        else
+            generator.emitNodeInConditionContext(m_expr1, afterExpr2.get(), afterExpr1.get(), FallThroughMeansFalse);
+        generator.emitLabel(afterExpr1.get());
+
+        generator.emitNodeInTailPosition(dst, m_expr2);
+        generator.emitLabel(afterExpr2.get());
+        return dst;
+    }
+
     RefPtr<RegisterID> temp = generator.tempDestination(dst);
     Ref<Label> target = generator.newLabel();
     
@@ -4277,9 +4291,12 @@ inline void SourceElements::emitBytecode(BytecodeGenerator& generator, RegisterI
     }
 
     for (StatementNode* statement = m_head; statement; statement = statement->next()) {
-        if (statement == lastStatementWithCompletionValue)
-            generator.emitLoad(dst, jsUndefined());
-        generator.emitNodeInTailPosition(dst, statement);
+        if (generator.shouldBeConcernedWithCompletionValue()) {
+            if (statement == lastStatementWithCompletionValue)
+                generator.emitLoad(dst, jsUndefined());
+            generator.emitNodeInTailPosition(dst, statement);
+        } else
+            generator.emitNodeInTailPosition(generator.ignoredResult(), statement);
     }
 }
 
