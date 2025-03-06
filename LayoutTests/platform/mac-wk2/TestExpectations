@@ -2061,3 +2061,5 @@ webkit.org/b/289200 imported/w3c/web-platform-tests/fullscreen/rendering/backdro
 webkit.org/b/289207 storage/filesystemaccess/writable-file-stream-abort.html [ Pass Crash ]
 
 webkit.org/b/289211 [ Sequoia Release x86_64 ] imported/w3c/web-platform-tests/mediacapture-insertable-streams/VideoTrackGenerator-with-window-tracks.https.html [ Failure ]
+
+webkit.org/b/289254 [ Debug ] imported/w3c/web-platform-tests/mediacapture-streams/historical.https.html [ Pass Crash ]
