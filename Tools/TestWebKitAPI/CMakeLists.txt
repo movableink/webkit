@@ -328,6 +328,7 @@ if (ENABLE_WEBKIT)
         Tests/WebKit/NewFirstVisuallyNonEmptyLayoutFrames.cpp
         Tests/WebKit/PageLoadBasic.cpp
         Tests/WebKit/PageLoadDidChangeLocationWithinPageForFrame.cpp
+        Tests/WebKit/PageLoadEmptyURL.cpp
         Tests/WebKit/PageLoadState.cpp
         Tests/WebKit/ParentFrame.cpp
         Tests/WebKit/PendingAPIRequestURL.cpp

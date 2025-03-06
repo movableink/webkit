@@ -2063,8 +2063,8 @@ void WebPageProxy::loadRequestWithNavigationShared(Ref<WebProcessProxy>&& proces
 
     auto url = request.url();
 #if PLATFORM(COCOA)
-    bool urlIsInvalidButNotNull = !url.isValid() && !url.isNull();
-    if (urlIsInvalidButNotNull && WTF::linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToNull)) {
+    bool urlIsInvalidButNotEmpty = !url.isValid() && !url.isEmpty();
+    if (urlIsInvalidButNotEmpty && WTF::linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToNull)) {
         RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, request, navigation = Ref { navigation }] {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
