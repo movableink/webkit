@@ -1912,10 +1912,6 @@ webkit.org/b/287865 [ Debug ] pdf/two-pages-continuous-to-discrete.html [ Pass C
 
 webkit.org/b/287877 pdf/pdf-plugin-printing.html [ Pass Timeout ]
 
-# webkit.org/287922 REGRESSION (289994@main?): [macOS Debug] imported/w3c/web-platform-tests/fullscreen/api/element tests are flaky failure
-[ Debug ] imported/w3c/web-platform-tests/fullscreen/api/element-request-fullscreen-namespaces.html [ Pass Failure ]
-[ Debug ] imported/w3c/web-platform-tests/fullscreen/api/element-ready-check-containing-iframe.html [ Pass Failure ]
-
 webkit.org/b/287967 media/modern-media-controls/overflow-support/playback-speed.html [ Pass Timeout ]
 
 webkit.org/b/287974 [ Sonoma Release arm64 ] imported/w3c/web-platform-tests/css/css-view-transitions/massive-element-below-viewport-offscreen-old.html [ Pass Failure ]
