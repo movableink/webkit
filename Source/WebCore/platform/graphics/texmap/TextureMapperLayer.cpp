@@ -433,10 +433,8 @@ static FloatRect transformRectFromLayerToGlobalCoordinateSpace(const FloatRect& 
     // Some layers are drawn on an intermediate surface and have this offset applied to convert to the
     // intermediate surface coordinates. In order to translate back to actual coordinates,
     // we have to undo it.
+    transformedRect.intersect(options.textureMapper.clipBounds());
     transformedRect.move(-options.offset);
-    auto clipBounds = options.textureMapper.clipBounds();
-    clipBounds.move(-options.offset);
-    transformedRect.intersect(clipBounds);
     return transformedRect;
 }
 

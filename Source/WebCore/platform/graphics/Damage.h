@@ -96,6 +96,9 @@ public:
             return;
         }
 
+        if (m_rects.size() == 1 && m_minimumBoundingRectangle.contains(rect))
+            return;
+
         m_minimumBoundingRectangle.unite(rect);
 
         if (!shouldUnite()) {
