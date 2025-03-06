@@ -962,7 +962,7 @@
 		DD3C8E7627C84C9400322F62 /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
 			compilerSpec = com.apple.compilers.proxy.script;
-			filePatterns = "*/Scripts/*/*";
+			filePatterns = "*/Scripts/*/*.yaml";
 			fileType = pattern.proxy;
 			inputFiles = (
 			);
@@ -1004,7 +1004,7 @@
 		DDF307FD27C088A3006A526F /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
 			compilerSpec = com.apple.compilers.proxy.script;
-			filePatterns = "*/Scripts/*";
+			filePatterns = "*/Scripts/*.rb";
 			fileType = pattern.proxy;
 			inputFiles = (
 			);
