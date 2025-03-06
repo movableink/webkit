@@ -2308,7 +2308,6 @@ imported/w3c/web-platform-tests/subresource-integrity [ Skip ]
 imported/w3c/web-platform-tests/svg [ Skip ]
 imported/w3c/web-platform-tests/uievents [ Skip ]
 imported/w3c/web-platform-tests/upgrade-insecure-requests [ Skip ]
-imported/w3c/web-platform-tests/url [ Skip ]
 imported/w3c/web-platform-tests/user-timing [ Skip ]
 imported/w3c/web-platform-tests/visual-viewport [ Skip ]
 imported/w3c/web-platform-tests/wasm/jsapi [ Skip ]
@@ -4320,9 +4319,6 @@ fast/text/web-font-load-fallback-during-loading-no-multiple.html [ Failure ]
 imported/w3c/web-platform-tests/permissions/all-permissions.html [ Failure ]
 loader/go-back-cached-main-resource.html [ Failure ]
 streams/pipe-to.html [ Failure ]
-
-# Failing after ICU 76.1. Needs to rebaseline.
-imported/w3c/web-platform-tests/url/toascii.window.html [ Failure ]
 
 fast/canvas/canvas-composite-text-alpha.html [ Failure Pass ]
 
