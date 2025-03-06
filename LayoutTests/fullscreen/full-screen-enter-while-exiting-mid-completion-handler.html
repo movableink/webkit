@@ -27,7 +27,6 @@
 
         consoleWrite('Exit fullscreen with target1');
         run('document.exitFullscreen()');
-        changePromise = waitFor(document, 'fullscreenchange')
         await testRunner.updatePresentation();
 
         consoleWrite('Attempt to enter fullscreen with target2');

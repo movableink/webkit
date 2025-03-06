@@ -27,6 +27,7 @@
 
         consoleWrite('Fully exit fullscreen with target1');
         run('document.webkitCancelFullScreen()');
+        await testRunner.updatePresentation();
 
         consoleWrite('Attempt to enter fullscreen with target2');
         internals.withUserGesture(() => { run('target2.requestFullscreen()'); });
