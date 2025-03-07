@@ -3057,3 +3057,5 @@ webkit.org/b/288889 media/track/track-in-band.html [ Pass Timeout ]
 webkit.org/b/289275 [ Debug ] media/media-garbage-collection.html [ Pass Crash ]
 
 webkit.org/b/289355 http/tests/navigation/fetch-pagecache.html [ Pass Failure ]
+
+webkit.org/b/289369 fast/workers/dedicated-worker-lifecycle.html [ Pass Timeout ]
