@@ -1932,11 +1932,7 @@ private:
 
     void emitMove(Value src, Location dst);
 
-    enum class ShuffleStatus {
-        ToMove,
-        BeingMoved,
-        Moved
-    };
+    using ShuffleStatus = CCallHelpers::ShuffleStatus;
 
     template<size_t N, typename OverflowHandler>
     void emitShuffleMove(Vector<Value, N, OverflowHandler>& srcVector, Vector<Location, N, OverflowHandler>& dstVector, Vector<ShuffleStatus, N, OverflowHandler>& statusVector, unsigned index);
