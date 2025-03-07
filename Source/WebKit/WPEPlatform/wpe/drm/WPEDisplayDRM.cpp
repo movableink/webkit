@@ -331,7 +331,7 @@ static gboolean wpeDisplayDRMSetup(WPEDisplayDRM* displayDRM, const char* device
         if (parsedLength == trimmedScaleString.length() && scaleIsInBounds(scale))
             scaleFromEnvironment = scale;
         else
-            g_warning_once("Invalid WPE_DRM_SCALE='%*s' value, or out of bounds.", static_cast<int>(scaleString.span8().size()), scaleString.span8().data());
+            g_warning("Invalid WPE_DRM_SCALE='%*s' value, or out of bounds.", static_cast<int>(scaleString.span8().size()), scaleString.span8().data());
     }
 
     int x = crtc->x();
@@ -349,7 +349,7 @@ static gboolean wpeDisplayDRMSetup(WPEDisplayDRM* displayDRM, const char* device
     if (scaleIsInBounds(scaleFromSettings))
         scale = scaleFromSettings;
     else
-        g_warning_once("Ignoring out of bounds WPE_SETTING_DRM_SCALE value '%.2f'.", scaleFromSettings);
+        g_warning("Ignoring out of bounds WPE_SETTING_DRM_SCALE value '%.2f'.", scaleFromSettings);
     RELEASE_ASSERT(scaleIsInBounds(scale));
 
     wpe_screen_set_position(displayDRM->priv->screen.get(), x / scale, y / scale);
