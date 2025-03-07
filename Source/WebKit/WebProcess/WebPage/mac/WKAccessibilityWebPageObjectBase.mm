@@ -221,8 +221,9 @@ namespace ax = WebCore::Accessibility;
     if (!m_frameID)
         return dynamicDowncast<WebCore::LocalFrame>(m_page->mainFrame());
 
-    auto* page = m_page->corePage();
-    ASSERT(page);
+    RefPtr page = m_page->corePage();
+    if (!page)
+        return nullptr;
     ASSERT(page->settings().siteIsolationEnabled());
 
     // FIXME: This needs to be made thread safe when the isolated accessibility tree is on.
