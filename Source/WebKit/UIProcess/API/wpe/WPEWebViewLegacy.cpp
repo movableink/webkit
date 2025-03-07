@@ -298,6 +298,11 @@ ViewLegacy::~ViewLegacy()
     wpe_view_backend_set_fullscreen_client(m_backend, nullptr, nullptr);
 #endif
 
+#if USE(ATK)
+    if (m_accessible)
+        webkitWebViewAccessibleSetWebView(m_accessible.get(), nullptr);
+#endif
+
     viewsVector().removeAll(this);
 }
 
@@ -403,5 +408,14 @@ void ViewLegacy::callAfterNextPresentationUpdate(CompletionHandler<void()>&& cal
     RELEASE_ASSERT(m_pageProxy->drawingArea());
     downcast<DrawingAreaProxyCoordinatedGraphics>(*m_pageProxy->drawingArea()).dispatchAfterEnsuringDrawing(WTFMove(callback));
 }
+
+#if USE(ATK)
+WebKitWebViewAccessible* ViewLegacy::accessible() const
+{
+    if (!m_accessible)
+        m_accessible = webkitWebViewAccessibleNew(const_cast<ViewLegacy*>(this));
+    return m_accessible.get();
+}
+#endif
 
 } // namespace WKWPE

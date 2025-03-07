@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,36 +22,37 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __WPE_PLATFORM_H__
-#define __WPE_PLATFORM_H__
 
-#define __WPE_PLATFORM_H_INSIDE__
+#include "config.h"
+#include "WPEViewAccessible.h"
 
-#include <wpe/WPEEnumTypes.h>
-#include <wpe/WPEEvent.h>
-#include <wpe/WPEBuffer.h>
-#include <wpe/WPEBufferDMABuf.h>
-#include <wpe/WPEBufferDMABufFormats.h>
-#include <wpe/WPEBufferSHM.h>
-#include <wpe/WPEColor.h>
-#include <wpe/WPEConfig.h>
-#include <wpe/WPEDefines.h>
-#include <wpe/WPEDisplay.h>
-#include <wpe/WPEEGLError.h>
-#include <wpe/WPEGestureController.h>
-#include <wpe/WPEInputMethodContext.h>
-#include <wpe/WPEKeymap.h>
-#include <wpe/WPEKeyUnicode.h>
-#include <wpe/WPEKeymapXKB.h>
-#include <wpe/WPEKeysyms.h>
-#include <wpe/WPEKeysyms.h>
-#include <wpe/WPERectangle.h>
-#include <wpe/WPEScreen.h>
-#include <wpe/WPEToplevel.h>
-#include <wpe/WPEVersion.h>
-#include <wpe/WPEView.h>
-#include <wpe/WPEViewAccessible.h>
+/**
+ * WPEViewAccessible:
+ * @See_also: #WPEView
+ *
+ * A #WPEView accessible interface.
+ *
+ * This interface enables implementing accessibility.
+ */
 
-#undef __WPE_PLATFORM_H_INSIDE__
+G_DEFINE_INTERFACE(WPEViewAccessible, wpe_view_accessible, G_TYPE_OBJECT)
 
-#endif /* __WPE_PLATFORM_H__ */
+static void wpe_view_accessible_default_init(WPEViewAccessibleInterface*)
+{
+}
+
+/**
+ * wpe_view_accessible_bind:
+ * @accessible: a #WPEViewAccessible
+ * @plug_id: the plug identifier
+ *
+ * Bind @accessible with the given @plug_id.
+ */
+void wpe_view_accessible_bind(WPEViewAccessible* accessible, const char* plugID)
+{
+    g_return_if_fail(accessible);
+    g_return_if_fail(plugID);
+
+    auto* accessibleInterface = WPE_VIEW_ACCESSIBLE_GET_IFACE(accessible);
+    accessibleInterface->bind(accessible, plugID);
+}

@@ -494,7 +494,12 @@ void PageClientImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, WebC
 #if USE(ATK)
 AtkObject* PageClientImpl::accessible()
 {
-    return ATK_OBJECT(m_view.accessible());
+#if ENABLE(WPE_PLATFORM)
+    if (m_view.wpeView())
+        return nullptr;
+#endif
+
+    return ATK_OBJECT(static_cast<WKWPE::ViewLegacy&>(m_view).accessible());
 }
 #endif
 

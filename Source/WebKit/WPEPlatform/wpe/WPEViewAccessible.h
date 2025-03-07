@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,36 +22,33 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __WPE_PLATFORM_H__
-#define __WPE_PLATFORM_H__
 
-#define __WPE_PLATFORM_H_INSIDE__
+#ifndef WPEViewAccessible_h
+#define WPEViewAccessible_h
 
-#include <wpe/WPEEnumTypes.h>
-#include <wpe/WPEEvent.h>
-#include <wpe/WPEBuffer.h>
-#include <wpe/WPEBufferDMABuf.h>
-#include <wpe/WPEBufferDMABufFormats.h>
-#include <wpe/WPEBufferSHM.h>
-#include <wpe/WPEColor.h>
-#include <wpe/WPEConfig.h>
+#if !defined(__WPE_PLATFORM_H_INSIDE__) && !defined(BUILDING_WEBKIT)
+#error "Only <wpe/wpe-platform.h> can be included directly."
+#endif
+
+#include <glib-object.h>
 #include <wpe/WPEDefines.h>
-#include <wpe/WPEDisplay.h>
-#include <wpe/WPEEGLError.h>
-#include <wpe/WPEGestureController.h>
-#include <wpe/WPEInputMethodContext.h>
-#include <wpe/WPEKeymap.h>
-#include <wpe/WPEKeyUnicode.h>
-#include <wpe/WPEKeymapXKB.h>
-#include <wpe/WPEKeysyms.h>
-#include <wpe/WPEKeysyms.h>
-#include <wpe/WPERectangle.h>
-#include <wpe/WPEScreen.h>
-#include <wpe/WPEToplevel.h>
-#include <wpe/WPEVersion.h>
-#include <wpe/WPEView.h>
-#include <wpe/WPEViewAccessible.h>
 
-#undef __WPE_PLATFORM_H_INSIDE__
+G_BEGIN_DECLS
 
-#endif /* __WPE_PLATFORM_H__ */
+#define WPE_TYPE_VIEW_ACCESSIBLE (wpe_view_accessible_get_type())
+WPE_API G_DECLARE_INTERFACE (WPEViewAccessible, wpe_view_accessible, WPE, VIEW_ACCESSIBLE, GObject)
+
+struct _WPEViewAccessibleInterface
+{
+    GTypeInterface parent_interface;
+
+    void (* bind) (WPEViewAccessible *accessible,
+                   const char        *plug_id);
+};
+
+WPE_API void wpe_view_accessible_bind (WPEViewAccessible *accessible,
+                                       const char        *plug_id);
+
+G_END_DECLS
+
+#endif /* WPEViewAccessible_h */

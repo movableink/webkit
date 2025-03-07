@@ -1105,3 +1105,22 @@ WPEGestureController* wpe_view_get_gesture_controller(WPEView* view)
 
     return view->priv->gestureController->get();
 }
+
+/**
+ * wpe_view_get_accessible:
+ * @view: a #WPEView
+ *
+ * Get the #WPEViewAccessible of @view.
+ *
+ * Returns: (transfer none) (nullable): a #WPEViewAccessible or %NULL
+ */
+WPEViewAccessible* wpe_view_get_accessible(WPEView* view)
+{
+    g_return_val_if_fail(WPE_IS_VIEW(view), nullptr);
+
+    auto* viewClass = WPE_VIEW_GET_CLASS(view);
+    if (viewClass->get_accessible)
+        return viewClass->get_accessible(view);
+
+    return nullptr;
+}
