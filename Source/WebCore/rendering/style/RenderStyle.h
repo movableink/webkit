@@ -592,6 +592,7 @@ public:
     inline FieldSizing fieldSizing() const;
 
     WEBCORE_EXPORT const FontCascade& fontCascade() const;
+    WEBCORE_EXPORT FontCascade& fontCascade();
     WEBCORE_EXPORT const FontMetrics& metricsOfPrimaryFont() const;
     WEBCORE_EXPORT const FontCascadeDescription& fontDescription() const;
 

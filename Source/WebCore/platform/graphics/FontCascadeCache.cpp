@@ -103,15 +103,15 @@ static FontCascadeCacheKey makeFontCascadeCacheKey(const FontCascadeDescription&
     };
 }
 
-Ref<FontCascadeFonts> FontCascadeCache::retrieveOrAddCachedFonts(const FontCascadeDescription& fontDescription, RefPtr<FontSelector>&& fontSelector)
+Ref<FontCascadeFonts> FontCascadeCache::retrieveOrAddCachedFonts(const FontCascadeDescription& fontDescription, FontSelector* fontSelector)
 {
-    auto key = makeFontCascadeCacheKey(fontDescription, fontSelector.get());
+    auto key = makeFontCascadeCacheKey(fontDescription, fontSelector);
     auto addResult = m_entries.add(key, nullptr);
     if (!addResult.isNewEntry)
         return addResult.iterator->value->fonts.get();
 
     auto& newEntry = addResult.iterator->value;
-    newEntry = makeUnique<FontCascadeCacheEntry>(FontCascadeCacheEntry { WTFMove(key), FontCascadeFonts::create(WTFMove(fontSelector)) });
+    newEntry = makeUnique<FontCascadeCacheEntry>(FontCascadeCacheEntry { WTFMove(key), FontCascadeFonts::create() });
     Ref<FontCascadeFonts> fonts = newEntry->fonts.get();
 
     static constexpr unsigned unreferencedPruneInterval = 50;
