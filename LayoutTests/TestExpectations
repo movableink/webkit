@@ -4778,9 +4778,10 @@ webkit.org/b/206168 [ Debug ] fast/dom/insert-span-into-long-text-bug-28245.html
 webkit.org/b/230593 fast/inline/kerning-across-inline-boxes.html [ Skip ]
 webkit.org/b/230593 fast/block/positioning/056.html [ Failure ]
 
-# wpt intersection-observer failures
+# wpt intersection-observer v2 failures - webkit.org/b/251586
 webkit.org/b/208052 imported/w3c/web-platform-tests/intersection-observer/v2/cross-origin-effects.sub.html [ Skip ]
 webkit.org/b/208052 imported/w3c/web-platform-tests/intersection-observer/v2/cross-origin-occlusion.sub.html [ Skip ]
+webkit.org/b/208052 imported/w3c/web-platform-tests/intersection-observer/v2/nested-cross-origin.sub.html [ Skip ]
 
 # wpt css-backgrounds failures
 webkit.org/b/206753 imported/w3c/web-platform-tests/css/css-backgrounds/background-attachment-local/attachment-local-clipping-color-4.html [ ImageOnlyFailure ]

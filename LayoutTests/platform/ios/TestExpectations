@@ -7409,6 +7409,9 @@ imported/w3c/web-platform-tests/intersection-observer/root-margin.html [ Pass Fa
 imported/w3c/web-platform-tests/intersection-observer/same-document-no-root.html [ Pass Failure ]
 imported/w3c/web-platform-tests/intersection-observer/same-document-zero-size-target.html [ Pass Failure ]
 imported/w3c/web-platform-tests/intersection-observer/text-target.html [ Pass Failure ]
+imported/w3c/web-platform-tests/intersection-observer/svg-rect-target.html [ Skip ]
+imported/w3c/web-platform-tests/intersection-observer/svg-clipped-rect-target.html [ Skip ]
+imported/w3c/web-platform-tests/intersection-observer/svg-intersection-with-fractional-bounds.html [ Skip ]
 
 # webkit.org/b/276562 ([ iOS18 ] 3 wpt/webcodecs/* layout tests are constantly failing.)
 imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.html?h264_annexb [ Failure DumpJSConsoleLogInStdErr ]
