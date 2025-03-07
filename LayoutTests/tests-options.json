@@ -3953,34 +3953,19 @@
     "imported/w3c/web-platform-tests/html/semantics/popovers/popover-focus.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/semantics/popovers/popover-hover-hide-hide.tentative.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/semantics/popovers/popover-hover-hide-hover.tentative.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/semantics/popovers/popover-hover-hide-show.tentative.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/semantics/popovers/popover-hover-hide-toggle.tentative.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/semantics/popovers/popover-invoking-attribute-hint.tentative.html": [
+    "imported/w3c/web-platform-tests/html/semantics/popovers/popover-invoking-attribute-hint.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/semantics/popovers/popover-invoking-attribute.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/semantics/popovers/popover-light-dismiss-hint.tentative.html": [
+    "imported/w3c/web-platform-tests/html/semantics/popovers/popover-light-dismiss-hint.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/semantics/popovers/popover-light-dismiss-with-anchor.tentative.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/semantics/popovers/popover-light-dismiss.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/html/semantics/popovers/popover-target-action-hover.tentative.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/async_003.htm": [
