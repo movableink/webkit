@@ -106,8 +106,8 @@ Allocator CompleteSubspace::allocatorForSlow(size_t size)
 void* CompleteSubspace::allocateSlow(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
     void* result = tryAllocateSlow(vm, size, deferralContext);
-    if (failureMode == AllocationFailureMode::Assert)
-        RELEASE_ASSERT(result);
+    if (UNLIKELY(!result))
+        RELEASE_ASSERT_RESOURCE_AVAILABLE(failureMode != AllocationFailureMode::Assert, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
     return result;
 }
 
@@ -161,8 +161,7 @@ void* CompleteSubspace::reallocatePreciseAllocationNonVirtual(VM& vm, HeapCell* 
 
     sanitizeStackForVM(vm);
 
-    if (size <= Options::preciseAllocationCutoff()
-        && size <= MarkedSpace::largeCutoff) {
+    if (UNLIKELY(size <= Options::preciseAllocationCutoff() && size <= MarkedSpace::largeCutoff)) {
         dataLog("FATAL: attampting to allocate small object using large allocation.\n");
         dataLog("Requested allocation size: ", size, "\n");
         RELEASE_ASSERT_NOT_REACHED();
@@ -177,8 +176,8 @@ void* CompleteSubspace::reallocatePreciseAllocationNonVirtual(VM& vm, HeapCell* 
         oldAllocation->remove();
 
     PreciseAllocation* allocation = oldAllocation->tryReallocate(size, this);
-    if (!allocation) {
-        RELEASE_ASSERT(failureMode != AllocationFailureMode::Assert);
+    if (UNLIKELY(!allocation)) {
+        RELEASE_ASSERT_RESOURCE_AVAILABLE(failureMode != AllocationFailureMode::Assert, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
         m_preciseAllocations.append(oldAllocation);
         return nullptr;
     }
