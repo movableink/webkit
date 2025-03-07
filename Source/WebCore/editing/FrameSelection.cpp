@@ -1784,6 +1784,7 @@ void FrameSelection::willBeRemovedFromFrame()
         CursorAlignOnScroll::IfNeeded, TextGranularity::CharacterGranularity);
     m_previousCaretNode = nullptr;
     m_typingStyle = nullptr;
+    m_originalBase = { };
 }
 
 void FrameSelection::setStart(const VisiblePosition& position, UserTriggered trigger)
