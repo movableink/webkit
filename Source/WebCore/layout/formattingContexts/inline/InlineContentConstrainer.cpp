@@ -55,6 +55,11 @@ static const float textWrapPrettyMaxShrink = 3;
 // We would like 2 or more items on the last line for text-wrap-style:pretty to avoid orphans.
 static const size_t lastLinePreferredInlineItemCount = 2;
 
+static size_t lastLineBreakingPointOffset()
+{
+    return 2 * lastLinePreferredInlineItemCount + 1;
+}
+
 // Use auto layout if ideal line width is too short relative to the largest inline item.
 // In these situations, text-wrap-pretty does very little of note other than take up time.
 static bool validIdealLineWidth(InlineLayoutUnit maxItemWidth, InlineLayoutUnit idealLineWidth)
@@ -84,28 +89,14 @@ static float computeCostBalance(InlineLayoutUnit candidateLineWidth, InlineLayou
     return computeRaggedness(candidateLineWidth, idealLineWidth);
 };
 
-static float computeCostPretty(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth, size_t breakIndex, size_t numberOfBreakOpportunities, InlineLayoutUnit lastLineWidth)
+static float computeCostPretty(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth, size_t breakIndex, size_t numberOfBreakOpportunities, InlineLayoutUnit)
 {
     // FIXME: add support for river minimization.
-    if (breakIndex == numberOfBreakOpportunities - lastLinePreferredInlineItemCount) {
-        // Allow a shorter next-to-last line if doing so would yield a final line with lastLinePreferredInlineItemCount inline items.
-        const auto minimumLastLineWidth = lastLineWidth - 2 * textWrapPrettyShrinkability * textWrapPrettyMaxShrink;
-        if (candidateLineWidth < minimumLastLineWidth)
+    // Force max/minimum line width bounds if there are more then lastLinePreferredInlineItemCount items to be laid out after the candidate line.
+    if (breakIndex < numberOfBreakOpportunities - lastLineBreakingPointOffset()) {
+        if (!validLineWidthPretty(candidateLineWidth, idealLineWidth))
             return std::numeric_limits<float>::infinity();
-        return 0;
     }
-    // Keeping the last line width longer than 20% of the previous is a heuristic to avoid orphan and "orphan-like" paragraph endings
-    // (lines that have more than one word but are still sufficiently short to appear like an orphan)
-    if (breakIndex == numberOfBreakOpportunities - 1) {
-        const auto minimumLastLineWidth = lastLineWidth * 0.2;
-        if (candidateLineWidth < minimumLastLineWidth)
-            return std::numeric_limits<float>::infinity();
-        return 0;
-    }
-    // text-wrap-mode:pretty disallows stretching/shrinking beyond accepted bounds.
-    if (!validLineWidthPretty(candidateLineWidth, idealLineWidth))
-        return std::numeric_limits<float>::infinity();
-
     return computeRaggedness(candidateLineWidth, idealLineWidth);
 };
 
@@ -205,7 +196,7 @@ InlineContentConstrainer::EntryPretty InlineContentConstrainer::layoutSingleLine
     LineLayoutResult lineLayoutResult = lineBuilder.layoutInlineContent({ layoutRange, lineInitialRect }, lastValidEntry.previousLine);
     InlineItemPosition lineEnd = InlineFormattingUtils::leadingInlineItemPositionForNextLine(lineLayoutResult.inlineItemRange.end, lastValidEntry.lineEnd, !lineLayoutResult.floatContent.hasIntrusiveFloat.isEmpty() || !lineLayoutResult.floatContent.placedFloats.isEmpty(), layoutRange.end);
     bool didLayoutAllItems = lineEnd.index == layoutRange.endIndex();
-    bool hasEnoughItemsForNextLine = lineEnd.index < layoutRange.endIndex() - lastLinePreferredInlineItemCount;
+    bool hasEnoughItemsForNextLine = lineEnd.index < layoutRange.endIndex() - lastLineBreakingPointOffset();
     if (didLayoutAllItems || hasEnoughItemsForNextLine) {
         return { lastValidEntry.accumulatedCost,
             // This function is only called when there are no more viable break points for PrettifyRange.
@@ -220,7 +211,7 @@ InlineContentConstrainer::EntryPretty InlineContentConstrainer::layoutSingleLine
     // Handle the case where there would be too few items to be laid out in the next line.
     // Redo the layout to leave lastLinePreferredInlineItemCount items at the end to avoid orphans.
     auto shortenedLayoutRange = layoutRange;
-    shortenedLayoutRange.end.index -=lastLinePreferredInlineItemCount;
+    shortenedLayoutRange.end.index -= lastLineBreakingPointOffset();
     LineLayoutResult shortenedLineLayoutResult = lineBuilder.layoutInlineContent({ shortenedLayoutRange, lineInitialRect }, lastValidEntry.previousLine);
     InlineItemPosition shortenedLineEnd = InlineFormattingUtils::leadingInlineItemPositionForNextLine(shortenedLineLayoutResult.inlineItemRange.end, lastValidEntry.lineEnd, !shortenedLineLayoutResult.floatContent.hasIntrusiveFloat.isEmpty() || !shortenedLineLayoutResult.floatContent.placedFloats.isEmpty(), shortenedLayoutRange.end);
     return { lastValidEntry.accumulatedCost,
@@ -574,9 +565,9 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
 
         auto cost = computeCostPretty(firstLineCandidateWidth, idealLineWidth, breakIndex, numberOfBreakOpportunities, idealLineWidth);
         if (cost < state[breakIndex].accumulatedCost) {
-            lastValidStateIndex = 0;
+            lastValidStateIndex = breakIndex;
             state[breakIndex].accumulatedCost = cost;
-            state[breakIndex].previousBreakIndex = range.startIndex();
+            state[breakIndex].previousBreakIndex = 0;
             state[breakIndex].lineIndex = state[0].lineIndex + 1;
             state[breakIndex].lastLineWidth = firstLineCandidateWidth;
             state[breakIndex].lineEnd = { .index = breakIndex, .offset = 0 };
@@ -629,6 +620,8 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
         // Evaluate all possible lines that break before m_inlineItemList[end]
         auto innerSlidingWidth = slidingWidth;
         for (size_t startIndex = firstStartIndex; startIndex < breakIndex; startIndex++) {
+            if (state[startIndex].accumulatedCost == std::numeric_limits<float>::infinity())
+                continue;
             size_t start = breakOpportunities[startIndex];
             ASSERT(start != range.startIndex());
             innerSlidingWidth.advanceStartTo(start);
@@ -638,6 +631,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
             auto accumulatedCost = candidateLineCost + state[startIndex].accumulatedCost;
 
             if (accumulatedCost < state[breakIndex].accumulatedCost) {
+                lastValidStateIndex = breakIndex;
                 state[breakIndex].accumulatedCost = accumulatedCost;
                 state[breakIndex].previousBreakIndex = startIndex;
                 state[breakIndex].lastLineWidth = candidateLineWidth;
