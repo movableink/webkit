@@ -8525,7 +8525,7 @@ WebAnimationsCustomFrameRateEnabled:
 
 WebAnimationsOverallProgressPropertyEnabled:
   type: bool
-  status: testable
+  status: preview
   category: animation
   humanReadableName: "Web Animations 'overallProgress' property"
   humanReadableDescription: "Support for Animation's overallProgress property"
