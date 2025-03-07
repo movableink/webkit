@@ -2043,3 +2043,5 @@ webkit.org/b/289347 [ arm64 ] http/tests/site-isolation/fullscreen.html [ Pass F
 webkit.org/b/289299 imported/w3c/web-platform-tests/css/css-view-transitions/pseudo-rendering-invalidation.html [ Pass Failure ]
 
 webkit.org/b/289356 [ Sequoia Debug arm64 ] webrtc/datachannel/bufferedAmount-afterClose.html [ Pass Failure ]
+
+webkit.org/b/289370 [ Debug arm64 ] media/video-webm-seek-singlekeyframe.html [ Pass Failure ]
