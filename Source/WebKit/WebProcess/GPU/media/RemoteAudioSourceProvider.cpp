@@ -83,9 +83,9 @@ void RemoteAudioSourceProvider::hasNewClient(AudioSourceProviderClient* client)
         gpuProcessConnection->protectedConnection()->send(Messages::RemoteMediaPlayerProxy::SetShouldEnableAudioSourceProvider { !!client }, m_identifier);
 }
 
-void RemoteAudioSourceProvider::audioSamplesAvailable(const PlatformAudioData& data, const AudioStreamDescription& description, size_t size)
+void RemoteAudioSourceProvider::audioSamplesAvailable(const PlatformAudioData& data, const AudioStreamDescription& description, size_t size, bool needsFlush)
 {
-    receivedNewAudioSamples(data, description, size);
+    receivedNewAudioSamples(data, description, size, needsFlush ? NeedsFlush::Yes : NeedsFlush::No);
 }
 
 #if !RELEASE_LOG_DISABLED

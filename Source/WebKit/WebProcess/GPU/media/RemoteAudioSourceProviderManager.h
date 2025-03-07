@@ -57,7 +57,7 @@ private:
 
     // Messages
     void audioStorageChanged(WebCore::MediaPlayerIdentifier, ConsumerSharedCARingBuffer::Handle&&, const WebCore::CAAudioStreamDescription&);
-    void audioSamplesAvailable(WebCore::MediaPlayerIdentifier, uint64_t startFrame, uint64_t numberOfFrames);
+    void audioSamplesAvailable(WebCore::MediaPlayerIdentifier, uint64_t startFrame, uint64_t numberOfFrames, bool needsFlush);
 
     void setConnection(RefPtr<IPC::Connection>&&);
 
@@ -67,7 +67,7 @@ private:
         explicit RemoteAudio(Ref<RemoteAudioSourceProvider>&&);
 
         void setStorage(ConsumerSharedCARingBuffer::Handle&&, const WebCore::CAAudioStreamDescription&);
-        void audioSamplesAvailable(uint64_t startFrame, uint64_t numberOfFrames);
+        void audioSamplesAvailable(uint64_t startFrame, uint64_t numberOfFrames, bool needsFlush);
 
     private:
         const Ref<RemoteAudioSourceProvider> m_provider;

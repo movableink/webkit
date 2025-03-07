@@ -122,7 +122,7 @@ MediaTime AudioSampleDataSource::hostTime() const
     return MediaTime::createWithDouble(mach_absolute_time() * frequency);
 }
 
-void AudioSampleDataSource::pushSamplesInternal(const AudioBufferList& bufferList, const MediaTime& presentationTime, size_t sampleCount)
+void AudioSampleDataSource::pushSamplesInternal(const AudioBufferList& bufferList, const MediaTime& presentationTime, size_t sampleCount, NeedsFlush needsFlush)
 {
     int64_t ringBufferIndexToWrite = presentationTime.toTimeScale(m_outputDescription->sampleRate()).timeValue();
 
@@ -171,6 +171,9 @@ void AudioSampleDataSource::pushSamplesInternal(const AudioBufferList& bufferLis
         });
     }
 
+    if (needsFlush == NeedsFlush::Yes)
+        m_seekTo = static_cast<uint64_t>(ringBufferIndexToWrite);
+
     m_ringBuffer->store(sampleBufferList, sampleCount, ringBufferIndexToWrite);
 
     m_converterInputOffset += offset;
@@ -182,12 +185,12 @@ void AudioSampleDataSource::pushSamples(const AudioStreamBasicDescription& sampl
     ASSERT_UNUSED(sampleDescription, *m_inputDescription == sampleDescription);
 
     WebAudioBufferList list(*m_inputDescription, sampleBuffer);
-    pushSamplesInternal(list, PAL::toMediaTime(PAL::CMSampleBufferGetPresentationTimeStamp(sampleBuffer)), PAL::CMSampleBufferGetNumSamples(sampleBuffer));
+    pushSamplesInternal(list, PAL::toMediaTime(PAL::CMSampleBufferGetPresentationTimeStamp(sampleBuffer)), PAL::CMSampleBufferGetNumSamples(sampleBuffer), NeedsFlush::No);
 }
 
-void AudioSampleDataSource::pushSamples(const MediaTime& sampleTime, const PlatformAudioData& audioData, size_t sampleCount)
+void AudioSampleDataSource::pushSamples(const MediaTime& sampleTime, const PlatformAudioData& audioData, size_t sampleCount, NeedsFlush needsFlush)
 {
-    pushSamplesInternal(*downcast<WebAudioBufferList>(audioData).list(), sampleTime, sampleCount);
+    pushSamplesInternal(*downcast<WebAudioBufferList>(audioData).list(), sampleTime, sampleCount, needsFlush);
 }
 
 bool AudioSampleDataSource::pullSamples(AudioBufferList& buffer, size_t sampleCount, uint64_t timeStamp, double /*hostTime*/, PullMode mode)
@@ -207,7 +210,12 @@ bool AudioSampleDataSource::pullSamples(AudioBufferList& buffer, size_t sampleCo
         return false;
     }
 
+    uint64_t seekTo = m_seekTo.exchange(NoSeek);
+    if (seekTo != NoSeek)
+        m_readCount = seekTo;
+
     auto [startFrame, endFrame] = m_ringBuffer->getFetchTimeBounds();
+    startFrame = std::max(m_readCount, startFrame);
 
     ASSERT(m_waitToStartForPushCount);
 
