@@ -214,8 +214,8 @@ public:
     };
 
     bool isDeferringTermination() const { return m_deferTerminationCount; }
-    void deferTermination(DeferAction);
-    void undoDeferTermination(DeferAction);
+    inline void deferTermination(DeferAction);
+    inline void undoDeferTermination(DeferAction);
 
     void notifyGrabAllLocks()
     {
