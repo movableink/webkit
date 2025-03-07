@@ -6605,7 +6605,6 @@
         "web-platform-tests/css/css-transforms/translate/reference/translate-in-svg-ref.html",
         "web-platform-tests/css/css-transforms/z-index-does-not-apply-ref.html",
         "web-platform-tests/css/css-transitions/inherit-background-color-transition-ref.html",
-        "web-platform-tests/css/css-transitions/no-transition-from-ua-to-blocking-stylesheet-ref.html",
         "web-platform-tests/css/css-transitions/pseudo-element-transform-ref.html",
         "web-platform-tests/css/css-transitions/reference/transition-test-ref.html",
         "web-platform-tests/css/css-transitions/render-blocking/no-transition-from-ua-to-blocking-stylesheet-ref.html",
