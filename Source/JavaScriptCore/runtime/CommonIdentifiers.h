@@ -103,6 +103,7 @@
     macro(constructor) \
     macro(count) \
     macro(counters) \
+    macro(copyWithin) \
     macro(dateStyle) \
     macro(day) \
     macro(days) \

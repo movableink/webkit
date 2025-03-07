@@ -69,6 +69,7 @@ static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToReversed);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToSorted);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncWith);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncIncludes);
+static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncCopyWithin);
 
 // ------------------------------ ArrayPrototype ----------------------------
 
@@ -127,7 +128,7 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().findIndexPublicName(), arrayPrototypeFindIndexCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().findLastIndexPublicName(), arrayPrototypeFindLastIndexCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->includes, arrayProtoFuncIncludes, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, ArrayIncludesIntrinsic);
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().copyWithinPublicName(), arrayPrototypeCopyWithinCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->copyWithin, arrayProtoFuncCopyWithin, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().atPublicName(), arrayPrototypeAtCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toReversed, arrayProtoFuncToReversed, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toSorted, arrayProtoFuncToSorted, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
@@ -146,7 +147,7 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     unscopables->convertToDictionary(vm);
     const Identifier* const unscopableNames[] = {
         &vm.propertyNames->builtinNames().atPublicName(),
-        &vm.propertyNames->builtinNames().copyWithinPublicName(),
+        &vm.propertyNames->copyWithin,
         &vm.propertyNames->builtinNames().entriesPublicName(),
         &vm.propertyNames->fill,
         &vm.propertyNames->builtinNames().findPublicName(),
@@ -2200,6 +2201,72 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIncludes, (JSGlobalObject* globalObject, 
     }
 
     return JSValue::encode(jsBoolean(false));
+}
+
+JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncCopyWithin, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (UNLIKELY(thisValue.isUndefinedOrNull()))
+        return throwVMTypeError(globalObject, scope, "Array.prototype.copyWithin requires that |this| not be null or undefined"_s);
+    auto* thisObject = thisValue.toObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t length = toLength(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t to = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(0), length);
+    RETURN_IF_EXCEPTION(scope, { });
+    uint64_t from = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(1), length);
+    RETURN_IF_EXCEPTION(scope, { });
+    uint64_t finalIndex = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(2), length, length);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (finalIndex < from)
+        return JSValue::encode(thisValue);
+
+    ASSERT(to <= length);
+    ASSERT(from <= length);
+
+    uint64_t count = std::min(length - std::max(to, from), finalIndex - from);
+    ASSERT(count <= length);
+    if (!count)
+        return JSValue::encode(thisObject);
+
+    if (LIKELY(isJSArray(thisObject))) {
+        JSArray* thisArray = asArray(thisObject);
+        if (thisArray->fastCopywithin(globalObject, from, to, count, length))
+            return JSValue::encode(thisValue);
+    }
+
+    int8_t direction = 1;
+    if (from < to && to < from + count) {
+        direction = -1;
+        from = from + count - 1;
+        to = to + count - 1;
+    }
+
+    for (uint64_t i = 0; i < count; ++i, from += direction, to += direction) {
+        if (thisObject->hasProperty(globalObject, from)) {
+            JSValue fromValue = thisObject->getIndex(globalObject, from);
+            RETURN_IF_EXCEPTION(scope, { });
+            thisObject->putByIndexInline(globalObject, to, fromValue, true);
+            RETURN_IF_EXCEPTION(scope, { });
+        } else {
+            bool success = thisObject->deleteProperty(globalObject, to);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (UNLIKELY(!success)) {
+                throwTypeError(globalObject, scope, UnableToDeletePropertyError);
+                return { };
+            }
+        }
+    }
+
+    return JSValue::encode(thisObject);
 }
 
 } // namespace JSC

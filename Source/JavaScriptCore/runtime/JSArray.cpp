@@ -819,6 +819,68 @@ std::optional<bool> JSArray::fastIncludes(JSGlobalObject* globalObject, JSValue 
     }
 }
 
+bool JSArray::fastCopywithin(JSGlobalObject* globalObject, uint64_t from64, uint64_t to64, uint64_t count64, uint64_t length64)
+{
+    VM& vm = globalObject->vm();
+
+    uint32_t from = static_cast<uint32_t>(from64);
+    uint32_t to = static_cast<uint32_t>(to64);
+    uint32_t count = static_cast<uint32_t>(count64);
+    uint32_t length = static_cast<uint32_t>(length64);
+
+    ASSERT(from + count <= length);
+    ASSERT(to + count <= length);
+
+    bool canDoFastPath = this->canDoFastIndexedAccess()
+        && this->getArrayLength() == length
+        && from64 == from
+        && to64 == to
+        && count64 == count;
+
+    if (!canDoFastPath)
+        return false;
+
+    if (isCopyOnWrite(indexingMode()))
+        convertFromCopyOnWrite(vm);
+
+    auto type = this->indexingType();
+    switch (type) {
+    case ArrayWithInt32:
+    case ArrayWithContiguous: {
+        auto data = this->butterfly()->contiguous().data();
+
+        if (containsHole(data, length))
+            return false;
+
+        std::span<WriteBarrier<Unknown>> destination { data + to, count };
+        std::span<const WriteBarrier<Unknown>> source { data + from, count };
+
+        if (type == ArrayWithInt32)
+            memmoveSpan(destination, source);
+        else {
+            ASSERT(type == ArrayWithContiguous);
+            gcSafeMemmove(destination.data(), source.data(), count * sizeof(JSValue));
+            vm.writeBarrier(this);
+        }
+        return true;
+    }
+    case ArrayWithDouble: {
+        auto data = this->butterfly()->contiguousDouble().data();
+
+        if (containsHole(data, length))
+            return false;
+
+        std::span<double> destination { data + to, count };
+        std::span<double> source { data + from, count };
+
+        memmoveSpan(destination, source);
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
 bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startIndex, IndexingType otherType, std::span<const EncodedJSValue> values)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);

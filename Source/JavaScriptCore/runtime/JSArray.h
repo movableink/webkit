@@ -127,6 +127,8 @@ public:
 
     std::optional<bool> fastIncludes(JSGlobalObject*, JSValue,  uint64_t fromIndex, uint64_t length);
 
+    bool fastCopywithin(JSGlobalObject*, uint64_t from64, uint64_t to64, uint64_t count64, uint64_t length64);
+
     ALWAYS_INLINE bool definitelyNegativeOneMiss() const;
 
     enum ShiftCountMode {
