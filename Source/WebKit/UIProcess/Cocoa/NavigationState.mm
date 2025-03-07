@@ -250,6 +250,8 @@ void NavigationState::setNavigationDelegate(id<WKNavigationDelegate> delegate)
     m_navigationDelegateMethods.webViewBackForwardListItemAddedRemoved = [delegate respondsToSelector:@selector(_webView:backForwardListItemAdded:removed:)];
     m_navigationDelegateMethods.webViewWillGoToBackForwardListItemInBackForwardCache = [delegate respondsToSelector:@selector(_webView:willGoToBackForwardListItem:inPageCache:)];
     m_navigationDelegateMethods.webViewShouldGoToBackForwardListItemInBackForwardCacheCompletionHandler = [delegate respondsToSelector:@selector(_webView:shouldGoToBackForwardListItem:inPageCache:completionHandler:)];
+    m_navigationDelegateMethods.webViewShouldGoToBackForwardListItemWillUseInstantBackCompletionHandler = [delegate respondsToSelector:@selector(webView:shouldGoToBackForwardListItem:willUseInstantBack:completionHandler:)];
+
 #if HAVE(APP_SSO)
     m_navigationDelegateMethods.webViewDecidePolicyForSOAuthorizationLoadWithCurrentPolicyForExtensionCompletionHandler = [delegate respondsToSelector:@selector(_webView:decidePolicyForSOAuthorizationLoadWithCurrentPolicy:forExtension:completionHandler:)];
 #endif
@@ -412,6 +414,13 @@ void NavigationState::NavigationClient::shouldGoToBackForwardListItem(WebPagePro
     auto navigationDelegate = navigationState->navigationDelegate();
     if (!navigationDelegate) {
         completionHandler(true);
+        return;
+    }
+
+    if (navigationState->m_navigationDelegateMethods.webViewShouldGoToBackForwardListItemWillUseInstantBackCompletionHandler) {
+        [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) webView:navigationState->webView().get() shouldGoToBackForwardListItem:wrapper(item) willUseInstantBack:inBackForwardCache completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)] (BOOL result) mutable {
+            completionHandler(result);
+        }).get()];
         return;
     }
 
