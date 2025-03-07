@@ -28,6 +28,7 @@
 
 #if ENABLE(EXTENSION_CAPABILITIES)
 
+#import "XPCUtilities.h"
 #import <BrowserEngineKit/BECapability.h>
 #import <WebCore/SecurityOrigin.h>
 #import <wtf/text/WTFString.h>
