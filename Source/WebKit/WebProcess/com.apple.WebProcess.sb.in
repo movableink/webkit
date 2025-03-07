@@ -471,6 +471,7 @@
 
 (deny sysctl-read (with no-report)
     (sysctl-name
+        "security.mac.lockdown_mode_state"
         "sysctl.proc_translated"
         "vm.task_no_footprint_for_debug"))
 

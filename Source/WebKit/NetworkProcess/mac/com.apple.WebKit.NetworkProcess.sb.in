@@ -71,7 +71,7 @@
 
 (allow socket-ioctl)
 
-(allow socket-option-set (with report))
+(allow socket-option-set)
 (allow socket-option-get (with telemetry) (with report))
 
 (allow socket-option-set
