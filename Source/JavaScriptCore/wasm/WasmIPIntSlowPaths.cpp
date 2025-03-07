@@ -864,7 +864,6 @@ WASM_IPINT_EXTERN_CPP_DECL(array_set, Wasm::TypeIndex typeIndex, IPIntStackEntry
 
 WASM_IPINT_EXTERN_CPP_DECL(array_fill, IPIntStackEntry* sp)
 {
-    UNUSED_PARAM(instance);
     // sp[0] = size
     // sp[1] = value
     // sp[2] = offset
@@ -877,7 +876,7 @@ WASM_IPINT_EXTERN_CPP_DECL(array_fill, IPIntStackEntry* sp)
     EncodedJSValue value = sp[1].ref;
     uint32_t size = sp[0].i32;
 
-    if (!Wasm::arrayFill(arrayref, offset, value, size))
+    if (!Wasm::arrayFill(instance->vm(), arrayref, offset, value, size))
         IPINT_THROW(Wasm::ExceptionType::OutOfBoundsArrayFill);
 
     IPINT_END();

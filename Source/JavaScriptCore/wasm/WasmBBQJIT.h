@@ -1203,6 +1203,8 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addArrayNewFixed(uint32_t typeIndex, ArgumentList& args, ExpressionType& result);
 
+    void emitArrayGetPayload(StorageType, GPRReg arrayGPR, GPRReg payloadGPR);
+
     PartialResult WARN_UNUSED_RETURN addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, ExpressionType arrayref, ExpressionType index, ExpressionType& result);
 
     PartialResult WARN_UNUSED_RETURN addArraySet(uint32_t typeIndex, ExpressionType arrayref, ExpressionType index, ExpressionType value);

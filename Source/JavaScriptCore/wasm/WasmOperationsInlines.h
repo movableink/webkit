@@ -59,7 +59,7 @@ JSWebAssemblyArray* fillArray(JSWebAssemblyInstance* instance, Wasm::FieldType f
     VM& vm = instance->vm();
 
     auto* array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(rtt));
-    array->fill(0, static_cast<T>(value), size);
+    array->fill(vm, 0, static_cast<T>(value), size);
     return array;
 }
 
@@ -121,7 +121,7 @@ inline JSValue arrayNew(JSWebAssemblyInstance* instance, uint32_t typeIndex, uin
         return jsNull();
 
     auto* array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(rtt));
-    array->fill(0, value, size);
+    array->fill(vm, 0, value, size);
     return array;
 }
 
@@ -135,11 +135,12 @@ JSWebAssemblyArray* copyElementsInReverse(JSWebAssemblyInstance* instance, Wasm:
     if (!size)
         return array;
 
-    auto* values = std::bit_cast<T*>(array->data());
+
     ASSERT(arguments);
+    auto span = array->span<T>();
     for (int srcIndex = size - 1; srcIndex >= 0; srcIndex--) {
         unsigned dstIndex = size - srcIndex - 1;
-        values[dstIndex] = static_cast<T>(arguments[srcIndex]);
+        span[dstIndex] = static_cast<T>(arguments[srcIndex]);
     }
     if (array->elementsAreRefTypes())
         vm.writeBarrier(array);
@@ -201,13 +202,16 @@ EncodedJSValue createArrayFromDataSegment(JSWebAssemblyInstance* instance, Field
     VM& vm = globalObject->vm();
     auto* array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), elementType, arraySize, WTFMove(rtt));
 
-    // Copy the data from the segment into the temp `values` vector
-    if (!instance->copyDataSegment(array, dataSegmentIndex, offset, arrayLengthInBytes, reinterpret_cast<uint8_t*>(array->data()))) {
-        // If copyDataSegment() returns false, the segment access is out of bounds.
-        // In that case, the caller is responsible for throwing an exception.
-        return JSValue::encode(jsNull());
-    }
-    return JSValue::encode(array);
+    ASSERT(!array->elementsAreRefTypes());
+    return array->visitSpan([&](auto span) ALWAYS_INLINE_LAMBDA {
+        // Copy the data from the segment into the temp `values` vector
+        if (!instance->copyDataSegment(array, dataSegmentIndex, offset, arrayLengthInBytes, reinterpret_cast<uint8_t*>(span.data()))) {
+            // If copyDataSegment() returns false, the segment access is out of bounds.
+            // In that case, the caller is responsible for throwing an exception.
+            return JSValue::encode(jsNull());
+        }
+        return JSValue::encode(array);
+    });
 }
 
 inline EncodedJSValue arrayNewData(JSWebAssemblyInstance* instance, uint32_t typeIndex, uint32_t dataSegmentIndex, uint32_t arraySize, uint32_t offset)
@@ -288,7 +292,9 @@ inline EncodedJSValue arrayNewElem(JSWebAssemblyInstance* instance, uint32_t typ
     JSGlobalObject* globalObject = instance->globalObject();
     VM& vm = globalObject->vm();
     auto* array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), FieldType { storageType, Mutability::Mutable }, arraySize, WTFMove(arrayRTT));
-    instance->copyElementSegment(array, instance->module().moduleInformation().elements[elemSegmentIndex], offset, arraySize, std::bit_cast<uint64_t*>(array->data()));
+    instance->copyElementSegment(array, instance->module().moduleInformation().elements[elemSegmentIndex], offset, arraySize, array->span<uint64_t>().data());
+    ASSERT(Wasm::isRefType(storageType.unpacked()));
+    vm.writeBarrier(array);
     return JSValue::encode(array);
 }
 
@@ -325,10 +331,10 @@ inline void arraySet(JSWebAssemblyInstance* instance, uint32_t typeIndex, Encode
     ASSERT(arrayRef.isObject());
     JSWebAssemblyArray* arrayObject = jsCast<JSWebAssemblyArray*>(arrayRef.getObject());
 
-    arrayObject->set(index, value);
+    arrayObject->set(instance->vm(), index, value);
 }
 
-inline bool doArrayFill(EncodedJSValue arrayValue, uint32_t offset, std::variant<uint64_t, v128_t> value, uint32_t size)
+inline bool doArrayFill(VM& vm, EncodedJSValue arrayValue, uint32_t offset, std::variant<uint64_t, v128_t> value, uint32_t size)
 {
     JSValue arrayRef = JSValue::decode(arrayValue);
     ASSERT(arrayRef.isObject());
@@ -344,28 +350,28 @@ inline bool doArrayFill(EncodedJSValue arrayValue, uint32_t offset, std::variant
         return false;
 
     if (std::holds_alternative<uint64_t>(value))
-        arrayObject->fill(offset, std::get<uint64_t>(value), size);
+        arrayObject->fill(vm, offset, std::get<uint64_t>(value), size);
     else {
         ASSERT(std::holds_alternative<v128_t>(value));
-        arrayObject->fill(offset, std::get<v128_t>(value), size);
+        arrayObject->fill(vm, offset, std::get<v128_t>(value), size);
     }
     return true;
 }
 
-inline bool arrayFill(EncodedJSValue arrayValue, uint32_t offset, uint64_t value, uint32_t size)
+inline bool arrayFill(VM& vm, EncodedJSValue arrayValue, uint32_t offset, uint64_t value, uint32_t size)
 {
-    return doArrayFill(arrayValue, offset, value, size);
+    return doArrayFill(vm, arrayValue, offset, value, size);
 }
 
-inline bool arrayFill(EncodedJSValue arrayValue, uint32_t offset, v128_t value, uint32_t size)
+inline bool arrayFill(VM& vm, EncodedJSValue arrayValue, uint32_t offset, v128_t value, uint32_t size)
 {
-    return doArrayFill(arrayValue, offset, value, size);
+    return doArrayFill(vm, arrayValue, offset, value, size);
 }
 
 // FIXME:
 // To be consistent it would make sense to include dst and src type indices, but they
 // are not necessary for operation and hits a limitation of BBQ JIT calls.
-inline bool arrayCopy(JSWebAssemblyInstance*, EncodedJSValue dst, uint32_t dstOffset, EncodedJSValue src, uint32_t srcOffset, uint32_t size)
+inline bool arrayCopy(JSWebAssemblyInstance* instance, EncodedJSValue dst, uint32_t dstOffset, EncodedJSValue src, uint32_t srcOffset, uint32_t size)
 {
     JSValue dstRef = JSValue::decode(dst);
     JSValue srcRef = JSValue::decode(src);
@@ -392,7 +398,7 @@ inline bool arrayCopy(JSWebAssemblyInstance*, EncodedJSValue dst, uint32_t dstOf
     if (lastSrcElementIndexChecked > srcObject->size())
         return false;
 
-    srcObject->copy(*dstObject, dstOffset, srcOffset, size);
+    srcObject->copy(instance->vm(), *dstObject, dstOffset, srcOffset, size);
     return true;
 }
 
@@ -422,8 +428,10 @@ inline bool arrayInitElem(JSWebAssemblyInstance* instance, EncodedJSValue dst, u
         return false;
 
     auto* elementSegment = instance->elementAt(srcElementIndex);
-    if (elementSegment)
-        instance->copyElementSegment(dstObject, *elementSegment, srcOffset, size, dstObject->reftypeData() + dstOffset);
+    if (elementSegment) {
+        instance->copyElementSegment(dstObject, *elementSegment, srcOffset, size, dstObject->refTypeSpan().data() + dstOffset);
+        instance->vm().writeBarrier(dstObject);
+    }
     else
         ASSERT(!lastSrcElementIndexChecked);
 
@@ -454,7 +462,11 @@ inline bool arrayInitData(JSWebAssemblyInstance* instance, EncodedJSValue dst, u
     if (lastSrcByteChecked.hasOverflowed())
         return false;
 
-    return instance->copyDataSegment(dstObject, srcDataIndex, srcOffset, size * elementSize, dstObject->data() + dstOffset * elementSize);
+    // Otherwise we need a writeBarrier.
+    ASSERT(!dstObject->elementsAreRefTypes());
+    return dstObject->visitSpan([&](auto span) ALWAYS_INLINE_LAMBDA -> bool {
+        return instance->copyDataSegment(dstObject, srcDataIndex, srcOffset, size * elementSize, reinterpret_cast<uint8_t*>(span.subspan(dstOffset).data()));
+    });
 }
 
 // structNew() expects the `arguments` array (when used) to be in reverse order

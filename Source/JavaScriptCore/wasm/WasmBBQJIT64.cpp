@@ -1713,14 +1713,14 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, u
             m_jit.branch32(MacroAssembler::AboveOrEqual, indexLocation.asGPR(), MacroAssembler::Address(arrayLocation.asGPR(), JSWebAssemblyArray::offsetOfSize())));
     }
 
-    m_jit.loadPtr(MacroAssembler::Address(arrayLocation.asGPR(), JSWebAssemblyArray::offsetOfPayload()), wasmScratchGPR);
+    emitArrayGetPayload(elementType, arrayLocation.asGPR(), wasmScratchGPR);
 
     consume(arrayref);
     result = topValue(resultType.kind);
     Location resultLocation = allocate(result);
 
     if (index.isConst()) {
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType) + elementType.elementSize() * index.asI32());
+        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, elementType.elementSize() * index.asI32());
 
         if (elementType.is<PackedType>()) {
             switch (elementType.as<Wasm::PackedType>()) {
@@ -1757,8 +1757,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, u
         }
     } else {
         auto scale = static_cast<MacroAssembler::Scale>(std::bit_width(std::min(size_t { 8 }, elementType.elementSize()) - 1));
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType));
-        auto fieldBaseIndex = fieldAddress.indexedBy(indexLocation.asGPR(), scale);
+        auto fieldBaseIndex = MacroAssembler::BaseIndex(wasmScratchGPR, indexLocation.asGPR(), scale);
 
         if (elementType.is<PackedType>()) {
             switch (elementType.as<Wasm::PackedType>()) {
@@ -1787,7 +1786,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, u
             case TypeKind::V128:
                 // For V128, the index computation above doesn't work so we index differently.
                 m_jit.mul32(Imm32(4), indexLocation.asGPR(), indexLocation.asGPR());
-                m_jit.loadVector(fieldAddress.indexedBy(indexLocation.asGPR(), MacroAssembler::Scale::TimesFour), resultLocation.asFPR());
+                m_jit.loadVector(MacroAssembler::BaseIndex(wasmScratchGPR, indexLocation.asGPR(), MacroAssembler::Scale::TimesFour), resultLocation.asFPR());
                 break;
             default:
                 RELEASE_ASSERT_NOT_REACHED();
@@ -1834,11 +1833,12 @@ void BBQJIT::emitArraySetUnchecked(uint32_t typeIndex, Value arrayref, Value ind
         arrayLocation = locationOf(arrayref);
     else
         arrayLocation = loadIfNecessary(arrayref);
-    m_jit.loadPtr(MacroAssembler::Address(arrayLocation.asGPR(), JSWebAssemblyArray::offsetOfPayload()), wasmScratchGPR);
+
+    emitArrayGetPayload(elementType, arrayLocation.asGPR(), wasmScratchGPR);
 
     if (index.isConst()) {
         ScratchScope<1, 0> scratches(*this);
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType) + elementType.elementSize() * index.asI32());
+        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, elementType.elementSize() * index.asI32());
 
         Location valueLocation;
         if (value.isConst() && value.isFloat()) {
@@ -1890,8 +1890,7 @@ void BBQJIT::emitArraySetUnchecked(uint32_t typeIndex, Value arrayref, Value ind
     } else {
         Location indexLocation = loadIfNecessary(index);
         auto scale = static_cast<MacroAssembler::Scale>(std::bit_width(std::min(size_t { 8 }, elementType.elementSize())) - 1);
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType));
-        auto fieldBaseIndex = fieldAddress.indexedBy(indexLocation.asGPR(), scale);
+        auto fieldBaseIndex = MacroAssembler::BaseIndex(wasmScratchGPR, indexLocation.asGPR(), scale);
 
         Location valueLocation;
         if (value.isConst() && value.isFloat()) {
@@ -1933,7 +1932,7 @@ void BBQJIT::emitArraySetUnchecked(uint32_t typeIndex, Value arrayref, Value ind
             case TypeKind::V128:
                 // For V128, the index computation above doesn't work so we index differently.
                 m_jit.mul32(Imm32(4), indexLocation.asGPR(), indexLocation.asGPR());
-                m_jit.storeVector(valueLocation.asFPR(), fieldAddress.indexedBy(indexLocation.asGPR(), MacroAssembler::Scale::TimesFour));
+                m_jit.storeVector(valueLocation.asFPR(), MacroAssembler::BaseIndex(wasmScratchGPR, indexLocation.asGPR(), MacroAssembler::Scale::TimesFour));
                 break;
             default:
                 RELEASE_ASSERT_NOT_REACHED();

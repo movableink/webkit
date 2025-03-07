@@ -501,7 +501,8 @@ WASM_SLOW_PATH_DECL(array_set)
 
 WASM_SLOW_PATH_DECL(array_fill)
 {
-    SlowPathFrameTracer tracer(instance->vm(), callFrame);
+    VM& vm = instance->vm();
+    SlowPathFrameTracer tracer(vm, callFrame);
 
     auto instruction = pc->as<WasmArrayFill>();
     EncodedJSValue arrayref = READ(instruction.m_arrayref).encodedJSValue();
@@ -511,7 +512,7 @@ WASM_SLOW_PATH_DECL(array_fill)
     EncodedJSValue value = READ(instruction.m_value).encodedJSValue();
     uint32_t size = READ(instruction.m_size).unboxedUInt32();
 
-    if (!Wasm::arrayFill(arrayref, offset, value, size))
+    if (!Wasm::arrayFill(vm, arrayref, offset, value, size))
         WASM_THROW(Wasm::ExceptionType::OutOfBoundsArrayFill);
     WASM_END_IMPL();
 }

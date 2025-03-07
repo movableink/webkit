@@ -177,7 +177,6 @@ class Heap;
 
 #if ENABLE(WEBASSEMBLY)
 #define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v) \
-    v(webAssemblyArraySpace, webAssemblyArrayHeapCellType, JSWebAssemblyArray) \
     v(webAssemblyExceptionSpace, webAssemblyExceptionHeapCellType, JSWebAssemblyException) \
     v(webAssemblyFunctionSpace, webAssemblyFunctionHeapCellType, WebAssemblyFunction) \
     v(webAssemblyGlobalSpace, webAssemblyGlobalHeapCellType, JSWebAssemblyGlobal) \
@@ -190,6 +189,7 @@ class Heap;
 
 // FIXME: This is a bit confusingly named since the objects in here are exclusive to the subspace but they can vary in size thus can't be in an IsoSubspace.
 #define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(v) \
+    v(webAssemblyArraySpace, webAssemblyArrayHeapCellType, JSWebAssemblyArray, CompleteSubspace) \
     v(webAssemblyInstanceSpace, webAssemblyInstanceHeapCellType, JSWebAssemblyInstance, PreciseSubspace) \
     v(webAssemblyStructSpace, webAssemblyStructHeapCellType, JSWebAssemblyStruct, CompleteSubspace)
 

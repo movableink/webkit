@@ -1568,14 +1568,14 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, u
             m_jit.branch32(MacroAssembler::AboveOrEqual, indexLocation.asGPR(), MacroAssembler::Address(arrayLocation.asGPRlo(), JSWebAssemblyArray::offsetOfSize())));
     }
 
-    m_jit.loadPtr(MacroAssembler::Address(arrayLocation.asGPRlo(), JSWebAssemblyArray::offsetOfPayload()), wasmScratchGPR);
+    emitArrayGetPayload(elementType, arrayLocation.asGPRlo(), wasmScratchGPR);
 
     consume(arrayref);
     result = topValue(resultType.kind);
     Location resultLocation = allocate(result);
 
     if (index.isConst()) {
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType) + elementType.elementSize() * index.asI32());
+        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, elementType.elementSize() * index.asI32());
 
         if (elementType.is<PackedType>()) {
             switch (elementType.as<Wasm::PackedType>()) {
@@ -1609,8 +1609,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, u
         }
     } else {
         auto scale = static_cast<MacroAssembler::Scale>(std::bit_width(elementType.elementSize()) - 1);
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType));
-        auto fieldBaseIndex = fieldAddress.indexedBy(indexLocation.asGPR(), scale);
+        auto fieldBaseIndex = MacroAssembler::BaseIndex(wasmScratchGPR, indexLocation.asGPR(), scale);
 
         if (elementType.is<PackedType>()) {
             switch (elementType.as<Wasm::PackedType>()) {
@@ -1683,10 +1682,10 @@ void BBQJIT::emitArraySetUnchecked(uint32_t typeIndex, Value arrayref, Value ind
         arrayLocation = loadIfNecessary(arrayref);
     ScratchScope<1, 0> tmp(*this);
     auto payloadGPR = tmp.gpr(0);
-    m_jit.loadPtr(MacroAssembler::Address(arrayLocation.asGPRlo(), JSWebAssemblyArray::offsetOfPayload()), payloadGPR);
+    emitArrayGetPayload(elementType, arrayLocation.asGPRlo(), payloadGPR);
     if (index.isConst()) {
         ScratchScope<1, 0> scratches(*this);
-        auto fieldAddress = MacroAssembler::Address(payloadGPR, JSWebAssemblyArray::offsetOfElements(elementType) + elementType.elementSize() * index.asI32());
+        auto fieldAddress = MacroAssembler::Address(payloadGPR, elementType.elementSize() * index.asI32());
 
         Location valueLocation;
         if (value.isConst() && value.isFloat()) {
@@ -1740,8 +1739,7 @@ void BBQJIT::emitArraySetUnchecked(uint32_t typeIndex, Value arrayref, Value ind
     } else {
         Location indexLocation = loadIfNecessary(index);
         auto scale = static_cast<MacroAssembler::Scale>(std::bit_width(elementType.elementSize()) - 1);
-        auto fieldAddress = MacroAssembler::Address(payloadGPR, JSWebAssemblyArray::offsetOfElements(elementType));
-        auto fieldBaseIndex = fieldAddress.indexedBy(indexLocation.asGPR(), scale);
+        auto fieldBaseIndex = MacroAssembler::BaseIndex(payloadGPR, indexLocation.asGPR(), scale);
 
         Location valueLocation;
         if (value.isConst() && value.isFloat()) {

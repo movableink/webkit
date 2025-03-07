@@ -989,6 +989,7 @@ private:
     Value* emitAtomicBinaryRMWOp(ExtAtomicOpType, Type, Value* pointer, Value*, uint32_t offset);
     Value* emitAtomicCompareExchange(ExtAtomicOpType, Type, Value* pointer, Value* expected, Value*, uint32_t offset);
 
+    Value* emitGetArrayPayloadBase(Wasm::StorageType, Value*);
     void emitArrayNullCheck(Value*, ExceptionType);
     void emitArraySetUnchecked(uint32_t, Value*, Value*, Value*);
     bool WARN_UNUSED_RETURN emitStructSet(Value*, uint32_t, const StructType&, Value*);
@@ -3487,11 +3488,10 @@ auto OMGIRGenerator::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, E
         });
     }
 
-    Value* payloadBase = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load), pointerType(), origin(), truncate(get(arrayref)), JSWebAssemblyArray::offsetOfPayload());
+    Value* payloadBase = emitGetArrayPayloadBase(elementType, get(arrayref));
     Value* indexValue = is32Bit() ? get(index) : append<Value>(m_proc, ZExt32, origin(), get(index));
     Value* indexedAddress = append<Value>(m_proc, Add, pointerType(), origin(), payloadBase,
-        append<Value>(m_proc, Add, pointerType(), origin(), constant(pointerType(), JSWebAssemblyArray::offsetOfElements(elementType)),
-            append<Value>(m_proc, Mul, pointerType(), origin(), indexValue, constant(pointerType(), elementType.elementSize()))));
+        append<Value>(m_proc, Mul, pointerType(), origin(), indexValue, constant(pointerType(), elementType.elementSize())));
 
     if (elementType.is<PackedType>()) {
         Value* load;
@@ -3529,6 +3529,18 @@ auto OMGIRGenerator::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, E
     return { };
 }
 
+Value* OMGIRGenerator::emitGetArrayPayloadBase(Wasm::StorageType fieldType, Value* arrayref)
+{
+    auto payloadBase = m_currentBlock->appendNew<Value>(m_proc, Add, pointerType(), origin(), arrayref, constant(pointerType(), JSWebAssemblyArray::offsetOfData()));
+    if (JSWebAssemblyArray::needsAlignmentCheck(fieldType)) {
+        auto isPreciseAllocation = m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), arrayref, constant(pointerType(), PreciseAllocation::halfAlignment));
+        return m_currentBlock->appendNew<Value>(m_proc, B3::Select, origin(), isPreciseAllocation,
+            m_currentBlock->appendNew<Value>(m_proc, Add, origin(), payloadBase, constant(pointerType(), PreciseAllocation::halfAlignment)),
+            payloadBase);
+    }
+    return payloadBase;
+}
+
 void OMGIRGenerator::emitArrayNullCheck(Value* arrayref, ExceptionType exceptionType)
 {
     CheckValue* check = append<CheckValue>(m_proc, Check, origin(),
@@ -3545,11 +3557,10 @@ void OMGIRGenerator::emitArraySetUnchecked(uint32_t typeIndex, Value* arrayref, 
     StorageType elementType;
     getArrayElementType(typeIndex, elementType);
 
-    auto payloadBase = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load), pointerType(), origin(), truncate(arrayref), JSWebAssemblyArray::offsetOfPayload());
+    auto payloadBase = emitGetArrayPayloadBase(elementType, arrayref);
     auto indexValue = is32Bit() ? index : append<Value>(m_proc, ZExt32, origin(), index);
     auto indexedAddress = append<Value>(m_proc, Add, pointerType(), origin(), payloadBase,
-        append<Value>(m_proc, Add, pointerType(), origin(), constant(pointerType(), JSWebAssemblyArray::offsetOfElements(elementType)),
-            append<Value>(m_proc, Mul, pointerType(), origin(), indexValue, constant(pointerType(), elementType.elementSize()))));
+        append<Value>(m_proc, Mul, pointerType(), origin(), indexValue, constant(pointerType(), elementType.elementSize())));
 
     if (elementType.is<PackedType>()) {
         switch (elementType.as<PackedType>()) {

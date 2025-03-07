@@ -1847,7 +1847,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayFill, UCPUStrictInt32, (JSWe
     assertCalleeIsReferenced(callFrame, instance);
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return toUCPUStrictInt32(arrayFill(arrayValue, offset, value, size));
+    return toUCPUStrictInt32(arrayFill(vm, arrayValue, offset, value, size));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayFillVector, UCPUStrictInt32, (JSWebAssemblyInstance* instance, EncodedJSValue arrayValue, uint32_t offset, uint64_t lane0, uint64_t lane1, uint32_t size))
@@ -1856,7 +1856,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayFillVector, UCPUStrictInt32,
     assertCalleeIsReferenced(callFrame, instance);
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return toUCPUStrictInt32(arrayFill(arrayValue, offset, v128_t { lane0, lane1 }, size));
+    return toUCPUStrictInt32(arrayFill(vm, arrayValue, offset, v128_t { lane0, lane1 }, size));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayCopy, UCPUStrictInt32, (JSWebAssemblyInstance* instance, EncodedJSValue dst, uint32_t dstOffset, EncodedJSValue src, uint32_t srcOffset, uint32_t size))

@@ -5153,6 +5153,22 @@ Location BBQJIT::allocateStack(Value value)
     return Location::fromStack(-m_frameSize);
 }
 
+void BBQJIT::emitArrayGetPayload(StorageType type, GPRReg arrayGPR, GPRReg payloadGPR)
+{
+    if (!JSWebAssemblyArray::needsAlignmentCheck(type)) {
+        m_jit.addPtr(MacroAssembler::TrustedImm32(JSWebAssemblyArray::offsetOfData()), arrayGPR, payloadGPR);
+        return;
+    }
+
+    // FIXME: This could probably use a moveConditionally but we don't have enough scratches and this case is unlikely to exist in practice.
+    auto notPrecise = m_jit.branchTestPtr(MacroAssembler::Zero, arrayGPR, MacroAssembler::TrustedImm32(PreciseAllocation::halfAlignment));
+    m_jit.addPtr(MacroAssembler::TrustedImm32(JSWebAssemblyArray::offsetOfData() + PreciseAllocation::halfAlignment), arrayGPR, payloadGPR);
+    auto done = m_jit.jump();
+    notPrecise.link(m_jit);
+    m_jit.addPtr(MacroAssembler::TrustedImm32(JSWebAssemblyArray::offsetOfData()), arrayGPR, payloadGPR);
+    done.link(m_jit);
+}
+
 } // namespace JSC::Wasm::BBQJITImpl
 
 Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileBBQ(CompilationContext& compilationContext, BBQCallee& callee, const FunctionData& function, const TypeDefinition& signature, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, const ModuleInformation& info, MemoryMode mode, FunctionCodeIndex functionIndex, std::optional<bool> hasExceptionHandlers, unsigned loopIndexForOSREntry)
