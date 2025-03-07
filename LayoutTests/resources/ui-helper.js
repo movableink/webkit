@@ -1100,6 +1100,24 @@ window.UIHelper = class UIHelper {
         return { x: rect.left + (rect.width / 2), y: rect.top + (rect.height / 2) };
     }
 
+    static computeLineBounds(element, firstRunIndex, lastRunIndex = undefined) {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const clientRects = range.getClientRects();
+        const firstRect = clientRects[firstRunIndex];
+        const secondRect = clientRects[lastRunIndex || firstRunIndex];
+        const x = Math.min(firstRect.left, secondRect.left);
+        const y = Math.min(firstRect.top, secondRect.top);
+        const maxX = Math.max(firstRect.left + firstRect.width, secondRect.left + secondRect.width);
+        const maxY = Math.max(firstRect.top + firstRect.height, secondRect.top + secondRect.height);
+        return {
+            top: Math.round(y),
+            left: Math.round(x),
+            width: Math.round(maxX - x),
+            height: Math.round(maxY - y)
+        };
+    }
+
     static selectionCaretBackgroundColor()
     {
         return new Promise(resolve => {

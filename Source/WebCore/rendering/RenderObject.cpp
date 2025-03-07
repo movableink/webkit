@@ -77,6 +77,7 @@
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
+#include "RenderedPosition.h"
 #include "SVGRenderSupport.h"
 #include "Settings.h"
 #include "StyleResolver.h"
@@ -2517,38 +2518,74 @@ static bool usesVisuallyContiguousBidiTextSelection(const SimpleRange& range)
     return range.protectedStartContainer()->protectedDocument()->settings().visuallyContiguousBidiTextSelectionEnabled();
 }
 
-enum class TextDirectionsNeedAdjustment : bool { No, Yes };
-static TextDirectionsNeedAdjustment makeBidiSelectionVisuallyContiguousIfNeeded(const SimpleRange& range, Vector<SelectionGeometry>& geometries)
+struct SelectionEndpointDirections {
+    TextDirection firstLine { TextDirection::LTR };
+    TextDirection lastLine { TextDirection::LTR };
+    bool isSingleLine { false };
+};
+
+static SelectionEndpointDirections computeSelectionEndpointDirections(const SimpleRange& range)
+{
+    auto [start, end] = positionsForRange(range);
+    if (inSameLine(start, end)) {
+        auto direction = primaryDirectionForSingleLineRange(start, end);
+        return { direction, direction, true };
+    }
+    return { start.primaryDirection(), end.primaryDirection(), false };
+}
+
+static void makeBidiSelectionVisuallyContiguousIfNeeded(const SelectionEndpointDirections directions, const SimpleRange& range, Vector<SelectionGeometry>& geometries)
 {
     if (!range.startContainer().document().editor().shouldDrawVisuallyContiguousBidiSelection())
-        return TextDirectionsNeedAdjustment::Yes;
+        return;
 
     FloatPoint selectionStartTop;
     FloatPoint selectionStartBottom;
     FloatPoint selectionEndTop;
     FloatPoint selectionEndBottom;
 
+    auto [start, end] = positionsForRange(range);
+    bool flipEndpointsAtStart = false;
+    bool flipEndpointsAtEnd = false;
+
+    auto anyGeometryHasSameDirectionAsLine = [&](TextDirection direction) {
+        return geometries.containsIf([direction](auto& geometry) {
+            return geometry.direction() == direction;
+        });
+    };
+
+    auto atVisualBoundaryOfBidiRun = [](const Position& position) {
+        RenderedPosition renderedPosition { position };
+        return renderedPosition.atLeftBoundaryOfBidiRun() || renderedPosition.atRightBoundaryOfBidiRun();
+    };
+
+    if (geometries.size() > 1 && directions.isSingleLine && !anyGeometryHasSameDirectionAsLine(directions.firstLine)) {
+        flipEndpointsAtStart = atVisualBoundaryOfBidiRun(start);
+        flipEndpointsAtEnd = atVisualBoundaryOfBidiRun(end);
+    }
+
     std::optional<SelectionGeometry> startGeometry;
     std::optional<SelectionGeometry> endGeometry;
     for (auto& geometry : geometries) {
         if (!geometry.isHorizontal())
-            return TextDirectionsNeedAdjustment::Yes;
+            return;
 
+        bool isRightToLeft = geometry.direction() == TextDirection::RTL;
         if (geometry.containsStart()) {
-            selectionStartTop = geometry.direction() == TextDirection::LTR ? geometry.quad().p1() : geometry.quad().p2();
-            selectionStartBottom = geometry.direction() == TextDirection::LTR ? geometry.quad().p4() : geometry.quad().p3();
+            selectionStartTop = flipEndpointsAtStart == isRightToLeft ? geometry.quad().p1() : geometry.quad().p2();
+            selectionStartBottom = flipEndpointsAtStart == isRightToLeft ? geometry.quad().p4() : geometry.quad().p3();
             startGeometry = { geometry };
         }
 
         if (geometry.containsEnd()) {
-            selectionEndTop = geometry.direction() == TextDirection::LTR ? geometry.quad().p2() : geometry.quad().p1();
-            selectionEndBottom = geometry.direction() == TextDirection::LTR ? geometry.quad().p3() : geometry.quad().p4();
+            selectionEndTop = flipEndpointsAtEnd == isRightToLeft ? geometry.quad().p2() : geometry.quad().p1();
+            selectionEndBottom = flipEndpointsAtEnd == isRightToLeft ? geometry.quad().p3() : geometry.quad().p4();
             endGeometry = { geometry };
         }
     }
 
     if (!startGeometry || !endGeometry)
-        return TextDirectionsNeedAdjustment::Yes;
+        return;
 
     unsigned geometryCountOnFirstLine = 0;
     unsigned geometryCountOnLastLine = 0;
@@ -2576,10 +2613,9 @@ static TextDirectionsNeedAdjustment makeBidiSelectionVisuallyContiguousIfNeeded(
         startGeometry->setQuad({ selectionStartTop, selectionEndTop, selectionEndBottom, selectionStartBottom });
         startGeometry->setContainsEnd(true);
         geometries.append(WTFMove(*startGeometry));
-        return TextDirectionsNeedAdjustment::Yes;
+        return;
     }
 
-    auto [start, end] = positionsForRange(range);
     auto makeSelectionQuad = [](const Position& position, const IntRect& selectionBounds, TextDirection lineDirection, bool caretIsOnVisualLeftEdge) -> FloatQuad {
         VisiblePosition visiblePosition { position };
         bool reachedBoundary = false;
@@ -2606,30 +2642,18 @@ static TextDirectionsNeedAdjustment makeBidiSelectionVisuallyContiguousIfNeeded(
     endGeometry->setDirection(lastLineDirection);
     endGeometry->setQuad(makeSelectionQuad(end, selectionBoundsOnLastLine, lastLineDirection, lastLineDirection == TextDirection::RTL));
     geometries.appendList({ WTFMove(*startGeometry), WTFMove(*endGeometry) });
-
-    return TextDirectionsNeedAdjustment::No;
 }
 
-static void adjustTextDirectionForCoalescedGeometries(const SimpleRange& range, Vector<SelectionGeometry>& geometries)
+static void adjustTextDirectionForCoalescedGeometries(const SelectionEndpointDirections& directions, const SimpleRange& range, Vector<SelectionGeometry>& geometries)
 {
     if (!usesVisuallyContiguousBidiTextSelection(range))
         return;
 
-    auto [start, end] = positionsForRange(range);
-    if (inSameLine(start, end)) {
-        auto direction = primaryDirectionForSingleLineRange(start, end);
-        for (auto& geometry : geometries)
-            geometry.setDirection(direction);
-        return;
-    }
-
-    auto firstLineDirection = start.primaryDirection();
-    auto lastLineDirection = end.primaryDirection();
     for (auto& geometry : geometries) {
         if (geometry.containsStart())
-            geometry.setDirection(firstLineDirection);
+            geometry.setDirection(directions.firstLine);
         if (geometry.containsEnd())
-            geometry.setDirection(lastLineDirection);
+            geometry.setDirection(directions.lastLine);
     }
 }
 
@@ -2969,8 +2993,9 @@ Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleR
     }
 
     if (hasBidirectionalText) {
-        if (makeBidiSelectionVisuallyContiguousIfNeeded(range, coalescedGeometries) == TextDirectionsNeedAdjustment::Yes)
-            adjustTextDirectionForCoalescedGeometries(range, coalescedGeometries);
+        auto directions = computeSelectionEndpointDirections(range);
+        makeBidiSelectionVisuallyContiguousIfNeeded(directions, range, coalescedGeometries);
+        adjustTextDirectionForCoalescedGeometries(directions, range, coalescedGeometries);
     }
 
     return coalescedGeometries;

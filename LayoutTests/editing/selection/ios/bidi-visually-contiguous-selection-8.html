@@ -31,26 +31,9 @@ jsTestIsAsync = true;
 addEventListener("load", async () => {
     description("Verifies that the selection extends to select the contents of the second line, and the ending selection handle is placed on the left.");
 
-    function computeLineBounds(firstRunIndex, lastRunIndex) {
-        const range = document.createRange();
-        range.selectNodeContents(document.querySelector("p[dir='rtl']"));
-        const clientRects = range.getClientRects();
-        const firstRect = clientRects[firstRunIndex];
-        const secondRect = clientRects[lastRunIndex];
-        const x = Math.min(firstRect.left, secondRect.left);
-        const y = Math.min(firstRect.top, secondRect.top);
-        const maxX = Math.max(firstRect.left + firstRect.width, secondRect.left + secondRect.width);
-        const maxY = Math.max(firstRect.top + firstRect.height, secondRect.top + secondRect.height);
-        return {
-            top: Math.round(y),
-            left: Math.round(x),
-            width: Math.round(maxX - x),
-            height: Math.round(maxY - y)
-        };
-    }
-
-    firstLineBounds = computeLineBounds(0, 1);
-    lastLineBounds = computeLineBounds(2, 3);
+    let paragraph = document.querySelector("p[dir='rtl']");
+    firstLineBounds = UIHelper.computeLineBounds(paragraph, 0, 1);
+    lastLineBounds = UIHelper.computeLineBounds(paragraph, 2, 3);
 
     let overlay = document.querySelector("div.overlay");
     overlay.style.top = `${firstLineBounds.top}px`;
