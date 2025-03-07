@@ -418,7 +418,6 @@ css/CSSFontFaceRule.cpp
 css/CSSFontFaceSet.cpp
 css/CSSFontFaceSource.cpp
 css/CSSFontFeatureValue.cpp
-css/CSSFontPaletteValuesOverrideColorsValue.cpp
 css/CSSFontSelector.cpp
 css/CSSFontStyleRangeValue.cpp
 css/CSSFontStyleRangeValue.h
@@ -488,7 +487,6 @@ css/StyleRuleImport.cpp
 css/StyleRuleImport.h
 css/StyleSheetContents.cpp
 css/StyleSheetList.cpp
-css/parser/CSSParserImpl.cpp
 css/parser/CSSPropertyParser.cpp
 css/parser/CSSPropertyParserConsumer+Grid.cpp
 css/parser/SizesCalcParser.cpp

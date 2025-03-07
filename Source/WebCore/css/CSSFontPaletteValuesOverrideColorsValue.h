@@ -70,8 +70,8 @@ private:
     {
     }
 
-    Ref<CSSPrimitiveValue> m_key;
-    Ref<CSSValue> m_color;
+    const Ref<CSSPrimitiveValue> m_key;
+    const Ref<CSSValue> m_color;
 };
 
 } // namespace WebCore

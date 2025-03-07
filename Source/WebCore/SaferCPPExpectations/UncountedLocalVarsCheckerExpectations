@@ -245,7 +245,6 @@ css/StyleProperties.cpp
 css/StyleRule.cpp
 css/StyleRuleImport.cpp
 css/StyleSheetContents.cpp
-css/parser/CSSParserImpl.cpp
 css/query/ContainerQueryFeatures.cpp
 css/query/MediaQueryFeatures.cpp
 css/typedom/CSSNumericValue.cpp
