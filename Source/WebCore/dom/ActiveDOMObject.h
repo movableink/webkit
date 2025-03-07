@@ -104,8 +104,19 @@ public:
     bool isContextStopped() const;
     bool isAllowedToRunScript() const;
 
+    template<typename T, typename Task>
+    static void queueTaskKeepingObjectAlive(T& object, TaskSource source, Task&& task)
+    {
+        // Calls the template member function outside of lambda init-captures to work around a MSVC bug.
+        auto activity = object.ActiveDOMObject::makePendingActivity(object);
+        object.queueTaskInEventLoop(source, [protectedObject = Ref { object }, activity = WTFMove(activity), task = WTFMove(task)]() mutable {
+            task(protectedObject.get());
+        });
+    }
+
+    // FIXME: Port call sites to queueTaskKeepingObjectAlive() and remove this.
     template<typename T>
-    static void queueTaskKeepingObjectAlive(T& object, TaskSource source, Function<void ()>&& task)
+    static void legacyQueueTaskKeepingObjectAlive(T& object, TaskSource source, Function<void()>&& task)
     {
         // Calls the template member function outside of lambda init-captures to work around a MSVC bug.
         auto activity = object.ActiveDOMObject::makePendingActivity(object);
@@ -114,13 +125,15 @@ public:
         });
     }
 
-    template<typename T>
-    static void queueCancellableTaskKeepingObjectAlive(T& object, TaskSource source, TaskCancellationGroup& cancellationGroup, Function<void()>&& task)
+    template<typename T, typename Task>
+    static void queueCancellableTaskKeepingObjectAlive(T& object, TaskSource source, TaskCancellationGroup& cancellationGroup, Task&& task)
     {
-        CancellableTask cancellableTask(cancellationGroup, WTFMove(task));
+        CancellableTask cancellableTask(cancellationGroup, [task = WTFMove(task), protectedObject = Ref { object }]() mutable {
+            task(protectedObject.get());
+        });
         // Calls the template member function outside of lambda init-captures to work around a MSVC bug.
         auto activity = object.ActiveDOMObject::makePendingActivity(object);
-        object.queueTaskInEventLoop(source, [protectedObject = Ref { object }, activity = WTFMove(activity), cancellableTask = WTFMove(cancellableTask)]() mutable {
+        object.queueTaskInEventLoop(source, [activity = WTFMove(activity), cancellableTask = WTFMove(cancellableTask)]() mutable {
             cancellableTask();
         });
     }

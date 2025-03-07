@@ -71,7 +71,7 @@ bool RTCIceTransport::virtualHasPendingActivity() const
 
 void RTCIceTransport::onStateChanged(RTCIceTransportState state)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state]() mutable {
         if (m_isStopped)
             return;
 
@@ -89,7 +89,7 @@ void RTCIceTransport::onStateChanged(RTCIceTransportState state)
 
 void RTCIceTransport::onGatheringStateChanged(RTCIceGatheringState state)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state]() mutable {
         if (m_isStopped)
             return;
 
@@ -103,7 +103,7 @@ void RTCIceTransport::onGatheringStateChanged(RTCIceGatheringState state)
 
 void RTCIceTransport::onSelectedCandidatePairChanged(RefPtr<RTCIceCandidate>&& local, RefPtr<RTCIceCandidate>&& remote)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, local = WTFMove(local), remote = WTFMove(remote)]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, local = WTFMove(local), remote = WTFMove(remote)]() mutable {
         if (m_isStopped)
             return;
 

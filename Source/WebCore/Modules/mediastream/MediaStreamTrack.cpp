@@ -390,7 +390,7 @@ void MediaStreamTrack::applyConstraints(const std::optional<MediaTrackConstraint
     }
 
     m_private->applyConstraints(createMediaConstraints(constraints), [this, protectedThis = Ref { *this }, constraints, promise = WTFMove(promise)](auto&& error) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [protectedThis = WTFMove(protectedThis), error = WTFMove(error), constraints, promise = WTFMove(promise)]() mutable {
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [protectedThis = WTFMove(protectedThis), error = WTFMove(error), constraints, promise = WTFMove(promise)]() mutable {
             if (error) {
                 promise.rejectType<IDLInterface<OverconstrainedError>>(OverconstrainedError::create(error->invalidConstraint, WTFMove(error->message)));
                 return;
@@ -487,7 +487,7 @@ void MediaStreamTrack::trackEnded(MediaStreamTrackPrivate&)
     // http://w3c.github.io/mediacapture-main/#life-cycle
     // When a MediaStreamTrack track ends for any reason other than the stop() method being invoked, the User Agent must
     // queue a task that runs the following steps:
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, muted = m_private->muted()] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, muted = m_private->muted()] {
         // 1. If the track's readyState attribute has the value ended already, then abort these steps.
         if (!isAllowedToRunScript() || m_readyState == State::Ended)
             return;
@@ -535,7 +535,7 @@ void MediaStreamTrack::trackMutedChanged(MediaStreamTrackPrivate&)
     if (m_shouldFireMuteEventImmediately)
         updateMuted();
     else
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, WTFMove(updateMuted));
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, WTFMove(updateMuted));
 
     configureTrackRendering();
 
@@ -552,7 +552,7 @@ void MediaStreamTrack::trackSettingsChanged(MediaStreamTrackPrivate&)
 
 void MediaStreamTrack::trackConfigurationChanged(MediaStreamTrackPrivate&)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
         if (!scriptExecutionContext() || scriptExecutionContext()->activeDOMObjectsAreStopped() || m_private->muted() || ended())
             return;
 

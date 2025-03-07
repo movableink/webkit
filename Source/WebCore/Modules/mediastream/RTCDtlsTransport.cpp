@@ -80,7 +80,7 @@ bool RTCDtlsTransport::virtualHasPendingActivity() const
 
 void RTCDtlsTransport::onStateChanged(RTCDtlsTransportState state, Vector<Ref<JSC::ArrayBuffer>>&& certificates)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state, certificates = WTFMove(certificates)]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state, certificates = WTFMove(certificates)]() mutable {
         if (m_state == RTCDtlsTransportState::Closed)
             return;
 

@@ -90,7 +90,7 @@ void MediaKeySystemRequest::allow(String&& mediaKeysHashSalt)
     if (!scriptExecutionContext())
         return;
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, mediaKeysHashSalt = WTFMove(mediaKeysHashSalt)] () mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, mediaKeysHashSalt = WTFMove(mediaKeysHashSalt)] () mutable {
         if (auto allowCompletionHandler = std::exchange(m_allowCompletionHandler, { }))
             allowCompletionHandler(WTFMove(mediaKeysHashSalt), WTFMove(m_promise));
     });

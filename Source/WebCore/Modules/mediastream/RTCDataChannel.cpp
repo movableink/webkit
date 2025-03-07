@@ -54,7 +54,7 @@ Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext& context, std:
     ASSERT(handler);
     auto channel = adoptRef(*new RTCDataChannel(context, WTFMove(handler), WTFMove(label), WTFMove(options), state));
     channel->suspendIfNeeded();
-    queueTaskKeepingObjectAlive(channel.get(), TaskSource::Networking, [channel = channel.ptr()] {
+    legacyQueueTaskKeepingObjectAlive(channel.get(), TaskSource::Networking, [channel = channel.ptr()] {
         if (!channel->m_isDetachable)
             return;
         channel->m_isDetachable = false;
@@ -175,7 +175,7 @@ bool RTCDataChannel::virtualHasPendingActivity() const
 
 void RTCDataChannel::didChangeReadyState(RTCDataChannelState newState)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, newState] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, newState] {
         if (m_stopped || m_readyState == RTCDataChannelState::Closed || m_readyState == newState)
             return;
 
@@ -230,7 +230,7 @@ void RTCDataChannel::didDetectError(Ref<RTCError>&& error)
 
 void RTCDataChannel::bufferedAmountIsDecreasing(size_t amount)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, amount] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, amount] {
         auto previousBufferedAmount = m_bufferedAmount;
         m_bufferedAmount -= amount;
         if (previousBufferedAmount > m_bufferedAmountLowThreshold && m_bufferedAmount <= m_bufferedAmountLowThreshold)
@@ -338,7 +338,7 @@ Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext& context, RTCD
         remoteHandlerPtr->setLocalIdentifier(channel->identifier());
 
     if (state == RTCDataChannelState::Open) {
-        channel->queueTaskKeepingObjectAlive(channel.get(), TaskSource::Networking, [channel = channel.ptr()] {
+        channel->legacyQueueTaskKeepingObjectAlive(channel.get(), TaskSource::Networking, [channel = channel.ptr()] {
             channel->fireOpenEventIfNeeded();
         });
     }

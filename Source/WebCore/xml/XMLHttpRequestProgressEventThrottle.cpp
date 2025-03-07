@@ -143,7 +143,7 @@ void XMLHttpRequestProgressEventThrottle::suspend()
     m_shouldDeferEventsDueToSuspension = true;
 
     if (m_hasPendingThrottledProgressEvent) {
-        m_target.queueTaskKeepingObjectAlive(m_target, TaskSource::Networking, [this] {
+        m_target.legacyQueueTaskKeepingObjectAlive(m_target, TaskSource::Networking, [this] {
             flushProgressEvent();
         });
     }
@@ -151,7 +151,7 @@ void XMLHttpRequestProgressEventThrottle::suspend()
 
 void XMLHttpRequestProgressEventThrottle::resume()
 {
-    m_target.queueTaskKeepingObjectAlive(m_target, TaskSource::Networking, [this] {
+    m_target.legacyQueueTaskKeepingObjectAlive(m_target, TaskSource::Networking, [this] {
         m_shouldDeferEventsDueToSuspension = false;
     });
 }

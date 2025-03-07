@@ -253,7 +253,7 @@ void WebXRSession::requestReferenceSpace(XRReferenceSpaceType type, RequestRefer
         // 2.1. If the result of running reference space is supported for type and session is false, queue a task to reject promise
         // with a NotSupportedError and abort these steps.
         if (!referenceSpaceIsSupported(type)) {
-            queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [promise = WTFMove(promise)]() mutable {
+            legacyQueueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [promise = WTFMove(promise)]() mutable {
                 promise.reject(Exception { ExceptionCode::NotSupportedError });
             });
             return;
@@ -263,7 +263,7 @@ void WebXRSession::requestReferenceSpace(XRReferenceSpaceType type, RequestRefer
             device->initializeReferenceSpace(type);
 
         // 2.3. Queue a task to run the following steps:
-        queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [this, type, promise = WTFMove(promise)]() mutable {
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [this, type, promise = WTFMove(promise)]() mutable {
             if (!scriptExecutionContext()) {
                 promise.reject(Exception { ExceptionCode::InvalidStateError });
                 return;
@@ -463,7 +463,7 @@ void WebXRSession::sessionDidInitializeInputSources(Vector<PlatformXR::FrameData
     // https://immersive-web.github.io/webxr/#dom-xrsystem-requestsession
     // 5.4.11 Queue a task to perform the following steps: NOTE: These steps ensure that initial inputsourceschange
     // events occur after the initial session is resolved.
-    queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [this, inputSources = WTFMove(inputSources)]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [this, inputSources = WTFMove(inputSources)]() mutable {
         //  1. Set session's promise resolved flag to true.
         m_inputInitialized = true;
         //  2. Let sources be any existing input sources attached to session.
@@ -623,7 +623,7 @@ void WebXRSession::onFrame(PlatformXR::FrameData&& frameData)
         return;
 
     // Queue a task to perform the following steps.
-    queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [this, frameData = WTFMove(frameData)]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [this, frameData = WTFMove(frameData)]() mutable {
         if (m_ended || m_visibilityState == XRVisibilityState::Hidden)
             return;
 

@@ -799,7 +799,7 @@ void RTCPeerConnection::updateIceGatheringState(RTCIceGatheringState newState)
 {
     ALWAYS_LOG(LOGIDENTIFIER, newState);
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, newState] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, newState] {
         if (isClosed() || m_iceGatheringState == newState)
             return;
 
@@ -811,7 +811,7 @@ void RTCPeerConnection::updateIceGatheringState(RTCIceGatheringState newState)
 
 void RTCPeerConnection::updateIceConnectionState(RTCIceConnectionState)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
         if (isClosed())
             return;
         auto newState = computeIceConnectionStateFromIceTransports();
@@ -943,7 +943,7 @@ void RTCPeerConnection::processIceTransportChanges()
 
 void RTCPeerConnection::updateNegotiationNeededFlag(std::optional<uint32_t> eventId)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, eventId]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, eventId]() mutable {
         if (isClosed())
             return;
         if (!eventId) {
@@ -969,7 +969,7 @@ void RTCPeerConnection::updateNegotiationNeededFlag(std::optional<uint32_t> even
 
 void RTCPeerConnection::scheduleEvent(Ref<Event>&& event)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, event = WTFMove(event)]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, event = WTFMove(event)]() mutable {
         dispatchEvent(event);
     });
 }
@@ -982,7 +982,7 @@ void RTCPeerConnection::dispatchEvent(Event& event)
 
 void RTCPeerConnection::dispatchDataChannelEvent(UniqueRef<RTCDataChannelHandler>&& channelHandler, String&& label, RTCDataChannelInit&& channelInit)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, label = WTFMove(label), channelHandler = WTFMove(channelHandler), channelInit = WTFMove(channelInit)]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, label = WTFMove(label), channelHandler = WTFMove(channelHandler), channelInit = WTFMove(channelInit)]() mutable {
         if (isClosed())
             return;
 

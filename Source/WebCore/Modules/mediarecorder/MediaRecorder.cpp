@@ -182,7 +182,7 @@ ExceptionOr<void> MediaRecorder::startRecording(std::optional<unsigned> timeSlic
 
         if (mimeTypeOrException.hasException()) {
             stopRecordingInternal();
-            queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, exception = mimeTypeOrException.releaseException()]() mutable {
+            legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, exception = mimeTypeOrException.releaseException()]() mutable {
                 if (!m_isActive)
                     return;
                 dispatchError(WTFMove(exception));
@@ -190,7 +190,7 @@ ExceptionOr<void> MediaRecorder::startRecording(std::optional<unsigned> timeSlic
             return;
         }
 
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, mimeType = mimeTypeOrException.releaseReturnValue(), audioBitsPerSecond, videoBitsPerSecond]() mutable {
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, mimeType = mimeTypeOrException.releaseReturnValue(), audioBitsPerSecond, videoBitsPerSecond]() mutable {
             if (!m_isActive)
                 return;
             m_options.mimeType = WTFMove(mimeType);
@@ -293,7 +293,7 @@ ExceptionOr<void> MediaRecorder::pauseRecording()
     m_private->pause([this, pendingActivity = makePendingActivity(*this)]() {
         if (!m_isActive)
             return;
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this]() mutable {
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this]() mutable {
             if (!m_isActive)
                 return;
             dispatchEvent(Event::create(eventNames().pauseEvent, Event::CanBubble::No, Event::IsCancelable::No));
@@ -320,7 +320,7 @@ ExceptionOr<void> MediaRecorder::resumeRecording()
     m_private->resume([this, pendingActivity = makePendingActivity(*this)]() {
         if (!m_isActive)
             return;
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this]() mutable {
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this]() mutable {
             if (!m_isActive)
                 return;
             dispatchEvent(Event::create(eventNames().resumeEvent, Event::CanBubble::No, Event::IsCancelable::No));
@@ -338,7 +338,7 @@ void MediaRecorder::fetchData(FetchDataCallback&& callback, TakePrivateRecorder 
         takenPrivateRecorder = WTFMove(m_private);
 
     auto fetchDataCallback = [this, privateRecorder = WTFMove(takenPrivateRecorder), callback = WTFMove(callback)](RefPtr<FragmentedSharedBuffer>&& buffer, auto& mimeType, auto timeCode) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [buffer = WTFMove(buffer), mimeType, timeCode, callback = WTFMove(callback)]() mutable {
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [buffer = WTFMove(buffer), mimeType, timeCode, callback = WTFMove(callback)]() mutable {
             callback(WTFMove(buffer), mimeType, timeCode);
         });
     };
@@ -373,9 +373,9 @@ void MediaRecorder::stopRecordingInternal(CompletionHandler<void()>&& completion
 
 void MediaRecorder::handleTrackChange()
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
         stopRecordingInternal([this, pendingActivity = makePendingActivity(*this)] {
-            queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
+            legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
                 if (!m_isActive)
                     return;
                 dispatchError(Exception { ExceptionCode::InvalidModificationError, "Track cannot be added to or removed from the MediaStream while recording"_s });
@@ -407,9 +407,9 @@ void MediaRecorder::trackEnded(MediaStreamTrackPrivate&)
     if (position != notFound)
         return;
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
         stopRecordingInternal([this, pendingActivity = makePendingActivity(*this)] {
-            queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
+            legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
                 if (!m_isActive)
                     return;
                 dispatchEvent(createDataAvailableEvent(scriptExecutionContext(), { }, { }, 0));

@@ -132,13 +132,13 @@ void ScreenOrientation::lock(LockType lockType, Ref<DeferredPromise>&& promise)
         return;
     }
     if (auto previousPromise = manager->takeLockPromise()) {
-        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [previousPromise = WTFMove(previousPromise)]() mutable {
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [previousPromise = WTFMove(previousPromise)]() mutable {
             previousPromise->reject(Exception { ExceptionCode::AbortError, "A new lock request was started"_s });
         });
     }
     manager->setLockPromise(*this, WTFMove(promise));
     manager->lock(lockType, [this, protectedThis = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, exception = WTFMove(exception)]() mutable {
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, exception = WTFMove(exception)]() mutable {
             auto* manager = this->manager();
             if (!manager)
                 return;
@@ -263,7 +263,7 @@ void ScreenOrientation::stop()
 
     manager->removeObserver(*this);
     if (manager->lockRequester() == this) {
-        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = manager->takeLockPromise()] {
+        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = manager->takeLockPromise()] {
             promise->reject(Exception { ExceptionCode::AbortError, "Document is no longer fully active"_s });
         });
     }

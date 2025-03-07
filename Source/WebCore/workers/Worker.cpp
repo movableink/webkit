@@ -255,7 +255,7 @@ void Worker::reportError(const String& errorMessage)
     if (m_wasTerminated)
         return;
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, errorMessage] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, errorMessage] {
         if (m_wasTerminated)
             return;
 

@@ -66,7 +66,7 @@ public:
 
     void replayDisplayList(GraphicsContext&);
 
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final { };
+    void legacyQueueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final { };
     void dispatchEvent(Event&) final { }
 
     const CSSParserContext& cssParserContext() const final;

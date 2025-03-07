@@ -249,7 +249,7 @@ void WebLockManager::request(const String& name, Options&& options, Ref<WebLockG
 
 void WebLockManager::didCompleteLockRequest(WebLockIdentifier lockIdentifier, bool success)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, weakThis = WeakPtr { *this }, lockIdentifier, success]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, weakThis = WeakPtr { *this }, lockIdentifier, success]() mutable {
         auto request = m_pendingRequests.take(lockIdentifier);
         if (!request.isValid())
             return;
@@ -309,7 +309,7 @@ void WebLockManager::query(Ref<DeferredPromise>&& promise)
         if (!weakThis)
             return;
 
-        weakThis->queueTaskKeepingObjectAlive(*weakThis, TaskSource::DOMManipulation, [promise = WTFMove(promise), snapshot = WTFMove(snapshot)]() mutable {
+        weakThis->legacyQueueTaskKeepingObjectAlive(*weakThis, TaskSource::DOMManipulation, [promise = WTFMove(promise), snapshot = WTFMove(snapshot)]() mutable {
             promise->resolve<IDLDictionary<Snapshot>>(WTFMove(snapshot));
         });
     });

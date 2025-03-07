@@ -71,7 +71,7 @@ bool RTCSctpTransport::virtualHasPendingActivity() const
 
 void RTCSctpTransport::onStateChanged(RTCSctpTransportState state, std::optional<double> maxMessageSize, std::optional<unsigned short> maxChannels)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state, maxMessageSize, maxChannels]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state, maxMessageSize, maxChannels]() mutable {
         if (m_state == RTCSctpTransportState::Closed)
             return;
 

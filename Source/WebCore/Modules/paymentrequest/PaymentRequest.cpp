@@ -472,7 +472,7 @@ void PaymentRequest::closeActivePaymentHandler()
 void PaymentRequest::stop()
 {
     closeActivePaymentHandler();
-    queueTaskKeepingObjectAlive(*this, TaskSource::Payment, [this] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Payment, [this] {
         settleShowPromise(Exception { ExceptionCode::AbortError });
     });
 }

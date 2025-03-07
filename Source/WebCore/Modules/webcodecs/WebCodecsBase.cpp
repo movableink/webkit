@@ -73,7 +73,7 @@ void WebCodecsBase::scheduleDequeueEvent()
         return;
 
     m_dequeueEventScheduled = true;
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this]() mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this]() mutable {
         dispatchEvent(Event::create(eventNames().dequeueEvent, Event::CanBubble::No, Event::IsCancelable::No));
         m_dequeueEventScheduled = false;
     });

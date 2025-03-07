@@ -86,7 +86,7 @@ void RemotePlayback::watchAvailability(Ref<RemotePlaybackAvailabilityCallback>&&
     auto identifier = LOGIDENTIFIER;
     ALWAYS_LOG(identifier);
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, callback = WTFMove(callback), promise = WTFMove(promise), identifier = identifier] () mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, callback = WTFMove(callback), promise = WTFMove(promise), identifier = identifier] () mutable {
         if (isContextStopped())
             return;
 
@@ -115,7 +115,7 @@ void RemotePlayback::watchAvailability(Ref<RemotePlaybackAvailabilityCallback>&&
         // 8. Fulfill promise with the callbackId and run the following steps in parallel:
         promise->whenSettled([this, protectedThis = Ref { *this }, callbackId] {
             // 8.1 Queue a task to invoke the callback with the current availability for the media element.
-            queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, callbackId, available = m_available] {
+            legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, callbackId, available = m_available] {
                 if (isContextStopped())
                     return;
                 auto foundCallback = m_callbackMap.find(callbackId);
@@ -147,7 +147,7 @@ void RemotePlayback::cancelWatchAvailability(std::optional<int32_t> id, Ref<Defe
     auto identifier = LOGIDENTIFIER;
     ALWAYS_LOG(identifier);
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, id = WTFMove(id), promise = WTFMove(promise), identifier = identifier] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, id = WTFMove(id), promise = WTFMove(promise), identifier = identifier] {
         if (isContextStopped())
             return;
         // 3. If the disableRemotePlayback attribute is present for the media element, reject promise with
@@ -199,7 +199,7 @@ void RemotePlayback::prompt(Ref<DeferredPromise>&& promise)
     auto identifier = LOGIDENTIFIER;
     ALWAYS_LOG(identifier);
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, promise = WTFMove(promise), processingUserGesture = UserGestureIndicator::processingUserGesture(), identifier = identifier] () mutable {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, promise = WTFMove(promise), processingUserGesture = UserGestureIndicator::processingUserGesture(), identifier = identifier] () mutable {
         if (isContextStopped())
             return;
 
@@ -351,7 +351,7 @@ void RemotePlayback::disconnect()
     ALWAYS_LOG(LOGIDENTIFIER);
 
     // 2. Queue a task to run the following steps:
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
         if (isContextStopped())
             return;
 
@@ -429,7 +429,7 @@ void RemotePlayback::availabilityChanged(bool available)
 
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, available] {
+    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, available] {
         if (isContextStopped())
             return;
 
