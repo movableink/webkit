@@ -1088,6 +1088,17 @@ AXCoreObject* AXObjectCache::rootObjectForFrame(LocalFrame& frame)
     return getOrCreate(frame.view());
 }
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+void AXObjectCache::buildAccessibilityTreeIfNeeded()
+{
+    if (!gAccessibilityEnabled)
+        return;
+
+    if (isIsolatedTreeEnabled())
+        isolatedTreeRootObject();
+}
+#endif
+
 AccessibilityObject* AXObjectCache::create(AccessibilityRole role)
 {
     RefPtr<AccessibilityObject> object;
