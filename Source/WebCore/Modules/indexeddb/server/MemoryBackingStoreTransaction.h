@@ -38,6 +38,7 @@
 namespace WebCore {
 namespace IDBServer {
 
+class MemoryCursor;
 class MemoryIDBBackingStore;
 class MemoryIndex;
 class MemoryObjectStore;
@@ -77,6 +78,9 @@ public:
 
     IDBTransactionInfo info() const { return m_info; }
 
+    MemoryCursor* cursor(const IDBResourceIdentifier&) const;
+    void addCursor(MemoryCursor&);
+
 private:
     void finish();
 
@@ -97,6 +101,8 @@ private:
     HashMap<String, RefPtr<MemoryIndex>> m_deletedIndexes;
     HashMap<MemoryObjectStore*, String> m_originalObjectStoreNames;
     HashMap<MemoryIndex*, String> m_originalIndexNames;
+
+    HashMap<IDBResourceIdentifier, WeakPtr<MemoryCursor>> m_cursors;
 };
 
 } // namespace IDBServer

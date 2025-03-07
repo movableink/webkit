@@ -96,7 +96,7 @@ public:
     const IDBObjectStoreInfo& info() const { return m_info; }
     IDBObjectStoreInfo& info() { return m_info; }
 
-    MemoryObjectStoreCursor* maybeOpenCursor(const IDBCursorInfo&);
+    MemoryObjectStoreCursor* maybeOpenCursor(const IDBCursorInfo&, MemoryBackingStoreTransaction&);
 
     IDBKeyDataSet* orderedKeys() { return m_orderedKeys.get(); }
 
@@ -132,7 +132,7 @@ private:
 
     HashMap<IDBIndexIdentifier, RefPtr<MemoryIndex>> m_indexesByIdentifier;
     HashMap<String, RefPtr<MemoryIndex>> m_indexesByName;
-    HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryObjectStoreCursor>> m_cursors;
+    HashMap<IDBResourceIdentifier, RefPtr<MemoryObjectStoreCursor>> m_cursors;
 };
 
 } // namespace IDBServer
