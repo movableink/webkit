@@ -275,7 +275,8 @@ TEST(FullscreenVideoTextRecognition, AddVideoAfterEnteringFullscreen)
 
 // FIXME: Re-enable this test for iOS once webkit.org/b/248094 is resolved
 // FIXME: Re-enable this test once webkit.org/b/248093 is resolved.
-#if PLATFORM(IOS) || PLATFORM(VISION) || !defined(NDEBUG)
+// FIXME: Re-enable this test in Sonoma once webkit.org/b/289025 is resolved.
+#if PLATFORM(IOS) || PLATFORM(VISION) || !defined(NDEBUG) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 140000 && __MAC_OS_X_VERSION_MIN_REQUIRED < 150000)
 TEST(FullscreenVideoTextRecognition, DISABLED_DoNotAnalyzeVideoAfterExitingFullscreen)
 #else
 TEST(FullscreenVideoTextRecognition, DoNotAnalyzeVideoAfterExitingFullscreen)
