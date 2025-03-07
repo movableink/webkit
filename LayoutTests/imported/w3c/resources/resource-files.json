@@ -9643,6 +9643,7 @@
         "web-platform-tests/html/rendering/non-replaced-elements/lists/ol-type-unsupported-ref.html",
         "web-platform-tests/html/rendering/non-replaced-elements/lists/ul-type-supported-ref.html",
         "web-platform-tests/html/rendering/non-replaced-elements/lists/ul-type-unsupported-ref.html",
+        "web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/b-strong-styles-ref.html",
         "web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/font-element-text-decoration-color/001-ref.html",
         "web-platform-tests/html/rendering/non-replaced-elements/tables/colgroup_valign-ref.xhtml",
         "web-platform-tests/html/rendering/non-replaced-elements/tables/colgroup_valign_bottom.xhtml",

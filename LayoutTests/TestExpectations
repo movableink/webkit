@@ -7738,3 +7738,5 @@ webkit.org/b/286883 imported/w3c/web-platform-tests/css/CSS2/floats/remove-block
 webkit.org/b/286884 imported/w3c/web-platform-tests/css/CSS2/floats/zero-width-floats-positioning.tentative.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/CSS2/floats/float-nowrap-hyphen-rewind-1.html [ ImageOnlyFailure ]
 [ Debug ] imported/w3c/web-platform-tests/css/CSS2/floats/line-pushed-by-floats-crash.html [ Skip ]
+
+imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/b-strong-styles.html [ ImageOnlyFailure ]

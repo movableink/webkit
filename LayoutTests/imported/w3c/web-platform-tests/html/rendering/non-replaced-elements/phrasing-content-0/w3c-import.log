@@ -14,5 +14,6 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
-/LayoutTests/imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/br-wbr-content/content-property.tentative-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/br-wbr-content/content-property.tentative.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/b-strong-styles-expected.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/b-strong-styles-ref.html
+/LayoutTests/imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/b-strong-styles.html

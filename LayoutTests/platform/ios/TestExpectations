@@ -184,6 +184,7 @@ imported/w3c/web-platform-tests/payment-request/payment-request-show-method.http
 imported/w3c/web-platform-tests/payment-request/rejects_if_not_active.https.html [ WontFix ]
 
 imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/form-controls/text-transform.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/br-wbr-content/content-property.tentative.html [ ImageOnlyFailure ]
 
 webkit.org/b/259089 imported/w3c/web-platform-tests/css/css-ui/text-overflow-028.html [ ImageOnlyFailure ]
 
