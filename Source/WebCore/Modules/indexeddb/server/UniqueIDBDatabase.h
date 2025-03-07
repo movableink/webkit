@@ -164,7 +164,8 @@ private:
     void clearStalePendingOpenDBRequests();
     void clearTransactionsOnConnection(UniqueIDBDatabaseConnection&);
     void createIndexAsyncAfterQuotaCheck(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, SpaceCheckResult);
-    void didCreateIndexAsyncForTransaction(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, const IDBError&);
+    enum class DidCreateIndexInBackingStore : bool { No, Yes };
+    void didCreateIndexAsyncForTransaction(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, const IDBError&, DidCreateIndexInBackingStore = DidCreateIndexInBackingStore::Yes);
 
     WeakPtr<UniqueIDBDatabaseManager> m_manager;
     IDBDatabaseIdentifier m_identifier;

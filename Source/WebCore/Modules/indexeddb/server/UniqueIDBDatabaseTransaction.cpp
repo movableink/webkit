@@ -268,7 +268,7 @@ void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData
         return;
     
     database->deleteIndex(*this, objectStoreIdentifier, indexName, [weakThis = WeakPtr { *this }, requestData](auto& error) {
-        LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createIndex (callback)");
+        LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteIndex (callback)");
 
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis || !protectedThis->m_databaseConnection)
@@ -537,7 +537,7 @@ void UniqueIDBDatabaseTransaction::createIndex(const IDBRequestData& requestData
 
     ASSERT(!requestData.requestIdentifier().isEmpty());
     if (!m_createIndexRequestIdentifier.isEmpty()) {
-        RELEASE_LOG_ERROR(IndexedDB, "%p - UniqueIDBDatabaseTransaction::createIndexAsync: ignored create index request since there is one in progress", this);
+        RELEASE_LOG_ERROR(IndexedDB, "%p - UniqueIDBDatabaseTransaction::createIndex: ignored create index request since there is one in progress", this);
         return;
     }
 

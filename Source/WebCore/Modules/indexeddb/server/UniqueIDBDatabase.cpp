@@ -740,18 +740,18 @@ void UniqueIDBDatabase::createIndexAsyncAfterQuotaCheck(UniqueIDBDatabaseTransac
 {
     Ref protectedTransaction = transaction;
     if (spaceCheckResult != SpaceCheckResult::Pass)
-        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("CreateIndex"_s) });
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("CreateIndex"_s) }, DidCreateIndexInBackingStore::No);
 
     if (!m_backingStore)
-        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::InvalidStateError, "Backing store is closed."_s });
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::InvalidStateError, "Backing store is closed."_s }, DidCreateIndexInBackingStore::No);
 
     if (!m_databaseInfo)
-        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::InvalidStateError, "Database info is invalid."_s });
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { ExceptionCode::InvalidStateError, "Database info is invalid."_s }, DidCreateIndexInBackingStore::No);
 
     auto transactionIdentifier = transaction.info().identifier();
     auto createIndexError = m_backingStore->addIndex(transactionIdentifier, indexInfo);
     if (!createIndexError.isNull())
-        return didCreateIndexAsyncForTransaction(transaction, indexInfo, createIndexError);
+        return didCreateIndexAsyncForTransaction(transaction, indexInfo, createIndexError, DidCreateIndexInBackingStore::No);
 
     auto* objectStoreInfo = m_databaseInfo->infoForExistingObjectStore(indexInfo.objectStoreIdentifier());
     if (!objectStoreInfo)
@@ -796,10 +796,10 @@ void UniqueIDBDatabase::didGenerateIndexKeyForRecord(UniqueIDBDatabaseTransactio
         didCreateIndexAsyncForTransaction(transaction, indexInfo, IDBError { });
 }
 
-void UniqueIDBDatabase::didCreateIndexAsyncForTransaction(UniqueIDBDatabaseTransaction& transaction, const IDBIndexInfo& indexInfo, const IDBError& error)
+void UniqueIDBDatabase::didCreateIndexAsyncForTransaction(UniqueIDBDatabaseTransaction& transaction, const IDBIndexInfo& indexInfo, const IDBError& error, DidCreateIndexInBackingStore didCreateIndexInBackingStore)
 {
     CheckedPtr backingStore = m_backingStore.get();
-    if (backingStore && !error.isNull())
+    if (backingStore && !error.isNull() && didCreateIndexInBackingStore == DidCreateIndexInBackingStore::Yes)
         backingStore->revertAddIndex(transaction.info().identifier(), indexInfo.objectStoreIdentifier(), indexInfo.identifier());
 
     transaction.didCreateIndexAsync(error);
