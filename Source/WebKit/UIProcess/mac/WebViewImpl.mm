@@ -1292,7 +1292,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(WebViewImpl);
 
 WebViewImpl::WebViewImpl(WKWebView *view, WebProcessPool& processPool, Ref<API::PageConfiguration>&& configuration)
     : m_view(view)
-    , m_pageClient(makeUniqueWithoutRefCountedCheck<PageClientImpl>(view, view))
+    , m_pageClient(makeUniqueRefWithoutRefCountedCheck<PageClientImpl>(view, view))
     , m_page(processPool.createWebPage(*m_pageClient, WTFMove(configuration)))
     , m_needsViewFrameInWindowCoordinates(false)
     , m_intrinsicContentSize(CGSizeMake(NSViewNoIntrinsicMetric, NSViewNoIntrinsicMetric))
@@ -1318,7 +1318,7 @@ WebViewImpl::WebViewImpl(WKWebView *view, WebProcessPool& processPool, Ref<API::
         if (id useRemoteLayerTreeBoolean = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2UseRemoteLayerTreeDrawingArea"])
             result = [useRemoteLayerTreeBoolean boolValue];
 
-        if (m_page->preferences().siteIsolationEnabled())
+        if (m_page->protectedPreferences()->siteIsolationEnabled())
             result = true;
 
         if (isInRecoveryOS()) {
@@ -2265,12 +2265,12 @@ bool WebViewImpl::shouldDelayWindowOrderingForEvent(NSEvent *event)
     if (![m_view hitTest:event.locationInWindow])
         return false;
 
-    if (!protectedPage()->protectedLegacyMainFrameProcess()->isResponsive())
+    if (!page().protectedLegacyMainFrameProcess()->isResponsive())
         return false;
 
-    if (protectedPage()->editorState().hasPostLayoutData()) {
+    if (page().editorState().hasPostLayoutData()) {
         auto locationInView = [m_view convertPoint:event.locationInWindow fromView:nil];
-        if (!protectedPage()->selectionBoundingRectInRootViewCoordinates().contains(roundedIntPoint(locationInView)))
+        if (!page().selectionBoundingRectInRootViewCoordinates().contains(roundedIntPoint(locationInView)))
             return false;
     }
 
@@ -4256,7 +4256,7 @@ bool WebViewImpl::performDragOperation(id <NSDraggingInfo> draggingInfo)
     Vector<SandboxExtension::Handle> sandboxExtensionForUpload;
 
     if (![types containsObject:PasteboardTypes::WebArchivePboardType] && [types containsObject:WebCore::legacyFilesPromisePasteboardType()])
-        return handleLegacyFilesPasteboard(draggingInfo, WTFMove(dragData), protectedPage(), m_view.get());
+        return handleLegacyFilesPasteboard(draggingInfo, WTFMove(dragData), page(), m_view.get());
 
     if ([types containsObject:WebCore::legacyFilenamesPasteboardType()]) {
         NSArray *files = [draggingInfo.draggingPasteboard propertyListForType:WebCore::legacyFilenamesPasteboardType()];
@@ -4753,7 +4753,7 @@ void WebViewImpl::showWritingTools(WTRequestedTool tool)
 
     auto& editorState = m_page->editorState();
     if (editorState.selectionIsRange)
-        selectionRect = protectedPage()->selectionBoundingRectInRootViewCoordinates();
+        selectionRect = page().selectionBoundingRectInRootViewCoordinates();
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [[PAL::getWTWritingToolsClass() sharedInstance] showTool:tool forSelectionRect:selectionRect ofView:m_view.getAutoreleased() forDelegate:(NSObject<WTWritingToolsDelegate> *)m_view.getAutoreleased()];
@@ -6887,11 +6887,6 @@ void WebViewImpl::fulfillDeferredImageAnalysisOverlayViewHierarchyTask()
 }
 
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-
-Ref<WebPageProxy> WebViewImpl::protectedPage() const
-{
-    return m_page.get();
-}
 
 } // namespace WebKit
 

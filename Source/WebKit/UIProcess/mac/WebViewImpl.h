@@ -227,7 +227,6 @@ public:
     NSWindow *window();
 
     WebPageProxy& page() { return m_page.get(); }
-    Ref<WebPageProxy> protectedPage() const;
 
     WKWebView *view() const { return m_view.getAutoreleased(); }
 
@@ -891,8 +890,8 @@ private:
     std::optional<EditorState::PostLayoutData> postLayoutDataForContentEditable();
 
     WeakObjCPtr<WKWebView> m_view;
-    std::unique_ptr<PageClient> m_pageClient;
-    Ref<WebPageProxy> m_page;
+    const UniqueRef<PageClient> m_pageClient;
+    const Ref<WebPageProxy> m_page;
 
     DrawingAreaType m_drawingAreaType { DrawingAreaType::TiledCoreAnimation };
 
