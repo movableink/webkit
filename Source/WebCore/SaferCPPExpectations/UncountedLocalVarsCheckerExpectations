@@ -373,7 +373,6 @@ html/HTMLOptionElement.cpp
 html/HTMLPictureElement.cpp
 html/HTMLSelectElement.cpp
 html/HTMLSlotElement.cpp
-html/HTMLStyleElement.cpp
 html/HTMLTableElement.cpp
 html/HTMLTableRowElement.cpp
 html/HTMLTextFormControlElement.cpp
