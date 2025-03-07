@@ -27,6 +27,7 @@
 #include "MicrotaskQueue.h"
 
 #include "Debugger.h"
+#include "JSCJSValueInlines.h"
 #include "JSGlobalObject.h"
 #include "JSObject.h"
 #include "SlotVisitorInlines.h"
