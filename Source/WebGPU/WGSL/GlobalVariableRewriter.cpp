@@ -485,16 +485,53 @@ Packing RewriteGlobalVariables::getPacking(AST::IdentifierExpression& identifier
 
 Packing RewriteGlobalVariables::getPacking(AST::FieldAccessExpression& expression)
 {
+    auto* baseType = expression.base().inferredType();
+    if (!baseType) {
+        // FIXME: all AST nodes should have an inferred type, but we create field
+        // access nodes from the EntryPointRewriter which don't have a trivial
+        // type, so we work around it by returning unpacked since those are only
+        // used for marshalling inputs/outputs and don't need to packed/unpacked.
+        return Packing::Unpacked;
+    }
+
+    if (auto* referenceType = std::get_if<Types::Reference>(baseType))
+        baseType = referenceType->element;
+
+    bool isPointer = false;
+    if (auto* pointerType = std::get_if<Types::Pointer>(baseType)) {
+        isPointer = true;
+        baseType = pointerType->element;
+    }
+
+    if (std::holds_alternative<Types::Vector>(*baseType)) {
+        if (std::holds_alternative<Types::Vector>(*expression.inferredType())) {
+            if (isPointer) {
+                auto& dereference = m_shaderModule.astBuilder().construct<AST::UnaryExpression>(
+                    expression.base().span(),
+                    expression.base(),
+                    AST::UnaryOperation::Dereference
+                );
+                dereference.m_inferredType = baseType;
+
+                auto& fieldAccessExpression = m_shaderModule.astBuilder().construct<AST::FieldAccessExpression>(
+                    expression.span(),
+                    dereference,
+                    AST::Identifier::make(expression.fieldName())
+                );
+                fieldAccessExpression.m_inferredType = expression.inferredType();
+
+                m_shaderModule.replace(expression, fieldAccessExpression);
+            }
+            pack(Packing::Unpacked, expression.base());
+        } else
+            pack(Packing::Either, expression.base());
+        return Packing::Unpacked;
+    }
+
     auto basePacking = pack(Packing::Either, expression.base());
     if (basePacking & Packing::Unpacked)
         return Packing::Unpacked;
-    auto* baseType = expression.base().inferredType();
-    if (auto* referenceType = std::get_if<Types::Reference>(baseType))
-        baseType = referenceType->element;
-    if (auto* pointerType = std::get_if<Types::Pointer>(baseType))
-        baseType = pointerType->element;
-    if (std::holds_alternative<Types::Vector>(*baseType))
-        return Packing::Unpacked;
+
     ASSERT(std::holds_alternative<Types::Struct>(*baseType));
     auto& structType = std::get<Types::Struct>(*baseType);
     auto* fieldType = structType.fields.get(expression.originalFieldName());
@@ -786,18 +823,15 @@ void RewriteGlobalVariables::packStructResource(AST::Variable& global, const Typ
 void RewriteGlobalVariables::packArrayResource(AST::Variable& global, const Types::Array* arrayType)
 {
     const Type* packedArrayType = packArrayType(arrayType);
-    if (!packedArrayType) {
-        if (arrayType->element->packing() & Packing::Vec3)
-            m_shaderModule.replace(&global.role(), AST::VariableRole::PackedResource);
+    if (!packedArrayType)
         return;
-    }
 
-    const Type* packedStructType = std::get<Types::Array>(*packedArrayType).element;
+    const Type* packedElementType = std::get<Types::Array>(*packedArrayType).element;
     auto& packedType = m_shaderModule.astBuilder().construct<AST::IdentifierExpression>(
         SourceSpan::empty(),
-        AST::Identifier::make(std::get<Types::Struct>(*packedStructType).structure.name().id())
+        AST::Identifier::make("__PackedArray"_s) // This name is not used by the codegen
     );
-    packedType.m_inferredType = packedStructType;
+    packedType.m_inferredType = packedElementType;
 
     auto& arrayTypeName = downcast<AST::ArrayTypeExpression>(*global.maybeTypeName());
     auto& packedArrayTypeName = m_shaderModule.astBuilder().construct<AST::ArrayTypeExpression>(
@@ -838,8 +872,10 @@ const Type* RewriteGlobalVariables::packType(const Type* type)
     if (auto* arrayType = std::get_if<Types::Array>(type))
         return packArrayType(arrayType);
     if (auto* vectorType = std::get_if<Types::Vector>(type)) {
-        if (vectorType->size == 3)
+        if (vectorType->size == 3) {
+            m_shaderModule.setUsesPackedVec3();
             return type;
+        }
     }
     return nullptr;
 }
@@ -880,23 +916,13 @@ const Type* RewriteGlobalVariables::packStructType(const Types::Struct* structTy
 
 const Type* RewriteGlobalVariables::packArrayType(const Types::Array* arrayType)
 {
-    auto* structType = std::get_if<Types::Struct>(arrayType->element);
-    if (!structType) {
-        if (arrayType->element->packing() & Packing::Vec3) {
-            m_shaderModule.setUsesUnpackArray();
-            m_shaderModule.setUsesPackArray();
-            m_shaderModule.setUsesPackedVec3();
-        }
-        return nullptr;
-    }
-
-    const Type* packedStructType = packStructType(structType);
-    if (!packedStructType)
+    auto* packedElementType = packType(arrayType->element);
+    if (!packedElementType)
         return nullptr;
 
     m_shaderModule.setUsesUnpackArray();
     m_shaderModule.setUsesPackArray();
-    return m_shaderModule.types().arrayType(packedStructType, arrayType->size);
+    return m_shaderModule.types().arrayType(packedElementType, arrayType->size);
 }
 
 static size_t getRoundedSize(const AST::Variable& variable)
