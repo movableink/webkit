@@ -3031,6 +3031,13 @@ webkit.org/b/288627 editing/spelling/spellcheck-async-mutation.html [ Timeout ]
 
 webkit.org/b/288725 http/tests/security/file-system-access-via-dataTransfer.html [ Pass Failure ]
 
+webkit.org/b/288769 fast/ruby/after-block-doesnt-crash.html [ Failure Pass ]
+webkit.org/b/288769 fast/ruby/after-table-doesnt-crash.html [ Failure Pass ]
+webkit.org/b/288769 fast/ruby/before-block-doesnt-crash.html [ Failure Pass ]
+webkit.org/b/288769 fast/ruby/generated-after-counter-doesnt-crash.html [ Failure Pass ]
+webkit.org/b/288769 fast/ruby/generated-before-and-after-counter-doesnt-crash.html [ Failure Pass ]
+webkit.org/b/288769 fast/ruby/generated-before-counter-doesnt-crash.html [ Failure Pass ]
+
 webkit.org/b/288757 [ Sonoma ] imported/w3c/web-platform-tests/fullscreen/rendering/fullscreen-css-invalidation.html [ Pass Failure ]
 webkit.org/b/288757 [ Sequoia Release ] imported/w3c/web-platform-tests/fullscreen/rendering/fullscreen-css-invalidation.html [ Pass Failure ]
 

@@ -30,8 +30,10 @@
 #include "config.h"
 #include "FontCascadeCache.h"
 
+#include "CSSFontSelector.h"
 #include "FontCache.h"
 #include "FontCascadeDescription.h"
+#include <wtf/RefPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -95,11 +97,13 @@ void FontCascadeCache::pruneSystemFallbackFonts()
 static FontCascadeCacheKey makeFontCascadeCacheKey(const FontCascadeDescription& description, FontSelector* fontSelector)
 {
     unsigned familyCount = description.familyCount();
+    auto hasComplexFontSelector = fontSelector && !fontSelector->isSimpleFontSelectorForDescription();
     return FontCascadeCacheKey {
         FontDescriptionKey(description),
         Vector<FontFamilyName, 3>(familyCount, [&](size_t i) { return description.familyAt(i); }),
-        fontSelector ? fontSelector->uniqueId() : 0,
-        fontSelector ? fontSelector->version() : 0
+        hasComplexFontSelector ? fontSelector->uniqueId() : 0,
+        hasComplexFontSelector ? fontSelector->version() : 0,
+        hasComplexFontSelector
     };
 }
 
