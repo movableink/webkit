@@ -179,6 +179,7 @@ template: enum class WebCore::FileSystemWritableFileStreamIdentifierType
 template: enum class WebCore::IDBDatabaseConnectionIdentifierType
 template: enum class WebCore::IDBIndexIdentifierType
 template: enum class WebCore::IDBObjectStoreIdentifierType
+template: enum class WebCore::IDBResourceObjectIdentifierType
 template: enum class WebCore::LibWebRTCSocketIdentifierType
 template: enum class WebCore::MainThreadPermissionObserverIdentifierType
 template: enum class WebCore::OpaqueOriginIdentifierType

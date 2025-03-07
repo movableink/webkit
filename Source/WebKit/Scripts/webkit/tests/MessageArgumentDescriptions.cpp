@@ -125,6 +125,7 @@
 #include <WebCore/IDBDatabaseConnectionIdentifier.h>
 #include <WebCore/IDBIndexIdentifier.h>
 #include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBResourceIdentifier.h>
 #include <WebCore/ImageDecoderIdentifier.h>
 #include <WebCore/InbandGenericCueIdentifier.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
@@ -596,6 +597,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebCore::TextManipulationItemIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::TextManipulationTokenIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::IDBDatabaseConnectionIdentifier));
+    static_assert(sizeof(uint64_t) == sizeof(WebCore::IDBResourceObjectIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::UserGestureTokenIdentifierID));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::UserMediaRequestIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::WebLockIdentifierID));
@@ -748,6 +750,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebCore::TextManipulationItemIdentifier"_s,
         "WebCore::TextManipulationTokenIdentifier"_s,
         "WebCore::IDBDatabaseConnectionIdentifier"_s,
+        "WebCore::IDBResourceObjectIdentifier"_s,
         "WebCore::UserGestureTokenIdentifierID"_s,
         "WebCore::UserMediaRequestIdentifier"_s,
         "WebCore::WebLockIdentifierID"_s,

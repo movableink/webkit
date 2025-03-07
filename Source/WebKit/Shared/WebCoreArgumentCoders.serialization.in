@@ -617,7 +617,7 @@ struct WebCore::IDBIterateCursorData {
 
 class WebCore::IDBResourceIdentifier {
     Markable<WebCore::IDBConnectionIdentifier> m_idbConnectionIdentifier
-    uint64_t m_resourceNumber
+    Markable<WebCore::IDBResourceObjectIdentifier> m_resourceNumber
 }
 
 class WebCore::IDBValue {
