@@ -209,7 +209,7 @@ void WebChromeClient::chromeDestroyed()
 
 Ref<WebPage> WebChromeClient::protectedPage() const
 {
-    return m_page.get();
+    return *m_page;
 }
 
 void WebChromeClient::setWindowRect(const FloatRect& windowFrame)
@@ -1287,7 +1287,8 @@ void WebChromeClient::setUpPlaybackControlsManager(HTMLMediaElement& mediaElemen
 
 void WebChromeClient::clearPlaybackControlsManager()
 {
-    protectedPage()->playbackSessionManager().clearPlaybackControlsManager();
+    if (RefPtr page = m_page.get())
+        page->playbackSessionManager().clearPlaybackControlsManager();
 }
 
 void WebChromeClient::mediaEngineChanged(WebCore::HTMLMediaElement& mediaElement)

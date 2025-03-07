@@ -57,7 +57,8 @@ public:
     WebChromeClient(WebPage&);
     ~WebChromeClient();
 
-    WebPage& page() const { return m_page.get(); }
+    // FIXME: these functions should return (ref) pointers that should be null-checked at callsites.
+    WebPage& page() const { return *m_page; }
     Ref<WebPage> protectedPage() const;
 
 #if PLATFORM(IOS_FAMILY)
@@ -569,7 +570,7 @@ private:
     mutable bool m_cachedMainFrameHasHorizontalScrollbar { false };
     mutable bool m_cachedMainFrameHasVerticalScrollbar { false };
 
-    WeakRef<WebPage> m_page;
+    WeakPtr<WebPage> m_page;
 };
 
 class AXRelayProcessSuspendedNotification {
