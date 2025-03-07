@@ -25,8 +25,19 @@
 
 #include "config.h"
 #include "AXTextRun.h"
+#include "Logging.h"
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
+
+#define TEXT_RUN_ASSERT_AND_LOG(assertion, methodName) do { \
+    if (!(assertion)) { \
+        RELEASE_LOG(Accessibility, "[AX Thread Text Run] hit assertion in %" PUBLIC_LOG_STRING, methodName); \
+        ASSERT(assertion); \
+    } \
+} while (0)
+#define TEXT_RUN_ASSERT_NOT_REACHED_AND_LOG(methodName) do { \
+    TEXT_RUN_ASSERT_AND_LOG(false, methodName); \
+} while (0)
 
 #include <wtf/text/MakeString.h>
 
@@ -80,7 +91,9 @@ String AXTextRuns::substring(unsigned start, unsigned length) const
         } else if (charactersSeen + runLength > start) {
             // start points somewhere in the middle of the current run, collect part of the text.
             unsigned startInRun = start - charactersSeen;
-            RELEASE_ASSERT(startInRun < runLength);
+            TEXT_RUN_ASSERT_AND_LOG(startInRun < runLength, "substring");
+            if (startInRun >= runLength)
+                startInRun = runLength - 1;
             result.append(runs[i].text.substring(startInRun, remaining()));
         }
         // If charactersSeen + runLength == start, the start points to the end of the run, and there is no text to gather.
@@ -97,7 +110,9 @@ unsigned AXTextRuns::domOffset(unsigned renderedTextOffset) const
     for (size_t i = 0; i < size(); i++) {
         const auto& domOffsets = at(i).domOffsets();
         for (const auto& domOffsetPair : domOffsets) {
-            RELEASE_ASSERT(domOffsetPair[0] >= previousEndDomOffset);
+            TEXT_RUN_ASSERT_AND_LOG(domOffsetPair[0] >= previousEndDomOffset, "domOffset");
+            if (domOffsetPair[0] < previousEndDomOffset)
+                return renderedTextOffset;
             // domOffsetPair[0] represents the start DOM offset of this run. Subtracting it
             // from the previous run's end DOM offset, we know how much whitespace was collapsed,
             // and thus know the offset between the DOM text and what was actually rendered.
@@ -123,7 +138,7 @@ unsigned AXTextRuns::domOffset(unsigned renderedTextOffset) const
     }
     // We were provided with a rendered-text offset that didn't actually fit into our
     // runs. This should never happen.
-    RELEASE_ASSERT_NOT_REACHED();
+    TEXT_RUN_ASSERT_NOT_REACHED_AND_LOG("renderedTextOffset");
     return renderedTextOffset;
 }
 
@@ -153,7 +168,9 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, float lineHeight) 
             unsigned measuredWidth = 0;
             if (i == runIndexOfSmallerOffset) {
                 unsigned offsetOfFirstCharacterInRun = !i ? 0 : runLengthSumTo(i - 1);
-                RELEASE_ASSERT(smallerOffset >= offsetOfFirstCharacterInRun);
+                TEXT_RUN_ASSERT_AND_LOG(smallerOffset >= offsetOfFirstCharacterInRun, "localRect (1)");
+                if (smallerOffset < offsetOfFirstCharacterInRun)
+                    smallerOffset = offsetOfFirstCharacterInRun;
                 // Measure the characters in this run (accomplished by smallerOffset - offsetOfFirstCharacterInRun)
                 // prior to the offset.
                 unsigned widthPriorToStart = (smallerOffset - offsetOfFirstCharacterInRun) * estimatedCharacterWidth;
@@ -165,7 +182,9 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, float lineHeight) 
                     : 0;
                 unsigned fullRunWidth = run.text.length() * estimatedCharacterWidth;
 
-                RELEASE_ASSERT(fullRunWidth >= (widthPriorToStart + widthAfterEnd));
+                TEXT_RUN_ASSERT_AND_LOG(fullRunWidth >= (widthPriorToStart + widthAfterEnd), "localRect (2)");
+                if (fullRunWidth < (widthPriorToStart + widthAfterEnd))
+                    fullRunWidth = widthPriorToStart + widthAfterEnd;
                 measuredWidth = fullRunWidth - widthPriorToStart - widthAfterEnd;
                 if (!measuredWidth) {
                     bool isCollapsedRange = (runIndexOfSmallerOffset == runIndexOfLargerOffset && smallerOffset == largerOffset);
@@ -187,7 +206,9 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, float lineHeight) 
             } else if (i == runIndexOfLargerOffset) {
                 // We're measuring the end of the range, so measure from the first character in the run up to largerOffset.
                 unsigned offsetOfFirstCharacterInRun = !i ? 0 : runLengthSumTo(i - 1);
-                RELEASE_ASSERT(largerOffset >= offsetOfFirstCharacterInRun);
+                TEXT_RUN_ASSERT_AND_LOG(largerOffset >= offsetOfFirstCharacterInRun, "localRect (3)");
+                if (largerOffset < offsetOfFirstCharacterInRun)
+                    largerOffset = offsetOfFirstCharacterInRun;
                 measuredWidth = (largerOffset - offsetOfFirstCharacterInRun) * estimatedCharacterWidth;
 
                 if (measuredWidth) {

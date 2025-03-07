@@ -3286,7 +3286,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 #if ENABLE(AX_THREAD_TEXT_APIS)
         if (AXObjectCache::useAXThreadTextApis()) {
             auto markerToLocation = AXTextMarker { *backingObject, 0 }.nextMarkerFromOffset(range.location);
-            auto markerToRangeEnd = markerToLocation.nextMarkerFromOffset(range.location + range.length);
+            auto markerToRangeEnd = markerToLocation.nextMarkerFromOffset(range.length);
             if (!markerToRangeEnd.isValid())
                 return [NSValue valueWithRect:CGRectZero];
 
