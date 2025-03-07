@@ -2103,7 +2103,7 @@ bool BBQJIT::emitStructSet(GPRReg structGPR, const StructType& structType, uint3
             break;
         }
 
-        ASSERT_IMPLIES(isRefType(storageType.unpacked()), value.asI64() == JSValue::encode(jsNull()));
+        ASSERT_IMPLIES(isRefType(storageType.unpacked()), !JSValue::decode(value.asI64()).isCell());
         return false;
     }
 
