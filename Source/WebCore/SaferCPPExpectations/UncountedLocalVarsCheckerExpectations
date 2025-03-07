@@ -359,7 +359,6 @@ html/HTMLAttachmentElement.cpp
 html/HTMLCanvasElement.cpp
 html/HTMLCollection.cpp
 html/HTMLDocument.cpp
-html/HTMLElement.cpp
 html/HTMLFieldSetElement.cpp
 html/HTMLFormControlsCollection.cpp
 html/HTMLFormElement.cpp
