@@ -522,7 +522,12 @@ void RenderText::collectSelectionGeometries(Vector<SelectionGeometry>& rects, un
                 continue;
         }
 
+        bool separateLines = false;
         if (textBox->lineBox()->isFirstAfterPageBreak()) {
+            // The top of the second line in a column aligns with the bottom of the first line in adjacent columns,
+            // which can cause the geometries united, extending the highlight box into unselected content.
+            // To prevent this, use setSeparateFromPreviousLine for each column to ensure the geometries won't be united.
+            separateLines = true;
             if (textBox->isHorizontal())
                 rect.shiftYEdgeTo(textBox->lineBox()->logicalTop());
             else
@@ -555,7 +560,9 @@ void RenderText::collectSelectionGeometries(Vector<SelectionGeometry>& rects, un
         auto absoluteQuad = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed);
         bool boxIsHorizontal = !is<InlineIterator::SVGTextBoxIterator>(textBox) ? textBox->isHorizontal() : !writingMode().isVertical();
 
-        rects.append(SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(textNode()), textBox->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, textBox->isLineBreak(), isFirstOnLine, isLastOnLine, containsStart, containsEnd, boxIsHorizontal, isFixed, view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
+        auto selectionGeometry = SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(textNode()), textBox->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, textBox->isLineBreak(), isFirstOnLine, isLastOnLine, containsStart, containsEnd, boxIsHorizontal, isFixed, view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x()));
+        selectionGeometry.setSeparateFromPreviousLine(separateLines);
+        rects.append(selectionGeometry);
     }
 }
 #endif

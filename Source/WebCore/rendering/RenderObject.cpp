@@ -2635,13 +2635,24 @@ static void adjustTextDirectionForCoalescedGeometries(const SimpleRange& range, 
 
 static bool currentNodeRequiresToSeparateLines(const RenderObject* currentRenderer)
 {
-    return currentRenderer && currentRenderer->isOutOfFlowPositioned();
+    if (!currentRenderer)
+        return false;
+
+    if (currentRenderer->isOutOfFlowPositioned())
+        return true;
+
+    if (CheckedPtr blockFlow = dynamicDowncast<const RenderBlockFlow>(*currentRenderer))
+        return blockFlow->multiColumnFlow();
+
+    return false;
 }
 
 static bool hasAncestorRequiresToSeparateLines(RenderObject* descendant, const RenderObject* stayWithin)
 {
     for (CheckedPtr current = descendant; current; current = current->parent()) {
         if (current->isOutOfFlowPositioned())
+            return true;
+        if (current->isRenderMultiColumnFlow())
             return true;
         if (current == stayWithin)
             break;
@@ -2925,11 +2936,12 @@ Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleR
             if (interiorUnionRect.isEmpty()) {
                 // Start collecting interior rects.
                 interiorUnionRect = currentGeometry.rect();
-            } else if (interiorUnionRect.intersects(currentGeometry.rect())
-                || interiorUnionRect.maxX() == currentGeometry.rect().x()
-                || interiorUnionRect.maxY() == currentGeometry.rect().y()
-                || interiorUnionRect.x() == currentGeometry.rect().maxX()
-                || interiorUnionRect.y() == currentGeometry.rect().maxY()) {
+            } else if (!currentGeometry.separateFromPreviousLine()
+                && (interiorUnionRect.intersects(currentGeometry.rect())
+                    || interiorUnionRect.maxX() == currentGeometry.rect().x()
+                    || interiorUnionRect.maxY() == currentGeometry.rect().y()
+                    || interiorUnionRect.x() == currentGeometry.rect().maxX()
+                    || interiorUnionRect.y() == currentGeometry.rect().maxY())) {
                 // Only union the lines that are attached.
                 // For iBooks, the interior lines may cross multiple horizontal pages.
                 interiorUnionRect.unite(currentGeometry.rect());
