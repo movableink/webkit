@@ -3744,7 +3744,7 @@ void WebViewImpl::accessibilityRegisterUIProcessTokens()
 id WebViewImpl::accessibilityFocusedUIElement()
 {
     enableAccessibilityIfNecessary();
-    return m_remoteAccessibilityChild.get();
+    return remoteAccessibilityChildIfNotSuspended().get();
 }
 
 id WebViewImpl::accessibilityHitTest(CGPoint)
@@ -3777,11 +3777,10 @@ id WebViewImpl::accessibilityAttributeValue(NSString *attribute, id parameter)
         id child = nil;
         if (m_warningView)
             child = m_warningView.get();
-        else if (m_remoteAccessibilityChild) {
+        else if ((child = remoteAccessibilityChildIfNotSuspended().get())) {
 #if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
             m_page->takeAccessibilityActivityWhenInWindow();
 #endif
-            child = m_remoteAccessibilityChild.get();
         }
 
         if (!child)
@@ -3805,6 +3804,13 @@ id WebViewImpl::accessibilityAttributeValue(NSString *attribute, id parameter)
     }
 
     return [m_view _web_superAccessibilityAttributeValue:attribute];
+}
+
+RetainPtr<NSAccessibilityRemoteUIElement> WebViewImpl::remoteAccessibilityChildIfNotSuspended()
+{
+    if (m_page->legacyMainFrameProcess().throttler().isSuspended())
+        return nil;
+    return m_remoteAccessibilityChild.get();
 }
 
 void WebViewImpl::updatePrimaryTrackingAreaOptions(NSTrackingAreaOptions options)

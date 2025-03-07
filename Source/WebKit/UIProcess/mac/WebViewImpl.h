@@ -504,6 +504,7 @@ public:
     id accessibilityHitTest(CGPoint);
     void enableAccessibilityIfNecessary();
     id accessibilityAttributeValue(NSString *, id parameter = nil);
+    RetainPtr<NSAccessibilityRemoteUIElement> remoteAccessibilityChildIfNotSuspended();
 
     void updatePrimaryTrackingAreaOptions(NSTrackingAreaOptions);
 
