@@ -206,6 +206,9 @@ namespace JSC {
             call(function, OperationPtrTag);
         }
 
+        template<size_t minAlign, typename Bytecode>
+        Address computeBaseAddressForMetadata(const Bytecode&, GPRReg);
+
         template <typename Bytecode>
         void loadPtrFromMetadata(const Bytecode&, size_t offset, GPRReg);
 
