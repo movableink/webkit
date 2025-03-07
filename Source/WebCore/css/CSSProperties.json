@@ -2641,9 +2641,7 @@
                     "name": "border-radius",
                     "resolver": "bottom-left"
                 },
-                "parser-function": "consumeBorderRadiusCorner",
-                "parser-grammar-unused": "<length-percentage [0,inf]>{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "<length-percentage [0,inf]>{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2664,9 +2662,7 @@
                     "name": "border-radius",
                     "resolver": "bottom-right"
                 },
-                "parser-function": "consumeBorderRadiusCorner",
-                "parser-grammar-unused": "<length-percentage [0,inf]>{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "<length-percentage [0,inf]>{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2770,9 +2766,7 @@
                     "name": "border-radius",
                     "resolver": "end-end"
                 },
-                "parser-function": "consumeBorderRadiusCorner",
-                "parser-grammar-unused": "<length-percentage [0,inf]>{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "<length-percentage [0,inf]>{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2789,9 +2783,7 @@
                     "name": "border-radius",
                     "resolver": "end-start"
                 },
-                "parser-function": "consumeBorderRadiusCorner",
-                "parser-grammar-unused": "<length-percentage [0,inf]>{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "<length-percentage [0,inf]>{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-logical-props",
@@ -2844,9 +2836,8 @@
                 "animation-wrapper-requires-override-parameters": ["CSSPropertyBorderImageRepeat", "&RenderStyle::borderImageHorizontalRule", "&RenderStyle::setBorderImageHorizontalRule", "&RenderStyle::borderImageVerticalRule", "&RenderStyle::setBorderImageVerticalRule"],
                 "style-builder-custom": "All",
                 "disables-native-appearance": true,
-                "parser-function": "consumeBorderImageRepeat",
-                "parser-grammar-unused": "[ stretch | repeat | round | space ]{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-exported": true,
+                "parser-grammar": "[ stretch | repeat | round | space ]{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3380,9 +3371,7 @@
                     "name": "border-radius",
                     "resolver": "start-end"
                 },
-                "parser-function": "consumeBorderRadiusCorner",
-                "parser-grammar-unused": "<length-percentage [0,inf]>{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "<length-percentage [0,inf]>{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-logical-props",
@@ -3399,9 +3388,7 @@
                     "name": "border-radius",
                     "resolver": "start-start"
                 },
-                "parser-function": "consumeBorderRadiusCorner",
-                "parser-grammar-unused": "<length-percentage [0,inf]>{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "<length-percentage [0,inf]>{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-logical-props",
@@ -3472,9 +3459,7 @@
                     "name": "border-radius",
                     "resolver": "top-left"
                 },
-                "parser-function": "consumeBorderRadiusCorner",
-                "parser-grammar-unused": "<length-percentage [0,inf]>{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "<length-percentage [0,inf]>{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3495,9 +3480,7 @@
                     "name": "border-radius",
                     "resolver": "top-right"
                 },
-                "parser-function": "consumeBorderRadiusCorner",
-                "parser-grammar-unused": "<length-percentage [0,inf]>{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "<length-percentage [0,inf]>{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -5472,9 +5455,7 @@
                 "animation-wrapper": "NinePieceImageRepeatWrapper",
                 "animation-wrapper-requires-override-parameters": ["CSSPropertyMaskBorderRepeat", "&RenderStyle::maskBorderHorizontalRule", "&RenderStyle::setMaskBorderHorizontalRule", "&RenderStyle::maskBorderVerticalRule", "&RenderStyle::setMaskBorderVerticalRule"],
                 "style-builder-custom": "All",
-                "parser-function": "consumeBorderImageRepeat",
-                "parser-grammar-unused": "[ stretch | repeat | space | round ]{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "[ stretch | repeat | round | space ]{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-masking",

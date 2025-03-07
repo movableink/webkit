@@ -65,6 +65,7 @@
 #include "CSSPropertyParserConsumer+URL.h"
 #include "CSSPropertyParserConsumer+ViewTransition.h"
 #include "CSSPropertyParserConsumer+WillChange.h"
+#include "CSSValuePair.h"
 #include "CSSValuePool.h"
 #include "DeprecatedGlobalSettings.h"
 
@@ -82,23 +83,320 @@ static bool isKeywordValidForTestUsingSharedRule(CSSValueID keyword)
     }
 }
 
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithCommas(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>#{2,3}
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<',', ListBounds(2, 3), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithCommasFixed(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>#{2}
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<',', ListBounds(2, 2), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithCommasNoSingleItemOpt(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>#{1,3}@(no-single-item-opt)
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<',', ListBounds(1, 3), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithCommasSingleItemOpt(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>#{1,3}
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<',', ListBounds(1, 3), ListOptimization::SingleValue>(range, consumeRepeatedTerm, context);
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpaces(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>{2,3}
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<' ', ListBounds(2, 3), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesFixed(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>{2}
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<' ', ListBounds(2, 2), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesNoSingleItemOpt(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>{1,3}@(no-single-item-opt)
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<' ', ListBounds(1, 3), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesSingleItemOpt(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>{1,3}
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<' ', ListBounds(1, 3), ListOptimization::SingleValue>(range, consumeRepeatedTerm, context);
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesWithType(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>{1,2}@(type=CSSValuePair)
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        CSSParserTokenRange rangeCopy = range;
+        auto term0 = consumeRepeatedTerm(rangeCopy, context);
+        if (!term0)
+            return nullptr;
+        auto term1 = consumeRepeatedTerm(rangeCopy, context);
+        if (!term1) {
+            range = rangeCopy;
+            return CSSValuePair::create(term0.releaseNonNull());
+        }
+        range = rangeCopy;
+        return CSSValuePair::create(term0.releaseNonNull(), term1.releaseNonNull());
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>{1,2}@(type=CSSValuePair default=previous)
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        CSSParserTokenRange rangeCopy = range;
+        auto term0 = consumeRepeatedTerm(rangeCopy, context);
+        if (!term0)
+            return nullptr;
+        auto term1 = consumeRepeatedTerm(rangeCopy, context);
+        if (!term1) {
+            term1 = term0;
+            range = rangeCopy;
+            return CSSValuePair::create(term0.releaseNonNull(), term1.releaseNonNull());
+        }
+        range = rangeCopy;
+        return CSSValuePair::create(term0.releaseNonNull(), term1.releaseNonNull());
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>{1,4}@(type=CSSValuePair default=previous)
+    auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        CSSParserTokenRange rangeCopy = range;
+        auto term0 = consumeRepeatedTerm(rangeCopy, context);
+        if (!term0)
+            return nullptr;
+        auto term1 = consumeRepeatedTerm(rangeCopy, context);
+        if (!term1) {
+            term1 = term0;
+            range = rangeCopy;
+            return CSSValuePair::create(term0.releaseNonNull(), term1.releaseNonNull());
+        }
+        auto term2 = consumeRepeatedTerm(rangeCopy, context);
+        if (!term2) {
+            term2 = term1;
+            range = rangeCopy;
+            return CSSValuePair::create(term0.releaseNonNull(), term1.releaseNonNull(), term2.releaseNonNull());
+        }
+        auto term3 = consumeRepeatedTerm(rangeCopy, context);
+        if (!term3) {
+            term3 = term2;
+            range = rangeCopy;
+            return CSSValuePair::create(term0.releaseNonNull(), term1.releaseNonNull(), term2.releaseNonNull(), term3.releaseNonNull());
+        }
+        range = rangeCopy;
+        return CSSValuePair::create(term0.releaseNonNull(), term1.releaseNonNull(), term2.releaseNonNull(), term3.releaseNonNull());
+    };
+    return consumeBoundedRepetition(range, context);
+}
+
 static RefPtr<CSSValue> consumeTestNumericValueRange(CSSParserTokenRange& range, const CSSParserContext& context)
 {
+    // <number [-inf,-10]>
     if (auto result = CSSPrimitiveValueResolver<CSS::Number<CSS::Range{-CSS::Range::infinity, -10}>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
         return result;
+    // <length [0,inf]>
     if (auto result = CSSPrimitiveValueResolver<CSS::Length<CSS::Range{0, CSS::Range::infinity}>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Forbid, .unitlessZero = UnitlessZeroQuirk::Allow }))
         return result;
+    // <angle [-90,90]>
     if (auto result = CSSPrimitiveValueResolver<CSS::Angle<CSS::Range{-90, 90}>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Forbid, .unitlessZero = UnitlessZeroQuirk::Forbid }))
         return result;
+    // <percentage [1,100]>
     return CSSPrimitiveValueResolver<CSS::Percentage<CSS::Range{1, 100}>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+}
+
+static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithCommasWithMin(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>#{2,}
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<',', ListBounds::minimumOf(2), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeUnboundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>#@(no-single-item-opt)
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<',', ListBounds::minimumOf(1), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeUnboundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithCommasWithMinSingleItemOpt(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>#
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<',', ListBounds::minimumOf(1), ListOptimization::SingleValue>(range, consumeRepeatedTerm, context);
+    };
+    return consumeUnboundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesNoMin(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>*
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(0), ListOptimization::SingleValue>(range, consumeRepeatedTerm, context);
+    };
+    return consumeUnboundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>*@(no-single-item-opt)
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(0), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeUnboundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesWithMin(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>{2,}
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(2), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeUnboundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>+@(no-single-item-opt)
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(1), ListOptimization::None>(range, consumeRepeatedTerm, context);
+    };
+    return consumeUnboundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>+
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        };
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(1), ListOptimization::SingleValue>(range, consumeRepeatedTerm, context);
+    };
+    return consumeUnboundedRepetition(range, context);
 }
 
 static RefPtr<CSSValue> consumeTestUsingSharedRule(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     if (auto result = consumeIdent(range, isKeywordValidForTestUsingSharedRule))
         return result;
+    // <number>
     if (auto result = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
         return result;
+    // <percentage>
     return CSSPrimitiveValueResolver<CSS::Percentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
 }
 
@@ -124,8 +422,46 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical:
         return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommas:
+        return consumeTestBoundedRepetitionWithCommas(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasFixed:
+        return consumeTestBoundedRepetitionWithCommasFixed(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasNoSingleItemOpt:
+        return consumeTestBoundedRepetitionWithCommasNoSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasSingleItemOpt:
+        return consumeTestBoundedRepetitionWithCommasSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpaces:
+        return consumeTestBoundedRepetitionWithSpaces(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesFixed:
+        return consumeTestBoundedRepetitionWithSpacesFixed(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesNoSingleItemOpt:
+        return consumeTestBoundedRepetitionWithSpacesNoSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesSingleItemOpt:
+        return consumeTestBoundedRepetitionWithSpacesSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithType:
+        return consumeTestBoundedRepetitionWithSpacesWithType(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious:
+        return consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious(range, context);
+    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
+        return consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(range, context);
     case CSSPropertyID::CSSPropertyTestNumericValueRange:
         return consumeTestNumericValueRange(range, context);
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMin:
+        return consumeTestUnboundedRepetitionWithCommasWithMin(range, context);
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt:
+        return consumeTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinSingleItemOpt:
+        return consumeTestUnboundedRepetitionWithCommasWithMinSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesNoMin:
+        return consumeTestUnboundedRepetitionWithSpacesNoMin(range, context);
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt:
+        return consumeTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMin:
+        return consumeTestUnboundedRepetitionWithSpacesWithMin(range, context);
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt:
+        return consumeTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt:
+        return consumeTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(range, context);
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
         return consumeTestUsingSharedRule(range, context);
     default:

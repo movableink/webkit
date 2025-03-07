@@ -20,18 +20,37 @@ enum CSSPropertyID : uint16_t {
     CSSPropertyTestAnimationWrapper = 6,
     CSSPropertyTestAnimationWrapperAccelerationAlways = 7,
     CSSPropertyTestAnimationWrapperAccelerationThreadedOnly = 8,
-    CSSPropertyTestNumericValueRange = 9,
-    CSSPropertyTestProperty = 10,
-    CSSPropertyTestSettingsOne = 11,
-    CSSPropertyTestUsingSharedRule = 12,
-    CSSPropertyTestSinkPriority = 13,
-    CSSPropertyTestLogicalPropertyGroupLogicalBlock = 14,
-    CSSPropertyTestLogicalPropertyGroupLogicalInline = 15,
-    CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal = 16,
-    CSSPropertyTestLogicalPropertyGroupPhysicalVertical = 17,
-    CSSPropertyFont = 18,
-    CSSPropertyTestShorthandOne = 19,
-    CSSPropertyTestShorthandTwo = 20,
+    CSSPropertyTestBoundedRepetitionWithCommas = 9,
+    CSSPropertyTestBoundedRepetitionWithCommasFixed = 10,
+    CSSPropertyTestBoundedRepetitionWithCommasNoSingleItemOpt = 11,
+    CSSPropertyTestBoundedRepetitionWithCommasSingleItemOpt = 12,
+    CSSPropertyTestBoundedRepetitionWithSpaces = 13,
+    CSSPropertyTestBoundedRepetitionWithSpacesFixed = 14,
+    CSSPropertyTestBoundedRepetitionWithSpacesNoSingleItemOpt = 15,
+    CSSPropertyTestBoundedRepetitionWithSpacesSingleItemOpt = 16,
+    CSSPropertyTestBoundedRepetitionWithSpacesWithType = 17,
+    CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious = 18,
+    CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo = 19,
+    CSSPropertyTestNumericValueRange = 20,
+    CSSPropertyTestProperty = 21,
+    CSSPropertyTestSettingsOne = 22,
+    CSSPropertyTestUnboundedRepetitionWithCommasWithMin = 23,
+    CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt = 24,
+    CSSPropertyTestUnboundedRepetitionWithCommasWithMinSingleItemOpt = 25,
+    CSSPropertyTestUnboundedRepetitionWithSpacesNoMin = 26,
+    CSSPropertyTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt = 27,
+    CSSPropertyTestUnboundedRepetitionWithSpacesWithMin = 28,
+    CSSPropertyTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt = 29,
+    CSSPropertyTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt = 30,
+    CSSPropertyTestUsingSharedRule = 31,
+    CSSPropertyTestSinkPriority = 32,
+    CSSPropertyTestLogicalPropertyGroupLogicalBlock = 33,
+    CSSPropertyTestLogicalPropertyGroupLogicalInline = 34,
+    CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal = 35,
+    CSSPropertyTestLogicalPropertyGroupPhysicalVertical = 36,
+    CSSPropertyFont = 37,
+    CSSPropertyTestShorthandOne = 38,
+    CSSPropertyTestShorthandTwo = 39,
 };
 
 // Enum value of the first "real" CSS property, which excludes
@@ -39,11 +58,11 @@ enum CSSPropertyID : uint16_t {
 constexpr uint16_t firstCSSProperty = 2;
 // Total number of enum values in the CSSPropertyID enum. If making an array
 // that can be indexed into using the enum value, use this as the size.
-constexpr uint16_t cssPropertyIDEnumValueCount = 21;
+constexpr uint16_t cssPropertyIDEnumValueCount = 40;
 // Number of "real" CSS properties. This differs from cssPropertyIDEnumValueCount,
 // as this doesn't consider CSSPropertyInvalid and CSSPropertyCustom.
-constexpr uint16_t numCSSProperties = 19;
-constexpr unsigned maxCSSPropertyNameLength = 49;
+constexpr uint16_t numCSSProperties = 38;
+constexpr unsigned maxCSSPropertyNameLength = 71;
 constexpr auto firstTopPriorityProperty = CSSPropertyID::CSSPropertyTestTopPriority;
 constexpr auto lastTopPriorityProperty = CSSPropertyID::CSSPropertyTestTopPriority;
 constexpr auto firstHighPriorityProperty = CSSPropertyID::CSSPropertyTestHighPriority;
@@ -55,7 +74,7 @@ constexpr auto lastLogicalGroupProperty = CSSPropertyID::CSSPropertyTestLogicalP
 constexpr auto firstShorthandProperty = CSSPropertyID::CSSPropertyFont;
 constexpr auto lastShorthandProperty = CSSPropertyID::CSSPropertyTestShorthandTwo;
 constexpr uint16_t numCSSPropertyLonghands = firstShorthandProperty - firstCSSProperty;
-extern const std::array<CSSPropertyID, 14> computedPropertyIDs;
+extern const std::array<CSSPropertyID, 33> computedPropertyIDs;
 
 struct CSSPropertySettings {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;

@@ -50,15 +50,7 @@ std::optional<CSS::BorderRadius> consumeUnresolvedBorderRadius(CSSParserTokenRan
 // Non-standard -webkit-border-radius.
 std::optional<CSS::BorderRadius> consumeUnresolvedWebKitBorderRadius(CSSParserTokenRange&, const CSSParserContext&);
 
-// <'border-[top|bottom]-[left|right]-radius,'> = <length-percentage [0,∞]>{1,2}
-// https://drafts.csswg.org/css-backgrounds/#propdef-border-top-left-radius
-RefPtr<CSSValue> consumeBorderRadiusCorner(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: - Border Image
-
-// <'border-image-repeat> = [ stretch | repeat | round | space ]{1,2}
-// https://drafts.csswg.org/css-backgrounds/#propdef-border-image-repeat
-RefPtr<CSSValue> consumeBorderImageRepeat(CSSParserTokenRange&, const CSSParserContext&);
 
 // <'border-image-slice'> = [<number [0,∞]> | <percentage [0,∞]>]{1,4} && fill?
 // https://drafts.csswg.org/css-backgrounds/#propdef-border-image-slice
