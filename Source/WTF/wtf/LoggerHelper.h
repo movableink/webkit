@@ -82,6 +82,10 @@ public:
 #define DEBUG_LOG_IF_POSSIBLE(...)      if (RefPtr logger = loggerPtr()) logger->debug(logChannel(), __VA_ARGS__)
 #define WILL_LOG_IF_POSSIBLE(_level_)   if (RefPtr logger = loggerPtr()) logger->willLog(logChannel(), _level_)
 
+#define ALWAYS_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, ...)  if (RefPtr logger = thisPtr->loggerPtr()) ALWAYS_LOG_WITH_THIS(thisPtr, __VA_ARGS__)
+#define ERROR_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, ...)   if (RefPtr logger = thisPtr->loggerPtr()) ERROR_LOG_WITH_THIS(thisPtr, __VA_ARGS__)
+#define INFO_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, ...)    if (RefPtr logger = thisPtr->loggerPtr()) INFO_LOG_WITH_THIS(thisPtr, __VA_ARGS__)
+
 #if defined(__OBJC__)
 #define OBJC_LOGIDENTIFIER WTF::Logger::LogSiteIdentifier(__PRETTY_FUNCTION__, self.logIdentifier)
 #define OBJC_ALWAYS_LOG(...)     if (self.loggerPtr && self.logChannel) self.loggerPtr->logAlways(*self.logChannel, __VA_ARGS__)
@@ -118,6 +122,10 @@ public:
 #define ALWAYS_LOG_WITH_THIS(thisPtr, channelName, ...)   (UNUSED_PARAM(channelName))
 #define ERROR_LOG_WITH_THIS(thisPtr, channelName, ...)    (UNUSED_PARAM(channelName))
 #define INFO_LOG_WITH_THIS(thisPtr, channelName, ...)     (UNUSED_PARAM(channelName))
+
+#define ALWAYS_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)  (UNUSED_PARAM(channelName))
+#define ERROR_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)   (UNUSED_PARAM(channelName))
+#define INFO_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)    (UNUSED_PARAM(channelName))
 
 #define ALWAYS_LOG_IF(condition, ...)     ((void)0)
 #define ERROR_LOG_IF(condition, ...)      ((void)0)
