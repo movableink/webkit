@@ -46,7 +46,6 @@ Modules/credentialmanagement/CredentialsContainer.cpp
 Modules/encryptedmedia/CDM.cpp
 Modules/encryptedmedia/MediaKeySession.cpp
 Modules/encryptedmedia/MediaKeyStatusMap.cpp
-Modules/encryptedmedia/MediaKeySystemAccess.cpp
 Modules/encryptedmedia/MediaKeySystemRequest.cpp
 Modules/encryptedmedia/MediaKeys.cpp
 Modules/encryptedmedia/legacy/LegacyCDMSessionClearKey.cpp
@@ -1397,7 +1396,6 @@ testing/MockPaymentCoordinator.cpp
 testing/ServiceWorkerInternals.cpp
 testing/js/WebCoreTestSupport.cpp
 workers/DedicatedWorkerGlobalScope.cpp
-workers/Worker.cpp
 workers/WorkerAnimationController.cpp
 workers/WorkerConsoleClient.cpp
 workers/WorkerFontLoadRequest.cpp

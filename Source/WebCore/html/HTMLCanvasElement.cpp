@@ -1013,9 +1013,11 @@ bool HTMLCanvasElement::isControlledByOffscreen() const
     return m_context && m_context->isPlaceholder();
 }
 
-void HTMLCanvasElement::legacyQueueTaskKeepingObjectAlive(TaskSource source, Function<void()>&& task)
+void HTMLCanvasElement::queueTaskKeepingObjectAlive(TaskSource source, Function<void(CanvasBase&)>&& task)
 {
-    ActiveDOMObject::legacyQueueTaskKeepingObjectAlive(*this, source, WTFMove(task));
+    ActiveDOMObject::queueTaskKeepingObjectAlive(*this, source, [task = WTFMove(task)](auto& element) mutable {
+        task(element);
+    });
 }
 
 void HTMLCanvasElement::dispatchEvent(Event& event)

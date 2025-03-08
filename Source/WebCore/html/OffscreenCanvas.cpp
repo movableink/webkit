@@ -454,9 +454,11 @@ void OffscreenCanvas::reset()
     scheduleCommitToPlaceholderCanvas();
 }
 
-void OffscreenCanvas::legacyQueueTaskKeepingObjectAlive(TaskSource source, Function<void()>&& task)
+void OffscreenCanvas::queueTaskKeepingObjectAlive(TaskSource source, Function<void(CanvasBase&)>&& task)
 {
-    ActiveDOMObject::legacyQueueTaskKeepingObjectAlive(*this, source, WTFMove(task));
+    ActiveDOMObject::queueTaskKeepingObjectAlive(*this, source, [task = WTFMove(task)](auto& canvas) mutable {
+        task(canvas);
+    });
 }
 
 void OffscreenCanvas::dispatchEvent(Event& event)

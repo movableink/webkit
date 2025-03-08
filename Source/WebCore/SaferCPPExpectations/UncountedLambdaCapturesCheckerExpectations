@@ -8,8 +8,6 @@ Modules/cache/DOMCache.cpp
 Modules/cache/DOMCacheStorage.cpp
 Modules/cookie-store/CookieStore.cpp
 Modules/encryptedmedia/MediaKeySession.cpp
-Modules/encryptedmedia/MediaKeySystemAccess.cpp
-Modules/encryptedmedia/MediaKeySystemRequest.cpp
 Modules/encryptedmedia/NavigatorEME.cpp
 Modules/entriesapi/DOMFileSystem.cpp
 Modules/entriesapi/FileSystemDirectoryEntry.cpp
@@ -30,19 +28,15 @@ Modules/mediastream/MediaDevices.cpp
 Modules/mediastream/MediaStreamTrack.cpp
 Modules/mediastream/PeerConnectionBackend.cpp
 Modules/mediastream/RTCDataChannel.cpp
-Modules/mediastream/RTCDtlsTransport.cpp
 Modules/mediastream/RTCIceTransport.cpp
 Modules/mediastream/RTCPeerConnection.cpp
 Modules/mediastream/RTCRtpSender.cpp
-Modules/mediastream/RTCSctpTransport.cpp
 Modules/mediastream/UserMediaRequest.cpp
 Modules/mediastream/libwebrtc/LibWebRTCMediaEndpoint.cpp
 Modules/notifications/Notification.cpp
 Modules/paymentrequest/PaymentRequest.cpp
-Modules/paymentrequest/PaymentResponse.cpp
 Modules/push-api/PushDatabase.cpp
 Modules/remoteplayback/RemotePlayback.cpp
-Modules/web-locks/WebLockManager.cpp
 Modules/webaudio/AudioContext.cpp
 Modules/webaudio/AudioWorkletThread.cpp
 Modules/webaudio/BaseAudioContext.cpp
@@ -51,7 +45,6 @@ Modules/webaudio/OfflineAudioDestinationNode.cpp
 Modules/webcodecs/WebCodecsAudioDecoder.cpp
 Modules/webcodecs/WebCodecsAudioEncoder.cpp
 Modules/webcodecs/WebCodecsBase.cpp
-Modules/webcodecs/WebCodecsUtilities.h
 Modules/webcodecs/WebCodecsVideoDecoder.cpp
 Modules/webcodecs/WebCodecsVideoEncoder.cpp
 Modules/webdatabase/DatabaseThread.cpp
@@ -76,7 +69,6 @@ css/CSSVariableReferenceValue.cpp
 css/SelectorChecker.cpp
 css/StyleRule.cpp
 css/parser/CSSParserImpl.cpp
-dom/BroadcastChannel.cpp
 dom/ContainerNode.cpp
 dom/ContentVisibilityDocumentState.cpp
 dom/CustomElementDefaultARIA.cpp
@@ -103,7 +95,6 @@ html/canvas/GPUCanvasContextCocoa.mm
 html/canvas/WebGLRenderingContextBase.cpp
 html/track/LoadableTextTrack.cpp
 html/track/TrackBase.cpp
-html/track/TrackListBase.cpp
 html/track/VTTCue.cpp
 inspector/InspectorOverlay.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
@@ -167,4 +158,3 @@ workers/service/ExtendableEvent.cpp
 workers/service/ServiceWorkerContainer.cpp
 workers/service/ServiceWorkerGlobalScope.cpp
 workers/shared/SharedWorkerObjectConnection.cpp
-xml/XMLHttpRequest.cpp
