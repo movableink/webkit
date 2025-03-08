@@ -150,7 +150,6 @@ UIProcess/mac/WKViewLayoutStrategy.mm
 UIProcess/mac/WebContextMenuProxyMac.mm
 UIProcess/mac/WebDataListSuggestionsDropdownMac.mm
 UIProcess/mac/WebDateTimePickerMac.mm
-UIProcess/mac/WebViewImpl.mm
 WebDriverBidiBackendDispatchers.cpp
 WebDriverBidiFrontendDispatchers.cpp
 WebProcess/ApplePay/WebPaymentCoordinator.cpp

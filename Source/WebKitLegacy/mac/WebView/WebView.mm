@@ -9223,8 +9223,8 @@ FORWARD(toggleUnderline)
         }
     }
 
-    if ([foundItem isKindOfClass:[NSPopoverTouchBarItem class]])
-        [(NSPopoverTouchBarItem *)foundItem dismissPopover:nil];
+    if (auto* touchBarItem = dynamic_objc_cast<NSPopoverTouchBarItem>(foundItem))
+        [touchBarItem dismissPopover:nil];
 }
 
 - (NSArray<NSString *> *)_textTouchBarCustomizationAllowedIdentifiers

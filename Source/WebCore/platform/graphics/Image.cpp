@@ -132,7 +132,12 @@ std::optional<Ref<Image>> Image::create(RefPtr<ShareableBitmap>&& bitmap)
 bool Image::supportsType(const String& type)
 {
     return MIMETypeRegistry::isSupportedImageMIMEType(type);
-} 
+}
+
+RefPtr<FragmentedSharedBuffer> Image::protectedData() const
+{
+    return m_encodedImageData;
+}
 
 EncodedDataStatus Image::setData(RefPtr<FragmentedSharedBuffer>&& data, bool allDataReceived)
 {

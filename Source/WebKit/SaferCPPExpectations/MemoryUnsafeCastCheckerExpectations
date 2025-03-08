@@ -13,7 +13,6 @@ UIProcess/API/Cocoa/WKNSURLAuthenticationChallenge.mm
 UIProcess/API/Cocoa/WKWebsiteDataStore.mm
 UIProcess/API/Cocoa/_WKDataTask.mm
 UIProcess/API/Cocoa/_WKInspectorConfiguration.mm
-UIProcess/mac/WebViewImpl.mm
 WebProcess/GPU/graphics/WebGPU/WebGPUDowncastConvertToBackingContext.cpp
 WebProcess/InjectedBundle/API/c/WKBundlePageOverlay.cpp
 WebProcess/InjectedBundle/API/mac/WKDOMInternals.mm
