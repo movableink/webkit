@@ -1043,6 +1043,7 @@ std::optional<float> PageClientImpl::computeAutomaticTopObscuredInset()
 {
     RetainPtr window = [m_view window];
     if (([window styleMask] & NSWindowStyleMaskFullSizeContentView) && ![window titlebarAppearsTransparent] && ![m_view enclosingScrollView]) {
+        [window updateConstraintsIfNeeded];
         NSRect contentLayoutRectInWebViewCoordinates = [m_view convertRect:[window contentLayoutRect] fromView:nil];
         return std::max<float>(contentLayoutRectInWebViewCoordinates.origin.y, 0);
     }
