@@ -137,12 +137,6 @@ UIProcess/BackgroundProcessResponsivenessTimer.cpp
 UIProcess/Cocoa/GroupActivities/GroupActivitiesCoordinator.mm
 UIProcess/Cocoa/LegacyDownloadClient.mm
 UIProcess/Cocoa/ModelElementControllerCocoa.mm
-UIProcess/Cocoa/SOAuthorization/NavigationSOAuthorizationSession.mm
-UIProcess/Cocoa/SOAuthorization/PopUpSOAuthorizationSession.mm
-UIProcess/Cocoa/SOAuthorization/SOAuthorizationSession.mm
-UIProcess/Cocoa/SOAuthorization/WKSOAuthorizationDelegate.mm
-UIProcess/Cocoa/UserMediaPermissionRequestManagerProxy.mm
-UIProcess/Cocoa/WKEditCommand.mm
 UIProcess/Extensions/Cocoa/WebExtensionActionCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionCommandCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm
