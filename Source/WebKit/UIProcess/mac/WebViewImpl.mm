@@ -822,7 +822,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!_webViewImpl)
         return;
 
-    NSSegmentedControl *insertListControl = (NSSegmentedControl *)self.view;
+    NSSegmentedControl *insertListControl = dynamic_objc_cast<NSSegmentedControl>(self.view);
     switch (insertListControl.selectedSegment) {
     case noListSegment:
         // There is no "remove list" edit command, but InsertOrderedList and InsertUnorderedList both
@@ -4554,8 +4554,8 @@ NSArray *WebViewImpl::namesOfPromisedFilesDroppedAtDestination(NSURL *dropDestin
     RetainPtr<NSFileWrapper> wrapper;
     RetainPtr<NSData> data;
 
-    if (m_promisedImage) {
-        data = m_promisedImage->protectedData()->makeContiguous()->createNSData();
+    if (RefPtr promisedImage = m_promisedImage) {
+        data = promisedImage->protectedData()->makeContiguous()->createNSData();
         wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:data.get()]);
     } else
         wrapper = adoptNS([[NSFileWrapper alloc] initWithURL:[NSURL URLWithString:m_promisedURL] options:NSFileWrapperReadingImmediate error:nil]);
@@ -4942,18 +4942,18 @@ void WebViewImpl::magnifyWithEvent(NSEvent *event)
 
     dismissContentRelativeChildWindowsWithAnimation(false);
 
-    auto& gestureController = ensureGestureController();
+    Ref gestureController = ensureGestureController();
 
 #if ENABLE(MAC_GESTURE_EVENTS)
-    if (gestureController.hasActiveMagnificationGesture()) {
-        gestureController.handleMagnificationGestureEvent(event, [m_view convertPoint:event.locationInWindow fromView:nil]);
+    if (gestureController->hasActiveMagnificationGesture()) {
+        gestureController->handleMagnificationGestureEvent(event, [m_view convertPoint:event.locationInWindow fromView:nil]);
         return;
     }
 
     if (auto webEvent = NativeWebGestureEvent::create(event, m_view.getAutoreleased()))
         m_page->handleGestureEvent(*webEvent);
 #else
-    gestureController.handleMagnificationGestureEvent(event, [m_view convertPoint:event.locationInWindow fromView:nil]);
+    gestureController->handleMagnificationGestureEvent(event, [m_view convertPoint:event.locationInWindow fromView:nil]);
 #endif
 }
 

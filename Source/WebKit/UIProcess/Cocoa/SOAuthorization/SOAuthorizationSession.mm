@@ -340,12 +340,13 @@ void SOAuthorizationSession::complete(NSHTTPURLResponse *httpResponse, NSData *d
         return;
     }
 
-    if (!m_page) {
+    RefPtr page = m_page.get();
+    if (!page) {
         AUTHORIZATIONSESSION_RELEASE_LOG("complete:  Returning early because m_page is null.");
         return;
     }
 
-    m_page->websiteDataStore().protectedCookieStore()->setCookies(WTFMove(cookies), [weakThis = ThreadSafeWeakPtr { *this }, response = WTFMove(response), data = adoptNS([[NSData alloc] initWithData:data])] () mutable {
+    page->protectedWebsiteDataStore()->protectedCookieStore()->setCookies(WTFMove(cookies), [weakThis = ThreadSafeWeakPtr { *this }, response = WTFMove(response), data = adoptNS([[NSData alloc] initWithData:data])] () mutable {
         auto protectedThis = weakThis.get();
         if (!protectedThis)
             return;
