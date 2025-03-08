@@ -130,22 +130,23 @@ void AudioSampleDataSource::pushSamplesInternal(const AudioBufferList& bufferLis
     const AudioBufferList* sampleBufferList;
 
     if (m_converter.updateBufferedAmount(m_lastBufferedAmount, sampleCount)) {
-        m_scratchBuffer->reset();
-        m_converter.convert(bufferList, *m_scratchBuffer, sampleCount);
+        RefPtr scratchBuffer = m_scratchBuffer;
+        scratchBuffer->reset();
+        m_converter.convert(bufferList, *scratchBuffer, sampleCount);
         auto expectedSampleCount = sampleCount * m_outputDescription->sampleRate() / m_inputDescription->sampleRate();
 
-        if (m_converter.isRegular() && expectedSampleCount > m_scratchBuffer->sampleCount()) {
+        if (m_converter.isRegular() && expectedSampleCount > scratchBuffer->sampleCount()) {
             // Sometimes converter is not writing enough data, for instance on first chunk conversion.
             // Pretend this is the case to keep pusher and puller in sync.
             offset = 0;
             sampleCount = expectedSampleCount;
-            if (m_scratchBuffer->sampleCount() > sampleCount)
-                m_scratchBuffer->setSampleCount(sampleCount);
+            if (scratchBuffer->sampleCount() > sampleCount)
+                scratchBuffer->setSampleCount(sampleCount);
         } else {
-            offset = m_scratchBuffer->sampleCount() - expectedSampleCount;
-            sampleCount = m_scratchBuffer->sampleCount();
+            offset = scratchBuffer->sampleCount() - expectedSampleCount;
+            sampleCount = scratchBuffer->sampleCount();
         }
-        sampleBufferList = m_scratchBuffer->bufferList().list();
+        sampleBufferList = scratchBuffer->bufferList().list();
     } else
         sampleBufferList = &bufferList;
 
@@ -266,12 +267,13 @@ bool AudioSampleDataSource::pullSamplesInternal(AudioBufferList& buffer, size_t 
         return true;
     }
 
-    if (m_scratchBuffer->copyFrom(*m_ringBuffer, sampleCount, timeStamp, CARingBuffer::Copy))
+    RefPtr scratchBuffer = m_scratchBuffer;
+    if (scratchBuffer->copyFrom(*m_ringBuffer, sampleCount, timeStamp, CARingBuffer::Copy))
         return false;
 
-    m_scratchBuffer->applyGain(m_volume);
-    m_scratchBuffer->mixFrom(buffer, sampleCount);
-    if (m_scratchBuffer->copyTo(buffer, sampleCount))
+    scratchBuffer->applyGain(m_volume);
+    scratchBuffer->mixFrom(buffer, sampleCount);
+    if (scratchBuffer->copyTo(buffer, sampleCount))
         return false;
 
     return true;

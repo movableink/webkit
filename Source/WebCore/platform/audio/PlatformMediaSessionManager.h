@@ -284,7 +284,7 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     UniqueRef<Timer> m_stateLogTimer;
-    Ref<AggregateLogger> m_logger;
+    const Ref<AggregateLogger> m_logger;
 #endif
 };
 

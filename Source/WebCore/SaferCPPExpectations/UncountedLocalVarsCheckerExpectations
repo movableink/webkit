@@ -560,7 +560,6 @@ platform/ThreadGlobalData.cpp
 platform/ThreadGlobalData.h
 platform/animation/AcceleratedEffect.cpp
 platform/animation/AcceleratedEffectValues.cpp
-platform/audio/AudioBus.cpp
 platform/cocoa/PlaybackSessionModelMediaElement.mm
 platform/cocoa/VideoPresentationModelVideoElement.mm
 platform/graphics/ComplexTextController.cpp

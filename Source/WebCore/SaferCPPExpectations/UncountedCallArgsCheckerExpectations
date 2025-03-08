@@ -981,15 +981,6 @@ platform/ShareableResource.cpp
 platform/animation/AcceleratedEffectValues.cpp
 platform/animation/Animation.cpp
 platform/animation/AnimationList.cpp
-platform/audio/AudioResampler.cpp
-platform/audio/HRTFDatabaseLoader.cpp
-platform/audio/MultiChannelResampler.cpp
-platform/audio/PlatformMediaSessionManager.cpp
-platform/audio/PushPullFIFO.cpp
-platform/audio/Reverb.cpp
-platform/audio/ReverbConvolver.cpp
-platform/audio/cocoa/AudioFileReaderCocoa.cpp
-platform/audio/cocoa/AudioSampleDataSource.mm
 platform/cocoa/DragImageCocoa.mm
 platform/cocoa/PlaybackSessionModelMediaElement.mm
 platform/cocoa/VideoPresentationModelVideoElement.mm
