@@ -298,8 +298,8 @@ bool HistoryController::shouldStopLoadingForHistoryItem(HistoryItem& targetItem)
     if (!currentItem)
         return false;
 
-    // Don't abort the current load if we're navigating within the current document.
-    if (currentItem->shouldDoSameDocumentNavigationTo(targetItem))
+    // Don't abort the current load unless it's associated with a different document.
+    if (currentItem->documentSequenceNumber() == targetItem.documentSequenceNumber())
         return false;
 
     return true;
@@ -309,7 +309,7 @@ bool HistoryController::shouldStopLoadingForHistoryItem(HistoryItem& targetItem)
 // This includes recursion to handle loading into framesets properly
 void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType frameLoadType, ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad)
 {
-    LOG(History, "HistoryController %p goToItem %p type=%d", this, &targetItem, static_cast<int>(frameLoadType));
+    RELEASE_LOG(History, "%p - HistoryController::goToItem: item %p, type=%d", this, &targetItem, static_cast<int>(frameLoadType));
 
     RefPtr page = m_frame->page();
     if (!page)
@@ -364,7 +364,7 @@ struct HistoryController::FrameToNavigate {
 
 void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameLoadType frameLoadType, LocalFrame& triggeringFrame, NavigationAPIMethodTracker* tracker)
 {
-    LOG(History, "HistoryController %p goToItemForNavigationAPI %p type=%d", this, &targetItem, static_cast<int>(frameLoadType));
+    RELEASE_LOG(History, "%p - HistoryController::goToItemForNavigationAPI: item %p type=%d", this, &targetItem, static_cast<int>(frameLoadType));
 
     Ref frame = m_frame.get();
     RefPtr page = frame->page();
