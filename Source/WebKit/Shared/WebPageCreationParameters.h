@@ -355,6 +355,7 @@ struct WebPageCreationParameters {
 #if PLATFORM(COCOA)
     String presentingApplicationBundleIdentifier;
 #endif
+    bool hasReceivedAXRequestInUIProcess { false };
 };
 
 } // namespace WebKit

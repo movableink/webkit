@@ -1576,7 +1576,11 @@ String WebPageProxy::presentingApplicationBundleIdentifier() const
 #if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
 void WebPageProxy::initializeAccessibility()
 {
-    auto handleArray = SandboxExtension::createHandlesForMachLookup({ }, legacyMainFrameProcess().auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
+    RELEASE_LOG(Process, "WebPageProxy::initializeAccessibility");
+    if (!hasRunningProcess())
+        return;
+
+    auto handleArray = SandboxExtension::createHandlesForMachLookup({ }, protectedLegacyMainFrameProcess()->auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
     protectedLegacyMainFrameProcess()->send(Messages::WebPage::InitializeAccessibility(WTFMove(handleArray)), webPageIDInMainFrameProcess());
 }
 #endif

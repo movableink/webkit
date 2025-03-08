@@ -624,6 +624,9 @@ public:
     void registerAssetFonts(WebProcessProxy&);
 #endif
 
+    void markHasReceivedAXRequestInUIProcess() { m_hasReceivedAXRequestInUIProcess = true; }
+    bool hasReceivedAXRequestInUIProcess() const { return m_hasReceivedAXRequestInUIProcess; }
+
 private:
     enum class NeedsGlobalStaticInitialization : bool { No, Yes };
     void platformInitialize(NeedsGlobalStaticInitialization);
@@ -998,6 +1001,8 @@ private:
 #if ENABLE(IPC_TESTING_API)
     const Ref<IPCTester> m_ipcTester;
 #endif
+
+    bool m_hasReceivedAXRequestInUIProcess { false };
 };
 
 template<typename T>

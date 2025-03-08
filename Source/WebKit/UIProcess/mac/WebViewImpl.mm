@@ -3752,15 +3752,22 @@ id WebViewImpl::accessibilityHitTest(CGPoint)
     return accessibilityFocusedUIElement();
 }
 
-void WebViewImpl::enableAccessibilityIfNecessary()
+void WebViewImpl::enableAccessibilityIfNecessary(NSString *attribute)
 {
+#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
+    // The attributes NSAccessibilityParentAttribute and NSAccessibilityPositionAttribute do not require AX initialization in the WebContent process.
+    auto& processPool = m_page->protectedLegacyMainFrameProcess()->processPool();
+    if (!processPool.hasReceivedAXRequestInUIProcess()
+        && ![attribute isEqualToString:NSAccessibilityParentAttribute]
+        && ![attribute isEqualToString:NSAccessibilityPositionAttribute]) {
+        m_page->initializeAccessibility();
+        accessibilityRegisterUIProcessTokens();
+        processPool.markHasReceivedAXRequestInUIProcess();
+    }
+#endif
+
     if (WebCore::AXObjectCache::accessibilityEnabled())
         return;
-
-#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
-    m_page->initializeAccessibility();
-    accessibilityRegisterUIProcessTokens();
-#endif
 
     // After enabling accessibility update the window frame on the web process so that the
     // correct accessibility position is transmitted (when AX is off, that position is not calculated).
@@ -3770,7 +3777,7 @@ void WebViewImpl::enableAccessibilityIfNecessary()
 
 id WebViewImpl::accessibilityAttributeValue(NSString *attribute, id parameter)
 {
-    enableAccessibilityIfNecessary();
+    enableAccessibilityIfNecessary(attribute);
 
     if ([attribute isEqualToString:NSAccessibilityChildrenAttribute]) {
 

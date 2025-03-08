@@ -11779,6 +11779,8 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
     parameters.presentingApplicationBundleIdentifier = presentingApplicationBundleIdentifier();
 #endif
 
+    parameters.hasReceivedAXRequestInUIProcess = protectedLegacyMainFrameProcess()->processPool().hasReceivedAXRequestInUIProcess();
+
     return parameters;
 }
 

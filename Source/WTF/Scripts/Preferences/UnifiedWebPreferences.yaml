@@ -2806,6 +2806,20 @@ EmbedElementEnabled:
       default: true
   disableInLockdownMode: true
 
+EnableAccessibilityOnDemand:
+  type: bool
+  status: internal
+  category: networking
+  humanReadableName: "Enable Accessibility On Demand"
+  humanReadableDescription: "Enable Accessibility On Demand"
+  webcoreBinding: none
+  condition: PLATFORM(MAC)
+  exposed: [ WebKit ]
+  defaultValue:
+    WebKit:
+      "ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)": true
+      default: false
+
 EnableInheritURIQueryComponent:
   type: bool
   status: embedder

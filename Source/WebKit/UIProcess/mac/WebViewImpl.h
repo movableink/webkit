@@ -502,7 +502,7 @@ public:
     id accessibilityFocusedUIElement();
     bool accessibilityIsIgnored() const { return false; }
     id accessibilityHitTest(CGPoint);
-    void enableAccessibilityIfNecessary();
+    void enableAccessibilityIfNecessary(NSString *attribute = nil);
     id accessibilityAttributeValue(NSString *, id parameter = nil);
     RetainPtr<NSAccessibilityRemoteUIElement> remoteAccessibilityChildIfNotSuspended();
 

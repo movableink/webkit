@@ -1191,7 +1191,8 @@ public:
     void navigateServiceWorkerClient(WebCore::ScriptExecutionContextIdentifier, const URL&, CompletionHandler<void(WebCore::ScheduleLocationChangeResult)>&&);
 
 #if PLATFORM(COCOA)
-    void platformInitializeAccessibility();
+    enum class ShouldInitializeNSAccessibility : bool { No, Yes };
+    void platformInitializeAccessibility(ShouldInitializeNSAccessibility);
     void registerUIProcessAccessibilityTokens(std::span<const uint8_t> elementToken, std::span<const uint8_t> windowToken);
     void registerRemoteFrameAccessibilityTokens(pid_t, std::span<const uint8_t>, WebCore::FrameIdentifier);
     WKAccessibilityWebPageObject* accessibilityRemoteObject();
