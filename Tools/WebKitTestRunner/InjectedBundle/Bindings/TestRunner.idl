@@ -294,8 +294,6 @@ interface TestRunner {
     undefined runUIScript(DOMString script, object callback);
     undefined runUIScriptImmediately(DOMString script, object callback);
 
-    undefined clearTestRunnerCallbacks();
-
     undefined accummulateLogsForChannel(DOMString channel);
 
     // Contextual menu actions

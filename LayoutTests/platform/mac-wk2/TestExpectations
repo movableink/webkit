@@ -1037,8 +1037,6 @@ webkit.org/b/209624 tiled-drawing/scrolling/fixed/four-bars-zoomed.html [ Pass F
 
 webkit.org/b/68278 http/tests/history/back-with-fragment-change.py [ Pass Failure ]
 
-webkit.org/b/210433 swipe/basic-cached-back-swipe.html [ Pass Crash Timeout ]
-
 webkit.org/b/207518 tiled-drawing/simple-document-with-margin-tiles.html [ Pass Failure ]
 
 webkit.org/b/212091 platform/mac/media/media-source/media-source-change-source.html [ Pass Failure ]
@@ -1547,8 +1545,6 @@ imported/w3c/web-platform-tests/fetch/api/abort/serviceworker-intercepted.https.
 # rdar://99153669 ([ iOS macOS ] 4X imported/w3c/web-platform-tests/html/cross-origin-opener-policy/(Layout tests) are flaky failures (244358))
 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-allow-popups-to-unsafe-none.https.html [ Pass Crash ]
 
-webkit.org/b/261005 swipe/pushState-cached-back-swipe.html [ Pass Failure Timeout ]
-
 webkit.org/b/227761 imported/w3c/web-platform-tests/beacon/beacon-cors.https.window.html [ Pass Failure ]
 
 webkit.org/b/261226 [ Sonoma+ ] fast/images/mac/play-pause-individual-animation-context-menu-items.html [ Pass ] # backing functionality only in Sonoma+
@@ -1844,11 +1840,6 @@ imported/w3c/web-platform-tests/navigation-api/navigation-methods/return-value/b
 # webkit.org/b/282063 REGRESSION (285464@main?) : [ macOS iOS wk2 ] media/remote-control-comman d-is-user-gesture.html is a constant timeout.
 media/remote-control-command-is-user-gesture.html [ Timeout ]
 
-# webkit.org/b/282126 NEW TEST [ Sequoia+ x86_64 ] 5 swipe layout tests are timing due to "Timed out waiting for notifyDone to be called"
-[ Sequoia+ x86_64 ] http/tests/swipe/swipe-back-with-outstanding-load-cancellation.html [ Timeout ]
-[ Sonoma+ ] swipe/navigate-event-back-swipe-verify-ua-transition.html [ Pass Timeout ]
-[ Sequoia+ x86_64 ] swipe/pushState-back-swipe-verify-ua-transition.html [ Timeout ]
-
 webkit.org/b/282565 [ Sequoia+ ] imported/w3c/web-platform-tests/css/css-writing-modes/text-combine-upright-sideways-001.html [ ImageOnlyFailure ]
 
 webkit.org/b/282726 http/tests/media/fairplay/legacy-fairplay-hls.html [ Failure ]
@@ -1857,9 +1848,6 @@ webkit.org/b/282726 http/tests/media/fairplay/legacy-fairplay-hls.html [ Failure
 [ Sequoia+ ] http/tests/cookies/same-site/fetch-after-navigating-iframe-in-cross-origin-page.html [ Failure ]
 [ Sequoia+ ] http/tests/cookies/same-site/fetch-in-cross-origin-service-worker.html [ Failure ]
 [ Sequoia+ ] http/tests/cookies/same-site/popup-cross-site-post.html [ Failure ]
-
-# webkit.org/b/282126 NEW TEST [ Sequoia+ x86_64 ] 5 swipe layout tests are timing due to "Timed out waiting for notifyDone to be called"
-swipe/main-frame-pinning-requirement.html [ Failure Timeout ]
 
 webkit.org/b/283596 [ Sequoia+ Debug ] ipc/cfnetwork-crashes-with-string-to-string-http-headers.html [ Skip ]
 
@@ -1956,10 +1944,6 @@ webkit.org/b/288404 [ Sonoma+ Release ] fast/text/canvas-color-fonts/stroke-grad
 webkit.org/b/287012 [ Sonoma+ Debug ] http/tests/pdf/linearized-pdf-in-iframe.html [ Pass Crash ]
 
 webkit.org/b/288411 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/webrtc/simulcast/getStats.https.html [ Failure ]
-
-webkit.org/b/288521 [ Sequoia+ X86_64 ] swipe/swipe-disables-view-transition.html [ Timeout ]
-
-webkit.org/b/288535 [ Sequoia+ X86_64 ] swipe/pushstate-with-manual-scrollrestoration.html [ Timeout ]
 
 webkit.org/b/288545 [ Sequoia x86_64 ] imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF-dynamic.html [ Failure ]
 webkit.org/b/288545 [ Sonoma Release ] imported/w3c/web-platform-tests/requestidlecallback/deadline-max-rAF-dynamic.html [ Pass Failure ]
