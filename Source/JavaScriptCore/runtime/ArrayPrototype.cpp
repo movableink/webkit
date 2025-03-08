@@ -1723,31 +1723,57 @@ static JSArray* concatAppendArray(JSGlobalObject* globalObject, VM& vm, JSArray*
         return { };
 
     ASSERT(!globalObject->isHavingABadTime());
-    ObjectInitializationScope initializationScope(vm);
-    JSArray* result = JSArray::tryCreateUninitializedRestricted(initializationScope, resultStructure, resultSize);
-    if (UNLIKELY(!result)) {
+    auto vectorLength = Butterfly::optimalContiguousVectorLength(resultStructure, resultSize);
+    if (UNLIKELY(vectorLength > MAX_STORAGE_VECTOR_LENGTH))
+        return { };
+
+    ASSERT(!resultStructure->outOfLineCapacity());
+    void* memory = vm.auxiliarySpace().allocate(vm, Butterfly::totalSize(0, 0, true, vectorLength * sizeof(EncodedJSValue)), nullptr, AllocationFailureMode::ReturnNull);
+    if (UNLIKELY(!memory)) {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
+    auto* butterfly = Butterfly::fromBase(memory, 0, 0);
+    butterfly->setVectorLength(vectorLength);
+    butterfly->setPublicLength(resultSize);
 
+    // We can use memcpy / memset since butterfly is not connected to cells yet.
     if (type == ArrayWithDouble) {
-        double* buffer = result->butterfly()->contiguousDouble().data();
+        double* buffer = butterfly->contiguousDouble().data();
         if (firstType == ArrayWithDouble)
-            copyArrayElements<ArrayFillMode::Empty>(buffer, 0, firstButterfly->contiguousDouble().data(), firstArraySize, firstType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguousDouble().data(), firstArraySize, firstType);
         else
-            copyArrayElements<ArrayFillMode::Empty>(buffer, 0, firstButterfly->contiguous().data(), firstArraySize, firstType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguous().data(), firstArraySize, firstType);
         if (secondType == ArrayWithDouble)
-            copyArrayElements<ArrayFillMode::Empty>(buffer, firstArraySize, secondButterfly->contiguousDouble().data(), secondArraySize, secondType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguousDouble().data(), secondArraySize, secondType);
         else
-            copyArrayElements<ArrayFillMode::Empty>(buffer, firstArraySize, secondButterfly->contiguous().data(), secondArraySize, secondType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), secondArraySize, secondType);
     } else if (type != ArrayWithUndecided) {
-        WriteBarrier<Unknown>* buffer = result->butterfly()->contiguous().data();
-        copyArrayElements<ArrayFillMode::Empty>(buffer, 0, firstButterfly->contiguous().data(), firstArraySize, firstType);
-        copyArrayElements<ArrayFillMode::Empty>(buffer, firstArraySize, secondButterfly->contiguous().data(), secondArraySize, secondType);
+        WriteBarrier<Unknown>* buffer = butterfly->contiguous().data();
+        copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguous().data(), firstArraySize, firstType);
+        copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), secondArraySize, secondType);
     }
 
-    ASSERT(result->butterfly()->publicLength() == resultSize);
-    return result;
+    if (size_t remaining = vectorLength - resultSize; remaining) {
+        if (hasDouble(type)) {
+#if OS(DARWIN)
+            constexpr double pattern = PNaN;
+            memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + resultSize), &pattern, sizeof(JSValue) * remaining);
+#else
+            for (unsigned i = resultSize; i < vectorLength; ++i)
+                butterfly->contiguousDouble().atUnsafe(i) = PNaN;
+#endif
+        } else {
+#if USE(JSVALUE64)
+            memset(static_cast<void*>(butterfly->contiguous().data() + resultSize), 0, sizeof(JSValue) * remaining);
+#else
+            for (unsigned i = resultSize; i < vectorLength; ++i)
+                butterfly->contiguous().atUnsafe(i).clear();
+#endif
+        }
+    }
+
+    return JSArray::createWithButterfly(vm, nullptr, resultStructure, butterfly);
 }
 
 JSC_DEFINE_HOST_FUNCTION(arrayProtoPrivateFuncAppendMemcpy, (JSGlobalObject* globalObject, CallFrame* callFrame))

@@ -288,6 +288,12 @@ enum class ArrayFillMode {
     Empty,
 };
 
+enum class NeedsGCSafeOps {
+    No,
+    Yes,
+};
+
+
 template<ArrayFillMode fillMode>
 bool moveArrayElements(JSGlobalObject* globalObject, VM& vm, JSArray* target, unsigned targetOffset, JSArray* source, unsigned sourceLength)
 {
@@ -333,7 +339,7 @@ void clearElement(T& element)
 template<>
 void clearElement(double& element);
 
-template<ArrayFillMode fillMode, typename T, typename U>
+template<ArrayFillMode fillMode, NeedsGCSafeOps needsGCSafeOps, typename T, typename U>
 ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsigned sourceSize, IndexingType sourceType)
 {
     if (sourceType == ArrayWithUndecided) {
@@ -349,7 +355,9 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
 
     if constexpr (std::is_same_v<T, U>) {
         if constexpr (fillMode == ArrayFillMode::Empty) {
-            if constexpr (std::is_same_v<T, double>)
+            if constexpr (needsGCSafeOps == NeedsGCSafeOps::No && sizeof(T) == sizeof(U))
+                memcpy(buffer + offset, source, sizeof(T) * sourceSize);
+            else if constexpr (std::is_same_v<T, double>)
                 memcpy(buffer + offset, source, sizeof(double) * sourceSize);
             else
                 gcSafeMemcpy(buffer + offset, source, sizeof(JSValue) * sourceSize);
