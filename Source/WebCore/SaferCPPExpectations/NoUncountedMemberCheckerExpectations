@@ -98,7 +98,6 @@ style/StyleScope.h
 style/StyleScopeRuleSets.h
 style/StyleSharingResolver.cpp
 style/Styleable.h
-svg/properties/SVGAnimatedProperty.h
 svg/properties/SVGPropertyOwnerRegistry.h
 workers/WorkerAnimationController.h
 workers/WorkerConsoleClient.h
