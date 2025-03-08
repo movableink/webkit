@@ -2414,3 +2414,12 @@ webkit.org/b/260320 imported/w3c/web-platform-tests/css/selectors/invalidation/n
 webkit.org/b/289204 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/focus-after-close.html [ Pass Failure ]
 
 webkit.org/b/289275 [ Release ] media/media-garbage-collection.html [ Pass Failure Timeout ]
+
+# webkit.org/b/289392 REGRESSION(291726@main): 7x imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-*.svg are constant failures. 
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-001.svg [ Failure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-002.svg [ Failure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-003.svg [ Failure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-004.svg [ Failure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-005.svg [ Failure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-bicubic-001.svg [ Failure ]
+imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-complex-001.svg [ Failure ]
