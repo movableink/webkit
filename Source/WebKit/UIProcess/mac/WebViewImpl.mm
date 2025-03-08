@@ -3756,13 +3756,13 @@ void WebViewImpl::enableAccessibilityIfNecessary(NSString *attribute)
 {
 #if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
     // The attributes NSAccessibilityParentAttribute and NSAccessibilityPositionAttribute do not require AX initialization in the WebContent process.
-    auto& processPool = m_page->protectedLegacyMainFrameProcess()->processPool();
-    if (!processPool.hasReceivedAXRequestInUIProcess()
+    Ref processPool = m_page->protectedLegacyMainFrameProcess()->processPool();
+    if (!processPool->hasReceivedAXRequestInUIProcess()
         && ![attribute isEqualToString:NSAccessibilityParentAttribute]
         && ![attribute isEqualToString:NSAccessibilityPositionAttribute]) {
         m_page->initializeAccessibility();
         accessibilityRegisterUIProcessTokens();
-        processPool.markHasReceivedAXRequestInUIProcess();
+        processPool->markHasReceivedAXRequestInUIProcess();
     }
 #endif
 
