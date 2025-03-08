@@ -1096,12 +1096,6 @@ platform/mock/MockRealtimeVideoSource.cpp
 platform/mock/RTCNotifiersMock.cpp
 platform/mock/TimerEventBasedMock.h
 platform/mock/mediasource/MockMediaSourcePrivate.cpp
-platform/network/BlobData.cpp
-platform/network/BlobRegistryImpl.cpp
-platform/network/BlobResourceHandle.cpp
-platform/network/DataURLDecoder.cpp
-platform/network/FormData.cpp
-platform/network/NetworkLoadMetrics.cpp
 platform/network/SynchronousLoaderClient.cpp
 platform/network/mac/ResourceHandleMac.mm
 platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.mm

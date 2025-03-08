@@ -77,7 +77,7 @@ NetworkDataTaskBlob::NetworkDataTaskBlob(NetworkSession& session, NetworkDataTas
         RELEASE_LOG(Network, "Got request for blob without topOrigin but request specifies firstPartyForCookies");
         topOriginData = SecurityOriginData::fromURLWithoutStrictOpaqueness(request.firstPartyForCookies());
     }
-    m_blobData = session.blobRegistry().getBlobDataFromURL(request.url(), topOriginData);
+    m_blobData = session.blobRegistry().blobDataFromURL(request.url(), topOriginData);
 
     LOG(NetworkSession, "%p - Created NetworkDataTaskBlob for %s", this, request.url().string().utf8().data());
 }

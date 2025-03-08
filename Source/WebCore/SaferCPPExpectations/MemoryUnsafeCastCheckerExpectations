@@ -119,7 +119,6 @@ platform/mac/ScrollbarThemeMac.mm
 platform/mac/ScrollbarsControllerMac.mm
 platform/mac/SerializedPlatformDataCueMac.mm
 platform/mac/WebCoreFullScreenWindow.mm
-platform/network/BlobResourceHandle.cpp
 rendering/BidiRun.cpp
 rendering/BidiRun.h
 rendering/RenderAncestorIterator.h
