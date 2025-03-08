@@ -13962,6 +13962,13 @@ void WebPageProxy::didChangeBackgroundColor()
         pageClient->didChangeBackgroundColor();
 }
 
+Awaitable<void> WebPageProxy::nextPresentationUpdate()
+{
+    co_return co_await AwaitableFromCompletionHandler<void> { [this, protectedThis = Ref { *this }] (auto completionHandler) {
+        callAfterNextPresentationUpdate(WTFMove(completionHandler));
+    } };
+}
+
 #if !PLATFORM(GTK) && !PLATFORM(WPE)
 void WebPageProxy::callAfterNextPresentationUpdate(CompletionHandler<void()>&& callback)
 {

@@ -26,20 +26,9 @@
 #pragma once
 
 #include <concepts>
+#include <coroutine>
 #include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMallocInlines.h>
-
-#if __has_include(<coroutine>)
-#include <coroutine>
-#else
-// FIXME: Remove this once all supported toolchains have non-experimental coroutine support.
-#include <experimental/coroutine>
-namespace std {
-using std::experimental::coroutine_handle;
-using std::experimental::suspend_never;
-using std::experimental::suspend_always;
-}
-#endif
 
 namespace WebKit {
 
@@ -69,11 +58,11 @@ private:
     std::coroutine_handle<PromiseType> m_handle;
 };
 
-// Name based on https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1056r1.html
 template<typename T>
-class Lazy {
+class [[nodiscard]] Awaitable {
 public:
     class PromiseBase {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         struct final_awaitable {
             bool await_ready() const noexcept { return false; }
@@ -93,7 +82,7 @@ public:
     template<typename U>
     class Promise final : public PromiseBase {
     public:
-        Lazy<U> get_return_object() { return Lazy<U> { std::coroutine_handle<Promise>::from_promise(*this) }; }
+        Awaitable<U> get_return_object() { return Awaitable<U> { std::coroutine_handle<Promise>::from_promise(*this) }; }
         void return_value(U&& value) { m_value = WTFMove(value); }
         U result() && { return std::exchange(m_value, { }); }
     private:
@@ -102,15 +91,15 @@ public:
     template<std::same_as<void> U>
     class Promise<U> : public PromiseBase {
     public:
-        Lazy<void> get_return_object() { return Lazy<void> { std::coroutine_handle<Promise>::from_promise(*this) }; }
+        Awaitable<void> get_return_object() { return Awaitable<void> { std::coroutine_handle<Promise>::from_promise(*this) }; }
         void return_void() { }
         void result() { }
     };
     using promise_type = Promise<T>;
 
-    class Awaitable {
+    class AwaitableHelper {
     public:
-        Awaitable(std::coroutine_handle<promise_type> coroutine)
+        AwaitableHelper(std::coroutine_handle<promise_type> coroutine)
             : m_coroutine(coroutine) { }
         bool await_ready() const { return m_coroutine.done(); }
         std::coroutine_handle<> await_suspend(std::coroutine_handle<> handle)
@@ -122,64 +111,57 @@ public:
     private:
         std::coroutine_handle<promise_type> m_coroutine;
     };
-    Lazy(std::coroutine_handle<promise_type> coroutine)
+    Awaitable(std::coroutine_handle<promise_type> coroutine)
         : m_coroutine(std::exchange(coroutine, nullptr)) { }
-    Awaitable operator co_await() const { return { m_coroutine.handle() }; }
+    AwaitableHelper operator co_await() const { return { m_coroutine.handle() }; }
 private:
     CoroutineHandle<promise_type> m_coroutine;
 };
 
 struct Task {
     struct promise_type {
-        Task get_return_object() { return { std::coroutine_handle<promise_type>::from_promise(*this) }; }
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        Task get_return_object() { return { }; }
         std::suspend_never initial_suspend() { return { }; }
-        std::suspend_always final_suspend() noexcept { return { }; }
+        std::suspend_never final_suspend() noexcept { return { }; }
         void unhandled_exception() { }
         void return_void() { }
     };
-    std::coroutine_handle<promise_type> handle;
 };
 
-class CoroutineCaller {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(CoroutineCaller);
+template<typename T> class [[nodiscard]] AwaitableFromCompletionHandler {
 public:
-    CoroutineCaller() = default;
-    void setCoroutine(Function<Task()>&& coroutine)
-    {
-        m_coroutine = std::exchange(coroutine, { });
-        m_coroutine();
-    }
-private:
-    Function<Task()> m_coroutine;
-};
-
-static void callCoroutine(auto coroutine)
-{
-    CoroutineCaller* caller = new CoroutineCaller();
-    caller->setCoroutine([caller, coroutine = WTFMove(coroutine)] () mutable -> Task {
-        co_await coroutine();
-        delete caller;
-    });
-}
-
-template<typename T>
-class AwaitableTaskWithCompletionHandler {
-public:
-    using Task = CompletionHandler<void(CompletionHandler<void(T&&)>&&)>;
-    AwaitableTaskWithCompletionHandler(Task&& task)
-        : m_task(WTFMove(task)) { }
-    bool await_ready() { return !!m_result; }
+    using Callback = CompletionHandler<void(CompletionHandler<void(T&&)>)>;
+    AwaitableFromCompletionHandler(Callback&& callback)
+        : m_callback(WTFMove(callback)) { }
+    bool await_ready() const { return !!m_result; }
     void await_suspend(std::coroutine_handle<> handle)
     {
-        m_task([this, handle] (T&& result) mutable {
+        m_callback([this, handle] (T&& result) mutable {
             m_result = WTFMove(result);
             handle();
         });
     }
     T await_resume() { return *std::exchange(m_result, { }); }
 private:
-    Task m_task;
+    Callback m_callback;
     std::optional<T> m_result;
+};
+template<> class [[nodiscard]] AwaitableFromCompletionHandler<void> {
+public:
+    using Callback = CompletionHandler<void(CompletionHandler<void(void)>)>;
+    AwaitableFromCompletionHandler(Callback&& callback)
+        : m_callback(WTFMove(callback)) { }
+    bool await_ready() const { return !m_callback; }
+    void await_suspend(std::coroutine_handle<> handle)
+    {
+        m_callback([handle] {
+            handle();
+        });
+    }
+    void await_resume() { }
+private:
+    Callback m_callback;
 };
 
 }
