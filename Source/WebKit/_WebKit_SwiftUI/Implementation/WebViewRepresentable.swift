@@ -108,7 +108,10 @@ struct WebViewRepresentable {
 
         // By default, SwiftUI allows representable views to have fractional sizes, however WebKit does not support this
         // (it may result in incorrect behavior such as the size of the content view and scroll view being slightly mismatched).
-        return CGSize(width: width.rounded(), height: height.rounded());
+        //
+        // Rounding down is needed to ensure that the view is never bigger than the requested size, otherwise miscellaneous UI
+        // issues manifest.
+        return CGSize(width: width.rounded(.down), height: height.rounded(.down));
     }
 }
 
