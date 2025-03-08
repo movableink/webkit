@@ -65,12 +65,12 @@ RefPtr<MemoryObjectStore> MemoryIndex::protectedObjectStore()
 
 void MemoryIndex::cursorDidBecomeClean(MemoryIndexCursor& cursor)
 {
-    m_cleanCursors.add(cursor);
+    m_cleanCursors.add(&cursor);
 }
 
 void MemoryIndex::cursorDidBecomeDirty(MemoryIndexCursor& cursor)
 {
-    m_cleanCursors.remove(cursor);
+    m_cleanCursors.remove(&cursor);
 }
 
 void MemoryIndex::objectStoreCleared()
@@ -91,16 +91,16 @@ void MemoryIndex::objectStoreCleared()
 
 void MemoryIndex::notifyCursorsOfValueChange(const IDBKeyData& indexKey, const IDBKeyData& primaryKey)
 {
-    for (Ref cursor : m_cleanCursors)
+    for (auto* cursor : copyToVector(m_cleanCursors))
         cursor->indexValueChanged(indexKey, primaryKey);
 }
 
 void MemoryIndex::notifyCursorsOfAllRecordsChanged()
 {
-    for (Ref cursor : m_cleanCursors)
+    for (auto* cursor : copyToVector(m_cleanCursors))
         cursor->indexRecordsAllChanged();
 
-    ASSERT(!m_cleanCursors.computeSize());
+    ASSERT(m_cleanCursors.isEmpty());
 }
 
 IDBGetResult MemoryIndex::getResultForKeyRange(IndexedDB::IndexRecordType type, const IDBKeyRangeData& range) const
@@ -262,13 +262,13 @@ void MemoryIndex::removeEntriesWithValueKey(const IDBKeyData& valueKey)
     m_records->removeEntriesWithValueKey(*this, valueKey);
 }
 
-MemoryIndexCursor* MemoryIndex::maybeOpenCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
+MemoryIndexCursor* MemoryIndex::maybeOpenCursor(const IDBCursorInfo& info)
 {
     auto result = m_cursors.add(info.identifier(), nullptr);
     if (!result.isNewEntry)
         return nullptr;
 
-    result.iterator->value = MemoryIndexCursor::create(*this, info, transaction);
+    result.iterator->value = makeUnique<MemoryIndexCursor>(*this, info);
     return result.iterator->value.get();
 }
 

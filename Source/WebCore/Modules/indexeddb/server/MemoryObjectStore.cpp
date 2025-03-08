@@ -523,13 +523,13 @@ void MemoryObjectStore::registerIndex(Ref<MemoryIndex>&& index)
     m_indexesByIdentifier.set(identifier, WTFMove(index));
 }
 
-MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
+MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo& info)
 {
     auto result = m_cursors.add(info.identifier(), nullptr);
     if (!result.isNewEntry)
         return nullptr;
 
-    result.iterator->value = MemoryObjectStoreCursor::create(*this, info, transaction);
+    result.iterator->value = makeUnique<MemoryObjectStoreCursor>(*this, info);
     return result.iterator->value.get();
 }
 

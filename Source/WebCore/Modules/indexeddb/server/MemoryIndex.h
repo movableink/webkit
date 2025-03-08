@@ -31,7 +31,6 @@
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
@@ -80,7 +79,8 @@ public:
 
     void objectStoreCleared();
 
-    MemoryIndexCursor* maybeOpenCursor(const IDBCursorInfo&, MemoryBackingStoreTransaction&);
+    MemoryIndexCursor* maybeOpenCursor(const IDBCursorInfo&);
+
     IndexValueStore* valueStore() { return m_records.get(); }
 
     MemoryObjectStore* objectStore();
@@ -112,8 +112,8 @@ private:
     HashMap<IDBKeyData, Vector<IDBKeyData>, IDBKeyDataHash, IDBKeyDataHashTraits> m_transactionModifiedRecords;
     std::unique_ptr<IndexValueStore> m_records;
 
-    HashMap<IDBResourceIdentifier, RefPtr<MemoryIndexCursor>> m_cursors;
-    WeakHashSet<MemoryIndexCursor> m_cleanCursors;
+    HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryIndexCursor>> m_cursors;
+    HashSet<MemoryIndexCursor*> m_cleanCursors;
 };
 
 } // namespace IDBServer

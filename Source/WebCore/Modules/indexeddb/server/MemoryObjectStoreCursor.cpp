@@ -36,13 +36,8 @@ namespace IDBServer {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MemoryObjectStoreCursor);
 
-Ref<MemoryObjectStoreCursor> MemoryObjectStoreCursor::create(MemoryObjectStore& objectStore, const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
-{
-    return adoptRef(*new MemoryObjectStoreCursor(objectStore, info, transaction));
-}
-
-MemoryObjectStoreCursor::MemoryObjectStoreCursor(MemoryObjectStore& objectStore, const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
-    : MemoryCursor(info, transaction)
+MemoryObjectStoreCursor::MemoryObjectStoreCursor(MemoryObjectStore& objectStore, const IDBCursorInfo& info)
+    : MemoryCursor(info)
     , m_objectStore(objectStore)
     , m_remainingRange(info.range())
 {
@@ -81,7 +76,7 @@ void MemoryObjectStoreCursor::setFirstInRemainingRange(IDBKeyDataSet& set)
 {
     m_iterator = std::nullopt;
 
-    if (info().isDirectionForward()) {
+    if (m_info.isDirectionForward()) {
         setForwardIteratorFromRemainingRange(set);
         if (m_iterator) {
             m_remainingRange.lowerKey = **m_iterator;
@@ -196,7 +191,7 @@ void MemoryObjectStoreCursor::currentData(IDBGetResult& data)
     }
 
     m_currentPositionKey = **m_iterator;
-    if (info().cursorType() == IndexedDB::CursorType::KeyOnly)
+    if (m_info.cursorType() == IndexedDB::CursorType::KeyOnly)
         data = { m_currentPositionKey, m_currentPositionKey };
     else {
         Ref objectStore = m_objectStore.get();
@@ -230,7 +225,7 @@ void MemoryObjectStoreCursor::incrementForwardIterator(IDBKeyDataSet& set, const
         // If iterating to a key, the count passed in must be zero, as there is no way to iterate by both a count and to a key.
         ASSERT(!count);
 
-        if (!info().range().containsKey(key))
+        if (!m_info.range().containsKey(key))
             return;
 
         if ((*m_iterator)->compare(key) < 0) {
@@ -254,7 +249,7 @@ void MemoryObjectStoreCursor::incrementForwardIterator(IDBKeyDataSet& set, const
         --count;
         ++*m_iterator;
 
-        if (*m_iterator == set.end() || !info().range().containsKey(**m_iterator)) {
+        if (*m_iterator == set.end() || !m_info.range().containsKey(**m_iterator)) {
             m_iterator = std::nullopt;
             return;
         }
@@ -284,7 +279,7 @@ void MemoryObjectStoreCursor::incrementReverseIterator(IDBKeyDataSet& set, const
         // If iterating to a key, the count passed in must be zero, as there is no way to iterate by both a count and to a key.
         ASSERT(!count);
 
-        if (!info().range().containsKey(key))
+        if (!m_info.range().containsKey(key))
             return;
 
         if ((*m_iterator)->compare(key) > 0) {
@@ -314,7 +309,7 @@ void MemoryObjectStoreCursor::incrementReverseIterator(IDBKeyDataSet& set, const
         --count;
         --*m_iterator;
 
-        if (!info().range().containsKey(**m_iterator)) {
+        if (!m_info.range().containsKey(**m_iterator)) {
             m_iterator = std::nullopt;
             return;
         }
@@ -334,7 +329,7 @@ void MemoryObjectStoreCursor::iterate(const IDBKeyData& key, const IDBKeyData& p
         return;
     }
 
-    if (key.isValid() && !info().range().containsKey(key)) {
+    if (key.isValid() && !m_info.range().containsKey(key)) {
         m_currentPositionKey = { };
         outData = { };
         return;
@@ -342,7 +337,7 @@ void MemoryObjectStoreCursor::iterate(const IDBKeyData& key, const IDBKeyData& p
 
     auto* set = objectStore->orderedKeys();
     if (set) {
-        if (info().isDirectionForward())
+        if (m_info.isDirectionForward())
             incrementForwardIterator(*set, key, count);
         else
             incrementReverseIterator(*set, key, count);
