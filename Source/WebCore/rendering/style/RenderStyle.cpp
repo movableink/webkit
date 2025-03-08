@@ -925,6 +925,9 @@ static bool rareDataChangeRequiresLayout(const StyleRareNonInheritedData& first,
     if (first.anchorScope != second.anchorScope || first.positionArea != second.positionArea)
         return true;
 
+    if (first.fieldSizing != second.fieldSizing)
+        return true;
+
     return false;
 }
 
