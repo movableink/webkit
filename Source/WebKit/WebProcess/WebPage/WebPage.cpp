@@ -7100,8 +7100,10 @@ void WebPage::insertTextAsync(const String& text, const EditingRange& replacemen
         return { direction == TextDirection::LTR ? WritingDirection::LeftToRight : WritingDirection::RightToLeft };
     }();
 
-    if (baseWritingDirectionFromInputMode)
+    if (baseWritingDirectionFromInputMode) {
         editor->setBaseWritingDirection(*baseWritingDirectionFromInputMode);
+        editor->setTextAlignmentForChangedBaseWritingDirection(*baseWritingDirectionFromInputMode);
+    }
 
     if (focusedElement && options.shouldSimulateKeyboardInput) {
         focusedElement->dispatchEvent(Event::create(eventNames().keyupEvent, Event::CanBubble::Yes, Event::IsCancelable::Yes));

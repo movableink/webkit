@@ -78,6 +78,7 @@
 #include "HTMLOListElement.h"
 #include "HTMLQuoteElement.h"
 #include "HTMLSpanElement.h"
+#include "HTMLTextAreaElement.h"
 #include "HTMLUListElement.h"
 #include "HitTestResult.h"
 #include "ImageOverlay.h"
@@ -2069,6 +2070,81 @@ void Editor::toggleBold()
 void Editor::toggleUnderline()
 {
     command("ToggleUnderline"_s).execute();
+}
+
+void Editor::setTextAlignmentForChangedBaseWritingDirection(WritingDirection direction)
+{
+    // Note that the passed-in argument is the direction that has been changed to by
+    // some code or user interaction outside the scope of this function. The former
+    // direction is not known, nor is it required for the kind of text alignment
+    // changes done by this function.
+    //
+    // Rules:
+    // When text has no explicit alignment, set alignment to match the writing direction.
+    // If the text has left or right alignment, flip left->right and right->left.
+    // Otherwise, do nothing.
+
+    Ref document = this->document();
+    RefPtr selectionStyle = EditingStyle::styleAtSelectionStart(document->selection().selection());
+    if (!selectionStyle || !selectionStyle->style())
+        return;
+
+    auto value = selectionStyle->style()->propertyAsValueID(CSSPropertyTextAlign);
+    if (!value)
+        return;
+
+    auto newValue = CSSValueInvalid;
+    switch (*value) {
+    case CSSValueStart:
+    case CSSValueEnd:
+        switch (direction) {
+        case WritingDirection::Natural:
+            return;
+        case WritingDirection::LeftToRight:
+            newValue = CSSValueLeft;
+            break;
+        case WritingDirection::RightToLeft:
+            newValue = CSSValueRight;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+            return;
+        }
+        break;
+    case CSSValueLeft:
+    case CSSValueWebkitLeft:
+        newValue = CSSValueRight;
+        break;
+    case CSSValueRight:
+    case CSSValueWebkitRight:
+        newValue = CSSValueLeft;
+        break;
+    case CSSValueCenter:
+    case CSSValueWebkitCenter:
+    case CSSValueJustify:
+        return;
+    default:
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    auto isTextControl = [](Element* focusedElement) {
+        if (RefPtr input = dynamicDowncast<HTMLInputElement>(focusedElement))
+            return input->isTextField() || input->isSearchField();
+        return is<HTMLTextAreaElement>(focusedElement);
+    };
+
+    if (RefPtr focusedElement = document->focusedElement(); isTextControl(focusedElement.get())) {
+        if (direction != WritingDirection::Natural) {
+            focusedElement->setAttributeWithoutSynchronization(alignAttr, nameString(newValue));
+            document->updateStyleIfNeeded();
+        }
+        return;
+    }
+
+    Ref style = MutableStyleProperties::create();
+    style->setProperty(CSSPropertyTextAlign, newValue);
+    applyParagraphStyle(style.ptr());
 }
 
 void Editor::setBaseWritingDirection(WritingDirection direction)
