@@ -50,8 +50,8 @@ struct ServiceWorkerRoutePattern {
     Component username;
     Component password;
     Component hostname;
-    Component pathname;
     Component port;
+    Component pathname;
     Component search;
     Component hash;
 };
@@ -82,7 +82,8 @@ struct ServiceWorkerRoute {
     ServiceWorkerRoute isolatedCopy() &&;
 };
 
-std::optional<ExceptionData> validateServiceWorkerRoute(ServiceWorkerRoute&, size_t maxRouteConditionDepth);
+size_t computeServiceWorkerRouteConditionCount(const ServiceWorkerRoute&);
+std::optional<ExceptionData> validateServiceWorkerRoute(ServiceWorkerRoute&);
 bool matchRouterCondition(const ServiceWorkerRouteCondition&, const FetchOptions&, const ResourceRequest&, bool isServiceWorkerRunning);
 
 } // namespace WebCore

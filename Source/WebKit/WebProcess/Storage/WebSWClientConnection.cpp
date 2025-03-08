@@ -499,8 +499,13 @@ void WebSWClientConnection::cookieChangeSubscriptions(WebCore::ServiceWorkerRegi
 
 Ref<WebSWClientConnection::AddRoutePromise> WebSWClientConnection::addRoutes(ServiceWorkerRegistrationIdentifier identifier, Vector<ServiceWorkerRoute>&& routes)
 {
-    // FIXM:Implement this.
-    return AddRoutePromise::createAndReject(WebCore::ExceptionData { WebCore::ExceptionCode::NotSupportedError, "not yet implemented"_s });
+    struct PromiseConverter {
+        static auto convertError(IPC::Error)
+        {
+            return makeUnexpected(WebCore::ExceptionData { WebCore::ExceptionCode::TypeError, "Internal error"_s });
+        }
+    };
+    return WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendWithPromisedReply<PromiseConverter>(Messages::WebSWServerConnection::AddRoutes { identifier, routes });
 }
 
 } // namespace WebKit

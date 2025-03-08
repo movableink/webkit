@@ -35,6 +35,21 @@
 
 namespace WebCore {
 
+static size_t computeServiceWorkerRouteConditionCount(const ServiceWorkerRouteCondition& routeCondition)
+{
+    size_t count = 1;
+    for (auto& condition : routeCondition.orConditions)
+        count += computeServiceWorkerRouteConditionCount(condition);
+    if (routeCondition.notCondition)
+        count += computeServiceWorkerRouteConditionCount(*routeCondition.notCondition);
+    return count;
+}
+
+size_t computeServiceWorkerRouteConditionCount(const ServiceWorkerRoute& route)
+{
+    return computeServiceWorkerRouteConditionCount(route.condition);
+}
+
 static std::optional<ExceptionData> validateURLPatternComponent(StringView component, EncodingCallbackType type)
 {
     auto result = URLPatternUtilities::URLPatternParser::parse(component, { .ignoreCase = true }, type);
@@ -51,11 +66,8 @@ static std::optional<ExceptionData> validateURLPatternComponent(StringView compo
     return { };
 }
 
-static inline std::optional<ExceptionData> validateServiceWorkerRouteCondition(ServiceWorkerRouteCondition& condition, size_t maxRouteConditionDepth, size_t depth = 0)
+static inline std::optional<ExceptionData> validateServiceWorkerRouteCondition(ServiceWorkerRouteCondition& condition)
 {
-    if (++depth > maxRouteConditionDepth)
-        return ExceptionData { ExceptionCode::TypeError, "Service Worker route condition depth is too high"_s };
-
     if (condition.urlPattern) {
         if (auto exception = validateURLPatternComponent(condition.urlPattern->protocol, EncodingCallbackType::Protocol))
             return exception;
@@ -85,12 +97,12 @@ static inline std::optional<ExceptionData> validateServiceWorkerRouteCondition(S
 
     Vector<ServiceWorkerRouteCondition> orConditions;
     for (auto& orCondition : condition.orConditions) {
-        if (auto exception = validateServiceWorkerRouteCondition(orCondition, depth))
+        if (auto exception = validateServiceWorkerRouteCondition(orCondition))
             return *exception;
     }
 
     if (condition.notCondition) {
-        if (auto exception = validateServiceWorkerRouteCondition(*condition.notCondition, depth))
+        if (auto exception = validateServiceWorkerRouteCondition(*condition.notCondition))
             return *exception;
     }
 
@@ -106,14 +118,14 @@ static inline std::optional<ExceptionData> validateServiceWorkerRouteCondition(S
     return { };
 }
 
-std::optional<ExceptionData> validateServiceWorkerRoute(ServiceWorkerRoute& route, size_t maxRouteConditionDepth)
+std::optional<ExceptionData> validateServiceWorkerRoute(ServiceWorkerRoute& route)
 {
-    return validateServiceWorkerRouteCondition(route.condition, maxRouteConditionDepth);
+    return validateServiceWorkerRouteCondition(route.condition);
 }
 
 static bool matchURLPatternComponent(const String& pattern, StringView value)
 {
-    // FIXME: Fully support pattern matching, check for case, whitespace....
+    // FIXME: Fully support pattern matching, check for case, whitespace...
     if (pattern.isNull() || pattern == "*"_s)
         return true;
 
@@ -234,8 +246,8 @@ ServiceWorkerRoutePattern ServiceWorkerRoutePattern::isolatedCopy() &&
         crossThreadCopy(WTFMove(username)),
         crossThreadCopy(WTFMove(password)),
         crossThreadCopy(WTFMove(hostname)),
-        crossThreadCopy(WTFMove(pathname)),
         crossThreadCopy(WTFMove(port)),
+        crossThreadCopy(WTFMove(pathname)),
         crossThreadCopy(WTFMove(search)),
         crossThreadCopy(WTFMove(hash))
     };

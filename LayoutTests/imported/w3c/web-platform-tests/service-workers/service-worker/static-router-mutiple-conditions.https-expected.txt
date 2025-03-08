@@ -1,4 +1,4 @@
 
-FAIL Multiple conditions work with `and` operation assert_true: expected true got false
-FAIL Multiple conditions including requestDestination work with `and` operation assert_true: expected true got false
+PASS Multiple conditions work with `and` operation
+PASS Multiple conditions including requestDestination work with `and` operation
 

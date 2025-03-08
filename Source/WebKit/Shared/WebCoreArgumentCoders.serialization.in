@@ -5538,6 +5538,48 @@ struct WebCore::ServiceWorkerJobData {
     [Validator='( type == WebCore::ServiceWorkerJobType::Register && registrationOptions->has_value()) || (type != WebCore::ServiceWorkerJobType::Register && !registrationOptions->has_value() )'] std::optional<WebCore::ServiceWorkerRegistrationOptions> registrationOptions;
 };
 
+struct WebCore::RouterSourceDict {
+    String cacheName;
+}
+
+enum class WebCore::RouterSourceEnum : uint8_t {
+    Cache,
+    FetchEvent,
+    Network
+};
+
+enum class WebCore::RunningStatus : bool
+
+header: <WebCore/ServiceWorkerRoute.h>
+[CustomHeader] struct WebCore::ServiceWorkerRoutePattern {
+    String protocol;
+    String username;
+    String password;
+    String hostname;
+    String port;
+    String pathname;
+    String search;
+    String hash;
+}
+
+header: <WebCore/ServiceWorkerRoute.h>
+[CustomHeader] struct WebCore::ServiceWorkerRouteCondition {
+    std::optional<WebCore::ServiceWorkerRoutePattern> urlPattern;
+    String requestMethod;
+    std::optional<WebCore::FetchRequestMode> requestMode;
+    std::optional<WebCore::FetchRequestDestination> requestDestination;
+    std::optional<WebCore::RunningStatus> runningStatus;
+
+    Vector<WebCore::ServiceWorkerRouteCondition> orConditions;
+    std::unique_ptr<WebCore::ServiceWorkerRouteCondition> notCondition;
+
+};
+
+struct WebCore::ServiceWorkerRoute {
+    WebCore::ServiceWorkerRouteCondition condition;
+    std::variant<WebCore::RouterSourceDict, WebCore::RouterSourceEnum> source;
+};
+
 struct WebCore::EventInit {
     bool bubbles;
     bool cancelable;

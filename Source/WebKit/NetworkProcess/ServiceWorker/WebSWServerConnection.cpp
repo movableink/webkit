@@ -281,11 +281,18 @@ RefPtr<ServiceWorkerFetchTask> WebSWServerConnection::createFetchTask(NetworkRes
         return nullptr;
     }
 
-    if (worker->shouldSkipFetchEvent()) {
-        if (registration->shouldSoftUpdate(loader.parameters().options))
-            registration->scheduleSoftUpdate(loader.isAppInitiated() ? WebCore::IsAppInitiated::Yes : WebCore::IsAppInitiated::No);
-
-        return nullptr;
+    // FIXME: Add support for cache route w/o cacheName, for now we go to fetch event.
+    auto routerSource = worker->getRouterSource(loader.parameters().options, request);
+    if (std::holds_alternative<RouterSourceEnum>(routerSource)) {
+        switch (std::get<RouterSourceEnum>(routerSource)) {
+        case RouterSourceEnum::Cache:
+        case RouterSourceEnum::FetchEvent:
+            break;
+        case RouterSourceEnum::Network:
+            if (registration->shouldSoftUpdate(loader.parameters().options))
+                registration->scheduleSoftUpdate(loader.isAppInitiated() ? WebCore::IsAppInitiated::Yes : WebCore::IsAppInitiated::No);
+            return nullptr;
+        }
     }
 
     if (worker->hasTimedOutAnyFetchTasks()) {
@@ -939,6 +946,16 @@ void WebSWServerConnection::cookieChangeSubscriptions(WebCore::ServiceWorkerRegi
     }
 
     callback(registration->cookieChangeSubscriptions());
+}
+
+void WebSWServerConnection::addRoutes(WebCore::ServiceWorkerRegistrationIdentifier registrationIdentifier, Vector<WebCore::ServiceWorkerRoute>&& routes, CompletionHandler<void(Expected<void, WebCore::ExceptionData>&&)>&& callback)
+{
+    RefPtr server = this->server();
+    if (!server) {
+        callback(makeUnexpected(WebCore::ExceptionData { ExceptionCode::TypeError, "Internal error"_s }));
+        return;
+    }
+    server->addRoutes(registrationIdentifier, WTFMove(routes), WTFMove(callback));
 }
 
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)

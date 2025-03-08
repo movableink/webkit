@@ -374,6 +374,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/fetch/FetchLoader.h
     Modules/fetch/FetchLoaderClient.h
     Modules/fetch/FetchRequestCredentials.h
+    Modules/fetch/FetchRequestDestination.h
+    Modules/fetch/FetchRequestMode.h
     Modules/fetch/RequestPriority.h
 
     Modules/filesystemaccess/FileSystemDirectoryHandle.h
@@ -2815,6 +2817,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     workers/service/ServiceWorkerRegistrationData.h
     workers/service/ServiceWorkerRegistrationKey.h
     workers/service/ServiceWorkerRegistrationOptions.h
+    workers/service/ServiceWorkerRoute.h
     workers/service/ServiceWorkerTypes.h
     workers/service/ServiceWorkerUpdateViaCache.h
 
