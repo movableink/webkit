@@ -273,13 +273,14 @@ private:
 
     static constexpr BitField NeedExceptionHandlingMask = ~(1 << NeedExceptionHandling);
 
-    Box<Lock> m_lock;
-    Box<Condition> m_condition;
     Atomic<BitField> m_trapBits { 0 };
+    unsigned m_deferTerminationCount { 0 };
     bool m_needToInvalidatedCodeBlocks { false };
     bool m_isShuttingDown { false };
     bool m_suspendedTerminationException { false };
-    unsigned m_deferTerminationCount { 0 };
+
+    Box<Lock> m_lock;
+    Box<Condition> m_condition;
 
 #if ENABLE(SIGNAL_BASED_VM_TRAPS)
     RefPtr<SignalSender> m_signalSender;

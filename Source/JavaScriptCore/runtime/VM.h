@@ -369,6 +369,9 @@ public:
     EntryFrame* topEntryFrame { nullptr };
 private:
     OptionSet<EntryScopeService> m_entryScopeServices;
+public:
+    bool didEnterVM { false };
+private:
     VMTraps m_traps;
 
     VMIdentifier m_identifier;
@@ -1041,7 +1044,6 @@ private:
 
 public:
     SentinelLinkedList<MicrotaskQueue, BasicRawSentinelNode<MicrotaskQueue>> m_microtaskQueues;
-    bool didEnterVM { false };
 private:
     bool m_failNextNewCodeBlock { false };
     bool m_globalConstRedeclarationShouldThrow { true };
