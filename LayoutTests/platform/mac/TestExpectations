@@ -120,6 +120,8 @@ accessibility/aria-checkbox-sends-notification.html
 accessibility/aria-switch-sends-notification.html
 accessibility/multiselect-list-reports-active-option.html
 
+accessibility/mac/style-range.html [ Timeout ]
+
 # uiController.simulateRotationLikeSafari() is not implemented on macOS.
 fast/screen-orientation/orientation-in-resize-event.html [ Skip ]
 

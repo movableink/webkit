@@ -789,6 +789,8 @@ webkit.org/b/212805 accessibility/svg-text.html [ Failure ]
 
 accessibility/combobox/mac [ Skip ]
 
+accessibility/textarea-line-for-index.html [ Skip ]
+
 # AX support for datetime input elements needs to be completed in glib platforms.
 accessibility/datetime [ Skip ]
 

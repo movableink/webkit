@@ -3969,7 +3969,7 @@ void RenderBlockFlow::layoutInlineContent(RelayoutChildren relayoutChildren, Lay
             renderer.clearNeedsLayout();
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE) && ENABLE(AX_THREAD_TEXT_APIS)
-        if (CheckedPtr cache = document().existingAXObjectCache())
+        if (CheckedPtr cache = protectedDocument()->existingAXObjectCache())
             cache->onTextRunsChanged(renderer);
 #endif
 
