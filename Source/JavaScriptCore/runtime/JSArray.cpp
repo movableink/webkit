@@ -1939,6 +1939,17 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
     }
 
     ASSERT(sourceType == ArrayWithDouble || sourceType == ArrayWithInt32 || sourceType == ArrayWithContiguous || sourceType == ArrayWithUndecided);
+
+    if (LIKELY(!globalObject->isHavingABadTime())) {
+        if constexpr (fillMode == ArrayFillMode::Empty) {
+            if (isCopyOnWrite(array->indexingMode()))
+                return JSArray::createWithButterfly(vm, nullptr, array->structure(), array->butterfly());
+        }
+
+        if (!resultSize)
+            RELEASE_AND_RETURN(scope, constructEmptyArray(globalObject, nullptr));
+    }
+
     IndexingType resultType = sourceType;
     if (sourceType == ArrayWithDouble) {
         double* buffer = butterfly->contiguousDouble().data();

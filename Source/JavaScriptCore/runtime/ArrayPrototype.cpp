@@ -1718,6 +1718,19 @@ static JSArray* concatAppendArray(JSGlobalObject* globalObject, VM& vm, JSArray*
         return result;
     }
 
+    if (LIKELY(!globalObject->isHavingABadTime())) {
+        if (!resultSize)
+            RELEASE_AND_RETURN(scope, constructEmptyArray(globalObject, nullptr));
+
+        if (!secondArraySize) {
+            if (isCopyOnWrite(firstArray->indexingMode()))
+                return JSArray::createWithButterfly(vm, nullptr, firstArray->structure(), firstArray->butterfly());
+        } else if (!firstArraySize) {
+            if (isCopyOnWrite(secondArray->indexingMode()))
+                return JSArray::createWithButterfly(vm, nullptr, secondArray->structure(), secondArray->butterfly());
+        }
+    }
+
     Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(type);
     if (UNLIKELY(hasAnyArrayStorage(resultStructure->indexingType())))
         return { };
