@@ -34,8 +34,9 @@ PASS event does not dispatch if click:preventDefault is called
 PASS event does not dispatch on input[type=button]
 PASS event does not dispatch if invoker is disabled
 PASS event does NOT dispatch if button is form associated, with implicit type
+PASS event does NOT dispatch if button is form associated, with explicit type=invalid
 PASS event dispatches if button is form associated, with explicit type=button
 PASS event does NOT dispatch if button is form associated, with explicit type=submit
-FAIL event does dispatch if button is form associated, with explicit type=reset assert_true: event was called expected true got false
+PASS event does NOT dispatch if button is form associated, with explicit type=reset
 PASS event dispatches if invokee is non-HTML Element
 
