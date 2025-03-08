@@ -1574,9 +1574,6 @@ webkit.org/b/215450 imported/w3c/web-platform-tests/media-source/mediasource-cha
 # <rdar://problem/59785942> [ iOS macOS ] imported/w3c/web-platform-tests/content-security-policy/form-action/form-action-src-blocked.sub.html is flaky failing
 imported/w3c/web-platform-tests/content-security-policy/form-action/form-action-src-blocked.sub.html [ Pass Failure ]
 
-# <rdar://problem/60173203> [ Mac ] accessibility/accessibility-node-memory-management.html is flaky failing and crashing.
-accessibility/accessibility-node-memory-management.html [ Pass Failure Crash ]
-
 # <rdar://problem/60290943> [ Mac ] inspector/unit-tests/test-harness-expect-functions.html is flaky crashing.
 inspector/unit-tests/test-harness-expect-functions.html [ Pass Crash ]
 

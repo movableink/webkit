@@ -170,6 +170,8 @@ RefPtr<AXIsolatedTree> AXIsolatedTree::create(AXObjectCache& axObjectCache)
     if (axFocus)
         tree->setFocusedNodeID(axFocus->objectID());
     tree->setSelectedTextMarkerRange(document->selection().selection());
+    tree->setInitialSortedLiveRegions(axIDs(axObjectCache.sortedLiveRegions()));
+    tree->setInitialSortedNonRootWebAreas(axIDs(axObjectCache.sortedNonRootWebAreas()));
     tree->updateLoadingProgress(axObjectCache.loadingProgress());
 
     const auto relations = axObjectCache.relations();
@@ -1082,6 +1084,20 @@ AXCoreObject::AccessibilityChildrenVector AXIsolatedTree::sortedNonRootWebAreas(
 {
     ASSERT(!isMainThread());
     return objectsForIDs(m_sortedNonRootWebAreaIDs);
+}
+
+void AXIsolatedTree::setInitialSortedLiveRegions(Vector<AXID> liveRegionIDs)
+{
+    ASSERT(isMainThread());
+
+    m_sortedLiveRegionIDs = WTFMove(liveRegionIDs);
+}
+
+void AXIsolatedTree::setInitialSortedNonRootWebAreas(Vector<AXID> webAreaIDs)
+{
+    ASSERT(isMainThread());
+
+    m_sortedNonRootWebAreaIDs = WTFMove(webAreaIDs);
 }
 
 std::optional<AXID> AXIsolatedTree::focusedNodeID()

@@ -487,6 +487,10 @@ public:
 
     void sortedLiveRegionsDidChange(Vector<AXID>);
     void sortedNonRootWebAreasDidChange(Vector<AXID>);
+
+    void setInitialSortedLiveRegions(Vector<AXID>);
+    void setInitialSortedNonRootWebAreas(Vector<AXID>);
+
     void queueNodeUpdate(AXID, const NodeUpdateOptions&);
     void queueNodeRemoval(const AccessibilityObject&);
     void processQueuedNodeUpdates();

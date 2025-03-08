@@ -390,7 +390,12 @@ void AXObjectCache::postPlatformAnnouncementNotification(const String& message)
 
 void AXObjectCache::onDocumentRenderTreeCreation(const Document& document)
 {
-    m_deferredDocumentAddedList.add(document);
+    if (m_sortedIDListsInitialized) {
+        // We only need to do this work if the sorted ID list has already been initialized.
+        m_deferredDocumentAddedList.add(document);
+        if (!m_performCacheUpdateTimer.isActive())
+            m_performCacheUpdateTimer.startOneShot(0_s);
+    }
 }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
@@ -661,14 +666,6 @@ void AXObjectCache::handleScrolledToAnchor(const Node&)
 
 void AXObjectCache::platformPerformDeferredCacheUpdate()
 {
-    if (!m_sortedIDListsInitialized) {
-        // Once initialized for the first time, we can keep the lists up-to-date as the tree changes.
-        // We need this initialization step because accessibility may have been turned on after the
-        // page was already loaded, meaning we wouldn't have got the aria-live or RenderView created
-        // notifications from the DOM / render tree.
-        initializeSortedIDLists();
-    }
-
     m_deferredDocumentAddedList.forEach([this] (const auto& document) {
         if (RefPtr object = getOrCreate(document.renderView()); object && object->isWebArea())
             addSortedObject(*object, PreSortedObjectType::WebArea);
@@ -750,19 +747,30 @@ bool AXObjectCache::shouldSpellCheck()
 #endif
 }
 
-AXCoreObject::AccessibilityChildrenVector AXObjectCache::sortedLiveRegions() const
+AXCoreObject::AccessibilityChildrenVector AXObjectCache::sortedLiveRegions()
 {
+    if (!m_sortedIDListsInitialized)
+        initializeSortedIDLists();
     return objectsForIDs(m_sortedLiveRegionIDs);
 }
 
-AXCoreObject::AccessibilityChildrenVector AXObjectCache::sortedNonRootWebAreas() const
+AXCoreObject::AccessibilityChildrenVector AXObjectCache::sortedNonRootWebAreas()
 {
+    if (!m_sortedIDListsInitialized)
+        initializeSortedIDLists();
     return objectsForIDs(m_sortedNonRootWebAreaIDs);
 }
 
 void AXObjectCache::addSortedObject(AccessibilityObject& object, PreSortedObjectType type)
 {
     ASSERT(type == PreSortedObjectType::LiveRegion || type == PreSortedObjectType::WebArea);
+
+    if (!m_sortedIDListsInitialized) {
+        // Once the sorted ID lists have been initialized for the first time, we rely
+        // on handling these dynamic updates to keep them up-to-date. But if that hasn't
+        // happened yet, don't bother doing any work.
+        return;
+    }
 
     auto axID = object.objectID();
     Vector<AXID>& sortedList = type == PreSortedObjectType::LiveRegion ? m_sortedLiveRegionIDs : m_sortedNonRootWebAreaIDs;
@@ -852,6 +860,9 @@ void AXObjectCache::addSortedObject(AccessibilityObject& object, PreSortedObject
 
 void AXObjectCache::removeLiveRegion(AccessibilityObject& object)
 {
+    if (!m_sortedIDListsInitialized)
+        return;
+
     if (m_sortedLiveRegionIDs.removeAll(object.objectID())) {
         if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID))
             tree->sortedLiveRegionsDidChange(m_sortedLiveRegionIDs);
@@ -860,6 +871,8 @@ void AXObjectCache::removeLiveRegion(AccessibilityObject& object)
 
 void AXObjectCache::initializeSortedIDLists()
 {
+    if (m_sortedIDListsInitialized)
+        return;
     m_sortedIDListsInitialized = true;
 
     RefPtr root = rootWebArea();

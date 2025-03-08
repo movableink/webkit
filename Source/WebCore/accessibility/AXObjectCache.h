@@ -607,8 +607,8 @@ public:
 #endif
 
 #if PLATFORM(MAC)
-    AXCoreObject::AccessibilityChildrenVector sortedLiveRegions() const;
-    AXCoreObject::AccessibilityChildrenVector sortedNonRootWebAreas() const;
+    AXCoreObject::AccessibilityChildrenVector sortedLiveRegions();
+    AXCoreObject::AccessibilityChildrenVector sortedNonRootWebAreas();
     void addSortedObject(AccessibilityObject&, PreSortedObjectType);
     void removeLiveRegion(AccessibilityObject&);
     void initializeSortedIDLists();
