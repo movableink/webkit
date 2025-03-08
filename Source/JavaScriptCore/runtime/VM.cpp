@@ -920,17 +920,6 @@ bool VM::hasExceptionsAfterHandlingTraps()
     return exception();
 }
 
-void VM::clearException()
-{
-#if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
-    m_needExceptionCheck = false;
-    m_nativeStackTraceOfLastThrow = nullptr;
-    m_throwingThread = nullptr;
-#endif
-    m_exception = nullptr;
-    traps().clearTrapBit(VMTraps::NeedExceptionHandling);
-}
-
 void VM::setException(Exception* exception)
 {
     ASSERT(!exception || !isTerminationException(exception) || hasTerminationRequest());

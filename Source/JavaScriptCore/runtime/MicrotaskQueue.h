@@ -193,7 +193,7 @@ public:
 
     DECLARE_VISIT_AGGREGATE;
 
-    inline void performMicrotaskCheckpoint(VM&, const Invocable<QueuedTask::Result(QueuedTask&)> auto& functor);
+    inline void performMicrotaskCheckpoint(VM&, NOESCAPE const Invocable<QueuedTask::Result(QueuedTask&)> auto& functor);
 
     bool hasMicrotasksForFullyActiveDocument() const
     {

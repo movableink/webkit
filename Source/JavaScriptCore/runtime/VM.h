@@ -998,7 +998,17 @@ private:
         return m_exception;
     }
 
-    JS_EXPORT_PRIVATE void clearException();
+    void clearException()
+    {
+#if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
+        m_needExceptionCheck = false;
+        m_nativeStackTraceOfLastThrow = nullptr;
+        m_throwingThread = nullptr;
+#endif
+        m_exception = nullptr;
+        traps().clearTrapBit(VMTraps::NeedExceptionHandling);
+    }
+
     JS_EXPORT_PRIVATE void setException(Exception*);
 
 #if ENABLE(C_LOOP)

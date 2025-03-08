@@ -25,6 +25,7 @@
 
 #include "CommonVM.h"
 #include "EventLoop.h"
+#include "JSDOMExceptionHandling.h"
 #include "JSExecState.h"
 #include "RejectedPromiseTracker.h"
 #include "ScriptExecutionContext.h"
@@ -66,6 +67,52 @@ void MicrotaskQueue::append(JSC::QueuedTask&& task)
     m_microtaskQueue.enqueue(WTFMove(task));
 }
 
+void MicrotaskQueue::runJSMicrotask(JSC::JSGlobalObject* globalObject, JSC::VM& vm, JSC::QueuedTask& task)
+{
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    if (UNLIKELY(!task.job().isObject()))
+        return;
+
+    auto* job = JSC::asObject(task.job());
+
+    if (UNLIKELY(!scope.clearExceptionExceptTermination()))
+        return;
+
+    auto* lexicalGlobalObject = job->globalObject();
+    auto callData = JSC::getCallData(job);
+    if (UNLIKELY(!scope.clearExceptionExceptTermination()))
+        return;
+    ASSERT(callData.type != JSC::CallData::Type::None);
+
+    unsigned count = 0;
+    for (auto argument : task.arguments()) {
+        if (!argument)
+            break;
+        ++count;
+    }
+
+    if (UNLIKELY(globalObject->hasDebugger())) {
+        JSC::DeferTerminationForAWhile deferTerminationForAWhile(vm);
+        globalObject->debugger()->willRunMicrotask(globalObject, task.identifier());
+        scope.clearException();
+    }
+
+    NakedPtr<JSC::Exception> returnedException = nullptr;
+    if (LIKELY(!vm.hasPendingTerminationException())) {
+        JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Microtask, job, callData, JSC::jsUndefined(), JSC::ArgList { std::bit_cast<JSC::EncodedJSValue*>(task.arguments().data()), count }, returnedException);
+        if (returnedException)
+            reportException(lexicalGlobalObject, returnedException);
+        scope.clearExceptionExceptTermination();
+    }
+
+    if (UNLIKELY(globalObject->hasDebugger())) {
+        JSC::DeferTerminationForAWhile deferTerminationForAWhile(vm);
+        globalObject->debugger()->didRunMicrotask(globalObject, task.identifier());
+        scope.clearException();
+    }
+}
+
 void MicrotaskQueue::performMicrotaskCheckpoint()
 {
     if (m_performingMicrotaskCheckpoint)
@@ -75,28 +122,36 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
     Ref vm = this->vm();
     JSC::JSLockHolder locker(vm);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
+    {
+        SUPPRESS_UNCOUNTED_ARG auto& data = threadGlobalData();
+        auto* previousState = data.currentState();
+        m_microtaskQueue.performMicrotaskCheckpoint(vm,
+            [&](JSC::QueuedTask& task) ALWAYS_INLINE_LAMBDA {
+                RefPtr dispatcher = downcast<WebCoreMicrotaskDispatcher>(task.dispatcher());
+                if (UNLIKELY(!dispatcher))
+                    return JSC::QueuedTask::Result::Discard;
 
-    m_microtaskQueue.performMicrotaskCheckpoint(vm,
-        [&](JSC::QueuedTask& task) ALWAYS_INLINE_LAMBDA {
-            RefPtr dispatcher = downcast<WebCoreMicrotaskDispatcher>(task.dispatcher());
-            if (UNLIKELY(!dispatcher))
-                return JSC::QueuedTask::Result::Discard;
-
-            auto result = dispatcher->currentRunnability();
-            if (result == JSC::QueuedTask::Result::Executed) {
-                switch (dispatcher->type()) {
-                case WebCoreMicrotaskDispatcher::Type::JavaScript:
-                    JSExecState::runTask(task.globalObject(), task);
-                    break;
-                case WebCoreMicrotaskDispatcher::Type::None:
-                case WebCoreMicrotaskDispatcher::Type::UserGestureIndicator:
-                case WebCoreMicrotaskDispatcher::Type::Function:
-                    dispatcher->run(task);
-                    break;
+                auto result = dispatcher->currentRunnability();
+                if (result == JSC::QueuedTask::Result::Executed) {
+                    switch (dispatcher->type()) {
+                    case WebCoreMicrotaskDispatcher::Type::JavaScript: {
+                        auto* globalObject = task.globalObject();
+                        data.setCurrentState(globalObject);
+                        runJSMicrotask(globalObject, vm, task);
+                        break;
+                    }
+                    case WebCoreMicrotaskDispatcher::Type::None:
+                    case WebCoreMicrotaskDispatcher::Type::UserGestureIndicator:
+                    case WebCoreMicrotaskDispatcher::Type::Function:
+                        data.setCurrentState(previousState);
+                        dispatcher->run(task);
+                        break;
+                    }
                 }
-            }
-            return result;
-        });
+                return result;
+            });
+        data.setCurrentState(previousState);
+    }
     vm->finalizeSynchronousJSExecution();
 
     if (!vm->executionForbidden()) {

@@ -31,7 +31,7 @@
 
 namespace JSC {
 
-inline void MicrotaskQueue::performMicrotaskCheckpoint(VM& vm, const Invocable<QueuedTask::Result(QueuedTask&)> auto& functor)
+inline void MicrotaskQueue::performMicrotaskCheckpoint(VM& vm, NOESCAPE const Invocable<QueuedTask::Result(QueuedTask&)> auto& functor)
 {
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
     while (!m_queue.isEmpty()) {
