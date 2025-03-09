@@ -7740,6 +7740,3 @@ imported/w3c/web-platform-tests/css/CSS2/floats/float-nowrap-hyphen-rewind-1.htm
 
 # This test is flaky. Resizing the window exposures the failure
 webkit.org/b/288689 svg/text/bidi-text-query.svg [ Skip ]
-
-imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/b-strong-styles.html [ ImageOnlyFailure ]
-

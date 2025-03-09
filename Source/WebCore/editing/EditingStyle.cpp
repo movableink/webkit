@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Apple Inc.
+ * Copyright (C) 2007-2025 Apple Inc.
  * Copyright (C) 2010, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -299,6 +299,8 @@ static bool fontWeightValueIsBold(CSSValue& fontWeight)
         return false;
     case CSSValueBold:
         return true;
+    case CSSValueBolder:
+        return false;
     default:
         break;
     }

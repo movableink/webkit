@@ -1263,7 +1263,7 @@ u, ins {
 }
 
 strong, b {
-    font-weight: bold;
+    font-weight: bolder;
 }
 
 i, cite, em, var, address, dfn {
